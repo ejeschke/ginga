@@ -19,10 +19,13 @@ class Histogram(GingaPlugin.LocalPlugin):
     Histogram plots a histogram for a region drawn in the image, or for the
     entire image.
 
-    Histogram is a local plugin, and thus must be invoked separately for
-    each channel in which you want to use it.  If a new image is selected
-    for the channel the histogram plot will be recalculated based on the
-    current parameters with the new data.
+    Plugin Type: Local
+    ------------------
+    Histogram is a local plugin, which means it is associated with a channel.
+    An instance can be opened for each channel.
+
+    If a new image is selected for the channel the histogram plot will be
+    recalculated based on the current parameters with the new data.
 
     Usage
     -----
@@ -65,9 +68,9 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         # get Histogram preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Histogram')
-        self.settings.addDefaults(draw_then_move=True, num_bins=2048,
-                                  hist_color='aquamarine')
+        self.settings = prefs.create_category('plugin_Histogram')
+        self.settings.add_defaults(draw_then_move=True, num_bins=2048,
+                                   hist_color='aquamarine')
         self.settings.load(onError='silent')
 
         # Set up histogram control parameters
@@ -93,7 +96,7 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         fitssettings = fitsimage.get_settings()
         for name in ['cuts']:
-            fitssettings.getSetting(name).add_callback(
+            fitssettings.get_setting(name).add_callback(
                 'set', self.cutset_ext_cb, fitsimage)
         self.gui_up = False
 
@@ -232,13 +235,13 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status("Draw a rectangle with the right mouse button")
 
     def stop(self):

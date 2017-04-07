@@ -15,8 +15,10 @@ class Crosshair(GingaPlugin.LocalPlugin):
     position of the cross in pixels coordinates, WCS coordinates or
     data value at the cross position.
 
-    NOTE: Crosshair is a local plugin, and thus must be invoked
-          separately for each channel in which you want to use it.
+    Plugin Type: Local
+    ------------------
+    Crosshair is a local plugin, which means it is associated with a channel.
+    An instance can be opened for each channel.
 
     Usage
     -----
@@ -124,10 +126,10 @@ class Crosshair(GingaPlugin.LocalPlugin):
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status("Click and drag to position crosshair")
 
     def stop(self):
@@ -137,7 +139,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
             p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
         self.fv.show_status("")
 
     def redo(self):

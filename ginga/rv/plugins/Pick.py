@@ -39,6 +39,11 @@ class Pick(GingaPlugin.LocalPlugin):
     well as its size based on the plate scale of the detector.  Rough
     measurement of background, sky level and brightness is done.
 
+    Plugin Type: Local
+    ------------------
+    Pick is a local plugin, which means it is associated with a channel.
+    An instance can be opened for each channel.
+
     Usage
     =====
 
@@ -329,7 +334,7 @@ class Pick(GingaPlugin.LocalPlugin):
         di.enable_autocuts('off')
         di.zoom_to(3)
         settings = di.get_settings()
-        settings.getSetting('zoomlevel').add_callback('set',
+        settings.get_setting('zoomlevel').add_callback('set',
                                self.zoomset, di)
 
         cmname = self.settings.get('pick_cmap_name', None)

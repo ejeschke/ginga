@@ -23,6 +23,13 @@ class Cuts(GingaPlugin.LocalPlugin):
     ====
     A plugin for generating a plot of the values along a line or path.
 
+    Plugin Type: Local
+    ------------------
+    Cuts is a local plugin, which means it is associated with a
+    channel.  An instance can be opened for each channel.
+
+    Usage
+    -----
     There are four kinds of cuts available: line, path, freepath and
     beziercurve:
 
@@ -467,13 +474,13 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status("Draw a line with the right mouse button")
         self.replot_all()
         if self.use_slit:

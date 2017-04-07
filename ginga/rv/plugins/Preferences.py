@@ -16,7 +16,24 @@ from ginga.util import wcs, wcsmod, rgb_cms
 from ginga.misc import Bunch
 
 class Preferences(GingaPlugin.LocalPlugin):
+    """
+    Preferences
+    ===========
+    A plugin to manage the settings for a channel.
 
+    Plugin Type: Local
+    ------------------
+    Preferences is a local plugin, which means it is associated with a
+    channel.  An instance can be opened for each channel.
+
+    Usage
+    -----
+    Make changes to settings graphically in the UI.
+
+    If "Save Settings" is pressed it will save the settings to the user's
+    home Ginga folder so that when a channel with the same name is created
+    in future Ginga sessions it will obtain the same settings.
+    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Preferences, self).__init__(fv, fitsimage)
@@ -608,6 +625,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btn = Widgets.Button("Save Settings")
         btn.add_callback('activated', lambda w: self.save_preferences())
         btns.add_widget(btn)

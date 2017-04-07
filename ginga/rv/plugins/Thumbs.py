@@ -15,11 +15,17 @@ from ginga.gw import Widgets, Viewers
 
 class Thumbs(GingaPlugin.GlobalPlugin):
     """
+    Thumbs
+    ======
     The Thumbs plugin provides a thumbnail index of all images viewed since
     the program was started.  By default, Thumbs appear in cronological viewing
     history, with the newest images at the bottom and the oldest at the top.
     The sorting can be made alphanumeric by a setting in the "plugin_Thumbs.cfg"
     configuration file.
+
+    Plugin Type: Global
+    -------------------
+    Thumbs is a global plugin.  Only one instance can be opened.
 
     Usage
     -----
@@ -49,20 +55,20 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         tt_keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Thumbs')
-        self.settings.addDefaults(cache_thumbs=False,
-                                  cache_location='local',
-                                  auto_scroll=True,
-                                  rebuild_wait=4.0,
-                                  tt_keywords=tt_keywords,
-                                  mouseover_name_key='NAME',
-                                  thumb_length=192,
-                                  sort_order=None,
-                                  label_length=25,
-                                  label_cutoff='right',
-                                  highlight_tracks_keyboard_focus=True,
-                                  label_font_color='black',
-                                  label_bg_color='lightgreen')
+        self.settings = prefs.create_category('plugin_Thumbs')
+        self.settings.add_defaults(cache_thumbs=False,
+                                   cache_location='local',
+                                   auto_scroll=True,
+                                   rebuild_wait=4.0,
+                                   tt_keywords=tt_keywords,
+                                   mouseover_name_key='NAME',
+                                   thumb_length=192,
+                                   sort_order=None,
+                                   label_length=25,
+                                   label_cutoff='right',
+                                   highlight_tracks_keyboard_focus=True,
+                                   label_font_color='black',
+                                   label_bg_color='lightgreen')
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumbWidth = self.settings.get('thumb_length', 150)
@@ -292,7 +298,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         fitsimage = chinfo.fitsimage
         fitssettings = fitsimage.get_settings()
         for name in ['cuts']:
-            fitssettings.getSetting(name).add_callback(
+            fitssettings.get_setting(name).add_callback(
                 'set', self.cutset_cb, fitsimage)
         fitsimage.add_callback('transform', self.transform_cb)
 

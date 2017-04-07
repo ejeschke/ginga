@@ -195,7 +195,7 @@ The "Settings" tab controls aspects of the search within the pick area:
 * The "Edge" parameter is used to eliminate candidates based on how
   close to the edge of the cutout they are.  **NOTE: currently this
   works reliably only for non-rotated rectangular shapes.**
-* The "Max side" parametergit p is used to limit the size of the bounding box
+* The "Max side" parameter is used to limit the size of the bounding box
   that can be used in the pick shape.  Larger sizes take longer to
   evaluate.
 * The "Coordinate Base" parameter is an offset to apply to located

@@ -14,10 +14,16 @@ from ginga import GingaPlugin
 
 class Pan(GingaPlugin.GlobalPlugin):
     """
+    Pan
+    ===
     The Pan plugin provides a small panning image that gives an overall
     "birds-eye" view of the channel image that last had the focus.  If the
     channel image is zoomed in 2X or greater then the pan region is shown
     graphically in the Pan image by a rectangle.
+
+    Plugin Type: Global
+    -------------------
+    Pan is a global plugin.  Only one instance can be opened.
 
     Usage
     -----
@@ -51,12 +57,12 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.dc = fv.get_draw_classes()
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Pan')
-        self.settings.addDefaults(use_shared_canvas=False,
-                                  pan_position_color='yellow',
-                                  pan_rectangle_color='red',
-                                  compass_color='skyblue',
-                                  rotate_pan_image=True)
+        self.settings = prefs.create_category('plugin_Pan')
+        self.settings.add_defaults(use_shared_canvas=False,
+                                   pan_position_color='yellow',
+                                   pan_rectangle_color='red',
+                                   compass_color='skyblue',
+                                   rotate_pan_image=True)
         self.settings.load(onError='silent')
         # share canvas with channel viewer?
         self.use_shared_canvas = self.settings.get('use_shared_canvas', False)
@@ -84,13 +90,13 @@ class Pan(GingaPlugin.GlobalPlugin):
         pi.set_callback('configure', self.reconfigure)
         # for debugging
         pi.set_name('panimage')
-        #pi.ui_setActive(True)
+        #pi.ui_set_active(True)
 
         my_canvas = pi.get_canvas()
         my_canvas.enable_draw(True)
         my_canvas.set_drawtype('rectangle', linestyle='dash', color='green')
         my_canvas.set_callback('draw-event', self.draw_cb)
-        my_canvas.ui_setActive(True)
+        my_canvas.ui_set_active(True)
 
         if self.use_shared_canvas:
             canvas = fitsimage.get_canvas()
@@ -131,19 +137,19 @@ class Pan(GingaPlugin.GlobalPlugin):
             xfrmsettings.append('rot_deg')
         fitssettings.shareSettings(pansettings, xfrmsettings)
         for key in xfrmsettings:
-            pansettings.getSetting(key).add_callback('set', self.settings_cb,
+            pansettings.get_setting(key).add_callback('set', self.settings_cb,
                                                      fitsimage, channel, paninfo, 0)
 
 
         fitssettings.shareSettings(pansettings, ['cuts'])
-        pansettings.getSetting('cuts').add_callback('set', self.settings_cb,
+        pansettings.get_setting('cuts').add_callback('set', self.settings_cb,
                                                     fitsimage, channel, paninfo, 1)
 
         zoomsettings = ['zoom_algorithm', 'zoom_rate',
                         'scale_x_base', 'scale_y_base']
         fitssettings.shareSettings(pansettings, zoomsettings)
         for key in zoomsettings:
-            pansettings.getSetting(key).add_callback('set', self.zoom_ext_cb,
+            pansettings.get_setting(key).add_callback('set', self.zoom_ext_cb,
                                                      fitsimage, channel, paninfo)
 
         fitsimage.add_callback('redraw', self.redraw_cb, channel, paninfo)

@@ -12,7 +12,16 @@ from ginga import GingaPlugin
 
 
 class Toolbar(GingaPlugin.GlobalPlugin):
+    """
+    Toolbar
+    =======
+    Toolbar provides a set of convenience UI controls for common operations
+    on viewers.
 
+    Plugin Type: Global
+    -------------------
+    Toolbar is a global plugin.  Only one instance can be opened.
+    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Toolbar, self).__init__(fv)
@@ -25,7 +34,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
         # get local plugin preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Toolbar')
+        self.settings = prefs.create_category('plugin_Toolbar')
         self.settings.load(onError='silent')
 
         self.modetype = self.settings.get('mode_type', 'oneshot')

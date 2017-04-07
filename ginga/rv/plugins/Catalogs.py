@@ -18,7 +18,20 @@ from ginga.gw import ColorBar, Widgets
 
 
 class Catalogs(GingaPlugin.LocalPlugin):
+    """
+    Catalogs
+    ========
+    A plugin for plotting object locations from a catalog on an image.
 
+    Plugin Type: Local
+    ------------------
+    Catalogs is a local plugin, which means it is associated with a
+    channel.  An instance can be opened for each channel.
+
+    Usage
+    -----
+    TBD
+    """
     def __init__(self, fv, fitsimage):
         super(Catalogs, self).__init__(fv, fitsimage)
 
@@ -41,7 +54,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.areatag = None
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Catalogs')
+        self.settings = prefs.create_category('plugin_Catalogs')
         self.settings.load(onError='silent')
 
         self.image_server_options = []
@@ -68,16 +81,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
     def build_gui(self, container, future=None):
         vbox1 = Widgets.VBox()
-
-        msg_font = self.fv.get_font("sansFont", 14)
-        tw = Widgets.TextArea()
-        tw.set_font(msg_font)
-        tw.set_wrap(True)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox1.add_widget(fr, stretch=0)
 
         nb = Widgets.TabWidget(tabpos='bottom')
         self.w.nb = nb
@@ -228,6 +231,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
             btn.add_callback('activated', lambda w: self.cancel())
             btns.add_widget(btn, stretch=0)
 
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+
         vbox1.add_widget(btns, stretch=0)
 
         container.add_widget(vbox1, stretch=1)
@@ -247,7 +255,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
         return True
 
     def start(self, future=None):
-        self.instructions()
         # start catalog operation
         p_canvas = self.fitsimage.get_canvas()
         try:
@@ -264,20 +271,20 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         #self.fv.show_status("Draw a rectangle with the right mouse button")
 
     def stop(self):
         # stop catalog operation
         self.clearAll()
         # remove the canvas from the image
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
@@ -778,9 +785,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
         for key in list(bnch.keys()):
             params[key] = str(bnch[key].get_text())
         return params
-
-    def instructions(self):
-        self.set_message("""TBD.""")
 
     def set_drawtype_cb(self, tf, drawtype):
         if tf:

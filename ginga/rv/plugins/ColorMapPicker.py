@@ -17,12 +17,18 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
     The ColorMapPicker plugin is used to graphically browse and select a
     color map for a channel image viewer.
 
+    Plugin Type: Global
+    -------------------
+    ColorMapPicker is a global plugin.  Only one instance can be opened.
+
     Usage
     -----
     Operation of the plugin is very simple: the color maps are displayed in
     the form of color bars and labels in the main view pane of the plugin.
     Click on any one of the bars to set the color map of the currently
     active channel in the viewer.
+
+    Change the channel to set the color map on a different channel.
 
     You can scroll vertically or use the scroll bars to move through the
     color bar samples.
@@ -31,6 +37,8 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
               a bitmap RGB image of color bars and labels corresponding to
               all the available color maps.  This can take a few seconds
               depending on the number of color maps installed.
+
+              Color maps are shown with the "ramp" intensity map applied.
     """
 
     def __init__(self, fv):

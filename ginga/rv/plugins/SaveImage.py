@@ -44,14 +44,14 @@ class SaveImage(GlobalPlugin):
         # User preferences. Some are just default values and can also be
         # changed by GUI.
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_SaveImage')
-        self.settings.addDefaults(output_directory = '.',
-                                  output_suffix = 'ginga',
-                                  include_chname = True,
-                                  clobber = False,
-                                  modified_only = True,
-                                  max_mosaic_size = 1e8,
-                                  max_rows_for_col_resize = 5000)
+        self.settings = prefs.create_category('plugin_SaveImage')
+        self.settings.add_defaults(output_directory = '.',
+                                   output_suffix = 'ginga',
+                                   include_chname = True,
+                                   clobber = False,
+                                   modified_only = True,
+                                   max_mosaic_size = 1e8,
+                                   max_rows_for_col_resize = 5000)
         self.settings.load(onError='silent')
 
         self.outdir = os.path.abspath(

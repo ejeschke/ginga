@@ -20,6 +20,11 @@ class Ruler(GingaPlugin.LocalPlugin):
     [ Should you want "sticky rulers", use the Drawing plugin (and choose
     "Ruler" as the drawing type). ]
 
+    Plugin Type: Local
+    ------------------
+    Ruler is a local plugin, which means it is associated with a channel.
+    An instance can be opened for each channel.
+
     Usage
     -----
     Click and drag to establish a ruler between two points.
@@ -162,10 +167,10 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status("Draw a ruler with the right mouse button")
 
     def stop(self):
@@ -175,7 +180,7 @@ class Ruler(GingaPlugin.LocalPlugin):
             p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
         self.fv.show_status("")
 
     def redo(self):

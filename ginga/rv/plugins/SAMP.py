@@ -1,16 +1,10 @@
 #
-# SAMP.py -- SAMP plugin for Ginga fits viewer
+# SAMP.py -- SAMP plugin for Ginga reference viewer
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-# NOTE: to run this plugin you need to install astropy that has the
-# vo.samp module
 #
-"""
-The SAMP plugin implements a SAMP interface for the Ginga FITS
-viewer.
-"""
 import os
 
 try:
@@ -29,13 +23,30 @@ class SAMPError(Exception):
     pass
 
 class SAMP(GingaPlugin.GlobalPlugin):
+    """
+    SAMP
+    ====
+    The SAMP plugin implements a SAMP interface for the Ginga reference
+    viewer.
 
+    .. note:: to run this plugin you need to install astropy that has the
+              vo.samp module
+
+    Plugin Type: Global
+    -------------------
+    SAMP is a global plugin.  Only one instance can be opened.
+
+    Usage
+    -----
+    Start the plugin.
+    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(SAMP, self).__init__(fv)
 
         self.count = 0
         self.ev_quit = fv.ev_quit
+        self.gui_up = False
 
         # objects that are recreated when the plugin is started
         # via start()
@@ -46,11 +57,11 @@ class SAMP(GingaPlugin.GlobalPlugin):
 
         # get plugin settings
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_SAMP')
-        self.settings.addDefaults(SAMP_channel='Image',
-                                  cache_location=self.fv.tmpdir,
-                                  default_connect=True,
-                                  start_hub=True)
+        self.settings = prefs.create_category('plugin_SAMP')
+        self.settings.add_defaults(SAMP_channel='Image',
+                                   cache_location=self.fv.tmpdir,
+                                   default_connect=True,
+                                   start_hub=True)
         self.settings.load(onError='silent')
 
 
@@ -61,15 +72,6 @@ class SAMP(GingaPlugin.GlobalPlugin):
         vbox = Widgets.VBox()
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msg_font)
-        self.tw = tw
-
-        fr = Widgets.Frame("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("SAMP")
 
@@ -99,17 +101,16 @@ class SAMP(GingaPlugin.GlobalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(btns, stretch=0)
 
         container.add_widget(vbox, stretch=1)
-
-    def instructions(self):
-        self.tw.set_text("""SAMP hub/client control.""")
+        self.gui_up = True
 
     def start(self):
-        self.instructions()
-
         self.robj = GingaWrapper(self.fv, self.logger)
 
         # Create a HUB
@@ -153,7 +154,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
         # Try to stop the hub, if any
         if self.hub is not None:
             self.hub.stop()
-        self.w.start_hub.set_state(False)
+        self.gui_up = False
 
     def start_hub_cb(self, w, tf):
         try:
@@ -299,7 +300,6 @@ class SAMP(GingaPlugin.GlobalPlugin):
 
     def close(self):
         self.fv.stop_global_plugin(str(self))
-        self.tw = None
         return True
 
     def __str__(self):

@@ -24,7 +24,27 @@ if spawn.find_executable("mencoder"):
 
 
 class MultiDim(GingaPlugin.LocalPlugin):
+    """
+    MultiDim
+    ========
+    A plugin to navigate HDUs in a FITS file or planes in a 3D cube or
+    higher dimension dataset.
 
+    Plugin Type: Local
+    ------------------
+    MultiDim is a local plugin, which means it is associated with a
+    channel.  An instance can be opened for each channel.
+
+    Browsing HDUs
+    -------------
+    Use the HDU drop down list in the upper part of the UI to browse and
+    select an HDU to open in the channel.
+
+    Navigating Cubes
+    ----------------
+    Use the controls in the lower part of the UI to select the axis and
+    to step through the planes in that axis.
+    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(MultiDim, self).__init__(fv, fitsimage)
@@ -50,8 +70,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         # Load plugin preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_MultiDim')
-        self.settings.setDefaults(auto_start_naxis=False)
+        self.settings = prefs.create_category('plugin_MultiDim')
+        self.settings.set_defaults(auto_start_naxis=False)
         self.settings.load(onError='silent')
 
         self.gui_up = False
@@ -65,15 +85,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.orientation = orientation
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("HDU")
 
@@ -175,6 +186,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         top.add_widget(btns, stretch=0)
@@ -311,11 +325,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def instructions(self):
-        self.tw.set_text("""Use mouse wheel to choose HDU or axis of data cube (NAXIS controls).""")  # noqa
-
     def start(self):
-        self.instructions()
         self.resume()
 
     def pause(self):

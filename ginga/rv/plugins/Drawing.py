@@ -19,7 +19,20 @@ fillkinds = ('circle', 'rectangle', 'polygon', 'triangle', 'righttriangle',
 
 
 class Drawing(GingaPlugin.LocalPlugin):
-    """Local plugin to draw shapes on canvas."""
+    """
+    Drawing
+    =======
+    A plugin for drawing canvas forms (overlaid graphics).
+
+    Plugin Type: Local
+    ------------------
+    Drawing is a local plugin, which means it is associated with a
+    channel.  An instance can be opened for each channel.
+
+    Usage
+    -----
+    TBD
+    """
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
@@ -64,15 +77,6 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.orientation = orientation
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("Drawing")
 
@@ -164,6 +168,9 @@ class Drawing(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
 
@@ -174,14 +181,7 @@ class Drawing(GingaPlugin.LocalPlugin):
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
 
-    def instructions(self):
-        self.tw.set_text(
-            """Draw a figure with the cursor.
-
-For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
-
     def start(self):
-        self.instructions()
         self.set_drawparams_cb()
 
         # insert layer if it is not already
@@ -196,10 +196,10 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status("Draw a figure with the right mouse button")
 
     def stop(self):
@@ -211,7 +211,7 @@ For polygons/paths press 'v' to create a vertex, 'z' to remove last vertex.""")
             pass
         # don't leave us stuck in edit mode
         self.canvas.set_draw_mode('draw')
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
         self.fv.show_status("")
 
     def redo(self):

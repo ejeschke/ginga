@@ -1,31 +1,3 @@
-"""
-The IRAF plugin implements a remote control interface for the Ginga FITS
-viewer from an IRAF session.  In particular it supports the use of the
-IRAF 'display' and 'imexamine' commands.
-
-Instructions for use:
-
-Set the environment variable IMTDEV appropriately, e.g.
-
-    $ export IMTDEV=inet:45005         (or)
-    $ export IMTDEV=unix:/tmp/.imtg45
-
-Ginga will try to use the default value if none is assigned.
-
-Start IRAF plugin (Plugins->Start IRAF).
-
-From Ginga you can load images and then use 'imexamine' from IRAF to load
-them, do photometry, etc.  You can also use the 'display' command from IRAF
-to show images in Ginga.  The 'IRAF' tab will show the mapping from Ginga
-channels to IRAF numerical 'frames'.
-
-When using imexamine, the plugin disables normal UI processing on the
-channel image so that keystrokes, etc. are passed through to IRAF.  You can
-toggle back and forth between local Ginga control and IRAF control using
-the radio buttons at the top of the tab or using the space bar.
-
-IRAF commands that have been tested: display, imexam, rimcur and tvmark.
-"""
 import sys, os
 import logging
 import threading
@@ -49,7 +21,41 @@ import IIS_DataListener as iis
 
 
 class IRAF(GingaPlugin.GlobalPlugin):
+    """
+    IRAF
+    ====
+    The IRAF plugin implements a remote control interface for the Ginga FITS
+    viewer from an IRAF session.  In particular it supports the use of the
+    IRAF 'display' and 'imexamine' commands.
 
+    Plugin Type: Global
+    -------------------
+    IRAF is a global plugin.  Only one instance can be opened.
+
+    Usage
+    -----
+
+    Set the environment variable IMTDEV appropriately, e.g.::
+
+        $ export IMTDEV=inet:45005         (or)
+        $ export IMTDEV=unix:/tmp/.imtg45
+
+    Ginga will try to use the default value if none is assigned.
+
+    Start IRAF plugin (Plugins->Start IRAF).
+
+    From Ginga you can load images and then use 'imexamine' from IRAF to load
+    them, do photometry, etc.  You can also use the 'display' command from IRAF
+    to show images in Ginga.  The 'IRAF' tab will show the mapping from Ginga
+    channels to IRAF numerical 'frames'.
+
+    When using imexamine, the plugin disables normal UI processing on the
+    channel image so that keystrokes, etc. are passed through to IRAF.  You can
+    toggle back and forth between local Ginga control and IRAF control using
+    the radio buttons at the top of the tab or using the space bar.
+
+    IRAF commands that have been tested: display, imexam, rimcur and tvmark.
+    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(IRAF, self).__init__(fv)
@@ -131,11 +137,11 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.w.mode_d = {}
         btn1 = Widgets.RadioButton("Ginga")
         btn1.set_state(True)
-        btn1.add_callback('activated', lambda w, val: self.switchMode('ginga'))
+        btn1.add_callback('activated', lambda w, val: self.switch_mode('ginga'))
         self.w.mode_d['ginga'] = btn1
         self.w.control.add_widget(btn1)
         btn2 = Widgets.RadioButton("IRAF", group=btn1)
-        btn2.add_callback('activated', lambda w, val: self.switchMode('iraf'))
+        btn2.add_callback('activated', lambda w, val: self.switch_mode('iraf'))
         self.w.mode_d['iraf'] = btn2
         self.w.control.add_widget(btn2)
 
@@ -160,6 +166,9 @@ class IRAF(GingaPlugin.GlobalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(btns)
 
@@ -184,7 +193,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.w.mode_d[mode_str].set_state(True)
         self.w.channel.set_text(chname)
 
-        self.switchMode(mode_str)
+        self.switch_mode(mode_str)
 
     def set_mode(self, mode_str, chname):
         self.imexam_chname = chname
@@ -227,7 +236,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fmap = self.get_channel_frame_mapping()
         self.fv.gui_do(self.update_chinfo, fmap)
 
-    def switchMode(self, mode_str):
+    def switch_mode(self, mode_str):
         mode_str = mode_str.lower()
         chname = self.imexam_chname
         chinfo = self.fv.get_channel(chname)
@@ -472,8 +481,8 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         # various settings that should apply
         settings = fitsimage.get_settings()
-        settings.setDict(dict(autocuts='off', flip_x=False, flip_y=False,
-                              swap_xy=False, rot_deg=0.0), callback=True)
+        settings.set_dict(dict(autocuts='off', flip_x=False, flip_y=False,
+                               swap_xy=False, rot_deg=0.0), callback=True)
 
         # Set cut levels
         fitsimage.cut_levels(0.0, 255.0, no_reset=True)
@@ -585,7 +594,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
                 keyname = chr(4)
 
         # Get cursor position
-        fitsimage = canvas.getSurface()
+        fitsimage = canvas.get_surface()
         last_x, last_y = fitsimage.get_last_data_xy()
 
         # Correct for surrounding framebuffer

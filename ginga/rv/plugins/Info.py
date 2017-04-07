@@ -13,12 +13,18 @@ from ginga import GingaPlugin
 
 class Info(GingaPlugin.GlobalPlugin):
     """
+    Info
+    ====
     The Info plugin provides a pane of commonly useful metadata about the
     associated channel image.  Common information includes some
     FITS header values, the equinox, dimensions of the image, minimum and
     maximum values and the zoom level.  As the cursor is moved around the
     image, the X, Y, Value, RA and DEC values are updated to reflect the
     value under the cursor.
+
+    Plugin Type: Global
+    -------------------
+    Info is a global plugin.  Only one instance can be opened.
 
     Usage
     -----
@@ -153,16 +159,16 @@ class Info(GingaPlugin.GlobalPlugin):
         fitsimage = channel.fitsimage
         fitssettings = fitsimage.get_settings()
         for name in ['cuts']:
-            fitssettings.getSetting(name).add_callback('set',
+            fitssettings.get_setting(name).add_callback('set',
                                self.cutset_cb, fitsimage, info)
         for name in ['scale']:
-            fitssettings.getSetting(name).add_callback('set',
+            fitssettings.get_setting(name).add_callback('set',
                                self.zoomset_cb, fitsimage, info)
-        fitssettings.getSetting('autocuts').add_callback('set',
+        fitssettings.get_setting('autocuts').add_callback('set',
                                self.autocuts_cb, fitsimage, info)
-        fitssettings.getSetting('autozoom').add_callback('set',
+        fitssettings.get_setting('autozoom').add_callback('set',
                                self.autozoom_cb, fitsimage, info)
-        fitssettings.getSetting('autocenter').add_callback('set',
+        fitssettings.get_setting('autocenter').add_callback('set',
                                self.autocenter_cb, fitsimage, info)
 
     def delete_channel(self, viewer, channel):

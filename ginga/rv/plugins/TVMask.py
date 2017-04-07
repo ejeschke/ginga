@@ -41,7 +41,7 @@ class TVMask(LocalPlugin):
         # User preferences. Some are just default values and can also be
         # changed by GUI.
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_TVMask')
+        self.settings = prefs.create_category('plugin_TVMask')
         self.settings.load(onError='silent')
         self.maskcolor = self.settings.get('maskcolor', 'green')
         self.maskalpha = self.settings.get('maskalpha', 0.5)
@@ -411,13 +411,13 @@ Press "Hide" to clear all masks (does not clear memory). Press "Show" to replot 
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status('See instructions')
 
     def stop(self):

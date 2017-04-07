@@ -53,10 +53,10 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         self.treeview = None
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_ChangeHistory')
-        self.settings.addDefaults(always_expand=True,
-                                  color_alternate_rows=True,
-                                  ts_colwidth=250)
+        self.settings = prefs.create_category('plugin_ChangeHistory')
+        self.settings.add_defaults(always_expand=True,
+                                   color_alternate_rows=True,
+                                   ts_colwidth=250)
         self.settings.load(onError='silent')
 
         fv.add_callback('remove-image', self.remove_image_cb)

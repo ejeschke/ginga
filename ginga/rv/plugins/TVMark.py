@@ -44,7 +44,7 @@ class TVMark(LocalPlugin):
         # User preferences. Some are just default values and can also be
         # changed by GUI.
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_TVMark')
+        self.settings = prefs.create_category('plugin_TVMark')
         self.settings.load(onError='silent')
         self.marktype = self.settings.get('marktype', 'circle')
         self.markcolor = self.settings.get('markcolor', 'green')
@@ -653,13 +653,13 @@ Press "Hide" to clear all markings (does not clear memory). Press "Show" to repl
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status('See instructions')
 
     def stop(self):

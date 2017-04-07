@@ -33,18 +33,18 @@ class PlotTable(LocalPlugin):
 
         # Plugin preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_PlotTable')
-        self.settings.addDefaults(linewidth=1,
-                                  linestyle='-',
-                                  linecolor='blue',
-                                  markersize=6,
-                                  markerwidth=0.5,
-                                  markerstyle='o',
-                                  markercolor='red',
-                                  show_marker=True,
-                                  x_index=1,
-                                  y_index=2,
-                                  file_suffix='.png')
+        self.settings = prefs.create_category('plugin_PlotTable')
+        self.settings.add_defaults(linewidth=1,
+                                   linestyle='-',
+                                   linecolor='blue',
+                                   markersize=6,
+                                   markerwidth=0.5,
+                                   markerstyle='o',
+                                   markercolor='red',
+                                   show_marker=True,
+                                   x_index=1,
+                                   y_index=2,
+                                   file_suffix='.png')
         self.settings.load(onError='silent')
 
         self.gui_up = False

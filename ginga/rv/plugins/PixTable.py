@@ -17,6 +17,11 @@ class PixTable(GingaPlugin.LocalPlugin):
     PixTable provides a way to check or monitor the pixel values in
     a region.
 
+    Plugin Type: Local
+    ------------------
+    PixTable is a local plugin, which means it is associated with a channel.
+    An instance can be opened for each channel.
+
     Basic Use
     ---------
     In the most basic use, simply move the cursor around the channel
@@ -67,9 +72,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.pan2mark = False
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_PixTable')
-        self.settings.addDefaults(fontsize=12,
-                                  font='fixed')
+        self.settings = prefs.create_category('plugin_PixTable')
+        self.settings.add_defaults(fontsize=12,
+                                   font='fixed')
         self.settings.load(onError='silent')
 
         self.dc = self.fv.get_draw_classes()
@@ -337,7 +342,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
     def stop(self):
         # remove the canvas from the image
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
@@ -346,13 +351,13 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.pixview = None
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.redo()
 
     def redo(self):

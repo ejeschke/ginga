@@ -42,6 +42,10 @@ class GlobalPlugin(object):
         """
         pass
 
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
+
 
 class LocalPlugin(object):
 
@@ -103,6 +107,10 @@ class LocalPlugin(object):
         it is doing.
         """
         pass
+
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
 
 
 #END

@@ -12,7 +12,22 @@ import numpy as np
 
 
 class LineProfile(GingaPlugin.LocalPlugin):
+    """
+    LineProfile
+    ===========
+    A plugin to graph the flux along a straight line bisecting a cube.
 
+    Plugin Type: Local
+    ------------------
+    LineProfile is a local plugin, which means it is associated with a
+    channel.  An instance can be opened for each channel.
+
+    Usage
+    -----
+    1. Select an axis and pick a point using the cursor.
+    2. Left-click to mark position.
+    3. Use MultiDim to change step values of axes.
+    """
     def __init__(self, fv, fitsimage):
         super(LineProfile, self).__init__(fv, fitsimage)
 
@@ -55,18 +70,6 @@ class LineProfile(GingaPlugin.LocalPlugin):
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_margins(4, 4, 4, 4)
         vbox.set_spacing(2)
-
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(tw)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-        fr.set_widget(vbox2)
-        vbox.add_widget(fr, stretch=0)
 
         self.plot = plots.Plot(logger=self.logger,
                                width=400, height=300)
@@ -142,6 +145,9 @@ class LineProfile(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
 
@@ -193,18 +199,12 @@ class LineProfile(GingaPlugin.LocalPlugin):
             children[pos-1].set_state(tf)
             self.redraw_mark()
 
-    def instructions(self):
-        self.tw.set_text("""Select an axis and pick a point using the cursor. Left-click to mark position.
-Use MultiDim to change step values of axes.""")
-
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         self.gui_up = False
         return True
 
     def start(self):
-        self.instructions()
-
         # insert layer if it is not already
         try:
             obj = self.fitsimage.get_object_by_tag(self.layertag)
@@ -216,16 +216,16 @@ Use MultiDim to change step values of axes.""")
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.redo()
 
     def stop(self):
         # Don't hang on to current image
         self.image = None
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
         try:
             self.fitsimage.delete_object_by_tag(self.layertag)
         except:
