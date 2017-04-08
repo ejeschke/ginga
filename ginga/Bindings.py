@@ -10,7 +10,7 @@ import itertools
 import numpy as np
 
 from ginga.misc import Bunch, Settings, Callback
-from ginga import AutoCuts, trcalc
+from ginga import trcalc
 from ginga import cmap, imap
 from ginga.util.paths import icondir
 
@@ -51,7 +51,6 @@ class ImageViewBindings(object):
                                              logger=self.logger)
             self.initialize_settings(settings)
         self.settings = settings
-        self.autocuts = AutoCuts.ZScale(self.logger)
 
         self.features = dict(
             # name, attr pairs
@@ -1725,7 +1724,7 @@ class ImageViewBindings(object):
             self._start_x, self._start_y = x, y
             image = viewer.get_image()
             #self._loval, self._hival = viewer.get_cut_levels()
-            self._loval, self._hival = self.autocuts.calc_cut_levels(image)
+            self._loval, self._hival = viewer.autocuts.calc_cut_levels(image)
 
         else:
             viewer.onscreen_message(None)

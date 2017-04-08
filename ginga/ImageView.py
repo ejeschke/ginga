@@ -2492,8 +2492,7 @@ class ImageViewBase(Callback.Callbacks):
             ac_class = AutoCuts.get_autocuts(method)
             self.autocuts = ac_class(self.logger, **params)
         else:
-            # TODO: find a cleaner way to update these
-            self.autocuts.__dict__.update(params)
+            self.autocuts.update_params(**params)
 
         # Redo the auto levels
         #if self.t_['autocuts'] != 'off':
@@ -2628,6 +2627,10 @@ class ImageViewBase(Callback.Callbacks):
 
             if 'rotation' in attrlist:
                 dst_fi.rotate(self.t_['rot_deg'])
+
+            if 'autocuts' in attrlist:
+                dst_fi.t_.set(autocut_method=self.t_['autocut_method'],
+                              autocut_params=self.t_['autocut_params'])
 
             if 'cutlevels' in attrlist:
                 loval, hival = self.t_['cuts']

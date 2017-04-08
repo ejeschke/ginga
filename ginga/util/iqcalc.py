@@ -141,15 +141,22 @@ class IQCalc(object):
     # FINDING BRIGHT PEAKS
 
     def get_threshold(self, data, sigma=5.0):
-        # data may be masked or contain NaNs
-        fdata = numpy.ma.compressed(data[numpy.isfinite(data)])
+        # remove masked elements
+        fdata = data[numpy.logical_not(numpy.ma.getmaskarray(data))]
+        # remove Inf or NaN
+        fdata = fdata[numpy.isfinite(fdata)]
+
+        # find the median
         median = numpy.median(fdata)
+
         # NOTE: for this method a good default sigma is 5.0
         dist = numpy.fabs(fdata - median).mean()
         threshold = median + sigma * dist
+
         # NOTE: for this method a good default sigma is 2.0
         ## std = numpy.std(fdata - median)
         ## threshold = median + sigma * std
+
         self.logger.debug("calc threshold=%f" % (threshold))
         return threshold
 

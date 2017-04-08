@@ -237,7 +237,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         self.iqcalc = iqcalc.IQCalc(self.logger)
         self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
-        self.copy_attrs = ['transforms', 'cutlevels']
+        self.copy_attrs = ['transforms', 'cutlevels', 'autocuts']
         if (self.settings.get('pick_cmap_name', None) is None and
             self.settings.get('pick_imap_name', None) is None):
             self.copy_attrs.append('rgbmap')
