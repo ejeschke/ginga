@@ -2616,8 +2616,8 @@ class ImageViewBase(Callback.Callbacks):
 
         attrlist : list
             A list of attribute names to copy. They can be ``'transforms'``,
-            ``'rotation'``, ``'cutlevels'``, ``'rgbmap'``, ``'zoom'``, or
-            ``'pan'``.
+            ``'rotation'``, ``'cutlevels'``, ``'rgbmap'``, ``'zoom'``,
+            ``'pan'``, ``'autocuts'``.
 
         """
         with dst_fi.suppress_redraw:
@@ -2638,7 +2638,8 @@ class ImageViewBase(Callback.Callbacks):
 
             if 'rgbmap' in attrlist:
                 #dst_fi.set_rgbmap(self.rgbmap)
-                dst_fi.rgbmap = self.rgbmap
+                #dst_fi.rgbmap = self.rgbmap
+                self.rgbmap.copy_attributes(dst_fi.rgbmap)
 
             if 'zoom' in attrlist:
                 dst_fi.zoom_to(self.t_['zoomlevel'])

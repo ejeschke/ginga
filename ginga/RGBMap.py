@@ -399,9 +399,13 @@ class RGBMapper(Callback.Callbacks):
         self.scale_and_shift(self.scale_pct, 0.0, callback=callback)
 
     def copy_attributes(self, dst_rgbmap):
-        dst_rgbmap.set_cmap(self.cmap)
-        dst_rgbmap.set_imap(self.imap)
-        dst_rgbmap.set_hash_algorithm(str(self.dist))
+        dst_rgbmap.set_cmap(self.cmap, callback=False)
+        dst_rgbmap.set_imap(self.imap, callback=False)
+        dst_rgbmap.set_hash_algorithm(str(self.dist), callback=False)
+        # TODO: set hash size
+        dst_rgbmap.carr = numpy.copy(self.carr)
+        dst_rgbmap.sarr = numpy.copy(self.sarr)
+        dst_rgbmap.recalc()
 
     def reset_cmap(self):
         self.recalc()
