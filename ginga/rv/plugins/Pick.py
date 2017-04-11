@@ -185,6 +185,8 @@ class Pick(GingaPlugin.LocalPlugin):
     * The "Coordinate Base" parameter is an offset to apply to located
       sources.  Set to "1" if you want sources pixel locations reported
       in a FITS-compliant manner and "0" if you prefer 0-based indexing.
+    * The "Calc center" parameter is used to determine whether the center
+      is calculated from FWHM fitting ("fwhm") or centroiding ("centroid").
     * The "Contour Interpolation" parameter is used to set the interpolation
       method used in rendering the background image in the "Contour" plot.
 
@@ -280,6 +282,8 @@ class Pick(GingaPlugin.LocalPlugin):
         coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
         self.pixel_coords_offset = self.settings.get('pixel_coords_offset',
                                                      coord_offset)
+        self.center_algs = ['fwhm', 'centroid']
+        self.center_alg = self.settings.get('calc_center_alg', 'fwhm')
 
         # For controls
         self.delta_bg = self.settings.get('delta_bg', 0.0)
@@ -496,6 +500,8 @@ class Pick(GingaPlugin.LocalPlugin):
                     ('Coordinate Base:', 'label',
                      'xlbl_coordinate_base', 'label',
                      'Coordinate Base', 'entry'),
+                    ("Calc center:", 'label', 'xlbl_calccenter', 'label',
+                     "Calc center", 'combobox'),
                     ('Contour Interpolation:', 'label', 'xlbl_cinterp', 'label',
                      'Contour Interpolation', 'combobox'),
                     ('Redo Pick', 'button'),
@@ -512,6 +518,7 @@ class Pick(GingaPlugin.LocalPlugin):
         b.show_candidates.set_tooltip("Show all peak candidates")
         b.max_side.set_tooltip("Maximum dimension to search for peaks")
         b.coordinate_base.set_tooltip("Base of pixel coordinate system")
+        b.calc_center.set_tooltip("How to calculate the center of object")
         b.contour_interpolation.set_tooltip("Interpolation for use in contour plot")
 
         def chg_pickshape(w, idx):
@@ -629,6 +636,18 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.xlbl_coordinate_base.set_text(str(self.pixel_coords_offset))
         b.coordinate_base.set_text(str(self.pixel_coords_offset))
         b.coordinate_base.add_callback('activated', self.coordinate_base_cb)
+
+        def chg_calccenter(w, idx):
+            self.center_alg = self.center_algs[idx]
+            self.w.xlbl_calccenter.set_text(self.center_alg)
+            return True
+        combobox = b.calc_center
+        for name in self.center_algs:
+            combobox.append_text(name)
+        index = self.center_algs.index(self.center_alg)
+        combobox.set_index(index)
+        combobox.add_callback('activated', chg_calccenter)
+        b.xlbl_calccenter.set_text(self.center_alg)
 
         vbox3 = Widgets.VBox()
         vbox3.add_widget(w, stretch=0)
@@ -1087,6 +1106,8 @@ class Pick(GingaPlugin.LocalPlugin):
                     qs.y += y1
                     qs.objx += x1
                     qs.objy += y1
+                    qs.oid_x += x1
+                    qs.oid_y += y1
 
                 # pick main result
                 qs = results[0]
@@ -1106,8 +1127,11 @@ class Pick(GingaPlugin.LocalPlugin):
         d = Bunch.Bunch()
         try:
             x, y = qs.objx, qs.objy
-            equinox = float(image.get_keyword('EQUINOX', 2000.0))
+            if (qs.oid_x is not None) and (self.center_alg == 'centroid'):
+                # user wants RA/DEC calculated by centroid instead of fwhm
+                x, y = qs.oid_x, qs.oid_y
 
+            equinox = float(image.get_keyword('EQUINOX', 2000.0))
             try:
                 ra_deg, dec_deg = image.pixtoradec(x, y, coords='data')
                 ra_txt, dec_txt = wcs.deg2fmt(ra_deg, dec_deg, 'str')

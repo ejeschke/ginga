@@ -133,9 +133,10 @@ class IQCalc(object):
         return fwhm
 
     def centroid(self, data, xc, yc, radius):
-        x0, y0, arr = self.cut_region(self, xc, yc, radius, data)
+        xc, yc = int(xc), int(yc)
+        x0, y0, arr = self.cut_region(xc, yc, radius, data)
         cy, cx = ndimage.center_of_mass(arr)
-        return (cx, cy)
+        return (x0 + cx, y0 + cy)
 
 
     # FINDING BRIGHT PEAKS
@@ -272,12 +273,10 @@ class IQCalc(object):
                      sdx, sdy, maxx, maxy) = self.fwhm_data(x, y, data,
                                                             radius=fwhm_radius)
 
-                    ## # Average the X and Y gaussian fitting near the peak
+                    # Average the X and Y gaussian fitting near the peak
                     bx = self.gaussian(round(ctr_x), (ctr_x, sdx, maxx))
                     by = self.gaussian(round(ctr_y), (ctr_y, sdy, maxy))
-                    ## ## bx = self.gaussian(ctr_x, (ctr_x, sdx, maxx))
-                    ## ## by = self.gaussian(ctr_y, (ctr_y, sdy, maxy))
-                    bright = float((bx + by)/2.0)
+                    bright = float((bx + by) / 2.0)
 
                 else:
                     raise IQCalcError("Method (%d) not supported for fwhm calculation!" %(
@@ -288,6 +287,15 @@ class IQCalc(object):
                 self.logger.debug("Error doing FWHM on object at %.2f,%.2f: %s" % (
                     x, y, str(e)))
                 continue
+
+            oid_x, oid_y = None, None
+            try:
+                oid_x, oid_y = self.centroid(data, x, y, fwhm_radius)
+
+            except Exception as e:
+                # Error doing centroid
+                self.logger.debug("Error doing centroid on object at %.2f,%.2f: %s" % (
+                    x, y, str(e)))
 
             self.logger.debug("orig=%f,%f  ctr=%f,%f  fwhm=%f,%f bright=%f" % (
                 x, y, ctr_x, ctr_y, fwhm_x, fwhm_y, bright))
@@ -311,6 +319,7 @@ class IQCalc(object):
                 pos = 1.0 - dy2
 
             obj = Bunch.Bunch(objx=ctr_x, objy=ctr_y, pos=pos,
+                              oid_x=oid_x, oid_y=oid_y,
                               fwhm_x=fwhm_x, fwhm_y=fwhm_y,
                               fwhm=fwhm, fwhm_radius=fwhm_radius,
                               brightness=bright, elipse=elipse,
