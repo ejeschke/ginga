@@ -37,7 +37,8 @@ class Histogram(GingaPlugin.LocalPlugin):
     UI Controls
     -----------
     Three radio buttons at the bottom of the UI are used to control the
-    effects of the click/drag action::
+    effects of the click/drag action:
+
     * select "Move" to drag the region to a different location
     * select "Draw" to draw a new region
     * select "Edit" to edit the region
