@@ -20,11 +20,11 @@ class PluginManager(Callback.Callbacks):
     A PluginManager manages the start and stop of plugins.
     """
 
-    def __init__(self, logger, fitsview, ds, mm):
+    def __init__(self, logger, gshell, ds, mm):
         super(PluginManager, self).__init__()
 
         self.logger = logger
-        self.fv = fitsview
+        self.fv = gshell
         self.ds = ds
         self.mm = mm
 
@@ -125,22 +125,26 @@ class PluginManager(Callback.Callbacks):
     def activate(self, p_info, exclusive=True):
         name = p_info.tabname
         lname = p_info.name.lower()
-        if lname not in self.active:
-            bnch = Bunch.Bunch(pInfo=p_info, lblname=None, widget=None,
-                               exclusive=exclusive)
+        if lname in self.active:
+            # plugin already active
+            return
 
-            if p_info.chinfo is not None:
-                # local plugin
-                tup = name.split(':')
-                bnch.lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
-                self.make_callback('activate-plugin', bnch)
-            else:
-                # global plugin
-                bnch.exclusive = False
+        bnch = Bunch.Bunch(pInfo=p_info, lblname=name, widget=None,
+                           exclusive=exclusive)
 
-            self.active[lname] = bnch
-            if bnch.exclusive:
-                self.exclusive.add(lname)
+        if p_info.chinfo is not None:
+            # local plugin
+            tup = name.split(':')
+            bnch.lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
+        else:
+            # global plugin
+            bnch.exclusive = False
+
+        self.active[lname] = bnch
+        if bnch.exclusive:
+            self.exclusive.add(lname)
+
+        self.make_callback('activate-plugin', bnch)
 
     def deactivate(self, name):
         self.logger.debug("deactivating %s" % (name))
@@ -148,26 +152,51 @@ class PluginManager(Callback.Callbacks):
         if lname in self.focus:
             self.clear_focus(lname)
 
-        if lname in self.active:
-            self.logger.debug("removing from task bar: %s" % (lname))
-            bnch = self.active[lname]
+        if lname not in self.active:
+            # plugin already deactivated
+            return
 
-            self.make_callback('deactivate-plugin', bnch)
-            del self.active[lname]
+        self.logger.debug("removing from task bar: %s" % (lname))
+        bnch = self.active[lname]
 
-            try:
-                self.stop_plugin(bnch.pInfo)
+        del self.active[lname]
 
-            except Exception as e:
-                self.logger.error("Error deactivating plugin: %s" % (str(e)))
-                # TODO: log traceback
+        try:
+            self.stop_plugin(bnch.pInfo)
 
-            # Set focus to another plugin if one is running
+        except Exception as e:
+            self.logger.error("Error deactivating plugin: %s" % (str(e)))
+            # TODO: log traceback
+
+        # Set focus to another plugin if one is running, but only if it
+        # is a local plugin
+        if bnch.pInfo.spec.ptype != 'global':
             active = list(self.active.keys())
             if len(active) > 0:
                 name = active[0]
                 self.logger.debug("focusing: %s" % (name))
                 self.set_focus(name)
+
+        self.make_callback('deactivate-plugin', bnch)
+
+    def stop_reload_start(self, name):
+        # deactivate the running plugin, if active
+        if self.is_active(name):
+            self.deactivate(name)
+
+        self.fv.update_pending(timeout=0.1)
+
+        # reload the plugin
+        p_info = self.get_plugin_info(name)
+        chname = None
+        if p_info.chinfo is not None:
+            chname = p_info.chinfo.name
+
+        self.reload_plugin(name, chinfo=p_info.chinfo)
+
+        # and start it up again
+        self.start_plugin_future(chname, name, None)
+
 
     def set_focus(self, name):
         self.logger.debug("Focusing plugin '%s'" % (name))
@@ -191,7 +220,8 @@ class PluginManager(Callback.Callbacks):
 
             self.logger.debug("resuming plugin %s" % (name))
             p_info.obj.resume()
-            self.make_callback('focus-plugin', bnch)
+
+        self.make_callback('focus-plugin', bnch)
 
         self.focus.add(lname)
         if p_info.widget is not None:
@@ -211,9 +241,12 @@ class PluginManager(Callback.Callbacks):
 
             if p_info.chinfo is not None:
                 p_info.obj.pause()
-                self.make_callback('unfocus-plugin', bnch)
-        except:
-            pass
+
+            self.make_callback('unfocus-plugin', bnch)
+
+        except Exception as e:
+            self.logger.error("Error unfocusing plugin '%s': %s" % (
+                name, str(e)))
 
     def start_plugin(self, chname, opname, alreadyOpenOk=False):
         return self.start_plugin_future(chname, opname, None,
@@ -250,7 +283,11 @@ class PluginManager(Callback.Callbacks):
             if hasattr(p_info.obj, 'build_gui'):
                 vbox = Widgets.VBox()
 
-                in_ws = p_info.spec.ws
+                in_ws = p_info.spec.get('workspace', None)
+                if in_ws is None:
+                    # to be deprecated
+                    in_ws = p_info.spec.ws
+
                 if in_ws.startswith('in:'):
                     # TODO: how to set this size appropriately
                     # Which plugins are actually using this attribute?
@@ -364,7 +401,10 @@ class PluginManager(Callback.Callbacks):
         wd, ht = vbox.get_size()
 
         try:
-            in_ws = p_info.spec.ws
+            in_ws = p_info.spec.get('workspace', None)
+            if in_ws is None:
+                # to be deprecated
+                in_ws = p_info.spec.ws
 
             if in_ws == 'in:toplevel':
                 topw = vbox.get_app().make_window()

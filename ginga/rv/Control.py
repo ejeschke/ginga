@@ -166,7 +166,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Initialize catalog and image server bank
         self.imgsrv = catalog.ServerBank(self.logger)
 
-        self.operations = []
+        self.operations = {}
 
         # state for implementing field-info callback
         self._cursor_task = self.get_timer()
@@ -271,6 +271,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def add_local_plugin(self, spec):
         try:
+            spec.setdefault('ptype', 'local')
             name = spec.setdefault('name', spec.get('klass', spec.module))
             self.local_plugins[name] = spec
 
@@ -280,21 +281,25 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             hidden = spec.get('hidden', False)
             if not hidden:
-                self.add_operation(name)
+                self.add_operation(name, 'local', spec)
 
         except Exception as e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
                 name, str(e)))
 
-    def add_operation(self, opname):
-        self.operations.append(opname)
-        self.make_callback('add-operation', opname)
+    def add_operation(self, opname, optype, spec):
+        category = spec.get('category', None)
+        l = self.operations.setdefault(category, [])
+        l.append(opname)
+        self.make_callback('add-operation', opname, optype, spec)
 
-    def get_operations(self):
-        return self.operations
+    def get_operations(self, category=None):
+        l = self.operations.setdefault(category, [])
+        return l
 
     def add_global_plugin(self, spec):
         try:
+            spec.setdefault('ptype', 'global')
             name = spec.setdefault('name', spec.get('klass', spec.module))
             self.global_plugins[name] = spec
 
@@ -303,7 +308,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.mm.load_module(spec.module, pfx=pfx, path=path)
 
             self.gpmon.load_plugin(name, spec)
-            self.add_plugin_menu(name)
+
+            hidden = spec.get('hidden', False)
+            if not hidden:
+                self.add_plugin_menu(name)
+                self.add_operation(name, 'global', spec)
 
             start = spec.get('start', True)
             if start:

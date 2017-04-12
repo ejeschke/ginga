@@ -70,57 +70,76 @@ default_layout = ['seq', {},
                     ]]
 
 global_plugins = [
-    Bunch(module='Toolbar', tab='Toolbar', ws='toolbar', start=True),
-    Bunch(module='Pan', tab='_pan', ws='uleft', start=True, raisekey=None),
-    Bunch(module='Info', tab='Synopsis', ws='lleft', start=True,
-          raisekey=None),
-    Bunch(module='Header', tab='Header', ws='left', start=True, raisekey='H'),
-    Bunch(module='Zoom', tab='Zoom', ws='left', start=True, raisekey='Z'),
-    Bunch(module='Command', tab='Command', ws='lleft', start=True),
-    Bunch(module='Thumbs', tab='Thumbs', ws='right', start=True, raisekey='T'),
-    Bunch(module='Contents', tab='Contents', ws='right', start=True,
-          raisekey='c'),
-    Bunch(module='Colorbar', tab='_cbar', ws='cbar', start=True),
-    Bunch(module='Cursor', tab='_readout', ws='readout', start=True),
-    Bunch(module='Operations', tab='_opns', ws='operations', start=True),
-    Bunch(module='WBrowser', tab='Help', ws='channels', raisekey='?',
-          start=False),
-    Bunch(module='FBrowser', tab='Open File', ws='right', start=False),
-    Bunch(module='Blink', tab='Blink Channels', ws='right', start=False),
-    Bunch(module='ColorMapPicker', tab='Color Map Picker', ws='right',
-          start=False),
+    Bunch(module='Operations', workspace='operations', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Toolbar', workspace='toolbar', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Pan', workspace='uleft', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Info', tab='Synopsis', workspace='lleft', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Header', tab='Header', workspace='left', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Zoom', tab='Zoom', workspace='left', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Thumbs', tab='Thumbs', workspace='right', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Contents', tab='Contents', workspace='right', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Colorbar', workspace='cbar', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Cursor', workspace='readout', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Errors', tab='Errors', workspace='right', start=True,
+          hidden=True, category='system'),
+    Bunch(module='Command', tab='Command', workspace='lleft', start=False,
+          category='Global'),
+    Bunch(module='WBrowser', tab='Help', workspace='channels', start=False,
+          category='Global'),
+    Bunch(module='FBrowser', tab='Open File', workspace='right', start=False,
+          category='Global'),
+    Bunch(module='Blink', tab='Blink Channels', workspace='right', start=False,
+          category='Global'),
+    Bunch(module='ColorMapPicker', tab='Color Map Picker', workspace='right',
+          start=False, category='Global'),
     # TODO: Move SaveImage to File menu.
-    Bunch(module='SaveImage', tab='Save File', ws='right', start=False),
-    Bunch(module='Errors', tab='Errors', ws='right', start=True),
-    Bunch(module='RC', tab='RC', ws='right', start=False),
-    Bunch(module='WCSMatch', tab='WCSMatch', ws='right', start=False),
-    Bunch(module='ChangeHistory', tab='History', ws='right', start=False),
-    Bunch(module='SAMP', tab='SAMP', ws='right', start=False),
-    Bunch(module='IRAF', tab='IRAF', ws='right', start=False),
-    Bunch(module='Log', tab='Log', ws='right', start=False),
+    Bunch(module='SaveImage', tab='Save File', workspace='right', start=False,
+          category='Global'),
+    Bunch(module='RC', tab='RC', workspace='right', start=False,
+          category='Global'),
+    Bunch(module='WCSMatch', tab='WCSMatch', workspace='right', start=False,
+          category='Global'),
+    Bunch(module='ChangeHistory', tab='History', workspace='right', start=False,
+          category='Global'),
+    Bunch(module='SAMP', tab='SAMP', workspace='right', start=False,
+          category='Global'),
+    Bunch(module='IRAF', tab='IRAF', workspace='right', start=False,
+          category='Global'),
+    Bunch(module='Log', tab='Log', workspace='right', start=False,
+          category='Global'),
     ]
 
 local_plugins = [
-    Bunch(module='Pick', ws='dialogs', shortkey='f1'),
-    Bunch(module='Ruler', ws='dialogs', shortkey='f2'),
-    Bunch(module='MultiDim', ws='lleft', shortkey='f4'),
-    Bunch(module='Cuts', ws='dialogs', shortkey='f5'),
-    Bunch(module='Histogram', ws='dialogs', shortkey='f6'),
-    Bunch(module='Crosshair', ws='dialogs'),
-    Bunch(module='Overlays', ws='dialogs'),
-    Bunch(module='TVMark', ws='dialogs'),
-    Bunch(module='TVMask', ws='dialogs'),
-    Bunch(module='Blink', ws='dialogs'),
-    Bunch(module='LineProfile', ws='dialogs'),
-    Bunch(module='PixTable', ws='dialogs', shortkey='f7'),
-    Bunch(module='Preferences', ws='dialogs', shortkey='f9'),
-    Bunch(module='Catalogs', ws='dialogs', shortkey='f10'),
-    Bunch(module='Mosaic', ws='dialogs'),
-    Bunch(module='Drawing', ws='dialogs', shortkey='f11'),
-    Bunch(module='FBrowser', ws='dialogs', shortkey='f12'),
-    Bunch(module='Compose', ws='dialogs'),
-    Bunch(module='PlotTable', ws='dialogs'),
-    Bunch(module='ScreenShot', ws='dialogs'),
+    Bunch(module='Pick', workspace='dialogs', category=None),
+    Bunch(module='Ruler', workspace='dialogs', category=None),
+    Bunch(module='MultiDim', workspace='lleft', category=None),
+    Bunch(module='Cuts', workspace='dialogs', category=None),
+    Bunch(module='Histogram', workspace='dialogs', category=None),
+    Bunch(module='Crosshair', workspace='dialogs', category=None),
+    Bunch(module='Overlays', workspace='dialogs', category=None),
+    Bunch(module='TVMark', workspace='dialogs', category=None),
+    Bunch(module='TVMask', workspace='dialogs', category=None),
+    Bunch(module='Blink', workspace='dialogs', category=None),
+    Bunch(module='LineProfile', workspace='dialogs', category=None),
+    Bunch(module='PixTable', workspace='dialogs', category=None),
+    Bunch(module='Preferences', workspace='dialogs', category=None),
+    Bunch(module='Catalogs', workspace='dialogs', category=None),
+    Bunch(module='Mosaic', workspace='dialogs', category=None),
+    Bunch(module='Drawing', workspace='dialogs', category=None),
+    Bunch(module='FBrowser', workspace='dialogs', category=None),
+    Bunch(module='Compose', workspace='dialogs', category=None),
+    Bunch(module='PlotTable', workspace='dialogs', category=None),
+    Bunch(module='ScreenShot', workspace='dialogs', category=None),
     ]
 
 
@@ -134,21 +153,24 @@ class ReferenceViewer(object):
         self.global_plugins = []
         self.layout = layout
 
+    def add_local_plugin_spec(self, spec):
+        self.local_plugins.append(spec)
+
+    def add_global_plugin_spec(self, spec):
+        self.global_plugins.append(spec)
+
     def add_local_plugin(self, module_name, ws_name,
-                         path=None, klass=None, pfx=None):
-        self.local_plugins.append(
-            Bunch(module=module_name, ws=ws_name,
+                         path=None, klass=None, pfx=None, category=None):
+        self.add_local_plugin_spec(
+            Bunch(module=module_name, workspace=ws_name, category=category,
                   path=path, klass=klass, pfx=pfx))
 
     def add_global_plugin(self, module_name, ws_name,
-                          path=None, klass=None,
+                          path=None, klass=None, category='Global',
                           tab_name=None, start_plugin=True, pfx=None):
-        if tab_name is None:
-            tab_name = module_name
-
-        self.global_plugins.append(
-            Bunch(module=module_name, ws=ws_name, tab=tab_name,
-                  path=path, klass=klass,
+        self.add_global_plugin_spec(
+            Bunch(module=module_name, workspace=ws_name, tab=tab_name,
+                  path=path, klass=klass, category=category,
                   start=start_plugin, pfx=pfx))
 
     def clear_default_plugins(self):
@@ -161,22 +183,14 @@ class ReferenceViewer(object):
         reference viewer.
         """
         # add default global plugins
-        for bnch in global_plugins:
-            if bnch.module not in except_global:
-                self.add_global_plugin(bnch.module, bnch.ws,
-                                       path=bnch.get('path', None),
-                                       klass=bnch.get('klass', bnch.module),
-                                       tab_name=bnch.tab,
-                                       start_plugin=bnch.get('start', False),
-                                       pfx=bnch.get('pfx', None))
+        for spec in global_plugins:
+            if spec.module not in except_global:
+                self.add_global_plugin_spec(spec)
 
         # add default local plugins
-        for bnch in local_plugins:
-            if bnch.module not in except_local:
-                self.add_local_plugin(bnch.module, bnch.ws,
-                                      path=bnch.get('path', None),
-                                      klass=bnch.get('klass', bnch.module),
-                                      pfx=bnch.get('pfx', None))
+        for spec in local_plugins:
+            if spec.module not in except_local:
+                self.add_local_plugin_spec(spec)
 
     def add_separately_distributed_plugins(self):
         from pkg_resources import iter_entry_points
@@ -198,16 +212,11 @@ class ReferenceViewer(object):
                 spec = method()
                 if 'start' in spec:
                     # global plugin
-                    self.add_global_plugin(spec.module, spec.workspace,
-                                           path=spec.get('path', None),
-                                           klass=spec.get('klass', spec.module),
-                                           tab_name=spec.tab,
-                                           start_plugin=spec.start)
+                    # TODO: need a better differentiator
+                    self.add_global_plugin_spec(spec)
                 else:
                     # local plugin
-                    self.add_local_plugin(spec.module, spec.workspace,
-                                          path=spec.get('path', None),
-                                          klass=spec.get('klass', spec.module))
+                    self.add_local_plugin_spec(spec)
 
             except Exception as e:
                 print("Error trying to instantiate external plugin using %s: %s" % (
@@ -489,7 +498,7 @@ class ReferenceViewer(object):
                     pluginName = longPluginName
                     pfx = None
                 spec = Bunch(name=pluginName, module=pluginName,
-                             tab=pluginName, ws='right', pfx=pfx)
+                             tab=pluginName, workspace='right', pfx=pfx)
                 ginga_shell.add_global_plugin(spec)
 
         # Load modules for "local" (per-channel) plug ins
@@ -508,7 +517,7 @@ class ReferenceViewer(object):
                 else:
                     pluginName = longPluginName
                     pfx = None
-                spec = Bunch(module=pluginName, ws='dialogs',
+                spec = Bunch(module=pluginName, workspace='dialogs',
                              hidden=False, pfx=pfx)
                 ginga_shell.add_local_plugin(spec)
 
