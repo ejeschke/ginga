@@ -1271,6 +1271,7 @@ class Menu(ContainerBase):
 
         # this ends up being a reference to the Qt menubar or toolbar
         self.widget = None
+        self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child):
         self.add_ref(child)
@@ -1279,6 +1280,17 @@ class Menu(ContainerBase):
         child = MenuAction(text=name)
         self.add_widget(child)
         return child
+
+    def add_menu(self, name):
+        child = Menu()
+        self.menus[name] = child
+        menu_w = Label(text=name, halign='left', style='clickable',
+                       menu=child)
+        self.add_widget(menu_w)
+        return child
+
+    def get_menu(self, name):
+        return self.menus[name]
 
     def add_separator(self):
         #self.widget.addSeparator()

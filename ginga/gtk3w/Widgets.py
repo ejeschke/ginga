@@ -1559,6 +1559,7 @@ class Menu(ContainerBase):
         super(Menu, self).__init__()
 
         self.widget = Gtk.Menu()
+        self.menus = Bunch.Bunch(caseless=True)
         self.widget.show()
 
     def add_widget(self, child):
@@ -1571,6 +1572,19 @@ class Menu(ContainerBase):
         child = MenuAction(text=name, checkable=checkable)
         self.add_widget(child)
         return child
+
+    def add_menu(self, name):
+        item_w = Gtk.MenuItem(label=name)
+        child = Menu()
+        self.add_ref(child)
+        self.menus[name] = child
+        item_w.set_submenu(child.get_widget())
+        self.widget.append(item_w)
+        item_w.show()
+        return child
+
+    def get_menu(self, name):
+        return self.menus[name]
 
     def add_separator(self):
         sep = Gtk.SeparatorMenuItem()

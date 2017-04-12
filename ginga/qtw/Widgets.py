@@ -863,7 +863,6 @@ class ContainerBase(WidgetBase):
         if w not in self.children:
             raise ValueError("Widget is not a child of this container")
         self.children.remove(w)
-
         self._remove(w.get_widget(), delete=delete)
 
     def remove_all(self, delete=False):
@@ -1500,6 +1499,7 @@ class Menu(ContainerBase):
 
         # NOTE: this get's overwritten if created from Menubar
         self.widget = QtGui.QMenu()
+        self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child):
         w = self.widget.addAction(child.text, lambda: child._cb_redirect())
@@ -1513,6 +1513,14 @@ class Menu(ContainerBase):
         self.add_widget(child)
         return child
 
+    def add_menu(self, name):
+        menu_w = self.widget.addMenu(name)
+        child = Menu()
+        child.widget = menu_w
+        self.add_ref(child)
+        self.menus[name] = child
+        return child
+
     def add_separator(self):
         self.widget.addSeparator()
 
@@ -1524,6 +1532,8 @@ class Menu(ContainerBase):
         else:
             self.widget.exec_(QCursor.pos())
 
+    def get_menu(self, name):
+        return self.menus[name]
 
 class Menubar(ContainerBase):
     def __init__(self):
