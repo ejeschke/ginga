@@ -31,7 +31,37 @@ __all__ = []
 
 
 class SaveImage(GlobalPlugin):
-    """Save images to output files.
+    """
+    SaveImage
+    =========
+    Save images to output files.
+
+    Plugin Type: Global
+    -------------------
+    SaveImage is a global plugin.  Only one instance can be opened.
+
+    This global plugin is used to save any changes made in Ginga back to output
+    images. For example, a mosaic image that was created by the `Mosaic`
+    plugin. Currently, only FITS images (single or multiple extensions) are
+    supported.
+
+    Usage
+    -----
+    Given the output directory (e.g., ``/mypath/outputs/``), a suffix
+    (e.g., ``ginga``), an image channel (``Image``), and a selected image
+    (e.g., ``image1.fits``), the output file will be
+    ``/mypath/outputs/image1_ginga_Image.fits``. Inclusion of the channel name is
+    optional and can be omitted using plugin configuration file (see below).
+    The modified extension(s) will have new header or data extracted from
+    Ginga, while those not modified will remain untouched. Relevant change
+    log entries from the `ChangeHistory` global plugin will be inserted into
+    the history of its ``PRIMARY`` header.
+
+    .. note::
+
+      This plugin uses the module `astropy.io.fits` to write the output images,
+      regardless of what is chosen for ``FITSpkg`` in your
+      ``~/.ginga/general.cfg`` configuration file.
 
     """
     def __init__(self, fv):
@@ -74,15 +104,6 @@ class SaveImage(GlobalPlugin):
         """Build GUI such that image list area is maximized."""
 
         vbox, sw, orientation = Widgets.get_oriented_box(container)
-
-        msg_font = self.fv.get_font('sansFont', 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander('Instructions')
-        fr.set_widget(tw)
-        container.add_widget(fr, stretch=0)
 
         captions = (('Channel:', 'label', 'Channel Name', 'combobox',
                      'Modified only', 'checkbutton'), )
@@ -145,6 +166,9 @@ class SaveImage(GlobalPlugin):
 
         btn = Widgets.Button('Close')
         btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         container.add_widget(btns, stretch=0)
@@ -480,8 +504,11 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         self.fv.stop_global_plugin(str(self))
 
     def start(self):
-        self.instructions()
         self.resume()
+
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
 
     def resume(self):
         # turn off any mode user may be in
@@ -490,7 +517,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         except AttributeError:
             pass
 
-        self.fv.show_status('See instructions')
+        self.fv.show_status('Press "Help" for instructions')
 
     def stop(self):
         self.gui_up = False

@@ -28,7 +28,79 @@ __all__ = []
 
 
 class TVMark(LocalPlugin):
-    """Mark points from file (non-interative mode) on an image."""
+    """
+    TVMark
+    ======
+    Mark points from file (non-interative mode) on an image.
+
+    Plugin Type: Local
+    ------------------
+    TVMark is a local plugin, which means it is associated with a
+    channel.  An instance can be opened for each channel.
+
+    Usage
+    -----
+    This plugin allows non-interactive marking of points of interest by
+    reading in a file containing a table with RA and DEC positions of those points.
+    Any text or FITS table file that can be read by `astropy.table` is acceptable
+    but user *must* define the column names correctly in the plugin configuration
+    file (see below).
+    An attempt will be made to convert RA and DEC values to degrees.
+    If the unit conversion fails, they will be assumed to be in degrees already.
+
+    Alternately, if the file has columns containing the direct pixel locations,
+    you can read these columns instead by unchecking the "Use RADEC" box.
+    Again, the column names must be correctly defined in the plugin configuration
+    file (see below).
+    Pixel values can be 0- or 1-indexed (i.e., whether the first pixel is 0 or 1)
+    and is configurable (see below).
+    This is useful when you want to mark the physical pixels regardless of WCS
+    (e.g., marking hot pixels on a detector). RA and DEC will still be displayed if
+    the image has WCS information but they will not affect the markings.
+
+    To mark different groups (e.g., displaying galaxies as green circles and
+    background as cyan crosses, as shown above):
+
+    1. Select green circle from the drop-down menus. Alternately, enter desired
+       size or width.
+    2. Make sure "Use RADEC" box is checked, if applicable.
+    3. Using "Load Coords" button, load the file containing RA and DEC (or X and Y)
+       positions for galaxies *only*.
+    4. Repeat Step 1 but now select cyan cross from the drop-down menus.
+    5. Repeat Step 2 but choose the file containing background positions *only*.
+
+    Selecting an entry (or multiple entries) from the table listing will
+    highlight the marking(s) on the image. The highlight uses the same shape
+    and color, but a slightly thicker line. Clicking on a marking on the image
+    will highlight it and its neighbors (if they are close enough) both on the
+    image and the table listing.
+
+    You can also highlight all the markings within a region both on the image
+    and the table listing by drawing a rectangle on the image using the right mouse
+    button while this plugin is active.
+
+    Pressing the "Hide" button will hide the markings but does not clear the
+    plugin's memory; That is, when you press "Show", the same markings will
+    reappear on the same image. However, pressing "Forget" will clear the markings
+    both from display and memory; That is, you will need to reload your file(s) to
+    recreate the markings.
+
+    To redraw the same positions with different marking parameters, press "Forget"
+    and repeat the steps above, as necessary. However, if you simply wish to change
+    the line width (thickness), pressing "Hide" and then "Show" after you entered
+    the new width value will suffice.
+
+    If images of very different pointings/dimensions are displayed in the same
+    channel, markings that belong to one image but fall outside another will not
+    appear in the latter.
+
+    To create a table that this plugin can read, one can use results from
+    the `Pick` plugin, in addition to creating a table by hand, using
+    `astropy.table`, etc.
+
+    Used together with `TVMask`, you can overlay both point sources and masked
+    regions in Ginga.
+    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(TVMark, self).__init__(fv, fitsimage)
@@ -93,15 +165,6 @@ class TVMark(LocalPlugin):
 
     def build_gui(self, container):
         vbox, sw, self.orientation = Widgets.get_oriented_box(container)
-
-        msg_font = self.fv.get_font('sansFont', 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander('Instructions')
-        fr.set_widget(tw)
-        container.add_widget(fr, stretch=0)
 
         captions = (('Mark:', 'label', 'mark type', 'combobox'),
                     ('Color:', 'label', 'mark color', 'combobox'),
@@ -206,6 +269,9 @@ class TVMark(LocalPlugin):
         btn = Widgets.Button('Close')
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         container.add_widget(btns, stretch=0)
@@ -217,13 +283,6 @@ class TVMark(LocalPlugin):
 
         # Populate table
         self.redo()
-
-    def instructions(self):
-        self.tw.set_text("""Set mark parameters. Then, load coordinates file to mark them on image with the specified marking. To add different kind of marking, change the mark parameters and load another file.
-
-Press "Hide" to clear all markings (does not clear memory). Press "Show" to replot them. Press "Forget" to forget all markings in memory.
-
-""")
 
     def redo(self):
         """Image or coordinates have changed. Clear and redraw."""
@@ -639,9 +698,11 @@ Press "Hide" to clear all markings (does not clear memory). Press "Show" to repl
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def start(self):
-        self.instructions()
+    def help(self):
+        name = str(self).capitalize()
+        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
 
+    def start(self):
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
         try:
@@ -660,7 +721,7 @@ Press "Hide" to clear all markings (does not clear memory). Press "Show" to repl
         self.modes_off()
 
         self.canvas.ui_set_active(True)
-        self.fv.show_status('See instructions')
+        self.fv.show_status('Press "Help" for instructions')
 
     def stop(self):
         # remove canvas from image
