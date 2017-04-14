@@ -343,6 +343,16 @@ class ImageViewBase(Callback.Callbacks):
                      'redraw', 'limits-set', 'cursor-changed'):
             self.enable_callback(name)
 
+        # for timed refresh
+        self.rf_fps = 1
+        self.rf_rate = 1.0 / self.rf_fps
+        self.rf_timer = self.make_timer()
+        self.rf_flags = {}
+        self.rf_count = 0
+        self.rf_start_time = 0.0
+        if self.rf_timer is not None:
+            self.rf_timer.add_callback('expired', self.refresh_timer_cb,
+                                       self.rf_flags)
 
     def set_window_size(self, width, height):
         """Report the size of the window to display the image.
@@ -1117,6 +1127,81 @@ class ImageViewBase(Callback.Callbacks):
         if self.defer_redraw:
             self.defer_lagtime = lag_sec
 
+    def set_refresh_rate(self, fps):
+        """Set the refresh rate for redrawing the canvas at a timed interval.
+
+        Parameters
+        ----------
+        fps : float
+            Desired rate in frames per second.
+
+        """
+        self.rf_fps = fps
+        self.rf_rate = 1.0 / self.rf_fps
+        self.set_redraw_lag(self.rf_rate)
+        self.logger.info("set a refresh rate of %.2f fps" % (self.rf_fps))
+
+    def start_refresh(self):
+        """Start redrawing the canvas at the previously set timed interval.
+        """
+        self.logger.debug("starting timed refresh interval")
+        self.rf_flags['done'] = False
+        self.rf_count = 0
+        self.rf_start_time = time.time()
+        self.refresh_timer_cb(self.rf_timer, self.rf_flags)
+
+    def stop_refresh(self):
+        """Stop redrawing the canvas at the previously set timed interval.
+        """
+        self.logger.debug("stopping timed refresh")
+        self.rf_flags['done'] = True
+        self.rf_timer.clear()
+
+    def get_measured_fps(self):
+        """Return the measured FPS for timed refresh intervals.
+
+        Returns
+        -------
+        fps : float
+            The measured rate of actual back end updates in frames per second.
+
+        """
+        if self.rf_count == 0:
+            return 0.0
+        interval = time.time() - self.rf_start_time
+        fps = self.rf_count / interval
+        return fps
+
+    def refresh_timer_cb(self, timer, flags):
+        """Refresh timer callback.
+        This callback will normally only be called internally.
+
+        Parameters
+        ----------
+        timer : a Ginga GUI timer
+            A GUI-based Ginga timer
+
+        flags : dict-like
+            A set of flags controlling the timer
+        """
+        # this is the timer call back, from the GUI thread
+        start_time = time.time()
+
+        if flags.get('done', False):
+            return
+        next_time = start_time + self.rf_rate
+
+        # TODO: optimize whence
+        self.redraw_now(whence=0)
+
+        delay = next_time - time.time()
+        if delay < 0:
+            self.logger.warning("viewer underrun %.4f sec" % (-delay))
+
+        # set up our next callback
+        delay = max(0.0, delay)
+        timer.start(delay)
+
     def redraw_now(self, whence=0):
         """Redraw the displayed image.
 
@@ -1133,6 +1218,7 @@ class ImageViewBase(Callback.Callbacks):
             # finally update the window drawable from the offscreen surface
             self.update_image()
 
+            self.rf_count += 1
             time_done = time.time()
             time_delta = time_start - self.time_last_redraw
             time_elapsed = time_done - time_start
@@ -2972,6 +3058,18 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.logger.warning("Subclass should override this abstract method!")
+
+    def make_timer(self):
+        """Return a timer object implemented using the back end.
+        This should be implemented by subclasses.
+
+        Returns
+        -------
+        timer : a Timer object
+
+        """
+        #self.logger.warning("Subclass should override this abstract method!")
+        return None
 
     def make_cursor(self, iconpath, x, y):
         """Make a cursor in the viewer's native widget toolkit.

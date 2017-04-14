@@ -290,6 +290,9 @@ class ImageViewQt(ImageView.ImageViewBase):
         cursor = self.imgwin.cursor()
         cursor.setPos(s_pt)
 
+    def make_timer(self):
+        return Timer()
+
     def _get_qimage(self, bgra):
         h, w, channels = bgra.shape
 

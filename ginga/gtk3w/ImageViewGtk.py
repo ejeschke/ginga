@@ -203,6 +203,9 @@ class ImageViewGtk(ImageView):
         screen = self.imgwin.window.get_screen()
         disp.warp_pointer(screen, scrn_x, scrn_y)
 
+    def make_timer(self):
+        return GtkHelp.Timer()
+
     def _get_rgbbuf(self, data):
         buf = data.tostring(order='C')
         return buf
