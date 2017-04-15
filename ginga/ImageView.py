@@ -348,8 +348,15 @@ class ImageViewBase(Callback.Callbacks):
         self.rf_rate = 1.0 / self.rf_fps
         self.rf_timer = self.make_timer()
         self.rf_flags = {}
-        self.rf_count = 0
+        self.rf_draw_count = 0
+        self.rf_timer_count = 0
         self.rf_start_time = 0.0
+        self.rf_late_warn_time = 0.0
+        self.rf_late_warn_interval = 10.0
+        self.rf_late_total = 0.0
+        self.rf_late_count = 0
+        self.rf_early_count = 0
+        self.rf_early_total = 0.0
         if self.rf_timer is not None:
             self.rf_timer.add_callback('expired', self.refresh_timer_cb,
                                        self.rf_flags)
@@ -1138,7 +1145,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.rf_fps = fps
         self.rf_rate = 1.0 / self.rf_fps
-        self.set_redraw_lag(self.rf_rate)
+        #self.set_redraw_lag(self.rf_rate)
         self.logger.info("set a refresh rate of %.2f fps" % (self.rf_fps))
 
     def start_refresh(self):
@@ -1146,8 +1153,15 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.logger.debug("starting timed refresh interval")
         self.rf_flags['done'] = False
-        self.rf_count = 0
+        self.rf_draw_count = 0
+        self.rf_timer_count = 0
+        self.rf_late_count = 0
+        self.rf_late_total = 0.0
+        self.rf_early_count = 0
+        self.rf_early_total = 0.0
+        self.rf_delta_total = 0.0
         self.rf_start_time = time.time()
+        self.rf_deadline = self.rf_start_time
         self.refresh_timer_cb(self.rf_timer, self.rf_flags)
 
     def stop_refresh(self):
@@ -1157,20 +1171,33 @@ class ImageViewBase(Callback.Callbacks):
         self.rf_flags['done'] = True
         self.rf_timer.clear()
 
-    def get_measured_fps(self):
-        """Return the measured FPS for timed refresh intervals.
+    def get_refresh_stats(self):
+        """Return the measured statistics for timed refresh intervals.
 
         Returns
         -------
-        fps : float
+        stats : float
             The measured rate of actual back end updates in frames per second.
 
         """
-        if self.rf_count == 0:
-            return 0.0
-        interval = time.time() - self.rf_start_time
-        fps = self.rf_count / interval
-        return fps
+        if self.rf_draw_count == 0:
+            fps = 0.0
+        else:
+            interval = time.time() - self.rf_start_time
+            fps = self.rf_draw_count / interval
+
+        jitter = self.rf_delta_total / max(1, self.rf_timer_count)
+
+        late_avg = self.rf_late_total / max(1, self.rf_late_count)
+        late_pct = self.rf_late_count / max(1.0, float(self.rf_timer_count)) * 100
+
+        early_avg = self.rf_early_total / max(1, self.rf_early_count)
+        early_pct = self.rf_early_count / max(1.0, float(self.rf_timer_count)) * 100
+
+        stats = dict(fps=fps, jitter=jitter,
+                     early_avg=early_avg, early_pct=early_pct,
+                     late_avg=late_avg, late_pct=late_pct)
+        return stats
 
     def refresh_timer_cb(self, timer, flags):
         """Refresh timer callback.
@@ -1189,17 +1216,37 @@ class ImageViewBase(Callback.Callbacks):
 
         if flags.get('done', False):
             return
-        next_time = start_time + self.rf_rate
 
-        # TODO: optimize whence
-        self.redraw_now(whence=0)
+        # calculate next deadline
+        deadline = self.rf_deadline
+        self.rf_deadline += self.rf_rate
 
-        delay = next_time - time.time()
-        if delay < 0:
-            self.logger.warning("viewer underrun %.4f sec" % (-delay))
+        self.rf_timer_count += 1
+        delta = abs(start_time - deadline)
+        self.rf_delta_total += delta
+        adjust = 0.0
 
-        # set up our next callback
-        delay = max(0.0, delay)
+        if start_time > deadline:
+            # we are late
+            self.rf_late_total += delta
+            self.rf_late_count += 1
+            late_avg = self.rf_late_total / self.rf_late_count
+            # skip a redraw and attempt to catch up
+            adjust = - (late_avg / 2.0)
+
+        else:
+            if start_time < deadline:
+                # we are early
+                self.rf_early_total += delta
+                self.rf_early_count += 1
+                early_avg = self.rf_early_total / self.rf_early_count
+                adjust = early_avg / 2.0
+
+            self.rf_draw_count += 1
+            # TODO: can we optimize whence?
+            self.redraw_now(whence=0)
+
+        delay = max(0.0, self.rf_deadline - time.time() + adjust)
         timer.start(delay)
 
     def redraw_now(self, whence=0):
@@ -1218,7 +1265,6 @@ class ImageViewBase(Callback.Callbacks):
             # finally update the window drawable from the offscreen surface
             self.update_image()
 
-            self.rf_count += 1
             time_done = time.time()
             time_delta = time_start - self.time_last_redraw
             time_elapsed = time_done - time_start

@@ -216,8 +216,8 @@ class GingaVision(object):
             if end_time - last_report > 5.0:
                 # report measured FPS every 5 sec or so
                 last_report = end_time
-                actual_fps = self.viewer.get_measured_fps()
-                self.logger.info("screen fps is approx %.2f" % (actual_fps))
+                stats = self.viewer.get_refresh_stats()
+                self.logger.info("screen fps: %(fps).2f jitter: %(jitter).5f late pct,avg: %(late_pct).1f%%, %(late_avg).4f early pct,avg: %(early_pct).1f%%, %(early_avg).4f" % stats)
 
             elapsed_time = end_time - start_time
             sleep_time = self.playback_rate - elapsed_time
