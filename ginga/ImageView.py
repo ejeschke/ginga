@@ -349,6 +349,7 @@ class ImageViewBase(Callback.Callbacks):
         self.rf_timer = self.make_timer()
         self.rf_flags = {}
         self.rf_draw_count = 0
+        self.rf_delta_total = 0.0
         self.rf_timer_count = 0
         self.rf_start_time = 0.0
         self.rf_late_warn_time = 0.0
