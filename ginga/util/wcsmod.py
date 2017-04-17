@@ -617,12 +617,17 @@ class AstropyWCS2(BaseWCS):
             return coord
 
         toclass = astropy.coordinates.frame_transform_graph.lookup_name(system)
+        if toclass is None:
+            raise WCSError(
+                "No such coordinate system available: '{0}'".format(system))
 
         transform = self.coordframe.is_transformable_to(toclass)
         if transform and transform != 'same':
             coord = coord.transform_to(toclass)
         else:
-            self.logger.error("Frame {} is not Transformable to {}, falling back to {}".format(self.coordframe.name, toclass.name, self.coordframe.name))
+            self.logger.error("Frame {} is not Transformable to {}, "
+                              "falling back to {}".format(
+                    self.coordframe.name, toclass.name, self.coordframe.name))
 #            self.prefs.set("wcs_coords", self.coordframe.name)
 
         return coord
@@ -801,9 +806,16 @@ class AstropyWCS(BaseWCS):
             coord = coord.transform_to(toclass)
 
         else:
-            frameClass = coordinates.frame_transform_graph.lookup_name(self.coordsys)
+            frameClass = coordinates.frame_transform_graph.lookup_name(
+                self.coordsys)
+            if frameClass is None:
+                raise WCSError("No such coordinate system available: '%s'" % (
+                    self.coordsys))
             coord = frameClass(ra_deg * units.degree, dec_deg * units.degree)
             toClass = coordinates.frame_transform_graph.lookup_name(system)
+            if toClass is None:
+                raise WCSError("No such coordinate system available: '%s'" % (
+                    system))
             # Skip in input and output is the same (no realize_frame
             # call in astropy)
             if toClass != frameClass:
