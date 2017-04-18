@@ -7,6 +7,7 @@ Ver 2.6.4.dev
 - Added new ScreenShot plugin to take PNG/JPEG snaps of the viewer
   window
 - Enhancements to the Pick plugin
+
   - Added ability to make shapes besides rectangles for enclosing pick area.
     Masks out unwanted pixels.  Choose the shape in the Settings tab.
   - Changed behavior of pick log to only write the log when the user clicks
@@ -45,7 +46,7 @@ Ver 2.6.2 (2017-02-16)
 - Fixed a stability issue with drag and dropping large number of files
   under Linux
 - Fixes for python3 and several example programs
-- Fix for interactive rotation bug under matplotlib back end    
+- Fix for interactive rotation bug under matplotlib back end
 
 Ver 2.6.1 (2016-12-22)
 ======================
