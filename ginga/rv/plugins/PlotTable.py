@@ -58,15 +58,6 @@ class PlotTable(LocalPlugin):
         vbox.set_margins(4, 4, 4, 4)
         vbox.set_spacing(2)
 
-        msg_font = self.fv.get_font('sansFont', 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander('Instructions')
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
-
         # Add Tab Widget
         nb = Widgets.TabWidget(tabpos='top')
         vbox.add_widget(nb, stretch=1)
@@ -150,6 +141,9 @@ class PlotTable(LocalPlugin):
         btn = Widgets.Button('Close')
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button('Help')
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         top.add_widget(btns, stretch=0)
@@ -167,9 +161,6 @@ class PlotTable(LocalPlugin):
         val = vals[default]
         combobox.show_text(val)
         return val
-
-    def instructions(self):
-        self.tw.set_text("""Select columns from drop-down menus to plot. Click Save to save plot out to file.""")  # noqa
 
     def redo(self):
         """This is called when a new image arrives or the data in the
@@ -442,7 +433,6 @@ class PlotTable(LocalPlugin):
             self.logger.info('Table plot saved as {0}'.format(target))
 
     def start(self):
-        self.instructions()
         self.resume()
 
     def resume(self):

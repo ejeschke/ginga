@@ -4,12 +4,9 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, os
 from ginga import GingaPlugin
-
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
-from ginga.rv.Control import package_home
 
 has_webkit = False
 try:
@@ -17,6 +14,7 @@ try:
     has_webkit = True
 except ImportError:
     pass
+
 
 class WBrowser(GingaPlugin.GlobalPlugin):
 
@@ -28,7 +26,9 @@ class WBrowser(GingaPlugin.GlobalPlugin):
 
     def build_gui(self, container):
         if not has_webkit:
-            self.browser = QtGui.QLabel("Please install the python-webkit package to enable this plugin")
+            self.browser = QtGui.QLabel(
+                "Please install the python-webkit package to enable "
+                "this plugin")
         else:
             self.browser = QWebView()
 
@@ -55,9 +55,8 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         cw.layout().addWidget(btns, stretch=0, alignment=QtCore.Qt.AlignLeft)
 
         if has_webkit:
-            helpfile = os.path.abspath(os.path.join(package_home,
-                                                    "doc", "help.html"))
-            helpurl = "file://%s" % (helpfile)
+            from ginga.doc.download_doc import get_doc
+            helpurl = get_doc()
             self.browse(helpurl)
 
     def browse(self, url):
@@ -84,4 +83,4 @@ class WBrowser(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'wbrowser'
 
-#END
+# END

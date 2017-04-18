@@ -4,9 +4,9 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, os
-
 from gi.repository import Gtk
+
+from ginga import GingaPlugin
 
 has_webkit = False
 try:
@@ -15,8 +15,6 @@ try:
 except ImportError:
     pass
 
-from ginga import GingaPlugin
-from ginga.rv.Control import package_home
 
 class WBrowser(GingaPlugin.GlobalPlugin):
 
@@ -28,7 +26,8 @@ class WBrowser(GingaPlugin.GlobalPlugin):
 
     def build_gui(self, container):
         if not has_webkit:
-            self.browser = Gtk.Label("Please install the python-webkit package to enable this plugin")
+            self.browser = Gtk.Label("Please install the python-webkit "
+                                     "package to enable this plugin")
         else:
             self.browser = WebKit.WebView()
 
@@ -46,9 +45,8 @@ class WBrowser(GingaPlugin.GlobalPlugin):
         self.entry.connect('activate', self.browse_cb)
 
         if has_webkit:
-            helpfile = os.path.abspath(os.path.join(package_home,
-                                                    "doc", "help.html"))
-            helpurl = "file:%s" % (helpfile)
+            from ginga.doc.download_doc import get_doc
+            helpurl = get_doc()
             self.browse(helpurl)
 
         btns = Gtk.HButtonBox()
@@ -85,4 +83,4 @@ class WBrowser(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'wbrowser'
 
-#END
+# END

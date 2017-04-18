@@ -270,10 +270,6 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         self.gui_up = False
         self.fv.show_status('')
 
-    def help(self):
-        name = str(self).capitalize()
-        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
-
     def start(self):
         self.recreate_toc()
 

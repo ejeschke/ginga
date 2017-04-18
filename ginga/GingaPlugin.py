@@ -6,8 +6,10 @@
 #
 from ginga.misc import Bunch
 
+
 class PluginError(Exception):
     pass
+
 
 class GlobalPlugin(object):
 
@@ -43,8 +45,23 @@ class GlobalPlugin(object):
         pass
 
     def help(self):
-        name = str(self).capitalize()
-        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
+        name = str(self)
+
+        if not self.fv.gpmon.has_plugin('WBrowser'):
+            self.fv.help_text(name.capitalize(), self.__doc__, text_kind='rst',
+                              trim_pfx=4)
+            return
+
+        from ginga.doc.download_doc import get_doc
+
+        self.fv.start_global_plugin('WBrowser')
+
+        # need to let GUI finish processing, it seems
+        self.fv.update_pending()
+
+        obj = self.fv.gpmon.get_plugin('WBrowser')
+        url = get_doc(plugin=self)
+        obj.browse(url)
 
 
 class LocalPlugin(object):
@@ -109,8 +126,22 @@ class LocalPlugin(object):
         pass
 
     def help(self):
-        name = str(self).capitalize()
-        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
+        name = str(self)
 
+        if not self.fv.gpmon.has_plugin('WBrowser'):
+            self.fv.help_text(name.capitalize(), self.__doc__, text_kind='rst',
+                              trim_pfx=4)
+            return
 
-#END
+        from ginga.doc.download_doc import get_doc
+
+        self.fv.start_global_plugin('WBrowser')
+
+        # need to let GUI finish processing, it seems
+        self.fv.update_pending()
+
+        obj = self.fv.gpmon.get_plugin('WBrowser')
+        url = get_doc(plugin=self)
+        obj.browse(url)
+
+# END
