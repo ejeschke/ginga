@@ -113,14 +113,14 @@ integer you may need to do something like::
 
 
 Interfacing from within Python
-==============================
+------------------------------
 
 It is also possible to control Ginga in RC mode
 from within Python.   The following describes
 some of the functionality.
 
 Connecting
-----------
+^^^^^^^^^^
 
 One first launches Ginga and starts the RC plugin.
 This can be done from the command line::
@@ -138,7 +138,7 @@ follows::
 This viewer object is now linked to the Ginga using RC.
 
 Load an Image
--------------
+^^^^^^^^^^^^^
 
 One can load an image from memory in a channel of
 one's choosing.  First connect to a Channel::
@@ -154,7 +154,7 @@ The image will display in Ginga and can be manipulated
 as usual.
 
 Overlay a Canvas Object
------------------------
+^^^^^^^^^^^^^^^^^^^^^^^
 
 It is possible to add objects to the Canvas in a given
 Channel.  First connect::
@@ -178,4 +178,3 @@ of points defined by two Numpy arrays::
     canvas.add('path', points, color='red')
 
 This will draw a red line on the image.
-
