@@ -2,6 +2,7 @@
 
 Pick
 ====
+
 Perform astronomical stellar quick analysis.
 
 .. image:: figures/pick-sc1.png
@@ -17,10 +18,11 @@ well as its size based on the plate scale of the detector.  Rough
 measurement of background, sky level and brightness is done.
 
 Usage
-=====
+-----
 
 Defining the pick area
-----------------------
+^^^^^^^^^^^^^^^^^^^^^^
+
 The default pick area is defined as a rectangle of approximately 30x30
 pixels that encloses the search area.
 
@@ -45,7 +47,8 @@ the area based on the criteria in the "Settings" tab of the UI
 (see "The Settings Tab", below) and try to locate a candidate.
 
 If a candidate is found
------------------------
+^^^^^^^^^^^^^^^^^^^^^^^
+
 The candidate will be marked with a `Point` (usually an "X") in the
 channel viewer canvas, centered on the object as determined by the
 horizontal and vertical FWHM measurements.
@@ -100,11 +103,11 @@ The "Readout" tab will be populated with a summary of the measurements:
      :align: center
 
 There are two buttons in this tab:
-  
+
 * The "Pan to pick" button will pan the channel viewer to the
   located center.
 * The "Default Region" button restores the pick region to the default
-  shape and size. 
+  shape and size.
 
 The "Controls" tab has a couple of buttons that will work off of the
 measurements:
@@ -115,15 +118,15 @@ measurements:
 
 * The "Bg cut" button will set the low cut level of the channel viewer
   to the measured background level.  A delta to this value can be
-  applied by setting a value in the "Delta bg" box (press Enter to 
+  applied by setting a value in the "Delta bg" box (press Enter to
   change the setting).
 * The "Sky cut" button will set the low cut level of the channel viewer
   to the measured sky level.  A delta to this value can be
-  applied by setting a value in the "Delta sky" box (press Enter to 
+  applied by setting a value in the "Delta sky" box (press Enter to
   change the setting).
 * The "Bright cut" button will set the high cut level of the channel viewer
   to the measured sky+brightness levels.  A delta to this value can be
-  applied by setting a value in the "Delta bright" box (press Enter to 
+  applied by setting a value in the "Delta bright" box (press Enter to
   change the setting).
 
 The "Report" tab is used to record information about the measurements in
@@ -136,7 +139,7 @@ tabular form:
 By pressing the "Add Pick" button the information about the most recent
 candidate is added to the table.  If the "Record Picks automatically"
 checkbox is checked, then any candidates are added to the table
-automatically. 
+automatically.
 
 .. note:: If the "Show candidates" checkbox in the "Settings" tab is
           checked, then *all* objects found in the region (according to
@@ -148,7 +151,8 @@ The log can be saved to a FITS table by putting a valid path and
 filename in the "File:" box and pressing "Save as FITS table".
 
 If no candidate is found
-------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^
+
 If no candidate can be found (based on the Settings) then the pick area
 is marked with a red `Point` centered on the pick area:
 
@@ -170,7 +174,7 @@ But all the other plots will be cleared.
 
 
 The Settings Tab
-================
+----------------
 
 .. image:: figures/pick-settings.png
    :width: 400px
@@ -185,7 +189,7 @@ The "Settings" tab controls aspects of the search within the pick area:
 * The "Draw type" parameter is used to choose the shape of the pick area
   to be drawn.
 * The "Radius" parameter sets the radius to be used when finding and
-  evaluating bright peaks in the image. 
+  evaluating bright peaks in the image.
 * The "Threshold" parameter is used to set a threshold for peak finding;
   if set to None then a reasonable default value will be chosen.
 * The "Min FWHM" and "Max FWHM" parameters can be used to eliminate
