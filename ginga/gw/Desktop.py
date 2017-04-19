@@ -214,7 +214,7 @@ class Desktop(Callback.Callbacks):
 
         # TODO: this needs to be more sophisticated
         # root.set_title(wsname)
-        ws = self.make_ws(wsname, wstype='tabs', use_toolbar=True)  # noqa
+        ws = self.make_ws(wsname, wstype='tabs', use_toolbar=True)
 
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
@@ -712,7 +712,7 @@ class Workspace(Widgets.WidgetBase):
         if wstype in ('tabs', 'nb', 'ws'):
             wstype = 'tabs'
             self.nb = Widgets.TabWidget(detachable=self.detachable,
-                                        group=self.group)
+                                        reorderable=True, group=self.group)
 
         elif wstype == 'mdi':
             self.nb = Widgets.MDIWidget(mode='mdi')
