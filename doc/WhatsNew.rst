@@ -16,6 +16,10 @@ Ver 2.6.4.dev
     clear what is being written.
   - If "Show candidates" is selected in Settings, then ALL of the candidates
     are saved to the log.
+  - Added documentation to the manual
+
+- Improvements to layout of Operations menu (plugin categories)
+- Colorbar scale now placed below the color wedge and is more legible
 
 Ver 2.6.3 (2017-03-30)
 ======================

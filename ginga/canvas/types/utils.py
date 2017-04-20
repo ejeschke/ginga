@@ -99,7 +99,7 @@ class ColorBar(CanvasObjectBase):
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
         spacing = 256 // nums
-        _interval = { i*spacing: True for i in range(nums) }
+        _interval = { i*spacing: True for i in range(1, nums) }
         ## self.logger.debug("nums=%d spacing=%d intervals=%s" % (
         ##     nums, spacing, _interval))
 
@@ -168,6 +168,7 @@ class ColorBar(CanvasObjectBase):
             cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
 
             cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
+            cr.draw_line(cx1, cy1, cx2, cy1)
 
             cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)
@@ -278,7 +279,7 @@ class DrawableColorBar(Rectangle):
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
         spacing = 256 // nums
-        _interval = { i*spacing: True for i in range(nums) }
+        _interval = { i*spacing: True for i in range(1, nums) }
 
         x_base, y_base, x_top, y_top = cx1, cy1, cx2, cy2
 
@@ -341,6 +342,7 @@ class DrawableColorBar(Rectangle):
             cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
 
             cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
+            cr.draw_line(cx1, cy1, cx2, cy1)
 
             cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)
