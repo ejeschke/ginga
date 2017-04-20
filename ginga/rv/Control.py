@@ -421,7 +421,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         else:
             local_doc = os.path.join(package_home, 'doc', 'help.html')
             if not os.path.exists(local_doc):
-                url = "https://ginga.readthedocs.io/en/latest"
+                url = "http://ginga.readthedocs.org/en/latest"
             else:
                 url = "file:%s" % (os.path.abspath(local_doc))
 

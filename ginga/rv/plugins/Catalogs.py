@@ -66,9 +66,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
-        canvas.set_drawtype(self.drawtype, color='cyan', linestyle='dash',
-                            #drawdims=True
-                            )
+        canvas.set_drawtype(self.drawtype, color='cyan', linestyle='dash')
         canvas.set_callback('cursor-down', self.btndown)
         canvas.set_callback('cursor-up', self.btnup)
         canvas.set_callback('draw-event', self.draw_cb)
@@ -835,6 +833,7 @@ class CatalogListing(object):
 
         self.cmap = cmap.get_cmap(self.magcmap)
         self.imap = imap.get_imap('ramp')
+        self.cbar_ht = 24
 
         self.operation_table = []
         self._select_flag = False
@@ -998,6 +997,7 @@ class CatalogListing(object):
         rgbmap.add_callback('changed', lambda *args: self.replot_stars())
 
         cbar_w = self.cbar.get_widget()
+        cbar_w.resize(-1, self.cbar_ht)
         vbox.add_widget(cbar_w, stretch=0)
 
         btns = Widgets.HBox()
