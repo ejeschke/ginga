@@ -27,7 +27,7 @@ class ColorBar(Callback.Callbacks):
         self._sarr = None
 
         cbar = Viewers.CanvasView(logger=self.logger)
-        width, height = 1, 28
+        width, height = 1, 48
         cbar.set_desired_size(width, height)
         cbar.enable_autozoom('off')
         cbar.enable_autocuts('off')

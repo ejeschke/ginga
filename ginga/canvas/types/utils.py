@@ -16,10 +16,10 @@ class ColorBar(CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='height', type=int, default=14,
+            Param(name='height', type=int, default=36,
                   min=0, max=200, widget='spinbutton', incr=1,
                   description="Height of colorbar in pixels"),
-            Param(name='offset', type=int, default=10,
+            Param(name='offset', type=int, default=40,
                   min=0, max=200, widget='spinbutton', incr=1,
                   description="Offset in pixels from the top or bottom of the window"),
             Param(name='side', type=str,
@@ -41,7 +41,10 @@ class ColorBar(CanvasObjectBase):
                   description="Style of outline (default: solid)"),
             Param(name='color',
                   valid=colors_plus_none, type=_color, default='black',
-                  description="Color of outline"),
+                  description="Color of text"),
+            Param(name='bgcolor',
+                  valid=colors_plus_none, type=_color, default='white',
+                  description="Color of text background"),
             Param(name='alpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of outline"),
@@ -50,14 +53,16 @@ class ColorBar(CanvasObjectBase):
                   description="Opacity of fill"),
             ]
 
-    def __init__(self, height=14, offset=10, side='bottom', showrange=True,
+    def __init__(self, height=36, offset=40, side='bottom', showrange=True,
                  font='Sans Serif', fontsize=8,
-                 color='black', linewidth=1, linestyle='solid', alpha=1.0,
+                 color='black', bgcolor='white',
+                 linewidth=1, linestyle='solid', alpha=1.0,
                  fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):
         super(ColorBar, self).__init__(height=height, offset=offset, side=side,
                                        showrange=showrange,
                                        font=font, fontsize=fontsize,
-                                       color=color, linewidth=linewidth,
+                                       color=color, bgcolor=bgcolor,
+                                       linewidth=linewidth,
                                        linestyle=linestyle, alpha=alpha,
                                        fillalpha=fillalpha, **kwdargs)
         self.rgbmap = rgbmap
@@ -85,20 +90,23 @@ class ColorBar(CanvasObjectBase):
         text = "%.4g" % (hival)
         txt_wd, txt_ht = cr.text_extents(text)
         avg_pixels_per_range_num = self.t_spacing + txt_wd
+        scale_ht = 0
+        if self.showrange:
+            scale_ht = txt_ht + self.tick_ht + 2
 
-        pxwd, pxht = width, max(self.height, txt_ht + self.tick_ht + 2)
-        #print("colormap size is %d,%d" % (pxwd, pxht))
+        pxwd, pxht = width, max(self.height, scale_ht)
 
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
         spacing = 256 // nums
         _interval = { i*spacing: True for i in range(nums) }
-        #self.logger.debug("nums=%d spacing=%d intervals=%s" % (
-        #    nums, spacing, _interval))
+        ## self.logger.debug("nums=%d spacing=%d intervals=%s" % (
+        ##     nums, spacing, _interval))
 
         y_base = self.offset
         if self.side == 'bottom':
             y_base = height - self.offset - pxht
+        y_top = y_base + self.height
 
         x1 = 0; x2 = pxwd
         clr_wd = pxwd // 256
@@ -107,9 +115,7 @@ class ColorBar(CanvasObjectBase):
             ival = 256 // rem_px
         else:
             ival = 0
-        clr_ht = pxht
-        #print("clr is %dx%d width=%d rem=%d ival=%d" % (
-        #       width, height, clr_wd, rem_px, ival))
+        clr_ht = pxht - scale_ht
 
         dist = rgbmap.get_dist()
 
@@ -132,7 +138,7 @@ class ColorBar(CanvasObjectBase):
             cr.set_line(color, linewidth=0)
             cr.set_fill(color, alpha=self.fillalpha)
 
-            cx1, cy1, cx2, cy2 = x, y_base, x+wd, y_base+pxht
+            cx1, cy1, cx2, cy2 = x, y_base, x+wd, y_base+clr_ht
             cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
 
             # Draw range scale if we are supposed to
@@ -145,29 +151,38 @@ class ColorBar(CanvasObjectBase):
                 text = "%.4g" % (val)
 
                 rx = x
-                ry = y_base + self.tick_ht + txt_ht
-                ryy = y_base
+                ry = y_top - scale_ht
+                ryy = y_top
                 range_pts.append((rx, ry, ryy, text))
 
             off += wd
 
-        cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
-
-        # draw optional border
-        if self.linewidth > 0:
-            cx1, cy1, cx2, cy2 = 0, y_base, wd, y_base+pxht
-            cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
-            cr.draw_polygon(cpoints)
-
         # draw range
         if self.showrange:
+            # draw background
+            cr.set_fill(self.bgcolor, alpha=self.fillalpha)
+            cr.set_line(self.bgcolor, linewidth=0)
+
+            x = 0
+            cx1, cy1, cx2, cy2 = x, y_top - scale_ht, x+pxwd, y_top
+            cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+
+            cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
+
             cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)
             for (cx, cy, cyy, text) in range_pts:
                 # tick
-                cr.draw_line(cx, cyy, cx, cyy+self.tick_ht)
+                cr.draw_line(cx, cy, cx, cy+self.tick_ht)
                 # number
-                cr.draw_text(cx, cy, text)
+                cr.draw_text(cx, cyy-2, text)
+
+        # draw optional border
+        if self.linewidth > 0:
+            cr.set_fill(self.bgcolor, alpha=0.0)
+            cx1, cy1, cx2, cy2 = 0, y_base, wd, y_top
+            cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
+            cr.draw_polygon(cpoints)
 
 
 class DrawableColorBar(Rectangle):
@@ -202,6 +217,9 @@ class DrawableColorBar(Rectangle):
             Param(name='color',
                   valid=colors_plus_none, type=_color, default='black',
                   description="Color of outline"),
+            Param(name='bgcolor',
+                  valid=colors_plus_none, type=_color, default='white',
+                  description="Color of text background"),
             Param(name='alpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of outline"),
@@ -212,11 +230,12 @@ class DrawableColorBar(Rectangle):
 
     def __init__(self, x1, y1, x2, y2, showrange=True,
                  font='Sans Serif', fontsize=8,
-                 color='black', linewidth=1, linestyle='solid', alpha=1.0,
+                 color='black', bgcolor='white',
+                 linewidth=1, linestyle='solid', alpha=1.0,
                  fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):
         Rectangle.__init__(self, x1, y1, x2, y2,
                            font=font, fontsize=fontsize,
-                           color=color, linewidth=linewidth,
+                           color=color, bgcolor=bgcolor, linewidth=linewidth,
                            linestyle=linestyle, alpha=alpha,
                            fillalpha=fillalpha, **kwdargs)
         self.showrange = showrange
@@ -249,8 +268,11 @@ class DrawableColorBar(Rectangle):
         text = "%.4g" % (hival)
         txt_wd, txt_ht = cr.text_extents(text)
         avg_pixels_per_range_num = self.t_spacing + txt_wd
+        scale_ht = 0
+        if self.showrange:
+            scale_ht = txt_ht + self.tick_ht + 2
 
-        pxwd, pxht = width, max(height, txt_ht + self.tick_ht + 2)
+        pxwd, pxht = width, max(height, scale_ht)
         pxwd, pxht = max(pxwd, 1), max(pxht, 1)
 
         # calculate intervals for range numbers
@@ -258,7 +280,7 @@ class DrawableColorBar(Rectangle):
         spacing = 256 // nums
         _interval = { i*spacing: True for i in range(nums) }
 
-        y_base = cy1
+        x_base, y_base, x_top, y_top = cx1, cy1, cx2, cy2
 
         x1 = cx1; x2 = pxwd
         clr_wd = pxwd // 256
@@ -267,9 +289,7 @@ class DrawableColorBar(Rectangle):
             ival = 256 // rem_px
         else:
             ival = 0
-        clr_ht = pxht
-        #print("clr is %dx%d width=%d rem=%d ival=%d" % (
-        #       width, height, clr_wd, rem_px, ival))
+        clr_ht = pxht - scale_ht
 
         dist = rgbmap.get_dist()
 
@@ -292,7 +312,7 @@ class DrawableColorBar(Rectangle):
             cr.set_line(color, linewidth=0)
             cr.set_fill(color, alpha=self.fillalpha)
 
-            cx1, cy1, cx2, cy2 = x, y_base, x+wd, y_base+pxht
+            cx1, cy1, cx2, cy2 = x, y_base, x+wd, y_base+clr_ht
             cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
 
             # Draw range scale if we are supposed to
@@ -305,29 +325,37 @@ class DrawableColorBar(Rectangle):
                 text = "%.4g" % (val)
 
                 rx = x
-                ry = y_base + self.tick_ht + txt_ht
-                ryy = y_base
+                ry = y_top - scale_ht
+                ryy = y_top
                 range_pts.append((rx, ry, ryy, text))
 
             off += wd
 
-        cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
-
-        # draw optional border
-        if self.linewidth > 0:
-            cx1, cy1, cx2, cy2 = 0, y_base, wd, y_base+pxht
-            cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
-            cr.draw_polygon(cpoints)
-
         # draw range
         if self.showrange:
+            # draw background
+            cr.set_fill(self.bgcolor, alpha=self.fillalpha)
+            cr.set_line(self.bgcolor, linewidth=0)
+
+            cx1, cy1, cx2, cy2 = x_base, y_top - scale_ht, x_top, y_top
+            cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+
+            cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
+
             cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)
             for (cx, cy, cyy, text) in range_pts:
                 # tick
-                cr.draw_line(cx, cyy, cx, cyy+self.tick_ht)
+                cr.draw_line(cx, cy, cx, cy+self.tick_ht)
                 # number
-                cr.draw_text(cx, cy, text)
+                cr.draw_text(cx, cyy-2, text)
+
+        # draw optional border
+        if self.linewidth > 0:
+            cr.set_fill(self.bgcolor, alpha=0.0)
+            cx1, cy1, cx2, cy2 = x_base, y_base, x_top, y_top
+            cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
+            cr.draw_polygon(cpoints)
 
 
 class ModeIndicator(CanvasObjectBase):
