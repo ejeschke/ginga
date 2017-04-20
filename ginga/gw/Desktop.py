@@ -218,7 +218,7 @@ class Desktop(Callback.Callbacks):
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
 
-        vbox.add_widget(bnch.widget)
+        vbox.add_widget(ws.widget)
         root.set_widget(vbox)
 
         root.resize(width, height)
@@ -227,7 +227,7 @@ class Desktop(Callback.Callbacks):
 
         if x is not None:
             root.move(x, y)
-        return bnch
+        return ws
 
     def _mk_take_tab_cb(self, tabname, to_nb):
         def _foo():
@@ -244,7 +244,7 @@ class Desktop(Callback.Callbacks):
         if num_children == 0:
             del self.workspace[ws.name]
             root = ws.root
-            bnch.root = None
+            ws.root = None
             root.delete()
         return True
 
