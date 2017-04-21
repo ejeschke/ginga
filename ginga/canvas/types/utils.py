@@ -99,7 +99,8 @@ class ColorBar(CanvasObjectBase):
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
         spacing = 256 // nums
-        _interval = { i*spacing: True for i in range(1, nums) }
+        start = spacing // 2
+        _interval = { start + i*spacing: True for i in range(0, nums-1) }
         ## self.logger.debug("nums=%d spacing=%d intervals=%s" % (
         ##     nums, spacing, _interval))
 
@@ -279,7 +280,8 @@ class DrawableColorBar(Rectangle):
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
         spacing = 256 // nums
-        _interval = { i*spacing: True for i in range(1, nums) }
+        start = spacing // 2
+        _interval = { start + i*spacing: True for i in range(0, nums-1) }
 
         x_base, y_base, x_top, y_top = cx1, cy1, cx2, cy2
 

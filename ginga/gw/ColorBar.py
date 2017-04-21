@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.misc import Callback
+from ginga.misc import Callback, Settings
 from ginga import RGBMap
 
 from ginga.gw import Viewers
@@ -15,19 +15,23 @@ class ColorBarError(Exception):
 
 class ColorBar(Callback.Callbacks):
 
-    def __init__(self, logger, rgbmap=None, link=False):
+    def __init__(self, logger, rgbmap=None, link=False, settings=None):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
         self.link_rgbmap = link
         if not rgbmap:
             rgbmap = RGBMap.RGBMapper(logger)
+        # Create settings and set defaults
+        if settings is None:
+            settings = Settings.SettingGroup(logger=self.logger)
+        self.settings = settings
 
         self._start_x = 0
         self._sarr = None
 
         cbar = Viewers.CanvasView(logger=self.logger)
-        width, height = 1, 36
+        width, height = 1, self.settings.get('cbar_height', 36)
         cbar.set_desired_size(width, height)
         cbar.enable_autozoom('off')
         cbar.enable_autocuts('off')
@@ -57,9 +61,10 @@ class ColorBar(Callback.Callbacks):
         self.widget = iw
         iw.resize(width, height)
 
+        fontsize = self.settings.get('fontsize', 12)
         canvas = self.cbar_view.get_canvas()
         self.cbar = utils.ColorBar(offset=0, height=height, rgbmap=rgbmap,
-                                   fontsize=8)
+                                   fontsize=fontsize)
         canvas.add(self.cbar, tag='colorbar')
 
         self.set_rgbmap(rgbmap)

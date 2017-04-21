@@ -40,18 +40,18 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Colorbar')
-        self.settings.add_defaults(cbar_height=28)
+        self.settings.add_defaults(cbar_height=36, fontsize=12)
         self.settings.load(onError='silent')
 
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
 
     def build_gui(self, container):
-        cbar = ColorBar.ColorBar(self.logger)
+        cbar = ColorBar.ColorBar(self.logger, settings=self.settings)
         cbar.set_cmap(self.fv.cm)
         cbar.set_imap(self.fv.im)
         cbar_w = cbar.get_widget()
-        cbar_ht = self.settings.get('cbar_height', 28)
+        cbar_ht = self.settings.get('cbar_height', 36)
         cbar_w.resize(-1, cbar_ht)
 
         self.colorbar = cbar
