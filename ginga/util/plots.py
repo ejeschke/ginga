@@ -401,7 +401,8 @@ class FWHMPlot(Plot):
 
         self.iqcalc = iqcalc.IQCalc(self.logger)
 
-    def _plot_fwhm_axis(self, arr, iqcalc, skybg, color1, color2, color3):
+    def _plot_fwhm_axis(self, arr, iqcalc, skybg, color1, color2, color3,
+                        fwhm_method='gaussian'):
         N = len(arr)
         X = numpy.array(list(range(N)))
         Y = arr
@@ -413,18 +414,21 @@ class FWHMPlot(Plot):
         self.logger.debug("Y=%s" % (str(Y)))
         self.ax.plot(X, Y, color=color1, marker='.')
 
-        fwhm, mu, sdev, maxv = iqcalc.calc_fwhm(arr)
-        # Make a little smoother gaussian curve by plotting intermediate
+        res = iqcalc.calc_fwhm(arr, method_name=fwhm_method)
+        fwhm, mu = res.fwhm, res.mu
+
+        # Make a little smoother fitted curve by plotting intermediate
         # points
-        XN = numpy.linspace(0.0, float(N), N*10)
-        Z = numpy.array([iqcalc.gaussian(x, (mu, sdev, maxv))
+        XN = numpy.linspace(0.0, float(N), N * 10)
+        Z = numpy.array([res.fit_fn(x, res.fit_args)
                          for x in XN])
         self.ax.plot(XN, Z, color=color1, linestyle=':')
-        self.ax.axvspan(mu-fwhm/2.0, mu+fwhm/2.0,
-                           facecolor=color3, alpha=0.25)
-        return (fwhm, mu, sdev, maxv)
+        self.ax.axvspan(mu - fwhm / 2.0, mu + fwhm / 2.0,
+                        facecolor=color3, alpha=0.25)
+        return fwhm
 
-    def plot_fwhm(self, x, y, radius, image, cutout_data=None, iqcalc=None):
+    def plot_fwhm(self, x, y, radius, image, cutout_data=None,
+                  iqcalc=None, fwhm_method='gaussian'):
 
         x0, y0, xarr, yarr = image.cutout_cross(x, y, radius)
 
@@ -449,14 +453,17 @@ class FWHMPlot(Plot):
                 x, y, radius, skybg))
 
             self.logger.debug("xarr=%s" % (str(xarr)))
-            fwhm_x, mu, sdev, maxv = self._plot_fwhm_axis(xarr, iqcalc, skybg,
-                                                          'blue', 'blue', 'skyblue')
+            fwhm_x = self._plot_fwhm_axis(xarr, iqcalc, skybg,
+                                          'blue', 'blue', 'skyblue',
+                                          fwhm_method=fwhm_method)
 
             self.logger.debug("yarr=%s" % (str(yarr)))
-            fwhm_y, mu, sdev, maxv = self._plot_fwhm_axis(yarr, iqcalc, skybg,
-                                                          'green', 'green', 'seagreen')
+            fwhm_y = self._plot_fwhm_axis(yarr, iqcalc, skybg,
+                                          'green', 'green', 'seagreen',
+                                          fwhm_method=fwhm_method)
 
-            self.ax.legend(('data x', 'gauss x', 'data y', 'gauss y'),
+            falg = fwhm_method
+            self.ax.legend(('data x', '%s x' % falg, 'data y', '%s y' % falg),
                            loc='upper right', shadow=False, fancybox=False,
                            prop={'size': 8}, labelspacing=0.2)
             self.set_titles(title="FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))

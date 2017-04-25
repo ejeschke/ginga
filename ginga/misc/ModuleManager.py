@@ -39,10 +39,7 @@ def my_import(name, path=None):
             sys.path.pop(0)
 
     else:
-        components = name.split('.')
-        modname = components[-1]
-        pkg = '.'.join(components[:-1])
-        mod = importlib.import_module(modname, package=pkg)
+        mod = importlib.import_module(name)
 
     return mod
 
@@ -63,15 +60,16 @@ class ModuleManager(object):
     def load_module(self, module_name, pfx=None, path=None):
         """Load/reload module from the given name."""
         try:
-            if module_name in self.module:
+            if module_name in sys.modules:
+                module = sys.modules[module_name]
                 self.logger.info("Reloading module '%s'..." % module_name)
                 if hasattr(importlib, 'reload'):
                     # python 3.4+
-                    module = importlib.reload(self.module[module_name])
+                    module = importlib.reload(module)
 
                 else:
                     import imp
-                    module = imp.reload(self.module[module_name])
+                    module = imp.reload(module)
 
             else:
                 if pfx:
@@ -92,7 +90,11 @@ class ModuleManager(object):
 
     def get_module(self, module_name):
         """Return loaded module from the given name."""
-        return self.module[module_name]
+        try:
+            return self.module[module_name]
+
+        except KeyError:
+            return sys.modules[module_name]
 
 
     ########################################################

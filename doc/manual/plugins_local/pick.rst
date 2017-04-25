@@ -205,6 +205,10 @@ The "Settings" tab controls aspects of the search within the pick area:
 * The "Coordinate Base" parameter is an offset to apply to located
   sources.  Set to "1" if you want sources pixel locations reported
   in a FITS-compliant manner and "0" if you prefer 0-based indexing.
+* The "Calc center" parameter is used to determine whether the center
+  is calculated from FWHM fitting ("fwhm") or centroiding ("centroid").
+* The "FWHM fitting" parameter is used to determine which function is
+  is used for FWHM fitting ("gaussian" or "moffat").
 * The "Contour Interpolation" parameter is used to set the interpolation
   method used in rendering the background image in the "Contour" plot.
 

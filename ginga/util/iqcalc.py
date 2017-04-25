@@ -56,16 +56,16 @@ class IQCalc(object):
 
         p[0]==mean, p[1]==sdev, p[2]=maxv
         """
-        y = (1.0 / (p[1] * numpy.sqrt(2*numpy.pi)) *
-             numpy.exp(-(x - p[0])**2 / (2*p[1]**2))) * p[2]
+        y = (1.0 / (p[1] * numpy.sqrt(2 * numpy.pi)) *
+             numpy.exp(-(x - p[0]) ** 2 / (2 * p[1] ** 2))) * p[2]
         return y
 
-    def calc_fwhm(self, arr1d, medv=None, gauss_fn=None):
+    def calc_fwhm_gaussian(self, arr1d, medv=None, gauss_fn=None):
         """FWHM calculation on a 1D array by using least square fitting of
         a gaussian function on the data.  arr1d is a 1D array cut in either
         X or Y direction on the object.
         """
-        if not gauss_fn:
+        if gauss_fn is None:
             gauss_fn = self.gaussian
 
         N = len(arr1d)
@@ -100,13 +100,93 @@ class IQCalc(object):
         self.logger.debug("mu=%f sdev=%f maxv=%f" % (mu, sdev, maxv))
 
         # Now that we have the sdev from fitting, we can calculate FWHM
-        # (fwhm = sdev * sqrt(8*log(2)) ?)
         fwhm = 2.0 * numpy.sqrt(2.0 * numpy.log(2.0)) * sdev
-        #return (fwhm, mu, sdev, maxv)
-        return (float(fwhm), float(mu), float(sdev), maxv)
+        # some routines choke on numpy values and need "pure" Python floats
+        # e.g. when marshalling through a remote procedure interface
+        fwhm = float(fwhm)
+        mu = float(mu)
+        sdev = float(sdev)
+        maxv = float(maxv)
 
-    def get_fwhm(self, x, y, radius, data, medv=None):
+        res = Bunch.Bunch(fwhm=fwhm, mu=mu, sdev=sdev, maxv=maxv,
+                          fit_fn=gauss_fn, fit_args=[mu, sdev, maxv])
+        return res
+
+    def moffat(self, x, p):
+        """Moffat fitting function in 1D.
+        p[0]==mean, p[1]==corewidth(gamma), p[2]=power(alpha), p[3]=maxv
         """
+        y = (1.0 + (x - p[0]) ** 2 / p[1] ** 2) ** (-1.0 * p[2]) * p[3]
+        return y
+
+    def calc_fwhm_moffat(self, arr1d, medv=None, moffat_fn=None):
+        """FWHM calculation on a 1D array by using least square fitting of
+        a Moffat function on the data.  arr1d is a 1D array cut in either
+        X or Y direction on the object.
+        """
+        if moffat_fn is None:
+            moffat_fn = self.moffat
+
+        N = len(arr1d)
+        X = numpy.array(list(range(N)))
+        Y = arr1d
+        # Fitting works more reliably if we do the following
+        # a. subtract sky background
+        if medv is None:
+            medv = numpy.median(Y)
+        Y = Y - medv
+        maxv = Y.max()
+        # b. clamp to 0..max (of the sky subtracted field)
+        Y = Y.clip(0, maxv)
+
+        # Fit a moffat
+        p0 = [0, N-1, 2, maxv]              # Inital guess
+        # Distance to the target function
+        errfunc = lambda p, x, y: moffat_fn(x, p) - y
+        # Least square fit to the gaussian
+        with self.lock:
+            # NOTE: without this mutex, optimize.leastsq causes a fatal error
+            # sometimes--it appears not to be thread safe.
+            # The error is:
+            # "SystemError: null argument to internal routine"
+            # "Fatal Python error: GC object already tracked"
+            p1, success = optimize.leastsq(errfunc, p0[:], args=(X, Y))
+
+        if not success:
+            raise IQCalcError("FWHM moffat fitting failed")
+
+        mu, width, power, maxv = p1
+        width = numpy.abs(width)
+        self.logger.debug("mu=%f width=%f power=%f maxv=%f" % (
+            mu, width, power, maxv))
+
+        fwhm = 2.0 * width * numpy.sqrt(2.0 ** (1.0 / power) - 1.0)
+
+        # some routines choke on numpy values and need "pure" Python floats
+        # e.g. when marshalling through a remote procedure interface
+        fwhm = float(fwhm)
+        mu = float(mu)
+        width = float(width)
+        power = float(power)
+        maxv = float(maxv)
+
+        res = Bunch.Bunch(fwhm=fwhm, mu=mu, width=width, power=power,
+                          maxv=maxv, fit_fn=moffat_fn,
+                          fit_args=[mu, width, power, maxv])
+        return res
+
+    def calc_fwhm(self, arr1d, medv=None, method_name='gaussian'):
+
+        # Calculate FWHM in each direction
+        fwhm_fn = self.calc_fwhm_gaussian
+        if method_name == 'moffat':
+            fwhm_fn = self.calc_fwhm_moffat
+
+        return fwhm_fn(arr1d, medv=medv)
+
+    def get_fwhm(self, x, y, radius, data, medv=None, method_name='gaussian'):
+        """Get the FWHM value of the object at the coordinates (x, y) using
+        radius.
         """
         if medv is None:
             medv = numpy.median(data)
@@ -115,14 +195,17 @@ class IQCalc(object):
         x0, y0, xarr, yarr = self.cut_cross(x, y, radius, data)
 
         # Calculate FWHM in each direction
-        fwhm_x, cx, sdx, maxx = self.calc_fwhm(xarr, medv=medv)
-        fwhm_y, cy, sdy, maxy = self.calc_fwhm(yarr, medv=medv)
+        x_res = self.calc_fwhm(xarr, medv=medv, method_name=method_name)
+        fwhm_x, cx = x_res.fwhm, x_res.mu
+
+        y_res = self.calc_fwhm(yarr, medv=medv, method_name=method_name)
+        fwhm_y, cy = y_res.fwhm, y_res.mu
 
         ctr_x = x0 + cx
         ctr_y = y0 + cy
         self.logger.debug("fwhm_x,fwhm_y=%f,%f center=%f,%f" % (
             fwhm_x, fwhm_y, ctr_x, ctr_y))
-        return (fwhm_x, fwhm_y, ctr_x, ctr_y, sdx, sdy, maxx, maxy)
+        return (fwhm_x, fwhm_y, ctr_x, ctr_y, x_res, y_res)
 
 
     def starsize(self, fwhm_x, deg_pix_x, fwhm_y, deg_pix_y):
@@ -237,14 +320,14 @@ class IQCalc(object):
         return float(res)
 
 
-    def fwhm_data(self, x, y, data, radius=15):
-        return self.get_fwhm(x, y, radius, data)
+    def fwhm_data(self, x, y, data, radius=15, method_name='gaussian'):
+        return self.get_fwhm(x, y, radius, data, method_name=method_name)
 
 
     # EVALUATION ON A FIELD
 
     def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=15,
-                       fwhm_method=1, cb_fn=None, ev_intr=None):
+                       fwhm_method='gaussian', cb_fn=None, ev_intr=None):
 
         height, width = data.shape
         hh = float(height) / 2.0
@@ -268,19 +351,15 @@ class IQCalc(object):
 
             # Find the fwhm in x and y
             try:
-                if fwhm_method == 1:
-                    (fwhm_x, fwhm_y, ctr_x, ctr_y,
-                     sdx, sdy, maxx, maxy) = self.fwhm_data(x, y, data,
-                                                            radius=fwhm_radius)
+                res = self.fwhm_data(x, y, data, radius=fwhm_radius,
+                                     method_name=fwhm_method)
+                fwhm_x, fwhm_y, ctr_x, ctr_y, x_res, y_res = res
 
-                    # Average the X and Y gaussian fitting near the peak
-                    bx = self.gaussian(round(ctr_x), (ctr_x, sdx, maxx))
-                    by = self.gaussian(round(ctr_y), (ctr_y, sdy, maxy))
-                    bright = float((bx + by) / 2.0)
-
-                else:
-                    raise IQCalcError("Method (%d) not supported for fwhm calculation!" %(
-                        fwhm_method))
+                bx = x_res.fit_fn(round(ctr_x),
+                                  (ctr_x,) + tuple(x_res.fit_args[1:]))
+                by = y_res.fit_fn(round(ctr_y),
+                                  (ctr_y,) + tuple(y_res.fit_args[1:]))
+                bright = float((bx + by) / 2.0)
 
             except Exception as e:
                 # Error doing FWHM, skip this object
@@ -300,8 +379,6 @@ class IQCalc(object):
             self.logger.debug("orig=%f,%f  ctr=%f,%f  fwhm=%f,%f bright=%f" % (
                 x, y, ctr_x, ctr_y, fwhm_x, fwhm_y, bright))
             # overall measure of fwhm as a single value
-            #fwhm = math.sqrt(fwhm_x*fwhm_x + fwhm_y*fwhm_y)
-            #fwhm = (math.fabs(fwhm_x) + math.fabs(fwhm_y)) / 2.0
             fwhm = (math.sqrt(fwhm_x*fwhm_x + fwhm_y*fwhm_y) *
                     (1.0 / math.sqrt(2.0)) )
 

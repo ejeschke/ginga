@@ -187,6 +187,8 @@ class Pick(GingaPlugin.LocalPlugin):
       in a FITS-compliant manner and "0" if you prefer 0-based indexing.
     * The "Calc center" parameter is used to determine whether the center
       is calculated from FWHM fitting ("fwhm") or centroiding ("centroid").
+    * The "FWHM fitting" parameter is used to determine which function is
+      is used for FWHM fitting ("gaussian" or "moffat").
     * The "Contour Interpolation" parameter is used to set the interpolation
       method used in rendering the background image in the "Contour" plot.
 
@@ -267,7 +269,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pickshape = self.settings.get('shape_pick', 'rectangle')
         if self.pickshape not in self.drawtypes:
             self.pickshape = 'box'
-        self.candidate_color = self.settings.get('color_candidate', 'purple')
+        self.candidate_color = self.settings.get('color_candidate', 'orange')
 
         # Peak finding parameters and selection criteria
         self.max_side = self.settings.get('max_side', 1024)
@@ -284,6 +286,8 @@ class Pick(GingaPlugin.LocalPlugin):
                                                      coord_offset)
         self.center_algs = ['fwhm', 'centroid']
         self.center_alg = self.settings.get('calc_center_alg', 'fwhm')
+        self.fwhm_algs = ['gaussian', 'moffat']
+        self.fwhm_alg = self.settings.get('calc_fwhm_alg', 'gaussian')
 
         # For controls
         self.delta_bg = self.settings.get('delta_bg', 0.0)
@@ -502,9 +506,10 @@ class Pick(GingaPlugin.LocalPlugin):
                      'Coordinate Base', 'entry'),
                     ("Calc center:", 'label', 'xlbl_calccenter', 'label',
                      "Calc center", 'combobox'),
+                    ("FWHM fitting:", 'label', 'xlbl_fwhmfitting', 'label',
+                     "FWHM fitting", 'combobox'),
                     ('Contour Interpolation:', 'label', 'xlbl_cinterp', 'label',
                      'Contour Interpolation', 'combobox'),
-                    ('Redo Pick', 'button'),
                     )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -519,6 +524,7 @@ class Pick(GingaPlugin.LocalPlugin):
         b.max_side.set_tooltip("Maximum dimension to search for peaks")
         b.coordinate_base.set_tooltip("Base of pixel coordinate system")
         b.calc_center.set_tooltip("How to calculate the center of object")
+        b.fwhm_fitting.set_tooltip("Function for fitting the FWHM")
         b.contour_interpolation.set_tooltip("Interpolation for use in contour plot")
 
         def chg_pickshape(w, idx):
@@ -630,7 +636,6 @@ class Pick(GingaPlugin.LocalPlugin):
         self.contour_plot.interpolation = self.contour_interpolation
         combobox.add_callback('activated', chg_contour_interp)
 
-        b.redo_pick.add_callback('activated', lambda w: self.redo())
         b.show_candidates.set_state(self.show_candidates)
         b.show_candidates.add_callback('activated', self.show_candidates_cb)
         self.w.xlbl_coordinate_base.set_text(str(self.pixel_coords_offset))
@@ -649,9 +654,30 @@ class Pick(GingaPlugin.LocalPlugin):
         combobox.add_callback('activated', chg_calccenter)
         b.xlbl_calccenter.set_text(self.center_alg)
 
+        def chg_fwhmfitting(w, idx):
+            self.fwhm_alg = self.fwhm_algs[idx]
+            self.w.xlbl_fwhmfitting.set_text(self.fwhm_alg)
+            return True
+        combobox = b.fwhm_fitting
+        for name in self.fwhm_algs:
+            combobox.append_text(name)
+        index = self.fwhm_algs.index(self.fwhm_alg)
+        combobox.set_index(index)
+        combobox.add_callback('activated', chg_fwhmfitting)
+        b.xlbl_fwhmfitting.set_text(self.fwhm_alg)
+
+        sw2 = Widgets.ScrollArea()
+        sw2.set_widget(w)
+
         vbox3 = Widgets.VBox()
-        vbox3.add_widget(w, stretch=0)
-        vbox3.add_widget(Widgets.Label(''), stretch=1)
+        vbox3.add_widget(sw2, stretch=1)
+
+        btns = Widgets.HBox()
+        btn = Widgets.Button('Redo Pick')
+        btn.add_callback('activated', lambda w: self.redo())
+        btns.add_widget(btn, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        vbox3.add_widget(btns, stretch=0)
         nb.add_widget(vbox3, title="Settings")
 
         # Build controls panel
@@ -903,7 +929,8 @@ class Pick(GingaPlugin.LocalPlugin):
         try:
             self.fwhm_plot.plot_fwhm(x, y, radius, image,
                                      cutout_data=self.pick_data,
-                                     iqcalc=self.iqcalc)
+                                     iqcalc=self.iqcalc,
+                                     fwhm_method=self.fwhm_alg)
 
         except Exception as e:
             self.logger.error("Error making fwhm plot: %s" % (
@@ -1082,7 +1109,8 @@ class Pick(GingaPlugin.LocalPlugin):
                 objlist = self.iqcalc.evaluate_peaks(peaks, data,
                                                      fwhm_radius=self.radius,
                                                      cb_fn=cb_fn,
-                                                     ev_intr=self.ev_intr)
+                                                     ev_intr=self.ev_intr,
+                                                     fwhm_method=self.fwhm_alg)
 
                 num_candidates = len(objlist)
                 if num_candidates == 0:

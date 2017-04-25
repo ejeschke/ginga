@@ -247,6 +247,14 @@ class CommandInterpreter(object):
         self.fv.start_global_plugin(plname)
         return True
 
+    def cmd_reload_module(self, modname):
+        """reload_module `modname`
+
+        Reload the Python module named `modname`.
+        """
+        self.fv.mm.load_module(modname)
+        return True
+
     def cmd_cd(self, *args):
         """cd [path]
 
