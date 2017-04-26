@@ -75,6 +75,17 @@ class Callbacks(object):
             raise CallbackError("No callback category of '%s'" % (
                 name))
 
+    def remove_callback(self, name, fn, *args, **kwdargs):
+        """Remove a specific callback that was added.
+        """
+        try:
+            tup = (fn, args, kwdargs)
+            if tup in self.cb[name]:
+                self.cb[name].remove(tup)
+        except KeyError:
+            raise CallbackError("No callback category of '%s'" % (
+                name))
+
     # TODO: to be deprecated ?
     def set_callback(self, name, fn, *args, **kwdargs):
         if not self.has_callback(name):

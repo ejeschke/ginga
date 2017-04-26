@@ -304,13 +304,13 @@ class ReferenceViewer(object):
 
         # Set up preferences
         prefs = Settings.Preferences(basefolder=basedir, logger=logger)
-        settings = prefs.createCategory('general')
+        settings = prefs.create_category('general')
         settings.load(onError='silent')
-        settings.setDefaults(useMatplotlibColormaps=False,
-                             widgetSet='choose',
-                             WCSpkg='choose', FITSpkg='choose',
-                             recursion_limit=2000,
-                             save_layout=False)
+        settings.set_defaults(useMatplotlibColormaps=False,
+                              widgetSet='choose',
+                              WCSpkg='choose', FITSpkg='choose',
+                              recursion_limit=2000,
+                              save_layout=False)
 
         # default of 1000 is a little too small
         sys.setrecursionlimit(settings.get('recursion_limit'))
@@ -489,16 +489,16 @@ class ReferenceViewer(object):
         # Load any custom modules
         if options.modules:
             modules = options.modules.split(',')
-            for longPluginName in modules:
-                if '.' in longPluginName:
-                    tmpstr = longPluginName.split('.')
-                    pluginName = tmpstr[-1]
+            for long_plugin_name in modules:
+                if '.' in long_plugin_name:
+                    tmpstr = long_plugin_name.split('.')
+                    plugin_name = tmpstr[-1]
                     pfx = '.'.join(tmpstr[:-1])
                 else:
-                    pluginName = longPluginName
+                    plugin_name = long_plugin_name
                     pfx = None
-                spec = Bunch(name=pluginName, module=pluginName,
-                             tab=pluginName, workspace='right', pfx=pfx)
+                spec = Bunch(name=plugin_name, module=plugin_name,
+                             tab=plugin_name, workspace='right', pfx=pfx)
                 ginga_shell.add_global_plugin(spec)
 
         # Load modules for "local" (per-channel) plug ins
@@ -509,15 +509,15 @@ class ReferenceViewer(object):
         # Load any custom plugins
         if options.plugins:
             plugins = options.plugins.split(',')
-            for longPluginName in plugins:
-                if '.' in longPluginName:
-                    tmpstr = longPluginName.split('.')
-                    pluginName = tmpstr[-1]
+            for long_plugin_name in plugins:
+                if '.' in long_plugin_name:
+                    tmpstr = long_plugin_name.split('.')
+                    plugin_name = tmpstr[-1]
                     pfx = '.'.join(tmpstr[:-1])
                 else:
-                    pluginName = longPluginName
+                    plugin_name = long_plugin_name
                     pfx = None
-                spec = Bunch(module=pluginName, workspace='dialogs',
+                spec = Bunch(module=plugin_name, workspace='dialogs',
                              hidden=False, pfx=pfx)
                 ginga_shell.add_local_plugin(spec)
 
