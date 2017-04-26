@@ -12,14 +12,34 @@ import gobject
 from ginga.misc import Callback, Bunch, LineHistory
 from functools import reduce
 
+has_webkit = False
+try:
+    import webkit  # noqa
+    has_webkit = True
+except ImportError:
+    pass
+
+__all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
+           'GrowingTextEdit', 'TextArea', 'Label', 'Button', 'ComboBox',
+           'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
+           'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
+           'WebView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
+           'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
+           'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
+           'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
+           'Dialog', 'SaveDialog', 'DragPackage', 'WidgetMoveEvent',
+           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
+           'get_orientation', 'get_oriented_box', 'has_webkit']
+
+
 class WidgetError(Exception):
     """For errors thrown in this module."""
     pass
 
-
 # (see TabWidget)
 _widget_move_event = None
 _app = None
+
 
 # BASE
 
@@ -92,6 +112,7 @@ class WidgetBase(Callback.Callbacks):
         # this is for compatibility with Qt widgets
         pass
 
+
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
@@ -150,6 +171,7 @@ class TextEntry(WidgetBase):
         self.widget.set_width_chars(numchars)
         pass
 
+
 class TextEntrySet(WidgetBase):
     def __init__(self, text='', editable=True):
         super(TextEntrySet, self).__init__()
@@ -192,6 +214,12 @@ class TextEntrySet(WidgetBase):
     def set_enabled(self, tf):
         super(TextEntrySet, self).set_enabled(tf)
         self.entry.set_sensitive(tf)
+
+
+class GrowingTextEdit(WidgetBase):
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError
+
 
 class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
@@ -273,6 +301,7 @@ class TextArea(WidgetBase):
         else:
             self.tw.set_wrap_mode(gtk.WRAP_NONE)
 
+
 class Label(WidgetBase):
     def __init__(self, text='', halign='left', style='normal', menu=None):
         super(Label, self).__init__()
@@ -332,6 +361,7 @@ class Label(WidgetBase):
             self.evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bg))
         if fg is not None:
             self.label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(fg))
+
 
 class Button(WidgetBase):
     def __init__(self, text=''):
@@ -610,6 +640,7 @@ class Image(WidgetBase):
     def _set_image(self, native_image):
         self.image.set_from_pixbuf(native_image.get_pixbuf())
 
+
 class ProgressBar(WidgetBase):
     def __init__(self):
         super(ProgressBar, self).__init__()
@@ -624,6 +655,7 @@ class ProgressBar(WidgetBase):
         pct = float(pct)
         self.widget.set_fraction(pct)
         self.widget.set_text("%.2f %%" % (pct * 100.0))
+
 
 class StatusBar(WidgetBase):
     def __init__(self):
@@ -980,6 +1012,22 @@ class TreeView(WidgetBase):
         self.make_callback('drag-start', drag_pkg, res_dict)
         drag_pkg.start_drag()
 
+
+class WebView(WidgetBase):
+    def __init__(self):
+        if not has_webkit:
+            raise NotImplementedError("Missing webkit")
+
+        super(WebView, self).__init__()
+        self.widget = webkit.WebView()
+
+    def load_url(self, url):
+        self.widget.open(url)
+
+    def load_html_string(self, html_string):
+        self.widget.load_string(html_string, 'text/html', 'utf-8', 'file://')
+
+
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
@@ -1052,9 +1100,11 @@ class Box(ContainerBase):
         self.widget.pack_start(child_w, expand=expand, fill=True)
         self.widget.show_all()
 
+
 class VBox(Box):
     def __init__(self):
         super(VBox, self).__init__(orientation='vertical')
+
 
 class HBox(Box):
     def __init__(self):
@@ -1204,6 +1254,7 @@ class TabWidget(ContainerBase):
         else:
             evbox.modify_bg(gtk.STATE_NORMAL, None)
 
+
 class StackWidget(TabWidget):
     def __init__(self):
         super(StackWidget, self).__init__()
@@ -1212,6 +1263,7 @@ class StackWidget(TabWidget):
         #nb.set_scrollable(False)
         nb.set_show_tabs(False)
         nb.set_show_border(False)
+
 
 class MDIWidget(ContainerBase):
 
@@ -1313,6 +1365,7 @@ class MDIWidget(ContainerBase):
 
     def use_tabs(self, tf):
         pass
+
 
 class ScrollArea(ContainerBase):
     def __init__(self):
@@ -1456,6 +1509,11 @@ class GridBox(ContainerBase):
                            xoptions=xoptions, yoptions=yoptions,
                            xpadding=0, ypadding=0)
         self.widget.show_all()
+
+
+class ToolbarAction(WidgetBase):
+    def __init__(self):
+        raise NotImplementedError
 
 
 class Toolbar(ContainerBase):
@@ -1902,6 +1960,7 @@ class SaveDialog(object):
             self.widget.destroy()
             return None
 
+
 class DragPackage(object):
     def __init__(self, src_widget, selection):
         self.src_widget = src_widget
@@ -1913,6 +1972,7 @@ class DragPackage(object):
 
     def start_drag(self):
         pass
+
 
 class WidgetMoveEvent(object):
     def __init__(self, src_widget, child):
@@ -1926,6 +1986,7 @@ class WidgetMoveEvent(object):
     def reject(self):
         self._result = False
 
+
 # MODULE FUNCTIONS
 
 def name_mangle(name, pfx=''):
@@ -1936,6 +1997,7 @@ def name_mangle(name, pfx=''):
         else:
             newname.append(c)
     return pfx + ''.join(newname)
+
 
 def make_widget(title, wtype):
     if wtype == 'label':
@@ -2053,6 +2115,7 @@ def get_orientation(container):
     else:
         return 'horizontal'
 
+
 def get_oriented_box(container, scrolled=True, fill=False):
     orientation = get_orientation(container)
 
@@ -2074,4 +2137,4 @@ def get_oriented_box(container, scrolled=True, fill=False):
 
     return box1, sw, orientation
 
-#END
+# END

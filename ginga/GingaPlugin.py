@@ -45,19 +45,13 @@ class BasePlugin(object):
             self._help_docstring()
             return
 
-        from ginga.doc.download_doc import get_doc
-
         self.fv.start_global_plugin('WBrowser')
 
         # need to let GUI finish processing, it seems
         self.fv.update_pending()
 
         obj = self.fv.gpmon.get_plugin('WBrowser')
-        url = get_doc(plugin=self)
-        if url is None:
-            self._help_docstring()
-        else:
-            obj.browse(url)
+        obj.show_help(plugin=self, no_url_callback=self._help_docstring)
 
 
 class GlobalPlugin(BasePlugin):

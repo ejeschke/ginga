@@ -416,14 +416,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if text is not None:
             if text_kind == 'url':
                 obj.browse(text)
-
             else:
-                obj.load_html(text)
-
+                obj.browse(text, url_is_content=True)
         else:
-            from ginga.doc.download_doc import get_doc
-            url = get_doc()
-            obj.browse(url)
+            obj.show_help()
 
     def show_help_text(self, name, help_txt, wsname='right'):
         """

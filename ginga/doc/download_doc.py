@@ -4,11 +4,10 @@ from ginga.util.six.moves import urllib
 
 import os
 import shutil
-import sys
 import zipfile
 
 from astropy.utils import minversion
-from astropy.utils.data import download_file, _find_pkg_data_path
+from astropy.utils.data import _find_pkg_data_path
 
 __all__ = ['get_doc']
 
@@ -65,7 +64,7 @@ def _download_rtd_zip(rtd_version=None, **kwargs):
         If not given, download closest match to software version.
 
     kwargs : dict
-        Keywords for :func:`astropy.utils.data.download_file`.
+        Keywords for ``urlretrieve()``.
 
     Returns
     -------
@@ -73,10 +72,6 @@ def _download_rtd_zip(rtd_version=None, **kwargs):
         Path to local "index.html".
 
     """
-    # TODO: Add Windows support.
-    if sys.platform.startswith('win'):
-        raise OSError('Windows is not supported')
-
     if rtd_version is None:
         rtd_version = _find_rtd_version()
 
@@ -92,7 +87,7 @@ def _download_rtd_zip(rtd_version=None, **kwargs):
 
     url = ('https://readthedocs.org/projects/ginga/downloads/htmlzip/'
            '{}/'.format(rtd_version))
-    local_path = download_file(url, **kwargs)
+    local_path = urllib.request.urlretrieve(url, **kwargs)[0]
 
     with zipfile.ZipFile(local_path, 'r') as zf:
         zf.extractall(data_path)
@@ -115,16 +110,22 @@ def _download_rtd_zip(rtd_version=None, **kwargs):
     return index_html
 
 
-def get_doc(plugin=None):
+def get_doc(logger=None, plugin=None, reporthook=None):
     """
     Return URL to documentation. Attempt download if does not exist.
 
     Parameters
     ----------
+    logger : obj or `None`
+        Ginga logger.
+
     plugin : obj or `None`
         Plugin object. If given, URL points to plugin doc directly.
         If this function is called from within plugin class,
         pass ``self`` here.
+
+    reporthook : callable or `None`
+        Report hook for ``urlretrieve()``.
 
     Returns
     -------
@@ -145,10 +146,10 @@ def get_doc(plugin=None):
         plugin_name = None
 
     try:
-        index_html = _download_rtd_zip()
+        index_html = _download_rtd_zip(reporthook=reporthook)
 
     # Download failed, use online resource
-    except Exception:
+    except Exception as e:
         url = 'https://ginga.readthedocs.io/en/latest/'
 
         if plugin_name is not None:
@@ -156,6 +157,9 @@ def get_doc(plugin=None):
             # url += '{}/{}.html'.format(plugin_page, plugin_name)
             # This displays plugin docstring.
             url = None
+
+        if logger is not None:
+            logger.error(str(e))
 
     # Use local resource
     else:

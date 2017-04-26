@@ -14,6 +14,25 @@ from ginga.qtw import QtHelp
 from ginga.misc import Callback, Bunch, LineHistory
 import ginga.icons
 
+has_webkit = False
+try:
+    from ginga.qtw.QtHelp import QWebView  # noqa
+    has_webkit = True
+except ImportError:
+    pass
+
+__all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
+           'GrowingTextEdit', 'TextArea', 'Label', 'Button', 'ComboBox',
+           'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
+           'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
+           'WebView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
+           'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
+           'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
+           'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
+           'Dialog', 'SaveDialog', 'DragPackage', 'WidgetMoveEvent',
+           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
+           'get_orientation', 'get_oriented_box', 'has_webkit']
+
 # path to our icons
 icondir = os.path.split(ginga.icons.__file__)[0]
 
@@ -839,6 +858,21 @@ class TreeView(WidgetBase):
         drag_pkg.start_drag()
 
 
+class WebView(WidgetBase):
+    def __init__(self):
+        if not has_webkit:
+            raise NotImplementedError("Missing webkit")
+
+        super(WebView, self).__init__()
+        self.widget = QWebView()
+
+    def load_url(self, url):
+        self.widget.load(QtCore.QUrl(url))
+
+    def load_html_string(self, html_string):
+        self.widget.setHtml(html_string)
+
+
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
@@ -1535,6 +1569,7 @@ class Menu(ContainerBase):
     def get_menu(self, name):
         return self.menus[name]
 
+
 class Menubar(ContainerBase):
     def __init__(self):
         super(Menubar, self).__init__()
@@ -1790,6 +1825,11 @@ class DragPackage(object):
             self._drag.exec_(QtCore.Qt.MoveAction)
         else:
             self._drag.start(QtCore.Qt.MoveAction)
+
+
+class WidgetMoveEvent(object):
+    def __init__(self, src_widget, child):
+        raise NotImplementedError
 
 
 # MODULE FUNCTIONS
