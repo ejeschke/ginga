@@ -872,6 +872,12 @@ class WebView(WidgetBase):
     def load_html_string(self, html_string):
         self.widget.setHtml(html_string)
 
+    def go_back(self):
+        self.widget.back()
+
+    def go_forward(self):
+        self.widget.forward()
+
 
 # CONTAINERS
 

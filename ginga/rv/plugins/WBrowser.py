@@ -63,6 +63,12 @@ class WBrowser(GlobalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(3)
 
+        btn = Widgets.Button('Back')
+        btn.add_callback('activated', lambda w: self.back_cb())
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button('Forward')
+        btn.add_callback('activated', lambda w: self.forward_cb())
+        btns.add_widget(btn, stretch=0)
         btn = Widgets.Button('Close')
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
@@ -129,6 +135,16 @@ class WBrowser(GlobalPlugin):
         url = str(self.entry.get_text()).strip()
         if len(url) > 0:
             self.browse(url)
+
+    def back_cb(self):
+        if not Widgets.has_webkit:
+            return
+        self.browser.go_back()
+
+    def forward_cb(self):
+        if not Widgets.has_webkit:
+            return
+        self.browser.go_forward()
 
     def close(self):
         self.fv.stop_global_plugin(str(self))
