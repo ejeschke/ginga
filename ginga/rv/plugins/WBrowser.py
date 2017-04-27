@@ -13,6 +13,15 @@ from ginga.gw import Widgets
 
 __all__ = []
 
+WAIT_HTML = """<html><title>Downloading documentation</title>
+<body>
+<p>Downloading and unpacking Ginga documentation from ReadTheDocs.
+This may take several seconds (or longer, depending on your connection).</p>
+<p>Please wait...</p>
+</body>
+</html>
+"""
+
 
 class WBrowser(GlobalPlugin):
     """
@@ -63,29 +72,41 @@ class WBrowser(GlobalPlugin):
         self.show_help()
         self.gui_up = True
 
-    def show_help(self, plugin=None, no_url_callback=None):
-        """See `~ginga.GingaPlugin` for usage of optional keywords."""
-        if not Widgets.has_webkit:
-            return
-
+    def _download_doc(self, plugin=None, no_url_callback=None):
         from ginga.doc.download_doc import get_doc
-        self.fv.assert_gui_thread()
+        self.fv.assert_nongui_thread()
+
+        self.fv.gui_do(self._load_doc, WAIT_HTML, url_is_content=True)
 
         def _dl_indicator(count, blksize, totalsize):
             pct = (count * blksize) / totalsize
-            msg = 'Downloading: {:.2%} complete'.format(pct)
+            msg = 'Downloading: {:.1%} complete'.format(pct)
             self.fv.gui_do(self.entry.set_text, msg)
 
-        helpurl = get_doc(logger=self.logger, plugin=plugin,
-                          reporthook=_dl_indicator)
-        if helpurl is None:
+        # This can block as long as it takes without blocking the UI.
+        url = get_doc(logger=self.logger, plugin=plugin,
+                      reporthook=_dl_indicator)
+
+        self.fv.gui_do(self._load_doc, url, no_url_callback=no_url_callback)
+
+    def _load_doc(self, url, no_url_callback=None, url_is_content=False):
+        self.fv.assert_gui_thread()
+        if url is None:
             self.entry.set_text('')
             if no_url_callback is None:
                 self.fv.show_error("Couldn't load web page")
             else:
                 no_url_callback()
         else:
-            self.browse(helpurl)
+            self.browse(url, url_is_content=url_is_content)
+
+    def show_help(self, plugin=None, no_url_callback=None):
+        """See `~ginga.GingaPlugin` for usage of optional keywords."""
+        if not Widgets.has_webkit:
+            return
+
+        self.fv.nongui_do(self._download_doc, plugin=plugin,
+                          no_url_callback=no_url_callback)
 
     def browse(self, url, url_is_content=False):
         if not Widgets.has_webkit:
