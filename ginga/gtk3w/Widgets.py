@@ -4,6 +4,9 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+
+# import time
+
 from ginga.gtk3w import GtkHelp
 import ginga.util.six as six
 
@@ -23,12 +26,12 @@ except ImportError:
     pass
 
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'GrowingTextEdit', 'TextArea', 'Label', 'Button', 'ComboBox',
+           'TextArea', 'Label', 'Button', 'ComboBox',
            'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
            'WebView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
-           'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
+           'Splitter', 'GridBox', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
            'Dialog', 'SaveDialog', 'DragPackage', 'WidgetMoveEvent',
            'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
@@ -67,21 +70,23 @@ class WidgetBase(Callback.Callbacks):
     def get_size(self):
         try:
             rect = self.widget.get_allocation()
-            x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+            # x, y = rect.x, rect.y
+            wd, ht = rect.width, rect.height
 
         except Exception as e:
             # window maybe isn't realized yet--try other ways
             min_req, nat_req = self.widget.get_preferred_size()
             wd, ht = nat_req.width, nat_req.height
-            #req = self.widget.get_size_request()
-            #wd, ht = req
+            # req = self.widget.get_size_request()
+            # wd, ht = req
 
-            #wd, ht = max(1, wd), max(1, ht)
+            # wd, ht = max(1, wd), max(1, ht)
         return wd, ht
 
     def get_pos(self):
-        rect = widget.get_allocation()
-        x, y, width, height = rect.x, rect.y, rect.width, rect.height
+        rect = self.widget.get_allocation()
+        x, y = rect.x, rect.y
+        # width, height = rect.width, rect.height
         return x, y
 
     def get_app(self):
@@ -91,7 +96,7 @@ class WidgetBase(Callback.Callbacks):
         self.widget.destroy()
 
     def show(self):
-        #self.widget.show()
+        # self.widget.show()
         self.widget.show_all()
 
     def hide(self):
@@ -103,7 +108,7 @@ class WidgetBase(Callback.Callbacks):
     def resize(self, width, height):
         self.widget.set_size_request(width, height)
         # hackish way to allow the widget to be resized down again later
-        #GObject.idle_add(self.widget.set_size_request, -1, -1)
+        # GObject.idle_add(self.widget.set_size_request, -1, -1)
 
     def get_font(self, font_family, point_size):
         font = GtkHelp.get_font(font_family, point_size)
@@ -209,17 +214,12 @@ class TextEntrySet(WidgetBase):
         self.widget.modify_font(font)
 
     def set_length(self, numchars):
-        #self.widget.set_width_chars(numchars)
+        # self.widget.set_width_chars(numchars)
         pass
 
     def set_enabled(self, tf):
         super(TextEntrySet, self).set_enabled(tf)
         self.entry.set_sensitive(tf)
-
-
-class GrowingTextEdit(WidgetBase):
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError
 
 
 class TextArea(WidgetBase):
@@ -255,12 +255,12 @@ class TextArea(WidgetBase):
 
         end = buf.get_end_iter()
         mark = buf.get_insert()
-        #self.tw.scroll_to_iter(end, 0.5)
+        # self.tw.scroll_to_iter(end, 0.5)
         # NOTE: this was causing a segfault if the text widget is
         # not mapped yet!  Seems to be fixed in recent versions of
         # gtk
         buf.move_mark(mark, end)
-        res = self.tw.scroll_to_mark(mark, 0.2, False, 0.0, 0.0)
+        res = self.tw.scroll_to_mark(mark, 0.2, False, 0.0, 0.0)  # noqa
 
     def get_text(self):
         buf = self.tw.get_buffer()
@@ -273,7 +273,7 @@ class TextArea(WidgetBase):
         if numlines > self.histlimit:
             rmcount = int(numlines - self.histlimit)
             start = buf.get_iter_at_line(0)
-            end   = buf.get_iter_at_line(rmcount)
+            end = buf.get_iter_at_line(rmcount)
             buf.delete(start, end)
 
     def clear(self):
@@ -512,10 +512,10 @@ class Slider(WidgetBase):
 
     def set_tracking(self, tf):
         if tf:
-            #self.widget.set_update_policy(Gtk.UPDATE_CONTINUOUS)
+            # self.widget.set_update_policy(Gtk.UPDATE_CONTINUOUS)
             pass
         else:
-            #self.widget.set_update_policy(Gtk.UPDATE_DISCONTINUOUS)
+            # self.widget.set_update_policy(Gtk.UPDATE_DISCONTINUOUS)
             pass
 
     def set_limits(self, minval, maxval, incr_value=1):
@@ -651,8 +651,8 @@ class ProgressBar(WidgetBase):
 
         w = Gtk.ProgressBar()
         # GTK3
-        #w.set_orientation(Gtk.Orientation.HORIZONTAL)
-        #w.set_inverted(False)
+        # w.set_orientation(Gtk.Orientation.HORIZONTAL)
+        # w.set_inverted(False)
         self.widget = w
 
     def set_value(self, pct):
@@ -715,7 +715,7 @@ class TreeView(WidgetBase):
         if self.dragable:
             tv = GtkHelp.MultiDragDropTreeView()
             # enable drag from this widget
-            toImage = [ ( "text/plain", 0, 0 ) ]
+            toImage = [("text/plain", 0, 0)]
             tv.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK,
                                         toImage, Gdk.DragAction.COPY)
             tv.connect("drag-data-get", self._start_drag)
@@ -747,8 +747,8 @@ class TreeView(WidgetBase):
         # create the column headers
         if not isinstance(columns[0], str):
             # columns specifies a mapping
-            headers = [ col[0] for col in columns ]
-            datakeys = [ col[1] for col in columns ]
+            headers = [col[0] for col in columns]
+            datakeys = [col[1] for col in columns]
         else:
             headers = datakeys = columns
 
@@ -779,7 +779,7 @@ class TreeView(WidgetBase):
                 tvc.set_clickable(True)
             if n == 0:
                 fn_data = self._mkcolfn0(kwd)
-                ## cell.set_property('xalign', 1.0)
+                # cell.set_property('xalign', 1.0)
             else:
                 fn_data = self._mkcolfnN(kwd)
             tvc.set_cell_data_func(cell, fn_data)
@@ -925,7 +925,7 @@ class TreeView(WidgetBase):
         treeselection.select_iter(item)
 
     def highlight_path(self, path, onoff, font_color='green'):
-        item = self._path_to_item(path)
+        item = self._path_to_item(path)  # noqa
         # TODO
 
     def _path_to_item(self, path):
@@ -972,13 +972,13 @@ class TreeView(WidgetBase):
             bnch2 = model.get_value(iter2, 0)
             if isinstance(bnch1, str):
                 if isinstance(bnch2, str):
-                    return cmp(bnch1.lower(), bnch2.lower())
+                    return bnch1.lower() == bnch2.lower()  # was using cmp
                 return 0
             val1, val2 = bnch1[idx], bnch2[idx]
             if isinstance(val1, str):
                 val1 = val1.lower()
                 val2 = val2.lower()
-            res = cmp(val1, val2)
+            res = val1 == val2  # was using nonexistent cmp
             return res
         return fn
 
@@ -1011,7 +1011,7 @@ class TreeView(WidgetBase):
         return fn
 
     def _start_drag(self, treeview, context, selection,
-                         info, timestamp):
+                    info, timestamp):
         res_dict = self.get_selected()
         drag_pkg = DragPackage(self.tv, selection)
         self.make_callback('drag-start', drag_pkg, res_dict)
@@ -1050,7 +1050,7 @@ class ContainerBase(WidgetBase):
             childw.destroy()
 
     def remove(self, w, delete=False):
-        if not w in self.children:
+        if w not in self.children:
             raise KeyError("Widget is not a child of this container")
         self.children.remove(w)
 
@@ -1155,17 +1155,17 @@ class TabWidget(ContainerBase):
         self.detachable = detachable
 
         nb = GtkHelp.Notebook()
-        #nb = Gtk.Notebook()
+        # nb = Gtk.Notebook()
         nb.set_show_border(False)
         nb.set_scrollable(True)
         # Allows drag-and-drop between notebooks
-        #nb.set_group_id(group)  # in gtk3?
+        # nb.set_group_id(group)  # in gtk3?
         if self.detachable:
             nb.connect("create-window", self._tab_detach_cb)
         nb.connect("page-added", self._tab_insert_cb)
         nb.connect("page-removed", self._tab_remove_cb)
         nb.sconnect("switch-page", self._cb_redirect)
-        #nb.connect("switch-page", self._cb_redirect)
+        # nb.connect("switch-page", self._cb_redirect)
         self.widget = nb
         self.set_tab_position(tabpos)
 
@@ -1189,7 +1189,7 @@ class TabWidget(ContainerBase):
         # (native widget already has been removed by gtk)
         self.children.remove(child)
 
-        #nchild_w.unparent()
+        # nchild_w.unparent()
         self.make_callback('page-detach', child)
 
     def _tab_insert_cb(self, nbw, nchild_w, page_num):
@@ -1265,7 +1265,7 @@ class StackWidget(TabWidget):
         super(StackWidget, self).__init__()
 
         nb = self.widget
-        #nb.set_scrollable(False)
+        # nb.set_scrollable(False)
         nb.set_show_tabs(False)
         nb.set_show_border(False)
 
@@ -1305,7 +1305,7 @@ class MDIWidget(ContainerBase):
         child_w = child.get_widget()
         label = Gtk.Label(title)
         subwin = self.mdi_w.append_page(child_w, label)
-        #self.mdi_w.show_all()
+        # self.mdi_w.show_all()
         # attach title to child
         child.extdata.tab_title = title
 
@@ -1386,7 +1386,8 @@ class ScrollArea(ContainerBase):
 
     def _resize_cb(self, widget, allocation):
         rect = widget.get_allocation()
-        x, y, width, height = rect.x, rect.y, rect.width, rect.height
+        # x, y = rect.x, rect.y
+        width, height = rect.width, rect.height
         self.make_callback('configure', width, height)
         return True
 
@@ -1517,11 +1518,6 @@ class GridBox(ContainerBase):
         self.widget.show_all()
 
 
-class ToolbarAction(WidgetBase):
-    def __init__(self):
-        raise NotImplementedError
-
-
 class Toolbar(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Toolbar, self).__init__()
@@ -1622,7 +1618,7 @@ class Menu(ContainerBase):
         menuitem_w = child.get_widget()
         self.widget.append(menuitem_w)
         self.add_ref(child)
-        #self.widget.show_all()
+        # self.widget.show_all()
 
     def add_name(self, name, checkable=False):
         child = MenuAction(text=name, checkable=checkable)
@@ -1651,7 +1647,7 @@ class Menu(ContainerBase):
         menu = self.widget
         menu.show_all()
         if six.PY2:
-            now = long(0)
+            now = long(0)  # noqa
         else:
             now = int(0)
         menu.popup(None, None, None, None, 0, now)
@@ -1695,7 +1691,7 @@ class TopLevelMixin(object):
         self.widget.connect("window_state_event", self._window_event)
         self.widget.connect("configure-event", self._configure_event)
 
-        if not title is None:
+        if title is not None:
             self.widget.set_title(title)
 
         self.enable_callback('close')
@@ -1719,7 +1715,7 @@ class TopLevelMixin(object):
 
     def _window_event(self, widget, event):
         if ((event.changed_mask & Gdk.WindowState.FULLSCREEN) or
-            (event.changed_mask & Gdk.WindowState.MAXIMIZED)):
+                (event.changed_mask & Gdk.WindowState.MAXIMIZED)):
             self._fullscreen = True
         else:
             self._fullscreen = False
@@ -1731,23 +1727,24 @@ class TopLevelMixin(object):
         return False
 
     def close(self):
-        ## try:
-        ##     self.widget.destroy()
-        ## except Exception as e:
-        ##     pass
-        #self.widget = None
+        # try:
+        #     self.widget.destroy()
+        # except Exception as e:
+        #     pass
+        # self.widget = None
 
         self.make_callback('close')
 
     def get_size(self):
         try:
             rect = self.widget.get_allocation()
-            x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+            # x, y = rect.x, rect.y
+            wd, ht = rect.width, rect.height
 
         except Exception as e:
             # window maybe isn't realized yet--try other ways
-            #req = self.widget.get_size_request()
-            #wd, ht = req
+            # req = self.widget.get_size_request()
+            # wd, ht = req
             min_req, nat_req = self.widget.get_preferred_size()
             wd, ht = nat_req.width, nat_req.height
             ed = self.extdata
@@ -1870,14 +1867,14 @@ class Application(Callback.Callbacks):
         except:
             self.screen_wd = 1600
             self.screen_ht = 1200
-        ## self.logger.debug("screen dimensions %dx%d" % (
-        ##     self.screen_wd, self.screen_ht))
+        # self.logger.debug("screen dimensions %dx%d" % (
+        #     self.screen_wd, self.screen_ht))
 
         _app = self
 
         # supposedly needed for GObject < 3.10.2
         GObject.threads_init()
-        ## self._time_save = time.time()
+        # self._time_save = time.time()
 
         for name in ('shutdown', ):
             self.enable_callback(name)
@@ -1897,10 +1894,10 @@ class Application(Callback.Callbacks):
                 # lost--we want to know whether the process_event loop
                 # is running, so ping periodically if events are showing
                 # up
-                ## cur_time = time.time()
-                ## if cur_time - self._time_save > 10.0:
-                ##     self.logger.info("process_events ping!")
-                ##     self._time_save = cur_time
+                # cur_time = time.time()
+                # if cur_time - self._time_save > 10.0:
+                #     self.logger.info("process_events ping!")
+                #     self._time_save = cur_time
 
             except Exception as e:
                 self.logger.error("Exception in main_iteration() loop: %s" %
@@ -2006,7 +2003,8 @@ class SaveDialog(object):
 
         if response == Gtk.ResponseType.OK:
             path = self.widget.get_filename()
-            if self.selectedfilter is not None and not path.endswith(self.selectedfilter):
+            if (self.selectedfilter is not None and
+                    not path.endswith(self.selectedfilter)):
                 path += self.selectedfilter
             self.widget.destroy()
             return path
@@ -2062,7 +2060,7 @@ def make_widget(title, wtype):
         w.label.set_alignment(0.05, 0.95)
     elif wtype == 'entry':
         w = TextEntry()
-        #w.get_widget().set_width_chars(12)
+        # w.get_widget().set_width_chars(12)
     elif wtype == 'entryset':
         w = TextEntrySet()
     elif wtype == 'combobox':
@@ -2163,8 +2161,8 @@ def get_orientation(container):
     if not hasattr(container, 'size'):
         return 'vertical'
     (wd, ht) = container.size
-    ## wd, ht = container.get_size()
-    #print('container size is %dx%d' % (wd, ht))
+    # wd, ht = container.get_size()
+    # print('container size is %dx%d' % (wd, ht))
     if wd < ht:
         return 'vertical'
     else:
