@@ -55,7 +55,7 @@ class WBrowser(GlobalPlugin):
         container.add_widget(sw, stretch=1)
         sw.show()
 
-        self.entry = Widgets.TextEntry()
+        self.entry = Widgets.TextEntrySet()
         container.add_widget(self.entry, stretch=0)
         self.entry.add_callback('activated', lambda w: self.browse_cb())
 
@@ -69,13 +69,22 @@ class WBrowser(GlobalPlugin):
         btn = Widgets.Button('Forward')
         btn.add_callback('activated', lambda w: self.forward_cb())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button('Reload')
+        btn.add_callback('activated', lambda w: self.reload_cb())
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button('Stop')
+        btn.add_callback('activated', lambda w: self.stop_cb())
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button('Home')
+        btn.add_callback('activated', lambda w: self.show_help())
+        btn.set_tooltip('Go to top of documentation')
+        btns.add_widget(btn, stretch=0)
         btn = Widgets.Button('Close')
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         container.add_widget(btns, stretch=0)
 
-        self.show_help()
         self.gui_up = True
 
     def _download_doc(self, plugin=None, no_url_callback=None):
@@ -145,6 +154,16 @@ class WBrowser(GlobalPlugin):
         if not Widgets.has_webkit:
             return
         self.browser.go_forward()
+
+    def reload_cb(self):
+        if not Widgets.has_webkit:
+            return
+        self.browser.reload_page()
+
+    def stop_cb(self):
+        if not Widgets.has_webkit:
+            return
+        self.browser.stop_loading()
 
     def close(self):
         self.fv.stop_global_plugin(str(self))

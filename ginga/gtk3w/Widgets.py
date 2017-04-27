@@ -1038,6 +1038,12 @@ class WebView(WidgetBase):
     def go_forward(self):
         self.widget.go_forward()
 
+    def reload_page(self):
+        self.widget.reload()
+
+    def stop_loading(self):
+        self.widget.stop_loading()
+
 
 # CONTAINERS
 
