@@ -168,8 +168,9 @@ class LineProfile(GingaPlugin.LocalPlugin):
         if image is not None:
             # Add Checkbox widgets
             # `image.naxispath` returns only mdim axes
-            for i in range(1, len(image.naxispath)+3):
-                chkbox = Widgets.CheckBox('NAXIS%d' % i)
+            maxi = len(image.naxispath) + 3
+            for i in range(1, maxi):
+                chkbox = Widgets.CheckBox('NAXIS{}'.format(i))
                 self.hbox_axes.add_widget(chkbox)
 
                 # Disable axes for 2D images
@@ -178,6 +179,10 @@ class LineProfile(GingaPlugin.LocalPlugin):
                 else:
                     # Add callback
                     self.axes_callback_handler(chkbox, i)
+
+                    # Auto-check a default box to prevent error messages
+                    if i == (maxi - 1):
+                        chkbox.set_state(True)
 
     def axes_callback_handler(self, chkbox, pos):
         chkbox.add_callback('activated',
@@ -207,7 +212,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
     def start(self):
         # insert layer if it is not already
         try:
-            obj = self.fitsimage.get_object_by_tag(self.layertag)
+            self.fitsimage.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -284,20 +289,21 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
     def get_axis(self, i):
         try:
-            self.x_lbl = self.image.get_keyword('CTYPE%d' % i, None)
+            self.x_lbl = self.image.get_keyword('CTYPE{}'.format(i), None)
             try:
-                kwds = ['CRVAL%d' % i, 'NAXIS%d' % i, 'CDELT%d' % i]
+                kwds = ['CRVAL{}'.format(i), 'NAXIS{}'.format(i),
+                        'CDELT{}'.format(i)]
                 crval_i, naxis_i, cdelt_i = self.image.get_keywords_list(*kwds)
 
             except KeyError as e:
-                raise ValueError("Missing FITS keyword: %s" % str(e))
+                raise ValueError("Missing FITS keyword: {}".format(str(e)))
 
             axis = crval_i + np.arange(0, naxis_i, 1) * cdelt_i
 
             if self.x_lbl is not None:
-                units = self.image.get_keyword('CUNIT%d' % i, None)
+                units = self.image.get_keyword('CUNIT{}'.format(i), None)
                 if units is not None:
-                    self.x_lbl += (' (%s)' % str(units))
+                    self.x_lbl += (' ({})'.format(units))
             else:
                 self.x_lbl = ''
             # Assume Y label should always be flux?
@@ -305,7 +311,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
             return axis
 
         except Exception as e:
-            errmsg = "Error loading axis %d: %s" % (i, str(e))
+            errmsg = "Error loading axis {}: {}".format(i, str(e))
             self.logger.error(errmsg)
             self.fv.show_error(errmsg)
 
@@ -313,7 +319,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.plot.clear()
         self.plot.fig.canvas.draw()
 
-    ### MARK FEATURE LOGIC ###
+    # MARK FEATURE LOGIC #
 
     def btndown_cb(self, canvas, event, data_x, data_y):
         # Disable plotting for 2D images
@@ -367,14 +373,14 @@ class LineProfile(GingaPlugin.LocalPlugin):
         if not style:
             style = self.mark_style
 
-        self.logger.debug("Setting mark at %d,%d" % (data_x, data_y))
+        self.logger.debug("Setting mark at {},{}".format(data_x, data_y))
         self.mark_index += 1
-        tag = 'mark%d' % (self.mark_index)
+        tag = 'mark{}'.format(self.mark_index)
         tag = self.canvas.add(self.dc.CompoundObject(
             self.dc.Point(data_x, data_y, self.mark_radius,
                           style=style, color=color,
                           linestyle='solid'),
-            self.dc.Text(data_x + 10, data_y, "%d" % (self.mark_index),
+            self.dc.Text(data_x + 10, data_y, "{}".format(self.mark_index),
                          color=color)),
                               tag=tag)
         self.marks.append(tag)
