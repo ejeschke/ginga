@@ -1,5 +1,6 @@
 """Download rendered HTML doc from RTD."""
 from __future__ import absolute_import, division, print_function
+from ginga.util import six
 from ginga.util.six.moves import urllib
 
 import os
@@ -26,9 +27,14 @@ def _find_rtd_version():
         return vstr
 
     # Get RTD download listing.
-    with urllib.request.urlopen(
-            'https://readthedocs.org/projects/ginga/downloads/') as r:
-        soup = BeautifulSoup(r, 'html.parser')
+    url = 'https://readthedocs.org/projects/ginga/downloads/'
+    if six.PY2:
+        import contextlib
+        with contextlib.closing(urllib.request.urlopen(url)) as r:
+            soup = BeautifulSoup(r, 'html.parser')
+    else:
+        with urllib.request.urlopen(url) as r:
+            soup = BeautifulSoup(r, 'html.parser')
 
     # Compile a list of available HTML doc versions for download.
     all_rtd_vernums = []
