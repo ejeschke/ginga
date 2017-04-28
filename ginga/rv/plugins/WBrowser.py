@@ -7,6 +7,8 @@
 """Browse help for Ginga."""
 from __future__ import absolute_import, division, print_function
 
+import os
+
 # GINGA
 from ginga.GingaPlugin import GlobalPlugin
 from ginga.gw import Widgets
@@ -59,28 +61,28 @@ class WBrowser(GlobalPlugin):
         container.add_widget(self.entry, stretch=0)
         self.entry.add_callback('activated', lambda w: self.browse_cb())
 
+        tbar = Widgets.Toolbar(orientation='horizontal')
+        for tt, cb, ico in (
+                ('Go back', lambda w: self.back_cb(), 'prev_48.png'),
+                ('Go forward', lambda w: self.forward_cb(), 'next_48.png'),
+                ('Reload page', lambda w: self.reload_cb(), 'rotate_48.png'),
+                ('Stop loading', lambda w: self.stop_cb(), 'stop_48.png'),
+                ('Go to top of documentation', lambda w: self.show_help(),
+                 'fits.png')):
+            btn = tbar.add_action(
+                None, iconpath=os.path.join(self.fv.iconpath, ico))
+            btn.add_callback('activated', cb)
+            btn.set_tooltip(tt)
+        container.add_widget(tbar, stretch=0)
+
         btns = Widgets.HBox()
         btns.set_border_width(4)
         btns.set_spacing(3)
-
-        btn = Widgets.Button('Back')
-        btn.add_callback('activated', lambda w: self.back_cb())
-        btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button('Forward')
-        btn.add_callback('activated', lambda w: self.forward_cb())
-        btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button('Reload')
-        btn.add_callback('activated', lambda w: self.reload_cb())
-        btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button('Stop')
-        btn.add_callback('activated', lambda w: self.stop_cb())
-        btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button('Home')
-        btn.add_callback('activated', lambda w: self.show_help())
-        btn.set_tooltip('Go to top of documentation')
-        btns.add_widget(btn, stretch=0)
         btn = Widgets.Button('Close')
         btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button('Help')
+        btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         container.add_widget(btns, stretch=0)
