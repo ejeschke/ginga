@@ -193,6 +193,8 @@ class LineProfile(GingaPlugin.LocalPlugin):
                         chkbox.set_state(True)
             # Add filler
             self.hbox_axes.add_widget(Widgets.Label(''), stretch=1)
+        else:
+            self.hbox_axes.add_widget(Widgets.Label('No NAXIS info'))
 
     def axes_callback_handler(self, chkbox, pos):
         chkbox.add_callback('activated',
@@ -274,21 +276,20 @@ class LineProfile(GingaPlugin.LocalPlugin):
         mddata = self.image.get_mddata().T
         naxes = mddata.ndim
 
-        if self.selected_axis:
-            plot_x_axis_data = self.get_axis(self.selected_axis)
-            if plot_x_axis_data is None:
-                # image may lack the required keywords, or some trouble
-                # building the axis
-                return
-            slice_obj = self._slice(naxes, mk=mark)
-            plot_y_axis_data = mddata[slice_obj]
+        if not self.selected_axis:
+            return
 
-            self.clear_plot()
-            self.plot.plot(plot_x_axis_data, plot_y_axis_data,
-                           xtitle=self.x_lbl, ytitle=self.y_lbl)
+        plot_x_axis_data = self.get_axis(self.selected_axis)
+        if plot_x_axis_data is None:
+            # image may lack the required keywords, or some trouble
+            # building the axis
+            return
+        slice_obj = self._slice(naxes, mk=mark)
+        plot_y_axis_data = mddata[slice_obj]
 
-        else:
-            self.fv.show_error("Please select an axis")
+        self.clear_plot()
+        self.plot.plot(plot_x_axis_data, plot_y_axis_data,
+                       xtitle=self.x_lbl, ytitle=self.y_lbl)
 
     def _slice(self, naxes, mk):
         # Build N-dim slice
@@ -310,29 +311,31 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
     def get_axis(self, i):
         try:
-            self.x_lbl = self.image.get_keyword('CTYPE{}'.format(i), None)
+            naxis_s = 'NAXIS{}'.format(i)
+            naxis_i = self.image.get_keyword(naxis_s)
+            self.x_lbl = self.image.get_keyword('CTYPE{}'.format(i), naxis_s)
+
             try:
-                kwds = ['CRVAL{}'.format(i), 'NAXIS{}'.format(i),
-                        'CDELT{}'.format(i)]
-                crval_i, naxis_i, cdelt_i = self.image.get_keywords_list(*kwds)
-
+                kwds = ['CRVAL{}'.format(i), 'CDELT{}'.format(i)]
+                crval_i, cdelt_i = self.image.get_keywords_list(*kwds)
             except KeyError as e:
-                raise ValueError("Missing FITS keyword: {}".format(str(e)))
+                self.logger.error("Missing FITS keyword: {}".format(str(e)))
+                crval_i = 0
+                cdelt_i = 1
 
-            axis = crval_i + np.arange(0, naxis_i, 1) * cdelt_i
+            axis = crval_i + np.arange(naxis_i) * cdelt_i
 
-            if self.x_lbl is not None:
-                units = self.image.get_keyword('CUNIT{}'.format(i), None)
-                if units is not None:
-                    self.x_lbl += (' ({})'.format(units))
-            else:
-                self.x_lbl = ''
-            return axis
+            units = self.image.get_keyword('CUNIT{}'.format(i), None)
+            if units is not None:
+                self.x_lbl += (' ({})'.format(units))
 
         except Exception as e:
             errmsg = "Error loading axis {}: {}".format(i, str(e))
             self.logger.error(errmsg)
             self.fv.show_error(errmsg)
+
+        else:
+            return axis
 
     def clear_plot(self):
         self.plot.clear()

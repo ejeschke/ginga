@@ -113,7 +113,6 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                     continue
                 ahdr.set_card(card.key, card.value, comment=card.comment)
 
-
     def load_hdu(self, hdu, dstobj=None, **kwargs):
 
         if isinstance(hdu, (pyfits.ImageHDU,
@@ -157,18 +156,17 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         return dstobj
 
-
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
                   **kwargs):
-
+        inherit_primary_header = kwargs.pop('inherit_primary_header', False)
         opener = self.get_factory()
         opener.open_file(filespec, memmap=memmap, **kwargs)
         try:
-            return opener.get_hdu(numhdu, dstobj=dstobj)
-
+            return opener.get_hdu(
+                numhdu, dstobj=dstobj,
+                inherit_primary_header=inherit_primary_header)
         finally:
             opener.close()
-
 
     def open_file(self, filespec, memmap=None, **kwargs):
 
@@ -229,14 +227,12 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         self.extver_db = extver_db
 
-
     def close(self):
         self.hdu_info = None
         self.hdu_db = {}
         self.extver_db = {}
         self.info = None
         self.fits_f = None
-
 
     def __len__(self):
         return len(self.hdu_info)
@@ -315,7 +311,6 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         return dstobj
 
-
     def create_fits(self, data, header):
         fits_f = pyfits.HDUList()
         hdu = pyfits.PrimaryHDU()
@@ -346,10 +341,10 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         super(FitsioFileHandler, self).__init__(logger)
         self.kind = 'fitsio'
-        self.hdutypes = { fitsio.IMAGE_HDU: 'ImageHDU',
-                          fitsio.BINARY_TBL: 'BinaryTBL',
-                          fitsio.ASCII_TBL: 'AsciiTBL',
-                          }
+        self.hdutypes = {fitsio.IMAGE_HDU: 'ImageHDU',
+                         fitsio.BINARY_TBL: 'BinaryTBL',
+                         fitsio.ASCII_TBL: 'AsciiTBL',
+                         }
 
     def fromHDU(self, hdu, ahdr):
         header = hdu.read_header()
@@ -386,18 +381,20 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         elif hdutype in (fitsio.ASCII_TBL, fitsio.BINARY_TBL):
             # <-- data is a table
-            raise FITSError("FITS tables are not yet readable using ginga/fitsio")
+            raise FITSError(
+                "FITS tables are not yet readable using ginga/fitsio")
 
         return dstobj
 
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
                   **kwargs):
-
+        inherit_primary_header = kwargs.pop('inherit_primary_header', False)
         opener = self.get_factory()
         opener.open_file(filespec, memmap=memmap, **kwargs)
         try:
-            return opener.get_hdu(numhdu, dstobj=dstobj)
-
+            return opener.get_hdu(
+                numhdu, dstobj=dstobj,
+                inherit_primary_header=inherit_primary_header)
         finally:
             opener.close()
 
@@ -440,14 +437,12 @@ class FitsioFileHandler(BaseFitsFileHandler):
             # by (hduname, extver)
             self.hdu_db[(name, extver)] = d
 
-
     def close(self):
         self.hdu_info = None
         self.hdu_db = {}
         self.extver_db = {}
         self.info = None
         self.fits_f = None
-
 
     def __len__(self):
         return len(self.hdu_info)
