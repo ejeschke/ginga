@@ -58,7 +58,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.tw = None
         self.mark_data_x = [None]
         self.mark_data_y = [None]
-        self.y_lbl = 'Flux'
+        self.y_lbl = 'Flux'  # Can be changed in GUI
         self.x_lbl = ''
 
         self.gui_up = False
@@ -81,11 +81,19 @@ class LineProfile(GingaPlugin.LocalPlugin):
         vbox.add_widget(w, stretch=0)
 
         fr = Widgets.Frame("Axes controls")
+        vbox3 = Widgets.VBox()
+        captions = (('Y Label:', 'llabel', 'ylabel', 'entryset'), )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+        b.ylabel.set_tooltip('Plot label for Y-axis')
+        b.ylabel.set_text(self.y_lbl)
+        b.ylabel.add_callback('activated', lambda w: self.set_ylabel_cb())
+        vbox3.add_widget(w)
         self.hbox_axes = Widgets.HBox()
         self.hbox_axes.set_border_width(4)
         self.hbox_axes.set_spacing(1)
-        fr.set_widget(self.hbox_axes)
-
+        vbox3.add_widget(self.hbox_axes)
+        fr.set_widget(vbox3)
         vbox.add_widget(fr, stretch=0)
 
         btns = Widgets.HBox()
@@ -168,8 +176,8 @@ class LineProfile(GingaPlugin.LocalPlugin):
         if image is not None:
             # Add Checkbox widgets
             # `image.naxispath` returns only mdim axes
-            maxi = len(image.naxispath) + 3
-            for i in range(1, maxi):
+            maxi = len(image.naxispath) + 2
+            for i in range(1, maxi + 1):
                 chkbox = Widgets.CheckBox('NAXIS{}'.format(i))
                 self.hbox_axes.add_widget(chkbox)
 
@@ -181,8 +189,10 @@ class LineProfile(GingaPlugin.LocalPlugin):
                     self.axes_callback_handler(chkbox, i)
 
                     # Auto-check a default box to prevent error messages
-                    if i == (maxi - 1):
+                    if i == maxi:
                         chkbox.set_state(True)
+            # Add filler
+            self.hbox_axes.add_widget(Widgets.Label(''), stretch=1)
 
     def axes_callback_handler(self, chkbox, pos):
         chkbox.add_callback('activated',
@@ -202,6 +212,17 @@ class LineProfile(GingaPlugin.LocalPlugin):
         else:
             self.selected_axis = pos
             children[pos-1].set_state(tf)
+            self.redraw_mark()
+
+    def set_ylabel_cb(self):
+        try:
+            val = self.w.ylabel.get_text()
+        except Exception as e:
+            errmsg = 'Error setting Y-label: {0}'.format(str(e))
+            self.fv.show_status(errmsg)
+            self.logger.error(errmsg)
+        else:
+            self.y_lbl = val
             self.redraw_mark()
 
     def close(self):
@@ -306,8 +327,6 @@ class LineProfile(GingaPlugin.LocalPlugin):
                     self.x_lbl += (' ({})'.format(units))
             else:
                 self.x_lbl = ''
-            # Assume Y label should always be flux?
-            self.y_lbl = 'Flux'
             return axis
 
         except Exception as e:
