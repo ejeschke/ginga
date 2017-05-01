@@ -58,7 +58,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.tw = None
         self.mark_data_x = [None]
         self.mark_data_y = [None]
-        self.y_lbl = 'Flux'  # Can be changed in GUI
+        self.y_lbl = ''
         self.x_lbl = ''
 
         self.gui_up = False
@@ -75,25 +75,18 @@ class LineProfile(GingaPlugin.LocalPlugin):
                                width=400, height=300)
         ax = self.plot.add_axis()
         ax.grid(False)
+        self._ax2 = self.plot.ax.twiny()
 
         w = Plot.PlotWidget(self.plot)
         w.resize(400, 300)
         vbox.add_widget(w, stretch=0)
 
         fr = Widgets.Frame("Axes controls")
-        vbox3 = Widgets.VBox()
-        captions = (('Y Label:', 'llabel', 'ylabel', 'entryset'), )
-        w, b = Widgets.build_info(captions, orientation=orientation)
-        self.w.update(b)
-        b.ylabel.set_tooltip('Plot label for Y-axis')
-        b.ylabel.set_text(self.y_lbl)
-        b.ylabel.add_callback('activated', lambda w: self.set_ylabel_cb())
-        vbox3.add_widget(w)
         self.hbox_axes = Widgets.HBox()
         self.hbox_axes.set_border_width(4)
         self.hbox_axes.set_spacing(1)
-        vbox3.add_widget(self.hbox_axes)
-        fr.set_widget(vbox3)
+        fr.set_widget(self.hbox_axes)
+
         vbox.add_widget(fr, stretch=0)
 
         btns = Widgets.HBox()
@@ -216,17 +209,6 @@ class LineProfile(GingaPlugin.LocalPlugin):
             children[pos-1].set_state(tf)
             self.redraw_mark()
 
-    def set_ylabel_cb(self):
-        try:
-            val = self.w.ylabel.get_text()
-        except Exception as e:
-            errmsg = 'Error setting Y-label: {0}'.format(str(e))
-            self.fv.show_status(errmsg)
-            self.logger.error(errmsg)
-        else:
-            self.y_lbl = val
-            self.redraw_mark()
-
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         self.gui_up = False
@@ -287,13 +269,32 @@ class LineProfile(GingaPlugin.LocalPlugin):
         slice_obj = self._slice(naxes, mk=mark)
         plot_y_axis_data = mddata[slice_obj]
 
+        # If few enough data points, add marker
+        if len(plot_y_axis_data) <= 10:
+            marker = 'o'
+        else:
+            marker = None
+
+        # https://github.com/matplotlib/matplotlib/issues/3633/
+        ax2 = self._ax2
+        ax2.patch.set_visible(False)
+
         self.clear_plot()
         self.plot.plot(plot_x_axis_data, plot_y_axis_data,
-                       xtitle=self.x_lbl, ytitle=self.y_lbl)
+                       xtitle=self.x_lbl, ytitle=self.y_lbl, marker=marker)
+
+        # Top axis to show pixel location across X
+        ax2.cla()
+        xx1, xx2 = self.plot.ax.get_xlim()
+        ax2.set_xlim((xx1 - self._crval) / self._cdelt,
+                     (xx2 - self._crval) / self._cdelt)
+        ax2.set_xlabel('Index')
+        self.plot.draw()
 
     def _slice(self, naxes, mk):
         # Build N-dim slice
         slice_obj = [0] * naxes
+        i_sel = self.selected_axis - 1
 
         # For axes 1 and 2
         if mk is not None:
@@ -302,10 +303,11 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         # For axis > 3
         for i in range(2, naxes):
-            slice_obj[i] = int(round(self.image.revnaxis[i-2] + 1))
+            if i != i_sel:
+                slice_obj[i] = 0  # int(round(self.image.revnaxis[i-2] + 1))
 
         # Slice selected axis
-        slice_obj[self.selected_axis-1] = slice(None, None, None)
+        slice_obj[i_sel] = slice(None, None, None)
 
         return slice_obj
 
@@ -324,10 +326,18 @@ class LineProfile(GingaPlugin.LocalPlugin):
                 cdelt_i = 1
 
             axis = crval_i + np.arange(naxis_i) * cdelt_i
+            self._crval = crval_i
+            self._cdelt = cdelt_i
 
             units = self.image.get_keyword('CUNIT{}'.format(i), None)
             if units is not None:
                 self.x_lbl += (' ({})'.format(units))
+
+            # Get pixel value info from header
+            self.y_lbl = self.image.get_keyword('BTYPE', 'Flux')
+            bunit = self.image.get_keyword('BUNIT', None)
+            if bunit is not None:
+                self.y_lbl += (' ({})'.format(bunit))
 
         except Exception as e:
             errmsg = "Error loading axis {}: {}".format(i, str(e))
