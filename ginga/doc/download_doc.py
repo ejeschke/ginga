@@ -10,6 +10,8 @@ import zipfile
 from astropy.utils import minversion
 from astropy.utils.data import _find_pkg_data_path
 
+from ginga import toolkit
+
 __all__ = ['get_doc']
 
 
@@ -78,6 +80,11 @@ def _download_rtd_zip(rtd_version=None, **kwargs):
         Path to local "index.html".
 
     """
+    # https://github.com/ejeschke/ginga/pull/451#issuecomment-298403134
+    if not toolkit.family.startswith('qt'):
+        raise ValueError('Downloaded documentation not compatible with {} '
+                         'UI toolkit browser'.format(toolkit.family))
+
     if rtd_version is None:
         rtd_version = _find_rtd_version()
 
@@ -142,13 +149,13 @@ def get_doc(logger=None, plugin=None, reporthook=None):
     from ginga.GingaPlugin import GlobalPlugin, LocalPlugin
 
     if isinstance(plugin, GlobalPlugin):
-        # plugin_page = 'plugins_global'
+        plugin_page = 'plugins_global'
         plugin_name = str(plugin)
     elif isinstance(plugin, LocalPlugin):
-        # plugin_page = 'plugins_local'
+        plugin_page = 'plugins_local'
         plugin_name = str(plugin)
     else:
-        # plugin_page = None
+        plugin_page = None
         plugin_name = None
 
     try:
@@ -159,10 +166,12 @@ def get_doc(logger=None, plugin=None, reporthook=None):
         url = 'https://ginga.readthedocs.io/en/latest/'
 
         if plugin_name is not None:
-            # This redirects to online doc.
-            # url += '{}/{}.html'.format(plugin_page, plugin_name)
-            # This displays plugin docstring.
-            url = None
+            if toolkit.family.startswith('qt'):
+                # This displays plugin docstring.
+                url = None
+            else:
+                # This redirects to online doc.
+                url += 'manual/{}/{}.html'.format(plugin_page, plugin_name)
 
         if logger is not None:
             logger.error(str(e))
