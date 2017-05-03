@@ -506,10 +506,6 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
     def start(self):
         self.resume()
 
-    def help(self):
-        name = str(self).capitalize()
-        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
-
     def resume(self):
         # turn off any mode user may be in
         try:

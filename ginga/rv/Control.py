@@ -348,6 +348,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         Provide help text for the user.
 
+        This method will convert the text as necessary with docutils and
+        display it in the WBrowser plugin, if available.  If the plugin is
+        not available and the text is type 'rst' then the text will be
+        displayed in a plain text widget.
+
         Parameters
         ----------
         name : str
@@ -362,10 +367,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         trim_pfx : int (optional)
             Number of spaces to trim off the beginning of each line of text.
 
-        This method will convert the text as necessary with docutils and
-        display it in the WBrowser plugin, if available.  If the plugin is
-        not available and the text is type 'rst' then the text will be
-        displayed in a plain text widget.
         """
 
         if trim_pfx > 0:
@@ -391,7 +392,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 # revert to showing RST as plain text
 
         else:
-            raise ValueError("I don't know how to display text of kind '%s'" % (text_kind))
+            raise ValueError(
+                "I don't know how to display text of kind '%s'" % (text_kind))
 
         if text_kind == 'html':
             self.help(text=text, text_kind='html')
@@ -414,24 +416,17 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if text is not None:
             if text_kind == 'url':
                 obj.browse(text)
-
             else:
-                obj.load_html(text)
-
+                obj.browse(text, url_is_content=True)
         else:
-            local_doc = os.path.join(package_home, 'doc', 'help.html')
-            if not os.path.exists(local_doc):
-                url = "http://ginga.readthedocs.org/en/latest"
-            else:
-                url = "file:%s" % (os.path.abspath(local_doc))
-
-            obj.browse(url)
+            obj.show_help()
 
     def show_help_text(self, name, help_txt, wsname='right'):
-        """Show help text in a closeable tab window.  The title of the
-        window is set from `name` prefixed with 'HELP:'
         """
-        tabname = 'HELP: %s' % name
+        Show help text in a closeable tab window.  The title of the
+        window is set from ``name`` prefixed with 'HELP:'
+        """
+        tabname = 'HELP: {}'.format(name)
         group = 1
         tabnames = self.ds.get_tabnames(group)
         if tabname in tabnames:

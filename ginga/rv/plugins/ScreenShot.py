@@ -177,10 +177,6 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def help(self):
-        name = str(self).capitalize()
-        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
-
     def start(self):
         pass
 

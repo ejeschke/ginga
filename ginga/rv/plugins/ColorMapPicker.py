@@ -228,10 +228,6 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
             self.c_view.onscreen_message(None)
         self.c_view.set_image(self.r_image)
 
-    def help(self):
-        name = str(self).capitalize()
-        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
-
     def close(self):
         self.fv.stop_global_plugin(str(self))
         return True

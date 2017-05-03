@@ -369,10 +369,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         chkbox.add_callback('activated',
                             lambda w, tf: self.axis_toggle_cb(w, tf, pos))
 
-    def help(self):
-        name = str(self).capitalize()
-        self.fv.help_text(name, self.__doc__, text_kind='rst', trim_pfx=4)
-
     def select_cut(self, tag):
         self.cutstag = tag
         self.w.cuts.show_text(tag)
