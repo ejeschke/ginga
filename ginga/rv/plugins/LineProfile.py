@@ -58,7 +58,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.tw = None
         self.mark_data_x = [None]
         self.mark_data_y = [None]
-        self.y_lbl = 'Flux'
+        self.y_lbl = ''
         self.x_lbl = ''
 
         self.gui_up = False
@@ -75,6 +75,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
                                width=400, height=300)
         ax = self.plot.add_axis()
         ax.grid(False)
+        self._ax2 = self.plot.ax.twiny()
 
         w = Plot.PlotWidget(self.plot)
         w.resize(400, 300)
@@ -168,8 +169,9 @@ class LineProfile(GingaPlugin.LocalPlugin):
         if image is not None:
             # Add Checkbox widgets
             # `image.naxispath` returns only mdim axes
-            for i in range(1, len(image.naxispath)+3):
-                chkbox = Widgets.CheckBox('NAXIS%d' % i)
+            maxi = len(image.naxispath) + 2
+            for i in range(1, maxi + 1):
+                chkbox = Widgets.CheckBox('NAXIS{}'.format(i))
                 self.hbox_axes.add_widget(chkbox)
 
                 # Disable axes for 2D images
@@ -178,6 +180,14 @@ class LineProfile(GingaPlugin.LocalPlugin):
                 else:
                     # Add callback
                     self.axes_callback_handler(chkbox, i)
+
+                    # Auto-check a default box to prevent error messages
+                    if i == maxi:
+                        chkbox.set_state(True)
+            # Add filler
+            self.hbox_axes.add_widget(Widgets.Label(''), stretch=1)
+        else:
+            self.hbox_axes.add_widget(Widgets.Label('No NAXIS info'))
 
     def axes_callback_handler(self, chkbox, pos):
         chkbox.add_callback('activated',
@@ -207,7 +217,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
     def start(self):
         # insert layer if it is not already
         try:
-            obj = self.fitsimage.get_object_by_tag(self.layertag)
+            self.fitsimage.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -248,25 +258,43 @@ class LineProfile(GingaPlugin.LocalPlugin):
         mddata = self.image.get_mddata().T
         naxes = mddata.ndim
 
-        if self.selected_axis:
-            plot_x_axis_data = self.get_axis(self.selected_axis)
-            if plot_x_axis_data is None:
-                # image may lack the required keywords, or some trouble
-                # building the axis
-                return
-            slice_obj = self._slice(naxes, mk=mark)
-            plot_y_axis_data = mddata[slice_obj]
+        if not self.selected_axis:
+            return
 
-            self.clear_plot()
-            self.plot.plot(plot_x_axis_data, plot_y_axis_data,
-                           xtitle=self.x_lbl, ytitle=self.y_lbl)
+        plot_x_axis_data = self.get_axis(self.selected_axis)
+        if plot_x_axis_data is None:
+            # image may lack the required keywords, or some trouble
+            # building the axis
+            return
+        slice_obj = self._slice(naxes, mk=mark)
+        plot_y_axis_data = mddata[slice_obj]
 
+        # If few enough data points, add marker
+        if len(plot_y_axis_data) <= 10:
+            marker = 'o'
         else:
-            self.fv.show_error("Please select an axis")
+            marker = None
+
+        # https://github.com/matplotlib/matplotlib/issues/3633/
+        ax2 = self._ax2
+        ax2.patch.set_visible(False)
+
+        self.clear_plot()
+        self.plot.plot(plot_x_axis_data, plot_y_axis_data,
+                       xtitle=self.x_lbl, ytitle=self.y_lbl, marker=marker)
+
+        # Top axis to show pixel location across X
+        ax2.cla()
+        xx1, xx2 = self.plot.ax.get_xlim()
+        ax2.set_xlim((xx1 - self._crval) / self._cdelt,
+                     (xx2 - self._crval) / self._cdelt)
+        ax2.set_xlabel('Index')
+        self.plot.draw()
 
     def _slice(self, naxes, mk):
         # Build N-dim slice
         slice_obj = [0] * naxes
+        i_sel = self.selected_axis - 1
 
         # For axes 1 and 2
         if mk is not None:
@@ -275,45 +303,55 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         # For axis > 3
         for i in range(2, naxes):
-            slice_obj[i] = int(round(self.image.revnaxis[i-2] + 1))
+            if i != i_sel:
+                slice_obj[i] = 0  # int(round(self.image.revnaxis[i-2] + 1))
 
         # Slice selected axis
-        slice_obj[self.selected_axis-1] = slice(None, None, None)
+        slice_obj[i_sel] = slice(None, None, None)
 
         return slice_obj
 
     def get_axis(self, i):
         try:
-            self.x_lbl = self.image.get_keyword('CTYPE%d' % i, None)
+            naxis_s = 'NAXIS{}'.format(i)
+            naxis_i = self.image.get_keyword(naxis_s)
+            self.x_lbl = self.image.get_keyword('CTYPE{}'.format(i), naxis_s)
+
             try:
-                kwds = ['CRVAL%d' % i, 'NAXIS%d' % i, 'CDELT%d' % i]
-                crval_i, naxis_i, cdelt_i = self.image.get_keywords_list(*kwds)
-
+                kwds = ['CRVAL{}'.format(i), 'CDELT{}'.format(i)]
+                crval_i, cdelt_i = self.image.get_keywords_list(*kwds)
             except KeyError as e:
-                raise ValueError("Missing FITS keyword: %s" % str(e))
+                self.logger.error("Missing FITS keyword: {}".format(str(e)))
+                crval_i = 0
+                cdelt_i = 1
 
-            axis = crval_i + np.arange(0, naxis_i, 1) * cdelt_i
+            axis = crval_i + np.arange(naxis_i) * cdelt_i
+            self._crval = crval_i
+            self._cdelt = cdelt_i
 
-            if self.x_lbl is not None:
-                units = self.image.get_keyword('CUNIT%d' % i, None)
-                if units is not None:
-                    self.x_lbl += (' (%s)' % str(units))
-            else:
-                self.x_lbl = ''
-            # Assume Y label should always be flux?
-            self.y_lbl = 'Flux'
-            return axis
+            units = self.image.get_keyword('CUNIT{}'.format(i), None)
+            if units is not None:
+                self.x_lbl += (' ({})'.format(units))
+
+            # Get pixel value info from header
+            self.y_lbl = self.image.get_keyword('BTYPE', 'Flux')
+            bunit = self.image.get_keyword('BUNIT', None)
+            if bunit is not None:
+                self.y_lbl += (' ({})'.format(bunit))
 
         except Exception as e:
-            errmsg = "Error loading axis %d: %s" % (i, str(e))
+            errmsg = "Error loading axis {}: {}".format(i, str(e))
             self.logger.error(errmsg)
             self.fv.show_error(errmsg)
+
+        else:
+            return axis
 
     def clear_plot(self):
         self.plot.clear()
         self.plot.fig.canvas.draw()
 
-    ### MARK FEATURE LOGIC ###
+    # MARK FEATURE LOGIC #
 
     def btndown_cb(self, canvas, event, data_x, data_y):
         # Disable plotting for 2D images
@@ -367,14 +405,14 @@ class LineProfile(GingaPlugin.LocalPlugin):
         if not style:
             style = self.mark_style
 
-        self.logger.debug("Setting mark at %d,%d" % (data_x, data_y))
+        self.logger.debug("Setting mark at {},{}".format(data_x, data_y))
         self.mark_index += 1
-        tag = 'mark%d' % (self.mark_index)
+        tag = 'mark{}'.format(self.mark_index)
         tag = self.canvas.add(self.dc.CompoundObject(
             self.dc.Point(data_x, data_y, self.mark_radius,
                           style=style, color=color,
                           linestyle='solid'),
-            self.dc.Text(data_x + 10, data_y, "%d" % (self.mark_index),
+            self.dc.Text(data_x + 10, data_y, "{}".format(self.mark_index),
                          color=color)),
                               tag=tag)
         self.marks.append(tag)
