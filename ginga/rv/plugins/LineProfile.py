@@ -233,11 +233,13 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
     def redo(self):
         # Get image being shown
-        self.image = self.fitsimage.get_image()
-        if self.image is None:
+        image = self.fitsimage.get_image()
+        if image is None:
             return
 
-        self.build_axes()
+        if self.image != image:
+            self.image = image
+            self.build_axes()
 
         self.wd, self.ht = self.image.get_size()
 
@@ -248,7 +250,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         mddata = self.image.get_mddata().T
         naxes = mddata.ndim
 
-        if self.selected_axis:
+        if self.selected_axis is not None:
             plot_x_axis_data = self.get_axis(self.selected_axis)
             if plot_x_axis_data is None:
                 # image may lack the required keywords, or some trouble
@@ -262,7 +264,8 @@ class LineProfile(GingaPlugin.LocalPlugin):
                            xtitle=self.x_lbl, ytitle=self.y_lbl)
 
         else:
-            self.fv.show_error("Please select an axis")
+            # TODO: should we show this more prominently?
+            self.fv.show_status("Please select an axis")
 
     def _slice(self, naxes, mk):
         # Build N-dim slice
