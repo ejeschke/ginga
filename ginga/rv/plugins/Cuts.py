@@ -415,7 +415,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.select_cut(tag)
         if tag == self._new_cut:
             self.save_cuts.set_enabled(False)
-            if self.use_slit:
+            if self.use_slit and self.gui_up:
                 self.save_slit.set_enabled(False)
         # plot cleared in replot_all() if no more cuts
         self.replot_all()
@@ -428,7 +428,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.w.cuts.append_text(self._new_cut)
         self.select_cut(self._new_cut)
         self.save_cuts.set_enabled(False)
-        if self.use_slit:
+        if self.use_slit and self.gui_up:
             self.save_slit.set_enabled(False)
         # plot cleared in replot_all() if no more cuts
         self.replot_all()
@@ -667,7 +667,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cuts_plot.clear()
         self.w.delete_all.set_enabled(False)
         self.save_cuts.set_enabled(False)
-        if self.use_slit:
+        if self.use_slit and self.gui_up:
             self.save_slit.set_enabled(False)
 
         idx = 0
@@ -695,7 +695,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         if self.use_slit:
             if self.cutstag != self._new_cut:
                 self._plot_slit()
-                if self.selected_axis:
+                if self.selected_axis and self.gui_up:
                     self.save_slit.set_enabled(True)
 
         # force mpl redraw
@@ -1018,12 +1018,13 @@ class Cuts(GingaPlugin.LocalPlugin):
         # Check if the old axis is clicked
         if pos == self.selected_axis:
             self.selected_axis = None
-            self.save_slit.set_enabled(False)
+            if self.gui_up:
+                self.save_slit.set_enabled(False)
             self.redraw_slit('clear')
         else:
             self.selected_axis = pos
             children[pos-1].set_state(tf)
-            if self.cutstag != self._new_cut:
+            if (self.cutstag != self._new_cut) and self.gui_up:
                 self.save_slit.set_enabled(True)
             self._plot_slit()
 
