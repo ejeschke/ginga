@@ -542,10 +542,10 @@ class Pick(GingaPlugin.LocalPlugin):
         # radius control
         #b.radius.set_digits(2)
         #b.radius.set_numeric(True)
-        b.radius.set_limits(5.0, 200.0, incr_value=1.0)
+        b.radius.set_limits(5, 200, incr_value=1)
 
         def chg_radius(w, val):
-            self.radius = float(val)
+            self.radius = int(val)
             self.w.xlbl_radius.set_text(str(self.radius))
             return True
         b.xlbl_radius.set_text(str(self.radius))

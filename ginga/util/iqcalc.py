@@ -217,7 +217,7 @@ class IQCalc(object):
 
     def centroid(self, data, xc, yc, radius):
         xc, yc = int(xc), int(yc)
-        x0, y0, arr = self.cut_region(xc, yc, radius, data)
+        x0, y0, arr = self.cut_region(xc, yc, int(radius), data)
         cy, cx = ndimage.center_of_mass(arr)
         return (x0 + cx, y0 + cy)
 
