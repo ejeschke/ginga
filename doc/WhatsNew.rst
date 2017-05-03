@@ -17,9 +17,13 @@ Ver 2.6.4.dev
   - If "Show candidates" is selected in Settings, then ALL of the candidates
     are saved to the log.
   - Added documentation to the manual
+  - Bug fix for error when changing radius
 
 - Improvements to layout of Operations menu (plugin categories)
 - Colorbar scale now placed below the color wedge and is more legible
+- Bug fixes for LineProfile plugin
+- Slit function for Cuts plugin can be enabled from GUI
+- Bug fixes for Slit function    
 
 Ver 2.6.3 (2017-03-30)
 ======================

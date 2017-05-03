@@ -146,7 +146,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
-        self.use_slit = self.settings.get('enable_slit', True)
+        self.use_slit = self.settings.get('enable_slit', False)
         self.cuts_image = None
 
         self.gui_up = False
@@ -287,36 +287,45 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox_cuts.add_widget(self.plot, stretch=1)
         nb.add_widget(vbox_cuts, title="Cuts")
 
-        if self.use_slit:
-            captions = (("Transpose Plot", 'checkbutton', "Save", 'button'),
-                        )
-            w, b = Widgets.build_info(captions, orientation=orientation)
-            self.w.update(b)
+        captions = (("Enable Slit", 'checkbutton',
+                     "Transpose Plot", 'checkbutton', "Save", 'button'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
 
-            self.t_btn = b.transpose_plot
-            self.t_btn.set_tooltip("Flip the plot")
-            self.t_btn.set_state(self.transpose_enabled)
-            self.t_btn.add_callback('activated', self.transpose_plot)
+        def chg_enable_slit(w, val):
+            self.use_slit = val
+            if val:
+                self.build_axes()
+            return True
+        b.enable_slit.set_state(self.use_slit)
+        b.enable_slit.set_tooltip("Enable the slit function")
+        b.enable_slit.add_callback('activated', chg_enable_slit)
 
-            self.save_slit = b.save
-            self.save_slit.set_tooltip("Save slit plot and data")
-            self.save_slit.add_callback('activated',
-                                        lambda w: self.save_cb(mode='slit'))
-            self.save_slit.set_enabled(self.save_enabled)
+        self.t_btn = b.transpose_plot
+        self.t_btn.set_tooltip("Flip the plot")
+        self.t_btn.set_state(self.transpose_enabled)
+        self.t_btn.add_callback('activated', self.transpose_plot)
 
-            # Add frame to hold the slit controls
-            fr = Widgets.Frame("Axes controls")
-            self.hbox_axes = Widgets.HBox()
-            self.hbox_axes.set_border_width(4)
-            self.hbox_axes.set_spacing(1)
-            fr.set_widget(self.hbox_axes)
+        self.save_slit = b.save
+        self.save_slit.set_tooltip("Save slit plot and data")
+        self.save_slit.add_callback('activated',
+                                    lambda w: self.save_cb(mode='slit'))
+        self.save_slit.set_enabled(self.save_enabled)
 
-            # Add Slit plot and controls to its tab
-            vbox_slit = Widgets.VBox()
-            vbox_slit.add_widget(self.plot2, stretch=1)
-            vbox_slit.add_widget(w)
-            vbox_slit.add_widget(fr)
-            nb.add_widget(vbox_slit, title="Slit")
+        # Add frame to hold the slit controls
+        fr = Widgets.Frame("Axes controls")
+        self.hbox_axes = Widgets.HBox()
+        self.hbox_axes.set_border_width(4)
+        self.hbox_axes.set_spacing(1)
+        fr.set_widget(self.hbox_axes)
+
+        # Add Slit plot and controls to its tab
+        vbox_slit = Widgets.VBox()
+        vbox_slit.add_widget(self.plot2, stretch=1)
+        vbox_slit.add_widget(w)
+        vbox_slit.add_widget(fr)
+        nb.add_widget(vbox_slit, title="Slit")
 
         top.add_widget(sw, stretch=1)
 
@@ -1005,8 +1014,22 @@ class Cuts(GingaPlugin.LocalPlugin):
         elif mode == 'slit':
             fig, xarr, yarr = self.slit_plot.get_data()
 
-        fig.savefig(target + '.png', dpi=fig_dpi)
-        numpy.savez_compressed(target + '.npz', x=xarr, y=yarr)
+        if isinstance(target, tuple):
+            # is this always a tuple?
+            filename = target[0]
+            if filename == '':
+                # user canceled dialog
+                return False
+        else:
+            filename = target
+
+        figname = filename + '.png'
+        self.logger.info("saving figure as: %s" % (figname))
+        fig.savefig(figname, dpi=fig_dpi)
+
+        dataname = filename + '.npz'
+        self.logger.info("saving data as: %s" % (dataname))
+        numpy.savez_compressed(dataname, x=xarr, y=yarr)
 
     def axis_toggle_cb(self, w, tf, pos):
         children = self.hbox_axes.get_children()
