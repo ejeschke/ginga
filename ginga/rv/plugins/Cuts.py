@@ -602,6 +602,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             coords = image.get_pixels_on_line(int(obj.x1), int(obj.y1),
                                               int(obj.x2), int(obj.y2),
                                               getvalues=False)
+
         elif obj.kind in ('path', 'freepath'):
             coords = []
             x1, y1 = obj.points[0]
@@ -612,6 +613,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                 # don't repeat last point when adding next segment
                 coords.extend(pts[:-1])
                 x1, y1 = x2, y2
+
         elif obj.kind == 'beziercurve':
             coords = obj.get_pixels_on_curve(image, getvalues=False)
             # Exclude NaNs
@@ -654,9 +656,12 @@ class Cuts(GingaPlugin.LocalPlugin):
         obj = self.canvas.get_object_by_tag(self.cutstag)
         line = self._getlines(obj)
 
-        self.get_slit_data(self.get_coords(line[0]))
+        coords = self.get_coords(line[0])
+        self.get_slit_data(coords)
+
         if self.transpose_enabled:
             self.redraw_slit('transpose')
+
         else:
             self.slit_plot.ax.imshow(
                 self.slit_data, interpolation='nearest',
@@ -1047,9 +1052,13 @@ class Cuts(GingaPlugin.LocalPlugin):
         else:
             self.selected_axis = pos
             children[pos-1].set_state(tf)
-            if (self.cutstag != self._new_cut) and self.gui_up:
-                self.save_slit.set_enabled(True)
-            self._plot_slit()
+            if self.gui_up:
+                if self.cutstag != self._new_cut:
+                    self.save_slit.set_enabled(True)
+                    self._plot_slit()
+                else:
+                    # no cut selected ("new cut")
+                    self.redraw_slit('clear')
 
     def redraw_slit(self, mode):
         if mode == 'clear':
