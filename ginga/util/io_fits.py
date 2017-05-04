@@ -224,6 +224,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             self.hdu_db[idx] = d
             # by (hduname, extver)
             self.hdu_db[(name, extver)] = d
+            idx += 1
 
         self.extver_db = extver_db
 

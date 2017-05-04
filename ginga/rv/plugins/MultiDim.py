@@ -574,7 +574,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
             if info is not None:
                 index = info.index
                 self.w.hdu.set_index(index)
-                self.set_hdu(index)
 
         self.w.hdu.set_enabled(len(self.file_obj) > 0)
 
