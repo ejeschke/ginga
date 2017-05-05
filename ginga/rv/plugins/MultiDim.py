@@ -5,12 +5,13 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
-import re, os
+import re
+import os
 from distutils import spawn
 from contextlib import contextmanager
 
 from ginga.gw import Widgets
-from ginga.misc import Future, Bunch
+from ginga.misc import Future
 from ginga import GingaPlugin
 from ginga.util.iohelper import get_hdu_suffix
 from ginga.util.videosink import VideoSink
@@ -113,13 +114,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
         vbox.add_widget(fr, stretch=0)
 
         tbar = Widgets.Toolbar(orientation='horizontal')
-        for name, actn, cb in (('first', 'first', lambda w: self.first_slice()),
-                               ('last', 'last', lambda w: self.last_slice()),
-                               ('reverse', 'prev', lambda w: self.prev_slice()),
-                               ('forward', 'next', lambda w: self.next_slice()),
-                               ('play', 'play', lambda w: self.play_start()),
-                               ('stop', 'stop', lambda w: self.play_stop()),
-                               ):
+        for name, actn, cb in (
+                ('first', 'first', lambda w: self.first_slice()),
+                ('last', 'last', lambda w: self.last_slice()),
+                ('reverse', 'prev', lambda w: self.prev_slice()),
+                ('forward', 'next', lambda w: self.next_slice()),
+                ('play', 'play', lambda w: self.play_start()),
+                ('stop', 'stop', lambda w: self.play_stop()), ):
             iconpath = os.path.join(self.fv.iconpath, "%s_48.png" % name)
             btn = tbar.add_action(None, iconpath=iconpath)
             self.w[actn] = btn
@@ -142,8 +143,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         b.interval.set_enabled(False)
         vbox.add_widget(w, stretch=0)
 
-        captions = [("Slice:", 'label', "Slice", 'llabel',),
-                     #"Value:", 'label', "Value", 'llabel'),
+        captions = [("Slice:", 'label', "Slice", 'llabel'),
+                    # ("Value:", 'label', "Value", 'llabel'),
                     ("Save Slice", 'button'),
                     ]
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -175,8 +176,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             fr.set_widget(infolbl)
         vbox.add_widget(fr, stretch=0)
 
-        #spacer = Widgets.Label('')
-        #vbox.add_widget(spacer, stretch=1)
+        # spacer = Widgets.Label('')
+        # vbox.add_widget(spacer, stretch=1)
 
         top.add_widget(sw, stretch=1)
 
@@ -198,7 +199,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.gui_up = True
 
     def set_hdu_cb(self, w, val):
-        #idx = int(val)
+        # idx = int(val)
         idx = w.get_index()
         idx = max(0, idx)
         try:
@@ -209,7 +210,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 idx+1, str(e)))
 
     def set_naxis_cb(self, w, idx, n):
-        #idx = int(w.get_value()) - 1
+        # idx = int(w.get_value()) - 1
         self.set_naxis(idx, n)
         # schedule a redraw
         self.fitsimage.redraw(whence=0)
@@ -230,7 +231,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 captions.append((title+':', 'label', title, 'llabel'))
             else:
                 captions.append((title+':', 'label', title, 'llabel',
-                                 #"Choose %s" % (title), 'spinbutton'))
+                                # "Choose %s" % (title), 'spinbutton'))
                                  "Choose %s" % (title), 'hscale'))
 
         if len(dims) > 3:  # only add radiobuttons if we have more than 3 dim
@@ -260,8 +261,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 slider.set_limits(lower, upper, incr_value=1)
                 slider.set_value(lower)
                 slider.set_tracking(True)
-                #slider.set_digits(0)
-                #slider.set_wrap(True)
+                # slider.set_digits(0)
+                # slider.set_wrap(True)
                 slider.add_callback('value-changed', self.set_naxis_cb, n)
 
         # Add vbox of naxis controls to gui
@@ -533,12 +534,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
             idx = 0
         if idx >= len(hdu_info):
             idx = len(hdu_info) - 1
-        #w.set_index(idx)
+        # w.set_index(idx)
 
     def redo(self):
         """Called when an image is set in the channel."""
         image = self.channel.get_current_image()
-        if (image is None) or (image == self.image):
+        if (image is None):
             return True
 
         path = image.get('path', None)
@@ -574,6 +575,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             if info is not None:
                 index = info.index
                 self.w.hdu.set_index(index)
+                if image != self.image:
+                    self.set_hdu(index)
 
         self.w.hdu.set_enabled(len(self.file_obj) > 0)
 
