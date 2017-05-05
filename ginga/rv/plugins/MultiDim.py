@@ -15,6 +15,7 @@ from ginga.misc import Future
 from ginga import GingaPlugin
 from ginga.util.iohelper import get_hdu_suffix
 from ginga.util.videosink import VideoSink
+from ginga.table.AstroTable import AstroTable
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -366,7 +367,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.fv.switch_name(chname, imname)
 
             # Still need to build datacube profile
-            mddata = self.image.get_mddata()
+            if isinstance(self.image, AstroTable):
+                mddata = None
+            else:
+                mddata = self.image.get_mddata()
             if mddata is not None:
                 dims = list(mddata.shape)
                 dims.reverse()
@@ -539,7 +543,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def redo(self):
         """Called when an image is set in the channel."""
         image = self.channel.get_current_image()
-        if (image is None):
+        if image is None:
             return True
 
         path = image.get('path', None)
