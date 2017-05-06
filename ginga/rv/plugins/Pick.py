@@ -496,9 +496,9 @@ class Pick(GingaPlugin.LocalPlugin):
                     ('Threshold:', 'label', 'xlbl_threshold', 'label',
                      'Threshold', 'entry'),
                     ('Min FWHM:', 'label', 'xlbl_min_fwhm', 'label',
-                     'Min FWHM', 'spinbutton'),
+                     'Min FWHM', 'spinfloat'),
                     ('Max FWHM:', 'label', 'xlbl_max_fwhm', 'label',
-                     'Max FWHM', 'spinbutton'),
+                     'Max FWHM', 'spinfloat'),
                     ('Ellipticity:', 'label', 'xlbl_ellipticity', 'label',
                      'Ellipticity', 'entry'),
                     ('Edge:', 'label', 'xlbl_edge', 'label',
@@ -678,7 +678,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         btns = Widgets.HBox()
         btn = Widgets.Button('Redo Pick')
-        btn.add_callback('activated', lambda w: self.redo())
+        btn.add_callback('activated', lambda w: self.redo_manual())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         vbox3.add_widget(btns, stretch=0)
@@ -997,12 +997,19 @@ class Pick(GingaPlugin.LocalPlugin):
             pass
         self.fv.show_status("")
 
-    def redo(self):
-        if self.picktag is None:
-            return
-
+    def redo_manual(self):
         serialnum = self.bump_serial()
         self.ev_intr.set()
+
+        self._redo(serialnum)
+
+    def redo(self):
+        serialnum = self.bump_serial()
+        self._redo(serialnum)
+
+    def _redo(self, serialnum):
+        if self.picktag is None:
+            return
 
         pickobj = self.canvas.get_object_by_tag(self.picktag)
         if pickobj.kind != 'compound':
@@ -1058,9 +1065,11 @@ class Pick(GingaPlugin.LocalPlugin):
             return True
 
     def search(self, serialnum, data, x1, y1, wd, ht, pickobj):
-        if serialnum != self.get_serial():
-            return
+
         with self.lock2:
+            if serialnum != self.get_serial():
+                return
+
             self.pgs_cnt = 0
             self.ev_intr.clear()
             self.fv.gui_call(self.init_progress)
@@ -1122,9 +1131,8 @@ class Pick(GingaPlugin.LocalPlugin):
                 msg = str(e)
                 self.update_status(msg)
 
-            if serialnum == self.get_serial():
-                self.fv.gui_do(self.update_pick, serialnum, results, qs,
-                               x1, y1, wd, ht, data, pickobj, msg)
+            self.fv.gui_do(self.update_pick, serialnum, results, qs,
+                           x1, y1, wd, ht, data, pickobj, msg)
 
     def _make_report_header(self):
         return self.rpt_header + '\n'
@@ -1332,7 +1340,7 @@ class Pick(GingaPlugin.LocalPlugin):
                          color=self.pickcolor)))
         self.picktag = tag
 
-        return self.redo()
+        return self.redo_manual()
 
     def edit_cb(self, canvas, obj):
         if obj.kind not in self.drawtypes:
@@ -1345,7 +1353,7 @@ class Pick(GingaPlugin.LocalPlugin):
                (c_obj.objects[0] != obj):
             return False
 
-        return self.redo()
+        return self.redo_manual()
 
     def reset_region(self):
         self.dx = region_default_width
@@ -1592,7 +1600,7 @@ class Pick(GingaPlugin.LocalPlugin):
             shape.move_to(data_x, data_y)
             self.canvas.update_canvas()
 
-            self.redo()
+            self.redo_manual()
 
         return True
 
