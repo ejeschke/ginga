@@ -318,8 +318,6 @@ class Pick(GingaPlugin.LocalPlugin):
         assert iqcalc.have_scipy == True, \
                Exception("Please install python-scipy to use this plugin")
 
-        self.pickcenter = None
-
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
 
@@ -368,6 +366,12 @@ class Pick(GingaPlugin.LocalPlugin):
         bd.enable_cmap(True)
 
         di.configure(width, height)
+
+        p_canvas = di.get_canvas()
+        tag = p_canvas.add(self.dc.Point(width / 2, height / 2, 5,
+                                         linewidth=1, color='red'))
+        self.pickcenter = p_canvas.get_object_by_tag(tag)
+
         iw = Viewers.GingaViewerWidget(viewer=di)
         iw.resize(300, 300)
         nb.add_widget(iw, title="Image")
@@ -1013,9 +1017,6 @@ class Pick(GingaPlugin.LocalPlugin):
         x1, y1, x2, y2 = shape.get_llur()
         text.x, text.y = x1, y2 + 4
 
-        # set the pick image to have the same cut levels and transforms
-        self.fitsimage.copy_attributes(self.pickimage, self.copy_attrs)
-
         try:
             image = self.fitsimage.get_image()
 
@@ -1028,42 +1029,23 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.fv.show_error(errmsg)
                 raise Exception(errmsg)
 
-            # Cut and show pick image in pick window
+            # Extract image in pick window
             self.logger.debug("bbox %f,%f %f,%f" % (x1, y1, x2, y2))
-            x1, y1, x2, y2, data = self.cutdetail(self.fitsimage,
-                                                  self.pickimage,
-                                                  shape)
+            x1, y1, x2, y2, data = self.cutdetail(image, shape)
             self.logger.debug("cut box %d,%d %d,%d" % (x1, y1, x2, y2))
 
             # calculate center of pick image
-            wd, ht = self.pickimage.get_data_size()
+            ht, wd = data.shape[:2]
             xc = wd // 2
             yc = ht // 2
-            if self.pickcenter is None:
-                p_canvas = self.pickimage.get_canvas()
-                tag = p_canvas.add(self.dc.Point(xc, yc, 5,
-                                                 linewidth=1, color='red'))
-                self.pickcenter = p_canvas.get_object_by_tag(tag)
-
             self.pick_x1, self.pick_y1 = x1, y1
             self.pick_data = data
-            self.wdetail.sample_area.set_text('%dx%d' % (x2-x1, y2-y1))
 
             point.color = 'red'
             text.text = '{0}: calc'.format(self._textlabel)
             self.pickcenter.x = xc
             self.pickcenter.y = yc
             self.pickcenter.color = 'red'
-
-            # clear contour and fwhm plots
-            if self.have_mpl:
-                self.clear_contours()
-                self.clear_fwhm()
-                self.clear_radial()
-
-            # Delete previous peak marks
-            objs = self.canvas.get_objects_by_tag_pfx('peak')
-            self.canvas.delete_objects(objs)
 
             # Offload this task to another thread so that GUI remains
             # responsive
@@ -1142,7 +1124,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             if serialnum == self.get_serial():
                 self.fv.gui_do(self.update_pick, serialnum, results, qs,
-                               x1, y1, wd, ht, pickobj, msg)
+                               x1, y1, wd, ht, data, pickobj, msg)
 
     def _make_report_header(self):
         return self.rpt_header + '\n'
@@ -1200,11 +1182,18 @@ class Pick(GingaPlugin.LocalPlugin):
 
         return d
 
-    def update_pick(self, serialnum, objlist, qs, x1, y1, wd, ht, pickobj, msg):
-        if serialnum != self.get_serial():
-            return
+    def update_pick(self, serialnum, objlist, qs, x1, y1, wd, ht, data,
+                    pickobj, msg):
 
         try:
+            # set the pick image to have the same cut levels and transforms
+            self.fitsimage.copy_attributes(self.pickimage, self.copy_attrs)
+            self.pickimage.set_data(data)
+
+            # Delete previous peak marks
+            objs = self.canvas.get_objects_by_tag_pfx('peak')
+            self.canvas.delete_objects(objs)
+
             image = self.fitsimage.get_image()
             shape_obj = pickobj.objects[0]
             point = pickobj.objects[1]
@@ -1243,6 +1232,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.last_rpt = []
 
             d = reports[0]
+            self.wdetail.sample_area.set_text('%dx%d' % (wd, ht))
             self.wdetail.fwhm_x.set_text('%.3f' % fwhm_x)
             self.wdetail.fwhm_y.set_text('%.3f' % fwhm_y)
             self.wdetail.fwhm.set_text('%.3f' % fwhm)
@@ -1301,8 +1291,11 @@ class Pick(GingaPlugin.LocalPlugin):
             shape_obj.linestyle = 'dash'
 
             self.plot_panx = self.plot_pany = 0.5
-            self.plot_contours(image)
-            # TODO: could calc background based on numpy calc
+            if self.have_mpl:
+                self.plot_contours(image)
+                # TODO: could calc background based on numpy calc
+                self.clear_fwhm()
+                self.clear_radial()
 
         self.w.btn_intr_eval.set_enabled(False)
         self.pickimage.redraw(whence=3)
@@ -1455,8 +1448,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             return self.fv.showxy(chviewer, data_x, data_y)
 
-    def cutdetail(self, src_view, dst_view, shape_obj):
-        image = src_view.get_image()
+    def cutdetail(self, image, shape_obj):
         view, mask = image.get_shape_view(shape_obj)
 
         data = image._slice(view)
@@ -1466,8 +1458,6 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # mask non-containing members
         mdata = numpy.ma.array(data, mask=numpy.logical_not(mask))
-
-        dst_view.set_data(mdata)
 
         return (x1, y1, x2, y2, mdata)
 
