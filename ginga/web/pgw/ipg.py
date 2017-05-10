@@ -30,7 +30,6 @@ import tornado.ioloop
 from ginga import AstroImage, colors
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log, Task
-from ginga.util import catalog, iohelper
 from ginga.Bindings import ImageViewBindings
 from ginga.misc.Settings import SettingGroup
 from ginga.util.paths import ginga_home
@@ -38,7 +37,28 @@ from ginga.util.paths import ginga_home
 from ginga.web.pgw import templates, js, PgHelp, Widgets, Viewers
 
 
-class EnhancedCanvasView(Viewers.CanvasView):
+class BasicCanvasView(Viewers.CanvasView):
+
+    def build_gui(self, container):
+        """
+        This is responsible for building the viewer's UI.  It should
+        place the UI in `container`.  Override this to make a custom
+        UI.
+        """
+        vbox = Widgets.VBox()
+        vbox.set_border_width(0)
+
+        w = Viewers.GingaViewerWidget(viewer=self)
+        vbox.add_widget(w, stretch=1)
+
+        # need to put this in an hbox with an expanding label or the
+        # browser wants to resize the canvas, distorting it
+        hbox = Widgets.HBox()
+        hbox.add_widget(vbox, stretch=0)
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+
+        container.set_widget(hbox)
+
 
     def embed(self, width=600, height=650):
         """
@@ -106,7 +126,7 @@ class EnhancedCanvasView(Viewers.CanvasView):
         canvas.enable_draw(True)
         canvas.enable_edit(True)
         canvas.set_drawtype(None)
-        canvas.ui_setActive(True)
+        canvas.ui_set_active(True)
         canvas.set_surface(self)
         canvas.register_for_cursor_drawing(self)
         # add the canvas to the view.
@@ -114,85 +134,35 @@ class EnhancedCanvasView(Viewers.CanvasView):
 
         return canvas
 
-class ImageViewer(object):
 
-    def __init__(self, logger, window, viewer_class=None, width=512, height=512):
-        if viewer_class is None:
-            viewer_class = EnhancedCanvasView
-        self.logger = logger
-        self.url = window.url
-        self.dc = get_canvas_types()
-        self.pixel_base = 1.0
+class EnhancedCanvasView(BasicCanvasView):
+    """
+    Like BasicCanvasView, but includes a readout widget for when the
+    cursor is moved over the canvas to display the coordinates.
+    """
 
-        self.top = window
-        self.top.add_callback('close', self.closed)
-
+    def build_gui(self, container):
+        """
+        This is responsible for building the viewer's UI.  It should
+        place the UI in `container`.
+        """
         vbox = Widgets.VBox()
         vbox.set_border_width(2)
         vbox.set_spacing(1)
 
-        # load binding preferences if available
-        cfgfile = os.path.join(ginga_home, "ipg_bindings.cfg")
-        bindprefs = SettingGroup(name='bindings', logger=logger,
-                                 preffile=cfgfile)
-        bindprefs.load(onError='silent')
-
-        bd = ImageViewBindings(logger, settings=bindprefs)
-
-        fi = viewer_class(logger, bindings=bd)
-        fi.url = self.url
-        fi.enable_autocuts('on')
-        fi.set_autocut_params('zscale')
-        fi.set_zoom_algorithm('rate')
-        fi.set_zoomrate(1.1)
-        fi.enable_autozoom('on')
-        #fi.set_callback('drag-drop', self.drop_file)
-        fi.set_callback('none-move', self.motion)
-        fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
-        self.fitsimage = fi
-        fi.ipg_parent = self
-
-        bd = fi.get_bindings()
-        bd.enable_all(True)
-
-        # canvas that we will draw on
-        canvas = self.dc.DrawingCanvas()
-        canvas.set_surface(fi)
-        self.canvas = canvas
-        # add canvas to view
-        private_canvas = fi.get_canvas()
-        private_canvas.add(canvas)
-        canvas.ui_setActive(True)
-        fi.set_canvas(canvas)
-
-        fi.set_desired_size(width, height)
-        # force allocation of a surface--may be resized later
-        fi.configure_surface(width, height)
-
-        # add little mode indicator that shows modal states in
-        # the corner
-        fi.show_mode_indicator(True)
-
-        w = Viewers.GingaViewerWidget(viewer=fi)
+        w = Viewers.GingaViewerWidget(viewer=self)
         vbox.add_widget(w, stretch=1)
+
+        # set up to capture cursor movement for reading out coordinates
+
+        # coordinates reported in base 1 or 0?
+        self.pixel_base = 1.0
 
         self.readout = Widgets.Label("")
         vbox.add_widget(self.readout, stretch=0)
 
-        hbox = Widgets.HBox()
-        hbox.add_widget(Widgets.Label('Zoom sensitivity: '))
-        slider = Widgets.Slider(orientation='horizontal', dtype=float)
-        slider.add_callback('value-changed',
-                            lambda w, val: self.adjust_scrolling_accel_cb(val))
-        slider.set_limits(1.0, 9.5, 0.1)
-        val = 4.0
-        slider.set_value(val)
-        self.adjust_scrolling_accel_cb(val)
-        hbox.add_widget(slider, stretch=1)
-
-        hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(hbox, stretch=0)
+        #self.set_callback('none-move', self.motion_cb)
+        self.set_callback('cursor-changed', self.motion_cb)
 
         # need to put this in an hbox with an expanding label or the
         # browser wants to resize the canvas, distorting it
@@ -200,24 +170,12 @@ class ImageViewer(object):
         hbox.add_widget(vbox, stretch=0)
         hbox.add_widget(Widgets.Label(''), stretch=1)
 
-        self.top.set_widget(hbox)
+        container.set_widget(hbox)
 
-    def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
-
-        self.fitsimage.set_image(image)
-        self.top.set_title(filepath)
-
-    def drop_file(self, fitsimage, paths):
-        fileName = paths[0]
-        self.load_file(fileName)
-
-    def motion(self, viewer, button, data_x, data_y):
+    def motion_cb(self, viewer, button, data_x, data_y):
 
         # Get the value under the data coordinates
         try:
-            #value = viewer.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
             value = viewer.get_data(int(data_x+0.5), int(data_y+0.5))
@@ -250,17 +208,63 @@ class ImageViewer(object):
     def set_readout_text(self, text):
         self.readout.set_text(text)
 
-    def adjust_scrolling_accel_cb(self, val):
-        def f(x):
-            return (math.log10(x) / (10 - x) * x/12) + 1.0001
-        val2 = f(val)
-        self.logger.debug("slider value is %f, setting will be %f" % (val, val2))
-        # save scale
-        scale_x, scale_y = self.fitsimage.get_scale_xy()
-        self.fitsimage.set_zoomrate(val2)
-        # restore scale
-        self.fitsimage.scale_to(scale_x, scale_y)
-        return True
+
+class ImageViewer(object):
+
+    def __init__(self, logger, window, viewer_class=None,
+                 width=512, height=512):
+        if viewer_class is None:
+            viewer_class = EnhancedCanvasView
+        self.logger = logger
+        self.url = window.url
+        self.dc = get_canvas_types()
+
+        self.top = window
+        self.top.add_callback('close', self.closed)
+
+        # load binding preferences if available
+        cfgfile = os.path.join(ginga_home, "ipg_bindings.cfg")
+        bindprefs = SettingGroup(name='bindings', logger=logger,
+                                 preffile=cfgfile)
+        bindprefs.load(onError='silent')
+
+        bd = ImageViewBindings(logger, settings=bindprefs)
+
+        fi = viewer_class(logger, bindings=bd)
+        fi.url = self.url
+        fi.enable_autocuts('on')
+        fi.set_autocut_params('zscale')
+        fi.set_zoom_algorithm('rate')
+        fi.set_zoomrate(1.1)
+        fi.enable_autozoom('on')
+        fi.set_bg(0.2, 0.2, 0.2)
+        fi.ui_set_active(True)
+        self.fitsimage = fi
+        fi.ipg_parent = self
+
+        bd = fi.get_bindings()
+        bd.enable_all(True)
+
+        # canvas that we will draw on
+        canvas = self.dc.DrawingCanvas()
+        canvas.set_surface(fi)
+        self.canvas = canvas
+        # add canvas to view
+        private_canvas = fi.get_canvas()
+        private_canvas.add(canvas)
+        canvas.ui_set_active(True)
+        fi.set_canvas(canvas)
+
+        fi.set_desired_size(width, height)
+        # force allocation of a surface--may be resized later
+        fi.configure_surface(width, height)
+
+        # add little mode indicator that shows modal states in
+        # the corner
+        fi.show_mode_indicator(True)
+
+        # Have the viewer
+        fi.build_gui(window)
 
     def closed(self, w):
         self.logger.info("Top window closed.")
@@ -286,6 +290,7 @@ class FileHandler(tornado.web.RequestHandler):
 
         output = window.render()
         self.write(output)
+
 
 class ViewerFactory(object):
 
@@ -327,8 +332,6 @@ class ViewerFactory(object):
         # our own viewer object, customized with methods (see above)
         viewer = ImageViewer(self.logger, window,
                              viewer_class=viewer_class, width=width, height=height)
-        #viewer.url = window.url
-
         self.viewers[v_id] = viewer
         return viewer
 
@@ -337,6 +340,7 @@ class ViewerFactory(object):
 
     def delete_all_viewers(self):
         self.viewers = {}
+
 
 class WebServer(object):
 
@@ -355,6 +359,7 @@ class WebServer(object):
 
         self.server = None
         self.http_server = None
+        self.default_viewer_class = None
 
     def start(self, use_thread=True, no_ioloop=False):
         self.thread_pool.startall()
@@ -370,8 +375,6 @@ class WebServer(object):
               dict(name='Application', url='/app', app=self.app)),
             (r"/app/socket", PgHelp.ApplicationHandler,
               dict(name='Ginga', app=self.app)),
-            ## ("/viewer/socket", ViewerWidget,
-            ##  dict(name='Ginga', factory=self.factory)),
             ],
                factory=self.factory, logger=self.logger)
 
@@ -402,14 +405,16 @@ class WebServer(object):
 
     def get_viewer(self, v_id, viewer_class=None, width=512, height=512,
                    force_new=False):
-        from IPython.display import display, HTML
+
+        if viewer_class is None:
+            viewer_class = self.default_viewer_class
+
         v = self.factory.get_viewer(v_id, viewer_class=viewer_class,
                                     width=width, height=height,
                                     force_new=force_new)
         url = v.top.url
         viewer = v.fitsimage
         viewer.url = url
-        #display(HTML('<a href="%s">link to viewer</a>' % url))
         return viewer
 
 
