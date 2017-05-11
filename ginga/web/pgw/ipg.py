@@ -20,16 +20,15 @@ Tested with Chromium 41.0.2272.76, Firefox 37.0.2, Safari 7.1.6
 """
 from __future__ import print_function
 import sys, os
-import math
 import logging
 import threading
 
 import tornado.web
 import tornado.ioloop
 
-from ginga import AstroImage, colors
+from ginga import AstroImage
 from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.misc import log, Task
+from ginga.misc import log, Task, Bunch
 from ginga.Bindings import ImageViewBindings
 from ginga.misc.Settings import SettingGroup
 from ginga.util.paths import ginga_home
@@ -59,7 +58,6 @@ class BasicCanvasView(Viewers.CanvasView):
 
         container.set_widget(hbox)
 
-
     def embed(self, width=600, height=650):
         """
         Embed a viewer into a Jupyter notebook.
@@ -75,7 +73,7 @@ class BasicCanvasView(Viewers.CanvasView):
         import webbrowser
         webbrowser.open(self.url, new=new)
 
-    def show(self):
+    def show(self, fmt=None):
         """
         Capture the window of a viewer.
         """
@@ -85,8 +83,14 @@ class BasicCanvasView(Viewers.CanvasView):
         self.redraw_now()
 
         from IPython.display import Image
-        return Image(data=bytes(self.get_rgb_image_as_bytes(format='png')),
-                     format='png', embed=True)
+
+        if fmt is None:
+            # what format are we using for the HTML5 canvas--use that
+            settings = self.get_settings()
+            fmt = settings.get('html5_canvas_format', 'png')
+
+        return Image(data=bytes(self.get_rgb_image_as_bytes(format=fmt)),
+                     format=fmt, embed=True)
 
     def load_fits(self, filepath):
         """
@@ -133,6 +137,24 @@ class BasicCanvasView(Viewers.CanvasView):
         my_canvas.add(canvas, tag=tag)
 
         return canvas
+
+    def set_html5_canvas_format(self, fmt):
+        """
+        Sets the format used for rendering to the HTML5 canvas.
+        'png' offers greater clarity, especially for small text, but
+        does not have as good of performance as 'jpeg'.
+        """
+        fmt = fmt.lower()
+        if not fmt in ('jpeg', 'png'):
+            raise ValueError("Format must be one of {jpeg|png} not '%s'" % (
+                fmt))
+
+        settings = self.get_settings()
+        settings.set(html5_canvas_format=fmt)
+
+    def get_html5_canvas_format(self):
+        settings = self.get_settings()
+        return settings.get('html5_canvas_format')
 
 
 class EnhancedCanvasView(BasicCanvasView):
@@ -209,46 +231,64 @@ class EnhancedCanvasView(BasicCanvasView):
         self.readout.set_text(text)
 
 
-class ImageViewer(object):
+class ViewerFactory(object):
+    """
+    This is a factory class that churns out web viewers for a web
+    application.
 
-    def __init__(self, logger, window, viewer_class=None,
-                 width=512, height=512):
+    The most important method of interest is get_viewer().
+    """
+
+    def __init__(self, logger, app, thread_pool):
+        """
+        Parameters
+        ----------
+        logger : python compatible logger
+            a logging-module compatible logger object
+        app : ginga pgw web application object
+        thread_pool : a ginga thread pool
+        """
+        self.logger = logger
+        self.app = app
+        self.thread_pool = thread_pool
+        self.dc = get_canvas_types()
+        # dict of viewers
+        self.viewers = {}
+
+    def get_threadpool(self):
+        return self.thread_pool
+
+    def make_viewer(self, window, viewer_class=None,
+                    width=512, height=512):
         if viewer_class is None:
             viewer_class = EnhancedCanvasView
-        self.logger = logger
-        self.url = window.url
-        self.dc = get_canvas_types()
-
-        self.top = window
-        self.top.add_callback('close', self.closed)
 
         # load binding preferences if available
         cfgfile = os.path.join(ginga_home, "ipg_bindings.cfg")
-        bindprefs = SettingGroup(name='bindings', logger=logger,
+        bindprefs = SettingGroup(name='bindings', logger=self.logger,
                                  preffile=cfgfile)
         bindprefs.load(onError='silent')
 
-        bd = ImageViewBindings(logger, settings=bindprefs)
+        bd = ImageViewBindings(self.logger, settings=bindprefs)
 
-        fi = viewer_class(logger, bindings=bd)
-        fi.url = self.url
-        fi.enable_autocuts('on')
+        fi = viewer_class(self.logger, bindings=bd)
+        fi.url = window.url
+        # set up some reasonable defaults--user can change these later
+        # if desired
         fi.set_autocut_params('zscale')
-        fi.set_zoom_algorithm('rate')
-        fi.set_zoomrate(1.1)
+        fi.enable_autocuts('on')
         fi.enable_autozoom('on')
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
-        self.fitsimage = fi
         fi.ipg_parent = self
 
+        # enable most key/mouse operations
         bd = fi.get_bindings()
         bd.enable_all(True)
 
-        # canvas that we will draw on
+        # set up a non-private canvas for drawing
         canvas = self.dc.DrawingCanvas()
         canvas.set_surface(fi)
-        self.canvas = canvas
         # add canvas to view
         private_canvas = fi.get_canvas()
         private_canvas.add(canvas)
@@ -263,56 +303,12 @@ class ImageViewer(object):
         # the corner
         fi.show_mode_indicator(True)
 
-        # Have the viewer
+        # Have the viewer build it's UI into the container
         fi.build_gui(window)
 
-    def closed(self, w):
-        self.logger.info("Top window closed.")
-        self.top = None
-        sys.exit()
-
-
-class FileHandler(tornado.web.RequestHandler):
-
-    def initialize(self, name, factory):
-        self.name = name
-        self.viewer_factory = factory
-        self.logger = factory.logger
-        self.logger.info("filehandler initialize")
-
-    def get(self):
-        self.logger.info("filehandler get")
-        # Collect arguments
-        wid = self.get_argument('id', None)
-
-        # Get window with this id
-        window = self.app.get_window(wid)
-
-        output = window.render()
-        self.write(output)
-
-
-class ViewerFactory(object):
-
-    def __init__(self, logger, basedir, app, thread_pool):
-        """
-        Constructor parameters:
-          `logger` : a logging-module compatible logger object
-          `basedir`: directory to which paths requested on the viewer
-                        are considered relative to.
-        """
-        self.logger = logger
-        self.basedir = basedir
-        self.app = app
-        self.thread_pool = thread_pool
-        # dict of viewers
-        self.viewers = {}
-
-    def get_basedir(self):
-        return self.basedir
-
-    def get_threadpool(self):
-        return self.thread_pool
+        v_info = Bunch.Bunch(url=window.url, viewer=fi,
+                             top=window)
+        return v_info
 
     def get_viewer(self, v_id, viewer_class=None, width=512, height=512,
                    force_new=False):
@@ -329,11 +325,13 @@ class ViewerFactory(object):
         #  create top level window
         window = self.app.make_window("Viewer %s" % v_id, wid=v_id)
 
-        # our own viewer object, customized with methods (see above)
-        viewer = ImageViewer(self.logger, window,
-                             viewer_class=viewer_class, width=width, height=height)
-        self.viewers[v_id] = viewer
-        return viewer
+        # We get back a record with information about the viewer
+        v_info = self.make_viewer(window, viewer_class=viewer_class,
+                                  width=width, height=height)
+
+        # Save it under this viewer id
+        self.viewers[v_id] = v_info
+        return v_info
 
     def delete_viewer(self, v_id):
         del self.viewers[v_id]
@@ -342,10 +340,56 @@ class ViewerFactory(object):
         self.viewers = {}
 
 
+class FileHandler(tornado.web.RequestHandler):
+    """
+    This is a handler that is started to allow a REST-type web API to
+    create and manipulate viewers.
+
+    Currently it only allows the following commands:
+        .../viewer?id=v1&cmd=get           Create/access a viewer
+        .../viewer?id=v1&cmd=load&path=... Load the viewer
+    """
+
+    def initialize(self, name, factory):
+        self.name = name
+        self.factory = factory
+        self.logger = factory.logger
+        self.logger.debug("filehandler initialize")
+
+    def get(self):
+        self.logger.debug("filehandler get")
+        # Collect arguments
+        # TODO: width, height?
+        cmd = self.get_argument('cmd', 'get')
+        v_id = self.get_argument('id', 'v1')
+
+        v_info = self.factory.get_viewer(v_id)
+
+        if cmd == 'get':
+            self._do_get(v_info)
+
+        elif cmd == 'load':
+            self._do_load(v_info)
+
+    def _do_get(self, v_info):
+        # Get window
+        window = v_info.top
+
+        # render back to caller
+        output = window.render()
+        self.write(output)
+
+    def _do_load(self, v_info):
+        path = self.get_argument('path', None)
+        if path is not None:
+            v_info.viewer.load_fits(path)
+
+
 class WebServer(object):
 
     def __init__(self, app, thread_pool, factory,
-                 host='localhost', port=9909, ev_quit=None):
+                 host='localhost', port=9909, ev_quit=None,
+                 viewer_class=None):
 
         self.host = host
         self.port = port
@@ -356,10 +400,10 @@ class WebServer(object):
         if ev_quit is None:
             ev_quit = threading.Event()
         self.ev_quit = ev_quit
+        self.default_viewer_class = viewer_class
 
         self.server = None
         self.http_server = None
-        self.default_viewer_class = None
 
     def start(self, use_thread=True, no_ioloop=False):
         self.thread_pool.startall()
@@ -409,17 +453,15 @@ class WebServer(object):
         if viewer_class is None:
             viewer_class = self.default_viewer_class
 
-        v = self.factory.get_viewer(v_id, viewer_class=viewer_class,
-                                    width=width, height=height,
-                                    force_new=force_new)
-        url = v.top.url
-        viewer = v.fitsimage
-        viewer.url = url
-        return viewer
+        v_info = self.factory.get_viewer(v_id, viewer_class=viewer_class,
+                                         width=width, height=height,
+                                         force_new=force_new)
+        return v_info.viewer
 
 
 def make_server(logger=None, basedir='.', numthreads=5,
-                host='localhost', port=9909, use_opencv=False):
+                host='localhost', port=9909, viewer_class=None,
+                use_opencv=False):
 
     if logger is None:
         logger = log.get_logger("ipg", null=True)
@@ -439,10 +481,10 @@ def make_server(logger=None, basedir='.', numthreads=5,
     app = Widgets.Application(logger=logger, base_url=base_url,
                               host=host, port=port)
 
-    factory = ViewerFactory(logger, basedir, app, thread_pool)
+    factory = ViewerFactory(logger, app, thread_pool)
 
     server = WebServer(app, thread_pool, factory,
-                       host=host, port=port)
+                       host=host, port=port, viewer_class=viewer_class)
 
     return server
 
@@ -454,7 +496,9 @@ def main(options, args):
     server = make_server(logger=logger, basedir=options.basedir,
                          numthreads=options.numthreads, host=options.host,
                          port=options.port, use_opencv=options.use_opencv)
+    viewer = server.get_viewer('v1')
 
+    logger.info("Starting server with one viewer, connect at %s" % viewer.url)
     try:
         server.start(use_thread=False)
 
@@ -462,7 +506,7 @@ def main(options, args):
         logger.info("Interrupted!")
         server.stop()
 
-    logger.info("Server terminating...")
+    logger.info("Server terminating ...")
 
 
 if __name__ == "__main__":
