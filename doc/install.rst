@@ -7,12 +7,12 @@ Dependences
 ===========
 
 Ginga is written entirely in Python, and only uses supporting Python
-packages.  There is nothing to compile, unless you need to compile one
-of the supporting packages.
+packages.  There is nothing to compile (unless you need to compile one
+of the supporting packages).
 
 On recent Linux, Mac and Windows versions, all of the packages are
-available in binary (installable) form; it should not be necessary to
-compile anything.  But as always, YMMV.
+available in binary (installable) form. It should not be necessary to
+compile anything, but as always, your mileage may vary.
 
 REQUIRED
 ========
@@ -38,52 +38,21 @@ For WCS resolution you will need ONE of:
 
 BACKENDS (one or more)
 ======================
-Ginga can draw it's output to a number of different back ends.
+Ginga can draw its output to a number of different back ends.
 Depending on which GUI toolkit you prefer (and what you want to
-do), you will need either:
+do), you will need at least one of the following:
 
 * python-qt4
-
-OR
-
 * python-qt5
-
-OR
-
 * python-pyside (qt4 alternative)
-
-OR
-
-* python-gtk (gtk2) AND python-cairo
-
-OR
-
-* python gtk3 (gi) AND python-cairo
-
-OR
-
+* python-gtk (gtk2) **AND** python-cairo
+* python gtk3 (gi) **AND** python-cairo
 * python-Tkinter
-
-OR
-
 * matplotlib
-
-OR
-
 * tornado
-
-OR
-
 * aggdraw
-
-OR
-
 * PIL (pillow)
-
-OR
-
 * OpenCv
-
 
 RECOMMENDED
 ===========
@@ -140,9 +109,11 @@ Tk
 ===
 
 Ginga's Tk support is limited to the viewing widget itself.  For
-overplotting (graphics) support you also need the "pillow"/PIL package,
-the Python "OpenCv" module, or the "aggdraw" module (which you can find 
-`here <https://github.com/ejeschke/aggdraw>`_, supports Python 2 only).
+overplotting (graphics) support, you will also need:
+
+* "pillow"/PIL package
+* "OpenCv" module
+* "aggdraw" module (which you can find `here <https://github.com/ejeschke/aggdraw>` ; supports Python 2 only).
 
 Matplotlib
 ==========
