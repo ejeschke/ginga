@@ -10,15 +10,15 @@ Platforms
 
 Does Ginga run on Mac/Windows/Linux/XYZ?
 ----------------------------------------
-Ginga is written entirely in Python, and only uses supporting Python
-packages.  As long as a platform supports python and the necessary
-packages, it can run some version of ginga.  On recent Linux, Mac and
-Windows versions, all of these packages are available.
+Ginga is written entirely in the Python programming language, and uses only 
+supporting Python packages.  As long as a platform supports Python 
+and the necessary packages, it can run some version of Ginga.  On recent 
+Linux, Mac and Windows versions, all of these packages are available.
 
-Does Ginga work with python 3?
+Does Ginga work with Python 3?
 ------------------------------
-Yes.  Just install with python 3.  Of course, you need all the
-supporting modules for python 3 (numpy, scipy, qt5, etc.)
+Yes. Just install with Python 3.  Of course, you need all the
+supporting modules for Python 3 (NumPy, SciPy, Qt 5, etc.)
 
 --------
 Toolkits
@@ -26,14 +26,14 @@ Toolkits
 
 What GUI toolkit does Ginga use?
 --------------------------------
-It depends what exactly you want to run--Ginga is both a toolkit for
+It depends what exactly you want to run. Ginga is both a toolkit for
 building viewers and also includes a "reference viewer".  The example
-programs currently support Qt, Gtk, Tk, Matplotlib and web browser via
+programs currently support Qt, GTK, Tk, matplotlib and web browser via
 HTML5 canvas.  Some other toolkits are being worked on and may be
 partially supported.
 
 The full reference viewer currently supports Qt and Gtk.  The difference
-is explained here :ref:`ch-programming-ginga`.
+is explained here, in Section :ref:`ch-programming-ginga`.
 
 Can Ginga work with PyQt5?
 --------------------------
@@ -41,24 +41,24 @@ Yes.
 
 Can Ginga work with Gtk3?
 -------------------------
-Yes, although the performance is not as good as gtk2 yet.  Cairo for
-python3 still lacks the important ImageSurface.create_for_data()
-API call so we have to use a workaround.
+Yes, although the performance is not on par with Gtk2 yet. Cairo for
+Python 3 still lacks the important ImageSurface.create_for_data()
+API call, so we have to use a workaround. Detailed instructions can be found in Section :ref:`ch-install`.
 
 ----------------
 Control Bindings
 ----------------
 
-Can I get ds9-like user interface mappings?
+Can I get DS9-like user interface mappings?
 -------------------------------------------
 Save the file called `bindings.cfg.ds9
 <https://raw.github.com/ejeschke/ginga/master/examples/bindings/bindings.cfg.ds9>`_
 and drop it in your $HOME/.ginga folder as "bindings.cfg".
 Then restart Ginga.
 
-How can I customize the user interface mappings?
-------------------------------------------------
-Yes.  There is more information in Section :ref:`sec-bindings`.
+Can I customize the user interface mappings?
+--------------------------------------------
+Yes. There is more information in the :ref:`sec-bindings` section.
 
 Where can I find a quick reference of the bindings?
 ---------------------------------------------------
@@ -68,33 +68,33 @@ See Section :ref:`ginga-quick-reference`.
 Miscellaneous
 -------------
 
-Does Ginga work with IRAF (a la ds9)?
+Does Ginga work with IRAF (a la DS9)?
 -------------------------------------
-Yes.  See Section :ref:`sec-plugins-IRAF`.
+Yes. See Section :ref:`sec-plugins-IRAF`.
 
 Does Ginga work with SAMP?
 --------------------------
-Yes.  See Section :ref:`sec-plugins-SAMP`.
+Yes. See Section :ref:`sec-plugins-SAMP`.
 
 Is it possible to control Ginga remotely?
 -----------------------------------------
-Yes.  See Section :ref:`sec-plugins-RC`.
+Yes. See Section :ref:`sec-plugins-RC`.
 
-When are you going to add the XYZ feature that ds9 has?
+When are you going to add the XYZ feature that DS9 has?
 -------------------------------------------------------
-Maybe never.  The ginga package design goal was never to "replace ds9",
-but to provide a full featured python FITS widget that we could use to
-build stuff in python directly.  This is clearly seen if you look at all
-the example programs in examples/*/example*.py.  The idea was to
-make it easy for someone to build any kind of custom viewer, by having a
+Maybe never.  The Ginga package design goal was never to replace DS9,
+but to provide a full featured Python FITS widget that we could use to
+build directly in Python.  This is clearly seen if you look at the 
+example programs in examples/*/example*.py.  The idea was to make it 
+easy for someone to build any kind of custom viewer by having a
 full-featured widget to build on.
 
-That said, we did write a reference viewer, because we needed something
-with many of the convenience features of a modern FITS viewer.  ds9 is
+That said, we did write a reference viewer because we needed something
+with many of the convenience features of a modern FITS viewer.  DS9 is
 almost the size of a small OS, however, and I'm not sure it is wise to
 try to match it feature for feature.  Instead, since Ginga is
 plugin-based, you can write plugins to give you the features you need.
-ds9 is a "everything including kitchen sink" kind of viewer, whereas
+DS9 is a "everything including kitchen sink" kind of viewer, whereas
 ginga reference viewer is more like a "take what you need from the
 pantry and whip it up" type viewer.
 
@@ -106,16 +106,16 @@ World Coordinate System
 
 What library are you using for WCS?
 -----------------------------------
-We are lucky to have several possible choices for a python WCS package
+We are lucky to have several possible choices for a Python WCS package
 compatible with Ginga:
-`astLib <http://astlib.sourceforge.net/>`_,
-`kapteyn <http://www.astro.rug.nl/software/kapteyn/>`_,
-`starlink <https://github.com/timj/starlink-pyast>`_ and
+`AstLib <http://astlib.sourceforge.net/>`_,
+`Kapteyn <http://www.astro.rug.nl/software/kapteyn/>`_,
+`Starlink <https://github.com/timj/starlink-pyast>`_ and
 :ref:`Astropy WCS <astropy:astropy-wcs>`.
 
-kapteyn and astropy wrap Mark Calabretta's "WCSLIB", astLib wraps
-Jessica Mink's "wcstools", and I'm not sure what starlink uses (their own?).
-Note that astlib and starlink require pyfits (or astropy) to be
+Kapteyn and Astropy wrap Mark Calabretta's "WCSLIB", astLib wraps
+Jessica Mink's "wcstools", and I'm not sure what Starlink uses.
+Note that Astlib and starlink require pyfits (or Astropy) to be
 installed in order to create a WCS object from a FITS header.
 
 To force the use of a particular one add this to your "general.cfg"
@@ -123,7 +123,7 @@ in $HOME/.ginga:
 
 WCSpkg = 'package'
 
-Replace 'package' with one of {'astropy', 'kapteyn', 'starlink' or
+Replace 'package' with one of {'Astropy', 'Kapteyn', 'Starlink' or
 'astlib', 'choose'}.  If you pick 'choose' Ginga will try to pick one
 for you.
 
@@ -138,11 +138,11 @@ I/O and File Formats
 
 What library are you using for FITS I/O?
 ----------------------------------------
-There are two possible choices for a python FITS file reading package
+There are two possible choices for a Python FITS file reading package
 compatible with Ginga:
 :ref:`Astropy FITS <astropy:astropy-io-fits>` and
 `fitsio <https://github.com/esheldon/fitsio>`_.
-Both are originally based on the CFITSIO library (although astropy's
+Both are originally based on the CFITSIO library (although Astropy's
 version uses very little of it any more, while fitsio is still
 tracking the current version).
 
@@ -151,7 +151,7 @@ in $HOME/.ginga:
 
 FITSpkg = 'package'
 
-Replace 'package' with one of {'astropy', 'fitsio', 'choose'}.
+Replace 'package' with one of {'Astropy', 'fitsio', 'choose'}.
 If you pick 'choose', Ginga will try to pick one for you.
 
 How easy is it for Ginga to support a new file formats besides FITS?
@@ -159,7 +159,7 @@ How easy is it for Ginga to support a new file formats besides FITS?
 Pretty easy.  See Section :ref:`sec-custom-io`.
 
 --------------------------
-Problems displaying images
+Problems Displaying Images
 --------------------------
 Nothing changes in the image when I change settings under "Preferences".
 
@@ -191,7 +191,7 @@ channel that I'm viewing.
 No image shows in the display, and I get an error in the terminal about
 histogram and keyword "density".
 
-.. note:: You need a slightly newer version of numpy.
+.. note:: You need a slightly newer version of NumPy.
 
-          I recommend getting at least numpy>1.7.
+          I recommend getting at least NumPy>1.7.
 
