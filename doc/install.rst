@@ -141,18 +141,18 @@ Tested browsers include Chromium (Chrome), Firefox,  and Safari.
 Installation from Source
 ========================
 
-Clone from github::
+#. Clone from github::
 
     $ git clone https://github.com/ejeschke/ginga.git
 
-Or see links on `this page <http://ejeschke.github.io/ginga/>`_
-to get a zip or tar ball.
+   Or see links on `this page <http://ejeschke.github.io/ginga/>`_
+   to get a zip or tar ball.
 
-Unpack, go into the top level directory and::
+#. Unpack, go into the top level directory, and run::
 
     $ python setup.py install
 
-The reference viewer can then be run using the command "ginga"
+   The reference viewer can then be run using the command ``ginga``.
 
 Alternatively you can download and install via `pip`::
 
@@ -169,20 +169,20 @@ Linux
    version of Ubuntu (e.g. v14.04 or later), something like the following
    will work::
 
-    $ apt-get install python-numpy python-scipy python-matplotlib \
-      python-astropy python-qt4 python-webkit python-magic git pip
+     $ apt-get install python-numpy python-scipy python-matplotlib \
+       python-astropy python-qt4 python-webkit python-magic git pip
 
-  Or::
+   Or::
 
-    $ apt-get install python-numpy python-scipy python-matplotlib \
-      python-astropy python-gtk python-cairo python-webkit \
-      python-magic git pip
+     $ apt-get install python-numpy python-scipy python-matplotlib \
+       python-astropy python-gtk python-cairo python-webkit \
+       python-magic git pip
 
-  (if you want to use the Gtk version)
+   (if you want to use the Gtk version)
 
-2. Install ginga with pip::
+#. Install ginga with pip::
 
-    $ pip install ginga
+     $ pip install ginga
 
    or by obtaining the source and installing as described above.
 
@@ -190,7 +190,7 @@ Linux
 Mac
 ===
 
-1. For Mac users, we recommend installing the
+#. For Mac users, we recommend installing the
    `Anaconda distribution <http://continuum.io/downloads>`_.
    This distribution already includes all of the necessary packages to run
    Ginga.
@@ -201,7 +201,7 @@ Mac
    "astropy" and install it.  Also search for and install "pyside"
    (free version of Qt bindings).
 
-2. After installing one of these distributions, open a Terminal and
+#. After installing one of these distributions, open a Terminal and
    install Ginga via "pip install ginga".  You can then run the reference
    viewer via the command "ginga".
 
@@ -212,25 +212,32 @@ Mac
 Windows
 =======
 
-For Windows users we recommend installing the
+Anaconda
+````````
+
+For Windows users, we recommend installing the
 `Anaconda distribution <http://continuum.io/downloads>`.
 This distribution already includes all of the necessary packages to run
 Ginga.
+  
+After installing Anaconda, you can find the reference viewer script as::
 
-After installing Anaconda, you can find the reference viewer script as
+   Start -> All Programs -> Anaconda -> Anaconda Command Prompt
+   pythonw Scripts\ginga
 
-    Start -> All Programs -> Anaconda -> Anaconda Command Prompt
-    pythonw Scripts\ginga
+Enthought Canopy
+````````````````
 
-As an alternative, you also have the choice of Enthought Canopy.  The
-`free version <https://www.enthought.com/canopy-express/>` works fine.
-After installing this, open the Canopy package manager, search for
-"astropy" and install it.  Also search for and install "pyside"
-(free version of Qt bindings).
+As an alternative, you also have the choice of Enthought Canopy.
 
-    Start -> All Programs -> Enthought Canopy -> Canopy command prompt
-    pip install ginga
-    pythonw AppData\Local\Enthought\Canopy\User\Scripts\ginga
+#. Install the `free version <https://www.enthought.com/canopy-express/>`_.
+#. Open the Canopy package manager.
+#. Search for and install "astropy".
+#. Search for and install "pyside" (free version of Qt bindings).
+
+   Start -> All Programs -> Enthought Canopy -> Canopy command prompt
+   pip install ginga
+   pythonw AppData\Local\Enthought\Canopy\User\Scripts\ginga
 
 
 
