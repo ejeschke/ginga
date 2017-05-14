@@ -38,7 +38,7 @@ For WCS resolution you will need ONE of:
 
 BACKENDS (one or more)
 ======================
-Ginga can draw it's output to a number of different back ends.
+Ginga can draw its output to a number of different back ends.
 Depending on which GUI toolkit you prefer (and what you want to
 do), you will need either:
 
