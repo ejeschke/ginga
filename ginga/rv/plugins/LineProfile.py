@@ -36,13 +36,20 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.selected_axis = None
         self.hbox_axes = None
 
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_LineProfile')
+        self.settings.add_defaults(mark_type='point', mark_radius=10,
+                                   mark_style='cross', mark_color='cyan')
+        self.settings.load(onError='silent')
+
         # For "marks" feature
         self._new_mark = 'New'
-        self.mark_types = ['point', 'circle', 'rectangle', 'polygon']
-        self.mark_type = 'point'
-        self.mark_radius = 10  # For point only
-        self.mark_style = 'cross'  # For point only
-        self.mark_color = 'cyan'
+        self.mark_types = ['point', 'circle', 'ellipse', 'box', 'rectangle',
+                           'polygon']
+        self.mark_type = self.settings.get('mark_type', 'point')
+        self.mark_radius = self.settings.get('mark_radius', 10)  # point
+        self.mark_style = self.settings.get('mark_style', 'cross')  # point
+        self.mark_color = self.settings.get('mark_color', 'cyan')
         self.marks = [self._new_mark]
         self.mark_selected = self._new_mark
         self.mark_index = 0
@@ -514,6 +521,10 @@ class LineProfile(GingaPlugin.LocalPlugin):
             if self.w.btn_edit.get_state():
                 self.edit_select_marks()
 
+            mode = self.canvas.get_draw_mode()
+            if mode == 'draw':
+                self.set_mode('move')
+
             self.redraw_mark()
 
     def redraw_mark(self):
@@ -615,3 +626,10 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'lineprofile'
+
+
+# Replace module docstring with config doc for auto insert by Sphinx.
+# In the future, if we need the real docstring, we can append instead of
+# overwrite.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+__doc__ = generate_cfg_example('plugin_LineProfile', package='ginga')
