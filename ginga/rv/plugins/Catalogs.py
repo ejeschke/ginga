@@ -13,7 +13,7 @@ from ginga.misc import Bunch
 from ginga import GingaPlugin
 from ginga import cmap, imap
 from ginga.util import wcs
-from ginga.util.six.moves import map, zip
+from ginga.util.six.moves import map
 from ginga.gw import ColorBar, Widgets
 
 
@@ -55,6 +55,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Catalogs')
+        self.settings.add_defaults(select_color='skyblue',
+                                   click_radius=10)
         self.settings.load(onError='silent')
 
         self.image_server_options = []
@@ -70,10 +72,12 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas.set_callback('cursor-down', self.btndown)
         canvas.set_callback('cursor-up', self.btnup)
         canvas.set_callback('draw-event', self.draw_cb)
+        canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
+        canvas.set_draw_mode('draw')
         self.canvas = canvas
 
-        self.color_selected = 'skyblue'
+        self.color_selected = self.settings.get('select_color', 'skyblue')
         self.hilite = None
         self.gui_up = False
 
@@ -104,7 +108,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.w.get_image.add_callback('activated',
                                       lambda w: self.getimage_cb())
         self.w.use_dss_channel.set_state(self.use_dss_channel)
-        self.w.use_dss_channel.add_callback('activated', self.use_dss_channel_cb)
+        self.w.use_dss_channel.add_callback(
+            'activated', self.use_dss_channel_cb)
 
         vbox.add_widget(w, stretch=0)
 
@@ -147,7 +152,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         combobox = self.w2.server
         index = 0
-        self.catalog_server_options = self.fv.imgsrv.getServerNames(kind='catalog')
+        self.catalog_server_options = self.fv.imgsrv.getServerNames(
+            kind='catalog')
         for name in self.catalog_server_options:
             combobox.append_text(name)
             index += 1
@@ -167,7 +173,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         btn1 = Widgets.RadioButton("Rectangle")
         btn1.set_state(self.drawtype == 'rectangle')
         btn1.add_callback('activated',
-                         lambda w, tf: self.set_drawtype_cb(tf, 'rectangle'))
+                          lambda w, tf: self.set_drawtype_cb(tf, 'rectangle'))
         btns.add_widget(btn1, stretch=0)
         btn2 = Widgets.RadioButton("Circle", group=btn1)
         btn2.set_state(self.drawtype == 'circle')
@@ -256,8 +262,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         # start catalog operation
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
-
+            p_canvas.get_object_by_tag(self.layertag)
         except KeyError:
             # Add canvas layer
             p_canvas.add(self.canvas, tag=self.layertag)
@@ -280,7 +285,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
     def stop(self):
         # stop catalog operation
-        self.clearAll()
+        self.clear_all()
         # remove the canvas from the image
         self.canvas.ui_set_active(False)
         p_canvas = self.fitsimage.get_canvas()
@@ -296,15 +301,18 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.fv.show_status("")
 
     def redo(self):
-        obj = self.canvas.get_object_by_tag(self.areatag)
-        if not obj.kind in ('rectangle', 'circle'):
+        try:
+            obj = self.canvas.get_object_by_tag(self.areatag)
+        except Exception:
+            return True
+        if obj.kind not in ('rectangle', 'circle'):
             return True
 
         try:
             image = self.fitsimage.get_image()
 
             if obj.kind == 'rectangle':
-                # if  the object drawn is a rectangle, calculate the radius
+                # if the object drawn is a rectangle, calculate the radius
                 # of a circle necessary to cover the area
                 # calculate center of bbox
                 x1, y1, x2, y2 = obj.get_llur()
@@ -372,10 +380,9 @@ class Catalogs(GingaPlugin.LocalPlugin):
             return True
 
         # Copy the image parameters out to the widget
-        d = { 'ra': ra_ctr, 'dec': dec_ctr, 'width': str(wd),
-              'height': ht, 'r': radius, 'r2': radius,
-              'r1': 0.0,
-              }
+        d = {'ra': ra_ctr, 'dec': dec_ctr, 'width': str(wd),
+             'height': ht, 'r': radius, 'r2': radius,
+             'r1': 0.0}
         self._update_widgets(d)
         return True
 
@@ -383,8 +390,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
         return True
 
     def btnup(self, canvas, event, data_x, data_y):
-
-        objs = self.canvas.get_items_at(data_x, data_y)
+        try:
+            objs = self.canvas.get_items_at(data_x, data_y)
+        except TypeError:  # reduce() of empty sequence with no initial value
+            return True
         for obj in objs:
             if (obj.tag is not None) and obj.tag.startswith('star'):
                 info = obj.get_data()
@@ -425,23 +434,20 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if redraw:
             self.canvas.update_canvas()
 
-
     def setfromimage(self):
         image = self.fitsimage.get_image()
         if image is None:
             return
         x1, y1 = 0, 0
         x2, y2 = self.fitsimage.get_data_size()
-        Rectangle = self.canvas.getDrawClass('Rectangle')
-        tag = self.canvas.add(Rectangle(x1, y1, x2, y2,
-                                        color=self.color_outline))
+        tag = self.canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
+                                                color=self.color_outline))
 
         self.draw_cb(self.canvas, tag)
 
-
     def draw_cb(self, canvas, tag):
         obj = canvas.get_object_by_tag(tag)
-        if not obj.kind in ('rectangle', 'circle'):
+        if obj.kind not in ('rectangle', 'circle'):
             return True
 
         if self.areatag:
@@ -465,7 +471,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         index = self._get_cbidx(self.w.server)
         server = self.image_server_options[index]
 
-        self.clearAll()
+        self.clear_all()
 
         if self.use_dss_channel:
             chname = 'DSS'
@@ -585,8 +591,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
             num_cat = len(starlist)
             self.logger.debug("number of incoming stars=%d" % (num_cat))
             # TODO: vectorize wcs lookup
-            coords = [ image.radectopix(star['ra_deg'], star['dec_deg'])
-                       for star in starlist ]
+            coords = [image.radectopix(star['ra_deg'], star['dec_deg'])
+                      for star in starlist]
             arr = numpy.array(coords)
             self.logger.debug("arr.shape = %s" % str(arr.shape))
 
@@ -594,7 +600,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             res = filter_obj.contains_arr(arr.T[0], arr.T[1])
             self.logger.debug("res.shape = %s" % str(res.shape))
 
-            stars = [ starlist[i] for i in range(num_cat) if res[i] ]
+            stars = [starlist[i] for i in range(num_cat) if res[i]]
             self.logger.debug("number of filtered stars=%d" % (len(stars)))
             starlist = stars
 
@@ -605,12 +611,12 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.canvas.delete_objects(objects)
         self.canvas.delete_objects_by_tag(['selected'])
 
-    def clearAll(self):
+    def clear_all(self):
         self.canvas.delete_all_objects()
 
     def reset(self):
         self.clear()
-        #self.clearAll()
+        #self.clear_all()
         self.table.clear()
 
     def plot_star(self, obj, image=None):
@@ -619,7 +625,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             image = self.fitsimage.get_image()
         x, y = image.radectopix(obj['ra_deg'], obj['dec_deg'])
         # TODO: auto-pick a decent radius
-        radius = 10
+        radius = self.settings.get('click_radius', 10)
         color = self.table.get_color(obj)
 
         circle = self.dc.Circle(x, y, radius, color=color)
@@ -686,11 +692,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
             canvas.update_canvas()
 
-    def limit_area_cb(self, tf):
+    def limit_area_cb(self, w, tf):
         self.limit_stars_to_area = (tf != 0)
         return True
 
-    def use_dss_channel_cb(self, tf):
+    def use_dss_channel_cb(self, w, tf):
         self.use_dss_channel = (tf != 0)
         return True
 
@@ -704,7 +710,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         num_stars = len(self.starlist)
         if num_stars > 0:
             adj = self.w.plotgrp
-            page_size = self.plot_limit
+            #page_size = self.plot_limit
             self.plot_start = min(self.plot_start, num_stars-1)
             adj.set_limits(0, num_stars, incr_value=1)
 
@@ -793,6 +799,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'catalogs'
 
+
 class CatalogListing(object):
 
     def __init__(self, logger, container):
@@ -839,7 +846,6 @@ class CatalogListing(object):
         self._select_flag = False
 
         self._build_gui(container)
-
 
     def get_color(self, obj):
         try:
@@ -894,13 +900,14 @@ class CatalogListing(object):
             return False
         else:
             if self.selection_mode == 'single':
-                # if selection mode is 'single' unselect any existing selections
+                # if selection mode is 'single' unselect any existing selection
                 for star2 in self.selected:
                     self.selected.remove(star2)
                     try:
                         self._unselect_tv(star2, fromtable=fromtable)
                     except Exception as e:
-                        self.logger.warning("Error unhilighting star: %s" % (str(e)))
+                        self.logger.warning(
+                            "Error unhilighting star: %s" % (str(e)))
             self.selected.append(star)
             try:
                 # highlight line in table
@@ -912,7 +919,6 @@ class CatalogListing(object):
 
             self.catalog.update_selected()
             return True
-
 
     def show_selection(self, star):
         """This method is called when the user clicks on a plotted star in the
@@ -977,7 +983,6 @@ class CatalogListing(object):
     def add_operation(self, name, fn):
         self.operation_table.append((name, fn))
 
-
     def _build_gui(self, container):
         self.mframe = container
 
@@ -1016,7 +1021,8 @@ class CatalogListing(object):
         except Exception:
             index = self.cmap_names.index('gray')
         combobox.set_index(index)
-        combobox.add_callback('activated', lambda w, idx: self.set_cmap_cb(idx))
+        combobox.add_callback(
+            'activated', lambda w, idx: self.set_cmap_cb(idx))
         self.btn['cmap'] = combobox
         btns.add_widget(combobox, stretch=0)
 
@@ -1033,7 +1039,8 @@ class CatalogListing(object):
         except Exception:
             index = self.imap_names.index('ramp')
         combobox.set_index(index)
-        combobox.add_callback('activated', lambda w, idx: self.set_imap_cb(idx))
+        combobox.add_callback(
+            'activated', lambda w, idx: self.set_imap_cb(idx))
         self.btn['imap'] = combobox
         btns.add_widget(combobox, stretch=0)
 
@@ -1058,8 +1065,7 @@ class CatalogListing(object):
         btns = Widgets.HBox()
         btns.set_spacing(5)
 
-        for name in ('Plot', 'Clear', #'Close'
-                     ):
+        for name in ('Plot', 'Clear'):  # 'Close'
             btn = Widgets.Button(name)
             btns.add_widget(btn, stretch=0)
             self.btn[name.lower()] = btn
@@ -1069,7 +1075,7 @@ class CatalogListing(object):
         self.btn.clear.add_callback('activated',
                                     lambda w: self.clear())
         #self.btn.close.add_callback('activated',
-        #                              lambda w: self.close())
+        #                            lambda w: self.close())
 
         combobox = Widgets.ComboBox()
         options = []
@@ -1196,11 +1202,15 @@ class CatalogListing(object):
     def select_star_cb(self, widget, res_dict):
         """This method is called when the user selects a star from the table.
         """
-        key = list(res_dict.keys())[0]
-        idx = int(key)
-        star = self.starlist[idx]
-        if not self._select_flag:
-            self.mark_selection(star, fromtable=True)
+        key = list(res_dict.keys())
+        if len(key) == 0:
+            self.selected = []
+            self.replot_stars()
+        else:
+            idx = int(key[0])
+            star = self.starlist[idx]
+            if not self._select_flag:
+                self.mark_selection(star, fromtable=True)
         return True
 
     def set_cmap_cb(self, index):
