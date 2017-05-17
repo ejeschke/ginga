@@ -35,6 +35,14 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def __init__(self, fv, fitsimage):
         super(Catalogs, self).__init__(fv, fitsimage)
 
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_Catalogs')
+        self.settings.add_defaults(draw_type='circle',
+                                   select_color='skyblue',
+                                   color_outline='aquamarine',
+                                   click_radius=10)
+        self.settings.load(onError='silent')
+
         self.limit_stars_to_area = False
         self.pan_to_selected = False
         self.use_dss_channel = False
@@ -42,22 +50,16 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.plot_max = 500
         self.plot_limit = 100
         self.plot_start = 0
-        self.drawtype = 'circle'
+        self.drawtype = self.settings.get('draw_type', 'circle')
 
         # star list
         self.starlist = []
         # catalog listing
         self.table = None
 
-        self.color_outline = 'aquamarine'
+        self.color_outline = self.settings.get('color_outline', 'aquamarine')
         self.layertag = 'catalog-canvas'
         self.areatag = None
-
-        prefs = self.fv.get_preferences()
-        self.settings = prefs.create_category('plugin_Catalogs')
-        self.settings.add_defaults(select_color='skyblue',
-                                   click_radius=10)
-        self.settings.load(onError='silent')
 
         self.image_server_options = []
         self.image_server_params = None
@@ -69,9 +71,9 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype(self.drawtype, color='cyan', linestyle='dash')
-        canvas.set_callback('cursor-down', self.btndown)
-        canvas.set_callback('cursor-up', self.btnup)
         canvas.set_callback('draw-event', self.draw_cb)
+        canvas.add_draw_mode('select', down=self.btndown,
+                             move=self.btndown, up=self.btnup)
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_draw_mode('draw')
@@ -183,6 +185,25 @@ class Catalogs(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Entire image")
         btn.add_callback('activated', lambda w: self.setfromimage())
         btns.add_widget(btn, stretch=0)
+        vbox0.add_widget(btns, stretch=0)
+
+        mode = self.canvas.get_draw_mode()
+        btns = Widgets.HBox()
+        btns.set_spacing(5)
+        btn1 = Widgets.RadioButton("Draw")
+        btn1.set_state(mode == 'draw')
+        btn1.add_callback('activated',
+                          lambda w, val: self.set_mode_cb('draw', val))
+        btn1.set_tooltip("Choose this to define search region")
+        self.w.btn_draw = btn1
+        btns.add_widget(btn1, stretch=0)
+        btn2 = Widgets.RadioButton("Select", group=btn1)
+        btn2.set_state(mode == 'select')
+        btn2.add_callback('activated',
+                          lambda w, val: self.set_mode_cb('select', val))
+        btn2.set_tooltip("Choose this to highlight selection on table")
+        self.w.btn_select = btn2
+        btns.add_widget(btn2, stretch=0)
         vbox0.add_widget(btns, stretch=0)
 
         self.w.params = vbox0
@@ -386,20 +407,31 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self._update_widgets(d)
         return True
 
-    def btndown(self, canvas, event, data_x, data_y):
+    def btndown(self, canvas, event, data_x, data_y, viewer):
         return True
 
-    def btnup(self, canvas, event, data_x, data_y):
+    def btnup(self, canvas, event, data_x, data_y, viewer):
         try:
-            objs = self.canvas.get_items_at(data_x, data_y)
-        except TypeError:  # reduce() of empty sequence with no initial value
+            objs = self.canvas.get_objects_by_tag_pfx('star')
+        except Exception:
             return True
         for obj in objs:
-            if (obj.tag is not None) and obj.tag.startswith('star'):
+            if obj.contains(data_x, data_y):
                 info = obj.get_data()
                 self.table.show_selection(info.star)
-                return True
+                return True  # Only show first match
         return True
+
+    def set_mode_cb(self, mode, tf):
+        """Called when one of the Move/Draw/Edit radio buttons is selected."""
+        if tf:
+            self.canvas.set_draw_mode(mode)
+        return True
+
+    def set_mode(self, mode):
+        self.canvas.set_draw_mode(mode)
+        self.w.btn_draw.set_state(mode == 'draw')
+        self.w.btn_select.set_state(mode == 'select')
 
     def highlight_object(self, obj, tag, color, redraw=True):
         x = obj.objects[0].x
@@ -582,6 +614,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self._raise_tab(self.w.listing)
 
         self._update_plotscroll()
+        self.set_mode('select')
 
     def filter_results(self, starlist, filter_obj):
         image = self.fitsimage.get_image()
@@ -613,6 +646,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
     def clear_all(self):
         self.canvas.delete_all_objects()
+        self.set_mode('draw')
 
     def reset(self):
         self.clear()
