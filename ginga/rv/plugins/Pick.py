@@ -1481,8 +1481,6 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.canvas.draw()
 
     def write_pick_log(self, filepath):
-        from astropy.io.registry import IORegistryError
-
         if len(self.rpt_dict) == 0:
             return
 
@@ -1492,13 +1490,12 @@ class Pick(GingaPlugin.LocalPlugin):
         try:
             self.logger.debug("Writing modified pick log")
             tbl = Table(rows=list(self.rpt_dict.values()))
-            tbl.meta['COMMENT'] = ["Written by ginga Pick plugin"]
-            try:  # Auto-detect file type
-                tbl.write(filepath, overwrite=True)
-            except IORegistryError:  # Force ASCII format as fallback
-                tbl.write(filepath, overwrite=True,
-                          format='ascii.commented_header')
-
+            tbl.meta['comments'] = ["Written by ginga Pick plugin"]
+            if filepath.lower().endswith('.txt'):
+                fmt = 'ascii.commented_header'
+            else:
+                fmt = None
+            tbl.write(filepath, format=fmt, overwrite=True)
             self.rpt_wrt_time = time.time()
 
         except Exception as e:
