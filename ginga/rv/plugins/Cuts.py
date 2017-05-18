@@ -1002,31 +1002,27 @@ class Cuts(GingaPlugin.LocalPlugin):
         target = Widgets.SaveDialog(
             title='Save {0} data'.format(mode)).get_path()
 
+        if isinstance(target, tuple):
+            # is this always a tuple?
+            filename = target[0]
+            if filename == '':
+                # user canceled dialog
+                return
+        else:
+            filename = target
+
         # Save cancelled
-        if not target:
+        if not filename:
             return
 
         # TODO: This can be a user preference?
         fig_dpi = 100
 
         if mode == 'cuts':
-            # Save as fits file
-            image = self.fitsimage.get_image()
-            self.fv.error_wrap(image.save_as_file, target + '.fits')
-
             fig, xarr, yarr = self.cuts_plot.get_data()
 
         elif mode == 'slit':
             fig, xarr, yarr = self.slit_plot.get_data()
-
-        if isinstance(target, tuple):
-            # is this always a tuple?
-            filename = target[0]
-            if filename == '':
-                # user canceled dialog
-                return False
-        else:
-            filename = target
 
         figname = filename + '.png'
         self.logger.info("saving figure as: %s" % (figname))
