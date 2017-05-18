@@ -38,7 +38,7 @@ lock is toggled.
 +----------------------+--------------------------------------------------+
 | Commmand             | Description                                      |
 +======================+==================================================+
-| Esc                  | Exit any mode. Does not toggle the lock.        |
+| Esc                  | Exit any mode. Does not toggle the lock.         |
 +----------------------+--------------------------------------------------+
 | l                    | Toggle the soft lock to the current mode or any  |
 |                      | future modes.                                    |
@@ -60,7 +60,7 @@ Panning and zooming commands
 | Shift + scroll wheel | Zoom while keeping location under the cursor.    |
 +----------------------+--------------------------------------------------+
 | Ctrl + scroll wheel  | Pan in direction of scroll.                      |
-| turned               |                                                  | 
+| turned               |                                                  |
 +----------------------+--------------------------------------------------+
 | Digit                | Zoom image to zoom steps 1, 2, ..., 9, 10.       |
 | (1234567890)         |                                                  |
@@ -72,7 +72,7 @@ Panning and zooming commands
 | Minus, Underscore    | Zoom out.                                        |
 | (-, \_)              |                                                  |
 +----------------------+--------------------------------------------------+
-| Equals, Plus         | Zoom in.                                         | 
+| Equals, Plus         | Zoom in.                                         |
 | (=, +)               |                                                  |
 +----------------------+--------------------------------------------------+
 | Middle (scroll)      | Set pan position (under cursor).                 |
@@ -86,7 +86,7 @@ Panning and zooming commands
 +----------------------+--------------------------------------------------+
 | c                    | Set pan position to the center of the image.     |
 +----------------------+--------------------------------------------------+
-| q                    | Enter :ref:`Pan mode <pan_mode>`.                | 
+| q                    | Enter :ref:`Pan mode <pan_mode>`.                |
 +----------------------+--------------------------------------------------+
 | w                    | Free :ref:`Freepan mode <freepan_mode>`.         |
 +----------------------+--------------------------------------------------+
@@ -113,18 +113,18 @@ Cut levels and colormap commands
 | a                    | Auto cut levels.                                 |
 +----------------------+--------------------------------------------------+
 | d                    | Enter Color Distribution ("dist") mode.          |
-|                      | See :ref:`Dist mode <dist_mode>`.               |
+|                      | See :ref:`Dist mode <dist_mode>`.                |
 +----------------------+--------------------------------------------------+
 | D                    | Reset color distribution algorithm to "linear".  |
 +----------------------+--------------------------------------------------+
-| s                    | Enter :ref:`Cuts mode <cuts_mode>`.             |
+| s                    | Enter :ref:`Cuts mode <cuts_mode>`.              |
 +----------------------+--------------------------------------------------+
-| t                    | Enter :ref:`Contrast mode <contrast_mode>`.     |
+| t                    | Enter :ref:`Contrast mode <contrast_mode>`.      |
 +----------------------+--------------------------------------------------+
 | T                    | Restore the contrast (via colormap) to its       |
 |                      | original (unstretched, unshifted) state.         |
 +----------------------+--------------------------------------------------+
-| y                    | Enter :ref:`CMap (color map) mode <cmap_mode>`. | 
+| y                    | Enter :ref:`CMap (color map) mode <cmap_mode>`.  |
 +----------------------+--------------------------------------------------+
 | Y                    | Restore the color map to default (gray).         |
 +----------------------+--------------------------------------------------+
@@ -155,7 +155,7 @@ Transform commands
 +----------------------+--------------------------------------------------+
 | Vertical bar (|)     | Reset to no swap of X and Y axes.                |
 +----------------------+--------------------------------------------------+
-| r                    | Enter :ref:`Rotate mode <rotate_mode>`.         |
+| r                    | Enter :ref:`Rotate mode <rotate_mode>`.          |
 +----------------------+--------------------------------------------------+
 | R                    | Restore rotation to 0 degrees and additionally   |
 |                      | undo any flip/swap transformations.              |
@@ -454,33 +454,32 @@ Reference Viewer Only
 +----------------------+--------------------------------------------------+
 | less than (<)        | Toggle collapse left pane.                       |
 +----------------------+--------------------------------------------------+
-| greater than (>)     | Toggle collapse right pane.                      | 
+| greater than (>)     | Toggle collapse right pane.                      |
 +----------------------+--------------------------------------------------+
-| f                    | Toggle full screen.                              | 
+| f                    | Toggle full screen.                              |
 +----------------------+--------------------------------------------------+
-| F                    | Panoramic full screen.                           | 
+| F                    | Panoramic full screen.                           |
 +----------------------+--------------------------------------------------+
-| m                    | Maximize window.                                 | 
+| m                    | Maximize window.                                 |
 +----------------------+--------------------------------------------------+
-| J                    | Cycle workspace type (tabs/mdi/stack/grid).      | 
+| J                    | Cycle workspace type (tabs/mdi/stack/grid).      |
 |                      | Note that "mdi" type is not supported on all     |
 |                      | platforms.                                       |
 +----------------------+--------------------------------------------------+
-| k                    | Add a channel with a generic name.               | 
+| k                    | Add a channel with a generic name.               |
 +----------------------+--------------------------------------------------+
-| Left, Right          | Previous/Next channel.                           | 
+| Left, Right          | Previous/Next channel.                           |
 | (arrow keys)         |                                                  |
 +----------------------+--------------------------------------------------+
-| Up, Down             | Previous/Next image in channel.                  | 
+| Up, Down             | Previous/Next image in channel.                  |
 | (arrow keys)         |                                                  |
 +----------------------+--------------------------------------------------+
 
 .. note:: If there are one or more plugins active, additional mouse
 	  or keyboard bindings may be present. In general, the left
 	  mouse button is used to select, pick or move, and the right
-	  mouse button is used to draw a shape for the operation.  
+	  mouse button is used to draw a shape for the operation.
 
 	  On the Mac, Ctrl + mouse button can also be used to draw
 	  or right-click. You can also press and release the space bar
 	  to make the next drag operation a drawing operation.
-
