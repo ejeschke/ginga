@@ -62,7 +62,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.play_image = None
         self.play_axis = 2
         self.play_idx = 1
-        self.play_last = {}  # cache to store last active slice for each image
         self.play_max = 1
         self.play_int_sec = 0.1
         self.play_min_sec = 1.0 / 30
@@ -217,14 +216,15 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # schedule a redraw
         self.fitsimage.redraw(whence=0)
 
-    def build_naxis(self, dims, imname):
+    def build_naxis(self, dims, image):
+        imname = image.get('name')
+        self.naxispath = image.naxispath.copy()
+
         # build a vbox of NAXIS controls
         captions = [("NAXIS1:", 'label', 'NAXIS1', 'llabel'),
                     ("NAXIS2:", 'label', 'NAXIS2', 'llabel')]
 
-        self.naxispath = []
         for n in range(2, len(dims)):
-            self.naxispath.append(0)
             key = 'naxis%d' % (n+1)
             title = key.upper()
             maxn = int(dims[n])
@@ -261,11 +261,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 lower = 1
                 upper = maxn
                 slider.set_limits(lower, upper, incr_value=1)
-
-                if imname in self.play_last:
-                    text = self.play_last[imname]
-                else:
-                    text = lower
+                text = self.naxispath[n - 2] + 1
                 if np.isscalar(text):
                     slider.set_value(text)
                 else:
@@ -304,7 +300,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
                         self.play_max = dims[self.play_axis]
 
                     self.play_idx = self.play_indices[n - 2]
-                    self.play_last[imname] = self.play_idx
 
                 def check_if_we_need_change(w, v):
                     if self.play_axis is not n:
@@ -319,16 +314,21 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 if n == 2:
                     self.w[key].set_state(True)
 
+        is_dc = len(dims) > 2
         self.play_axis = 2
         if self.play_axis < len(dims):
             self.play_max = dims[self.play_axis]
-        if imname not in self.play_last:
-            self.play_last[imname] = 1
-        self.play_idx = self.play_last[imname]
-        self.w.slice.set_text(str(self.play_idx))
+        if is_dc:
+            self.play_idx = self.naxispath[self.play_axis - 2] + 1
+        else:
+            self.play_idx = 1
+        if self.play_indices:
+            text = [i + 1 for i in self.naxispath]
+        else:
+            text = self.play_idx
+        self.w.slice.set_text(str(text))
 
         # Enable or disable NAXIS animation controls
-        is_dc = len(dims) > 2
         self.w.next.set_enabled(is_dc)
         self.w.prev.set_enabled(is_dc)
         self.w.first.set_enabled(is_dc)
@@ -392,7 +392,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             if mddata is not None:
                 dims = list(mddata.shape)
                 dims.reverse()
-                self.build_naxis(dims, imname)
+                self.build_naxis(dims, self.image)
                 return
 
         # Nope, we'll have to load it
@@ -430,7 +430,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             self.fv.add_image(imname, image, chname=chname)
 
-            self.build_naxis(dims, imname)
+            self.build_naxis(dims, image)
             self.logger.debug("HDU #%d loaded." % (idx))
 
         except Exception as e:
@@ -459,16 +459,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
 
             if self.play_indices:
-                text = self.play_indices
-                text[m] = idx
-                text = [i + 1 for i in text]
+                self.play_indices[m] = idx
+                text = [i + 1 for i in self.naxispath]
                 if slidername in self.w:
                     self.w[slidername].set_value(text[m])
             else:
                 text = idx + 1
                 if slidername in self.w:
                     self.w[slidername].set_value(text)
-            self.play_last[image.get('name')] = text
             self.w.slice.set_text(str(text))
 
         except Exception as e:
