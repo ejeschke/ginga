@@ -410,7 +410,20 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
     def add_mark(self, obj):
         self.logger.debug("Setting mark of type {}".format(obj.kind))
-        self.mark_index += 1
+
+        # Adding a new mark, so use a new tag.
+        if self.mark_selected == self._new_mark:
+            draw_new = True
+            self.mark_index += 1
+            idx = self.mark_index
+        # Replace existing mark (to support old-style drawing).
+        else:
+            draw_new = False
+            try:
+                idx = int(self.mark_selected.replace('mark', ''))
+            except ValueError as e:
+                self.logger.error(str(e))
+                return
 
         obj.color = self.mark_color
         obj.linestyle = 'solid'
@@ -419,20 +432,20 @@ class LineProfile(GingaPlugin.LocalPlugin):
             obj.style = self.mark_style
         args = [obj]
 
-        text_obj = self.dc.Text(
-            4, 4, '{}'.format(self.mark_index), color=self.mark_color,
-            coord='offset', ref_obj=obj)
+        text_obj = self.dc.Text(4, 4, '{}'.format(idx), color=self.mark_color,
+                                coord='offset', ref_obj=obj)
         args.append(text_obj)
 
         cobj = self.dc.CompoundObject(*args)
-        cobj.set_data(count=self.mark_index)
+        cobj.set_data(count=idx)
 
-        tag = 'mark{}'.format(self.mark_index)
+        tag = 'mark{}'.format(idx)
         self.canvas.delete_object_by_tag(tag)
         self.canvas.add(cobj, tag=tag)
 
-        self.marks.append(tag)
-        self.w.marks.append_text(tag)
+        if draw_new:
+            self.marks.append(tag)
+            self.w.marks.append_text(tag)
 
         self.select_mark(tag)
 
@@ -442,10 +455,6 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         if obj.kind not in self.mark_types:
             return True
-
-        # Can only draw a new mark
-        if self.mark_selected != self._new_mark:
-            return
 
         # Disable plotting for 2D images
         image = self.fitsimage.get_image()
