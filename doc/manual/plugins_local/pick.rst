@@ -86,6 +86,7 @@ The blue lines show measurements in the X direction and the green lines
 show measurements in the Y direction.  The solid lines indicate actual
 pixel values and the dotted lines indicate the fitted 1D gaussians.
 The shaded green and blue regions indicate the FWHM measurements.
+(Moffat fitting is also available.)
 
 The "Radial" tab contains a radial profile plot:
 
@@ -147,8 +148,11 @@ automatically.
           selected candidate.
 
 You can clear the table at any time by pressing the "Clear Log" button.
-The log can be saved to a FITS table by putting a valid path and
-filename in the "File:" box and pressing "Save as FITS table".
+The log can be saved to a table by putting a valid path and
+filename in the "File:" box and pressing "Save table". File type is
+automatically determined by the given extension
+(e.g., ".fits" is FITS and ".txt" is plain text), as accepted by
+:ref:`Astropy unified file read/write interface <astropy:table_io>`.
 
 If no candidate is found
 ^^^^^^^^^^^^^^^^^^^^^^^^

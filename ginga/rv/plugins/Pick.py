@@ -141,8 +141,10 @@ class Pick(GingaPlugin.LocalPlugin):
               selected candidate.
 
     You can clear the table at any time by pressing the "Clear Log" button.
-    The log can be saved to a FITS table by putting a valid path and
-    filename in the "File:" box and pressing "Save as FITS table".
+    The log can be saved to a table by putting a valid path and
+    filename in the "File:" box and pressing "Save table". File type is
+    automatically determined by the given extension (e.g., ".fits" is FITS and
+    ".txt" is plain text).
 
     If no candidate is found
     ------------------------
@@ -790,7 +792,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
-        btn = Widgets.Button("Save as FITS table")
+        btn = Widgets.Button("Save table")
         btn.add_callback('activated', self.write_pick_log_cb)
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label("File:"))
@@ -799,6 +801,7 @@ class Pick(GingaPlugin.LocalPlugin):
         if report_log is None:
             report_log = "pick_log.fits"
         ent.set_text(report_log)
+        ent.set_tooltip('File type determined by extension')
         self.w.report_log = ent
         btns.add_widget(ent, stretch=1)
         vbox3.add_widget(btns, stretch=0)
@@ -1492,14 +1495,16 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # Save the table as a binary table HDU
         from astropy.table import Table
-        from astropy.io import fits
 
         try:
             self.logger.debug("Writing modified pick log")
             tbl = Table(rows=list(self.rpt_dict.values()))
-            tbl.meta['COMMENT'] = ["Written by ginga Pick plugin"]
-            tbl.write(filepath, overwrite=True)
-
+            tbl.meta['comments'] = ["Written by ginga Pick plugin"]
+            if filepath.lower().endswith('.txt'):
+                fmt = 'ascii.commented_header'
+            else:
+                fmt = None
+            tbl.write(filepath, format=fmt, overwrite=True)
             self.rpt_wrt_time = time.time()
 
         except Exception as e:
