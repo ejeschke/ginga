@@ -1018,9 +1018,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         if isinstance(target, tuple):
             # is this always a tuple?
             filename = target[0]
-            if filename == '':
-                # user canceled dialog
-                return
         else:
             filename = target
 

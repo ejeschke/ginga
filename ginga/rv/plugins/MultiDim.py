@@ -618,7 +618,18 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         target = Widgets.SaveDialog(title='Save slice',
                                     selectedfilter='*.png').get_path()
-        with open(target, 'w') as target_file:
+
+        if isinstance(target, tuple):
+            # is this always a tuple?
+            filename = target[0]
+        else:
+            filename = target
+
+        # Save cancelled
+        if not filename:
+            return
+
+        with open(filename, 'w') as target_file:
             hival = self.fitsimage.get_cut_levels()[1]
             image = self.fitsimage.get_image()
             curr_slice_data = image.get_data()
@@ -644,8 +655,18 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         target = Widgets.SaveDialog(title='Save Movie',
                                     selectedfilter='*.avi').get_path()
-        if target:
-            self.save_movie(start, end, target)
+
+        if isinstance(target, tuple):
+            # is this always a tuple?
+            filename = target[0]
+        else:
+            filename = target
+
+        # Save cancelled
+        if not filename:
+            return
+
+        self.save_movie(start, end, filename)
 
     def save_movie(self, start, end, target_file):
         image = self.fitsimage.get_image()
