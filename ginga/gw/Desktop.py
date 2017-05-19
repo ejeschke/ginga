@@ -858,6 +858,13 @@ class SymmetricGridWidget(Widgets.GridBox):
 
         self.enable_callback('page-switch')
 
+    def _calc_dims(self, num_widgets):
+        rows = int(round(math.sqrt(num_widgets)))
+        cols = rows
+        if rows ** 2 < num_widgets:
+            cols += 1
+        return rows, cols
+
     def _relayout(self, widgets):
         # remove all the old widgets
         # TEMP: this call causes a recursive loop to happen
@@ -869,10 +876,7 @@ class SymmetricGridWidget(Widgets.GridBox):
         # calculate number of rows and cols, try to maintain a square
         # TODO: take into account the window geometry
         num_widgets = len(widgets)
-        rows = int(round(math.sqrt(num_widgets)))
-        cols = rows
-        if rows**2 < num_widgets:
-            cols += 1
+        rows, cols = self._calc_dims(num_widgets)
 
         self.resize_grid(rows, cols)
 
@@ -886,32 +890,83 @@ class SymmetricGridWidget(Widgets.GridBox):
                                                                 stretch=1)
 
     def add_widget(self, child, title=''):
-        widgets = list(self.get_children())
-        widgets.append(child)
+        num_widgets = self.num_children()
+        o_rows, o_cols = self._calc_dims(num_widgets)
+
+        num_widgets += 1
+        rows, cols = self._calc_dims(num_widgets)
+
         # attach title to child
         child.extdata.tab_title = title
 
-        self._relayout(widgets)
+        if (o_rows, o_cols) == (rows, cols):
+            # size of matrix has not changed--
+            # we can be a little efficient here and skip rebuilding
+            j = num_widgets - ((rows - 1) * cols) - 1
+            super(SymmetricGridWidget, self).add_widget(child, rows-1, j,
+                                                        stretch=1)
+        else:
+            widgets = list(self.get_children())
+            widgets.append(child)
+            self._relayout(widgets)
 
     def remove(self, child, delete=False):
-        super(SymmetricGridWidget, self).remove(child)
 
         widgets = list(self.get_children())
+        try:
+            idx = widgets.index(child)
 
-        self._relayout(widgets)
+        except IndexError:
+            raise ValueError("child not in container")
+
+        o_rows, o_cols = self._calc_dims(len(widgets))
+
+        super(SymmetricGridWidget, self).remove(child)
+
+        num_widgets = self.num_children()
+        rows, cols = self._calc_dims(num_widgets)
+
+        # if size of matrix has not changed AND user only deleted from
+        # the end--we can be a little efficient here and skip rebuilding
+        if (child != widgets[-1]) or ((o_rows, o_cols) != (rows, cols)):
+            widgets = list(self.get_children())
+            self._relayout(widgets)
+
+        if idx < self.cur_index:
+            # deleted a widget lower than the current index:
+            # current index just shifts down
+            self.cur_index -= 1
+
+        elif idx == self.cur_index:
+            # deleted same widget as current index
+            self.cur_index = -1
+            num_children = self.num_children()
+            if 0 <= idx < num_children:
+                # we can keep same index
+                self.set_index(idx)
+            else:
+                # pick acceptable index
+                idx = max(0, min(idx - 1, num_children - 1))
+                if num_children > 0:
+                    self.set_index(idx)
 
     def get_index(self):
         return self.cur_index
 
     def set_index(self, idx):
         old_index = self.cur_index
-        if 0 <= idx < self.num_children():
+        num_children = self.num_children()
+        if 0 <= idx < num_children:
             self.cur_index = idx
             child = self.children[idx]
             # child.focus()
 
             if old_index != idx:
                 self.make_callback('page-switch', child)
+
+        else:
+            raise ValueError("index (%d) inconsistent with number of children (%d)" %
+                             (idx, num_children))
 
     def index_of(self, child):
         children = self.get_children()
