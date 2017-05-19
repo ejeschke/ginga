@@ -1815,9 +1815,22 @@ class SaveDialog(QtGui.QFileDialog):
         self.widget = self.getSaveFileName(self, title, '', selectedfilter)
 
     def get_path(self):
-        if (self.widget and self.selectedfilter is not None and
-                not self.widget.endswith(self.selectedfilter[1:])):
-            self.widget += self.selectedfilter[1:]
+        if isinstance(self.widget, tuple):
+            w = self.widget[0]
+        else:
+            w = self.widget
+
+        if (w and self.selectedfilter is not None and
+                not w.endswith(self.selectedfilter[1:])):
+            w += self.selectedfilter[1:]
+
+        if isinstance(self.widget, tuple):
+            wlist = [x for x in self.widget]
+            wlist[0] = w
+            self.widget = tuple(wlist)
+        else:
+            self.widget = w
+
         return self.widget
 
 
