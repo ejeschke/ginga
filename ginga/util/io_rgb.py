@@ -52,7 +52,7 @@ class RGBFileHandler(object):
     def load_file(self, filespec, header):
         info = iohelper.get_fileinfo(filespec)
         if not info.ondisk:
-            raise FITSError("File does not appear to be on disk: %s" % (
+            raise ValueError("File does not appear to be on disk: %s" % (
                 info.url))
 
         filepath = info.filepath
