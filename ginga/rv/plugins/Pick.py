@@ -12,12 +12,13 @@ import os.path
 
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
-from ginga.util import iqcalc, plots, wcs
+from ginga.util import iqcalc, wcs
 from ginga import GingaPlugin
 from ginga.util.six.moves import map, zip, filter
 
 try:
     from ginga.gw import Plot
+    from ginga.util import plots
     have_mpl = True
 except ImportError:
     have_mpl = False

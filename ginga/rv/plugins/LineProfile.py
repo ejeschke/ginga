@@ -4,11 +4,17 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga import GingaPlugin
-from ginga.gw import Widgets, Plot
-from ginga.util import plots
-
 import numpy as np
+
+from ginga import GingaPlugin
+from ginga.gw import Widgets
+
+try:
+    from ginga.gw import Plot
+    from ginga.util import plots
+    have_mpl = True
+except ImportError:
+    have_mpl = False
 
 
 class LineProfile(GingaPlugin.LocalPlugin):
@@ -74,6 +80,9 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
+        if not have_mpl:
+            raise ImportError('Install matplotlib to use this plugin')
+
         top = Widgets.VBox()
         top.set_border_width(4)
 

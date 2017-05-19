@@ -18,7 +18,6 @@ from ginga.util.videosink import VideoSink
 from ginga.table.AstroTable import AstroTable
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 have_mencoder = False
 if spawn.find_executable("mencoder"):
@@ -615,6 +614,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.w.hdu.set_enabled(len(self.file_obj) > 0)
 
     def save_slice_cb(self):
+        import matplotlib.pyplot as plt
+
         target = Widgets.SaveDialog(title='Save slice',
                                     selectedfilter='*.png').get_path()
         with open(target, 'w') as target_file:

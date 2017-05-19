@@ -6,10 +6,16 @@
 #
 import numpy
 
-from ginga.gw import Widgets, Plot
+from ginga.gw import Widgets
 from ginga import GingaPlugin
 from ginga import AutoCuts
-from ginga.util import plots
+
+try:
+    from ginga.gw import Plot
+    from ginga.util import plots
+    have_mpl = True
+except ImportError:
+    have_mpl = False
 
 
 class Histogram(GingaPlugin.LocalPlugin):
@@ -102,6 +108,9 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
+        if not have_mpl:
+            raise ImportError('Install matplotlib to use this plugin')
+
         top = Widgets.VBox()
         top.set_border_width(4)
 
