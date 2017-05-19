@@ -1,5 +1,5 @@
 #
-# catalog.py -- DSS and star catalog interfaces for the Ginga fits viewer
+# catalog.py -- DSS and star catalog interfaces for the Ginga reference viewer
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
@@ -665,7 +665,7 @@ class CatalogServer(URLServer):
 
                 # convert ra/dec via EQUINOX change if catalog EQUINOX is
                 # not the same as our default one (2000)
-                if cmp(self.equinox, 2000.0) != 0:
+                if self.equinox != 2000.0:
                     ra_deg, dec_deg = wcs.eqToEq2000(ra_deg, dec_deg,
                                                      self.equinox)
 

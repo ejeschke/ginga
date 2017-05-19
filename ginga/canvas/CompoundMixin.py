@@ -52,6 +52,9 @@ class CompoundMixin(object):
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
     def contains_arr(self, x_arr, y_arr):
+        if len(self.objects) == 0:
+            return numpy.full(x_arr.shape, False, dtype=numpy.bool)
+
         return reduce(self._contains_reduce,
                       map(lambda obj: obj.contains_arr(x_arr, y_arr),
                           self.objects))

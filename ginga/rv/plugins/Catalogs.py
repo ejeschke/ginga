@@ -686,8 +686,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
             canvas.update_canvas()
 
-    def limit_area_cb(self, tf):
-        self.limit_stars_to_area = (tf != 0)
+    def limit_area_cb(self, w, tf):
+        self.limit_stars_to_area = tf
         return True
 
     def use_dss_channel_cb(self, tf):
@@ -833,7 +833,7 @@ class CatalogListing(object):
 
         self.cmap = cmap.get_cmap(self.magcmap)
         self.imap = imap.get_imap('ramp')
-        self.cbar_ht = 24
+        self.cbar_ht = 32
 
         self.operation_table = []
         self._select_flag = False
@@ -991,6 +991,8 @@ class CatalogListing(object):
         vbox.add_widget(table, stretch=1)
 
         self.cbar = ColorBar.ColorBar(self.logger)
+        # hack to set font size of this color bar
+        self.cbar.cbar.fontsize = 8
         self.cbar.set_cmap(self.cmap)
         self.cbar.set_imap(self.imap)
         rgbmap = self.cbar.get_rgbmap()
@@ -1196,7 +1198,10 @@ class CatalogListing(object):
     def select_star_cb(self, widget, res_dict):
         """This method is called when the user selects a star from the table.
         """
-        key = list(res_dict.keys())[0]
+        keys = list(res_dict.keys())
+        if len(keys) == 0:
+            return True
+        key = keys[0]
         idx = int(key)
         star = self.starlist[idx]
         if not self._select_flag:
