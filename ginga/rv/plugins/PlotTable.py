@@ -7,9 +7,15 @@
 import numpy as np
 
 from ginga.GingaPlugin import LocalPlugin
-from ginga.gw import Widgets, Plot
+from ginga.gw import Widgets
 from ginga.table.AstroTable import AstroTable
-from ginga.util import plots
+
+try:
+    from ginga.gw import Plot
+    from ginga.util import plots
+    have_mpl = True
+except ImportError:
+    have_mpl = False
 
 
 class PlotTable(LocalPlugin):
@@ -50,6 +56,9 @@ class PlotTable(LocalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
+        if not have_mpl:
+            raise ImportError('Install matplotlib to use this plugin')
+
         top = Widgets.VBox()
         top.set_border_width(4)
 

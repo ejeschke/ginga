@@ -6,11 +6,17 @@
 #
 import numpy
 
-from ginga.gw import Widgets, Plot
+from ginga.gw import Widgets
 from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
 from ginga.canvas.coordmap import OffsetMapper
-from ginga.util import plots
+
+try:
+    from ginga.gw import Plot
+    from ginga.util import plots
+    have_mpl = True
+except ImportError:
+    have_mpl = False
 
 # default cut colors
 cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
@@ -152,6 +158,9 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
+        if not have_mpl:
+            raise ImportError('Install matplotlib to use this plugin')
+
         top = Widgets.VBox()
         top.set_border_width(4)
 
@@ -173,7 +182,11 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         self.slit_plot = plots.Plot(logger=self.logger,
                                     width=400, height=400)
-        self.slit_plot.add_axis(axisbg='black')
+        if plots.MPL_GE_2_0:
+            kwargs = {'facecolor': 'black'}
+        else:
+            kwargs = {'axisbg': 'black'}
+        self.slit_plot.add_axis(**kwargs)
         self.plot2 = Plot.PlotWidget(self.slit_plot)
         self.plot2.resize(400, 400)
 

@@ -5,6 +5,8 @@
 # Please see the file LICENSE.txt for details.
 #
 import numpy
+from astropy.utils.introspection import minversion
+
 import matplotlib as mpl
 from matplotlib.figure import Figure
 # fix issue of negative numbers rendering incorrectly with default font
@@ -12,6 +14,9 @@ mpl.rcParams['axes.unicode_minus'] = False
 
 from ginga.util import iqcalc
 from ginga.misc import Callback
+
+MPL_GE_2_0 = minversion(mpl, '2.0')
+
 
 class Plot(Callback.Callbacks):
 
@@ -208,7 +213,10 @@ class ContourPlot(Plot):
         ##     self.cbar.remove()
 
         self.ax.cla()
-        self.ax.set_axis_bgcolor('#303030')
+        if MPL_GE_2_0:
+            self.ax.set_facecolor('#303030')
+        else:
+            self.ax.set_axis_bgcolor('#303030')
 
         try:
             im = self.ax.imshow(data, interpolation=self.interpolation,
@@ -500,7 +508,12 @@ class SurfacePlot(Plot):
             from mpl_toolkits.mplot3d import Axes3D
             from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
-            self.ax = self.fig.gca(projection='3d', axisbg='#808080')
+            if MPL_GE_2_0:
+                kwargs = {'facecolor': '#808080'}
+            else:
+                kwargs = {'axisbg': '#808080'}
+
+            self.ax = self.fig.gca(projection='3d', **kwargs)
             self.ax.set_aspect('equal', adjustable='box')
             #self.ax.cla()
 
