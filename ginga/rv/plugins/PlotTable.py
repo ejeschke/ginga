@@ -423,6 +423,10 @@ class PlotTable(LocalPlugin):
         target = Widgets.SaveDialog(title='Save plot').get_path()
         plot_ext = self.settings.get('file_suffix', '.png')
 
+        if isinstance(target, tuple):
+            # is this always a tuple?
+            target = target[0]
+
         # Save cancelled
         if not target:
             return
