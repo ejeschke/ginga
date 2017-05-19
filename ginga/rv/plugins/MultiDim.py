@@ -616,8 +616,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def save_slice_cb(self):
         import matplotlib.pyplot as plt
 
-        target = Widgets.SaveDialog(title='Save slice',
-                                    selectedfilter='*.png').get_path()
+        w = Widgets.SaveDialog(title='Save slice',
+                               selectedfilter='*.png')
+        target = w.get_path()
+        if target is None:
+            # save canceled
+            return
+
         with open(target, 'w') as target_file:
             hival = self.fitsimage.get_cut_levels()[1]
             image = self.fitsimage.get_image()
@@ -642,9 +647,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if start == 1:
             start = 0
 
-        target = Widgets.SaveDialog(title='Save Movie',
-                                    selectedfilter='*.avi').get_path()
-        if target:
+        w = Widgets.SaveDialog(title='Save Movie',
+                               selectedfilter='*.avi')
+        target = w.get_path()
+        if target is not None:
             self.save_movie(start, end, target)
 
     def save_movie(self, start, end, target_file):

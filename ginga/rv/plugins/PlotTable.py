@@ -420,12 +420,13 @@ class PlotTable(LocalPlugin):
 
         # This just defines the basename.
         # Extension has to be explicitly defined or things can get messy.
-        target = Widgets.SaveDialog(title='Save plot').get_path()
-        plot_ext = self.settings.get('file_suffix', '.png')
-
-        # Save cancelled
-        if not target:
+        w = Widgets.SaveDialog(title='Save plot')
+        target = w.get_path()
+        if target is None:
+            # Save canceled
             return
+
+        plot_ext = self.settings.get('file_suffix', '.png')
 
         if not target.endswith(plot_ext):
             target += plot_ext
@@ -436,6 +437,7 @@ class PlotTable(LocalPlugin):
         try:
             fig = self.tab_plot.get_figure()
             fig.savefig(target, dpi=fig_dpi)
+
         except Exception as e:
             self.logger.error(str(e))
         else:

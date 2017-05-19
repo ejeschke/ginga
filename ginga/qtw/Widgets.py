@@ -1808,17 +1808,27 @@ class Dialog(TopLevelMixin, WidgetBase):
 
 
 class SaveDialog(QtGui.QFileDialog):
+
     def __init__(self, title=None, selectedfilter=None):
         super(SaveDialog, self).__init__()
 
+        self.title = title
         self.selectedfilter = selectedfilter
-        self.widget = self.getSaveFileName(self, title, '', selectedfilter)
+        self.widget = self
 
     def get_path(self):
-        if (self.widget and self.selectedfilter is not None and
-                not self.widget.endswith(self.selectedfilter[1:])):
-            self.widget += self.selectedfilter[1:]
-        return self.widget
+        res = self.getSaveFileName(self, self.title, '', self.selectedfilter)
+        if (res and self.selectedfilter is not None and
+                not res.endswith(self.selectedfilter[1:])):
+            res += self.selectedfilter[1:]
+
+        if isinstance(res, tuple):
+            res = res[0]
+
+        if res == '':
+            # user cancelled dialog
+            res = None
+        return res
 
 
 class DragPackage(object):

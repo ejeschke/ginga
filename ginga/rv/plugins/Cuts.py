@@ -1012,20 +1012,11 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         # This just defines the basename.
         # Extension has to be explicitly defined or things can get messy.
-        target = Widgets.SaveDialog(
-            title='Save {0} data'.format(mode)).get_path()
+        w = Widgets.SaveDialog(title='Save {0} data'.format(mode))
+        filename = w.get_path()
 
-        if isinstance(target, tuple):
-            # is this always a tuple?
-            filename = target[0]
-            if filename == '':
-                # user canceled dialog
-                return
-        else:
-            filename = target
-
-        # Save cancelled
-        if not filename:
+        if filename is None:
+            # user canceled dialog
             return
 
         # TODO: This can be a user preference?
