@@ -182,7 +182,11 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         self.slit_plot = plots.Plot(logger=self.logger,
                                     width=400, height=400)
-        self.slit_plot.add_axis(axisbg='black')
+        if plots.MPL_GE_2_0:
+            kwargs = {'facecolor': 'black'}
+        else:
+            kwargs = {'axisbg': 'black'}
+        self.slit_plot.add_axis(**kwargs)
         self.plot2 = Plot.PlotWidget(self.slit_plot)
         self.plot2.resize(400, 400)
 
