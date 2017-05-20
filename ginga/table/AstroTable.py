@@ -46,6 +46,7 @@ class AstroTable(ViewerObjectBase):
                                   name=name)
 
         self._data = data_ap
+        self.naxispath = []
 
         # wcsclass specifies a pluggable WCS module
         if wcsclass is None:
