@@ -412,11 +412,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
     def btnup(self, canvas, event, data_x, data_y, viewer):
         try:
-            objs = self.canvas.get_objects_by_tag_pfx('star')
+            objs = self.canvas.get_items_at(data_x, data_y)
         except Exception:
             return True
         for obj in objs:
-            if obj.contains(data_x, data_y):
+            if (obj.tag is not None) and obj.tag.startswith('star'):
                 info = obj.get_data()
                 self.table.show_selection(info.star)
                 return True  # Only show first match
