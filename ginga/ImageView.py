@@ -390,7 +390,7 @@ class ImageViewBase(Callback.Callbacks):
         self._imgwin_ht = int(height)
         self._ctr_x = width // 2
         self._ctr_y = height // 2
-        self.logger.info("widget resized to %dx%d" % (width, height))
+        self.logger.debug("widget resized to %dx%d" % (width, height))
 
         self.make_callback('configure', width, height)
         self.redraw(whence=0)

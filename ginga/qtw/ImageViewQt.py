@@ -735,7 +735,7 @@ class QtEventMixin(object):
         self.make_ui_callback('drag-drop', data)
 
 
-class ImageViewEvent(ImageViewQt, QtEventMixin):
+class ImageViewEvent(QtEventMixin, ImageViewQt):
 
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         ImageViewQt.__init__(self, logger=logger, rgbmap=rgbmap,
