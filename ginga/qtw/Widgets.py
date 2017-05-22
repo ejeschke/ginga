@@ -1818,16 +1818,17 @@ class SaveDialog(QtGui.QFileDialog):
 
     def get_path(self):
         res = self.getSaveFileName(self, self.title, '', self.selectedfilter)
-        if (res and self.selectedfilter is not None and
-                not res.endswith(self.selectedfilter[1:])):
-            res += self.selectedfilter[1:]
 
         if isinstance(res, tuple):
             res = res[0]
 
+        if (res and self.selectedfilter is not None and
+                not res.endswith(self.selectedfilter[1:])):
+            res += self.selectedfilter[1:]
         if res == '':
             # user cancelled dialog
             res = None
+
         return res
 
 
