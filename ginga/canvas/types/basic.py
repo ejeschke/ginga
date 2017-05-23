@@ -34,7 +34,7 @@ class Text(OnePointMixin, CanvasObjectBase):
     def get_params_metadata(cls):
         return [
             ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
+            ##       valid=['data', 'wcs', 'offset'],
             ##       description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of lower left of text"),

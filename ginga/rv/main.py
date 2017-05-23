@@ -127,6 +127,7 @@ local_plugins = [
     Bunch(module='Histogram', workspace='dialogs', category=None),
     Bunch(module='Crosshair', workspace='dialogs', category=None),
     Bunch(module='Overlays', workspace='dialogs', category=None),
+    Bunch(module='WCSAxes', workspace='dialogs', category=None),
     Bunch(module='TVMark', workspace='dialogs', category=None),
     Bunch(module='TVMask', workspace='dialogs', category=None),
     Bunch(module='Blink', workspace='dialogs', category=None),
