@@ -4,35 +4,34 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
+from __future__ import division, print_function
+
 import os.path
 import tempfile
 import re
 import urllib
+import time
+
 import ginga.util.six as six
+from ginga.misc import Bunch
+from ginga.util import wcs
+
 if six.PY2:
     from urllib2 import Request, urlopen, URLError, HTTPError
 else:
     # python3
     from urllib.request import Request, urlopen
     from urllib.error import URLError, HTTPError
-import time
 
-from ginga.misc import Bunch
-from ginga.util import wcs
+# star_attrs = ('name', 'ra', 'dec', 'ra_deg', 'dec_deg', 'mag', 'preference',
+#               'priority', 'flag', 'b_r', 'dst', 'description')
 
-
-## star_attrs = ('name', 'ra', 'dec', 'ra_deg', 'dec_deg', 'mag', 'preference',
-##               'priority', 'flag', 'b_r', 'dst', 'description')
-
-
-# Do we have astropy.vo installed?
-have_astropy = False
+# Do we have astroquery >=0.3.5 installed?
+have_astroquery = False
 try:
-    from astropy.vo.client import conesearch
     from astropy import coordinates, units
-    have_astropy = True
-
+    from astroquery.vo_conesearch import conesearch
+    have_astroquery = True
 except ImportError:
     pass
 
@@ -41,7 +40,6 @@ have_pyvo = False
 try:
     import pyvo
     have_pyvo = True
-
 except ImportError:
     pass
 
@@ -50,8 +48,8 @@ class Star(object):
     def __init__(self, **kwdargs):
         starInfo = {}
         starInfo.update(kwdargs)
-        ## for attrname in star_attrs:
-        ##     starInfo[attrname] = kwdargs.get(attrname)
+        # for attrname in star_attrs:
+        #     starInfo[attrname] = kwdargs.get(attrname)
         self.starInfo = starInfo
 
     def __getitem__(self, key):
@@ -67,6 +65,8 @@ class Star(object):
         return key in self.starInfo
 
 
+# TODO: Deprecate this class name and replace with something that reflects
+#       Cone Search in Astroquery.
 class AstroPyCatalogServer(object):
 
     def __init__(self, logger, full_name, key, url, description):
@@ -95,20 +95,21 @@ class AstroPyCatalogServer(object):
             mag = 0.0
 
         # Make sure we have at least these Ginga standard fields defined
-        d = { 'name':         data[ext['id']],
-              'ra_deg':       float(data[ext['ra']]),
-              'dec_deg':      float(data[ext['dec']]),
-              'mag':          mag,
-              'preference':   0.0,
-              'priority':     0,
-              'description':  'fake magnitude' }
+        d = {'name':        data[ext['id']],
+             'ra_deg':      float(data[ext['ra']]),
+             'dec_deg':     float(data[ext['dec']]),
+             'mag':         mag,
+             'preference':  0.0,
+             'priority':    0,
+             'description': 'fake magnitude'}
         data.update(d)
         data['ra'] = wcs.raDegToString(data['ra_deg'])
         data['dec'] = wcs.decDegToString(data['dec_deg'])
         return Star(**data)
 
     def search(self, **params):
-        """For compatibility with generic star catalog search.
+        """
+        For compatibility with generic star catalog search.
         """
 
         self.logger.debug("search params=%s" % (str(params)))
@@ -124,18 +125,15 @@ class AstroPyCatalogServer(object):
 
         # Convert to degrees for search radius
         radius_deg = float(params['r']) / 60.0
-        #radius_deg = float(params['r'])
+        # radius_deg = float(params['r'])
 
-        # Note requires astropy 3.x+
+        # Note requires astropy 0.3.x+
         c = coordinates.SkyCoord(ra_deg * units.degree,
                                  dec_deg * units.degree,
                                  frame='icrs')
         self.logger.info("Querying catalog: %s" % (self.full_name))
-        time_start = time.time()
-        results = conesearch.conesearch(c, radius_deg * units.degree,
-                                        catalog_db=self.full_name)
-        time_elapsed = time.time() - time_start
-
+        time_elapsed, results = conesearch.conesearch_timer(
+            c, radius_deg * units.degree, catalog_db=self.full_name)
         numsources = results.array.size
         self.logger.info("Found %d sources in %.2f sec" % (
             numsources, time_elapsed))
@@ -208,7 +206,7 @@ class AstroQueryImageServer(object):
         self.params = {}
         count = 0
         for label, key in (('RA', 'ra'), ('DEC', 'dec'),
-                          ('Width', 'width'), ('Height', 'height')):
+                           ('Width', 'width'), ('Height', 'height')):
             self.params[key] = Bunch.Bunch(name=key, convert=str,
                                            label=label, order=count)
             count += 1
@@ -216,10 +214,10 @@ class AstroQueryImageServer(object):
     def getParams(self):
         return self.params
 
+    # TODO: dstpath provides the pathname for storing the image
     def search(self, dstpath, **params):
-        """For compatibility with generic image catalog search.
-
-        TODO: dstpath provides the pathname for storing the image
+        """
+        For compatibility with generic image catalog search.
         """
 
         self.logger.debug("search params=%s" % (str(params)))
@@ -242,11 +240,11 @@ class AstroQueryImageServer(object):
                                  dec_deg * units.degree,
                                  frame='icrs')
         self.logger.info("Querying catalog: %s" % (self.full_name))
-        time_start = time.time()
-        results = self.querymod.get_image_list(c,
-                                               image_width=wd_deg * units.degree,
-                                               image_height=ht_deg * units.degree)
-        time_elapsed = time.time() - time_start
+        # time_start = time.time()
+        results = self.querymod.get_image_list(
+            c, image_width=wd_deg * units.degree,
+            image_height=ht_deg * units.degree)
+        # time_elapsed = time.time() - time_start
 
         if len(results) > 0:
             self.logger.info("Found %d images" % len(results))
@@ -256,7 +254,7 @@ class AstroQueryImageServer(object):
 
         # For now, we pick the first one found
         url = results[0]
-        #fitspath = results[0].make_dataset_filename(dir="/tmp")
+        # fitspath = results[0].make_dataset_filename(dir="/tmp")
 
         # TODO: download file
         fitspath = url
@@ -293,20 +291,21 @@ class PyVOCatalogServer(object):
             mag = 0.0
 
         # Make sure we have at least these Ginga standard fields defined
-        d = { 'name':         data[ext['id']],
-              'ra_deg':       float(data[ext['ra']]),
-              'dec_deg':      float(data[ext['dec']]),
-              'mag':          mag,
-              'preference':   0.0,
-              'priority':     0,
-              'description':  'fake magnitude' }
+        d = {'name':        data[ext['id']],
+             'ra_deg':      float(data[ext['ra']]),
+             'dec_deg':     float(data[ext['dec']]),
+             'mag':         mag,
+             'preference':  0.0,
+             'priority':    0,
+             'description': 'fake magnitude'}
         data.update(d)
         data['ra'] = wcs.raDegToString(data['ra_deg'])
         data['dec'] = wcs.decDegToString(data['dec_deg'])
         return Star(**data)
 
     def search(self, **params):
-        """For compatibility with generic star catalog search.
+        """
+        For compatibility with generic star catalog search.
         """
 
         self.logger.debug("search params=%s" % (str(params)))
@@ -322,7 +321,7 @@ class PyVOCatalogServer(object):
 
         # Convert to degrees for search radius
         radius_deg = float(params['r']) / 60.0
-        #radius_deg = float(params['r'])
+        # radius_deg = float(params['r'])
 
         # initialize our query object with the service's base URL
         query = pyvo.scs.SCSQuery(self.url)
@@ -392,6 +391,7 @@ class PyVOCatalogServer(object):
     def get_catalogs(self):
         return conesearch.list_catalogs()
 
+
 class PyVOImageServer(object):
 
     def __init__(self, logger, full_name, key, url, description):
@@ -406,7 +406,7 @@ class PyVOImageServer(object):
         self.params = {}
         count = 0
         for label, key in (('RA', 'ra'), ('DEC', 'dec'),
-                          ('Width', 'width'), ('Height', 'height')):
+                           ('Width', 'width'), ('Height', 'height')):
             self.params[key] = Bunch.Bunch(name=key, convert=str,
                                            label=label, order=count)
             count += 1
@@ -414,10 +414,10 @@ class PyVOImageServer(object):
     def getParams(self):
         return self.params
 
+    # TODO: dstpath provides the pathname for storing the image
     def search(self, dstpath, **params):
-        """For compatibility with generic image catalog search.
-
-        TODO: dstpath provides the pathname for storing the image
+        """
+        For compatibility with generic image catalog search.
         """
 
         self.logger.debug("search params=%s" % (str(params)))
@@ -434,8 +434,8 @@ class PyVOImageServer(object):
         # Convert to degrees for search
         wd_deg = float(params['width']) / 60.0
         ht_deg = float(params['height']) / 60.0
-        ## wd_deg = float(params['width'])
-        ## ht_deg = float(params['height'])
+        # wd_deg = float(params['width'])
+        # ht_deg = float(params['height'])
 
         # initialize our query object with the service's base URL
         query = pyvo.sia.SIAQuery(self.url)
@@ -502,7 +502,6 @@ class URLServer(object):
             d[key] = bnch.convert(params[key])
         return d
 
-
     def fetch(self, url, filepath=None):
         data = ""
 
@@ -524,12 +523,12 @@ class URLServer(object):
                 raise e
 
             self.logger.debug("getting HTTP headers")
-            info = response.info()
+            info = response.info()  # noqa
 
             self.logger.debug("getting data")
             data = response.read()
             self.logger.debug("fetched %d bytes" % (len(data)))
-            #data = data.decode('ascii')
+            # data = data.decode('ascii')
 
         except Exception as e:
             self.logger.error("Error reading data from '%s': %s" % (
@@ -544,7 +543,6 @@ class URLServer(object):
         else:
             return data
 
-
     def retrieve(self, url, filepath=None, cb_fn=None):
         ofilepath = filepath
         if (filepath is None) or os.path.isdir(filepath):
@@ -556,8 +554,7 @@ class URLServer(object):
             self.logger.info("Opening url=%s" % (url))
 
             if cb_fn is not None:
-                localpath, info = urllib.urlretrieve(url, filepath,
-                                                            cb_fn)
+                localpath, info = urllib.urlretrieve(url, filepath, cb_fn)
             else:
                 localpath, info = urllib.urlretrieve(url, filepath)
 
@@ -574,21 +571,21 @@ class URLServer(object):
         with open(filepath, 'r') as in_f:
             return in_f.read()
 
-
     def search(self, filepath, **params):
 
-        ## values = urllib.urlencode(params)
-        ## if self.reqtype == 'get':
-        ##     url = self.base_url + '?' + values
-        ##     req = Request(url)
+        # values = urllib.urlencode(params)
+        # if self.reqtype == 'get':
+        #     url = self.base_url + '?' + values
+        #     req = Request(url)
 
-        ## elif self.reqtype == 'post':
-        ##     url = self.base_url
-        ##     req = Request(self.base_url, values)
+        # elif self.reqtype == 'post':
+        #     url = self.base_url
+        #     req = Request(self.base_url, values)
 
-        ## else:
-        ##     raise Exception("Don't know how to handle a request of type '%s'" % (
-        ##         self.reqtype))
+        # else:
+        #     raise Exception(
+        #         "Don't know how to handle a request of type '%s'" % (
+        #             self.reqtype))
 
         url = self.base_url % params
 
@@ -610,7 +607,7 @@ class CatalogServer(URLServer):
         super(CatalogServer, self).__init__(logger, full_name, key, url,
                                             description)
         self.kind = 'catalog'
-        self.index = { 'name': 0, 'ra': 1, 'dec': 2, 'mag': 10 }
+        self.index = {'name': 0, 'ra': 1, 'dec': 2, 'mag': 10}
         self.format = 'str'
         self.equinox = 2000.0
 
@@ -628,7 +625,7 @@ class CatalogServer(URLServer):
         offset = 0
         while offset < len(lines):
             line = lines[offset].strip()
-            #print(line)
+            # print(line)
             offset += 1
             if line.startswith('-'):
                 break
@@ -639,7 +636,7 @@ class CatalogServer(URLServer):
 
         for line in lines[offset:]:
             line = line.strip()
-            #print(line)
+            # print(line)
             if (len(line) == 0) or line.startswith('#'):
                 continue
             elts = line.split()
@@ -652,7 +649,7 @@ class CatalogServer(URLServer):
                 ra = elts[self.index['ra']]
                 dec = elts[self.index['dec']]
                 mag = float(elts[self.index['mag']])
-                #print name
+                # print(name)
 
                 if (self.format == 'deg') or not (':' in ra):
                     # Assume RA and DEC are in degrees
@@ -671,7 +668,7 @@ class CatalogServer(URLServer):
 
                 ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
                 dec_txt = wcs.decDegToString(dec_deg,
-                                               format='%s%02d:%02d:%05.2f')
+                                             format='%s%02d:%02d:%05.2f')
                 self.logger.debug("STAR %s AT ra=%s dec=%s mag=%f" % (
                     name, ra_txt, dec_txt, mag))
 
@@ -735,6 +732,5 @@ class ServerBank(object):
         obj = self.ctbank[key]
 
         return obj.search(**params)
-
 
 # END

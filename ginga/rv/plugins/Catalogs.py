@@ -72,8 +72,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas.enable_draw(True)
         canvas.set_drawtype(self.drawtype, color='cyan', linestyle='dash')
         canvas.set_callback('draw-event', self.draw_cb)
-        canvas.add_draw_mode('select', down=self.btndown,
-                             move=self.btndown, up=self.btnup)
+        canvas.add_draw_mode('select', down=None, move=None, up=self.btnup)
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_draw_mode('draw')
@@ -407,13 +406,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self._update_widgets(d)
         return True
 
-    def btndown(self, canvas, event, data_x, data_y, viewer):
-        return True
-
     def btnup(self, canvas, event, data_x, data_y, viewer):
         try:
             objs = self.canvas.get_items_at(data_x, data_y)
-        except Exception:
+        except Exception as e:
+            self.logger.warning('select failed: {}'.format(str(e)))
             return True
         for obj in objs:
             if (obj.tag is not None) and obj.tag.startswith('star'):
