@@ -70,8 +70,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
+        canvas.enable_edit(True)
         canvas.set_drawtype(self.drawtype, color='cyan', linestyle='dash')
         canvas.set_callback('draw-event', self.draw_cb)
+        canvas.set_callback('edit-event', self.edit_cb)
         canvas.add_draw_mode('select', down=None, move=None, up=self.btnup)
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
@@ -189,20 +191,31 @@ class Catalogs(GingaPlugin.LocalPlugin):
         mode = self.canvas.get_draw_mode()
         btns = Widgets.HBox()
         btns.set_spacing(5)
-        btn1 = Widgets.RadioButton("Draw")
-        btn1.set_state(mode == 'draw')
+
+        btn1 = Widgets.RadioButton("Select")
+        btn1.set_state(mode == 'select')
         btn1.add_callback('activated',
-                          lambda w, val: self.set_mode_cb('draw', val))
-        btn1.set_tooltip("Choose this to define search region")
-        self.w.btn_draw = btn1
-        btns.add_widget(btn1, stretch=0)
-        btn2 = Widgets.RadioButton("Select", group=btn1)
-        btn2.set_state(mode == 'select')
-        btn2.add_callback('activated',
                           lambda w, val: self.set_mode_cb('select', val))
-        btn2.set_tooltip("Choose this to highlight selection on table")
-        self.w.btn_select = btn2
+        btn1.set_tooltip("Choose this to highlight selection on table")
+        self.w.btn_select = btn1
+        btns.add_widget(btn1, stretch=0)
+
+        btn2 = Widgets.RadioButton("Draw", group=btn1)
+        btn2.set_state(mode == 'draw')
+        btn2.add_callback('activated',
+                          lambda w, val: self.set_mode_cb('draw', val))
+        btn2.set_tooltip("Choose this to define search region")
+        self.w.btn_draw = btn2
         btns.add_widget(btn2, stretch=0)
+
+        btn3 = Widgets.RadioButton("Edit", group=btn1)
+        btn3.set_state(mode == 'edit')
+        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn3.set_tooltip("Choose this to edit or move a region")
+        self.w.btn_edit = btn3
+        btns.add_widget(btn3)
+
+        btns.add_widget(Widgets.Label(''), stretch=1)
         vbox0.add_widget(btns, stretch=0)
 
         self.w.params = vbox0
@@ -419,16 +432,27 @@ class Catalogs(GingaPlugin.LocalPlugin):
                 return True  # Only show first match
         return True
 
+    def edit_select_region(self):
+        if self.areatag is not None:
+            obj = self.canvas.get_object_by_tag(self.areatag)
+            self.canvas.edit_select(obj)
+        else:
+            self.canvas.clear_selected()
+        self.canvas.update_canvas()
+
     def set_mode_cb(self, mode, tf):
-        """Called when one of the Move/Draw/Edit radio buttons is selected."""
+        """Called when one of the Select/Draw/Edit radio buttons is selected."""
         if tf:
             self.canvas.set_draw_mode(mode)
+            if mode == 'edit':
+                self.edit_select_region()
         return True
 
     def set_mode(self, mode):
         self.canvas.set_draw_mode(mode)
-        self.w.btn_draw.set_state(mode == 'draw')
         self.w.btn_select.set_state(mode == 'select')
+        self.w.btn_draw.set_state(mode == 'draw')
+        self.w.btn_edit.set_state(mode == 'edit')
 
     def highlight_object(self, obj, tag, color, redraw=True):
         x = obj.objects[0].x
@@ -490,6 +514,17 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas.update_canvas()
 
         self.areatag = tag
+        # Raise the params tab
+        self._raise_tab(self.w.params)
+        return self.redo()
+
+    def edit_cb(self, canvas, obj):
+        if self.areatag is not None:
+            obj2 = canvas.get_object_by_tag(self.areatag)
+            if obj != obj2:
+                # Not editing the area
+                return
+
         # Raise the params tab
         self._raise_tab(self.w.params)
         return self.redo()
