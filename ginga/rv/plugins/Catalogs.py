@@ -461,6 +461,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         radius = obj.objects[0].radius + delta
 
         hilite = self.dc.Circle(x, y, radius, linewidth=4, color=color)
+        hilite.editable = False
         self.hilite.add_object(hilite)
         if redraw:
             self.canvas.update_canvas()
@@ -695,7 +696,9 @@ class Catalogs(GingaPlugin.LocalPlugin):
         color = self.table.get_color(obj)
 
         circle = self.dc.Circle(x, y, radius, color=color)
+        circle.editable = False
         point = self.dc.Point(x, y, radius, color=color)
+        point.editable = False
 
         ## What is this from?
         if 'pick' in obj:
