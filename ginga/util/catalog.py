@@ -11,6 +11,7 @@ import tempfile
 import re
 import urllib
 import time
+import warnings
 
 import ginga.util.six as six
 from ginga.misc import Bunch
@@ -33,7 +34,12 @@ try:
     from astroquery.vo_conesearch import conesearch
     have_astroquery = True
 except ImportError:
-    pass
+    try:  # Backward-compatibility for astropy < 2.0
+        from astropy import coordinates, units
+        from astropy.vo.client import conesearch
+        have_astroquery = True
+    except ImportError:
+        pass
 
 # How about pyvo?
 have_pyvo = False
@@ -132,8 +138,13 @@ class AstroPyCatalogServer(object):
                                  dec_deg * units.degree,
                                  frame='icrs')
         self.logger.info("Querying catalog: %s" % (self.full_name))
-        time_elapsed, results = conesearch.conesearch_timer(
-            c, radius_deg * units.degree, catalog_db=self.full_name)
+        time_start = time.time()
+        with warnings.catch_warnings():  # Ignore VO warnings
+            warnings.simplefilter('ignore')
+            results = conesearch.conesearch(
+                c, radius_deg * units.degree, catalog_db=self.full_name,
+                verbose=False)
+        time_elapsed = time.time() - time_start
         numsources = results.array.size
         self.logger.info("Found %d sources in %.2f sec" % (
             numsources, time_elapsed))
