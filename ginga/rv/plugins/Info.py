@@ -52,7 +52,10 @@ class Info(GingaPlugin.GlobalPlugin):
         # truncate names after this size
         self.maxstr = 60
 
-        #self.w = Bunch.Bunch()
+        self.autozoom_options = ['on', 'override', 'once', 'off']
+        self.autocut_options = self.autozoom_options
+        self.autocenter_options = self.autozoom_options
+
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
         fv.add_callback('field-info', self.field_info)
@@ -107,9 +110,9 @@ class Info(GingaPlugin.GlobalPlugin):
                      'Cut High', 'entry'),
                     ('Auto Levels', 'button', 'spacer1', 'spacer',
                      'Cut Levels', 'button'),
-                    ('Cut New:', 'label', 'Cut New', 'llabel'),
-                    ('Zoom New:', 'label', 'Zoom New', 'llabel'),
-                    ('Center New:', 'label', 'Center New', 'llabel'),
+                    ('Cut New:', 'label', 'Cut New', 'combobox'),
+                    ('Zoom New:', 'label', 'Zoom New', 'combobox'),
+                    ('Center New:', 'label', 'Center New', 'combobox'),
                     )
 
         w, b2 = Widgets.build_info(captions)
@@ -123,9 +126,27 @@ class Info(GingaPlugin.GlobalPlugin):
         b.cut_low_value.set_text('')
         b.cut_high.set_tooltip("Set high cut level (press Enter)")
         b.cut_high_value.set_text('')
-        b.cut_new.set_text('')
-        b.zoom_new.set_text('')
-        b.center_new.set_text('')
+
+        combobox = b.cut_new
+        index = 0
+        for name in self.autocut_options:
+            combobox.append_text(name)
+            index += 1
+        b.cut_new.set_tooltip("Automatically set cut levels for new images")
+
+        combobox = b.zoom_new
+        index = 0
+        for name in self.autozoom_options:
+            combobox.append_text(name)
+            index += 1
+        b.zoom_new.set_tooltip("Automatically fit new images to window")
+
+        combobox = b.center_new
+        index = 0
+        for name in self.autocenter_options:
+            combobox.append_text(name)
+            index += 1
+        b.center_new.set_tooltip("Automatically center new images in window")
 
         row = Widgets.HBox()
         row.set_spacing(0)
@@ -155,6 +176,12 @@ class Info(GingaPlugin.GlobalPlugin):
                                       channel.fitsimage, info)
         winfo.auto_levels.add_callback('activated', self.auto_levels,
                                        channel.fitsimage, info)
+        winfo.cut_new.add_callback('activated', self.set_autocuts_cb,
+                                   channel.fitsimage, info)
+        winfo.zoom_new.add_callback('activated', self.set_autozoom_cb,
+                                    channel.fitsimage, info)
+        winfo.center_new.add_callback('activated', self.set_autocenter_cb,
+                                      channel.fitsimage, info)
 
         fitsimage = channel.fitsimage
         fitssettings = fitsimage.get_settings()
@@ -236,17 +263,33 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.cut_high_value.set_text('%.4g' % (hival))
 
     def autocuts_cb(self, setting, option, fitsimage, info):
-        info.winfo.cut_new.set_text(option)
+        self.logger.debug("autocuts changed to %s" % option)
+        index = self.autocut_options.index(option)
+        info.winfo.cut_new.set_index(index)
 
     def autozoom_cb(self, setting, option, fitsimage, info):
-        info.winfo.zoom_new.set_text(option)
+        index = self.autozoom_options.index(option)
+        info.winfo.zoom_new.set_index(index)
 
     def autocenter_cb(self, setting, option, fitsimage, info):
         # Hack to convert old values that used to be T/F
         if isinstance(option, bool):
             choice = { True: 'on', False: 'off' }
             option = choice[option]
-        info.winfo.center_new.set_text(option)
+        index = self.autocenter_options.index(option)
+        info.winfo.center_new.set_index(index)
+
+    def set_autocuts_cb(self, w, index, fitsimage, info):
+        option = self.autocut_options[index]
+        fitsimage.enable_autocuts(option)
+
+    def set_autozoom_cb(self, w, index, fitsimage, info):
+        option = self.autozoom_options[index]
+        fitsimage.enable_autozoom(option)
+
+    def set_autocenter_cb(self, w, index, fitsimage, info):
+        option = self.autocenter_options[index]
+        fitsimage.enable_autocenter(option)
 
     # LOGIC
 
@@ -294,14 +337,17 @@ class Info(GingaPlugin.GlobalPlugin):
 
         # update cut new/zoom new indicators
         t_ = fitsimage.get_settings()
-        info.winfo.cut_new.set_text(t_['autocuts'])
-        info.winfo.zoom_new.set_text(t_['autozoom'])
+        index = self.autocut_options.index(t_['autocuts'])
+        info.winfo.cut_new.set_index(index)
+        index = self.autozoom_options.index(t_['autozoom'])
+        info.winfo.zoom_new.set_index(index)
         option = t_['autocenter']
         # Hack to convert old values that used to be T/F
         if isinstance(option, bool):
             choice = { True: 'on', False: 'off' }
             option = choice[option]
-        info.winfo.center_new.set_text(option)
+        index = self.autocenter_options.index(option)
+        info.winfo.center_new.set_index(index)
 
 
     def field_info(self, viewer, channel, info):

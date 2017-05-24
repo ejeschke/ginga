@@ -23,7 +23,8 @@ Ver 2.6.4.dev
 - Colorbar scale now placed below the color wedge and is more legible
 - Bug fixes for LineProfile plugin
 - Slit function for Cuts plugin can be enabled from GUI
-- Bug fixes for Slit function    
+- Bug fixes for Slit function
+- Info plugin can now control new image cut/zoom/center settings 
 
 Ver 2.6.3 (2017-03-30)
 ======================
