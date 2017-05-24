@@ -90,10 +90,10 @@ class RGBFileHandler(object):
             try:
                 if hasattr(image, '_getexif'):
                     info = image._getexif()
-
-                    for tag, value in info.items():
-                        kwd = TAGS.get(tag, tag)
-                        kwds[kwd] = value
+                    if info is not None:
+                        for tag, value in info.items():
+                            kwd = TAGS.get(tag, tag)
+                            kwds[kwd] = value
 
             except Exception as e:
                 self.logger.warning("Failed to get image metadata: %s" % (str(e)))

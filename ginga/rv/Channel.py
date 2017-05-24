@@ -373,7 +373,7 @@ class Channel(Callback.Callbacks):
         info = self.image_index[imname]
         if info.image_future is not None:
             self.logger.info("Image '%s' is no longer in memory; attempting "
-                             "reloader" % (imname))
+                             "image future" % (imname))
             # TODO: recode this--it's a bit messy
             def _switch(image):
                 # this will be executed in the gui thread

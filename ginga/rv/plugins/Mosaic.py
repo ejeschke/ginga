@@ -262,18 +262,20 @@ class Mosaic(GingaPlugin.LocalPlugin):
             if name is not None:
                 img_mosaic.set(name=name)
             imname = img_mosaic.get('name', image.get('name', "NoName"))
+            self.logger.debug("mosaic name is '%s'" % (imname))
 
             # avoid making a thumbnail of this if seed image is also that way
             nothumb = not self.settings.get('make_thumbs', False)
             if nothumb:
                 img_mosaic.set(nothumb=True)
-            else:
-                # image is not on disk, set indication for other plugins
-                img_mosaic.set(path=None)
+
+            # image is not on disk, set indication for other plugins
+            img_mosaic.set(path=None)
 
             # TODO: fill in interesting/select object headers from seed image
 
             self.img_mosaic = img_mosaic
+            self.logger.info("adding mosaic image '%s' to channel" % (imname))
             self.fv.gui_call(self.fv.add_image, imname, img_mosaic,
                              chname=self.mosaic_chname)
 
@@ -329,7 +331,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                             merge=merge,
                                             allow_expand=allow_expand,
                                             expand_pad_deg=expand_pad_deg,
-                                            suppress_callback=True)
+                                            suppress_callback=False)
 
         # annotate ingested image with its name?
         if annotate and (not allow_expand):
