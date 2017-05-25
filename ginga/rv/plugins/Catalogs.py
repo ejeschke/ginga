@@ -74,7 +74,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
         canvas.set_drawtype(self.drawtype, color='cyan', linestyle='dash')
         canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('edit-event', self.edit_cb)
-        canvas.add_draw_mode('select', down=None, move=None, up=self.btnup)
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_draw_mode('draw')
@@ -419,19 +418,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self._update_widgets(d)
         return True
 
-    def btnup(self, canvas, event, data_x, data_y, viewer):
-        try:
-            objs = self.canvas.get_items_at(data_x, data_y)
-        except Exception as e:
-            self.logger.warning('select failed: {}'.format(str(e)))
-            return True
-        for obj in objs:
-            if (obj.tag is not None) and obj.tag.startswith('star'):
-                info = obj.get_data()
-                self.table.show_selection(info.star)
-                return True  # Only show first match
-        return True
-
     def edit_select_region(self):
         if self.areatag is not None:
             obj = self.canvas.get_object_by_tag(self.areatag)
@@ -443,14 +429,18 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def set_mode_cb(self, mode, tf):
         """Called when one of the Select/Draw/Edit radio buttons is selected."""
         if tf:
+            if mode == 'select':
+                mode = 'pick'
             self.canvas.set_draw_mode(mode)
             if mode == 'edit':
                 self.edit_select_region()
         return True
 
     def set_mode(self, mode):
+        if mode == 'select':
+            mode = 'pick'
         self.canvas.set_draw_mode(mode)
-        self.w.btn_select.set_state(mode == 'select')
+        self.w.btn_select.set_state(mode == 'pick')
         self.w.btn_draw.set_state(mode == 'draw')
         self.w.btn_edit.set_state(mode == 'edit')
 
@@ -686,6 +676,13 @@ class Catalogs(GingaPlugin.LocalPlugin):
         #self.clear_all()
         self.table.clear()
 
+    def select_cb(self, obj, canvas, event, pt):
+        if (obj.tag is not None) and obj.tag.startswith('star'):
+            info = obj.get_data()
+            self.table.show_selection(info.star)
+            return True
+        return True
+
     def plot_star(self, obj, image=None):
 
         if not image:
@@ -713,6 +710,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
         else:
             star = self.dc.Canvas(circle, point)
 
+        star.pickable = True
+        star.add_callback('pick-up', self.select_cb)
+        star.opaque = True
+        # see select_cb() above
         star.set_data(star=obj)
         obj.canvobj = star
 
