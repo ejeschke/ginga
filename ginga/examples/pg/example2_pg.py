@@ -12,7 +12,7 @@ import logging
 from ginga import AstroImage, colors
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
-from ginga.web.pgw import Widgets, Viewers, PgMain
+from ginga.web.pgw import Widgets, Viewers
 
 
 class FitsViewer(object):
