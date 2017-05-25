@@ -213,16 +213,7 @@ class Info(GingaPlugin.GlobalPlugin):
         fitsimage = channel.fitsimage
         info = channel.extdata._info_info
 
-        # add cb to image so that if it is modified we can update info
-        image.add_callback('modified', self.image_update_cb, fitsimage, info)
-
         self.set_info(info, fitsimage)
-        return True
-
-    def image_update_cb(self, image, fitsimage, info):
-        cur_img = fitsimage.get_image()
-        if cur_img == image:
-            self.fv.gui_do(self.set_info, info, fitsimage)
         return True
 
     def focus_cb(self, viewer, channel):
