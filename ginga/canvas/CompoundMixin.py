@@ -89,9 +89,8 @@ class CompoundMixin(object):
         try:
             for obj in self.objects:
                 if obj.is_compound() and not obj.opaque:
-                    # compound object, list up compatible members
+                    # non-opaque compound object, list up compatible members
                     res.extend(obj.select_items_at(viewer, x, y, test=test))
-                    continue
 
                 is_inside = obj.select_contains(viewer, x, y)
                 if test is None:

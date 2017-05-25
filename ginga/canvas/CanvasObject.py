@@ -47,6 +47,7 @@ class CanvasObjectBase(Callback.Callbacks):
         self.cap = 'ball'
         self.cap_radius = 4
         self.editable = True
+        self.pickable = False
         self.coord = 'data'
         self.ref_obj = None
         self.__dict__.update(kwdargs)

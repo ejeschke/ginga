@@ -10,6 +10,8 @@ import math
 from ginga import trcalc
 from ginga.misc.Bunch import Bunch
 from ginga.Bindings import KeyEvent
+from ginga.util.six.moves import filter
+
 from .CanvasMixin import CanvasMixin
 
 __all__ = ['DrawingMixin']
@@ -48,7 +50,7 @@ class DrawingMixin(object):
         self._edit_obj = None
         self._edit_status = False
         self._edit_detail = {}
-        self._pick_cur_obj = None
+        self._pick_cur_objs = set([])
 
         # For modes
         self._mode = 'draw'
@@ -667,32 +669,30 @@ class DrawingMixin(object):
         # check for objects at this location
         objs = canvas.select_items_at(viewer, data_x, data_y)
 
-        if len(objs) == 0:
-            # <-- no objects under cursor
+        picked = set(filter(lambda obj: obj.pickable, objs))
 
-            if self._pick_cur_obj is not None:
-                # leaving an object that we were in--make pick-leave cb
-                obj, self._pick_cur_obj = self._pick_cur_obj, None
-                pt = obj.crdmap.data_to(data_x, data_y)
-                obj.make_callback('pick-leave', canvas, event, pt)
+        newly_out = self._pick_cur_objs - picked
+        newly_in = picked - self._pick_cur_objs
+        self._pick_cur_objs = picked
 
-            return False
+        # leaving an object
+        for obj in newly_out:
+            pt = obj.crdmap.data_to(data_x, data_y)
+            obj.make_callback('pick-leave', canvas, event, pt)
 
-        # pick top object
-        obj = objs[-1]
-        self.logger.debug("%s event in %s obj at x, y = %d, %d" % (
-            cb_name, obj.kind, data_x, data_y))
-
-        # get coordinates in native form for this object
-        pt = obj.crdmap.data_to(data_x, data_y)
-
-        if self._pick_cur_obj is None:
-            # entering a new object--make pick-enter cb
-            self._pick_cur_obj = obj
+        # entering an object
+        for obj in newly_in:
+            pt = obj.crdmap.data_to(data_x, data_y)
             obj.make_callback('pick-enter', canvas, event, pt)
 
-        # make pick callback
-        obj.make_callback(cb_name, canvas, event, pt)
+        # pick down/up
+        for obj in picked:
+            self.logger.debug("%s event in %s obj at x, y = %d, %d" % (
+                cb_name, obj.kind, data_x, data_y))
+
+            pt = obj.crdmap.data_to(data_x, data_y)
+            obj.make_callback(cb_name, canvas, event, pt)
+
         return True
 
     def pick_start(self, canvas, event, data_x, data_y, viewer):
