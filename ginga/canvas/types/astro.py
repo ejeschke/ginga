@@ -5,24 +5,27 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import absolute_import, division, print_function
+
 import math
 import numpy
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        Point, MovePoint, ScalePoint,
-                                       RotatePoint,
                                        register_canvas_types, get_canvas_type,
                                        colors_plus_none)
 from ginga.misc.ParamSet import Param
-from ginga.misc.Bunch import Bunch
 from ginga.util import wcs
 
 from .mixins import OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin
 from .layer import CompoundObject
 
+__all__ = ['Ruler', 'Compass', 'Crosshair', 'AnnulusMixin', 'Annulus']
+
 
 class Ruler(TwoPointMixin, CanvasObjectBase):
-    """Draws a WCS ruler (like a right triangle) on a DrawingCanvas.
+    """
+    Draws a WCS ruler (like a right triangle) on a DrawingCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
     x2, y2: 0-based coordinates of the opposite end of the diagonal
@@ -185,7 +188,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
 
         diag_yoffset = 14
         if abs(cy1 - cy2) < 5:
-            show_angle = 0
+            show_angle = 0  # noqa
         elif cy1 < cy2:
             xplumb_yoffset = -4
         else:
@@ -194,7 +197,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
 
         if abs(cx1 - cx2) < 5:
             diag_xoffset = -(4 + htwd)
-            show_angle = 0
+            show_angle = 0  # noqa
         elif (cx1 < cx2):
             diag_xoffset = -(4 + htwd)
             yplumb_xoffset = 4
@@ -202,9 +205,11 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
             diag_xoffset = 4
             yplumb_xoffset = -(4 + ytwd)
 
-        xh = min(cx1, cx2); y = cy1 + xplumb_yoffset
+        xh = min(cx1, cx2)
+        y = cy1 + xplumb_yoffset
         xh += (max(cx1, cx2) - xh) // 2
-        yh = min(cy1, cy2); x = cx2 + yplumb_xoffset
+        yh = min(cy1, cy2)
+        x = cx2 + yplumb_xoffset
         yh += (max(cy1, cy2) - yh) // 2
 
         xd = xh + diag_xoffset
@@ -234,7 +239,8 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
 
 
 class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
-    """Draws a WCS compass on a DrawingCanvas.
+    """
+    Draws a WCS compass on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
     radius: radius of the compass arms, in data units
@@ -305,7 +311,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
 
     def get_edit_points(self, viewer):
         c_pt, n_pt, e_pt = self.get_points()
-        return [ MovePoint(*c_pt), ScalePoint(*n_pt), ScalePoint(*e_pt) ]
+        return [MovePoint(*c_pt), ScalePoint(*n_pt), ScalePoint(*e_pt)]
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
@@ -374,9 +380,11 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
             diag_xoffset = 4
             yplumb_xoffset = -(4 + 0)
 
-        xh = min(cx1, cx2); y = cy1 + xplumb_yoffset
+        xh = min(cx1, cx2)
+        y = cy1 + xplumb_yoffset  # noqa
         xh += (max(cx1, cx2) - xh) // 2
-        yh = min(cy1, cy2); x = cx2 + yplumb_xoffset
+        yh = min(cy1, cy2)
+        x = cx2 + yplumb_xoffset  # noqa
         yh += (max(cy1, cy2) - yh) // 2
 
         xd = xh + diag_xoffset
@@ -385,7 +393,8 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
 
 
 class Crosshair(OnePointMixin, CanvasObjectBase):
-    """Draws a crosshair on a DrawingCanvas.
+    """
+    Draws a crosshair on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
     Optional parameters for linesize, color, etc.
@@ -515,7 +524,8 @@ class AnnulusMixin(object):
 
 
 class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
-    """Special compound object to handle annulus shape that
+    """
+    Special compound object to handle annulus shape that
     consists of two objects with the same centroid.
 
     Examples
@@ -561,7 +571,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
     @classmethod
     def idraw(cls, canvas, cxt):
         radius = math.sqrt(abs(cxt.start_x - cxt.x)**2 +
-                            abs(cxt.start_y - cxt.y)**2 )
+                           abs(cxt.start_y - cxt.y)**2)
         return cls(cxt.start_x, cxt.start_y, radius,
                    **cxt.drawparams)
 
@@ -669,4 +679,4 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
 register_canvas_types(dict(ruler=Ruler, compass=Compass,
                            crosshair=Crosshair, annulus=Annulus))
 
-#END
+# END
