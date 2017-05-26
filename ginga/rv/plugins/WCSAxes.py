@@ -6,16 +6,9 @@
 #
 from __future__ import division
 
-import math
-
-import numpy as np
-
 from ginga import colors
-from ginga.AstroImage import AstroImage
 from ginga.GingaPlugin import LocalPlugin
 from ginga.gw import Widgets
-from ginga.util.wcs import raDegToString, decDegToString
-from ginga.util.wcsmod import AstropyWCS
 
 
 class WCSAxes(LocalPlugin):
@@ -174,95 +167,25 @@ class WCSAxes(LocalPlugin):
         self.redo()
 
     def redo(self):
-        image = self.fitsimage.get_image()
-        if not isinstance(image, AstroImage) or not image.has_valid_wcs():
-            return True
-
-        # TODO: Support all WCS packages?
-        if not isinstance(image.wcs, AstropyWCS):
-            return True
-
         try:
             obj = self.canvas.get_object_by_tag(self.overlaytag)
         except Exception:
             pass
         else:
-            if obj.kind != 'compound':
+            if obj.kind != 'wcsaxes':
                 return True
         try:
             self.canvas.delete_object_by_tag(self.overlaytag)
         except Exception:
             pass
 
-        # TODO: Support data cube
-        # Approximate bounding box in RA/DEC space
-        xmax = image.width - 1
-        ymax = image.height - 1
-        radec = image.wcs.wcs.all_pix2world(
-            [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]], 0)
-        ra_min, dec_min = radec.min(axis=0)
-        ra_max, dec_max = radec.max(axis=0)
-        ra_size = ra_max - ra_min
-        dec_size = dec_max - dec_min
-
-        # Calculate positions of RA/DEC lines
-        d_ra = ra_size / (self.num_ra + 1)
-        d_dec = dec_size / (self.num_dec + 1)
-        ra_arr = np.arange(ra_min + d_ra, ra_max - d_ra * 0.5, d_ra)
-        dec_arr = np.arange(dec_min + d_dec, dec_max - d_ra * 0.5, d_dec)
-
-        # RA/DEC step size for each vector
-        min_imsize = min(image.width, image.height)
-        d_ra_step = ra_size * self._pix_res / min_imsize
-        d_dec_step = dec_size * self._pix_res / min_imsize
-
-        # Create Path objects
-        objs = []
-
-        for cur_ra in ra_arr:
-            crds = [[cur_ra, cur_dec] for cur_dec in
-                    np.arange(dec_min, dec_max + d_dec_step, d_dec_step)]
-            lbl = raDegToString(cur_ra)
-            objs += self._get_path(image, crds, lbl, self.ra_angle)
-        for cur_dec in dec_arr:
-            crds = [[cur_ra, cur_dec] for cur_ra in
-                    np.arange(ra_min, ra_max + d_ra_step, d_ra_step)]
-            lbl = decDegToString(cur_dec)
-            objs += self._get_path(image, crds, lbl, self.dec_angle)
-
-        self.overlaytag = self.canvas.add(self.dc.CompoundObject(*objs))
+        # dc.WCSAxes will pick up image under the hood.
+        # UNTIL HERE - what about other params to adjust?
+        obj = self.dc.WCSAxes(
+            linewidth=self.linewidth, linestyle=self.linestyle,
+            color=self.linecolor, alpha=self.alpha, fontsize=self.fontsize)
+        self.overlaytag = self.canvas.add(obj)
         self.canvas.redraw(whence=3)
-
-    def _get_path(self, image, crds, lbl, rot):
-        pts = image.wcs.wcs.all_world2pix(crds, 0)
-
-        # Don't draw outside image area
-        mask = ((pts[:, 0] >= 0) & (pts[:, 0] < image.width) &
-                (pts[:, 1] >= 0) & (pts[:, 1] < image.height))
-        pts = pts[mask]
-
-        path_obj = self.dc.Path(
-            points=pts, coords='data', linewidth=self.linewidth,
-            linestyle=self.linestyle, color=self.linecolor,
-            alpha=self.alpha)
-
-        if self.show_label:
-            # Calculate label orientation
-            if rot is None:
-                x1, y1 = pts[0]
-                x2, y2 = pts[-1]
-                try:
-                    rot = math.asin((y2 - y1) / (x2 - x1)) * 180 / math.pi
-                except ValueError:
-                    rot = 90
-
-            text_obj = self.dc.Text(
-                4, 4, lbl, fontsize=self.fontsize, color=self.linecolor,
-                alpha=self.alpha, rot_deg=rot, coord='offset',
-                ref_obj=path_obj)
-            return [path_obj, text_obj]
-        else:
-            return [path_obj]
 
     def set_linecolor_cb(self, w, index):
         self.linecolor = self.colornames[index]

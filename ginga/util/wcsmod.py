@@ -32,7 +32,7 @@ import re
 import numpy
 
 from ginga.misc import Bunch
-from ginga.util.six.moves import map, zip
+from ginga.util.six.moves import map
 
 __all__ = ['use', 'BaseWCS', 'AstropyWCS2', 'AstropyWCS', 'AstLibWCS',
            'KapteynWCS', 'StarlinkWCS', 'BareBonesWCS', 'choose_coord_units',
@@ -67,11 +67,11 @@ class WCSError(Exception):
 
 def use(wcspkg, raise_err=True):
     """Choose WCS package."""
-    global coord_types, wcs_configured, WCS, \
-           have_kapteyn, kapwcs, \
-           have_astlib, astWCS, astCoords, \
-           have_starlink, Ast, Atl, \
-           have_astropy, pywcs, pyfits, astropy, coordinates, units
+    global coord_types, wcs_configured, WCS
+    global have_kapteyn, kapwcs
+    global have_astlib, astWCS, astCoords
+    global have_starlink, Ast, Atl
+    global have_astropy, pywcs, pyfits, astropy, coordinates, units
 
     if wcspkg == 'kapteyn':
         try:
@@ -133,13 +133,13 @@ def use(wcspkg, raise_err=True):
 
             from distutils.version import LooseVersion
             if LooseVersion(astropy.__version__) <= LooseVersion('1'):
-                raise ImportError("astropy2 wrapper requires version 1 of astropy")
+                raise ImportError(
+                    "astropy2 wrapper requires version 1 of astropy")
 
             import astropy.coordinates
             import astropy.wcs as pywcs
             from astropy.io import fits as pyfits
-            import astropy.units as u
-            from astropy.version import version
+            import astropy.units as u  # noqa
 
         except ImportError:
             if raise_err:
@@ -156,7 +156,8 @@ def use(wcspkg, raise_err=True):
         except ImportError:
             pass
 
-        coord_types = [f.name for f in astropy.coordinates.frame_transform_graph.frame_set]
+        coord_types = [f.name for f in
+                       astropy.coordinates.frame_transform_graph.frame_set]
 
         return True
 
@@ -168,7 +169,7 @@ def use(wcspkg, raise_err=True):
         except ImportError:
             try:
                 import pywcs
-                have_pywcs = True
+                have_pywcs = True  # noqa
             except ImportError as e:
                 if raise_err:
                     raise
@@ -183,10 +184,11 @@ def use(wcspkg, raise_err=True):
 
             if hasattr(coordinates, 'SkyCoord'):
                 try:
-                    import sunpy.coordinates
+                    import sunpy.coordinates  # noqa
                 except ImportError:
                     pass
-                coord_types = [f.name for f in coordinates.frame_transform_graph.frame_set]
+                coord_types = [f.name for f in
+                               coordinates.frame_transform_graph.frame_set]
             else:
                 coord_types = ['icrs', 'fk5', 'fk4', 'galactic']
 
@@ -215,7 +217,8 @@ def use(wcspkg, raise_err=True):
 
 
 def register_wcs(name, wrapper_class, coord_types):
-    """Register a custom WCS wrapper.
+    """
+    Register a custom WCS wrapper.
 
     Parameters
     ----------
@@ -229,9 +232,9 @@ def register_wcs(name, wrapper_class, coord_types):
         List of names of coordinate types supported by the WCS
     """
     global custom_wcs
-    custom_wcs[wcs_name] = Bunch.Bunch(name=name,
-                                       wrapper_class=wrapper_class,
-                                       coord_types=coord_types)
+    custom_wcs[name] = Bunch.Bunch(name=name,
+                                   wrapper_class=wrapper_class,
+                                   coord_types=coord_types)
 
 
 class BaseWCS(object):
@@ -299,6 +302,28 @@ class BaseWCS(object):
         """
         pass
 
+    def pointstosky(self, pts, coords='data'):
+        """
+        Convert multiple points to RA/DEC.
+
+        Parameters
+        ----------
+        pts : array-like
+            Pixel coordinates in the format of
+            ``[[x0, y0], [x1, y1], ..., [xn, yn]]``.
+
+        coords : 'data' or None, optional, default to 'data'
+            Expresses whether the data coordinate is indexed from zero
+
+        Returns
+        -------
+        sky : array-like
+            Sky coordinates in the format of
+            ``[[ra0, dec0], [ra1, dec1], ..., [ran, decn]]``.
+
+        """
+        pass
+
     def pixtoradec(self, idxs, coords='data'):
         """
         Map pixel indexes into a sky coordinate in the WCS system
@@ -329,6 +354,28 @@ class BaseWCS(object):
         Returns a 2-tuple containing the WCS converted values in the
         first two axes of the coordinate system defined by the WCS
         (e.g. (ra_deg, dec_deg) as floats).
+        """
+        pass
+
+    def skytopoints(self, sky, coords='data'):
+        """
+        Convert multiple RA/DEC to points.
+
+        Parameters
+        ----------
+        sky : array-like
+            Sky coordinates in the format of
+            ``[[ra0, dec0], [ra1, dec1], ..., [ran, decn]]``.
+
+        coords : 'data' or None, optional, default to 'data'
+            Expresses whether the data coordinate is indexed from zero
+
+        Returns
+        -------
+        pts : array-like
+            Pixel coordinates in the format of
+            ``[[x0, y0], [x1, y1], ..., [xn, yn]]``.
+
         """
         pass
 
@@ -421,15 +468,15 @@ class BaseWCS(object):
         # WCSLIB doesn't like "nonstandard" units
         unit = self.header.get('CUNIT1', 'deg')
         if unit.upper() == 'DEGREE':
-            #self.header.update('CUNIT1', 'deg')
+            # self.header.update('CUNIT1', 'deg')
             self.header['CUNIT1'] = 'deg'
         unit = self.header.get('CUNIT2', 'deg')
         if unit.upper() == 'DEGREE':
-            #self.header.update('CUNIT2', 'deg')
+            # self.header.update('CUNIT2', 'deg')
             self.header['CUNIT2'] = 'deg'
 
     def has_valid_wcs(self):
-        return self.wcs != None
+        return self.wcs is not None
 
 
 class AstropyWCS2(BaseWCS):
@@ -449,9 +496,8 @@ class AstropyWCS2(BaseWCS):
         "coordsys" is a bad name in astropy coordinates, and using the name
         `coordframe` internally makes it clearer what's going on (see
         :ref:`Astropy Coordinates Definitions <astropy:astropy-coordinates-definitions>`).
-        """
+        """  # noqa
         return self.coordframe
-
 
     def load_header(self, header, fobj=None):
         from astropy.wcs.utils import wcs_to_celestial_frame
@@ -478,7 +524,8 @@ class AstropyWCS2(BaseWCS):
     def valid_transform_frames(self):
         global coord_types
 
-        frames = [f.name for f in astropy.coordinates.frame_transform_graph.frame_set
+        frames = [f.name for f in
+                  astropy.coordinates.frame_transform_graph.frame_set
                   if self.coordframe.is_transformable_to(f)]
         coord_types = frames
 
@@ -506,7 +553,8 @@ class AstropyWCS2(BaseWCS):
         # spherical subclass.
         if (issubclass(self.coordframe.representation,
                        astropy.coordinates.SphericalRepresentation) and
-            hasattr(self.coordframe.representation, '_unit_representation')):
+                hasattr(self.coordframe.representation,
+                        '_unit_representation')):
             rep = self.coordframe.representation._unit_representation(*data)
 
         elif issubclass(self.coordframe.representation,
@@ -526,7 +574,6 @@ class AstropyWCS2(BaseWCS):
             # not exist at all if we're starting from an un-realized frame
             self.coordframe._rep_cache = {(rep.__class__.__name__, False): rep}
 
-
     def spectral_coord(self, idxs, coords='data'):
 
         if coords == 'data':
@@ -539,13 +586,15 @@ class AstropyWCS2(BaseWCS):
             return float(sky[0, 2])
 
         except Exception as e:
-            self.logger.error("Error calculating spectral coordinate: %s" % (str(e)))
+            self.logger.error(
+                "Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
 
+    def pointstosky(self, pts, coords='data'):
+        raise NotImplementedError
 
     def pixtoradec(self, idxs, coords='data'):
         return self._frametofloats(self.pixtonative(idxs, coords=coords))
-
 
     def pixtonative(self, idxs, coords='data'):
         """
@@ -570,6 +619,8 @@ class AstropyWCS2(BaseWCS):
 
         return self.coordframe
 
+    def skytopoints(self, sky, coords='data'):
+        raise NotImplementedError
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
         import astropy.units as u
@@ -583,8 +634,7 @@ class AstropyWCS2(BaseWCS):
 
         return self.nativetopix(coords=coords, naxispath=naxispath)
 
-
-    def nativetopix(self, coords='data',naxispath=None):
+    def nativetopix(self, coords='data', naxispath=None):
         """
         Take a frame in native coords and transform to pixel coordinates.
         """
@@ -605,7 +655,6 @@ class AstropyWCS2(BaseWCS):
 
         return pixels
 
-
     def pixtocoords(self, idxs, system=None, coords='data'):
 
         if self.coordframe == 'raw':
@@ -622,11 +671,13 @@ class AstropyWCS2(BaseWCS):
         if transform and transform != 'same':
             coord = coord.transform_to(toclass)
         else:
-            self.logger.error("Frame {} is not Transformable to {}, falling back to {}".format(self.coordframe.name, toclass.name, self.coordframe.name))
+            self.logger.error(
+                "Frame {} is not Transformable to {}, "
+                "falling back to {}".format(
+                    self.coordframe.name, toclass.name, self.coordframe.name))
 #            self.prefs.set("wcs_coords", self.coordframe.name)
 
         return coord
-
 
     def pixtosystem(self, idxs, system=None, coords='data'):
         if self.coordframe == 'pixel':
@@ -636,18 +687,19 @@ class AstropyWCS2(BaseWCS):
         c = self.pixtocoords(idxs, system=system, coords=coords)
         return self._frametofloats(c)
 
-
     def _frametofloats(self, frame):
         """
         Take any astropy coord frame and return the first two components as
         floats in a tuple.
         """
         r = frame.data
-        return tuple([getattr(r, component).value for component in r.components[:2]])
+        return tuple([getattr(r, component).value for component in
+                      r.components[:2]])
 
 
 class AstropyWCS(BaseWCS):
-    """A WCS interface for astropy.wcs
+    """
+    A WCS interface for astropy.wcs
     You need to install python module 'astropy'
     (http://pypi.python.org/pypi/astropy)
     if you want to use this version.
@@ -713,8 +765,23 @@ class AstropyWCS(BaseWCS):
             return float(sky[0, 2])
 
         except Exception as e:
-            self.logger.error("Error calculating spectral coordinate: %s" % (str(e)))
+            self.logger.error(
+                "Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
+
+    def pointstosky(self, pts, coords='data'):
+
+        if coords == 'data':
+            origin = 0
+        else:
+            origin = 1
+        try:
+            sky = self.wcs.all_pix2world(pts, origin)
+        except Exception as e:
+            self.logger.error("Error calculating pointstosky: %s" % (str(e)))
+            raise WCSError(e)
+
+        return sky
 
     def pixtoradec(self, idxs, coords='data'):
 
@@ -724,8 +791,8 @@ class AstropyWCS(BaseWCS):
             origin = 1
         pixcrd = numpy.array([idxs], numpy.float_)
         try:
-            #sky = self.wcs.wcs_pix2sky(pixcrd, origin)
-            #sky = self.wcs.all_pix2sky(pixcrd, origin)
+            # sky = self.wcs.wcs_pix2sky(pixcrd, origin)
+            # sky = self.wcs.all_pix2sky(pixcrd, origin)
             # astropy only?
             sky = self.wcs.all_pix2world(pixcrd, origin)
 
@@ -737,6 +804,20 @@ class AstropyWCS(BaseWCS):
         dec_deg = float(sky[0, 1])
 
         return ra_deg, dec_deg
+
+    def skytopoints(self, sky, coords='data'):
+
+        if coords == 'data':
+            origin = 0
+        else:
+            origin = 1
+        try:
+            pts = self.wcs.all_world2pix(sky, origin)
+        except Exception as e:
+            self.logger.error("Error calculating skytopoints: %s" % (str(e)))
+            raise WCSError(e)
+
+        return pts
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
 
@@ -751,9 +832,9 @@ class AstropyWCS(BaseWCS):
         skycrd = numpy.array([args], numpy.float_)
 
         try:
-            #pix = self.wcs.wcs_sky2pix(skycrd, origin)
+            # pix = self.wcs.wcs_sky2pix(skycrd, origin)
             # Doesn't seem to be a all_sky2pix
-            #pix = self.wcs.all_sky2pix(skycrd, origin)
+            # pix = self.wcs.all_sky2pix(skycrd, origin)
             # astropy only?
             pix = self.wcs.wcs_world2pix(skycrd, origin)
 
@@ -801,7 +882,8 @@ class AstropyWCS(BaseWCS):
             coord = coord.transform_to(toclass)
 
         else:
-            frameClass = coordinates.frame_transform_graph.lookup_name(self.coordsys)
+            frameClass = coordinates.frame_transform_graph.lookup_name(
+                self.coordsys)
             coord = frameClass(ra_deg * units.degree, dec_deg * units.degree)
             toClass = coordinates.frame_transform_graph.lookup_name(system)
             # Skip in input and output is the same (no realize_frame
@@ -835,7 +917,8 @@ class AstropyWCS(BaseWCS):
 
 
 class AstLibWCS(BaseWCS):
-    """A WCS interface for astLib.astWCS.WCS
+    """
+    A WCS interface for astLib.astWCS.WCS
     You need to install python module 'astLib'
     (http://sourceforge.net/projects/astlib)
     if you want to use this version.
@@ -878,11 +961,14 @@ class AstLibWCS(BaseWCS):
         elif coordsys in ('PIXEL',):
             return 'pixel'
 
-        #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
+        #raise WCSError("Cannot determine appropriate coordinate system from FITS header")  # noqa
         return 'j2000'
 
     def spectral_coord(self, idxs, coords='data'):
         raise WCSError("This feature not supported by astWCS")
+
+    def pointstosky(self, pts, coords='data'):
+        raise NotImplementedError
 
     def pixtoradec(self, idxs, coords='data'):
         if coords == 'fits':
@@ -897,6 +983,9 @@ class AstLibWCS(BaseWCS):
             raise WCSError(e)
 
         return ra_deg, dec_deg
+
+    def skytopoints(self, sky, coords='data'):
+        raise NotImplementedError
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
         try:
@@ -943,14 +1032,16 @@ class AstLibWCS(BaseWCS):
                                                        ra_deg, dec_deg,
                                                        equinox)
         except Exception as e:
-            raise WCSError("Error converting between coordinate systems '%s' and '%s': %s" % (
-                fromsys, tosys, str(e)))
+            raise WCSError(
+                "Error converting between coordinate systems "
+                "'%s' and '%s': %s" % (fromsys, tosys, str(e)))
 
         return (lon_deg, lat_deg)
 
 
 class KapteynWCS(BaseWCS):
-    """A WCS interface for kapteyn.wcs.Projection
+    """
+    A WCS interface for kapteyn.wcs.Projection
     You need to install python module 'kapteyn'
     (http://www.astro.rug.nl/software/kapteyn/)
     if you want to use this version.
@@ -964,7 +1055,7 @@ class KapteynWCS(BaseWCS):
         self.kind = 'kapteyn/WCSLIB'
         self._skyout = "equatorial icrs J2000.0"
 
-        # see: https://github.com/astropy/coordinates-benchmark/blob/master/kapteyn/convert.py
+        # see: https://github.com/astropy/coordinates-benchmark/blob/master/kapteyn/convert.py  # noqa
         self.conv_d = dict(fk5='fk5', fk4='fk4,J2000_OBS', icrs='icrs',
                            galactic='galactic', ecliptic='ecliptic,J2000')
 
@@ -1000,8 +1091,12 @@ class KapteynWCS(BaseWCS):
                 return res[self.wcs.specaxnum-1]
 
         except Exception as e:
-            self.logger.error("Error calculating spectral coordinate: %s" % (str(e)))
+            self.logger.error(
+                "Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
+
+    def pointstosky(self, pts, coords='data'):
+        raise NotImplementedError
 
     def pixtoradec(self, idxs, coords='data'):
         # Kapteyn's WCS needs pixels referenced from 1
@@ -1009,12 +1104,14 @@ class KapteynWCS(BaseWCS):
             idxs = tuple(map(lambda x: x+1, idxs))
         else:
             idxs = tuple(idxs)
-        #print "indexes=%s" % (str(idxs))
+        # print("indexes=%s" % (str(idxs)))
 
         try:
             res = self.wcs.toworld(idxs)
-            if (self.wcs.lonaxnum is not None) and (self.wcs.lataxnum is not None):
-                ra_deg, dec_deg = res[self.wcs.lonaxnum-1], res[self.wcs.lataxnum-1]
+            if ((self.wcs.lonaxnum is not None) and
+                    (self.wcs.lataxnum is not None)):
+                ra_deg = res[self.wcs.lonaxnum-1]
+                dec_deg = res[self.wcs.lataxnum-1]
             else:
                 ra_deg, dec_deg = res[0], res[1]
 
@@ -1023,6 +1120,9 @@ class KapteynWCS(BaseWCS):
             raise WCSError(e)
 
         return ra_deg, dec_deg
+
+    def skytopoints(self, sky, coords='data'):
+        raise NotImplementedError
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
         args = [ra_deg, dec_deg]
@@ -1068,7 +1168,8 @@ class KapteynWCS(BaseWCS):
 
 
 class StarlinkWCS(BaseWCS):
-    """A WCS interface for Starlink
+    """
+    A WCS interface for Starlink
     You need to install python module 'starlink-pyast'
     (http://www.astro.rug.nl/software/kapteyn/)
     if you want to use this version.
@@ -1097,12 +1198,12 @@ class StarlinkWCS(BaseWCS):
         try:
             self.logger.debug("Trying to make starlink wcs object")
             # read in the header and create the default WCS transform
-            #adapter = Atl.PyFITSAdapter(hdu)
-            #fitschan = Ast.FitsChan(adapter)
+            # adapter = Atl.PyFITSAdapter(hdu)
+            # fitschan = Ast.FitsChan(adapter)
             fitschan = Ast.FitsChan(source)
             self.wcs = fitschan.read()
             # self.wcs is a FrameSet, with a Mapping
-            #self.wcs.Report = True
+            # self.wcs.Report = True
 
             self.coordsys = get_coord_system_name(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
@@ -1129,13 +1230,17 @@ class StarlinkWCS(BaseWCS):
 
         try:
             # pixel to sky coords (in the WCS specified transform)
-            arrs = [ [idxs[i]] for i in range(len(idxs)) ]
+            arrs = [[idxs[i]] for i in range(len(idxs))]
             res = self.wcs.tran(arrs, 1)
             return res[2][0]
 
         except Exception as e:
-            self.logger.error("Error calculating spectral coordinate: %s" % (str(e)))
+            self.logger.error(
+                "Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
+
+    def pointstosky(self, pts, coords='data'):
+        raise NotImplementedError
 
     def pixtoradec(self, idxs, coords='data'):
         # Starlink's WCS needs pixels referenced from 1
@@ -1146,7 +1251,7 @@ class StarlinkWCS(BaseWCS):
 
         try:
             # pixel to sky coords (in the WCS specified transform)
-            arrs = [ [idxs[i]] for i in range(len(idxs)) ]
+            arrs = [[idxs[i]] for i in range(len(idxs))]
             res = self.wcs.tran(arrs, 1)
 
             if self.coordsys not in ('pixel', 'raw'):
@@ -1155,13 +1260,16 @@ class StarlinkWCS(BaseWCS):
             # TODO: what if axes are inverted?
             ra_rad, dec_rad = res[0][0], res[1][0]
             ra_deg, dec_deg = math.degrees(ra_rad), math.degrees(dec_rad)
-            #print ra_deg, dec_deg
+            # print(ra_deg, dec_deg)
 
         except Exception as e:
             self.logger.error("Error calculating pixtoradec: %s" % (str(e)))
             raise WCSError(e)
 
         return ra_deg, dec_deg
+
+    def skytopoints(self, sky, coords='data'):
+        raise NotImplementedError
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
         try:
@@ -1171,7 +1279,7 @@ class StarlinkWCS(BaseWCS):
             args = [ra_rad, dec_rad]
             if naxispath:
                 args += [0] * len(naxispath)
-            arrs = [ [args[i]] for i in range(len(args)) ]
+            arrs = [[args[i]] for i in range(len(args))]
             # 0 as second arg -> inverse transform
             res = self.wcs.tran(arrs, 0)
             x, y = res[0][0], res[1][0]
@@ -1234,13 +1342,19 @@ class BareBonesWCS(BaseWCS):
     def spectral_coord(self, idxs, coords='data'):
         raise WCSError("This feature not supported by BareBonesWCS")
 
+    def pointstosky(self, pts, coords='data'):
+        raise NotImplementedError
+
     def pixtoradec(self, idxs, coords='data'):
         px_x, px_y = idxs[:2]
         px_x, px_y = px_x + 1.0, px_y + 1.0
         return (px_x, px_y)
 
+    def skytopoints(self, sky, coords='data'):
+        raise NotImplementedError
+
     def radectopix(self, px_x, px_y, coords='data', naxispath=None):
-        #px_x, px_y = px_x - 1.0, px_y - 1.0
+        # px_x, px_y = px_x - 1.0, px_y - 1.0
         return (px_x, px_y)
 
     def pixtosystem(self, idxs, system=None, coords='data'):
@@ -1252,7 +1366,7 @@ class WcslibWCS(AstropyWCS):
     pass
 
 
-################## Help functions ##################
+# ---------------- Help functions ---------------- #
 
 def choose_coord_units(header):
     """Return the appropriate key code for the units value for the axes by
@@ -1263,7 +1377,7 @@ def choose_coord_units(header):
     if match:
         return 'degree'
 
-    #raise WCSError("Don't understand units '%s'" % (cunit))
+    # raise WCSError("Don't understand units '%s'" % (cunit))
     return 'degree'
 
 
@@ -1276,7 +1390,7 @@ def get_coord_system_name(header):
     except KeyError:
         try:
             # see if we have an "RA" header
-            ra = header['RA']
+            ra = header['RA']  # noqa
             try:
                 equinox = float(header['EQUINOX'])
                 if equinox < 1984.0:
@@ -1342,7 +1456,7 @@ def get_coord_system_name(header):
     if match:
         return 'pixel'
 
-    #raise WCSError("Cannot determine appropriate coordinate system from FITS header")
+    #raise WCSError("Cannot determine appropriate coordinate system from FITS header")  # noqa
     return 'icrs'
 
 
@@ -1358,4 +1472,4 @@ if not wcs_configured:
         except Exception as e:
             continue
 
-#END
+# END

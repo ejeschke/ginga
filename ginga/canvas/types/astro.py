@@ -18,7 +18,6 @@ from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
 from ginga.misc.ParamSet import Param
 from ginga.util import wcs
 from ginga.util.wcs import raDegToString, decDegToString
-from ginga.util.wcsmod import AstropyWCS
 
 from .mixins import OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin
 from .layer import CompoundObject
@@ -740,16 +739,12 @@ class WCSAxes(CompoundObject):
         if not isinstance(image, AstroImage) or not image.has_valid_wcs():
             return []
 
-        # TODO: Support all WCS packages
-        if not isinstance(image.wcs, AstropyWCS):
-            return []
-
         # TODO: Support data cube
         # Approximate bounding box in RA/DEC space
         xmax = image.width - 1
         ymax = image.height - 1
-        radec = image.wcs.wcs.all_pix2world(
-            [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]], 0)
+        radec = image.wcs.pointstosky(
+            [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]])
         ra_min, dec_min = radec.min(axis=0)
         ra_max, dec_max = radec.max(axis=0)
         ra_size = ra_max - ra_min
@@ -783,9 +778,9 @@ class WCSAxes(CompoundObject):
         return objs
 
     def _get_path(self, viewer, image, crds, lbl, axis):
-        pts = image.wcs.wcs.all_world2pix(crds, 0)
-
         from ginga.canvas.types.basic import Path, Text
+
+        pts = image.wcs.skytopoints(crds)
 
         # Don't draw outside image area
         mask = ((pts[:, 0] >= 0) & (pts[:, 0] < image.width) &
@@ -809,12 +804,12 @@ class WCSAxes(CompoundObject):
                 rot = math.asin((y2 - y1) / (x2 - x1)) * 180 / math.pi
                 rot = self._cur_rot + rot
 
-                x, y = abs(x2 - x1) / 2 + self.txt_off, y2
+                x, y = abs(x2 - x1) * 0.5 + self.txt_off, y2
             else:
                 # y axis varying
                 rot = self._cur_rot + 90
 
-                x, y = x2, abs(y2 - y1) / 2 + self.txt_off
+                x, y = x2, abs(y2 - y1) * 0.5 + self.txt_off
 
             if self._cur_swap:
                 # axes are swapped
@@ -845,7 +840,7 @@ class WCSAxes(CompoundObject):
             update = True
 
         cur_rot = viewer.get_rotation()
-        if cur_rot != self._cur_rot:
+        if cur_rot != self._cur_rot and self.show_label:
             # rotation has changed
             # TODO: for a rotation or swap axes change, it would be
             # sufficient to simply calculate the new rotation angles
