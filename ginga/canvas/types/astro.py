@@ -743,10 +743,11 @@ class WCSAxes(CompoundObject):
         # Approximate bounding box in RA/DEC space
         xmax = image.width - 1
         ymax = image.height - 1
-        radec = image.wcs.pointstosky(
-            [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]])
-        ra_min, dec_min = radec.min(axis=0)
-        ra_max, dec_max = radec.max(axis=0)
+        radec = image.wcs.pointstocoords(
+            [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]],
+            naxispath=image.naxispath)
+        ra_min, dec_min = radec.ra.min().deg, radec.dec.min().deg
+        ra_max, dec_max = radec.ra.max().deg, radec.dec.max().deg
         ra_size = ra_max - ra_min
         dec_size = dec_max - dec_min
 
@@ -780,7 +781,7 @@ class WCSAxes(CompoundObject):
     def _get_path(self, viewer, image, crds, lbl, axis):
         from ginga.canvas.types.basic import Path, Text
 
-        pts = image.wcs.skytopoints(crds)
+        pts = image.wcs.skytopoints(crds, naxispath=image.naxispath)
 
         # Don't draw outside image area
         mask = ((pts[:, 0] >= 0) & (pts[:, 0] < image.width) &
