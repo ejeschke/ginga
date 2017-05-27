@@ -107,11 +107,11 @@ class ImageViewAgg(ImageView.ImageViewBase):
         image.save(obuf, format=format, quality=quality)
         if not (output is None):
             return None
-        return obuf.getvalue()
+        return obuf
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return buf
+        return buf.getvalue()
 
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         if not have_PIL:

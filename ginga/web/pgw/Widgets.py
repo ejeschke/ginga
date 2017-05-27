@@ -913,9 +913,10 @@ class ContainerBase(WidgetBase):
 
     def render_children(self, ifx=' ', spacing=0, spacing_side='right'):
         def _render_child(child):
-            # return '''<span style="margin-%s: %dpx;">%s</span>''' % (
-            #     spacing_side, spacing, child.render())
-            return child.render()
+            if spacing == 0:
+                return child.render()
+            return '''<span style="margin-%s: %dpx;">%s</span>''' % (
+                spacing_side, spacing, child.render())
         return ifx.join(map(_render_child, self.children))
 
 

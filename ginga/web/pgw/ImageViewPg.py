@@ -99,8 +99,8 @@ class ImageViewPg(ImageView):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        image_buf = self.get_image_as_bytes()
-        return image_buf
+        image_buf = self.get_rgb_image_as_buffer()
+        return image_buf.getvalue()
 
     def save_plain_image_as_file(self, filepath, format='png', quality=90):
         """Used for generating thumbnails.  Does not include overlaid
