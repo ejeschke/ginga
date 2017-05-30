@@ -716,6 +716,8 @@ class WCSAxes(CompoundObject):
         self.num_dec = 10
         self._pix_res = 10
         self.txt_off = 4
+        self.ra_angle = None
+        self.dec_angle = None
         # for keeping track of changes to image and orientation
         self._cur_rot = None
         self._cur_swap = None
@@ -739,7 +741,6 @@ class WCSAxes(CompoundObject):
         if not isinstance(image, AstroImage) or not image.has_valid_wcs():
             return []
 
-        # TODO: Support data cube
         # Approximate bounding box in RA/DEC space
         xmax = image.width - 1
         ymax = image.height - 1
@@ -800,15 +801,21 @@ class WCSAxes(CompoundObject):
             x1, y1 = pts[0]
             x2, y2 = pts[-1]
 
-            if axis == 0:
+            if axis == 0:  # DEC
                 # x axis varying
-                rot = math.asin((y2 - y1) / (x2 - x1)) * 180 / math.pi
-                rot = self._cur_rot + rot
+                if self.dec_angle is None:
+                    rot = math.asin((y2 - y1) / (x2 - x1)) * 180 / math.pi
+                    rot = self._cur_rot + rot
+                else:
+                    rot = self.dec_angle
 
                 x, y = abs(x2 - x1) * 0.5 + self.txt_off, y2
-            else:
+            else:  # RA
                 # y axis varying
-                rot = self._cur_rot + 90
+                if self.ra_angle is None:
+                    rot = self._cur_rot + 90
+                else:
+                    rot = self.ra_angle
 
                 x, y = x2, abs(y2 - y1) * 0.5 + self.txt_off
 
@@ -816,9 +823,10 @@ class WCSAxes(CompoundObject):
                 # axes are swapped
                 rot -= 90
 
-            text_obj = Text(x, y, text=lbl,
+            text_obj = Text(x, y, text=lbl, font=self.font,
                             fontsize=self.fontsize, color=self.color,
                             alpha=self.alpha, rot_deg=rot, coord='data')
+            text_obj.crdaxis = axis
             # this is necessary because we are not actually adding to a canvas
             text_obj.crdmap = viewer.get_coordmap('data')
 
@@ -826,6 +834,27 @@ class WCSAxes(CompoundObject):
 
         else:
             return [path_obj]
+
+    def sync_state(self):
+        for obj in self.objects:
+            if obj.kind == 'text':
+                if self.show_label:
+                    obj.alpha = self.alpha
+                    obj.color = self.color
+                    obj.font = self.font
+                    obj.fontsize = self.fontsize
+                    if obj.crdaxis == 0 and self.dec_angle is not None:
+                        obj.rot_deg = self.dec_angle
+                    elif obj.crdaxis == 1 and self.ra_angle is not None:
+                        obj.rot_deg = self.ra_angle
+                else:
+                    obj.alpha = 0  # hide
+
+            else:  # path
+                obj.alpha = self.alpha
+                obj.color = self.color
+                obj.linewidth = self.linewidth
+                obj.linestyle = self.linestyle
 
     def draw(self, viewer):
         # see if we need to recalculate our grid
@@ -854,6 +883,8 @@ class WCSAxes(CompoundObject):
 
         if update:
             # only expensive recalculation of grid if needed
+            self.ra_angle = None
+            self.dec_angle = None
             self.objects = self._calc_axes(viewer, image, cur_rot, cur_swap)
 
         super(WCSAxes, self).draw(viewer)

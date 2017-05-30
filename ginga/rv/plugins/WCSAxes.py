@@ -6,6 +6,8 @@
 #
 from __future__ import division
 
+import numpy as np
+
 from ginga import colors
 from ginga.GingaPlugin import LocalPlugin
 from ginga.gw import Widgets
@@ -33,30 +35,25 @@ class WCSAxes(LocalPlugin):
         super(WCSAxes, self).__init__(fv, fitsimage)
 
         self.layertag = 'wcsaxes-canvas'
-        self.overlaytag = None
+        self.colornames = colors.get_colors()
+        self.linestyles = ['solid', 'dash']
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_WCSAxes')
         self.settings.add_defaults(linecolor='cyan', alpha=1,
                                    linestyle='solid', linewidth=1,
                                    n_ra_lines=10, n_dec_lines=10,
-                                   show_label=True, fontsize=8,
-                                   ra_angle=None, dec_angle=None)
+                                   show_label=True, fontsize=8)
         self.settings.load(onError='silent')
 
-        self.colornames = colors.get_colors()
-        self.linestyles = ['solid', 'dash']
-        self.linecolor = self.settings.get('linecolor', 'cyan')
-        self.alpha = self.settings.get('alpha', 1)
-        self.linestyle = self.settings.get('linestyle', 'solid')
-        self.linewidth = self.settings.get('linewidth', 1)
-        self.num_ra = self.settings.get('n_ra_lines', 10)
-        self.num_dec = self.settings.get('n_dec_lines', 10)
-        self.show_label = self.settings.get('show_label', True)
-        self.fontsize = self.settings.get('fontsize', 8)
-        self.ra_angle = self.settings.get('ra_angle', None)
-        self.dec_angle = self.settings.get('dec_angle', None)
-        self._pix_res = 10
+        linecolor = self.settings.get('linecolor', 'cyan')
+        alpha = self.settings.get('alpha', 1)
+        linestyle = self.settings.get('linestyle', 'solid')
+        linewidth = self.settings.get('linewidth', 1)
+        num_ra = self.settings.get('n_ra_lines', 10)
+        num_dec = self.settings.get('n_dec_lines', 10)
+        show_label = self.settings.get('show_label', True)
+        fontsize = self.settings.get('fontsize', 8)
 
         self.dc = fv.get_draw_classes()
 
@@ -64,6 +61,14 @@ class WCSAxes(LocalPlugin):
         canvas.enable_draw(False)
         canvas.set_surface(self.fitsimage)
         self.canvas = canvas
+
+        self.axes = self.dc.WCSAxes(
+            linewidth=linewidth, linestyle=linestyle, color=linecolor,
+            alpha=alpha, fontsize=fontsize)
+        self.axes.num_ra = num_ra
+        self.axes.num_dec = num_dec
+        self.axes.show_label = show_label
+        self.canvas.add(self.axes)
 
         self.gui_up = False
 
@@ -84,10 +89,10 @@ class WCSAxes(LocalPlugin):
         combobox = b.line_colors
         for name in self.colornames:
             combobox.append_text(name)
-        combobox.set_index(self.colornames.index(self.linecolor))
+        combobox.set_index(self.colornames.index(self.axes.color))
         combobox.add_callback('activated', self.set_linecolor_cb)
 
-        b.alpha.set_text(str(self.alpha))
+        b.alpha.set_text(str(self.axes.alpha))
         b.alpha.set_tooltip('Line transparency (alpha)')
         b.alpha.add_callback('activated', lambda *args: self.set_alpha())
 
@@ -104,14 +109,14 @@ class WCSAxes(LocalPlugin):
         combobox = b.line_styles
         for name in self.linestyles:
             combobox.append_text(name)
-        combobox.set_index(self.linestyles.index(self.linestyle))
+        combobox.set_index(self.linestyles.index(self.axes.linestyle))
         combobox.add_callback('activated', self.set_linestyle_cb)
 
-        b.num_ra.set_text(str(self.num_ra))
+        b.num_ra.set_text(str(self.axes.num_ra))
         b.num_ra.set_tooltip('Number of lines drawn for RA')
         b.num_ra.add_callback('activated', lambda *args: self.set_num_ra())
 
-        b.num_dec.set_text(str(self.num_dec))
+        b.num_dec.set_text(str(self.axes.num_dec))
         b.num_dec.set_tooltip('Number of lines drawn for DEC')
         b.num_dec.add_callback('activated', lambda *args: self.set_num_dec())
 
@@ -126,20 +131,20 @@ class WCSAxes(LocalPlugin):
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        b.show_label.set_state(self.show_label)
+        b.show_label.set_state(self.axes.show_label)
         b.show_label.set_tooltip('Show/hide label')
         b.show_label.add_callback('activated', self.toggle_label_cb)
 
-        b.font_size.set_text(str(self.fontsize))
+        b.font_size.set_text(str(self.axes.fontsize))
         b.font_size.set_tooltip('Labels font size')
         b.font_size.add_callback(
             'activated', lambda *args: self.set_fontsize())
 
-        b.ra_angle.set_text(str(self.ra_angle))
+        b.ra_angle.set_text(str(self.axes.ra_angle))
         b.ra_angle.set_tooltip('Orientation in deg of RA labels')
         b.ra_angle.add_callback('activated', lambda *args: self.set_ra_angle())
 
-        b.dec_angle.set_text(str(self.dec_angle))
+        b.dec_angle.set_text(str(self.axes.dec_angle))
         b.dec_angle.set_tooltip('Orientation in deg of DEC labels')
         b.dec_angle.add_callback(
             'activated', lambda *args: self.set_dec_angle())
@@ -164,103 +169,123 @@ class WCSAxes(LocalPlugin):
         container.add_widget(top, stretch=1)
 
         self.gui_up = True
-        self.redo()
 
     def redo(self):
-        try:
-            obj = self.canvas.get_object_by_tag(self.overlaytag)
-        except Exception:
-            pass
-        else:
-            if obj.kind != 'wcsaxes':
-                return True
-        try:
-            self.canvas.delete_object_by_tag(self.overlaytag)
-        except Exception:
-            pass
+        if not self.gui_up:
+            return
 
-        # dc.WCSAxes will pick up image under the hood.
-        # UNTIL HERE - what about other params to adjust?
-        obj = self.dc.WCSAxes(
-            linewidth=self.linewidth, linestyle=self.linestyle,
-            color=self.linecolor, alpha=self.alpha, fontsize=self.fontsize)
-        self.overlaytag = self.canvas.add(obj)
-        self.canvas.redraw(whence=3)
+        # Need this here so GUI accurately updates values from drawing.
+        self.w.ra_angle.set_text(str(self.axes.ra_angle))
+        self.w.dec_angle.set_text(str(self.axes.dec_angle))
 
     def set_linecolor_cb(self, w, index):
-        self.linecolor = self.colornames[index]
-        self.redo()
+        self.axes.color = self.colornames[index]
+        self.axes.sync_state()
+        self.canvas.update_canvas()
         return True
 
     def set_alpha(self):
         try:
             a = float(self.w.alpha.get_text())
+            if (a < 0) or (a > 1):
+                raise ValueError
         except ValueError:
-            self.w.alpha.set_text(str(self.alpha))
+            self.w.alpha.set_text(str(self.axes.alpha))
         else:
-            self.alpha = a
-            self.redo()
+            self.axes.alpha = a
+            self.axes.sync_state()
+            self.canvas.update_canvas()
         return True
 
     def set_linestyle_cb(self, w, index):
-        self.linestyle = self.linestyles[index]
-        self.redo()
+        self.axes.linestyle = self.linestyles[index]
+        self.axes.sync_state()
+        self.canvas.update_canvas()
         return True
 
     def set_num_ra(self):
         try:
             n = int(self.w.num_ra.get_text())
+            if n < 1 or n > 50:
+                raise ValueError
         except ValueError:
-            self.w.num_ra.set_text(str(self.num_ra))
+            self.w.num_ra.set_text(str(self.axes.num_ra))
         else:
-            self.num_ra = n
-            self.redo()
+            self.axes.num_ra = n
+            self.axes._cur_image = None  # Force redraw
+            self.canvas.update_canvas()
         return True
 
     def set_num_dec(self):
         try:
             n = int(self.w.num_dec.get_text())
+            if n < 1 or n > 50:
+                raise ValueError
         except ValueError:
-            self.w.num_dec.set_text(str(self.num_dec))
+            self.w.num_dec.set_text(str(self.axes.num_dec))
         else:
-            self.num_dec = n
-            self.redo()
+            self.axes.num_dec = n
+            self.axes._cur_image = None  # Force redraw
+            self.canvas.update_canvas()
         return True
 
     def toggle_label_cb(self, w, val):
-        self.show_label = val
-        self.redo()
+        self.axes.show_label = val
+
+        # Toggling label off and switch image causes axes not to have labels
+        # at all, which causes toggling it back on to not work without complete
+        # rebuild.
+        if (val and not np.any([obj.kind == 'text'
+                                for obj in self.axes.objects])):
+            self.axes._cur_image = None  # Force redraw
+        else:
+            self.axes.sync_state()
+
+        self.canvas.update_canvas()
 
     def set_fontsize(self):
         try:
-            val = float(self.w.font_size.get_text())
+            val = int(self.w.font_size.get_text())
+            if val < 8 or val > 72:
+                raise ValueError
         except ValueError:
-            self.w.font_size.set_text(str(self.fontsize))
+            self.w.font_size.set_text(str(self.axes.fontsize))
         else:
-            self.fontsize = val
-            self.redo()
+            self.axes.fontsize = val
+            self.axes.sync_state()
+            self.canvas.update_canvas()
         return True
 
     def set_ra_angle(self):
-        try:
-            a = float(self.w.ra_angle.get_text())
-        except ValueError:
-            self.ra_angle = None
-            self.w.ra_angle.set_text(str(self.ra_angle))
+        s = self.w.ra_angle.get_text()
+        if s.lower() == 'none':
+            a = None
         else:
-            self.ra_angle = a
-        self.redo()
+            try:
+                a = float(s)
+            except ValueError:
+                self.w.ra_angle.set_text(str(self.axes.ra_angle))
+                return
+
+        self.axes.ra_angle = a
+        self.axes.sync_state()
+        self.canvas.update_canvas()
         return True
 
     def set_dec_angle(self):
-        try:
-            a = float(self.w.dec_angle.get_text())
-        except ValueError:
-            self.dec_angle = None
-            self.w.dec_angle.set_text(str(self.dec_angle))
+        s = self.w.dec_angle.get_text()
+        if s.lower() == 'none':
+            a = None
         else:
-            self.dec_angle = a
-        self.redo()
+            try:
+                a = float(s)
+            except ValueError:
+                self.w.dec_angle.set_text(str(self.axes.dec_angle))
+                return
+
+        self.axes.dec_angle = a
+        self.axes.sync_state()
+        self.canvas.update_canvas()
         return True
 
     def close(self):
@@ -278,17 +303,10 @@ class WCSAxes(LocalPlugin):
 
         self.resume()
 
-    def pause(self):
-        self.canvas.ui_set_active(False)
-
-    def resume(self):
-        # turn off any mode user may be in
-        self.modes_off()
-
-        self.canvas.ui_set_active(True)
-        self.fv.show_status("Overlaying WCS axes if available")
-
     def stop(self):
+        # so we don't hang on to a large image
+        self.axes._cur_image = False
+
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
         try:
