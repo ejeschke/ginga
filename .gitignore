@@ -18,6 +18,8 @@ MANIFEST
 
 # Sphinx
 doc/api
+doc/manual/api/
+doc/manual/plugins_local/api/
 doc/_build
 
 # TeX products

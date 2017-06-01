@@ -744,9 +744,12 @@ class WCSAxes(CompoundObject):
         # Approximate bounding box in RA/DEC space
         xmax = image.width - 1
         ymax = image.height - 1
-        radec = image.wcs.pointstocoords(
-            [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]],
-            naxispath=image.naxispath)
+        try:
+            radec = image.wcs.pointstocoords(
+                [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]],
+                naxispath=image.naxispath)
+        except Exception:
+            return []
         ra_min, dec_min = radec.ra.min().deg, radec.dec.min().deg
         ra_max, dec_max = radec.ra.max().deg, radec.dec.max().deg
         ra_size = ra_max - ra_min
@@ -782,7 +785,10 @@ class WCSAxes(CompoundObject):
     def _get_path(self, viewer, image, crds, lbl, axis):
         from ginga.canvas.types.basic import Path, Text
 
-        pts = image.wcs.skytopoints(crds, naxispath=image.naxispath)
+        try:
+            pts = image.wcs.skytopoints(crds, naxispath=image.naxispath)
+        except Exception:
+            return []
 
         # Don't draw outside image area
         mask = ((pts[:, 0] >= 0) & (pts[:, 0] < image.width) &
@@ -800,24 +806,37 @@ class WCSAxes(CompoundObject):
             # Calculate label orientation
             x1, y1 = pts[0]
             x2, y2 = pts[-1]
+            dx = x2 - x1
+            dy = y2 - y1
+            m = dy / dx
+            c = y1 - m * x1
+
+            if abs(m) < 1:  # x axis varying
+                x = min(x1, x2) + abs(dx) * 0.45
+                y = m * x + c + self.txt_off
+            else:  # y axis varying
+                y = min(y1, y2) + abs(dy) * 0.45
+                if numpy.isfinite(m):
+                    x = (y - c) / m
+                else:
+                    x = min(x1, x2)
+                x += self.txt_off
 
             if axis == 0:  # DEC
-                # x axis varying
-                if self.dec_angle is None:
-                    rot = math.asin((y2 - y1) / (x2 - x1)) * 180 / math.pi
-                    rot = self._cur_rot + rot
-                else:
-                    rot = self.dec_angle
-
-                x, y = abs(x2 - x1) * 0.5 + self.txt_off, y2
+                user_angle = self.dec_angle
+                default_rot = 0
             else:  # RA
-                # y axis varying
-                if self.ra_angle is None:
-                    rot = self._cur_rot + 90
-                else:
-                    rot = self.ra_angle
+                user_angle = self.ra_angle
+                default_rot = 90
 
-                x, y = x2, abs(y2 - y1) * 0.5 + self.txt_off
+            if user_angle is None:
+                try:
+                    rot = math.atan(m) * 180 / math.pi
+                except ValueError:
+                    rot = default_rot
+                rot = self._cur_rot + rot
+            else:
+                rot = user_angle
 
             if self._cur_swap:
                 # axes are swapped

@@ -74,6 +74,7 @@ is the graphical way to start an operation.
    plugins_local/histogram
    plugins_local/crosshair
    plugins_local/overlays
+   plugins_local/wcsaxes
    plugins_local/tvmark
    plugins_local/tvmask
    plugins_local/blink

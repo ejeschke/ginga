@@ -43,7 +43,7 @@ class WCSAxes(LocalPlugin):
         self.settings.add_defaults(linecolor='cyan', alpha=1,
                                    linestyle='solid', linewidth=1,
                                    n_ra_lines=10, n_dec_lines=10,
-                                   show_label=True, fontsize=8)
+                                   show_label=True, fontsize=8, label_offset=4)
         self.settings.load(onError='silent')
 
         linecolor = self.settings.get('linecolor', 'cyan')
@@ -54,6 +54,7 @@ class WCSAxes(LocalPlugin):
         num_dec = self.settings.get('n_dec_lines', 10)
         show_label = self.settings.get('show_label', True)
         fontsize = self.settings.get('fontsize', 8)
+        txt_off = self.settings.get('label_offset', 4)
 
         self.dc = fv.get_draw_classes()
 
@@ -68,6 +69,7 @@ class WCSAxes(LocalPlugin):
         self.axes.num_ra = num_ra
         self.axes.num_dec = num_dec
         self.axes.show_label = show_label
+        self.axes.txt_off = txt_off
         self.canvas.add(self.axes)
 
         self.gui_up = False
@@ -126,6 +128,7 @@ class WCSAxes(LocalPlugin):
         fr = Widgets.Frame('Labels')
         captions = (('Show label', 'checkbutton'),
                     ('Font size:', 'label', 'Font size', 'entryset'),
+                    ('Text offset:', 'label', 'Text offset', 'entryset'),
                     ('RA angle:', 'label', 'RA angle', 'entryset'),
                     ('DEC angle:', 'label', 'DEC angle', 'entryset'))
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -139,6 +142,11 @@ class WCSAxes(LocalPlugin):
         b.font_size.set_tooltip('Labels font size')
         b.font_size.add_callback(
             'activated', lambda *args: self.set_fontsize())
+
+        b.text_offset.set_text(str(self.axes.txt_off))
+        b.text_offset.set_tooltip('Labels text offset in pixels')
+        b.text_offset.add_callback(
+            'activated', lambda *args: self.set_txt_off())
 
         b.ra_angle.set_text(str(self.axes.ra_angle))
         b.ra_angle.set_tooltip('Orientation in deg of RA labels')
@@ -253,6 +261,19 @@ class WCSAxes(LocalPlugin):
         else:
             self.axes.fontsize = val
             self.axes.sync_state()
+            self.canvas.update_canvas()
+        return True
+
+    def set_txt_off(self):
+        try:
+            val = int(self.w.text_offset.get_text())
+            if abs(val) > 50:  # No point putting the label so far away
+                raise ValueError
+        except ValueError:
+            self.w.text_offset.set_text(str(self.axes.txt_off))
+        else:
+            self.axes.txt_off = val
+            self.axes._cur_image = None  # Force redraw
             self.canvas.update_canvas()
         return True
 
