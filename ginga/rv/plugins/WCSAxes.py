@@ -326,7 +326,7 @@ class WCSAxes(LocalPlugin):
 
     def stop(self):
         # so we don't hang on to a large image
-        self.axes._cur_image = False
+        self.axes._cur_image = None
 
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
