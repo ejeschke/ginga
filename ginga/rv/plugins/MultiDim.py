@@ -54,6 +54,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.naxispath = []
         self.name_pfx = 'NONAME'
         self.img_path = None
+        self.img_name = None
         self.file_obj = None
         self.orientation = 'vertical'
 
@@ -363,7 +364,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             pass
         self.file_obj = None
         self.img_path = None
-        self.imname = None
+        self.img_name = None
         self.fv.show_status("")
 
     def set_hdu(self, idx):
@@ -385,17 +386,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
             image = chinfo.datasrc[imname]
             self.fv.switch_name(chname, imname)
 
-            # Still need to build datacube profile
-            if isinstance(image, AstroTable):
-                mddata = None
-            else:
-                mddata = image.get_mddata()
-
-            if mddata is not None:
-                dims = list(mddata.shape)
-                dims.reverse()
-                self.build_naxis(dims, image)
-
             return
 
         # Nope, we'll have to load it
@@ -407,23 +397,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             image = self.file_obj.get_hdu(idx)
 
-            data = image.get_data()
-            if data is None:
-                # <- empty data part to this HDU
-                self.logger.warning("Empty data part in HDU #%d" % (idx))
-
-            elif info.htype.lower() in ('bintablehdu', 'tablehdu',):
-                dims = [0, 0]
-
-            elif info.htype.lower() not in ('imagehdu', 'primaryhdu'):
-                self.logger.warning("HDU #%d is not an image" % (idx))
-
-            else:
-                mddata = image.get_mddata()
-                if mddata is not None:
-                    dims = list(mddata.shape)
-                    dims.reverse()
-
             # create a future for reconstituting this HDU
             future = Future.Future()
             future.freeze(self.fv.load_image, self.img_path, idx=aidx)
@@ -432,7 +405,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             self.fv.add_image(imname, image, chname=chname)
 
-            self.build_naxis(dims, image)
             self.logger.debug("HDU #%d loaded." % (idx))
 
         except Exception as e:
@@ -614,6 +586,31 @@ class MultiDim(GingaPlugin.LocalPlugin):
             if info is not None:
                 index = info.index
                 self.w.hdu.set_index(index)
+
+        # rebuild the NAXIS controls, if necessary
+        # No two images in the same channel can have the same name.
+        # Here we keep track of the name to decide if we need to rebuild
+        if self.img_name != name:
+            self.img_name = name
+            dims = [0, 0]
+            data = image.get_data()
+            if data is None:
+                # <- empty data part to this HDU
+                self.logger.warning("Empty data part in HDU #%d" % (idx))
+
+            elif info.htype.lower() in ('bintablehdu', 'tablehdu',):
+                pass
+
+            elif info.htype.lower() not in ('imagehdu', 'primaryhdu'):
+                self.logger.warning("HDU #%d is not an image" % (idx))
+
+            else:
+                mddata = image.get_mddata()
+                if mddata is not None:
+                    dims = list(mddata.shape)
+                    dims.reverse()
+
+            self.build_naxis(dims, image)
 
     def save_slice_cb(self):
         import matplotlib.pyplot as plt
