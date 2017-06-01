@@ -24,7 +24,9 @@ Ver 2.6.4.dev
 - Bug fixes for LineProfile plugin
 - Slit function for Cuts plugin can be enabled from GUI
 - Bug fixes for Slit function
-- Info plugin can now control new image cut/zoom/center settings 
+- Info plugin can now control new image cut/zoom/center settings
+- Fixed an issue with the MultiDim plugin that could result in a hang
+    with some back ends
 
 Ver 2.6.3 (2017-03-30)
 ======================

@@ -53,7 +53,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.curhdu = 0
         self.naxispath = []
         self.name_pfx = 'NONAME'
-        self.image = None
+        self.img_path = None
         self.file_obj = None
         self.orientation = 'vertical'
 
@@ -217,7 +217,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
     def build_naxis(self, dims, image):
         imname = image.get('name')
-        self.naxispath = image.naxispath.copy()
+        self.naxispath = list(image.naxispath)
 
         # build a vbox of NAXIS controls
         captions = [("NAXIS1:", 'label', 'NAXIS1', 'llabel'),
@@ -361,7 +361,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.file_obj.close()
         except:
             pass
-        self.image = None
+        self.file_obj = None
+        self.img_path = None
+        self.imname = None
         self.fv.show_status("")
 
     def set_hdu(self, idx):
@@ -380,19 +382,21 @@ class MultiDim(GingaPlugin.LocalPlugin):
         chinfo = self.channel
         if imname in chinfo.datasrc:
             self.curhdu = idx
-            self.image = chinfo.datasrc[imname]
+            image = chinfo.datasrc[imname]
             self.fv.switch_name(chname, imname)
 
             # Still need to build datacube profile
-            if isinstance(self.image, AstroTable):
+            if isinstance(image, AstroTable):
                 mddata = None
             else:
-                mddata = self.image.get_mddata()
+                mddata = image.get_mddata()
+
             if mddata is not None:
                 dims = list(mddata.shape)
                 dims.reverse()
-                self.build_naxis(dims, self.image)
-                return
+                self.build_naxis(dims, image)
+
+            return
 
         # Nope, we'll have to load it
         self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))
@@ -402,7 +406,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
             info = self.file_obj.hdu_info[idx]
 
             image = self.file_obj.get_hdu(idx)
-            self.image = image
 
             data = image.get_data()
             if data is None:
@@ -423,8 +426,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             # create a future for reconstituting this HDU
             future = Future.Future()
-            future.freeze(self.fv.load_image, self.path, idx=aidx)
-            image.set(path=self.path, idx=aidx, name=imname,
+            future.freeze(self.fv.load_image, self.img_path, idx=aidx)
+            image.set(path=self.img_path, idx=aidx, name=imname,
                       image_future=future)
 
             self.fv.add_image(imname, image, chname=chname)
@@ -581,7 +584,21 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 "Cannot open image: no value for metadata key 'path'")
             return
 
-        self.path = path
+        if path != self.img_path:
+            # <-- New file is being looked at
+            self.img_path = path
+
+            self.file_obj = self.fv.fits_opener.get_factory()
+            # TODO: specify 'readonly' somehow?
+            self.file_obj.open_file(path)
+
+            upper = len(self.file_obj) - 1
+            self.prep_hdu_menu(self.w.hdu, self.file_obj.hdu_info)
+            self.num_hdu = upper
+            self.logger.debug("there are %d hdus" % (upper+1))
+            self.w.numhdu.set_text("%d" % (upper+1))
+
+            self.w.hdu.set_enabled(len(self.file_obj) > 0)
 
         name = image.get('name', self.fv.name_image_from_path(path))
         idx = image.get('idx', None)
@@ -591,27 +608,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
             name = match.group(1)
         self.name_pfx = name
 
-        self.file_obj = self.fv.fits_opener.get_factory()
-        # TODO: specify 'readonly' somehow?
-        self.file_obj.open_file(path)
-
-        # lower = 0
-        upper = len(self.file_obj) - 1
-        self.prep_hdu_menu(self.w.hdu, self.file_obj.hdu_info)
-        self.num_hdu = upper
-        self.logger.debug("there are %d hdus" % (upper+1))
-        self.w.numhdu.set_text("%d" % (upper+1))
-
         if idx is not None:
             # set the HDU in the drop down if known
             info = self.file_obj.hdu_db.get(idx, None)
             if info is not None:
                 index = info.index
                 self.w.hdu.set_index(index)
-                if image != self.image:
-                    self.set_hdu(index)
-
-        self.w.hdu.set_enabled(len(self.file_obj) > 0)
 
     def save_slice_cb(self):
         import matplotlib.pyplot as plt
