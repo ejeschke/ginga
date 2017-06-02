@@ -111,7 +111,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
-                     'add-image-info', 'add-operation'):
+                     'add-image-info', 'remove-image-info', 'add-operation'):
             self.enable_callback(name)
 
         # Initialize the timer factory

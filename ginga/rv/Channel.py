@@ -97,7 +97,7 @@ class Channel(Callback.Callbacks):
         channel.add_image(image, silent=silent)
 
     def remove_image(self, imname):
-        if self.datasrc.has_key(imname):
+        if imname in self.datasrc:
             self.datasrc.remove(imname)
 
         info = self.remove_history(imname)
@@ -176,7 +176,6 @@ class Channel(Callback.Callbacks):
         info = self.add_history(info.name, info.path,
                                 image_loader=image_loader,
                                 image_future=image_future)
-        self.fv.make_async_gui_callback('add-image-info', self, info)
 
     def get_image_info(self, imname):
         return self.image_index[imname]
@@ -258,6 +257,8 @@ class Channel(Callback.Callbacks):
             if self.hist_sort is not None:
                 self.history.sort(key=self.hist_sort)
 
+            self.fv.make_async_gui_callback('add-image-info', self, info)
+
     def add_history(self, imname, path, idx=None,
                     image_loader=None, image_future=None):
 
@@ -287,6 +288,8 @@ class Channel(Callback.Callbacks):
             info = self.image_index[imname]
             del self.image_index[imname]
             self.history.remove(info)
+
+            self.fv.make_async_gui_callback('remove-image-info', self, info)
             return info
         return None
 

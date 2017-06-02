@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.util.six import itervalues
-from ginga.util.six.moves import map
+from ginga.util.six.moves import map, filter
 
 from ginga import GingaPlugin
 from ginga.misc import Bunch
@@ -62,10 +62,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.highlight_tracks_keyboard_focus = self.settings.get(
             'highlight_tracks_keyboard_focus', True)
         self._hl_path = set([])
+        self.chnames = []
 
         fv.add_callback('add-image', self.add_image_cb)
-        fv.add_callback('add-image-info', self.add_image_info_cb)
         fv.add_callback('remove-image', self.remove_image_cb)
+        fv.add_callback('add-image-info', self.add_image_info_cb)
+        fv.add_callback('remove-image-info', self.remove_image_info_cb)
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
         fv.add_callback('channel-change', self.focus_cb)
@@ -73,37 +75,76 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
+        vbox = Widgets.VBox()
+        vbox.set_border_width(2)
+        vbox.set_spacing(4)
+
         # create the Treeview
         always_expand = self.settings.get('always_expand', False)
         color_alternate = self.settings.get('color_alternate_rows', True)
         treeview = Widgets.TreeView(auto_expand=always_expand,
                                     sortable=True,
+                                    selection='multiple',
                                     use_alt_row_color=color_alternate)
         self.treeview = treeview
         treeview.setup_table(self.columns, 2, 'NAME')
 
-        treeview.add_callback('selected', self.switch_image)
-        container.add_widget(treeview, stretch=1)
+        #treeview.add_callback('selected', self.switch_image)
+        vbox.add_widget(treeview, stretch=1)
 
+        btns = Widgets.HBox()
+        btns.set_spacing(4)
+        b1 = Widgets.Button('Display')
+        b1.add_callback('activated', self.switch_image_cb)
+        btns.add_widget(b1)
+        b2 = Widgets.Button('Move')
+        b2.add_callback('activated', lambda w: self.ask_action_images('move'))
+        btns.add_widget(b2)
+        b3 = Widgets.Button('Copy')
+        b3.add_callback('activated', lambda w: self.ask_action_images('copy'))
+        btns.add_widget(b3)
+        b4 = Widgets.Button('Delete')
+        b4.add_callback('activated', lambda w: self.ask_action_images('remove'))
+        btns.add_widget(b4)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+
+        self._rebuild_channels()
+
+        vbox.add_widget(btns, stretch=0)
+
+        container.add_widget(vbox, stretch=1)
         self.gui_up = True
 
     def stop(self):
         self.gui_up = False
 
-    def switch_image(self, widget, res_dict):
+    def get_selected(self):
+        res = []
+        res_dict = self.treeview.get_selected()
         if len(res_dict) == 0:
+            return res
+        for chname in res_dict.keys():
+            img_dict = res_dict[chname]
+            if len(img_dict) == 0:
+                continue
+            for imname in img_dict.keys():
+                bnch = img_dict[imname]
+                res.append((chname, bnch))
+        return res
+
+    def switch_image_cb(self, widget):
+        res = self.get_selected()
+        if len(res) != 1:
+            self.fv.show_error("select just one file to load!")
             return
-        chname = list(res_dict.keys())[0]
-        img_dict = res_dict[chname]
-        if len(img_dict) == 0:
-            return
-        imname = list(img_dict.keys())[0]
-        bnch = img_dict[imname]
+
+        chname, bnch = res[0]
+
         if not 'path' in bnch:
             # may be a top-level channel node, e.g. in gtk
             return
-
         path = bnch.path
+        imname = bnch.imname
         self.logger.debug("chname=%s name=%s path=%s" % (
             chname, imname, path))
 
@@ -208,7 +249,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.logger.debug("%s added to Contents" % (name))
 
     def add_image_info_cb(self, viewer, channel, image_info):
-        """Almost the same as add_image_info(), except that the image
+        """Almost the same as add_image_cb(), except that the image
         may not be loaded in memory.
         """
         chname = channel.name
@@ -247,6 +288,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.recreate_toc()
         self.logger.debug("%s removed from Contents" % (name))
 
+    def remove_image_info_cb(self, viewer, channel, image_info):
+        """Almost the same as remove_image_cb().
+        """
+        return self.remove_image_cb(viewer, channel.name,
+                                    image_info.name, image_info.path)
+
     def clear(self):
         self.name_dict = Bunch.caselessDict()
         self._hl_path = set([])
@@ -270,6 +317,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         tree_dict = { chname: { } }
         self.treeview.add_tree(tree_dict)
 
+        self._rebuild_channels()
+
     def delete_channel_cb(self, viewer, channel):
         """Called when a channel is deleted from the main interface.
         Parameter is a channel (a Channel object)."""
@@ -286,6 +335,11 @@ class Contents(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return False
         self.recreate_toc()
+
+        self._rebuild_channels()
+
+    def _rebuild_channels(self):
+        self.chnames = self.fv.get_channel_names()
 
     def _get_hl_key(self, chname, image):
         return (chname, image.get('name', 'none'))
@@ -373,6 +427,71 @@ class Contents(GingaPlugin.GlobalPlugin):
         if self.highlight_tracks_keyboard_focus:
             self.update_highlights(self._hl_path, new_highlight)
             self._hl_path = new_highlight
+
+    def ask_action_images(self, action):
+
+        images = self.get_selected()
+
+        l_img = list(map(lambda tup: "%s/%s" % (tup[0], tup[1].imname),
+                         images))
+
+        verb = action.capitalize()
+        l_img.insert(0, "%s images\n" % (verb))
+
+        # build dialog
+        dialog = Widgets.Dialog(title="%s Images" % (verb),
+                                flags=0,
+                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                parent=self.fv.w.root)
+        box = dialog.get_content_area()
+        box.set_border_width(6)
+        if len(l_img) < 12:
+            text = Widgets.Label("\n".join(l_img))
+        else:
+            text = Widgets.TextArea(wrap=None)
+            text.set_text("\n".join(l_img))
+        box.add_widget(text, stretch=1)
+
+        if action != 'remove':
+            hbox = Widgets.HBox()
+            hbox.add_widget(Widgets.Label("To channel: "))
+            chnl = Widgets.ComboBox()
+            for chname in self.chnames:
+                chnl.append_text(chname)
+            hbox.add_widget(chnl)
+            hbox.add_widget(Widgets.Label(''), stretch=1)
+            box.add_widget(hbox)
+        else:
+            chnl = None
+
+        dialog.add_callback('activated',
+                            lambda w, rsp: self.action_images_cb(w, rsp,
+                                                                 chnl,
+                                                                 images,
+                                                                 action))
+
+        self.fv.ds.show_dialog(dialog)
+
+    def action_images_cb(self, w, rsp, chnl_w, images, action):
+        # dst channel
+        if chnl_w is not None:
+            idx = chnl_w.get_index()
+            chname = self.chnames[idx]
+            dst_channel = self.fv.get_channel(chname)
+
+        self.fv.ds.remove_dialog(w)
+        if rsp == 0:
+            # user canceled
+            return
+
+        for chname, info in images:
+            src_channel = self.fv.get_channel(chname)
+            if action == 'copy':
+                src_channel.copy_image_to(info.imname, dst_channel)
+            elif action == 'move':
+                src_channel.move_image_to(info.imname, dst_channel)
+            elif action == 'remove':
+                src_channel.remove_image(info.imname)
 
     def __str__(self):
         return 'contents'

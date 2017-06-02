@@ -89,6 +89,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         fv.set_callback('add-image', self.add_image_cb)
         fv.set_callback('add-image-info', self.add_image_info_cb)
         fv.set_callback('remove-image', self.remove_image_cb)
+        fv.set_callback('remove-image-info', self.remove_image_info_cb)
         fv.set_callback('add-channel', self.add_channel_cb)
         fv.set_callback('delete-channel', self.delete_channel_cb)
         fv.add_callback('channel-change', self.focus_cb)
@@ -237,6 +238,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         except Exception as e:
             self.logger.error("Error removing thumb for %s: %s" % (
                 name, str(e)))
+
+    def remove_image_info_cb(self, viewer, channel, image_info):
+        """Almost the same as remove_image_cb().
+        """
+        return self.remove_image_cb(viewer, channel.name,
+                                    image_info.name, image_info.path)
 
     def remove_thumb(self, thumbkey):
         with self.thmblock:
@@ -764,7 +771,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                        info.path, thumbkey, info.image_future,
                        save_thumb=save_thumb,
                        thumbpath=thumbpath)
-
 
     def __str__(self):
         return 'thumbs'
