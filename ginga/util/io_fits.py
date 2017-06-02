@@ -294,7 +294,11 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 numhdu = _numhdu
 
         self.logger.debug("HDU index looks like: %s" % str(numhdu))
-        hdu = self.fits_f[numhdu]
+        if numhdu not in self.fits_f:
+            info = self.hdu_db[numhdu]
+            hdu = self.fits_f[info.index]
+        else:
+            hdu = self.fits_f[numhdu]
 
         dstobj = self.load_hdu(hdu, dstobj=dstobj, fobj=self.fits_f,
                                **kwargs)
