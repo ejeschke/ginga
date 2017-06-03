@@ -93,15 +93,10 @@ class Info(GingaPlugin.GlobalPlugin):
         row.add_widget(w, stretch=0)
         row.add_widget(Widgets.Label(''), stretch=1)
         col.add_widget(row, stretch=0)
-        #col.add_widget(Widgets.Label(''), stretch=1)
+        col.add_widget(Widgets.Label(''), stretch=1)
         sw2 = Widgets.ScrollArea()
-        # hack for Qt to expand this widget properly
-        sw2.cfg_expand(0x7, 0x4)
         sw2.set_widget(col)
-        vbox.add_widget(sw2, stretch=2)
-
-        # stretcher
-        vbox.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(sw2, stretch=1)
 
         captions = (('Zoom:', 'label', 'Zoom', 'llabel'),
                     ('Cut Low:', 'label', 'Cut Low Value', 'llabel',
@@ -117,9 +112,6 @@ class Info(GingaPlugin.GlobalPlugin):
 
         w, b2 = Widgets.build_info(captions)
         b.update(b2)
-        # TODO: need a more general solution to gtk labels resizing their
-        # parent window
-        #b.object.set_length(12)
         b.cut_levels.set_tooltip("Set cut levels manually")
         b.auto_levels.set_tooltip("Set cut levels by algorithm")
         b.cut_low.set_tooltip("Set low cut level (press Enter)")
@@ -152,7 +144,7 @@ class Info(GingaPlugin.GlobalPlugin):
         row.set_spacing(0)
         row.set_border_width(0)
         row.add_widget(w, stretch=0)
-        ## row.add_widget(Widgets.Label(''), stretch=1)
+        row.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(row, stretch=0)
 
         return sw, b
