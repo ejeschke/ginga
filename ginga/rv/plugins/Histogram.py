@@ -115,9 +115,11 @@ class Histogram(GingaPlugin.LocalPlugin):
         top.set_border_width(4)
 
         # Make the cuts plot
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
-        vbox.set_border_width(4)
-        vbox.set_spacing(2)
+        box, sw, orientation = Widgets.get_oriented_box(container)
+        box.set_border_width(4)
+        box.set_spacing(2)
+
+        paned = Widgets.Splitter(orientation=orientation)
 
         self.plot = plots.Plot(logger=self.logger,
                                width=400, height=400)
@@ -125,7 +127,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         ax.grid(True)
         w = Plot.PlotWidget(self.plot)
         w.resize(400, 400)
-        vbox.add_widget(w, stretch=1)
+        paned.add_widget(Widgets.hadjust(w, orientation))
 
         captions = (('Cut Low:', 'label', 'Cut Low', 'entry'),
                     ('Cut High:', 'label', 'Cut High', 'entry',
@@ -163,7 +165,12 @@ class Histogram(GingaPlugin.LocalPlugin):
         b.numbins.add_callback('activated', lambda w: self.set_numbins_cb())
         b.full_image.add_callback('activated', lambda w: self.full_image_cb())
 
-        vbox.add_widget(w, stretch=0)
+        fr = Widgets.Frame("Histogram")
+        fr.set_widget(w)
+        box.add_widget(fr, stretch=0)
+        paned.add_widget(sw)
+        # hack to set a reasonable starting position for the splitter
+        paned.set_sizes([400, 500])
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
@@ -196,12 +203,9 @@ class Histogram(GingaPlugin.LocalPlugin):
             self.w.btn_edit.set_enabled(False)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(hbox, stretch=0)
 
-        ## spacer = Widgets.Label('')
-        ## vbox.add_widget(spacer, stretch=1)
-
-        top.add_widget(sw, stretch=1)
+        top.add_widget(paned, stretch=5)
+        top.add_widget(hbox, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)

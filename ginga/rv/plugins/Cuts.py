@@ -165,13 +165,15 @@ class Cuts(GingaPlugin.LocalPlugin):
         top.set_border_width(4)
 
         # Make the cuts plot
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
-        vbox.set_margins(4, 4, 4, 4)
-        vbox.set_spacing(2)
+        box, sw, orientation = Widgets.get_oriented_box(container)
+        box.set_margins(4, 4, 4, 4)
+        box.set_spacing(2)
+
+        paned = Widgets.Splitter(orientation=orientation)
 
         # Add Tab Widget
         nb = Widgets.TabWidget(tabpos='top')
-        vbox.add_widget(nb, stretch=1)
+        paned.add_widget(Widgets.hadjust(nb, orientation))
 
         self.cuts_plot = plots.CutsPlot(logger=self.logger,
                                         width=400, height=400)
@@ -231,8 +233,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', self.delete_all_cb)
         btn.set_tooltip("Clear all cuts")
 
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(w, stretch=0)
+        fr = Widgets.Frame("Cuts")
+        fr.set_widget(w)
+
+        box.add_widget(fr, stretch=0)
 
         exp = Widgets.Expander("Cut Width")
 
@@ -260,7 +264,14 @@ class Cuts(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame()
         fr.set_widget(w)
         exp.set_widget(fr)
-        vbox2.add_widget(exp, stretch=0)
+
+        box.add_widget(exp, stretch=0)
+        box.add_widget(Widgets.Label(''), stretch=1)
+        paned.add_widget(sw)
+        # hack to set a reasonable starting position for the splitter
+        paned.set_sizes([400, 500])
+
+        top.add_widget(paned, stretch=5)
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
@@ -289,11 +300,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         hbox.add_widget(btn3)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox2.add_widget(hbox, stretch=0)
-
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-
-        vbox.add_widget(vbox2, stretch=0)
+        top.add_widget(hbox, stretch=0)
 
         # Add Cuts plot to its tab
         vbox_cuts = Widgets.VBox()
@@ -339,8 +346,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox_slit.add_widget(w)
         vbox_slit.add_widget(fr)
         nb.add_widget(vbox_slit, title="Slit")
-
-        top.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)

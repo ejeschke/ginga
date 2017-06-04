@@ -25,7 +25,7 @@ __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevel', 'Application', 'Dialog',
            'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
-           'get_orientation', 'get_oriented_box', 'has_webkit']
+           'has_webkit']
 
 
 class WidgetError(Exception):
@@ -1868,36 +1868,5 @@ def wrap(native_widget):
     wrapper.widget = native_widget
     return wrapper
 
-
-def get_orientation(container):
-    if not hasattr(container, 'size'):
-        return 'vertical'
-    (wd, ht) = container.size
-    if wd < ht:
-        return 'vertical'
-    else:
-        return 'horizontal'
-
-
-def get_oriented_box(container, scrolled=True, fill=False):
-    orientation = get_orientation(container)
-
-    if orientation == 'vertical':
-        box1 = VBox()
-        box2 = VBox()
-    else:
-        box1 = HBox()
-        box2 = VBox()
-
-    box2.add_widget(box1)
-    if not fill:
-        box2.add_widget(Label(''), stretch=1)
-    if scrolled:
-        sw = ScrollArea()
-        sw.set_widget(box2)
-    else:
-        sw = box2
-
-    return box1, sw, orientation
 
 # END

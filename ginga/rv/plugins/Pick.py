@@ -324,20 +324,20 @@ class Pick(GingaPlugin.LocalPlugin):
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
 
-        box, sw, orientation = Widgets.get_oriented_box(container, fill=True)
+        box, sw, orientation = Widgets.get_oriented_box(container)
         box.set_border_width(4)
         box.set_spacing(2)
 
-        vpaned = Widgets.Splitter(orientation=orientation)
+        paned = Widgets.Splitter(orientation=orientation)
 
         nb = Widgets.TabWidget(tabpos='bottom')
         self.w.nb1 = nb
-        vpaned.add_widget(nb)
+        paned.add_widget(Widgets.hadjust(nb, orientation))
 
         cm, im = self.fv.cm, self.fv.im
 
         di = Viewers.CanvasView(logger=self.logger)
-        width, height = 300, 300
+        width, height = 400, 300
         di.set_desired_size(width, height)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
@@ -376,21 +376,21 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pickcenter = p_canvas.get_object_by_tag(tag)
 
         iw = Viewers.GingaViewerWidget(viewer=di)
-        iw.resize(300, 300)
+        iw.resize(width, height)
         nb.add_widget(iw, title="Image")
 
         if have_mpl:
             # Contour plot
             hbox = Widgets.HBox()
             self.contour_plot = plots.ContourPlot(logger=self.logger,
-                                                  width=400, height=300)
+                                                  width=width, height=height)
             if plots.MPL_GE_2_0:
                 kwargs = {'facecolor': 'black'}
             else:
                 kwargs = {'axisbg': 'black'}
             self.contour_plot.add_axis(**kwargs)
             pw = Plot.PlotWidget(self.contour_plot)
-            pw.resize(400, 300)
+            pw.resize(width, height)
             hbox.add_widget(pw, stretch=1)
 
             # calc contour zoom setting
@@ -412,22 +412,22 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # FWHM gaussians plot
             self.fwhm_plot = plots.FWHMPlot(logger=self.logger,
-                                            width=400, height=300)
+                                            width=width, height=height)
             if plots.MPL_GE_2_0:
                 kwargs = {'facecolor': 'white'}
             else:
                 kwargs = {'axisbg': 'white'}
             self.fwhm_plot.add_axis(**kwargs)
             pw = Plot.PlotWidget(self.fwhm_plot)
-            pw.resize(400, 300)
+            pw.resize(width, height)
             nb.add_widget(pw, title="FWHM")
 
             # Radial profile plot
             self.radial_plot = plots.RadialPlot(logger=self.logger,
-                                                width=400, height=300)
+                                                width=width, height=height)
             self.radial_plot.add_axis(**kwargs)
             pw = Plot.PlotWidget(self.radial_plot)
-            pw.resize(400, 300)
+            pw.resize(width, height)
             nb.add_widget(pw, title="Radial")
 
         fr = Widgets.Frame(self._textlabel)
@@ -808,12 +808,13 @@ class Pick(GingaPlugin.LocalPlugin):
 
         nb.add_widget(vbox3, title="Report")
 
-        ## sw2 = Widgets.ScrollArea()
-        ## sw2.set_widget(nb)
-        ## fr.set_widget(sw2)
         fr.set_widget(nb)
 
-        vpaned.add_widget(fr)
+        box.add_widget(fr, stretch=5)
+        paned.add_widget(sw)
+        # hack to set a reasonable starting position for the splitter
+        paned.set_sizes([height, height])
+        vtop.add_widget(paned, stretch=5)
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
@@ -839,15 +840,7 @@ class Pick(GingaPlugin.LocalPlugin):
         hbox.add_widget(btn3)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
-        #box.add_widget(hbox, stretch=0)
-        vpaned.add_widget(hbox)
-
-        box.add_widget(vpaned, stretch=1)
-
-        vtop.add_widget(sw, stretch=5)
-
-        ## spacer = Widgets.Label('')
-        ## vtop.add_widget(spacer, stretch=0)
+        vtop.add_widget(hbox, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
