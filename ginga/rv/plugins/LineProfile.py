@@ -309,11 +309,8 @@ class LineProfile(GingaPlugin.LocalPlugin):
                 data = mddata
             # Broadcast region mask to 3D
             mask = self.image.get_shape_mask(obj)  # 2D only, True = enclosed
-            mask3d = np.zeros(data.shape, dtype=np.bool)
-            mask3d[:, :, :] = mask[np.newaxis, :, :]  # z, y, x
-            masked_data = np.ma.masked_array(data, mask=~mask3d)
-            masked_mean = masked_data.mean(axis=(1, 2))
-            plot_y_axis_data = masked_mean[~masked_mean.mask].data
+            plot_y_axis_data = [data[i][mask].mean()
+                                for i in range(data.shape[0])]
 
         # If few enough data points, add marker
         if len(plot_y_axis_data) <= 10:
