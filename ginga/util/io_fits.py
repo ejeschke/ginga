@@ -156,7 +156,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         return dstobj
 
-    def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
+    def load_file(self, filespec, numhdu=None, dstobj=None, memmap=False,
                   **kwargs):
         inherit_primary_header = kwargs.pop('inherit_primary_header', False)
         opener = self.get_factory()
@@ -168,7 +168,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         finally:
             opener.close()
 
-    def open_file(self, filespec, memmap=None, **kwargs):
+    def open_file(self, filespec, memmap=False, **kwargs):
 
         info = iohelper.get_fileinfo(filespec)
         if not info.ondisk:
@@ -391,7 +391,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         return dstobj
 
-    def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
+    def load_file(self, filespec, numhdu=None, dstobj=None, memmap=False,
                   **kwargs):
         inherit_primary_header = kwargs.pop('inherit_primary_header', False)
         opener = self.get_factory()
@@ -403,7 +403,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         finally:
             opener.close()
 
-    def open_file(self, filespec, memmap=None, **kwargs):
+    def open_file(self, filespec, memmap=False, **kwargs):
 
         info = iohelper.get_fileinfo(filespec)
         if not info.ondisk:
