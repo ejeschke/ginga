@@ -302,26 +302,26 @@ class BaseWCS(object):
         """
         pass
 
-    def pointstosky(self, pts, coords='data', naxispath=None):
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
         """
-        Convert multiple points to RA/DEC.
+        Convert multiple data points to WCS.
 
         Parameters
         ----------
-        pts : array-like
+        datapt : array-like
             Pixel coordinates in the format of
             ``[[x0, y0, ...], [x1, y1, ...], ..., [xn, yn, ...]]``.
 
         coords : 'data' or None, optional, default to 'data'
-            Expresses whether the data coordinate is indexed from zero
+            Expresses whether the data coordinate is indexed from zero.
 
         naxispath : list-like or None, optional, defaults to None
-            A sequence defining the pixel indexes > 2D, if any
+            A sequence defining the pixel indexes > 2D, if any.
 
         Returns
         -------
-        sky : array-like
-            Sky coordinates in the format of
+        wcspt : array-like
+            WCS coordinates in the format of
             ``[[ra0, dec0], [ra1, dec1], ..., [ran, decn]]``.
 
         """
@@ -360,25 +360,25 @@ class BaseWCS(object):
         """
         pass
 
-    def skytopoints(self, sky, coords='data', naxispath=None):
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
         """
-        Convert multiple RA/DEC to points.
+        Convert multiple WCS to data points.
 
         Parameters
         ----------
-        sky : array-like
-            Sky coordinates in the format of
+        wcspt : array-like
+            WCS coordinates in the format of
             ``[[ra0, dec0, ...], [ra1, dec1, ...], ..., [ran, decn, ...]]``.
 
         coords : 'data' or None, optional, default to 'data'
-            Expresses whether the data coordinate is indexed from zero
+            Expresses whether the data coordinate is indexed from zero.
 
         naxispath : list-like or None, optional, defaults to None
-            A sequence defining the pixel indexes > 2D, if any
+            A sequence defining the pixel indexes > 2D, if any.
 
         Returns
         -------
-        pts : array-like
+        datapt : array-like
             Pixel coordinates in the format of
             ``[[x0, y0], [x1, y1], ..., [xn, yn]]``.
 
@@ -457,7 +457,8 @@ class BaseWCS(object):
         """
         pass
 
-    def pointstocoords(self, pts, system=None, coords='data', naxispath=None):
+    def datapt_to_coords(self, datapt, system=None, coords='data',
+                         naxispath=None):
         """This is specific to :class:`AstropyWCS`."""
         raise NotImplementedError
 
@@ -600,7 +601,7 @@ class AstropyWCS2(BaseWCS):
                 "Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
 
-    def pointstosky(self, pts, coords='data', naxispath=None):
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
         raise NotImplementedError
 
     def pixtoradec(self, idxs, coords='data'):
@@ -629,7 +630,7 @@ class AstropyWCS2(BaseWCS):
 
         return self.coordframe
 
-    def skytopoints(self, sky, coords='data', naxispath=None):
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
         raise NotImplementedError
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
@@ -779,7 +780,7 @@ class AstropyWCS(BaseWCS):
                 "Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
 
-    def pointstosky(self, pts, coords='data', naxispath=None):
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
 
         if coords == 'data':
             origin = 0
@@ -788,14 +789,15 @@ class AstropyWCS(BaseWCS):
         if naxispath is not None:
             n = len(naxispath)
             if n > 0:
-                pts = np.hstack((pts, np.zeros((len(pts), n))))
+                datapt = np.hstack((datapt, np.zeros((len(datapt), n))))
         try:
-            sky = self.wcs.all_pix2world(pts, origin)
+            wcspt = self.wcs.all_pix2world(datapt, origin)
         except Exception as e:
-            self.logger.error("Error calculating pointstosky: %s" % (str(e)))
+            self.logger.error(
+                "Error calculating datapt_to_wcspt: %s" % (str(e)))
             raise WCSError(e)
 
-        return sky
+        return wcspt
 
     def pixtoradec(self, idxs, coords='data'):
 
@@ -819,7 +821,7 @@ class AstropyWCS(BaseWCS):
 
         return ra_deg, dec_deg
 
-    def skytopoints(self, sky, coords='data', naxispath=None):
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
 
         if coords == 'data':
             origin = 0
@@ -828,14 +830,15 @@ class AstropyWCS(BaseWCS):
         if naxispath is not None:
             n = len(naxispath)
             if n > 0:
-                sky = np.hstack((sky, np.zeros((len(sky), n))))
+                wcspt = np.hstack((wcspt, np.zeros((len(wcspt), n))))
         try:
-            pts = self.wcs.all_world2pix(sky, origin)
+            datapt = self.wcs.all_world2pix(wcspt, origin)
         except Exception as e:
-            self.logger.error("Error calculating skytopoints: %s" % (str(e)))
+            self.logger.error(
+                "Error calculating wcspt_to_datapt: %s" % (str(e)))
             raise WCSError(e)
 
-        return pts[:, :2]
+        return datapt[:, :2]
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
 
@@ -864,13 +867,14 @@ class AstropyWCS(BaseWCS):
         y = float(pix[0, 1])
         return (x, y)
 
-    def pointstocoords(self, pts, system=None, coords='data', naxispath=None):
+    def datapt_to_coords(self, datapt, system=None, coords='data',
+                         naxispath=None):
         """
         Map points to given coordinate system.
 
         Parameters
         ----------
-        pts : array-like
+        datapt : array-like
             Pixel coordinates in the format of
             ``[[x0, y0, ...], [x1, y1, ...], ..., [xn, yn, ...]]``.
 
@@ -894,7 +898,8 @@ class AstropyWCS(BaseWCS):
         if system is None:
             system = 'icrs'
 
-        sky = self.pointstosky(pts, coords=coords, naxispath=naxispath)
+        wcspt = self.datapt_to_wcspt(datapt, coords=coords,
+                                     naxispath=naxispath)
 
         if not self.new_coords:
             raise NotImplementedError
@@ -902,8 +907,8 @@ class AstropyWCS(BaseWCS):
         else:
             frameClass = coordinates.frame_transform_graph.lookup_name(
                 self.coordsys)
-            ra_deg = sky[:, 0]
-            dec_deg = sky[:, 1]
+            ra_deg = wcspt[:, 0]
+            dec_deg = wcspt[:, 1]
             coord = frameClass(ra_deg * units.degree, dec_deg * units.degree)
             toClass = coordinates.frame_transform_graph.lookup_name(system)
             # Skip in input and output is the same (no realize_frame
@@ -1034,7 +1039,7 @@ class AstLibWCS(BaseWCS):
     def spectral_coord(self, idxs, coords='data'):
         raise WCSError("This feature not supported by astWCS")
 
-    def pointstosky(self, pts, coords='data', naxispath=None):
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
         raise NotImplementedError
 
     def pixtoradec(self, idxs, coords='data'):
@@ -1051,7 +1056,7 @@ class AstLibWCS(BaseWCS):
 
         return ra_deg, dec_deg
 
-    def skytopoints(self, sky, coords='data', naxispath=None):
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
         raise NotImplementedError
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
@@ -1162,7 +1167,7 @@ class KapteynWCS(BaseWCS):
                 "Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
 
-    def pointstosky(self, pts, coords='data', naxispath=None):
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
         raise NotImplementedError
 
     def pixtoradec(self, idxs, coords='data'):
@@ -1188,7 +1193,7 @@ class KapteynWCS(BaseWCS):
 
         return ra_deg, dec_deg
 
-    def skytopoints(self, sky, coords='data', naxispath=None):
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
         raise NotImplementedError
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
@@ -1306,7 +1311,7 @@ class StarlinkWCS(BaseWCS):
                 "Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
 
-    def pointstosky(self, pts, coords='data', naxispath=None):
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
         raise NotImplementedError
 
     def pixtoradec(self, idxs, coords='data'):
@@ -1335,7 +1340,7 @@ class StarlinkWCS(BaseWCS):
 
         return ra_deg, dec_deg
 
-    def skytopoints(self, sky, coords='data', naxispath=None):
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
         raise NotImplementedError
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
@@ -1409,7 +1414,7 @@ class BareBonesWCS(BaseWCS):
     def spectral_coord(self, idxs, coords='data'):
         raise WCSError("This feature not supported by BareBonesWCS")
 
-    def pointstosky(self, pts, coords='data', naxispath=None):
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
         raise NotImplementedError
 
     def pixtoradec(self, idxs, coords='data'):
@@ -1417,7 +1422,7 @@ class BareBonesWCS(BaseWCS):
         px_x, px_y = px_x + 1.0, px_y + 1.0
         return (px_x, px_y)
 
-    def skytopoints(self, sky, coords='data', naxispath=None):
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
         raise NotImplementedError
 
     def radectopix(self, px_x, px_y, coords='data', naxispath=None):

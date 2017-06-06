@@ -745,7 +745,7 @@ class WCSAxes(CompoundObject):
         xmax = image.width - 1
         ymax = image.height - 1
         try:
-            radec = image.wcs.pointstocoords(
+            radec = image.wcs.datapt_to_coords(
                 [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]],
                 naxispath=image.naxispath)
         except Exception:
@@ -786,7 +786,7 @@ class WCSAxes(CompoundObject):
         from ginga.canvas.types.basic import Path, Text
 
         try:
-            pts = image.wcs.skytopoints(crds, naxispath=image.naxispath)
+            pts = image.wcs.wcspt_to_datapt(crds, naxispath=image.naxispath)
         except Exception:
             return []
 
