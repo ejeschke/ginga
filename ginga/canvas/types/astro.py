@@ -5,24 +5,30 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import absolute_import, division, print_function
+
 import math
 import numpy
 
+from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        Point, MovePoint, ScalePoint,
-                                       RotatePoint,
                                        register_canvas_types, get_canvas_type,
                                        colors_plus_none)
 from ginga.misc.ParamSet import Param
-from ginga.misc.Bunch import Bunch
 from ginga.util import wcs
+from ginga.util.wcs import raDegToString, decDegToString
 
 from .mixins import OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin
 from .layer import CompoundObject
 
+__all__ = ['Ruler', 'Compass', 'Crosshair', 'AnnulusMixin', 'Annulus',
+           'WCSAxes']
+
 
 class Ruler(TwoPointMixin, CanvasObjectBase):
-    """Draws a WCS ruler (like a right triangle) on a DrawingCanvas.
+    """
+    Draws a WCS ruler (like a right triangle) on a DrawingCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
     x2, y2: 0-based coordinates of the opposite end of the diagonal
@@ -185,7 +191,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
 
         diag_yoffset = 14
         if abs(cy1 - cy2) < 5:
-            show_angle = 0
+            show_angle = 0  # noqa
         elif cy1 < cy2:
             xplumb_yoffset = -4
         else:
@@ -194,7 +200,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
 
         if abs(cx1 - cx2) < 5:
             diag_xoffset = -(4 + htwd)
-            show_angle = 0
+            show_angle = 0  # noqa
         elif (cx1 < cx2):
             diag_xoffset = -(4 + htwd)
             yplumb_xoffset = 4
@@ -202,9 +208,11 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
             diag_xoffset = 4
             yplumb_xoffset = -(4 + ytwd)
 
-        xh = min(cx1, cx2); y = cy1 + xplumb_yoffset
+        xh = min(cx1, cx2)
+        y = cy1 + xplumb_yoffset
         xh += (max(cx1, cx2) - xh) // 2
-        yh = min(cy1, cy2); x = cx2 + yplumb_xoffset
+        yh = min(cy1, cy2)
+        x = cx2 + yplumb_xoffset
         yh += (max(cy1, cy2) - yh) // 2
 
         xd = xh + diag_xoffset
@@ -234,7 +242,8 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
 
 
 class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
-    """Draws a WCS compass on a DrawingCanvas.
+    """
+    Draws a WCS compass on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
     radius: radius of the compass arms, in data units
@@ -305,7 +314,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
 
     def get_edit_points(self, viewer):
         c_pt, n_pt, e_pt = self.get_points()
-        return [ MovePoint(*c_pt), ScalePoint(*n_pt), ScalePoint(*e_pt) ]
+        return [MovePoint(*c_pt), ScalePoint(*n_pt), ScalePoint(*e_pt)]
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
@@ -374,9 +383,11 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
             diag_xoffset = 4
             yplumb_xoffset = -(4 + 0)
 
-        xh = min(cx1, cx2); y = cy1 + xplumb_yoffset
+        xh = min(cx1, cx2)
+        y = cy1 + xplumb_yoffset  # noqa
         xh += (max(cx1, cx2) - xh) // 2
-        yh = min(cy1, cy2); x = cx2 + yplumb_xoffset
+        yh = min(cy1, cy2)
+        x = cx2 + yplumb_xoffset  # noqa
         yh += (max(cy1, cy2) - yh) // 2
 
         xd = xh + diag_xoffset
@@ -385,7 +396,8 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
 
 
 class Crosshair(OnePointMixin, CanvasObjectBase):
-    """Draws a crosshair on a DrawingCanvas.
+    """
+    Draws a crosshair on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
     Optional parameters for linesize, color, etc.
@@ -515,7 +527,8 @@ class AnnulusMixin(object):
 
 
 class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
-    """Special compound object to handle annulus shape that
+    """
+    Special compound object to handle annulus shape that
     consists of two objects with the same centroid.
 
     Examples
@@ -561,7 +574,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
     @classmethod
     def idraw(cls, canvas, cxt):
         radius = math.sqrt(abs(cxt.start_x - cxt.x)**2 +
-                            abs(cxt.start_y - cxt.y)**2 )
+                           abs(cxt.start_y - cxt.y)**2)
         return cls(cxt.start_x, cxt.start_y, radius,
                    **cxt.drawparams)
 
@@ -666,7 +679,238 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
         self.set_data_points([(xdst, ydst)])
 
 
-register_canvas_types(dict(ruler=Ruler, compass=Compass,
-                           crosshair=Crosshair, annulus=Annulus))
+class WCSAxes(CompoundObject):
+    """
+    Special compound object to draw WCS axes.
+    """
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='dash',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default dash)"),
+            Param(name='color',
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of grid and text"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of grid and text"),
+            Param(name='font', type=str, default='Sans Serif',
+                  description="Font family for text"),
+            Param(name='fontsize', type=int, default=8,
+                  min=8, max=72,
+                  description="Font size of text (default: 8)"),
+            ]
 
-#END
+    def __init__(self, color='cyan',
+                 linewidth=1, linestyle='dash', alpha=1.0,
+                 font='Sans Serif', fontsize=8,
+                 **kwdargs):
+
+        # these could become supplied optional parameters, if desired
+        self.show_label = True
+        self.num_ra = 10
+        self.num_dec = 10
+        self._pix_res = 10
+        self.txt_off = 4
+        self.ra_angle = None
+        self.dec_angle = None
+        # for keeping track of changes to image and orientation
+        self._cur_rot = None
+        self._cur_swap = None
+        self._cur_image = None
+
+        CompoundObject.__init__(self,
+                                color=color, alpha=alpha,
+                                linewidth=linewidth, linestyle=linestyle,
+                                font=font, fontsize=fontsize, **kwdargs)
+
+        self.editable = False
+        self.pickable = False
+        self.opaque = True
+        self.kind = 'wcsaxes'
+
+    def _calc_axes(self, viewer, image, rot_deg, swapxy):
+        self._cur_image = image
+        self._cur_rot = rot_deg
+        self._cur_swap = swapxy
+
+        if not isinstance(image, AstroImage) or not image.has_valid_wcs():
+            return []
+
+        # Approximate bounding box in RA/DEC space
+        xmax = image.width - 1
+        ymax = image.height - 1
+        try:
+            radec = image.wcs.datapt_to_coords(
+                [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]],
+                naxispath=image.naxispath)
+        except Exception:
+            return []
+        ra_min, dec_min = radec.ra.min().deg, radec.dec.min().deg
+        ra_max, dec_max = radec.ra.max().deg, radec.dec.max().deg
+        ra_size = ra_max - ra_min
+        dec_size = dec_max - dec_min
+
+        # Calculate positions of RA/DEC lines
+        d_ra = ra_size / (self.num_ra + 1)
+        d_dec = dec_size / (self.num_dec + 1)
+        ra_arr = numpy.arange(ra_min + d_ra, ra_max - d_ra * 0.5, d_ra)
+        dec_arr = numpy.arange(dec_min + d_dec, dec_max - d_ra * 0.5, d_dec)
+
+        # RA/DEC step size for each vector
+        min_imsize = min(image.width, image.height)
+        d_ra_step = ra_size * self._pix_res / min_imsize
+        d_dec_step = dec_size * self._pix_res / min_imsize
+
+        # Create Path objects
+        objs = []
+
+        for cur_ra in ra_arr:
+            crds = [[cur_ra, cur_dec] for cur_dec in
+                    numpy.arange(dec_min, dec_max + d_dec_step, d_dec_step)]
+            lbl = raDegToString(cur_ra)
+            objs += self._get_path(viewer, image, crds, lbl, 1)
+        for cur_dec in dec_arr:
+            crds = [[cur_ra, cur_dec] for cur_ra in
+                    numpy.arange(ra_min, ra_max + d_ra_step, d_ra_step)]
+            lbl = decDegToString(cur_dec)
+            objs += self._get_path(viewer, image, crds, lbl, 0)
+
+        return objs
+
+    def _get_path(self, viewer, image, crds, lbl, axis):
+        from ginga.canvas.types.basic import Path, Text
+
+        try:
+            pts = image.wcs.wcspt_to_datapt(crds, naxispath=image.naxispath)
+        except Exception:
+            return []
+
+        # Don't draw outside image area
+        mask = ((pts[:, 0] >= 0) & (pts[:, 0] < image.width) &
+                (pts[:, 1] >= 0) & (pts[:, 1] < image.height))
+        pts = pts[mask]
+
+        path_obj = Path(
+            points=pts, coords='data', linewidth=self.linewidth,
+            linestyle=self.linestyle, color=self.color,
+            alpha=self.alpha)
+        # this is necessary because we are not actually adding to a canvas
+        path_obj.crdmap = viewer.get_coordmap('data')
+
+        if self.show_label:
+            # Calculate label orientation
+            x1, y1 = pts[0]
+            x2, y2 = pts[-1]
+            dx = x2 - x1
+            dy = y2 - y1
+            m = dy / dx
+            c = y1 - m * x1
+
+            if abs(m) < 1:  # x axis varying
+                x = min(x1, x2) + abs(dx) * 0.45
+                y = m * x + c + self.txt_off
+            else:  # y axis varying
+                y = min(y1, y2) + abs(dy) * 0.45
+                if numpy.isfinite(m):
+                    x = (y - c) / m
+                else:
+                    x = min(x1, x2)
+                x += self.txt_off
+
+            if axis == 0:  # DEC
+                user_angle = self.dec_angle
+                default_rot = 0
+            else:  # RA
+                user_angle = self.ra_angle
+                default_rot = 90
+
+            if user_angle is None:
+                try:
+                    rot = math.atan(m) * 180 / math.pi
+                except ValueError:
+                    rot = default_rot
+                rot = self._cur_rot + rot
+            else:
+                rot = user_angle
+
+            if self._cur_swap:
+                # axes are swapped
+                rot -= 90
+
+            text_obj = Text(x, y, text=lbl, font=self.font,
+                            fontsize=self.fontsize, color=self.color,
+                            alpha=self.alpha, rot_deg=rot, coord='data')
+            text_obj.crdaxis = axis
+            # this is necessary because we are not actually adding to a canvas
+            text_obj.crdmap = viewer.get_coordmap('data')
+
+            return [path_obj, text_obj]
+
+        else:
+            return [path_obj]
+
+    def sync_state(self):
+        for obj in self.objects:
+            if obj.kind == 'text':
+                if self.show_label:
+                    obj.alpha = self.alpha
+                    obj.color = self.color
+                    obj.font = self.font
+                    obj.fontsize = self.fontsize
+                    if obj.crdaxis == 0 and self.dec_angle is not None:
+                        obj.rot_deg = self.dec_angle
+                    elif obj.crdaxis == 1 and self.ra_angle is not None:
+                        obj.rot_deg = self.ra_angle
+                else:
+                    obj.alpha = 0  # hide
+
+            else:  # path
+                obj.alpha = self.alpha
+                obj.color = self.color
+                obj.linewidth = self.linewidth
+                obj.linestyle = self.linestyle
+
+    def draw(self, viewer):
+        # see if we need to recalculate our grid
+        image = viewer.get_image()
+        update = False
+        if self._cur_image != image:
+            # new image loaded
+            update = True
+
+        cur_swap = viewer.get_transforms()[2]
+        if cur_swap != self._cur_swap:
+            # axes have been swapped
+            update = True
+
+        cur_rot = viewer.get_rotation()
+        if cur_rot != self._cur_rot and self.show_label:
+            # rotation has changed
+            # TODO: for a rotation or swap axes change, it would be
+            # sufficient to simply calculate the new rotation angles
+            # and update all the text objects in self.objects
+            update = True
+
+        if len(self.objects) == 0:
+            # initial time
+            update = True
+
+        if update:
+            # only expensive recalculation of grid if needed
+            self.ra_angle = None
+            self.dec_angle = None
+            self.objects = self._calc_axes(viewer, image, cur_rot, cur_swap)
+
+        super(WCSAxes, self).draw(viewer)
+
+
+register_canvas_types(dict(ruler=Ruler, compass=Compass,
+                           crosshair=Crosshair, annulus=Annulus,
+                           wcsaxes=WCSAxes))
+
+# END
