@@ -834,8 +834,10 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         self._adjusting = False
         self._scrolling = False
         self.pad = 20
-        self.upper_h = 100
-        self.upper_v = 100
+        self.range_h = 10000
+        self.range_v = 10000
+        self.upper_h = self.range_h
+        self.upper_v = self.range_v
 
         # reparent the viewer widget
         vp = self.viewport()
@@ -844,10 +846,10 @@ class ScrolledView(QtGui.QAbstractScrollArea):
 
         hsb = self.horizontalScrollBar()
         hsb.setTracking(True)
-        hsb.setRange(0, 100)
+        hsb.setRange(0, self.upper_h)
         hsb.setSingleStep(1)
         vsb = self.verticalScrollBar()
-        vsb.setRange(0, 100)
+        vsb.setRange(0, self.upper_v)
         vsb.setSingleStep(1)
         vsb.setTracking(True)
 
@@ -887,12 +889,13 @@ class ScrolledView(QtGui.QAbstractScrollArea):
             hsb = self.horizontalScrollBar()
             vsb = self.verticalScrollBar()
 
-            page_h, page_v = (int(round(res.thm_pct_x * 100)),
-                              int(round(res.thm_pct_y * 100)))
+            page_h, page_v = (int(round(res.thm_pct_x * self.range_h)),
+                              int(round(res.thm_pct_y * self.range_v)))
             hsb.setPageStep(page_h)
             vsb.setPageStep(page_v)
 
-            upper_h, upper_v = max(1, 100 - page_h), max(1, 100 - page_v)
+            upper_h = max(1, self.range_h - page_h)
+            upper_v = max(1, self.range_v - page_v)
             hsb.setRange(0, upper_h)
             vsb.setRange(0, upper_v)
             self.upper_h, self.upper_v = upper_h, upper_v
@@ -914,12 +917,22 @@ class ScrolledView(QtGui.QAbstractScrollArea):
 
         self._scrolling = True
         try:
-            hsb = self.horizontalScrollBar()
-            vsb = self.verticalScrollBar()
+            bd = self.viewer.get_bindings()
+            res = bd.calc_pan_pct(self.viewer, pad=self.pad)
+            if res is None:
+                return
+            pct_x, pct_y = res.pan_pct_x, res.pan_pct_y
 
-            pct_x = hsb.value() / float(self.upper_h)
-            # invert Y pct because of orientation of scrollbar
-            pct_y = 1.0 - (vsb.value() / float(self.upper_v))
+            # Only adjust pan setting for axes that have changed
+            if dx != 0:
+                hsb = self.horizontalScrollBar()
+                pos_x = float(hsb.value())
+                pct_x = pos_x / float(self.upper_h)
+            if dy != 0:
+                vsb = self.verticalScrollBar()
+                pos_y = float(vsb.value())
+                # invert Y pct because of orientation of scrollbar
+                pct_y = 1.0 - (pos_y / float(self.upper_v))
 
             bd = self.viewer.get_bindings()
             bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)

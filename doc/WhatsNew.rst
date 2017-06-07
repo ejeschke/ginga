@@ -26,7 +26,10 @@ Ver 2.6.4.dev
 - Bug fixes for Slit function
 - Info plugin can now control new image cut/zoom/center settings
 - Fixed an issue with the MultiDim plugin that could result in a hang
-    with some back ends
+  with some back ends
+- New canvas type for displaying WCS grid overlay and new WCSAxes plugin
+  that uses it
+- Bug fixes to scrolling via scrollbars and vert/horiz percentages
 
 Ver 2.6.3 (2017-03-30)
 ======================

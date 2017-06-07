@@ -183,6 +183,8 @@ class ImageViewBindings(object):
             mouse_rotate_acceleration = 0.75,
             pan_reverse = False,
             pan_multiplier = 1.0,
+            pan_min_scroll_thumb_pct = 0.0,
+            pan_max_scroll_thumb_pct = 0.8,
             zoom_scroll_reverse = False,
 
             # MOUSE/BUTTON
@@ -551,9 +553,6 @@ class ImageViewBindings(object):
         qx1, qx2 = np.min(x), np.max(x)
         qy1, qy2 = np.min(y), np.max(y)
 
-        qx1, qx2 = max(rx1, qx1), min(rx2, qx2)
-        qy1, qy2 = max(ry1, qy1), min(ry2, qy2)
-
         # this is the range of X and Y of the entire image
         # in the viewer (unscaled)
         rng_x, rng_y = abs(rx2 - rx1), abs(ry2 - ry1)
@@ -562,20 +561,27 @@ class ImageViewBindings(object):
         abs_x, abs_y = abs(qx2 - qx1), abs(qy2 - qy1)
 
         # calculate the width of the slider arms as a ratio
-        xthm_pct = max(0.0, min(abs_x / (rx2 - rx1), 1.0))
-        ythm_pct = max(0.0, min(abs_y / (ry2 - ry1), 1.0))
+        min_pct = self.settings.get('pan_min_scroll_thumb_pct', 0.0)
+        max_pct = self.settings.get('pan_max_scroll_thumb_pct', 0.8)
+        xthm_pct = max(min_pct, min(abs_x / (rx2 - rx1), max_pct))
+        ythm_pct = max(min_pct, min(abs_y / (ry2 - ry1), max_pct))
 
         # calculate the pan position as a ratio
         pct_x = min(max(0.0, abs(0.0 - rx1) / rng_x), 1.0)
         pct_y = min(max(0.0, abs(0.0 - ry1) / rng_y), 1.0)
 
-        return Bunch.Bunch(rng_x=rng_x, rng_y=rng_y, vis_x=abs_x, vis_y=abs_y,
+        bnch = Bunch.Bunch(rng_x=rng_x, rng_y=rng_y, vis_x=abs_x, vis_y=abs_y,
                            thm_pct_x=xthm_pct, thm_pct_y=ythm_pct,
                            pan_pct_x=pct_x, pan_pct_y=pct_y)
+        return bnch
 
     def pan_by_pct(self, viewer, pct_x, pct_y, pad=0):
         """Called when the scroll bars are adjusted by the user.
         """
+        # Sanity check on inputs
+        pct_x = min(1.0, max(0.0, pct_x))
+        pct_y = min(1.0, max(0.0, pct_y))
+
         limits = viewer.get_limits()
 
         tr = viewer.tform['data_to_scrollbar']

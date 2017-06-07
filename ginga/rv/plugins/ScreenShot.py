@@ -74,7 +74,6 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         zi.cut_levels(0, 255)
         zi.transform(False, True, False)
         #zi.set_scale_limits(0.001, 1000.0)
-        settings = zi.get_settings()
         zi.set_bg(0.4, 0.4, 0.4)
         zi.set_color_map('gray')
         zi.set_intensity_map('ramp')
@@ -86,14 +85,16 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         bd.enable_zoom(True)
         bd.enable_pan(True)
         bd.enable_cmap(False)
+        zi.show_mode_indicator(True)
 
-        iw = Viewers.GingaViewerWidget(zi)
+        iw = Viewers.ScrolledView(zi)
         iw.resize(self._wd, self._ht)
         vbox1.add_widget(iw, stretch=1)
 
         captions = (('Type:', 'label', 'grtype', 'combobox',
                     'Snap', 'button'),
-                    ('Clear', 'button', 'Center', 'button', 'Fit', 'button'),
+                    ('Clear', 'button', 'Center', 'button', 'Fit', 'button',
+                     'Full', 'button'),
                     )
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w = b
@@ -114,6 +115,8 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         b.center.add_callback('activated', self.center_cb)
         b.fit.set_tooltip("Fit snap image to window")
         b.fit.add_callback('activated', self.fit_cb)
+        b.full.set_tooltip("View at 100% (1:1)")
+        b.full.add_callback('activated', self.full_cb)
 
         vbox1.add_widget(w, stretch=0)
 
@@ -225,6 +228,9 @@ class ScreenShot(GingaPlugin.LocalPlugin):
 
     def fit_cb(self, w):
         self.scrnimage.zoom_fit(no_reset=True)
+
+    def full_cb(self, w):
+        self.scrnimage.scale_to(1.0, 1.0, no_reset=True)
 
     def clear_cb(self, w):
         self.scrnimage.clear()
