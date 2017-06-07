@@ -29,6 +29,10 @@ import datetime
 import os
 import sys
 
+from astropy.extern import six
+from sphinx.util.compat import Directive
+from docutils import nodes, statemachine
+
 try:
     import astropy_helpers
 except ImportError:
@@ -164,3 +168,37 @@ if eval(setup_cfg.get('edit_on_github')):
 
     edit_on_github_source_root = ""
     edit_on_github_doc_root = "docs"
+
+# -- Insert generated string from code --------------------
+# https://stackoverflow.com/questions/7250659/python-code-to-generate-part-of-sphinx-documentation-is-it-possible
+
+
+class ExecDirective(Directive):
+    """
+    Execute the specified python code and insert the output into the document
+    """
+    has_content = True
+
+    def run(self):
+        oldStdout, sys.stdout = sys.stdout, six.StringIO()
+
+        tab_width = self.options.get('tab-width',
+                                     self.state.document.settings.tab_width)
+        source = self.state_machine.input_lines.source(
+            self.lineno - self.state_machine.input_offset - 1)
+
+        try:
+            exec('\n'.join(self.content))
+            text = sys.stdout.getvalue()
+            lines = statemachine.string2lines(
+                text, tab_width, convert_whitespace=True)
+            self.state_machine.insert_input(lines, source)
+            return []
+        except Exception:
+            return [nodes.error(None, nodes.paragraph(text="Unable to execute python code at %s:%d:" % (os.path.basename(source), self.lineno)), nodes.paragraph(text=str(sys.exc_info()[1])))]  # noqa
+        finally:
+            sys.stdout = oldStdout
+
+
+def setup(app):
+    app.add_directive('exec', ExecDirective)

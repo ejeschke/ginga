@@ -1,5 +1,6 @@
 numpy
 matplotlib
 Cython
+docutils
 astropy-helpers
 astropy
