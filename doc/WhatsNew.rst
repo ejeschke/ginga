@@ -2,8 +2,8 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.6.4.dev
-=============
+Ver 2.6.4 (2017-06-07)
+======================
 - Added new ScreenShot plugin to take PNG/JPEG snaps of the viewer
   window
 - Enhancements to the Pick plugin
@@ -30,6 +30,10 @@ Ver 2.6.4.dev
 - New canvas type for displaying WCS grid overlay and new WCSAxes plugin
   that uses it
 - Bug fixes to scrolling via scrollbars and vert/horiz percentages
+- Enhancements to the LineProfile plugin
+
+  - several new shapes besides the standard point
+  - plot multiple lines
 
 Ver 2.6.3 (2017-03-30)
 ======================
