@@ -86,19 +86,31 @@ class LineProfile(GingaPlugin.LocalPlugin):
         top = Widgets.VBox()
         top.set_border_width(4)
 
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
-        vbox.set_margins(4, 4, 4, 4)
-        vbox.set_spacing(2)
+        box, sw, orientation = Widgets.get_oriented_box(container)
+        box.set_border_width(4)
+        box.set_spacing(2)
+
+        paned = Widgets.Splitter(orientation=orientation)
 
         self.plot = plots.Plot(logger=self.logger,
-                               width=400, height=300)
+                               width=400, height=400)
         ax = self.plot.add_axis()
-        ax.grid(False)
+        ax.grid(True)
         self._ax2 = self.plot.ax.twiny()
 
         w = Plot.PlotWidget(self.plot)
-        w.resize(400, 300)
-        vbox.add_widget(w, stretch=0)
+        w.resize(400, 400)
+        paned.add_widget(Widgets.hadjust(w, orientation))
+
+        captions = (('Plot All', 'checkbutton'), )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+
+        b.plot_all.set_state(False)
+        b.plot_all.add_callback('activated', lambda *args: self.redraw_mark())
+        b.plot_all.set_tooltip("Plot all marks")
+
+        box.add_widget(w, stretch=0)
 
         fr = Widgets.Frame("Axes controls")
         self.hbox_axes = Widgets.HBox()
@@ -106,7 +118,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.hbox_axes.set_spacing(1)
         fr.set_widget(self.hbox_axes)
 
-        vbox.add_widget(fr, stretch=0)
+        box.add_widget(fr, stretch=0)
 
         captions = (('marks', 'combobox',
                      'New Mark Type:', 'label', 'Mark Type', 'combobox'),
@@ -173,13 +185,18 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         fr = Widgets.Frame("Mark controls")
         fr.set_widget(vbox2)
-        vbox.add_widget(fr, stretch=1)
+        box.add_widget(fr, stretch=0)
 
-        # scroll bars will allow lots of content to be accessed
-        top.add_widget(sw, stretch=1)
+        box.add_widget(Widgets.Label(''), stretch=1)
+        paned.add_widget(sw)
+        # hack to set a reasonable starting position for the splitter
+        paned.set_sizes([400, 500])
+
+        top.add_widget(paned, stretch=5)
 
         # A button box that is always visible at the bottom
         btns = Widgets.HBox()
+        btns.set_border_width(4)
         btns.set_spacing(3)
 
         # Add a close button for the convenience of the user
@@ -200,6 +217,8 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.build_axes()
 
     def build_axes(self):
+        self.selected_axis = None
+
         if (not self.gui_up) or (self.hbox_axes is None):
             return
         self.hbox_axes.remove_all()
@@ -227,7 +246,6 @@ class LineProfile(GingaPlugin.LocalPlugin):
             # Add filler
             self.hbox_axes.add_widget(Widgets.Label(''), stretch=1)
         else:
-            self.selected_axis = None
             self.hbox_axes.add_widget(Widgets.Label('No NAXIS info'))
 
     def axes_callback_handler(self, chkbox, pos):
@@ -263,23 +281,19 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         self.redraw_mark()
 
-    def _plot(self, tag):
+    def _plot(self, tags):
         self.clear_plot()
 
         if self.selected_axis is None:
             return
-
-        obj = self.canvas.get_object_by_tag(tag)
-        if hasattr(obj, 'objects'):
-            obj = obj.objects[0]
 
         mddata = self.image.get_mddata()  # ..., z2, z1, y, x
         naxes = mddata.ndim
         i_sel = abs(self.selected_axis - naxes)
         i_x = naxes - 1
         i_y = naxes - 2
-        axes_slice = self.image.revnaxis + [0, 0]
 
+        # Also sets axis labels
         plot_x_axis_data = self.get_axis(self.selected_axis)
 
         # Image may lack the required keywords, or some trouble
@@ -287,53 +301,79 @@ class LineProfile(GingaPlugin.LocalPlugin):
         if plot_x_axis_data is None:
             return
 
-        # Cutting through surface ignores drawn shape but uses its center.
-        # A line through higher dim uses the same algorithm.
-        if i_sel in (i_x, i_y) or obj.kind == 'point':
-            xcen, ycen = obj.get_center_pt()
-            # Build N-dim slice
-            axes_slice[i_x] = int(round(xcen))
-            axes_slice[i_y] = int(round(ycen))
-            axes_slice[i_sel] = slice(None, None, None)
-            plot_y_axis_data = mddata[axes_slice]
+        is_surface_cut = i_sel in (i_x, i_y)
+        plotted_first = False
 
-        # TODO: Add more stats choices? Only calc mean for now.
-        # Do some stats of data in selected region.
-        else:
-            # Collapse to 3D cube
-            if naxes > 3:
-                for j in (i_x, i_y, i_sel):
-                    axes_slice[j] = slice(None, None, None)
-                data = mddata[axes_slice]  # z, y, x
+        for tag in tags:
+            if tag == self._new_mark:
+                continue
+
+            obj = self.canvas.get_object_by_tag(tag)
+            if hasattr(obj, 'objects'):
+                obj = obj.objects[0]
+
+            axes_slice = self.image.revnaxis + [0, 0]
+
+            # Cutting through surface ignores drawn shape but uses its center.
+            # A line through higher dim uses the same algorithm.
+            if is_surface_cut or obj.kind == 'point':
+                xcen, ycen = obj.get_center_pt()
+                # Build N-dim slice
+                axes_slice[i_x] = int(round(xcen))
+                axes_slice[i_y] = int(round(ycen))
+                axes_slice[i_sel] = slice(None, None, None)
+                try:
+                    plot_y_axis_data = mddata[axes_slice]
+                except IndexError:
+                    continue
+
+            # TODO: Add more stats choices? Only calc mean for now.
+            # Do some stats of data in selected region.
             else:
-                data = mddata
-            # Broadcast region mask to 3D
-            mask = self.image.get_shape_mask(obj)  # 2D only, True = enclosed
-            mask3d = np.zeros(data.shape, dtype=np.bool)
-            mask3d[:, :, :] = mask[np.newaxis, :, :]  # z, y, x
-            masked_data = np.ma.masked_array(data, mask=~mask3d)
-            masked_mean = masked_data.mean(axis=(1, 2))
-            plot_y_axis_data = masked_mean[~masked_mean.mask].data
+                # Collapse to 3D cube
+                if naxes > 3:
+                    for j in (i_x, i_y, i_sel):
+                        axes_slice[j] = slice(None, None, None)
+                    data = mddata[axes_slice]  # z, y, x
+                else:
+                    data = mddata
+                # Mask is 2D only (True = enclosed)
+                mask = self.image.get_shape_mask(obj)
+                try:
+                    plot_y_axis_data = [data[i][mask].mean()
+                                        for i in range(data.shape[0])]
+                except IndexError:
+                    continue
 
-        # If few enough data points, add marker
-        if len(plot_y_axis_data) <= 10:
-            marker = 'x'
-        else:
-            marker = None
+            # If few enough data points, add marker
+            if len(plot_y_axis_data) <= 10:
+                marker = 'x'
+            else:
+                marker = None
+
+            if not plotted_first:
+                lines = self.plot.plot(
+                    plot_x_axis_data, plot_y_axis_data, marker=marker,
+                    label=tag, xtitle=self.x_lbl, ytitle=self.y_lbl)
+                plotted_first = True
+            else:  # Overplot
+                lines = self.plot.ax.plot(
+                    plot_x_axis_data, plot_y_axis_data, marker=marker,
+                    label=tag)
+
+            # Highlight data point from active slice.
+            if not is_surface_cut:
+                i = self.image.revnaxis[i_sel]
+                self.plot.ax.plot(
+                    plot_x_axis_data[i], plot_y_axis_data[i], marker='o',
+                    ls='', color=lines[0].get_color())
+
+        if not plotted_first:  # Nothing was plotted
+            return
 
         # https://github.com/matplotlib/matplotlib/issues/3633/
         ax2 = self._ax2
         ax2.patch.set_visible(False)
-
-        self.clear_plot()
-        self.plot.plot(plot_x_axis_data, plot_y_axis_data,
-                       xtitle=self.x_lbl, ytitle=self.y_lbl, marker=marker)
-
-        # Highlight data point from active slice.
-        if i_sel not in (i_x, i_y):
-            i = self.image.revnaxis[i_sel]
-            self.plot.ax.plot(plot_x_axis_data[i], plot_y_axis_data[i],
-                              marker='o', ls='')
 
         # Top axis to show pixel location across X
         ax2.cla()
@@ -341,6 +381,8 @@ class LineProfile(GingaPlugin.LocalPlugin):
         ax2.set_xlim((xx1 - self._crval) / self._cdelt + self._crpix - 1,
                      (xx2 - self._crval) / self._cdelt + self._crpix - 1)
         ax2.set_xlabel('Index')
+
+        self.plot.ax.legend(loc='best')
         self.plot.draw()
 
     def get_axis(self, i):
@@ -546,11 +588,13 @@ class LineProfile(GingaPlugin.LocalPlugin):
             self.redraw_mark()
 
     def redraw_mark(self):
-        tag = self.mark_selected
-        if tag == self._new_mark:
+        plot_all = self.w.plot_all.get_state()
+        if plot_all:
+            self._plot([tag for tag in self.marks if tag != self._new_mark])
+        elif self.mark_selected != self._new_mark:
+            self._plot([self.mark_selected])
+        else:
             self.clear_plot()
-            return
-        self._plot(tag)
 
     def mark_select_cb(self, w, index):
         tag = self.marks[index]
