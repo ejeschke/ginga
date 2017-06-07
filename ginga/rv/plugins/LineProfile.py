@@ -86,19 +86,21 @@ class LineProfile(GingaPlugin.LocalPlugin):
         top = Widgets.VBox()
         top.set_border_width(4)
 
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
-        vbox.set_margins(4, 4, 4, 4)
-        vbox.set_spacing(2)
+        box, sw, orientation = Widgets.get_oriented_box(container)
+        box.set_border_width(4)
+        box.set_spacing(2)
+
+        paned = Widgets.Splitter(orientation=orientation)
 
         self.plot = plots.Plot(logger=self.logger,
-                               width=400, height=300)
+                               width=400, height=400)
         ax = self.plot.add_axis()
-        ax.grid(False)
+        ax.grid(True)
         self._ax2 = self.plot.ax.twiny()
 
         w = Plot.PlotWidget(self.plot)
-        w.resize(400, 300)
-        vbox.add_widget(w, stretch=0)
+        w.resize(400, 400)
+        paned.add_widget(Widgets.hadjust(w, orientation))
 
         fr = Widgets.Frame("Axes controls")
         self.hbox_axes = Widgets.HBox()
@@ -106,7 +108,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.hbox_axes.set_spacing(1)
         fr.set_widget(self.hbox_axes)
 
-        vbox.add_widget(fr, stretch=0)
+        box.add_widget(fr, stretch=0)
 
         captions = (('marks', 'combobox',
                      'New Mark Type:', 'label', 'Mark Type', 'combobox'),
@@ -173,13 +175,18 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         fr = Widgets.Frame("Mark controls")
         fr.set_widget(vbox2)
-        vbox.add_widget(fr, stretch=1)
+        box.add_widget(fr, stretch=0)
 
-        # scroll bars will allow lots of content to be accessed
-        top.add_widget(sw, stretch=1)
+        box.add_widget(Widgets.Label(''), stretch=1)
+        paned.add_widget(sw)
+        # hack to set a reasonable starting position for the splitter
+        paned.set_sizes([400, 500])
+
+        top.add_widget(paned, stretch=5)
 
         # A button box that is always visible at the bottom
         btns = Widgets.HBox()
+        btns.set_border_width(4)
         btns.set_spacing(3)
 
         # Add a close button for the convenience of the user
