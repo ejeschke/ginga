@@ -1233,8 +1233,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 viewer.clear()
 
         channel.remove_image(imname)
-        self.make_async_gui_callback('remove-image',
-                                     channel.name, imname, impath)
 
     def move_image_by_name(self, from_chname, imname, to_chname, impath=None):
 

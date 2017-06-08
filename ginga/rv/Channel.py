@@ -82,25 +82,28 @@ class Channel(Callback.Callbacks):
         if self == channel:
             return
 
+        # transfer image info
+        info = self.image_index[imname]
+        channel._add_info(info)
+
         try:
             # copy image to other channel's datasrc if still
             # in memory
             image = self.datasrc[imname]
 
         except KeyError:
-            # transfer image info
-            info = self.image_index[imname]
-            channel._add_info(info)
             return
 
-        #channel.datasrc[imname] = image
         channel.add_image(image, silent=silent)
 
     def remove_image(self, imname):
+        info = self.remove_history(imname)
+
         if imname in self.datasrc:
             self.datasrc.remove(imname)
+            self.fv.make_async_gui_callback('remove-image', self.name,
+                                            info.name, info.path)
 
-        info = self.remove_history(imname)
         return info
 
     def get_image_names(self):
