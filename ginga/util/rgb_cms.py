@@ -78,7 +78,7 @@ class ColorManager(object):
                 in_profile = "/tmp/_image_%d_%s.icc" % (
                     os.getpid(), prof_md5)
                 if not os.path.exists(in_profile):
-                    with open(in_profile, 'w') as icc_f:
+                    with open(in_profile, 'wb') as icc_f:
                         icc_f.write(buf_profile)
 
             # see if there is any EXIF tag about the colorspace
