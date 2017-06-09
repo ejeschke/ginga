@@ -260,7 +260,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             imgwin = RGBImage.RGBImage(rgb_img)
 
         self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
-                              thumbpath, metadata, future)
+                              thumbpath, metadata, image_info)
 
     def add_image_info_cb(self, viewer, channel, info):
 
@@ -312,8 +312,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 thmb_image.set(name=info.name, path=None)
 
         self.fv.gui_do(self._make_thumb, chname, thmb_image, info.name,
-                       info.path, thumbkey, info.image_future,
-                       save_thumb=save_thumb,
+                       info.path, thumbkey, info, save_thumb=save_thumb,
                        thumbpath=thumbpath)
 
 
@@ -681,7 +680,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         return obj
 
     def show_tt(self, obj, canvas, event, pt,
-                thumbkey, chname, name, text, tf):
+                thumbkey, chname, name, image_info, tf):
+
+        text = image_info.thumb_extras.tooltip
+
         tag = '_$tooltip'
         if tf:
             tt = self.make_tt(self.c_view, canvas, text, pt)
@@ -690,7 +692,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             canvas.delete_object_by_tag(tag)
 
     def _make_thumb(self, chname, image, name, path, thumbkey,
-                    image_future, save_thumb=False, thumbpath=None):
+                    image_info, save_thumb=False, thumbpath=None):
         # This is called by the make_thumbs() as a gui thread
         with self.thmblock:
             thumb_np = image.get_thumbnail(self.thumb_width)
@@ -714,8 +716,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         thumbname = name
         self.insert_thumbnail(imgwin, thumbkey, thumbname,
                               chname, name, path, thumbpath, metadata,
-                              image_future)
-        #self.fv.update_pending(timeout=0.001)
+                              image_info)
 
     def get_thumbpath(self, path, makedir=True):
         if path is None:
@@ -763,14 +764,23 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         return (xt, yt, xi, yi)
 
     def insert_thumbnail(self, imgwin, thumbkey, thumbname, chname, name, path,
-                         thumbpath, metadata, image_future):
+                         thumbpath, metadata, image_info):
 
         self.logger.debug("inserting thumb %s" % (thumbname))
         # make a context menu
-        menu = self._mk_context_menu(thumbkey, chname, name, path, image_future)
+        image_future = image_info.image_future
+        menu = self._mk_context_menu(thumbkey, chname, name, path,
+                                     image_future)
 
-        # make a tool tip
-        text = self.query_thumb(thumbkey, name, metadata)
+        # Get any previously stored thumb information in the image info
+        thumb_extra = image_info.setdefault('thumb_extras', Bunch.Bunch())
+
+        # If there is no previously made tooltip, then generate one
+        if 'tooltip' in thumb_extra:
+            text = thumb_extra.tooltip
+        else:
+            text = self.query_thumb(thumbkey, name, metadata)
+            thumb_extra.tooltip = text
 
         canvas = self.c_view.get_canvas()
         Image = canvas.get_draw_class('image')
@@ -784,10 +794,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         label_cutoff = self.settings.get('label_cutoff', 'right')
 
         if label_length is not None:
-            thumbname = iohelper.shorten_name(thumbname, label_length,
-                                              side=label_cutoff)
+            ## thumbname = iohelper.shorten_name(thumbname, label_length,
+            ##                                   side=label_cutoff)
             # TEMP
-            #thumbname = thumbname[:label_length]
+            thumbname = thumbname[:label_length]
 
         with self.thmblock:
             row, col = self.thumb_row_count, self.thumb_col_count
@@ -809,7 +819,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             obj.pickable = True
             obj.opaque = True
 
-            bnch = Bunch.Bunch(widget=obj, image=image,
+            bnch = Bunch.Bunch(widget=obj, image=image, info=image_info,
                                name=name, imname=name, namelbl=namelbl,
                                chname=chname, path=path, thumbpath=thumbpath,
                                image_future=image_future)
@@ -824,9 +834,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                                           path, image_future))
             # set callbacks for tool tips
             obj.add_callback('pick-enter', self.show_tt,
-                             thumbkey, chname, name, text, True)
+                             thumbkey, chname, name, image_info, True)
             obj.add_callback('pick-leave', self.show_tt,
-                             thumbkey, chname, name, text, False)
+                             thumbkey, chname, name, image_info, False)
 
             sort_order = self.settings.get('sort_order', None)
             if sort_order:
@@ -933,6 +943,14 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 self.logger.debug("No thumb found for %s; not updating "
                                   "thumbs" % (str(thumbkey)))
                 return
+
+            image_info = bnch.info
+            # Get any previously stored thumb information in the image info
+            thumb_extra = image_info.setdefault('thumb_extras', Bunch.Bunch())
+
+            # Update the tooltip, in case of new or changed metadata
+            text = self.query_thumb(thumbkey, name, metadata)
+            thumb_extra.tooltip = text
 
             self.logger.info("updating thumbnail '%s'" % (name))
             bnch.image.set_image(imgwin)
