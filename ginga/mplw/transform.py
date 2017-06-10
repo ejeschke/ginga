@@ -2,9 +2,6 @@
 # transform.py -- a custom projection for supporting matplotlib plotting
 #                          on ginga
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -229,7 +226,9 @@ class GingaAxes(Axes):
             if self.viewer is None:
                 return xy
 
-            res = np.dstack(self.viewer.get_canvas_xy(xy.T[0], xy.T[1]))[0]
+            #res = np.dstack(self.viewer.get_canvas_xy(xy.T[0], xy.T[1]))[0]
+            tr = self.viewer.tform['data_to_window']
+            res = tr.to_(xy)
             #print(("transform out:", res))
             return res
 
@@ -278,7 +277,9 @@ class GingaAxes(Axes):
             if self.viewer is None:
                 return xy
 
-            res = np.dstack(self.viewer.get_data_xy(xy.T[0], xy.T[1]))[0]
+            #res = np.dstack(self.viewer.get_data_xy(xy.T[0], xy.T[1]))[0]
+            tr = self.viewer.tform['data_to_window']
+            res = tr.from_(xy)
             #print "transform out:", res
             return res
 

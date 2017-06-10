@@ -118,7 +118,9 @@ class RenderContext(object):
 
     def draw_polygon(self, cpoints):
         qpoints = list(map(lambda p: QtCore.QPoint(p[0], p[1]),
-                            (cpoints + (cpoints[0],))))
+                           cpoints))
+        p = cpoints[0]
+        qpoints.append(QtCore.QPoint(p[0], p[1]))
         qpoly = QPolygon(qpoints)
 
         self.cr.drawPolygon(qpoly)

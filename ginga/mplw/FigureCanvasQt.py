@@ -2,9 +2,6 @@
 # GingaCanvasQt.py -- classes for the display of FITS files in
 #                             Matplotlib FigureCanvas
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 from __future__ import print_function

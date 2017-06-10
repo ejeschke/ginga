@@ -19,6 +19,9 @@ import matplotlib.lines as lines
 
 from ginga import ImageView
 from ginga import Mixins, Bindings, colors
+# This import is necessary to register the 'ginga' projection
+# used via matplotlib, even though the module is not directly
+# referenced within this code
 from . import transform
 from ginga.mplw.CanvasRenderMpl import CanvasRenderer
 from ginga.mplw.MplHelp import Timer

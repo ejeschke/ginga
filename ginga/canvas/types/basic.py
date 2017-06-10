@@ -4,8 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import math
-import numpy
+import numpy as np
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        Point as XPoint, MovePoint, ScalePoint,
@@ -15,6 +14,7 @@ from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
 from ginga import trcalc
 from ginga.misc.ParamSet import Param
 from ginga.util import wcs, bezier
+from ginga.util.six.moves import map
 
 from .mixins import (OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin,
                      OnePointTwoRadiusMixin, PolygonMixin)
@@ -85,7 +85,7 @@ class Text(OnePointMixin, CanvasObjectBase):
         cr.set_font_from_shape(self)
 
         x, y = self.get_data_points()[0]
-        cx, cy = self.canvascoords(viewer, x, y)
+        cx, cy = viewer.get_canvas_xy(x, y)
         cr.draw_text(cx, cy, self.text, rot_deg=self.rot_deg)
 
         if self.showcap:
@@ -166,6 +166,7 @@ class Polygon(PolygonMixin, CanvasObjectBase):
         cr = viewer.renderer.setup_cr(self)
 
         cpoints = self.get_cpoints(viewer)
+
         cr.draw_polygon(cpoints)
 
         if self.showcap:
@@ -233,7 +234,7 @@ class Path(PolygonMixin, CanvasObjectBase):
             if contains is None:
                 contains = res
             else:
-                contains = numpy.logical_or(contains, res)
+                contains = np.logical_or(contains, res)
             x1, y1 = x2, y2
         return contains
 
@@ -242,7 +243,7 @@ class Path(PolygonMixin, CanvasObjectBase):
                                         radius=radius)
 
     def contains(self, data_x, data_y):
-        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        x_arr, y_arr = np.array([data_x]), np.array([data_y])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
@@ -338,11 +339,11 @@ class BezierCurve(Path):
         wd, ht = image.get_size()
         if getvalues:
             res = [ data[int(y), int(x)]
-                    if 0 <= x < wd and 0 <= y < ht else numpy.NaN
+                    if 0 <= x < wd and 0 <= y < ht else np.NaN
                     for x, y in self.get_points_on_curve(image) ]
         else:
             res = [ (int(x), int(y))
-                    if 0 <= x < wd and 0 <= y < ht else numpy.NaN
+                    if 0 <= x < wd and 0 <= y < ht else np.NaN
                     for x, y in self.get_points_on_curve(image) ]
         return res
 
@@ -444,13 +445,13 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def get_points(self):
         points = (self.crdmap.offset_pt((self.x, self.y),
-                                        -self.xradius, -self.yradius),
+                                        (-self.xradius, -self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.xradius, -self.yradius),
+                                        (self.xradius, -self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.xradius, self.yradius),
+                                        (self.xradius, self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        -self.xradius, self.yradius),
+                                        (-self.xradius, self.yradius)),
                   )
         points = self.get_data_points(points=points)
         return points
@@ -461,17 +462,17 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
         x2, y2 = points[2]
 
         # rotate points back to non-rotated cartesian alignment for test
-        xd, yd = self.crdmap.to_data(self.x, self.y)
+        xd, yd = self.crdmap.to_data((self.x, self.y))
         xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
                                   xoff=xd, yoff=yd)
 
-        contains = numpy.logical_and(
-            numpy.logical_and(min(x1, x2) <= xa, xa <= max(x1, x2)),
-            numpy.logical_and(min(y1, y2) <= ya, ya <= max(y1, y2)))
+        contains = np.logical_and(
+            np.logical_and(min(x1, x2) <= xa, xa <= max(x1, x2)),
+            np.logical_and(min(y1, y2) <= ya, ya <= max(y1, y2)))
         return contains
 
     def contains(self, data_x, data_y):
-        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        x_arr, y_arr = np.array([data_x]), np.array([data_y])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
@@ -559,18 +560,18 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
 
     def get_points(self):
         points = (self.crdmap.offset_pt((self.x, self.y),
-                                        -self.radius, -self.radius),
+                                        (-self.radius, -self.radius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.radius, -self.radius),
+                                        (self.radius, -self.radius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.radius, self.radius),
+                                        (self.radius, self.radius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        -self.radius, self.radius))
+                                        (-self.radius, self.radius)))
         points = self.get_data_points(points=points)
         return points
 
     def rotate_by(self, theta_deg):
-        new_rot = math.fmod(self.rot_deg + theta_deg, 360.0)
+        new_rot = np.fmod(self.rot_deg + theta_deg, 360.0)
         self.rot_deg = new_rot
         return new_rot
 
@@ -580,17 +581,17 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
         x2, y2 = points[2]
 
         # rotate point back to cartesian alignment for test
-        xd, yd = self.crdmap.to_data(self.x, self.y)
+        xd, yd = self.crdmap.to_data((self.x, self.y))
         xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
                                   xoff=xd, yoff=yd)
 
-        contains = numpy.logical_and(
-            numpy.logical_and(min(x1, x2) <= xa, xa <= max(x1, x2)),
-            numpy.logical_and(min(y1, y2) <= ya, ya <= max(y1, y2)))
+        contains = np.logical_and(
+            np.logical_and(min(x1, x2) <= xa, xa <= max(x1, x2)),
+            np.logical_and(min(y1, y2) <= ya, ya <= max(y1, y2)))
         return contains
 
     def contains(self, data_x, data_y):
-        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        x_arr, y_arr = np.array([data_x]), np.array([data_y])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
@@ -609,7 +610,7 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
     def get_edit_points(self, viewer):
         points = self.get_data_points(points=(
             self.crdmap.offset_pt((self.x, self.y),
-                                  self.radius, self.radius),
+                                  (self.radius, self.radius)),
             ))
         move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
         return [move_pt,
@@ -703,19 +704,19 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
     def get_points(self):
         points = ((self.x, self.y),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.xradius, 0),
+                                        (self.xradius, 0)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        0, self.yradius),
+                                        (0, self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.xradius, self.yradius),
+                                        (self.xradius, self.yradius)),
                   )
         points = self.get_data_points(points=points)
         return points
 
     def contains_arr(self, x_arr, y_arr):
         # coerce args to floats
-        x_arr = x_arr.astype(numpy.float)
-        y_arr = y_arr.astype(numpy.float)
+        x_arr = x_arr.astype(np.float)
+        y_arr = y_arr.astype(np.float)
 
         points = self.get_points()
         # rotate point back to cartesian alignment for test
@@ -735,15 +736,15 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
         return contains
 
     def contains(self, data_x, data_y):
-        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        x_arr, y_arr = np.array([data_x]), np.array([data_y])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
     def get_llur(self):
         # See http://stackoverflow.com/questions/87734/how-do-you-calculate-the-axis-aligned-bounding-box-of-an-ellipse
-        theta = math.radians(self.rot_deg)
-        sin_theta = math.sin(theta)
-        cos_theta = math.cos(theta)
+        theta = np.radians(self.rot_deg)
+        sin_theta = np.sin(theta)
+        cos_theta = np.cos(theta)
 
         # need to recalculate radius in case of wcs coords
         points = self.get_points()
@@ -755,8 +756,8 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
         b = yradius * sin_theta
         c = xradius * sin_theta
         d = yradius * cos_theta
-        wd = math.sqrt(a ** 2.0 + b ** 2.0) * 2.
-        ht = math.sqrt(c ** 2.0 + d ** 2.0) * 2.
+        wd = np.sqrt(a ** 2.0 + b ** 2.0) * 2.
+        ht = np.sqrt(c ** 2.0 + d ** 2.0) * 2.
 
         x1, y1 = x - wd * 0.5, y + ht * 0.5
         x2, y2 = x1 + wd, y1 - ht
@@ -874,18 +875,18 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def get_points(self):
         points = (self.crdmap.offset_pt((self.x, self.y),
-                                        -2*self.xradius, -self.yradius),
+                                        (-2*self.xradius, -self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        2*self.xradius, -self.yradius),
+                                        (2*self.xradius, -self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        0, self.yradius),
+                                        (0, self.yradius)),
                   )
         points = self.get_data_points(points=points)
         return points
 
     def get_llur(self):
-        xd, yd = self.crdmap.to_data(self.x, self.y)
-        points = numpy.asarray(self.get_points(), dtype=numpy.double)
+        xd, yd = self.crdmap.to_data((self.x, self.y))
+        points = np.asarray(self.get_points(), dtype=np.double)
 
         mpts = trcalc.rotate_coord(points, self.rot_deg, [xd, yd])
         t_ = mpts.T
@@ -904,8 +905,8 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
         (x1, y1), (x2, y2), (x3, y3) = self.get_points()
 
         # coerce args to floats
-        x_arr = x_arr.astype(numpy.float)
-        y_arr = y_arr.astype(numpy.float)
+        x_arr = x_arr.astype(np.float)
+        y_arr = y_arr.astype(np.float)
 
         # barycentric coordinate test
         denominator = float((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
@@ -914,14 +915,14 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
         c = 1.0 - a - b
 
         #tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
-        contains = numpy.logical_and(
-            numpy.logical_and(0.0 <= a, a <= 1.0),
-            numpy.logical_and(numpy.logical_and(0.0 <= b, b <= 1.0),
-                              numpy.logical_and(0.0 <= c, c <= 1.0)))
+        contains = np.logical_and(
+            np.logical_and(0.0 <= a, a <= 1.0),
+            np.logical_and(np.logical_and(0.0 <= b, b <= 1.0),
+                              np.logical_and(0.0 <= c, c <= 1.0)))
         return contains
 
     def contains(self, data_x, data_y):
-        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        x_arr, y_arr = np.array([data_x]), np.array([data_y])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
@@ -984,8 +985,8 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        radius = math.sqrt(abs(cxt.start_x - cxt.x)**2 +
-                           abs(cxt.start_y - cxt.y)**2 )
+        radius = np.sqrt(abs(cxt.start_x - cxt.x)**2 +
+                         abs(cxt.start_y - cxt.y)**2 )
         return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
 
     def __init__(self, x, y, radius, color='yellow',
@@ -1002,20 +1003,20 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
         self.kind = 'circle'
 
     def contains_arr(self, x_arr, y_arr):
-        xd, yd = self.crdmap.to_data(self.x, self.y)
+        xd, yd = self.crdmap.to_data((self.x, self.y))
 
         # need to recalculate radius in case of wcs coords
         points = self.get_data_points(points=(
-            self.crdmap.offset_pt((self.x, self.y), self.radius, 0),
-            self.crdmap.offset_pt((self.x, self.y), 0, self.radius),
+            self.crdmap.offset_pt((self.x, self.y), (self.radius, 0)),
+            self.crdmap.offset_pt((self.x, self.y), (0, self.radius)),
             ))
         (x2, y2), (x3, y3) = points
         xradius = max(x2, xd) - min(x2, xd)
         yradius = max(y3, yd) - min(y3, yd)
 
         # need to make sure to coerce these to floats or it won't work
-        x_arr = x_arr.astype(numpy.float)
-        y_arr = y_arr.astype(numpy.float)
+        x_arr = x_arr.astype(np.float)
+        y_arr = y_arr.astype(np.float)
 
         # See http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse
         res = (((x_arr - xd) ** 2) / xradius ** 2 +
@@ -1024,14 +1025,14 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
         return contains
 
     def contains(self, data_x, data_y):
-        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        x_arr, y_arr = np.array([data_x]), np.array([data_y])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
     def get_edit_points(self, viewer):
         points = self.get_data_points(points=(
             (self.x, self.y),
-            self.crdmap.offset_pt((self.x, self.y), self.radius, 0),
+            self.crdmap.offset_pt((self.x, self.y), (self.radius, 0)),
             ))
         return [MovePoint(*points[0]),
                 ScalePoint(*points[1]),
@@ -1040,9 +1041,9 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
     def get_llur(self):
         points = self.get_data_points(points=(
             self.crdmap.offset_pt((self.x, self.y),
-                                  -self.radius, -self.radius),
+                                  (-self.radius, -self.radius)),
             self.crdmap.offset_pt((self.x, self.y),
-                                  self.radius, self.radius),
+                                  (self.radius, self.radius)),
             ))
         (x1, y1), (x2, y2) = points
         return self.swapxy(x1, y1, x2, y2)
@@ -1050,7 +1051,7 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
     def draw(self, viewer):
         points = self.get_data_points(points=(
             (self.x, self.y),
-            self.crdmap.offset_pt((self.x, self.y), 0, self.radius),
+            self.crdmap.offset_pt((self.x, self.y), (0, self.radius)),
             ))
         cpoints = self.get_cpoints(viewer, points=points)
         cx, cy, cradius = self.calc_radius(viewer,
@@ -1123,18 +1124,18 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
         OnePointOneRadiusMixin.__init__(self)
 
     def contains_arr(self, x_arr, y_arr, radius=2.0):
-        xd, yd = self.crdmap.to_data(self.x, self.y)
+        xd, yd = self.crdmap.to_data((self.x, self.y))
         contains = self.point_within_radius(x_arr, y_arr, xd, yd,
                                             radius)
         return contains
 
     def contains(self, data_x, data_y, radius=1):
-        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        x_arr, y_arr = np.array([data_x]), np.array([data_y])
         res = self.contains_arr(x_arr, y_arr, radius=radius)
         return res[0]
 
     def select_contains(self, viewer, data_x, data_y):
-        xd, yd = self.crdmap.to_data(self.x, self.y)
+        xd, yd = self.crdmap.to_data((self.x, self.y))
         return self.within_radius(viewer, data_x, data_y, xd, yd,
                                   self.cap_radius)
 
@@ -1146,7 +1147,7 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
     def draw(self, viewer):
         points = self.get_data_points(points=(
             (self.x, self.y),
-            self.crdmap.offset_pt((self.x, self.y), 0, self.radius),
+            self.crdmap.offset_pt((self.x, self.y), (0, self.radius)),
             ))
         cpoints = self.get_cpoints(viewer, points=points)
         cx, cy, cradius = self.calc_radius(viewer,
@@ -1250,9 +1251,9 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
     def contains_arr(self, x_arr, y_arr):
         x1, y1, x2, y2 = self.get_llur()
 
-        contains = numpy.logical_and(
-            numpy.logical_and(x1 <= x_arr, x_arr <= x2),
-            numpy.logical_and(y1 <= y_arr, y_arr <= y2))
+        contains = np.logical_and(
+            np.logical_and(x1 <= x_arr, x_arr <= x2),
+            np.logical_and(y1 <= y_arr, y_arr <= y2))
         return contains
 
     def contains(self, data_x, data_y):
@@ -1299,8 +1300,8 @@ class Square(Rectangle):
         len_x = cxt.start_x - cxt.x
         len_y = cxt.start_y - cxt.y
         length = max(abs(len_x), abs(len_y))
-        len_x = numpy.sign(len_x) * length
-        len_y = numpy.sign(len_y) * length
+        len_x = np.sign(len_x) * length
+        len_y = np.sign(len_y) * length
         return cls(cxt.start_x, cxt.start_y,
                    cxt.start_x-len_x, cxt.start_y-len_y,
                    **cxt.drawparams)
@@ -1376,7 +1377,7 @@ class Line(TwoPointMixin, CanvasObjectBase):
         return contains
 
     def contains(self, data_x, data_y, radius=1.0):
-        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        x_arr, y_arr = np.array([data_x]), np.array([data_y])
         res = self.contains_arr(x_arr, y_arr, radius=radius)
         return res[0]
 
@@ -1391,8 +1392,8 @@ class Line(TwoPointMixin, CanvasObjectBase):
         points = self.get_points()
         x1, y1 = points[0]
         x2, y2 = points[1]
-        cx1, cy1 = self.canvascoords(viewer, x1, y1)
-        cx2, cy2 = self.canvascoords(viewer, x2, y2)
+        cx1, cy1 = viewer.get_canvas_xy(x1, y1)
+        cx2, cy2 = viewer.get_canvas_xy(x2, y2)
 
         cr = viewer.renderer.setup_cr(self)
         cr.draw_line(cx1, cy1, cx2, cy2)
@@ -1493,8 +1494,8 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
         x3, y3 = points[2]
 
         # coerce args to floats
-        x_arr = x_arr.astype(numpy.float)
-        y_arr = y_arr.astype(numpy.float)
+        x_arr = x_arr.astype(np.float)
+        y_arr = y_arr.astype(np.float)
 
         # barycentric coordinate test
         denominator = float((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
@@ -1503,14 +1504,14 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
         c = 1.0 - a - b
 
         #tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
-        contains = numpy.logical_and(
-            numpy.logical_and(0.0 <= a, a <= 1.0),
-            numpy.logical_and(numpy.logical_and(0.0 <= b, b <= 1.0),
-                              numpy.logical_and(0.0 <= c, c <= 1.0)))
+        contains = np.logical_and(
+            np.logical_and(0.0 <= a, a <= 1.0),
+            np.logical_and(np.logical_and(0.0 <= b, b <= 1.0),
+                              np.logical_and(0.0 <= c, c <= 1.0)))
         return contains
 
     def contains(self, data_x, data_y):
-        x_arr, y_arr = numpy.array([data_x]), numpy.array([data_y])
+        x_arr, y_arr = np.array([data_x]), np.array([data_y])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
@@ -1587,7 +1588,7 @@ class XRange(Rectangle):
     def contains_arr(self, x_arr, y_arr):
         x1, y1, x2, y2 = self.get_llur()
 
-        contains = numpy.logical_and(x1 <= x_arr, x_arr <= x2)
+        contains = np.logical_and(x1 <= x_arr, x_arr <= x2)
         return contains
 
     def contains(self, data_x, data_y):
@@ -1598,7 +1599,7 @@ class XRange(Rectangle):
     def get_edit_points(self, viewer):
         win_wd, win_ht = viewer.get_window_size()
         crdmap = viewer.get_coordmap('canvas')
-        dx, dy = crdmap.to_data(0, win_ht // 2)
+        dx, dy = crdmap.to_data((0, win_ht // 2))
         pt = self.get_data_points(points=self.get_points())
         return [ MovePoint((pt[0][0] + pt[2][0]) / 2.0, dy),
                  EditPoint(pt[0][0], dy),
@@ -1691,7 +1692,7 @@ class YRange(Rectangle):
     def contains_arr(self, x_arr, y_arr):
         x1, y1, x2, y2 = self.get_llur()
 
-        contains = numpy.logical_and(y1 <= y_arr, y_arr <= y2)
+        contains = np.logical_and(y1 <= y_arr, y_arr <= y2)
         return contains
 
     def contains(self, data_x, data_y):
@@ -1702,7 +1703,7 @@ class YRange(Rectangle):
     def get_edit_points(self, viewer):
         win_wd, win_ht = viewer.get_window_size()
         crdmap = viewer.get_coordmap('canvas')
-        dx, dy = crdmap.to_data(win_wd // 2, 0)
+        dx, dy = crdmap.to_data((win_wd // 2, 0))
         pt = self.get_data_points(points=self.get_points())
         return [ MovePoint(dx, (pt[0][1] + pt[2][1]) / 2.0),
                  EditPoint(dx, pt[0][1]),

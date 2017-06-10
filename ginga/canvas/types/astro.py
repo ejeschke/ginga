@@ -8,7 +8,7 @@
 from __future__ import absolute_import, division, print_function
 
 import math
-import numpy
+import numpy as np
 
 from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
@@ -166,8 +166,8 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
         points = self.get_points()
         x1, y1 = points[0]
         x2, y2 = points[1]
-        cx1, cy1 = self.canvascoords(viewer, x1, y1)
-        cx2, cy2 = self.canvascoords(viewer, x2, y2)
+        cx1, cy1 = viewer.get_canvas_xy(x1, y1)
+        cx2, cy2 = viewer.get_canvas_xy(x2, y2)
 
         text_x, text_y, text_h = self.get_ruler_distances(viewer)
 
@@ -327,7 +327,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
             raise ValueError("No point corresponding to index %d" % (i))
 
     def select_contains(self, viewer, data_x, data_y):
-        xd, yd = self.crdmap.to_data(self.x, self.y)
+        xd, yd = self.crdmap.to_data((self.x, self.y))
         return self.within_radius(viewer, data_x, data_y, xd, yd,
                                   self.cap_radius)
 
@@ -458,7 +458,7 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
         OnePointMixin.__init__(self)
 
     def select_contains(self, viewer, data_x, data_y):
-        xd, yd = self.crdmap.to_data(self.x, self.y)
+        xd, yd = self.crdmap.to_data((self.x, self.y))
         return self.within_radius(viewer, data_x, data_y, xd, yd,
                                   self.cap_radius)
 
@@ -507,14 +507,14 @@ class AnnulusMixin(object):
     def contains(self, x, y):
         """Containment test."""
         obj1, obj2 = self.objects
-        return obj2.contains(x, y) and numpy.logical_not(obj1.contains(x, y))
+        return obj2.contains(x, y) and np.logical_not(obj1.contains(x, y))
 
     def contains_arr(self, x_arr, y_arr):
         """Containment test on arrays."""
         obj1, obj2 = self.objects
         arg1 = obj2.contains_arr(x_arr, y_arr)
-        arg2 = numpy.logical_not(obj1.contains_arr(x_arr, y_arr))
-        return numpy.logical_and(arg1, arg2)
+        arg2 = np.logical_not(obj1.contains_arr(x_arr, y_arr))
+        return np.logical_and(arg1, arg2)
 
     def get_llur(self):
         """Bounded by outer object."""
@@ -620,9 +620,9 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
     def get_edit_points(self, viewer):
         points = ((self.x, self.y),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.radius, 0),
+                                        (self.radius, 0)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.radius + self.width, 0),
+                                        (self.radius + self.width, 0)),
                   )
         points = self.get_data_points(points=points)
         return [MovePoint(*points[0]),
@@ -758,8 +758,8 @@ class WCSAxes(CompoundObject):
         # Calculate positions of RA/DEC lines
         d_ra = ra_size / (self.num_ra + 1)
         d_dec = dec_size / (self.num_dec + 1)
-        ra_arr = numpy.arange(ra_min + d_ra, ra_max - d_ra * 0.5, d_ra)
-        dec_arr = numpy.arange(dec_min + d_dec, dec_max - d_ra * 0.5, d_dec)
+        ra_arr = np.arange(ra_min + d_ra, ra_max - d_ra * 0.5, d_ra)
+        dec_arr = np.arange(dec_min + d_dec, dec_max - d_ra * 0.5, d_dec)
 
         # RA/DEC step size for each vector
         min_imsize = min(image.width, image.height)
@@ -771,12 +771,12 @@ class WCSAxes(CompoundObject):
 
         for cur_ra in ra_arr:
             crds = [[cur_ra, cur_dec] for cur_dec in
-                    numpy.arange(dec_min, dec_max + d_dec_step, d_dec_step)]
+                    np.arange(dec_min, dec_max + d_dec_step, d_dec_step)]
             lbl = raDegToString(cur_ra)
             objs += self._get_path(viewer, image, crds, lbl, 1)
         for cur_dec in dec_arr:
             crds = [[cur_ra, cur_dec] for cur_ra in
-                    numpy.arange(ra_min, ra_max + d_ra_step, d_ra_step)]
+                    np.arange(ra_min, ra_max + d_ra_step, d_ra_step)]
             lbl = decDegToString(cur_dec)
             objs += self._get_path(viewer, image, crds, lbl, 0)
 
@@ -816,7 +816,7 @@ class WCSAxes(CompoundObject):
                 y = m * x + c + self.txt_off
             else:  # y axis varying
                 y = min(y1, y2) + abs(dy) * 0.45
-                if numpy.isfinite(m):
+                if np.isfinite(m):
                     x = (y - c) / m
                 else:
                     x = min(x1, x2)

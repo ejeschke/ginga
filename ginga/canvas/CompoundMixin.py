@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import sys, traceback
-import numpy
+import numpy as np
 
 from ginga.util.six.moves import map, zip, reduce, filter
 from ginga.canvas import coordmap
@@ -29,7 +29,7 @@ class CompoundMixin(object):
         if not hasattr(self, 'coord'):
             self.coord = None
         self.opaque = False
-        self._contains_reduce = numpy.logical_or
+        self._contains_reduce = np.logical_or
 
     def get_llur(self):
         """
@@ -40,7 +40,7 @@ class CompoundMixin(object):
         -------
         x1, y1, x2, y2: a 4-tuple of the lower-left and upper-right coords
         """
-        points = numpy.array(list(map(lambda obj: obj.get_llur(),
+        points = np.array(list(map(lambda obj: obj.get_llur(),
                                       self.objects)))
         t_ = points.T
         x1, y1 = min(t_[0].min(), t_[0].min()), min(t_[1].min(), t_[3].min())
@@ -53,14 +53,14 @@ class CompoundMixin(object):
 
     def contains_arr(self, x_arr, y_arr):
         if len(self.objects) == 0:
-            return numpy.full(x_arr.shape, False, dtype=numpy.bool)
+            return np.full(x_arr.shape, False, dtype=np.bool)
 
         return reduce(self._contains_reduce,
                       map(lambda obj: obj.contains_arr(x_arr, y_arr),
                           self.objects))
 
     def contains(self, x, y):
-        x_arr, y_arr = numpy.array([x]), numpy.array([y])
+        x_arr, y_arr = np.array([x]), np.array([y])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
@@ -235,10 +235,10 @@ class CompoundMixin(object):
     def get_reference_pt(self):
         # Reference point for a compound object is the average of all
         # it's contituents reference points
-        points = numpy.asarray([ obj.get_reference_pt()
+        points = np.asarray([ obj.get_reference_pt()
                                  for obj in self.objects ])
         t_ = points.T
-        x, y = numpy.average(t_[0]), numpy.average(t_[1])
+        x, y = np.average(t_[0]), np.average(t_[1])
         return (x, y)
 
     def move_to(self, xdst, ydst):

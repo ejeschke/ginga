@@ -374,9 +374,9 @@ class Catalogs(GingaPlugin.LocalPlugin):
             else:
                 # if the object drawn is a circle, calculate the box
                 # enclosed by the circle
-                ctr_x, ctr_y = obj.crdmap.to_data(obj.x, obj.y)
+                ctr_x, ctr_y = obj.crdmap.to_data((obj.x, obj.y))
                 ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y)
-                dst_x, dst_y = obj.crdmap.to_data(obj.x + obj.radius, obj.y)
+                dst_x, dst_y = obj.crdmap.to_data((obj.x + obj.radius, obj.y))
                 ra_dst, dec_dst = image.pixtoradec(dst_x, dst_y)
                 radius_deg = wcs.deltaStarsRaDecDeg(ra_ctr, dec_ctr,
                                                     ra_dst, dec_dst)

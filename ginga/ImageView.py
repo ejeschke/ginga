@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 """This module handles image viewers."""
-import numpy
+import numpy as np
 import math
 import logging
 import threading
@@ -20,7 +20,6 @@ from ginga import cmap, imap, colors, trcalc, version
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util import rgb_cms
-from ginga.util.six.moves import map
 
 __all__ = ['ImageViewBase']
 
@@ -1366,7 +1365,7 @@ class ImageViewBase(Callback.Callbacks):
         imgwin_wd, imgwin_ht = self.get_window_size()
 
         # create RGBA array for output
-        outarr = numpy.zeros((imgwin_ht, imgwin_wd, depth), dtype='uint8')
+        outarr = np.zeros((imgwin_ht, imgwin_wd, depth), dtype='uint8')
 
         # fill image array with the background color
         r, g, b = self.img_bg
@@ -1431,8 +1430,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # convert to data coordinates
         crdmap = self.get_coordmap(coord)
-        limits = list(map(lambda pt: crdmap.data_to(pt[0], pt[1]),
-                          limits))
+        limits = crdmap.data_to(limits)
 
         return limits
 
@@ -1450,8 +1448,7 @@ class ImageViewBase(Callback.Callbacks):
 
             # convert to data coordinates
             crdmap = self.get_coordmap(coord)
-            limits = list(map(lambda pt: crdmap.to_data(pt[0], pt[1]),
-                              limits))
+            limits = crdmap.to_data(limits)
 
         self._limits = limits
         self.make_callback('limits-set', limits)
@@ -1492,12 +1489,12 @@ class ImageViewBase(Callback.Callbacks):
 
             # create backing image
             depth = len(order)
-            rgba = numpy.zeros((ht, wd, depth), dtype=numpy.uint8)
+            rgba = np.zeros((ht, wd, depth), dtype=np.uint8)
             self._rgbarr = rgba
 
         if (whence <= 2.0) or (self._rgbarr2 is None):
             # Apply any RGB image overlays
-            self._rgbarr2 = numpy.copy(self._rgbarr)
+            self._rgbarr2 = np.copy(self._rgbarr)
             self.overlay_images(self.private_canvas, self._rgbarr2,
                                 whence=whence)
 
@@ -1514,7 +1511,7 @@ class ImageViewBase(Callback.Callbacks):
             # if not applied earlier
             rotimg = self.apply_transforms(rotimg,
                                            self.t_['rot_deg'])
-            rotimg = numpy.ascontiguousarray(rotimg)
+            rotimg = np.ascontiguousarray(rotimg)
 
             self._rgbobj = RGBMap.RGBPlanes(rotimg, order)
 
@@ -1564,7 +1561,7 @@ class ImageViewBase(Callback.Callbacks):
         b2 = max(yul, yur, ylr, yll)
 
         # constrain to integer indexes
-        x1, y1, x2, y2 = int(a1), int(b1), int(round(a2)), int(round(b2))
+        x1, y1, x2, y2 = int(a1), int(b1), int(np.round(a2)), int(np.round(b2))
         x1 = max(0, x1)
         y1 = max(0, y1)
 
@@ -1644,7 +1641,7 @@ class ImageViewBase(Callback.Callbacks):
         if rot_deg != 0:
             # This is the slowest part of the rendering--install the OpenCv or pyopencl
             # packages to speed it up
-            data = numpy.ascontiguousarray(data)
+            data = np.ascontiguousarray(data)
             data = trcalc.rotate_clip(data, -rot_deg, out=data,
                                       logger=self.logger)
 
@@ -1654,7 +1651,7 @@ class ImageViewBase(Callback.Callbacks):
         if self._invert_y:
             # Flip Y for natural natural Y-axis inversion between FITS coords
             # and screen coords
-            data = numpy.flipud(data)
+            data = np.flipud(data)
 
         self.logger.debug("rotate time %.3f sec, total reshape %.3f sec" % (
             split2_time - split_time, split2_time - start_time))
@@ -1770,7 +1767,8 @@ class ImageViewBase(Callback.Callbacks):
         if center is not None:
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
-        return self.tform['data_to_window'].from_(win_x, win_y)
+        arr_pts = np.asarray((win_x, win_y)).T
+        return self.tform['data_to_window'].from_(arr_pts).T
 
     def offset_to_data(self, off_x, off_y, center=None):
         """Get the closest coordinates in the data array to those
@@ -1790,7 +1788,8 @@ class ImageViewBase(Callback.Callbacks):
         if center is not None:
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
-        return self.tform['data_to_cartesian'].from_(off_x, off_y)
+        arr_pts = np.asarray((off_x, off_y)).T
+        return self.tform['data_to_cartesian'].from_(arr_pts).T
 
     def get_canvas_xy(self, data_x, data_y, center=None):
         """Reverse of :meth:`get_data_xy`.
@@ -1799,7 +1798,8 @@ class ImageViewBase(Callback.Callbacks):
         if center is not None:
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
-        return self.tform['data_to_window'].to_(data_x, data_y)
+        arr_pts = np.asarray((data_x, data_y)).T
+        return self.tform['data_to_window'].to_(arr_pts).T
 
     def data_to_offset(self, data_x, data_y, center=None):
         """Reverse of :meth:`offset_to_data`.
@@ -1808,7 +1808,8 @@ class ImageViewBase(Callback.Callbacks):
         if center is not None:
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
-        return self.tform['data_to_cartesian'].to_(data_x, data_y)
+        arr_pts = np.asarray((data_x, data_y)).T
+        return self.tform['data_to_cartesian'].to_(arr_pts).T
 
     def offset_to_window(self, off_x, off_y):
         """Convert data offset to window coordinates.
@@ -1824,11 +1825,13 @@ class ImageViewBase(Callback.Callbacks):
             Offset in window coordinates in the form of ``(x, y)``.
 
         """
-        return self.tform['cartesian_to_window'].to_(off_x, off_y)
+        arr_pts = np.asarray((off_x, off_y)).T
+        return self.tform['cartesian_to_window'].to_(arr_pts).T
 
     def window_to_offset(self, win_x, win_y):
         """Reverse of :meth:`offset_to_window`."""
-        return self.tform['cartesian_to_window'].from_(win_x, win_y)
+        arr_pts = np.asarray((win_x, win_y)).T
+        return self.tform['cartesian_to_window'].from_(arr_pts).T
 
     def canvascoords(self, data_x, data_y, center=None):
         """Same as :meth:`get_canvas_xy`.
@@ -1838,7 +1841,8 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         # data->canvas space coordinate conversion
-        return self.tform['data_to_window'].to_(data_x, data_y)
+        arr_pts = np.asarray((data_x, data_y)).T
+        return self.tform['data_to_window'].to_(arr_pts).T
 
     def get_data_pct(self, xpct, ypct):
         """Calculate new data size for the given axis ratios.
@@ -1872,12 +1876,9 @@ class ImageViewBase(Callback.Callbacks):
             from lower-left to lower-right.
 
         """
-        points = []
         wd, ht = self.get_window_size()
-        for x, y in ((0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)):
-            c, d = self.get_data_xy(x, y)
-            points.append((c, d))
-        return points
+        arr_pts = np.asarray([(0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)])
+        return self.tform['data_to_window'].from_(arr_pts)
 
     def get_data(self, data_x, data_y):
         """Get the data value at the given position.
@@ -1921,8 +1922,8 @@ class ImageViewBase(Callback.Callbacks):
         """
         dx = abs(x2 - x1)
         dy = abs(y2 - y1)
-        dist = math.sqrt(dx*dx + dy*dy)
-        dist = round(dist)
+        dist = np.sqrt(dx*dx + dy*dy)
+        dist = np.round(dist)
         return dist
 
     def _sanity_check_scale(self, scale_x, scale_y):

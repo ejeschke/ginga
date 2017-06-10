@@ -4,13 +4,11 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import math
-import numpy
+import numpy as np
 from collections import namedtuple
 
 from ginga.misc import Callback, Bunch
 from ginga import trcalc, colors
-from ginga.util.six.moves import map
 
 from . import coordmap
 
@@ -116,7 +114,7 @@ class CanvasObjectBase(Callback.Callbacks):
         return False
 
     def contains_arr(self, x_arr, y_arr):
-        contains = numpy.asarray([False] * len(x_arr))
+        contains = np.asarray([False] * len(x_arr))
         return contains
 
     def contains(self, x, y):
@@ -170,25 +168,25 @@ class CanvasObjectBase(Callback.Callbacks):
             return cpt
 
         cpoints = tuple([ _map_cpt(points[i], cpoints[i])
-                    for i in range(len(points)) ])
+                          for i in range(len(points)) ])
         self.draw_caps(cr, 'ball', cpoints)
 
     def calc_radius(self, viewer, p1, p2):
         x1, y1 = p1
         x2, y2 = p2
         # TODO: the accuracy of this calculation of radius might be improved?
-        radius = math.sqrt(abs(y2 - y1)**2 + abs(x2 - x1)**2)
+        radius = np.sqrt(abs(y2 - y1)**2 + abs(x2 - x1)**2)
         return (x1, y1, radius)
 
     def calc_vertexes(self, start_cx, start_cy, end_cx, end_cy,
                      arrow_length=10, arrow_degrees=0.35):
 
-        angle = math.atan2(end_cy - start_cy, end_cx - start_cx) + math.pi
+        angle = np.arctan2(end_cy - start_cy, end_cx - start_cx) + np.pi
 
-        cx1 = end_cx + arrow_length * math.cos(angle - arrow_degrees);
-        cy1 = end_cy + arrow_length * math.sin(angle - arrow_degrees);
-        cx2 = end_cx + arrow_length * math.cos(angle + arrow_degrees);
-        cy2 = end_cy + arrow_length * math.sin(angle + arrow_degrees);
+        cx1 = end_cx + arrow_length * np.cos(angle - arrow_degrees);
+        cy1 = end_cy + arrow_length * np.sin(angle - arrow_degrees);
+        cx2 = end_cx + arrow_length * np.cos(angle + arrow_degrees);
+        cy2 = end_cy + arrow_length * np.sin(angle + arrow_degrees);
 
         return (cx1, cy1, cx2, cy2)
 
@@ -215,25 +213,25 @@ class CanvasObjectBase(Callback.Callbacks):
 
         Points are returned in *data* coordinates.
         """
-        points = list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
-                          self.points))
+        points = self.crdmap.to_data(self.points)
         return points
 
     def get_data_points(self, points=None):
         if points is None:
             points = self.points
-        points = list(map(lambda pt: self.crdmap.to_data(pt[0], pt[1]),
-                          points))
+        points = self.crdmap.to_data(points)
         return points
 
     def set_data_points(self, points):
-        points = list(map(lambda pt: self.crdmap.data_to(pt[0], pt[1]),
-                          points))
-        self.points = points
+        """
+        Input points must be in data coordinates, will be converted
+        to the coordinate space of the object.
+        """
+        self.points = np.asarray(self.crdmap.data_to(points))
 
     def rotate(self, theta_deg, xoff=0, yoff=0):
-        points = numpy.asarray(self.get_data_points(), dtype=numpy.double)
-        points = trcalc.rotate_coord(points, theta_deg, [xoff, yoff])
+        points = np.asarray(self.get_data_points(), dtype=np.double)
+        points = trcalc.rotate_coord(points, theta_deg, (xoff, yoff))
         self.set_data_points(points)
 
     def rotate_by(self, theta_deg):
@@ -242,15 +240,12 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def rerotate_by(self, theta_deg, detail):
         ref_x, ref_y = detail.center_pos
-        points = numpy.asarray(detail.points, dtype=numpy.double)
-        points = trcalc.rotate_coord(points, theta_deg, [ref_x, ref_y])
+        points = np.asarray(detail.points, dtype=np.double)
+        points = trcalc.rotate_coord(points, theta_deg, (ref_x, ref_y))
         self.set_data_points(points)
 
     def move_delta(self, xoff, yoff):
-        ## self.points = list(map(
-        ##     lambda pt: self.crdmap.offset_pt(pt, xoff, yoff),
-        ##     self.points))
-        points = numpy.asarray(self.get_data_points(), dtype=numpy.double)
+        points = np.asarray(self.get_data_points(), dtype=np.double)
         points.T[0] += xoff
         points.T[1] += yoff
         self.set_data_points(points)
@@ -263,26 +258,27 @@ class CanvasObjectBase(Callback.Callbacks):
         return(len(self.points))
 
     def set_point_by_index(self, i, pt):
-        points = self.get_data_points()
-        points[i] = pt
-        self.set_data_points(points)
+        #self.points[i] = self.crdmap.data_to(pt)
+        # Can we eventually use something like the above?
+        points = np.asarray(self.points, dtype=np.float)
+        points[i] = self.crdmap.data_to(pt)
+        self.points = points
 
     def get_point_by_index(self, i):
-        points = self.get_data_points()
-        return points[i]
+        return self.crdmap.to_data(self.points[i])
 
     def scale_by(self, scale_x, scale_y):
         ctr_x, ctr_y = self.get_center_pt()
-        pts = numpy.asarray(self.get_data_points(), dtype=numpy.double)
-        pts[:, 0] = (pts[:, 0] - ctr_x) * scale_x + ctr_x
-        pts[:, 1] = (pts[:, 1] - ctr_y) * scale_y + ctr_y
+        pts = np.asarray(self.get_data_points(), dtype=np.double)
+        pts = np.add(np.multiply(np.subtract(pts, (ctr_x, ctr_y)),
+                                 (scale_x, scale_y)), (ctr_x, ctr_y))
         self.set_data_points(pts)
 
     def rescale_by(self, scale_x, scale_y, detail):
         ctr_x, ctr_y = detail.center_pos
-        pts = numpy.asarray(detail.points, dtype=numpy.double)
-        pts[:, 0] = (pts[:, 0] - ctr_x) * scale_x + ctr_x
-        pts[:, 1] = (pts[:, 1] - ctr_y) * scale_y + ctr_y
+        pts = np.asarray(detail.points, dtype=np.double)
+        pts = np.add(np.multiply(np.subtract(pts, (ctr_x, ctr_y)),
+                                 (scale_x, scale_y)), (ctr_x, ctr_y))
         self.set_data_points(pts)
 
     def setup_edit(self, detail):
@@ -294,10 +290,10 @@ class CanvasObjectBase(Callback.Callbacks):
         ctr_x, ctr_y = detail.center_pos
         start_x, start_y = detail.start_pos
         # calc angle of starting point wrt origin
-        deg1 = math.degrees(math.atan2(start_y - ctr_y,
-                                       start_x - ctr_x))
+        deg1 = np.degrees(np.arctan2(start_y - ctr_y,
+                                     start_x - ctr_x))
         # calc angle of current point wrt origin
-        deg2 = math.degrees(math.atan2(y - ctr_y, x - ctr_x))
+        deg2 = np.degrees(np.arctan2(y - ctr_y, x - ctr_x))
         delta_deg = deg2 - deg1
         return delta_deg
 
@@ -307,10 +303,10 @@ class CanvasObjectBase(Callback.Callbacks):
         start_x, start_y = detail.start_pos
         dx, dy = start_x - ctr_x, start_y - ctr_y
         # calc distance of starting point wrt origin
-        dist1 = math.sqrt(dx**2.0 + dy**2.0)
+        dist1 = np.sqrt(dx**2.0 + dy**2.0)
         dx, dy = x - ctr_x, y - ctr_y
         # calc distance of current point wrt origin
-        dist2 = math.sqrt(dx**2.0 + dy**2.0)
+        dist2 = np.sqrt(dx**2.0 + dy**2.0)
         scale_f = dist2 / dist1
         return scale_f
 
@@ -341,36 +337,31 @@ class CanvasObjectBase(Callback.Callbacks):
             xc, yc = self.get_center_pt()
             # get data coordinates of a point radius away from center
             # under current coordmap
-            x1, y1 = frommap.to_data(xc, yc)
-            x2, y2 = frommap.to_data(xc + self.radius, yc)
-            x3, y3 = frommap.to_data(xc, yc + self.radius)
+            x1, y1 = frommap.to_data((xc, yc))
+            x2, y2 = frommap.to_data((xc + self.radius, yc))
+            x3, y3 = frommap.to_data((xc, yc + self.radius))
             # now convert these data coords to native coords in tomap
-            nx1, ny1 = tomap.data_to(x1, y1)
-            nx2, ny2 = tomap.data_to(x2, y2)
-            nx3, ny3 = tomap.data_to(x3, y3)
+            nx1, ny1 = tomap.data_to((x1, y1))
+            nx2, ny2 = tomap.data_to((x2, y2))
+            nx3, ny3 = tomap.data_to((x3, y3))
             # recalculate radius using new coords
-            self.radius = math.sqrt((nx2 - nx1)**2 + (ny3 - ny1)**2)
+            self.radius = np.sqrt((nx2 - nx1)**2 + (ny3 - ny1)**2)
 
         elif hasattr(self, 'xradius'):
             # similar to above case, but there are 2 radii
             xc, yc = self.get_center_pt()
-            x1, y1 = frommap.to_data(xc, yc)
-            x2, y2 = frommap.to_data(xc + self.xradius, yc)
-            x3, y3 = frommap.to_data(xc, yc + self.yradius)
-            nx1, ny1 = tomap.data_to(x1, y1)
-            nx2, ny2 = tomap.data_to(x2, y2)
-            nx3, ny3 = tomap.data_to(x3, y3)
-            self.xradius = math.fabs(nx2 - nx1)
-            self.yradius = math.fabs(ny3 - ny1)
+            x1, y1 = frommap.to_data((xc, yc))
+            x2, y2 = frommap.to_data((xc + self.xradius, yc))
+            x3, y3 = frommap.to_data((xc, yc + self.yradius))
+            nx1, ny1 = tomap.data_to((x1, y1))
+            nx2, ny2 = tomap.data_to((x2, y2))
+            nx3, ny3 = tomap.data_to((x3, y3))
+            self.xradius = np.fabs((nx2 - nx1))
+            self.yradius = np.fabs((ny3 - ny1))
 
         # convert points
-        for i in range(self.get_num_points()):
-            # convert each point by going to data coords under old map
-            # and then to native coords in the new map
-            x, y = self.get_point_by_index(i)
-            data_x, data_y = frommap.to_data(x, y)
-            new_x, new_y = tomap.data_to(data_x, data_y)
-            self.set_point_by_index(i, (new_x, new_y))
+        data_pts = self.get_data_points()
+        self.points = tomap.data_to(data_pts)
 
         # set our map to the new map
         self.crdmap = tomap
@@ -383,9 +374,9 @@ class CanvasObjectBase(Callback.Callbacks):
         Return True if point (a, b) is within the circle defined by
         a center at point (x, y) and within canvas_radius.
         """
-        dx = numpy.fabs(x - a_arr) * scale_x
-        dy = numpy.fabs(y - b_arr) * scale_y
-        new_radius = numpy.sqrt(dx**2 + dy**2)
+        dx = np.fabs(x - a_arr) * scale_x
+        dy = np.fabs(y - b_arr) * scale_y
+        new_radius = np.sqrt(dx**2 + dy**2)
         res = (new_radius <= canvas_radius)
         return res
 
@@ -425,16 +416,16 @@ class CanvasObjectBase(Callback.Callbacks):
         r = canvas_radius
         xmin, xmax = min(x1, x2) - r, max(x1, x2) + r
         ymin, ymax = min(y1, y2) - r, max(y1, y2) + r
-        div = numpy.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+        div = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-        d = numpy.fabs((x2 - x1)*(y1 - b_arr) - (x1 - a_arr)*(y2 - y1)) / div
+        d = np.fabs((x2 - x1)*(y1 - b_arr) - (x1 - a_arr)*(y2 - y1)) / div
 
         ## contains = (xmin <= a_arr <= xmax) and (ymin <= b_arr <= ymax) and \
         ##            (d <= canvas_radius)
-        contains = numpy.logical_and(
-            numpy.logical_and(xmin <= a_arr, a_arr <= xmax),
-            numpy.logical_and(d <= canvas_radius,
-                              numpy.logical_and(ymin <= b_arr, b_arr <= ymax)))
+        contains = np.logical_and(
+            np.logical_and(xmin <= a_arr, a_arr <= xmax),
+            np.logical_and(d <= canvas_radius,
+                              np.logical_and(ymin <= b_arr, b_arr <= ymax)))
         return contains
 
     def within_line(self, viewer, a_arr, b_arr, x1, y1, x2, y2,
@@ -454,11 +445,11 @@ class CanvasObjectBase(Callback.Callbacks):
     def get_center_pt(self):
         """Return the geometric average of points as data_points.
         """
-        P = numpy.asarray(self.get_data_points(), dtype=numpy.double)
+        P = np.asarray(self.get_data_points(), dtype=np.double)
         x = P[:, 0]
         y = P[:, 1]
-        ctr_x = numpy.sum(x) / float(len(x))
-        ctr_y = numpy.sum(y) / float(len(y))
+        ctr_x = np.sum(x) / float(len(x))
+        ctr_y = np.sum(y) / float(len(y))
         return ctr_x, ctr_y
 
     def get_reference_pt(self):
@@ -491,19 +482,17 @@ class CanvasObjectBase(Callback.Callbacks):
         return (move_pt, scale_pt, rotate_pt)
 
     def get_cpoints(self, viewer, points=None, no_rotate=False):
+        # If points are passed, they are assumed to be in data space
         if points is None:
             points = self.get_points()
-
-        points = numpy.asarray(points)
 
         if (not no_rotate) and hasattr(self, 'rot_deg') and self.rot_deg != 0.0:
             # rotate vertices according to rotation
             ctr_x, ctr_y = self.get_center_pt()
             points = trcalc.rotate_coord(points, self.rot_deg, (ctr_x, ctr_y))
 
-        cpoints = tuple(map(lambda p: self.canvascoords(viewer, p[0], p[1]),
-                            points))
-        return cpoints
+        crdmap = viewer.get_coordmap('canvas')
+        return crdmap.data_to(points)
 
     def get_bbox(self):
         """

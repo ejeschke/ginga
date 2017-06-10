@@ -5,7 +5,8 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
-import numpy
+import numpy as np
+from copy import deepcopy
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, Point,
                                        MovePoint, ScalePoint, RotatePoint)
@@ -18,10 +19,10 @@ from ginga.util.six.moves import map
 class OnePointMixin(object):
 
     def __get_points(self):
-        return numpy.asarray([(self.x, self.y)])
+        return np.asarray([(self.x, self.y)])
 
     def __set_points(self, pts):
-        pts = numpy.asarray(pts)
+        pts = np.asarray(pts)
         self.x, self.y = pts[0, 0], pts[0, 1]
 
     points = property(__get_points, __set_points)
@@ -32,7 +33,7 @@ class OnePointMixin(object):
 
     def setup_edit(self, detail):
         detail.center_pos = self.get_center_pt()
-        detail.points = self.get_data_points()
+        detail.points = deepcopy(self.get_data_points())
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
@@ -45,7 +46,7 @@ class OnePointMixin(object):
         return [MovePoint(*self.get_center_pt())]
 
     def get_llur(self):
-        x, y = self.crdmap.to_data(self.x, self.y)
+        x, y = self.crdmap.to_data((self.x, self.y))
         return (x-0.5, y-0.5, x+0.5, y+0.5)
 
     def rotate_by(self, theta_deg):
@@ -58,10 +59,10 @@ class OnePointMixin(object):
 class TwoPointMixin(object):
 
     def __get_points(self):
-        return numpy.asarray([(self.x1, self.y1), (self.x2, self.y2)])
+        return np.asarray([(self.x1, self.y1), (self.x2, self.y2)])
 
     def __set_points(self, pts):
-        pts = numpy.asarray(pts)
+        pts = np.asarray(pts)
         self.x1, self.y1 = pts[0, 0], pts[0, 1]
         self.x2, self.y2 = pts[1, 0], pts[1, 1]
 
@@ -103,7 +104,7 @@ class TwoPointMixin(object):
 
     def setup_edit(self, detail):
         detail.center_pos = self.get_center_pt()
-        detail.points = self.get_data_points()
+        detail.points = deepcopy(self.get_data_points())
 
     def get_llur(self):
         points = self.get_data_points()
@@ -133,7 +134,7 @@ class OnePointOneRadiusMixin(OnePointMixin):
     def get_edit_points(self, viewer):
         move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
         points = self.get_data_points(points=(
-            self.crdmap.offset_pt((self.x, self.y), self.radius, 0),
+            self.crdmap.offset_pt((self.x, self.y), (self.radius, 0)),
             ))
         return [move_pt,
                 ScalePoint(*points[0]),
@@ -143,21 +144,21 @@ class OnePointOneRadiusMixin(OnePointMixin):
     def setup_edit(self, detail):
         detail.center_pos = self.get_center_pt()
         detail.radius = self.radius
-        detail.points = numpy.array(self.get_data_points())
+        detail.points = deepcopy(self.get_data_points())
 
     def get_llur(self):
         points = (self.crdmap.offset_pt((self.x, self.y),
-                                        -self.radius, -self.radius),
+                                        (-self.radius, -self.radius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.radius, -self.radius),
+                                        (self.radius, -self.radius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.radius, self.radius),
+                                        (self.radius, self.radius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        -self.radius, self.radius))
-        mpts = numpy.asarray(self.get_data_points(points=points))
+                                        (-self.radius, self.radius)))
+        mpts = np.asarray(self.get_data_points(points=points))
 
         if hasattr(self, 'rot_deg'):
-            xd, yd = self.crdmap.to_data(self.x, self.y)
+            xd, yd = self.crdmap.to_data((self.x, self.y))
             mpts = trcalc.rotate_coord(mpts, self.rot_deg, [xd, yd])
 
         t_ = mpts.T
@@ -205,11 +206,11 @@ class OnePointTwoRadiusMixin(OnePointMixin):
         move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
 
         points = (self.crdmap.offset_pt((self.x, self.y),
-                                        self.xradius, 0),
+                                        (self.xradius, 0)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        0, self.yradius),
+                                        (0, self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.xradius, self.yradius),
+                                        (self.xradius, self.yradius)),
                   )
         points = self.get_data_points(points=points)
         return [move_pt,    # location
@@ -224,7 +225,7 @@ class OnePointTwoRadiusMixin(OnePointMixin):
         detail.center_pos = self.get_center_pt()
         detail.xradius = self.xradius
         detail.yradius = self.yradius
-        detail.points = self.get_data_points()
+        detail.points = deepcopy(self.get_data_points())
 
     def rotate_by(self, theta_deg):
         new_rot = math.fmod(self.rot_deg + theta_deg, 360.0)
@@ -237,17 +238,17 @@ class OnePointTwoRadiusMixin(OnePointMixin):
 
     def get_llur(self):
         points = (self.crdmap.offset_pt((self.x, self.y),
-                                        -self.xradius, -self.yradius),
+                                        (-self.xradius, -self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.xradius, -self.yradius),
+                                        (self.xradius, -self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        self.xradius, self.yradius),
+                                        (self.xradius, self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        -self.xradius, self.yradius))
-        mpts = numpy.asarray(self.get_data_points(points=points))
+                                        (-self.xradius, self.yradius)))
+        mpts = np.asarray(self.get_data_points(points=points))
 
         if hasattr(self, 'rot_deg'):
-            xd, yd = self.crdmap.to_data(self.x, self.y)
+            xd, yd = self.crdmap.to_data((self.x, self.y))
             mpts = trcalc.rotate_coord(mpts, self.rot_deg, [xd, yd])
 
         t_ = mpts.T
@@ -263,22 +264,24 @@ class PolygonMixin(object):
         pass
 
     def insert_pt(self, idx, pt):
-        self.points.insert(idx, pt)
+        points = np.asarray(self.points)
+        self.points = np.insert(points, idx, pt, axis=0)
 
     def delete_pt(self, idx):
-        self.points.pop(idx)
+        points = np.asarray(self.points)
+        self.points = np.delete(points, idx, axis=0)
 
     def get_center_pt(self):
         # default is geometric average of points
-        P = numpy.asarray(self.get_data_points())
+        P = np.asarray(self.get_data_points())
         x = P[:, 0]
         y = P[:, 1]
-        ctr_x = numpy.sum(x) / float(len(x))
-        ctr_y = numpy.sum(y) / float(len(y))
+        ctr_x = np.sum(x) / float(len(x))
+        ctr_y = np.sum(y) / float(len(y))
         return ctr_x, ctr_y
 
     def get_llur(self):
-        points = numpy.asarray(self.get_data_points())
+        points = np.asarray(self.get_data_points())
         t_ = points.T
         x1, y1 = t_[0].min(), t_[1].min()
         x2, y2 = t_[0].max(), t_[1].max()
@@ -298,7 +301,7 @@ class PolygonMixin(object):
             ya = ya.reshape(-1, 1)
             promoted = True
 
-        result = numpy.empty((ya.size, xa.size), dtype=numpy.bool)
+        result = np.empty((ya.size, xa.size), dtype=np.bool)
         result.fill(False)
 
         points = self.get_data_points()
@@ -306,10 +309,10 @@ class PolygonMixin(object):
         xj, yj = points[-1]
         for point in points:
             xi, yi = point
-            tf = numpy.logical_and(
-                numpy.logical_or(numpy.logical_and(yi < ya, yj >= ya),
-                                 numpy.logical_and(yj < ya, yi >= ya)),
-                numpy.logical_or(xi <= xa, xj <= xa))
+            tf = np.logical_and(
+                np.logical_or(np.logical_and(yi < ya, yj >= ya),
+                                 np.logical_and(yj < ya, yi >= ya)),
+                np.logical_or(xi <= xa, xj <= xa))
             # NOTE: get a divide by zero here for some elements whose tf=False
             # Need to figure out a way to conditionally do those w/tf=True
             # Till then we use the warnings module to suppress the warning.
@@ -318,7 +321,7 @@ class PolygonMixin(object):
             # NOTE postscript: warnings context manager causes this computation
             # to fail silently sometimes where it previously worked with a
             # warning--commenting out the warning manager for now
-            cross = ((xi + (ya - yi).astype(numpy.float) /
+            cross = ((xi + (ya - yi).astype(np.float) /
                           (yj - yi) * (xj - xi)) < xa)
 
             result[tf == True] ^= cross[tf == True]
@@ -326,12 +329,12 @@ class PolygonMixin(object):
 
         if promoted:
             # de-promote result
-            result = result[numpy.eye(len(y_arr), len(x_arr), dtype=numpy.bool)]
+            result = result[np.eye(len(y_arr), len(x_arr), dtype=np.bool)]
 
         return result
 
     def contains(self, xp, yp):
-        x_arr, y_arr = numpy.array([xp]), numpy.array([yp])
+        x_arr, y_arr = np.array([xp]), np.array([yp])
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
@@ -358,7 +361,7 @@ class PolygonMixin(object):
 
     def setup_edit(self, detail):
         detail.center_pos = self.get_center_pt()
-        detail.points = self.get_data_points()
+        detail.points = deepcopy(self.get_data_points())
 
 
 #END
