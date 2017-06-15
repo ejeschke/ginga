@@ -1598,7 +1598,7 @@ class XRange(Rectangle):
 
     def get_edit_points(self, viewer):
         win_wd, win_ht = viewer.get_window_size()
-        crdmap = viewer.get_coordmap('canvas')
+        crdmap = viewer.get_coordmap('window')
         dx, dy = crdmap.to_data((0, win_ht // 2))
         pt = self.get_data_points(points=self.get_points())
         return [ MovePoint((pt[0][0] + pt[2][0]) / 2.0, dy),
@@ -1702,7 +1702,7 @@ class YRange(Rectangle):
 
     def get_edit_points(self, viewer):
         win_wd, win_ht = viewer.get_window_size()
-        crdmap = viewer.get_coordmap('canvas')
+        crdmap = viewer.get_coordmap('window')
         dx, dy = crdmap.to_data((win_wd // 2, 0))
         pt = self.get_data_points(points=self.get_points())
         return [ MovePoint(dx, (pt[0][1] + pt[2][1]) / 2.0),

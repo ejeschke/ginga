@@ -56,7 +56,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.drawtypes = list(canvas.get_drawtypes())
         self.drawcolors = draw_colors
         self.linestyles = ['solid', 'dash']
-        self.coordtypes = ['data', 'wcs', 'cartesian', 'canvas']
+        self.coordtypes = ['data', 'wcs', 'cartesian', 'window']
         # contains all parameters to be passed to the constructor
         self.draw_args = []
         self.draw_kwdargs = {}

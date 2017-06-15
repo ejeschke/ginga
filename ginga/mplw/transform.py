@@ -226,7 +226,7 @@ class GingaAxes(Axes):
             if self.viewer is None:
                 return xy
 
-            tr = self.viewer.tform['data_to_window']
+            tr = self.viewer.tform['data_to_native']
             res = tr.to_(xy)
             return res
 
@@ -275,7 +275,7 @@ class GingaAxes(Axes):
             if self.viewer is None:
                 return xy
 
-            tr = self.viewer.tform['data_to_window']
+            tr = self.viewer.tform['data_to_native']
             res = tr.from_(xy)
             return res
 

@@ -296,9 +296,9 @@ class ImageViewBase(Callback.Callbacks):
 
         # set up basic transforms
         self.tform = {
-            'canvas_to_window': transform.CanvasWindowTransform(self),
-            'cartesian_to_window': (transform.RotationTransform(self) +
-                                    transform.CartesianWindowTransform(self)),
+            'window_to_native': transform.WindowNativeTransform(self),
+            'cartesian_to_native': (transform.RotationTransform(self) +
+                                    transform.CartesianNativeTransform(self)),
             'data_to_cartesian': (transform.DataCartesianTransform(self) +
                                   transform.ScaleTransform(self)),
             'data_to_scrollbar': (transform.DataCartesianTransform(self) +
@@ -307,21 +307,26 @@ class ImageViewBase(Callback.Callbacks):
                                transform.ScaleTransform(self) +
                                transform.RotationTransform(self) +
                                transform.CartesianWindowTransform(self)),
+            'data_to_native': (transform.DataCartesianTransform(self) +
+                               transform.ScaleTransform(self) +
+                               transform.RotationTransform(self) +
+                               transform.CartesianNativeTransform(self)),
             'wcs_to_data': transform.WCSDataTransform(self),
-            'wcs_to_window': (transform.WCSDataTransform(self) +
+            'wcs_to_native': (transform.WCSDataTransform(self) +
                               transform.DataCartesianTransform(self) +
                               transform.ScaleTransform(self) +
                               transform.RotationTransform(self) +
-                              transform.CartesianWindowTransform(self)),
+                              transform.CartesianNativeTransform(self)),
             }
 
         self.coordmap = {
-            'canvas': coordmap.CanvasMapper(self),
+            'native': coordmap.NativeMapper(self),
+            'window': coordmap.WindowMapper(self),
             'cartesian': coordmap.CartesianMapper(self),
             'data': coordmap.DataMapper(self),
             None: coordmap.DataMapper(self),
             'offset': coordmap.OffsetMapper(self, None),
-            'wcs': coordmap.WCSMapper(self, coordmap.DataMapper(self)),
+            'wcs': coordmap.WCSMapper(self),
             }
 
         # cursors
@@ -1768,7 +1773,7 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((win_x, win_y)).T
-        return self.tform['data_to_window'].from_(arr_pts).T
+        return self.tform['data_to_native'].from_(arr_pts).T
 
     def offset_to_data(self, off_x, off_y, center=None):
         """Get the closest coordinates in the data array to those
@@ -1799,7 +1804,7 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((data_x, data_y)).T
-        return self.tform['data_to_window'].to_(arr_pts).T
+        return self.tform['data_to_native'].to_(arr_pts).T
 
     def data_to_offset(self, data_x, data_y, center=None):
         """Reverse of :meth:`offset_to_data`.
@@ -1826,12 +1831,12 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         arr_pts = np.asarray((off_x, off_y)).T
-        return self.tform['cartesian_to_window'].to_(arr_pts).T
+        return self.tform['cartesian_to_native'].to_(arr_pts).T
 
     def window_to_offset(self, win_x, win_y):
         """Reverse of :meth:`offset_to_window`."""
         arr_pts = np.asarray((win_x, win_y)).T
-        return self.tform['cartesian_to_window'].from_(arr_pts).T
+        return self.tform['cartesian_to_native'].from_(arr_pts).T
 
     def canvascoords(self, data_x, data_y, center=None):
         """Same as :meth:`get_canvas_xy`.
@@ -1842,7 +1847,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # data->canvas space coordinate conversion
         arr_pts = np.asarray((data_x, data_y)).T
-        return self.tform['data_to_window'].to_(arr_pts).T
+        return self.tform['data_to_native'].to_(arr_pts).T
 
     def get_data_pct(self, xpct, ypct):
         """Calculate new data size for the given axis ratios.
@@ -1878,7 +1883,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         wd, ht = self.get_window_size()
         arr_pts = np.asarray([(0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)])
-        return self.tform['data_to_window'].from_(arr_pts)
+        return self.tform['data_to_native'].from_(arr_pts)
 
     def get_data(self, data_x, data_y):
         """Get the data value at the given position.
@@ -3497,7 +3502,7 @@ class ImageViewBase(Callback.Callbacks):
                 Text = canvas.get_draw_class('text')
                 canvas.add(Text(x, y, text=text,
                                 font=font, fontsize=font_size,
-                                color=self.img_fg, coord='canvas'),
+                                color=self.img_fg, coord='window'),
                            tag=tag, redraw=False)
 
         if redraw:

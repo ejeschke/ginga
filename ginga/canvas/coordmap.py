@@ -10,8 +10,8 @@ from ginga import trcalc
 from ginga.util import wcs
 from ginga.util.six.moves import map
 
-__all__ = ['CanvasMapper', 'CartesianMapper', 'DataMapper', 'OffsetMapper',
-           'WCSMapper']
+__all__ = ['NativeMapper', 'WindowMapper', 'CartesianMapper',
+           'DataMapper', 'OffsetMapper', 'WCSMapper']
 
 class CoordMapError(Exception):
     pass
@@ -46,12 +46,42 @@ class BaseMapper(object):
         """
         raise CoordMapError("subclass should override this method")
 
-class CanvasMapper(BaseMapper):
+
+class NativeMapper(BaseMapper):
     """A coordinate mapper that maps to the viewer's canvas in
-    canvas coordinates.
+    the viewer's canvas coordinates.
     """
     def __init__(self, viewer):
-        super(CanvasMapper, self).__init__()
+        super(NativeMapper, self).__init__()
+        self.viewer = viewer
+
+    def to_data(self, cvs_pts, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+
+        cvs_arr = np.asarray(cvs_pts)
+        return viewer.tform['data_to_native'].from_(cvs_arr)
+
+    def data_to(self, data_pts, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+
+        data_arr = np.asarray(data_pts)
+        return viewer.tform['data_to_native'].to_(data_arr)
+
+    def offset_pt(self, pts, offset):
+        return np.add(pts, offset)
+
+    def rotate_pt(self, pts, theta, offset):
+        # TODO?  Not sure if it is needed with this mapper type
+        return x, y
+
+
+class WindowMapper(BaseMapper):
+    """A coordinate mapper that maps to the viewer in 'window' coordinates.
+    """
+    def __init__(self, viewer):
+        super(WindowMapper, self).__init__()
         self.viewer = viewer
 
     def to_data(self, cvs_pts, viewer=None):
@@ -77,8 +107,8 @@ class CanvasMapper(BaseMapper):
 
 
 class CartesianMapper(BaseMapper):
-    """A coordinate mapper that maps to the viewer's canvas
-    in Cartesian coordinates that do not scale (unlike DataMapper).
+    """A coordinate mapper that maps to the viewer in Cartesian
+    coordinates that do not scale (unlike DataMapper).
     """
     def __init__(self, viewer):
         super(CartesianMapper, self).__init__()
@@ -107,8 +137,7 @@ class CartesianMapper(BaseMapper):
 
 
 class DataMapper(BaseMapper):
-    """A coordinate mapper that maps to the viewer's canvas
-    in data coordinates.
+    """A coordinate mapper that maps to the viewer in data coordinates.
     """
     def __init__(self, viewer):
         super(DataMapper, self).__init__()
@@ -131,9 +160,8 @@ class DataMapper(BaseMapper):
 
 
 class OffsetMapper(BaseMapper):
-    """A coordinate mapper that maps to the viewer's canvas
-    in data coordinates that are offsets relative to some other
-    reference object.
+    """A coordinate mapper that maps to the viewer in data coordinates
+    that are offsets relative to some other reference object.
     """
     def __init__(self, viewer, refobj):
         super(OffsetMapper, self).__init__()
@@ -167,14 +195,12 @@ class OffsetMapper(BaseMapper):
 
 
 class WCSMapper(BaseMapper):
-    """A coordinate mapper that maps to the viewer's canvas
-    in WCS coordinates.
+    """A coordinate mapper that maps to the viewer in WCS coordinates.
     """
 
-    def __init__(self, viewer, data_mapper):
+    def __init__(self, viewer):
         super(WCSMapper, self).__init__()
         self.viewer = viewer
-        self.data_mapper = data_mapper
 
     def to_data(self, wcs_pts, viewer=None):
         if viewer is None:

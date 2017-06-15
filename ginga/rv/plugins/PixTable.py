@@ -384,7 +384,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         ex_txt = Text(0, 0, text='5', fontsize=self.fontsize, font=self.font)
         font_wd, font_ht = self.fitsimage.renderer.get_dimensions(ex_txt)
         max_wd = self.maxdigits + 2
-        crdmap = self.pixview.get_coordmap('canvas')
+        crdmap = self.pixview.get_coordmap('window')
 
         rows = []
         objs = []
@@ -428,7 +428,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         canvas.add(CompoundObject(*objs), redraw=False)
 
         # set limits for scrolling
-        self.pixview.set_limits(((0, 0), (max_x, y)), coord='canvas')
+        self.pixview.set_limits(((0, 0), (max_x, y)), coord='window')
 
     def set_cutout_size_cb(self, w, val):
         index = w.get_index()

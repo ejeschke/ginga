@@ -491,7 +491,7 @@ class CanvasObjectBase(Callback.Callbacks):
             ctr_x, ctr_y = self.get_center_pt()
             points = trcalc.rotate_coord(points, self.rot_deg, (ctr_x, ctr_y))
 
-        crdmap = viewer.get_coordmap('canvas')
+        crdmap = viewer.get_coordmap('native')
         return crdmap.data_to(points)
 
     def get_bbox(self):

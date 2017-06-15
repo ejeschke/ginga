@@ -9,7 +9,8 @@ import numpy as np
 from ginga import trcalc
 
 __all__ = ['TransformError', 'BaseTransform', 'ComposedTransform',
-           'CanvasWindowTransform', 'CartesianWindowTransform',
+           'WindowNativeTransform', 'CartesianWindowTransform',
+           'CartesianNativeTransform',
            'RotationTransform', 'ScaleTransform',
            'DataCartesianTransform', 'OffsetDataTransform',
            'WCSDataTransform',
@@ -50,14 +51,14 @@ class ComposedTransform(BaseTransform):
         return self.tform1.from_(self.tform2.from_(pts), **kwargs)
 
 
-class CanvasWindowTransform(BaseTransform):
+class WindowNativeTransform(BaseTransform):
     """
-    A transform from a possibly Y-flipped pixel space to a typical
-    window pixel coordinate space with the lower left at (0, 0).
+    A transform from a typical window standard coordinate space with the
+    upper left at (0, 0) to the viewer back end native pixel space.
     """
 
     def __init__(self, viewer):
-        super(CanvasWindowTransform, self).__init__()
+        super(WindowNativeTransform, self).__init__()
         self.viewer = viewer
 
     def to_(self, cvs_pts):
@@ -77,7 +78,7 @@ class CanvasWindowTransform(BaseTransform):
 
 class CartesianWindowTransform(BaseTransform):
     """
-    A transform from cartesian coordinates to the window pixel coordinates
+    A transform from cartesian coordinates to standard window coordinates
     of a viewer.
     """
 
@@ -88,7 +89,47 @@ class CartesianWindowTransform(BaseTransform):
 
     def to_(self, off_pts):
         # add center pixel to convert from X/Y coordinate space to
-        # canvas graphics space
+        # window graphics space
+        ctr_x, ctr_y = self.viewer.get_center()
+        off_x, off_y = np.asarray(off_pts, dtype=np.float).T
+
+        win_x = off_x + ctr_x
+        win_y = ctr_y - off_y
+
+        # round to pixel units, if asked
+        if self.as_int:
+            win_x = np.rint(win_x).astype(np.int)
+            win_y = np.rint(win_y).astype(np.int)
+
+        return np.asarray((win_x, win_y)).T
+
+    def from_(self, win_pts):
+        """Reverse of :meth:`to_`."""
+        # make relative to center pixel to convert from window
+        # graphics space to standard X/Y coordinate space
+        ctr_x, ctr_y = self.viewer.get_center()
+        win_x, win_y = np.asarray(win_pts).T
+
+        off_x = win_x - ctr_x
+        off_y = ctr_y - win_y
+
+        return np.asarray((off_x, off_y)).T
+
+
+class CartesianNativeTransform(BaseTransform):
+    """
+    A transform from cartesian coordinates to the native pixel coordinates
+    of a viewer.
+    """
+
+    def __init__(self, viewer, as_int=True):
+        super(CartesianNativeTransform, self).__init__()
+        self.viewer = viewer
+        self.as_int = as_int
+
+    def to_(self, off_pts):
+        # add center pixel to convert from X/Y coordinate space to
+        # back end graphics space
         ctr_x, ctr_y = self.viewer.get_center()
         off_x, off_y = np.asarray(off_pts, dtype=np.float).T
 
@@ -107,7 +148,7 @@ class CartesianWindowTransform(BaseTransform):
 
     def from_(self, win_pts):
         """Reverse of :meth:`to_`."""
-        # make relative to center pixel to convert from canvas
+        # make relative to center pixel to convert from back end
         # graphics space to standard X/Y coordinate space
         ctr_x, ctr_y = self.viewer.get_center()
         win_x, win_y = np.asarray(win_pts).T
@@ -272,6 +313,14 @@ class WCSDataTransform(BaseTransform):
 
     def to_(self, wcs_pts):
         wcs_pts = np.asarray(wcs_pts)
+
+        # hack to work around passing singleton pt vs. array of pts
+        unpack = False
+        if len(wcs_pts.shape) < 2:
+            # passed a single coordinate
+            wcs_pts = np.asarray([wcs_pts])
+            unpack = True
+
         image = self.viewer.get_image()
         if image is None:
             raise TransformError("No image, no WCS")
@@ -279,10 +328,23 @@ class WCSDataTransform(BaseTransform):
         if wcs is None:
             raise TransformError("No valid WCS found in image")
 
-        return wcs.wcspt_to_datapt(wcs_pts)
+        naxispath = image.naxispath
+
+        res = wcs.wcspt_to_datapt(wcs_pts, naxispath=naxispath)
+        if unpack:
+            return res[0]
+        return res
 
     def from_(self, data_pts):
         data_pts = np.asarray(data_pts)
+
+        # hack to work around passing singleton pt vs. array of pts
+        unpack = False
+        if len(data_pts.shape) < 2:
+            # passed a single coordinate
+            data_pts = np.asarray([data_pts])
+            unpack = True
+
         image = self.viewer.get_image()
         if image is None:
             raise TransformError("No image, no WCS")
@@ -290,7 +352,12 @@ class WCSDataTransform(BaseTransform):
         if wcs is None:
             raise TransformError("No valid WCS found in image")
 
-        return wcs.datapt_to_wcspt(data_pts)
+        naxispath = image.naxispath
+
+        res = wcs.datapt_to_wcspt(data_pts, naxispath=naxispath)
+        if unpack:
+            return res[0]
+        return res
 
 
 #END
