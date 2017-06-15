@@ -208,6 +208,7 @@ class GingaAxes(Axes):
         input_dims = 2
         output_dims = 2
         is_separable = False
+        has_inverse = True
         viewer = None
         #pass_through = True
 
@@ -222,14 +223,11 @@ class GingaAxes(Axes):
 
             The input and output are Nx2 numpy arrays.
             """
-            #print(("transform in:", xy))
             if self.viewer is None:
                 return xy
 
-            #res = np.dstack(self.viewer.get_canvas_xy(xy.T[0], xy.T[1]))[0]
             tr = self.viewer.tform['data_to_window']
             res = tr.to_(xy)
-            #print(("transform out:", res))
             return res
 
         # This is where things get interesting.  With this projection,
@@ -270,17 +268,15 @@ class GingaAxes(Axes):
         input_dims = 2
         output_dims = 2
         is_separable = False
+        has_inverse = True
         viewer = None
 
         def transform_non_affine(self, xy):
-            #print "transform in:", xy
             if self.viewer is None:
                 return xy
 
-            #res = np.dstack(self.viewer.get_data_xy(xy.T[0], xy.T[1]))[0]
             tr = self.viewer.tform['data_to_window']
             res = tr.from_(xy)
-            #print "transform out:", res
             return res
 
         transform_non_affine.__doc__ = Transform.transform_non_affine.__doc__

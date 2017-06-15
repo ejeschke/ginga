@@ -59,8 +59,6 @@ class CanvasMapper(BaseMapper):
             viewer = self.viewer
 
         cvs_arr = np.asarray(cvs_pts)
-        cvs_arr = viewer.tform['canvas_to_window'].from_(cvs_arr)
-        # flip Y axis for certain backends
         return viewer.tform['data_to_window'].from_(cvs_arr)
 
     def data_to(self, data_pts, viewer=None):
@@ -68,9 +66,7 @@ class CanvasMapper(BaseMapper):
             viewer = self.viewer
 
         data_arr = np.asarray(data_pts)
-        cvs_arr = viewer.tform['data_to_window'].to_(data_arr)
-        # flip Y axis for certain backends
-        return viewer.tform['canvas_to_window'].to_(cvs_arr)
+        return viewer.tform['data_to_window'].to_(data_arr)
 
     def offset_pt(self, pts, offset):
         return np.add(pts, offset)

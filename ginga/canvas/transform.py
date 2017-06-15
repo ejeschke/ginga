@@ -275,16 +275,22 @@ class WCSDataTransform(BaseTransform):
         image = self.viewer.get_image()
         if image is None:
             raise TransformError("No image, no WCS")
+        wcs = image.wcs
+        if wcs is None:
+            raise TransformError("No valid WCS found in image")
 
-        return image.wcspt_to_datapt(wcs_pts)
+        return wcs.wcspt_to_datapt(wcs_pts)
 
     def from_(self, data_pts):
         data_pts = np.asarray(data_pts)
         image = self.viewer.get_image()
         if image is None:
             raise TransformError("No image, no WCS")
+        wcs = image.wcs
+        if wcs is None:
+            raise TransformError("No valid WCS found in image")
 
-        return image.datapt_to_wcspt(data_pts)
+        return wcs.datapt_to_wcspt(data_pts)
 
 
 #END
