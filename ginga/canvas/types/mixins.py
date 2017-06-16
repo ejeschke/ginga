@@ -281,11 +281,7 @@ class PolygonMixin(object):
         return ctr_x, ctr_y
 
     def get_llur(self):
-        points = np.asarray(self.get_data_points())
-        t_ = points.T
-        x1, y1 = t_[0].min(), t_[1].min()
-        x2, y2 = t_[0].max(), t_[1].max()
-        return (x1, y1, x2, y2)
+        return self.get_llur_pts(self.get_data_points())
 
     def contains_arr(self, x_arr, y_arr):
         # NOTE: we use a version of the ray casting algorithm

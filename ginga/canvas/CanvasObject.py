@@ -361,10 +361,11 @@ class CanvasObjectBase(Callback.Callbacks):
 
         # convert points
         data_pts = self.get_data_points()
-        self.points = tomap.data_to(data_pts)
 
         # set our map to the new map
         self.crdmap = tomap
+
+        self.set_data_points(data_pts)
 
     # TODO: move these into utility module?
     #####
@@ -494,16 +495,27 @@ class CanvasObjectBase(Callback.Callbacks):
         crdmap = viewer.get_coordmap('native')
         return crdmap.data_to(points)
 
-    def get_bbox(self):
+    def get_llur_pts(self, points):
+        points = np.asarray(points)
+        t_ = points.T
+        x1, y1 = t_[0].min(), t_[1].min()
+        x2, y2 = t_[0].max(), t_[1].max()
+        return (x1, y1, x2, y2)
+
+    def get_bbox(self, points=None):
         """
-        Get lower-left and upper-right coordinates of the bounding box
-        of this compound object.
+        Get bounding box of this object.
 
         Returns
         -------
-        x1, y1, x2, y2: a 4-tuple of the lower-left and upper-right coords
+        (p1, p2, p3, p4): a 4-tuple of the points in data coordinates,
+        beginning with the lower-left and proceeding counter-clockwise.
         """
-        x1, y1, x2, y2 = self.get_llur()
+        if points is None:
+            x1, y1, x2, y2 = self.get_llur()
+        else:
+            x1, y1, x2, y2 = self.get_llur_pts(points)
+
         return ((x1, y1), (x1, y2), (x2, y2), (x2, y1))
 
 
