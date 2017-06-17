@@ -9,8 +9,6 @@ from __future__ import print_function
 import sys, os
 import logging
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga.util import wcsmod
-wcsmod.use('astropy')
 
 from ginga import AstroImage, colors
 from ginga.qtw.ImageViewQt import CanvasView
