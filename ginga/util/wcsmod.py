@@ -302,37 +302,6 @@ class BaseWCS(object):
         """
         pass
 
-    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
-        """
-        Convert multiple data points to WCS.
-
-        Parameters
-        ----------
-        datapt : array-like
-            Pixel coordinates in the format of
-            ``[[x0, y0, ...], [x1, y1, ...], ..., [xn, yn, ...]]``.
-
-        coords : 'data' or None, optional, default to 'data'
-            Expresses whether the data coordinate is indexed from zero.
-
-        naxispath : list-like or None, optional, defaults to None
-            A sequence defining the pixel indexes > 2D, if any.
-
-        Returns
-        -------
-        wcspt : array-like
-            WCS coordinates in the format of
-            ``[[ra0, dec0], [ra1, dec1], ..., [ran, decn]]``.
-
-        """
-        # We provide a list comprehension version for WCS packages that
-        # don't support array operations.
-        if naxispath:
-            raise NotImplementedError
-
-        return np.asarray([self.pixtoradec(pt[0], pt[1], coords=coords)
-                           for pt in datapt])
-
     def pixtoradec(self, idxs, coords='data'):
         """
         Map pixel indexes into a sky coordinate in the WCS system
@@ -365,37 +334,6 @@ class BaseWCS(object):
         (e.g. (ra_deg, dec_deg) as floats).
         """
         pass
-
-    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
-        """
-        Convert multiple WCS to data points.
-
-        Parameters
-        ----------
-        wcspt : array-like
-            WCS coordinates in the format of
-            ``[[ra0, dec0, ...], [ra1, dec1, ...], ..., [ran, decn, ...]]``.
-
-        coords : 'data' or None, optional, default to 'data'
-            Expresses whether the data coordinate is indexed from zero.
-
-        naxispath : list-like or None, optional, defaults to None
-            A sequence defining the pixel indexes > 2D, if any.
-
-        Returns
-        -------
-        datapt : array-like
-            Pixel coordinates in the format of
-            ``[[x0, y0], [x1, y1], ..., [xn, yn]]``.
-
-        """
-        # We provide a list comprehension version for WCS packages that
-        # don't support array operations.
-        if naxispath:
-            raise NotImplementedError
-
-        return np.asarray([self.radectopix(pt[0], pt[1], coords=coords)
-                           for pt in wcspt])
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
         """
@@ -468,6 +406,100 @@ class BaseWCS(object):
         (e.g. (ra_deg, dec_deg) as floats).
         """
         pass
+
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
+        """
+        Convert multiple data points to WCS.
+
+        Parameters
+        ----------
+        datapt : array-like
+            Pixel coordinates in the format of
+            ``[[x0, y0, ...], [x1, y1, ...], ..., [xn, yn, ...]]``.
+
+        coords : 'data' or None, optional, default to 'data'
+            Expresses whether the data coordinate is indexed from zero.
+
+        naxispath : list-like or None, optional, defaults to None
+            A sequence defining the pixel indexes > 2D, if any.
+
+        Returns
+        -------
+        wcspt : array-like
+            WCS coordinates in the format of
+            ``[[ra0, dec0], [ra1, dec1], ..., [ran, decn]]``.
+
+        """
+        # We provide a list comprehension version for WCS packages that
+        # don't support array operations.
+        if naxispath:
+            raise NotImplementedError
+
+        return np.asarray([self.pixtoradec(pt[0], pt[1], coords=coords)
+                           for pt in datapt])
+
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
+        """
+        Convert multiple WCS to data points.
+
+        Parameters
+        ----------
+        wcspt : array-like
+            WCS coordinates in the format of
+            ``[[ra0, dec0, ...], [ra1, dec1, ...], ..., [ran, decn, ...]]``.
+
+        coords : 'data' or None, optional, default to 'data'
+            Expresses whether the data coordinate is indexed from zero.
+
+        naxispath : list-like or None, optional, defaults to None
+            A sequence defining the pixel indexes > 2D, if any.
+
+        Returns
+        -------
+        datapt : array-like
+            Pixel coordinates in the format of
+            ``[[x0, y0], [x1, y1], ..., [xn, yn]]``.
+
+        """
+        # We provide a list comprehension version for WCS packages that
+        # don't support array operations.
+        if naxispath:
+            raise NotImplementedError
+
+        return np.asarray([self.radectopix(pt[0], pt[1], coords=coords)
+                           for pt in wcspt])
+
+    def datapt_to_system(self, datapt, system=None, coords='data',
+                         naxispath=None):
+        """
+        Map points to given coordinate system.
+
+        Parameters
+        ----------
+        datapt : array-like
+            Pixel coordinates in the format of
+            ``[[x0, y0, ...], [x1, y1, ...], ..., [xn, yn, ...]]``.
+
+        system : str or None, optional, default to 'icrs'
+            Coordinate system name.
+
+        coords : 'data' or None, optional, default to 'data'
+            Expresses whether the data coordinate is indexed from zero
+
+        naxispath : list-like or None, optional, defaults to None
+            A sequence defining the pixel indexes > 2D, if any
+
+        Returns
+        -------
+        wcspt : array-like
+            WCS coordinates in the format of
+            ``[[ra0, dec0], [ra1, dec1], ..., [ran, decn]]``.
+
+        """
+        if self.coordsys == 'raw':
+            raise WCSError("No usable WCS")
+
+        raise NotImplementedError
 
     def get_keyword(self, key):
         return self.header[key]
@@ -781,25 +813,6 @@ class AstropyWCS(BaseWCS):
                 "Error calculating spectral coordinate: %s" % (str(e)))
             raise WCSError(e)
 
-    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
-
-        if coords == 'data':
-            origin = 0
-        else:
-            origin = 1
-        if naxispath is not None:
-            n = len(naxispath)
-            if n > 0:
-                datapt = np.hstack((datapt, np.zeros((len(datapt), n))))
-        try:
-            wcspt = self.wcs.all_pix2world(datapt, origin)
-        except Exception as e:
-            self.logger.error(
-                "Error calculating datapt_to_wcspt: %s" % (str(e)))
-            raise WCSError(e)
-
-        return wcspt
-
     def pixtoradec(self, idxs, coords='data'):
 
         if coords == 'data':
@@ -821,25 +834,6 @@ class AstropyWCS(BaseWCS):
         dec_deg = float(sky[0, 1])
 
         return ra_deg, dec_deg
-
-    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
-
-        if coords == 'data':
-            origin = 0
-        else:
-            origin = 1
-        if naxispath is not None:
-            n = len(naxispath)
-            if n > 0:
-                wcspt = np.hstack((wcspt, np.zeros((len(wcspt), n))))
-        try:
-            datapt = self.wcs.all_world2pix(wcspt, origin)
-        except Exception as e:
-            self.logger.error(
-                "Error calculating wcspt_to_datapt: %s" % (str(e)))
-            raise WCSError(e)
-
-        return datapt[:, :2]
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
 
@@ -867,57 +861,6 @@ class AstropyWCS(BaseWCS):
         x = float(pix[0, 0])
         y = float(pix[0, 1])
         return (x, y)
-
-    def datapt_to_coords(self, datapt, system=None, coords='data',
-                         naxispath=None):
-        """
-        Map points to given coordinate system.
-
-        Parameters
-        ----------
-        datapt : array-like
-            Pixel coordinates in the format of
-            ``[[x0, y0, ...], [x1, y1, ...], ..., [xn, yn, ...]]``.
-
-        system : str or None, optional, default to 'icrs'
-            Coordinate system name.
-
-        coords : 'data' or None, optional, default to 'data'
-            Expresses whether the data coordinate is indexed from zero
-
-        naxispath : list-like or None, optional, defaults to None
-            A sequence defining the pixel indexes > 2D, if any
-
-        Returns
-        -------
-        coord : SkyCoord
-
-        """
-        if self.coordsys == 'raw':
-            raise WCSError("No usable WCS")
-
-        if system is None:
-            system = 'icrs'
-
-        wcspt = self.datapt_to_wcspt(datapt, coords=coords,
-                                     naxispath=naxispath)
-
-        if not self.new_coords:
-            raise NotImplementedError
-
-        else:
-            frameClass = coordinates.frame_transform_graph.lookup_name(
-                self.coordsys)
-            ra_deg = wcspt[:, 0]
-            dec_deg = wcspt[:, 1]
-            coord = frameClass(ra_deg * units.degree, dec_deg * units.degree)
-            toClass = coordinates.frame_transform_graph.lookup_name(system)
-            # Skip if input and output is the same (no realize_frame
-            # call in astropy)
-            if toClass != frameClass:
-                coord = coord.transform_to(toClass)
-
-        return coord
 
     def pixtocoords(self, idxs, system=None, coords='data'):
 
@@ -987,6 +930,95 @@ class AstropyWCS(BaseWCS):
             r = c.data
             return tuple(map(self._deg, [getattr(r, component)
                                          for component in r.components[:2]]))
+
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
+
+        if coords == 'data':
+            origin = 0
+        else:
+            origin = 1
+        if naxispath is not None:
+            n = len(naxispath)
+            if n > 0:
+                datapt = np.hstack((datapt, np.zeros((len(datapt), n))))
+        try:
+            wcspt = self.wcs.all_pix2world(datapt, origin)
+        except Exception as e:
+            self.logger.error(
+                "Error calculating datapt_to_wcspt: %s" % (str(e)))
+            raise WCSError(e)
+
+        return wcspt
+
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
+
+        if coords == 'data':
+            origin = 0
+        else:
+            origin = 1
+        if naxispath is not None:
+            n = len(naxispath)
+            if n > 0:
+                wcspt = np.hstack((wcspt, np.zeros((len(wcspt), n))))
+        try:
+            datapt = self.wcs.all_world2pix(wcspt, origin)
+        except Exception as e:
+            self.logger.error(
+                "Error calculating wcspt_to_datapt: %s" % (str(e)))
+            raise WCSError(e)
+
+        return datapt[:, :2]
+
+    def datapt_to_system(self, datapt, system=None, coords='data',
+                         naxispath=None):
+        """
+        Map points to given coordinate system.
+
+        Parameters
+        ----------
+        datapt : array-like
+            Pixel coordinates in the format of
+            ``[[x0, y0, ...], [x1, y1, ...], ..., [xn, yn, ...]]``.
+
+        system : str or None, optional, default to 'icrs'
+            Coordinate system name.
+
+        coords : 'data' or None, optional, default to 'data'
+            Expresses whether the data coordinate is indexed from zero
+
+        naxispath : list-like or None, optional, defaults to None
+            A sequence defining the pixel indexes > 2D, if any
+
+        Returns
+        -------
+        coord : SkyCoord
+
+        """
+        if self.coordsys == 'raw':
+            raise WCSError("No usable WCS")
+
+        if system is None:
+            system = 'icrs'
+
+        wcspt = self.datapt_to_wcspt(datapt, coords=coords,
+                                     naxispath=naxispath)
+
+        if not self.new_coords:
+            raise NotImplementedError
+
+        else:
+            frameClass = coordinates.frame_transform_graph.lookup_name(
+                self.coordsys)
+            ra_deg = wcspt[:, 0]
+            dec_deg = wcspt[:, 1]
+            coord = frameClass(ra_deg * units.degree, dec_deg * units.degree)
+            toClass = coordinates.frame_transform_graph.lookup_name(system)
+            # Skip if input and output is the same (no realize_frame
+            # call in astropy)
+            if toClass != frameClass:
+                coord = coord.transform_to(toClass)
+
+        return coord
 
 
 class AstLibWCS(BaseWCS):
@@ -1227,6 +1259,73 @@ class KapteynWCS(BaseWCS):
 
         return lon_deg, lat_deg
 
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
+
+        # Kapteyn's WCS needs pixels referenced from 1
+        if coords == 'data':
+            datapt = datapt + 1.0
+
+        if naxispath is not None:
+            n = len(naxispath)
+            if n > 0:
+                datapt = np.hstack((datapt, np.zeros((len(datapt), n))))
+
+        try:
+            wcspt = self.wcs.toworld(datapt)
+
+        except Exception as e:
+            self.logger.error(
+                "Error calculating datapt_to_wcspt: %s" % (str(e)))
+            raise WCSError(e)
+
+        # TODO: swap axes if lon/lat reversed?
+        ## if ((self.wcs.lonaxnum is not None) and
+        ##         (self.wcs.lataxnum is not None)):
+
+        return wcspt
+
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
+
+        if naxispath is not None:
+            n = len(naxispath)
+            if n > 0:
+                wcspt = np.hstack((wcspt, np.zeros((len(wcspt), n))))
+
+        try:
+            datapt = self.wcs.topixel(wcspt)
+
+        except Exception as e:
+            self.logger.error(
+                "Error calculating wcspt_to_datapt: %s" % (str(e)))
+            raise WCSError(e)
+
+        if coords == 'data':
+            # Kapteyn's WCS returns pixels referenced from 1
+            datapt = datapt - 1.0
+
+        return datapt
+
+    def datapt_to_system(self, datapt, system=None, coords='data',
+                         naxispath=None):
+
+        if self.coordsys == 'raw':
+            raise WCSError("No usable WCS")
+
+        if system is None:
+            system = 'icrs'
+
+        wcspt = self.datapt_to_wcspt(datapt, coords=coords,
+                                     naxispath=naxispath)
+
+        if self.coordsys == 'pixel':
+            return wcspt
+
+        # convert to alternate coord
+        spec = self.conv_d[system]
+        tran = kapwcs.Transformation(self._skyout, spec)
+
+        return tran(wcspt)
+
 
 class StarlinkWCS(BaseWCS):
     """
@@ -1377,6 +1476,86 @@ class StarlinkWCS(BaseWCS):
         lon_deg, lat_deg = math.degrees(lon_rad), math.degrees(lat_rad)
 
         return lon_deg, lat_deg
+
+    def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
+
+        # Starlink's WCS needs pixels referenced from 1
+        if coords == 'data':
+            datapt = datapt + 1.0
+
+        if naxispath is not None:
+            n = len(naxispath)
+            if n > 0:
+                datapt = np.hstack((datapt, np.zeros((len(datapt), n))))
+
+        try:
+            # 1 as second arg -> regular transform
+            wcspt = self.wcs.tran(datapt.T, 1)
+
+            if self.coordsys not in ('pixel', 'raw'):
+                # whatever sky coords to icrs coords
+                wcspt = self.icrs_trans.tran(wcspt, 1)
+
+        except Exception as e:
+            self.logger.error(
+                "Error calculating datapt_to_wcspt: %s" % (str(e)))
+            raise WCSError(e)
+
+        # Starlink returns angles in radians
+        wcspt = np.degrees(wcspt.T)
+        return wcspt
+
+    def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
+
+        # Starlink works on angles in radians
+        wcspt = np.radians(wcspt)
+
+        if naxispath is not None:
+            n = len(naxispath)
+            if n > 0:
+                wcspt = np.hstack((wcspt, np.zeros((len(wcspt), n))))
+
+        try:
+            # 0 as second arg -> inverse transform
+            datapt = self.wcs.tran(wcspt.T, 0)
+
+        except Exception as e:
+            self.logger.error(
+                "Error calculating wcspt_to_datapt: %s" % (str(e)))
+            raise WCSError(e)
+
+        if coords == 'data':
+            # Starlink's WCS returns pixels referenced from 1
+            datapt = datapt - 1.0
+
+        return datapt.T
+
+    def datapt_to_system(self, datapt, system=None, coords='data',
+                         naxispath=None):
+
+        if self.coordsys == 'raw':
+            raise WCSError("No usable WCS")
+
+        if system is None:
+            system = 'icrs'
+
+        wcspt = self.datapt_to_wcspt(datapt, coords=coords,
+                                     naxispath=naxispath)
+
+        if self.coordsys == 'pixel':
+            return wcspt
+
+        # define a transform from reference (icrs/j2000) to user's end choice
+        refframe = self.icrs_trans.getframe(2)
+        toframe = Ast.SkyFrame("System=%s, Epoch=2000.0" % (system.upper()))
+        end_trans = refframe.convert(toframe)
+
+        # convert to alternate coord
+        wcspt = np.radians(wcspt)
+        wcspt = end_trans.tran(wcspt.T, 1)
+        wcspt = np.degrees(wcspt)
+
+        return wcspt.T
 
 
 class BareBonesWCS(BaseWCS):

@@ -745,7 +745,7 @@ class WCSAxes(CompoundObject):
         xmax = image.width - 1
         ymax = image.height - 1
         try:
-            radec = image.wcs.datapt_to_coords(
+            radec = image.wcs.datapt_to_system(
                 [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]],
                 naxispath=image.naxispath)
         except Exception:
