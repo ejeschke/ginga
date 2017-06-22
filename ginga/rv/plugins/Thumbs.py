@@ -750,14 +750,14 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # TODO: should really be text ht
         text_ht = self.thumb_sep
 
-        # calc in canvas coords
+        # calc in window coords
         twd_plus = self.thumb_width + text_ht + self.thumb_sep
         xt = self.thumb_sep + col * twd_plus
         yt = self._cmyoff + (row * twd_plus) + text_ht
 
         # convert to data coords
-        crdmap = self.c_view.get_coordmap('canvas')
-        xt, yt = crdmap.to_data(xt, yt)
+        crdmap = self.c_view.get_coordmap('window')
+        xt, yt = crdmap.to_data((xt, yt))
 
         xi = xt
         yi = yt
