@@ -81,7 +81,6 @@ class Drawing(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Drawing")
 
         captions = (("Draw type:", 'label', "Draw type", 'combobox'),
-                    ("Coord type:", 'label', "Coord type", 'combobox'),
                     )
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -91,14 +90,7 @@ class Drawing(GingaPlugin.LocalPlugin):
             combobox.append_text(name)
         index = self.drawtypes.index(default_drawtype)
         combobox.set_index(index)
-        combobox.add_callback('activated', lambda w, idx: self.set_drawparams_cb())
-
-        combobox = b.coord_type
-        for name in self.coordtypes:
-            combobox.append_text(name)
-        index = 0
-        combobox.set_index(index)
-        combobox.add_callback('activated', lambda w, idx: self.set_drawparams_cb())
+        combobox.add_callback('activated', lambda w, idx: self.set_drawtype_cb())
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -224,14 +216,15 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.logger.info("drew a %s" % (obj.kind))
         return True
 
+    def set_drawtype_cb(self):
+        if self.canvas.get_draw_mode() != 'draw':
+            self.canvas.set_draw_mode('draw')
+        self.w.btn_draw.set_state(True)
+        self.set_mode_cb('draw', True)
+
     def set_drawparams_cb(self):
-        ## if self.canvas.get_draw_mode() != 'draw':
-        ##     # if we are in edit mode then don't initialize draw gui
-        ##     return
         index = self.w.draw_type.get_index()
         kind = self.drawtypes[index]
-        index = self.w.coord_type.get_index()
-        coord = self.coordtypes[index]
 
         # remove old params
         self.w.drawvbox.remove_all()
@@ -259,21 +252,15 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.w.rotate_by.set_enabled(False)
 
         args, kwdargs = self.draw_params.get_params()
-        if kind != 'compass':
-            kwdargs['coord'] = coord
-        self.logger.info("changing params to: %s" % (str(kwdargs)))
+        self.logger.debug("changing params to: %s" % (str(kwdargs)))
         self.canvas.set_drawtype(kind, **kwdargs)
 
     def draw_params_changed_cb(self, paramObj, params):
         index = self.w.draw_type.get_index()
         kind = self.drawtypes[index]
-        index = self.w.coord_type.get_index()
-        coord = self.coordtypes[index]
 
         args, kwdargs = self.draw_params.get_params()
-        if kind != 'compass':
-            kwdargs['coord'] = coord
-        self.logger.info("changing params to: %s" % (str(kwdargs)))
+        self.logger.debug("changing params to: %s" % (str(kwdargs)))
         self.canvas.set_drawtype(kind, **kwdargs)
 
     def edit_cb(self, fitsimage, obj):
