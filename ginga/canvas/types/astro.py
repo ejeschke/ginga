@@ -14,7 +14,7 @@ from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        Point, MovePoint, ScalePoint,
                                        register_canvas_types, get_canvas_type,
-                                       colors_plus_none)
+                                       colors_plus_none, coord_names)
 from ginga.misc.ParamSet import Param
 from ginga.util import wcs
 from ginga.util.wcs import raDegToString, decDegToString
@@ -38,9 +38,9 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -150,7 +150,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
             else:
                 dx = abs(x2 - x1)
                 dy = abs(y2 - y1)
-                dh = math.sqrt(dx**2 + dy**2)
+                dh = np.sqrt(dx**2 + dy**2)
                 text_x = ("%.3f" % dx)
                 text_y = ("%.3f" % dy)
                 text_h = ("%.3f" % dh)
@@ -253,9 +253,9 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -406,9 +406,9 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -541,9 +541,9 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -573,8 +573,8 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        radius = math.sqrt(abs(cxt.start_x - cxt.x)**2 +
-                           abs(cxt.start_y - cxt.y)**2)
+        radius = np.sqrt(abs(cxt.start_x - cxt.x)**2 +
+                         abs(cxt.start_y - cxt.y)**2)
         return cls(cxt.start_x, cxt.start_y, radius,
                    **cxt.drawparams)
 

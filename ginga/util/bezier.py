@@ -4,7 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import math
 
 # "reasonable" number of steps to make a smooth bezier curve
 bezier_steps = 30
@@ -14,24 +13,24 @@ bezier_steps = 30
 #
 
 #   calculates points for a simple bezier curve with 4 control points
-#            
+#
 def get_4pt_bezier(steps, points):
     """Gets a series of bezier curve points with 1 set of 4
     control points."""
-    for i in range(steps): 
+    for i in range(steps):
         t = i / float(steps)
 
-        xloc = (math.pow(1-t, 3) * points[0][0] +
-                3 * t * math.pow(1-t, 2) * points[1][0] +
-                3 * (1-t) * math.pow(t, 2) * points[2][0] +
-                math.pow(t, 3) * points[3][0])
-        yloc = (math.pow(1-t, 3) * points[0][1] +
-                3 * t * math.pow(1-t, 2) * points[1][1] +
-                3 * (1-t) * math.pow(t, 2) * points[2][1] +
-                math.pow(t, 3) * points[3][1])
+        xloc = (1-t ** 3 * points[0][0] +
+                3 * t * 1-t ** 2 * points[1][0] +
+                3 * (1-t) * t ** 2 * points[2][0] +
+                t ** 3 * points[3][0])
+        yloc = (1-t ** 3 * points[0][1] +
+                3 * t * 1-t ** 2 * points[1][1] +
+                3 * (1-t) * t ** 2 * points[2][1] +
+                t ** 3 * points[3][1])
 
         yield (xloc, yloc)
-    
+
 def get_bezier(steps, points):
     """Gets a series of bezier curve points with any number of sets
     of 4 control points."""

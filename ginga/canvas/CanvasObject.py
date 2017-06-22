@@ -17,6 +17,8 @@ __all__ = ['CanvasObjectBase', 'get_canvas_type', 'get_canvas_types',
 
 colors_plus_none = [ None ] + colors.get_colors()
 
+coord_names = ['data', 'wcs', 'cartesian', 'window']
+
 Point = namedtuple('Point', ['x', 'y'])
 
 class EditPoint(Point):
@@ -332,40 +334,31 @@ class CanvasObjectBase(Callback.Callbacks):
         if frommap == tomap:
             return
 
-        # convert radii
+        # mild hack to convert radii on objects that have them
         if hasattr(self, 'radius'):
-            xc, yc = self.get_center_pt()
-            # get data coordinates of a point radius away from center
+            # get coordinates of a point radius away from center
             # under current coordmap
-            x1, y1 = frommap.to_data((xc, yc))
-            x2, y2 = frommap.to_data((xc + self.radius, yc))
-            x3, y3 = frommap.to_data((xc, yc + self.radius))
-            # now convert these data coords to native coords in tomap
-            nx1, ny1 = tomap.data_to((x1, y1))
-            nx2, ny2 = tomap.data_to((x2, y2))
-            nx3, ny3 = tomap.data_to((x3, y3))
-            # recalculate radius using new coords
-            self.radius = np.sqrt((nx2 - nx1)**2 + (ny3 - ny1)**2)
+            x0, y0 = frommap.offset_pt((self.x, self.y), (self.radius, 0))
+            pts = frommap.to_data(((self.x, self.y), (x0, y0)))
+            pts = tomap.data_to(pts)
+            self.radius = np.fabs(pts[1][0] - pts[0][0])
 
         elif hasattr(self, 'xradius'):
             # similar to above case, but there are 2 radii
-            xc, yc = self.get_center_pt()
-            x1, y1 = frommap.to_data((xc, yc))
-            x2, y2 = frommap.to_data((xc + self.xradius, yc))
-            x3, y3 = frommap.to_data((xc, yc + self.yradius))
-            nx1, ny1 = tomap.data_to((x1, y1))
-            nx2, ny2 = tomap.data_to((x2, y2))
-            nx3, ny3 = tomap.data_to((x3, y3))
-            self.xradius = np.fabs((nx2 - nx1))
-            self.yradius = np.fabs((ny3 - ny1))
+            x0, y0 = frommap.offset_pt((self.x, self.y), (self.xradius,
+                                                          self.yradius))
+            pts = frommap.to_data(((self.x, self.y), (x0, y0)))
+            pts = tomap.data_to(pts)
+            self.xradius = np.fabs(pts[1][0] - pts[0][0])
+            self.yradius = np.fabs(pts[1][1] - pts[0][1])
 
-        # convert points
         data_pts = self.get_data_points()
 
         # set our map to the new map
         self.crdmap = tomap
 
         self.set_data_points(data_pts)
+
 
     # TODO: move these into utility module?
     #####

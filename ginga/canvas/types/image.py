@@ -9,7 +9,7 @@ import numpy as np
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        Point, MovePoint, ScalePoint,
                                        register_canvas_types,
-                                       colors_plus_none)
+                                       colors_plus_none, coord_names)
 from ginga.misc.ParamSet import Param
 from ginga.misc import Bunch
 from ginga import trcalc
@@ -26,9 +26,9 @@ class Image(OnePointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of corner of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -319,9 +319,9 @@ class NormImage(Image):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of corner of object"),
             Param(name='y', type=float, default=0.0, argpos=1,

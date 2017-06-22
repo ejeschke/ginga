@@ -259,17 +259,21 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.w.rotate_by.set_enabled(False)
 
         args, kwdargs = self.draw_params.get_params()
-        #self.logger.debug("changing params to: %s" % str(kwdargs))
         if kind != 'compass':
             kwdargs['coord'] = coord
+        self.logger.info("changing params to: %s" % (str(kwdargs)))
         self.canvas.set_drawtype(kind, **kwdargs)
 
     def draw_params_changed_cb(self, paramObj, params):
         index = self.w.draw_type.get_index()
         kind = self.drawtypes[index]
+        index = self.w.coord_type.get_index()
+        coord = self.coordtypes[index]
 
         args, kwdargs = self.draw_params.get_params()
-        #self.logger.debug("changing params to: %s" % str(kwdargs))
+        if kind != 'compass':
+            kwdargs['coord'] = coord
+        self.logger.info("changing params to: %s" % (str(kwdargs)))
         self.canvas.set_drawtype(kind, **kwdargs)
 
     def edit_cb(self, fitsimage, obj):
@@ -287,8 +291,8 @@ class Drawing(GingaPlugin.LocalPlugin):
         if hasattr(obj, 'coord'):
             tomap = self.fitsimage.get_coordmap(obj.coord)
             if obj.crdmap != tomap:
-                #self.logger.debug("coordmap has changed to '%s'--converting mapper" % (
-                #    str(tomap)))
+                self.logger.debug("coordmap has changed to '%s'--converting mapper" % (
+                    str(tomap)))
                 # user changed type of mapper; convert coordinates to
                 # new mapper and update widgets
                 obj.convert_mapper(tomap)

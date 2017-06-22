@@ -97,17 +97,16 @@ def rotate_pt(x_arr, y_arr, theta_deg, xoff=0, yoff=0):
     sin_t = np.sin(np.radians(theta_deg))
     ap = (a_arr * cos_t) - (b_arr * sin_t)
     bp = (a_arr * sin_t) + (b_arr * cos_t)
-    return (ap + xoff, bp + yoff)
+    return np.asarray((ap + xoff, bp + yoff))
 
 rotate_arr = rotate_pt
 
 def rotate_coord(coord, theta_deg, offsets):
     arr = np.asarray(coord)
     # TODO: handle dimensional rotation N>2
-    x_arr, y_arr = rotate_pt(arr.T[0], arr.T[1], theta_deg,
-                             xoff=offsets[0], yoff=offsets[1])
-    arr = np.asarray((x_arr, y_arr)).T
-    return arr
+    arr = rotate_pt(arr.T[0], arr.T[1], theta_deg,
+                    xoff=offsets[0], yoff=offsets[1])
+    return arr.T
 
 def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
                 out=None, use_opencl=True, logger=None):

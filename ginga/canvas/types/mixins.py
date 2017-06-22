@@ -23,7 +23,7 @@ class OnePointMixin(object):
 
     def __set_points(self, pts):
         pts = np.asarray(pts)
-        self.x, self.y = pts[0, 0], pts[0, 1]
+        self.x, self.y = pts[0]
 
     points = property(__get_points, __set_points)
 
@@ -63,8 +63,8 @@ class TwoPointMixin(object):
 
     def __set_points(self, pts):
         pts = np.asarray(pts)
-        self.x1, self.y1 = pts[0, 0], pts[0, 1]
-        self.x2, self.y2 = pts[1, 0], pts[1, 1]
+        self.x1, self.y1 = pts[0]
+        self.x2, self.y2 = pts[1]
 
     points = property(__get_points, __set_points)
 

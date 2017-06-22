@@ -74,7 +74,7 @@ class NativeMapper(BaseMapper):
 
     def rotate_pt(self, pts, theta, offset):
         # TODO?  Not sure if it is needed with this mapper type
-        return x, y
+        return pts
 
 
 class WindowMapper(BaseMapper):
@@ -103,7 +103,7 @@ class WindowMapper(BaseMapper):
 
     def rotate_pt(self, pts, theta, offset):
         # TODO?  Not sure if it is needed with this mapper type
-        return x, y
+        return pts
 
 
 class CartesianMapper(BaseMapper):

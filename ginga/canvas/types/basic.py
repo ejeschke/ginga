@@ -10,7 +10,7 @@ from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        Point as XPoint, MovePoint, ScalePoint,
                                        RotatePoint, EditPoint,
                                        register_canvas_types,
-                                       colors_plus_none)
+                                       colors_plus_none, coord_names)
 from ginga import trcalc
 from ginga.misc.ParamSet import Param
 from ginga.util import wcs, bezier
@@ -33,9 +33,9 @@ class Text(OnePointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs', 'offset'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of lower left of text"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -102,9 +102,9 @@ class Polygon(PolygonMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             ## Param(name='points', type=list, default=[], argpos=0,
             ##       description="points making up polygon"),
             Param(name='linewidth', type=int, default=1,
@@ -183,9 +183,9 @@ class Path(PolygonMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             ## Param(name='points', type=list, default=[], argpos=0,
             ##       description="points making up polygon"),
             Param(name='linewidth', type=int, default=1,
@@ -381,9 +381,9 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -497,9 +497,9 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -639,9 +639,9 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -740,7 +740,7 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
         res = self.contains_arr(x_arr, y_arr)
         return res[0]
 
-    def get_llur(self):
+    def get_wdht(self):
         # See http://stackoverflow.com/questions/87734/how-do-you-calculate-the-axis-aligned-bounding-box-of-an-ellipse
         theta = np.radians(self.rot_deg)
         sin_theta = np.sin(theta)
@@ -759,17 +759,28 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
         wd = np.sqrt(a ** 2.0 + b ** 2.0) * 2.
         ht = np.sqrt(c ** 2.0 + d ** 2.0) * 2.
 
+        return (points, (wd, ht))
+
+    def get_llur(self):
+        points, dims = self.get_wdht()
+        x, y = points[0]
+        wd, ht = dims
+
         x1, y1 = x - wd * 0.5, y + ht * 0.5
         x2, y2 = x1 + wd, y1 - ht
         return self.swapxy(x1, y1, x2, y2)
 
-    def get_bezier_pts(self):
-        points = self.get_points()
+    def get_bezier_pts(self, points, rot_deg=None):
         x, y = points[0]
         xradius = abs(points[1][0] - x)
         yradius = abs(points[2][1] - y)
 
-        return bezier.get_bezier_ellipse(x, y, xradius, yradius)
+        pts = np.asarray(bezier.get_bezier_ellipse(x, y, xradius, yradius))
+        if rot_deg is None:
+            return pts
+
+        # specified a rotation for the points
+        return trcalc.rotate_coord(pts, rot_deg, (x, y))
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
@@ -785,12 +796,14 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
 
         elif hasattr(cr, 'draw_ellipse_bezier'):
             # <- backend can draw Bezier curves
-            cp = self.get_cpoints(viewer, points=self.get_bezier_pts())
+            points = self.get_bezier_pts(self.get_points())
+            cp = self.get_cpoints(viewer, points=points)
             cr.draw_ellipse_bezier(cp)
 
         else:
             # <- backend can draw polygons
-            cp = self.get_cpoints(viewer, points=self.get_bezier_pts())
+            points = self.get_bezier_pts(self.get_points())
+            cp = self.get_cpoints(viewer, points=points)
             num_pts = bezier.bezier_steps
             cp = bezier.get_bezier(num_pts, cp)
             cr.draw_polygon(cp)
@@ -811,9 +824,9 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -947,9 +960,9 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -1075,9 +1088,9 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -1179,9 +1192,9 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=['data', 'wcs', 'cartesian', 'window'],
+                  description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -1317,9 +1330,9 @@ class Line(TwoPointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -1426,9 +1439,9 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -1535,9 +1548,9 @@ class XRange(Rectangle):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='x2', type=float, default=0.0, argpos=1,
@@ -1639,9 +1652,9 @@ class YRange(Rectangle):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data', 'wcs'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='y1', type=float, default=0.0, argpos=0,
                   description="First Y coordinate of object"),
             Param(name='y2', type=float, default=0.0, argpos=1,
