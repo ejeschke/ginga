@@ -83,6 +83,7 @@ class ColorBar(CanvasObjectBase):
         loval, hival = viewer.get_cut_levels()
 
         cr = viewer.renderer.setup_cr(self)
+        tr = viewer.tform['window_to_native']
 
         # Calculate reasonable spacing for range numbers
         cr.set_font(self.font, self.fontsize, color=self.color,
@@ -140,7 +141,8 @@ class ColorBar(CanvasObjectBase):
             cr.set_fill(color, alpha=self.fillalpha)
 
             cx1, cy1, cx2, cy2 = x, y_base, x+wd, y_base+clr_ht
-            cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+            cr.draw_polygon(tr.to_(((cx1, cy1), (cx2, cy1),
+                                    (cx2, cy2), (cx1, cy2))))
 
             # Draw range scale if we are supposed to
             if self.showrange and i in _interval:
@@ -166,25 +168,30 @@ class ColorBar(CanvasObjectBase):
 
             x = 0
             cx1, cy1, cx2, cy2 = x, y_top - scale_ht, x+pxwd, y_top
-            cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+            cp = tr.to_(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+            cr.draw_polygon(cp)
 
             cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
-            cr.draw_line(cx1, cy1, cx2, cy1)
+            #cr.draw_line(cx1, cy1, cx2, cy1)
+            cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
 
             cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)
             for (cx, cy, cyy, text) in range_pts:
+                cp = tr.to_(((cx, cy), (cx, cy+self.tick_ht), (cx, cyy-2)))
                 # tick
-                cr.draw_line(cx, cy, cx, cy+self.tick_ht)
+                #cr.draw_line(cx, cy, cx, cy+self.tick_ht)
+                cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
                 # number
-                cr.draw_text(cx, cyy-2, text)
+                #cr.draw_text(cx, cyy-2, text)
+                cr.draw_text(cp[2][0], cp[2][1], text)
 
         # draw optional border
         if self.linewidth > 0:
             cr.set_fill(self.bgcolor, alpha=0.0)
             cx1, cy1, cx2, cy2 = 0, y_base, wd, y_top
             cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
-            cr.draw_polygon(cpoints)
+            cr.draw_polygon(tr.to_(cpoints))
 
 
 class DrawableColorBar(Rectangle):
@@ -263,6 +270,7 @@ class DrawableColorBar(Rectangle):
         loval, hival = viewer.get_cut_levels()
 
         cr = viewer.renderer.setup_cr(self)
+        tr = viewer.tform['window_to_native']
 
         # Calculate reasonable spacing for range numbers
         cr.set_font(self.font, self.fontsize, color=self.color,
@@ -316,7 +324,8 @@ class DrawableColorBar(Rectangle):
             cr.set_fill(color, alpha=self.fillalpha)
 
             cx1, cy1, cx2, cy2 = x, y_base, x+wd, y_base+clr_ht
-            cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+            cr.draw_polygon(tr.to_(((cx1, cy1), (cx2, cy1),
+                                    (cx2, cy2), (cx1, cy2))))
 
             # Draw range scale if we are supposed to
             if self.showrange and i in _interval:
@@ -341,25 +350,30 @@ class DrawableColorBar(Rectangle):
             cr.set_line(self.bgcolor, linewidth=0)
 
             cx1, cy1, cx2, cy2 = x_base, y_top - scale_ht, x_top, y_top
-            cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+            cp = tr.to_(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+            cr.draw_polygon(cp)
 
             cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
-            cr.draw_line(cx1, cy1, cx2, cy1)
+            #cr.draw_line(cx1, cy1, cx2, cy1)
+            cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
 
             cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)
             for (cx, cy, cyy, text) in range_pts:
+                cp = tr.to_(((cx, cy), (cx, cy+self.tick_ht), (cx, cyy-2)))
                 # tick
-                cr.draw_line(cx, cy, cx, cy+self.tick_ht)
+                #cr.draw_line(cx, cy, cx, cy+self.tick_ht)
+                cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
                 # number
-                cr.draw_text(cx, cyy-2, text)
+                #cr.draw_text(cx, cyy-2, text)
+                cr.draw_text(cp[2][0], cp[2][1], text)
 
         # draw optional border
         if self.linewidth > 0:
             cr.set_fill(self.bgcolor, alpha=0.0)
             cx1, cy1, cx2, cy2 = x_base, y_base, x_top, y_top
             cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
-            cr.draw_polygon(cpoints)
+            cr.draw_polygon(tr.to_(cpoints))
 
 
 class ModeIndicator(CanvasObjectBase):
@@ -419,6 +433,7 @@ class ModeIndicator(CanvasObjectBase):
             return
 
         cr = viewer.renderer.setup_cr(self)
+        tr = viewer.tform['window_to_native']
 
         if mode_type == 'locked':
             text = '%s [L]' % (mode)
@@ -446,12 +461,14 @@ class ModeIndicator(CanvasObjectBase):
         cr.set_fill('black', alpha=self.fillalpha)
 
         cx1, cy1, cx2, cy2 = x_base, y_base, x_base + box_wd, y_base + box_ht
-        cr.draw_polygon(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+        cr.draw_polygon(tr.to_(((cx1, cy1), (cx2, cy1),
+                                (cx2, cy2), (cx1, cy2))))
 
         # draw fg
         cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
 
         cx, cy = x_base + self.xpad, y_base + txt_ht + self.ypad
+        cx, cy = tr.to_((cx, cy))
         cr.draw_text(cx, cy, text)
 
 
@@ -498,6 +515,7 @@ class FocusIndicator(CanvasObjectBase):
             return
 
         cr = viewer.renderer.setup_cr(self)
+        tr = viewer.tform['window_to_native']
 
         wd, ht = viewer.get_window_size()
         lw = self.linewidth
@@ -507,8 +525,8 @@ class FocusIndicator(CanvasObjectBase):
         cr.set_line(color=self.color, linewidth=lw, alpha=self.alpha,
                     style=self.linestyle)
 
-        points = ((off, off), (wd-off, off), (wd-off, ht-off), (off, ht-off))
-        cr.draw_polygon(points)
+        cpoints = ((off, off), (wd-off, off), (wd-off, ht-off), (off, ht-off))
+        cr.draw_polygon(tr.to_(cpoints))
 
     def focus_cb(self, viewer, onoff):
         has_focus = self.has_focus

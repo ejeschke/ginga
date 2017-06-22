@@ -19,6 +19,9 @@ import matplotlib.lines as lines
 
 from ginga import ImageView
 from ginga import Mixins, Bindings, colors
+# NOTE: this import is necessary to register the 'ginga' projection
+# used via matplotlib, even though the module is not directly
+# referenced within this code
 from . import transform
 from ginga.mplw.CanvasRenderMpl import CanvasRenderer
 from ginga.mplw.MplHelp import Timer
@@ -80,7 +83,10 @@ class ImageViewMpl(ImageView.ImageViewBase):
         """Call this with the matplotlib Figure() object."""
         self.figure = figure
 
-        ax = self.figure.add_axes((0, 0, 1, 1), frame_on=False)
+        ax = self.figure.add_axes((0, 0, 1, 1), frame_on=False,
+                                  #viewer=self,
+                                  #projection='ginga'
+                                  )
         #ax = fig.add_subplot(111)
         self.ax_img = ax
         # We don't want the axes cleared every time plot() is called
@@ -96,7 +102,10 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # Add an overlapped axis for drawing graphics
         newax = self.figure.add_axes(self.ax_img.get_position(),
                                      sharex=ax, sharey=ax,
-                                     frameon=False)
+                                     frameon=False,
+                                     #viewer=self,
+                                     #projection='ginga'
+                                     )
         newax.hold(True)
         newax.autoscale(enable=False)
         newax.get_xaxis().set_visible(False)
@@ -265,7 +274,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
     def add_axes(self):
         ax = self.figure.add_axes(self.ax_img.get_position(),
-                                  #sharex=self.ax_img, sharey=self.ax_img,
                                   frameon=False,
                                   viewer=self,
                                   projection='ginga')

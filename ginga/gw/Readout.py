@@ -29,7 +29,7 @@ class Readout(object):
         xoff, yoff = 4, 4
         self.text_obj = Text(xoff, height-yoff, text='',
                              color='lightgreen', fontsize=14,
-                             coord='canvas')
+                             coord='window')
         canvas.add(self.text_obj, redraw=False)
 
         self.maxx = 0

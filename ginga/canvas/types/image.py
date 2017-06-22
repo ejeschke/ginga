@@ -4,12 +4,12 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy
+import numpy as np
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        Point, MovePoint, ScalePoint,
                                        register_canvas_types,
-                                       colors_plus_none)
+                                       colors_plus_none, coord_names)
 from ginga.misc.ParamSet import Param
 from ginga.misc import Bunch
 from ginga import trcalc
@@ -26,9 +26,9 @@ class Image(OnePointMixin, CanvasObjectBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of corner of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -149,12 +149,12 @@ class Image(OnePointMixin, CanvasObjectBase):
             ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
             ymin = int(min(y0, y1, y2, y3))
-            xmax = int(numpy.ceil(max(x0, x1, x2, x3)))
-            ymax = int(numpy.ceil(max(y0, y1, y2, y3)))
+            xmax = int(np.ceil(max(x0, x1, x2, x3)))
+            ymax = int(np.ceil(max(y0, y1, y2, y3)))
 
             # destination location in data_coords
             #dst_x, dst_y = self.x, self.y + ht
-            dst_x, dst_y = self.crdmap.to_data(self.x, self.y)
+            dst_x, dst_y = self.crdmap.to_data((self.x, self.y))
 
             a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
 
@@ -206,8 +206,8 @@ class Image(OnePointMixin, CanvasObjectBase):
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
             ht, wd, dp = dstarr.shape
-            cvs_x = int(round(wd / 2.0  + off_x))
-            cvs_y = int(round(ht / 2.0  + off_y))
+            cvs_x = int(np.round(wd / 2.0  + off_x))
+            cvs_y = int(np.round(ht / 2.0  + off_y))
             cache.cvs_pos = (cvs_x, cvs_y)
 
         # composite the image into the destination array at the
@@ -239,7 +239,7 @@ class Image(OnePointMixin, CanvasObjectBase):
         return (width, height)
 
     def get_coords(self):
-        x1, y1 = self.crdmap.to_data(self.x, self.y)
+        x1, y1 = self.crdmap.to_data((self.x, self.y))
         wd, ht = self.get_scaled_wdht()
         x2, y2 = x1 + wd, y1 + ht
         return (x1, y1, x2, y2)
@@ -319,9 +319,9 @@ class NormImage(Image):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='coord', type=str, default='data',
-            ##       valid=['data'],
-            ##       description="Set type of coordinates"),
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x', type=float, default=0.0, argpos=0,
                   description="X coordinate of corner of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
@@ -388,11 +388,11 @@ class NormImage(Image):
             ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
             xmin = int(min(x0, x1, x2, x3))
             ymin = int(min(y0, y1, y2, y3))
-            xmax = int(numpy.ceil(max(x0, x1, x2, x3)))
-            ymax = int(numpy.ceil(max(y0, y1, y2, y3)))
+            xmax = int(np.ceil(max(x0, x1, x2, x3)))
+            ymax = int(np.ceil(max(y0, y1, y2, y3)))
 
             # destination location in data_coords
-            dst_x, dst_y = self.crdmap.to_data(self.x, self.y)
+            dst_x, dst_y = self.crdmap.to_data((self.x, self.y))
 
             a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
 
@@ -431,8 +431,8 @@ class NormImage(Image):
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
             ht, wd, dp = dstarr.shape
-            cvs_x = int(round(wd / 2.0  + off_x))
-            cvs_y = int(round(ht / 2.0  + off_y))
+            cvs_x = int(np.round(wd / 2.0  + off_x))
+            cvs_y = int(np.round(ht / 2.0  + off_y))
             cache.cvs_pos = (cvs_x, cvs_y)
 
         if self.rgbmap is not None:
@@ -446,8 +446,8 @@ class NormImage(Image):
             newdata = self.apply_visuals(viewer, cache.cutout, 0, vmax)
 
             # result becomes an index array fed to the RGB mapper
-            if not numpy.issubdtype(newdata.dtype, numpy.dtype('uint')):
-                newdata = newdata.astype(numpy.uint)
+            if not np.issubdtype(newdata.dtype, np.dtype('uint')):
+                newdata = newdata.astype(np.uint)
             idx = newdata
 
             self.logger.debug("shape of index is %s" % (str(idx.shape)))

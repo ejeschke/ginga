@@ -78,7 +78,7 @@ class ModeIndicator(object):
                 text = mode
 
             o1 = Text(0, 0, text,
-                      fontsize=self.fontsize, color='yellow', coord='canvas')
+                      fontsize=self.fontsize, color='yellow', coord='window')
 
             txt_wd, txt_ht = self.viewer.renderer.get_dimensions(o1)
 
@@ -92,7 +92,7 @@ class ModeIndicator(object):
             cx1, cy1, cx2, cy2 = x_base, y_base, x_base + box_wd, y_base + box_ht
             poly_pts = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
             o2 = Compound(Polygon(poly_pts,
-                               color='black', coord='canvas',
+                               color='black', coord='window',
                                fill=True, fillcolor='black'),
                                o1)
             self.mode_obj = o2

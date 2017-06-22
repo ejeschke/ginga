@@ -96,13 +96,13 @@ class Clock(object):
         # text object for the time
         self.time_txt = Text(x, y, text='', color=self.color,
                              font=self.font, fontsize=self.largesize,
-                             coord='canvas')
+                             coord='window')
         self.canvas.add(self.time_txt, tag='_time', redraw=False)
 
         # for supplementary info (date, timezone, etc)
         self.suppl_txt = Text(x, height-10, text='', color=self.color,
                               font=self.font, fontsize=self.smallsize,
-                              coord='canvas')
+                              coord='window')
         self.canvas.add(self.suppl_txt, tag='_suppl', redraw=False)
 
         self.canvas.update_canvas(whence=3)

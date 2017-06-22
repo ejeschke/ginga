@@ -180,7 +180,7 @@ class DrawingMixin(object):
         obj = None
 
         # update the context with current position
-        x, y = cxt.crdmap.data_to(data_x, data_y)
+        x, y = cxt.crdmap.data_to((data_x, data_y))
         cxt.setvals(x=x, y=y, data_x=data_x, data_y=data_y)
 
         draw_class = cxt.draw_class
@@ -208,7 +208,7 @@ class DrawingMixin(object):
         # get the drawing coordinate type (default 'data')
         crdtype = self.t_drawparams.get('coord', 'data')
         crdmap = viewer.get_coordmap(crdtype)
-        x, y = crdmap.data_to(data_x, data_y)
+        x, y = crdmap.data_to((data_x, data_y))
 
         klass = self.draw_dict.get(self.t_drawtype, None)
 
@@ -254,10 +254,10 @@ class DrawingMixin(object):
 
         cxt = self._draw_cxt
         if self.t_drawtype in ('polygon', 'freepolygon', 'path', 'freepath'):
-            x, y = cxt.crdmap.data_to(data_x, data_y)
+            x, y = cxt.crdmap.data_to((data_x, data_y))
             cxt.points.append((x, y))
         elif self.t_drawtype == 'beziercurve' and len(cxt.points) < 3:
-            x, y = cxt.crdmap.data_to(data_x, data_y)
+            x, y = cxt.crdmap.data_to((data_x, data_y))
             cxt.points.append((x, y))
 
         self._draw_update(data_x, data_y, cxt, force_update=True)
@@ -541,7 +541,7 @@ class DrawingMixin(object):
             if insert is not None:
                 self.logger.debug("inserting point")
                 # Point near a line
-                pt = obj.crdmap.data_to(data_x, data_y)
+                pt = obj.crdmap.data_to((data_x, data_y))
                 obj.insert_pt(insert, pt)
                 self.process_drawing()
             else:
@@ -677,12 +677,12 @@ class DrawingMixin(object):
 
         # leaving an object
         for obj in newly_out:
-            pt = obj.crdmap.data_to(data_x, data_y)
+            pt = obj.crdmap.data_to((data_x, data_y))
             obj.make_callback('pick-leave', canvas, event, pt)
 
         # entering an object
         for obj in newly_in:
-            pt = obj.crdmap.data_to(data_x, data_y)
+            pt = obj.crdmap.data_to((data_x, data_y))
             obj.make_callback('pick-enter', canvas, event, pt)
 
         # pick down/up
@@ -690,7 +690,7 @@ class DrawingMixin(object):
             self.logger.debug("%s event in %s obj at x, y = %d, %d" % (
                 cb_name, obj.kind, data_x, data_y))
 
-            pt = obj.crdmap.data_to(data_x, data_y)
+            pt = obj.crdmap.data_to((data_x, data_y))
             obj.make_callback(cb_name, canvas, event, pt)
 
         return True

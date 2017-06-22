@@ -541,14 +541,14 @@ class ImageViewBindings(object):
         arr = np.array([(mnwd, mnht), (mxwd, mnht),
                         (mxwd, mxht), (mnwd, mxht)],
                        dtype=np.float)
-        x, y = tr.to_(arr.T[0], arr.T[1])
+        x, y = tr.to_(arr).T
 
         rx1, rx2 = np.min(x), np.max(x)
         ry1, ry2 = np.min(y), np.max(y)
 
         rect = viewer.get_pan_rect()
         arr = np.array(rect, dtype=np.float)
-        x, y = tr.to_(arr.T[0], arr.T[1])
+        x, y = tr.to_(arr).T
 
         qx1, qx2 = np.min(x), np.max(x)
         qy1, qy2 = np.min(y), np.max(y)
@@ -594,7 +594,7 @@ class ImageViewBindings(object):
         arr = np.array([(mnwd, mnht), (mxwd, mnht),
                         (mxwd, mxht), (mnwd, mxht)],
                        dtype=np.float)
-        x, y = tr.to_(arr.T[0], arr.T[1])
+        x, y = tr.to_(arr).T
 
         rx1, rx2 = np.min(x), np.max(x)
         ry1, ry2 = np.min(y), np.max(y)
@@ -602,7 +602,7 @@ class ImageViewBindings(object):
         crd_x = rx1 + (pct_x * (rx2 - rx1))
         crd_y = ry1 + (pct_y * (ry2 - ry1))
 
-        pan_x, pan_y = tr.from_(crd_x, crd_y)
+        pan_x, pan_y = tr.from_((crd_x, crd_y))
         self.logger.debug("crd=%f,%f pan=%f,%f" % (
             crd_x, crd_y, pan_x, pan_y))
 

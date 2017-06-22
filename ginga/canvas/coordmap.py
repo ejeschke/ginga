@@ -4,12 +4,14 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import numpy as np
+
 from ginga import trcalc
 from ginga.util import wcs
 from ginga.util.six.moves import map
 
-__all__ = ['CanvasMapper', 'CartesianMapper', 'DataMapper', 'OffsetMapper',
-           'WCSMapper']
+__all__ = ['NativeMapper', 'WindowMapper', 'CartesianMapper',
+           'DataMapper', 'OffsetMapper', 'WCSMapper']
 
 class CoordMapError(Exception):
     pass
@@ -23,114 +25,143 @@ class BaseMapper(object):
     def to_canvas(self, canvas_x, canvas_y):
         raise CoordMapError("this method is deprecated")
 
-    def to_data(self, canvas_x, canvas_y):
+    def to_data(self, pts):
         raise CoordMapError("subclass should override this method")
 
-    def data_to(self, data_x, data_y):
+    def data_to(self, pts):
         raise CoordMapError("subclass should override this method")
 
-    def offset_pt(self, pt, xoff, yoff):
+    def offset_pt(self, pts, offset):
         """
-        Offset a point specified by `pt`, by the offsets (`xoff`, `yoff`).
+        Offset a point specified by `pt`, by the offsets `offset`.
         Coordinates are assumed to be in the space defined by this mapper.
         """
         raise CoordMapError("subclass should override this method")
 
-    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
+    def rotate_pt(self, pts, theta, offset=None):
         """
-        Rotate a point specified by (`x`, `y`) by the angle `theta` (in degrees)
-        around the point indicated by (`xoff`, `yoff`).
+        Rotate a point specified by `pt` by the angle `theta` (in degrees)
+        around the point indicated by `offset`.
         Coordinates are assumed to be in the space defined by this mapper.
         """
         raise CoordMapError("subclass should override this method")
 
-class CanvasMapper(BaseMapper):
+
+class NativeMapper(BaseMapper):
     """A coordinate mapper that maps to the viewer's canvas in
-    canvas coordinates.
+    the viewer's canvas coordinates.
     """
     def __init__(self, viewer):
-        super(CanvasMapper, self).__init__()
+        super(NativeMapper, self).__init__()
         self.viewer = viewer
 
-    def to_data(self, canvas_x, canvas_y, viewer=None):
+    def to_data(self, cvs_pts, viewer=None):
         if viewer is None:
             viewer = self.viewer
 
-        canvas_x, canvas_y = viewer.tform['canvas_to_window'].from_(canvas_x,
-                                                                    canvas_y)
-        # flip Y axis for certain backends
-        return viewer.tform['data_to_window'].from_(canvas_x, canvas_y)
+        cvs_arr = np.asarray(cvs_pts)
+        return viewer.tform['data_to_native'].from_(cvs_arr)
 
-    def data_to(self, data_x, data_y, viewer=None):
+    def data_to(self, data_pts, viewer=None):
         if viewer is None:
             viewer = self.viewer
 
-        canvas_x, canvas_y = viewer.tform['data_to_window'].to_(data_x,
-                                                                data_y)
-        # flip Y axis for certain backends
-        return viewer.tform['canvas_to_window'].to_(canvas_x, canvas_y)
+        data_arr = np.asarray(data_pts)
+        return viewer.tform['data_to_native'].to_(data_arr)
 
-    def offset_pt(self, pt, xoff, yoff):
-        x, y = pt
-        return x + xoff, y + yoff
+    def offset_pt(self, pts, offset):
+        return np.add(pts, offset)
 
-    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
+    def rotate_pt(self, pts, theta, offset):
         # TODO?  Not sure if it is needed with this mapper type
-        return x, y
+        return pts
+
+
+class WindowMapper(BaseMapper):
+    """A coordinate mapper that maps to the viewer in 'window' coordinates.
+    """
+    def __init__(self, viewer):
+        super(WindowMapper, self).__init__()
+        self.viewer = viewer
+
+    def to_data(self, cvs_pts, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+
+        cvs_arr = np.asarray(cvs_pts)
+        return viewer.tform['data_to_window'].from_(cvs_arr)
+
+    def data_to(self, data_pts, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+
+        data_arr = np.asarray(data_pts)
+        return viewer.tform['data_to_window'].to_(data_arr)
+
+    def offset_pt(self, pts, offset):
+        return np.add(pts, offset)
+
+    def rotate_pt(self, pts, theta, offset):
+        # TODO?  Not sure if it is needed with this mapper type
+        return pts
 
 
 class CartesianMapper(BaseMapper):
-    """A coordinate mapper that maps to the viewer's canvas
-    in Cartesian coordinates that do not scale (unlike DataMapper).
+    """A coordinate mapper that maps to the viewer in Cartesian
+    coordinates that do not scale (unlike DataMapper).
     """
     def __init__(self, viewer):
         super(CartesianMapper, self).__init__()
         self.viewer = viewer
 
-    def to_data(self, crt_x, crt_y, viewer=None):
+    def to_data(self, crt_pts, viewer=None):
         if viewer is None:
             viewer = self.viewer
-        return viewer.tform['data_to_cartesian'].from_(crt_x, crt_y)
+        crt_arr = np.asarray(crt_pts)
+        return viewer.tform['data_to_cartesian'].from_(crt_arr)
 
-    def data_to(self, data_x, data_y, viewer=None):
+    def data_to(self, data_pts, viewer=None):
         if viewer is None:
             viewer = self.viewer
-        return viewer.tform['data_to_cartesian'].to_(data_x, data_y)
+        data_arr = np.asarray(data_pts)
+        return viewer.tform['data_to_cartesian'].to_(data_arr)
 
-    def offset_pt(self, pt, xoff, yoff):
-        x, y = pt
-        return x + xoff, y + yoff
+    def offset_pt(self, pts, offset):
+        return np.add(pts, offset)
 
-    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
-        return trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
+    def rotate_pt(self, pts, theta, offset):
+        x, y = np.asarray(pts).T
+        xoff, yoff = np.transpose(offset)
+        rot_x, rot_y = trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
+        return np.asarray((rot_x, rot_y)).T
 
 
 class DataMapper(BaseMapper):
-    """A coordinate mapper that maps to the viewer's canvas
-    in data coordinates.
+    """A coordinate mapper that maps to the viewer in data coordinates.
     """
     def __init__(self, viewer):
         super(DataMapper, self).__init__()
         self.viewer = viewer
 
-    def to_data(self, data_x, data_y, viewer=None):
-        return data_x, data_y
+    def to_data(self, data_pts, viewer=None):
+        return data_pts
 
-    def data_to(self, data_x, data_y, viewer=None):
-        return data_x, data_y
+    def data_to(self, data_pts, viewer=None):
+        return data_pts
 
-    def offset_pt(self, pt, xoff, yoff):
-        x, y = pt
-        return x + xoff, y + yoff
+    def offset_pt(self, pts, offset):
+        return np.add(pts, offset)
 
-    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
-        return trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
+    def rotate_pt(self, pts, theta, offset):
+        x, y = np.asarray(pts).T
+        xoff, yoff = np.transpose(offset)
+        rot_x, rot_y = trcalc.rotate_pt(x, y, theta, xoff=xoff, yoff=yoff)
+        return np.asarray((rot_x, rot_y)).T
 
 
 class OffsetMapper(BaseMapper):
-    """A coordinate mapper that maps to the viewer's canvas
-    in data coordinates that are offsets relative to some other
-    reference object.
+    """A coordinate mapper that maps to the viewer in data coordinates
+    that are offsets relative to some other reference object.
     """
     def __init__(self, viewer, refobj):
         super(OffsetMapper, self).__init__()
@@ -138,70 +169,68 @@ class OffsetMapper(BaseMapper):
         self.viewer = viewer
         self.refobj = refobj
 
-    def calc_offsets(self, points):
-        ref_x, ref_y = self.refobj.get_reference_pt()
-        #return map(lambda x, y: x - ref_x, y - ref_y, points)
-        def _cvt(pt):
-            x, y = pt
-            return x - ref_x, y - ref_y
-        return map(_cvt, points)
+    def calc_offsets(self, pts):
+        ref_pt = self.refobj.get_reference_pt()
+        return np.subtract(pts, ref_pt)
 
-    def to_data(self, delta_x, delta_y, viewer=None):
+    def to_data(self, delta_pt, viewer=None):
         if viewer is None:
             viewer = self.viewer
-        ref_x, ref_y = self.refobj.get_reference_pt()
-        data_x, data_y = self.refobj.crdmap.to_data(ref_x, ref_y, viewer=viewer)
-        return data_x + delta_x, data_y + delta_y
+        ref_pt = self.refobj.get_reference_pt()
+        data_pt = self.refobj.crdmap.to_data(ref_pt, viewer=viewer)
+        return np.add(data_pt, delta_pt)
 
-    def data_to(self, data_x, data_y, viewer=None):
-        ref_x, ref_y = self.refobj.get_reference_pt()
-        return data_x - ref_x, data_y - ref_y
+    def data_to(self, data_pts, viewer=None):
+        ref_pt = self.refobj.get_reference_pt()
+        return np.subtract(data_pts, ref_pt)
 
-    def offset_pt(self, pt, xoff, yoff):
+    def offset_pt(self, pts, offset):
         # A no-op because this object's points are always considered
         # relative to the reference object
         return pt
 
-    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
+    def rotate_pt(self, pts, theta, offset):
         # TODO?  Not sure if it is needed with this mapper type
-        return x, y
+        return pts
 
 
 class WCSMapper(BaseMapper):
-    """A coordinate mapper that maps to the viewer's canvas
-    in WCS coordinates.
+    """A coordinate mapper that maps to the viewer in WCS coordinates.
     """
 
-    def __init__(self, viewer, data_mapper):
+    def __init__(self, viewer):
         super(WCSMapper, self).__init__()
         self.viewer = viewer
-        self.data_mapper = data_mapper
 
-    def to_data(self, lon, lat, viewer=None):
+    def to_data(self, wcs_pts, viewer=None):
         if viewer is None:
             viewer = self.viewer
-        return viewer.tform['wcs_to_data'].to_(lon, lat)
+        return viewer.tform['wcs_to_data'].to_(wcs_pts)
 
-    def data_to(self, data_x, data_y, viewer=None):
+    def data_to(self, data_pts, viewer=None):
         if viewer is None:
             viewer = self.viewer
-        return viewer.tform['wcs_to_data'].from_(data_x, data_y)
+        data_arr = np.asarray(data_pts)
+        return viewer.tform['wcs_to_data'].from_(data_arr)
 
-    def offset_pt(self, pt, xoff, yoff):
-        x, y = pt
-        return wcs.add_offset_radec(x, y, xoff, yoff)
+    def offset_pt(self, pts, offset):
+        x, y = np.transpose(pts)
+        xoff, yoff = np.transpose(offset)
+        res_arr = wcs.add_offset_radec(x, y, xoff, yoff)
+        return np.transpose(res_arr)
 
-    def rotate_pt(self, x, y, theta, xoff=0, yoff=0):
+    def rotate_pt(self, pts, theta, offset):
         # TODO: rotate in WCS space?
         # rotate in data space
-        xoff, yoff = self.to_data(xoff, yoff)
-        data_x, data_y = self.to_data(x, y)
+        data_off = self.to_data(offset)
+        data_pts = self.to_data(pts)
 
-        rot_x, rot_y = trcalc.rotate_pt(data_x, data_y, theta,
-                                        xoff=xoff, yoff=yoff)
+        xoff, yoff = numpy.transpose(data_off)
+        data_x, data_y = data_pts.T
+        data_rot = trcalc.rotate_pt(data_x, data_y, theta,
+                                    xoff=xoff, yoff=yoff)
 
-        x, y = self.data_to(rot_x, rot_y)
-        return x, y
+        return self.data_to(data_rot.T)
 
 
 #END
