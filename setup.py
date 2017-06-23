@@ -105,7 +105,7 @@ package_info['package_data'][PACKAGENAME].extend(c_files)
 # https://groups.google.com/forum/#!topic/astropy-dev/urYO8ckB2uM
 
 # pretty much needed
-install_requires = ['astropy>=0.3', 'numpy>=1.7', 'qtpy>=1.1',
+install_requires = ['astropy>=1.0', 'numpy>=1.7', 'qtpy>=1.1',
                     'setuptools>=1.0']
 
 # nice to have, but not required, depending on the application
