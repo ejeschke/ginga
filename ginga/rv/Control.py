@@ -944,7 +944,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.redo_plugins(image, channel)
 
             split_time1 = time.time()
-            self.logger.info("Large image update: %.4f sec" % (
+            self.logger.info("Channel image update: %.4f sec" % (
                 split_time1 - start_time))
 
     def change_channel(self, chname, image=None, raisew=True):

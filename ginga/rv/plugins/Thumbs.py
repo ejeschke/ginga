@@ -108,7 +108,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         fv.set_callback('add-image', self.add_image_cb)
         fv.set_callback('add-image-info', self.add_image_info_cb)
-        fv.set_callback('remove-image', self.remove_image_cb)
         fv.set_callback('remove-image-info', self.remove_image_info_cb)
         fv.set_callback('add-channel', self.add_channel_cb)
         fv.set_callback('delete-channel', self.delete_channel_cb)
@@ -210,57 +209,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return False
 
-        # image is flagged not to make a thumbnail?
-        nothumb = image.get('nothumb', False)
-        if nothumb:
-            return
-
-        # idx = image.get('idx', None)
-        # get image path
-        path = image_info.path
-
-        if path is not None:
-            path = os.path.abspath(path)
-        name = image_info.name
-
-        thumbname = name
-        self.logger.info("making thumb for %s" % (thumbname))
-
-        future = image_info.image_future
-
-        # Is there a preference set to avoid making thumbnails?
         channel = self.fv.get_channel(chname)
-        prefs = channel.settings
-        if not prefs.get('genthumb', False):
-            return
-
-        # Is this thumbnail already in the list?
-        # NOTE: does not handle two separate images with the same path
-        # in the same channel
-        thumbkey = self.get_thumb_key(chname, name, path)
-        with self.thmblock:
-            if thumbkey in self.thumb_dict:
-                self.logger.debug("thumb key already present")
-                return
-
-        # Get metadata for mouse-over tooltip
-        header = image.get_header()
-        metadata = {}
-        for kwd in self.keywords:
-            metadata[kwd] = header.get(kwd, 'N/A')
-        metadata[self.settings.get('mouseover_name_key', 'NAME')] = name
-
-        thumbpath = self.get_thumbpath(path)
-
-        with self.thmblock:
-            self.copy_attrs(channel.fitsimage)
-            thumb_np = image.get_thumbnail(self.thumb_width)
-            self.thumb_generator.set_data(thumb_np)
-            rgb_img = self.thumb_generator.get_image_as_array()
-            imgwin = RGBImage.RGBImage(rgb_img)
-
-        self.insert_thumbnail(imgwin, thumbkey, thumbname, chname, name, path,
-                              thumbpath, metadata, image_info)
+        self.redo_delay(channel.fitsimage)
 
     def add_image_info_cb(self, viewer, channel, info):
 
@@ -277,9 +227,11 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 # if these are not equal then the mtime must have
                 # changed on the file, better reload and regenerate
                 if bnch.thumbpath == thumbpath:
+                    self.logger.debug("we have this thumb--skipping regeneration")
                     return
+                self.logger.debug("we have this thumb, but thumbpath is different--regenerating thumb")
             except KeyError:
-                pass
+                self.logger.debug("we don't seem to have this thumb--generating thumb")
 
         # Is there a cached thumbnail image on disk we can use?
         thmb_image = RGBImage.RGBImage()
@@ -328,29 +280,23 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         self.add_image_cb(viewer, chname, image, info)
 
-    def remove_image_cb(self, viewer, chname, name, path):
+    def remove_image_info_cb(self, viewer, channel, image_info):
         if not self.gui_up:
             return
 
+        chname, imname, impath = channel.name, image_info.name, image_info.path
         try:
             # Is this thumbnail already in the list?
-            thumbkey = self.get_thumb_key(chname, name, path)
+            thumbkey = self.get_thumb_key(chname, imname, impath)
             self.remove_thumb(thumbkey)
         except Exception as e:
             self.logger.error("Error removing thumb for %s: %s" % (
-                name, str(e)))
-
-    def remove_image_info_cb(self, viewer, channel, image_info):
-        """Almost the same as remove_image_cb().
-        """
-        return self.remove_image_cb(viewer, channel.name,
-                                    image_info.name, image_info.path)
+                imname, str(e)))
 
     def remove_thumb(self, thumbkey):
         with self.thmblock:
             if thumbkey not in self.thumb_dict:
                 return
-            self.clear_widget()
             del self.thumb_dict[thumbkey]
             self.thumb_list.remove(thumbkey)
 
@@ -373,7 +319,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                     del self.thumb_dict[thumbkey]
                     self._tkf_highlight.discard(thumbkey)
 
-            self.reorder_thumbs()
+        self.reorder_thumbs()
 
     def thumbpane_resized_cb(self, thumbvw, width, height):
         self.fv.gui_do_oneshot('thumbs-resized', self._resized, width, height)
@@ -400,10 +346,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def clear(self):
         with self.thmblock:
-            self.clear_widget()
             self.thumb_list = []
             self.thumb_dict = {}
             self._tkf_highlight = set([])
+
         self.reorder_thumbs()
 
     def add_channel_cb(self, viewer, channel):
@@ -431,15 +377,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             thumbkey = self._get_thumb_key(chname, image)
             new_highlight = set([thumbkey])
 
-            # TODO: already calculated thumbkey, use simpler test
-            if not self.have_thumbnail(fitsimage, image):
-                # No memory of this thumbnail, so regenerate it
-                self._add_image(viewer, chname, image)
-                return
-
-            # Else schedule an update of the thumbnail for changes to
-            # cut levels, etc.
-            self.redo_delay(fitsimage)
+            if self.have_thumbnail(fitsimage, image):
+                # schedule an update of the thumbnail to pick up changes
+                self.redo_delay(fitsimage)
 
         else:
             # no image has the focus
@@ -567,6 +507,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         image = fitsimage.get_image()
         if image is None:
             return
+
+        # image is flagged not to make a thumbnail?
+        nothumb = image.get('nothumb', False)
+        if nothumb:
+            return
+
         if save_thumb is None:
             save_thumb = self.settings.get('cache_thumbs', False)
 
@@ -628,7 +574,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # TODO: delete thumbs for this channel!
         self.logger.info("deleting thumbs for channel '%s'" % (chname_del))
         with self.thmblock:
-            self.clear_widget()
             newThumbList = []
             un_hilite_set = set([])
             for thumbkey in self.thumb_list:
