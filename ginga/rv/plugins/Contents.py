@@ -89,13 +89,13 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.treeview = treeview
         treeview.setup_table(self.columns, 2, 'NAME')
 
-        #treeview.add_callback('selected', self.switch_image)
+        treeview.add_callback('activated', self.dblclick_cb)
         vbox.add_widget(treeview, stretch=1)
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
         b1 = Widgets.Button('Display')
-        b1.add_callback('activated', self.switch_image_cb)
+        b1.add_callback('activated', self.display_cb)
         btns.add_widget(b1)
         b2 = Widgets.Button('Move')
         b2.add_callback('activated', lambda w: self.ask_action_images('move'))
@@ -132,7 +132,18 @@ class Contents(GingaPlugin.GlobalPlugin):
                 res.append((chname, bnch))
         return res
 
-    def switch_image_cb(self, widget):
+    def dblclick_cb(self, widget, d):
+        chname = list(d.keys())[0]
+        imname = list(d[chname].keys())[0]
+        bnch = d[chname][imname]
+        path = bnch.path
+        self.logger.debug("chname=%s name=%s path=%s" % (
+            chname, imname, path))
+
+        self.fv.switch_name(chname, imname, path=path,
+                            image_future=bnch.image_future)
+
+    def display_cb(self, widget):
         res = self.get_selected()
         if len(res) != 1:
             self.fv.show_error("select just one file to load!")
