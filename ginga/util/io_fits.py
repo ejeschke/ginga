@@ -217,7 +217,12 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             # lookups by numerical index or (NAME, EXTVER)
             d = Bunch.Bunch(index=idx, name=name, extver=extver)
             if len(tup) > 5:
-                d.setvals(htype=tup[2], dtype=tup[5])
+                import astropy
+                from astropy.utils.introspection import minversion
+                if minversion(astropy, '2.0'):
+                    d.setvals(htype=tup[3], dtype=tup[6])
+                else:
+                    d.setvals(htype=tup[2], dtype=tup[5])
             self.hdu_info.append(d)
             # different ways of accessing this HDU:
             # by numerical index
