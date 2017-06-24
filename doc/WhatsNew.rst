@@ -2,6 +2,11 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.6.5.dev
+=============
+- Vectorized all steps of coordinate transforms
+- Set minimum astropy version to 1.X
+
 Ver 2.6.4 (2017-06-07)
 ======================
 - Added new ScreenShot plugin to take PNG/JPEG snaps of the viewer
