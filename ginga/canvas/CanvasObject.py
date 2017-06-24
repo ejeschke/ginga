@@ -246,15 +246,27 @@ class CanvasObjectBase(Callback.Callbacks):
         points = trcalc.rotate_coord(points, theta_deg, (ref_x, ref_y))
         self.set_data_points(points)
 
-    def move_delta(self, xoff, yoff):
+    def move_delta_pt(self, off_pt):
         points = np.asarray(self.get_data_points(), dtype=np.double)
-        points.T[0] += xoff
-        points.T[1] += yoff
+        points = np.add(points, off_pt)
         self.set_data_points(points)
 
+    def move_delta(self, xoff, yoff):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use move_delta_pt instead.
+        """
+        self.move_delta_pt((xoff, yoff))
+
+    def move_to_pt(self, dst_pt):
+        ref_pt = self.get_reference_pt()
+        off_pt = np.subtract(dst_pt, ref_pt)
+        self.move_delta_pt(off_pt)
+
     def move_to(self, xdst, ydst):
-        x, y = self.get_reference_pt()
-        return self.move_delta(xdst - x, ydst - y)
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use move_to_pt() instead.
+        """
+        self.move_to_pt((xdst, ydst))
 
     def get_num_points(self):
         return(len(self.points))
@@ -269,19 +281,29 @@ class CanvasObjectBase(Callback.Callbacks):
     def get_point_by_index(self, i):
         return self.crdmap.to_data(self.points[i])
 
-    def scale_by(self, scale_x, scale_y):
-        ctr_x, ctr_y = self.get_center_pt()
+    def scale_by_factors(self, factors):
+        ctr_pt = self.get_center_pt()
         pts = np.asarray(self.get_data_points(), dtype=np.double)
-        pts = np.add(np.multiply(np.subtract(pts, (ctr_x, ctr_y)),
-                                 (scale_x, scale_y)), (ctr_x, ctr_y))
+        pts = np.add(np.multiply(np.subtract(pts, ctr_pt), factors), ctr_pt)
+        self.set_data_points(pts)
+
+    def scale_by(self, scale_x, scale_y):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use scale_by_factors() instead.
+        """
+        self.scale_by_factors((scale_x, scale_y))
+
+    def rescale_by_factors(self, factors, detail):
+        ctr_pt = detail.center_pos
+        pts = np.asarray(detail.points, dtype=np.double)
+        pts = np.add(np.multiply(np.subtract(pts, ctr_pt), factors), ctr_pt)
         self.set_data_points(pts)
 
     def rescale_by(self, scale_x, scale_y, detail):
-        ctr_x, ctr_y = detail.center_pos
-        pts = np.asarray(detail.points, dtype=np.double)
-        pts = np.add(np.multiply(np.subtract(pts, (ctr_x, ctr_y)),
-                                 (scale_x, scale_y)), (ctr_x, ctr_y))
-        self.set_data_points(pts)
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use rescale_by_factors() instead.
+        """
+        self.rescale_by_factors((scale_x, scale_y), detail)
 
     def setup_edit(self, detail):
         """subclass should override as necessary."""

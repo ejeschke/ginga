@@ -89,12 +89,12 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
                  showcap=True, showplumb=True, units='arcmin',
                  font='Sans Serif', fontsize=None, **kwdargs):
         self.kind = 'ruler'
+        points = np.asarray([(x1, y1), (x2, y2)], dtype=np.float)
         CanvasObjectBase.__init__(self, color=color, color2=color2,
                                   alpha=alpha, units=units,
                                   showplumb=showplumb,
                                   linewidth=linewidth, showcap=showcap,
-                                  linestyle=linestyle,
-                                  x1=x1, y1=y1, x2=x2, y2=y2,
+                                  linestyle=linestyle, points=points,
                                   font=font, fontsize=fontsize,
                                   **kwdargs)
         TwoPointMixin.__init__(self)
@@ -294,10 +294,11 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
                  linewidth=1, fontsize=None, font='Sans Serif',
                  alpha=1.0, linestyle='solid', showcap=True, **kwdargs):
         self.kind = 'compass'
+        points = np.asarray([(x, y)], dtype=np.float)
         CanvasObjectBase.__init__(self, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
-                                  x=x, y=y, radius=radius,
+                                  points=points, radius=radius,
                                   font=font, fontsize=fontsize,
                                   **kwdargs)
         OnePointOneRadiusMixin.__init__(self)
@@ -318,8 +319,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i in (1, 2):
             x, y = pt
             self.radius = max(abs(x - self.x), abs(y - self.y))
@@ -450,11 +450,12 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
                  fontsize=None, font='Sans Serif', format='xy',
                  **kwdargs):
         self.kind = 'crosshair'
+        points = np.asarray([(x, y)], dtype=np.float)
         CanvasObjectBase.__init__(self, color=color, alpha=alpha,
                                   linewidth=linewidth, linestyle=linestyle,
                                   text=text, textcolor=textcolor,
                                   fontsize=fontsize, font=font,
-                                  x=x, y=y, format=format, **kwdargs)
+                                  points=points, format=format, **kwdargs)
         OnePointMixin.__init__(self)
 
     def select_contains(self, viewer, data_x, data_y):
@@ -606,8 +607,10 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
                      coord=coord)
         obj2.editable = False
 
+        points = np.asarray([(x, y)], dtype=np.float)
+
         CompoundObject.__init__(self, obj1, obj2,
-                                x=x, y=y, radius=radius,
+                                points=points, radius=radius,
                                 width=width, color=color,
                                 linewidth=linewidth, linestyle=linestyle,
                                 alpha=alpha, **kwdargs)
@@ -637,8 +640,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
     def set_edit_point(self, i, pt, detail):
         if i == 0:
             # move control point
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         else:
             if i == 1:
                 scalef = self.calc_scale_from_pt(pt, detail)
@@ -662,7 +664,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
         if oradius < self.radius:
             raise ValueError('Outer boundary < inner boundary')
 
-        d = dict(x=self.x, y=self.y, radius=self.radius, color=self.color,
+        d = dict(points=self.points, radius=self.radius, color=self.color,
                  linewidth=self.linewidth, linestyle=self.linestyle,
                  alpha=self.alpha)
 
@@ -673,10 +675,10 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
         d['radius'] = oradius
         self.objects[1].__dict__.update(d)
 
-    def move_to(self, xdst, ydst):
-        super(Annulus, self).move_to(xdst, ydst)
+    def move_to_pt(self, dst_pt):
+        super(Annulus, self).move_to_pt(dst_pt)
 
-        self.set_data_points([(xdst, ydst)])
+        self.set_data_points([dst_pt])
 
 
 class WCSAxes(CompoundObject):

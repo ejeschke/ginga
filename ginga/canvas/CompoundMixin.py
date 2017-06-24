@@ -219,32 +219,22 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.rotate(theta, xoff=xoff, yoff=yoff)
 
-    def move_delta(self, xoff, yoff):
+    def move_delta_pt(self, off_pt):
         for obj in self.objects:
-            obj.move_delta(xoff, yoff)
+            obj.move_delta_pt(off_pt)
 
-    def rotate_by(self, theta_deg):
-        ref_x, ref_y = self.get_reference_pt()
+    def scale_by_factors(self, factors):
         for obj in self.objects:
-            self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
-
-    def scale_by(self, scale_x, scale_y):
-        for obj in self.objects:
-            obj.scale_by(scale_x, scale_y)
+            obj.scale_by_factors(factors)
 
     def get_reference_pt(self):
         # Reference point for a compound object is the average of all
         # it's contituents reference points
         points = np.asarray([ obj.get_reference_pt()
-                                 for obj in self.objects ])
+                              for obj in self.objects ])
         t_ = points.T
         x, y = np.average(t_[0]), np.average(t_[1])
         return (x, y)
-
-    def move_to(self, xdst, ydst):
-        x, y = self.get_reference_pt()
-        for obj in self.objects:
-            obj.move_delta(xdst - x, ydst - y)
 
     def reorder_layers(self):
         self.objects.sort(key=lambda obj: getattr(obj, '_zorder', 0))

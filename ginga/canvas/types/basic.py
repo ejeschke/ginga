@@ -70,8 +70,9 @@ class Text(OnePointMixin, CanvasObjectBase):
                  color='yellow', alpha=1.0, rot_deg=0.0,
                  showcap=False, **kwdargs):
         self.kind = 'text'
-        super(Text, self).__init__(color=color, alpha=alpha,
-                                   x=x, y=y, font=font, fontsize=fontsize,
+        points = np.asarray([(x, y)], dtype=np.float)
+        super(Text, self).__init__(points=points, color=color, alpha=alpha,
+                                   font=font, fontsize=fontsize,
                                    text=text, rot_deg=rot_deg,
                                    showcap=showcap, **kwdargs)
         OnePointMixin.__init__(self)
@@ -432,13 +433,14 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
-        CanvasObjectBase.__init__(self, color=color,
+        points = np.asarray([(x, y)], dtype=np.float)
+        CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
                                   fill=fill, fillcolor=fillcolor,
                                   alpha=alpha, fillalpha=fillalpha,
-                                  x=x, y=y, xradius=xradius,
-                                  yradius=yradius, rot_deg=rot_deg,
+                                  xradius=xradius, yradius=yradius,
+                                  rot_deg=rot_deg,
                                   **kwdargs)
         OnePointTwoRadiusMixin.__init__(self)
         self.kind = 'box'
@@ -547,13 +549,13 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
-        CanvasObjectBase.__init__(self, color=color,
+        points = np.asarray([(x, y)], dtype=np.float)
+        CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
                                   fill=fill, fillcolor=fillcolor,
                                   alpha=alpha, fillalpha=fillalpha,
-                                  x=x, y=y, radius=radius,
-                                  rot_deg=rot_deg,
+                                  radius=radius, rot_deg=rot_deg,
                                   **kwdargs)
         OnePointOneRadiusMixin.__init__(self)
         self.kind = 'squarebox'
@@ -690,14 +692,14 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
-        CanvasObjectBase.__init__(self, color=color,
+        points = np.asarray([(x, y)], dtype=np.float)
+        CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
                                   fill=fill, fillcolor=fillcolor,
                                   alpha=alpha, fillalpha=fillalpha,
-                                  x=x, y=y, xradius=xradius,
-                                  yradius=yradius, rot_deg=rot_deg,
-                                  **kwdargs)
+                                  xradius=xradius, yradius=yradius,
+                                  rot_deg=rot_deg, **kwdargs)
         OnePointTwoRadiusMixin.__init__(self)
         self.kind = 'ellipse'
 
@@ -876,14 +878,14 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
         self.kind='triangle'
-        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+        points = np.asarray([(x, y)], dtype=np.float)
+        CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
-                                  linestyle=linestyle,
+                                  linestyle=linestyle, alpha=alpha,
                                   fill=fill, fillcolor=fillcolor,
                                   fillalpha=fillalpha,
-                                  x=x, y=y, xradius=xradius,
-                                  yradius=yradius, rot_deg=rot_deg,
-                                  **kwdargs)
+                                  xradius=xradius, yradius=yradius,
+                                  rot_deg=rot_deg, **kwdargs)
         OnePointTwoRadiusMixin.__init__(self)
 
     def get_points(self):
@@ -1006,12 +1008,13 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  **kwdargs):
-        CanvasObjectBase.__init__(self, color=color,
+        points = np.asarray([(x, y)], dtype=np.float)
+        CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
                                   fill=fill, fillcolor=fillcolor,
                                   alpha=alpha, fillalpha=fillalpha,
-                                  x=x, y=y, radius=radius, **kwdargs)
+                                  radius=radius, **kwdargs)
         OnePointOneRadiusMixin.__init__(self)
         self.kind = 'circle'
 
@@ -1128,10 +1131,10 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', alpha=1.0, showcap=False,
                  **kwdargs):
         self.kind = 'point'
-        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
-                                  linewidth=linewidth,
-                                  linestyle=linestyle,
-                                  x=x, y=y, radius=radius,
+        points = np.asarray([(x, y)], dtype=np.float)
+        CanvasObjectBase.__init__(self, points=points, color=color,
+                                  linewidth=linewidth, alpha=alpha,
+                                  linestyle=linestyle, radius=radius,
                                   showcap=showcap, style=style,
                                   **kwdargs)
         OnePointOneRadiusMixin.__init__(self)
@@ -1244,9 +1247,9 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
                  drawdims=False, font='Sans Serif', fillalpha=1.0,
                  **kwdargs):
         self.kind = 'rectangle'
+        points = np.asarray([(x1, y1), (x2, y2)], dtype=np.float)
 
-        CanvasObjectBase.__init__(self, color=color,
-                                  x1=x1, y1=y1, x2=x2, y2=y2,
+        CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
                                   fill=fill, fillcolor=fillcolor,
@@ -1369,10 +1372,10 @@ class Line(TwoPointMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', alpha=1.0,
                  arrow=None, showcap=False, **kwdargs):
         self.kind = 'line'
-        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+        points = np.asarray([(x1, y1), (x2, y2)], dtype=np.float)
+        CanvasObjectBase.__init__(self, points=points, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle, arrow=arrow,
-                                  x1=x1, y1=y1, x2=x2, y2=y2,
                                   **kwdargs)
         TwoPointMixin.__init__(self)
 
@@ -1485,12 +1488,12 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  **kwdargs):
         self.kind='righttriangle'
-        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+        points = np.asarray([(x1, y1), (x2, y2)], dtype=np.float)
+        CanvasObjectBase.__init__(self, points=points, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
                                   fill=fill, fillcolor=fillcolor,
                                   fillalpha=fillalpha,
-                                  x1=x1, y1=y1, x2=x2, y2=y2,
                                   **kwdargs)
         TwoPointMixin.__init__(self)
 

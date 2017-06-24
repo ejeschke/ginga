@@ -18,17 +18,26 @@ from ginga.util.six.moves import map
 #
 class OnePointMixin(object):
 
-    def __get_points(self):
-        return np.asarray([(self.x, self.y)])
+    # --- For backward compatibility ---
+    def __get_x(self):
+        return self.points[0][0]
 
-    def __set_points(self, pts):
-        pts = np.asarray(pts)
-        self.x, self.y = pts[0]
+    def __set_x(self, val):
+        self.points[0][0] = val
 
-    points = property(__get_points, __set_points)
+    x = property(__get_x, __set_x)
+
+    def __get_y(self):
+        return self.points[0][1]
+
+    def __set_y(self, val):
+        self.points[0][1] = val
+
+    y = property(__get_y, __set_y)
+    # ----------------------------------
 
     def get_center_pt(self):
-        points = self.get_data_points(points=[(self.x, self.y)])
+        points = self.get_data_points()
         return points[0]
 
     def setup_edit(self, detail):
@@ -37,8 +46,7 @@ class OnePointMixin(object):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
@@ -52,24 +60,48 @@ class OnePointMixin(object):
     def rotate_by(self, theta_deg):
         pass
 
+    def scale_by_factors(self, factors):
+        pass
+
     def scale_by(self, scale_x, scale_y):
         pass
 
 
 class TwoPointMixin(object):
 
-    def __get_points(self):
-        return np.asarray([(self.x1, self.y1), (self.x2, self.y2)])
+    # --- For backward compatibility ---
+    def __get_x1(self):
+        return self.points[0][0]
 
-    def __set_points(self, pts):
-        pts = np.asarray(pts)
-        self.x1, self.y1 = pts[0]
-        self.x2, self.y2 = pts[1]
+    def __set_x1(self, val):
+        self.points[0][0] = val
 
-    points = property(__get_points, __set_points)
+    x1 = property(__get_x1, __set_x1)
 
-    def get_point_by_index(self, i):
-        return self.points[i]
+    def __get_y1(self):
+        return self.points[0][1]
+
+    def __set_y1(self, val):
+        self.points[0][1] = val
+
+    y1 = property(__get_y1, __set_y1)
+
+    def __get_x2(self):
+        return self.points[1][0]
+
+    def __set_x2(self, val):
+        self.points[1][0] = val
+
+    x2 = property(__get_x2, __set_x2)
+
+    def __get_y2(self):
+        return self.points[1][1]
+
+    def __set_y2(self, val):
+        self.points[1][1] = val
+
+    y2 = property(__get_y2, __set_y2)
+    # ----------------------------------
 
     def get_center_pt(self):
         points = self.get_data_points(points=[
@@ -79,13 +111,12 @@ class TwoPointMixin(object):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i in (1, 2):
             self.set_point_by_index(i-1, pt)
         elif i == 3:
             scalef = self.calc_scale_from_pt(pt, detail)
-            self.rescale_by(scalef, scalef, detail)
+            self.rescale_by_factors((scalef, scalef), detail)
         elif i == 4:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
             self.rerotate_by(delta_deg, detail)
@@ -120,8 +151,7 @@ class OnePointOneRadiusMixin(OnePointMixin):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i == 1:
             scalef = self.calc_scale_from_pt(pt, detail)
             self.radius = detail.radius * scalef
@@ -169,6 +199,9 @@ class OnePointOneRadiusMixin(OnePointMixin):
     def rotate_by(self, theta_deg):
         pass
 
+    def scale_by_factors(self, factors):
+        self.radius *= np.asarray(factors).max()
+
     def scale_by(self, scale_x, scale_y):
         self.radius *= max(scale_x, scale_y)
 
@@ -180,8 +213,7 @@ class OnePointTwoRadiusMixin(OnePointMixin):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i == 1:
             scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
             self.xradius = detail.xradius * scale_x
@@ -337,8 +369,7 @@ class PolygonMixin(object):
     def set_edit_point(self, i, pt, detail):
         num_points = len(self.points)
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i-1 < num_points:
             self.set_point_by_index(i-1, pt)
         elif i == num_points + 1:

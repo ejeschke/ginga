@@ -70,7 +70,8 @@ class Image(OnePointMixin, CanvasObjectBase):
                  showcap=False, flipy=False, optimize=True,
                  **kwdargs):
         self.kind = 'image'
-        CanvasObjectBase.__init__(self, x=x, y=y, image=image, alpha=alpha,
+        points = np.asarray([(x, y)], dtype=np.float)
+        CanvasObjectBase.__init__(self, points=points, image=image, alpha=alpha,
                                   scale_x=scale_x, scale_y=scale_y,
                                   interpolation=interpolation,
                                   linewidth=linewidth, linestyle=linestyle,
@@ -268,8 +269,7 @@ class Image(OnePointMixin, CanvasObjectBase):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i == 1:
             scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
             self.scale_x = detail.scale_x * scale_x
@@ -366,13 +366,13 @@ class NormImage(Image):
                  linewidth=0, linestyle='solid', color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
-        super(NormImage, self).__init__(x=x, y=y, image=image, alpha=alpha,
-                                            scale_x=scale_x, scale_y=scale_y,
-                                            interpolation=interpolation,
-                                            linewidth=linewidth, linestyle=linestyle,
-                                            color=color,
-                                            showcap=showcap, optimize=optimize,
-                                            **kwdargs)
+        super(NormImage, self).__init__(x, y, image=image, alpha=alpha,
+                                        scale_x=scale_x, scale_y=scale_y,
+                                        interpolation=interpolation,
+                                        linewidth=linewidth, linestyle=linestyle,
+                                        color=color,
+                                        showcap=showcap, optimize=optimize,
+                                        **kwdargs)
         self.rgbmap = rgbmap
         self.autocuts = autocuts
 
