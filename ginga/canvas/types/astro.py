@@ -104,11 +104,9 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
         points = self.get_data_points(points=points)
         return points
 
-    def select_contains(self, viewer, data_x, data_y):
+    def select_contains_pt(self, viewer, pt):
         points = self.get_points()
-        x1, y1 = points[0]
-        x2, y2 = points[1]
-        return self.within_line(viewer, data_x, data_y, x1, y1, x2, y2,
+        return self.within_line(viewer, pt, points[0], points[1],
                                 self.cap_radius)
 
     def get_ruler_distances(self, viewer):
@@ -326,10 +324,9 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
-    def select_contains(self, viewer, data_x, data_y):
-        xd, yd = self.crdmap.to_data((self.x, self.y))
-        return self.within_radius(viewer, data_x, data_y, xd, yd,
-                                  self.cap_radius)
+    def select_contains_pt(self, viewer, pt):
+        p0 = self.crdmap.to_data((self.x, self.y))
+        return self.within_radius(viewer, pt, p0, self.cap_radius)
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
@@ -458,10 +455,9 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
                                   points=points, format=format, **kwdargs)
         OnePointMixin.__init__(self)
 
-    def select_contains(self, viewer, data_x, data_y):
-        xd, yd = self.crdmap.to_data((self.x, self.y))
-        return self.within_radius(viewer, data_x, data_y, xd, yd,
-                                  self.cap_radius)
+    def select_contains_pt(self, viewer, pt):
+        p0 = self.crdmap.to_data((self.x, self.y))
+        return self.within_radius(viewer, pt, p0, self.cap_radius)
 
     def draw(self, viewer):
         wd, ht = viewer.get_window_size()
@@ -505,16 +501,16 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
 
 class AnnulusMixin(object):
 
-    def contains(self, x, y):
+    def contains_pt(self, pt):
         """Containment test."""
         obj1, obj2 = self.objects
-        return obj2.contains(x, y) and np.logical_not(obj1.contains(x, y))
+        return obj2.contains_pt(pt) and np.logical_not(obj1.contains_pt(pt))
 
-    def contains_arr(self, x_arr, y_arr):
+    def contains_pts(self, pts):
         """Containment test on arrays."""
         obj1, obj2 = self.objects
-        arg1 = obj2.contains_arr(x_arr, y_arr)
-        arg2 = np.logical_not(obj1.contains_arr(x_arr, y_arr))
+        arg1 = obj2.contains_pts(pts)
+        arg2 = np.logical_not(obj1.contains_pts(pts))
         return np.logical_and(arg1, arg2)
 
     def get_llur(self):
@@ -522,9 +518,9 @@ class AnnulusMixin(object):
         obj2 = self.objects[1]
         return obj2.get_llur()
 
-    def select_contains(self, viewer, data_x, data_y):
+    def select_contains_pt(self, viewer, pt):
         obj2 = self.objects[1]
-        return obj2.select_contains(viewer, data_x, data_y)
+        return obj2.select_contains_pt(viewer, pt)
 
 
 class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):

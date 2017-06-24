@@ -101,10 +101,10 @@ def rotate_pt(x_arr, y_arr, theta_deg, xoff=0, yoff=0):
 
 rotate_arr = rotate_pt
 
-def rotate_coord(coord, theta_deg, offsets):
+def rotate_coord(coord, thetas, offsets):
     arr = np.asarray(coord)
     # TODO: handle dimensional rotation N>2
-    arr = rotate_pt(arr.T[0], arr.T[1], theta_deg,
+    arr = rotate_pt(arr.T[0], arr.T[1], thetas[0],
                     xoff=offsets[0], yoff=offsets[1])
     return arr.T
 

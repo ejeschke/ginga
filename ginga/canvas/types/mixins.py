@@ -57,7 +57,7 @@ class OnePointMixin(object):
         x, y = self.crdmap.to_data((self.x, self.y))
         return (x-0.5, y-0.5, x+0.5, y+0.5)
 
-    def rotate_by(self, theta_deg):
+    def rotate_by_deg(self, thetas):
         pass
 
     def scale_by_factors(self, factors):
@@ -119,7 +119,7 @@ class TwoPointMixin(object):
             self.rescale_by_factors((scalef, scalef), detail)
         elif i == 4:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
-            self.rerotate_by(delta_deg, detail)
+            self.rerotate_by_deg([delta_deg], detail)
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
@@ -157,7 +157,7 @@ class OnePointOneRadiusMixin(OnePointMixin):
             self.radius = detail.radius * scalef
         elif i == 2:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
-            self.rotate_by(delta_deg)
+            self.rotate_by_deg([delta_deg])
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
@@ -189,14 +189,14 @@ class OnePointOneRadiusMixin(OnePointMixin):
 
         if hasattr(self, 'rot_deg'):
             xd, yd = self.crdmap.to_data((self.x, self.y))
-            mpts = trcalc.rotate_coord(mpts, self.rot_deg, [xd, yd])
+            mpts = trcalc.rotate_coord(mpts, [self.rot_deg], [xd, yd])
 
         t_ = mpts.T
         x1, y1 = t_[0].min(), t_[1].min()
         x2, y2 = t_[0].max(), t_[1].max()
         return (x1, y1, x2, y2)
 
-    def rotate_by(self, theta_deg):
+    def rotate_by_deg(self, thetas):
         pass
 
     def scale_by_factors(self, factors):
@@ -230,7 +230,7 @@ class OnePointTwoRadiusMixin(OnePointMixin):
             self.yradius = detail.yradius * scalef
         elif i == 5:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
-            self.rotate_by(delta_deg)
+            self.rotate_by_deg([delta_deg])
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
@@ -259,8 +259,8 @@ class OnePointTwoRadiusMixin(OnePointMixin):
         detail.yradius = self.yradius
         detail.points = deepcopy(self.get_data_points())
 
-    def rotate_by(self, theta_deg):
-        new_rot = math.fmod(self.rot_deg + theta_deg, 360.0)
+    def rotate_by_deg(self, thetas):
+        new_rot = math.fmod(self.rot_deg + thetas[0], 360.0)
         self.rot_deg = new_rot
         return new_rot
 
@@ -281,7 +281,7 @@ class OnePointTwoRadiusMixin(OnePointMixin):
 
         if hasattr(self, 'rot_deg'):
             xd, yd = self.crdmap.to_data((self.x, self.y))
-            mpts = trcalc.rotate_coord(mpts, self.rot_deg, [xd, yd])
+            mpts = trcalc.rotate_coord(mpts, [self.rot_deg], [xd, yd])
 
         t_ = mpts.T
         x1, y1 = t_[0].min(), t_[1].min()
@@ -315,9 +315,10 @@ class PolygonMixin(object):
     def get_llur(self):
         return self.get_llur_pts(self.get_data_points())
 
-    def contains_arr(self, x_arr, y_arr):
+    def contains_pts(self, pts):
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
+        x_arr, y_arr = np.asarray(pts, dtype=np.float).T
         xa, ya = x_arr, y_arr
 
         # promote input arrays dimension cardinality, if necessary
@@ -361,11 +362,6 @@ class PolygonMixin(object):
 
         return result
 
-    def contains(self, xp, yp):
-        x_arr, y_arr = np.array([xp]), np.array([yp])
-        res = self.contains_arr(x_arr, y_arr)
-        return res[0]
-
     def set_edit_point(self, i, pt, detail):
         num_points = len(self.points)
         if i == 0:
@@ -377,7 +373,7 @@ class PolygonMixin(object):
             self.rescale_by(scalef, scalef, detail)
         elif i == num_points + 2:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
-            self.rerotate_by(delta_deg, detail)
+            self.rerotate_by_deg([delta_deg], detail)
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 

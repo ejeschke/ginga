@@ -365,7 +365,7 @@ class DrawingMixin(object):
             self.process_drawing()
         return True
 
-    def _is_editable(self, obj, x, y, is_inside):
+    def _is_editable(self, obj, pt, is_inside):
         return is_inside and obj.editable
 
     def _prepare_to_move(self, obj, data_x, data_y):
@@ -394,7 +394,7 @@ class DrawingMixin(object):
 
             # check for objects at this location
             #print("getting items")
-            objs = canvas.select_items_at(viewer, data_x, data_y,
+            objs = canvas.select_items_at(viewer, (data_x, data_y),
                                           test=self._is_editable)
             #print("items: %s" % (str(objs)))
 
@@ -416,10 +416,10 @@ class DrawingMixin(object):
                 #print("editing: checking for cp")
                 edit_pts = obj.get_edit_points(viewer)
                 #print((self._edit_obj, edit_pts))
-                i = obj.get_pt(viewer, edit_pts, data_x, data_y,
-                               obj.cap_radius)
-                #print(('got point', i))
-                if i is not None:
+                idx = obj.get_pt(viewer, edit_pts, (data_x, data_y),
+                                 obj.cap_radius)
+                if len(idx) > 0:
+                    i = idx[0]
                     #print("editing cp #%d" % (i))
                     # editing a control point from an existing object
                     self._edit_obj = obj
@@ -433,7 +433,8 @@ class DrawingMixin(object):
                     self._edit_update(data_x, data_y, viewer)
                     return True
 
-                ## if obj.contains(data_x, data_y):
+                i = None
+                ## if obj.contains_pt((data_x, data_y)):
                 ##     contains.append(obj)
                 # update: check if objects bbox contains this point
                 x1, y1, x2, y2 = obj.get_llur()
@@ -462,7 +463,7 @@ class DrawingMixin(object):
                     self.clear_selected()
 
                 # see now if there is an unselected item at this location
-                objs = canvas.select_items_at(viewer, data_x, data_y,
+                objs = canvas.select_items_at(viewer, (data_x, data_y),
                                               test=self._is_editable)
                 #print("new items: %s" % (str(objs)))
                 if len(objs) > 0:
@@ -533,8 +534,8 @@ class DrawingMixin(object):
             for i in range(1, len(points[1:])+1):
                 x1, y1 = points[i]
                 self.logger.debug("checking line %d" % (i))
-                if obj.within_line(viewer, data_x, data_y, x0, y0, x1, y1,
-                                   8):
+                if obj.within_line(viewer, (data_x, data_y),
+                                   (x0, y0), (x1, y1), 8):
                     insert = i
                     break
                 x0, y0 = x1, y1
@@ -562,7 +563,7 @@ class DrawingMixin(object):
             for i in range(len(points)):
                 x1, y1 = points[i]
                 self.logger.debug("checking vertex %d" % (i))
-                if obj.within_radius(viewer, data_x, data_y, x1, y1,
+                if obj.within_radius(viewer, (data_x, data_y), (x1, y1),
                                      8):
                     delete = i
                     break
@@ -578,7 +579,7 @@ class DrawingMixin(object):
     def edit_rotate(self, delta_deg, viewer):
         if self._edit_obj is None:
             return False
-        self._edit_obj.rotate_by(delta_deg)
+        self._edit_obj.rotate_by_deg([delta_deg])
         self.process_drawing()
         self.make_callback('edit-event', self._edit_obj)
         return True
@@ -667,7 +668,7 @@ class DrawingMixin(object):
 
     def _do_pick(self, canvas, event, data_x, data_y, cb_name, viewer):
         # check for objects at this location
-        objs = canvas.select_items_at(viewer, data_x, data_y)
+        objs = canvas.select_items_at(viewer, (data_x, data_y))
 
         picked = set(filter(lambda obj: obj.pickable, objs))
 

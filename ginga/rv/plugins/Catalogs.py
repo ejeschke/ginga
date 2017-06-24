@@ -646,19 +646,19 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if filter_obj:
             num_cat = len(starlist)
             self.logger.debug("number of incoming stars=%d" % (num_cat))
-            # TODO: vectorize wcs lookup
-            coords = [image.radectopix(star['ra_deg'], star['dec_deg'])
-                      for star in starlist]
-            arr = numpy.array(coords)
-            self.logger.debug("arr.shape = %s" % str(arr.shape))
+            coords = numpy.asarray([(star['ra_deg'], star['dec_deg'])
+                                    for star in starlist])
+
+            # vectorized wcs transform to data coords
+            coords = image.wcs.wcspt_to_datapt(coords)
 
             # vectorized test for inclusion in shape
-            res = filter_obj.contains_arr(arr.T[0], arr.T[1])
+            res = filter_obj.contains_pts(coords)
             self.logger.debug("res.shape = %s" % str(res.shape))
 
-            stars = [starlist[i] for i in range(num_cat) if res[i]]
+            stars = numpy.array(starlist)[numpy.flatnonzero(res)]
             self.logger.debug("number of filtered stars=%d" % (len(stars)))
-            starlist = stars
+            starlist = list(stars)
 
         return starlist
 

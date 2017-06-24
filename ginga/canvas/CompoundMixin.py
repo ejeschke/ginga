@@ -51,23 +51,18 @@ class CompoundMixin(object):
         x1, y1, x2, y2 = self.get_llur()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
-    def contains_arr(self, x_arr, y_arr):
+    def contains_pts(self, pts):
         if len(self.objects) == 0:
+            x_arr, y_arr = np.asarray(pts).T
             return np.full(x_arr.shape, False, dtype=np.bool)
 
         return reduce(self._contains_reduce,
-                      map(lambda obj: obj.contains_arr(x_arr, y_arr),
-                          self.objects))
+                      map(lambda obj: obj.contains_pts(pts), self.objects))
 
-    def contains(self, x, y):
-        x_arr, y_arr = np.array([x]), np.array([y])
-        res = self.contains_arr(x_arr, y_arr)
-        return res[0]
-
-    def get_items_at(self, x, y):
+    def get_items_at(self, pt):
         res = []
         for obj in self.objects:
-            if obj.contains(x, y):
+            if obj.contains_pt(pt):
                 #res.insert(0, obj)
                 res.append(obj)
         return res
@@ -78,25 +73,25 @@ class CompoundMixin(object):
     def get_objects_by_kinds(self, kinds):
         return filter(lambda obj: obj.kind in kinds, self.objects)
 
-    def select_contains(self, viewer, x, y):
+    def select_contains_pt(self, viewer, pt):
         for obj in self.objects:
-            if obj.select_contains(viewer, x, y):
+            if obj.select_contains_pt(viewer, pt):
                 return True
         return False
 
-    def select_items_at(self, viewer, x, y, test=None):
+    def select_items_at(self, viewer, pt, test=None):
         res = []
         try:
             for obj in self.objects:
                 if obj.is_compound() and not obj.opaque:
                     # non-opaque compound object, list up compatible members
-                    res.extend(obj.select_items_at(viewer, x, y, test=test))
+                    res.extend(obj.select_items_at(viewer, pt, test=test))
 
-                is_inside = obj.select_contains(viewer, x, y)
+                is_inside = obj.select_contains_pt(viewer, pt)
                 if test is None:
                     if is_inside:
                         res.append(obj)
-                elif test(obj, x, y, is_inside):
+                elif test(obj, pt, is_inside):
                     # custom test
                     res.append(obj)
         except Exception as e:

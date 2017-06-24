@@ -253,7 +253,8 @@ class Image(OnePointMixin, CanvasObjectBase):
         x1, y1, x2, y2 = self.get_coords()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
-    def contains(self, data_x, data_y):
+    def contains_pt(self, pt):
+        data_x, data_y = pt
         x1, y1, x2, y2 = self.get_coords()
         if ((x1 <= data_x < x2) and (y1 <= data_y < y2)):
             return True
