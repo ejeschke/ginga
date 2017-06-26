@@ -339,7 +339,9 @@ class Desktop(Callback.Callbacks):
                         wexp = 0
                     if hexp is None:
                         hexp = 0
-                    widget.cfg_expand(wexp, hexp)
+                    # This is causing issues with resizing (see issue #478);
+                    # temporarily disabling it
+                    #widget.cfg_expand(wexp, hexp)
 
                 # User wants to place window somewhere
                 if params.xpos >= 0:

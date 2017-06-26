@@ -29,7 +29,7 @@ logging.captureWarnings(True)
 __all__ = ['ReferenceViewer']
 
 default_layout = ['seq', {},
-                   ['vbox', dict(name='top', width=1520, height=900),
+                   ['vbox', dict(name='top', width=1400, height=700),
                     dict(row=['hbox', dict(name='menu')],
                          stretch=0),
                     dict(row=['hpanel', dict(name='hpnl'),
@@ -38,12 +38,12 @@ default_layout = ['seq', {},
                       # (tabname, layout), ...
                       [("Info", ['vpanel', {},
                                  ['ws', dict(name='uleft', wstype='stack',
-                                             height=300, group=3)],
+                                             height=250, group=3)],
                                  ['ws', dict(name='lleft', wstype='tabs',
-                                             height=430, group=3)],
+                                             height=330, group=3)],
                                  ]
                         )]],
-                     ['vbox', dict(name='main', width=700),
+                     ['vbox', dict(name='main', width=600),
                       dict(row=['ws', dict(name='channels', wstype='tabs',
                                            group=1, use_toolbar=True)],
                            stretch=1),
