@@ -110,16 +110,17 @@ class Operations(GingaPlugin.GlobalPlugin):
             channel = self.fv.get_channel(name)
             self.add_channel_cb(self.fv, channel)
 
-        # get the list of local plugins and populate our operation control
-        operations = self.fv.get_operations()
-        for opname in operations:
-            self.add_operation_cb(self.fv, opname)
+        # TODO: get the list of plugins and populate our operation control
+        ## operations = self.fv.get_operations()
+        ## for opname in operations:
+        ##     self.add_operation_cb(self.fv, opname, optype, spec)
 
     def add_operation_cb(self, viewer, opname, optype, spec):
         if not self.gui_up:
             return
 
         category = spec.get('category', None)
+        menuname = spec.get('menu', opname)
 
         opmenu = self.w.operation
         if self.use_popup:
@@ -131,12 +132,14 @@ class Operations(GingaPlugin.GlobalPlugin):
                         menu = menu.get_menu(catname)
                     except KeyError:
                         menu = menu.add_menu(catname)
-            item = menu.add_name(opname)
+
+            item = menu.add_name(menuname)
             item.add_callback('activated',
                               lambda *args: self.start_operation_cb(opname,
                                                                     optype,
                                                                     spec))
         else:
+            # TODO: use menuname
             opmenu.insert_alpha(opname)
 
     def start_operation_cb(self, name, optype, spec):

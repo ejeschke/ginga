@@ -311,7 +311,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             hidden = spec.get('hidden', False)
             if not hidden:
-                self.add_plugin_menu(name)
+                menuname = spec.get('menu', name)
+                self.add_plugin_menu(name, menuname)
                 self.add_operation(name, 'global', spec)
 
             start = spec.get('start', True)
@@ -1451,10 +1452,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if hasattr(GwHelp, 'FileSelection'):
             self.filesel = GwHelp.FileSelection(self.w.root.get_widget())
 
-    def add_plugin_menu(self, name):
+    def add_plugin_menu(self, name, menuname):
         # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
         if 'menu_plug' in self.w:
-            item = self.w.menu_plug.add_name("Start %s" % (name))
+            item = self.w.menu_plug.add_name("Start %s" % (menuname))
             item.add_callback('activated',
                               lambda *args: self.start_global_plugin(name))
 

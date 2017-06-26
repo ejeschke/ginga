@@ -99,7 +99,7 @@ global_plugins = [
     Bunch(module='FBrowser', tab='Open File', workspace='right', start=False,
           category='Global'),
     Bunch(module='Blink', tab='Blink Channels', workspace='right', start=False,
-          category='Global'),
+          menu="Blink Channels", category='Global'),
     Bunch(module='ColorMapPicker', tab='Color Map Picker', workspace='right',
           start=False, category='Global'),
     # TODO: Move SaveImage to File menu.
@@ -130,7 +130,8 @@ local_plugins = [
     Bunch(module='WCSAxes', workspace='dialogs', category=None),
     Bunch(module='TVMark', workspace='dialogs', category=None),
     Bunch(module='TVMask', workspace='dialogs', category=None),
-    Bunch(module='Blink', workspace='dialogs', category=None),
+    Bunch(module='Blink', workspace='dialogs', menu='Blink Images',
+          category=None),
     Bunch(module='LineProfile', workspace='dialogs', category=None),
     Bunch(module='PixTable', workspace='dialogs', category=None),
     Bunch(module='Preferences', workspace='dialogs', category=None),
@@ -162,6 +163,9 @@ class ReferenceViewer(object):
 
     def add_local_plugin(self, module_name, ws_name,
                          path=None, klass=None, pfx=None, category=None):
+        """TO BE DEPRECATED--DO NOT USE.
+        Use add_local_plugin_spec() instead.
+        """
         self.add_local_plugin_spec(
             Bunch(module=module_name, workspace=ws_name, category=category,
                   path=path, klass=klass, pfx=pfx))
@@ -169,6 +173,9 @@ class ReferenceViewer(object):
     def add_global_plugin(self, module_name, ws_name,
                           path=None, klass=None, category='Global',
                           tab_name=None, start_plugin=True, pfx=None):
+        """TO BE DEPRECATED--DO NOT USE.
+        Use add_global_plugin_spec() instead.
+        """
         self.add_global_plugin_spec(
             Bunch(module=module_name, workspace=ws_name, tab=tab_name,
                   path=path, klass=klass, category=category,
