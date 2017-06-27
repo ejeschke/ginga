@@ -306,7 +306,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self._tkf_highlight.discard(thumbkey)
             channel.extdata.thumbs_old_highlight.discard(thumbkey)
 
-        self.reorder_thumbs()
+        self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs)
 
     def update_thumbs(self, name_list):
 
@@ -319,13 +319,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                     del self.thumb_dict[thumbkey]
                     self._tkf_highlight.discard(thumbkey)
 
-        self.reorder_thumbs()
+        self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs)
 
     def thumbpane_resized_cb(self, thumbvw, width, height):
         self.fv.gui_do_oneshot('thumbs-resized', self._resized, width, height)
 
     def _resized(self, width, height):
-        self.logger.info("reordering thumbs width=%d" % (width))
+        self.logger.debug("thumbs resized, width=%d" % (width))
 
         with self.thmblock:
             cols = max(1, width // (self.thumb_width + self.thumb_sep))
@@ -336,7 +336,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self.logger.info("column count is now %d" % (cols))
             self.thumb_num_cols = cols
 
-        self.reorder_thumbs()
+        self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs)
         return False
 
     def load_file(self, thumbkey, chname, name, path, image_future):
@@ -350,7 +350,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self.thumb_dict = {}
             self._tkf_highlight = set([])
 
-        self.reorder_thumbs()
+        self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs)
 
     def add_channel_cb(self, viewer, channel):
         """Called when a channel is added from the main interface.
@@ -586,7 +586,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self.thumb_list = newThumbList
             self._tkf_highlight -= un_hilite_set  # Unhighlight
 
-        self.reorder_thumbs()
+        self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs)
 
     def make_tt(self, viewer, canvas, text, pt, fontsize=10):
         Text = canvas.get_draw_class('text')
@@ -630,11 +630,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         text = image_info.thumb_extras.tooltip
 
         tag = '_$tooltip'
+        try:
+            canvas.delete_object_by_tag(tag)
+        except KeyError:
+            pass
         if tf:
             tt = self.make_tt(self.c_view, canvas, text, pt)
             canvas.add(tt, tag=tag)
-        else:
-            canvas.delete_object_by_tag(tag)
 
     def _make_thumb(self, chname, image, name, path, thumbkey,
                     image_info, save_thumb=False, thumbpath=None):
@@ -783,22 +785,17 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             obj.add_callback('pick-leave', self.show_tt,
                              thumbkey, chname, name, image_info, False)
 
-            sort_order = self.settings.get('sort_order', None)
-            if sort_order:
-                self.thumb_list.sort()
-                self.reorder_thumbs()
-                return
-
             # add thumb to canvas
             canvas.add(obj)
 
-        self.c_view.redraw(whence=0)
+        #self.c_view.redraw(whence=0)
 
-        # reset limits
-        xm, ym, x_, y_ = self._calc_thumb_pos(0, 0)
-        self.c_view.set_limits([(xm, ym), (xi, yi)], coord='data')
+        sort_order = self.settings.get('sort_order', None)
+        if sort_order:
+            self.thumb_list.sort()
 
-        self._auto_scroll(xi, yi)
+        self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs)
+
         self.logger.debug("added thumb for %s" % (name))
 
     def _auto_scroll(self, xi, yi):
@@ -847,6 +844,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.c_view.redraw(whence=0)
 
         if xi is not None:
+            xi += self.thumb_width
             xm, ym, x_, y_ = self._calc_thumb_pos(0, 0)
             self.c_view.set_limits([(xm, ym), (xi, yi)], coord='data')
             self._auto_scroll(xi, yi)
