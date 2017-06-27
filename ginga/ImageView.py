@@ -1597,6 +1597,10 @@ class ImageViewBase(Callback.Callbacks):
         scale_x, scale_y = self.get_scale_xy()
         pan_x, pan_y = self.get_pan()
         win_wd, win_ht = self.get_window_size()
+        # NOTE: need to set at least a minimum 1-pixel dimension on
+        # the window or we get a scale calculation exception. See github
+        # issue 431
+        win_wd, win_ht = max(1, win_wd), max(1, win_ht)
 
         self._calc_bg_dimensions(scale_x, scale_y,
                                  pan_x, pan_y, win_wd, win_ht)
