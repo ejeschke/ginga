@@ -1992,15 +1992,17 @@ class ImageViewBase(Callback.Callbacks):
     def _scale_to(self, scale_x, scale_y, no_reset=False):
         # Check scale limits
         maxscale = max(scale_x, scale_y)
-        if (maxscale > self.t_['scale_max']):
-            self.logger.error("Scale (%.2f) exceeds max scale limit (%.2f)" % (
+        max_lim = self.t_.get('scale_max', None)
+        if (max_lim is not None) and (maxscale > max_lim):
+            self.logger.warn("Scale (%.2f) exceeds max scale limit (%.2f)" % (
                 maxscale, self.t_['scale_max']))
             # TODO: exception?
             return
 
         minscale = min(scale_x, scale_y)
-        if (minscale < self.t_['scale_min']):
-            self.logger.error("Scale (%.2f) exceeds min scale limit (%.2f)" % (
+        min_lim = self.t_.get('scale_min', None)
+        if (min_lim is not None) and (minscale < min_lim):
+            self.logger.warn("Scale (%.2f) exceeds min scale limit (%.2f)" % (
                 minscale, self.t_['scale_min']))
             # TODO: exception?
             return
