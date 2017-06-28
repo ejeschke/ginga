@@ -533,9 +533,9 @@ class ImageViewBindings(object):
         tr = viewer.tform['data_to_scrollbar']
 
         # calculate the corners of the entire image in unscaled cartesian
-        mxwd, mxht = limits[1]
+        mxwd, mxht = limits[1][:2]
         mxwd, mxht = mxwd + pad, mxht + pad
-        mnwd, mnht = limits[0]
+        mnwd, mnht = limits[0][:2]
         mnwd, mnht = mnwd - pad, mnht - pad
 
         arr = np.array([(mnwd, mnht), (mxwd, mnht),
@@ -586,9 +586,9 @@ class ImageViewBindings(object):
 
         tr = viewer.tform['data_to_scrollbar']
 
-        mxwd, mxht = limits[1]
+        mxwd, mxht = limits[1][:2]
         mxwd, mxht = mxwd + pad, mxht + pad
-        mnwd, mnht = limits[0]
+        mnwd, mnht = limits[0][:2]
         mnwd, mnht = mnwd - pad, mnht - pad
 
         arr = np.array([(mnwd, mnht), (mxwd, mnht),

@@ -137,7 +137,7 @@ class CanvasObjectBase(Callback.Callbacks):
     def draw_caps(self, cr, cap, points, radius=None):
         i = 0
         for pt in points:
-            cx, cy = pt
+            cx, cy = pt[:2]
             if radius is None:
                 radius = self.cap_radius
             alpha = getattr(self, 'alpha', 1.0)
@@ -175,8 +175,8 @@ class CanvasObjectBase(Callback.Callbacks):
         self.draw_caps(cr, 'ball', cpoints)
 
     def calc_radius(self, viewer, p1, p2):
-        x1, y1 = p1
-        x2, y2 = p2
+        x1, y1 = p1[:2]
+        x2, y2 = p2[:2]
         # TODO: the accuracy of this calculation of radius might be improved?
         radius = np.sqrt(abs(y2 - y1)**2 + abs(x2 - x1)**2)
         return (x1, y1, radius)
@@ -288,9 +288,9 @@ class CanvasObjectBase(Callback.Callbacks):
         detail.center_pos = self.get_center_pt()
 
     def calc_rotation_from_pt(self, pt, detail):
-        x, y = pt
-        ctr_x, ctr_y = detail.center_pos
-        start_x, start_y = detail.start_pos
+        x, y = pt[:2]
+        ctr_x, ctr_y = detail.center_pos[:2]
+        start_x, start_y = detail.start_pos[:2]
         # calc angle of starting point wrt origin
         deg1 = np.degrees(np.arctan2(start_y - ctr_y,
                                      start_x - ctr_x))
@@ -300,9 +300,9 @@ class CanvasObjectBase(Callback.Callbacks):
         return delta_deg
 
     def calc_scale_from_pt(self, pt, detail):
-        x, y = pt
-        ctr_x, ctr_y = detail.center_pos
-        start_x, start_y = detail.start_pos
+        x, y = pt[:2]
+        ctr_x, ctr_y = detail.center_pos[:2]
+        start_x, start_y = detail.start_pos[:2]
         dx, dy = start_x - ctr_x, start_y - ctr_y
         # calc distance of starting point wrt origin
         dist1 = np.sqrt(dx**2.0 + dy**2.0)
@@ -313,9 +313,9 @@ class CanvasObjectBase(Callback.Callbacks):
         return scale_f
 
     def calc_dual_scale_from_pt(self, pt, detail):
-        x, y = pt
-        ctr_x, ctr_y = detail.center_pos
-        start_x, start_y = detail.start_pos
+        x, y = pt[:2]
+        ctr_x, ctr_y = detail.center_pos[:2]
+        start_x, start_y = detail.start_pos[:2]
         # calc distance of starting point wrt origin
         dx, dy = start_x - ctr_x, start_y - ctr_y
         # calc distance of current point wrt origin

@@ -12,6 +12,7 @@ from ginga.qtw import ImageViewQt
 from ginga import Mixins, Bindings
 import ginga.util.six as six
 from ginga.util.six.moves import map, zip
+from ginga.canvas import transform
 
 # GL imports
 # TODO: find how to import this from qtpy
@@ -64,6 +65,10 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         self.rgb_order = 'RGBA'
 
         self.renderer = CanvasRenderer(self)
+        self.tform['data_to_native'] = (
+            transform.DataCartesianTransform(self) +
+            transform.ScaleTransform(self) +
+            transform.RotationTransform(self))
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y

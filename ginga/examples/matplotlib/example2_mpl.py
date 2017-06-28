@@ -22,6 +22,7 @@ from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
 from ginga import colors
+from ginga.canvas.CanvasObject import get_canvas_types
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -30,6 +31,7 @@ class FitsViewer(QtGui.QMainWindow):
         super(FitsViewer, self).__init__()
         self.logger = logger
         self.drawcolors = colors.get_colors()
+        self.dc = get_canvas_types()
 
         fig = Figure()
         w = FigureCanvas(fig)
@@ -50,8 +52,7 @@ class FitsViewer(QtGui.QMainWindow):
         bd.enable_all(True)
 
         # canvas that we will draw on
-        DrawingCanvas = fi.getDrawClass('drawingcanvas')
-        canvas = DrawingCanvas()
+        canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         #canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='lightblue')
@@ -141,7 +142,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
 
     def load_file(self, filepath):
         image = AstroImage.AstroImage(logger=self.logger)

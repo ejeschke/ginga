@@ -102,6 +102,7 @@ class RenderContext(object):
         self.cr.text((cx, cy-ht), text, self.font, self.pen)
 
     def draw_polygon(self, cpoints):
+        cpoints = self.viewer.strip_z(cpoints)
         self.cr.polygon(cpoints, self.pen, self.brush)
 
     def draw_circle(self, cx, cy, cradius):
@@ -111,6 +112,7 @@ class RenderContext(object):
         self.cr.line((cx1, cy1), (cx2, cy2), self.pen)
 
     def draw_path(self, cpoints):
+        cpoints = self.viewer.strip_z(cpoints)
         self.cr.path(cpoints, self.pen)
 
 

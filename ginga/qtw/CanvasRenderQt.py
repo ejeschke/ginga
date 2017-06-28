@@ -153,6 +153,8 @@ class RenderContext(object):
         self.cr.drawLine(cx1, cy1, cx2, cy2)
 
     def draw_path(self, cpoints):
+        cpoints = self.viewer.strip_z(cpoints)
+
         self.cr.pen().setCapStyle(QtCore.Qt.RoundCap)
         for i in range(len(cpoints) - 1):
             cx1, cy1 = cpoints[i]

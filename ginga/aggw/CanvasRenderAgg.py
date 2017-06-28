@@ -1,9 +1,6 @@
 #
 # CanvasRenderAgg.py -- for rendering into a ImageViewAgg widget
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -112,6 +109,7 @@ class RenderContext(object):
         ## self.cr.canvas.settransform()
 
     def draw_polygon(self, cpoints):
+        cpoints = self.viewer.strip_z(cpoints)
         self.cr.canvas.polygon(list(chain.from_iterable(cpoints)),
                                self.pen, self.brush)
 
@@ -141,7 +139,8 @@ class RenderContext(object):
     def draw_line(self, cx1, cy1, cx2, cy2):
         self.cr.canvas.line((cx1, cy1, cx2, cy2), self.pen)
 
-    def draw_path(self, cp):
+    def draw_path(self, cpoints):
+        cp = self.viewer.strip_z(cpoints)
         # TODO: is there a more efficient way in aggdraw to do this?
         path = agg.Path()
         path.moveto(cp[0][0], cp[0][1])

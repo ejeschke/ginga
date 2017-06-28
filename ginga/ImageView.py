@@ -1414,9 +1414,9 @@ class ImageViewBase(Callback.Callbacks):
 
         Returns
         -------
-        rect : tuple
+        limits : tuple
             Bounding box in data coordinates in the form of
-            ``(x1, y1, x2, y2)``.
+               ``(ll_pt, ur_pt)``.
 
         """
         if self._limits is not None:
@@ -1448,7 +1448,7 @@ class ImageViewBase(Callback.Callbacks):
         ----------
         limits : tuple or None
             A tuple setting the extents of the viewer in the form of
-            ``((x1, y1), (x2, y2))``.
+            ``(ll_pt, ur_pt)``.
         """
         if limits is not None:
             assert len(limits) == 2, ValueError("limits takes a 2 tuple")
@@ -1547,8 +1547,8 @@ class ImageViewBase(Callback.Callbacks):
             #self.logger.warning("new scale would exceed max/min; scale unchanged")
             raise ImageViewError("new scale would exceed pixel max; scale unchanged")
 
-        # It is necessary to store these so that the get_data_xy()
-        # (below) calculations can proceed
+        # It is necessary to store these so that the get_pan_rect()
+        # (below) calculation can proceed
         self._org_x, self._org_y = pan_x - self.data_off, pan_y - self.data_off
         self._org_scale_x, self._org_scale_y = scale_x, scale_y
         self._org_scale_z = (scale_x + scale_y) / 2.0
@@ -1557,16 +1557,11 @@ class ImageViewBase(Callback.Callbacks):
         # necessary to fit the window in the desired size
 
         # get the data points in the four corners
-        xul, yul = self.get_data_xy(0, 0)
-        xur, yur = self.get_data_xy(win_wd, 0)
-        xlr, ylr = self.get_data_xy(win_wd, win_ht)
-        xll, yll = self.get_data_xy(0, win_ht)
+        pts_t = self.get_pan_rect().T
 
         # determine bounding box
-        a1 = min(xul, xur, xlr, xll)
-        b1 = min(yul, yur, ylr, yll)
-        a2 = max(xul, xur, xlr, xll)
-        b2 = max(yul, yur, ylr, yll)
+        a1, b1 = np.min(pts_t[0]), np.min(pts_t[1])
+        a2, b2 = np.max(pts_t[0]), np.max(pts_t[1])
 
         # constrain to integer indexes
         x1, y1, x2, y2 = int(a1), int(b1), int(np.round(a2)), int(np.round(b2))
@@ -1755,6 +1750,13 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.info("Output left unprofiled")
 
 
+    def get_data_pt(self, win_pt):
+        """Similar to :meth:`get_data_xy`, except that it takes a single
+        array of points.
+
+        """
+        return self.tform['data_to_native'].from_(win_pt)
+
     def get_data_xy(self, win_x, win_y, center=None):
         """Get the closest coordinates in the data array to those
         reported on the window.
@@ -1780,7 +1782,7 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((win_x, win_y)).T
-        return self.tform['data_to_native'].from_(arr_pts).T
+        return self.tform['data_to_native'].from_(arr_pts).T[:2]
 
     def offset_to_data(self, off_x, off_y, center=None):
         """Get the closest coordinates in the data array to those
@@ -1801,7 +1803,14 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((off_x, off_y)).T
-        return self.tform['data_to_cartesian'].from_(arr_pts).T
+        return self.tform['data_to_cartesian'].from_(arr_pts).T[:2]
+
+    def get_canvas_pt(self, data_pt):
+        """Similar to :meth:`get_canvas_xy`, except that it takes a single
+        array of points.
+
+        """
+        return self.tform['data_to_native'].to_(data_pt)
 
     def get_canvas_xy(self, data_x, data_y, center=None):
         """Reverse of :meth:`get_data_xy`.
@@ -1811,7 +1820,7 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((data_x, data_y)).T
-        return self.tform['data_to_native'].to_(arr_pts).T
+        return self.tform['data_to_native'].to_(arr_pts).T[:2]
 
     def data_to_offset(self, data_x, data_y, center=None):
         """Reverse of :meth:`offset_to_data`.
@@ -1821,7 +1830,7 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((data_x, data_y)).T
-        return self.tform['data_to_cartesian'].to_(arr_pts).T
+        return self.tform['data_to_cartesian'].to_(arr_pts).T[:2]
 
     def offset_to_window(self, off_x, off_y):
         """Convert data offset to window coordinates.
@@ -1838,12 +1847,12 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         arr_pts = np.asarray((off_x, off_y)).T
-        return self.tform['cartesian_to_native'].to_(arr_pts).T
+        return self.tform['cartesian_to_native'].to_(arr_pts).T[:2]
 
     def window_to_offset(self, win_x, win_y):
         """Reverse of :meth:`offset_to_window`."""
         arr_pts = np.asarray((win_x, win_y)).T
-        return self.tform['cartesian_to_native'].from_(arr_pts).T
+        return self.tform['cartesian_to_native'].from_(arr_pts).T[:2]
 
     def canvascoords(self, data_x, data_y, center=None):
         """Same as :meth:`get_canvas_xy`.
@@ -1854,7 +1863,25 @@ class ImageViewBase(Callback.Callbacks):
 
         # data->canvas space coordinate conversion
         arr_pts = np.asarray((data_x, data_y)).T
-        return self.tform['data_to_native'].to_(arr_pts).T
+        return self.tform['data_to_native'].to_(arr_pts).T[:2]
+
+    def strip_z(self, pts):
+        """Strips a Z component from `pts` if it is present."""
+        pts = np.asarray(pts)
+        if pts.shape[-1] > 2:
+            pts = np.asarray((pts.T[0], pts.T[1])).T
+        return pts
+
+    def pad_z(self, pts, value=0.0):
+        """Adds a Z component from `pts` if it is missing.
+        The value defaults to `value` (0.0)"""
+        pts = np.asarray(pts)
+        if pts.shape[-1] < 3:
+            if len(pts.shape) < 2:
+                return np.asarray((pts[0], pts[1], value), dtype=pts.dtype)
+            pad_col = np.full(len(pts), value, dtype=pts.dtype)
+            pts = np.asarray((pts.T[0], pts.T[1], pad_col)).T
+        return pts
 
     def get_data_pct(self, xpct, ypct):
         """Calculate new data size for the given axis ratios.
@@ -1889,7 +1916,8 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         wd, ht = self.get_window_size()
-        arr_pts = np.asarray([(0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)])
+        #arr_pts = np.asarray([(0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)])
+        arr_pts = np.asarray([(0, 0), (wd, 0), (wd, ht), (0, ht)])
         return self.tform['data_to_native'].from_(arr_pts)
 
     def get_data(self, data_x, data_y):
@@ -2091,7 +2119,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         #return (self._org_scale_x, self._org_scale_y)
-        return self.t_['scale']
+        return self.t_['scale'][:2]
 
     def get_scale_base_xy(self):
         """Get stretch factors.
@@ -2124,7 +2152,7 @@ class ImageViewBase(Callback.Callbacks):
             ``'<num> x'`` if enlarged, or ``'1/<num> x'`` if shrunken.
 
         """
-        scalefactor = self.get_scale()
+        scalefactor = self.get_scale_max()
         if scalefactor >= 1.0:
             #text = '%dx' % (int(scalefactor))
             text = '%.2fx' % (scalefactor)

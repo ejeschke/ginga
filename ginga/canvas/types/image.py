@@ -147,11 +147,11 @@ class Image(OnePointMixin, CanvasObjectBase):
 
         if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
-            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
-            xmin = int(min(x0, x1, x2, x3))
-            ymin = int(min(y0, y1, y2, y3))
-            xmax = int(np.ceil(max(x0, x1, x2, x3)))
-            ymax = int(np.ceil(max(y0, y1, y2, y3)))
+            pts = np.asarray(viewer.get_pan_rect()).T
+            xmin = int(np.min(pts[0]))
+            ymin = int(np.min(pts[1]))
+            xmax = int(np.ceil(np.max(pts[0])))
+            ymax = int(np.ceil(np.max(pts[1])))
 
             # destination location in data_coords
             #dst_x, dst_y = self.x, self.y + ht
@@ -386,11 +386,11 @@ class NormImage(Image):
 
         if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
-            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
-            xmin = int(min(x0, x1, x2, x3))
-            ymin = int(min(y0, y1, y2, y3))
-            xmax = int(np.ceil(max(x0, x1, x2, x3)))
-            ymax = int(np.ceil(max(y0, y1, y2, y3)))
+            pts = np.asarray(viewer.get_pan_rect()).T
+            xmin = int(np.min(pts[0]))
+            ymin = int(np.min(pts[1]))
+            xmax = int(np.ceil(np.max(pts[0])))
+            ymax = int(np.ceil(np.max(pts[1])))
 
             # destination location in data_coords
             dst_x, dst_y = self.crdmap.to_data((self.x, self.y))

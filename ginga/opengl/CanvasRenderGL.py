@@ -105,7 +105,7 @@ class RenderContext(object):
             # the OpenGL context is set for us correctly
             return
 
-        z_pts = self.renderer.tr.to_(cpoints)
+        z_pts = cpoints
 
         gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
 
@@ -163,7 +163,6 @@ class CanvasRenderer(object):
 
     def __init__(self, viewer):
         self.viewer = viewer
-        self.tr = DataNativeTransform(viewer)
 
         # size of our GL viewport
         # these will change when the resize() is called
@@ -171,7 +170,7 @@ class CanvasRenderer(object):
 
         self.camera = Camera()
         self.camera.set_scene_radius(2)
-        #self.camera.set_camera_home_position((0, 0, -self.wd))
+        self.camera.set_camera_home_position((0, 0, -1000))
         self.camera.reset()
 
         self.draw_wrapper = False
@@ -272,28 +271,30 @@ class CanvasRenderer(object):
             gl.glClearColor(r, g, b, 1.0)
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
-            # Draw the image portion of the plot
-            gl.glColor4f(1, 1, 1, 1.0)
-            gl.glEnable(gl.GL_TEXTURE_2D)
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-            gl.glBegin(gl.GL_QUADS)
-            try:
-                gl.glTexCoord(0, 0)
-                gl.glVertex(self.mn_x, self.mn_y)
-                gl.glTexCoord(1, 0)
-                gl.glVertex(self.mx_x, self.mn_y)
-                gl.glTexCoord(1, 1)
-                gl.glVertex(self.mx_x, self.mx_y)
-                gl.glTexCoord(0, 1)
-                gl.glVertex(self.mn_x, self.mx_y)
-            finally:
-                gl.glEnd()
+            image = self.viewer.get_image()
+            if image is not None:
+                # Draw the image portion of the plot
+                gl.glColor4f(1, 1, 1, 1.0)
+                gl.glEnable(gl.GL_TEXTURE_2D)
+                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+                gl.glBegin(gl.GL_QUADS)
+                try:
+                    gl.glTexCoord(0, 0)
+                    gl.glVertex(self.mn_x, self.mn_y)
+                    gl.glTexCoord(1, 0)
+                    gl.glVertex(self.mx_x, self.mn_y)
+                    gl.glTexCoord(1, 1)
+                    gl.glVertex(self.mx_x, self.mx_y)
+                    gl.glTexCoord(0, 1)
+                    gl.glVertex(self.mn_x, self.mx_y)
+                finally:
+                    gl.glEnd()
 
             gl.glDisable(gl.GL_TEXTURE_2D)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+
             gl.glEnable(gl.GL_BLEND)
             gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-
-            lim = max(self.lim_x, self.lim_y, self.lim_z)
 
             if self.mode3d and self.draw_spines:
                 # draw orienting spines radiating in x, y and z
@@ -321,11 +322,21 @@ class CanvasRenderer(object):
             self._drawing = False
             gl.glFlush()
 
+
+class DataNativeTransform(BaseTransform):
+    """
+    A transform from data coordinates to OpenGL coordinates of a viewer.
+    """
+
+    def __init__(self, viewer):
+        super(DataNativeTransform, self).__init__()
+        self.viewer = viewer
+
     def pix2canvas(self, pt):
         """Takes a 2-tuple of (x, y) in window coordinates and gives
         the (cx, cy, cz) coordinates on the canvas.
         """
-        x, y = pt
+        x, y = pt[:2]
         mm = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
         pm = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
         vp = gl.glGetIntegerv(gl.GL_VIEWPORT)
@@ -348,43 +359,18 @@ class CanvasRenderer(object):
         pt = glu.gluProject(x, y, z, mm, pm, vp)
         return pt
 
-    def get_bbox(self):
+    def get_bbox(self, wd, ht):
         return (self.pix2canvas((0, 0)),
-                self.pix2canvas((self.wd, 0)),
-                self.pix2canvas((self.wd, self.ht)),
-                self.pix2canvas((0, self.ht))
+                self.pix2canvas((wd, 0)),
+                self.pix2canvas((wd, ht)),
+                self.pix2canvas((0, ht))
                 )
 
-
-class DataNativeTransform(BaseTransform):
-    """
-    A transform from data coordinates to OpenGL coordinates of a viewer.
-    """
-
-    def __init__(self, viewer):
-        super(DataNativeTransform, self).__init__()
-        self.viewer = viewer
-
-    def to_(self, off_pts):
-        off_pts = np.asarray(off_pts)
-        r = self.viewer.renderer
-
-        # extend off_pts in Z plane if not present
-        if off_pts.shape[-1] < 3:
-            off_pts = np.column_stack((off_pts, np.zeros(len(off_pts))))
-
-        render_lim = (r.lim_x, r.lim_y, r.lim_z)
-
-        cvs_pts = np.divide(off_pts, render_lim)
-        return cvs_pts
+    def to_(self, pts):
+        return np.asarray([self.pix2canvas(pt) for pt in pts])
 
     def from_(self, cvs_pts):
-        """Reverse of :meth:`to_`."""
-        r = self.viewer.renderer
-        render_lim = (r.lim_x, r.lim_y, r.lim_z)
-
-        off_pts = np.multiply(cvs_pts, render_lim)
-        return off_pts
+        return np.asarray([self.canvas2pix(pt) for pt in pts])
 
 
 #END

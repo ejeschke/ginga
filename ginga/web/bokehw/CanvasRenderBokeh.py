@@ -1,13 +1,10 @@
 #
 # CanvasRenderBokeh.py -- for rendering into a Bokeh widget
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import numpy
+import numpy as np
 
 from . import BokehHelp
 from ginga.canvas.mixins import *
@@ -91,7 +88,7 @@ class RenderContext(object):
     ##### DRAWING OPERATIONS #####
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
-        self.cr.init(angle=[numpy.radians(rot_deg)])
+        self.cr.init(angle=[np.radians(rot_deg)])
         self.cr.update_font(self.pen, self.font)
 
         self.cr.plot.text(x=[cx], y=[cy], text=[text], **self.cr.kwdargs)
@@ -100,7 +97,7 @@ class RenderContext(object):
         self.cr.init()
         self.cr.update_patch(self.pen, self.brush)
 
-        xy = numpy.array(cpoints)
+        xy = self.viewer.strip_z(cpoints)
 
         self.cr.plot.patches(xs=[xy.T[0]], ys=[xy.T[1]], **self.cr.kwdargs)
 
@@ -129,7 +126,7 @@ class RenderContext(object):
 
         self.cr.plot.oval(x=[cx], y=[cy],
                           width=[cxradius*2.0], height=[cyradius*2.0],
-                          angle=[numpy.radians(theta)], **self.cr.kwdargs)
+                          angle=[np.radians(theta)], **self.cr.kwdargs)
 
     def draw_line(self, cx1, cy1, cx2, cy2):
         self.cr.init()
@@ -142,7 +139,7 @@ class RenderContext(object):
 
         self.cr.update_line(self.pen)
 
-        xy = numpy.array(cpoints)
+        xy = self.viewer.strip_z(cpoints)
 
         self.cr.plot.line(x=xy.T[0], y=xy.T[1], **self.cr.kwdargs)
 

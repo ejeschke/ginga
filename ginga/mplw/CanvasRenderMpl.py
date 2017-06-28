@@ -8,7 +8,6 @@ import matplotlib.patches as patches
 import matplotlib.lines as lines
 import matplotlib.text as text
 from matplotlib.path import Path as MplPath
-import numpy as np
 
 from . import MplHelp
 from ginga.canvas.mixins import *
@@ -99,7 +98,7 @@ class RenderContext(object):
         self.cr.init(closed=True, transform=None)
         self.cr.update_patch(self.pen, self.brush)
 
-        xy = np.asarray(cpoints)
+        xy = self.viewer.strip_z(cpoints)
 
         p = patches.Polygon(xy, **self.cr.kwdargs)
         self.cr.axes.add_patch(p)
@@ -152,7 +151,7 @@ class RenderContext(object):
         self.cr.init(closed=False, transform=None)
         self.cr.update_patch(self.pen, None)
 
-        xy = np.asarray(cpoints)
+        xy = self.viewer.strip_z(cpoints)
 
         p = patches.Polygon(xy, **self.cr.kwdargs)
         self.cr.axes.add_patch(p)

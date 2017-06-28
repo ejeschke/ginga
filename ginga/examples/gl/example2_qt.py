@@ -61,9 +61,27 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
-        # add a color bar
-        #fi.show_color_bar(True)
-        #fi.show_focus_indicator(True)
+        import numpy as np
+        # octahedron
+        A = [ 0.17770898,  0.72315927,  0.66742804]
+        B = [-0.65327074, -0.4196453 ,  0.63018661]
+        C = [ 0.65382635,  0.42081934, -0.62882604]
+        D = [-0.17907021, -0.72084723, -0.66956189]
+        E = [-0.73452809,  0.5495376 , -0.39809158]
+        F = [ 0.73451554, -0.55094017,  0.39617148]
+        octo = [[E, A, B],
+                [E, B, D],
+                [E, D, C],
+                [E, C, A],
+                [F, A, B],
+                [F, B, D],
+                [F, D, C],
+                [F, C, A],
+                ]
+        r = 100
+        for tri in octo:
+            new_tri = [np.asarray(pt) * r for pt in tri]
+            canvas.add(self.dc.Polygon(new_tri, color='yellow', fill=False))
 
         # add little mode indicator that shows keyboard modal states
         #fi.show_mode_indicator(True, corner='ur')
