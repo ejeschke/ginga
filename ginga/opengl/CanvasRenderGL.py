@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy
+import numpy as np
 
 # NOTE: we need GLU, but even if we didn't we should import it to
 #   workaround for a bug: http://bugs.python.org/issue26245
@@ -15,6 +15,7 @@ from ginga import colors
 from ginga.util.six.moves import map, zip
 # force registration of all canvas types
 import ginga.canvas.types.all
+from ginga.canvas.transform import BaseTransform, TransformError
 
 # Local imports
 from .Camera import Camera
@@ -97,12 +98,6 @@ class RenderContext(object):
         # TODO
         pass
 
-    def cvs_to_gl(self, pt):
-        x, y = pt
-        sx, sy = x - self.renderer.lim_x, self.renderer.lim_y - y
-        sz = 1 if not self.renderer.mode3d else 10
-        return (sx, sy, sz)
-
     def _draw_pts(self, shape, cpoints):
 
         if not self.renderer._drawing:
@@ -110,9 +105,7 @@ class RenderContext(object):
             # the OpenGL context is set for us correctly
             return
 
-        #print('drawing canvas')
-
-        z_pts = numpy.array(list(map(self.cvs_to_gl, cpoints)))
+        z_pts = self.renderer.tr.to_(cpoints)
 
         gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
 
@@ -150,18 +143,18 @@ class RenderContext(object):
         # TODO: there is a more efficient algorithm described here:
         # http://slabode.exofire.net/circle_draw.shtml
         num_segments = 360
-        z_pts = []
+        cpoints = []
         for i in range(0, num_segments):
-            theta = 2.0 * numpy.pi * i / float(num_segments)
-            dx = cradius * numpy.cos(theta)
-            dy = cradius * numpy.sin(theta)
-            z_pts.append((cx + dx, cy + dy))
+            theta = 2.0 * np.pi * i / float(num_segments)
+            dx = cradius * np.cos(theta)
+            dy = cradius * np.sin(theta)
+            cpoints.append((cx + dx, cy + dy))
 
-        self._draw_pts(gl.GL_LINE_LOOP, z_pts)
+        self._draw_pts(gl.GL_POLYGON, cpoints)
 
     def draw_line(self, cx1, cy1, cx2, cy2):
-        z_pts = [(cx1, cy1), (cx2, cy2)]
-        self._draw_pts(gl.GL_LINES, z_pts)
+        cpoints = [(cx1, cy1), (cx2, cy2)]
+        self._draw_pts(gl.GL_LINES, cpoints)
 
     def draw_path(self, cpoints):
         self._draw_pts(gl.GL_LINE_STRIP, cpoints)
@@ -170,6 +163,7 @@ class CanvasRenderer(object):
 
     def __init__(self, viewer):
         self.viewer = viewer
+        self.tr = DataNativeTransform(viewer)
 
         # size of our GL viewport
         # these will change when the resize() is called
@@ -186,9 +180,10 @@ class CanvasRenderer(object):
         self._drawing = False
 
         # initial values, will be recalculated at window map/resize
-        self.lim_x, self.lim_y = 10, 10
+        self.lim_x, self.lim_y, self.lim_z = 10, 10, 10
         self.mn_x, self.mx_x = -self.lim_x, self.lim_x
         self.mn_y, self.mx_y = -self.lim_y, self.lim_y
+        self.mn_z, self.mx_z = -self.lim_z, self.lim_z
 
     def setup_cr(self, shape):
         cr = RenderContext(self.viewer)
@@ -215,7 +210,7 @@ class CanvasRenderer(object):
         else:
             gl.glDisable(gl.GL_DEPTH_TEST)
             gl.glOrtho(self.mn_x, self.mx_x, self.mn_y, self.mx_y,
-                       -1.0, 100.0)
+                       self.mn_z, self.mx_z)
 
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
@@ -249,7 +244,7 @@ class CanvasRenderer(object):
     def gl_set_image(self, img_np, pos):
         dst_x, dst_y = pos
         # TODO: can we avoid this transformation?
-        data = numpy.flipud(img_np[0:self.ht, 0:self.wd])
+        data = np.flipud(img_np[0:self.ht, 0:self.wd])
         ht, wd = data.shape[:2]
 
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
@@ -257,10 +252,13 @@ class CanvasRenderer(object):
 
     def gl_resize(self, width, height):
         self.wd, self.ht = width, height
+
         self.lim_x, self.lim_y = width / 2.0, height / 2.0
+        self.lim_z = (self.lim_x + self.lim_y) / 2.0
 
         self.mn_x, self.mx_x = -self.lim_x, self.lim_x
         self.mn_y, self.mx_y = -self.lim_y, self.lim_y
+        self.mn_z, self.mx_z = -self.lim_z, self.lim_z
 
         self.camera.set_viewport_dimensions(width, height)
         gl.glViewport(0, 0, width, height)
@@ -295,24 +293,24 @@ class CanvasRenderer(object):
             gl.glEnable(gl.GL_BLEND)
             gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 
-            lim = max(self.lim_x, self.lim_y)
+            lim = max(self.lim_x, self.lim_y, self.lim_z)
 
             if self.mode3d and self.draw_spines:
                 # draw orienting spines radiating in x, y and z
                 gl.glColor(1.0, 0.0, 0.0)
                 gl.glBegin(gl.GL_LINES)
-                gl.glVertex( -lim, 0, 0)
-                gl.glVertex( lim, 0, 0)
+                gl.glVertex( self.mn_x, 0, 0)
+                gl.glVertex( self.mx_x, 0, 0)
                 gl.glEnd()
                 gl.glColor(0.0, 1.0, 0.0)
                 gl.glBegin(gl.GL_LINES)
-                gl.glVertex( 0, -lim, 0)
-                gl.glVertex( 0, lim, 0)
+                gl.glVertex( 0, self.mn_y, 0)
+                gl.glVertex( 0, self.mx_y, 0)
                 gl.glEnd()
                 gl.glColor(0.0, 0.0, 1.0)
                 gl.glBegin(gl.GL_LINES)
-                gl.glVertex( 0, 0, -lim)
-                gl.glVertex( 0, 0, lim)
+                gl.glVertex( 0, 0, self.mn_z)
+                gl.glVertex( 0, 0, self.mx_z)
                 gl.glEnd()
 
             # Draw the overlays
@@ -356,5 +354,37 @@ class CanvasRenderer(object):
                 self.pix2canvas((self.wd, self.ht)),
                 self.pix2canvas((0, self.ht))
                 )
+
+
+class DataNativeTransform(BaseTransform):
+    """
+    A transform from data coordinates to OpenGL coordinates of a viewer.
+    """
+
+    def __init__(self, viewer):
+        super(DataNativeTransform, self).__init__()
+        self.viewer = viewer
+
+    def to_(self, off_pts):
+        off_pts = np.asarray(off_pts)
+        r = self.viewer.renderer
+
+        # extend off_pts in Z plane if not present
+        if off_pts.shape[-1] < 3:
+            off_pts = np.column_stack((off_pts, np.zeros(len(off_pts))))
+
+        render_lim = (r.lim_x, r.lim_y, r.lim_z)
+
+        cvs_pts = np.divide(off_pts, render_lim)
+        return cvs_pts
+
+    def from_(self, cvs_pts):
+        """Reverse of :meth:`to_`."""
+        r = self.viewer.renderer
+        render_lim = (r.lim_x, r.lim_y, r.lim_z)
+
+        off_pts = np.multiply(cvs_pts, render_lim)
+        return off_pts
+
 
 #END

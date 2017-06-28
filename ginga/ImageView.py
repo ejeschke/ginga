@@ -216,6 +216,7 @@ class ImageViewBase(Callback.Callbacks):
         # data indexes at the reference pixel (in data coords)
         self._org_x = 0
         self._org_y = 0
+        self._org_z = 0
         # offset from pan position (at center) in this array
         self._org_xoff = 0
         self._org_yoff = 0
@@ -245,6 +246,7 @@ class ImageViewBase(Callback.Callbacks):
         # actual scale factors produced from desired ones
         self._org_scale_x = 1.0
         self._org_scale_y = 1.0
+        self._org_scale_z = 1.0
 
         self._rgbarr = None
         self._rgbarr2 = None
@@ -1549,6 +1551,7 @@ class ImageViewBase(Callback.Callbacks):
         # (below) calculations can proceed
         self._org_x, self._org_y = pan_x - self.data_off, pan_y - self.data_off
         self._org_scale_x, self._org_scale_y = scale_x, scale_y
+        self._org_scale_z = (scale_x + scale_y) / 2.0
 
         # calc minimum size of pixel image we will generate
         # necessary to fit the window in the desired size
