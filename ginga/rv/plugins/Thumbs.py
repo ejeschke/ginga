@@ -661,6 +661,11 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             metadata[kwd] = header.get(kwd, 'N/A')
 
         thumbname = name
+        # assign a name in the metadata if we don't have one yet
+        name_key = self.settings.get('mouseover_name_key', 'NAME')
+        if metadata.setdefault(name_key, thumbname) == 'N/A':
+            metadata[name_key] = thumbname
+
         self.insert_thumbnail(imgwin, thumbkey, thumbname,
                               chname, name, path, thumbpath, metadata,
                               image_info)
