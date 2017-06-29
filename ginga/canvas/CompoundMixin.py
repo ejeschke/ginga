@@ -43,31 +43,26 @@ class CompoundMixin(object):
         points = np.array(list(map(lambda obj: obj.get_llur(),
                                       self.objects)))
         t_ = points.T
-        x1, y1 = min(t_[0].min(), t_[0].min()), min(t_[1].min(), t_[3].min())
-        x2, y2 = max(t_[0].max(), t_[0].max()), min(t_[1].max(), t_[3].max())
+        x1, y1 = min(t_[0].min(), t_[2].min()), min(t_[1].min(), t_[3].min())
+        x2, y2 = max(t_[0].max(), t_[2].max()), min(t_[1].max(), t_[3].max())
         return (x1, y1, x2, y2)
 
     def get_edit_points(self, viewer):
         x1, y1, x2, y2 = self.get_llur()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
-    def contains_arr(self, x_arr, y_arr):
+    def contains_pts(self, pts):
         if len(self.objects) == 0:
+            x_arr, y_arr = np.asarray(pts).T
             return np.full(x_arr.shape, False, dtype=np.bool)
 
         return reduce(self._contains_reduce,
-                      map(lambda obj: obj.contains_arr(x_arr, y_arr),
-                          self.objects))
+                      map(lambda obj: obj.contains_pts(pts), self.objects))
 
-    def contains(self, x, y):
-        x_arr, y_arr = np.array([x]), np.array([y])
-        res = self.contains_arr(x_arr, y_arr)
-        return res[0]
-
-    def get_items_at(self, x, y):
+    def get_items_at(self, pt):
         res = []
         for obj in self.objects:
-            if obj.contains(x, y):
+            if obj.contains_pt(pt):
                 #res.insert(0, obj)
                 res.append(obj)
         return res
@@ -78,25 +73,25 @@ class CompoundMixin(object):
     def get_objects_by_kinds(self, kinds):
         return filter(lambda obj: obj.kind in kinds, self.objects)
 
-    def select_contains(self, viewer, x, y):
+    def select_contains_pt(self, viewer, pt):
         for obj in self.objects:
-            if obj.select_contains(viewer, x, y):
+            if obj.select_contains_pt(viewer, pt):
                 return True
         return False
 
-    def select_items_at(self, viewer, x, y, test=None):
+    def select_items_at(self, viewer, pt, test=None):
         res = []
         try:
             for obj in self.objects:
                 if obj.is_compound() and not obj.opaque:
                     # non-opaque compound object, list up compatible members
-                    res.extend(obj.select_items_at(viewer, x, y, test=test))
+                    res.extend(obj.select_items_at(viewer, pt, test=test))
 
-                is_inside = obj.select_contains(viewer, x, y)
+                is_inside = obj.select_contains_pt(viewer, pt)
                 if test is None:
                     if is_inside:
                         res.append(obj)
-                elif test(obj, x, y, is_inside):
+                elif test(obj, pt, is_inside):
                     # custom test
                     res.append(obj)
         except Exception as e:
@@ -219,32 +214,22 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.rotate(theta, xoff=xoff, yoff=yoff)
 
-    def move_delta(self, xoff, yoff):
+    def move_delta_pt(self, off_pt):
         for obj in self.objects:
-            obj.move_delta(xoff, yoff)
+            obj.move_delta_pt(off_pt)
 
-    def rotate_by(self, theta_deg):
-        ref_x, ref_y = self.get_reference_pt()
+    def scale_by_factors(self, factors):
         for obj in self.objects:
-            self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
-
-    def scale_by(self, scale_x, scale_y):
-        for obj in self.objects:
-            obj.scale_by(scale_x, scale_y)
+            obj.scale_by_factors(factors)
 
     def get_reference_pt(self):
         # Reference point for a compound object is the average of all
         # it's contituents reference points
         points = np.asarray([ obj.get_reference_pt()
-                                 for obj in self.objects ])
+                              for obj in self.objects ])
         t_ = points.T
         x, y = np.average(t_[0]), np.average(t_[1])
         return (x, y)
-
-    def move_to(self, xdst, ydst):
-        x, y = self.get_reference_pt()
-        for obj in self.objects:
-            obj.move_delta(xdst - x, ydst - y)
 
     def reorder_layers(self):
         self.objects.sort(key=lambda obj: getattr(obj, '_zorder', 0))

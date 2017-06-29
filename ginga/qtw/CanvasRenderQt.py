@@ -11,6 +11,7 @@ from ginga import colors
 from ginga.util.six.moves import map, zip
 # force registration of all canvas types
 import ginga.canvas.types.all
+from ginga import trcalc
 
 
 class RenderContext(object):
@@ -153,6 +154,8 @@ class RenderContext(object):
         self.cr.drawLine(cx1, cy1, cx2, cy2)
 
     def draw_path(self, cpoints):
+        cpoints = trcalc.strip_z(cpoints)
+
         self.cr.pen().setCapStyle(QtCore.Qt.RoundCap)
         for i in range(len(cpoints) - 1):
             cx1, cy1 = cpoints[i]

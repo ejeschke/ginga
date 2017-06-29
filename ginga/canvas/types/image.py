@@ -70,7 +70,8 @@ class Image(OnePointMixin, CanvasObjectBase):
                  showcap=False, flipy=False, optimize=True,
                  **kwdargs):
         self.kind = 'image'
-        CanvasObjectBase.__init__(self, x=x, y=y, image=image, alpha=alpha,
+        points = np.asarray([(x, y)], dtype=np.float)
+        CanvasObjectBase.__init__(self, points=points, image=image, alpha=alpha,
                                   scale_x=scale_x, scale_y=scale_y,
                                   interpolation=interpolation,
                                   linewidth=linewidth, linestyle=linestyle,
@@ -146,11 +147,11 @@ class Image(OnePointMixin, CanvasObjectBase):
 
         if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
-            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
-            xmin = int(min(x0, x1, x2, x3))
-            ymin = int(min(y0, y1, y2, y3))
-            xmax = int(np.ceil(max(x0, x1, x2, x3)))
-            ymax = int(np.ceil(max(y0, y1, y2, y3)))
+            pts = np.asarray(viewer.get_pan_rect()).T
+            xmin = int(np.min(pts[0]))
+            ymin = int(np.min(pts[1]))
+            xmax = int(np.ceil(np.max(pts[0])))
+            ymax = int(np.ceil(np.max(pts[1])))
 
             # destination location in data_coords
             #dst_x, dst_y = self.x, self.y + ht
@@ -252,7 +253,8 @@ class Image(OnePointMixin, CanvasObjectBase):
         x1, y1, x2, y2 = self.get_coords()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
-    def contains(self, data_x, data_y):
+    def contains_pt(self, pt):
+        data_x, data_y = pt
         x1, y1, x2, y2 = self.get_coords()
         if ((x1 <= data_x < x2) and (y1 <= data_y < y2)):
             return True
@@ -268,8 +270,7 @@ class Image(OnePointMixin, CanvasObjectBase):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i == 1:
             scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
             self.scale_x = detail.scale_x * scale_x
@@ -366,13 +367,13 @@ class NormImage(Image):
                  linewidth=0, linestyle='solid', color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
-        super(NormImage, self).__init__(x=x, y=y, image=image, alpha=alpha,
-                                            scale_x=scale_x, scale_y=scale_y,
-                                            interpolation=interpolation,
-                                            linewidth=linewidth, linestyle=linestyle,
-                                            color=color,
-                                            showcap=showcap, optimize=optimize,
-                                            **kwdargs)
+        super(NormImage, self).__init__(x, y, image=image, alpha=alpha,
+                                        scale_x=scale_x, scale_y=scale_y,
+                                        interpolation=interpolation,
+                                        linewidth=linewidth, linestyle=linestyle,
+                                        color=color,
+                                        showcap=showcap, optimize=optimize,
+                                        **kwdargs)
         self.rgbmap = rgbmap
         self.autocuts = autocuts
 
@@ -385,11 +386,11 @@ class NormImage(Image):
 
         if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
-            ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = viewer.get_pan_rect()
-            xmin = int(min(x0, x1, x2, x3))
-            ymin = int(min(y0, y1, y2, y3))
-            xmax = int(np.ceil(max(x0, x1, x2, x3)))
-            ymax = int(np.ceil(max(y0, y1, y2, y3)))
+            pts = np.asarray(viewer.get_pan_rect()).T
+            xmin = int(np.min(pts[0]))
+            ymin = int(np.min(pts[1]))
+            xmax = int(np.ceil(np.max(pts[0])))
+            ymax = int(np.ceil(np.max(pts[1])))
 
             # destination location in data_coords
             dst_x, dst_y = self.crdmap.to_data((self.x, self.y))

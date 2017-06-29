@@ -115,15 +115,16 @@ class CanvasObjectBase(Callback.Callbacks):
     def is_compound(self):
         return False
 
-    def contains_arr(self, x_arr, y_arr):
-        contains = np.asarray([False] * len(x_arr))
+    def contains_pts(self, points):
+        contains = np.asarray([False] * len(points))
         return contains
 
-    def contains(self, x, y):
-        return False
+    def contains_pt(self, pt):
+        pts = np.asarray([pt])
+        return self.contains_pts(pts)[0]
 
-    def select_contains(self, viewer, x, y):
-        return self.contains(x, y)
+    def select_contains_pt(self, viewer, pt):
+        return self.contains_pt(pt)
 
     def draw_arrowhead(self, cr, x1, y1, x2, y2):
         i1, j1, i2, j2 = self.calc_vertexes(x1, y1, x2, y2)
@@ -136,7 +137,7 @@ class CanvasObjectBase(Callback.Callbacks):
     def draw_caps(self, cr, cap, points, radius=None):
         i = 0
         for pt in points:
-            cx, cy = pt
+            cx, cy = pt[:2]
             if radius is None:
                 radius = self.cap_radius
             alpha = getattr(self, 'alpha', 1.0)
@@ -174,8 +175,8 @@ class CanvasObjectBase(Callback.Callbacks):
         self.draw_caps(cr, 'ball', cpoints)
 
     def calc_radius(self, viewer, p1, p2):
-        x1, y1 = p1
-        x2, y2 = p2
+        x1, y1 = p1[:2]
+        x2, y2 = p2[:2]
         # TODO: the accuracy of this calculation of radius might be improved?
         radius = np.sqrt(abs(y2 - y1)**2 + abs(x2 - x1)**2)
         return (x1, y1, radius)
@@ -219,6 +220,7 @@ class CanvasObjectBase(Callback.Callbacks):
         return points
 
     def get_data_points(self, points=None):
+        """Points returned are in data coordinates."""
         if points is None:
             points = self.points
         points = self.crdmap.to_data(points)
@@ -226,35 +228,35 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def set_data_points(self, points):
         """
-        Input points must be in data coordinates, will be converted
-        to the coordinate space of the object.
+        Input `points` must be in data coordinates, will be converted
+        to the coordinate space of the object and stored.
         """
         self.points = np.asarray(self.crdmap.data_to(points))
 
-    def rotate(self, theta_deg, xoff=0, yoff=0):
+    def rotate_deg(self, thetas, offset):
         points = np.asarray(self.get_data_points(), dtype=np.double)
-        points = trcalc.rotate_coord(points, theta_deg, (xoff, yoff))
+        points = trcalc.rotate_coord(points, thetas, offset)
         self.set_data_points(points)
 
-    def rotate_by(self, theta_deg):
-        ref_x, ref_y = self.get_reference_pt()
-        self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
+    def rotate_by_deg(self, thetas):
+        ref_pt = self.get_reference_pt()
+        self.rotate_deg(thetas, ref_pt)
 
-    def rerotate_by(self, theta_deg, detail):
-        ref_x, ref_y = detail.center_pos
+    def rerotate_by_deg(self, thetas, detail):
+        ref_pt = detail.center_pos
         points = np.asarray(detail.points, dtype=np.double)
-        points = trcalc.rotate_coord(points, theta_deg, (ref_x, ref_y))
+        points = trcalc.rotate_coord(points, thetas, ref_pt)
         self.set_data_points(points)
 
-    def move_delta(self, xoff, yoff):
+    def move_delta_pt(self, off_pt):
         points = np.asarray(self.get_data_points(), dtype=np.double)
-        points.T[0] += xoff
-        points.T[1] += yoff
+        points = np.add(points, off_pt)
         self.set_data_points(points)
 
-    def move_to(self, xdst, ydst):
-        x, y = self.get_reference_pt()
-        return self.move_delta(xdst - x, ydst - y)
+    def move_to_pt(self, dst_pt):
+        ref_pt = self.get_reference_pt()
+        off_pt = np.subtract(dst_pt, ref_pt)
+        self.move_delta_pt(off_pt)
 
     def get_num_points(self):
         return(len(self.points))
@@ -269,18 +271,16 @@ class CanvasObjectBase(Callback.Callbacks):
     def get_point_by_index(self, i):
         return self.crdmap.to_data(self.points[i])
 
-    def scale_by(self, scale_x, scale_y):
-        ctr_x, ctr_y = self.get_center_pt()
+    def scale_by_factors(self, factors):
+        ctr_pt = self.get_center_pt()
         pts = np.asarray(self.get_data_points(), dtype=np.double)
-        pts = np.add(np.multiply(np.subtract(pts, (ctr_x, ctr_y)),
-                                 (scale_x, scale_y)), (ctr_x, ctr_y))
+        pts = np.add(np.multiply(np.subtract(pts, ctr_pt), factors), ctr_pt)
         self.set_data_points(pts)
 
-    def rescale_by(self, scale_x, scale_y, detail):
-        ctr_x, ctr_y = detail.center_pos
+    def rescale_by_factors(self, factors, detail):
+        ctr_pt = detail.center_pos
         pts = np.asarray(detail.points, dtype=np.double)
-        pts = np.add(np.multiply(np.subtract(pts, (ctr_x, ctr_y)),
-                                 (scale_x, scale_y)), (ctr_x, ctr_y))
+        pts = np.add(np.multiply(np.subtract(pts, ctr_pt), factors), ctr_pt)
         self.set_data_points(pts)
 
     def setup_edit(self, detail):
@@ -288,9 +288,9 @@ class CanvasObjectBase(Callback.Callbacks):
         detail.center_pos = self.get_center_pt()
 
     def calc_rotation_from_pt(self, pt, detail):
-        x, y = pt
-        ctr_x, ctr_y = detail.center_pos
-        start_x, start_y = detail.start_pos
+        x, y = pt[:2]
+        ctr_x, ctr_y = detail.center_pos[:2]
+        start_x, start_y = detail.start_pos[:2]
         # calc angle of starting point wrt origin
         deg1 = np.degrees(np.arctan2(start_y - ctr_y,
                                      start_x - ctr_x))
@@ -300,9 +300,9 @@ class CanvasObjectBase(Callback.Callbacks):
         return delta_deg
 
     def calc_scale_from_pt(self, pt, detail):
-        x, y = pt
-        ctr_x, ctr_y = detail.center_pos
-        start_x, start_y = detail.start_pos
+        x, y = pt[:2]
+        ctr_x, ctr_y = detail.center_pos[:2]
+        start_x, start_y = detail.start_pos[:2]
         dx, dy = start_x - ctr_x, start_y - ctr_y
         # calc distance of starting point wrt origin
         dist1 = np.sqrt(dx**2.0 + dy**2.0)
@@ -313,9 +313,9 @@ class CanvasObjectBase(Callback.Callbacks):
         return scale_f
 
     def calc_dual_scale_from_pt(self, pt, detail):
-        x, y = pt
-        ctr_x, ctr_y = detail.center_pos
-        start_x, start_y = detail.start_pos
+        x, y = pt[:2]
+        ctr_x, ctr_y = detail.center_pos[:2]
+        start_x, start_y = detail.start_pos[:2]
         # calc distance of starting point wrt origin
         dx, dy = start_x - ctr_x, start_y - ctr_y
         # calc distance of current point wrt origin
@@ -327,8 +327,9 @@ class CanvasObjectBase(Callback.Callbacks):
         """
         Converts our object from using one coordinate map to another.
 
-        NOTE: This is currently NOT WORKING, because radii are not
-        converted correctly.
+        NOTE: In some cases this only approximately preserves the
+        equivalent point values when transforming between coordinate
+        spaces.
         """
         frommap = self.crdmap
         if frommap == tomap:
@@ -360,81 +361,78 @@ class CanvasObjectBase(Callback.Callbacks):
         self.set_data_points(data_pts)
 
 
-    # TODO: move these into utility module?
-    #####
-    def point_within_radius(self, a_arr, b_arr, x, y, canvas_radius,
-                            scale_x=1.0, scale_y=1.0):
-        """Point (a, b) and point (x, y) are in data coordinates.
-        Return True if point (a, b) is within the circle defined by
-        a center at point (x, y) and within canvas_radius.
+    def point_within_radius(self, points, pt, canvas_radius,
+                            scales=(1.0, 1.0)):
+        """Points `points` and point `pt` are in data coordinates.
+        Return True for points within the circle defined by
+        a center at point `pt` and within canvas_radius.
         """
+        scale_x, scale_y = scales
+        x, y = pt
+        a_arr, b_arr = np.asarray(points).T
         dx = np.fabs(x - a_arr) * scale_x
         dy = np.fabs(y - b_arr) * scale_y
         new_radius = np.sqrt(dx**2 + dy**2)
         res = (new_radius <= canvas_radius)
         return res
 
-    def within_radius(self, viewer, a_arr, b_arr, x, y, canvas_radius):
-        """Point (a, b) and point (x, y) are in data coordinates.
-        Return True if point (a, b) is within the circle defined by
-        a center at point (x, y) and within canvas_radius.
+    def within_radius(self, viewer, points, pt, canvas_radius):
+        """Points `points` and point `pt` are in data coordinates.
+        Return True for points within the circle defined by
+        a center at point `pt` and within canvas_radius.
         The distance between points is scaled by the canvas scale.
         """
-        scale_x, scale_y = viewer.get_scale_xy()
-        return self.point_within_radius(a_arr, b_arr, x, y, canvas_radius,
-                                        scale_x=scale_x, scale_y=scale_y)
+        scales = viewer.get_scale_xy()
+        return self.point_within_radius(points, pt, canvas_radius,
+                                        scales)
 
-    def get_pt(self, viewer, points, x, y, canvas_radius=None):
+    def get_pt(self, viewer, points, pt, canvas_radius=None):
+        """Takes an array of points `points` and a target point `pt`.
+        Returns the first index of the point that is within the
+        radius of the target point.  If none of the points are within
+        the radius, returns None.
+        """
         if canvas_radius is None:
             canvas_radius = self.cap_radius
 
         if hasattr(self, 'rot_deg'):
             # rotate point back to cartesian alignment for test
-            ctr_x, ctr_y = self.get_center_pt()
-            xp, yp = trcalc.rotate_pt(x, y, -self.rot_deg,
-                                      xoff=ctr_x, yoff=ctr_y)
-        else:
-            xp, yp = x, y
+            ctr_pt = self.get_center_pt()
+            pt = trcalc.rotate_coord(pt, [-self.rot_deg], ctr_pt)
 
-        # TODO: do this using numpy array()
-        for i in range(len(points)):
-            a, b = points[i]
-            if self.within_radius(viewer, xp, yp, a, b, canvas_radius):
-                return i
-        return None
+        res = self.within_radius(viewer, points, pt, canvas_radius)
+        return np.flatnonzero(res)
 
-    def point_within_line(self, a_arr, b_arr, x1, y1, x2, y2,
-                          canvas_radius):
+    def point_within_line(self, points, p_start, p_stop, canvas_radius):
         # TODO: is there an algorithm with the cross and dot products
         # that is more efficient?
         r = canvas_radius
+        x1, y1 = p_start
+        x2, y2 = p_stop
         xmin, xmax = min(x1, x2) - r, max(x1, x2) + r
         ymin, ymax = min(y1, y2) - r, max(y1, y2) + r
         div = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
+        a_arr, b_arr = np.asarray(points).T
         d = np.fabs((x2 - x1)*(y1 - b_arr) - (x1 - a_arr)*(y2 - y1)) / div
 
-        ## contains = (xmin <= a_arr <= xmax) and (ymin <= b_arr <= ymax) and \
-        ##            (d <= canvas_radius)
         contains = np.logical_and(
             np.logical_and(xmin <= a_arr, a_arr <= xmax),
             np.logical_and(d <= canvas_radius,
                               np.logical_and(ymin <= b_arr, b_arr <= ymax)))
         return contains
 
-    def within_line(self, viewer, a_arr, b_arr, x1, y1, x2, y2,
-                    canvas_radius):
-        """Point (a, b) and points (x1, y1), (x2, y2) are in data coordinates.
-        Return True if point (a, b) is within the line defined by
-        a line from (x1, y1) to (x2, y2) and within canvas_radius.
-        The distance between points is scaled by the canvas scale.
+    def within_line(self, viewer, points, p_start, p_stop, canvas_radius):
+        """Points `points` and line endpoints `p_start`, `p_stop` are in
+        data coordinates.
+        Return True for points within the line defined by a line from
+        p_start to p_end and within `canvas_radius`.
+        The distance between points is scaled by the viewer's canvas scale.
         """
         scale_x, scale_y = viewer.get_scale_xy()
         new_radius = canvas_radius * 1.0 / min(scale_x, scale_y)
-        return self.point_within_line(a_arr, b_arr, x1, y1, x2, y2,
-                                         new_radius)
 
-    #####
+        return self.point_within_line(points, p_start, p_stop, new_radius)
 
     def get_center_pt(self):
         """Return the geometric average of points as data_points.
@@ -483,17 +481,10 @@ class CanvasObjectBase(Callback.Callbacks):
         if (not no_rotate) and hasattr(self, 'rot_deg') and self.rot_deg != 0.0:
             # rotate vertices according to rotation
             ctr_x, ctr_y = self.get_center_pt()
-            points = trcalc.rotate_coord(points, self.rot_deg, (ctr_x, ctr_y))
+            points = trcalc.rotate_coord(points, [self.rot_deg], (ctr_x, ctr_y))
 
         crdmap = viewer.get_coordmap('native')
         return crdmap.data_to(points)
-
-    def get_llur_pts(self, points):
-        points = np.asarray(points)
-        t_ = points.T
-        x1, y1 = t_[0].min(), t_[1].min()
-        x2, y2 = t_[0].max(), t_[1].max()
-        return (x1, y1, x2, y2)
 
     def get_bbox(self, points=None):
         """
@@ -506,10 +497,67 @@ class CanvasObjectBase(Callback.Callbacks):
         """
         if points is None:
             x1, y1, x2, y2 = self.get_llur()
+            return ((x1, y1), (x1, y2), (x2, y2), (x2, y1))
         else:
-            x1, y1, x2, y2 = self.get_llur_pts(points)
+            return trcalc.strip_z(trcalc.get_bounds(points))
 
-        return ((x1, y1), (x1, y2), (x2, y2), (x2, y1))
+
+    # --- TO BE DEPRECATED METHODS ---
+
+    def move_delta(self, xoff, yoff):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use move_delta_pt instead.
+        """
+        self.move_delta_pt((xoff, yoff))
+
+    def move_to(self, xdst, ydst):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use move_to_pt() instead.
+        """
+        self.move_to_pt((xdst, ydst))
+
+    def scale_by(self, scale_x, scale_y):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use scale_by_factors() instead.
+        """
+        self.scale_by_factors((scale_x, scale_y))
+
+    def rescale_by(self, scale_x, scale_y, detail):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use rescale_by_factors() instead.
+        """
+        self.rescale_by_factors((scale_x, scale_y), detail)
+
+    def rotate(self, theta_deg, xoff=0, yoff=0):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use rotate_deg() instead.
+        """
+        self.rotate_deg([theta_deg], (xoff, yoff))
+
+    def rotate_by(self, theta_deg):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use rotate_by_deg() instead.
+        """
+        self.rotate_by_deg([theta_deg])
+
+    def contains_arr(self, x_arr, y_arr):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use contains_pts() instead.
+        """
+        pts = np.asarray((x_arr, y_arr)).T
+        return self.contains_pts(pts)
+
+    def contains(self, x, y):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use contains_pt() instead.
+        """
+        return self.contains_pt((x, y))
+
+    def select_contains(self, viewer, x, y):
+        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
+        Use select_contains_pt() instead.
+        """
+        return self.select_contains_pt(viewer, (x, y))
 
 
 # this is the data structure to which drawing classes are registered

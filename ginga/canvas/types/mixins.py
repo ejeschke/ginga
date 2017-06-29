@@ -18,17 +18,26 @@ from ginga.util.six.moves import map
 #
 class OnePointMixin(object):
 
-    def __get_points(self):
-        return np.asarray([(self.x, self.y)])
+    # --- For backward compatibility ---
+    def __get_x(self):
+        return self.points[0][0]
 
-    def __set_points(self, pts):
-        pts = np.asarray(pts)
-        self.x, self.y = pts[0]
+    def __set_x(self, val):
+        self.points[0][0] = val
 
-    points = property(__get_points, __set_points)
+    x = property(__get_x, __set_x)
+
+    def __get_y(self):
+        return self.points[0][1]
+
+    def __set_y(self, val):
+        self.points[0][1] = val
+
+    y = property(__get_y, __set_y)
+    # ----------------------------------
 
     def get_center_pt(self):
-        points = self.get_data_points(points=[(self.x, self.y)])
+        points = self.get_data_points()
         return points[0]
 
     def setup_edit(self, detail):
@@ -37,8 +46,7 @@ class OnePointMixin(object):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
@@ -49,7 +57,10 @@ class OnePointMixin(object):
         x, y = self.crdmap.to_data((self.x, self.y))
         return (x-0.5, y-0.5, x+0.5, y+0.5)
 
-    def rotate_by(self, theta_deg):
+    def rotate_by_deg(self, thetas):
+        pass
+
+    def scale_by_factors(self, factors):
         pass
 
     def scale_by(self, scale_x, scale_y):
@@ -58,18 +69,39 @@ class OnePointMixin(object):
 
 class TwoPointMixin(object):
 
-    def __get_points(self):
-        return np.asarray([(self.x1, self.y1), (self.x2, self.y2)])
+    # --- For backward compatibility ---
+    def __get_x1(self):
+        return self.points[0][0]
 
-    def __set_points(self, pts):
-        pts = np.asarray(pts)
-        self.x1, self.y1 = pts[0]
-        self.x2, self.y2 = pts[1]
+    def __set_x1(self, val):
+        self.points[0][0] = val
 
-    points = property(__get_points, __set_points)
+    x1 = property(__get_x1, __set_x1)
 
-    def get_point_by_index(self, i):
-        return self.points[i]
+    def __get_y1(self):
+        return self.points[0][1]
+
+    def __set_y1(self, val):
+        self.points[0][1] = val
+
+    y1 = property(__get_y1, __set_y1)
+
+    def __get_x2(self):
+        return self.points[1][0]
+
+    def __set_x2(self, val):
+        self.points[1][0] = val
+
+    x2 = property(__get_x2, __set_x2)
+
+    def __get_y2(self):
+        return self.points[1][1]
+
+    def __set_y2(self, val):
+        self.points[1][1] = val
+
+    y2 = property(__get_y2, __set_y2)
+    # ----------------------------------
 
     def get_center_pt(self):
         points = self.get_data_points(points=[
@@ -79,16 +111,15 @@ class TwoPointMixin(object):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i in (1, 2):
             self.set_point_by_index(i-1, pt)
         elif i == 3:
             scalef = self.calc_scale_from_pt(pt, detail)
-            self.rescale_by(scalef, scalef, detail)
+            self.rescale_by_factors((scalef, scalef), detail)
         elif i == 4:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
-            self.rerotate_by(delta_deg, detail)
+            self.rerotate_by_deg([delta_deg], detail)
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
@@ -120,14 +151,13 @@ class OnePointOneRadiusMixin(OnePointMixin):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i == 1:
             scalef = self.calc_scale_from_pt(pt, detail)
             self.radius = detail.radius * scalef
         elif i == 2:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
-            self.rotate_by(delta_deg)
+            self.rotate_by_deg([delta_deg])
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
@@ -159,15 +189,16 @@ class OnePointOneRadiusMixin(OnePointMixin):
 
         if hasattr(self, 'rot_deg'):
             xd, yd = self.crdmap.to_data((self.x, self.y))
-            mpts = trcalc.rotate_coord(mpts, self.rot_deg, [xd, yd])
+            mpts = trcalc.rotate_coord(mpts, [self.rot_deg], [xd, yd])
 
-        t_ = mpts.T
-        x1, y1 = t_[0].min(), t_[1].min()
-        x2, y2 = t_[0].max(), t_[1].max()
-        return (x1, y1, x2, y2)
+        a, b = trcalc.get_bounds(mpts)
+        return (a[0], a[1], b[0], b[1])
 
-    def rotate_by(self, theta_deg):
+    def rotate_by_deg(self, thetas):
         pass
+
+    def scale_by_factors(self, factors):
+        self.radius *= np.asarray(factors).max()
 
     def scale_by(self, scale_x, scale_y):
         self.radius *= max(scale_x, scale_y)
@@ -180,8 +211,7 @@ class OnePointTwoRadiusMixin(OnePointMixin):
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i == 1:
             scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
             self.xradius = detail.xradius * scale_x
@@ -198,7 +228,7 @@ class OnePointTwoRadiusMixin(OnePointMixin):
             self.yradius = detail.yradius * scalef
         elif i == 5:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
-            self.rotate_by(delta_deg)
+            self.rotate_by_deg([delta_deg])
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 
@@ -227,8 +257,8 @@ class OnePointTwoRadiusMixin(OnePointMixin):
         detail.yradius = self.yradius
         detail.points = deepcopy(self.get_data_points())
 
-    def rotate_by(self, theta_deg):
-        new_rot = math.fmod(self.rot_deg + theta_deg, 360.0)
+    def rotate_by_deg(self, thetas):
+        new_rot = math.fmod(self.rot_deg + thetas[0], 360.0)
         self.rot_deg = new_rot
         return new_rot
 
@@ -249,12 +279,10 @@ class OnePointTwoRadiusMixin(OnePointMixin):
 
         if hasattr(self, 'rot_deg'):
             xd, yd = self.crdmap.to_data((self.x, self.y))
-            mpts = trcalc.rotate_coord(mpts, self.rot_deg, [xd, yd])
+            mpts = trcalc.rotate_coord(mpts, [self.rot_deg], [xd, yd])
 
-        t_ = mpts.T
-        x1, y1 = t_[0].min(), t_[1].min()
-        x2, y2 = t_[0].max(), t_[1].max()
-        return (x1, y1, x2, y2)
+        a, b = trcalc.get_bounds(mpts)
+        return (a[0], a[1], b[0], b[1])
 
 
 class PolygonMixin(object):
@@ -281,11 +309,13 @@ class PolygonMixin(object):
         return ctr_x, ctr_y
 
     def get_llur(self):
-        return self.get_llur_pts(self.get_data_points())
+        a, b = trcalc.get_bounds(self.get_data_points())
+        return (a[0], a[1], b[0], b[1])
 
-    def contains_arr(self, x_arr, y_arr):
+    def contains_pts(self, pts):
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
+        x_arr, y_arr = np.asarray(pts, dtype=np.float).T
         xa, ya = x_arr, y_arr
 
         # promote input arrays dimension cardinality, if necessary
@@ -329,16 +359,10 @@ class PolygonMixin(object):
 
         return result
 
-    def contains(self, xp, yp):
-        x_arr, y_arr = np.array([xp]), np.array([yp])
-        res = self.contains_arr(x_arr, y_arr)
-        return res[0]
-
     def set_edit_point(self, i, pt, detail):
         num_points = len(self.points)
         if i == 0:
-            x, y = pt
-            self.move_to(x, y)
+            self.move_to_pt(pt)
         elif i-1 < num_points:
             self.set_point_by_index(i-1, pt)
         elif i == num_points + 1:
@@ -346,7 +370,7 @@ class PolygonMixin(object):
             self.rescale_by(scalef, scalef, detail)
         elif i == num_points + 2:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
-            self.rerotate_by(delta_deg, detail)
+            self.rerotate_by_deg([delta_deg], detail)
         else:
             raise ValueError("No point corresponding to index %d" % (i))
 

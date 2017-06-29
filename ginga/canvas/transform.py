@@ -7,13 +7,15 @@
 import numpy as np
 
 from ginga import trcalc
+from ginga.misc import Bunch
 
 __all__ = ['TransformError', 'BaseTransform', 'ComposedTransform',
+           'InvertedTransform', 'PassThruTransform',
            'WindowNativeTransform', 'CartesianWindowTransform',
            'CartesianNativeTransform',
            'RotationTransform', 'ScaleTransform',
            'DataCartesianTransform', 'OffsetDataTransform',
-           'WCSDataTransform',
+           'WCSDataTransform', 'get_catalog'
            ]
 
 class TransformError(Exception):
@@ -33,6 +35,24 @@ class BaseTransform(object):
     def __add__(self, trans):
         return ComposedTransform(self, trans)
 
+    @classmethod
+    def inverted_class(cls):
+        class _inverted(cls):
+
+            def __init__(self, *args, **kwargs):
+                cls.__init__(self, *args, **kwargs)
+
+            def to_(self, pts, **kwargs):
+                return cls.from_(self, pts, **kwargs)
+
+            def from_(self, pts, **kwargs):
+                return cls.to_(self, pts, **kwargs)
+
+        return _inverted
+
+    def invert(self):
+        return self.inverted_class()(self)
+
 
 class ComposedTransform(BaseTransform):
     """
@@ -51,6 +71,37 @@ class ComposedTransform(BaseTransform):
         return self.tform1.from_(self.tform2.from_(pts), **kwargs)
 
 
+class InvertedTransform(BaseTransform):
+    """
+    A transform that inverts another transform.
+    """
+
+    def __init__(self, tform):
+        super(InvertedTransform, self).__init__()
+        self.tform = tform
+
+    def to_(self, pts, **kwargs):
+        return self.tform.from_(pts, **kwargs)
+
+    def from_(self, pts, **kwargs):
+        return self.tform.to_(pts, **kwargs)
+
+
+class PassThruTransform(BaseTransform):
+    """
+    A transform that essentially acts as a no-op.
+    """
+
+    def __init__(self, viewer):
+        super(PassThruTransform, self).__init__()
+
+    def to_(self, pts, **kwargs):
+        return pts
+
+    def from_(self, pts, **kwargs):
+        return pts
+
+
 class WindowNativeTransform(BaseTransform):
     """
     A transform from a typical window standard coordinate space with the
@@ -61,19 +112,31 @@ class WindowNativeTransform(BaseTransform):
         super(WindowNativeTransform, self).__init__()
         self.viewer = viewer
 
-    def to_(self, cvs_pts):
+    def to_(self, win_pts):
         if self.viewer.origin_upper:
-            return cvs_pts
+            return win_pts
+
+        win_pts = np.asarray(win_pts)
+        has_z = (win_pts.shape[-1] > 2)
 
         # invert Y coord for backends that have the origin in the lower left
         win_wd, win_ht = self.viewer.get_window_size()
-        cvs_x, cvs_y = np.asarray(cvs_pts).T
 
-        win_x, win_y = cvs_x, win_ht - cvs_y
-        return np.asarray((win_x, win_y)).T
+        # win_x, win_y = cvs_x, win_ht - cvs_y
+        mpy_pt = [1.0, -1.0]
+        if has_z:
+            mpy_pt.append(1.0)
 
-    def from_(self, win_pts):
-        return self.to_(win_pts)
+        add_pt = [0.0, win_ht]
+        if has_z:
+            add_pt.append(0.0)
+
+        ntv_pts = np.add(np.multiply(win_pts, mpy_pt), add_pt)
+
+        return ntv_pts
+
+    def from_(self, ntv_pts):
+        return self.to_(ntv_pts)
 
 
 class CartesianWindowTransform(BaseTransform):
@@ -90,30 +153,50 @@ class CartesianWindowTransform(BaseTransform):
     def to_(self, off_pts):
         # add center pixel to convert from X/Y coordinate space to
         # window graphics space
-        ctr_x, ctr_y = self.viewer.get_center()
-        off_x, off_y = np.asarray(off_pts, dtype=np.float).T
+        off_pts = np.asarray(off_pts, dtype=np.float)
+        has_z = (off_pts.shape[-1] > 2)
 
-        win_x = off_x + ctr_x
-        win_y = ctr_y - off_y
+        ctr_pt = list(self.viewer.get_center())
+        if has_z:
+            ctr_pt.append(0.0)
+
+        # win_x = off_x + ctr_x
+        # win_y = ctr_y - off_y
+        mpy_pt = [1.0, -1.0]
+        if has_z:
+            mpy_pt.append(1.0)
+
+        win_pts = np.add(np.multiply(off_pts, mpy_pt), ctr_pt)
 
         # round to pixel units, if asked
         if self.as_int:
-            win_x = np.rint(win_x).astype(np.int)
-            win_y = np.rint(win_y).astype(np.int)
+            win_pts = np.rint(win_pts).astype(np.int)
 
-        return np.asarray((win_x, win_y)).T
+        return win_pts
 
     def from_(self, win_pts):
         """Reverse of :meth:`to_`."""
         # make relative to center pixel to convert from window
         # graphics space to standard X/Y coordinate space
-        ctr_x, ctr_y = self.viewer.get_center()
-        win_x, win_y = np.asarray(win_pts).T
+        win_pts = np.asarray(win_pts, dtype=np.float)
+        has_z = (win_pts.shape[-1] > 2)
 
-        off_x = win_x - ctr_x
-        off_y = ctr_y - win_y
+        ctr_pt = list(self.viewer.get_center())
+        if has_z:
+            ctr_pt.append(0.0)
 
-        return np.asarray((off_x, off_y)).T
+        mpy_pt = [1.0, -1.0]
+        if has_z:
+            mpy_pt.append(1.0)
+
+        # off_x = win_x - ctr_x
+        #       = win_x + -ctr_x
+        # off_y = ctr_y - win_y
+        #       = -win_y + ctr_y
+        ctr_pt[0] = -ctr_pt[0]
+        off_pts = np.add(np.multiply(win_pts, mpy_pt), ctr_pt)
+
+        return off_pts
 
 
 class CartesianNativeTransform(BaseTransform):
@@ -130,36 +213,54 @@ class CartesianNativeTransform(BaseTransform):
     def to_(self, off_pts):
         # add center pixel to convert from X/Y coordinate space to
         # back end graphics space
-        ctr_x, ctr_y = self.viewer.get_center()
-        off_x, off_y = np.asarray(off_pts, dtype=np.float).T
+        off_pts = np.asarray(off_pts, dtype=np.float)
+        has_z = (off_pts.shape[-1] > 2)
 
-        win_x = off_x + ctr_x
+        ctr_pt = list(self.viewer.get_center())
+        if has_z:
+            ctr_pt.append(0.0)
+
         if self.viewer.origin_upper:
-            win_y = ctr_y - off_y
+            mpy_pt = [1.0, -1.0]
         else:
-            win_y = off_y + ctr_y
+            mpy_pt = [1.0, 1.0]
+
+        if has_z:
+            mpy_pt.append(1.0)
+
+        win_pts = np.add(np.multiply(off_pts, mpy_pt), ctr_pt)
 
         # round to pixel units, if asked
+        # round to pixel units, if asked
         if self.as_int:
-            win_x = np.rint(win_x).astype(np.int)
-            win_y = np.rint(win_y).astype(np.int)
+            win_pts = np.rint(win_pts).astype(np.int)
 
-        return np.asarray((win_x, win_y)).T
+        return win_pts
 
     def from_(self, win_pts):
         """Reverse of :meth:`to_`."""
         # make relative to center pixel to convert from back end
         # graphics space to standard X/Y coordinate space
-        ctr_x, ctr_y = self.viewer.get_center()
-        win_x, win_y = np.asarray(win_pts).T
+        win_pts = np.asarray(win_pts, dtype=np.float)
+        has_z = (win_pts.shape[-1] > 2)
 
-        off_x = win_x - ctr_x
+        ctr_pt = list(self.viewer.get_center())
+        if has_z:
+            ctr_pt.append(0.0)
+
+        ctr_pt[0] = -ctr_pt[0]
         if self.viewer.origin_upper:
-            off_y = ctr_y - win_y
+            mpy_pt = [1.0, -1.0]
         else:
-            off_y = win_y - ctr_y
+            ctr_pt[1] = -ctr_pt[1]
+            mpy_pt = [1.0, 1.0]
 
-        return np.asarray((off_x, off_y)).T
+        if has_z:
+            mpy_pt.append(1.0)
+
+        off_pts = np.add(np.multiply(win_pts, mpy_pt), ctr_pt)
+
+        return off_pts
 
 
 class RotationTransform(BaseTransform):
@@ -173,37 +274,71 @@ class RotationTransform(BaseTransform):
         self.viewer = viewer
 
     def to_(self, off_pts):
-        off_x, off_y = np.asarray(off_pts, dtype=np.float).T
+        off_pts = np.asarray(off_pts, dtype=np.float)
+        has_z = (off_pts.shape[-1] > 2)
 
         t_ = self.viewer.t_
+
+        # flip
+        flip_pt = [1.0, 1.0]
         if t_['flip_x']:
-            off_x = - off_x
+            flip_pt[0] = -1.0
         if t_['flip_y']:
-            off_y = - off_y
+            flip_pt[1] = -1.0
+        if has_z:
+            # no flip_z at the moment
+            flip_pt.append(1.0)
+
+        off_pts = np.multiply(off_pts, flip_pt)
+
+        # swap
         if t_['swap_xy']:
-            off_x, off_y = off_y, off_x
+            p = list(off_pts.T)
+            off_pts = np.asarray([p[1], p[0]] + list(p[2:])).T
 
+        # rotate
         if t_['rot_deg'] != 0:
-            off_x, off_y = trcalc.rotate_pt(off_x, off_y, t_['rot_deg'])
+            thetas = [t_['rot_deg']]
+            offset = [0.0, 0.0]
+            if has_z:
+                offset.append(0.0)
+            off_pts = trcalc.rotate_coord(off_pts, thetas, offset)
 
-        return np.asarray((off_x, off_y)).T
+        return off_pts
 
     def from_(self, off_pts):
         """Reverse of :meth:`to_`."""
-        off_x, off_y = np.asarray(off_pts, dtype=np.float).T
+        off_pts = np.asarray(off_pts, dtype=np.float)
+        has_z = (off_pts.shape[-1] > 2)
 
         t_ = self.viewer.t_
+
+        # rotate
         if t_['rot_deg'] != 0:
-            off_x, off_y = trcalc.rotate_pt(off_x, off_y, -t_['rot_deg'])
+            thetas = [- t_['rot_deg']]
+            offset = [0.0, 0.0]
+            if has_z:
+                offset.append(0.0)
+            off_pts = trcalc.rotate_coord(off_pts, thetas, offset)
 
+        # swap
         if t_['swap_xy']:
-            off_x, off_y = off_y, off_x
-        if t_['flip_y']:
-            off_y = - off_y
-        if t_['flip_x']:
-            off_x = - off_x
+            p = list(off_pts.T)
+            off_pts = np.asarray([p[1], p[0]] + list(p[2:])).T
 
-        return np.asarray((off_x, off_y)).T
+        # flip
+        flip_pt = [1.0, 1.0]
+        if t_['flip_x']:
+            flip_pt[0] = -1.0
+        if t_['flip_y']:
+            flip_pt[1] = -1.0
+        if has_z:
+            # no flip_z at the moment
+            flip_pt.append(1.0)
+
+        off_pts = np.multiply(off_pts, flip_pt)
+
+        return off_pts
 
 
 class ScaleTransform(BaseTransform):
@@ -217,22 +352,29 @@ class ScaleTransform(BaseTransform):
 
     def to_(self, off_pts):
         """Reverse of :meth:`from_`."""
-        off_x, off_y = np.asarray(off_pts, dtype=np.float).T
+        off_pts = np.asarray(off_pts, dtype=np.float)
+        has_z = (off_pts.shape[-1] > 2)
 
         # scale according to current settings
-        off_x = off_x * self.viewer._org_scale_x
-        off_y = off_y * self.viewer._org_scale_y
+        scale_pt = [self.viewer._org_scale_x, self.viewer._org_scale_y]
+        if has_z:
+            scale_pt.append(self.viewer._org_scale_z)
 
-        return np.asarray((off_x, off_y)).T
+        off_pts = np.multiply(off_pts, scale_pt)
+        return off_pts
 
     def from_(self, off_pts):
-        off_x, off_y = np.asarray(off_pts, dtype=np.float).T
+        off_pts = np.asarray(off_pts, dtype=np.float)
+        has_z = (off_pts.shape[-1] > 2)
+
+        scale_pt = [1.0 / self.viewer._org_scale_x,
+                    1.0 / self.viewer._org_scale_y]
+        if has_z:
+            scale_pt.append(1.0 / self.viewer._org_scale_z)
 
         # Reverse scaling
-        off_x = off_x * (1.0 / self.viewer._org_scale_x)
-        off_y = off_y * (1.0 / self.viewer._org_scale_y)
-
-        return np.asarray((off_x, off_y)).T
+        off_pts = np.multiply(off_pts, scale_pt)
+        return off_pts
 
 
 class DataCartesianTransform(BaseTransform):
@@ -252,30 +394,36 @@ class DataCartesianTransform(BaseTransform):
 
     def to_(self, data_pts):
         """Reverse of :meth:`from_`."""
-        data_x, data_y = np.asarray(data_pts, dtype=np.float).T
+        data_pts = np.asarray(data_pts, dtype=np.float)
+        has_z = (data_pts.shape[-1] > 2)
 
         if self.use_center:
-            data_x = data_x - self.viewer.data_off
-            data_y = data_y - self.viewer.data_off
+            data_pts = data_pts - self.viewer.data_off
 
         # subtract data indexes at center reference pixel
-        off_x = data_x - self.viewer._org_x
-        off_y = data_y - self.viewer._org_y
+        ref_pt = [self.viewer._org_x, self.viewer._org_y]
+        if has_z:
+            ref_pt.append(self.viewer._org_z)
 
-        return np.asarray((off_x, off_y)).T
+        off_pts = np.subtract(data_pts, ref_pt)
+        return off_pts
 
     def from_(self, off_pts):
-        off_x, off_y = np.asarray(off_pts, dtype=np.float).T
+        off_pts = np.asarray(off_pts, dtype=np.float)
+        has_z = (off_pts.shape[-1] > 2)
 
         # Add data index at center to offset
-        data_x = self.viewer._org_x + off_x
-        data_y = self.viewer._org_y + off_y
+        # subtract data indexes at center reference pixel
+        ref_pt = [self.viewer._org_x, self.viewer._org_y]
+        if has_z:
+            ref_pt.append(self.viewer._org_z)
+
+        data_pts = np.add(off_pts, ref_pt)
 
         if self.use_center:
-            data_x = data_x + self.viewer.data_off
-            data_y = data_y + self.viewer.data_off
+            data_pts = data_pts + self.viewer.data_off
 
-        return np.asarray((data_x, data_y)).T
+        return data_pts
 
 
 class OffsetDataTransform(BaseTransform):
@@ -359,5 +507,16 @@ class WCSDataTransform(BaseTransform):
             return res[0]
         return res
 
+
+def get_catalog():
+    """Returns a catalog of available transforms.  These are used to
+    build chains for rendering with different back ends.
+    """
+    tforms = {}
+    for name, value in list(globals().items()):
+        if name.endswith('Transform'):
+            tforms[name] = value
+
+    return Bunch.Bunch(tforms, caseless=True)
 
 #END

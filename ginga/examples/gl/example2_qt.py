@@ -61,10 +61,6 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
-        # add a color bar
-        #fi.show_color_bar(True)
-        #fi.show_focus_indicator(True)
-
         # add little mode indicator that shows keyboard modal states
         #fi.show_mode_indicator(True, corner='ur')
 

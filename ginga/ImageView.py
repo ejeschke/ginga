@@ -216,6 +216,7 @@ class ImageViewBase(Callback.Callbacks):
         # data indexes at the reference pixel (in data coords)
         self._org_x = 0
         self._org_y = 0
+        self._org_z = 0
         # offset from pan position (at center) in this array
         self._org_xoff = 0
         self._org_yoff = 0
@@ -245,6 +246,7 @@ class ImageViewBase(Callback.Callbacks):
         # actual scale factors produced from desired ones
         self._org_scale_x = 1.0
         self._org_scale_y = 1.0
+        self._org_scale_z = 1.0
 
         self._rgbarr = None
         self._rgbarr2 = None
@@ -295,29 +297,9 @@ class ImageViewBase(Callback.Callbacks):
         self._canvas_img_tag = '__image'
 
         # set up basic transforms
-        self.tform = {
-            'window_to_native': transform.WindowNativeTransform(self),
-            'cartesian_to_native': (transform.RotationTransform(self) +
-                                    transform.CartesianNativeTransform(self)),
-            'data_to_cartesian': (transform.DataCartesianTransform(self) +
-                                  transform.ScaleTransform(self)),
-            'data_to_scrollbar': (transform.DataCartesianTransform(self) +
-                                  transform.RotationTransform(self)),
-            'data_to_window': (transform.DataCartesianTransform(self) +
-                               transform.ScaleTransform(self) +
-                               transform.RotationTransform(self) +
-                               transform.CartesianWindowTransform(self)),
-            'data_to_native': (transform.DataCartesianTransform(self) +
-                               transform.ScaleTransform(self) +
-                               transform.RotationTransform(self) +
-                               transform.CartesianNativeTransform(self)),
-            'wcs_to_data': transform.WCSDataTransform(self),
-            'wcs_to_native': (transform.WCSDataTransform(self) +
-                              transform.DataCartesianTransform(self) +
-                              transform.ScaleTransform(self) +
-                              transform.RotationTransform(self) +
-                              transform.CartesianNativeTransform(self)),
-            }
+        self.trcat = transform.get_catalog()
+        self.tform = {}
+        self.recalc_transforms(self.trcat)
 
         self.coordmap = {
             'native': coordmap.NativeMapper(self),
@@ -1412,9 +1394,9 @@ class ImageViewBase(Callback.Callbacks):
 
         Returns
         -------
-        rect : tuple
-            Bounding box in data coordinates in the form of
-            ``(x1, y1, x2, y2)``.
+        limits : tuple
+            Bounding box in coordinates of type `coord` in the form of
+               ``(ll_pt, ur_pt)``.
 
         """
         if self._limits is not None:
@@ -1430,10 +1412,16 @@ class ImageViewBase(Callback.Callbacks):
                 limits = ((0.0, 0.0), (float(wd), float(ht)))
 
             else:
-                # No limits found, go to default
-                limits = ((0.0, 0.0), (0.0, 0.0))
+                # Calculate limits based on plotted points, if any
+                canvas = self.get_canvas()
+                pts = canvas.get_points()
+                if len(pts) > 0:
+                    limits = trcalc.get_bounds(pts)
+                else:
+                    # No limits found, go to default
+                    limits = ((0.0, 0.0), (0.0, 0.0))
 
-        # convert to data coordinates
+        # convert to desired coordinates
         crdmap = self.get_coordmap(coord)
         limits = crdmap.data_to(limits)
 
@@ -1446,7 +1434,7 @@ class ImageViewBase(Callback.Callbacks):
         ----------
         limits : tuple or None
             A tuple setting the extents of the viewer in the form of
-            ``((x1, y1), (x2, y2))``.
+            ``(ll_pt, ur_pt)``.
         """
         if limits is not None:
             assert len(limits) == 2, ValueError("limits takes a 2 tuple")
@@ -1545,25 +1533,21 @@ class ImageViewBase(Callback.Callbacks):
             #self.logger.warning("new scale would exceed max/min; scale unchanged")
             raise ImageViewError("new scale would exceed pixel max; scale unchanged")
 
-        # It is necessary to store these so that the get_data_xy()
-        # (below) calculations can proceed
+        # It is necessary to store these so that the get_pan_rect()
+        # (below) calculation can proceed
         self._org_x, self._org_y = pan_x - self.data_off, pan_y - self.data_off
         self._org_scale_x, self._org_scale_y = scale_x, scale_y
+        self._org_scale_z = (scale_x + scale_y) / 2.0
 
         # calc minimum size of pixel image we will generate
         # necessary to fit the window in the desired size
 
         # get the data points in the four corners
-        xul, yul = self.get_data_xy(0, 0)
-        xur, yur = self.get_data_xy(win_wd, 0)
-        xlr, ylr = self.get_data_xy(win_wd, win_ht)
-        xll, yll = self.get_data_xy(0, win_ht)
+        a, b = trcalc.get_bounds(self.get_pan_rect())
 
         # determine bounding box
-        a1 = min(xul, xur, xlr, xll)
-        b1 = min(yul, yur, ylr, yll)
-        a2 = max(xul, xur, xlr, xll)
-        b2 = max(yul, yur, ylr, yll)
+        a1, b1 = a[:2]
+        a2, b2 = b[:2]
 
         # constrain to integer indexes
         x1, y1, x2, y2 = int(a1), int(b1), int(np.round(a2)), int(np.round(b2))
@@ -1752,6 +1736,13 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.info("Output left unprofiled")
 
 
+    def get_data_pt(self, win_pt):
+        """Similar to :meth:`get_data_xy`, except that it takes a single
+        array of points.
+
+        """
+        return self.tform['data_to_native'].from_(win_pt)
+
     def get_data_xy(self, win_x, win_y, center=None):
         """Get the closest coordinates in the data array to those
         reported on the window.
@@ -1777,7 +1768,7 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((win_x, win_y)).T
-        return self.tform['data_to_native'].from_(arr_pts).T
+        return self.tform['data_to_native'].from_(arr_pts).T[:2]
 
     def offset_to_data(self, off_x, off_y, center=None):
         """Get the closest coordinates in the data array to those
@@ -1798,7 +1789,14 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((off_x, off_y)).T
-        return self.tform['data_to_cartesian'].from_(arr_pts).T
+        return self.tform['data_to_cartesian'].from_(arr_pts).T[:2]
+
+    def get_canvas_pt(self, data_pt):
+        """Similar to :meth:`get_canvas_xy`, except that it takes a single
+        array of points.
+
+        """
+        return self.tform['data_to_native'].to_(data_pt)
 
     def get_canvas_xy(self, data_x, data_y, center=None):
         """Reverse of :meth:`get_data_xy`.
@@ -1808,7 +1806,7 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((data_x, data_y)).T
-        return self.tform['data_to_native'].to_(arr_pts).T
+        return self.tform['data_to_native'].to_(arr_pts).T[:2]
 
     def data_to_offset(self, data_x, data_y, center=None):
         """Reverse of :meth:`offset_to_data`.
@@ -1818,7 +1816,7 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warn("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((data_x, data_y)).T
-        return self.tform['data_to_cartesian'].to_(arr_pts).T
+        return self.tform['data_to_cartesian'].to_(arr_pts).T[:2]
 
     def offset_to_window(self, off_x, off_y):
         """Convert data offset to window coordinates.
@@ -1835,12 +1833,12 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         arr_pts = np.asarray((off_x, off_y)).T
-        return self.tform['cartesian_to_native'].to_(arr_pts).T
+        return self.tform['cartesian_to_native'].to_(arr_pts).T[:2]
 
     def window_to_offset(self, win_x, win_y):
         """Reverse of :meth:`offset_to_window`."""
         arr_pts = np.asarray((win_x, win_y)).T
-        return self.tform['cartesian_to_native'].from_(arr_pts).T
+        return self.tform['cartesian_to_native'].from_(arr_pts).T[:2]
 
     def canvascoords(self, data_x, data_y, center=None):
         """Same as :meth:`get_canvas_xy`.
@@ -1851,7 +1849,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # data->canvas space coordinate conversion
         arr_pts = np.asarray((data_x, data_y)).T
-        return self.tform['data_to_native'].to_(arr_pts).T
+        return self.tform['data_to_native'].to_(arr_pts).T[:2]
 
     def get_data_pct(self, xpct, ypct):
         """Calculate new data size for the given axis ratios.
@@ -1886,8 +1884,10 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         wd, ht = self.get_window_size()
-        arr_pts = np.asarray([(0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)])
-        return self.tform['data_to_native'].from_(arr_pts)
+        #win_pts = np.asarray([(0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)])
+        win_pts = np.asarray([(0, 0), (wd, 0), (wd, ht), (0, ht)])
+        arr_pts = self.tform['data_to_window'].from_(win_pts)
+        return arr_pts
 
     def get_data(self, data_x, data_y):
         """Get the data value at the given position.
@@ -2088,7 +2088,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         #return (self._org_scale_x, self._org_scale_y)
-        return self.t_['scale']
+        return self.t_['scale'][:2]
 
     def get_scale_base_xy(self):
         """Get stretch factors.
@@ -2121,7 +2121,7 @@ class ImageViewBase(Callback.Callbacks):
             ``'<num> x'`` if enlarged, or ``'1/<num> x'`` if shrunken.
 
         """
-        scalefactor = self.get_scale()
+        scalefactor = self.get_scale_max()
         if scalefactor >= 1.0:
             #text = '%dx' % (int(scalefactor))
             text = '%.2fx' % (scalefactor)
@@ -2946,6 +2946,39 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.coordmap[key] = mapper
+
+    def recalc_transforms(self, trcat=None):
+        """Takes a catalog of transforms (`trcat`) and builds the chain
+        of default transforms necessary to do rendering with most backends.
+
+        """
+        if trcat is None:
+            trcat = self.trcat
+
+        self.tform = {
+            'window_to_native': trcat.WindowNativeTransform(self),
+            'cartesian_to_window': trcat.CartesianWindowTransform(self),
+            'cartesian_to_native': (trcat.RotationTransform(self) +
+                                    trcat.CartesianNativeTransform(self)),
+            'data_to_cartesian': (trcat.DataCartesianTransform(self) +
+                                  trcat.ScaleTransform(self)),
+            'data_to_scrollbar': (trcat.DataCartesianTransform(self) +
+                                  trcat.RotationTransform(self)),
+            'data_to_window': (trcat.DataCartesianTransform(self) +
+                               trcat.ScaleTransform(self) +
+                               trcat.RotationTransform(self) +
+                               trcat.CartesianWindowTransform(self)),
+            'data_to_native': (trcat.DataCartesianTransform(self) +
+                               trcat.ScaleTransform(self) +
+                               trcat.RotationTransform(self) +
+                               trcat.CartesianNativeTransform(self)),
+            'wcs_to_data': trcat.WCSDataTransform(self),
+            'wcs_to_native': (trcat.WCSDataTransform(self) +
+                              trcat.DataCartesianTransform(self) +
+                              trcat.ScaleTransform(self) +
+                              trcat.RotationTransform(self) +
+                              trcat.CartesianNativeTransform(self)),
+            }
 
     def set_bg(self, r, g, b):
         """Set the background color.
