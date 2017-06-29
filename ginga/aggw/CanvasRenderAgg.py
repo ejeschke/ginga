@@ -11,6 +11,7 @@ from . import AggHelp
 from itertools import chain
 # force registration of all canvas types
 import ginga.canvas.types.all
+from ginga import trcalc
 
 class RenderContext(object):
 
@@ -109,7 +110,7 @@ class RenderContext(object):
         ## self.cr.canvas.settransform()
 
     def draw_polygon(self, cpoints):
-        cpoints = self.viewer.strip_z(cpoints)
+        cpoints = trcalc.strip_z(cpoints)
         self.cr.canvas.polygon(list(chain.from_iterable(cpoints)),
                                self.pen, self.brush)
 
@@ -140,7 +141,7 @@ class RenderContext(object):
         self.cr.canvas.line((cx1, cy1, cx2, cy2), self.pen)
 
     def draw_path(self, cpoints):
-        cp = self.viewer.strip_z(cpoints)
+        cp = trcalc.strip_z(cpoints)
         # TODO: is there a more efficient way in aggdraw to do this?
         path = agg.Path()
         path.moveto(cp[0][0], cp[0][1])

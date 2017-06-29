@@ -6,6 +6,7 @@
 #
 # force registration of all canvas types
 import ginga.canvas.types.all
+from ginga import trcalc
 
 class RenderContext(object):
 
@@ -61,7 +62,7 @@ class RenderContext(object):
         pass
 
     def draw_polygon(self, cpoints):
-        cpoints = self.viewer.strip_z(cpoints)
+        cpoints = trcalc.strip_z(cpoints)
         #self.cr.draw_polygon(cpoints)
         pass
 
@@ -78,7 +79,7 @@ class RenderContext(object):
         pass
 
     def draw_path(self, cpoints):
-        cpoints = self.viewer.strip_z(cpoints)
+        cpoints = trcalc.strip_z(cpoints)
         for i in range(len(cpoints) - 1):
             cx1, cy1 = cpoints[i]
             cx2, cy2 = cpoints[i+1]

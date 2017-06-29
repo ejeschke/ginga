@@ -191,10 +191,8 @@ class OnePointOneRadiusMixin(OnePointMixin):
             xd, yd = self.crdmap.to_data((self.x, self.y))
             mpts = trcalc.rotate_coord(mpts, [self.rot_deg], [xd, yd])
 
-        t_ = mpts.T
-        x1, y1 = t_[0].min(), t_[1].min()
-        x2, y2 = t_[0].max(), t_[1].max()
-        return (x1, y1, x2, y2)
+        a, b = trcalc.get_bounds(mpts)
+        return (a[0], a[1], b[0], b[1])
 
     def rotate_by_deg(self, thetas):
         pass
@@ -283,10 +281,8 @@ class OnePointTwoRadiusMixin(OnePointMixin):
             xd, yd = self.crdmap.to_data((self.x, self.y))
             mpts = trcalc.rotate_coord(mpts, [self.rot_deg], [xd, yd])
 
-        t_ = mpts.T
-        x1, y1 = t_[0].min(), t_[1].min()
-        x2, y2 = t_[0].max(), t_[1].max()
-        return (x1, y1, x2, y2)
+        a, b = trcalc.get_bounds(mpts)
+        return (a[0], a[1], b[0], b[1])
 
 
 class PolygonMixin(object):
@@ -313,7 +309,8 @@ class PolygonMixin(object):
         return ctr_x, ctr_y
 
     def get_llur(self):
-        return self.get_llur_pts(self.get_data_points())
+        a, b = trcalc.get_bounds(self.get_data_points())
+        return (a[0], a[1], b[0], b[1])
 
     def contains_pts(self, pts):
         # NOTE: we use a version of the ray casting algorithm

@@ -297,29 +297,9 @@ class ImageViewBase(Callback.Callbacks):
         self._canvas_img_tag = '__image'
 
         # set up basic transforms
-        self.tform = {
-            'window_to_native': transform.WindowNativeTransform(self),
-            'cartesian_to_native': (transform.RotationTransform(self) +
-                                    transform.CartesianNativeTransform(self)),
-            'data_to_cartesian': (transform.DataCartesianTransform(self) +
-                                  transform.ScaleTransform(self)),
-            'data_to_scrollbar': (transform.DataCartesianTransform(self) +
-                                  transform.RotationTransform(self)),
-            'data_to_window': (transform.DataCartesianTransform(self) +
-                               transform.ScaleTransform(self) +
-                               transform.RotationTransform(self) +
-                               transform.CartesianWindowTransform(self)),
-            'data_to_native': (transform.DataCartesianTransform(self) +
-                               transform.ScaleTransform(self) +
-                               transform.RotationTransform(self) +
-                               transform.CartesianNativeTransform(self)),
-            'wcs_to_data': transform.WCSDataTransform(self),
-            'wcs_to_native': (transform.WCSDataTransform(self) +
-                              transform.DataCartesianTransform(self) +
-                              transform.ScaleTransform(self) +
-                              transform.RotationTransform(self) +
-                              transform.CartesianNativeTransform(self)),
-            }
+        self.trcat = transform.get_catalog()
+        self.tform = {}
+        self.recalc_transforms(self.trcat)
 
         self.coordmap = {
             'native': coordmap.NativeMapper(self),
@@ -1415,7 +1395,7 @@ class ImageViewBase(Callback.Callbacks):
         Returns
         -------
         limits : tuple
-            Bounding box in data coordinates in the form of
+            Bounding box in coordinates of type `coord` in the form of
                ``(ll_pt, ur_pt)``.
 
         """
@@ -1432,10 +1412,16 @@ class ImageViewBase(Callback.Callbacks):
                 limits = ((0.0, 0.0), (float(wd), float(ht)))
 
             else:
-                # No limits found, go to default
-                limits = ((0.0, 0.0), (0.0, 0.0))
+                # Calculate limits based on plotted points, if any
+                canvas = self.get_canvas()
+                pts = canvas.get_points()
+                if len(pts) > 0:
+                    limits = trcalc.get_bounds(pts)
+                else:
+                    # No limits found, go to default
+                    limits = ((0.0, 0.0), (0.0, 0.0))
 
-        # convert to data coordinates
+        # convert to desired coordinates
         crdmap = self.get_coordmap(coord)
         limits = crdmap.data_to(limits)
 
@@ -1557,11 +1543,11 @@ class ImageViewBase(Callback.Callbacks):
         # necessary to fit the window in the desired size
 
         # get the data points in the four corners
-        pts_t = self.get_pan_rect().T
+        a, b = trcalc.get_bounds(self.get_pan_rect())
 
         # determine bounding box
-        a1, b1 = np.min(pts_t[0]), np.min(pts_t[1])
-        a2, b2 = np.max(pts_t[0]), np.max(pts_t[1])
+        a1, b1 = a[:2]
+        a2, b2 = b[:2]
 
         # constrain to integer indexes
         x1, y1, x2, y2 = int(a1), int(b1), int(np.round(a2)), int(np.round(b2))
@@ -1865,24 +1851,6 @@ class ImageViewBase(Callback.Callbacks):
         arr_pts = np.asarray((data_x, data_y)).T
         return self.tform['data_to_native'].to_(arr_pts).T[:2]
 
-    def strip_z(self, pts):
-        """Strips a Z component from `pts` if it is present."""
-        pts = np.asarray(pts)
-        if pts.shape[-1] > 2:
-            pts = np.asarray((pts.T[0], pts.T[1])).T
-        return pts
-
-    def pad_z(self, pts, value=0.0):
-        """Adds a Z component from `pts` if it is missing.
-        The value defaults to `value` (0.0)"""
-        pts = np.asarray(pts)
-        if pts.shape[-1] < 3:
-            if len(pts.shape) < 2:
-                return np.asarray((pts[0], pts[1], value), dtype=pts.dtype)
-            pad_col = np.full(len(pts), value, dtype=pts.dtype)
-            pts = np.asarray((pts.T[0], pts.T[1], pad_col)).T
-        return pts
-
     def get_data_pct(self, xpct, ypct):
         """Calculate new data size for the given axis ratios.
         See :meth:`get_data_size`.
@@ -1916,9 +1884,10 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         wd, ht = self.get_window_size()
-        #arr_pts = np.asarray([(0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)])
-        arr_pts = np.asarray([(0, 0), (wd, 0), (wd, ht), (0, ht)])
-        return self.tform['data_to_native'].from_(arr_pts)
+        #win_pts = np.asarray([(0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)])
+        win_pts = np.asarray([(0, 0), (wd, 0), (wd, ht), (0, ht)])
+        arr_pts = self.tform['data_to_window'].from_(win_pts)
+        return arr_pts
 
     def get_data(self, data_x, data_y):
         """Get the data value at the given position.
@@ -2977,6 +2946,39 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.coordmap[key] = mapper
+
+    def recalc_transforms(self, trcat=None):
+        """Takes a catalog of transforms (`trcat`) and builds the chain
+        of default transforms necessary to do rendering with most backends.
+
+        """
+        if trcat is None:
+            trcat = self.trcat
+
+        self.tform = {
+            'window_to_native': trcat.WindowNativeTransform(self),
+            'cartesian_to_window': trcat.CartesianWindowTransform(self),
+            'cartesian_to_native': (trcat.RotationTransform(self) +
+                                    trcat.CartesianNativeTransform(self)),
+            'data_to_cartesian': (trcat.DataCartesianTransform(self) +
+                                  trcat.ScaleTransform(self)),
+            'data_to_scrollbar': (trcat.DataCartesianTransform(self) +
+                                  trcat.RotationTransform(self)),
+            'data_to_window': (trcat.DataCartesianTransform(self) +
+                               trcat.ScaleTransform(self) +
+                               trcat.RotationTransform(self) +
+                               trcat.CartesianWindowTransform(self)),
+            'data_to_native': (trcat.DataCartesianTransform(self) +
+                               trcat.ScaleTransform(self) +
+                               trcat.RotationTransform(self) +
+                               trcat.CartesianNativeTransform(self)),
+            'wcs_to_data': trcat.WCSDataTransform(self),
+            'wcs_to_native': (trcat.WCSDataTransform(self) +
+                              trcat.DataCartesianTransform(self) +
+                              trcat.ScaleTransform(self) +
+                              trcat.RotationTransform(self) +
+                              trcat.CartesianNativeTransform(self)),
+            }
 
     def set_bg(self, r, g, b):
         """Set the background color.

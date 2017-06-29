@@ -7,13 +7,15 @@
 import numpy as np
 
 from ginga import trcalc
+from ginga.misc import Bunch
 
 __all__ = ['TransformError', 'BaseTransform', 'ComposedTransform',
+           'InvertedTransform', 'PassThruTransform',
            'WindowNativeTransform', 'CartesianWindowTransform',
            'CartesianNativeTransform',
            'RotationTransform', 'ScaleTransform',
            'DataCartesianTransform', 'OffsetDataTransform',
-           'WCSDataTransform',
+           'WCSDataTransform', 'get_catalog'
            ]
 
 class TransformError(Exception):
@@ -33,6 +35,24 @@ class BaseTransform(object):
     def __add__(self, trans):
         return ComposedTransform(self, trans)
 
+    @classmethod
+    def inverted_class(cls):
+        class _inverted(cls):
+
+            def __init__(self, *args, **kwargs):
+                cls.__init__(self, *args, **kwargs)
+
+            def to_(self, pts, **kwargs):
+                return cls.from_(self, pts, **kwargs)
+
+            def from_(self, pts, **kwargs):
+                return cls.to_(self, pts, **kwargs)
+
+        return _inverted
+
+    def invert(self):
+        return self.inverted_class()(self)
+
 
 class ComposedTransform(BaseTransform):
     """
@@ -51,6 +71,37 @@ class ComposedTransform(BaseTransform):
         return self.tform1.from_(self.tform2.from_(pts), **kwargs)
 
 
+class InvertedTransform(BaseTransform):
+    """
+    A transform that inverts another transform.
+    """
+
+    def __init__(self, tform):
+        super(InvertedTransform, self).__init__()
+        self.tform = tform
+
+    def to_(self, pts, **kwargs):
+        return self.tform.from_(pts, **kwargs)
+
+    def from_(self, pts, **kwargs):
+        return self.tform.to_(pts, **kwargs)
+
+
+class PassThruTransform(BaseTransform):
+    """
+    A transform that essentially acts as a no-op.
+    """
+
+    def __init__(self, viewer):
+        super(PassThruTransform, self).__init__()
+
+    def to_(self, pts, **kwargs):
+        return pts
+
+    def from_(self, pts, **kwargs):
+        return pts
+
+
 class WindowNativeTransform(BaseTransform):
     """
     A transform from a typical window standard coordinate space with the
@@ -61,12 +112,12 @@ class WindowNativeTransform(BaseTransform):
         super(WindowNativeTransform, self).__init__()
         self.viewer = viewer
 
-    def to_(self, cvs_pts):
+    def to_(self, win_pts):
         if self.viewer.origin_upper:
-            return cvs_pts
+            return win_pts
 
-        cvs_pts = np.asarray(cvs_pts)
-        has_z = (cvs_pts.shape[-1] > 2)
+        win_pts = np.asarray(win_pts)
+        has_z = (win_pts.shape[-1] > 2)
 
         # invert Y coord for backends that have the origin in the lower left
         win_wd, win_ht = self.viewer.get_window_size()
@@ -80,12 +131,12 @@ class WindowNativeTransform(BaseTransform):
         if has_z:
             add_pt.append(0.0)
 
-        cvs_pts = np.add(np.multiply(cvs_pts, mpy_pt), add_pt)
+        ntv_pts = np.add(np.multiply(win_pts, mpy_pt), add_pt)
 
-        return cvs_pts
+        return ntv_pts
 
-    def from_(self, win_pts):
-        return self.to_(win_pts)
+    def from_(self, ntv_pts):
+        return self.to_(ntv_pts)
 
 
 class CartesianWindowTransform(BaseTransform):
@@ -456,5 +507,16 @@ class WCSDataTransform(BaseTransform):
             return res[0]
         return res
 
+
+def get_catalog():
+    """Returns a catalog of available transforms.  These are used to
+    build chains for rendering with different back ends.
+    """
+    tforms = {}
+    for name, value in list(globals().items()):
+        if name.endswith('Transform'):
+            tforms[name] = value
+
+    return Bunch.Bunch(tforms, caseless=True)
 
 #END

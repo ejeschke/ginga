@@ -22,7 +22,7 @@ else:
     from PyQt5.QtOpenGL import QGLWidget as QOpenGLWidget
 
 # Local imports
-from ginga.opengl.CanvasRenderGL import CanvasRenderer
+from ginga.opengl.CanvasRenderGL import CanvasRenderer, WindowGLTransform
 
 
 class ImageViewQtGLError(ImageViewQt.ImageViewQtError):
@@ -65,10 +65,13 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         self.rgb_order = 'RGBA'
 
         self.renderer = CanvasRenderer(self)
-        self.tform['data_to_native'] = (
-            transform.DataCartesianTransform(self) +
-            transform.ScaleTransform(self) +
-            transform.RotationTransform(self))
+
+        # we replace two transforms in the catalog for OpenGL rendering
+        #self.trcat['WindowNativeTransform'] = WindowGLTransform
+        self.trcat['WindowNativeTransform'] = \
+                     transform.CartesianWindowTransform.inverted_class()
+        self.trcat['CartesianNativeTransform'] = transform.PassThruTransform
+        self.recalc_transforms()
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
@@ -76,8 +79,11 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         """
         pos = (0, 0)
         arr = self.getwin_array(order=self.rgb_order, alpha=1.0)
-        ## pos = (dst_x, dst_y)
-        ## arr = rgbobj.get_array(self.rgb_order)
+        #arr = rgbobj.get_array(self.rgb_order)
+        #pos = (dst_x, dst_y)
+        #print('dst', pos)
+        #pos = self.tform['window_to_native'].to_(pos)
+        #print('dst(c)', pos)
         self.renderer.gl_set_image(arr, pos)
 
     def configure_window(self, width, height):

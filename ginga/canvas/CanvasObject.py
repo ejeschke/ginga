@@ -486,13 +486,6 @@ class CanvasObjectBase(Callback.Callbacks):
         crdmap = viewer.get_coordmap('native')
         return crdmap.data_to(points)
 
-    def get_llur_pts(self, points):
-        points = np.asarray(points)
-        t_ = points.T
-        x1, y1 = t_[0].min(), t_[1].min()
-        x2, y2 = t_[0].max(), t_[1].max()
-        return (x1, y1, x2, y2)
-
     def get_bbox(self, points=None):
         """
         Get bounding box of this object.
@@ -504,10 +497,9 @@ class CanvasObjectBase(Callback.Callbacks):
         """
         if points is None:
             x1, y1, x2, y2 = self.get_llur()
+            return ((x1, y1), (x1, y2), (x2, y2), (x2, y1))
         else:
-            x1, y1, x2, y2 = self.get_llur_pts(points)
-
-        return ((x1, y1), (x1, y2), (x2, y2), (x2, y1))
+            return trcalc.strip_z(trcalc.get_bounds(points))
 
 
     # --- TO BE DEPRECATED METHODS ---

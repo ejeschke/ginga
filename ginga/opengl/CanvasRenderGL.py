@@ -177,6 +177,7 @@ class CanvasRenderer(object):
         self.draw_spines = True
         self.mode3d = False
         self._drawing = False
+        self._img_pos = None
 
         # initial values, will be recalculated at window map/resize
         self.lim_x, self.lim_y, self.lim_z = 10, 10, 10
@@ -241,10 +242,11 @@ class CanvasRenderer(object):
                            gl.GL_NEAREST)
 
     def gl_set_image(self, img_np, pos):
-        dst_x, dst_y = pos
+        dst_x, dst_y = pos[:2]
         # TODO: can we avoid this transformation?
         data = np.flipud(img_np[0:self.ht, 0:self.wd])
         ht, wd = data.shape[:2]
+        self._img_pos = ((dst_x, dst_y), (dst_x + wd, dst_y + ht))
 
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
                         gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, data)
@@ -272,7 +274,7 @@ class CanvasRenderer(object):
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
             image = self.viewer.get_image()
-            if image is not None:
+            if (image is not None) and (self._img_pos is not None):
                 # Draw the image portion of the plot
                 gl.glColor4f(1, 1, 1, 1.0)
                 gl.glEnable(gl.GL_TEXTURE_2D)
@@ -323,13 +325,13 @@ class CanvasRenderer(object):
             gl.glFlush()
 
 
-class DataNativeTransform(BaseTransform):
+class WindowGLTransform(BaseTransform):
     """
-    A transform from data coordinates to OpenGL coordinates of a viewer.
+    A transform from window coordinates to OpenGL coordinates of a viewer.
     """
 
     def __init__(self, viewer):
-        super(DataNativeTransform, self).__init__()
+        super(WindowGLTransform, self).__init__()
         self.viewer = viewer
 
     def pix2canvas(self, pt):
@@ -337,14 +339,16 @@ class DataNativeTransform(BaseTransform):
         the (cx, cy, cz) coordinates on the canvas.
         """
         x, y = pt[:2]
+        #print('p2c in', x, y)
         mm = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
         pm = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
         vp = gl.glGetIntegerv(gl.GL_VIEWPORT)
 
         win_x, win_y = float(x), float(vp[3] - y)
-        win_z = gl.glReadPixels(int(x), int(win_y), 1, 1, gl.GL_DEPTH_COMPONENT,
-                                gl.GL_FLOAT)
+        win_z = gl.glReadPixels(int(win_x), int(win_y), 1, 1,
+                                gl.GL_DEPTH_COMPONENT, gl.GL_FLOAT)
         pos = glu.gluUnProject(win_x, win_y, win_z, mm, pm, vp)
+        #print('out', pos)
         return pos
 
     def canvas2pix(self, pos):
@@ -352,11 +356,13 @@ class DataNativeTransform(BaseTransform):
         the (x, y, z) pixel coordinates in the window.
         """
         x, y, z = pos
+        #print('c2p in', x, y, z)
         mm = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
         pm = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
         vp = gl.glGetIntegerv(gl.GL_VIEWPORT)
 
         pt = glu.gluProject(x, y, z, mm, pm, vp)
+        #print('c2p out', pt)
         return pt
 
     def get_bbox(self, wd, ht):

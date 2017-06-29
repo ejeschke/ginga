@@ -102,10 +102,15 @@ def rotate_pt(x_arr, y_arr, theta_deg, xoff=0, yoff=0):
 rotate_arr = rotate_pt
 
 def rotate_coord(coord, thetas, offsets):
-    arr = np.asarray(coord)
+    arr_t = np.asarray(coord).T
     # TODO: handle dimensional rotation N>2
-    arr = rotate_pt(arr.T[0], arr.T[1], thetas[0],
+    arr = rotate_pt(arr_t[0], arr_t[1], thetas[0],
                     xoff=offsets[0], yoff=offsets[1])
+
+    if len(arr_t) > 2:
+        # just copy unrotated Z coords
+        arr = np.asarray([arr[0], arr[1]] + list(arr_t[2:]))
+
     return arr.T
 
 def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
@@ -774,6 +779,31 @@ def reorder_image(dst_order, src_arr, src_order):
     #return np.dstack([ src_arr[..., idx] for idx in indexes ])
     return np.concatenate([ src_arr[..., idx, np.newaxis]
                                for idx in indexes ], axis=-1)
+
+def strip_z(pts):
+    """Strips a Z component from `pts` if it is present."""
+    pts = np.asarray(pts)
+    if pts.shape[-1] > 2:
+        pts = np.asarray((pts.T[0], pts.T[1])).T
+    return pts
+
+def pad_z(pts, value=0.0):
+    """Adds a Z component from `pts` if it is missing.
+    The value defaults to `value` (0.0)"""
+    pts = np.asarray(pts)
+    if pts.shape[-1] < 3:
+        if len(pts.shape) < 2:
+            return np.asarray((pts[0], pts[1], value), dtype=pts.dtype)
+        pad_col = np.full(len(pts), value, dtype=pts.dtype)
+        pts = np.asarray((pts.T[0], pts.T[1], pad_col)).T
+    return pts
+
+def get_bounds(pts):
+    """Return the minimum point and maximum point bounding a
+    set of points."""
+    pts_t = np.asarray(pts).T
+    return np.asarray(([np.min(_pts) for _pts in pts_t],
+                       [np.max(_pts) for _pts in pts_t]))
 
 
 #END

@@ -43,8 +43,8 @@ class CompoundMixin(object):
         points = np.array(list(map(lambda obj: obj.get_llur(),
                                       self.objects)))
         t_ = points.T
-        x1, y1 = min(t_[0].min(), t_[0].min()), min(t_[1].min(), t_[3].min())
-        x2, y2 = max(t_[0].max(), t_[0].max()), min(t_[1].max(), t_[3].max())
+        x1, y1 = min(t_[0].min(), t_[2].min()), min(t_[1].min(), t_[3].min())
+        x2, y2 = max(t_[0].max(), t_[2].max()), min(t_[1].max(), t_[3].max())
         return (x1, y1, x2, y2)
 
     def get_edit_points(self, viewer):

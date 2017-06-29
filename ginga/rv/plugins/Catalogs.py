@@ -6,7 +6,7 @@
 #
 import os
 import math
-import numpy
+import numpy as np
 from collections import OrderedDict
 
 from ginga.misc import Bunch
@@ -646,7 +646,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if filter_obj:
             num_cat = len(starlist)
             self.logger.debug("number of incoming stars=%d" % (num_cat))
-            coords = numpy.asarray([(star['ra_deg'], star['dec_deg'])
+            coords = np.asarray([(star['ra_deg'], star['dec_deg'])
                                     for star in starlist])
 
             # vectorized wcs transform to data coords
@@ -656,7 +656,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             res = filter_obj.contains_pts(coords)
             self.logger.debug("res.shape = %s" % str(res.shape))
 
-            stars = numpy.array(starlist)[numpy.flatnonzero(res)]
+            stars = np.array(starlist)[np.flatnonzero(res)]
             self.logger.debug("number of filtered stars=%d" % (len(stars)))
             starlist = list(stars)
 

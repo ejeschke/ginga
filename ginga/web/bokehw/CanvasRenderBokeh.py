@@ -10,6 +10,7 @@ from . import BokehHelp
 from ginga.canvas.mixins import *
 # force registration of all canvas types
 import ginga.canvas.types.all
+from ginga import trcalc
 
 # Bokeh imports
 from bokeh.plotting import figure
@@ -97,7 +98,7 @@ class RenderContext(object):
         self.cr.init()
         self.cr.update_patch(self.pen, self.brush)
 
-        xy = self.viewer.strip_z(cpoints)
+        xy = trcalc.strip_z(cpoints)
 
         self.cr.plot.patches(xs=[xy.T[0]], ys=[xy.T[1]], **self.cr.kwdargs)
 
@@ -139,7 +140,7 @@ class RenderContext(object):
 
         self.cr.update_line(self.pen)
 
-        xy = self.viewer.strip_z(cpoints)
+        xy = trcalc.strip_z(cpoints)
 
         self.cr.plot.line(x=xy.T[0], y=xy.T[1], **self.cr.kwdargs)
 
