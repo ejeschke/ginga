@@ -7,12 +7,16 @@
 #
 import os
 
+# astropy.vo.samp moved to astropy.samp in astropy v2.0.
 try:
-    import astropy.vo.samp as samp
+    from astropy import samp
     have_samp = True
-
-except ImportError as e:
-    have_samp = False
+except ImportError:
+    try:
+        from astropy.vo import samp
+        have_samp = True
+    except ImportError:
+        have_samp = False
 
 from ginga import GingaPlugin
 from ginga.util import catalog
@@ -32,7 +36,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
     viewer.
 
     .. note:: to run this plugin you need to install astropy that has the
-              vo.samp module
+              samp module
 
     Plugin Type: Global
     -------------------
@@ -70,7 +74,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
         if not have_samp:
             raise GingaPlugin.PluginError(
                 "To run this plugin you need to install the "
-                "astropy.vo.samp module")
+                "astropy package")
 
         vbox = Widgets.VBox()
         vbox.set_border_width(4)
