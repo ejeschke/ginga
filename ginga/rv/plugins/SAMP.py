@@ -19,8 +19,10 @@ from ginga.util import catalog
 from ginga.version import version
 from ginga.gw import Widgets
 
+
 class SAMPError(Exception):
     pass
+
 
 class SAMP(GingaPlugin.GlobalPlugin):
     """
@@ -64,10 +66,11 @@ class SAMP(GingaPlugin.GlobalPlugin):
                                    start_hub=True)
         self.settings.load(onError='silent')
 
-
     def build_gui(self, container):
         if not have_samp:
-            raise GingaPlugin.PluginError("To run this plugin you need to install the astropy.vo.samp module")
+            raise GingaPlugin.PluginError(
+                "To run this plugin you need to install the "
+                "astropy.vo.samp module")
 
         vbox = Widgets.VBox()
         vbox.set_border_width(4)
@@ -170,15 +173,15 @@ class SAMP(GingaPlugin.GlobalPlugin):
             self.fv.show_error("Cannot start/stop hub: %s" % (str(e)))
 
     def _connect_client(self):
-        client = samp.SAMPIntegratedClient(metadata = {
+        client = samp.SAMPIntegratedClient(metadata={
             "samp.name": "ginga",
             "samp.description.text": "Ginga viewer",
             "ginga.version": version})
         client.connect()
 
         # TODO: need to handle some administrative messages
-        #client.bindReceiveNotification("samp.app.*", self.samp_placeholder)
-        #client.bindReceiveCall("samp.app.*", self.samp_placeholder)
+        # client.bindReceiveNotification("samp.app.*", self.samp_placeholder)
+        # client.bindReceiveCall("samp.app.*", self.samp_placeholder)
 
         # Loads a 2-dimensional FITS image.
         # Arguments:
@@ -190,12 +193,13 @@ class SAMP(GingaPlugin.GlobalPlugin):
         # Return Values: none
         client.bind_receive_call("image.load.fits", self.samp_call_load_fits)
         client.bind_receive_notification("image.load.fits",
-                                       self.samp_notify_load_fits)
+                                         self.samp_notify_load_fits)
 
         # Not yet implemented.  Not sure if/how these are different
         # from the image.load.fits variants
         client.bind_receive_call("table.load.fits", self.samp_placeholder)
-        client.bind_receive_notification("table.load.fits", self.samp_placeholder)
+        client.bind_receive_notification(
+            "table.load.fits", self.samp_placeholder)
 
         # Directs attention (e.g. by moving a cursor or shifting the field
         #   of view) to a given point on the celestial sphere.
@@ -244,11 +248,11 @@ class SAMP(GingaPlugin.GlobalPlugin):
         self.logger.debug("key=%s sender=%s msg_id=%s mtype=%s" % (
             private_key, sender_id, msg_id, mtype))
         self.logger.debug("params=%s extra=%s" % (params, extra))
-        self.logger.warning("SAMP message (%s) handler not yet implemented." % (
-            str(msg_id)))
+        self.logger.warning(
+            "SAMP message (%s) handler not yet implemented." % (str(msg_id)))
 
     def _load_fits(self, private_key, sender_id, msg_id, mtype, params,
-                     extra):
+                   extra):
 
         url = params['url']
         # TODO: unmangle the 'name' parameter to a filename (if provided)
@@ -274,7 +278,6 @@ class SAMP(GingaPlugin.GlobalPlugin):
                 fitspath, str(e))
             self.logger.error(errmsg)
             raise SAMPError(errmsg)
-
 
     def samp_notify_load_fits(self, private_key, sender_id, msg_id, mtype,
                               params, extra):
@@ -319,4 +322,4 @@ class GingaWrapper(object):
         self.fv.load_file(fitspath, chname=chname, wait=dowait)
         return 0
 
-#END
+# END
