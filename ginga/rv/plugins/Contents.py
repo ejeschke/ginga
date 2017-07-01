@@ -90,6 +90,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         treeview.setup_table(self.columns, 2, 'NAME')
 
         treeview.add_callback('activated', self.dblclick_cb)
+        treeview.add_callback('selected', self.select_cb)
         vbox.add_widget(treeview, stretch=1)
 
         btns = Widgets.HBox()
@@ -97,20 +98,25 @@ class Contents(GingaPlugin.GlobalPlugin):
         b1 = Widgets.Button('Display')
         b1.add_callback('activated', self.display_cb)
         b1.set_tooltip("Display the selected object in its channel viewer")
+        b1.set_enabled(False)
         btns.add_widget(b1)
         b2 = Widgets.Button('Move')
         b2.add_callback('activated', lambda w: self.ask_action_images('move'))
         b2.set_tooltip("Move the selected objects to a channel")
+        b2.set_enabled(False)
         btns.add_widget(b2)
         b3 = Widgets.Button('Copy')
         b3.add_callback('activated', lambda w: self.ask_action_images('copy'))
         b3.set_tooltip("Copy the selected objects to a channel")
+        b3.set_enabled(False)
         btns.add_widget(b3)
         b4 = Widgets.Button('Remove')
         b4.add_callback('activated', lambda w: self.ask_action_images('remove'))
         b4.set_tooltip("Remove the selected objects from a channel")
+        b4.set_enabled(False)
         btns.add_widget(b4)
         btns.add_widget(Widgets.Label(''), stretch=1)
+        self.btn_list = [b1, b2, b3, b4]
 
         self._rebuild_channels()
 
@@ -146,6 +152,12 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         self.fv.switch_name(chname, imname, path=path,
                             image_future=bnch.image_future)
+
+    def select_cb(self, widget, d):
+        res = self.get_selected()
+        tf = (len(res) > 0)
+        for btn in self.btn_list:
+            btn.set_enabled(tf)
 
     def display_cb(self, widget):
         res = self.get_selected()
