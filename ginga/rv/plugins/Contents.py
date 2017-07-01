@@ -96,15 +96,19 @@ class Contents(GingaPlugin.GlobalPlugin):
         btns.set_spacing(4)
         b1 = Widgets.Button('Display')
         b1.add_callback('activated', self.display_cb)
+        b1.set_tooltip("Display the selected object in its channel viewer")
         btns.add_widget(b1)
         b2 = Widgets.Button('Move')
         b2.add_callback('activated', lambda w: self.ask_action_images('move'))
+        b2.set_tooltip("Move the selected objects to a channel")
         btns.add_widget(b2)
         b3 = Widgets.Button('Copy')
         b3.add_callback('activated', lambda w: self.ask_action_images('copy'))
+        b3.set_tooltip("Copy the selected objects to a channel")
         btns.add_widget(b3)
-        b4 = Widgets.Button('Delete')
+        b4 = Widgets.Button('Remove')
         b4.add_callback('activated', lambda w: self.ask_action_images('remove'))
+        b4.set_tooltip("Remove the selected objects from a channel")
         btns.add_widget(b4)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
@@ -146,7 +150,7 @@ class Contents(GingaPlugin.GlobalPlugin):
     def display_cb(self, widget):
         res = self.get_selected()
         if len(res) != 1:
-            self.fv.show_error("select just one file to load!")
+            self.fv.show_error("Please select just one file to display!")
             return
 
         chname, bnch = res[0]
@@ -369,7 +373,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         try:
             self.treeview.highlight_path(hl_path, tf, font_color=fc)
         except Exception as e:
-            self.logger.error('Error changing highlight on treeview path '
+            self.logger.info('Error changing highlight on treeview path '
                               '({0}): {1}'.format(hl_path, str(e)))
 
     def update_highlights(self, old_highlight_set, new_highlight_set):
@@ -442,6 +446,9 @@ class Contents(GingaPlugin.GlobalPlugin):
     def ask_action_images(self, action):
 
         images = self.get_selected()
+        if len(images) == 0:
+            self.fv.show_error("Please select some images first")
+            return
 
         l_img = list(map(lambda tup: "%s/%s" % (tup[0], tup[1].imname),
                          images))

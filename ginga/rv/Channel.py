@@ -84,26 +84,35 @@ class Channel(Callback.Callbacks):
 
         # transfer image info
         info = self.image_index[imname]
-        channel._add_info(info)
+        was_not_there_already = channel._add_info(info)
 
         try:
-            # copy image to other channel's datasrc if still
-            # in memory
             image = self.datasrc[imname]
 
         except KeyError:
             return
 
-        channel.add_image(image, silent=silent)
+        if was_not_there_already:
+            channel.datasrc[imname] = image
+
+            if not silent:
+                self.fv.gui_do(channel._add_image_update, image, info)
 
     def remove_image(self, imname):
-        info = self.remove_history(imname)
+        info = self.image_index[imname]
+        self.remove_history(imname)
 
         if imname in self.datasrc:
+            image = self.datasrc[imname]
             self.datasrc.remove(imname)
-            self.fv.make_async_gui_callback('remove-image', self.name,
-                                            info.name, info.path)
 
+            # clear viewer if we are removing the currently displayed image
+            cur_image = self.fitsimage.get_image()
+            if cur_image == image:
+                self.fitsimage.clear()
+
+        self.fv.make_async_gui_callback('remove-image', self.name,
+                                        info.name, info.path)
         return info
 
     def get_image_names(self):
@@ -142,14 +151,18 @@ class Channel(Callback.Callbacks):
 
         self.datasrc[imname] = image
 
-        idx = image.get('idx', None)
-        path = image.get('path', None)
-        image_loader = image.get('image_loader', None)
-        image_future = image.get('image_future', None)
-        info = self.add_history(imname, path,
-                                image_loader=image_loader,
-                                image_future=image_future,
-                                idx=idx)
+        # Has this image been loaded into a channel before?
+        info = image.get('image_info', None)
+        if info is None:
+            # No
+            idx = image.get('idx', None)
+            path = image.get('path', None)
+            image_loader = image.get('image_loader', None)
+            image_future = image.get('image_future', None)
+            info = self.add_history(imname, path,
+                                    image_loader=image_loader,
+                                    image_future=image_future,
+                                    idx=idx)
 
         # we'll get notified if an image changes and can update
         # metadata and make a chained callback
@@ -203,7 +216,10 @@ class Channel(Callback.Callbacks):
                 self.fv.change_channel(self.name)
 
     def _image_modified_cb(self, image):
-        imname = image.get('name')
+        imname = image.get('name', None)
+        if (imname is None) or (not imname in self.image_index):
+            return
+
         info = self.image_index[imname]
         info.time_modified = datetime.utcnow()
         self.logger.debug("image modified; making chained callback")
@@ -253,14 +269,23 @@ class Channel(Callback.Callbacks):
         return True
 
     def _add_info(self, info):
-        if not info in self.image_index:
+        if info in self.image_index:
+            # image info is already present
+            return False
+
+        with self.lock:
             self.history.append(info)
             self.image_index[info.name] = info
 
             if self.hist_sort is not None:
                 self.history.sort(key=self.hist_sort)
 
-            self.fv.make_async_gui_callback('add-image-info', self, info)
+        self.fv.make_async_gui_callback('add-image-info', self, info)
+
+        # image was newly added
+        return True
+
+
 
     def add_history(self, imname, path, idx=None,
                     image_loader=None, image_future=None):
@@ -281,9 +306,11 @@ class Channel(Callback.Callbacks):
                                time_added=time.time(),
                                time_modified=None)
             self._add_info(info)
+
         else:
             # already in history
             info = self.image_index[imname]
+
         return info
 
     def remove_history(self, imname):
@@ -293,8 +320,6 @@ class Channel(Callback.Callbacks):
             self.history.remove(info)
 
             self.fv.make_async_gui_callback('remove-image-info', self, info)
-            return info
-        return None
 
     def get_current_image(self):
         return self.viewer.get_image()
@@ -433,5 +458,11 @@ class Channel(Callback.Callbacks):
 
     def __len__(self):
         return len(self.history)
+
+    def __contains__(self, imname):
+        return imname in self.image_index
+
+    def __getitem__(self, imname):
+        return self.image_index[imname]
 
 # END
