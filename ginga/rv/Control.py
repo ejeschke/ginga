@@ -704,7 +704,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Zoom the view to a 1 to 1 pixel ratio (100 %%).
         """
         viewer = self.getfocus_viewer()
-        viewer.zoom_to(1)
+        viewer.scale_to(1.0, 1.0)
         return True
 
     def zoom_fit(self):

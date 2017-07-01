@@ -216,7 +216,10 @@ class CanvasObjectBase(Callback.Callbacks):
 
         Points are returned in *data* coordinates.
         """
-        points = self.crdmap.to_data(self.points)
+        if hasattr(self, 'points'):
+            points = self.crdmap.to_data(self.points)
+        else:
+            points = []
         return points
 
     def get_data_points(self, points=None):
