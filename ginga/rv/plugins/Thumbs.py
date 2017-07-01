@@ -51,8 +51,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thumb_num_cols = 1
         self.thumb_row_count = 0
         self.thumb_col_count = 0
-        # distance in pixels between thumbs
-        self.thumb_sep = 15
         self._wd = 300
         self._ht = 400
         self._cmyoff = 10
@@ -68,9 +66,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    tt_keywords=tt_keywords,
                                    mouseover_name_key='NAME',
                                    thumb_length=192,
+                                   thumb_sep=15,
                                    sort_order=None,
                                    label_length=14,
-                                   label_cutoff='right',
+                                   label_cutoff=None,
                                    highlight_tracks_keyboard_focus=True,
                                    label_font_color='white',
                                    label_font_size=10,
@@ -78,6 +77,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumb_width = self.settings.get('thumb_length', 192)
+        # distance in pixels between thumbs
+        self.thumb_sep = self.settings.get('thumb_sep', 15)
 
         # Build our thumb generator
         tg = CanvasView(logger=self.logger)
@@ -780,13 +781,14 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # Shorten thumbnail label, if requested
         label_length = self.settings.get('label_length', None)
-        label_cutoff = self.settings.get('label_cutoff', 'right')
+        label_cutoff = self.settings.get('label_cutoff', None)
 
         if label_length is not None:
-            ## thumbname = iohelper.shorten_name(thumbname, label_length,
-            ##                                   side=label_cutoff)
-            # TEMP
-            thumbname = thumbname[:label_length]
+            if label_cutoff is not None:
+                thumbname = iohelper.shorten_name(thumbname, label_length,
+                                                  side=label_cutoff)
+            else:
+                thumbname = thumbname[:label_length]
 
         with self.thmblock:
             row, col = self.thumb_row_count, self.thumb_col_count
