@@ -245,16 +245,20 @@ class Image(OnePointMixin, CanvasObjectBase):
         x2, y2 = x1 + wd, y1 + ht
         return (x1, y1, x2, y2)
 
+    def get_llur(self):
+        return self.get_coords()
+
     def get_center_pt(self):
         wd, ht = self.get_scaled_wdht()
-        return (self.x + wd / 2.0, self.y + ht / 2.0)
+        x1, y1, x2, y2 = self.get_coords()
+        return ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
 
     def get_points(self):
         x1, y1, x2, y2 = self.get_coords()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
     def contains_pt(self, pt):
-        data_x, data_y = pt
+        data_x, data_y = pt[:2]
         x1, y1, x2, y2 = self.get_coords()
         if ((x1 <= data_x < x2) and (y1 <= data_y < y2)):
             return True

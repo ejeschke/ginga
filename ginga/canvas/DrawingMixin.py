@@ -29,11 +29,11 @@ class DrawingMixin(object):
         from .CanvasObject import drawCatalog
         # For interactive drawing
         self.candraw = False
-        self.draw_dict = drawCatalog
+        self.dc = drawCatalog
         # canvas objects which we know how to draw have an "idraw"
         # class method
-        self.drawtypes = [ key for key in self.draw_dict.keys()
-                           if hasattr(self.draw_dict[key], 'idraw') ]
+        self.drawtypes = [ key for key in self.dc.keys()
+                           if hasattr(self.dc[key], 'idraw') ]
         self.drawtypes.sort()
         self.t_drawtype = 'point'
         self.t_drawparams = {}
@@ -210,7 +210,7 @@ class DrawingMixin(object):
         crdmap = viewer.get_coordmap(crdtype)
         x, y = crdmap.data_to((data_x, data_y))
 
-        klass = self.draw_dict.get(self.t_drawtype, None)
+        klass = self.dc.get(self.t_drawtype, None)
 
         # create the drawing context
         self._draw_cxt = Bunch(start_x=x, start_y=y, points=[(x, y)],
@@ -302,8 +302,11 @@ class DrawingMixin(object):
 
     def get_draw_class(self, drawtype):
         drawtype = drawtype.lower()
-        klass = self.draw_dict[drawtype]
+        klass = self.dc[drawtype]
         return klass
+
+    def get_draw_classes(self):
+        return self.dc
 
     def get_drawparams(self):
         return self.t_drawparams.copy()
@@ -315,7 +318,7 @@ class DrawingMixin(object):
 
     def register_canvas_type(self, name, klass):
         drawtype = name.lower()
-        self.draw_dict[drawtype] = klass
+        self.dc[drawtype] = klass
         if not drawtype in self.drawtypes:
             self.drawtypes.append(drawtype)
             self.drawtypes.sort()
