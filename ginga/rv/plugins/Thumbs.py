@@ -751,13 +751,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         xt = self._cmxoff + (col * twd_hplus)
         yt = self._cmyoff + (row * twd_vplus) + text_ht
 
+        # position of image
+        xi = xt
+        yi = yt + 6
+
         # convert to data coords
         crdmap = self.c_view.get_coordmap('window')
-        xt, yt = crdmap.to_data((xt, yt))
+        xtd, ytd = crdmap.to_data((xt, yt))
+        xid, yid = crdmap.to_data((xi, yi))
 
-        xi = xt
-        yi = yt
-        return (xt, yt, xi, yi)
+        return (xtd, ytd, xid, yid)
 
     def insert_thumbnail(self, imgwin, thumbkey, chname,
                          thumbpath, metadata, info):
