@@ -53,6 +53,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thumb_col_count = 0
         self._wd = 300
         self._ht = 400
+        self._cmxoff = 10
         self._cmyoff = 10
         self._max_y = 0
         tt_keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
@@ -65,20 +66,22 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    rebuild_wait=0.5,
                                    tt_keywords=tt_keywords,
                                    mouseover_name_key='NAME',
-                                   thumb_length=192,
-                                   thumb_sep=15,
+                                   thumb_length=180,
+                                   thumb_hsep=15,
+                                   thumb_vsep=15,
                                    sort_order=None,
-                                   label_length=14,
-                                   label_cutoff=None,
+                                   label_length=25,
+                                   label_cutoff='right',
                                    highlight_tracks_keyboard_focus=True,
                                    label_font_color='white',
                                    label_font_size=10,
                                    label_bg_color='lightgreen')
         self.settings.load(onError='silent')
         # max length of thumb on the long side
-        self.thumb_width = self.settings.get('thumb_length', 192)
+        self.thumb_width = self.settings.get('thumb_length', 180)
         # distance in pixels between thumbs
-        self.thumb_sep = self.settings.get('thumb_sep', 15)
+        self.thumb_hsep = self.settings.get('thumb_hsep', 15)
+        self.thumb_vsep = self.settings.get('thumb_vsep', 15)
 
         # Build our thumb generator
         tg = CanvasView(logger=self.logger)
@@ -130,7 +133,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         c_v.enable_autozoom('off')
         c_v.enable_autocuts('off')
         c_v.set_pan(0, 0)
-        c_v.zoom_to(1)
+        c_v.scale_to(1.0, 1.0)
         c_v.transform(False, True, False)
         c_v.cut_levels(0, 255)
         c_v.set_bg(0.4, 0.4, 0.4)
@@ -180,7 +183,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         bd = viewer.get_bindings()
         direction = bd.get_direction(direction)
         pan_x, pan_y = viewer.get_pan()[:2]
-        qty = self.thumb_sep * amt * self.settings.get('thumb_pan_accel', 1.0)
+        qty = self.thumb_vsep * amt * self.settings.get('thumb_pan_accel', 1.0)
         if direction == 'up':
             pan_y -= qty
         else:
@@ -315,7 +318,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.logger.debug("thumbs resized, width=%d" % (width))
 
         with self.thmblock:
-            cols = max(1, width // (self.thumb_width + self.thumb_sep))
+            cols = max(1, width // (self.thumb_width + self.thumb_hsep))
             if self.thumb_num_cols == cols:
                 # If we have not actually changed the possible number of columns
                 # then don't do anything
@@ -587,10 +590,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         x1, y1, x2, y2 = obj.get_llur()
 
         # Determine pop-up position on canvas.  Try to align a little below
-        # the thumbnail image and offset a bit based on column
-        tup = viewer.get_pan_rect()
-        col = obj.data.col
-        x = tup[0][0] + 10 + col * 20
+        # the thumbnail image and offset a bit
+        x = x1 + 10
         y = y1 + 10
         mxwd = 0
         lines = text.split('\n')
@@ -742,12 +743,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def _calc_thumb_pos(self, row, col):
         # TODO: should really be text ht
-        text_ht = self.thumb_sep
+        text_ht = self.thumb_vsep
 
         # calc in window coords
-        twd_plus = self.thumb_width + text_ht + self.thumb_sep
-        xt = self.thumb_sep + col * twd_plus
-        yt = self._cmyoff + (row * twd_plus) + text_ht
+        twd_hplus = self.thumb_width + self.thumb_hsep
+        twd_vplus = self.thumb_width + text_ht + self.thumb_vsep
+        xt = self._cmxoff + (col * twd_hplus)
+        yt = self._cmyoff + (row * twd_vplus) + text_ht
 
         # convert to data coords
         crdmap = self.c_view.get_coordmap('window')
