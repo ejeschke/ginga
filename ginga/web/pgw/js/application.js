@@ -174,7 +174,8 @@ ginga_initialize_canvas = function (canvas, id, app) {
             ctrl_key: e.ctrlKey || false,
             meta_key: e.metaKey || false,
             shift_key: e.shiftKey || false,
-            key_code: e.keyCode || e.which || 0
+            key_code: e.keyCode || e.which || 0,
+            key_name: String.fromCharCode(e.keyCode || e.which || 0)
         }
         pg_canvas.send_pkt(message);
     }
@@ -191,7 +192,8 @@ ginga_initialize_canvas = function (canvas, id, app) {
             ctrl_key: e.ctrlKey || false,
             meta_key: e.metaKey || false,
             shift_key: e.shiftKey || false,
-            key_code: e.keyCode || 0
+            key_code: e.keyCode || 0,
+            key_name: String.fromCharCode(e.keyCode || e.which || 0)
         }
         e.preventDefault();
         pg_canvas.send_pkt(message);
@@ -239,7 +241,8 @@ ginga_initialize_canvas = function (canvas, id, app) {
             ctrl_key: e.ctrlKey || false,
             meta_key: e.metaKey || false,
             shift_key: e.shiftKey || false,
-            key_code: e.keyCode || 0
+            key_code: e.keyCode || 0,
+            key_name: String.fromCharCode(e.keyCode || e.which || 0)
         }
         pg_canvas.send_pkt(message);
     }

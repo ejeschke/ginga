@@ -19,6 +19,9 @@ import matplotlib.lines as lines
 
 from ginga import ImageView
 from ginga import Mixins, Bindings, colors
+# NOTE: this import is necessary to register the 'ginga' projection
+# used via matplotlib, even though the module is not directly
+# referenced within this code
 from . import transform
 from ginga.mplw.CanvasRenderMpl import CanvasRenderer
 from ginga.mplw.MplHelp import Timer
@@ -61,14 +64,14 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # NOTE: matplotlib manages it's Y coordinates by default with
         # the origin at the bottom (see base class)
-        self._originUpper = False
+        self.origin_upper = False
 
         self.img_fg = (1.0, 1.0, 1.0)
         self.img_bg = (0.5, 0.5, 0.5)
 
         self.in_axes = False
         # Matplotlib expects RGBA data for color images
-        self._rgb_order = 'RGBA'
+        self.rgb_order = 'RGBA'
 
         self.renderer = CanvasRenderer(self)
 
@@ -80,7 +83,10 @@ class ImageViewMpl(ImageView.ImageViewBase):
         """Call this with the matplotlib Figure() object."""
         self.figure = figure
 
-        ax = self.figure.add_axes((0, 0, 1, 1), frame_on=False)
+        ax = self.figure.add_axes((0, 0, 1, 1), frame_on=False,
+                                  #viewer=self,
+                                  #projection='ginga'
+                                  )
         #ax = fig.add_subplot(111)
         self.ax_img = ax
         # We don't want the axes cleared every time plot() is called
@@ -96,7 +102,10 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # Add an overlapped axis for drawing graphics
         newax = self.figure.add_axes(self.ax_img.get_position(),
                                      sharex=ax, sharey=ax,
-                                     frameon=False)
+                                     frameon=False,
+                                     #viewer=self,
+                                     #projection='ginga'
+                                     )
         newax.hold(True)
         newax.autoscale(enable=False)
         newax.get_xaxis().set_visible(False)
@@ -108,13 +117,13 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self._defer_timer = None
 
         if hasattr(figure.canvas, 'new_timer'):
-            self._msg_timer = Timer(0.0,
-                                    lambda timer: self.onscreen_message(None),
-                                    mplcanvas=figure.canvas)
+            self._msg_timer = Timer(mplcanvas=figure.canvas)
+            self._msg_timer.add_callback('expired',
+                                         lambda timer: self.onscreen_message(None))
 
-            self._defer_timer = Timer(0.0,
-                                      lambda timer: self.delayed_redraw(),
-                                      mplcanvas=figure.canvas)
+            self._defer_timer = Timer(mplcanvas=figure.canvas)
+            self._defer_timer.add_callback('expired',
+                                           lambda timer: self.delayed_redraw())
 
         canvas = figure.canvas
         if hasattr(canvas, 'viewer'):
@@ -136,9 +145,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
     def get_widget(self):
         return self.figure.canvas
 
-    def get_rgb_order(self):
-        return self._rgb_order
-
     def calculate_aspect(self, shape, extent):
         dx = abs(extent[1] - extent[0]) / float(shape[1])
         dy = abs(extent[3] - extent[2]) / float(shape[0])
@@ -158,7 +164,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
-        data = self.getwin_array(order=self._rgb_order)
+        data = self.getwin_array(order=self.rgb_order)
 
         dst_x = dst_y = 0
 
@@ -193,7 +199,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
-        arr = self.getwin_array(order=self._rgb_order)
+        arr = self.getwin_array(order=self.rgb_order)
 
         # Get the data extents
         x0, y0 = 0, 0
@@ -268,7 +274,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
     def add_axes(self):
         ax = self.figure.add_axes(self.ax_img.get_position(),
-                                  #sharex=self.ax_img, sharey=self.ax_img,
                                   frameon=False,
                                   viewer=self,
                                   projection='ginga')
@@ -291,7 +296,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
     def onscreen_message(self, text, delay=None, redraw=True):
         if self._msg_timer is not None:
-            self._msg_timer.cancel()
+            self._msg_timer.stop()
 
         self.set_onscreen_message(text, redraw=redraw)
 
@@ -303,7 +308,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
             self.delayed_redraw()
             return
 
-        self._defer_timer.cancel()
+        self._defer_timer.stop()
         self._defer_timer.start(time_sec)
 
 
@@ -345,6 +350,16 @@ class ImageViewEvent(ImageViewMpl):
             'f10': 'f10',
             'f11': 'f11',
             'f12': 'f12',
+            'right': 'right',
+            'left': 'left',
+            'up': 'up',
+            'down': 'down',
+            'insert': 'insert',
+            'delete': 'delete',
+            'home': 'home',
+            'end': 'end',
+            'pageup': 'page_up',
+            'pagedown': 'page_down',
             }
 
         # Define cursors for pick and pan
@@ -386,7 +401,12 @@ class ImageViewEvent(ImageViewMpl):
         if keyname is None:
             return keyname
         try:
-            return self._keytbl[keyname.lower()]
+            key = keyname.lower()
+            if 'shift+' in key:
+                key = key.replace('shift+', '')
+            if 'ctrl+' in key:
+                key = key.replace('ctrl+', '')
+            return self._keytbl[key]
 
         except KeyError:
             return keyname
@@ -434,8 +454,7 @@ class ImageViewEvent(ImageViewMpl):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
@@ -448,8 +467,7 @@ class ImageViewEvent(ImageViewMpl):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
@@ -462,8 +480,7 @@ class ImageViewEvent(ImageViewMpl):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
         self.logger.debug("motion event at DATA %dx%d" % (data_x, data_y))
 
         return self.make_ui_callback('motion', button, data_x, data_y)
@@ -485,8 +502,7 @@ class ImageViewEvent(ImageViewMpl):
         self.logger.debug("scroll deg=%f direction=%f" % (
             amount, direction))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, amount,
                                   data_x, data_y)

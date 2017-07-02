@@ -19,6 +19,7 @@ else:
 
 from ginga import AstroImage
 from ginga.tkw.ImageViewTk import ImageViewCanvas
+from ginga.misc import log
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -51,9 +52,9 @@ class FitsViewer(object):
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.enable_draw(False)
-        fi.set_callback('none-move', self.motion)
+        fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
         fi.show_pan_mark(True)
         self.fitsimage = fi
 
@@ -70,7 +71,7 @@ class FitsViewer(object):
         self.canvas = canvas
         # add canvas to view
         fi.add(canvas)
-        canvas.ui_setActive(True)
+        canvas.ui_set_active(True)
 
         fi.configure(512, 512)
 
@@ -154,14 +155,16 @@ class FitsViewer(object):
                                               ("fitsfiles","*.fits")])
         self.load_file(filename)
 
-    def motion(self, fitsimage, button, data_x, data_y):
-
+    def cursor_cb(self, viewer, button, data_x, data_y):
+        """This gets called when the data position relative to the cursor
+        changes.
+        """
         # Get the value under the data coordinates
         try:
-            #value = fitsimage.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x + viewer.data_off),
+                                    int(data_y + viewer.data_off))
 
         except Exception:
             value = None
@@ -171,7 +174,7 @@ class FitsViewer(object):
         # Calculate WCS RA
         try:
             # NOTE: image function operates on DATA space coords
-            image = fitsimage.get_image()
+            image = viewer.get_image()
             if image is None:
                 # No image loaded
                 return
@@ -194,12 +197,7 @@ class FitsViewer(object):
 
 def main(options, args):
 
-    logger = logging.getLogger("example1")
-    logger.setLevel(logging.INFO)
-    fmt = logging.Formatter(STD_FORMAT)
-    stderrHdlr = logging.StreamHandler()
-    stderrHdlr.setFormatter(fmt)
-    logger.addHandler(stderrHdlr)
+    logger = log.get_logger("example2", options=options)
 
     fv = FitsViewer(logger)
     top = fv.get_widget()
@@ -220,17 +218,10 @@ if __name__ == "__main__":
 
     optprs.add_option("--debug", dest="debug", default=False, action="store_true",
                       help="Enter the pdb debugger on main()")
-    optprs.add_option("--log", dest="logfile", metavar="FILE",
-                      help="Write logging output to FILE")
-    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=logging.INFO,
-                      help="Set logging level to LEVEL")
-    optprs.add_option("--stderr", dest="logstderr", default=False,
-                      action="store_true",
-                      help="Copy logging also to stderr")
     optprs.add_option("--profile", dest="profile", action="store_true",
                       default=False,
                       help="Run the profiler on main()")
+    log.addlogopts(optprs)
 
     (options, args) = optprs.parse_args(sys.argv[1:])
 

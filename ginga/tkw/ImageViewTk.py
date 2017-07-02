@@ -76,12 +76,12 @@ class ImageViewTk(ImageView):
         height = canvas.winfo_height()
 
         # see reschedule_redraw() method
-        self._defer_task = TkHelp.Timer(0.0,
-                                        lambda timer: self.delayed_redraw(),
-                                        tkcanvas=canvas)
-        self.msgtask = TkHelp.Timer(0.0,
-                                    lambda timer: self.onscreen_message(None),
-                                    tkcanvas=canvas)
+        self._defer_task = TkHelp.Timer(tkcanvas=canvas)
+        self._defer_task.add_callback('expired',
+                                      lambda timer: self.delayed_redraw())
+        self.msgtask = TkHelp.Timer(tkcanvas=canvas)
+        self.msgtask.add_callback('expired',
+                                  lambda timer: self.onscreen_message(None))
 
         self.configure_window(width, height)
 
@@ -124,7 +124,7 @@ class ImageViewTk(ImageView):
         cr.config(scrollregion=cr.bbox('all'))
 
     def reschedule_redraw(self, time_sec):
-        self._defer_task.cancel()
+        self._defer_task.stop()
         self._defer_task.start(time_sec)
 
     def configure_window(self, width, height):
@@ -141,7 +141,7 @@ class ImageViewTk(ImageView):
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.tkcanvas is None:
             return
-        self.msgtask.cancel()
+        self.msgtask.stop()
         self.set_onscreen_message(text, redraw=redraw)
         if delay is not None:
             self.msgtask.start(delay)
@@ -217,6 +217,16 @@ class ImageViewEvent(ImageViewTk):
             'f10': 'f10',
             'f11': 'f11',
             'f12': 'f12',
+            'right': 'right',
+            'left': 'left',
+            'up': 'up',
+            'down': 'down',
+            'insert': 'insert',
+            'delete': 'delete',
+            'home': 'home',
+            'end': 'end',
+            'prior': 'page_up',
+            'next': 'page_down',
             }
 
         # Define cursors for pick and pan
@@ -313,8 +323,7 @@ class ImageViewEvent(ImageViewTk):
                 self.logger.debug("scroll deg=%f direction=%f" % (
                     numDegrees, direction))
 
-                data_x, data_y = self.get_data_xy(x, y)
-                self.last_data_x, self.last_data_y = data_x, data_y
+                data_x, data_y = self.check_cursor_location()
 
                 return self.make_ui_callback('scroll', direction, numDegrees,
                                           data_x, data_y)
@@ -323,8 +332,7 @@ class ImageViewEvent(ImageViewTk):
         self._button = button
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
@@ -342,8 +350,7 @@ class ImageViewEvent(ImageViewTk):
         self._button = 0
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
@@ -362,8 +369,7 @@ class ImageViewEvent(ImageViewTk):
         #     button |= 0x4
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('motion', button, data_x, data_y)
 

@@ -5,10 +5,12 @@
 # Please see the file LICENSE.txt for details.
 
 import os.path
+import numpy as np
 from PIL import Image, ImageFont, ImageDraw
 
 from ginga import colors
 import ginga.fonts
+from ginga.util.six.moves import map
 
 # Set up known fonts
 fontdir, xx = os.path.split(ginga.fonts.__file__)
@@ -96,6 +98,11 @@ class PilContext(object):
         return Font(fontname=name, fontsize=size, color=color,
                     linewidth=linewidth, alpha=alpha)
 
+    def _cvt_points(self, points):
+        # PIL seems to have trouble with numpy arrays as sequences
+        # of points, so just convert to a list
+        return [ (p[0], p[1]) for p in points ]
+
     def text_extents(self, text, font):
         retval = self.ctx.textsize(text, font.font)
         wd, ht = retval
@@ -106,8 +113,8 @@ class PilContext(object):
         self.ctx.text((x, y), text, fill=pen.color, font=font.font)
 
     def line(self, pt1, pt2, pen):
-        x1, y1 = int(round(pt1[0])), int(round(pt1[1]))
-        x2, y2 = int(round(pt2[0])), int(round(pt2[1]))
+        x1, y1 = int(np.round(pt1[0])), int(np.round(pt1[1]))
+        x2, y2 = int(np.round(pt2[0])), int(np.round(pt2[1]))
         self.ctx.line(((x1, y1), (x2, y2)), fill=pen.color,
                       width=pen.linewidth)
 
@@ -122,12 +129,16 @@ class PilContext(object):
                              outline=pen.color)
 
     def polygon(self, points, pen, brush):
+        points = self._cvt_points(points)
+
         if (brush is not None) and brush.fill:
             self.ctx.polygon(points, fill=brush.color, outline=pen.color)
         else:
             self.ctx.polygon(points, outline=pen.color)
 
     def path(self, points, pen):
+        points = self._cvt_points(points)
+
         p0 = points[0]
         for pt in points[1:]:
             self.line(p0, pt, pen)

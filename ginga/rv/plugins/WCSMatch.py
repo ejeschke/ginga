@@ -12,10 +12,18 @@ from ginga.misc import Bunch
 
 class WCSMatch(GingaPlugin.GlobalPlugin):
     """
+    WCSMatch
+    ========
     WCSMatch is a global plugin for the Ginga image viewer that allows
     you to roughly align images with different scales and orientations
     using the images' World Coordinate System for viewing purposes.
 
+    Plugin Type: Global
+    -------------------
+    WCSMatch is a global plugin.  Only one instance can be opened.
+
+    Usage
+    -----
     To use, simply start the plugin, and from the plugin GUI select a
     channel from the drop-down menu labeled "Reference Channel".  The
     image contained in that channel will be used as a reference for
@@ -93,15 +101,15 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         # transform settings changes
         chviewer = channel.fitsimage
         fitssettings = chviewer.get_settings()
-        fitssettings.getSetting('scale').add_callback('set',
-                                                   self.zoomset_cb, chviewer, info)
-        fitssettings.getSetting('rot_deg').add_callback('set',
-                                                        self.rotset_cb, chviewer, info)
+        fitssettings.get_setting('scale').add_callback('set',
+                                                       self.zoomset_cb, chviewer, info)
+        fitssettings.get_setting('rot_deg').add_callback('set',
+                                                         self.rotset_cb, chviewer, info)
         for name in ('flip_x', 'flip_y', 'swap_xy'):
-            fitssettings.getSetting(name).add_callback('set',
-                                                       self.xfmset_cb, chviewer, info)
-        fitssettings.getSetting('pan').add_callback('set',
-                                                    self.panset_cb, chviewer, info)
+            fitssettings.get_setting(name).add_callback('set',
+                                                        self.xfmset_cb, chviewer, info)
+        fitssettings.get_setting('pan').add_callback('set',
+                                                     self.panset_cb, chviewer, info)
         self.fv.gui_do(self._reset_channels_gui)
 
 
@@ -153,10 +161,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         self.pan_all_relative(chviewer, chinfo)
 
         self.logger.info("set reference channel to '%s'" % (chname))
-
-    def help(self):
-        name = str(self).capitalize()
-        self.fv.show_help_text(name, self.__doc__)
 
     def close(self):
         self.fv.stop_global_plugin(str(self))

@@ -31,7 +31,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
                                          settings=settings)
 
         self.surface = None
-        self._rgb_order = 'RGBA'
+        self.rgb_order = 'RGBA'
 
         self.renderer = CanvasRenderer(self)
 
@@ -48,8 +48,8 @@ class ImageViewAgg(ImageView.ImageViewBase):
         self.logger.debug("redraw surface")
 
         # get window contents as a buffer and load it into the AGG surface
-        rgb_buf = self.getwin_buffer(order=self._rgb_order)
-        canvas.fromstring(rgb_buf)
+        rgb_buf = self.getwin_buffer(order=self.rgb_order)
+        canvas.frombytes(rgb_buf)
 
         # for debugging
         #self.save_rgb_image_as_file('/tmp/temp.png', format='png')
@@ -71,7 +71,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         # Get agg surface as a numpy array
         surface = self.get_surface()
-        arr8 = numpy.fromstring(surface.tostring(), dtype=numpy.uint8)
+        arr8 = numpy.fromstring(surface.tobytes(), dtype=numpy.uint8)
         arr8 = arr8.reshape((ht, wd, 4))
         return arr8
 
@@ -84,7 +84,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
             obuf = BytesIO()
 
         surface = self.get_surface()
-        obuf.write(surface.tostring())
+        obuf.write(surface.tobytes())
         return obuf
 
     def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
@@ -107,11 +107,11 @@ class ImageViewAgg(ImageView.ImageViewBase):
         image.save(obuf, format=format, quality=quality)
         if not (output is None):
             return None
-        return obuf.getvalue()
+        return obuf
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return buf
+        return buf.getvalue()
 
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         if not have_PIL:
@@ -139,9 +139,6 @@ class ImageViewAgg(ImageView.ImageViewBase):
         # subclass implements this method to call delayed_redraw() after
         # time_sec
         self.delayed_redraw()
-
-    def get_rgb_order(self):
-        return self._rgb_order
 
 
 #END

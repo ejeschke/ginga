@@ -1,9 +1,6 @@
 #
 # CanvasRenderMpl.py -- for rendering into a ImageViewMpl widget
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -11,12 +8,12 @@ import matplotlib.patches as patches
 import matplotlib.lines as lines
 import matplotlib.text as text
 from matplotlib.path import Path as MplPath
-import numpy
 
 from . import MplHelp
 from ginga.canvas.mixins import *
 # force registration of all canvas types
 import ginga.canvas.types.all
+from ginga import trcalc
 
 
 class RenderContext(object):
@@ -84,9 +81,9 @@ class RenderContext(object):
         else:
             self.brush = self.cr.get_brush(color, alpha=alpha)
 
-    def set_font(self, fontname, fontsize):
-        self.font = self.cr.get_font(fontname, fontsize, 'black',
-                                     alpha=1.0)
+    def set_font(self, fontname, fontsize, color='black', alpha=1.0):
+        self.font = self.cr.get_font(fontname, fontsize, color,
+                                     alpha=alpha)
 
     def text_extents(self, text):
         return self.cr.text_extents(text, self.font)
@@ -102,7 +99,7 @@ class RenderContext(object):
         self.cr.init(closed=True, transform=None)
         self.cr.update_patch(self.pen, self.brush)
 
-        xy = numpy.array(cpoints)
+        xy = trcalc.strip_z(cpoints)
 
         p = patches.Polygon(xy, **self.cr.kwdargs)
         self.cr.axes.add_patch(p)
@@ -155,7 +152,7 @@ class RenderContext(object):
         self.cr.init(closed=False, transform=None)
         self.cr.update_patch(self.pen, None)
 
-        xy = numpy.array(cpoints)
+        xy = trcalc.strip_z(cpoints)
 
         p = patches.Polygon(xy, **self.cr.kwdargs)
         self.cr.axes.add_patch(p)

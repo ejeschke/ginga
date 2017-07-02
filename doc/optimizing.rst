@@ -21,12 +21,12 @@ enable the support by::
     trcalc.use('opencl')
 
 If you are using the reference viewer, you can add the command line
-option `--opencl` to enable support, or you can add the line::
+option `--opencl` to enable support. 
+
+Alternatively, you can add the following line to your Ginga general options configuration file
+(`$HOME/.ginga/general.cfg`)::
 
     use_opencl = True
-
-to your Ginga general options configuration file
-(`$HOME/.ginga/general.cfg`).
 
 .. note:: `pyopencl` may prompt you if it can't figure out which device
           is the obvious choice to use as for hardware acceleration. If
@@ -51,7 +51,7 @@ Ginga includes support for OpenCv accelerated operations (e.g. rotation
 and rescaling).  *This support is not enabled by default*.
 
 To enable OpenCv support, install the python `opencv` module (you can
-find it here).
+find it `here <https://pypi.python.org/pypi/opencv-python>`_).
 
 If you are building your own program using a ginga viewer widget, simply
 enable the support by::
@@ -60,12 +60,12 @@ enable the support by::
     trcalc.use('opencv')
 
 If you are using the reference viewer, you can add the command line
-option `--opencv` to enable support, or you can add the line::
+option `--opencv` to enable support. 
+
+Alternatively, you can add the following line to your Ginga general options configuration file
+(`$HOME/.ginga/general.cfg`)::
 
     use_opencv = True
-
-to your Ginga general options configuration file
-(`$HOME/.ginga/general.cfg`).
 
 
 numexpr Acceleration
@@ -80,7 +80,5 @@ To enable `numexpr` acceleration, simply install the package, e.g.::
     $ pip install numexpr
 
 It will be automatically detected and used when appropriate.
-
-
 
   

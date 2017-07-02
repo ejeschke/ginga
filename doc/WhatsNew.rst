@@ -2,8 +2,60 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.6.2.dev
+Ver 2.6.5.dev
 =============
+- Vectorized all steps of coordinate transforms
+- Set minimum astropy version to 1.X
+
+Ver 2.6.4 (2017-06-07)
+======================
+- Added new ScreenShot plugin to take PNG/JPEG snaps of the viewer
+  window
+- Enhancements to the Pick plugin
+
+  - Added ability to make shapes besides rectangles for enclosing pick area.
+    Masks out unwanted pixels.  Choose the shape in the Settings tab.
+  - Changed behavior of pick log to only write the log when the user clicks
+    the save button.
+  - Changed the name of the save button to "Save as FITS table" to make it
+    clear what is being written.
+  - If "Show candidates" is selected in Settings, then ALL of the candidates
+    are saved to the log.
+  - Added documentation to the manual
+  - Bug fix for error when changing radius
+
+- Improvements to layout of Operations menu (plugin categories)
+- Colorbar scale now placed below the color wedge and is more legible
+- Bug fixes for LineProfile plugin
+- Slit function for Cuts plugin can be enabled from GUI
+- Bug fixes for Slit function
+- Info plugin can now control new image cut/zoom/center settings
+- Fixed an issue with the MultiDim plugin that could result in a hang
+  with some back ends
+- New canvas type for displaying WCS grid overlay and new WCSAxes plugin
+  that uses it
+- Bug fixes to scrolling via scrollbars and vert/horiz percentages
+- Enhancements to the LineProfile plugin
+
+  - several new shapes besides the standard point
+  - plot multiple lines
+
+Ver 2.6.3 (2017-03-30)
+======================
+- Fix for issue that stops ginga startup when loading externally
+  distributed plugins that have errors
+- Fix for an issue loading plugins from the command line when they
+  are nested in a package
+- Added bindings for moving +/- pixel delta in X or Y and centering on the
+  pixel
+- Fixes for some key mappings for tk, matplotlib and HTML5 canvas backends
+- Fixes for IRAF plugin under python 3
+- Fix for a bug using remote control (RC) plugin from python2 client to
+  python 3 ginga
+- Documentation updates
+
+Ver 2.6.2 (2017-02-16)
+======================
 - Added some colormaps from ds9 that don't have equivalents in Ginga or
   matplotlib
 - Fix for recognizing CompImage HDU type when using astropy.io.fits
@@ -13,6 +65,11 @@ Ver 2.6.2.dev
   the reference viewer that Ginga will find and load on startup
 - Added --sep option to load command line files into separate channels
 - New help screen feature available for plugins
+- Lots of updates to documentation
+- Fixed a stability issue with drag and dropping large number of files
+  under Linux
+- Fixes for python3 and several example programs
+- Fix for interactive rotation bug under matplotlib back end
 
 Ver 2.6.1 (2016-12-22)
 ======================

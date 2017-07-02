@@ -13280,6 +13280,14 @@ def matplotlib_to_ginga_cmap(cm, name=None):
     clst = tuple(map(lambda rec: tuple(rec)[:3], arr))
     return ColorMap(name, clst)
 
+def ginga_to_matplotlib_cmap(cm, name=None):
+    """Convert Ginga colormap to matplotlib's."""
+    if name is None:
+        name = cm.name
+    from matplotlib.colors import ListedColormap
+    carr = numpy.asarray(cm.clst)
+    mpl_cm = ListedColormap(carr, name=name, N=256)
+    return mpl_cm
 
 def add_matplotlib_cmap(cm, name=None):
     """Add a matplotlib colormap."""

@@ -1,14 +1,11 @@
 #
 # CompoundMixin.py -- enable compound capabilities.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import sys, traceback
-import numpy
+import numpy as np
 
 from ginga.util.six.moves import map, zip, reduce, filter
 from ginga.canvas import coordmap
@@ -32,7 +29,7 @@ class CompoundMixin(object):
         if not hasattr(self, 'coord'):
             self.coord = None
         self.opaque = False
-        self._contains_reduce = numpy.logical_or
+        self._contains_reduce = np.logical_or
 
     def get_llur(self):
         """
@@ -43,31 +40,28 @@ class CompoundMixin(object):
         -------
         x1, y1, x2, y2: a 4-tuple of the lower-left and upper-right coords
         """
-        points = numpy.array(list(map(lambda obj: obj.get_llur(),
-                                      self.objects)))
+        points = np.array([obj.get_llur() for obj in self.objects])
         t_ = points.T
-        x1, y1 = min(t_[0].min(), t_[0].min()), min(t_[1].min(), t_[3].min())
-        x2, y2 = max(t_[0].max(), t_[0].max()), min(t_[1].max(), t_[3].max())
+        x1, y1 = t_[0].min(), t_[1].min()
+        x2, y2 = t_[2].max(), t_[3].max()
         return (x1, y1, x2, y2)
 
     def get_edit_points(self, viewer):
         x1, y1, x2, y2 = self.get_llur()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
-    def contains_arr(self, x_arr, y_arr):
+    def contains_pts(self, pts):
+        if len(self.objects) == 0:
+            x_arr, y_arr = np.asarray(pts).T
+            return np.full(x_arr.shape, False, dtype=np.bool)
+
         return reduce(self._contains_reduce,
-                      map(lambda obj: obj.contains_arr(x_arr, y_arr),
-                          self.objects))
+                      map(lambda obj: obj.contains_pts(pts), self.objects))
 
-    def contains(self, x, y):
-        x_arr, y_arr = numpy.array([x]), numpy.array([y])
-        res = self.contains_arr(x_arr, y_arr)
-        return res[0]
-
-    def get_items_at(self, x, y):
+    def get_items_at(self, pt):
         res = []
         for obj in self.objects:
-            if obj.contains(x, y):
+            if obj.contains_pt(pt):
                 #res.insert(0, obj)
                 res.append(obj)
         return res
@@ -78,26 +72,25 @@ class CompoundMixin(object):
     def get_objects_by_kinds(self, kinds):
         return filter(lambda obj: obj.kind in kinds, self.objects)
 
-    def select_contains(self, viewer, x, y):
+    def select_contains_pt(self, viewer, pt):
         for obj in self.objects:
-            if obj.select_contains(viewer, x, y):
+            if obj.select_contains_pt(viewer, pt):
                 return True
         return False
 
-    def select_items_at(self, viewer, x, y, test=None):
+    def select_items_at(self, viewer, pt, test=None):
         res = []
         try:
             for obj in self.objects:
                 if obj.is_compound() and not obj.opaque:
-                    # compound object, list up compatible members
-                    res.extend(obj.select_items_at(viewer, x, y, test=test))
-                    continue
+                    # non-opaque compound object, list up compatible members
+                    res.extend(obj.select_items_at(viewer, pt, test=test))
 
-                is_inside = obj.select_contains(viewer, x, y)
+                is_inside = obj.select_contains_pt(viewer, pt)
                 if test is None:
                     if is_inside:
                         res.append(obj)
-                elif test(obj, x, y, is_inside):
+                elif test(obj, pt, is_inside):
                     # custom test
                     res.append(obj)
         except Exception as e:
@@ -220,32 +213,22 @@ class CompoundMixin(object):
         for obj in self.objects:
             obj.rotate(theta, xoff=xoff, yoff=yoff)
 
-    def move_delta(self, xoff, yoff):
+    def move_delta_pt(self, off_pt):
         for obj in self.objects:
-            obj.move_delta(xoff, yoff)
+            obj.move_delta_pt(off_pt)
 
-    def rotate_by(self, theta_deg):
-        ref_x, ref_y = self.get_reference_pt()
+    def scale_by_factors(self, factors):
         for obj in self.objects:
-            self.rotate(theta_deg, xoff=ref_x, yoff=ref_y)
-
-    def scale_by(self, scale_x, scale_y):
-        for obj in self.objects:
-            obj.scale_by(scale_x, scale_y)
+            obj.scale_by_factors(factors)
 
     def get_reference_pt(self):
         # Reference point for a compound object is the average of all
         # it's contituents reference points
-        points = numpy.asarray([ obj.get_reference_pt()
-                                 for obj in self.objects ])
+        points = np.asarray([ obj.get_reference_pt()
+                              for obj in self.objects ])
         t_ = points.T
-        x, y = numpy.average(t_[0]), numpy.average(t_[1])
+        x, y = np.average(t_[0]), np.average(t_[1])
         return (x, y)
-
-    def move_to(self, xdst, ydst):
-        x, y = self.get_reference_pt()
-        for obj in self.objects:
-            obj.move_delta(xdst - x, ydst - y)
 
     def reorder_layers(self):
         self.objects.sort(key=lambda obj: getattr(obj, '_zorder', 0))

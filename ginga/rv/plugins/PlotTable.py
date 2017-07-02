@@ -7,9 +7,15 @@
 import numpy as np
 
 from ginga.GingaPlugin import LocalPlugin
-from ginga.gw import Widgets, Plot
+from ginga.gw import Widgets
 from ginga.table.AstroTable import AstroTable
-from ginga.util import plots
+
+try:
+    from ginga.gw import Plot
+    from ginga.util import plots
+    have_mpl = True
+except ImportError:
+    have_mpl = False
 
 
 class PlotTable(LocalPlugin):
@@ -33,23 +39,26 @@ class PlotTable(LocalPlugin):
 
         # Plugin preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_PlotTable')
-        self.settings.addDefaults(linewidth=1,
-                                  linestyle='-',
-                                  linecolor='blue',
-                                  markersize=6,
-                                  markerwidth=0.5,
-                                  markerstyle='o',
-                                  markercolor='red',
-                                  show_marker=True,
-                                  x_index=1,
-                                  y_index=2,
-                                  file_suffix='.png')
+        self.settings = prefs.create_category('plugin_PlotTable')
+        self.settings.add_defaults(linewidth=1,
+                                   linestyle='-',
+                                   linecolor='blue',
+                                   markersize=6,
+                                   markerwidth=0.5,
+                                   markerstyle='o',
+                                   markercolor='red',
+                                   show_marker=True,
+                                   x_index=1,
+                                   y_index=2,
+                                   file_suffix='.png')
         self.settings.load(onError='silent')
 
         self.gui_up = False
 
     def build_gui(self, container):
+        if not have_mpl:
+            raise ImportError('Install matplotlib to use this plugin')
+
         top = Widgets.VBox()
         top.set_border_width(4)
 
@@ -57,15 +66,6 @@ class PlotTable(LocalPlugin):
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_margins(4, 4, 4, 4)
         vbox.set_spacing(2)
-
-        msg_font = self.fv.get_font('sansFont', 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander('Instructions')
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         # Add Tab Widget
         nb = Widgets.TabWidget(tabpos='top')
@@ -150,6 +150,9 @@ class PlotTable(LocalPlugin):
         btn = Widgets.Button('Close')
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button('Help')
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         top.add_widget(btns, stretch=0)
@@ -167,9 +170,6 @@ class PlotTable(LocalPlugin):
         val = vals[default]
         combobox.show_text(val)
         return val
-
-    def instructions(self):
-        self.tw.set_text("""Select columns from drop-down menus to plot. Click Save to save plot out to file.""")  # noqa
 
     def redo(self):
         """This is called when a new image arrives or the data in the
@@ -420,12 +420,13 @@ class PlotTable(LocalPlugin):
 
         # This just defines the basename.
         # Extension has to be explicitly defined or things can get messy.
-        target = Widgets.SaveDialog(title='Save plot').get_path()
-        plot_ext = self.settings.get('file_suffix', '.png')
-
-        # Save cancelled
-        if not target:
+        w = Widgets.SaveDialog(title='Save plot')
+        target = w.get_path()
+        if target is None:
+            # Save canceled
             return
+
+        plot_ext = self.settings.get('file_suffix', '.png')
 
         if not target.endswith(plot_ext):
             target += plot_ext
@@ -436,13 +437,13 @@ class PlotTable(LocalPlugin):
         try:
             fig = self.tab_plot.get_figure()
             fig.savefig(target, dpi=fig_dpi)
+
         except Exception as e:
             self.logger.error(str(e))
         else:
             self.logger.info('Table plot saved as {0}'.format(target))
 
     def start(self):
-        self.instructions()
         self.resume()
 
     def resume(self):

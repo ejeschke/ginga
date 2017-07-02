@@ -6,11 +6,17 @@
 #
 import numpy
 
-from ginga.gw import Widgets, Plot
+from ginga.gw import Widgets
 from ginga import GingaPlugin, colors
 from ginga.util.six.moves import map, zip
 from ginga.canvas.coordmap import OffsetMapper
-from ginga.util import plots
+
+try:
+    from ginga.gw import Plot
+    from ginga.util import plots
+    have_mpl = True
+except ImportError:
+    have_mpl = False
 
 # default cut colors
 cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
@@ -19,17 +25,26 @@ cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
 
 class Cuts(GingaPlugin.LocalPlugin):
     """
+    Cuts
+    ====
     A plugin for generating a plot of the values along a line or path.
 
+    Plugin Type: Local
+    ------------------
+    Cuts is a local plugin, which means it is associated with a
+    channel.  An instance can be opened for each channel.
+
+    Usage
+    -----
     There are four kinds of cuts available: line, path, freepath and
     beziercurve:
 
-    - The 'line' cut is a straight line between two points.
-    - The 'path' cut is drawn like an open polygon, with straight segments
+    - The "line" cut is a straight line between two points.
+    - The "path" cut is drawn like an open polygon, with straight segments
       in-between.
-    - The 'freepath' cut is like a path cut, but drawn using a free-form
+    - The "freepath" cut is like a path cut, but drawn using a free-form
       stroke following the cursor movement.
-    - The 'beziercurve' path is a cubic Bezier curve.
+    - The "beziercurve" path is a cubic Bezier curve.
 
     Multiple cuts can be plotted.
 
@@ -76,14 +91,14 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     - "none" indicates a cut of zero radius; i.e. only showing the pixel
       values along the line
-    - "x" will plot the sum of values along the X axis orthoginal to the
+    - "x" will plot the sum of values along the X axis orthogonal to the
       cut.
-    - "y" will plot the sum of values along the Y axis orthoginal to the
+    - "y" will plot the sum of values along the Y axis orthogonal to the
       cut.
     - "perpendicular" will plot the sum of values along an axis perpendicular
       to the cut.
 
-    The "Width radius" controls the width of the orthoginal summation by
+    The "Width radius" controls the width of the orthogonal summation by
     an amount on either side of the cut--1 would be 3 pixels, 2 would be 5
     pixels, etc.
 
@@ -137,23 +152,28 @@ class Cuts(GingaPlugin.LocalPlugin):
         canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
-        self.use_slit = self.settings.get('enable_slit', True)
+        self.use_slit = self.settings.get('enable_slit', False)
         self.cuts_image = None
 
         self.gui_up = False
 
     def build_gui(self, container):
+        if not have_mpl:
+            raise ImportError('Install matplotlib to use this plugin')
+
         top = Widgets.VBox()
         top.set_border_width(4)
 
         # Make the cuts plot
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
-        vbox.set_margins(4, 4, 4, 4)
-        vbox.set_spacing(2)
+        box, sw, orientation = Widgets.get_oriented_box(container)
+        box.set_margins(4, 4, 4, 4)
+        box.set_spacing(2)
+
+        paned = Widgets.Splitter(orientation=orientation)
 
         # Add Tab Widget
         nb = Widgets.TabWidget(tabpos='top')
-        vbox.add_widget(nb, stretch=1)
+        paned.add_widget(Widgets.hadjust(nb, orientation))
 
         self.cuts_plot = plots.CutsPlot(logger=self.logger,
                                         width=400, height=400)
@@ -164,7 +184,11 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         self.slit_plot = plots.Plot(logger=self.logger,
                                     width=400, height=400)
-        self.slit_plot.add_axis(axisbg='black')
+        if plots.MPL_GE_2_0:
+            kwargs = {'facecolor': 'black'}
+        else:
+            kwargs = {'axisbg': 'black'}
+        self.slit_plot.add_axis(**kwargs)
         self.plot2 = Plot.PlotWidget(self.slit_plot)
         self.plot2.resize(400, 400)
 
@@ -209,8 +233,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', self.delete_all_cb)
         btn.set_tooltip("Clear all cuts")
 
-        vbox2 = Widgets.VBox()
-        vbox2.add_widget(w, stretch=0)
+        fr = Widgets.Frame("Cuts")
+        fr.set_widget(w)
+
+        box.add_widget(fr, stretch=0)
 
         exp = Widgets.Expander("Cut Width")
 
@@ -238,7 +264,14 @@ class Cuts(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame()
         fr.set_widget(w)
         exp.set_widget(fr)
-        vbox2.add_widget(exp, stretch=0)
+
+        box.add_widget(exp, stretch=0)
+        box.add_widget(Widgets.Label(''), stretch=1)
+        paned.add_widget(sw)
+        # hack to set a reasonable starting position for the splitter
+        paned.set_sizes([400, 500])
+
+        top.add_widget(paned, stretch=5)
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
@@ -267,49 +300,52 @@ class Cuts(GingaPlugin.LocalPlugin):
         hbox.add_widget(btn3)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox2.add_widget(hbox, stretch=0)
-
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-
-        vbox.add_widget(vbox2, stretch=0)
+        top.add_widget(hbox, stretch=0)
 
         # Add Cuts plot to its tab
         vbox_cuts = Widgets.VBox()
         vbox_cuts.add_widget(self.plot, stretch=1)
         nb.add_widget(vbox_cuts, title="Cuts")
 
-        if self.use_slit:
-            captions = (("Transpose Plot", 'checkbutton', "Save", 'button'),
-                        )
-            w, b = Widgets.build_info(captions, orientation=orientation)
-            self.w.update(b)
+        captions = (("Enable Slit", 'checkbutton',
+                     "Transpose Plot", 'checkbutton', "Save", 'button'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
 
-            self.t_btn = b.transpose_plot
-            self.t_btn.set_tooltip("Flip the plot")
-            self.t_btn.set_state(self.transpose_enabled)
-            self.t_btn.add_callback('activated', self.transpose_plot)
+        def chg_enable_slit(w, val):
+            self.use_slit = val
+            if val:
+                self.build_axes()
+            return True
+        b.enable_slit.set_state(self.use_slit)
+        b.enable_slit.set_tooltip("Enable the slit function")
+        b.enable_slit.add_callback('activated', chg_enable_slit)
 
-            self.save_slit = b.save
-            self.save_slit.set_tooltip("Save slit plot and data")
-            self.save_slit.add_callback('activated',
-                                        lambda w: self.save_cb(mode='slit'))
-            self.save_slit.set_enabled(self.save_enabled)
+        self.t_btn = b.transpose_plot
+        self.t_btn.set_tooltip("Flip the plot")
+        self.t_btn.set_state(self.transpose_enabled)
+        self.t_btn.add_callback('activated', self.transpose_plot)
 
-            # Add frame to hold the slit controls
-            fr = Widgets.Frame("Axes controls")
-            self.hbox_axes = Widgets.HBox()
-            self.hbox_axes.set_border_width(4)
-            self.hbox_axes.set_spacing(1)
-            fr.set_widget(self.hbox_axes)
+        self.save_slit = b.save
+        self.save_slit.set_tooltip("Save slit plot and data")
+        self.save_slit.add_callback('activated',
+                                    lambda w: self.save_cb(mode='slit'))
+        self.save_slit.set_enabled(self.save_enabled)
 
-            # Add Slit plot and controls to its tab
-            vbox_slit = Widgets.VBox()
-            vbox_slit.add_widget(self.plot2, stretch=1)
-            vbox_slit.add_widget(w)
-            vbox_slit.add_widget(fr)
-            nb.add_widget(vbox_slit, title="Slit")
+        # Add frame to hold the slit controls
+        fr = Widgets.Frame("Axes controls")
+        self.hbox_axes = Widgets.HBox()
+        self.hbox_axes.set_border_width(4)
+        self.hbox_axes.set_spacing(1)
+        fr.set_widget(self.hbox_axes)
 
-        top.add_widget(sw, stretch=1)
+        # Add Slit plot and controls to its tab
+        vbox_slit = Widgets.VBox()
+        vbox_slit.add_widget(self.plot2, stretch=1)
+        vbox_slit.add_widget(w)
+        vbox_slit.add_widget(fr)
+        nb.add_widget(vbox_slit, title="Slit")
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -360,10 +396,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         chkbox.add_callback('activated',
                             lambda w, tf: self.axis_toggle_cb(w, tf, pos))
 
-    def help(self):
-        name = str(self).capitalize()
-        self.fv.show_help_text(name, self.__doc__)
-
     def select_cut(self, tag):
         self.cutstag = tag
         self.w.cuts.show_text(tag)
@@ -410,7 +442,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.select_cut(tag)
         if tag == self._new_cut:
             self.save_cuts.set_enabled(False)
-            if self.use_slit:
+            if self.use_slit and self.gui_up:
                 self.save_slit.set_enabled(False)
         # plot cleared in replot_all() if no more cuts
         self.replot_all()
@@ -423,7 +455,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.w.cuts.append_text(self._new_cut)
         self.select_cut(self._new_cut)
         self.save_cuts.set_enabled(False)
-        if self.use_slit:
+        if self.use_slit and self.gui_up:
             self.save_slit.set_enabled(False)
         # plot cleared in replot_all() if no more cuts
         self.replot_all()
@@ -465,13 +497,13 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status("Draw a line with the right mouse button")
         self.replot_all()
         if self.use_slit:
@@ -588,6 +620,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             coords = image.get_pixels_on_line(int(obj.x1), int(obj.y1),
                                               int(obj.x2), int(obj.y2),
                                               getvalues=False)
+
         elif obj.kind in ('path', 'freepath'):
             coords = []
             x1, y1 = obj.points[0]
@@ -598,6 +631,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                 # don't repeat last point when adding next segment
                 coords.extend(pts[:-1])
                 x1, y1 = x2, y2
+
         elif obj.kind == 'beziercurve':
             coords = obj.get_pixels_on_curve(image, getvalues=False)
             # Exclude NaNs
@@ -640,9 +674,12 @@ class Cuts(GingaPlugin.LocalPlugin):
         obj = self.canvas.get_object_by_tag(self.cutstag)
         line = self._getlines(obj)
 
-        self.get_slit_data(self.get_coords(line[0]))
+        coords = self.get_coords(line[0])
+        self.get_slit_data(coords)
+
         if self.transpose_enabled:
             self.redraw_slit('transpose')
+
         else:
             self.slit_plot.ax.imshow(
                 self.slit_data, interpolation='nearest',
@@ -662,7 +699,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cuts_plot.clear()
         self.w.delete_all.set_enabled(False)
         self.save_cuts.set_enabled(False)
-        if self.use_slit:
+        if self.use_slit and self.gui_up:
             self.save_slit.set_enabled(False)
 
         idx = 0
@@ -690,7 +727,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         if self.use_slit:
             if self.cutstag != self._new_cut:
                 self._plot_slit()
-                if self.selected_axis:
+                if self.selected_axis and self.gui_up:
                     self.save_slit.set_enabled(True)
 
         # force mpl redraw
@@ -980,28 +1017,29 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         # This just defines the basename.
         # Extension has to be explicitly defined or things can get messy.
-        target = Widgets.SaveDialog(
-            title='Save {0} data'.format(mode)).get_path()
+        w = Widgets.SaveDialog(title='Save {0} data'.format(mode))
+        filename = w.get_path()
 
-        # Save cancelled
-        if not target:
+        if filename is None:
+            # user canceled dialog
             return
 
         # TODO: This can be a user preference?
         fig_dpi = 100
 
         if mode == 'cuts':
-            # Save as fits file
-            image = self.fitsimage.get_image()
-            self.fv.error_wrap(image.save_as_file, target + '.fits')
-
             fig, xarr, yarr = self.cuts_plot.get_data()
 
         elif mode == 'slit':
             fig, xarr, yarr = self.slit_plot.get_data()
 
-        fig.savefig(target + '.png', dpi=fig_dpi)
-        numpy.savez_compressed(target + '.npz', x=xarr, y=yarr)
+        figname = filename + '.png'
+        self.logger.info("saving figure as: %s" % (figname))
+        fig.savefig(figname, dpi=fig_dpi)
+
+        dataname = filename + '.npz'
+        self.logger.info("saving data as: %s" % (dataname))
+        numpy.savez_compressed(dataname, x=xarr, y=yarr)
 
     def axis_toggle_cb(self, w, tf, pos):
         children = self.hbox_axes.get_children()
@@ -1013,14 +1051,19 @@ class Cuts(GingaPlugin.LocalPlugin):
         # Check if the old axis is clicked
         if pos == self.selected_axis:
             self.selected_axis = None
-            self.save_slit.set_enabled(False)
+            if self.gui_up:
+                self.save_slit.set_enabled(False)
             self.redraw_slit('clear')
         else:
             self.selected_axis = pos
             children[pos-1].set_state(tf)
-            if self.cutstag != self._new_cut:
-                self.save_slit.set_enabled(True)
-            self._plot_slit()
+            if self.gui_up:
+                if self.cutstag != self._new_cut:
+                    self.save_slit.set_enabled(True)
+                    self._plot_slit()
+                else:
+                    # no cut selected ("new cut")
+                    self.redraw_slit('clear')
 
     def redraw_slit(self, mode):
         if mode == 'clear':

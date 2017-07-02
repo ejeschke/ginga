@@ -3,9 +3,6 @@
 # example4_mpl.py -- Load a fits file into a Ginga widget with a
 #          matplotlib backend.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -65,7 +62,7 @@ fig = plt.figure()
 
 # create a ginga object, initialize some defaults and
 # tell it about the figure
-fi = ImageViewCanvas(logger)
+fi = ImageViewCanvas(logger=logger)
 fi.enable_autocuts('on')
 fi.set_autocut_params('zscale')
 #fi.set_cmap(cmap.get_cmap('rainbow3'))
@@ -79,7 +76,7 @@ if len(sys.argv) < 2:
     print("Please provide a FITS file on the command line")
     sys.exit(1)
 
-image = AstroImage(logger)
+image = AstroImage(logger=logger)
 image.load_file(sys.argv[1])
 fi.set_image(image)
 #fi.rotate(45)

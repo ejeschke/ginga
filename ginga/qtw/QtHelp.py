@@ -10,6 +10,7 @@ import math
 
 import ginga.toolkit
 from ginga.util import iohelper
+from ginga.misc import Callback, Bunch
 
 configured = False
 
@@ -225,44 +226,58 @@ class DirectorySelection(object):
             self.cb(dirname)
 
 
-class Timer(object):
+class Timer(Callback.Callbacks):
     """Abstraction of a GUI-toolkit implemented timer."""
 
-    def __init__(self, ival_sec, expire_cb, data=None):
-        """Create a timer set to expire after `ival_sec` and which will
-        call the callable `expire_cb` when it expires.
+    def __init__(self, duration=0.0):
+        """Create a timer set to expire after `duration` sec.
         """
-        self.ival_sec = ival_sec
-        self.data = data
+        super(Timer, self).__init__()
+
+        self.duration = duration
+        # For storing aritrary data with timers
+        self.data = Bunch.Bunch()
+
         self.timer = QtCore.QTimer()
         self.timer.setSingleShot(True)
-        self.timer.timeout.connect(lambda: expire_cb(self))
+        self.timer.timeout.connect(self._expired_cb)
 
-    def start(self, ival_sec=None):
-        """Start the timer.  If `ival_sec` is not None, it should
+        for name in ('expired', 'canceled'):
+            self.enable_callback(name)
+
+    def start(self, duration=None):
+        """Start the timer.  If `duration` is not None, it should
         specify the time to expiration in seconds.
         """
-        if ival_sec is None:
-            ival_sec = self.ival_sec
+        if duration is None:
+            duration = self.duration
+
+        self.set(duration)
+
+    def set(self, duration):
+        self.stop()
 
         # QTimer set in milliseconds
-        ms = int(ival_sec * 1000.0)
+        ms = int(duration * 1000.0)
         self.timer.start(ms)
 
-    def set(self, time_sec):
-        self.start(ival_sec=time_sec)
+    def _expired_cb(self):
+        self.make_callback('expired')
 
-    def cancel(self):
-        """Cancel this timer.  If the timer is not running, there
-        is no error.
-        """
+    def stop(self):
         try:
             self.timer.stop()
         except:
             pass
 
-    clear = cancel
+    def cancel(self):
+        """Cancel this timer.  If the timer is not running, there
+        is no error.
+        """
+        self.stop()
+        self.make_callback('canceled')
 
+    clear = cancel
 
 def cmap2pixmap(cmap, steps=50):
     """Convert a Ginga colormap into a QPixmap

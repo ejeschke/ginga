@@ -32,11 +32,17 @@ class Operations(GingaPlugin.GlobalPlugin):
         fv.add_callback('channel-change', self.change_channel_cb)
         fv.add_callback('add-operation', self.add_operation_cb)
 
-        self.operations = list(fv.get_operations())
+        # Add in global plugin manager
+        pl_mgr = self.fv.gpmon
+        pl_mgr.add_callback('activate-plugin', self.activate_plugin_cb)
+        pl_mgr.add_callback('deactivate-plugin', self.deactivate_plugin_cb)
+        pl_mgr.add_callback('focus-plugin', self.focus_plugin_cb)
+        pl_mgr.add_callback('unfocus-plugin', self.unfocus_plugin_cb)
 
         self.focuscolor = self.settings.get('focuscolor', "lightgreen")
         self.use_popup = True
         self.spacer = None
+        self.gui_up = False
 
     def build_gui(self, container):
 
@@ -77,6 +83,7 @@ class Operations(GingaPlugin.GlobalPlugin):
 
         hbox.add_widget(self.w.optray, stretch=1)
         container.add_widget(hbox, stretch=0)
+        self.gui_up = True
 
 
     def add_channel_cb(self, viewer, channel):
@@ -103,22 +110,46 @@ class Operations(GingaPlugin.GlobalPlugin):
             channel = self.fv.get_channel(name)
             self.add_channel_cb(self.fv, channel)
 
-        # get the list of local plugins and populate our operation control
-        operations = self.fv.get_operations()
-        for opname in operations:
-            self.add_operation_cb(self.fv, opname)
+        # TODO: get the list of plugins and populate our operation control
+        ## operations = self.fv.get_operations()
+        ## for opname in operations:
+        ##     self.add_operation_cb(self.fv, opname, optype, spec)
 
-    def add_operation_cb(self, viewer, opname):
+    def add_operation_cb(self, viewer, opname, optype, spec):
+        if not self.gui_up:
+            return
+
+        category = spec.get('category', None)
+        menuname = spec.get('menu', opname)
+
         opmenu = self.w.operation
         if self.use_popup:
-            item = opmenu.add_name(opname)
+            menu = opmenu
+            if category is not None:
+                categories = category.split('.')
+                for catname in categories:
+                    try:
+                        menu = menu.get_menu(catname)
+                    except KeyError:
+                        menu = menu.add_menu(catname)
+
+            item = menu.add_name(menuname)
             item.add_callback('activated',
-                              lambda *args: self.start_operation_cb(opname))
+                              lambda *args: self.start_operation_cb(opname,
+                                                                    optype,
+                                                                    spec))
         else:
+            # TODO: use menuname
             opmenu.insert_alpha(opname)
 
-    def start_operation_cb(self, name):
+    def start_operation_cb(self, name, optype, spec):
         self.logger.debug("invoking operation menu")
+        if optype == 'global':
+            # global plugin
+            self.fv.error_wrap(self.fv.start_global_plugin, name,
+                               raise_tab=True)
+            return
+
         idx = self.w.channel.get_index()
         chname = str(self.w.channel.get_alpha(idx))
         self.fv.error_wrap(self.fv.start_local_plugin, chname, name, None)
@@ -145,6 +176,10 @@ class Operations(GingaPlugin.GlobalPlugin):
             self.start_operation_cb(opname)
 
     def activate_plugin_cb(self, pl_mgr, bnch):
+        hidden = bnch.pInfo.spec.get('hidden', False)
+        if hidden:
+            return
+
         lname = bnch.pInfo.name.lower()
         menu = Widgets.Menu()
         item = menu.add_name("Focus")
@@ -153,6 +188,9 @@ class Operations(GingaPlugin.GlobalPlugin):
         item.add_callback('activated', lambda *args: pl_mgr.clear_focus(lname))
         item = menu.add_name("Stop")
         item.add_callback('activated', lambda *args: pl_mgr.deactivate(lname))
+        item = menu.add_name("Reload")
+        item.add_callback('activated',
+                          lambda *args: pl_mgr.stop_reload_start(lname))
 
         lblname = bnch.lblname
         lbl = Widgets.Label(lblname, halign='center', style='clickable',
@@ -164,11 +202,14 @@ class Operations(GingaPlugin.GlobalPlugin):
         self.w.optray.add_widget(lbl, stretch=0)
         self.w.optray.add_widget(self.spacer, stretch=1)
 
+        bnch.setvals(widget=lbl, label=lbl, menu=menu)
         lbl.add_callback('activated', lambda w: pl_mgr.set_focus(lname))
 
-        bnch.setvals(widget=lbl, label=lbl, menu=menu)
-
     def deactivate_plugin_cb(self, pl_mgr, bnch):
+        hidden = bnch.pInfo.spec.get('hidden', False)
+        if hidden:
+            return
+
         if bnch.widget is not None:
             self.logger.debug("removing widget from taskbar")
             self.w.optray.remove(bnch.widget)
@@ -177,11 +218,17 @@ class Operations(GingaPlugin.GlobalPlugin):
 
     def focus_plugin_cb(self, pl_mgr, bnch):
         self.logger.debug("highlighting widget")
+        # plugin may not have been started by us, so don't assume it has
+        # a label
+        bnch.setdefault('label', None)
         if bnch.label is not None:
             bnch.label.set_color(bg=self.focuscolor)
 
     def unfocus_plugin_cb(self, pl_mgr, bnch):
         self.logger.debug("unhighlighting widget")
+        # plugin may not have been started by us, so don't assume it has
+        # a label
+        bnch.setdefault('label', None)
         if bnch.label is not None:
             bnch.label.set_color(bg='grey')
 

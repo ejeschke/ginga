@@ -36,8 +36,8 @@ class ImageViewCv(ImageView.ImageViewBase):
         # you can use any channel ordering. The drawing functions process
         # each channel independently and do not depend on the channel
         # order or even on the used color space."
-        #self._rgb_order = 'BGRA'
-        self._rgb_order = 'RGBA'
+        #self.rgb_order = 'BGRA'
+        self.rgb_order = 'RGBA'
 
         self.renderer = CanvasRenderer(self)
 
@@ -55,7 +55,7 @@ class ImageViewCv(ImageView.ImageViewBase):
         self.logger.debug("redraw surface")
 
         # get window contents as an array and store it into the CV surface
-        rgb_arr = self.getwin_array(order=self._rgb_order)
+        rgb_arr = self.getwin_array(order=self.rgb_order)
         # TODO: is there a faster way to copy this array in?
         canvas[:,:,:] = rgb_arr
 
@@ -65,7 +65,7 @@ class ImageViewCv(ImageView.ImageViewBase):
     def configure_surface(self, width, height):
         # create cv surface the size of the window
         # (cv just uses numpy arrays!)
-        depth = len(self._rgb_order)
+        depth = len(self.rgb_order)
         self.surface = numpy.zeros((height, width, depth), numpy.uint8)
 
         # inform the base class about the actual window size
@@ -110,9 +110,6 @@ class ImageViewCv(ImageView.ImageViewBase):
         # subclass implements this method to call delayed_redraw() after
         # time_sec
         self.delayed_redraw()
-
-    def get_rgb_order(self):
-        return self._rgb_order
 
 
 #END

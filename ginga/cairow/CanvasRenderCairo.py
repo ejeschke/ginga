@@ -121,9 +121,10 @@ class RenderContext(object):
         self.cr.new_path()
 
     def draw_polygon(self, cpoints):
-        (cx0, cy0) = cpoints[-1]
+        (cx0, cy0) = cpoints[-1][:2]
         self.cr.move_to(cx0, cy0)
-        for cx, cy in cpoints:
+        for cpt in cpoints:
+            cx, cy = cpt[:2]
             self.cr.line_to(cx, cy)
             #cr.move_to(cx, cy)
         self.cr.close_path()
@@ -166,9 +167,10 @@ class RenderContext(object):
         self.cr.new_path()
 
     def draw_path(self, cpoints):
-        (cx0, cy0) = cpoints[0]
+        (cx0, cy0) = cpoints[-1][:2]
         self.cr.move_to(cx0, cy0)
-        for cx, cy in cpoints[1:]:
+        for cpt in cpoints[1:]:
+            cx, cy = cpt[:2]
             self.cr.line_to(cx, cy)
         self.cr.stroke()
         self.cr.new_path()

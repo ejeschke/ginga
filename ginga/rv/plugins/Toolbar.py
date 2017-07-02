@@ -12,7 +12,16 @@ from ginga import GingaPlugin
 
 
 class Toolbar(GingaPlugin.GlobalPlugin):
+    """
+    Toolbar
+    =======
+    Toolbar provides a set of convenience UI controls for common operations
+    on viewers.
 
+    Plugin Type: Global
+    -------------------
+    Toolbar is a global plugin.  Only one instance can be opened.
+    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Toolbar, self).__init__(fv)
@@ -25,7 +34,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
         # get local plugin preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Toolbar')
+        self.settings = prefs.create_category('plugin_Toolbar')
         self.settings.load(onError='silent')
 
         self.modetype = self.settings.get('mode_type', 'oneshot')
@@ -88,6 +97,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
              lambda w, tf: self.mode_cb(tf, 'freepan')),
             ("Rotate", 'toggle', 'rotate_48', "Interactive rotation",
              lambda w, tf: self.mode_cb(tf, 'rotate')),
+            ("Dist", 'toggle', 'distribute_48', "Scroll to set distribution",
+             lambda w, tf: self.mode_cb(tf, 'dist')),
             ("Cuts", 'toggle', 'cuts_48',
              "Left/right sets hi cut, up/down sets lo cut",
              lambda w, tf: self.mode_cb(tf, 'cuts')),
@@ -322,6 +333,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             self.w.btn_pan.set_state(modename == 'pan')
             self.w.btn_freepan.set_state(modename == 'freepan')
             self.w.btn_rotate.set_state(modename == 'rotate')
+            self.w.btn_dist.set_state(modename == 'dist')
             self.w.btn_cuts.set_state(modename == 'cuts')
             self.w.btn_contrast.set_state(modename == 'contrast')
 

@@ -6,11 +6,27 @@
 #
 import os.path
 import threading
-import time, re
+import time
+import re
 from functools import reduce
 
 from ginga.misc import Callback, Bunch, LineHistory
 from ginga.web.pgw import PgHelp
+
+# For future support of WebView widget
+has_webkit = False
+
+__all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
+           'TextArea', 'Label', 'Button', 'ComboBox',
+           'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
+           'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
+           'Canvas', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
+           'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
+           'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
+           'Menu', 'Menubar', 'TopLevel', 'Application', 'Dialog',
+           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
+           'has_webkit']
+
 
 class WidgetError(Exception):
     """For errors thrown in this module."""
@@ -24,8 +40,8 @@ tab_idx = 0
 # reference to the created application
 _app = None
 
-
 default_font = "Arial 8"
+
 
 def _font_info(font_str):
     """Extract font information from a font string, such as supplied to the
@@ -47,7 +63,9 @@ def _font_info(font_str):
     return Bunch.Bunch(family=family, point_size=point_size,
                        style=style, weight=weight)
 
+
 # BASE
+
 class WidgetBase(Callback.Callbacks):
 
     def __init__(self):
@@ -124,6 +142,7 @@ class WidgetBase(Callback.Callbacks):
         d = dict(id=self.id, text=text)
         return '''<span id=%(id)s>%(text)s</span>''' % d
 
+
 # BASIC WIDGETS
 
 class TextEntry(WidgetBase):
@@ -168,7 +187,8 @@ class TextEntry(WidgetBase):
         d = dict(id=self.id, text=self.text, disabled='', size=20)
         if not self.enabled:
             d['disabled'] = 'disabled'
-        return '''<input id=%(id)s type="text" size=%(size)d name="%(id)s" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(text)s">''' % d
+        return '''<input id=%(id)s type="text" size=%(size)d name="%(id)s" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(text)s">''' % d  # noqa
+
 
 class TextEntrySet(WidgetBase):
     def __init__(self, text='', editable=True):
@@ -178,8 +198,8 @@ class TextEntrySet(WidgetBase):
         self.text = text
         self.font = default_font
         self.editable = editable
-        ## self.entry = None
-        ## self.btn = None
+        # self.entry = None
+        # self.btn = None
         self.length = 20    # seems to be default HTML5 size
 
         self.enable_callback('activated')
@@ -210,7 +230,8 @@ class TextEntrySet(WidgetBase):
         # TODO: render font, editable
         d = dict(id=self.id, text=self.text, disabled='', size=20)
         return '''<span> <input id=%(id)s type="text" size=%(size)d name="%(id)s" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(text)s"/>
- <input type="button" %(disabled)s onclick="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="Set"/> </span>''' % d
+ <input type="button" %(disabled)s onclick="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="Set"/> </span>''' % d  # noqa
+
 
 class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
@@ -224,11 +245,11 @@ class TextArea(WidgetBase):
 
     def _cb_redirect(self, event):
         self.text = event.value
-        #self.make_callback('activated')
+        # self.make_callback('activated')
 
     def append_text(self, text, autoscroll=True):
-        ## if text.endswith('\n'):
-        ##     text = text[:-1]
+        # if text.endswith('\n'):
+        #     text = text[:-1]
         self.text = self.text + text
 
         app = self.get_app()
@@ -270,7 +291,8 @@ class TextArea(WidgetBase):
             d['disabled'] = 'disabled'
         if not self.editable:
             d['editable'] = 'readOnly'
-        return '''<textarea id=%(id)s name="%(id)s" style="width: 100%%;" %(disabled)s %(editable)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)">%(text)s</textarea>''' % d
+        return '''<textarea id=%(id)s name="%(id)s" style="width: 100%%;" %(disabled)s %(editable)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)">%(text)s</textarea>''' % d  # noqa
+
 
 class Label(WidgetBase):
     def __init__(self, text='', halign='left', style='normal', menu=None):
@@ -309,15 +331,15 @@ class Label(WidgetBase):
 
     def _compose_style(self):
         style = ""
-        #style += ("text-align: %s; " % self.halign)
+        # style += ("text-align: %s; " % self.halign)
         if self.fgcolor is not None:
             style += ("color: %s; " % self.fgcolor)
         if self.bgcolor is not None:
             style += ("background-color: %s; " % self.bgcolor)
         f_info = _font_info(self.font)
         style += ("font-family: %s; " % f_info.family)
-        style += ("font-size: %s; "   % f_info.point_size)
-        style += ("font-style: %s; "  % f_info.style)
+        style += ("font-size: %s; " % f_info.point_size)
+        style += ("font-style: %s; " % f_info.style)
         style += ("font-weight: %s; " % f_info.weight)
         return style
 
@@ -334,7 +356,7 @@ class Button(WidgetBase):
 
         self.text = text
         self.widget = None
-        #self.widget.clicked.connect(self._cb_redirect)
+        # self.widget.clicked.connect(self._cb_redirect)
 
         self.enable_callback('activated')
 
@@ -345,7 +367,8 @@ class Button(WidgetBase):
         d = dict(id=self.id, text=self.text, disabled='')
         if not self.enabled:
             d['disabled'] = 'disabled'
-        return '''<input id=%(id)s type="button" %(disabled)s onclick="ginga_app.widget_handler('%(id)s', 0)" value="%(text)s">''' % d
+        return '''<input id=%(id)s type="button" %(disabled)s onclick="ginga_app.widget_handler('%(id)s', 0)" value="%(text)s">''' % d  # noqa
+
 
 class ComboBox(WidgetBase):
     def __init__(self, editable=False, multi_choice=False):
@@ -407,7 +430,7 @@ class ComboBox(WidgetBase):
             d['multiple'] = ''
         if not self.enabled:
             d['disabled'] = 'disabled'
-        res = ['''<select id=%(id)s %(disabled)s name="%(id)s" %(multiple)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)">''' % d]
+        res = ['''<select id=%(id)s %(disabled)s name="%(id)s" %(multiple)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)">''' % d]  # noqa
         for idx, choice in enumerate(self.choices):
             if idx == self.index:
                 selected = 'selected'
@@ -417,6 +440,7 @@ class ComboBox(WidgetBase):
                 idx, selected, choice))
         res.append('''</select>''')
         return '\n'.join(res)
+
 
 class SpinBox(WidgetBase):
     def __init__(self, dtype=int):
@@ -457,9 +481,9 @@ class SpinBox(WidgetBase):
         if not self.enabled:
             d['disabled'] = 'disabled'
         if self.dtype == float:
-            return '''<input id=%(id)s %(disabled)s type="number" onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)f" step="%(step)f" max="%(max)f" min="%(min)f">''' % d
+            return '''<input id=%(id)s %(disabled)s type="number" onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)f" step="%(step)f" max="%(max)f" min="%(min)f">''' % d  # noqa
         else:
-            return '''<input id=%(id)s %(disabled)s type="number" onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)d" step="%(step)d" max="%(max)d" min="%(min)d">''' % d
+            return '''<input id=%(id)s %(disabled)s type="number" onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)d" step="%(step)d" max="%(max)d" min="%(min)d">''' % d  # noqa
 
 
 class Slider(WidgetBase):
@@ -507,9 +531,10 @@ class Slider(WidgetBase):
         if not self.enabled:
             d['disabled'] = 'disabled'
         if self.dtype == float:
-            return '''<input id=%(id)s type="range" %(disabled)s style="%(style)s" onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)f" step="%(incr)f" max="%(max)f" min="%(min)f orient="%(orient)s">''' % d
+            return '''<input id=%(id)s type="range" %(disabled)s style="%(style)s" onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)f" step="%(incr)f" max="%(max)f" min="%(min)f orient="%(orient)s">''' % d  # noqa
         else:
-            return '''<input id=%(id)s type="range" %(disabled)s style="%(style)s" onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)d" step="%(incr)d" max="%(max)d" min="%(min)d orient="%(orient)s">''' % d
+            return '''<input id=%(id)s type="range" %(disabled)s style="%(style)s" onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(value)d" step="%(incr)d" max="%(max)d" min="%(min)d orient="%(orient)s">''' % d  # noqa
+
 
 class ScrollBar(WidgetBase):
     def __init__(self, orientation='horizontal'):
@@ -555,15 +580,16 @@ class CheckBox(WidgetBase):
         d = dict(id=self.id, text=self.text, disabled='')
         if not self.enabled:
             d['disabled'] = 'disabled'
-        return '''<input id=%(id)s type="checkbox" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').checked)" value="%(text)s"><label for="%(id)s">%(text)s</label>''' % d
+        return '''<input id=%(id)s type="checkbox" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').checked)" value="%(text)s"><label for="%(id)s">%(text)s</label>''' % d  # noqa
+
 
 class ToggleButton(WidgetBase):
     def __init__(self, text=''):
         super(ToggleButton, self).__init__()
 
-        ## self.widget = QtGui.QPushButton(text)
-        ## self.widget.setCheckable(True)
-        ## self.widget.clicked.connect(self._cb_redirect)
+        # self.widget = QtGui.QPushButton(text)
+        # self.widget.setCheckable(True)
+        # self.widget.clicked.connect(self._cb_redirect)
         self.widget = None
         self.value = False
         self.text = text
@@ -584,7 +610,7 @@ class ToggleButton(WidgetBase):
         d = dict(id=self.id, text=self.text, disabled='')
         if not self.enabled:
             d['disabled'] = 'disabled'
-        return '''<input id=%(id)s type="checkbox" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').checked)" value="%(text)s"><label for="%(id)s">%(text)s</label>''' % d
+        return '''<input id=%(id)s type="checkbox" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').checked)" value="%(text)s"><label for="%(id)s">%(text)s</label>''' % d  # noqa
 
 
 class RadioButton(WidgetBase):
@@ -594,8 +620,8 @@ class RadioButton(WidgetBase):
     def __init__(self, text='', group=None):
         super(RadioButton, self).__init__()
 
-        ## self.widget = QtGui.QRadioButton(text)
-        ## self.widget.toggled.connect(self._cb_redirect)
+        # self.widget = QtGui.QRadioButton(text)
+        # self.widget.toggled.connect(self._cb_redirect)
         self.widget = None
         self.text = text
         self.value = False
@@ -630,7 +656,7 @@ class RadioButton(WidgetBase):
             d['disabled'] = 'disabled'
         if self.value:
             d['checked'] = 'checked'
-        return '''<input id=%(id)s name="%(group)s" type="radio" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" %(checked)s value="true">%(text)s''' % d
+        return '''<input id=%(id)s name="%(group)s" type="radio" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" %(checked)s value="true">%(text)s''' % d  # noqa
 
 
 class Image(WidgetBase):
@@ -662,11 +688,12 @@ class Image(WidgetBase):
         # TODO: callback for click
         d = dict(id=self.id, src=self.img_src, tooltip=self.tooltip,
                  height=self.height, width=self.width)
-        ## return '''<div><img id=%(id)s src="%(src)s" alt="%(tooltip)s"
-        ##                 width="%(width)d" height="%(height)d"></div>''' % d
-        ## return '''<img id=%(id)s width="%(width)d" height="%(height)d"
-        ##              src="%(src)s" alt="%(tooltip)s">''' % d
+        # return '''<div><img id=%(id)s src="%(src)s" alt="%(tooltip)s"
+        #                 width="%(width)d" height="%(height)d"></div>''' % d
+        # return '''<img id=%(id)s width="%(width)d" height="%(height)d"
+        #              src="%(src)s" alt="%(tooltip)s">''' % d
         return '''<img id=%(id)s src="%(src)s" alt="%(tooltip)s">''' % d
+
 
 class ProgressBar(Label):
     def __init__(self):
@@ -758,15 +785,15 @@ class TreeView(WidgetBase):
         return item
 
     def select_path(self, path):
-        item = self._path_to_item(path)
+        item = self._path_to_item(path)  # noqa
         # TODO
 
     def highlight_path(self, path, onoff, font_color='green'):
-        item = self._path_to_item(path)
+        item = self._path_to_item(path)  # noqa
         # TODO
 
     def scroll_to_path(self, path):
-        item = self._path_to_item(path)
+        item = self._path_to_item(path)  # noqa
         # TODO
 
     def sort_on_column(self, i):
@@ -796,7 +823,8 @@ support HTML5 canvas.</canvas>
         ginga_initialize_canvas(document.getElementById("%(id)s"), "%(id)s",
                                   ginga_app);
     </script>
-'''
+'''  # noqa
+
     def __init__(self, width=600, height=600):
         super(Canvas, self).__init__()
 
@@ -843,6 +871,7 @@ support HTML5 canvas.</canvas>
                  tab_idx=tab_idx)
         return Canvas.canvas_template % d
 
+
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
@@ -857,7 +886,7 @@ class ContainerBase(WidgetBase):
         self.children.append(ref)
 
     def remove(self, w, delete=False):
-        if not w in self.children:
+        if w not in self.children:
             raise KeyError("Widget is not a child of this container")
         self.children.remove(w)
 
@@ -884,10 +913,12 @@ class ContainerBase(WidgetBase):
 
     def render_children(self, ifx=' ', spacing=0, spacing_side='right'):
         def _render_child(child):
-            ## return '''<span style="margin-%s: %dpx;">%s</span>''' % (
-            ##     spacing_side, spacing, child.render())
-            return child.render()
+            if spacing == 0:
+                return child.render()
+            return '''<span style="margin-%s: %dpx;">%s</span>''' % (
+                spacing_side, spacing, child.render())
         return ifx.join(map(_render_child, self.children))
+
 
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
@@ -912,23 +943,26 @@ class Box(ContainerBase):
         style_d = dict(left=self.margins[0], right=self.margins[1],
                        top=self.margins[2], bottom=self.margins[3])
         if self.orientation == 'horizontal':
-            d['style'] = "display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: flex-start; margin: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d
+            d['style'] = "display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: flex-start; margin: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d  # noqa
             d['content'] = self.render_children(spacing=self.spacing,
                                                 spacing_side='right')
         else:
-            d['style'] = "display: flex; flex-direction: column; flex-wrap: nowrap; justify-content: flex-start; margin: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d
+            d['style'] = "display: flex; flex-direction: column; flex-wrap: nowrap; justify-content: flex-start; margin: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d  # noqa
             d['content'] = self.render_children(spacing=self.spacing,
                                                 spacing_side='bottom')
 
         return '''<div id=%(id)s style="%(style)s">%(content)s</div>''' % d
 
+
 class HBox(Box):
     def __init__(self):
         super(HBox, self).__init__(orientation='horizontal')
 
+
 class VBox(Box):
     def __init__(self):
         super(VBox, self).__init__(orientation='vertical')
+
 
 class Frame(ContainerBase):
     def __init__(self, title=None):
@@ -944,7 +978,7 @@ class Frame(ContainerBase):
     def render(self):
         d = dict(id=self.id, content=self.render_children(), legend=self.label)
         res = '''<fieldset id=%(id)s>'''
-        if not self.label is None:
+        if self.label is not None:
             res += '''<legend>%(legend)s</legend>''' % d
         res += "%(content)s" % d
         res += '''</fieldset>'''
@@ -954,13 +988,14 @@ class Frame(ContainerBase):
 class Expander(Frame):
     pass
 
+
 class TabWidget(ContainerBase):
 
     tab_script_template = '''
     <script>
     ginga_initialize_tab_widget(document.getElementById("%(id)s"), "%(id)s", ginga_app)
     </script>
-    '''
+    '''  # noqa
 
     def __init__(self, tabpos='top', reorderable=False, detachable=True,
                  group=0):
@@ -982,7 +1017,7 @@ class TabWidget(ContainerBase):
     def set_tab_position(self, tabpos):
         self.tabpos = tabpos
         # TODO: set tab position
-        nb = self.widget
+        nb = self.widget  # noqa
         if tabpos == 'top':
             pass
         elif tabpos == 'bottom':
@@ -1003,7 +1038,7 @@ class TabWidget(ContainerBase):
         child.extdata.tab_title = title
 
         app = self.get_app()
-        #app.do_operation('update_html', id=self.id, value=self.render())
+        # app.do_operation('update_html', id=self.id, value=self.render())
         # this is a hack--we really don't want to reload the page, but just
         # re-rendering the HTML does not seem to process the CSS right
         app.do_operation('reload_page', id=self.id)
@@ -1031,7 +1066,7 @@ class TabWidget(ContainerBase):
         d = dict(id=self.id)
         style_d = dict(left=self.margins[0], right=self.margins[1],
                        top=self.margins[2], bottom=self.margins[3])
-        d['style'] = "padding: 0; margin: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d
+        d['style'] = "padding: 0; margin: %(left)dpx %(right)dpx %(top)dpx %(bottom)dpx;" % style_d  # noqa
         res = ['''\n<div id="%(id)s" style="%(style)s">\n''' % d]
 
         if self._tabs_visible:
@@ -1040,20 +1075,21 @@ class TabWidget(ContainerBase):
             d['cnt'] = 1
             for child in self.get_children():
                 d['title'] = self.titles[d['cnt']-1]
-                res.append('''<li><a href="#%(id)s-%(cnt)d">%(title)s</a></li>\n''' % d)
+                res.append('''<li><a href="#%(id)s-%(cnt)d">%(title)s</a></li>\n''' % d)  # noqa
                 d['cnt'] += 1
             res.append('''  </ul>\n''')
 
         d['cnt'] = 1
         for child in self.get_children():
             d['content'] = child.render()
-            res.append('''<div id="%(id)s-%(cnt)d" style="%(style)s"> %(content)s </div>\n''' % d)
+            res.append('''<div id="%(id)s-%(cnt)d" style="%(style)s"> %(content)s </div>\n''' % d)  # noqa
             d['cnt'] += 1
 
         res.append('''</div>\n''')
         res.append(TabWidget.tab_script_template % d)
 
         return ''.join(res)
+
 
 class StackWidget(TabWidget):
     def __init__(self):
@@ -1085,6 +1121,7 @@ class MDIWidget(TabWidget):
     def use_tabs(self, tf):
         pass
 
+
 class ScrollArea(ContainerBase):
     def __init__(self):
         super(ScrollArea, self).__init__()
@@ -1105,6 +1142,7 @@ class ScrollArea(ContainerBase):
         child = self.get_children()[0]
         d['content'] = child.render()
         return '''<div id=%(id)s>%(content)s</div>''' % d
+
 
 class Splitter(Box):
 
@@ -1180,6 +1218,7 @@ class GridBox(ContainerBase):
         res.append("</table>")
         return '\n'.join(res)
 
+
 class ToolbarAction(WidgetBase):
     def __init__(self):
         super(ToolbarAction, self).__init__()
@@ -1242,11 +1281,12 @@ class Toolbar(ContainerBase):
         return menu
 
     def add_separator(self):
-        #self.widget.addSeparator()
+        # self.widget.addSeparator()
         pass
 
     def render(self):
         return self.widget.render()
+
 
 class MenuAction(WidgetBase):
     def __init__(self, text=None):
@@ -1271,6 +1311,7 @@ class Menu(ContainerBase):
 
         # this ends up being a reference to the Qt menubar or toolbar
         self.widget = None
+        self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child):
         self.add_ref(child)
@@ -1280,14 +1321,25 @@ class Menu(ContainerBase):
         self.add_widget(child)
         return child
 
+    def add_menu(self, name):
+        child = Menu()
+        self.menus[name] = child
+        menu_w = Label(text=name, halign='left', style='clickable', menu=child)
+        self.add_widget(menu_w)
+        return child
+
+    def get_menu(self, name):
+        return self.menus[name]
+
     def add_separator(self):
-        #self.widget.addSeparator()
+        # self.widget.addSeparator()
         pass
 
     def popup(self, widget=None):
         # TODO
         if widget is not None:
-            w = widget.get_widget()
+            w = widget.get_widget()  # noqa
+
 
 class Menubar(HBox):
 
@@ -1322,7 +1374,7 @@ class TopLevel(ContainerBase):
         self.url = None
         self.app = None
         self.debug = False
-        #widget.closeEvent = lambda event: self._quit(event)
+        # widget.closeEvent = lambda event: self._quit(event)
 
         self.enable_callback('close')
 
@@ -1352,7 +1404,7 @@ class TopLevel(ContainerBase):
         pass
 
     def resize(self, width, height):
-        #self.widget.resize(width, height)
+        # self.widget.resize(width, height)
         pass
 
     def focus(self):
@@ -1419,9 +1471,9 @@ class TopLevel(ContainerBase):
     <script type="text/javascript" src="/js/hammer.js"></script>
 
     <!-- The next three lines are for the jQuery widgets (e.g., Dialog) -->
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
-    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
-    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
+    <script src="//code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <script type="text/javascript" src="/js/application.js"></script>
     <script type="text/javascript">
         var wid = "%(wid)s";
@@ -1431,7 +1483,7 @@ class TopLevel(ContainerBase):
     </script>
 <div id=%(id)s>%(content)s</div>
 </body>
-</html>''' % d
+</html>''' % d  # noqa
 
 
 class Application(Callback.Callbacks):
@@ -1501,7 +1553,7 @@ class Application(Callback.Callbacks):
         return w
 
     def _cb_redirect(self, event):
-        #print("application got an event (%s)" % (str(event)))
+        # print("application got an event (%s)" % (str(event)))
         pass
 
     def add_ws_handler(self, handler):
@@ -1529,7 +1581,7 @@ class Application(Callback.Callbacks):
                     self.ws_handlers.remove(handler)
 
     def on_timer_event(self, event):
-        #self.logger.debug("timer update")
+        # self.logger.debug("timer update")
         funcs = []
         with self._timer_lock:
             for key, bnch in self._timer.items():
@@ -1543,7 +1595,7 @@ class Application(Callback.Callbacks):
                 func()
             except Exception as e:
                 pass
-            #self.logger.debug("update should have been called.")
+            # self.logger.debug("update should have been called.")
 
     def add_timer(self, func):
         with self._timer_lock:
@@ -1560,7 +1612,7 @@ class Application(Callback.Callbacks):
 
     def reset_timer(self, timer, time_sec):
         with self._timer_lock:
-            #self.logger.debug("setting timer...")
+            # self.logger.debug("setting timer...")
             timer.timer = time.time() + time_sec
 
     def widget_event(self, event):
@@ -1589,15 +1641,15 @@ class Application(Callback.Callbacks):
 
         # create and run the app
         self.server = tornado.web.Application([
-            #(r"/js/(.*\.js)", tornado.web.StaticFileHandler,
+            # (r"/js/(.*\.js)", tornado.web.StaticFileHandler,
             (r"/js/(.*)", tornado.web.StaticFileHandler,
              {"path":  js_path}),
             (r"/js/jquery/(.*)", tornado.web.StaticFileHandler,
              {"path":  os.path.join(js_path, 'jquery')}),
             (r"/app", PgHelp.WindowHandler,
-              dict(name='Application', url='/app', app=self)),
+             dict(name='Application', url='/app', app=self)),
             (r"/app/socket", PgHelp.ApplicationHandler,
-              dict(name='ApplicationSocketInterface', app=self)),
+             dict(name='ApplicationSocketInterface', app=self)),
             ],
                app=self, logger=self.logger)
 
@@ -1613,13 +1665,14 @@ class Application(Callback.Callbacks):
 
     def stop(self):
         # how to stop tornado server?
-        if not self.t_ioloop is None:
+        if self.t_ioloop is not None:
             self.t_ioloop.stop()
 
         self.ev_quit.set()
 
     def mainloop(self, no_ioloop=False):
         self.start(no_ioloop=no_ioloop)
+
 
 class Dialog(WidgetBase):
 
@@ -1630,7 +1683,7 @@ class Dialog(WidgetBase):
     </script>
     %(content)s
     </div>
-    '''
+    '''  # noqa
 
     def __init__(self, title='', flags=None, buttons=[],
                  parent=None, callback=None, modal=False):
@@ -1688,21 +1741,24 @@ class Dialog(WidgetBase):
         self.make_callback('close')
 
     def render(self):
-        d = dict(id=self.id, title=self.title, buttons=self.buttons_to_js_obj(), modal=str(self.modal).lower())
+        d = dict(id=self.id, title=self.title,
+                 buttons=self.buttons_to_js_obj(),
+                 modal=str(self.modal).lower())
         d['content'] = self.content.render()
         return self.dialog_template % d
 
-## class SaveDialog(QtGui.QFileDialog):
-##     def __init__(self, title=None, selectedfilter=None):
-##         super(SaveDialog, self).__init__()
+# class SaveDialog(QtGui.QFileDialog):
+#     def __init__(self, title=None, selectedfilter=None):
+#         super(SaveDialog, self).__init__()
+#
+#         self.selectedfilter = selectedfilter
+#         self.widget = self.getSaveFileName(self, title, '', selectedfilter)
+#
+#     def get_path(self):
+#         if self.widget and not self.widget.endswith(self.selectedfilter[1:]):
+#             self.widget += self.selectedfilter[1:]
+#         return self.widget
 
-##         self.selectedfilter = selectedfilter
-##         self.widget = self.getSaveFileName(self, title, '', selectedfilter)
-
-##     def get_path(self):
-##         if self.widget and not self.widget.endswith(self.selectedfilter[1:]):
-##             self.widget += self.selectedfilter[1:]
-##         return self.widget
 
 # MODULE FUNCTIONS
 
@@ -1715,19 +1771,20 @@ def name_mangle(name, pfx=''):
             newname.append(c)
     return pfx + ''.join(newname)
 
+
 def make_widget(title, wtype):
     if wtype == 'label':
         w = Label(title)
-        #w.widget.setAlignment(QtCore.Qt.AlignRight)
+        # w.widget.setAlignment(QtCore.Qt.AlignRight)
     elif wtype == 'llabel':
         w = Label(title)
-        #w.widget.setAlignment(QtCore.Qt.AlignLeft)
+        # w.widget.setAlignment(QtCore.Qt.AlignLeft)
     elif wtype == 'entry':
         w = TextEntry()
-        #w.widget.setMaxLength(12)
+        # w.widget.setMaxLength(12)
     elif wtype == 'entryset':
         w = TextEntrySet()
-        #w.widget.setMaxLength(12)
+        # w.widget.setMaxLength(12)
     elif wtype == 'combobox':
         w = ComboBox()
     elif wtype == 'spinbutton':
@@ -1805,39 +1862,11 @@ def build_info(captions, orientation='vertical'):
 
     return w, wb
 
+
 def wrap(native_widget):
     wrapper = WidgetBase()
     wrapper.widget = native_widget
     return wrapper
 
-def get_orientation(container):
-    if not hasattr(container, 'size'):
-        return 'vertical'
-    (wd, ht) = container.size
-    if wd < ht:
-        return 'vertical'
-    else:
-        return 'horizontal'
 
-def get_oriented_box(container, scrolled=True, fill=False):
-    orientation = get_orientation(container)
-
-    if orientation == 'vertical':
-        box1 = VBox()
-        box2 = VBox()
-    else:
-        box1 = HBox()
-        box2 = VBox()
-
-    box2.add_widget(box1)
-    if not fill:
-        box2.add_widget(Label(''), stretch=1)
-    if scrolled:
-        sw = ScrollArea()
-        sw.set_widget(box2)
-    else:
-        sw = box2
-
-    return box1, sw, orientation
-
-#END
+# END

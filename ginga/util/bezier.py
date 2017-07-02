@@ -14,11 +14,11 @@ bezier_steps = 30
 #
 
 #   calculates points for a simple bezier curve with 4 control points
-#            
+#
 def get_4pt_bezier(steps, points):
     """Gets a series of bezier curve points with 1 set of 4
     control points."""
-    for i in range(steps): 
+    for i in range(steps):
         t = i / float(steps)
 
         xloc = (math.pow(1-t, 3) * points[0][0] +
@@ -31,7 +31,7 @@ def get_4pt_bezier(steps, points):
                 math.pow(t, 3) * points[3][1])
 
         yield (xloc, yloc)
-    
+
 def get_bezier(steps, points):
     """Gets a series of bezier curve points with any number of sets
     of 4 control points."""

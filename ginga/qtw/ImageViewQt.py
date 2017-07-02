@@ -125,14 +125,18 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.imgwin.viewer = self
         self.pixmap = None
         # Qt expects 32bit BGRA data for color images
-        self._rgb_order = 'BGRA'
+        self.rgb_order = 'BGRA'
 
         self.renderer = CanvasRenderer(self)
 
-        self.msgtimer = Timer(0.0, lambda timer: self.onscreen_message_off())
+        self.msgtimer = Timer()
+        self.msgtimer.add_callback('expired',
+                                   lambda timer: self.onscreen_message_off())
 
         # For optomized redrawing
-        self._defer_task = Timer(0.0, lambda timer: self.delayed_redraw())
+        self._defer_task = Timer()
+        self._defer_task.add_callback('expired',
+                                      lambda timer: self.delayed_redraw())
 
     def get_widget(self):
         return self.imgwin
@@ -171,7 +175,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.logger.debug("drawing to pixmap")
 
         # Prepare array for rendering
-        arr = rgbobj.get_array(self._rgb_order)
+        arr = rgbobj.get_array(self.rgb_order)
         (height, width) = arr.shape[:2]
 
         return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,
@@ -227,7 +231,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        arr = self.getwin_array(order=self._rgb_order)
+        arr = self.getwin_array(order=self.rgb_order)
         image = self._get_qimage(arr)
         return image
 
@@ -239,7 +243,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         res = qimg.save(filepath, format=format, quality=quality)
 
     def reschedule_redraw(self, time_sec):
-        self._defer_task.cancel()
+        self._defer_task.stop()
         self._defer_task.start(time_sec)
 
     def update_image(self):
@@ -253,7 +257,6 @@ class ImageViewQt(ImageView.ImageViewBase):
                                   QtGui.QGraphicsScene.BackgroundLayer)
         else:
             self.imgwin.update()
-            #self.imgwin.show()
 
     def set_cursor(self, cursor):
         if self.imgwin is not None:
@@ -287,8 +290,8 @@ class ImageViewQt(ImageView.ImageViewBase):
         cursor = self.imgwin.cursor()
         cursor.setPos(s_pt)
 
-    def get_rgb_order(self):
-        return self._rgb_order
+    def make_timer(self):
+        return Timer()
 
     def _get_qimage(self, bgra):
         h, w, channels = bgra.shape
@@ -305,7 +308,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         return clr
 
     def onscreen_message(self, text, delay=None, redraw=True):
-        self.msgtimer.cancel()
+        self.msgtimer.stop()
         self.set_onscreen_message(text, redraw=redraw)
         if delay is not None:
             self.msgtimer.start(delay)
@@ -540,8 +543,7 @@ class QtEventMixin(object):
             button |= 0x4
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
@@ -559,8 +561,7 @@ class QtEventMixin(object):
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
@@ -587,8 +588,7 @@ class QtEventMixin(object):
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('motion', button, data_x, data_y)
 
@@ -611,8 +611,7 @@ class QtEventMixin(object):
             else:
                 src = 'trackpad'
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, num_degrees,
                                      data_x, data_y)
@@ -736,7 +735,7 @@ class QtEventMixin(object):
         self.make_ui_callback('drag-drop', data)
 
 
-class ImageViewEvent(ImageViewQt, QtEventMixin):
+class ImageViewEvent(QtEventMixin, ImageViewQt):
 
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         ImageViewQt.__init__(self, logger=logger, rgbmap=rgbmap,
@@ -776,7 +775,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 rgbmap=rgbmap, render=render)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_setActive(True)
+        self.ui_set_active(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
@@ -835,8 +834,10 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         self._adjusting = False
         self._scrolling = False
         self.pad = 20
-        self.upper_h = 100
-        self.upper_v = 100
+        self.range_h = 10000
+        self.range_v = 10000
+        self.upper_h = self.range_h
+        self.upper_v = self.range_v
 
         # reparent the viewer widget
         vp = self.viewport()
@@ -845,10 +846,10 @@ class ScrolledView(QtGui.QAbstractScrollArea):
 
         hsb = self.horizontalScrollBar()
         hsb.setTracking(True)
-        hsb.setRange(0, 100)
+        hsb.setRange(0, self.upper_h)
         hsb.setSingleStep(1)
         vsb = self.verticalScrollBar()
-        vsb.setRange(0, 100)
+        vsb.setRange(0, self.upper_v)
         vsb.setSingleStep(1)
         vsb.setTracking(True)
 
@@ -888,12 +889,13 @@ class ScrolledView(QtGui.QAbstractScrollArea):
             hsb = self.horizontalScrollBar()
             vsb = self.verticalScrollBar()
 
-            page_h, page_v = (int(round(res.thm_pct_x * 100)),
-                              int(round(res.thm_pct_y * 100)))
+            page_h, page_v = (int(round(res.thm_pct_x * self.range_h)),
+                              int(round(res.thm_pct_y * self.range_v)))
             hsb.setPageStep(page_h)
             vsb.setPageStep(page_v)
 
-            upper_h, upper_v = max(1, 100 - page_h), max(1, 100 - page_v)
+            upper_h = max(1, self.range_h - page_h)
+            upper_v = max(1, self.range_v - page_v)
             hsb.setRange(0, upper_h)
             vsb.setRange(0, upper_v)
             self.upper_h, self.upper_v = upper_h, upper_v
@@ -915,12 +917,22 @@ class ScrolledView(QtGui.QAbstractScrollArea):
 
         self._scrolling = True
         try:
-            hsb = self.horizontalScrollBar()
-            vsb = self.verticalScrollBar()
+            bd = self.viewer.get_bindings()
+            res = bd.calc_pan_pct(self.viewer, pad=self.pad)
+            if res is None:
+                return
+            pct_x, pct_y = res.pan_pct_x, res.pan_pct_y
 
-            pct_x = hsb.value() / float(self.upper_h)
-            # invert Y pct because of orientation of scrollbar
-            pct_y = 1.0 - (vsb.value() / float(self.upper_v))
+            # Only adjust pan setting for axes that have changed
+            if dx != 0:
+                hsb = self.horizontalScrollBar()
+                pos_x = float(hsb.value())
+                pct_x = pos_x / float(self.upper_h)
+            if dy != 0:
+                vsb = self.verticalScrollBar()
+                pos_y = float(vsb.value())
+                # invert Y pct because of orientation of scrollbar
+                pct_y = 1.0 - (pos_y / float(self.upper_v))
 
             bd = self.viewer.get_bindings()
             bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)

@@ -10,7 +10,7 @@ import itertools
 import numpy as np
 
 from ginga.misc import Bunch, Settings, Callback
-from ginga import AutoCuts, trcalc
+from ginga import trcalc
 from ginga import cmap, imap
 from ginga.util.paths import icondir
 
@@ -51,7 +51,6 @@ class ImageViewBindings(object):
                                              logger=self.logger)
             self.initialize_settings(settings)
         self.settings = settings
-        self.autocuts = AutoCuts.ZScale(self.logger)
 
         self.features = dict(
             # name, attr pairs
@@ -86,6 +85,7 @@ class ImageViewBindings(object):
             dmod_pan = ['q', None, 'pan'],
             dmod_freepan = ['w', None, 'pan'],
             dmod_camera = [None, None, 'pan'],
+            dmod_naxis = [None, None, None],
 
             default_mode_type = 'oneshot',
             default_lock_mode_type = 'softlock',
@@ -108,6 +108,11 @@ class ImageViewBindings(object):
             kp_pan_right = ['pan+*+right', 'freepan+*+right'],
             kp_pan_up = ['pan+*+up', 'freepan+*+up'],
             kp_pan_down = ['pan+*+down', 'freepan+*+down'],
+            kp_pan_px_xminus = ['shift+left'],
+            kp_pan_px_xplus = ['shift+right'],
+            kp_pan_px_yminus = ['shift+down'],
+            kp_pan_px_yplus = ['shift+up'],
+            kp_pan_px_center = ['shift+home'],
             kp_center = ['c', 'pan+c', 'freepan+c'],
             kp_cut_255 = ['cuts+A'],
             kp_cut_minmax = ['cuts+S'],
@@ -148,6 +153,8 @@ class ImageViewBindings(object):
 
             # pct of a window of data to move with pan key commands
             key_pan_pct = 0.666667,
+            # amount to move (in pixels) when using key pan arrow
+            key_pan_px_delta = 1.0,
 
             # SCROLLING/WHEEL
             sc_pan = ['ctrl+scroll'],
@@ -163,8 +170,8 @@ class ImageViewBindings(object):
             sc_dist = ['dist+scroll'],
             sc_cmap = ['cmap+scroll'],
             sc_imap = ['cmap+ctrl+scroll'],
-            #sc_draw = ['draw+scroll'],
             sc_camera_track = ['camera+scroll'],
+            sc_naxis = ['naxis+scroll'],
 
             scroll_pan_acceleration = 1.0,
             # 1.0 is appropriate for a mouse, 0.1 for most trackpads
@@ -176,6 +183,8 @@ class ImageViewBindings(object):
             mouse_rotate_acceleration = 0.75,
             pan_reverse = False,
             pan_multiplier = 1.0,
+            pan_min_scroll_thumb_pct = 0.0,
+            pan_max_scroll_thumb_pct = 0.8,
             zoom_scroll_reverse = False,
 
             # MOUSE/BUTTON
@@ -202,6 +211,7 @@ class ImageViewBindings(object):
             ms_cmap_restore = ['cmap+right'],
             ms_camera_orbit = ['camera+left'],
             ms_camera_pan_delta = ['camera+right'],
+            ms_naxis = ['naxis+left'],
 
             # GESTURES (some backends only)
             gs_pinch = [],
@@ -523,28 +533,25 @@ class ImageViewBindings(object):
         tr = viewer.tform['data_to_scrollbar']
 
         # calculate the corners of the entire image in unscaled cartesian
-        mxwd, mxht = limits[1]
+        mxwd, mxht = limits[1][:2]
         mxwd, mxht = mxwd + pad, mxht + pad
-        mnwd, mnht = limits[0]
+        mnwd, mnht = limits[0][:2]
         mnwd, mnht = mnwd - pad, mnht - pad
 
         arr = np.array([(mnwd, mnht), (mxwd, mnht),
                         (mxwd, mxht), (mnwd, mxht)],
                        dtype=np.float)
-        x, y = tr.to_(arr.T[0], arr.T[1])
+        x, y = tr.to_(arr).T
 
         rx1, rx2 = np.min(x), np.max(x)
         ry1, ry2 = np.min(y), np.max(y)
 
         rect = viewer.get_pan_rect()
         arr = np.array(rect, dtype=np.float)
-        x, y = tr.to_(arr.T[0], arr.T[1])
+        x, y = tr.to_(arr).T
 
         qx1, qx2 = np.min(x), np.max(x)
         qy1, qy2 = np.min(y), np.max(y)
-
-        qx1, qx2 = max(rx1, qx1), min(rx2, qx2)
-        qy1, qy2 = max(ry1, qy1), min(ry2, qy2)
 
         # this is the range of X and Y of the entire image
         # in the viewer (unscaled)
@@ -554,33 +561,40 @@ class ImageViewBindings(object):
         abs_x, abs_y = abs(qx2 - qx1), abs(qy2 - qy1)
 
         # calculate the width of the slider arms as a ratio
-        xthm_pct = max(0.0, min(abs_x / (rx2 - rx1), 1.0))
-        ythm_pct = max(0.0, min(abs_y / (ry2 - ry1), 1.0))
+        min_pct = self.settings.get('pan_min_scroll_thumb_pct', 0.0)
+        max_pct = self.settings.get('pan_max_scroll_thumb_pct', 0.8)
+        xthm_pct = max(min_pct, min(abs_x / (rx2 - rx1), max_pct))
+        ythm_pct = max(min_pct, min(abs_y / (ry2 - ry1), max_pct))
 
         # calculate the pan position as a ratio
         pct_x = min(max(0.0, abs(0.0 - rx1) / rng_x), 1.0)
         pct_y = min(max(0.0, abs(0.0 - ry1) / rng_y), 1.0)
 
-        return Bunch.Bunch(rng_x=rng_x, rng_y=rng_y, vis_x=abs_x, vis_y=abs_y,
+        bnch = Bunch.Bunch(rng_x=rng_x, rng_y=rng_y, vis_x=abs_x, vis_y=abs_y,
                            thm_pct_x=xthm_pct, thm_pct_y=ythm_pct,
                            pan_pct_x=pct_x, pan_pct_y=pct_y)
+        return bnch
 
     def pan_by_pct(self, viewer, pct_x, pct_y, pad=0):
         """Called when the scroll bars are adjusted by the user.
         """
+        # Sanity check on inputs
+        pct_x = min(1.0, max(0.0, pct_x))
+        pct_y = min(1.0, max(0.0, pct_y))
+
         limits = viewer.get_limits()
 
         tr = viewer.tform['data_to_scrollbar']
 
-        mxwd, mxht = limits[1]
+        mxwd, mxht = limits[1][:2]
         mxwd, mxht = mxwd + pad, mxht + pad
-        mnwd, mnht = limits[0]
+        mnwd, mnht = limits[0][:2]
         mnwd, mnht = mnwd - pad, mnht - pad
 
         arr = np.array([(mnwd, mnht), (mxwd, mnht),
                         (mxwd, mxht), (mnwd, mxht)],
                        dtype=np.float)
-        x, y = tr.to_(arr.T[0], arr.T[1])
+        x, y = tr.to_(arr).T
 
         rx1, rx2 = np.min(x), np.max(x)
         ry1, ry2 = np.min(y), np.max(y)
@@ -588,7 +602,7 @@ class ImageViewBindings(object):
         crd_x = rx1 + (pct_x * (rx2 - rx1))
         crd_y = ry1 + (pct_y * (ry2 - ry1))
 
-        pan_x, pan_y = tr.from_(crd_x, crd_y)
+        pan_x, pan_y = tr.from_((crd_x, crd_y))
         self.logger.debug("crd=%f,%f pan=%f,%f" % (
             crd_x, crd_y, pan_x, pan_y))
 
@@ -637,6 +651,19 @@ class ImageViewBindings(object):
 
         # update the pan position by pct
         self.pan_by_pct(viewer, res.pan_pct_x, pct_y)
+
+    def pan_delta_px(self, viewer, x_px, y_px):
+        pan_x, pan_y = viewer.get_pan(coord='data')[:2]
+        pan_x += x_px
+        pan_y += y_px
+        viewer.panset_xy(pan_x, pan_y)
+
+    def pan_center_px(self, viewer):
+        data_x, data_y = viewer.get_last_data_xy()
+        ndata_x = float(int(data_x + viewer.data_off))
+        ndata_y = float(int(data_y + viewer.data_off))
+        x_px, y_px = ndata_x - data_x, ndata_y - data_y
+        self.pan_delta_px(viewer, x_px, y_px)
 
     def get_direction(self, direction, rev=False):
         """
@@ -930,14 +957,9 @@ class ImageViewBindings(object):
     def _rotate_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_rotate', msg)
         ctr_x, ctr_y = viewer.get_center()
-        if not viewer.window_has_origin_upper():
-            deg1 = math.degrees(math.atan2(self._start_y - ctr_y,
-                                           self._start_x - ctr_x))
-            deg2 = math.degrees(math.atan2(y - ctr_y, x - ctr_x))
-        else:
-            deg1 = math.degrees(math.atan2(ctr_y - self._start_y,
-                                           self._start_x - ctr_x))
-            deg2 = math.degrees(math.atan2(ctr_y - y, x - ctr_x))
+        deg1 = math.degrees(math.atan2(ctr_y - self._start_y,
+                                       self._start_x - ctr_x))
+        deg2 = math.degrees(math.atan2(ctr_y - y, x - ctr_x))
         delta_deg = deg2 - deg1
         deg = math.fmod(self._start_rot + delta_deg, 360.0)
         if msg:
@@ -1066,6 +1088,42 @@ class ImageViewBindings(object):
             return False
         amt = self._get_key_pan_pct(event)
         self.pan_ud(viewer, amt, -1.0, msg=msg)
+        return True
+
+    def kp_pan_px_xminus(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        px_amt = self.settings.get('key_pan_px_delta', 1.0)
+        self.pan_delta_px(viewer, -px_amt, 0.0)
+        return True
+
+    def kp_pan_px_xplus(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        px_amt = self.settings.get('key_pan_px_delta', 1.0)
+        self.pan_delta_px(viewer, px_amt, 0.0)
+        return True
+
+    def kp_pan_px_yminus(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        px_amt = self.settings.get('key_pan_px_delta', 1.0)
+        self.pan_delta_px(viewer, 0.0, -px_amt)
+        return True
+
+    def kp_pan_px_yplus(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        px_amt = self.settings.get('key_pan_px_delta', 1.0)
+        self.pan_delta_px(viewer, 0.0, px_amt)
+        return True
+
+    def kp_pan_px_center(self, viewer, event, data_x, data_y, msg=True):
+        """This pans so that the cursor is over the center of the
+        current pixel."""
+        if not self.canpan:
+            return False
+        self.pan_center_px(viewer)
         return True
 
     def kp_center(self, viewer, event, data_x, data_y):
@@ -1491,7 +1549,7 @@ class ImageViewBindings(object):
 
         elif event.state == 'down':
             if msg:
-                viewer.onscreen_message("Rotate (drag mouse L-R)",
+                viewer.onscreen_message("Rotate (drag around center)",
                                            delay=1.0)
             self._start_x, self._start_y = x, y
             self._start_rot = viewer.get_rotation()
@@ -1672,7 +1730,7 @@ class ImageViewBindings(object):
             self._start_x, self._start_y = x, y
             image = viewer.get_image()
             #self._loval, self._hival = viewer.get_cut_levels()
-            self._loval, self._hival = self.autocuts.calc_cut_levels(image)
+            self._loval, self._hival = viewer.autocuts.calc_cut_levels(image)
 
         else:
             viewer.onscreen_message(None)
@@ -1689,6 +1747,33 @@ class ImageViewBindings(object):
         """
         if self.canpan and (event.state == 'down'):
             self._panset(viewer, data_x, data_y, msg=msg)
+        return True
+
+    def ms_naxis(self, viewer, event, data_x, data_y, msg=True):
+
+        # TODO: be able to pick axis
+        axis = 2
+        x, y = self.get_win_xy(viewer)
+
+        image = viewer.get_image()
+        if image is None:
+            return
+        mddata = image.get_mddata()
+        if len(mddata.shape) < axis+1:
+            # image dimensions < 3D
+            return
+
+        naxispath = list(image.naxispath)
+        axis_lim = mddata.shape[axis]
+        m = axis - 2
+
+        if event.state in ('down', 'move'):
+            win_wd, win_ht = viewer.get_window_size()
+            x_pct = x / float(win_wd)
+            idx = int(x_pct * axis_lim)
+            naxispath[m] = idx
+            image.set_naxispath(naxispath)
+
         return True
 
     #####  SCROLL ACTION CALLBACKS #####
@@ -1838,6 +1923,35 @@ class ImageViewBindings(object):
     def sc_pan_fine(self, viewer, event, msg=True):
         event.amount = event.amount / 5.0
         return self.sc_pan(viewer, event, msg=msg)
+
+    def sc_naxis(self, viewer, event, msg=True):
+
+        # TODO: be able to pick axis
+        axis = 2
+        direction = self.get_direction(event.direction)
+
+        image = viewer.get_image()
+        if image is None:
+            return
+        mddata = image.get_mddata()
+        if len(mddata.shape) < axis+1:
+            # image dimensions < 3D
+            return
+
+        naxispath = list(image.naxispath)
+        axis_lim = mddata.shape[axis]
+        m = axis - 2
+
+        idx = naxispath[m]
+        if direction == 'down':
+            idx = (idx + 1) % axis_lim
+        else:
+            idx = idx - 1
+            if idx < 0:
+                idx = axis_lim - 1
+
+        naxispath[m] = idx
+        image.set_naxispath(naxispath)
 
     def sc_dist(self, viewer, event, msg=True):
 

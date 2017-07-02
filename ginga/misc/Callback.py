@@ -1,9 +1,6 @@
 #
 # Callback.py -- Mixin class for programmed callbacks.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -78,6 +75,17 @@ class Callbacks(object):
             raise CallbackError("No callback category of '%s'" % (
                 name))
 
+    def remove_callback(self, name, fn, *args, **kwdargs):
+        """Remove a specific callback that was added.
+        """
+        try:
+            tup = (fn, args, kwdargs)
+            if tup in self.cb[name]:
+                self.cb[name].remove(tup)
+        except KeyError:
+            raise CallbackError("No callback category of '%s'" % (
+                name))
+
     # TODO: to be deprecated ?
     def set_callback(self, name, fn, *args, **kwdargs):
         if not self.has_callback(name):
@@ -136,6 +144,9 @@ class Callbacks(object):
                     print("Traceback:\n%s" % (tb_str))
 
         return result
+
+    # this can be overridden by a mixin
+    make_ui_callback = make_callback
 
 
 class SuppressCallback(object):

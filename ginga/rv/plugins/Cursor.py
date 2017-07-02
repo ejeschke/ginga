@@ -15,12 +15,16 @@ from ginga.ImageView import ImageViewNoDataError
 
 class Cursor(GingaPlugin.GlobalPlugin):
     """
+    Cursor
+    ======
     The Cursor plugin displays a summary line of text that changes as the
     user moves the cursor around an image.  In the standard reference viewer
     configuration, it appears as a line containing green text just below the
     Colorbar plugin.
 
-    Cursor is a global plugin and there is no associated configuration GUI.
+    Plugin Type: Global
+    -------------------
+    Cursor is a global plugin.  Only one instance can be opened.
 
     Usage
     -----
@@ -39,8 +43,8 @@ class Cursor(GingaPlugin.GlobalPlugin):
         super(Cursor, self).__init__(fv)
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Cursor')
-        self.settings.addDefaults(share_readout=True)
+        self.settings = prefs.create_category('plugin_Cursor')
+        self.settings.add_defaults(share_readout=True)
         self.settings.load(onError='silent')
 
         fv.add_callback('add-channel', self.add_channel_cb)

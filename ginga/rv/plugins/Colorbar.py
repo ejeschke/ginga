@@ -11,8 +11,14 @@ from ginga.gw import Widgets, ColorBar
 
 class Colorbar(GingaPlugin.GlobalPlugin):
     """
+    Colorbar
+    ========
     The Colorbar plugin shows a color bar indicating the color map applied
     to the image and showing the example values along the range.
+
+    Plugin Type: Global
+    -------------------
+    Colorbar is a global plugin.  Only one instance can be opened.
 
     Usage
     -----
@@ -33,18 +39,20 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         self.info = None
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Colorbar')
-        #self.settings.addDefaults()
+        self.settings = prefs.create_category('plugin_Colorbar')
+        self.settings.add_defaults(cbar_height=36, fontsize=12)
         self.settings.load(onError='silent')
 
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
 
     def build_gui(self, container):
-        cbar = ColorBar.ColorBar(self.logger)
+        cbar = ColorBar.ColorBar(self.logger, settings=self.settings)
         cbar.set_cmap(self.fv.cm)
         cbar.set_imap(self.fv.im)
         cbar_w = cbar.get_widget()
+        cbar_ht = self.settings.get('cbar_height', 36)
+        cbar_w.resize(-1, cbar_ht)
 
         self.colorbar = cbar
         self.fv.add_callback('channel-change', self.change_cbar, cbar)
@@ -54,7 +62,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
     def add_channel_cb(self, viewer, channel):
         settings = channel.settings
-        settings.getSetting('cuts').add_callback('set',
+        settings.get_setting('cuts').add_callback('set',
                               self.change_range_cb, channel.fitsimage, self.colorbar)
 
         chname = channel.name

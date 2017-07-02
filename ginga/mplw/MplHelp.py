@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 
 from ginga import colors
+from ginga.misc import Bunch, Callback
 
 import matplotlib.textpath as textpath
 
@@ -111,45 +112,59 @@ class MplContext(object):
         return (wd, ht)
 
 
-class Timer(object):
+class Timer(Callback.Callbacks):
     """Abstraction of a GUI-toolkit implemented timer."""
 
-    def __init__(self, ival_sec, expire_cb, data=None, mplcanvas=None):
-        """Create a timer set to expire after `ival_sec` and which will
-        call the callable `expire_cb` when it expires.
+    def __init__(self, duration=0.0, mplcanvas=None):
+        """Create a timer set to expire after `duration` sec.
         """
-        self.ival_sec = ival_sec
-        self.cb = expire_cb
-        self.data = data
+        super(Timer, self).__init__()
+
+        self.duration = duration
+        # For storing aritrary data with timers
+        self.data = Bunch.Bunch()
 
         self._timer = mplcanvas.new_timer()
         self._timer.single_shot = True
         self._timer.add_callback(self._redirect_cb)
 
-    def start(self, ival_sec=None):
-        """Start the timer.  If `ival_sec` is not None, it should
+        for name in ('expired', 'canceled'):
+            self.enable_callback(name)
+
+    def start(self, duration=None):
+        """Start the timer.  If `duration` is not None, it should
         specify the time to expiration in seconds.
         """
-        if ival_sec is None:
-            ival_sec = self.ival_sec
+        if duration is None:
+            duration = self.duration
 
-        self.cancel()
+        self.set(duration)
+
+    def set(self, duration):
+
+        self.stop()
 
         # Matplotlib timer set in milliseconds
-        time_ms = int(ival_sec * 1000.0)
+        time_ms = int(duration * 1000.0)
         self._timer.interval = time_ms
         self._timer.start()
 
     def _redirect_cb(self):
-        self.cb(self)
+        self.make_callback('expired')
+
+    def stop(self):
+        try:
+            self._timer.stop()
+        except:
+            pass
 
     def cancel(self):
         """Cancel this timer.  If the timer is not running, there
         is no error.
         """
-        try:
-            self._timer.stop()
-        except:
-            pass
+        self.stop()
+        self.make_callback('canceled')
+
+    clear = cancel
 
 #END

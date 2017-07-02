@@ -44,6 +44,10 @@ class AutoCutsBase(object):
         self.kind = 'base'
         self.crop_radius = 512
 
+    def update_params(self, **param_dict):
+        # TODO: find a cleaner way to update these
+        self.__dict__.update(param_dict)
+
     def get_algorithms(self):
         return autocut_methods
 
@@ -414,6 +418,8 @@ class ZScale(AutoCutsBase):
                AutoCutsError("contrast (%.2f) not in range 0 < c <= 1" % (
             contrast))
 
+        # remove masked elements, they cause problems
+        data = data[numpy.logical_not(numpy.ma.getmaskarray(data))]
         # remove NaN and Inf from samples
         samples = data[numpy.isfinite(data)].flatten()
         samples = samples[:num_points]

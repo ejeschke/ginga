@@ -14,15 +14,23 @@ from ginga.gw import Widgets
 
 
 class Pipeline(GingaPlugin.LocalPlugin):
+    """
+    Pipeline
+    ========
 
+    Plugin Type: Local
+    ------------------
+    Crosshair is a local plugin, which means it is associated with a channel.
+    An instance can be opened for each channel.
+    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Pipeline, self).__init__(fv, fitsimage)
 
         # Load preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Pipeline')
-        self.settings.setDefaults(num_threads=4)
+        self.settings = prefs.create_category('plugin_Pipeline')
+        self.settings.set_defaults(num_threads=4)
         self.settings.load(onError='silent')
 
         # For building up an image stack

@@ -2,9 +2,6 @@
 # GingaCanvasQt.py -- classes for the display of FITS files in
 #                             Matplotlib FigureCanvas
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 from __future__ import print_function
@@ -20,6 +17,8 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 
 def setup_Qt(widget, viewer):
 
+    _resizeEvent = widget.resizeEvent
+
     def resizeEvent(*args):
         rect = widget.geometry()
         x1, y1, x2, y2 = rect.getCoords()
@@ -28,6 +27,8 @@ def setup_Qt(widget, viewer):
 
         if viewer is not None:
             viewer.configure_window(width, height)
+
+        _resizeEvent(*args)
 
     widget.setFocusPolicy(QtCore.Qt.FocusPolicy(
         QtCore.Qt.TabFocus |
@@ -38,8 +39,7 @@ def setup_Qt(widget, viewer):
     widget.setAcceptDrops(True)
 
     # Matplotlib has a bug where resize events are not reported
-    widget.connect(widget, QtCore.SIGNAL('resizeEvent()'),
-                   resizeEvent)
+    widget.resizeEvent = resizeEvent
 
 
 class FigureCanvas(QtFigureCanvas):
