@@ -14,7 +14,9 @@ import os
 import shutil
 
 # THIRD-PARTY
+import astropy
 from astropy.io import fits
+from astropy.utils.introspection import minversion
 
 # GINGA
 from ginga.GingaPlugin import GlobalPlugin
@@ -424,7 +426,10 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         self._write_history(key, hdu)
 
         # Write to file
-        hdu.writeto(outfile, clobber=True)
+        if minversion(astropy, '1.3'):
+            hdu.writeto(outfile, overwrite=True)
+        else:
+            hdu.writeto(outfile, clobber=True)
 
     def _write_mef(self, key, extlist, outfile):
         """Write out regular multi-extension FITS data."""
