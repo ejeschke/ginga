@@ -315,7 +315,8 @@ class PolygonMixin(object):
     def contains_pts(self, pts):
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
-        x_arr, y_arr = np.asarray(pts, dtype=np.float).T
+        x_arr, y_arr = np.asarray(pts).T
+        x_arr, y_arr = x_arr.astype(np.float), y_arr.astype(np.float)
         xa, ya = x_arr, y_arr
 
         # promote input arrays dimension cardinality, if necessary
