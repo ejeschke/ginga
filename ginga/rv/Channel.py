@@ -107,9 +107,9 @@ class Channel(Callback.Callbacks):
             self.datasrc.remove(imname)
 
             # clear viewer if we are removing the currently displayed image
-            cur_image = self.fitsimage.get_image()
+            cur_image = self.viewer.get_image()
             if cur_image == image:
-                self.fitsimage.clear()
+                self.viewer.clear()
 
         self.fv.make_async_gui_callback('remove-image', self.name,
                                         info.name, info.path)
