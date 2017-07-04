@@ -100,7 +100,7 @@ class Channel(Callback.Callbacks):
 
     def remove_image(self, imname):
         info = self.image_index[imname]
-        self.remove_history(imname)
+        changed = self.remove_history(imname)
 
         if imname in self.datasrc:
             image = self.datasrc[imname]
@@ -113,6 +113,10 @@ class Channel(Callback.Callbacks):
 
         self.fv.make_async_gui_callback('remove-image', self.name,
                                         info.name, info.path)
+
+        if changed:
+            self.refresh_cursor_image()
+
         return info
 
     def get_image_names(self):
@@ -227,6 +231,10 @@ class Channel(Callback.Callbacks):
         self.fv.make_async_gui_callback('add-image-info', self, info)
 
     def refresh_cursor_image(self):
+        if self.cursor < 0:
+            self.viewer.clear()
+            return
+
         info = self.history[self.cursor]
         if self.datasrc.has_key(info.name):
             # image still in memory
@@ -285,8 +293,6 @@ class Channel(Callback.Callbacks):
         # image was newly added
         return True
 
-
-
     def add_history(self, imname, path, idx=None,
                     image_loader=None, image_future=None):
 
@@ -314,12 +320,24 @@ class Channel(Callback.Callbacks):
         return info
 
     def remove_history(self, imname):
+        changed = False
         if imname in self.image_index:
             info = self.image_index[imname]
             del self.image_index[imname]
+            i = self.history.index(info)
             self.history.remove(info)
 
+            # adjust cursor as necessary
+            if i < self.cursor:
+                self.cursor -= 1
+            elif i == self.cursor:
+                if i >= len(self.history):
+                    # loop
+                    self.cursor = min(0, len(self.history) - 1)
+                changed = True
+
             self.fv.make_async_gui_callback('remove-image-info', self, info)
+        return changed
 
     def get_current_image(self):
         return self.viewer.get_image()
