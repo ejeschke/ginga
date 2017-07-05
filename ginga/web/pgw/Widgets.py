@@ -101,6 +101,9 @@ class WidgetBase(Callback.Callbacks):
     def set_tooltip(self, text):
         self.tooltip = text
 
+    def get_enabled(self):
+        return self.enabled
+
     def set_enabled(self, tf):
         self.enabled = tf
         app = self.get_app()
@@ -1273,7 +1276,7 @@ class Toolbar(ContainerBase):
     def add_widget(self, child):
         self.add_ref(child)
 
-    def add_menu(self, text, menu=None):
+    def add_menu(self, text, menu=None, mtype='tool'):
         if menu is None:
             menu = Menu()
         child = self.add_action(text)

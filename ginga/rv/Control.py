@@ -1941,7 +1941,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.ds.remove_dialog(w)
         # save name for next add
         self._lastwsname = wsname
-        if rsp == 0:
+        if rsp != 1:
             return
 
         if self.has_channel(chname):
@@ -1957,7 +1957,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         wsname = names[idx]
         num = int(b.number.get_value())
         self.ds.remove_dialog(w)
-        if (rsp == 0) or (num <= 0):
+        if (rsp != 1) or (num <= 0):
             return
 
         for i in range(num):
@@ -1967,14 +1967,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def delete_channel_cb(self, w, rsp, chname):
         self.ds.remove_dialog(w)
-        if rsp == 0:
+        if rsp != 1:
             return
         self.delete_channel(chname)
         return True
 
     def delete_tab_cb(self, w, rsp, tabname):
         self.ds.remove_dialog(w)
-        if rsp == 0:
+        if rsp != 1:
             return
         self.ds.remove_tab(tabname)
         return True
@@ -2032,7 +2032,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         try:
             wsname = str(b.workspace_name.get_text())
             idx = b.workspace_type.get_index()
-            if rsp == 0:
+            if rsp != 1:
                 self.ds.remove_dialog(w)
                 return
 

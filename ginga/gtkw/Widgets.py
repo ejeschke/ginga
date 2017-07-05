@@ -58,6 +58,9 @@ class WidgetBase(Callback.Callbacks):
     def set_tooltip(self, text):
         self.widget.set_tooltip_text(text)
 
+    def get_enabled(self):
+        self.widget.get_sensitive()
+
     def set_enabled(self, tf):
         self.widget.set_sensitive(tf)
 
@@ -319,6 +322,8 @@ class Label(WidgetBase):
 
         evbox.connect("button_press_event", self._cb_redirect)
         self.enable_callback('activated')
+        evbox.connect("button_release_event", self._cb_redirect2)
+        self.enable_callback('released')
 
         self.label = label
         self.menu = menu
@@ -333,15 +338,21 @@ class Label(WidgetBase):
             self.widget = fr
 
     def _cb_redirect(self, widget, event):
-        # event.button, event.x, event.y
         if event.button == 1:
             self.make_callback('activated')
-            return True
+            return False
 
         elif event.button == 3 and self.menu is not None:
             menu_w = self.menu.get_widget()
-            return menu_w.popup(None, None, None,
-                                event.button, event.time)
+            if menu_w.get_sensitive():
+                return menu_w.popup(None, None, None,
+                                    event.button, event.time)
+        return False
+
+    def _cb_redirect2(self, widget, event):
+        if event.button == 1:
+            self.make_callback('released')
+            return True
         return False
 
     def get_text(self):
@@ -625,8 +636,9 @@ class Image(WidgetBase):
 
             elif event.button == 3 and self.menu is not None:
                 menu_w = self.menu.get_widget()
-                return menu_w.popup(None, None, None,
-                                    event.button, event.time)
+                if menu_w.get_sensitive():
+                    return menu_w.popup(None, None, None,
+                                        event.button, event.time)
 
     def _cb_redirect2(self, widget, event):
         if event.type == gtk.gdk.BUTTON_RELEASE:
@@ -1298,6 +1310,9 @@ class MDIWidget(ContainerBase):
         sw.set_vadjustment(self.mdi_w.get_vadjustment())
         sw.add(self.mdi_w)
 
+        for name in ('page-switch', 'page-close'):
+            self.enable_callback(name)
+
     def get_mode(self):
         return self.mode
 
@@ -1325,6 +1340,8 @@ class MDIWidget(ContainerBase):
             x, y = pos
             self.mdi_w.move_page(subwin, x, y)
 
+        subwin.add_callback('close', self._window_close, child)
+
     def _remove(self, childw, delete=False):
         self.mdi_w.remove(childw)
         if delete:
@@ -1351,6 +1368,9 @@ class MDIWidget(ContainerBase):
         child = self._native_to_child(nchild)
         child.extdata.mdi_pos = (x, y)
         return True
+
+    def _window_close(self, subwin, child):
+        return self.make_callback('page-close', child)
 
     def get_index(self):
         return self.mdi_w.get_current_page()
@@ -1556,10 +1576,16 @@ class Toolbar(ContainerBase):
         w = child.get_widget()
         self.widget.append_widget(w, None, None)
 
-    def add_menu(self, text, menu=None):
+    def add_menu(self, text, menu=None, mtype='tool'):
         if menu is None:
             menu = Menu()
-        child = self.add_action(text)
+        if mtype == 'tool':
+            child = self.add_action(text)
+        else:
+            child = Label(text, style='clickable', menu=menu)
+            self.add_widget(child)
+            child.add_callback('released', lambda w: menu.hide())
+
         child.add_callback('activated', lambda w: menu.popup())
         return menu
 
@@ -1644,7 +1670,8 @@ class Menu(ContainerBase):
             now = long(0)  # noqa
         else:
             now = int(0)
-        menu.popup(None, None, None, 0, now)
+        if menu.get_sensitive():
+            menu.popup(None, None, None, 0, now)
 
 
 class Menubar(ContainerBase):

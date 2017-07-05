@@ -62,6 +62,9 @@ class WidgetBase(Callback.Callbacks):
     def set_tooltip(self, text):
         self.widget.setToolTip(text)
 
+    def get_enabled(self):
+        self.widget.isEnabled()
+
     def set_enabled(self, tf):
         self.widget.setEnabled(tf)
 
@@ -283,6 +286,7 @@ class Label(WidgetBase):
 
         self.widget = lbl
         lbl.mousePressEvent = self._cb_redirect
+        lbl.mouseReleaseEvent = self._cb_redirect2
 
         if style == 'clickable':
             lbl.setSizePolicy(QtGui.QSizePolicy.Minimum,
@@ -302,11 +306,17 @@ class Label(WidgetBase):
         # lbl.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
         self.enable_callback('activated')
+        self.enable_callback('released')
 
     def _cb_redirect(self, event):
         buttons = event.buttons()
         if buttons & QtCore.Qt.LeftButton:
             self.make_callback('activated')
+
+    def _cb_redirect2(self, event):
+        buttons = event.buttons()
+        if buttons & QtCore.Qt.LeftButton:
+            self.make_callback('released')
 
     def get_text(self):
         return self.widget.text()
@@ -1472,6 +1482,7 @@ class Toolbar(ContainerBase):
         else:
             w.setOrientation(QtCore.Qt.Vertical)
         self.widget = w
+        self._menu = None
         self.widget.setStyleSheet(
             """
             QToolBar { padding: 0; spacing: 0; }\n
@@ -1503,10 +1514,16 @@ class Toolbar(ContainerBase):
         w = child.get_widget()
         self.widget.addWidget(w)
 
-    def add_menu(self, text, menu=None):
+    def add_menu(self, text, menu=None, mtype='tool'):
         if menu is None:
             menu = Menu()
-        child = self.add_action(text)
+        if mtype == 'tool':
+            child = self.add_action(text)
+        else:
+            child = Label(text, style='clickable', menu=menu)
+            self.add_widget(child)
+            child.add_callback('released', lambda w: menu.hide())
+
         child.add_callback('activated', lambda w: menu.popup())
         return menu
 
@@ -1573,10 +1590,12 @@ class Menu(ContainerBase):
     def popup(self, widget=None):
         if widget is not None:
             w = widget.get_widget()
-            # self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
-            self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
+            if w.isEnabled():
+                # self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
+                self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
         else:
-            self.widget.exec_(QCursor.pos())
+            if self.widget.isEnabled():
+                self.widget.exec_(QCursor.pos())
 
     def get_menu(self, name):
         return self.menus[name]

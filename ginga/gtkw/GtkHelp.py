@@ -1,4 +1,3 @@
-
 #
 # GtkHelp.py -- customized Gtk2 widgets
 #
@@ -265,6 +264,58 @@ class MultiDragDropTreeView(gtk.TreeView):
         self.defer_select=False
 
 
+class MDISubWindow(Callback.Callbacks):
+
+    def __init__(self, widget, label):
+        super(MDISubWindow, self).__init__()
+
+        self.widget = widget
+
+        vbox = gtk.VBox()
+        vbox.set_border_width(4)
+        hbox = gtk.HBox()
+        close = gtk.Button("x")
+        maxim = gtk.Button("^")
+        minim = gtk.Button("v")
+        hbox.pack_start(close, False, False, 0)
+        hbox.pack_start(minim, False, False, 0)
+        hbox.pack_start(maxim, False, False, 0)
+
+        evbox = gtk.EventBox()
+        evbox.add(label)
+        evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("gray90"))
+        self.label = evbox
+        self.evbox = evbox
+        hbox.pack_start(evbox, True, True, 2)
+
+        vbox.pack_start(hbox, False, False, 0)
+        vbox.pack_start(widget, True, True, 4)
+
+        # what size does the widget want to be?
+        self.x, self.y, wd, ht = widget.get_allocation()
+        ## wd = widget.get_preferred_width()
+        ## ht = widget.get_preferred_height()
+        ## wd, ht = widget.get_size_request()
+        self.width, self.height = max(wd, 300), max(ht, 300)
+
+        frame = gtk.EventBox()
+        frame.set_size_request(self.width, self.height)
+        frame.props.visible_window = True
+        frame.set_border_width(0)
+        frame.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("gray70"))
+        self.frame = frame
+
+        frame.add(vbox)
+        frame.show_all()
+
+        for name in ('close', 'maximize', 'minimize'):
+            self.enable_callback(name)
+
+        maxim.connect('clicked', lambda *args: self.make_callback('maximize'))
+        minim.connect('clicked', lambda *args: self.make_callback('minimize'))
+        close.connect('clicked', lambda *args: self.make_callback('close'))
+
+
 class MDIWidget(gtk.Layout):
     """
     Multiple Document Interface type widget for Gtk.
@@ -301,57 +352,20 @@ class MDIWidget(gtk.Layout):
         self.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("gray50"))
 
     def append_page(self, widget, label):
-        vbox = gtk.VBox()
-        vbox.set_border_width(4)
-        hbox = gtk.HBox()
-        close = gtk.Button("x")
-        maxim = gtk.Button("^")
-        minim = gtk.Button("v")
-        hbox.pack_start(close, False, False, 0)
-        hbox.pack_start(minim, False, False, 0)
-        hbox.pack_start(maxim, False, False, 0)
 
-        evbox = gtk.EventBox()
-        evbox.add(label)
-        evbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("gray90"))
-        hbox.pack_start(evbox, True, True, 2)
-
-        vbox.pack_start(hbox, fill=False, expand=False, padding=0)
-        vbox.pack_start(widget, fill=True, expand=True, padding=4)
-
-        # what size does the widget want to be?
-        x, y, wd, ht = widget.get_allocation()
-        ## wd = widget.get_preferred_width()
-        ## ht = widget.get_preferred_height()
-        ## wd, ht = widget.get_size_request()
-        wd, ht = max(wd, 300), max(ht, 300)
-
-        frame = gtk.EventBox()
-        frame.set_size_request(wd, ht)
-        frame.props.visible_window = True
-        frame.set_border_width(0)
-        frame.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("gray70"))
-
-        frame.add(vbox)
-        frame.show_all()
-
-        pos = self.get_widget_position(frame)
-        if pos is None:
-            x, y = 0, 0
-        else:
-            x, y = pos
-        wd, ht = self.get_widget_size(frame)
-        subwin = Bunch.Bunch(widget=widget, label=evbox, frame=frame,
-                             x=x, y=y, width=wd, height=ht)
+        subwin = MDISubWindow(widget, label)
         self.children.append(subwin)
 
-        evbox.connect("button_press_event", self.select_child_cb, subwin)
-        frame.connect("button_press_event", self.start_resize_cb, subwin)
-        maxim.connect('clicked', lambda *args: self.maximize_page(subwin))
-        minim.connect('clicked', lambda *args: self.minimize_page(subwin))
-        close.connect('clicked', lambda *args: self.close_page(subwin))
+        subwin.evbox.connect("button_press_event", self.select_child_cb, subwin)
+        subwin.frame.connect("button_press_event", self.start_resize_cb, subwin)
+        subwin.add_callback('maximize', lambda *args: self.maximize_page(subwin))
+        subwin.add_callback('minimize', lambda *args: self.minimize_page(subwin))
 
-        self.put(frame, self.cascade_offset, self.cascade_offset)
+        self.put(subwin.frame, self.cascade_offset, self.cascade_offset)
+
+        self.update_subwin_position(subwin)
+        self.update_subwin_size(subwin)
+
         return subwin
 
     def set_tab_reorderable(self, w, tf):
@@ -446,6 +460,8 @@ class MDIWidget(gtk.Layout):
         return True
 
     def start_resize_cb(self, widget, event, subwin):
+        self.update_subwin_size(subwin)
+
         ex, ey = event.x_root, event.y_root
         x, y = self.get_widget_position(subwin.frame)
         subwin.x, subwin.y = x, y
