@@ -331,6 +331,7 @@ class MDIWidget(gtk.Layout):
         self.kbdmouse_mask = 0
         self.cascade_offset = 50
         self.minimized_width = 150
+        self.delta_px = 50
 
         self.connect("motion_notify_event", self.motion_notify_event)
         self.connect("button_press_event", self.button_press_event)
@@ -444,7 +445,7 @@ class MDIWidget(gtk.Layout):
         self.put(frame, subwin.x, subwin.y)
 
     def select_child_cb(self, layout, event, subwin):
-        ex, ey = event.x_root, event.y_root
+        x_root, y_root = event.x_root, event.y_root
 
         x, y = self.get_widget_position(subwin.frame)
         subwin.x, subwin.y = x, y
@@ -455,29 +456,110 @@ class MDIWidget(gtk.Layout):
             self.set_current_page(idx)
 
         self.selected_child = Bunch.Bunch(subwin=subwin, action='move',
-                                          x_origin=x, y_origin=y, dx=ex, dy=ey)
+                                          x_origin=x, y_origin=y,
+                                          x_root=x_root, y_root=y_root)
 
         return True
 
     def start_resize_cb(self, widget, event, subwin):
         self.update_subwin_size(subwin)
 
-        ex, ey = event.x_root, event.y_root
-        x, y = self.get_widget_position(subwin.frame)
-        subwin.x, subwin.y = x, y
+        x_root, y_root = event.x_root, event.y_root
+        x, y = widget.translate_coordinates(self, int(event.x), int(event.y))
+
+        rect = subwin.frame.get_allocation()
+        x1, y1, wd, ht = rect.x, rect.y, rect.width, rect.height
+        x2, y2 = x1 + wd, y1 + ht
+        subwin.x, subwin.y = x1, y1
+        subwin.width, subwin.height = wd, ht
+
+        updates = set([])
+        if abs(x - x2) < self.delta_px:
+            # right side
+            if abs(y - y2) < self.delta_px:
+                # lower right corner
+                origin = 'lr'
+                updates = set(['w', 'h'])
+            elif abs(y - y1) < self.delta_px:
+                origin = 'ur'
+                updates = set(['w', 'h', 'y'])
+            else:
+                origin = 'r'
+                updates = set(['w'])
+        elif abs(x - x1) < self.delta_px:
+            # left side
+            if abs(y - y2) < self.delta_px:
+                # lower left corner
+                origin = 'll'
+                updates = set(['w', 'h', 'x'])
+            elif abs(y - y1) < self.delta_px:
+                origin = 'ul'
+                updates = set(['w', 'h', 'x', 'y'])
+            else:
+                origin = 'l'
+                updates = set(['w', 'x'])
+        elif abs(y - y2) < self.delta_px:
+            # bottom
+            origin = 'b'
+            updates = set(['h'])
+        else:
+            origin = 't'
+            updates = set(['h', 'y'])
+
         self.selected_child = Bunch.Bunch(subwin=subwin, action='resize',
-                                          x_origin=x, y_origin=y, dx=ex, dy=ey)
+                                          x_origin=x1, y_origin=y1,
+                                          wd=wd, ht=ht,
+                                          x_root=x_root, y_root=y_root,
+                                          origin=origin, updates=updates)
         return True
 
     def button_press_event(self, widget, event):
-        x = event.x; y = event.y
+        x, y = event.x, event.y
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         return True
 
+    def _resize(self, bnch, x_root, y_root):
+        subwin = bnch.subwin
+        updates = bnch.updates
+
+        dx, dy = x_root - bnch.x_root, y_root - bnch.y_root
+
+        wd = bnch.wd
+        if 'w' in updates:
+            wd = int(wd + dx)
+        ht = bnch.ht
+        if 'h' in updates:
+            ht = int(ht + dy)
+
+        if 'x' in updates or 'y' in updates:
+            x = bnch.x_origin
+            if 'x' in updates:
+                x = int(x + dx)
+                if x < bnch.x_origin:
+                    wd = int(bnch.wd + abs(dx))
+                else:
+                    wd = int(bnch.wd + -abs(dx))
+
+            y = bnch.y_origin
+            if 'y' in updates:
+                y = int(y + dy)
+                if y < bnch.y_origin:
+                    ht = int(bnch.ht + abs(dy))
+                else:
+                    ht = int(bnch.ht + -abs(dy))
+
+            # this works better if it is not self.move_page()
+            self.move(subwin.frame, x, y)
+
+        if 'w' in updates or 'h' in updates:
+            # this works better if it is not self.resize_page()
+            subwin.frame.set_size_request(wd, ht)
+
+
     def button_release_event(self, widget, event):
-        x = event.x_root; y = event.y_root
+        x_root, y_root = event.x_root, event.y_root
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
@@ -485,21 +567,27 @@ class MDIWidget(gtk.Layout):
             bnch = self.selected_child
             subwin = bnch.subwin
             if bnch.action == 'move':
-                x = int(subwin.x + (x - bnch.dx))
-                y = int(subwin.y + (y - bnch.dy))
+                x = int(subwin.x + (x_root - bnch.x_root))
+                y = int(subwin.y + (y_root - bnch.y_root))
                 self.move_page(subwin, x, y)
 
             elif bnch.action == 'resize':
-                wd = int(subwin.width + (x - bnch.dx))
-                ht = int(subwin.height + (y - bnch.dy))
-                self.resize_page(subwin, wd, ht)
+                self._resize(bnch, x_root, y_root)
+
+                self.update_subwin_position(subwin)
+                # NOTE: necessary for wrapped widget to remember position
+                self.move_page(subwin, subwin.x, subwin.y)
+
+                self.update_subwin_size(subwin)
+                # NOTE: necessary for wrapped widget to remember size
+                self.resize_page(subwin, subwin.width, subwin.height)
 
             self.selected_child = None
         return True
 
     def motion_notify_event(self, widget, event):
         button = self.kbdmouse_mask
-        x, y, state = event.x_root, event.y_root, event.state
+        x_root, y_root, state = event.x_root, event.y_root, event.state
 
         if state & gtk.gdk.BUTTON1_MASK:
             button |= 0x1
@@ -512,16 +600,13 @@ class MDIWidget(gtk.Layout):
             bnch = self.selected_child
             subwin = bnch.subwin
             if bnch.action == 'move':
-                x = int(subwin.x + (x - bnch.dx))
-                y = int(subwin.y + (y - bnch.dy))
+                x = int(subwin.x + (x_root - bnch.x_root))
+                y = int(subwin.y + (y_root - bnch.y_root))
                 # this works better if it is not self.move_page()
                 self.move(subwin.frame, x, y)
 
             elif bnch.action == 'resize':
-                wd = int(subwin.width + (x - bnch.dx))
-                ht = int(subwin.height + (y - bnch.dy))
-                # this works better if it is not self.resize_page()
-                subwin.frame.set_size_request(wd, ht)
+                self._resize(bnch, x_root, y_root)
 
         return True
 
