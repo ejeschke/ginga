@@ -13,7 +13,7 @@ class GingaViewerWidget(Widgets.Canvas):
     """
 
     def __init__(self, viewer=None, width=600, height=600):
-        super(GingaViewerWidget, self).__init__(width=600, height=600)
+        super(GingaViewerWidget, self).__init__(width=width, height=height)
 
         if viewer is None:
             viewer = CanvasView(logger)
