@@ -636,7 +636,7 @@ class Desktop(Callback.Callbacks):
                 layout = self.read_layout_conf(lo_file)
 
             except Exception as e:
-                self.logger.error("Error reading saved layout: %s" % (str(e)))
+                self.logger.info("Error reading saved layout: %s" % (str(e)))
                 layout = alt_layout
 
         return self.make_desktop(layout, widget_dict=widget_dict)

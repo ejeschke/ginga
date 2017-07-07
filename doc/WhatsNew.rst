@@ -4,8 +4,19 @@ What's New in Ginga?
 
 Ver 2.6.5.dev
 =============
-- Vectorized all steps of coordinate transforms
-- Set minimum astropy version to 1.X
+- Coordinate transforms refactored for speed and code clarity
+- Some canvas shapes refactored for better code reuse
+- Allow max and min scale limits to be disabled (by None)
+- Fixed a bug that prevented the reference viewer from resizing
+  correctly with Qt back end
+- Refactored WCS wrapper module for code clarity
+- Set minimum astropy version requirement to 1.X
+- Fixed a bug in NAXIS selection GUI (MultiDim plugin)
+- Fixed MDI window resizing with Gtk back ends
+- Fixed an error where zoom 100% button did not correctly zoom to 1:1 scale
+- Several fixes for astropy 2.0 compatibility
+- Fixed a bug in the FBrowser plugin when channel displaying a table
+    and attempting to load a new file
 
 Ver 2.6.4 (2017-06-07)
 ======================
