@@ -394,21 +394,25 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         pan_x, pan_y = self.fitsimage.get_pan()
         coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
+        pan_coord = self.t_.get('pan_coord', "data")
+        if pan_coord == 'data':
+            pan_x, pan_y = pan_x + coord_offset, pan_y + coord_offset
         b.pan_x.set_tooltip("Coordinate for the pan position in X axis")
-        b.pan_x.set_text(str(pan_x + coord_offset))
+        b.pan_x.set_text(str(pan_x))
         #b.pan_x.add_callback('activated', self.set_pan_cb)
         b.pan_y.set_tooltip("Coordinate for the pan position in Y axis")
-        b.pan_y.set_text(str(pan_y + coord_offset))
+        b.pan_y.set_text(str(pan_y))
         #b.pan_y.add_callback('activated', self.set_pan_cb)
         b.apply_pan.add_callback('activated', self.set_pan_cb)
         b.apply_pan.set_tooltip("Set the pan position")
         b.wcs_sexagesimal.set_tooltip("Display pan position in sexagesimal")
+        b.wcs_sexagesimal.add_callback('activated',
+                                       lambda w, tf: self._update_pan_coords())
 
         index = 0
         for name in self.pancoord_options:
             b.pan_coord.append_text(name)
             index += 1
-        pan_coord = self.t_.get('pan_coord', "data")
         index = self.pancoord_options.index(pan_coord)
         b.pan_coord.set_index(index)
         b.pan_coord.set_tooltip("Pan coordinates type")

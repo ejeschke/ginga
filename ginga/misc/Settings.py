@@ -126,7 +126,12 @@ class SettingGroup(object):
             if key not in self.group:
                 self.setdefault(key, value)
             else:
-                self.group[key].set(value, callback=callback)
+                self.group[key].set(value, callback=False)
+
+        if callback:
+            # make callbacks only after all items are set in the group
+            for key, value in d.items():
+                self.group[key].make_callback('set', value)
 
     def set(self, callback=True, **kwdargs):
         self.set_dict(kwdargs, callback=callback)

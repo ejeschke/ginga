@@ -1474,7 +1474,7 @@ class ImageViewBase(Callback.Callbacks):
 
         if (whence <= 0.0) or (self._rgbarr is None):
             # calculate dimensions of window RGB backing image
-            pan_x, pan_y = self.get_pan()
+            pan_x, pan_y = self.get_pan(coord='data')[:2]
             scale_x, scale_y = self.get_scale_xy()
             wd, ht = self._calc_bg_dimensions(scale_x, scale_y,
                                               pan_x, pan_y,
@@ -1515,16 +1515,18 @@ class ImageViewBase(Callback.Callbacks):
 
     def _calc_bg_dimensions(self, scale_x, scale_y,
                             pan_x, pan_y, win_wd, win_ht):
+        """
+        Parameters
+        ----------
+        scale_x, scale_y : float
+            desired scale of viewer in each axis.
 
-        coord = self.t_.get('pan_coord', 'data')
-        if coord == 'wcs':
-            # <-- pan_x, pan_y are in WCS
-            image = self.get_image()
-            if image is None:
-                # TODO:
-                pan_x, pan_y = 0.0, 0.0
-            else:
-                pan_x, pan_y = image.radectopix(pan_x, pan_y)
+        pan_x, pan_y : float
+            pan position in data coordinates.
+
+        win_wd, win_ht : int
+            window dimensions in pixels
+        """
 
         # Sanity check on the scale
         sx = float(win_wd) / scale_x
@@ -1579,7 +1581,7 @@ class ImageViewBase(Callback.Callbacks):
         the viewers bounding box based on changes to pan or scale.
         """
         scale_x, scale_y = self.get_scale_xy()
-        pan_x, pan_y = self.get_pan()
+        pan_x, pan_y = self.get_pan(coord='data')[:2]
         win_wd, win_ht = self.get_window_size()
         # NOTE: need to set at least a minimum 1-pixel dimension on
         # the window or we get a scale calculation exception. See github
