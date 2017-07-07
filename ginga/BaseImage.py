@@ -393,7 +393,7 @@ class BaseImage(ViewerObjectBase):
         data = self._slice(view)
 
         # mask non-containing members
-        mdata = numpy.ma.array(data, mask=numpy.logical_not(mask))
+        mdata = np.ma.array(data, mask=np.logical_not(mask))
         return mdata
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
