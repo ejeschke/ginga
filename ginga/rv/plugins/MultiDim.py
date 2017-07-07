@@ -61,8 +61,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # For animation feature
         self.play_image = None
         self.play_axis = 2
-        self.play_idx = 1
-        self.play_max = 1
+        self.play_idx = 0
+        self.play_max = 0
         self.play_int_sec = 0.1
         self.play_min_sec = 1.0 / 30
         self.play_last_time = 0.0
@@ -210,11 +210,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.logger.error("Error loading HDU #%d: %s" % (
                 idx+1, str(e)))
 
-    def set_naxis_cb(self, w, idx, n):
-        # idx = int(w.get_value()) - 1
-        self.set_naxis(idx, n)
-        # schedule a redraw
-        self.fitsimage.redraw(whence=0)
+    def set_naxis_cb(self, widget, idx, n):
+        play_idx = int(idx) - 1
+        self.set_naxis(play_idx, n)
 
     def build_naxis(self, dims, image):
         imname = image.get('name')
@@ -233,23 +231,32 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 captions.append((title+':', 'label', title, 'llabel'))
             else:
                 captions.append((title+':', 'label', title, 'llabel',
-                                # "Choose %s" % (title), 'spinbutton'))
                                  "Choose %s" % (title), 'hscale'))
-
-        if len(dims) > 3:  # only add radiobuttons if we have more than 3 dim
-            radiobuttons = []
-            for i in range(2, len(dims)):
-                title = 'AXIS%d' % (i+1)
-                radiobuttons.extend((title, 'radiobutton'))
-            captions.append(radiobuttons)
 
         # Remove old naxis widgets
         for key in self.w:
             if key.startswith('choose_'):
                 self.w[key] = None
 
+        hbox = Widgets.HBox()
+
+        if len(dims) > 3:  # only add radiobuttons if we have more than 3 dim
+            group = None
+            for i in range(2, len(dims)):
+                title = 'AXIS%d' % (i+1)
+                btn = Widgets.RadioButton(title, group=group)
+                if group is None:
+                    group = btn
+                hbox.add_widget(btn)
+                self.w[title.lower()] = btn
+
         w, b = Widgets.build_info(captions, orientation=self.orientation)
         self.w.update(b)
+
+        vbox = Widgets.VBox()
+        vbox.add_widget(w)
+        vbox.add_widget(hbox)
+
         for n in range(0, len(dims)):
             key = 'naxis%d' % (n+1)
             lbl = b[key]
@@ -271,13 +278,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 # slider.set_digits(0)
                 # slider.set_wrap(True)
                 slider.add_callback('value-changed', self.set_naxis_cb, n)
+
             # Disable playback if there is only 1 slice in the higher dimension
             if n > 2 and dims[n] == 1:
-                radiobutton = b['axis%d' % (n+1)]
+                radiobutton = self.w['axis%d' % (n+1)]
                 radiobutton.set_enabled(False)
 
         # Add vbox of naxis controls to gui
-        self.naxisfr.set_widget(w)
+        self.naxisfr.set_widget(vbox)
 
         # for storing play_idx for each dim of image. used for going back to
         # the idx where you left off.
@@ -291,15 +299,18 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 # widget callable needs (widget, value) args
                 def play_axis_change():
 
-                    self.play_indices[self.play_axis - 2] = (self.play_idx - 1) % dims[self.play_axis]  # noqa
+                    self.play_indices[self.play_axis - 2] = self.play_idx % dims[self.play_axis]  # noqa
 
                     self.play_axis = n
                     self.logger.debug("play_axis changed to %d" % n)
 
                     if self.play_axis < len(dims):
-                        self.play_max = dims[self.play_axis]
+                        self.play_max = dims[self.play_axis] - 1
 
                     self.play_idx = self.play_indices[n - 2]
+
+                    self.fv.gui_do(self.set_naxis, self.play_idx,
+                                   self.play_axis)
 
                 def check_if_we_need_change(w, v):
                     if self.play_axis is not n:
@@ -317,15 +328,15 @@ class MultiDim(GingaPlugin.LocalPlugin):
         is_dc = len(dims) > 2
         self.play_axis = 2
         if self.play_axis < len(dims):
-            self.play_max = dims[self.play_axis]
+            self.play_max = dims[self.play_axis] - 1
         if is_dc:
-            self.play_idx = self.naxispath[self.play_axis - 2] + 1
+            self.play_idx = self.naxispath[self.play_axis - 2]
         else:
-            self.play_idx = 1
+            self.play_idx = 0
         if self.play_indices:
             text = [i + 1 for i in self.naxispath]
         else:
-            text = self.play_idx
+            text = self.play_idx + 1
         self.w.slice.set_text(str(text))
 
         # Enable or disable NAXIS animation controls
@@ -414,8 +425,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.fv.show_error(errmsg, raisetab=True)
 
     def set_naxis(self, idx, n):
+        """Change the slice shown in the channel viewer.
+        `idx` is the slice index (0-based); `n` is the axis (0-based)
+        """
         self.play_idx = idx
-        idx = idx - 1
         self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
 
         image = self.fitsimage.get_image()
@@ -433,6 +446,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
 
             if self.play_indices:
+                # save play index
                 self.play_indices[m] = idx
                 text = [i + 1 for i in self.naxispath]
                 if slidername in self.w:
@@ -442,6 +456,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 if slidername in self.w:
                     self.w[slidername].set_value(text)
             self.w.slice.set_text(str(text))
+
+            # schedule a redraw
+            self.fitsimage.redraw(whence=0)
 
         except Exception as e:
             errmsg = "Error loading NAXIS%d slice %d: %s" % (
@@ -497,12 +514,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.play_image = None
 
     def first_slice(self):
-        play_idx = 1
-        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+        play_idx = 0
+        self.fv.gui_do(self.set_naxis, play_idx, self.play_axis)
 
     def last_slice(self):
         play_idx = self.play_max
-        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+        self.fv.gui_do(self.set_naxis, play_idx, self.play_axis)
 
     def prev_slice(self):
         if np.isscalar(self.play_idx):
@@ -510,9 +527,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         else:
             m = self.play_axis - 2
             play_idx = self.play_idx[m] - 1
-        if play_idx < 1:
+        if play_idx < 0:
             play_idx = self.play_max
-        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+        self.fv.gui_do(self.set_naxis, play_idx, self.play_axis)
 
     def next_slice(self):
         if np.isscalar(self.play_idx):
@@ -521,8 +538,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             m = self.play_axis - 2
             play_idx = self.play_idx[m] + 1
         if play_idx > self.play_max:
-            play_idx = 1
-        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+            play_idx = 0
+        self.fv.gui_do(self.set_naxis, play_idx, self.play_axis)
 
     def play_int_cb(self, w, val):
         # force at least play_min_sec, otherwise playback is untenable
@@ -636,15 +653,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         end = int(self.w.end_slice.get_text())
         if not start or not end:
             return
-        elif start < 0 or end > self.play_max:
+        elif start < 1 or end > (self.play_max + 1):
             self.fv.show_status("Wrong slice index")
             return
         elif start > end:
             self.fv.show_status("Wrong slice order")
             return
 
-        if start == 1:
-            start = 0
+        start, end = start - 1, end - 1
 
         w = Widgets.SaveDialog(title='Save Movie',
                                selectedfilter='*.avi')
