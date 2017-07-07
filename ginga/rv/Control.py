@@ -690,35 +690,40 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Zoom the view in one zoom step.
         """
         viewer = self.getfocus_viewer()
-        viewer.zoom_in()
+        if hasattr(viewer, 'zoom_in'):
+            viewer.zoom_in()
         return True
 
     def zoom_out(self):
         """Zoom the view out one zoom step.
         """
         viewer = self.getfocus_viewer()
-        viewer.zoom_out()
+        if hasattr(viewer, 'zoom_out'):
+            viewer.zoom_out()
         return True
 
     def zoom_1_to_1(self):
         """Zoom the view to a 1 to 1 pixel ratio (100 %%).
         """
         viewer = self.getfocus_viewer()
-        viewer.scale_to(1.0, 1.0)
+        if hasattr(viewer, 'scale_to'):
+            viewer.scale_to(1.0, 1.0)
         return True
 
     def zoom_fit(self):
         """Zoom the view to fit the image entirely in the window.
         """
         viewer = self.getfocus_viewer()
-        viewer.zoom_fit()
+        if hasattr(viewer, 'zoom_fit'):
+            viewer.zoom_fit()
         return True
 
     def auto_levels(self):
         """Perform an auto cut levels on the image.
         """
         viewer = self.getfocus_viewer()
-        viewer.auto_levels()
+        if hasattr(viewer, 'auto_levels'):
+            viewer.auto_levels()
 
     def prev_img(self, loop=True):
         """Go to the previous image in the channel.
@@ -2309,7 +2314,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         return True
 
     def dragdrop(self, viewer, urls):
-        """Called when a drop operation is performed on our main window.
+        """Called when a drop operation is performed on a channel viewer.
         We are called back with a URL and we attempt to load it if it
         names a file.
         """

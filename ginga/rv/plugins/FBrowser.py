@@ -161,8 +161,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
         if self.fitsimage is not None:
             self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
         else:
-            chviewer = self.fv.getfocus_viewer()
-            self.fv.gui_do(chviewer.make_callback, 'drag-drop', paths)
+            channel = self.fv.get_channel_info()
+            if channel is None:
+                return
+            self.fv.gui_do(self.fv.dragdrop, channel.fitsimage, paths)
 
     def load_cb(self):
         # Load from text box
