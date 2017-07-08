@@ -1493,9 +1493,10 @@ class ImageViewBase(Callback.Callbacks):
 
             # convert to output ICC profile, if one is specified
             output_profile = self.t_.get('icc_output_profile', None)
-            if output_profile is not None:
+            working_profile = rgb_cms.working_profile
+            if (working_profile is not None) and (output_profile is not None):
                 self.convert_via_profile(self._rgbarr2, order,
-                                         'working', output_profile)
+                                         working_profile, output_profile)
 
         if (whence <= 2.5) or (self._rgbobj is None):
             rotimg = self._rgbarr2
@@ -1721,7 +1722,8 @@ class ImageViewBase(Callback.Callbacks):
                                                  to_intent=to_intent,
                                                  proof_name=proofprof_name,
                                                  proof_intent=proof_intent,
-                                                 use_black_pt=use_black_pt)
+                                                 use_black_pt=use_black_pt,
+                                                 logger=self.logger)
             ri, gi, bi = rgbobj.get_order_indexes('RGB')
 
             out = data_np
@@ -1733,7 +1735,7 @@ class ImageViewBase(Callback.Callbacks):
                 inprof_name, outprof_name))
 
         except Exception as e:
-            self.logger.warn("Error converting output from working profile: %s" % (str(e)))
+            self.logger.warning("Error converting output from working profile: %s" % (str(e)))
             # TODO: maybe should have a traceback here
             self.logger.info("Output left unprofiled")
 
@@ -1767,7 +1769,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         if center is not None:
-            self.logger.warn("`center` keyword is ignored and will be deprecated")
+            self.logger.warning("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((win_x, win_y)).T
         return self.tform['data_to_native'].from_(arr_pts).T[:2]
@@ -1788,7 +1790,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         if center is not None:
-            self.logger.warn("`center` keyword is ignored and will be deprecated")
+            self.logger.warning("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((off_x, off_y)).T
         return self.tform['data_to_cartesian'].from_(arr_pts).T[:2]
@@ -1805,7 +1807,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         if center is not None:
-            self.logger.warn("`center` keyword is ignored and will be deprecated")
+            self.logger.warning("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((data_x, data_y)).T
         return self.tform['data_to_native'].to_(arr_pts).T[:2]
@@ -1815,7 +1817,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         if center is not None:
-            self.logger.warn("`center` keyword is ignored and will be deprecated")
+            self.logger.warning("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((data_x, data_y)).T
         return self.tform['data_to_cartesian'].to_(arr_pts).T[:2]
@@ -1847,7 +1849,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         if center is not None:
-            self.logger.warn("`center` keyword is ignored and will be deprecated")
+            self.logger.warning("`center` keyword is ignored and will be deprecated")
 
         # data->canvas space coordinate conversion
         arr_pts = np.asarray((data_x, data_y)).T
@@ -1996,7 +1998,7 @@ class ImageViewBase(Callback.Callbacks):
         maxscale = max(scale_x, scale_y)
         max_lim = self.t_.get('scale_max', None)
         if (max_lim is not None) and (maxscale > max_lim):
-            self.logger.warn("Scale (%.2f) exceeds max scale limit (%.2f)" % (
+            self.logger.warning("Scale (%.2f) exceeds max scale limit (%.2f)" % (
                 maxscale, self.t_['scale_max']))
             # TODO: exception?
             return
@@ -2004,7 +2006,7 @@ class ImageViewBase(Callback.Callbacks):
         minscale = min(scale_x, scale_y)
         min_lim = self.t_.get('scale_min', None)
         if (min_lim is not None) and (minscale < min_lim):
-            self.logger.warn("Scale (%.2f) exceeds min scale limit (%.2f)" % (
+            self.logger.warning("Scale (%.2f) exceeds min scale limit (%.2f)" % (
                 minscale, self.t_['scale_min']))
             # TODO: exception?
             return

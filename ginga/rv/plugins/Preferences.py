@@ -557,9 +557,12 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         exp = Widgets.Expander("ICC Profiles")
 
-        captions = (('Output ICC profile:', 'label', 'Output ICC profile', 'combobox'),
-                    ('Rendering intent:', 'label', 'Rendering intent', 'combobox'),
-                    ('Proof ICC profile:', 'label', 'Proof ICC profile', 'combobox'),
+        captions = (('Output ICC profile:', 'label', 'Output ICC profile',
+                     'combobox'),
+                    ('Rendering intent:', 'label', 'Rendering intent',
+                     'combobox'),
+                    ('Proof ICC profile:', 'label', 'Proof ICC profile',
+                     'combobox'),
                     ('Proof intent:', 'label', 'Proof intent', 'combobox'),
                     ('__x', 'spacer', 'Black point compensation', 'checkbutton'),
                     )

@@ -21,7 +21,7 @@ from ginga.misc.Bunch import Bunch
 from ginga.misc import Task, ModuleManager, Settings, log
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
-from ginga.util import paths
+from ginga.util import paths, rgb_cms
 
 # Catch warnings
 logging.captureWarnings(True)
@@ -318,6 +318,7 @@ class ReferenceViewer(object):
                               widgetSet='choose',
                               WCSpkg='choose', FITSpkg='choose',
                               recursion_limit=2000,
+                              icc_working_profile=None,
                               save_layout=False)
 
         # default of 1000 is a little too small
@@ -385,6 +386,10 @@ class ReferenceViewer(object):
             except Exception as e:
                 logger.warning(
                     "failed to load matplotlib colormaps: %s" % (str(e)))
+
+        # Set a working RGB ICC profile if user has one
+        working_profile = settings.get('icc_working_profile', None)
+        rgb_cms.working_profile = working_profile
 
         # User wants to customize the WCS package?
         if options.wcspkg:

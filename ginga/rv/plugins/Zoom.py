@@ -180,11 +180,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         vbox2.add_widget(spacer, stretch=1)
 
         vpaned.add_widget(vbox2)
-        #vpaned.add_widget(Widgets.Label(''))
 
         vbox.add_widget(vpaned, stretch=1)
-
-        #vbox.add_widget(Widgets.Label(''), stretch=1)
 
         container.add_widget(sw, stretch=1)
 

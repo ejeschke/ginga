@@ -24,7 +24,7 @@ except ImportError:
     pass
 
 from ginga.util import paths
-
+from ginga.misc import Bunch
 
 basedir = paths.ginga_home
 
@@ -32,6 +32,9 @@ basedir = paths.ginga_home
 profile = {}
 rendering_intent = 'perceptual'
 intents = dict(perceptual=0)
+
+# The working profile, if there is one
+working_profile = None
 
 # Holds transforms
 icc_transform = {}
@@ -52,15 +55,17 @@ class ColorManager(object):
         # If we have a working color profile then handle any embedded
         # profile or color space information, if possible
         if not have_cms:
-            self.logger.debug("No CMS is installed; leaving image unprofiled.")
+            self.logger.warning("No CMS is installed; leaving image unprofiled.")
             return image
 
-        if not have_profile('working'):
-            self.logger.debug("No working profile defined; leaving image unprofiled.")
+        if not have_profile(working_profile):
+            self.logger.warning("No working profile defined; leaving image unprofiled.")
             return image
 
-        if not os.path.exists(profile['working']):
-            self.logger.debug("Working profile %s not found; leaving image unprofiled." % (profile['working']))
+        out_profile = profile[working_profile].name
+
+        if not os.path.exists(profile[out_profile].path):
+            self.logger.warning("Working profile '%s' (%s) not found; leaving image unprofiled." % (out_profile, profile[out_profile].path))
             return image
 
         if intent is None:
@@ -75,8 +80,8 @@ class ColorManager(object):
 
                 # Write out embedded profile (if needed)
                 prof_md5 = hashlib.md5(buf_profile).hexdigest()
-                in_profile = "/tmp/_image_%d_%s.icc" % (
-                    os.getpid(), prof_md5)
+                in_profile = os.path.join("/tmp", "_image_%d_%s.icc" % (
+                    os.getpid(), prof_md5))
                 if not os.path.exists(in_profile):
                     with open(in_profile, 'wb') as icc_f:
                         icc_f.write(buf_profile)
@@ -101,22 +106,23 @@ class ColorManager(object):
                     self.logger.debug("no color space metadata, assuming this is an sRGB image")
 
             # if we have a valid profile, try the conversion
-            tr_key = (in_profile, 'working', intent)
+            tr_key = get_transform_key(in_profile, out_profile, intent,
+                                       None, None, 0)
             if tr_key in icc_transform:
-                # We have am in-core transform already for this (faster)
+                # We have an in-core transform already for this (faster)
                 image = convert_profile_pil_transform(image,
                                                       icc_transform[tr_key],
                                                       inPlace=True)
             else:
                 # Convert using profiles on disk (slower)
                 if in_profile in profile:
-                    in_profile = profile[in_profile]
+                    in_profile = profile[in_profile].path
                 image = convert_profile_pil(image, in_profile,
-                                            profile['working'],
+                                            profile[out_profile].path,
                                             intent)
 
             self.logger.info("converted from profile (%s) to profile (%s)" % (
-                in_profile, profile['working']))
+                in_profile, profile[out_profile].name))
 
         except Exception as e:
             self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
@@ -180,10 +186,17 @@ def get_transform(from_name, to_name, to_intent='perceptual',
     global icc_transform
 
     flags = 0
-    if not (proof_name is None):
-        flags |= ImageCms.SOFTPROOFING
+    if proof_name is not None:
+        if hasattr(ImageCms, 'FLAGS'):
+            # supporting multiple versions of lcms...sigh..
+            flags |= ImageCms.FLAGS['SOFTPROOFING']
+        else:
+            flags |= ImageCms.SOFTPROOFING
     if use_black_pt:
-        flags |= ImageCms.BLACKPOINTCOMPENSATION
+        if hasattr(ImageCms, 'FLAGS'):
+            flags |= ImageCms.FLAGS['BLACKPOINTCOMPENSATION']
+        else:
+            flags |= ImageCms.BLACKPOINTCOMPENSATION
 
     key = get_transform_key(from_name, to_name, to_intent, proof_name,
                             proof_intent, flags)
@@ -196,17 +209,17 @@ def get_transform(from_name, to_name, to_intent='perceptual',
         try:
             if not (proof_name is None):
                 output_transform = ImageCms.buildProofTransform(
-                    profile[from_name],
-                    profile[to_name],
-                    profile[proof_name],
+                    profile[from_name].path,
+                    profile[to_name].path,
+                    profile[proof_name].path,
                     'RGB', 'RGB',
                     renderingIntent=intents[to_intent],
                     proofRenderingIntent=intents[proof_intent],
                     flags=flags)
             else:
                 output_transform = ImageCms.buildTransform(
-                    profile[from_name],
-                    profile[to_name],
+                    profile[from_name].path,
+                    profile[to_name].path,
                     'RGB', 'RGB',
                     renderingIntent=intents[to_intent],
                     flags=flags)
@@ -221,7 +234,7 @@ def get_transform(from_name, to_name, to_intent='perceptual',
 def convert_profile_fromto(image_np, from_name, to_name,
                            to_intent='perceptual',
                            proof_name=None, proof_intent=None,
-                           use_black_pt=False):
+                           use_black_pt=False, logger=None):
 
     try:
         output_transform = get_transform(from_name, to_name,
@@ -234,8 +247,10 @@ def convert_profile_fromto(image_np, from_name, to_name,
         return out_np
 
     except Exception as e:
-        print("Error converting profile from '%s' to '%s': %s" % (
-            from_name, to_name, str(e)))
+        if logger is not None:
+            logger.warn("Error converting profile from '%s' to '%s': %s" % (
+                from_name, to_name, str(e)))
+            logger.warn("Leaving image unprofiled")
         return image_np
 
 
@@ -258,20 +273,17 @@ glob_pat = os.path.join(basedir, "profiles", "*.icc")
 for path in glob.glob(glob_pat):
     dirname, filename = os.path.split(path)
     profname, ext = os.path.splitext(filename)
-    profile[profname] = os.path.abspath(path)
+    profile[profname] = Bunch.Bunch(name=profname,
+                                    path=os.path.abspath(path))
 
-# These are ones we are particularly interested in
-for filename in ('working.icc', 'monitor.icc', 'sRGB.icc', 'AdobeRGB.icc'):
-    profname, ext = os.path.splitext(filename)
-    profile[profname] = os.path.join(basedir, "profiles", filename)
-
-# Build transforms for profile conversions for which we have profiles
 if have_cms:
     d = dict(absolute_colorimetric=ImageCms.INTENT_ABSOLUTE_COLORIMETRIC,
              perceptual=ImageCms.INTENT_PERCEPTUAL,
              relative_colorimetric=ImageCms.INTENT_RELATIVE_COLORIMETRIC,
              saturation=ImageCms.INTENT_SATURATION)
     intents.update(d)
+
+    # Build transforms for profile conversions for which we have profiles
 
 
 def have_profile(name):
@@ -286,3 +298,9 @@ def get_intents():
     names = list(intents.keys())
     names.sort()
     return names
+
+def set_profile_alias(alias, profname):
+    global profile
+    profile[alias] = profile[profname]
+
+# END

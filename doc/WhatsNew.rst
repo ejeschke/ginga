@@ -16,7 +16,9 @@ Ver 2.6.5.dev
 - Fixed an error where zoom 100% button did not correctly zoom to 1:1 scale
 - Several fixes for astropy 2.0 compatibility
 - Fixed a bug in the FBrowser plugin when channel displaying a table
-    and attempting to load a new file
+  and attempting to load a new file
+- Fixed a bug when setting the pan position manually by wcs coordinates
+- Updates for changes in PIL.ImageCms module
 
 Ver 2.6.4 (2017-06-07)
 ======================
