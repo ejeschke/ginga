@@ -472,7 +472,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         dialog = Widgets.Dialog(title="%s Images" % (verb),
                                 flags=0,
                                 buttons=[['Cancel', 0], ['Ok', 1]],
-                                parent=self.fv.w.root)
+                                parent=self.treeview)
         box = dialog.get_content_area()
         box.set_border_width(6)
         if len(l_img) < 12:

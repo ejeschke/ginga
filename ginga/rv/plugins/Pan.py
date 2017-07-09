@@ -181,14 +181,17 @@ class Pan(GingaPlugin.GlobalPlugin):
         paninfo = channel.extdata._pan_info
 
         if (image is None) or not isinstance(image, BaseImage):
-            # TODO: clear not yet working
-            #paninfo.panimage.clear()
+            paninfo.panimage.clear()
             return
 
         loval, hival = channel.fitsimage.get_cut_levels()
         paninfo.panimage.cut_levels(loval, hival)
 
         self.set_image(channel, paninfo, image)
+
+    def blank(self, channel):
+        paninfo = channel.extdata._pan_info
+        paninfo.panimage.clear()
 
     def focus_cb(self, viewer, channel):
         chname = channel.name
@@ -237,8 +240,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     def set_image(self, channel, paninfo, image):
         if (image is None) or not isinstance(image, BaseImage):
-            # TODO: clear not yet working
-            #paninfo.panimage.clear()
+            paninfo.panimage.clear()
             return
 
         if not self.use_shared_canvas:
@@ -285,8 +287,7 @@ class Pan(GingaPlugin.GlobalPlugin):
     def panset(self, fitsimage, channel, paninfo):
         image = fitsimage.get_image()
         if (image is None) or not isinstance(image, BaseImage):
-            # TODO: clear not yet working
-            #paninfo.panimage.clear()
+            paninfo.panimage.clear()
             return
 
         x, y = fitsimage.get_pan()

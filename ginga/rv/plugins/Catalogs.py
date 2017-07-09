@@ -317,7 +317,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
     def stop(self):
         # stop catalog operation
-        self.clear_all()
+        try:
+            self.clear_all()
+        except:
+            pass
         # remove the canvas from the image
         self.canvas.ui_set_active(False)
         p_canvas = self.fitsimage.get_canvas()

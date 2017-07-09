@@ -276,7 +276,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         chname, imname, impath = channel.name, image_info.name, image_info.path
         try:
-            # Is this thumbnail already in the list?
             thumbkey = self.get_thumb_key(chname, imname, impath)
             self.remove_thumb(thumbkey)
         except Exception as e:
@@ -285,10 +284,11 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def remove_thumb(self, thumbkey):
         with self.thmblock:
-            if thumbkey not in self.thumb_dict:
-                return
-            del self.thumb_dict[thumbkey]
-            self.thumb_list.remove(thumbkey)
+            self.logger.debug("Removing thumb %s" % (str(thumbkey)))
+            if thumbkey in self.thumb_dict:
+                del self.thumb_dict[thumbkey]
+            if thumbkey in self.thumb_list:
+                self.thumb_list.remove(thumbkey)
 
             # Unhighlight
             chname = thumbkey[0]
@@ -323,7 +323,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 # If we have not actually changed the possible number of columns
                 # then don't do anything
                 return False
-            self.logger.info("column count is now %d" % (cols))
+            self.logger.debug("column count is now %d" % (cols))
             self.thumb_num_cols = cols
 
         self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs)
@@ -487,7 +487,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             return thumbkey in self.thumb_dict
 
     def redo_thumbnail(self, viewer, save_thumb=None):
-        self.logger.debug("redoing thumbnail...")
         # Get the thumbnail image
         image = viewer.get_image()
         if image is None:
@@ -514,7 +513,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if nothumb:
             return
 
-        self.logger.debug("redoing thumbnail...")
+        self.logger.debug("redoing thumbnail ...")
         if save_thumb is None:
             save_thumb = self.settings.get('cache_thumbs', False)
 
@@ -529,6 +528,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         with self.thmblock:
             if thumbkey not in self.thumb_dict:
                 # No memory of this thumbnail, so regenerate it
+                self.logger.debug("No memory of %s, adding..." % (str(thumbkey)))
                 self._add_image(self.fv, chname, image)
                 return
 
@@ -552,7 +552,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         Parameter is channel (a bunch)."""
         chname_del = channel.name
         # TODO: delete thumbs for this channel!
-        self.logger.info("deleting thumbs for channel '%s'" % (chname_del))
+        self.logger.debug("deleting thumbs for channel '%s'" % (chname_del))
         with self.thmblock:
             new_thumb_list = []
             un_hilite_set = set([])
@@ -822,7 +822,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                thumbpath=thumbpath)
 
             self.thumb_dict[thumbkey] = bnch
-            self.thumb_list.append(thumbkey)
+            if thumbkey not in self.thumb_list:
+                self.thumb_list.append(thumbkey)
 
             # set the load callback
             obj.add_callback('pick-down',
@@ -947,7 +948,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             text = self._mk_tooltip_text(metadata)
             thumb_extra.tooltip = text
 
-            self.logger.info("updating thumbnail '%s'" % (info.name))
+            self.logger.debug("updating thumbnail '%s'" % (info.name))
             # TODO: figure out why set_image() causes corruption of the
             # redraw here.  Instead we force a manual redraw.
             #bnch.image.set_image(thmb_image)

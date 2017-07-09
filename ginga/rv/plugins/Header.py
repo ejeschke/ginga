@@ -154,12 +154,17 @@ class Header(GingaPlugin.GlobalPlugin):
             self.add_channel(self.fv, channel)
 
     def redo(self, channel, image):
-        """This is called when buffer is modified."""
+        """This is called when image changes."""
         self._image = None  # Skip cache checking in set_header()
-        chname = channel.name
         info = channel.extdata._header_info
 
         self.set_header(info, image)
+
+    def blank(self, channel):
+        """This is called when image is cleared."""
+        self._image = None
+        info = channel.extdata._header_info
+        info.table.clear()
 
     def set_sortable_cb(self, info):
         self._image = None

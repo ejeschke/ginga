@@ -898,7 +898,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         for key in opmon.get_active():
             obj = opmon.get_plugin(key)
             try:
-                self.gui_do(obj.redo, channel, image)
+                if image is None:
+                    self.gui_do(obj.blank, channel)
+                else:
+                    self.gui_do(obj.redo, channel, image)
 
             except Exception as e:
                 self.logger.error(
@@ -910,7 +913,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         for key in opmon.get_active():
             obj = opmon.get_plugin(key)
             try:
-                self.gui_do(obj.redo)
+                if image is None:
+                    self.gui_do(obj.blank)
+                else:
+                    self.gui_do(obj.redo)
 
             except Exception as e:
                 self.logger.error(
@@ -938,7 +944,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             # add cb so that if image is modified internally
             #  our plugins get updated
-            image.add_callback('modified', self.redo_plugins, channel)
+            if image is not None:
+                image.add_callback('modified', self.redo_plugins, channel)
 
             self.logger.debug("executing redo() in plugins...")
             self.redo_plugins(image, channel)
