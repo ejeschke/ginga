@@ -187,7 +187,7 @@ class TextEntry(WidgetBase):
 
     def render(self):
         # TODO: render font
-        d = dict(id=self.id, text=self.text, disabled='', size=20)
+        d = dict(id=self.id, text=self.text, disabled='', size=self.length)
         if not self.enabled:
             d['disabled'] = 'disabled'
         return '''<input id=%(id)s type="text" size=%(size)d name="%(id)s" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(text)s">''' % d  # noqa
@@ -231,7 +231,7 @@ class TextEntrySet(WidgetBase):
 
     def render(self):
         # TODO: render font, editable
-        d = dict(id=self.id, text=self.text, disabled='', size=20)
+        d = dict(id=self.id, text=self.text, disabled='', size=self.length)
         return '''<span> <input id=%(id)s type="text" size=%(size)d name="%(id)s" %(disabled)s onchange="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="%(text)s"/>
  <input type="button" %(disabled)s onclick="ginga_app.widget_handler('%(id)s', document.getElementById('%(id)s').value)" value="Set"/> </span>''' % d  # noqa
 
