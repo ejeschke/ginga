@@ -73,7 +73,8 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
                                    ts_colwidth=250)
         self.settings.load(onError='silent')
 
-        fv.add_callback('remove-image', self.remove_image_cb)
+        fv.add_callback('add-image-info', self.add_image_info_cb)
+        fv.add_callback('remove-image-info', self.remove_image_info_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
 
         self.gui_up = False
@@ -187,14 +188,22 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
     def redo(self, channel, image):
         """Add an entry with image modification info."""
         chname = channel.name
+        if image is None:
+            # shouldn't happen, but let's play it safe
+            return
+
         imname = image.get('name', 'none')
         iminfo = channel.get_image_info(imname)
         timestamp = iminfo.time_modified
 
-        # Image fell out of cache and lost its history
         if timestamp is None:
-            self.remove_image_cb(self.fv, chname, imname, image.get('path'))
+            # Image somehow lost its history
+            self.remove_image_info_cb(self.fv, channel, iminfo)
             return
+
+        self.add_entry(chname, iminfo)
+
+    def add_entry(self, chname, iminfo):
 
         # Add info to internal log
         if chname not in self.name_dict:
@@ -202,10 +211,12 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
 
         fileDict = self.name_dict[chname]
 
+        imname = iminfo.name
         if imname not in fileDict:
             fileDict[imname] = {}
 
         # Z: Zulu time, GMT, UTC
+        timestamp = iminfo.time_modified
         timestamp = timestamp.strftime('%Y-%m-%dZ %H:%M:%SZ')
         reason = iminfo.get('reason_modified', 'Not given')
         bnch = Bunch.Bunch(CHNAME=chname, NAME=imname, MODIFIED=timestamp,
@@ -221,13 +232,15 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         if self.gui_up:
             self.recreate_toc()
 
-    def remove_image_cb(self, viewer, chname, name, path):
+    def remove_image_info_cb(self, gshell, channel, iminfo):
         """Delete entries related to deleted image."""
+        chname = channel.name
         if chname not in self.name_dict:
             return
 
         fileDict = self.name_dict[chname]
 
+        name = iminfo.name
         if name not in fileDict:
             return
 
@@ -240,7 +253,17 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         self.clear_selected_history()
         self.recreate_toc()
 
-    def delete_channel_cb(self, viewer, chinfo):
+    def add_image_info_cb(self, gshell, channel, iminfo):
+        """Add entries related to an added image."""
+
+        timestamp = iminfo.time_modified
+        if timestamp is None:
+            # Not an image we are interested in tracking
+            return
+
+        self.add_entry(channel.name, iminfo)
+
+    def delete_channel_cb(self, gshell, chinfo):
         """Called when a channel is deleted from the main interface.
         Parameter is chinfo (a bunch)."""
         chname = chinfo.name
