@@ -331,7 +331,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                             merge=merge,
                                             allow_expand=allow_expand,
                                             expand_pad_deg=expand_pad_deg,
-                                            suppress_callback=False)
+                                            suppress_callback=True)
 
         # annotate ingested image with its name?
         if annotate and (not allow_expand):
@@ -481,7 +481,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         self.update_status("mosaicing images...")
         images, self.images = self.images, []
-        #self.fv.gui_do(self._inline, images)
         self._inline(images)
 
         self.end_progress()
@@ -491,7 +490,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
             total_elapsed, self.process_elapsed)
         self.update_status(msg)
 
-        self.fv.gui_do(self.fitsimage.redraw, whence=0)
+        self.fv.gui_do(self.img_mosaic.make_callback, 'modified')
 
     def mosaic(self, paths, new_mosaic=False, name=None, image_loader=None):
         if image_loader is None:
