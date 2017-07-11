@@ -34,15 +34,31 @@
 
 <h3>About Ginga</h3>
 
-<p>Ginga is a viewer for astronomical data FITS (Flexible Image Transport
-System) files.</p>
+<p>Ginga is a Python toolkit for building viewers for astronomical and
+   scientific images stored in numpy data arrays.</p>
 
-<p>The Ginga viewer centers around a new FITS display widget which supports zooming and panning, color and intensity mapping, a choice of several automatic cut levels algorithms and canvases for plotting scalable geometric forms.  In addition to this widget, the fits viewer provides a flexible plugin framework for extending the viewer with many different features.  A fairly complete set of "standard" plugins are provided for features that we expect from a modern viewer: panning and zooming windows, star catalog access, cuts, star pick/fwhm, thumbnails, etc.</p>
+<p>The certerpiece of the toolkit is a flexible display widget which supports
+   zooming, panning, rotations and transforms, color and intensity
+   mapping, a choice of several automatic cut levels algorithms and
+   canvases for plotting scalable and editable geometric forms. This
+   widget supports a number of display platforms, including Qt
+   (ver 4/5/PySide), Gtk (ver 2/3), Tk, Matplotlib figures, HTML5
+   canvases, OpenGL and more.  The widget can be
+   incorporated easily into Python programs (2.7 or 3.5+) running on
+   all the popular desktop and server OSes where Python is available. </p>
+
+<p>In addition to this widget, the toolkit provides many other
+   features for building a viewer, including a flexible plugin
+   framework that is provided as a stock, customizable "reference
+   viewer".  A fairly complete set of standard plugins are provided
+   for features that one might expect from a modern FITS viewer:
+   panning and zooming windows, cuts, star pick/fwhm, thumbnails, etc.</p>
 
 <h3>Copyright and License</h3>
 
-<p>Copyright (c) 2011-2014  Eric R. Jeschke.  All rights reserved.
-Ginga is distributed under an open-source BSD licence.  Please see the file LICENSE.txt in the top-level directory for details.</p>
+<p>Copyright (c) 2011-2017  Eric R. Jeschke.  All rights reserved.
+Ginga is distributed under an open-source BSD licence.  Please see the
+file LICENSE.txt in the top-level directory for details.</p>
 
 <h3>Getting the source</h3>
 
