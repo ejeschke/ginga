@@ -294,6 +294,15 @@ class GingaWrapper(object):
 
             byteswap = metadata.get('byteswap', False)
 
+            # WCS?
+            if 'WCS-XIMG' in header.keys():
+                from ginga.util import wcsmod
+                from ginga.util.wcsmod.common import register_wcs
+                from ginga.util.wcsmod.wcs_img import ImgWCS
+                register_wcs('img', ImgWCS, ['pixel'])
+                wcsmod.use('img')
+                metadata = header.copy()
+
             # Create image container
             image = AstroImage.AstroImage(logger=self.logger)
             image.load_buffer(img_buf, dims, dtype, byteswap=byteswap,
