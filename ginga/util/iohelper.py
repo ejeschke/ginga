@@ -7,9 +7,59 @@
 import os
 import re
 import hashlib
+import mimetypes
 
 from ginga.misc import Bunch
 from ginga.util.six.moves import urllib_parse
+
+magic_tester = None
+try:
+    import magic
+    have_magic = True
+    # it seems there are conflicting versions of a 'magic'
+    # module for python floating around...*sigh*
+    if not hasattr(magic, 'from_file'):
+        # TODO: do this at program start only
+        magic_tester = magic.open(magic.DEFAULT_MODE)
+        magic_tester.load()
+
+except (ImportError, Exception):
+    have_magic = False
+
+
+def guess_filetype(filepath):
+    """Guess the type of a file."""
+    # If we have python-magic, use it to determine file type
+    typ = None
+    if have_magic:
+        try:
+            # it seems there are conflicting versions of a 'magic'
+            # module for python floating around...*sigh*
+            if hasattr(magic, 'from_file'):
+                typ = magic.from_file(filepath, mime=True)
+
+            elif magic_tester is not None:
+                descrip = magic_tester.file(filepath)
+                if descrip.startswith("FITS image data"):
+                    return ('image', 'fits')
+
+        except Exception as e:
+            pass
+
+    if typ is None:
+        # if no magic, or magic fails, fall back to mimetypes
+        try:
+            typ, enc = mimetypes.guess_type(filepath)
+
+        except Exception as e:
+            # fail
+            pass
+
+    if typ:
+        typ, subtyp = typ.split('/')
+        return (typ, subtyp)
+
+    raise ValueError("Can't determine file type of '%s'" % (filepath))
 
 
 def get_fileinfo(filespec, cache_dir='/tmp', download=False):

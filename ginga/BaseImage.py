@@ -456,7 +456,13 @@ class BaseImage(ViewerObjectBase):
 
     def get_scaled_cutout2(self, p1, p2, scales,
                            method='basic', logger=None):
-        # NOTE: method is here for compatibility, but is ignored
+
+        if method not in ('basic',) and len(scales) == 2:
+            # for 2D images with alternate interpolation requirements
+            return self.get_scaled_cutout(p1[0], p1[1], p2[0], p2[1],
+                                          scales[0], scales[1],
+                                          method=method)
+
         shp = self.shape
 
         view, scales = trcalc.get_scaled_cutout_basic_view(

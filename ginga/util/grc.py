@@ -12,11 +12,10 @@ import ginga.util.six as six
 if six.PY2:
     import xmlrpclib
     import SimpleXMLRPCServer
-    import cPickle as pickle
 else:
     import xmlrpc.client as xmlrpclib
     import xmlrpc.server as SimpleXMLRPCServer
-    import pickle
+
 from ginga.util.six.moves import map, zip
 from ginga.misc import Task, log
 
@@ -89,11 +88,10 @@ class _channel_proxy(object):
         * The "RC" plugin needs to be started in the viewer for this to work.
         """
         # future: handle imtype
-
         load_buffer = self._client.lookup_attr('load_buffer')
 
         return load_buffer(imname, self._chname,
-                           data_np.tobytes(),
+                           Blob(data_np.tobytes()),
                            data_np.shape, str(data_np.dtype),
                            header, {}, False)
 
@@ -125,7 +123,7 @@ class _channel_proxy(object):
         load_fits_buffer = self._client.lookup_attr('load_fits_buffer')
 
         return load_fits_buffer(imname, self._chname,
-                                buf_io.getvalue(),
+                                Blob(buf_io.getvalue()),
                                 num_hdu, {})
 
     def load_fitsbuf(self, imname, fitsbuf, num_hdu):
@@ -156,7 +154,7 @@ class _channel_proxy(object):
         load_fits_buffer = self._client_.lookup_attr('load_fits_buffer')
 
         return load_fits_buffer(imname, self._chname,
-                                fitsbuf,
+                                Blob(fitsbuf),
                                 num_hdu, {})
 
 class RemoteClient(object):
@@ -269,41 +267,50 @@ base_types = [str, int, float, bool]
 compound_types = [list, tuple, dict]
 
 
-def marshall(res):
-    typ = type(res)
+class Blob(object):
+    """A class used to wrap objects like buffers and so on in a way that
+    can be recognized in both python 2 and 3 during marshalling and
+    unmarshalling.
+    """
+    def __init__(self, buf):
+        self.buf = buf
+
+
+def marshall(obj):
+    typ = type(obj)
 
     # take care of compound types
-    if isinstance(res, list):
-        return list(map(marshall, res))
-    if isinstance(res, tuple):
-        return tuple(map(marshall, res))
-    if isinstance(res, dict):
-        return dict(zip(res.keys(), map(marshall, res.values())))
+    if isinstance(obj, list):
+        return list(map(marshall, obj))
+    if isinstance(obj, tuple):
+        return tuple(map(marshall, obj))
+    if isinstance(obj, dict):
+        return dict(zip(obj.keys(), map(marshall, obj.values())))
 
-    # base types
-    if isinstance(res, bytes):
-        return xmlrpclib.Binary(res)
+    # check if object is a large binary object
+    if isinstance(obj, Blob):
+        return xmlrpclib.Binary(obj.buf)
 
     if not typ in base_types:
-        res = undefined
+        obj = undefined
 
-    return res
+    return obj
 
-def unmarshall(rtnval):
-    typ = type(rtnval)
+def unmarshall(obj):
+    typ = type(obj)
 
     # take care of compound types
-    if isinstance(rtnval, list):
-        return list(map(unmarshall, rtnval))
-    if isinstance(rtnval, tuple):
-        return tuple(map(unmarshall, rtnval))
-    if isinstance(rtnval, dict):
-        return dict(zip(rtnval.keys(), map(unmarshall, rtnval.values())))
+    if isinstance(obj, list):
+        return list(map(unmarshall, obj))
+    if isinstance(obj, tuple):
+        return tuple(map(unmarshall, obj))
+    if isinstance(obj, dict):
+        return dict(zip(obj.keys(), map(unmarshall, obj.values())))
 
-    if isinstance(rtnval, xmlrpclib.Binary):
-        rtnval = rtnval.data
+    if isinstance(obj, xmlrpclib.Binary):
+        obj = obj.data
 
-    return rtnval
+    return obj
 
 def prep_arg(arg):
     try:

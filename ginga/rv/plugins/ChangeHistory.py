@@ -8,13 +8,27 @@ from ginga.util.iohelper import shorten_name
 
 
 class ChangeHistory(GingaPlugin.GlobalPlugin):
-    """Keep track of buffer change history.
+    """
+    ChangeHistory
+    =============
+    Keep track of buffer change history.
 
+    Plugin Type: Global
+    -------------------
+    ChangeHistory is a global plugin.  Only one instance can be opened.
+
+    This plugin is used to log any changes to data buffer. For example,
+    a change log would appear here if a new image is added to a mosaic via the
+    `Mosaic` plugin. Like `Contents`, the log is sorted by channel, and then
+    by image name.
+
+    Notes
+    -----
     History should stay no matter what channel or image is active.
     New history can be added, but old history cannot be deleted,
     unless the image/channel itself is deleted.
 
-    The :meth:`redo` method picks up a ``'modified'`` event and displays
+    The `redo()` method picks up a ``'modified'`` event and displays
     related metadata here. The metadata is obtained as follows:
 
     .. code-block:: python
@@ -53,10 +67,10 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         self.treeview = None
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_ChangeHistory')
-        self.settings.addDefaults(always_expand=True,
-                                  color_alternate_rows=True,
-                                  ts_colwidth=250)
+        self.settings = prefs.create_category('plugin_ChangeHistory')
+        self.settings.add_defaults(always_expand=True,
+                                   color_alternate_rows=True,
+                                   ts_colwidth=250)
         self.settings.load(onError='silent')
 
         fv.add_callback('remove-image', self.remove_image_cb)
@@ -130,6 +144,9 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
 
         btn = Widgets.Button('Close')
         btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 

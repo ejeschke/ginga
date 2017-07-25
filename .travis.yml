@@ -59,8 +59,8 @@ matrix:
         # may run for a long time
         # *** TODO: The `-w` option doesn't work with `python setup.py build_sphinx` yet for `ginga` ... removing it for now
         - python: 2.7
-          # env: SETUP_CMD='build_sphinx -w'
-          env: SETUP_CMD='build_sphinx' PIP_DEPENDENCIES='sphinx_rtd_theme'
+          # env: SETUP_CMD='build_docs -w'
+          env: SETUP_CMD='build_docs' PIP_DEPENDENCIES='sphinx_rtd_theme'
 
         # Try Astropy development version
         # NOTE: Uncomment this if global version is stable, not dev
@@ -86,7 +86,7 @@ matrix:
           env: NUMPY_VERSION=1.9
 
         # Try numpy pre-release
-        - python: 3.5
+        - python: 3.6
           env: NUMPY_VERSION=prerelease
 
         # Do a PEP8 test with pycodestyle
@@ -118,7 +118,7 @@ install:
     # commands in the install: section below.
 
     - git clone git://github.com/astropy/ci-helpers.git
-    - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
+    - source ci-helpers/travis/setup_conda.sh
 
     # As described above, using ci-helpers, you should be able to set up an
     # environment with dependencies installed using conda and pip, but in some

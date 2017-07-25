@@ -27,7 +27,6 @@ import sys
 import numpy
 
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
-from ginga.qtw import ColorBar
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga import AstroImage
 from ginga import cmap, imap
@@ -76,11 +75,13 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.enable_draw(False)
-        fi.set_callback('drag-drop', self.drop_file)
-        fi.set_callback('none-move', self.motion)
+        fi.set_callback('drag-drop', self.drop_file_cb)
+        fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
         self.fitsimage = fi
+
+        fi.show_color_bar(True)
 
         # enable various key and mouse controlled actions
         bd = fi.get_bindings()
@@ -99,20 +100,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.cm = cmap.get_cmap('gray')
         self.im = imap.get_imap('ramp')
 
-        # add color bar
-        rgbmap = fi.get_rgbmap()
-        rgbmap.set_hash_size(256)
-        cbar = ColorBar.ColorBar(self.logger, rgbmap=rgbmap,
-                                 link=True)
-        cbar.resize(-1, 15)
-        #cbar.show()
-        self.colorbar = cbar
-        layout.addWidget(cbar, stretch=0)
-
         settings = fi.get_settings()
-        settings.getSetting('cuts').add_callback('set',
-                                                 self.change_range_cb, fi,
-                                                 self.colorbar)
 
         # color map selection widget
         wcmap = QtGui.QComboBox()
@@ -154,12 +142,6 @@ class FitsViewer(QtGui.QMainWindow):
 
         vbox2 = QtGui.QWidget()
         layout = QtGui.QVBoxLayout()
-        # scrw = QtGui.QScrollArea()
-        # scrw.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        # scrw.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        # scrw.setWidgetResizable(True)
-        # layout.addWidget(scrw, stretch=1)
-        # scrw.setWidget(self.canvas)
         layout.addWidget(self.canvas, stretch=1)
 
         # Add matplotlib buttons
@@ -213,12 +195,8 @@ class FitsViewer(QtGui.QMainWindow):
         self.fitsimage.set_cmap(self.cm)
         self.fitsimage.set_imap(self.im)
 
-    def change_range_cb(self, setting, value, fitsimage, cbar):
-        loval, hival = value
-        cbar.set_range(loval, hival)
-
     def clear_canvas(self):
-        self.fitsimage.deleteAllObjects()
+        self.fitsimage.delete_all_objects()
 
     def load_file(self, filepath):
         image = AstroImage.AstroImage(logger=self.logger)
@@ -230,16 +208,18 @@ class FitsViewer(QtGui.QMainWindow):
         # create compass
         try:
             try:
-                self.fitsimage.deleteObjectByTag(self.cp_tag)
+                self.fitsimage.delete_object_by_tag(self.cp_tag)
             except KeyError:
                 pass
-            (x, y, xn, yn, xe, ye) = image.calc_compass_center()
-            self.logger.debug("x=%d y=%d xn=%d yn=%d xe=%d ye=%d" % (
-                x, y, xn, yn, xe, ye))
-            Compass = self.fitsimage.getDrawClass('compass')
-            self.fitsimage.add(Compass(
-                x, y, xn, yn, xe, ye, color='skyblue',
-                fontsize=14), tag=self.cp_tag)
+
+            width, height = image.get_size()
+            x, y = width / 2.0, height / 2.0
+            # radius we want the arms to be (approx 1/4 the largest dimension)
+            radius = float(max(width, height)) / 4.0
+
+            Compass = self.fitsimage.get_draw_class('compass')
+            self.fitsimage.add(Compass(x, y, radius, color='skyblue',
+                                       fontsize=14), tag=self.cp_tag)
         except Exception as e:
             self.logger.warning("Can't calculate compass: %s" % (
                 str(e)))
@@ -255,22 +235,23 @@ class FitsViewer(QtGui.QMainWindow):
         if len(fileName) != 0:
             self.load_file(fileName)
 
-    def drop_file(self, fitsimage, paths):
-        fileName = paths[0]
-        #print(fileName)
-        self.load_file(fileName)
+    def drop_file_cb(self, viewer, paths):
+        filename = paths[0]
+        self.load_file(filename)
 
     def closeEvent(self, ce):
         self.close()
 
-    def motion(self, fitsimage, button, data_x, data_y):
-
+    def cursor_cb(self, viewer, button, data_x, data_y):
+        """This gets called when the data position relative to the cursor
+        changes.
+        """
         # Get the value under the data coordinates
         try:
-            #value = fitsimage.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x + viewer.data_off),
+                                    int(data_y + viewer.data_off))
 
         except Exception:
             value = None
@@ -280,7 +261,7 @@ class FitsViewer(QtGui.QMainWindow):
         # Calculate WCS RA
         try:
             # NOTE: image function operates on DATA space coords
-            image = fitsimage.get_image()
+            image = viewer.get_image()
             if image is None:
                 # No image loaded
                 return
@@ -303,15 +284,10 @@ class FitsViewer(QtGui.QMainWindow):
 
     def make_mpl_colormap(self, fitsimage):
         # make the equivalent color map for matplotlib
-        # (takes into account any cmap warps, etc.)
-        idx = numpy.array(list(range(256)), dtype='uint')
-        idx = idx.reshape((256, 1))
         rgbmap = fitsimage.get_rgbmap()
-        carr = rgbmap.get_rgbarray(idx).get_array('RGB').astype('float')
-        carr = carr / 256.0
-        carr = carr.reshape((256, 3))
-        cm = ListedColormap(carr, N=256)
-        return cm
+        cm = rgbmap.get_cmap()
+        mpl_cm = cmap.ginga_to_matplotlib_cmap(cm)
+        return mpl_cm
 
     def get_wcs_extent(self, image, x0, y0, x1, y1):
         # WCS of the area
@@ -407,10 +383,7 @@ class FitsViewer(QtGui.QMainWindow):
 
 def main(options, args):
 
-    QtGui.QApplication.setGraphicsSystem('raster')
     app = QtGui.QApplication(args)
-    app.connect(app, QtCore.SIGNAL('lastWindowClosed()'),
-                app, QtCore.SLOT('quit()'))
 
     logger = log.get_logger(name="example3", options=options)
     w = FitsViewer(logger)

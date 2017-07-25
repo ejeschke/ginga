@@ -23,7 +23,7 @@ objects includes:
   two radii and a rotation angle.
 * ``Ellipse``:  an elliptical shape defined by a single center point,
   two radii and a rotation angle.
-* ``Triangle``:  an equilateral triangluar shape defined by a single
+* ``Triangle``:  an equilateral triangular shape defined by a single
   center point, two radii and a rotation angle.
 * ``Circle``:  a circular shape defined by a center point and a radius.
 * ``Point``:  a marker for a point defined by a single point and a

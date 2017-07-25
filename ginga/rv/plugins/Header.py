@@ -12,7 +12,16 @@ from ginga.gw import Widgets
 
 
 class Header(GingaPlugin.GlobalPlugin):
+    """
+    Header
+    ======
+    The Header plugin provides a listing of the metadata associated with the
+    image.
 
+    Plugin Type: Global
+    -------------------
+    Header is a global plugin.  Only one instance can be opened.
+    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Header, self).__init__(fv)
@@ -26,10 +35,10 @@ class Header(GingaPlugin.GlobalPlugin):
                         ]
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Header')
-        self.settings.addDefaults(sortable=False,
-                                  color_alternate_rows=True,
-                                  max_rows_for_col_resize=5000)
+        self.settings = prefs.create_category('plugin_Header')
+        self.settings.add_defaults(sortable=False,
+                                   color_alternate_rows=True,
+                                   max_rows_for_col_resize=5000)
         self.settings.load(onError='silent')
 
         fv.add_callback('add-channel', self.add_channel)

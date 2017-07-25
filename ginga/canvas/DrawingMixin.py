@@ -10,6 +10,8 @@ import math
 from ginga import trcalc
 from ginga.misc.Bunch import Bunch
 from ginga.Bindings import KeyEvent
+from ginga.util.six.moves import filter
+
 from .CanvasMixin import CanvasMixin
 
 __all__ = ['DrawingMixin']
@@ -27,11 +29,11 @@ class DrawingMixin(object):
         from .CanvasObject import drawCatalog
         # For interactive drawing
         self.candraw = False
-        self.draw_dict = drawCatalog
+        self.dc = drawCatalog
         # canvas objects which we know how to draw have an "idraw"
         # class method
-        self.drawtypes = [ key for key in self.draw_dict.keys()
-                           if hasattr(self.draw_dict[key], 'idraw') ]
+        self.drawtypes = [ key for key in self.dc.keys()
+                           if hasattr(self.dc[key], 'idraw') ]
         self.drawtypes.sort()
         self.t_drawtype = 'point'
         self.t_drawparams = {}
@@ -48,7 +50,7 @@ class DrawingMixin(object):
         self._edit_obj = None
         self._edit_status = False
         self._edit_detail = {}
-        self._pick_cur_obj = None
+        self._pick_cur_objs = set([])
 
         # For modes
         self._mode = 'draw'
@@ -86,7 +88,7 @@ class DrawingMixin(object):
                      'cursor-down', 'cursor-up', 'cursor-move',
                      'draw-scroll', 'keydown-poly_add', 'keydown-poly_del',
                      'keydown-edit_del', 'edit-event',
-                     'edit-select', 'drag-drop'):
+                     'edit-select', 'drag-drop', 'cursor-changed'):
             self.enable_callback(name)
 
     def set_surface(self, viewer):
@@ -178,7 +180,7 @@ class DrawingMixin(object):
         obj = None
 
         # update the context with current position
-        x, y = cxt.crdmap.data_to(data_x, data_y)
+        x, y = cxt.crdmap.data_to((data_x, data_y))
         cxt.setvals(x=x, y=y, data_x=data_x, data_y=data_y)
 
         draw_class = cxt.draw_class
@@ -201,12 +203,14 @@ class DrawingMixin(object):
             return False
 
         self._draw_obj = None
+        self.clear_selected()
+
         # get the drawing coordinate type (default 'data')
         crdtype = self.t_drawparams.get('coord', 'data')
         crdmap = viewer.get_coordmap(crdtype)
-        x, y = crdmap.data_to(data_x, data_y)
+        x, y = crdmap.data_to((data_x, data_y))
 
-        klass = self.draw_dict.get(self.t_drawtype, None)
+        klass = self.dc.get(self.t_drawtype, None)
 
         # create the drawing context
         self._draw_cxt = Bunch(start_x=x, start_y=y, points=[(x, y)],
@@ -231,7 +235,6 @@ class DrawingMixin(object):
 
             if self.edit_follows_draw:
                 #self.set_draw_mode('edit')
-                self.clear_selected()
                 self.edit_select(obj)
                 self.make_callback('edit-select', self._edit_obj)
             return True
@@ -251,10 +254,10 @@ class DrawingMixin(object):
 
         cxt = self._draw_cxt
         if self.t_drawtype in ('polygon', 'freepolygon', 'path', 'freepath'):
-            x, y = cxt.crdmap.data_to(data_x, data_y)
+            x, y = cxt.crdmap.data_to((data_x, data_y))
             cxt.points.append((x, y))
         elif self.t_drawtype == 'beziercurve' and len(cxt.points) < 3:
-            x, y = cxt.crdmap.data_to(data_x, data_y)
+            x, y = cxt.crdmap.data_to((data_x, data_y))
             cxt.points.append((x, y))
 
         self._draw_update(data_x, data_y, cxt, force_update=True)
@@ -299,8 +302,11 @@ class DrawingMixin(object):
 
     def get_draw_class(self, drawtype):
         drawtype = drawtype.lower()
-        klass = self.draw_dict[drawtype]
+        klass = self.dc[drawtype]
         return klass
+
+    def get_draw_classes(self):
+        return self.dc
 
     def get_drawparams(self):
         return self.t_drawparams.copy()
@@ -312,7 +318,7 @@ class DrawingMixin(object):
 
     def register_canvas_type(self, name, klass):
         drawtype = name.lower()
-        self.draw_dict[drawtype] = klass
+        self.dc[drawtype] = klass
         if not drawtype in self.drawtypes:
             self.drawtypes.append(drawtype)
             self.drawtypes.sort()
@@ -362,7 +368,7 @@ class DrawingMixin(object):
             self.process_drawing()
         return True
 
-    def _is_editable(self, obj, x, y, is_inside):
+    def _is_editable(self, obj, pt, is_inside):
         return is_inside and obj.editable
 
     def _prepare_to_move(self, obj, data_x, data_y):
@@ -391,7 +397,7 @@ class DrawingMixin(object):
 
             # check for objects at this location
             #print("getting items")
-            objs = canvas.select_items_at(viewer, data_x, data_y,
+            objs = canvas.select_items_at(viewer, (data_x, data_y),
                                           test=self._is_editable)
             #print("items: %s" % (str(objs)))
 
@@ -413,10 +419,10 @@ class DrawingMixin(object):
                 #print("editing: checking for cp")
                 edit_pts = obj.get_edit_points(viewer)
                 #print((self._edit_obj, edit_pts))
-                i = obj.get_pt(viewer, edit_pts, data_x, data_y,
-                               obj.cap_radius)
-                #print(('got point', i))
-                if i is not None:
+                idx = obj.get_pt(viewer, edit_pts, (data_x, data_y),
+                                 obj.cap_radius)
+                if len(idx) > 0:
+                    i = idx[0]
                     #print("editing cp #%d" % (i))
                     # editing a control point from an existing object
                     self._edit_obj = obj
@@ -430,7 +436,8 @@ class DrawingMixin(object):
                     self._edit_update(data_x, data_y, viewer)
                     return True
 
-                ## if obj.contains(data_x, data_y):
+                i = None
+                ## if obj.contains_pt((data_x, data_y)):
                 ##     contains.append(obj)
                 # update: check if objects bbox contains this point
                 x1, y1, x2, y2 = obj.get_llur()
@@ -459,7 +466,7 @@ class DrawingMixin(object):
                     self.clear_selected()
 
                 # see now if there is an unselected item at this location
-                objs = canvas.select_items_at(viewer, data_x, data_y,
+                objs = canvas.select_items_at(viewer, (data_x, data_y),
                                               test=self._is_editable)
                 #print("new items: %s" % (str(objs)))
                 if len(objs) > 0:
@@ -530,15 +537,15 @@ class DrawingMixin(object):
             for i in range(1, len(points[1:])+1):
                 x1, y1 = points[i]
                 self.logger.debug("checking line %d" % (i))
-                if obj.within_line(viewer, data_x, data_y, x0, y0, x1, y1,
-                                   8):
+                if obj.within_line(viewer, (data_x, data_y),
+                                   (x0, y0), (x1, y1), 8):
                     insert = i
                     break
                 x0, y0 = x1, y1
             if insert is not None:
                 self.logger.debug("inserting point")
                 # Point near a line
-                pt = obj.crdmap.data_to(data_x, data_y)
+                pt = obj.crdmap.data_to((data_x, data_y))
                 obj.insert_pt(insert, pt)
                 self.process_drawing()
             else:
@@ -559,7 +566,7 @@ class DrawingMixin(object):
             for i in range(len(points)):
                 x1, y1 = points[i]
                 self.logger.debug("checking vertex %d" % (i))
-                if obj.within_radius(viewer, data_x, data_y, x1, y1,
+                if obj.within_radius(viewer, (data_x, data_y), (x1, y1),
                                      8):
                     delete = i
                     break
@@ -575,7 +582,7 @@ class DrawingMixin(object):
     def edit_rotate(self, delta_deg, viewer):
         if self._edit_obj is None:
             return False
-        self._edit_obj.rotate_by(delta_deg)
+        self._edit_obj.rotate_by_deg([delta_deg])
         self.process_drawing()
         self.make_callback('edit-event', self._edit_obj)
         return True
@@ -660,39 +667,36 @@ class DrawingMixin(object):
         if obj not in self._selected:
             self._selected.append(obj)
 
-
     ##### PICK LOGIC #####
 
     def _do_pick(self, canvas, event, data_x, data_y, cb_name, viewer):
         # check for objects at this location
-        objs = canvas.select_items_at(viewer, data_x, data_y)
+        objs = canvas.select_items_at(viewer, (data_x, data_y))
 
-        if len(objs) == 0:
-            # <-- no objects under cursor
+        picked = set(filter(lambda obj: obj.pickable, objs))
 
-            if self._pick_cur_obj is not None:
-                # leaving an object that we were in--make pick-leave cb
-                obj, self._pick_cur_obj = self._pick_cur_obj, None
-                pt = obj.crdmap.data_to(data_x, data_y)
-                obj.make_callback('pick-leave', canvas, event, pt)
+        newly_out = self._pick_cur_objs - picked
+        newly_in = picked - self._pick_cur_objs
+        self._pick_cur_objs = picked
 
-            return False
+        # leaving an object
+        for obj in newly_out:
+            pt = obj.crdmap.data_to((data_x, data_y))
+            obj.make_callback('pick-leave', canvas, event, pt)
 
-        # pick top object
-        obj = objs[-1]
-        self.logger.debug("%s event in %s obj at x, y = %d, %d" % (
-            cb_name, obj.kind, data_x, data_y))
-
-        # get coordinates in native form for this object
-        pt = obj.crdmap.data_to(data_x, data_y)
-
-        if self._pick_cur_obj is None:
-            # entering a new object--make pick-enter cb
-            self._pick_cur_obj = obj
+        # entering an object
+        for obj in newly_in:
+            pt = obj.crdmap.data_to((data_x, data_y))
             obj.make_callback('pick-enter', canvas, event, pt)
 
-        # make pick callback
-        obj.make_callback(cb_name, canvas, event, pt)
+        # pick down/up
+        for obj in picked:
+            self.logger.debug("%s event in %s obj at x, y = %d, %d" % (
+                cb_name, obj.kind, data_x, data_y))
+
+            pt = obj.crdmap.data_to((data_x, data_y))
+            obj.make_callback(cb_name, canvas, event, pt)
+
         return True
 
     def pick_start(self, canvas, event, data_x, data_y, viewer):
@@ -726,12 +730,6 @@ class DrawingMixin(object):
         selected = list(self.get_selected())
         if len(selected) > 0:
             for obj in selected:
-                ## if not self.has_object(obj):
-                ##     # <-- the object has been removed from the canvas
-                ##     # but not removed from the selection
-                ##     self.select_remove(obj)
-                ##     continue
-
                 cr = viewer.renderer.setup_cr(obj)
                 obj.draw_edit(cr, viewer)
 

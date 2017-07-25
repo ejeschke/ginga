@@ -10,6 +10,8 @@ ColorMapPicker
 The ColorMapPicker plugin is used to graphically browse and select a
 color map for a channel image viewer.
 
+Usage
+-----
 Operation of the plugin is very simple: the color maps are displayed in
 the form of color bars and labels in the main view pane of the plugin.
 Click on any one of the bars to set the color map of the currently

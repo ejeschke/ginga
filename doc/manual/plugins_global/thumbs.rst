@@ -7,7 +7,7 @@ Thumbs
    :align: center
 
 The Thumbs plugin provides a thumbnail index of all images viewed since the
-program was started.  By default, Thumbs appear in cronological viewing
+program was started.  By default, Thumbs appear in chronological viewing
 history, with the newest images at the bottom and the oldest at the top.
 The sorting can be made alphanumeric by a setting in the "plugin_Thumbs.cfg"
 configuration file.

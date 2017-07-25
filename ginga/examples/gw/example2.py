@@ -42,10 +42,10 @@ class FitsViewer(object):
         fi.set_zoom_algorithm('rate')
         fi.set_zoomrate(1.4)
         fi.show_pan_mark(True)
-        fi.set_callback('drag-drop', self.drop_file)
-        fi.set_callback('none-move', self.motion)
+        fi.set_callback('drag-drop', self.drop_file_cb)
+        fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
         self.fitsimage = fi
 
         bd = fi.get_bindings()
@@ -67,11 +67,11 @@ class FitsViewer(object):
         canvas.enable_draw(True)
         canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='lightblue', coord='data')
-        canvas.setSurface(fi)
+        canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         fi.get_canvas().add(canvas)
-        canvas.ui_setActive(True)
+        canvas.ui_set_active(True)
         canvas.register_for_cursor_drawing(fi)
         canvas.add_callback('draw-event', self.draw_cb)
 
@@ -176,7 +176,7 @@ class FitsViewer(object):
         self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
 
     def load_file(self, filepath):
         image = AstroImage.AstroImage(logger=self.logger)
@@ -188,19 +188,20 @@ class FitsViewer(object):
     def open_file(self):
         self.fs.popup("Open FITS file", self.load_file)
 
-    def drop_file(self, fitsimage, paths):
-        fileName = paths[0]
-        #print(fileName)
-        self.load_file(fileName)
+    def drop_file_cb(self, viewer, paths):
+        filename = paths[0]
+        self.load_file(filename)
 
-    def motion(self, viewer, button, data_x, data_y):
-
+    def cursor_cb(self, viewer, button, data_x, data_y):
+        """This gets called when the data position relative to the cursor
+        changes.
+        """
         # Get the value under the data coordinates
         try:
-            #value = viewer.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = viewer.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x + viewer.data_off),
+                                    int(data_y + viewer.data_off))
 
         except Exception:
             value = None

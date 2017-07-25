@@ -14,6 +14,25 @@ from ginga.qtw import QtHelp
 from ginga.misc import Callback, Bunch, LineHistory
 import ginga.icons
 
+has_webkit = False
+try:
+    from ginga.qtw.QtHelp import QWebView  # noqa
+    has_webkit = True
+except ImportError:
+    pass
+
+__all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
+           'GrowingTextEdit', 'TextArea', 'Label', 'Button', 'ComboBox',
+           'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
+           'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
+           'WebView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
+           'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
+           'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
+           'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
+           'Dialog', 'SaveDialog', 'DragPackage',
+           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
+           'has_webkit']
+
 # path to our icons
 icondir = os.path.split(ginga.icons.__file__)[0]
 
@@ -63,7 +82,7 @@ class WidgetBase(Callback.Callbacks):
     def focus(self):
         self.widget.activateWindow()
         self.widget.setFocus()
-        #self.widget.raise_()
+        # self.widget.raise_()
 
     def resize(self, width, height):
         self.widget.resize(width, height)
@@ -135,7 +154,7 @@ class TextEntry(WidgetBase):
     def set_length(self, numchars):
         # this is only supposed to set the visible length (but Qt doesn't
         # really have a good way to do that)
-        #self.widget.setMaxLength(numchars)
+        # self.widget.setMaxLength(numchars)
         pass
 
 
@@ -174,7 +193,7 @@ class TextEntrySet(WidgetBase):
     def set_length(self, numchars):
         # this is only supposed to set the visible length (but Qt doesn't
         # really have a good way to do that)
-        #self.widget.setMaxLength(numchars)
+        # self.widget.setMaxLength(numchars)
         pass
 
     def set_enabled(self, tf):
@@ -203,7 +222,7 @@ class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
         super(TextArea, self).__init__()
 
-        #tw = QtGui.QTextEdit()
+        # tw = QtGui.QTextEdit()
         tw = GrowingTextEdit()
         tw.setReadOnly(not editable)
         if wrap:
@@ -237,7 +256,7 @@ class TextArea(WidgetBase):
         self.widget.setReadOnly(not tf)
 
     def set_limit(self, numlines):
-        #self.widget.setMaximumBlockCount(numlines)
+        # self.widget.setMaximumBlockCount(numlines)
         pass
 
     def set_font(self, font):
@@ -280,7 +299,7 @@ class Label(WidgetBase):
             lbl.customContextMenuRequested.connect(on_context_menu)
 
         # Enable highlighting for copying
-        #lbl.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        # lbl.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
         self.enable_callback('activated')
 
@@ -414,7 +433,7 @@ class Slider(WidgetBase):
         else:
             w = QtGui.QSlider(QtCore.Qt.Vertical)
             w.setTickPosition(QtGui.QSlider.TicksRight)
-        #w.setTickPosition(QtGui.QSlider.NoTicks)
+        # w.setTickPosition(QtGui.QSlider.NoTicks)
         # this controls whether the callbacks are made *as the user
         # moves the slider* or afterwards
         w.setTracking(track)
@@ -428,9 +447,9 @@ class Slider(WidgetBase):
         # slider when it is dragged, so we cannot use the usual method
         # of setting a hidden "changed" variable to suppress the callback
         # when setting the value programmatically.
-        ## if self.changed:
-        ##     self.changed = False
-        ##     return
+        # if self.changed:
+        #     self.changed = False
+        #     return
         self.make_callback('value-changed', val)
 
     def get_value(self):
@@ -547,7 +566,7 @@ class Image(WidgetBase):
         if style == 'clickable':
             lbl.setSizePolicy(QtGui.QSizePolicy.Minimum,
                               QtGui.QSizePolicy.Minimum)
-            #lbl.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
+            # lbl.setFrameStyle(QtGui.QFrame.Box | QtGui.QFrame.Raised)
 
         if menu is not None:
             lbl.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -839,6 +858,33 @@ class TreeView(WidgetBase):
         drag_pkg.start_drag()
 
 
+class WebView(WidgetBase):
+    def __init__(self):
+        if not has_webkit:
+            raise NotImplementedError("Missing webkit")
+
+        super(WebView, self).__init__()
+        self.widget = QWebView()
+
+    def load_url(self, url):
+        self.widget.load(QtCore.QUrl(url))
+
+    def load_html_string(self, html_string):
+        self.widget.setHtml(html_string)
+
+    def go_back(self):
+        self.widget.back()
+
+    def go_forward(self):
+        self.widget.forward()
+
+    def reload_page(self):
+        self.widget.reload()
+
+    def stop_loading(self):
+        self.widget.stop()
+
+
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
@@ -863,7 +909,6 @@ class ContainerBase(WidgetBase):
         if w not in self.children:
             raise ValueError("Widget is not a child of this container")
         self.children.remove(w)
-
         self._remove(w.get_widget(), delete=delete)
 
     def remove_all(self, delete=False):
@@ -949,7 +994,7 @@ class Frame(ContainerBase):
         if title:
             lbl = QtGui.QLabel(title)
             lbl.setAlignment(QtCore.Qt.AlignHCenter)
-            #lbl.setAlignment(QtCore.Qt.AlignLeft)
+            # lbl.setAlignment(QtCore.Qt.AlignLeft)
             vbox.addWidget(lbl, stretch=0)
             self.label = lbl
         else:
@@ -962,7 +1007,7 @@ class Frame(ContainerBase):
 
 
 # Qt custom expander widget
-# See http://stackoverflow.com/questions/10364589/equivalent-of-gtks-expander-in-pyqt4
+# See http://stackoverflow.com/questions/10364589/equivalent-of-gtks-expander-in-pyqt4  # noqa
 #
 class Expander(ContainerBase):
     r_arrow = None
@@ -994,7 +1039,7 @@ class Expander(ContainerBase):
 
         self.toggle = QtGui.QPushButton(Expander.r_arrow, title)
         self.toggle.setStyleSheet(Expander.widget_style)
-        #self.toggle.setCheckable(True)
+        # self.toggle.setCheckable(True)
         self.toggle.clicked.connect(self._toggle_widget)
 
         vbox.addWidget(self.toggle, stretch=0)
@@ -1010,7 +1055,7 @@ class Expander(ContainerBase):
     def _toggle_widget(self):
         child = self.get_children()[0]
         child_w = child.get_widget()
-        #if self.toggle.isChecked():
+        # if self.toggle.isChecked():
         if child_w.isVisible():
             self.toggle.setIcon(Expander.r_arrow)
             child_w.setVisible(False)
@@ -1031,11 +1076,11 @@ class TabWidget(ContainerBase):
         w.currentChanged.connect(self._cb_redirect)
         w.tabCloseRequested.connect(self._tab_close)
         w.setUsesScrollButtons(True)
-        #w.setTabsClosable(True)
+        # w.setTabsClosable(True)
         if self.reorderable:
             w.setMovable(True)
-        ## w.tabInserted = self._tab_insert_cb
-        ## w.tabRemoved = self._tab_remove_cb
+        # w.tabInserted = self._tab_insert_cb
+        # w.tabRemoved = self._tab_remove_cb
         self.widget = w
         self.set_tab_position(tabpos)
 
@@ -1084,8 +1129,8 @@ class TabWidget(ContainerBase):
 
     def set_index(self, idx):
         self.widget.setCurrentIndex(idx)
-        #child = self.index_to_widget(idx)
-        #child.focus()
+        # child = self.index_to_widget(idx)
+        # child.focus()
 
     def index_of(self, child):
         return self.widget.indexOf(child.get_widget())
@@ -1128,8 +1173,8 @@ class StackWidget(ContainerBase):
 
     def set_index(self, idx):
         self.widget.setCurrentIndex(idx)
-        #child = self.index_to_widget(idx)
-        #child.focus()
+        # child = self.index_to_widget(idx)
+        # child.focus()
 
     def index_of(self, child):
         return self.widget.indexOf(child.get_widget())
@@ -1148,8 +1193,8 @@ class MDIWidget(ContainerBase):
         w.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         w.subWindowActivated.connect(self._cb_redirect)
 
-        ## w.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
-        ##                                   QtGui.QSizePolicy.Expanding))
+        # w.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+        #                                   QtGui.QSizePolicy.Expanding))
         w.setTabsClosable(True)
         w.setTabsMovable(False)
         self.widget = w
@@ -1215,7 +1260,7 @@ class MDIWidget(ContainerBase):
         # let the application deal with this if desired in page-close
         # callback
         event.ignore()
-        #self.widget.removeSubWindow(subwin)
+        # self.widget.removeSubWindow(subwin)
 
         self.make_callback('page-close', child)
 
@@ -1500,6 +1545,7 @@ class Menu(ContainerBase):
 
         # NOTE: this get's overwritten if created from Menubar
         self.widget = QtGui.QMenu()
+        self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child):
         w = self.widget.addAction(child.text, lambda: child._cb_redirect())
@@ -1513,16 +1559,27 @@ class Menu(ContainerBase):
         self.add_widget(child)
         return child
 
+    def add_menu(self, name):
+        menu_w = self.widget.addMenu(name)
+        child = Menu()
+        child.widget = menu_w
+        self.add_ref(child)
+        self.menus[name] = child
+        return child
+
     def add_separator(self):
         self.widget.addSeparator()
 
     def popup(self, widget=None):
         if widget is not None:
             w = widget.get_widget()
-            #self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
+            # self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
             self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
         else:
             self.widget.exec_(QCursor.pos())
+
+    def get_menu(self, name):
+        return self.menus[name]
 
 
 class Menubar(ContainerBase):
@@ -1562,7 +1619,7 @@ class TopLevelMixin(object):
         self.enable_callback('close')
 
     def _quit(self, event):
-        #event.accept()
+        # event.accept()
         # let application decide how to handle this
         event.ignore()
         self.close()
@@ -1571,8 +1628,8 @@ class TopLevelMixin(object):
         self.close()
 
     def close(self):
-        #self.widget.deleteLater()
-        #self.widget = None
+        # self.widget.deleteLater()
+        # self.widget = None
         self.make_callback('close')
 
     def _destroyed_cb(self, event, *args):
@@ -1652,13 +1709,13 @@ class Application(Callback.Callbacks):
         if have_pyqt4:
             QtGui.QApplication.setGraphicsSystem('raster')
         app = QtGui.QApplication([])
-        #app.lastWindowClosed.connect(lambda *args: self._quit())
+        # app.lastWindowClosed.connect(lambda *args: self._quit())
         self._qtapp = app
         _app = self
 
         # Get screen size
         desktop = self._qtapp.desktop()
-        #rect = desktop.screenGeometry()
+        # rect = desktop.screenGeometry()
         rect = desktop.availableGeometry()
         size = rect.size()
         self.screen_wd = size.width()
@@ -1739,7 +1796,7 @@ class Dialog(TopLevelMixin, WidgetBase):
                 hbox.addWidget(btn, stretch=0)
 
             vbox.addWidget(hbox_w, stretch=0)
-            ## self.widget.closeEvent = lambda event: self.delete()
+            # self.widget.closeEvent = lambda event: self.delete()
 
         self.enable_callback('activated')
 
@@ -1751,17 +1808,28 @@ class Dialog(TopLevelMixin, WidgetBase):
 
 
 class SaveDialog(QtGui.QFileDialog):
+
     def __init__(self, title=None, selectedfilter=None):
         super(SaveDialog, self).__init__()
 
+        self.title = title
         self.selectedfilter = selectedfilter
-        self.widget = self.getSaveFileName(self, title, '', selectedfilter)
+        self.widget = self
 
     def get_path(self):
-        if (self.widget and self.selectedfilter is not None and
-                not self.widget.endswith(self.selectedfilter[1:])):
-            self.widget += self.selectedfilter[1:]
-        return self.widget
+        res = self.getSaveFileName(self, self.title, '', self.selectedfilter)
+
+        if isinstance(res, tuple):
+            res = res[0]
+
+        if (res and self.selectedfilter is not None and
+                not res.endswith(self.selectedfilter[1:])):
+            res += self.selectedfilter[1:]
+        if res == '':
+            # user cancelled dialog
+            res = None
+
+        return res
 
 
 class DragPackage(object):
@@ -1794,6 +1862,15 @@ def name_mangle(name, pfx=''):
     return pfx + ''.join(newname)
 
 
+def hadjust(w, orientation):
+    if orientation != 'horizontal':
+        return w
+    vbox = VBox()
+    vbox.add_widget(w)
+    vbox.add_widget(Label(''), stretch=1)
+    return vbox
+
+
 def make_widget(title, wtype):
     if wtype == 'label':
         w = Label(title)
@@ -1803,10 +1880,10 @@ def make_widget(title, wtype):
         w.widget.setAlignment(QtCore.Qt.AlignLeft)
     elif wtype == 'entry':
         w = TextEntry()
-        #w.widget.setMaxLength(12)
+        # w.widget.setMaxLength(12)
     elif wtype == 'entryset':
         w = TextEntrySet()
-        #w.widget.setMaxLength(12)
+        # w.widget.setMaxLength(12)
     elif wtype == 'combobox':
         w = ComboBox()
     elif wtype == 'spinbutton':
@@ -1842,15 +1919,6 @@ def make_widget(title, wtype):
     else:
         raise ValueError("Bad wtype=%s" % wtype)
     return w
-
-
-def hadjust(w, orientation):
-    if orientation != 'horizontal':
-        return w
-    vbox = VBox()
-    vbox.add_widget(w)
-    vbox.add_widget(Label(''), stretch=1)
-    return vbox
 
 
 def build_info(captions, orientation='vertical'):
@@ -1897,37 +1965,4 @@ def wrap(native_widget):
     return wrapper
 
 
-def get_orientation(container):
-    if not hasattr(container, 'size'):
-        return 'vertical'
-    (wd, ht) = container.size
-    ## wd, ht = container.get_size()
-    #print('container size is %dx%d' % (wd, ht))
-    if wd < ht:
-        return 'vertical'
-    else:
-        return 'horizontal'
-
-
-def get_oriented_box(container, scrolled=True, fill=False):
-    orientation = get_orientation(container)
-
-    if orientation == 'vertical':
-        box1 = VBox()
-        box2 = VBox()
-    else:
-        box1 = HBox()
-        box2 = VBox()
-
-    box2.add_widget(box1, stretch=0)
-    if not fill:
-        box2.add_widget(Label(''), stretch=1)
-    if scrolled:
-        sw = ScrollArea()
-        sw.set_widget(box2)
-    else:
-        sw = box2
-
-    return box1, sw, orientation
-
-#END
+# END

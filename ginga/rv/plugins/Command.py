@@ -15,16 +15,40 @@ from ginga.util import grc
 
 class Command(GingaPlugin.GlobalPlugin):
     """
-    Usage:
+    Command
+    =======
     This plugin provides a command line interface to the reference viewer.
 
-    Useful commands:
+    .. note:: The command line is for use *within* the plugin UI.
+              If you are looking for a *remote* command line interface,
+              please see the "RC" plugin.
 
-    g> help
+    Plugin Type: Global
+    -------------------
+    Command is a global plugin.  Only one instance can be opened.
 
-    g> reload_local <local_plugin_name>
+    Usage
+    -----
+    Get a list of commands and parameters:
 
-    g> reload_global <global_plugin_name>
+      g> help
+
+    Execute a shell command:
+
+      g>!cmd arg arg ...
+
+    Notes
+    -----
+    An especially powerful tool is to use the `reload_local` and
+    `reload_global` commands to reload a plugin when you are developing
+    that plugin.  This avoids having to restart the reference viewer and
+    laboriously reload data, etc.  Simply close the plugin, execute the
+    appropriate "reload" command (see the help!) and then start the plugin
+    again.
+
+    .. note:: If you have modifed modules *other* than the plugin itself,
+              these will not be reloaded by these commands.
+
     """
 
     def __init__(self, fv):
@@ -49,16 +73,19 @@ class Command(GingaPlugin.GlobalPlugin):
         tw.set_limit(self.histlimit)
         self.hist_w = tw
 
-        ## sw = Widgets.ScrollArea()
-        ## sw.set_widget(self.hist_w)
-        ## vbox.add_widget(sw, stretch=1)
-        vbox.add_widget(tw, stretch=1)
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(tw, stretch=1)
+        vbox2.add_widget(Widgets.Label(''), stretch=0)
 
-        vbox.add_widget(Widgets.Label("Type command here:"))
+        vbox.add_widget(vbox2, stretch=1)
+
+        vbox2 = Widgets.VBox()
+        vbox2.add_widget(Widgets.Label("Type command here:"))
         self.cmd_w = Widgets.TextEntry()
         self.cmd_w.set_font(self.msg_font)
-        vbox.add_widget(self.cmd_w, stretch=0)
+        vbox2.add_widget(self.cmd_w, stretch=0)
         self.cmd_w.add_callback('activated', self.exec_cmd_cb)
+        vbox.add_widget(vbox2, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
@@ -67,8 +94,11 @@ class Command(GingaPlugin.GlobalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(btns)
+        vbox.add_widget(btns, stretch=0)
 
         container.add_widget(vbox, stretch=1)
 
@@ -215,6 +245,14 @@ class CommandInterpreter(object):
         self.fv.mm.load_module(plname)
         gpmon.reload_plugin(plname)
         self.fv.start_global_plugin(plname)
+        return True
+
+    def cmd_reload_module(self, modname):
+        """reload_module `modname`
+
+        Reload the Python module named `modname`.
+        """
+        self.fv.mm.load_module(modname)
         return True
 
     def cmd_cd(self, *args):

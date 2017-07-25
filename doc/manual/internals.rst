@@ -22,7 +22,7 @@ The Model
 ---------
 
 .. _fig-astroimage:
-.. figure:: figures/ginga_AstroImage.png
+.. figure:: figures/class_structure_astroimage.png
    :scale: 100%
    :figclass: h
 
@@ -55,11 +55,11 @@ The View
 --------
 
 .. _fig-imageviewzoom:
-.. figure:: figures/ginga_ImageViewZoom.png
+.. figure:: figures/class_structure_viewer.png
    :scale: 100%
    :figclass: h
 
-   Class hierarchy of Ginga ``ImageViewZoom`` class 
+   Class structure of Ginga basic widget viewer 
 
 Figure :ref:`fig-imageviewzoom` shows the class inheritance of the
 ImageViewZoom class, which is a typical end class to use in a program if
@@ -105,15 +105,21 @@ There are many callback functions that can be registered,
 allowing the user to create their own custom user interface for
 manipulating the view.
 
+
 Graphics on Ginga
 =================
 
 .. _fig_imageviewcanvas:
-.. figure:: figures/ginga_ImageViewCanvas.png
+.. figure:: figures/class_structure_drawingcanvas.png
    :scale: 100%
    :figclass: h
 
-   Class construction of Ginga ``ImageViewCanvas`` class. 
+   Class structure of Ginga ``DrawingCanvas`` class. 
+
+Ginga's graphics are all rendered from objects placed on a
+``DrawingCanvas``.  All objects that can be put on a ``DrawingCanvas``
+are rooted in the ``CanvasObject`` type (including ``DrawingCanvas``
+itself).
 
 
 Miscellaneous Topics

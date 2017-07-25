@@ -11,6 +11,58 @@ from ginga import GingaPlugin, colors
 
 
 class PixTable(GingaPlugin.LocalPlugin):
+    """
+    PixTable
+    ========
+    PixTable provides a way to check or monitor the pixel values in
+    a region.
+
+    Plugin Type: Local
+    ------------------
+    PixTable is a local plugin, which means it is associated with a channel.
+    An instance can be opened for each channel.
+
+    Basic Use
+    ---------
+    In the most basic use, simply move the cursor around the channel
+    viewer; an array of pixel values will appear in the "Pixel Values"
+    display in the plugin UI.  The center value is highlighted, and this
+    corresponds to the value under the cursor.
+
+    You can choose a 3x3, 5x5, 7x7 or 9x9 grid from the leftmost
+    combobox control.  It may help to adjust the "Font Size" control
+    to prevent having the array values cut off on the sides.  You can
+    also enlarge the plugin workspace to see more of the table.
+
+    NOTE: the order of the value table shown will not necessarily match to
+    the channel viewer if the images is flipped, transposed or rotated.
+
+    Using Marks
+    -----------
+    If you click in the channel viewer, it will set a mark.  There can
+    be any number of marks, and they are each noted with an "X"
+    annotated with a number.  When that mark is selected it will only
+    show the values around the mark.  Simply change the mark control to
+    select a different mark to see the values around it.
+
+    The marks will stay in position even if a new image is loaded and
+    they will show the values for the new image.  In this way you can
+    monitor the area around a spot if the image is updating frequently.
+
+    If the "Pan to mark" checkbox is selected, then when you select a
+    different mark from the mark control, the channel viewer will pan to
+    that mark.  This can be useful to inspect the same spots in several
+    different images.
+
+    NOTE: if you change the mark control back to "None" then the pixel
+    table will again update as you move the cursor around the viewer.
+
+    Deleting Marks
+    --------------
+    To delete a mark, select it in the mark control and then press the
+    button marked "Delete".  To delete all the marks, press the button
+    marked "Delete All".
+    """
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
@@ -20,15 +72,15 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.pan2mark = False
 
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_PixTable')
-        self.settings.addDefaults(fontsize=12,
-                                  font='fixed')
+        self.settings = prefs.create_category('plugin_PixTable')
+        self.settings.add_defaults(fontsize=12,
+                                   font='fixed')
         self.settings.load(onError='silent')
 
         self.dc = self.fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.set_callback('cursor-down', self.btndown_cb)
-        canvas.set_callback('none-move', self.motion_cb)
+        canvas.set_callback('cursor-changed', self.cursor_cb)
         canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
@@ -44,6 +96,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.font = self.settings.get('font', 'fixed')
         self.fontsize = self.settings.get('fontsize', 12)
         self.fontsizes = [6, 8, 9, 10, 11, 12, 14, 16]
+        self.pixview = None
 
         # For "marks" feature
         self.mark_radius = 10
@@ -53,7 +106,6 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.marks = ['None']
         self.mark_index = 0
         self.mark_selected = None
-        self.tw = None
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -63,15 +115,6 @@ class PixTable(GingaPlugin.LocalPlugin):
                                                          fill=True)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("Pixel Values")
 
@@ -178,6 +221,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         top.add_widget(btns, stretch=0)
@@ -245,6 +291,10 @@ class PixTable(GingaPlugin.LocalPlugin):
     def plot(self, data, x1, y1, x2, y2, data_x, data_y, radius,
              maxv=9):
 
+        # Because most FITS data is stored with lower Y indexes to
+        # bottom
+        data = numpy.flipud(data)
+
         width, height = self.fitsimage.get_dims(data)
         if self.txt_arr is None:
             return
@@ -260,24 +310,22 @@ class PixTable(GingaPlugin.LocalPlugin):
             for j in range(height):
                 self.txt_arr[i][j].text = fmt_cell.format(data[i][j])
 
+        ctr_txt = self.txt_arr[width // 2][height // 2]
+
         # append statistics line
         fmt_stat = "  Min: %s  Max: %s  Avg: %s" % (fmt_cell, fmt_cell,
                                                     fmt_cell)
         self.sum_arr[0].text = fmt_stat.format(minval, maxval, avgval)
 
         # update the pixtable
-        self.pixview.redraw(whence=3)
+        #self.pixview.redraw(whence=3)
+        self.pixview.panset_xy(ctr_txt.x, ctr_txt.y)
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
-    def instructions(self):
-        self.tw.set_text("""Move cursor around to see surrounding pixel values.
-""")
-
     def start(self):
-        self.instructions()
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
@@ -290,26 +338,26 @@ class PixTable(GingaPlugin.LocalPlugin):
 
     def stop(self):
         # remove the canvas from the image
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
-        self.tw = None
+        self.pixview = None
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.redo()
 
     def redo(self):
-        if self.tw is None:
+        if self.pixview is None:
             return
         # cut out and set the pixel table data
         image = self.fitsimage.get_image()
@@ -324,8 +372,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         # cutout image data
         data, x1, y1, x2, y2 = image.cutout_radius(data_x, data_y,
                                                    self.pixtbl_radius)
-        self.plot(data, x1, y1, x2, y2, self.lastx, self.lasty,
-                  self.pixtbl_radius, maxv=9)
+        self.fv.error_wrap(self.plot, data, x1, y1, x2, y2,
+                           self.lastx, self.lasty,
+                           self.pixtbl_radius, maxv=9)
 
     def _rebuild_table(self):
         canvas = self.pixview.get_canvas()
@@ -335,7 +384,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         ex_txt = Text(0, 0, text='5', fontsize=self.fontsize, font=self.font)
         font_wd, font_ht = self.fitsimage.renderer.get_dimensions(ex_txt)
         max_wd = self.maxdigits + 2
-        crdmap = self.pixview.get_coordmap('canvas')
+        crdmap = self.pixview.get_coordmap('window')
 
         rows = []
         objs = []
@@ -352,7 +401,7 @@ class PixTable(GingaPlugin.LocalPlugin):
                 if (row == col) and (row == self.pixtbl_radius):
                     color = 'pink'
 
-                dx, dy = crdmap.to_data(x, y)
+                dx, dy = crdmap.to_data((x, y))
                 text_obj = Text(dx, dy, text='', font=self.font,
                                 color=color, fontsize=self.fontsize,
                                 coord='data')
@@ -366,7 +415,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         # add summary row(s)
         x = (font_wd + 2) + 4
         y += font_ht+20
-        dx, dy = crdmap.to_data(x, y)
+        dx, dy = crdmap.to_data((x, y))
         s1 = Text(dx, dy, text='', font=self.font,
                   color=color, fontsize=self.fontsize,
                   coord='data')
@@ -379,17 +428,17 @@ class PixTable(GingaPlugin.LocalPlugin):
         canvas.add(CompoundObject(*objs), redraw=False)
 
         # set limits for scrolling
-        self.pixview.set_limits(((0, 0), (max_x, y)), coord='canvas')
+        self.pixview.set_limits(((0, 0), (max_x, y)), coord='window')
 
     def set_cutout_size_cb(self, w, val):
         index = w.get_index()
         self.pixtbl_radius = self.sizes[index]
         self._rebuild_table()
 
-    def motion_cb(self, canvas, event, data_x, data_y):
+    def cursor_cb(self, canvas, junk, data_x, data_y):
         if self.mark_selected is not None:
             return False
-        if self.tw is None:
+        if self.pixview is None:
             return
 
         self.lastx, self.lasty = data_x, data_y

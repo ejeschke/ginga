@@ -4,72 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""
-The RC plugin implements a remote control interface for the Ginga FITS
-viewer.
-
- Show example usage:
- $ ggrc help
-
- Show help for a specific ginga method:
- $ ggrc help ginga <method>
-
- Show help for a specific channel method:
- $ ggrc help channel <chname> <method>
-
-Ginga methods can be called like this:
-
- $ ggrc ginga <method> <arg1> <arg2> ...
-
-Channel methods can be called like this:
-
- $ ggrc channel <chname> <method> <arg1> <arg2> ...
-
-Calls can be made from a remote host by adding the options
-   --host=<hostname> --port=9000
-
-(in the plugin GUI be sure to remove the 'localhost' prefix
-from the addr, but leave the colon and port)
-
-Examples:
-
- Create a new channel:
- $ ggrc ginga add_channel FOO
-
- Load a file into current channel:
- $ ggrc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
-
- Load a file into a specific channel:
- $ ggrc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits FOO
-
- Cut levels:
- $ ggrc channel FOO cut_levels 163 1300
-
- Auto cut levels:
- $ ggrc channel FOO auto_levels
-
- Zoom to a specific level:
- $ ggrc -- channel FOO zoom_to -7
-
- Zoom to fit:
- $ ggrc channel FOO zoom_fit
-
- Transform (args are boolean triplet: (flipx flipy swapxy)):
- $ ggrc channel FOO transform 1 0 1
-
- Rotate:
- $ ggrc channel FOO rotate 37.5
-
- Change color map:
- $ ggrc channel FOO set_color_map rainbow3
-
- Change color distribution algorithm:
- $ ggrc channel FOO set_color_algorithm log
-
- Change intensity map:
- $ ggrc channel FOO set_intensity_map neg
-
-"""
 import sys
 import numpy
 import bz2
@@ -85,7 +19,102 @@ help_msg = sys.modules[__name__].__doc__
 
 
 class RC(GingaPlugin.GlobalPlugin):
+    """
+    RC
+    ==
+    The RC plugin implements a remote control interface for the Ginga FITS
+    viewer.
 
+    Plugin Type: Global
+    -------------------
+    RC is a global plugin.  Only one instance can be opened.
+
+    Usage
+    -----
+    Start the plugin.  The remote interface is not up and listening unless
+    you do.
+
+    Usage from the Command-Line Client
+    ----------------------------------
+    Show example usage:
+
+      $ ggrc help
+
+    Show help for a specific ginga method:
+
+      $ ggrc help ginga <method>
+
+    Show help for a specific channel method:
+
+      $ ggrc help channel <chname> <method>
+
+    Ginga methods can be called like this:
+
+      $ ggrc ginga <method> <arg1> <arg2> ...
+
+    Channel methods can be called like this:
+
+      $ ggrc channel <chname> <method> <arg1> <arg2> ...
+
+    Calls can be made from a remote host by adding the options:
+
+       --host=<hostname> --port=9000
+
+    (in the plugin GUI be sure to remove the 'localhost' prefix
+    from the addr, but leave the colon and port)
+
+    Examples
+    --------
+
+    Create a new channel:
+
+      $ ggrc ginga add_channel FOO
+
+    Load a file into current channel:
+
+      $ ggrc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
+
+    Load a file into a specific channel:
+
+      $ ggrc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits FOO
+
+    Cut levels:
+
+      $ ggrc channel FOO cut_levels 163 1300
+
+    Auto cut levels:
+
+      $ ggrc channel FOO auto_levels
+
+    Zoom to a specific level:
+
+      $ ggrc -- channel FOO zoom_to -7
+
+    Zoom to fit:
+
+      $ ggrc channel FOO zoom_fit
+
+    Transform (args are boolean triplet: (flipx flipy swapxy)):
+
+      $ ggrc channel FOO transform 1 0 1
+
+    Rotate:
+
+      $ ggrc channel FOO rotate 37.5
+
+    Change color map:
+
+      $ ggrc channel FOO set_color_map rainbow3
+
+    Change color distribution algorithm:
+
+      $ ggrc channel FOO set_color_algorithm log
+
+    Change intensity map:
+
+      $ ggrc channel FOO set_intensity_map neg
+
+    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(RC, self).__init__(fv)
@@ -132,6 +161,9 @@ class RC(GingaPlugin.GlobalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(btns)
 
@@ -143,7 +175,8 @@ class RC(GingaPlugin.GlobalPlugin):
 
         self.server = grc.RemoteServer(self.robj,
                                        host=self.host, port=self.port,
-                                       ev_quit=self.fv.ev_quit)
+                                       ev_quit=self.fv.ev_quit,
+                                       logger=self.logger)
         self.server.start(thread_pool=self.fv.get_threadPool())
 
     def stop(self):
@@ -260,6 +293,15 @@ class GingaWrapper(object):
                 dtype = numpy.float32
 
             byteswap = metadata.get('byteswap', False)
+
+            # WCS?
+            if 'WCS-XIMG' in header.keys():
+                from ginga.util import wcsmod
+                from ginga.util.wcsmod.common import register_wcs
+                from ginga.util.wcsmod.wcs_img import ImgWCS
+                register_wcs('img', ImgWCS, ['pixel'])
+                wcsmod.use('img')
+                metadata = header.copy()
 
             # Create image container
             image = AstroImage.AstroImage(logger=self.logger)

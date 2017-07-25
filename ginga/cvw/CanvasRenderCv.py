@@ -1,9 +1,6 @@
 #
 # CanvasRenderCv.py -- for rendering into a ImageViewCv widget
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
@@ -12,6 +9,7 @@ from . import CvHelp
 
 # force registration of all canvas types
 import ginga.canvas.types.all
+from ginga import trcalc
 
 class RenderContext(object):
 
@@ -87,6 +85,7 @@ class RenderContext(object):
         self.cr.text((cx, cy), text, self.font)
 
     def draw_polygon(self, cpoints):
+        cpoints = trcalc.strip_z(cpoints)
         self.cr.polygon(cpoints, self.pen, self.brush)
 
     def draw_circle(self, cx, cy, cradius):
@@ -100,6 +99,7 @@ class RenderContext(object):
         self.cr.line((cx1, cy1), (cx2, cy2), self.pen)
 
     def draw_path(self, cpoints):
+        cpoints = trcalc.strip_z(cpoints)
         self.cr.path(cpoints, self.pen)
 
 

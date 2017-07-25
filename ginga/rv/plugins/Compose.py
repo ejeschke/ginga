@@ -26,15 +26,24 @@ class ComposeImage(RGBImage.RGBImage, LayerImage.LayerImage):
 
 class Compose(GingaPlugin.LocalPlugin):
     """
-    Usage:
+    Compose
+    =======
+    A plugin for composing RGB images from constituent monochrome images.
+
+    Plugin Type: Local
+    ------------------
+    Compose is a local plugin, which means it is associated with a
+    channel.  An instance can be opened for each channel.
+
+    Usage
+    -----
     Start the Compose plugin from the Operation menu--the tab should
     show up under "Dialogs"
 
-    - Press "New Image" to start composing a new RGB image.
-
-    - drag your three constituent images that will make up the R, G and B
-    planes to the main viewer window--drag them in the order R (red),
-    G (green) and B (blue).
+    1) Press "New Image" to start composing a new RGB image.
+    2) drag your three constituent images that will make up the R, G and B
+       planes to the main viewer window--drag them in the order R (red),
+       G (green) and B (blue).
 
     In the plugin, the R, G and B iamges should show up as three slider
     controls in the Layers area of the plugin.
@@ -44,11 +53,10 @@ class Compose(GingaPlugin.LocalPlugin):
     may want to set cut levels on the image using any of the usual cut levels
     controls.
 
-    - Play with the alpha levels of each layer using the sliders in the
-    Compose plugin, when you release a slider the image should update.
-
-    - When you see something you like you can save it to a file using the
-    "Save As" button.
+    3) Play with the alpha levels of each layer using the sliders in the
+       Compose plugin, when you release a slider the image should update.
+    4) When you see something you like you can save it to a file using the
+       "Save As" button.
     """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
@@ -74,15 +82,6 @@ class Compose(GingaPlugin.LocalPlugin):
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("Compositing")
 
@@ -136,6 +135,9 @@ class Compose(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         top.add_widget(btns, stretch=0)
@@ -305,17 +307,11 @@ class Compose(GingaPlugin.LocalPlugin):
         image = self.fitsimage.get_image()
         self.fv.nongui_do(self.fv.error_wrap, self.save_as_file, path, image)
 
-    def instructions(self):
-        self.tw.set_text("""Drag R, then G then B images to the window. Adjust cut levels and contrast as desired.
-
-Then manipulate channel mix using the sliders.""")
-
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
     def start(self):
-        self.instructions()
         # start ruler drawing operation
         p_canvas = self.fitsimage.get_canvas()
         try:
@@ -328,10 +324,10 @@ Then manipulate channel mix using the sliders.""")
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
 
     def stop(self):
         # remove the canvas from the image
@@ -340,7 +336,7 @@ Then manipulate channel mix using the sliders.""")
             p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
         self.fv.show_status("")
         self.gui_up = False
 

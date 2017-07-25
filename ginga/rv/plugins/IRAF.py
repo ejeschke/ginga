@@ -1,31 +1,3 @@
-"""
-The IRAF plugin implements a remote control interface for the Ginga FITS
-viewer from an IRAF session.  In particular it supports the use of the
-IRAF 'display' and 'imexamine' commands.
-
-Instructions for use:
-
-Set the environment variable IMTDEV appropriately, e.g.
-
-    $ export IMTDEV=inet:45005         (or)
-    $ export IMTDEV=unix:/tmp/.imtg45
-
-Ginga will try to use the default value if none is assigned.
-
-Start IRAF plugin (Plugins->Start IRAF).
-
-From Ginga you can load images and then use 'imexamine' from IRAF to load
-them, do photometry, etc.  You can also use the 'display' command from IRAF
-to show images in Ginga.  The 'IRAF' tab will show the mapping from Ginga
-channels to IRAF numerical 'frames'.
-
-When using imexamine, the plugin disables normal UI processing on the
-channel image so that keystrokes, etc. are passed through to IRAF.  You can
-toggle back and forth between local Ginga control and IRAF control using
-the radio buttons at the top of the tab or using the space bar.
-
-IRAF commands that have been tested: display, imexam, rimcur and tvmark.
-"""
 import sys, os
 import logging
 import threading
@@ -49,7 +21,41 @@ import IIS_DataListener as iis
 
 
 class IRAF(GingaPlugin.GlobalPlugin):
+    """
+    IRAF
+    ====
+    The IRAF plugin implements a remote control interface for the Ginga FITS
+    viewer from an IRAF session.  In particular it supports the use of the
+    IRAF 'display' and 'imexamine' commands.
 
+    Plugin Type: Global
+    -------------------
+    IRAF is a global plugin.  Only one instance can be opened.
+
+    Usage
+    -----
+
+    Set the environment variable IMTDEV appropriately, e.g.::
+
+        $ export IMTDEV=inet:45005         (or)
+        $ export IMTDEV=unix:/tmp/.imtg45
+
+    Ginga will try to use the default value if none is assigned.
+
+    Start IRAF plugin (Plugins->Start IRAF).
+
+    From Ginga you can load images and then use 'imexamine' from IRAF to load
+    them, do photometry, etc.  You can also use the 'display' command from IRAF
+    to show images in Ginga.  The 'IRAF' tab will show the mapping from Ginga
+    channels to IRAF numerical 'frames'.
+
+    When using imexamine, the plugin disables normal UI processing on the
+    channel image so that keystrokes, etc. are passed through to IRAF.  You can
+    toggle back and forth between local Ginga control and IRAF control using
+    the radio buttons at the top of the tab or using the space bar.
+
+    IRAF commands that have been tested: display, imexam, rimcur and tvmark.
+    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(IRAF, self).__init__(fv)
@@ -69,7 +75,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.addr = iis.get_interface()
 
         self.ev_quit = self.fv.ev_quit
-        self.dataTask = None
+        self.data_task = None
 
         # Holds frame buffers
         self.fb = {}
@@ -131,11 +137,11 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.w.mode_d = {}
         btn1 = Widgets.RadioButton("Ginga")
         btn1.set_state(True)
-        btn1.add_callback('activated', lambda w, val: self.switchMode('ginga'))
+        btn1.add_callback('activated', lambda w, val: self.switch_mode('ginga'))
         self.w.mode_d['ginga'] = btn1
         self.w.control.add_widget(btn1)
         btn2 = Widgets.RadioButton("IRAF", group=btn1)
-        btn2.add_callback('activated', lambda w, val: self.switchMode('iraf'))
+        btn2.add_callback('activated', lambda w, val: self.switch_mode('iraf'))
         self.w.mode_d['iraf'] = btn2
         self.w.control.add_widget(btn2)
 
@@ -160,6 +166,9 @@ class IRAF(GingaPlugin.GlobalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(btns)
 
@@ -174,31 +183,31 @@ class IRAF(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return
         # Update the GUI with the new frame/channel mapping
-        fmap.sort(lambda x, y: x[1] - y[1])
+        fmap.sort(key=lambda x: x[1])
 
         s = ["%2d: %s" % (num, name) for (name, num) in fmap]
         self.w.frch.set_text("\n".join(s))
 
-    def _setMode(self, modeStr, chname):
-        modeStr = modeStr.lower()
-        self.w.mode_d[modeStr].set_state(True)
+    def _set_mode(self, mode_str, chname):
+        mode_str = mode_str.lower()
+        self.w.mode_d[mode_str].set_state(True)
         self.w.channel.set_text(chname)
 
-        self.switchMode(modeStr)
+        self.switch_mode(mode_str)
 
-    def setMode(self, modeStr, chname):
+    def set_mode(self, mode_str, chname):
         self.imexam_chname = chname
-        self.fv.gui_do(self._setMode, modeStr, chname)
+        self.fv.gui_do(self._set_mode, mode_str, chname)
 
-    def toggleMode(self):
+    def toggle_mode(self):
         isIRAF = self.w.mode_d['iraf'].get_state()
         chname = self.imexam_chname
         if isIRAF:
             self.logger.info("setting mode to Ginga")
-            self.setMode('Ginga', chname)
+            self.set_mode('Ginga', chname)
         else:
             self.logger.info("setting mode to IRAF")
-            self.setMode('IRAF', chname)
+            self.set_mode('IRAF', chname)
 
 
     def add_channel(self, viewer, chinfo):
@@ -227,12 +236,12 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fmap = self.get_channel_frame_mapping()
         self.fv.gui_do(self.update_chinfo, fmap)
 
-    def switchMode(self, modeStr):
-        modeStr = modeStr.lower()
+    def switch_mode(self, mode_str):
+        mode_str = mode_str.lower()
         chname = self.imexam_chname
         chinfo = self.fv.get_channel(chname)
 
-        if modeStr == 'iraf':
+        if mode_str == 'iraf':
             self.ui_disable(chinfo.fitsimage)
         else:
             self.ui_enable(chinfo.fitsimage)
@@ -246,20 +255,20 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         # start the data listener task, if appropriate
         ev_quit = threading.Event()
-        self.dataTask = iis.IIS_DataListener(
+        self.data_task = iis.IIS_DataListener(
             self.addr, controller=self,
             ev_quit=ev_quit, logger=self.logger)
-        self.fv.nongui_do(self.dataTask.mainloop)
+        self.fv.nongui_do(self.data_task.mainloop)
 
     def stop(self):
-        if self.dataTask:
-            self.dataTask.stop()
+        if self.data_task:
+            self.data_task.stop()
         self.gui_up = False
 
     def restart_cb(self, w):
         # restart server
-        if self.dataTask:
-            self.dataTask.stop()
+        if self.data_task:
+            self.data_task.stop()
         self.start()
 
     def set_addr_cb(self, w):
@@ -472,8 +481,8 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         # various settings that should apply
         settings = fitsimage.get_settings()
-        settings.setDict(dict(autocuts='off', flip_x=False, flip_y=False,
-                              swap_xy=False, rot_deg=0.0), callback=True)
+        settings.set_dict(dict(autocuts='off', flip_x=False, flip_y=False,
+                               swap_xy=False, rot_deg=0.0), callback=True)
 
         # Set cut levels
         fitsimage.cut_levels(0.0, 255.0, no_reset=True)
@@ -526,13 +535,13 @@ class IRAF(GingaPlugin.GlobalPlugin):
     def ui_disable(self, fitsimage):
         # NOTE: can't disable main canvas ui because it won't propagate
         # events to layered canvases
-        #fitsimage.ui_setActive(False)
-        #self.canvas.ui_setActive(True)
+        #fitsimage.ui_set_active(False)
+        #self.canvas.ui_set_active(True)
         self.mode = 'iraf'
 
     def ui_enable(self, fitsimage):
-        fitsimage.ui_setActive(True)
-        #self.canvas.ui_setActive(False)
+        fitsimage.ui_set_active(True)
+        #self.canvas.ui_set_active(False)
         self.mode = 'ginga'
 
     def start_imexamine(self, fitsimage, chname):
@@ -546,17 +555,17 @@ class IRAF(GingaPlugin.GlobalPlugin):
         except KeyError:
             # Add canvas layer
             fitsimage.add(self.canvas, tag=self.layertag)
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
 
         self.imexam_active = True
-        self.setMode('IRAF', chname)
+        self.set_mode('IRAF', chname)
         self.fv.gui_do(self.fv.ds.raise_tab, 'IRAF')
         self.logger.info("FINISHING")
 
     def stop_imexamine(self, fitsimage, chname):
         self.logger.info("STARTING")
         self.imexam_active = False
-        self.setMode('Ginga', chname)
+        self.set_mode('Ginga', chname)
         self.logger.info("FINISHING")
 
     def window_key_press(self, canvas, keyname):
@@ -572,7 +581,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
                 self.ctrldown = True
                 return False
             elif keyname == 'space':
-                self.toggleMode()
+                self.toggle_mode()
                 return True
             keyname = self.keymap.get(keyname, '?')
 
@@ -585,7 +594,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
                 keyname = chr(4)
 
         # Get cursor position
-        fitsimage = canvas.getSurface()
+        fitsimage = canvas.get_surface()
         last_x, last_y = fitsimage.get_last_data_xy()
 
         # Correct for surrounding framebuffer

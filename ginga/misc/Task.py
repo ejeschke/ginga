@@ -29,6 +29,7 @@ else:
 import threading
 import traceback
 
+from . import Callback
 
 class TaskError(Exception):
     """Exception generated for task errors"""
@@ -44,7 +45,7 @@ class UserTaskException(Exception):
 
 # ------------ BASIC TASKS ------------
 
-class Task(object):
+class Task(Callback.Callbacks):
     """This class implements a basic Task (command) abstraction.  The
     methods define the interface for starting, cancelling, waiting on a
     task, etc.
@@ -56,7 +57,6 @@ class Task(object):
         initialize() and start() methods.
         """
         self.ev_done = threading.Event()
-        self.callbacks = Queue.Queue()
         self.tag = None
         self.logger = None
         self.threadPool = None
@@ -68,6 +68,8 @@ class Task(object):
         self.shares = ['logger', 'threadPool', 'shares']
 
         super(Task, self).__init__()
+
+        self.enable_callback('resolved')
 
 
     def initialize(self, taskParent, override=None):
@@ -247,7 +249,7 @@ class Task(object):
         self.ev_done.set()
 
         # Perform callbacks for event-style waiters
-        self.do_callbacks()
+        self.make_callback('resolved', self.result)
 
         # If the result is an exception, then our final act is to raise
         # it in the caller, unless the caller explicitly supressed that
@@ -255,35 +257,6 @@ class Task(object):
             raise result
 
         return result
-
-
-    def register_callback(self, fn, args=None):
-        """This method is called to register a callback function to be
-        called when a task terminates.
-        Subclass should probably not override this method.
-        """
-        if args is None:
-            args = []
-
-        if callable(fn):
-            self.callbacks.put((fn, args))
-        else:
-            raise TaskError("Function argument is not a callable: %s" % \
-                            str(fn))
-
-
-    def do_callbacks(self):
-        """Makes callbacks on all registered functions waiting on this task.
-        """
-
-        while not self.callbacks.empty():
-            (fn, rest) = self.callbacks.get()
-
-            args = [self.result]
-            args.extend(rest)
-
-            fn(*args)
-
 
     def get_tag(self):
         """This is only valid AFTER initialize() has been called on the task.
@@ -530,7 +503,7 @@ class oldConcurrentAndTaskset(Task):
         # Register termination callbacks for all my child tasks.
         for task in self.taskseq:
             self.taskset.append(task)
-            task.register_callback(self.child_done, args=[self.count, task])
+            task.add_callback('resolved', self.child_done, self.count)
             self.count += 1
 
         self.numtasks = self.count
@@ -562,7 +535,7 @@ class oldConcurrentAndTaskset(Task):
         return 0
 
 
-    def child_done(self, result, count, task):
+    def child_done(self, task, result, count):
         """Acquire the condition variable for the compound task object.
         Decrement the thread count.  If we are the last thread to
         finish, release compound task thread, which is blocked in execute().
@@ -596,7 +569,7 @@ class oldConcurrentAndTaskset(Task):
         """
         with self.regcond:
             self.taskset.append(task)
-            task.register_callback(self.child_done, args=[self.numtasks, task])
+            task.add_callback('resolved', self.child_done, self.numtasks)
             self.numtasks += 1
             self.count += 1
 
@@ -813,7 +786,7 @@ class QueueTaskset(Task):
 
                 self.task = task
 
-                task.register_callback(self.child_done, args=[task])
+                task.add_callback(self.child_done)
 
                 with self.lock:
                     self.count += 1
@@ -860,7 +833,7 @@ class QueueTaskset(Task):
         return self.result
 
 
-    def child_done(self, result, task):
+    def child_done(self, task, result):
         with self.lock:
             self.count -= 1
             self.totaltime += task.getExecutionTime()

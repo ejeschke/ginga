@@ -13,7 +13,6 @@ import tempfile
 import glob
 import threading
 import logging
-import mimetypes
 import platform
 import atexit
 import shutil
@@ -24,7 +23,7 @@ from ginga import cmap, imap
 from ginga import AstroImage, RGBImage, BaseImage
 from ginga.table import AstroTable
 from ginga.misc import Bunch, Timer, Future
-from ginga.util import catalog, iohelper, io_fits
+from ginga.util import catalog, iohelper, io_fits, toolbox
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util.six.moves import map
@@ -49,19 +48,13 @@ else:
     import _thread as thread  # noqa
     import queue as Queue  # noqa
 
-magic_tester = None
+have_docutils = False
 try:
-    import magic
-    have_magic = True
-    # it seems there are conflicting versions of a 'magic'
-    # module for python floating around...*sigh*
-    if not hasattr(magic, 'from_file'):
-        # TODO: do this at program start only
-        magic_tester = magic.open(magic.DEFAULT_MODE)
-        magic_tester.load()
+    from docutils.core import publish_string
+    have_docutils = True
+except ImportError:
+    pass
 
-except (ImportError, Exception):
-    have_magic = False
 
 #pluginconfpfx = 'plugins'
 pluginconfpfx = None
@@ -145,6 +138,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.settings.add_defaults(fixedFont='Monospace',
                                    sansFont='Sans',
                                    channel_follows_focus=False,
+                                   scrollbars='off',
                                    share_readout=True,
                                    numImages=10,
                                    # Offset to add to numpy-based coords
@@ -172,7 +166,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Initialize catalog and image server bank
         self.imgsrv = catalog.ServerBank(self.logger)
 
-        self.operations = []
+        self.operations = {}
 
         # state for implementing field-info callback
         self._cursor_task = self.get_timer()
@@ -277,6 +271,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def add_local_plugin(self, spec):
         try:
+            spec.setdefault('ptype', 'local')
             name = spec.setdefault('name', spec.get('klass', spec.module))
             self.local_plugins[name] = spec
 
@@ -286,21 +281,25 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             hidden = spec.get('hidden', False)
             if not hidden:
-                self.add_operation(name)
+                self.add_operation(name, 'local', spec)
 
         except Exception as e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
                 name, str(e)))
 
-    def add_operation(self, opname):
-        self.operations.append(opname)
-        self.make_callback('add-operation', opname)
+    def add_operation(self, opname, optype, spec):
+        category = spec.get('category', None)
+        l = self.operations.setdefault(category, [])
+        l.append(opname)
+        self.make_callback('add-operation', opname, optype, spec)
 
-    def get_operations(self):
-        return self.operations
+    def get_operations(self, category=None):
+        l = self.operations.setdefault(category, [])
+        return l
 
     def add_global_plugin(self, spec):
         try:
+            spec.setdefault('ptype', 'global')
             name = spec.setdefault('name', spec.get('klass', spec.module))
             self.global_plugins[name] = spec
 
@@ -309,7 +308,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.mm.load_module(spec.module, pfx=pfx, path=path)
 
             self.gpmon.load_plugin(name, spec)
-            self.add_plugin_menu(name)
+
+            hidden = spec.get('hidden', False)
+            if not hidden:
+                menuname = spec.get('menu', name)
+                self.add_plugin_menu(name, menuname)
+                self.add_operation(name, 'global', spec)
 
             start = spec.get('start', True)
             if start:
@@ -341,30 +345,89 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.logger.error(errmsg)
             self.gui_do(self.show_error, errmsg, raisetab=True)
 
-    def help(self):
+    def help_text(self, name, text, text_kind='plain', trim_pfx=0):
+        """
+        Provide help text for the user.
+
+        This method will convert the text as necessary with docutils and
+        display it in the WBrowser plugin, if available.  If the plugin is
+        not available and the text is type 'rst' then the text will be
+        displayed in a plain text widget.
+
+        Parameters
+        ----------
+        name : str
+            Category of help to show.
+
+        text : str
+            The text to show.  Should be plain, HTML or RST text
+
+        text_kind : str (optional)
+            One of 'plain', 'html', 'rst'.  Default is 'plain'.
+
+        trim_pfx : int (optional)
+            Number of spaces to trim off the beginning of each line of text.
+
+        """
+
+        if trim_pfx > 0:
+            # caller wants to trim some space off the front
+            # of each line
+            text = toolbox.trim_prefix(text, trim_pfx)
+
+        if text_kind == 'rst':
+            # try to convert RST to HTML using docutils
+            try:
+                overrides = {'input_encoding': 'ascii',
+                             'output_encoding': 'utf-8'}
+                text_html = publish_string(text, writer_name='html',
+                                           settings_overrides=overrides)
+                # docutils produces 'bytes' output, but webkit needs
+                # a utf-8 string
+                text = text_html.decode('utf-8')
+                text_kind = 'html'
+
+            except Exception as e:
+                self.logger.error("Error converting help text to HTML: %s" % (
+                    str(e)))
+                # revert to showing RST as plain text
+
+        else:
+            raise ValueError(
+                "I don't know how to display text of kind '%s'" % (text_kind))
+
+        if text_kind == 'html':
+            self.help(text=text, text_kind='html')
+
+        else:
+            self.show_help_text(name, text)
+
+    def help(self, text=None, text_kind='url'):
+
         if not self.gpmon.has_plugin('WBrowser'):
-            self.logger.error("help() requires 'WBrowser' plugin")
-            return
+            return self.show_error("help() requires 'WBrowser' plugin")
 
         self.start_global_plugin('WBrowser')
 
-        local_doc = os.path.join(package_home, 'doc', 'help.html')
-        if not os.path.exists(local_doc):
-            url = "https://ginga.readthedocs.io/en/latest"
-        else:
-            url = "file:%s" % (os.path.abspath(local_doc))
-
-        # TODO: need to let GUI finish processing, it seems
+        # need to let GUI finish processing, it seems
         self.update_pending()
 
         obj = self.gpmon.get_plugin('WBrowser')
-        obj.browse(url)
 
-    def show_help_text(self, name, help_txt, wsname='channels'):
-        """Show help text in a closeable tab window.  The title of the
-        window is set from `name` prefixed with 'HELP:'
+        if text is not None:
+            if text_kind == 'url':
+                obj.browse(text)
+            else:
+                obj.browse(text, url_is_content=True)
+        else:
+            obj.show_help()
+
+    def show_help_text(self, name, help_txt, wsname='right'):
         """
-        tabname = 'HELP: %s' % name
+        Show help text in a closeable tab window.  The title of the
+        window is set from ``name`` prefixed with 'HELP:'
+        """
+        tabname = 'HELP: {}'.format(name)
         group = 1
         tabnames = self.ds.get_tabnames(group)
         if tabname in tabnames:
@@ -400,39 +463,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     # BASIC IMAGE OPERATIONS
 
-    def guess_filetype(self, filepath):
-        # If we have python-magic, use it to determine file type
-        typ = None
-        if have_magic:
-            try:
-                # it seems there are conflicting versions of a 'magic'
-                # module for python floating around...*sigh*
-                if hasattr(magic, 'from_file'):
-                    typ = magic.from_file(filepath, mime=True)
-
-                elif magic_tester is not None:
-                    descrip = magic_tester.file(filepath)
-                    if descrip.startswith("FITS image data"):
-                        return ('image', 'fits')
-
-            except Exception as e:
-                self.logger.warning("python-magic error: %s; falling back "
-                                    "to 'mimetypes'" % (str(e)))
-
-        if typ is None:
-            try:
-                typ, enc = mimetypes.guess_type(filepath)
-            except Exception as e:
-                self.logger.warning("mimetypes error: %s; can't determine "
-                                    "file type" % (str(e)))
-
-        if typ:
-            typ, subtyp = typ.split('/')
-            self.logger.debug("MIME type is %s/%s" % (typ, subtyp))
-            return (typ, subtyp)
-
-        raise ControlError("Can't determine file type of '%s'" % (filepath))
-
     def load_image(self, filepath, idx=None):
 
         info = iohelper.get_fileinfo(filepath, cache_dir=self.tmpdir)
@@ -441,7 +471,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Create an image.  Assume type to be an AstroImage unless
         # the MIME association says it is something different.
         try:
-            typ, subtyp = self.guess_filetype(filepfx)
+            typ, subtyp = iohelper.guess_filetype(filepfx)
 
         except Exception as e:
             self.logger.warning("error determining file type: %s; "
@@ -674,7 +704,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Zoom the view to a 1 to 1 pixel ratio (100 %%).
         """
         viewer = self.getfocus_viewer()
-        viewer.zoom_to(1)
+        viewer.scale_to(1.0, 1.0)
         return True
 
     def zoom_fit(self):
@@ -1071,6 +1101,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                       self.settings.get('numImages', 1))
         settings.set_defaults(switchnew=True, numImages=num_images,
                               raisenew=True, genthumb=True,
+                              enter_focus=True, focus_indicator=False,
                               preload_images=False, sort_order='loadtime')
 
         with self.lock:
@@ -1421,10 +1452,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if hasattr(GwHelp, 'FileSelection'):
             self.filesel = GwHelp.FileSelection(self.w.root.get_widget())
 
-    def add_plugin_menu(self, name):
+    def add_plugin_menu(self, name, menuname):
         # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
         if 'menu_plug' in self.w:
-            item = self.w.menu_plug.add_name("Start %s" % (name))
+            item = self.w.menu_plug.add_name("Start %s" % (menuname))
             item.add_callback('activated',
                               lambda *args: self.start_global_plugin(name))
 
@@ -1464,10 +1495,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
         vbox.set_spacing(0)
-        root.add_widget(vbox, stretch=1)
+        root.set_widget(vbox)
 
         fi = self.build_viewpane(settings, rgbmap=rgbmap)
-        iw = fi.get_widget()
+
+        iw = Viewers.GingaViewerWidget(viewer=fi)
         vbox.add_widget(iw, stretch=1)
 
         # Get image from current focused channel
@@ -1535,7 +1567,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def build_viewpane(self, settings, rgbmap=None, size=(1, 1)):
         # instantiate bindings loaded with users preferences
         bclass = Viewers.ImageViewCanvas.bindingsClass
-        bindprefs = self.prefs.createCategory('bindings')
+        bindprefs = self.prefs.create_category('bindings')
         bd = bclass(self.logger, settings=bindprefs)
 
         fi = Viewers.ImageViewCanvas(logger=self.logger,
@@ -1548,11 +1580,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         canvas.enable_draw(False)
         fi.set_canvas(canvas)
 
-        fi.set_enter_focus(settings.get('enter_focus', False))
-        fi.show_focus_indicator(settings.get('focus_indicator', False))
+        fi.set_enter_focus(settings.get('enter_focus', True))
+        # check general settings for default value of focus indicator
+        focus_ind = self.settings.get('focus_indicator', False)
+        fi.show_focus_indicator(self.settings.get('focus_indicator', focus_ind))
         fi.enable_auto_orient(True)
 
-        fi.add_callback('motion', self.motion_cb)
+        fi.add_callback('cursor-changed', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
         fi.set_callback('keydown-none', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
@@ -1582,7 +1616,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi = self.build_viewpane(settings, size=size)
 
         # add scrollbar interface around this viewer
-        scr = settings.get('scrollbars', 'off')
+        scr_onoff = self.settings.get('scrollbars', 'off')
+        scr = settings.get('scrollbars', scr_onoff)
         if scr != 'off':
             si = Viewers.ScrolledView(fi)
             si.scroll_bars(horizontal=scr, vertical=scr)
@@ -1948,11 +1983,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # add close handlers
         ws.add_callback('ws-close', self.workspace_closed_cb)
-
-        if ws.nb.has_callback('page-closed'):
-            ws.nb.add_callback('page-closed', self.page_closed_cb, ws.name)
-        if ws.nb.has_callback('page-switch'):
-            ws.nb.add_callback('page-switch', self.page_switch_cb)
+        if ws.has_callback('page-close'):
+            ws.add_callback('page-close', self.page_close_cb)
+        if ws.has_callback('page-switch'):
+            ws.add_callback('page-switch', self.page_switch_cb)
 
         if ws.toolbar is not None:
             tb = ws.toolbar
@@ -2082,7 +2116,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 return channel
         return None
 
-    def page_switch_cb(self, tab_w, child):
+    def page_switch_cb(self, ws, child):
         self.logger.debug("page switched to %s" % (str(child)))
 
         # Find the channel that contains this widget
@@ -2138,8 +2172,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         return True
 
-    def page_closed_cb(self, widget, child, wsname):
-        self.logger.debug("page closed in %s: '%s'" % (wsname, str(child)))
+    def page_close_cb(self, ws, child):
+        self.logger.debug("page closed in %s: '%s'" % (ws.name, str(child)))
 
         channel = self._get_channel_by_container(child)
         if channel is not None:
@@ -2254,12 +2288,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.collapse_pane('right')
         elif keyname == 'n':
             self.next_channel()
-        elif keyname == 'j':
+        elif keyname == 'J':
             self.cycle_workspace_type()
         elif keyname == 'k':
             self.add_channel_auto()
         elif keyname == 'K':
             self.remove_channel_auto()
+        elif keyname == 'f1':
+            self.show_channel_names()
         ## elif keyname == 'escape':
         ##     self.reset_viewer()
         elif keyname in ('up',):
@@ -2279,9 +2315,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         to_chname = self.get_channel_name(viewer)
         for url in urls:
-            ## self.load_file(url)
-            self.nongui_do(self.load_file, url, chname=to_chname,
-                           wait=False)
+            # NOTE: this used to be a nongui_do(), but there is some
+            # subtle interaction inside the toolkit code with the
+            # loading that makes it unstable
+            self.gui_do_priority(20, self.load_file, url, chname=to_chname,
+                                 wait=False)
         return True
 
     def force_focus_cb(self, viewer, event, data_x, data_y):
@@ -2295,12 +2333,22 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         if not self.channel_follows_focus:
             return True
+
         self.logger.debug("Focus %s=%s" % (name, tf))
         if tf:
             if viewer != self.getfocus_viewer():
                 self.change_channel(name, raisew=False)
 
         return True
+
+    def show_channel_names(self):
+        """Show each channel's name in its image viewer.
+        Useful in 'grid' or 'stack' workspace type to identify which window
+        is which.
+        """
+        for name in self.get_channel_names():
+            channel = self.get_channel(name)
+            channel.fitsimage.onscreen_message(name, delay=2.5)
 
     ########################################################
     ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED

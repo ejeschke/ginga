@@ -56,10 +56,12 @@ class ImageViewGtk(ImageView):
         self.imgwin.show_all()
 
         # see reschedule_redraw() method
-        self._defer_task = GtkHelp.Timer(0.0,
-                                         lambda timer: self.delayed_redraw())
-        self.msgtask = GtkHelp.Timer(0.0,
-                                     lambda timer: self.onscreen_message(None))
+        self._defer_task = GtkHelp.Timer()
+        self._defer_task.add_callback('expired',
+                                      lambda timer: self.delayed_redraw())
+        self.msgtask = GtkHelp.Timer()
+        self.msgtask.add_callback('expired',
+                                  lambda timer: self.onscreen_message(None))
 
     def get_widget(self):
         return self.imgwin
@@ -109,7 +111,7 @@ class ImageViewGtk(ImageView):
         pixbuf.save(filepath, format, options)
 
     def reschedule_redraw(self, time_sec):
-        self._defer_task.cancel()
+        self._defer_task.stop()
         self._defer_task.start(time_sec)
 
     def update_image(self):
@@ -201,12 +203,15 @@ class ImageViewGtk(ImageView):
         screen = self.imgwin.window.get_screen()
         disp.warp_pointer(screen, scrn_x, scrn_y)
 
+    def make_timer(self):
+        return GtkHelp.Timer()
+
     def _get_rgbbuf(self, data):
         buf = data.tostring(order='C')
         return buf
 
     def onscreen_message(self, text, delay=None, redraw=True):
-        self.msgtask.cancel()
+        self.msgtask.stop()
         self.set_onscreen_message(text, redraw=redraw)
         if delay is not None:
             self.msgtask.start(delay)
@@ -320,6 +325,12 @@ class ImageViewEvent(ImageViewGtk):
             'left': 'left',
             'up': 'up',
             'down': 'down',
+            'insert': 'insert',
+            'delete': 'delete',
+            'home': 'home',
+            'end': 'end',
+            'page_up': 'page_up',
+            'page_down': 'page_down',
             }
 
         # Define cursors
@@ -394,8 +405,7 @@ class ImageViewEvent(ImageViewGtk):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
@@ -409,8 +419,7 @@ class ImageViewEvent(ImageViewGtk):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
@@ -431,8 +440,7 @@ class ImageViewEvent(ImageViewGtk):
             button |= 0x4
         # self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('motion', button, data_x, data_y)
 
@@ -454,8 +462,7 @@ class ImageViewEvent(ImageViewGtk):
         self.logger.debug("scroll deg=%f direction=%f" % (
             degrees, direction))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, degrees,
                                   data_x, data_y)

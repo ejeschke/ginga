@@ -35,10 +35,10 @@ class ImageViewCairo(ImageView.ImageViewBase):
         self.dst_surface = None
 
         if sys.byteorder == 'little':
-            self._rgb_order = 'BGRA'
+            self.rgb_order = 'BGRA'
             self._alpha_idx = 3
         else:
-            self._rgb_order = 'ARGB'
+            self.rgb_order = 'ARGB'
             self._alpha_idx = 0
 
         self.renderer = CanvasRenderer(self)
@@ -110,7 +110,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
             return
 
         # Prepare array for Cairo rendering
-        arr = rgbobj.get_array(self._rgb_order)
+        arr = rgbobj.get_array(self.rgb_order)
 
         (height, width) = arr.shape[:2]
         return self._render_offscreen(self.surface, arr, dst_x, dst_y,
@@ -165,9 +165,6 @@ class ImageViewCairo(ImageView.ImageViewBase):
 
     def set_cursor(self, cursor):
         pass
-
-    def get_rgb_order(self):
-        return self._rgb_order
 
     ## def pix2canvas(self, pt):
     ##     x, y = pt

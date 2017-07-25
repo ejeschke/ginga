@@ -99,8 +99,8 @@ class ImageViewPg(ImageView):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        image_buf = self.get_image_as_bytes()
-        return image_buf
+        image_buf = self.get_rgb_image_as_buffer()
+        return image_buf.getvalue()
 
     def save_plain_image_as_file(self, filepath, format='png', quality=90):
         """Used for generating thumbnails.  Does not include overlaid
@@ -167,76 +167,184 @@ class ImageViewEvent(ImageViewPg):
         self._button = 0
 
         # @$%&^(_)*&^ javascript!!
+        # table mapping javascript key codes to ginga key names
+        # see key_down_event() and key_up_event()
+        #
+        # https://www.cambiaresearch.com/articles/15/javascript-char-codes-key-codes
         self._keytbl = {
+            8: 'backspace',
+            9: 'tab',
+            13: 'return',
             16: 'shift_l',
             #'shift_r': 'shift_r',
             17: 'control_l',
             #'control_r': 'control_r',
             18: 'alt_l',
             #'alt_r': 'alt_r',
-            'super_l': 'super_l',
-            'super_r': 'super_r',
-            'meta_right': 'meta_right',
-            ord('~'): '~',
-            # borrow ~ for escape for use in browser
-            #ord('~'): 'escape',
-            ord('`'): 'backquote',
-            ord('!'): '!',
-            ord('@'): '@',
-            ord('#'): '#',
-            ord('%'): '%',
-            ord('^'): '^',
-            ord('&'): '&',
-            ord('*'): '*',
-            ord('$'): '$',
-            ord('('): '(',
-            ord(')'): ')',
-            ord('_'): '_',
-            ord('-'): '-',
-            ord('+'): '+',
-            ord('='): '=',
-            ord('{'): '{',
-            ord('}'): '}',
-            ord('['): '[',
-            ord(']'): ']',
-            ord('|'): '|',
-            ord(':'): ':',
-            ord(';'): ';',
-            ord('"'): 'doublequote',
-            ord("'"): 'singlequote',
-            ord('\\'): 'backslash',
-            ord('<'): '<',
-            ord('>'): '>',
-            ord(','): ',',
-            ord('.'): '.',
-            ord('?'): '?',
-            ord('/'): '/',
-            ord(' '): 'space',
+            19: 'break',
+            20: 'caps_lock',
             27: 'escape',
-            13: 'return',
-            9: 'tab',
-            'f1': 'f1',
-            'f2': 'f2',
-            'f3': 'f3',
-            'f4': 'f4',
-            'f5': 'f5',
-            'f6': 'f6',
-            'f7': 'f7',
-            'f8': 'f8',
-            'f9': 'f9',
-            'f10': 'f10',
-            'f11': 'f11',
-            'f12': 'f12',
+            32: 'space',
+            33: 'page_up',
+            34: 'page_down',
+            35: 'end',
+            36: 'home',
+            37: 'left',
+            38: 'up',
+            39: 'right',
+            40: 'down',
+            45: 'insert',
+            46: 'delete',
+            65: 'a',
+            66: 'b',
+            67: 'c',
+            68: 'd',
+            69: 'e',
+            70: 'f',
+            71: 'g',
+            72: 'h',
+            73: 'i',
+            74: 'j',
+            75: 'k',
+            76: 'l',
+            77: 'm',
+            78: 'n',
+            79: 'o',
+            80: 'p',
+            81: 'q',
+            82: 'r',
+            83: 's',
+            84: 't',
+            85: 'u',
+            86: 'v',
+            87: 'w',
+            88: 'x',
+            89: 'y',
+            90: 'z',
+            91: 'super_l',
+            92: 'super_r',
+            93: 'menu_r',
+            96: 'numpad_0',
+            97: 'numpad_1',
+            98: 'numpad_2',
+            99: 'numpad_3',
+            100: 'numpad_4',
+            101: 'numpad_5',
+            102: 'numpad_6',
+            103: 'numpad_7',
+            104: 'numpad_8',
+            105: 'numpad_9',
+            106: 'numpad_*',
+            107: 'numpad_+',
+            109: 'numpad_-',
+            110: 'numpad_.',
+            111: 'numpad_/',
+            112: 'f1',
+            113: 'f2',
+            114: 'f3',
+            115: 'f4',
+            116: 'f5',
+            117: 'f6',
+            118: 'f7',
+            119: 'f8',
+            120: 'f9',
+            121: 'f10',
+            122: 'f11',
+            123: 'f12',
+            144: 'num_lock',
+            145: 'scroll_lock',
+            189: '-',
+            186: ';',
+            187: '=',
+            188: ',',
+            190: '.',
+            191: '/',
+            192: 'backquote',
+            219: '[',
+            220: 'backslash',
+            221: ']',
+            222: 'singlequote',
             }
 
-        self._browser_problem_keys = ('shift_l', 'control_l', 'escape',
-                                      'tab')
+        # this is an auxilliary table used to map shifted keys to names
+        # see key_down_event() and key_up_event()
+        self._keytbl2 = {
+            ('shift_l', 'backquote'): '~',
+            ('shift_l', '1'): '!',
+            ('shift_l', '2'): '@',
+            ('shift_l', '3'): '#',
+            ('shift_l', '4'): '$',
+            ('shift_l', '5'): '%',
+            ('shift_l', '6'): '^',
+            ('shift_l', '7'): '&',
+            ('shift_l', '8'): '*',
+            ('shift_l', '9'): '(',
+            ('shift_l', '0'): ')',
+            ('shift_l', 'a'): 'A',
+            ('shift_l', 'b'): 'B',
+            ('shift_l', 'c'): 'C',
+            ('shift_l', 'd'): 'D',
+            ('shift_l', 'e'): 'E',
+            ('shift_l', 'f'): 'F',
+            ('shift_l', 'g'): 'G',
+            ('shift_l', 'h'): 'H',
+            ('shift_l', 'i'): 'I',
+            ('shift_l', 'j'): 'J',
+            ('shift_l', 'k'): 'K',
+            ('shift_l', 'l'): 'L',
+            ('shift_l', 'm'): 'M',
+            ('shift_l', 'n'): 'N',
+            ('shift_l', 'o'): 'O',
+            ('shift_l', 'p'): 'P',
+            ('shift_l', 'q'): 'Q',
+            ('shift_l', 'r'): 'R',
+            ('shift_l', 's'): 'S',
+            ('shift_l', 't'): 'T',
+            ('shift_l', 'u'): 'U',
+            ('shift_l', 'v'): 'V',
+            ('shift_l', 'w'): 'W',
+            ('shift_l', 'x'): 'X',
+            ('shift_l', 'y'): 'Y',
+            ('shift_l', 'z'): 'Z',
+            ('shift_l', '-'): '_',
+            ('shift_l', '='): '+',
+            ('shift_l', '['): '{',
+            ('shift_l', ']'): '}',
+            ('shift_l', 'backslash'): '|',
+            ('shift_l', ';'): ':',
+            ('shift_l', 'singlequote'): 'doublequote',
+            ('shift_l', ','): '<',
+            ('shift_l', '.'): '>',
+            ('shift_l', '/'): '?',
+            }
+
+        # this table is used to map special characters to character names
+        # see key_press_event()
+        self._keytbl3 = {
+            '\\': 'backslash',
+            '"': 'doublequote',
+            "'": 'singlequote',
+            "`": 'backquote',
+            " ": 'space',
+            }
+
+        # list of keys for which javascript will give us a keydown event,
+        # but not a keypress event.  We use this list to synthesize one.
+        self._browser_problem_keys = set(['shift_l', 'control_l', 'alt_l',
+                                          'super_l', 'super_r', 'menu_r',
+                                          'escape', 'tab',
+                                          'left', 'up', 'right', 'down',
+                                          'insert', 'delete', 'home', 'end',
+                                          'page_up', 'page_down',
+                                          ])
         # Define cursors for pick and pan
         #hand = openHandCursor()
         hand = 'fleur'
         self.define_cursor('pan', hand)
         cross = 'cross'
         self.define_cursor('pick', cross)
+
+        self._shifted = False
 
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
@@ -253,11 +361,19 @@ class ImageViewEvent(ImageViewPg):
 
     def transkey(self, keycode):
         self.logger.debug("key code in js '%d'" % (keycode))
-        try:
-            return self._keytbl[keycode]
+        if keycode in self._keytbl:
+            key = self._keytbl[keycode]
+        else:
+            key = chr(keycode)
 
-        except KeyError:
-            return chr(keycode)
+        if self._shifted:
+            try:
+                key = self._keytbl2[('shift_l', key)]
+            except KeyError:
+                pass
+
+        self.logger.debug("key name in ginga '%s'" % (key))
+        return key
 
     def get_keyTable(self):
         return self._keytbl
@@ -280,28 +396,43 @@ class ImageViewEvent(ImageViewPg):
         return self.make_callback('leave')
 
     def key_press_event(self, event):
-        keycode = event.key_code
-        keyname = self.transkey(keycode)
-        self.logger.debug("key press event, key=%s" % (keyname))
+        # For key_press_events, javascript reports the actual printable
+        # key name.  We use a special keymap to just handle the few
+        # characters for which we have special names
+        keyname = event.key_name
+        self.logger.debug("key press event, keyname=%s" % (keyname))
+        if keyname in self._keytbl3:
+            keyname = self._keytbl3[keyname]
+        self.logger.debug("making key-press cb, key=%s" % (keyname))
         return self.make_ui_callback('key-press', keyname)
 
     def key_down_event(self, event):
+        # For key down events, javascript only validly reports a key code.
+        # We look up the code to determine the
         keycode = event.key_code
+        self.logger.debug("key down event, keycode=%s" % (keycode))
         keyname = self.transkey(keycode)
-        self.logger.debug("key press event, key=%s" % (keyname))
         # special hack for modifiers
+        if keyname == 'shift_l':
+            self._shifted = True
+
         if keyname in self._browser_problem_keys:
+            # JS doesn't report key press callbacks for certain keys
+            # so we synthesize one here for those
+            self.logger.debug("making key-press cb, key=%s" % (keyname))
             return self.make_ui_callback('key-press', keyname)
         return False
 
     def key_up_event(self, event):
         keycode = event.key_code
+        self.logger.debug("key release event, keycode=%s" % (keycode))
         keyname = self.transkey(keycode)
-        self.logger.debug("key release event, key=%s" % (keyname))
         # special hack for modifiers
-        if keyname in self._browser_problem_keys:
-            return self.make_ui_callback('key-release', keyname)
-        return False
+        if keyname == 'shift_l':
+            self._shifted = False
+
+        self.logger.debug("making key-release cb, key=%s" % (keyname))
+        return self.make_ui_callback('key-release', keyname)
 
     def button_press_event(self, event):
         x = event.x; y = event.y
@@ -311,8 +442,7 @@ class ImageViewEvent(ImageViewPg):
         self._button = button
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
@@ -324,8 +454,7 @@ class ImageViewEvent(ImageViewPg):
         self._button = 0
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
     def motion_notify_event(self, event):
@@ -336,8 +465,7 @@ class ImageViewEvent(ImageViewPg):
 
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('motion', button, data_x, data_y)
 
@@ -358,8 +486,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("scroll deg=%f direction=%f" % (
             numDegrees, direction))
 
-        data_x, data_y = self.get_data_xy(x, y)
-        self.last_data_x, self.last_data_y = data_x, data_y
+        data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, numDegrees,
                                   data_x, data_y)

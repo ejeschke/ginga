@@ -23,7 +23,17 @@ except ImportError:
     have_pyfits = False
 
 class Mosaic(GingaPlugin.LocalPlugin):
+    """
+    Mosaic
+    ======
 
+    Plugin Type: Local
+    ------------------
+    Mosaic is a local plugin, which means it is associated with a
+    channel.  An instance can be opened for each channel.
+
+    Set the FOV and drag files onto the window.
+    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Mosaic, self).__init__(fv, fitsimage)
@@ -51,21 +61,21 @@ class Mosaic(GingaPlugin.LocalPlugin):
         canvas.enable_draw(False)
         canvas.add_callback('drag-drop', self.drop_cb)
         canvas.set_surface(fitsimage)
-        #canvas.ui_setActive(True)
+        #canvas.ui_set_active(True)
         self.canvas = canvas
         self.layertag = 'mosaic-canvas'
 
         # Load plugin preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Mosaic')
-        self.settings.setDefaults(annotate_images=False, fov_deg=0.2,
-                                  match_bg=False, trim_px=0,
-                                  merge=False, num_threads=4,
-                                  drop_creates_new_mosaic=False,
-                                  mosaic_hdus=False, skew_limit=0.1,
-                                  allow_expand=True, expand_pad_deg=0.01,
-                                  max_center_deg_delta=2.0,
-                                  make_thumbs=True, reuse_image=False)
+        self.settings = prefs.create_category('plugin_Mosaic')
+        self.settings.set_defaults(annotate_images=False, fov_deg=0.2,
+                                   match_bg=False, trim_px=0,
+                                   merge=False, num_threads=4,
+                                   drop_creates_new_mosaic=False,
+                                   mosaic_hdus=False, skew_limit=0.1,
+                                   allow_expand=True, expand_pad_deg=0.01,
+                                   max_center_deg_delta=2.0,
+                                   make_thumbs=True, reuse_image=False)
         self.settings.load(onError='silent')
 
         # channel where mosaic should appear (default=ours)
@@ -84,15 +94,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_border_width(4)
         vbox.set_spacing(2)
-
-        self.msg_font = self.fv.get_font("sansFont", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
 
         fr = Widgets.Frame("Mosaic")
 
@@ -202,6 +203,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
 
@@ -258,18 +262,20 @@ class Mosaic(GingaPlugin.LocalPlugin):
             if name is not None:
                 img_mosaic.set(name=name)
             imname = img_mosaic.get('name', image.get('name', "NoName"))
+            self.logger.debug("mosaic name is '%s'" % (imname))
 
             # avoid making a thumbnail of this if seed image is also that way
             nothumb = not self.settings.get('make_thumbs', False)
             if nothumb:
                 img_mosaic.set(nothumb=True)
-            else:
-                # image is not on disk, set indication for other plugins
-                img_mosaic.set(path=None)
+
+            # image is not on disk, set indication for other plugins
+            img_mosaic.set(path=None)
 
             # TODO: fill in interesting/select object headers from seed image
 
             self.img_mosaic = img_mosaic
+            self.logger.info("adding mosaic image '%s' to channel" % (imname))
             self.fv.gui_call(self.fv.add_image, imname, img_mosaic,
                              chname=self.mosaic_chname)
 
@@ -325,7 +331,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                             merge=merge,
                                             allow_expand=allow_expand,
                                             expand_pad_deg=expand_pad_deg,
-                                            suppress_callback=True)
+                                            suppress_callback=False)
 
         # annotate ingested image with its name?
         if annotate and (not allow_expand):
@@ -350,11 +356,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.gui_up = False
         return True
 
-    def instructions(self):
-        self.tw.set_text("""Set the FOV and drag files onto the window.""")
-
     def start(self):
-        self.instructions()
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
@@ -367,7 +369,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.resume()
 
     def stop(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
@@ -380,11 +382,11 @@ class Mosaic(GingaPlugin.LocalPlugin):
     def pause(self):
         # comment this to NOT disable the UI for this plugin
         # when it loses focus
-        #self.canvas.ui_setActive(False)
+        #self.canvas.ui_set_active(False)
         pass
 
     def resume(self):
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
 
     def new_mosaic_cb(self):
         self.img_mosaic = None

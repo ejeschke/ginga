@@ -6,21 +6,32 @@
 #
 import numpy
 
-from ginga.gw import Widgets, Plot
+from ginga.gw import Widgets
 from ginga import GingaPlugin
 from ginga import AutoCuts
-from ginga.util import plots
+
+try:
+    from ginga.gw import Plot
+    from ginga.util import plots
+    have_mpl = True
+except ImportError:
+    have_mpl = False
 
 
 class Histogram(GingaPlugin.LocalPlugin):
     """
+    Histogram
+    =========
     Histogram plots a histogram for a region drawn in the image, or for the
     entire image.
 
-    Histogram is a local plugin, and thus must be invoked separately for
-    each channel in which you want to use it.  If a new image is selected
-    for the channel the histogram plot will be recalculated based on the
-    current parameters with the new data.
+    Plugin Type: Local
+    ------------------
+    Histogram is a local plugin, which means it is associated with a channel.
+    An instance can be opened for each channel.
+
+    If a new image is selected for the channel the histogram plot will be
+    recalculated based on the current parameters with the new data.
 
     Usage
     -----
@@ -32,7 +43,8 @@ class Histogram(GingaPlugin.LocalPlugin):
     UI Controls
     -----------
     Three radio buttons at the bottom of the UI are used to control the
-    effects of the click/drag action::
+    effects of the click/drag action:
+
     * select "Move" to drag the region to a different location
     * select "Draw" to draw a new region
     * select "Edit" to edit the region
@@ -63,9 +75,9 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         # get Histogram preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_Histogram')
-        self.settings.addDefaults(draw_then_move=True, num_bins=2048,
-                                  hist_color='aquamarine')
+        self.settings = prefs.create_category('plugin_Histogram')
+        self.settings.add_defaults(draw_then_move=True, num_bins=2048,
+                                   hist_color='aquamarine')
         self.settings.load(onError='silent')
 
         # Set up histogram control parameters
@@ -91,18 +103,23 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         fitssettings = fitsimage.get_settings()
         for name in ['cuts']:
-            fitssettings.getSetting(name).add_callback(
+            fitssettings.get_setting(name).add_callback(
                 'set', self.cutset_ext_cb, fitsimage)
         self.gui_up = False
 
     def build_gui(self, container):
+        if not have_mpl:
+            raise ImportError('Install matplotlib to use this plugin')
+
         top = Widgets.VBox()
         top.set_border_width(4)
 
         # Make the cuts plot
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
-        vbox.set_border_width(4)
-        vbox.set_spacing(2)
+        box, sw, orientation = Widgets.get_oriented_box(container)
+        box.set_border_width(4)
+        box.set_spacing(2)
+
+        paned = Widgets.Splitter(orientation=orientation)
 
         self.plot = plots.Plot(logger=self.logger,
                                width=400, height=400)
@@ -110,7 +127,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         ax.grid(True)
         w = Plot.PlotWidget(self.plot)
         w.resize(400, 400)
-        vbox.add_widget(w, stretch=1)
+        paned.add_widget(Widgets.hadjust(w, orientation))
 
         captions = (('Cut Low:', 'label', 'Cut Low', 'entry'),
                     ('Cut High:', 'label', 'Cut High', 'entry',
@@ -148,7 +165,12 @@ class Histogram(GingaPlugin.LocalPlugin):
         b.numbins.add_callback('activated', lambda w: self.set_numbins_cb())
         b.full_image.add_callback('activated', lambda w: self.full_image_cb())
 
-        vbox.add_widget(w, stretch=0)
+        fr = Widgets.Frame("Histogram")
+        fr.set_widget(w)
+        box.add_widget(fr, stretch=0)
+        paned.add_widget(sw)
+        # hack to set a reasonable starting position for the splitter
+        paned.set_sizes([400, 500])
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
@@ -181,12 +203,9 @@ class Histogram(GingaPlugin.LocalPlugin):
             self.w.btn_edit.set_enabled(False)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(hbox, stretch=0)
 
-        ## spacer = Widgets.Label('')
-        ## vbox.add_widget(spacer, stretch=1)
-
-        top.add_widget(sw, stretch=1)
+        top.add_widget(paned, stretch=5)
+        top.add_widget(hbox, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -205,14 +224,9 @@ class Histogram(GingaPlugin.LocalPlugin):
         container.add_widget(top, stretch=1)
         self.gui_up = True
 
-
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
-
-    def help(self):
-        name = str(self).capitalize()
-        self.fv.show_help_text(name, self.__doc__)
 
     def start(self):
         self.plot.set_titles(rtitle="Histogram")
@@ -230,13 +244,13 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.resume()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status("Draw a rectangle with the right mouse button")
 
     def stop(self):

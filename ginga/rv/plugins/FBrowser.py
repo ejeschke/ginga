@@ -22,7 +22,31 @@ except ImportError:
 
 
 class FBrowser(GingaPlugin.LocalPlugin):
+    """
+    FBrowser
+    ========
+    A plugin for browsing the local filesystem and loading files.
 
+    Plugin Type: Global or Local
+    ----------------------------
+    FBrowser is a hybrid global/local plugin, which means it can be invoked
+    in either fashion.  If invoked as a local plugin then it is associated
+    with a channel, and an instance can be opened for each channel.  It can
+    also be opened as a global plugin.
+
+    Usage
+    -----
+    Navigate the directory tree until you come to the location files
+    you want to load.  You can double click a file to load it into the
+    associated channel, or drag a file into a channel viewer window to
+    load it into any channel viewer.
+
+    Multiple files can be selected by holding down Ctrl (Command on Mac),
+    or Shift-clicking to select a contiguous range of files.
+
+    Because it is a local plugin, FBrowser will remember its last
+    directory if closed and then restarted.
+    """
     def __init__(self, *args):
         # superclass defines some variables for us, like logger
         if len(args) == 2:
@@ -45,14 +69,14 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         # setup plugin preferences
         prefs = self.fv.get_preferences()
-        self.settings = prefs.createCategory('plugin_FBrowser')
-        self.settings.addDefaults(home_path=paths.home,
-                                  scan_fits_headers=False,
-                                  scan_limit=100,
-                                  keywords=keywords,
-                                  columns=columns,
-                                  color_alternate_rows=True,
-                                  max_rows_for_col_resize=5000)
+        self.settings = prefs.create_category('plugin_FBrowser')
+        self.settings.add_defaults(home_path=paths.home,
+                                   scan_fits_headers=False,
+                                   scan_limit=100,
+                                   keywords=keywords,
+                                   columns=columns,
+                                   color_alternate_rows=True,
+                                   max_rows_for_col_resize=5000)
         self.settings.load(onError='silent')
 
         homedir = self.settings.get('home_path', None)
@@ -118,6 +142,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btn = Widgets.Button("Refresh")
         btn.add_callback('activated', lambda w: self.refresh())

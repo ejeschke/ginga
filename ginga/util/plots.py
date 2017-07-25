@@ -5,13 +5,19 @@
 # Please see the file LICENSE.txt for details.
 #
 import numpy
+from astropy.utils.introspection import minversion
+
 import matplotlib as mpl
 from matplotlib.figure import Figure
-# fix issue of negative numbers rendering incorrectly with default font
-mpl.rcParams['axes.unicode_minus'] = False
 
 from ginga.util import iqcalc
 from ginga.misc import Callback
+
+# fix issue of negative numbers rendering incorrectly with default font
+mpl.rcParams['axes.unicode_minus'] = False
+
+MPL_GE_2_0 = minversion(mpl, '2.0')
+
 
 class Plot(Callback.Callbacks):
 
@@ -70,7 +76,7 @@ class Plot(Callback.Callbacks):
             pass
         ax = self.ax
         for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
-             ax.get_xticklabels() + ax.get_yticklabels()):
+                     ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(self.fontsize)
 
     def clear(self):
@@ -101,7 +107,7 @@ class Plot(Callback.Callbacks):
         self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
                         rtitle=rtitle)
         self.ax.grid(True)
-        self.ax.plot(xarr, yarr, **kwdargs)
+        lines = self.ax.plot(xarr, yarr, **kwdargs)
 
         for item in self.ax.get_xticklabels() + self.ax.get_yticklabels():
             item.set_fontsize(self.fontsize)
@@ -114,9 +120,11 @@ class Plot(Callback.Callbacks):
         #self.fig.tight_layout()
 
         self.draw()
+        return lines
 
     def get_data(self):
             return self.fig, self.xdata, self.ydata
+
 
 class HistogramPlot(Plot):
 
@@ -208,7 +216,10 @@ class ContourPlot(Plot):
         ##     self.cbar.remove()
 
         self.ax.cla()
-        self.ax.set_axis_bgcolor('#303030')
+        if MPL_GE_2_0:
+            self.ax.set_facecolor('#303030')
+        else:
+            self.ax.set_axis_bgcolor('#303030')
 
         try:
             im = self.ax.imshow(data, interpolation=self.interpolation,
@@ -217,11 +228,9 @@ class ContourPlot(Plot):
             # Create a contour plot
             self.xdata = numpy.arange(x1, x2, 1)
             self.ydata = numpy.arange(y1, y2, 1)
-            colors = [ 'black' ] * num_contours
-            cs = self.ax.contour(self.xdata, self.ydata, data, num_contours,
-                                 colors=colors
-                                 #cmap=self.cmap
-                                 )
+            colors = ['black'] * num_contours
+            self.ax.contour(self.xdata, self.ydata, data, num_contours,
+                            colors=colors)  # cmap=self.cmap
             ## self.ax.clabel(cs, inline=1, fontsize=10,
             ##                fmt='%5.3f', color='cyan')
             # Mark the center of the object
@@ -258,7 +267,7 @@ class ContourPlot(Plot):
         ##                     num_contours=num_contours)
         cx, cy = x - x1, y - y1
         self.plot_contours_data(cx, cy, img_data,
-                            num_contours=num_contours)
+                                num_contours=num_contours)
 
     def plot_panzoom(self):
         ht, wd = len(self.ydata), len(self.xdata)
@@ -305,7 +314,7 @@ class ContourPlot(Plot):
     def plot_scroll(self, event):
         # Matplotlib only gives us the number of steps of the scroll,
         # positive for up and negative for down.
-        direction = None
+        #direction = None
         if event.step > 0:
             #delta = 0.9
             self.plot_zoomlevel += 1.0
@@ -362,14 +371,15 @@ class RadialPlot(Plot):
         try:
             ht, wd = img_data.shape
             off_x, off_y = x1, y1
-            maxval = numpy.nanmax(img_data)
+            #maxval = numpy.nanmax(img_data)
 
             # create arrays of radius and value
             r = []
             v = []
             for i in range(0, wd):
                 for j in range(0, ht):
-                    r.append( numpy.sqrt( (off_x + i - x)**2 + (off_y + j - y)**2 ) )
+                    r.append(numpy.sqrt((off_x + i - x) ** 2 +
+                                        (off_y + j - y) ** 2))
                     v.append(img_data[j, i])
             r, v = numpy.array(r), numpy.array(v)
 
@@ -394,6 +404,7 @@ class RadialPlot(Plot):
             self.logger.error("Error making radial plot: %s" % (
                 str(e)))
 
+
 class FWHMPlot(Plot):
 
     def __init__(self, *args, **kwargs):
@@ -401,7 +412,8 @@ class FWHMPlot(Plot):
 
         self.iqcalc = iqcalc.IQCalc(self.logger)
 
-    def _plot_fwhm_axis(self, arr, iqcalc, skybg, color1, color2, color3):
+    def _plot_fwhm_axis(self, arr, iqcalc, skybg, color1, color2, color3,
+                        fwhm_method='gaussian'):
         N = len(arr)
         X = numpy.array(list(range(N)))
         Y = arr
@@ -413,18 +425,21 @@ class FWHMPlot(Plot):
         self.logger.debug("Y=%s" % (str(Y)))
         self.ax.plot(X, Y, color=color1, marker='.')
 
-        fwhm, mu, sdev, maxv = iqcalc.calc_fwhm(arr)
-        # Make a little smoother gaussian curve by plotting intermediate
+        res = iqcalc.calc_fwhm(arr, method_name=fwhm_method)
+        fwhm, mu = res.fwhm, res.mu
+
+        # Make a little smoother fitted curve by plotting intermediate
         # points
-        XN = numpy.linspace(0.0, float(N), N*10)
-        Z = numpy.array([iqcalc.gaussian(x, (mu, sdev, maxv))
+        XN = numpy.linspace(0.0, float(N), N * 10)
+        Z = numpy.array([res.fit_fn(x, res.fit_args)
                          for x in XN])
         self.ax.plot(XN, Z, color=color1, linestyle=':')
-        self.ax.axvspan(mu-fwhm/2.0, mu+fwhm/2.0,
-                           facecolor=color3, alpha=0.25)
-        return (fwhm, mu, sdev, maxv)
+        self.ax.axvspan(mu - fwhm / 2.0, mu + fwhm / 2.0,
+                        facecolor=color3, alpha=0.25)
+        return fwhm
 
-    def plot_fwhm(self, x, y, radius, image, cutout_data=None, iqcalc=None):
+    def plot_fwhm(self, x, y, radius, image, cutout_data=None,
+                  iqcalc=None, fwhm_method='gaussian'):
 
         x0, y0, xarr, yarr = image.cutout_cross(x, y, radius)
 
@@ -449,14 +464,17 @@ class FWHMPlot(Plot):
                 x, y, radius, skybg))
 
             self.logger.debug("xarr=%s" % (str(xarr)))
-            fwhm_x, mu, sdev, maxv = self._plot_fwhm_axis(xarr, iqcalc, skybg,
-                                                          'blue', 'blue', 'skyblue')
+            fwhm_x = self._plot_fwhm_axis(xarr, iqcalc, skybg,
+                                          'blue', 'blue', 'skyblue',
+                                          fwhm_method=fwhm_method)
 
             self.logger.debug("yarr=%s" % (str(yarr)))
-            fwhm_y, mu, sdev, maxv = self._plot_fwhm_axis(yarr, iqcalc, skybg,
-                                                          'green', 'green', 'seagreen')
+            fwhm_y = self._plot_fwhm_axis(yarr, iqcalc, skybg,
+                                          'green', 'green', 'seagreen',
+                                          fwhm_method=fwhm_method)
 
-            self.ax.legend(('data x', 'gauss x', 'data y', 'gauss y'),
+            falg = fwhm_method
+            self.ax.legend(('data x', '%s x' % falg, 'data y', '%s y' % falg),
                            loc='upper right', shadow=False, fancybox=False,
                            prop={'size': 8}, labelspacing=0.2)
             self.set_titles(title="FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
@@ -490,10 +508,15 @@ class SurfacePlot(Plot):
         X, Y = numpy.meshgrid(X, Y)
 
         try:
-            from mpl_toolkits.mplot3d import Axes3D
+            from mpl_toolkits.mplot3d import Axes3D  # noqa
             from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
-            self.ax = self.fig.gca(projection='3d', axisbg='#808080')
+            if MPL_GE_2_0:
+                kwargs = {'facecolor': '#808080'}
+            else:
+                kwargs = {'axisbg': '#808080'}
+
+            self.ax = self.fig.gca(projection='3d', **kwargs)
             self.ax.set_aspect('equal', adjustable='box')
             #self.ax.cla()
 
@@ -531,4 +554,4 @@ class SurfacePlot(Plot):
             self.logger.error("Error making surface plot: %s" % (
                 str(e)))
 
-#END
+# END

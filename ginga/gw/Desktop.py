@@ -8,7 +8,8 @@ import time
 import math
 
 from ginga.misc import Bunch, Callback
-from ginga.gw import Widgets, GwHelp, Viewers
+from ginga.gw import Widgets, Viewers
+
 
 class Desktop(Callback.Callbacks):
 
@@ -27,14 +28,14 @@ class Desktop(Callback.Callbacks):
         self.node_idx = 0
         self._cur_dialogs = []
 
-        for name in ('page-switch', 'all-closed'):
+        for name in ('page-switch', 'page-close', 'all-closed'):
             self.enable_callback(name)
 
     # --- Workspace Handling ---
 
     def make_ws(self, name, group=1, show_tabs=True, show_border=False,
-                detachable=False, tabpos=None, scrollable=True, closeable=False,
-                wstype='tabs', use_toolbar=False):
+                detachable=False, tabpos=None, scrollable=True,
+                closeable=False, wstype='tabs', use_toolbar=False):
 
         if (wstype in ('nb', 'ws', 'tabs')) and (not show_tabs):
             wstype = 'stack'
@@ -44,6 +45,7 @@ class Desktop(Callback.Callbacks):
                        use_toolbar=use_toolbar)
         ws.add_callback('page-switch', self.switch_page_cb)
         ws.add_callback('page-detach', self.page_detach_cb)
+        ws.add_callback('page-close', self.page_close_cb)
 
         nb = ws.nb
 
@@ -144,7 +146,7 @@ class Desktop(Callback.Callbacks):
         # should be raised
         l = []
         name = tabname.lower()
-        while self.tab.has_key(name):
+        while name in self.tab:
             bnch = self.tab[name]
             l.insert(0, name)
             name = bnch.wsname.lower()
@@ -172,7 +174,7 @@ class Desktop(Callback.Callbacks):
     def show_dialog(self, dialog):
         dialog.show()
         # save a handle so widgets aren't garbage collected
-        if not dialog in self._cur_dialogs:
+        if dialog not in self._cur_dialogs:
             self._cur_dialogs.append(dialog)
 
     def hide_dialog(self, dialog):
@@ -211,13 +213,13 @@ class Desktop(Callback.Callbacks):
         root = self.app.make_window()
 
         # TODO: this needs to be more sophisticated
-        ## root.set_title(wsname)
+        # root.set_title(wsname)
         ws = self.make_ws(wsname, wstype='tabs', use_toolbar=True)
 
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
 
-        vbox.add_widget(bnch.widget)
+        vbox.add_widget(ws.widget)
         root.set_widget(vbox)
 
         root.resize(width, height)
@@ -226,7 +228,8 @@ class Desktop(Callback.Callbacks):
 
         if x is not None:
             root.move(x, y)
-        return bnch
+
+        return ws
 
     def _mk_take_tab_cb(self, tabname, to_nb):
         def _foo():
@@ -243,7 +246,7 @@ class Desktop(Callback.Callbacks):
         if num_children == 0:
             del self.workspace[ws.name]
             root = ws.root
-            bnch.root = None
+            ws.root = None
             root.delete()
         return True
 
@@ -269,6 +272,13 @@ class Desktop(Callback.Callbacks):
         bnch = self._find_tab(child)
         if bnch is not None:
             self.make_callback('page-switch', bnch.name, bnch.data)
+        return False
+
+    def page_close_cb(self, ws, child):
+        self.logger.debug("page close: %s" % str(child))
+        bnch = self._find_tab(child)
+        if bnch is not None:
+            self.make_callback('page-close', bnch.name, bnch.data)
         return False
 
     def make_desktop(self, layout, widget_dict=None):
@@ -312,7 +322,7 @@ class Desktop(Callback.Callbacks):
                     else:
                         width = params.width
                         if wexp is None:
-                            wexp = 1|4
+                            wexp = 1 | 4
                     if params.height < 0:
                         height = widget.get_size()[1]
                         if hexp is None:
@@ -320,7 +330,7 @@ class Desktop(Callback.Callbacks):
                     else:
                         height = params.height
                         if hexp is None:
-                            hexp = 1|4
+                            hexp = 1 | 4
                     widget.resize(width, height)
 
                 # specify expansion policy of widget
@@ -329,7 +339,9 @@ class Desktop(Callback.Callbacks):
                         wexp = 0
                     if hexp is None:
                         hexp = 0
-                    widget.cfg_expand(wexp, hexp)
+                    # This is causing issues with resizing (see issue #478);
+                    # temporarily disabling it
+                    #widget.cfg_expand(wexp, hexp)
 
                 # User wants to place window somewhere
                 if params.xpos >= 0:
@@ -342,10 +354,10 @@ class Desktop(Callback.Callbacks):
 
             # Process workspace parameters
             param_dict = Bunch.Bunch(name=None, title=None, height=-1,
-                                      width=-1, group=1, show_tabs=True,
-                                      show_border=False, scrollable=True,
-                                      detachable=False, wstype='tabs',
-                                      tabpos='top', use_toolbar=False)
+                                     width=-1, group=1, show_tabs=True,
+                                     show_border=False, scrollable=True,
+                                     detachable=False, wstype='tabs',
+                                     tabpos='top', use_toolbar=False)
             param_dict.update(params)
             params.update(param_dict)
 
@@ -363,7 +375,7 @@ class Desktop(Callback.Callbacks):
                                   scrollable=params.scrollable,
                                   use_toolbar=params.use_toolbar)
                 widget = ws.widget
-                #debug(widget)
+                # debug(widget)
 
             # If a title was passed as a parameter, then make a frame to
             # wrap the widget using the title.
@@ -374,7 +386,7 @@ class Desktop(Callback.Callbacks):
             else:
                 pack(widget)
 
-            #process_common_params(kind, widget, params)
+            # process_common_params(kind, widget, params)
 
             res = []
             if (kind in ('ws', 'mdi', 'grid', 'stack')) and (len(args) > 0):
@@ -393,7 +405,7 @@ class Desktop(Callback.Callbacks):
             if kind == 'ws':
                 bnch.ws = ws
 
-            #return [kind, params] + res
+            # return [kind, params] + res
             return [kind, params, res]
 
         # Horizontal adjustable panel
@@ -425,7 +437,7 @@ class Desktop(Callback.Callbacks):
 
                 c = make(cols[0], lambda w: widget.add_widget(w, stretch=1))
                 res.append(c)
-                #widget.show()
+                # widget.show()
 
             pack(widget)
             return ['hpanel', params] + res
@@ -459,7 +471,7 @@ class Desktop(Callback.Callbacks):
 
                 r = make(rows[0], lambda w: widget.add_widget(w, stretch=1))
                 res.append(r)
-                #widget.show()
+                # widget.show()
 
             pack(widget)
             return ['vpanel', params] + res
@@ -518,7 +530,7 @@ class Desktop(Callback.Callbacks):
         def seq(params, cols, pack):
             def mypack(w):
                 w_top = self.app.make_window()
-                #w_top.cfg_expand(8, 8)
+                # w_top.cfg_expand(8, 8)
                 # Ask the size of the widget that wants to get packed
                 # and resize the top-level to fit
                 wd, ht = w.get_size()
@@ -531,11 +543,11 @@ class Desktop(Callback.Callbacks):
             res = []
             for dct in cols:
                 if isinstance(dct, dict):
-                    stretch = dct.get('stretch', 0)
+                    stretch = dct.get('stretch', 0)  # noqa
                     col = dct.get('col', None)
                 else:
                     # assume a list defining the col
-                    stretch = 0
+                    stretch = 0  # noqa
                     col = dct
                 if col is not None:
                     res.append(make(col, mypack))
@@ -629,7 +641,8 @@ class Desktop(Callback.Callbacks):
 
         return self.make_desktop(layout, widget_dict=widget_dict)
 
-    ##### WORKSPACES #####
+
+# WORKSPACES #####
 
 class Workspace(Widgets.WidgetBase):
 
@@ -663,7 +676,6 @@ class Workspace(Widgets.WidgetBase):
             item = ws_menu.add_name("Close")
             item.add_callback('activated', self._close_menuitem_cb)
 
-
         self._set_wstype(wstype)
         self.vbox.add_widget(self.nb, stretch=1)
 
@@ -678,11 +690,11 @@ class Workspace(Widgets.WidgetBase):
             self.toolbar.add_widget(cbox)
 
             mdi_menu = self.toolbar.add_menu("MDI")
-            ## item = mdi_menu.add_name("Panes as Tabs", checkable=True)
-            ## item.add_callback('activated',
-            ##                   lambda w, tf: self.tabstoggle_cb(tf))
-            ## is_tabs = (self.nb.get_mode() == 'tabs')
-            ## item.set_state(is_tabs)
+            # item = mdi_menu.add_name("Panes as Tabs", checkable=True)
+            # item.add_callback('activated',
+            #                   lambda w, tf: self.tabstoggle_cb(tf))
+            # is_tabs = (self.nb.get_mode() == 'tabs')
+            # item.set_state(is_tabs)
 
             item = mdi_menu.add_name("Tile Panes")
             item.add_callback('activated',
@@ -694,14 +706,15 @@ class Workspace(Widgets.WidgetBase):
             self.mdi_menu = mdi_menu
             self._update_mdi_menu()
 
-        for name in ('page-switch', 'page-detach', 'ws-close'):
+        for name in ('page-switch', 'page-detach', 'page-close',
+                     'ws-close'):
             self.enable_callback(name)
 
     def _set_wstype(self, wstype):
         if wstype in ('tabs', 'nb', 'ws'):
             wstype = 'tabs'
             self.nb = Widgets.TabWidget(detachable=self.detachable,
-                                            group=self.group)
+                                        reorderable=True, group=self.group)
 
         elif wstype == 'mdi':
             self.nb = Widgets.MDIWidget(mode='mdi')
@@ -717,6 +730,8 @@ class Workspace(Widgets.WidgetBase):
             self.nb.add_callback('page-switch', self._switch_page_cb)
         if self.nb.has_callback('page-detach'):
             self.nb.add_callback('page-detach', self._detach_page_cb)
+        if self.nb.has_callback('page-close'):
+            self.nb.add_callback('page-close', self._close_page_cb)
 
         self.wstype = wstype
 
@@ -746,6 +761,9 @@ class Workspace(Widgets.WidgetBase):
 
     def _detach_page_cb(self, nb, child):
         self.make_callback('page-detach', child)
+
+    def _close_page_cb(self, nb, child):
+        self.make_callback('page-close', child)
 
     def _close_menuitem_cb(self, *args):
         self.make_callback('ws-close')
@@ -842,10 +860,17 @@ class SymmetricGridWidget(Widgets.GridBox):
 
         self.enable_callback('page-switch')
 
+    def _calc_dims(self, num_widgets):
+        rows = int(round(math.sqrt(num_widgets)))
+        cols = rows
+        if rows ** 2 < num_widgets:
+            cols += 1
+        return rows, cols
+
     def _relayout(self, widgets):
         # remove all the old widgets
         # TEMP: this call causes a recursive loop to happen
-        #self.remove_all()
+        # self.remove_all()
         children = list(self.get_children())
         for child in children:
             super(SymmetricGridWidget, self).remove(child)
@@ -853,10 +878,7 @@ class SymmetricGridWidget(Widgets.GridBox):
         # calculate number of rows and cols, try to maintain a square
         # TODO: take into account the window geometry
         num_widgets = len(widgets)
-        rows = int(round(math.sqrt(num_widgets)))
-        cols = rows
-        if rows**2 < num_widgets:
-            cols += 1
+        rows, cols = self._calc_dims(num_widgets)
 
         self.resize_grid(rows, cols)
 
@@ -866,36 +888,87 @@ class SymmetricGridWidget(Widgets.GridBox):
                 index = i*cols + j
                 if index < num_widgets:
                     child = widgets[index]
-                    super(SymmetricGridWidget, self).add_widget(child,
-                                                                i, j, stretch=1)
+                    super(SymmetricGridWidget, self).add_widget(child, i, j,
+                                                                stretch=1)
 
     def add_widget(self, child, title=''):
-        widgets = list(self.get_children())
-        widgets.append(child)
+        num_widgets = self.num_children()
+        o_rows, o_cols = self._calc_dims(num_widgets)
+
+        num_widgets += 1
+        rows, cols = self._calc_dims(num_widgets)
+
         # attach title to child
         child.extdata.tab_title = title
 
-        self._relayout(widgets)
+        if (o_rows, o_cols) == (rows, cols):
+            # size of matrix has not changed--
+            # we can be a little efficient here and skip rebuilding
+            j = num_widgets - ((rows - 1) * cols) - 1
+            super(SymmetricGridWidget, self).add_widget(child, rows-1, j,
+                                                        stretch=1)
+        else:
+            widgets = list(self.get_children())
+            widgets.append(child)
+            self._relayout(widgets)
 
     def remove(self, child, delete=False):
-        super(SymmetricGridWidget, self).remove(child)
 
         widgets = list(self.get_children())
+        try:
+            idx = widgets.index(child)
 
-        self._relayout(widgets)
+        except IndexError:
+            raise ValueError("child not in container")
+
+        o_rows, o_cols = self._calc_dims(len(widgets))
+
+        super(SymmetricGridWidget, self).remove(child)
+
+        num_widgets = self.num_children()
+        rows, cols = self._calc_dims(num_widgets)
+
+        # if size of matrix has not changed AND user only deleted from
+        # the end--we can be a little efficient here and skip rebuilding
+        if (child != widgets[-1]) or ((o_rows, o_cols) != (rows, cols)):
+            widgets = list(self.get_children())
+            self._relayout(widgets)
+
+        if idx < self.cur_index:
+            # deleted a widget lower than the current index:
+            # current index just shifts down
+            self.cur_index -= 1
+
+        elif idx == self.cur_index:
+            # deleted same widget as current index
+            self.cur_index = -1
+            num_children = self.num_children()
+            if 0 <= idx < num_children:
+                # we can keep same index
+                self.set_index(idx)
+            else:
+                # pick acceptable index
+                idx = max(0, min(idx - 1, num_children - 1))
+                if num_children > 0:
+                    self.set_index(idx)
 
     def get_index(self):
         return self.cur_index
 
     def set_index(self, idx):
         old_index = self.cur_index
-        if 0 <= idx < self.num_children():
+        num_children = self.num_children()
+        if 0 <= idx < num_children:
             self.cur_index = idx
             child = self.children[idx]
-            #child.focus()
+            # child.focus()
 
             if old_index != idx:
                 self.make_callback('page-switch', child)
+
+        else:
+            raise ValueError("index (%d) inconsistent with number of children (%d)" %
+                             (idx, num_children))
 
     def index_of(self, child):
         children = self.get_children()
@@ -908,4 +981,4 @@ class SymmetricGridWidget(Widgets.GridBox):
         children = self.get_children()
         return children[idx]
 
-#END
+# END

@@ -92,11 +92,11 @@ workspaces and mapping the available plugins to workspaces.  By changing
 a couple of tables via `ginga_config.pre_gui_config()` you can change
 the way Ginga looks and presents its content.
 
-If you examine the module `ginga.main` you will find a layout table
+If you examine the module `ginga.rv.main` you will find a layout table
 called `default_layout`::
 
     default_layout = ['seq', {},
-                       ['vbox', dict(name='top', width=1520, height=900),
+                       ['vbox', dict(name='top', width=1400, height=700),
                         dict(row=['hbox', dict(name='menu')],
                              stretch=0),
                         dict(row=['hpanel', dict(name='hpnl'),
@@ -105,19 +105,20 @@ called `default_layout`::
                           # (tabname, layout), ...
                           [("Info", ['vpanel', {},
                                      ['ws', dict(name='uleft', wstype='stack',
-                                                 height=300, group=3)],
+                                                 height=250, group=3)],
                                      ['ws', dict(name='lleft', wstype='tabs',
-                                                 height=430, group=3)],
+                                                 height=330, group=3)],
                                      ]
                             )]],
-                         ['vbox', dict(name='main', width=700),
+                         ['vbox', dict(name='main', width=600),
                           dict(row=['ws', dict(name='channels', wstype='tabs',
-                                               group=1)], stretch=1),
+                                               group=1, use_toolbar=True)],
+                               stretch=1),
                           dict(row=['ws', dict(name='cbar', wstype='stack',
                                                group=99)], stretch=0),
                           dict(row=['ws', dict(name='readout', wstype='stack',
                                                group=99)], stretch=0),
-                                               dict(row=['ws', dict(name='operations', wstype='stack',
+                          dict(row=['ws', dict(name='operations', wstype='stack',
                                                group=99)], stretch=0),
                           ],
                          ['ws', dict(name='right', wstype='tabs',
@@ -258,7 +259,7 @@ configuration available without relying on the `ginga_config` module in
 a personal settings area.  To do this we make use of the `main` module::
 
     import sys
-    from ginga.main import ReferenceViewer
+    from ginga.rv.main import ReferenceViewer
     from optparse import OptionParser
 
     my_layout = [ ... ]

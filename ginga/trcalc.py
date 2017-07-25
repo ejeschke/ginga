@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
-import numpy
+import numpy as np
 import time
 
 interpolation_methods = ['basic']
@@ -93,21 +93,25 @@ def rotate_pt(x_arr, y_arr, theta_deg, xoff=0, yoff=0):
     # TODO: use opencv acceleration if available
     a_arr = x_arr - xoff
     b_arr = y_arr - yoff
-    cos_t = numpy.cos(numpy.radians(theta_deg))
-    sin_t = numpy.sin(numpy.radians(theta_deg))
+    cos_t = np.cos(np.radians(theta_deg))
+    sin_t = np.sin(np.radians(theta_deg))
     ap = (a_arr * cos_t) - (b_arr * sin_t)
     bp = (a_arr * sin_t) + (b_arr * cos_t)
-    return (ap + xoff, bp + yoff)
+    return np.asarray((ap + xoff, bp + yoff))
 
 rotate_arr = rotate_pt
 
-def rotate_coord(coord, theta_deg, offsets):
-    arr = numpy.asarray(coord)
+def rotate_coord(coord, thetas, offsets):
+    arr_t = np.asarray(coord).T
     # TODO: handle dimensional rotation N>2
-    x_arr, y_arr = rotate_pt(arr.T[0], arr.T[1], theta_deg,
-                             xoff=offsets[0], yoff=offsets[1])
-    arr = numpy.column_stack((x_arr, y_arr))
-    return arr
+    arr = rotate_pt(arr_t[0], arr_t[1], thetas[0],
+                    xoff=offsets[0], yoff=offsets[1])
+
+    if len(arr_t) > 2:
+        # just copy unrotated Z coords
+        arr = np.asarray([arr[0], arr[1]] + list(arr_t[2:]))
+
+    return arr.T
 
 def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
                 out=None, use_opencl=True, logger=None):
@@ -153,7 +157,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         if logger is not None:
             logger.debug("rotating with OpenCL")
         # opencl is very close, sometimes better, sometimes worse
-        if (data_np.dtype == numpy.uint8) and (len(data_np.shape) == 3):
+        if (data_np.dtype == np.uint8) and (len(data_np.shape) == 3):
             # special case for 3D RGB images
             newdata = trcalc_cl.rotate_clip_uint32(data_np, theta_deg,
                                                    rotctr_x, rotctr_y,
@@ -166,11 +170,11 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     else:
         if logger is not None:
             logger.debug("rotating with numpy")
-        yi, xi = numpy.mgrid[0:ht, 0:wd]
+        yi, xi = np.mgrid[0:ht, 0:wd]
         xi -= rotctr_x
         yi -= rotctr_y
-        cos_t = numpy.cos(numpy.radians(theta_deg))
-        sin_t = numpy.sin(numpy.radians(theta_deg))
+        cos_t = np.cos(np.radians(theta_deg))
+        sin_t = np.sin(np.radians(theta_deg))
 
         if have_numexpr:
             ap = ne.evaluate("(xi * cos_t) - (yi * sin_t) + rotctr_x")
@@ -179,13 +183,13 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
             bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
 
-        #ap = numpy.rint(ap).astype('int').clip(0, wd-1)
-        #bp = numpy.rint(bp).astype('int').clip(0, ht-1)
+        #ap = np.rint(ap).astype('int').clip(0, wd-1)
+        #bp = np.rint(bp).astype('int').clip(0, ht-1)
         # Optomizations to reuse existing intermediate arrays
-        numpy.rint(ap, out=ap)
+        np.rint(ap, out=ap)
         ap = ap.astype('int')
         ap.clip(0, wd-1, out=ap)
-        numpy.rint(bp, out=bp)
+        np.rint(bp, out=bp)
         bp = bp.astype('int')
         bp.clip(0, ht-1, out=bp)
 
@@ -238,7 +242,7 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None, pad=20,
         bdy, tdy = min(ocy, ncy), min(ht - ocy, ncy)
 
         # TODO: fill with a different value?
-        newdata = numpy.zeros(dims, dtype=data_np.dtype)
+        newdata = np.zeros(dims, dtype=data_np.dtype)
         newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx] = \
                                  data_np[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
 
@@ -254,6 +258,9 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
     Like get_scaled_cutout_wdht, but returns the view/slice to extract
     from an image instead of the extraction itself.
     """
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+    new_wd, new_ht = int(new_wd), int(new_ht)
+
     # calculate dimensions of NON-scaled cutout
     old_wd = x2 - x1 + 1
     old_ht = y2 - y1 + 1
@@ -262,8 +269,8 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
     if (new_wd != old_wd) or (new_ht != old_ht):
         # Make indexes and scale them
         # Is there a more efficient way to do this?
-        yi = numpy.mgrid[0:new_ht].reshape(-1, 1)
-        xi = numpy.mgrid[0:new_wd].reshape(1, -1)
+        yi = np.mgrid[0:new_ht].reshape(-1, 1)
+        xi = np.mgrid[0:new_wd].reshape(1, -1)
         iscale_x = float(old_wd) / float(new_wd)
         iscale_y = float(old_ht) / float(new_ht)
 
@@ -276,12 +283,12 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
         assert xi_max <= max_x, ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
         assert yi_max <= max_y, ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
 
-        view = numpy.s_[yi, xi]
+        view = np.s_[yi, xi]
 
     else:
         # simple stepped view will do, because new view is same as old
         wd, ht = old_wd, old_ht
-        view = numpy.s_[y1:y2+1, x1:x2+1]
+        view = np.s_[y1:y2+1, x1:x2+1]
 
     # Calculate actual scale used (vs. desired)
     old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
@@ -300,6 +307,9 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
     x2, y2, z2 = p2
     new_wd, new_ht, new_dp = new_dims
 
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2), int(z1), int(z2)
+    z1, z2, new_wd, new_ht = int(z1), int(z2), int(new_wd), int(new_ht)
+
     # calculate dimensions of NON-scaled cutout
     old_wd = x2 - x1 + 1
     old_ht = y2 - y1 + 1
@@ -309,9 +319,9 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
     if (new_wd != old_wd) or (new_ht != old_ht) or (new_dp != old_dp):
         # Make indexes and scale them
         # Is there a more efficient way to do this?
-        yi = numpy.mgrid[0:new_ht].reshape(-1, 1, 1)
-        xi = numpy.mgrid[0:new_wd].reshape(1, -1, 1)
-        zi = numpy.mgrid[0:new_dp].reshape(1, 1, -1)
+        yi = np.mgrid[0:new_ht].reshape(-1, 1, 1)
+        xi = np.mgrid[0:new_wd].reshape(1, -1, 1)
+        zi = np.mgrid[0:new_dp].reshape(1, 1, -1)
         iscale_x = float(old_wd) / float(new_wd)
         iscale_y = float(old_ht) / float(new_ht)
         iscale_z = float(old_dp) / float(new_dp)
@@ -327,12 +337,12 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
         assert yi_max <= max_y, ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
         assert zi_max <= max_z, ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
 
-        view = numpy.s_[yi, xi, zi]
+        view = np.s_[yi, xi, zi]
 
     else:
         # simple stepped view will do, because new view is same as old
         wd, ht, dp = old_wd, old_ht, old_dp
-        view = numpy.s_[y1:y2+1, x1:x2+1, z1:z2+1]
+        view = np.s_[y1:y2+1, x1:x2+1, z1:z2+1]
 
     # Calculate actual scale used (vs. desired)
     old_wd, old_ht, old_dp = max(old_wd, 1), max(old_ht, 1), max(old_dp, 1)
@@ -489,9 +499,9 @@ def transform(data_np, flip_x=False, flip_y=False, swap_xy=False):
 
     # Do transforms as necessary
     if flip_y:
-        data_np = numpy.flipud(data_np)
+        data_np = np.flipud(data_np)
     if flip_x:
-        data_np = numpy.fliplr(data_np)
+        data_np = np.fliplr(data_np)
     if swap_xy:
         data_np = data_np.swapaxes(0, 1)
 
@@ -571,7 +581,7 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
     dst_x, dst_y = int(round(pos[0])), int(round(pos[1]))
 
     if flipy:
-        srcarr = numpy.flipud(srcarr)
+        srcarr = np.flipud(srcarr)
 
     # Trim off parts of srcarr that would be "hidden"
     # to the left and above the dstarr edge.
@@ -603,7 +613,7 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
         src_wd -= ex
 
     if copy:
-        dstarr = numpy.copy(dstarr, order='C')
+        dstarr = np.copy(dstarr, order='C')
 
     da_idx = -1
     slc = slice(0, 3)
@@ -626,7 +636,7 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter
         alpha = srcarr[0:src_ht, 0:src_wd, sa_idx] / 255.0
-        alpha = numpy.dstack((alpha, alpha, alpha))
+        alpha = np.dstack((alpha, alpha, alpha))
 
     # reorder srcarr if necessary to match dstarr for alpha merge
     get_order = dst_order
@@ -637,10 +647,10 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
-    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(numpy.uint8)
+    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(np.uint8)
     b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y+src_ht,
                                     dst_x:dst_x+src_wd,
-                                    slc]).astype(numpy.uint8)
+                                    slc]).astype(np.uint8)
 
     # Place our srcarr into this dstarr at dst offsets
     #dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, slc] += addarr[0:src_ht, 0:src_wd, slc]
@@ -657,7 +667,7 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     src_ht, src_wd, src_dp, src_ch = srcarr.shape
 
     if flipy:
-        srcarr = numpy.flipud(srcarr)
+        srcarr = np.flipud(srcarr)
 
     # Trim off parts of srcarr that would be "hidden"
     # to the left and above the dstarr edge.
@@ -703,7 +713,7 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         return dstarr
 
     if copy:
-        dstarr = numpy.copy(dstarr, order='C')
+        dstarr = np.copy(dstarr, order='C')
 
     da_idx = -1
     slc = slice(0, 3)
@@ -727,11 +737,11 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter
         alpha = srcarr[0:src_ht, 0:src_wd, 0:src_dp, sa_idx] / 255.0
-        #alpha = numpy.dstack((alpha, alpha, alpha))
-        alpha = numpy.concatenate([ alpha[..., numpy.newaxis],
-                                    alpha[..., numpy.newaxis],
-                                    alpha[..., numpy.newaxis] ],
-                                  axis=-1)
+        #alpha = np.dstack((alpha, alpha, alpha))
+        alpha = np.concatenate([ alpha[..., np.newaxis],
+                                 alpha[..., np.newaxis],
+                                 alpha[..., np.newaxis] ],
+                               axis=-1)
 
     # reorder srcarr if necessary to match dstarr for alpha merge
     get_order = dst_order
@@ -743,11 +753,11 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
     a_arr = (alpha * srcarr[0:src_ht, 0:src_wd,
-                            0:src_dp, slc]).astype(numpy.uint8)
+                            0:src_dp, slc]).astype(np.uint8)
     b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y+src_ht,
                                     dst_x:dst_x+src_wd,
                                     dst_z:dst_z+src_dp,
-                                    slc]).astype(numpy.uint8)
+                                    slc]).astype(np.uint8)
 
     # Place our srcarr into this dstarr at dst offsets
     dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd,
@@ -766,9 +776,34 @@ def overlay_image(dstarr, pos, srcarr, **kwargs):
 
 def reorder_image(dst_order, src_arr, src_order):
     indexes = [ src_order.index(c) for c in dst_order ]
-    #return numpy.dstack([ src_arr[..., idx] for idx in indexes ])
-    return numpy.concatenate([ src_arr[..., idx, numpy.newaxis]
+    #return np.dstack([ src_arr[..., idx] for idx in indexes ])
+    return np.concatenate([ src_arr[..., idx, np.newaxis]
                                for idx in indexes ], axis=-1)
+
+def strip_z(pts):
+    """Strips a Z component from `pts` if it is present."""
+    pts = np.asarray(pts)
+    if pts.shape[-1] > 2:
+        pts = np.asarray((pts.T[0], pts.T[1])).T
+    return pts
+
+def pad_z(pts, value=0.0):
+    """Adds a Z component from `pts` if it is missing.
+    The value defaults to `value` (0.0)"""
+    pts = np.asarray(pts)
+    if pts.shape[-1] < 3:
+        if len(pts.shape) < 2:
+            return np.asarray((pts[0], pts[1], value), dtype=pts.dtype)
+        pad_col = np.full(len(pts), value, dtype=pts.dtype)
+        pts = np.asarray((pts.T[0], pts.T[1], pad_col)).T
+    return pts
+
+def get_bounds(pts):
+    """Return the minimum point and maximum point bounding a
+    set of points."""
+    pts_t = np.asarray(pts).T
+    return np.asarray(([np.min(_pts) for _pts in pts_t],
+                       [np.max(_pts) for _pts in pts_t]))
 
 
 #END

@@ -11,13 +11,15 @@ from ginga.gw import Widgets
 
 class Overlays(GingaPlugin.LocalPlugin):
     """
+    Overlays
+    ========
     A plugin for generating color overlays representing under- and
     overexposure in the loaded image.
 
-    Overlays is a local plugin, and thus must be invoked separately for
-    each channel in which you want to use it.  If a new image is selected
-    for the channel the overlays image will be recalculated based on the
-    current parameters with the new data.
+    Plugin Type: Local
+    ------------------
+    Overlays is a local plugin, which means it is associated with a channel.
+    An instance can be opened for each channel.
 
     Usage
     -----
@@ -32,6 +34,9 @@ class Overlays(GingaPlugin.LocalPlugin):
 
     If you omit a limit (leave the box blank), that color won't be shown in
     the overlay.
+
+    If a new image is selected for the channel the overlays image will be
+    recalculated based on the current parameters with the new data.
     """
 
     def __init__(self, fv, fitsimage):
@@ -131,10 +136,6 @@ class Overlays(GingaPlugin.LocalPlugin):
 
         container.add_widget(top, stretch=1)
 
-    def help(self):
-        name = str(self).capitalize()
-        self.fv.show_help_text(name, self.__doc__)
-
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
@@ -154,10 +155,10 @@ class Overlays(GingaPlugin.LocalPlugin):
             self.redo()
 
     def pause(self):
-        self.canvas.ui_setActive(False)
+        self.canvas.ui_set_active(False)
 
     def resume(self):
-        self.canvas.ui_setActive(True)
+        self.canvas.ui_set_active(True)
         self.fv.show_status("Enter a value for saturation limit")
 
     def stop(self):
@@ -170,7 +171,7 @@ class Overlays(GingaPlugin.LocalPlugin):
             p_canvas.delete_object_by_tag(self.layertag)
         except:
             pass
-        #self.canvas.ui_setActive(False)
+        #self.canvas.ui_set_active(False)
         self.fv.show_status("")
 
     def redo(self):
