@@ -37,8 +37,8 @@ class RenderGraphicsView(QtGui.QGraphicsView):
         if not self.pixmap:
             return
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         # redraw the screen from backing pixmap
         rect = QtCore.QRect(x1, y1, width, height)
@@ -47,8 +47,8 @@ class RenderGraphicsView(QtGui.QGraphicsView):
     def resizeEvent(self, event):
         rect = self.geometry()
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         self.viewer.configure_window(width, height)
 
@@ -79,8 +79,8 @@ class RenderWidget(QtGui.QWidget):
             return
         rect = event.rect()
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         # redraw the screen from backing pixmap
         painter = QPainter(self)
@@ -90,8 +90,8 @@ class RenderWidget(QtGui.QWidget):
     def resizeEvent(self, event):
         rect = self.geometry()
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         self.viewer.configure_window(width, height)
         #self.update()
@@ -413,7 +413,7 @@ class QtEventMixin(object):
 
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
-                               ('pick', 'thinCrossCursor.png')):
+                                  ('pick', 'thinCrossCursor.png')):
             path = os.path.join(icondir, filename)
             cur = self.make_cursor(path, 8, 8)
             self.define_cursor(curname, cur)
@@ -437,7 +437,8 @@ class QtEventMixin(object):
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
-                     'pinch', 'pan', 'swipe', 'tap'):
+                     'pinch', 'pan', #'swipe', 'tap'
+                     ):
             self.enable_callback(name)
 
     def set_enter_focus(self, tf):
@@ -497,8 +498,8 @@ class QtEventMixin(object):
     def map_event(self, widget, event):
         rect = widget.geometry()
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         self.configure_window(width, height)
         return self.make_callback('map')
@@ -596,9 +597,7 @@ class QtEventMixin(object):
         x, y = event.x(), event.y()
         self.last_win_x, self.last_win_y = x, y
 
-        num_degrees, direction = get_scroll_info(event)
-        self.logger.debug("scroll deg={} direction={}".format(
-            num_degrees, direction))
+        data_x, data_y = self.check_cursor_location()
 
         # NOTE: for future use in distinguishing mouse wheel vs.
         # trackpad events
@@ -610,8 +609,17 @@ class QtEventMixin(object):
                 src = 'wheel'
             else:
                 src = 'trackpad'
+                point = event.pixelDelta()
+                dx, dy = point.x(), point.y()
 
-        data_x, data_y = self.check_cursor_location()
+                # Synthesize this as a pan gesture event
+                self.make_ui_callback('pan', 'start', 0, 0)
+                self.make_ui_callback('pan', 'move', dx, dy)
+                return self.make_ui_callback('pan', 'stop', 0, 0)
+
+        num_degrees, direction = get_scroll_info(event)
+        self.logger.debug("scroll deg={} direction={}".format(
+            num_degrees, direction))
 
         return self.make_ui_callback('scroll', direction, num_degrees,
                                      data_x, data_y)
@@ -624,9 +632,9 @@ class QtEventMixin(object):
         elif state == QtCore.Qt.GestureUpdated:
             gstate = 'move'
         elif state == QtCore.Qt.GestureFinished:
-            gstate = 'end'
+            gstate = 'stop'
         elif state == QtCore.Qt.GestureCancelled:
-            gstate = 'end'
+            gstate = 'stop'
 
         # dispatch on gesture type
         gtype = event.gesture(QtCore.Qt.SwipeGesture)
@@ -652,7 +660,7 @@ class QtEventMixin(object):
         return True
 
     def gs_swiping(self, event, gesture, gstate):
-        if gstate == 'end':
+        if gstate == 'stop':
             _hd = gesture.horizontalDirection()
             hdir = None
             if _hd == QtGui.QSwipeGesture.Left:
@@ -673,7 +681,6 @@ class QtEventMixin(object):
             return self.make_ui_callback('swipe', gstate, hdir, vdir)
 
     def gs_pinching(self, event, gesture, gstate):
-        #print("PINCHING")
         rot = gesture.rotationAngle()
         scale = gesture.scaleFactor()
         self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
@@ -682,13 +689,6 @@ class QtEventMixin(object):
         return self.make_ui_callback('pinch', gstate, rot, scale)
 
     def gs_panning(self, event, gesture, gstate):
-        #print("PANNING")
-        # x, y = event.x(), event.y()
-        # self.last_win_x, self.last_win_y = x, y
-
-        # data_x, data_y = self.get_data_xy(x, y)
-        # self.last_data_x, self.last_data_y = data_x, data_y
-
         d = gesture.delta()
         dx, dy = d.x(), d.y()
         self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
@@ -866,8 +866,8 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         vp = self.viewport()
         rect = vp.geometry()
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         self.v_w.resize(width, height)
 

@@ -52,7 +52,7 @@ class FitsViewer(object):
         bd.enable_all(True)
 
         # add a color bar
-        fi.private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
+        #fi.private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
 
         # add little mode indicator that shows modal states in
         # lower left hand corner
@@ -236,10 +236,13 @@ class FitsViewer(object):
     def draw_cb(self, canvas, tag):
         obj = canvas.get_object_by_tag(tag)
         obj.add_callback('pick-down', self.pick_cb)
+        obj.pickable = True
         obj.add_callback('edited', self.edit_cb)
 
     def pick_cb(self, obj, canvas, event, pt):
         self.logger.info("pick point is %s" % (str(pt)))
+        self.fitsimage.onscreen_message("pick point is (%.2f, %.2f)" % pt,
+                                        delay=1.0)
         return True
 
     def edit_cb(self, obj):

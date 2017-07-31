@@ -792,7 +792,10 @@ class TreeView(WidgetBase):
             s = s[name].node
 
         dst_key = path[-1]
-        d[dst_key] = s[dst_key].node
+        try:
+            d[dst_key] = s[dst_key].node
+        except KeyError:
+            d[dst_key] = None
 
     def get_selected(self):
         items = list(self.widget.selectedItems())

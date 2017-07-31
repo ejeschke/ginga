@@ -76,6 +76,7 @@ class Pick(GingaPlugin.LocalPlugin):
     horizontal and vertical FWHM measurements.
 
     The top set of tabs in the UI will be populated as follows.
+    
     The "Image" tag will show the contents of the cutout area.
 
     The widget in this tab is a Ginga widget and so can be zoomed and panned
@@ -182,7 +183,7 @@ class Pick(GingaPlugin.LocalPlugin):
     * The "Edge" parameter is used to eliminate candidates based on how
       close to the edge of the cutout they are.  **NOTE: currently this
       works reliably only for non-rotated rectangular shapes.**
-    * The "Max side" parametergit p is used to limit the size of the bounding box
+    * The "Max side" parameter is used to limit the size of the bounding box
       that can be used in the pick shape.  Larger sizes take longer to
       evaluate.
     * The "Coordinate Base" parameter is an offset to apply to located

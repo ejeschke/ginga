@@ -214,16 +214,13 @@ class ImageViewBindings(object):
             ms_naxis = ['naxis+left'],
 
             # GESTURES (some backends only)
-            gs_pinch = [],
-            # Rotate gesture usually doesn't work so well on most platforms
-            # so don't enable by default
-            #gs_rotate = [],
-            gs_pan = [],
-            gs_swipe = [],
-            gs_tap = [],
-            pinch_actions = [],
-            pinch_zoom_acceleration = 1.4,
+            pi_zoom = ['pinch'],
+            pa_pan = ['pan'],
+
+            pinch_actions = ['zoom'],
+            pinch_zoom_acceleration = 1.0,
             pinch_rotate_acceleration = 1.0,
+            pan_pan_acceleration = 1.0,
 
             # No messages for following operations:
             msg_panset = False,
@@ -338,7 +335,7 @@ class ImageViewBindings(object):
                 continue
 
             pfx = name[:3]
-            if not pfx in ('kp_', 'ms_', 'sc_', 'gs_'):
+            if not pfx in ('kp_', 'ms_', 'sc_', 'gs_', 'pi_', 'pa_'):
                 continue
 
             evname = name[3:]
@@ -386,7 +383,24 @@ class ImageViewBindings(object):
                 if cb_method:
                     viewer.add_callback(event, cb_method)
 
+            elif pfx == 'pi_':
+                # pinch event
+                event = '%s-pinch' % evname
+                viewer.enable_callback(event)
+                if cb_method:
+                    viewer.add_callback(event, cb_method)
+
+            elif pfx == 'pa_':
+                # pan event
+                event = '%s-pan' % evname
+                viewer.enable_callback(event)
+                if cb_method:
+                    viewer.add_callback(event, cb_method)
+
             elif pfx == 'gs_':
+                # for backward compatibility
+                self.logger.warning("'gs_' bindings will be deprecated in a future "
+                                    "version--please update your bindings.cfg")
                 viewer.set_callback(evname, cb_method)
 
     def reset(self, viewer):
@@ -1978,6 +1992,7 @@ class ImageViewBindings(object):
         if state == 'start':
             self._start_scale_x, self._start_scale_y = viewer.get_scale_xy()
             self._start_rot = viewer.get_rotation()
+
         else:
             msg_str = None
             if self.canzoom and ('zoom' in pinch_actions):
@@ -2009,25 +2024,72 @@ class ImageViewBindings(object):
                 viewer.onscreen_message(msg_str, delay=0.4)
         return True
 
-    def gs_pan(self, viewer, state, dx, dy):
+    def gs_pan(self, viewer, state, dx, dy, msg=True):
         if not self.canpan:
             return True
 
-        if state == 'move':
-            scale_x, scale_y = viewer.get_scale_xy()
-            delta_x = float(dx) / scale_x
-            delta_y = float(dy) / scale_y
+        method = 1
+        x, y = viewer.get_last_win_xy()
 
-            data_x = self._start_panx + delta_x
-            data_y = self._start_pany + delta_y
-            viewer.panset_xy(data_x, data_y)
+        # User has "Pan Reverse" preference set?
+        rev = self.settings.get('pan_reverse', False)
+        if rev:
+            dx, dy = -dx, -dy
+
+        if state == 'move':
+            # Internal factor to adjust the panning speed so that user-adjustable
+            # pan_pan_acceleration is normalized to 1.0 for "normal" speed
+            pan_pan_adj_factor = 1.0
+            pan_accel = (self.settings.get('pan_pan_acceleration', 1.0) *
+                         pan_pan_adj_factor)
+
+            if method == 1:
+                # METHOD 1
+                # similar to moving by the scroll bars
+                # calculate current pan pct
+                res = self.calc_pan_pct(viewer, pad=0)
+
+                # modify the pct, as relative to the offsets
+                pct_page_x = res.vis_x / res.rng_x
+                amt_x = float(dx) / res.rng_x * pan_accel
+                pct_page_y = res.vis_y / res.rng_y
+                amt_y = float(dy) / res.rng_y * pan_accel
+
+                pct_x = res.pan_pct_x - amt_x
+                pct_y = res.pan_pct_y + amt_y
+
+                # update the pan position by pct
+                self.pan_by_pct(viewer, pct_x, pct_y)
+
+            elif method == 2:
+                # METHOD 2
+                # similar to using a drag pan
+                x, y = x + dx * pan_accel, y + dy * pan_accel
+
+                data_x, data_y = self.get_new_pan(viewer, x, y,
+                                                  ptype=self._pantype)
+                viewer.panset_xy(data_x, data_y)
+
+            elif method == 3:
+                # METHOD 3
+                # calculate new position from pan gesture offsets
+                data_x, data_y = viewer.get_pan(coord='data')
+                x, y = viewer.get_canvas_xy(data_x, data_y)
+
+                x, y = x - dx * pan_accel, y - dy * pan_accel
+
+                data_x, data_y = viewer.get_data_xy(x, y)
+                viewer.panset_xy(data_x, data_y)
 
         elif state == 'start':
-            self._start_panx, self._start_pany = viewer.get_pan()
+            #self._start_panx, self._start_pany = viewer.get_pan()
+            data_x, data_y = viewer.get_last_data_xy()
+            self.pan_set_origin(viewer, x, y, data_x, data_y)
             self.pan_start(viewer, ptype=2)
 
         else:
             self.pan_stop(viewer)
+
         return True
 
     def gs_rotate(self, viewer, state, rot_deg, msg=True):
@@ -2048,6 +2110,11 @@ class ImageViewBindings(object):
                 viewer.onscreen_message(msg_str, delay=0.4)
         return True
 
+    def pi_zoom(self, viewer, event, msg=True):
+        return self.gs_pinch(viewer, event.state, event.rot_deg, event.scale, msg=msg)
+
+    def pa_pan(self, viewer, event, msg=True):
+        return self.gs_pan(viewer, event.state, event.delta_x, event.delta_y, msg=msg)
 
     ##### CAMERA MOTION CALLBACKS #####
 
@@ -2198,6 +2265,30 @@ class ScrollEvent(UIEvent):
         self.amount = amount
         self.data_x = data_x
         self.data_y = data_y
+        self.viewer = viewer
+
+class PinchEvent(UIEvent):
+    def __init__(self, button=None, state=None, mode=None, modifiers=None,
+                 rot_deg=None, scale=None, viewer=None):
+        super(PinchEvent, self).__init__()
+        self.button = button
+        self.state = state
+        self.mode = mode
+        self.modifiers = modifiers
+        self.rot_deg = rot_deg
+        self.scale = scale
+        self.viewer = viewer
+
+class PanEvent(UIEvent):
+    def __init__(self, button=None, state=None, mode=None, modifiers=None,
+                 delta_x=None, delta_y=None, viewer=None):
+        super(PanEvent, self).__init__()
+        self.button = button
+        self.state = state
+        self.mode = mode
+        self.modifiers = modifiers
+        self.delta_x = delta_x
+        self.delta_y = delta_y
         self.viewer = viewer
 
 class BindingMapError(Exception):
@@ -2371,6 +2462,10 @@ class BindingMapper(Callback.Callbacks):
         viewer.add_callback('focus', self.window_focus)
         viewer.add_callback('enter', self.window_enter)
         viewer.add_callback('leave', self.window_leave)
+        if viewer.has_callback('pinch'):
+            viewer.add_callback('pinch', self.window_pinch)
+        if viewer.has_callback('pan'):
+            viewer.add_callback('pan', self.window_pan)
 
     def window_map(self, viewer):
         return True
@@ -2508,7 +2603,7 @@ class BindingMapper(Callback.Callbacks):
 
     def window_button_press(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d btncode=%s" % (data_x, data_y,
-                                                   hex(btncode)))
+                                                    hex(btncode)))
         self._button |= btncode
         button = self.btnmap[btncode]
         trigger = 'ms_' + button
@@ -2619,6 +2714,62 @@ class BindingMapper(Callback.Callbacks):
                             modifiers=self._modifiers, viewer=viewer,
                             direction=direction, amount=amount,
                             data_x=data_x, data_y=data_y)
+        return viewer.make_ui_callback(cbname, event)
+
+    def window_pinch(self, viewer, state, rot_deg, scale):
+        btncode = 0
+        button = self.btnmap[btncode]
+        trigger = 'pi_pinch'
+        try:
+            idx = (self._kbdmode, self._modifiers, trigger)
+            emap = self.eventmap[idx]
+            cbname = '%s-pinch' % (emap.name)
+
+        except KeyError:
+            # no entry for this mode, try unmodified entry
+            try:
+                idx = (None, self._modifiers, trigger)
+                emap = self.eventmap[idx]
+                cbname = '%s-pinch' % (emap.name)
+
+            except KeyError:
+                idx = None
+                cbname = 'pinch-%s' % (str(self._kbdmode).lower())
+
+        event = PinchEvent(button=button, state=state, mode=self._kbdmode,
+                            modifiers=self._modifiers, viewer=viewer,
+                            rot_deg=rot_deg, scale=scale)
+
+        self.logger.debug("making callback for %s (mode=%s)" % (
+            cbname, self._kbdmode))
+        return viewer.make_ui_callback(cbname, event)
+
+    def window_pan(self, viewer, state, delta_x, delta_y):
+        btncode = 0
+        button = self.btnmap[btncode]
+        trigger = 'pa_pan'
+        try:
+            idx = (self._kbdmode, self._modifiers, trigger)
+            emap = self.eventmap[idx]
+            cbname = '%s-pan' % (emap.name)
+
+        except KeyError:
+            # no entry for this mode, try unmodified entry
+            try:
+                idx = (None, self._modifiers, trigger)
+                emap = self.eventmap[idx]
+                cbname = '%s-pan' % (emap.name)
+
+            except KeyError:
+                idx = None
+                cbname = 'pan-%s' % (str(self._kbdmode).lower())
+
+        event = PanEvent(button=button, state=state, mode=self._kbdmode,
+                         modifiers=self._modifiers, viewer=viewer,
+                         delta_x=delta_x, delta_y=delta_y)
+
+        self.logger.debug("making callback for %s (mode=%s)" % (
+            cbname, self._kbdmode))
         return viewer.make_ui_callback(cbname, event)
 
 

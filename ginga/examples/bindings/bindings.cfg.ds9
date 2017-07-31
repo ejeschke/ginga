@@ -175,18 +175,18 @@ mouse_zoom_acceleration = 1.085
 mouse_rotate_acceleration = 0.75
 
 # GESTURES (Qt version only)
-# Uncomment to enable pinch gesture on touchpads.
-# NOTE: if you enable this, it is *highly* recommended to disable any
+# NOTE: if using Qt4 back end, it is *highly* recommended to disable any
 # "scroll zoom" (sc_zoom*) features above because the two kinds don't play
-# well together.  A good combination for trackpads is enabling pinch with
-# zoom and the sc_pan functions.
-#gs_pinch = ['pinch']
+# well together.
+pi_zoom = ['pinch']
+pa_pan = ['pan']
 
 # This controls what operations the pinch gesture controls.  Possibilities are
 # (empty list or) some combination of 'zoom' and 'rotate'.
-pinch_actions = []
-pinch_zoom_acceleration = 1.4
+pinch_actions = ['zoom']
+pinch_zoom_acceleration = 1.0
 pinch_rotate_acceleration = 1.0
+pan_pan_acceleration = 1.0
 
 # ds9 uses opposite sense of panning direction
 pan_reverse = True

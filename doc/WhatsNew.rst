@@ -19,6 +19,8 @@ Ver 2.6.5.dev
   and attempting to load a new file
 - Fixed a bug when setting the pan position manually by wcs coordinates
 - Updates for changes in PIL.ImageCms module
+- Fix for window corruption on certain expose events
+- New default bindings for touch pads and differentiation from wheel zoom
 
 Ver 2.6.4 (2017-06-07)
 ======================

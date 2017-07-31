@@ -304,7 +304,7 @@ def get_scroll_info(event):
     # 15 deg is standard 1-click turn for a wheel mouse
     # delta() usually returns 120
     if have_pyqt5:
-        # TODO: use pixelDelta() for better handling on hi-res devices
+        # TODO: use pixelDelta() for better handling on hi-res devices?
         point = event.angleDelta()
         dx, dy = point.x(), point.y()
         delta = math.sqrt(dx ** 2 + dy ** 2)
