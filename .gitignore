@@ -1,0 +1,6 @@
+__pycache__
+astropy_helpers
+build
+dist
+*.egg*
+ginga
