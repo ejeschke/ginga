@@ -105,8 +105,8 @@ package_info['package_data'][PACKAGENAME].extend(c_files)
 # https://groups.google.com/forum/#!topic/astropy-dev/urYO8ckB2uM
 
 # pretty much needed
-install_requires = ['astropy>=1.0', 'numpy>=1.9', 'qtpy>=1.1',
-                    'setuptools>=1.0']
+install_requires = ['numpy>=1.9', 'qtpy>=1.1', 'setuptools>=1.0',
+                    'astropy>=1.0']
 
 # nice to have, but not required, depending on the application
 extras_require = {
@@ -117,6 +117,21 @@ extras_require = {
 setup(name=PACKAGENAME,
       version=VERSION,
       description=DESCRIPTION,
+      requires=['numpy'],  # scipy not required, but strongly recommended
+      provides=['ginga'],
+      classifiers=[
+          "Intended Audience :: Science/Research",
+          "License :: OSI Approved :: BSD License",
+          "Operating System :: MacOS :: MacOS X",
+          "Operating System :: Microsoft :: Windows",
+          "Operating System :: POSIX",
+          "Programming Language :: C",
+          "Programming Language :: Python :: 2.7",
+          "Programming Language :: Python :: 3.5",
+          "Programming Language :: Python :: 3",
+          "Topic :: Scientific/Engineering :: Astronomy",
+          "Topic :: Scientific/Engineering :: Physics",
+          ],
       scripts=scripts,
       install_requires=install_requires,
       extras_require=extras_require,
