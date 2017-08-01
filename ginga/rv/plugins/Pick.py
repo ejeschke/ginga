@@ -76,7 +76,7 @@ class Pick(GingaPlugin.LocalPlugin):
     horizontal and vertical FWHM measurements.
 
     The top set of tabs in the UI will be populated as follows.
-    
+
     The "Image" tag will show the contents of the cutout area.
 
     The widget in this tab is a Ginga widget and so can be zoomed and panned

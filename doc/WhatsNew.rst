@@ -2,8 +2,8 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.6.5.dev
-=============
+Ver 2.6.5 (2017-07-31)
+======================
 - Coordinate transforms refactored for speed and code clarity
 - Some canvas shapes refactored for better code reuse
 - Allow max and min scale limits to be disabled (by None)
