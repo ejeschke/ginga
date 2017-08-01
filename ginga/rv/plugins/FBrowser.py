@@ -125,32 +125,28 @@ class FBrowser(GingaPlugin.LocalPlugin):
         vbox.add_widget(self.entry, stretch=0)
         self.entry.add_callback('activated', self.browse_cb)
 
-        hbox = Widgets.HBox()
-        btn = Widgets.Button("Load")
-        btn.add_callback('activated', lambda w: self.load_cb())
-        hbox.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Save Image As")
-        hbox.add_widget(btn, stretch=0)
-        self.entry2 = Widgets.TextEntry()
-        hbox.add_widget(self.entry2, stretch=1)
-        vbox.add_widget(hbox, stretch=0)
-        self.entry2.add_callback('activated', self.save_as_cb)
-        btn.add_callback('activated', lambda w: self.save_as_cb())
-
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
+        btn.set_tooltip("Close this plugin")
         btns.add_widget(btn, stretch=0)
         btn = Widgets.Button("Help")
         btn.add_callback('activated', lambda w: self.help())
+        btn.set_tooltip("Show documentation for this plugin")
         btns.add_widget(btn, stretch=0)
         btn = Widgets.Button("Refresh")
         btn.add_callback('activated', lambda w: self.refresh())
+        btn.set_tooltip("Refresh the file list from the directory")
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Load")
+        btn.add_callback('activated', lambda w: self.load_cb())
+        btn.set_tooltip("Load files selected in file pane")
         btns.add_widget(btn, stretch=0)
         btn = Widgets.Button("Make Thumbs")
         btn.add_callback('activated', lambda w: self.make_thumbs())
+        btn.set_tooltip("Make thumbnails for files in directory")
         btns.add_widget(btn, stretch=0)
 
         vbox.add_widget(btns, stretch=0)
@@ -237,18 +233,6 @@ class FBrowser(GingaPlugin.LocalPlugin):
         # Open directory
         if not retcode:
             self.browse(path)
-
-    def save_as_cb(self):
-        path = str(self.entry2.get_text()).strip()
-        if not path.startswith('/'):
-            path = os.path.join(self.curpath, path)
-
-        image = self.fitsimage.get_image()
-        if image is None:
-            self.logger.error('No image to save')
-            return
-
-        self.fv.error_wrap(image.save_as_file, path)
 
     def close(self):
         if self.fitsimage is None:
