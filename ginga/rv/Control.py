@@ -892,6 +892,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 str(imname), str(e)))
 
     def redo_plugins(self, image, channel):
+        if image is not None:
+            imname = image.get('name', None)
+            if (imname is not None) and (imname not in channel):
+                # image may have been removed--
+                # skip updates to this channel's plugins
+                return
+
         # New data in channel
         # update active global plugins
         opmon = self.gpmon

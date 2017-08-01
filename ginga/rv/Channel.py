@@ -222,7 +222,8 @@ class Channel(Callback.Callbacks):
 
     def _image_modified_cb(self, image):
         imname = image.get('name', None)
-        if (imname is None) or (not imname in self.image_index):
+        if (imname is None) or (imname not in self.image_index):
+            # not one of ours apparently (maybe used to be, but got removed)
             return
 
         info = self.image_index[imname]
