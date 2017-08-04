@@ -235,14 +235,18 @@ class FitsViewer(object):
 
     def draw_cb(self, canvas, tag):
         obj = canvas.get_object_by_tag(tag)
-        obj.add_callback('pick-down', self.pick_cb)
+        obj.add_callback('pick-down', self.pick_cb, 'down')
+        obj.add_callback('pick-up', self.pick_cb, 'up')
+        obj.add_callback('pick-move', self.pick_cb, 'move')
+        obj.add_callback('pick-hover', self.pick_cb, 'hover')
+        obj.add_callback('pick-enter', self.pick_cb, 'enter')
+        obj.add_callback('pick-leave', self.pick_cb, 'leave')
         obj.pickable = True
         obj.add_callback('edited', self.edit_cb)
 
-    def pick_cb(self, obj, canvas, event, pt):
-        self.logger.info("pick point is %s" % (str(pt)))
-        self.fitsimage.onscreen_message("pick point is (%.2f, %.2f)" % pt,
-                                        delay=1.0)
+    def pick_cb(self, obj, canvas, event, pt, ptype):
+        self.logger.info("pick event '%s' with obj %s at (%.2f, %.2f)" % (
+            ptype, obj.kind, pt[0], pt[1]))
         return True
 
     def edit_cb(self, obj):

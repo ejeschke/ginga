@@ -51,6 +51,7 @@ class DrawingMixin(object):
         self._edit_status = False
         self._edit_detail = {}
         self._pick_cur_objs = set([])
+        self._pick_sel_objs = set([])
 
         # For modes
         self._mode = 'draw'
@@ -669,7 +670,7 @@ class DrawingMixin(object):
 
     ##### PICK LOGIC #####
 
-    def _do_pick(self, canvas, event, data_x, data_y, cb_name, viewer):
+    def _do_pick(self, canvas, event, data_x, data_y, ptype, viewer):
         # check for objects at this location
         objs = canvas.select_items_at(viewer, (data_x, data_y))
 
@@ -678,6 +679,9 @@ class DrawingMixin(object):
         newly_out = self._pick_cur_objs - picked
         newly_in = picked - self._pick_cur_objs
         self._pick_cur_objs = picked
+
+        if ptype not in ('move', 'up'):
+            self._pick_sel_objs = picked
 
         # leaving an object
         for obj in newly_out:
@@ -690,7 +694,8 @@ class DrawingMixin(object):
             obj.make_callback('pick-enter', canvas, event, pt)
 
         # pick down/up
-        for obj in picked:
+        for obj in self._pick_sel_objs:
+            cb_name = 'pick-%s' % (ptype)
             self.logger.debug("%s event in %s obj at x, y = %d, %d" % (
                 cb_name, obj.kind, data_x, data_y))
 
@@ -701,19 +706,19 @@ class DrawingMixin(object):
 
     def pick_start(self, canvas, event, data_x, data_y, viewer):
         return self._do_pick(canvas, event, data_x, data_y,
-                             'pick-down', viewer)
+                             'down', viewer)
 
     def pick_motion(self, canvas, event, data_x, data_y, viewer):
         return self._do_pick(canvas, event, data_x, data_y,
-                             'pick-move', viewer)
+                             'move', viewer)
 
     def pick_hover(self, canvas, event, data_x, data_y, viewer):
         return self._do_pick(canvas, event, data_x, data_y,
-                             'pick-hover', viewer)
+                             'hover', viewer)
 
     def pick_stop(self, canvas, event, data_x, data_y, viewer):
         return self._do_pick(canvas, event, data_x, data_y,
-                             'pick-up', viewer)
+                             'up', viewer)
 
 
     # The canvas drawing
