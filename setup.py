@@ -8,7 +8,7 @@ import sys
 import ah_bootstrap
 from setuptools import setup
 
-#A dirty hack to get around some early import/configurations ambiguities
+# A dirty hack to get around some early import/configurations ambiguities
 if sys.version_info[0] >= 3:
     import builtins
 else:
@@ -104,6 +104,8 @@ package_info['package_data'][PACKAGENAME].extend(c_files)
 # ``setup``, since these are now deprecated. See this link for more details:
 # https://groups.google.com/forum/#!topic/astropy-dev/urYO8ckB2uM
 
+setup_requires = ['numpy>=1.9']
+
 # pretty much needed
 install_requires = ['numpy>=1.9', 'qtpy>=1.1', 'setuptools>=1.0',
                     'astropy>=1.0']
@@ -118,7 +120,9 @@ setup(name=PACKAGENAME,
       version=VERSION,
       description=DESCRIPTION,
       requires=['numpy'],  # scipy not required, but strongly recommended
-      provides=['ginga'],
+      provides=[PACKAGENAME],
+      keywords=['scientific', 'image', 'viewer', 'numpy', 'toolkit',
+                'astronomy', 'FITS'],
       classifiers=[
           "Intended Audience :: Science/Research",
           "License :: OSI Approved :: BSD License",
@@ -133,8 +137,10 @@ setup(name=PACKAGENAME,
           "Topic :: Scientific/Engineering :: Physics",
           ],
       scripts=scripts,
+      setup_requires=setup_requires,
       install_requires=install_requires,
       extras_require=extras_require,
+      python_requires='>=2.7',
       author=AUTHOR,
       author_email=AUTHOR_EMAIL,
       license=LICENSE,
