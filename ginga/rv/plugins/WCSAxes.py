@@ -332,7 +332,7 @@ class WCSAxes(LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
 
         self.gui_up = False

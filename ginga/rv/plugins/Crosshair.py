@@ -7,6 +7,7 @@
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
+
 class Crosshair(GingaPlugin.LocalPlugin):
     """
     Crosshair
@@ -133,7 +134,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         self.canvas.ui_set_active(False)
         self.fv.show_status("")

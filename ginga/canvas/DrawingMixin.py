@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
-import math
 
 from ginga import trcalc
 from ginga.misc.Bunch import Bunch
@@ -661,7 +660,7 @@ class DrawingMixin(object):
     def select_remove(self, obj):
         try:
             self._selected.remove(obj)
-        except:
+        except Exception:
             pass
 
     def select_add(self, obj):

@@ -33,13 +33,13 @@ have_pyside = False
 try:
     from qtpy import QtCore
     from qtpy import QtWidgets as QtGui
-    from qtpy.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
-         QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
-         QDrag, QPainterPath, QBrush
-    from qtpy.QtCore import QItemSelectionModel
-    from qtpy.QtWidgets import QApplication
+    from qtpy.QtGui import (QImage, QColor, QFont, QPixmap, QIcon, QCursor,
+                            QPainter, QPen, QPolygonF, QPolygon, QTextCursor,
+                            QDrag, QPainterPath, QBrush)  # noqa
+    from qtpy.QtCore import QItemSelectionModel  # noqa
+    from qtpy.QtWidgets import QApplication  # noqa
     try:
-        from qtpy.QtWebEngineWidgets import QWebEngineView as QWebView
+        from qtpy.QtWebEngineWidgets import QWebEngineView as QWebView  # noqa
     except ImportError as e:
         pass
 
@@ -267,7 +267,7 @@ class Timer(Callback.Callbacks):
     def stop(self):
         try:
             self.timer.stop()
-        except:
+        except Exception:
             pass
 
     def cancel(self):
@@ -279,12 +279,15 @@ class Timer(Callback.Callbacks):
 
     clear = cancel
 
+
 def cmap2pixmap(cmap, steps=50):
     """Convert a Ginga colormap into a QPixmap
     """
-    inds = numpy.linspace(0, 1, steps)
+    import numpy as np
+
+    inds = np.linspace(0, 1, steps)
     n = len(cmap.clst) - 1
-    tups = [ cmap.clst[int(x*n)] for x in inds ]
+    tups = [cmap.clst[int(x * n)] for x in inds]
     rgbas = [QColor(int(r * 255), int(g * 255),
                     int(b * 255), 255).rgba() for r, g, b in tups]
     im = QImage(steps, 1, QImage.Format_Indexed8)
@@ -350,4 +353,4 @@ def get_font(font_family, point_size):
     font = QFont(font_family, point_size)
     return font
 
-#END
+# END

@@ -46,6 +46,7 @@ class WidgetError(Exception):
     """For errors thrown in this module."""
     pass
 
+
 # (see TabWidget)
 _widget_move_event = None
 _app = None
@@ -694,7 +695,7 @@ class StatusBar(WidgetBase):
     def set_message(self, msg_str, duration=10.0):
         try:
             self.widget.remove_all(self.ctx_id)
-        except:
+        except Exception:
             pass
         self.ctx_id = self.widget.get_context_id('status')
         self.widget.push(self.ctx_id, msg_str)
@@ -1916,7 +1917,7 @@ class Application(Callback.Callbacks):
             screen = Gdk.screen_get_default()
             self.screen_ht = screen.get_height()
             self.screen_wd = screen.get_width()
-        except:
+        except Exception:
             self.screen_wd = 1600
             self.screen_ht = 1200
         # self.logger.debug("screen dimensions %dx%d" % (

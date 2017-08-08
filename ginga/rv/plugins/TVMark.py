@@ -412,13 +412,13 @@ class TVMark(LocalPlugin):
         if self.marktag:
             try:
                 self.canvas.delete_object_by_tag(self.marktag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         if self.markhltag:
             try:
                 self.canvas.delete_object_by_tag(self.markhltag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         self.treeview.clear()  # Clear table too
@@ -554,7 +554,7 @@ class TVMark(LocalPlugin):
         if self.markhltag:
             try:
                 self.canvas.delete_object_by_tag(self.markhltag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         # Display highlighted entries only in second table
@@ -595,13 +595,13 @@ class TVMark(LocalPlugin):
         if self.markhltag:
             try:
                 canvas.delete_object_by_tag(self.markhltag, redraw=True)
-            except:
+            except Exception:
                 pass
 
         # Nothing to do if no markings are displayed
         try:
             obj = canvas.get_object_by_tag(self.marktag)
-        except:
+        except Exception:
             return
 
         if obj.kind != 'compound':
@@ -626,13 +626,13 @@ class TVMark(LocalPlugin):
         if self.markhltag:
             try:
                 canvas.delete_object_by_tag(self.markhltag, redraw=True)
-            except:
+            except Exception:
                 pass
 
         # Nothing to do if no markings are displayed
         try:
             obj = canvas.get_object_by_tag(self.marktag)
-        except:
+        except Exception:
             return
 
         if obj.kind != 'compound':
@@ -724,7 +724,7 @@ class TVMark(LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
 
         # Free some memory, maybe
@@ -747,5 +747,5 @@ class TVMark(LocalPlugin):
 # Replace module docstring with config doc for auto insert by Sphinx.
 # In the future, if we need the real docstring, we can append instead of
 # overwrite.
-from ginga.util.toolbox import generate_cfg_example
+from ginga.util.toolbox import generate_cfg_example  # noqa
 __doc__ = generate_cfg_example('plugin_TVMark', package='ginga')

@@ -97,7 +97,7 @@ class AstroPyCatalogServer(object):
     def toStar(self, data, ext, magfield):
         try:
             mag = float(data[magfield])
-        except:
+        except Exception:
             mag = 0.0
 
         # Make sure we have at least these Ginga standard fields defined
@@ -298,7 +298,7 @@ class PyVOCatalogServer(object):
     def toStar(self, data, ext, magfield):
         try:
             mag = float(data[magfield])
-        except:
+        except Exception:
             mag = 0.0
 
         # Make sure we have at least these Ginga standard fields defined

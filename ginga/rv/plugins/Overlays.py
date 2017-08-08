@@ -9,6 +9,7 @@ import numpy
 from ginga import GingaPlugin, RGBImage, colors
 from ginga.gw import Widgets
 
+
 class Overlays(GingaPlugin.LocalPlugin):
     """
     Overlays
@@ -169,7 +170,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         #self.canvas.ui_set_active(False)
         self.fv.show_status("")

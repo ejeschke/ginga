@@ -4,54 +4,52 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import sys, re
-import numpy
-import threading
-import math
 from io import BytesIO
 
+import numpy
+
 # Bokeh imports
-from bokeh.plotting import figure, show, curdoc
-from bokeh.models import BoxSelectTool, TapTool, PanTool
+#from bokeh.plotting import figure, show, curdoc
+#from bokeh.models import BoxSelectTool, TapTool
+from bokeh.models import PanTool
 #from bokeh.client import push_session
 #from bokeh.io import push_notebook
 
 from ginga import ImageView
-from ginga import Mixins, Bindings, colors
+from ginga import Mixins, Bindings
 from ginga.web.bokehw.CanvasRenderBokeh import CanvasRenderer
-from ginga.util.heaptimer import TimerHeap
 
 # TODO: is this the right place for this call?
 #session = push_session(curdoc())
 
 try:
     # See if we have aggdraw module--best choice
-    from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageViewSS, \
-         ImageViewAggError as ImageViewError
+    from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageViewSS
+    from ginga.aqqw.ImageViewAgg import ImageViewAggError as ImageViewError
 
 except ImportError:
     try:
         # No, hmm..ok, see if we have opencv module...
-        from ginga.cvw.ImageViewCv import ImageViewCv as ImageViewSS, \
-             ImageViewCvError as ImageViewError
+        from ginga.cvw.ImageViewCv import ImageViewCv as ImageViewSS
+        from ginga.cvw.ImageViewCv import ImageViewCvError as ImageViewError
 
     except ImportError:
         try:
             # No dice. How about the PIL module?
-            from ginga.pilw.ImageViewPil import ImageViewPil as ImageViewSS, \
-                 ImageViewPilError as ImageViewError
+            from ginga.pilw.ImageViewPil import ImageViewPil as ImageViewSS
+            from ginga.pilw.ImageViewPil import ImageViewPilError as ImageViewError
 
         except ImportError:
             # Fall back to mock--there will be no graphic overlays
-            from ginga.mockw.ImageViewMock import ImageViewMock as ImageViewSS, \
-                 ImageViewMockError as ImageViewError
-
+            from ginga.mockw.ImageViewMock import ImageViewMock as ImageViewSS
+            from ginga.mockw.ImageViewMock import ImageViewMockError as ImageViewError
 
 
 ## class ImageViewBokehError(ImageView.ImageViewError):
 ##     pass
 class ImageViewBokehError(ImageViewError):
     pass
+
 
 class ImageViewBokeh2(ImageViewSS):
     """
@@ -79,7 +77,6 @@ class ImageViewBokeh2(ImageViewSS):
         self.msgtask = None
         # see reschedule_redraw() method
         self._defer_task = None
-
 
     def set_figure(self, figure):
         """Call this with the Bokeh figure object."""
@@ -140,12 +137,11 @@ class ImageViewBokeh2(ImageViewSS):
             except Exception as e:
                 self.logger.warning("Can't update bokeh plot: %s" % (str(e)))
 
-
     def reschedule_redraw(self, time_sec):
         if self.figure is not None:
             ## try:
             ##     self.figure.after_cancel(self._defer_task)
-            ## except:
+            ## except Exception:
             ##     pass
             time_ms = int(time_sec * 1000)
             ## self._defer_task = self.figure.after(time_ms,
@@ -167,7 +163,7 @@ class ImageViewBokeh2(ImageViewSS):
         ## if self.msgtask:
         ##     try:
         ##         self.figure.after_cancel(self.msgtask)
-        ##     except:
+        ##     except Exception:
         ##         pass
         self.message = text
         self.redraw(whence=3)
@@ -175,6 +171,7 @@ class ImageViewBokeh2(ImageViewSS):
             ms = int(delay * 1000.0)
             ## self.msgtask = self.figure.after(ms,
             ##                                   lambda: self.onscreen_message(None))
+
 
 class ImageViewBokeh(ImageView.ImageViewBase):
     """
@@ -275,7 +272,6 @@ class ImageViewBokeh(ImageView.ImageViewBase):
             d_src.data["dw"] = [wd]
             d_src.data["dh"] = [ht]
 
-
         # Draw a cross in the center of the window in debug mode
         if self.t_['show_pan_position']:
             # size of cross is 4% of max window dimensions
@@ -304,7 +300,6 @@ class ImageViewBokeh(ImageView.ImageViewBase):
 
             except Exception as e:
                 self.logger.warning("Can't update bokeh plot: %s" % (str(e)))
-
 
     def configure_window(self, width, height):
         self.configure(width, height)
@@ -346,7 +341,7 @@ class ImageViewBokeh(ImageView.ImageViewBase):
     def onscreen_message(self, text, delay=None):
         ## try:
         ##     self._msg_timer.stop()
-        ## except:
+        ## except Exception:
         ##     pass
 
         self.message = text
@@ -368,7 +363,7 @@ class ImageViewBokeh(ImageView.ImageViewBase):
 
         ## try:
         ##     self._defer_timer.stop()
-        ## except:
+        ## except Exception:
         ##     pass
 
         time_ms = int(time_sec * 1000)
@@ -433,7 +428,7 @@ class ImageViewEvent(ImageViewBokeh):
             'f10': 'f10',
             'f11': 'f11',
             'f12': 'f12',
-            }
+        }
 
         # Define cursors for pick and pan
         #hand = openHandCursor()
@@ -588,7 +583,8 @@ class ImageViewEvent(ImageViewBokeh):
         self.last_data_x, self.last_data_y = data_x, data_y
 
         return self.make_ui_callback('scroll', direction, amount,
-                                  data_x, data_y)
+                                     data_x, data_y)
+
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
@@ -649,6 +645,4 @@ class CanvasView(ImageViewZoom):
 
         self.objects[0] = self.private_canvas
 
-
-
-#END
+# END

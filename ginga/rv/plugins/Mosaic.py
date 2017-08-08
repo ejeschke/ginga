@@ -7,11 +7,9 @@
 import math
 import time
 import numpy
-import os.path
 import threading
 
 from ginga.AstroImage import AstroImage
-from ginga.util import mosaic
 from ginga.util import wcs, iqcalc, dp
 from ginga import GingaPlugin
 from ginga.gw import Widgets
@@ -21,6 +19,7 @@ try:
     have_pyfits = True
 except ImportError:
     have_pyfits = False
+
 
 class Mosaic(GingaPlugin.LocalPlugin):
     """
@@ -86,7 +85,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         self.gui_up = False
 
-
     def build_gui(self, container):
         top = Widgets.VBox()
         top.set_border_width(4)
@@ -108,7 +106,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
             ("Merge data", 'checkbutton', "Drop new",
              'checkbutton'),
             ("Mosaic HDUs", 'checkbutton'),
-            ]
+        ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
@@ -212,12 +210,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
         container.add_widget(top, stretch=1)
         self.gui_up = True
 
-
     def set_preprocess(self, fn):
         if fn is None:
-            fn = lambda x: x
+            fn = lambda x: x  # noqa
         self.preprocess = fn
-
 
     def prepare_mosaic(self, image, fov_deg, name=None):
         """Prepare a new (blank) mosaic image based on the pointing of
@@ -343,7 +339,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                 else:
                     imname = image.get('name', 'noname')
 
-                x, y = (xlo+xhi) / 2., (ylo+yhi) / 2.
+                x, y = (xlo + xhi) / 2., (ylo + yhi) / 2.
                 self.canvas.add(self.dc.Text(x, y, imname, color='red'),
                                 redraw=False)
 
@@ -373,7 +369,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         # dereference potentially large mosaic image
         self.img_mosaic = None
@@ -473,7 +469,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
                 self.num_groups -= 1
                 if self.num_groups <= 0:
                     self.fv.nongui_do(self.finish_mosaic)
-
 
     def finish_mosaic(self):
         # NOTE: this runs in a nongui thread
@@ -612,7 +607,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
 # Replace module docstring with config doc for auto insert by Sphinx.
 # In the future, if we need the real docstring, we can append instead of
 # overwrite.
-from ginga.util.toolbox import generate_cfg_example
+from ginga.util.toolbox import generate_cfg_example  # noqa
 __doc__ = generate_cfg_example('plugin_Mosaic', package='ginga')
 
-#END
+# END

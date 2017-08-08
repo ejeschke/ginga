@@ -15,7 +15,6 @@ from ginga.misc import Future
 from ginga import GingaPlugin
 from ginga.util.iohelper import get_hdu_suffix
 from ginga.util.videosink import VideoSink
-from ginga.table.AstroTable import AstroTable
 
 import numpy as np
 
@@ -208,14 +207,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         except Exception as e:
             self.logger.error("Error loading HDU #%d: %s" % (
-                idx+1, str(e)))
+                idx + 1, str(e)))
 
     def set_naxis_cb(self, widget, idx, n):
         play_idx = int(idx) - 1
         self.set_naxis(play_idx, n)
 
     def build_naxis(self, dims, image):
-        imname = image.get('name')
         self.naxispath = list(image.naxispath)
 
         # build a vbox of NAXIS controls
@@ -223,14 +221,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
                     ("NAXIS2:", 'label', 'NAXIS2', 'llabel')]
 
         for n in range(2, len(dims)):
-            key = 'naxis%d' % (n+1)
+            key = 'naxis%d' % (n + 1)
             title = key.upper()
             maxn = int(dims[n])
-            self.logger.debug("NAXIS%d=%d" % (n+1, maxn))
+            self.logger.debug("NAXIS%d=%d" % (n + 1, maxn))
             if maxn <= 1:
-                captions.append((title+':', 'label', title, 'llabel'))
+                captions.append((title + ':', 'label', title, 'llabel'))
             else:
-                captions.append((title+':', 'label', title, 'llabel',
+                captions.append((title + ':', 'label', title, 'llabel',
                                  "Choose %s" % (title), 'hscale'))
 
         # Remove old naxis widgets
@@ -243,7 +241,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if len(dims) > 3:  # only add radiobuttons if we have more than 3 dim
             group = None
             for i in range(2, len(dims)):
-                title = 'AXIS%d' % (i+1)
+                title = 'AXIS%d' % (i + 1)
                 btn = Widgets.RadioButton(title, group=group)
                 if group is None:
                     group = btn
@@ -258,7 +256,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         vbox.add_widget(hbox)
 
         for n in range(0, len(dims)):
-            key = 'naxis%d' % (n+1)
+            key = 'naxis%d' % (n + 1)
             lbl = b[key]
             maxn = int(dims[n])
             lbl.set_text("%d" % maxn)
@@ -281,7 +279,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             # Disable playback if there is only 1 slice in the higher dimension
             if n > 2 and dims[n] == 1:
-                radiobutton = self.w['axis%d' % (n+1)]
+                radiobutton = self.w['axis%d' % (n + 1)]
                 radiobutton.set_enabled(False)
 
         # Add vbox of naxis controls to gui
@@ -371,7 +369,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.play_stop()
         try:
             self.file_obj.close()
-        except:
+        except Exception:
             pass
         self.file_obj = None
         self.img_path = None
@@ -403,7 +401,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))
         try:
             self.curhdu = idx
-            dims = [0, 0]
             info = self.file_obj.hdu_info[idx]
 
             image = self.file_obj.get_hdu(idx)
@@ -429,10 +426,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
         `idx` is the slice index (0-based); `n` is the axis (0-based)
         """
         self.play_idx = idx
-        self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
+        self.logger.debug("naxis %d index is %d" % (n + 1, idx + 1))
 
         image = self.fitsimage.get_image()
-        slidername = 'choose_naxis%d' % (n+1)
+        slidername = 'choose_naxis%d' % (n + 1)
         try:
             if image is None:
                 raise ValueError("Please load an image cube")
@@ -443,7 +440,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.logger.debug("m=%d naxispath=%s" % (m, str(self.naxispath)))
 
             image.set_naxispath(self.naxispath)
-            self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
+            self.logger.debug("NAXIS%d slice %d loaded." % (n + 1, idx + 1))
 
             if self.play_indices:
                 # save play index
@@ -462,7 +459,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         except Exception as e:
             errmsg = "Error loading NAXIS%d slice %d: %s" % (
-                n+1, idx+1, str(e))
+                n + 1, idx + 1, str(e))
             self.logger.error(errmsg)
             self.fv.error(errmsg)
 
@@ -584,8 +581,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             upper = len(self.file_obj) - 1
             self.prep_hdu_menu(self.w.hdu, self.file_obj.hdu_info)
             self.num_hdu = upper
-            self.logger.debug("there are %d hdus" % (upper+1))
-            self.w.numhdu.set_text("%d" % (upper+1))
+            self.logger.debug("there are %d hdus" % (upper + 1))
+            self.w.numhdu.set_text("%d" % (upper + 1))
 
             self.w.hdu.set_enabled(len(self.file_obj) > 0)
 

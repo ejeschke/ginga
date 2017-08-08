@@ -16,7 +16,7 @@ import time
 from ginga.misc import Callback, Settings
 from ginga import BaseImage, AstroImage
 from ginga import RGBMap, AutoCuts, ColorDist
-from ginga import cmap, imap, colors, trcalc, version
+from ginga import cmap, imap, colors, trcalc
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util import rgb_cms
@@ -133,7 +133,7 @@ class ImageViewBase(Callback.Callbacks):
         # for auto cut levels
         self.autocuts_options = ('on', 'override', 'once', 'off')
         self.t_.add_defaults(autocuts='override', autocut_method='zscale',
-                            autocut_params=[])
+                             autocut_params=[])
         for name in ('autocut_method', 'autocut_params'):
             self.t_.get_setting(name).add_callback('set', self.auto_levels_cb)
 
@@ -512,7 +512,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # make sure private canvas has our non-private one added
         if (self.private_canvas != self.canvas) and (
-            not self.private_canvas.has_object(canvas)):
+                not self.private_canvas.has_object(canvas)):
             self.private_canvas.add(canvas)
 
         self.initialize_private_canvas(self.private_canvas)
@@ -743,11 +743,11 @@ class ImageViewBase(Callback.Callbacks):
             # previous choice might not be available if preferences
             # were saved when opencv was being used (and not used now)
             # --if so, default to "basic"
-            if not interp in trcalc.interpolation_methods:
-                interp='basic'
+            if interp not in trcalc.interpolation_methods:
+                interp = 'basic'
 
             self._imgobj = NormImage(0, 0, None, alpha=1.0,
-                                      interpolation=interp)
+                                     interpolation=interp)
             self._imgobj.add_callback('image-set', self._image_set_cb)
 
         return self._imgobj
@@ -884,7 +884,6 @@ class ImageViewBase(Callback.Callbacks):
                     self.auto_levels()
 
             self.canvas.update_canvas(whence=0)
-
 
     def _image_modified_cb(self, image):
 
@@ -1310,7 +1309,7 @@ class ImageViewBase(Callback.Callbacks):
         data_x, data_y = self.get_data_xy(self.last_win_x,
                                           self.last_win_y)
         if (data_x != self.last_data_x or
-            data_y != self.last_data_y):
+                data_y != self.last_data_y):
             self.last_data_x, self.last_data_y = data_x, data_y
             self.logger.debug("cursor location changed %.4f,%.4f => %.4f,%.4f" % (
                 self.last_data_x, self.last_data_y, data_x, data_y))
@@ -1576,7 +1575,6 @@ class ImageViewBase(Callback.Callbacks):
 
         return (wd, ht)
 
-
     def _reset_bbox(self):
         """This function should only be called internally.  It resets
         the viewers bounding box based on changes to pan or scale.
@@ -1591,7 +1589,6 @@ class ImageViewBase(Callback.Callbacks):
 
         self._calc_bg_dimensions(scale_x, scale_y,
                                  pan_x, pan_y, win_wd, win_ht)
-
 
     def apply_transforms(self, data, rot_deg):
         """Apply transformations to the given data.
@@ -1738,7 +1735,6 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warning("Error converting output from working profile: %s" % (str(e)))
             # TODO: maybe should have a traceback here
             self.logger.info("Output left unprofiled")
-
 
     def get_data_pt(self, win_pt):
         """Similar to :meth:`get_data_xy`, except that it takes a single
@@ -2224,7 +2220,7 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.debug("Window size is %dx%d" % (wwidth, wheight))
             if self.t_['swap_xy']:
                 wwidth, wheight = wheight, wwidth
-        except:
+        except Exception:
             return
 
         # zoom_fit also centers image
@@ -3551,7 +3547,6 @@ class ImageViewBase(Callback.Callbacks):
         if redraw:
             canvas.update_canvas(whence=3)
 
-
     def show_focus_indicator(self, tf, color='white'):
         """Show a focus indicator in the window.
 
@@ -3603,4 +3598,4 @@ class SuppressRedraw(object):
         return False
 
 
-#END
+# END

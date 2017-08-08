@@ -258,7 +258,7 @@ class BaseImage(ViewerObjectBase):
                 self.maxval_noinf = self.maxval
             else:
                 self.maxval_noinf = np.nanmax(data[np.isfinite(data)])
-        except:
+        except Exception:
             self.maxval_noinf = self.maxval
 
         try:
@@ -266,7 +266,7 @@ class BaseImage(ViewerObjectBase):
                 self.minval_noinf = self.minval
             else:
                 self.minval_noinf = np.nanmin(data[np.isfinite(data)])
-        except:
+        except Exception:
             self.minval_noinf = self.minval
 
     def get_minmax(self, noinf=False):
@@ -615,4 +615,4 @@ class Header(dict):
     def asdict(self):
         return dict([(key, self[key]) for key in self.keys()])
 
-#END
+# END

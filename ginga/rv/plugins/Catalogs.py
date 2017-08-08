@@ -323,11 +323,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         try:
             self.table.close()
-        except:
+        except Exception:
             pass
         self.gui_up = False
         self.fv.show_status("")
@@ -398,11 +398,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
             # width and height are specified in arcmin
             sgn, deg, mn, sec = wcs.degToDms(wd_deg)
-            wd = deg*60.0 + float(mn) + sec/60.0
+            wd = deg * 60.0 + float(mn) + sec / 60.0
             sgn, deg, mn, sec = wcs.degToDms(ht_deg)
-            ht = deg*60.0 + float(mn) + sec/60.0
+            ht = deg * 60.0 + float(mn) + sec / 60.0
             sgn, deg, mn, sec = wcs.degToDms(radius_deg)
-            radius = deg*60.0 + float(mn) + sec/60.0
+            radius = deg * 60.0 + float(mn) + sec / 60.0
             #wd, ht, radius = wd_deg, ht_deg, radius_deg
 
         except Exception as e:
@@ -497,7 +497,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if self.areatag:
             try:
                 canvas.delete_object_by_tag(self.areatag)
-            except:
+            except Exception:
                 pass
 
         obj.color = self.color_outline
@@ -609,7 +609,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             return starlist, info
 
         except Exception as e:
-            errmsg ="Failed to load catalog: %s" % (str(e))
+            errmsg = "Failed to load catalog: %s" % (str(e))
             raise Exception(errmsg)
 
     def getcatalog(self, server, params, obj):
@@ -647,7 +647,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             num_cat = len(starlist)
             self.logger.debug("number of incoming stars=%d" % (num_cat))
             coords = np.asarray([(star['ra_deg'], star['dec_deg'])
-                                    for star in starlist])
+                                 for star in starlist])
 
             # vectorized wcs transform to data coords
             coords = image.wcs.wcspt_to_datapt(coords)
@@ -752,7 +752,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             obj.canvobj = None
 
         # plot stars in range
-        subset = self.table.get_subset_from_starlist(i, i+length)
+        subset = self.table.get_subset_from_starlist(i, i + length)
 
         with self.fitsimage.suppress_redraw:
             for obj in subset:
@@ -781,7 +781,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if num_stars > 0:
             adj = self.w.plotgrp
             #page_size = self.plot_limit
-            self.plot_start = min(self.plot_start, num_stars-1)
+            self.plot_start = min(self.plot_start, num_stars - 1)
             adj.set_limits(0, num_stars, incr_value=1)
 
         self.replot_stars()
@@ -812,7 +812,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             if 'label' in bnch:
                 text = bnch.label
             #captions.append((text, 'entry'))
-            captions.append((text+':', 'label', bnch.name, 'entry'))
+            captions.append((text + ':', 'label', bnch.name, 'entry'))
 
         # TODO: put RA/DEC first, and other stuff not in random orders
         w, b = Widgets.build_info(captions)
@@ -920,7 +920,7 @@ class CatalogListing(object):
     def get_color(self, obj):
         try:
             mag = obj[self.mag_field]
-        except:
+        except Exception:
             return self.color_default
 
         # calculate range of values
@@ -1029,7 +1029,7 @@ class CatalogListing(object):
         self.replot_stars()
 
     def set_minmax(self, i, length):
-        subset = self.get_subset_from_starlist(i, i+length)
+        subset = self.get_subset_from_starlist(i, i + length)
         values = list(map(lambda star: float(star[self.mag_field]),
                           subset))
         if len(values) > 0:

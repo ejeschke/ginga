@@ -49,7 +49,6 @@ class ModeIndicator(object):
         bm.add_callback('mode-set', self.mode_change_cb)
         viewer.add_callback('configure', self._configure_cb)
 
-
     def mode_change_cb(self, bindmap, mode, modetype):
         # delete the old indicator
         obj = self.mode_obj
@@ -58,14 +57,14 @@ class ModeIndicator(object):
         if obj:
             try:
                 canvas.delete_object(obj)
-            except:
+            except Exception:
                 pass
 
         if not self.visible:
             return True
 
         # if not one of the standard modifiers, display the new one
-        if not mode in (None, 'ctrl', 'shift'):
+        if mode not in (None, 'ctrl', 'shift'):
             Text = canvas.get_draw_class('text')
             Polygon = canvas.get_draw_class('polygon')
             Compound = canvas.get_draw_class('compoundobject')
@@ -92,9 +91,9 @@ class ModeIndicator(object):
             cx1, cy1, cx2, cy2 = x_base, y_base, x_base + box_wd, y_base + box_ht
             poly_pts = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
             o2 = Compound(Polygon(poly_pts,
-                               color='black', coord='window',
-                               fill=True, fillcolor='black'),
-                               o1)
+                                  color='black', coord='window',
+                                  fill=True, fillcolor='black'),
+                          o1)
             self.mode_obj = o2
             canvas.add(o2)
 
