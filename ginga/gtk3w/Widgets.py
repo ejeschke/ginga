@@ -987,16 +987,22 @@ class TreeView(WidgetBase):
             model, iter1, iter2 = args[:3]
             bnch1 = model.get_value(iter1, 0)
             bnch2 = model.get_value(iter2, 0)
-            if isinstance(bnch1, str):
-                if isinstance(bnch2, str):
-                    return bnch1.lower() == bnch2.lower()  # was using cmp
+            if isinstance(bnch1, six.string_types):
+                if isinstance(bnch2, six.string_types):
+                    s1, s2 = bnch1.lower(), bnch2.lower()
+                    if s1 < s2:
+                        return -1
+                    if s1 > s2:
+                        return 1
                 return 0
             val1, val2 = bnch1[idx], bnch2[idx]
-            if isinstance(val1, str):
-                val1 = val1.lower()
-                val2 = val2.lower()
-            res = val1 == val2  # was using nonexistent cmp
-            return res
+            if isinstance(val1, six.string_types):
+                val1, val2 = val1.lower(), val2.lower()
+                if val1 < val2:
+                    return -1
+                if val1 > val2:
+                    return 1
+            return 0
         return fn
 
     def _mkcolfn0(self, idx):

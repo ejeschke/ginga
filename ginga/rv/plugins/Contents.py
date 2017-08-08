@@ -99,6 +99,10 @@ class Contents(GingaPlugin.GlobalPlugin):
             return
         imname = list(img_dict.keys())[0]
         bnch = img_dict[imname]
+        if not 'path' in bnch:
+            # may be a top-level channel node, e.g. in gtk
+            return
+
         path = bnch.path
         self.logger.debug("chname=%s name=%s path=%s" % (
             chname, imname, path))
