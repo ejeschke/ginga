@@ -997,7 +997,7 @@ class WorkerThread(object):
 
     def stop(self):
         # Put termination sentinal on queue
-        self.queue.put((priority, task))
+        self.queue.put((0, None))
         self.ev_quit.set()
 
 # ------------ THREAD POOL ------------
