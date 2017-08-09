@@ -44,13 +44,13 @@ IMT_FBCONFIG      = 0o77
 XYMASK            = 0o77777
 
 MAX_FBCONFIG      = 128             # max possible frame buf sizes
-MAX_FRAMES        = 15              #  max number of frames (start from 0)
-MAX_CLIENTS       = 8               #  max display server clients
-DEF_NFRAMES       = 1               #  save memory; only one frame
-DEF_FRAME_WIDTH   = 512             #  512 square frame
-DEF_FRAME_HEIGHT  = 512             #  512 square frame
+MAX_FRAMES        = 15              # max number of frames (start from 0)
+MAX_CLIENTS       = 8               # max display server clients
+DEF_NFRAMES       = 1               # save memory; only one frame
+DEF_FRAME_WIDTH   = 512             # 512 square frame
+DEF_FRAME_HEIGHT  = 512             # 512 square frame
 
-SZ_LABEL          = 256             #  main frame label string
+SZ_LABEL          = 256             # main frame label string
 SZ_IMTITLE        = 128             # image title string
 SZ_WCSBUF         = 1024            # WCS text buffer size
 SZ_OLD_WCSBUF     = 320             # old WCS text buffer size
@@ -833,12 +833,6 @@ Where   nbytes | NB  = number of bytes expected or written
             self.server.controller.display(self.frame, fb.width, fb.height,
                                            False)
 
-    def decode_iis(self, data):
-        f = file('/tmp/pippo', 'wb')
-        f.write(data)
-        f.close()
-        return (decoded_data)
-
 
 # Frame buffer configurations
 fbconfigs = {
@@ -1085,7 +1079,8 @@ def get_interface(addr=None):
         n, match = 4, re.match(r'^(\d+)$', imtdev)
     if not match:
         # Error
-        raise socketError("I don't understand the format of addr IMTDEV: '%s'" % (imtdev))
+        raise ValueError(
+            "I don't understand the format of addr IMTDEV: '%s'" % (imtdev))
 
     if n == 1:
         prot, port, host = match.groups()
