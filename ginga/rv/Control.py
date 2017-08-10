@@ -1068,48 +1068,48 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             The channel info bunch.
 
         """
-        if self.has_channel(chname):
-            return self.get_channel(chname)
-
-        name = chname
-        if settings is None:
-            settings = self.prefs.create_category('channel_'+name)
-            try:
-                settings.load(onError='raise')
-
-            except Exception as e:
-                self.logger.warning("no saved preferences found for channel "
-                                    "'%s': %s" % (name, str(e)))
-
-                # copy template settings to new channel
-                if settings_template is not None:
-                    osettings = settings_template
-                    osettings.copy_settings(settings)
-                else:
-                    try:
-                        # use channel_Image as a template if one was not
-                        # provided
-                        osettings = self.prefs.get_settings('channel_Image')
-                        self.logger.debug("Copying settings from 'Image' to "
-                                          "'%s'" % (name))
-                        osettings.copy_settings(settings)
-                    except KeyError:
-                        pass
-
-        if (share_keylist is not None) and (settings_share is not None):
-            # caller wants us to share settings with another viewer
-            settings_share.share_settings(settings, keylist=share_keylist)
-
-        # Make sure these preferences are at least defined
-        if num_images is None:
-            num_images = settings.get('numImages',
-                                      self.settings.get('numImages', 1))
-        settings.set_defaults(switchnew=True, numImages=num_images,
-                              raisenew=True, genthumb=True,
-                              enter_focus=True, focus_indicator=False,
-                              preload_images=False, sort_order='loadtime')
-
         with self.lock:
+            if self.has_channel(chname):
+                return self.get_channel(chname)
+
+            name = chname
+            if settings is None:
+                settings = self.prefs.create_category('channel_'+name)
+                try:
+                    settings.load(onError='raise')
+
+                except Exception as e:
+                    self.logger.warning("no saved preferences found for channel "
+                                        "'%s': %s" % (name, str(e)))
+
+                    # copy template settings to new channel
+                    if settings_template is not None:
+                        osettings = settings_template
+                        osettings.copy_settings(settings)
+                    else:
+                        try:
+                            # use channel_Image as a template if one was not
+                            # provided
+                            osettings = self.prefs.get_settings('channel_Image')
+                            self.logger.debug("Copying settings from 'Image' to "
+                                              "'%s'" % (name))
+                            osettings.copy_settings(settings)
+                        except KeyError:
+                            pass
+
+            if (share_keylist is not None) and (settings_share is not None):
+                # caller wants us to share settings with another viewer
+                settings_share.share_settings(settings, keylist=share_keylist)
+
+            # Make sure these preferences are at least defined
+            if num_images is None:
+                num_images = settings.get('numImages',
+                                          self.settings.get('numImages', 1))
+            settings.set_defaults(switchnew=True, numImages=num_images,
+                                  raisenew=True, genthumb=True,
+                                  enter_focus=True, focus_indicator=False,
+                                  preload_images=False, sort_order='loadtime')
+
             self.logger.debug("Adding channel '%s'" % (chname))
             channel = Channel(chname, self, datasrc=None,
                               settings=settings)
@@ -1999,11 +1999,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             # add toolbar buttons for navigating images in the channel
             iconpath = os.path.join(self.iconpath, "up_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
             btn.set_tooltip("Previous object in current channel")
             btn.add_callback('activated', lambda w: self.prev_img())
             iconpath = os.path.join(self.iconpath, "down_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
             btn.set_tooltip("Next object in current channel")
             btn.add_callback('activated', lambda w: self.next_img())
 
@@ -2011,24 +2011,24 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             # add toolbar buttons for navigating between channels
             iconpath = os.path.join(self.iconpath, "prev_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
             btn.set_tooltip("Focus previous channel in this workspace")
             btn.add_callback('activated', lambda w: self.prev_channel_ws(ws))
             iconpath = os.path.join(self.iconpath, "next_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
             btn.set_tooltip("Focus next channel in this workspace")
             btn.add_callback('activated', lambda w: self.next_channel_ws(ws))
 
             tb.add_separator()
 
             # add toolbar buttons adding and deleting channels
-            iconpath = os.path.join(self.iconpath, "plus_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
+            iconpath = os.path.join(self.iconpath, "inbox_plus_48.png")
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 23))
             btn.set_tooltip("Add a channel to this workspace")
             btn.add_callback('activated',
                              lambda w: self.add_channel_auto_ws(ws))
-            iconpath = os.path.join(self.iconpath, "minus_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
+            iconpath = os.path.join(self.iconpath, "inbox_minus_48.png")
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 23))
             btn.set_tooltip("Delete current channel from this workspace")
             btn.add_callback('activated',
                              lambda w: self.gui_delete_channel_ws(ws))
