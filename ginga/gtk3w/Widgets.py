@@ -1550,11 +1550,13 @@ class GridBox(ContainerBase):
         self.add_ref(child)
         w = child.get_widget()
         if stretch > 0:
-            xoptions = Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL
-            yoptions = Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL
+            xoptions = (Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.SHRINK |
+                        Gtk.AttachOptions.FILL)
+            yoptions = (Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.SHRINK |
+                        Gtk.AttachOptions.FILL)
         else:
-            xoptions = Gtk.AttachOptions.FILL
-            yoptions = Gtk.AttachOptions.FILL
+            xoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
+            yoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
         self.widget.attach(w, col, col+1, row, row+1,
                            xoptions=xoptions, yoptions=yoptions,
                            xpadding=0, ypadding=0)
