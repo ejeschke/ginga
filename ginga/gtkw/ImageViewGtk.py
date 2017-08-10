@@ -6,8 +6,6 @@
 
 import sys, os
 
-import numpy
-
 import gtk
 import cairo
 

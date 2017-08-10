@@ -6,25 +6,12 @@
 
 import sys, os
 
-import numpy
-
 from ginga.gtk3w import GtkHelp
 from ginga import Mixins, Bindings, colors
 from ginga.util.paths import icondir
-import ginga.util.six as six
 
-if six.PY2:
-    from ginga.cairow.ImageViewCairo import (ImageViewCairo as ImageView,
-                                             ImageViewCairoError as ImageViewError)
-else:
-    # NOTE [1]: this is a workaround for broken pycairo3--
-    # it lacks the ImageSurface.create_for_data() function present in
-    # pycairo2.  Supposedly this will be added.  Until this is fixed
-    # we use a workaround to draw with PIL, so we use a different base
-    # class and just change the draw handler accordingly
-    #
-    from ginga.pilw.ImageViewPil import (ImageViewPil as ImageView,
-                                         ImageViewPilError as ImageViewError)
+from ginga.cairow.ImageViewCairo import (ImageViewCairo as ImageView,
+                                         ImageViewCairoError as ImageViewError)
 
 from gi.repository import Gtk
 from gi.repository import Gdk
@@ -131,16 +118,8 @@ class ImageViewGtk(ImageView):
 
     def draw_event(self, widget, cr):
         self.logger.debug("updating window from surface")
-        if six.PY2:
-            # redraw the screen from backing surface
-            cr.set_source_surface(self.surface, 0, 0)
-        else:
-            # see NOTE [1] above
-            arr8 = self.get_image_as_array()
-            pixbuf = GtkHelp.pixbuf_new_from_array(arr8,
-                                                   GdkPixbuf.Colorspace.RGB,
-                                                   8)
-            Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0)
+        # redraw the screen from backing surface
+        cr.set_source_surface(self.surface, 0, 0)
 
         cr.set_operator(cairo.OPERATOR_SOURCE)
         cr.paint()
@@ -163,10 +142,8 @@ class ImageViewGtk(ImageView):
             if (wwd == width) and (wht == height):
                 return True
 
-        #self.surface = None
         self.logger.debug("allocation is %d,%d %dx%d" % (
             x, y, width, height))
-        #width, height = width*2, height*2
         self.configure_window(width, height)
         return True
 

@@ -5,7 +5,12 @@ What's New in Ginga?
 Ver 2.6.6.dev
 =============
 - Fix for broken sorting in Contents plugin in gtk backends
-- Fix for resize bug in switching in and out of grid view in gtk backends
+- Fix for resize bug in switching in and out of grid view in gtk
+  backends
+- Updated to have efficient support for gtk3
+  - please install compatible pycairo from github.com/pygobject/pycairo
+    if you get a "Not implemented yet" exception bubbling up from a
+    method called cairo.ImageSurface.create_for_data()
 
 Ver 2.6.5 (2017-07-31)
 ======================

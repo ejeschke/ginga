@@ -108,7 +108,10 @@ the full reference viewer.
 Gtk
 ===
 
-Ginga can use either Gtk 2 (with pygtk) or gtk 3 (with gi).
+Ginga can use either Gtk 2 (with pygtk) or gtk 3 (with gi).  (If you have
+an older version of pycairo package you may need to install a newer version
+from github.com/pygobject/pycairo).
+
 
 Tk
 ===

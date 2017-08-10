@@ -5,10 +5,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import sys, re
-import numpy
-import threading
-import math
+import sys
+import numpy as np
 from io import BytesIO
 
 import cairo
@@ -17,9 +15,6 @@ import ginga.util.six as six
 from ginga import ImageView
 from ginga.cairow.CanvasRenderCairo import CanvasRenderer
 
-if six.PY3:
-    from io import BytesIO
-    from PIL import Image
 
 class ImageViewCairoError(ImageView.ImageViewError):
     pass
@@ -48,7 +43,6 @@ class ImageViewCairo(ImageView.ImageViewBase):
 
     def _render_offscreen(self, surface, data, dst_x, dst_y,
                           width, height):
-        # NOTE [A]
         daht, dawd, depth = data.shape
         self.logger.debug("data shape is %dx%dx%d" % (dawd, daht, depth))
 
@@ -60,36 +54,19 @@ class ImageViewCairo(ImageView.ImageViewBase):
         cr.rectangle(0, 0, imgwin_wd, imgwin_ht)
         r, g, b = self.get_bg()
         cr.set_source_rgba(r, g, b)
-        #cr.set_operator(cairo.OPERATOR_OVER)
         cr.fill()
 
         stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
                                                             width)
 
-        if six.PY2:
-            img_surface = cairo.ImageSurface.create_for_data(data,
-                                                             cairo.FORMAT_ARGB32,
-                                                             dawd, daht, stride)
-        else:
-            # NOTE: pycairo3 does not have create_from_data(), so we have to
-            # use this painful workaround.
-            # TODO: need a faster method--this is S-L-O-W
-            # 1. create a PIL Image object from the image array
-            p_image = Image.fromarray(data)
-
-            # 2. save the rgb buffer as a PNG
-            png_buf = BytesIO()
-            p_image.save(png_buf, format='png', compress_level=0)
-
-            # 3. create the surface from the PNG
-            png_buf.seek(0)
-            img_surface = cairo.ImageSurface.create_from_png(png_buf)
+        img_surface = cairo.ImageSurface.create_for_data(data,
+                                                         cairo.FORMAT_ARGB32,
+                                                         dawd, daht, stride)
 
         cr.set_source_surface(img_surface, dst_x, dst_y)
         cr.set_operator(cairo.OPERATOR_SOURCE)
 
         cr.mask_surface(img_surface, dst_x, dst_y)
-        #cr.rectangle(dst_x, dst_y, dawd, daht)
         cr.fill()
 
     def get_offscreen_context(self):
@@ -117,16 +94,14 @@ class ImageViewCairo(ImageView.ImageViewBase):
                                       width, height)
 
     def configure_surface(self, width, height):
-        if six.PY2:
-            arr8 = numpy.zeros(height*width*4, dtype=numpy.uint8)
+        #surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        arr8 = np.zeros(height*width*4, dtype=np.uint8)
 
-            stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
-                                                                width)
-            surface = cairo.ImageSurface.create_for_data(arr8,
-                                                         cairo.FORMAT_ARGB32,
-                                                         width, height, stride)
-        else:
-            surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
+                                                            width)
+        surface = cairo.ImageSurface.create_for_data(arr8,
+                                                     cairo.FORMAT_ARGB32,
+                                                     width, height, stride)
 
         self.surface = surface
         self.configure(width, height)
