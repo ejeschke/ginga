@@ -1470,8 +1470,14 @@ class Splitter(ContainerBase):
     def add_widget(self, child):
         self.add_ref(child)
         child_w = child.get_widget()
+
+        # without a Frame it is difficult to see the divider
+        frame_w = Gtk.Frame()
+        frame_w.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+        frame_w.add(child_w)
+
         if len(self.children) == 1:
-            self.widget.pack1(child_w)
+            self.widget.pack1(frame_w)
 
         else:
             last = self.widget
@@ -1481,7 +1487,7 @@ class Splitter(ContainerBase):
             w = self._get_pane()
             self.panes.append(w)
 
-            w.pack1(child_w)
+            w.pack1(frame_w)
             last.pack2(w)
 
         self.widget.show_all()
