@@ -923,10 +923,13 @@ class TreeView(WidgetBase):
         treeselection = self.tv.get_selection()
         treeselection.unselect_all()
 
-    def select_path(self, path):
+    def select_path(self, path, state=True):
         treeselection = self.tv.get_selection()
         item = self._path_to_item(path)
-        treeselection.select_iter(item)
+        if state:
+            treeselection.select_iter(item)
+        else:
+            treeselection.unselect_iter(item)
 
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)  # noqa
