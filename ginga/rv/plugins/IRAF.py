@@ -686,7 +686,7 @@ class IRAF_AstroImage(AstroImage.AstroImage):
 
         # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
         # are 0-based
-        ra_lbl, dec_lbl = unichr(945), unichr(948)
+        ra_lbl, dec_lbl = six.unichr(945), six.unichr(948)
         fits_x, fits_y = data_x + 1, data_y + 1
 
         info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
