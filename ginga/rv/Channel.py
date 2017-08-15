@@ -38,7 +38,6 @@ class Channel(Callback.Callbacks):
         self.fv = fv
         self.settings = settings
         self.logger = fv.logger
-        self.lock = threading.RLock()
 
         # CHANNEL ATTRIBUTES
         self.name = name
@@ -98,6 +97,7 @@ class Channel(Callback.Callbacks):
 
         if was_not_there_already:
             channel.datasrc[imname] = image
+            image.add_callback('modified', channel._image_modified_cb)
 
             if not silent:
                 self.fv.gui_do(channel._add_image_update, image, info)
@@ -168,6 +168,7 @@ class Channel(Callback.Callbacks):
                                     image_loader=image_loader,
                                     image_future=image_future,
                                     idx=idx)
+            image.set(image_info=info)
 
         # we'll get notified if an image changes and can update
         # metadata and make a chained callback
@@ -248,34 +249,32 @@ class Channel(Callback.Callbacks):
             self.switch_name(info.name)
 
     def prev_image(self, loop=True):
-        with self.lock:
-            self.logger.debug("Previous image")
-            if self.cursor <= 0:
-                n = len(self.history) - 1
-                if (not loop) or (n < 0):
-                    self.logger.error("No previous image!")
-                    return True
-                self.cursor = n
-            else:
-                self.cursor -= 1
+        self.logger.debug("Previous image")
+        if self.cursor <= 0:
+            n = len(self.history) - 1
+            if (not loop) or (n < 0):
+                self.logger.error("No previous image!")
+                return True
+            self.cursor = n
+        else:
+            self.cursor -= 1
 
-            self.refresh_cursor_image()
+        self.refresh_cursor_image()
 
         return True
 
     def next_image(self, loop=True):
-        with self.lock:
-            self.logger.debug("Next image")
-            n = len(self.history) - 1
-            if self.cursor >= n:
-                if (not loop) or (n < 0):
-                    self.logger.error("No next image!")
-                    return True
-                self.cursor = 0
-            else:
-                self.cursor += 1
+        self.logger.debug("Next image")
+        n = len(self.history) - 1
+        if self.cursor >= n:
+            if (not loop) or (n < 0):
+                self.logger.error("No next image!")
+                return True
+            self.cursor = 0
+        else:
+            self.cursor += 1
 
-            self.refresh_cursor_image()
+        self.refresh_cursor_image()
 
         return True
 
@@ -284,12 +283,11 @@ class Channel(Callback.Callbacks):
             # image info is already present
             return False
 
-        with self.lock:
-            self.history.append(info)
-            self.image_index[info.name] = info
+        self.history.append(info)
+        self.image_index[info.name] = info
 
-            if self.hist_sort is not None:
-                self.history.sort(key=self.hist_sort)
+        if self.hist_sort is not None:
+            self.history.sort(key=self.hist_sort)
 
         self.fv.make_async_gui_callback('add-image-info', self, info)
 
@@ -368,40 +366,39 @@ class Channel(Callback.Callbacks):
 
     def switch_image(self, image):
 
-        with self.lock:
-            curimage = self.get_current_image()
-            if curimage != image:
-                self.logger.debug("updating viewer...")
-                self.view_object(image)
+        curimage = self.get_current_image()
+        if curimage != image:
+            self.logger.debug("updating viewer...")
+            self.view_object(image)
 
-                # update cursor to match image
-                imname = image.get('name')
-                if imname in self.image_index:
-                    info = self.image_index[imname]
-                    if info in self.history:
-                        self.cursor = self.history.index(info)
+            # update cursor to match image
+            imname = image.get('name')
+            if imname in self.image_index:
+                info = self.image_index[imname]
+                if info in self.history:
+                    self.cursor = self.history.index(info)
 
-                self.fv.channel_image_updated(self, image)
+            self.fv.channel_image_updated(self, image)
 
-                # Check for preloading any images into memory
-                preload = self.settings.get('preload_images', False)
-                if not preload:
-                    return
+            # Check for preloading any images into memory
+            preload = self.settings.get('preload_images', False)
+            if not preload:
+                return
 
-                # queue next and previous files for preloading
-                index = self.cursor
-                if index < len(self.history)-1:
-                    info = self.history[index+1]
-                    if info.path is not None:
-                        self.fv.add_preload(self.name, info)
+            # queue next and previous files for preloading
+            index = self.cursor
+            if index < len(self.history)-1:
+                info = self.history[index+1]
+                if info.path is not None:
+                    self.fv.add_preload(self.name, info)
 
-                if index > 0:
-                    info = self.history[index-1]
-                    if info.path is not None:
-                        self.fv.add_preload(self.name, info)
+            if index > 0:
+                info = self.history[index-1]
+                if info.path is not None:
+                    self.fv.add_preload(self.name, info)
 
-            else:
-                self.logger.debug("Apparently no need to set image.")
+        else:
+            self.logger.debug("Apparently no need to set channel viewer.")
 
     def switch_name(self, imname):
 
