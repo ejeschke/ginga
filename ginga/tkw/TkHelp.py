@@ -6,6 +6,7 @@
 
 from ginga.misc import Bunch, Callback
 
+
 class Timer(Callback.Callbacks):
     """Abstraction of a GUI-toolkit implemented timer."""
 
@@ -50,7 +51,7 @@ class Timer(Callback.Callbacks):
             if self._timer is not None:
                 self.tkcanvas.after_cancel(self._timer)
                 self._timer = None
-        except:
+        except Exception:
             pass
 
     def cancel(self):

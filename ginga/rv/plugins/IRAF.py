@@ -1,23 +1,23 @@
-import sys, os
-import logging
+import os
 import threading
 import socket
-import ginga.util.six as six
-if six.PY2:
-    import Queue
-else:
-    import queue as Queue
 import array
 import numpy
 import time
 
+import ginga.util.six as six
 from ginga import GingaPlugin, AstroImage
 from ginga import cmap, imap
-from ginga.gw import Widgets, Viewers
+from ginga.gw import Widgets
 from ginga.misc import Bunch
 
 # XImage protocol support
 import IIS_DataListener as iis
+
+if six.PY2:
+    import Queue
+else:
+    import queue as Queue
 
 
 class IRAF(GingaPlugin.GlobalPlugin):
@@ -64,7 +64,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.keyevent = threading.Event()
         self.keymap = {
             'comma': ',',
-            }
+        }
         self.ctrldown = False
 
         self.layertag = 'iraf-canvas'
@@ -120,7 +120,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
             ("Set Addr:", 'label', "Set Addr", 'entry'),
             ("Control", 'hbox'),
             ("Channel:", 'label', 'Channel', 'llabel'),
-            ]
+        ]
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
@@ -178,7 +178,6 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fmap = self.get_channel_frame_mapping()
         self.update_chinfo(fmap)
 
-
     def update_chinfo(self, fmap):
         if not self.gui_up:
             return
@@ -209,7 +208,6 @@ class IRAF(GingaPlugin.GlobalPlugin):
             self.logger.info("setting mode to IRAF")
             self.set_mode('IRAF', chname)
 
-
     def add_channel(self, viewer, chinfo):
         self.logger.debug("channel %s added." % (chinfo.name))
 
@@ -224,7 +222,6 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         fmap = self.get_channel_frame_mapping()
         self.fv.gui_do(self.update_chinfo, fmap)
-
 
     def delete_channel(self, viewer, chinfo):
         self.logger.debug("delete channel %s" % (chinfo.name))
@@ -250,7 +247,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         try:
             if self.addr.prot == 'unix':
                 os.remove(self.addr.path)
-        except:
+        except Exception:
             pass
 
         # start the data listener task, if appropriate
@@ -285,7 +282,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         return None
 
     def get_channel_frame_mapping(self):
-        l = [ (fb.chname, n+1) for n, fb in self.fb.items() ]
+        l = [(fb.chname, n + 1) for n, fb in self.fb.items()]
         return l
 
     def redo(self, channel, image):
@@ -305,9 +302,9 @@ class IRAF(GingaPlugin.GlobalPlugin):
             return
         self.logger.debug("new image, frame is %d" % (n))
         fb = self.get_frame(n)
-        newpath  = image.get('path', 'NO_PATH')
+        newpath = image.get('path', 'NO_PATH')
         host = socket.getfqdn()
-        newhost  = image.get('host', host)
+        newhost = image.get('host', host)
         # protocol has a bizarre 16-char limit on hostname
         newhost = newhost[:16]
 
@@ -367,7 +364,6 @@ class IRAF(GingaPlugin.GlobalPlugin):
         fb.wcs = wcs + mapping
         self.logger.debug("filled wcs info")
 
-
     # ------ BEGIN (methods called by IIS server) ----------------
     def init_frame(self, n):
         """
@@ -419,10 +415,10 @@ class IRAF(GingaPlugin.GlobalPlugin):
         # frames are indexed from 1 in IRAF
         chname = fb.chname
         if chname is None:
-            chname = 'Frame%d' % (frame+1)
+            chname = 'Frame%d' % (frame + 1)
             fb.chname = chname
 
-        self.logger.debug("display to %s" %(chname))
+        self.logger.debug("display to %s" % (chname))
 
         try:
             data = fb.buffer
@@ -655,7 +651,7 @@ class IRAF_AstroImage(AstroImage.AstroImage):
         try:
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            x, y = int(data_x+0.5), int(data_y+0.5)
+            x, y = int(data_x + 0.5), int(data_y + 0.5)
             value = self.get_data_xy(x, y)
 
             # Mapping from bytescaled values back to original values
@@ -669,19 +665,19 @@ class IRAF_AstroImage(AstroImage.AstroImage):
         try:
             # Subtract offsets of data in framebuffer and add offsets of
             # rect beginning in source
-            data_x = data_x - (ct.dx-1) + (ct.sx-1)
-            data_y = data_y - (ct.dy-1) + (ct.sy-1)
+            data_x = data_x - (ct.dx - 1) + (ct.sx - 1)
+            data_y = data_y - (ct.dy - 1) + (ct.sy - 1)
 
             #ra_deg, dec_deg = wcs_coord_transform(ct, data_x, data_y)
 
             #ra_txt, dec_txt = self.wcs.deg2fmt(ra_deg, dec_deg, 'str')
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
@@ -702,8 +698,8 @@ class IRAF_AstroImage(AstroImage.AstroImage):
         if ct is not None:
             # Subtract offsets of data in framebuffer and add offsets of
             # rect beginning in source
-            data_x = data_x - (ct.dx-1) + (ct.sx-1)
-            data_y = data_y - (ct.dy-1) + (ct.sy-1)
+            data_x = data_x - (ct.dx - 1) + (ct.sx - 1)
+            data_y = data_y - (ct.dy - 1) + (ct.sy - 1)
         return data_x, data_y
 
 
@@ -966,7 +962,7 @@ cmap_iis_iraf = (
     (1.000000, 0.000000, 0.000000),
     (1.000000, 0.000000, 0.000000),
     (0.000000, 0.000000, 0.000000),   # 255: black
-    )
+)
 
 
-#END
+# END

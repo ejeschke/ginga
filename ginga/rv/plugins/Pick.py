@@ -8,13 +8,12 @@ import threading
 import numpy
 import time
 from collections import OrderedDict
-import os.path
 
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga.util import iqcalc, wcs
 from ginga import GingaPlugin, colors
-from ginga.util.six.moves import map, zip, filter
+from ginga.util.six.moves import map
 
 try:
     from ginga.gw import Plot
@@ -271,7 +270,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
         self.copy_attrs = ['transforms', 'cutlevels', 'autocuts']
         if (self.settings.get('pick_cmap_name', None) is None and
-            self.settings.get('pick_imap_name', None) is None):
+                self.settings.get('pick_imap_name', None) is None):
             self.copy_attrs.append('rgbmap')
 
         self.dc = self.fv.get_draw_classes()
@@ -363,8 +362,8 @@ class Pick(GingaPlugin.LocalPlugin):
                                                        'bilinear')
 
     def build_gui(self, container):
-        assert iqcalc.have_scipy == True, \
-               Exception("Please install python-scipy to use this plugin")
+        assert iqcalc.have_scipy is True, \
+            Exception("Please install python-scipy to use this plugin")
 
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
@@ -388,8 +387,7 @@ class Pick(GingaPlugin.LocalPlugin):
         di.enable_autocuts('off')
         di.zoom_to(3)
         settings = di.get_settings()
-        settings.get_setting('zoomlevel').add_callback('set',
-                               self.zoomset, di)
+        settings.get_setting('zoomlevel').add_callback('set', self.zoomset, di)
 
         cmname = self.settings.get('pick_cmap_name', None)
         if cmname is not None:
@@ -449,7 +447,7 @@ class Pick(GingaPlugin.LocalPlugin):
             zoom.set_value(zv)
 
             def zoom_contour_cb(w, val):
-                self.contour_plot.plot_zoom(val/10.0)
+                self.contour_plot.plot_zoom(val / 10.0)
 
             zoom.add_callback('value-changed', zoom_contour_cb)
             hbox.add_widget(zoom, stretch=0)
@@ -617,6 +615,7 @@ class Pick(GingaPlugin.LocalPlugin):
             pickshape = self.drawtypes[idx]
             self.set_drawtype(pickshape)
             return True
+
         combobox = b.draw_type
         for name in self.drawtypes:
             combobox.append_text(name)
@@ -646,6 +645,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.threshold = threshold
             self.w.xlbl_threshold.set_text(str(self.threshold))
             return True
+
         b.xlbl_threshold.set_text(str(self.threshold))
         b.threshold.add_callback('activated', chg_threshold)
 
@@ -654,10 +654,12 @@ class Pick(GingaPlugin.LocalPlugin):
         #b.min_fwhm.set_numeric(True)
         b.min_fwhm.set_limits(0.1, 200.0, incr_value=0.1)
         b.min_fwhm.set_value(self.min_fwhm)
+
         def chg_min(w, val):
             self.min_fwhm = float(val)
             self.w.xlbl_min_fwhm.set_text(str(self.min_fwhm))
             return True
+
         b.xlbl_min_fwhm.set_text(str(self.min_fwhm))
         b.min_fwhm.add_callback('value-changed', chg_min)
 
@@ -666,10 +668,12 @@ class Pick(GingaPlugin.LocalPlugin):
         #b.max_fwhm.set_numeric(True)
         b.max_fwhm.set_limits(0.1, 200.0, incr_value=0.1)
         b.max_fwhm.set_value(self.max_fwhm)
+
         def chg_max(w, val):
             self.max_fwhm = float(val)
             self.w.xlbl_max_fwhm.set_text(str(self.max_fwhm))
             return True
+
         b.xlbl_max_fwhm.set_text(str(self.max_fwhm))
         b.max_fwhm.add_callback('value-changed', chg_max)
 
@@ -682,6 +686,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.min_ellipse = minellipse
             self.w.xlbl_ellipticity.set_text(str(self.min_ellipse))
             return True
+
         b.xlbl_ellipticity.set_text(str(self.min_ellipse))
         b.ellipticity.add_callback('activated', chg_ellipticity)
 
@@ -694,6 +699,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.edgew = edgew
             self.w.xlbl_edge.set_text(str(self.edgew))
             return True
+
         b.xlbl_edge.set_text(str(self.edgew))
         b.edge.add_callback('activated', chg_edgew)
 
@@ -701,19 +707,23 @@ class Pick(GingaPlugin.LocalPlugin):
         #b.max_side.set_numeric(True)
         b.max_side.set_limits(5, 10000, incr_value=10)
         b.max_side.set_value(self.max_side)
+
         def chg_max_side(w, val):
             self.max_side = int(val)
             self.w.xlbl_max_side.set_text(str(self.max_side))
             return True
+
         b.xlbl_max_side.set_text(str(self.max_side))
         b.max_side.add_callback('value-changed', chg_max_side)
 
         combobox = b.contour_interpolation
+
         def chg_contour_interp(w, idx):
             self.contour_interpolation = self.contour_interp_methods[idx]
             self.w.xlbl_cinterp.set_text(self.contour_interpolation)
             self.contour_plot.interpolation = self.contour_interpolation
             return True
+
         for name in self.contour_interp_methods:
             combobox.append_text(name)
         index = self.contour_interp_methods.index(self.contour_interpolation)
@@ -732,6 +742,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.center_alg = self.center_algs[idx]
             self.w.xlbl_calccenter.set_text(self.center_alg)
             return True
+
         combobox = b.calc_center
         for name in self.center_algs:
             combobox.append_text(name)
@@ -744,6 +755,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fwhm_alg = self.fwhm_algs[idx]
             self.w.xlbl_fwhmfitting.set_text(self.fwhm_alg)
             return True
+
         combobox = b.fwhm_fitting
         for name in self.fwhm_algs:
             combobox.append_text(name)
@@ -775,7 +787,7 @@ class Pick(GingaPlugin.LocalPlugin):
              'xlbl_delta_sky', 'label', 'Delta sky', 'entry'),
             ('Bright cut', 'button', 'Delta bright:', 'label',
              'xlbl_delta_bright', 'label', 'Delta bright', 'entry'),
-            )
+        )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -792,6 +804,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.bg_cut_delta = b.delta_bg
         b.xlbl_delta_bg.set_text(str(self.delta_bg))
         b.delta_bg.set_text(str(self.delta_bg))
+
         def chg_delta_bg(w):
             delta_bg = 0.0
             val = w.get_text().strip()
@@ -800,6 +813,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.delta_bg = delta_bg
             self.w.xlbl_delta_bg.set_text(str(self.delta_bg))
             return True
+
         b.delta_bg.add_callback('activated', chg_delta_bg)
 
         b.sky_cut.set_enabled(False)
@@ -808,6 +822,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.sky_cut_delta = b.delta_sky
         b.xlbl_delta_sky.set_text(str(self.delta_sky))
         b.delta_sky.set_text(str(self.delta_sky))
+
         def chg_delta_sky(w):
             delta_sky = 0.0
             val = w.get_text().strip()
@@ -816,6 +831,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.delta_sky = delta_sky
             self.w.xlbl_delta_sky.set_text(str(self.delta_sky))
             return True
+
         b.delta_sky.add_callback('activated', chg_delta_sky)
 
         b.bright_cut.set_enabled(False)
@@ -825,6 +841,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.bright_cut_delta = b.delta_bright
         b.xlbl_delta_bright.set_text(str(self.delta_bright))
         b.delta_bright.set_text(str(self.delta_bright))
+
         def chg_delta_bright(w):
             delta_bright = 0.0
             val = w.get_text().strip()
@@ -833,6 +850,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.delta_bright = delta_bright
             self.w.xlbl_delta_bright.set_text(str(self.delta_bright))
             return True
+
         b.delta_bright.add_callback('activated', chg_delta_bright)
 
         vbox3.add_widget(w, stretch=0)
@@ -1069,7 +1087,7 @@ class Pick(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         self.fv.show_status("")
 
@@ -1652,8 +1670,8 @@ class Pick(GingaPlugin.LocalPlugin):
         x1, x2 = self.w.ax.get_xlim()
         y1, y2 = self.w.ax.get_ylim()
 
-        self.w.ax.set_xlim(x1+xdelta, x2+xdelta)
-        self.w.ax.set_ylim(y1+ydelta, y2+ydelta)
+        self.w.ax.set_xlim(x1 + xdelta, x2 + xdelta)
+        self.w.ax.set_ylim(y1 + ydelta, y2 + ydelta)
         self.w.canvas.draw()
 
     def write_pick_log(self, filepath):
@@ -1844,4 +1862,4 @@ class Pick(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'pick'
 
-#END
+# END

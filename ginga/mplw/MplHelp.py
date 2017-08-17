@@ -18,10 +18,12 @@ class Pen(object):
         if linestyle == 'dash':
             self.linestyle = 'dashdot'
 
+
 class Brush(object):
     def __init__(self, color='black', fill=False):
         self.color = color
         self.fill = fill
+
 
 class Font(object):
     def __init__(self, fontname='sans', fontsize=12.0, color='black'):
@@ -155,7 +157,7 @@ class Timer(Callback.Callbacks):
     def stop(self):
         try:
             self._timer.stop()
-        except:
+        except Exception:
             pass
 
     def cancel(self):
@@ -167,4 +169,4 @@ class Timer(Callback.Callbacks):
 
     clear = cancel
 
-#END
+# END

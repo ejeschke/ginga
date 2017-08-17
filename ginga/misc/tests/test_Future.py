@@ -4,7 +4,6 @@
 # Rajul Srivastava  (rajul09@gmail.com)
 #
 import unittest
-import logging
 import threading
 import time
 import sys
@@ -31,9 +30,9 @@ class TestFuture(unittest.TestCase):
         elif sys.version_info.major == 3:
             assert isinstance(test_future.evt, threading.Event)
 
-        assert test_future.evt.isSet() == False
-        assert test_future.res == None
-        assert test_future.data == None
+        assert test_future.evt.isSet() is False
+        assert test_future.res is None
+        assert test_future.data is None
         assert 'resolved' in test_future.cb
 
         expected = []
@@ -44,14 +43,14 @@ class TestFuture(unittest.TestCase):
         test_future = Future("TestData")
 
         assert hasattr(test_future, 'cb')
-        
+
         if sys.version_info.major == 2:
             assert isinstance(test_future.evt, threading._Event)
         elif sys.version_info.major == 3:
             assert isinstance(test_future.evt, threading.Event)
 
-        assert test_future.evt.isSet() == False
-        assert test_future.res == None
+        assert test_future.evt.isSet() is False
+        assert test_future.res is None
         assert test_future.data == "TestData"
         assert 'resolved' in test_future.cb
 
@@ -110,8 +109,8 @@ class TestFuture(unittest.TestCase):
         actual = test_future.thaw()
         assert expected == actual
 
-        assert test_future.res == True
-        assert test_future.evt.isSet() == True
+        assert test_future.res is True
+        assert test_future.evt.isSet() is True
 
     def test_thaw_suppress_exception_exception(self):
         test_future = Future("TestData")
@@ -127,7 +126,7 @@ class TestFuture(unittest.TestCase):
         assert isinstance(test_result, TypeError)
 
         assert isinstance(test_future.res, TypeError)
-        assert test_future.evt.isSet() == True
+        assert test_future.evt.isSet() is True
 
     def test_thaw_not_suppress_exception_no_exception(self):
         test_future = Future("TestData")
@@ -141,8 +140,8 @@ class TestFuture(unittest.TestCase):
         actual = test_future.thaw(False)
         assert expected == actual
 
-        assert test_future.res == True
-        assert test_future.evt.isSet() == True
+        assert test_future.res is True
+        assert test_future.evt.isSet() is True
 
     def test_thaw_not_suppress_exception_raise_exception(self):
         test_future = Future("TestData")
@@ -155,8 +154,8 @@ class TestFuture(unittest.TestCase):
 
         self.assertRaises(TypeError, test_future.thaw, False)
 
-        assert test_future.res == None
-        assert test_future.evt.isSet() == False
+        assert test_future.res is None
+        assert test_future.evt.isSet() is False
 
     def test_has_value_unset(self):
         test_future = Future("TestData")
@@ -179,8 +178,8 @@ class TestFuture(unittest.TestCase):
 
         test_future.resolve(True)
 
-        assert test_future.res == True
-        assert test_future.evt.isSet() == True
+        assert test_future.res is True
+        assert test_future.evt.isSet() is True
 
     def test_resolve_callback(self):
         test_future = Future("TestData")
@@ -188,7 +187,7 @@ class TestFuture(unittest.TestCase):
         def test_callback(obj):
             try:
                 obj.res = not obj.res
-            except:
+            except Exception:
                 pass
 
         test_future.add_callback('resolved', test_callback)
@@ -196,8 +195,8 @@ class TestFuture(unittest.TestCase):
         test_future.resolve(True)
 
         # Callback reverses the boolean 'res' value
-        assert test_future.res == False
-        assert test_future.evt.isSet() == True
+        assert test_future.res is False
+        assert test_future.evt.isSet() is True
 
     def test_wait(self):
         test_future = Future("TestData")
@@ -321,8 +320,9 @@ class TestFuture(unittest.TestCase):
         self.assertRaises(TestError, test_future.get_value)
 
     def tearDown(self):
-        if self.future_thread != None:
+        if self.future_thread is not None:
             self.future_thread.join()
+
 
 if __name__ == '__main__':
     unittest.main()

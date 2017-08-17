@@ -231,13 +231,13 @@ class TVMask(LocalPlugin):
         if self.masktag:
             try:
                 self.canvas.delete_object_by_tag(self.masktag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         if self.maskhltag:
             try:
                 self.canvas.delete_object_by_tag(self.maskhltag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         self.treeview.clear()  # Clear table too
@@ -315,7 +315,7 @@ class TVMask(LocalPlugin):
         if self.maskhltag:
             try:
                 self.canvas.delete_object_by_tag(self.maskhltag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         for sub_dict in itervalues(res_dict):
@@ -346,13 +346,13 @@ class TVMask(LocalPlugin):
         if self.maskhltag:
             try:
                 canvas.delete_object_by_tag(self.maskhltag, redraw=True)
-            except:
+            except Exception:
                 pass
 
         # Nothing to do if no masks are displayed
         try:
             obj = canvas.get_object_by_tag(self.masktag)
-        except:
+        except Exception:
             return
 
         if obj.kind != 'compound':
@@ -383,13 +383,13 @@ class TVMask(LocalPlugin):
         if self.maskhltag:
             try:
                 canvas.delete_object_by_tag(self.maskhltag, redraw=True)
-            except:
+            except Exception:
                 pass
 
         # Nothing to do if no masks are displayed
         try:
             obj = canvas.get_object_by_tag(self.masktag)
-        except:
+        except Exception:
             return
 
         if obj.kind != 'compound':
@@ -464,7 +464,7 @@ class TVMask(LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
 
         self.gui_up = False
@@ -481,5 +481,5 @@ class TVMask(LocalPlugin):
 # Replace module docstring with config doc for auto insert by Sphinx.
 # In the future, if we need the real docstring, we can append instead of
 # overwrite.
-from ginga.util.toolbox import generate_cfg_example
+from ginga.util.toolbox import generate_cfg_example  # noqa
 __doc__ = generate_cfg_example('plugin_TVMask', package='ginga')

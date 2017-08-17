@@ -199,7 +199,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         # don't leave us stuck in edit mode
         self.canvas.set_draw_mode('draw')
@@ -423,4 +423,4 @@ class Drawing(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'drawing'
 
-#END
+# END

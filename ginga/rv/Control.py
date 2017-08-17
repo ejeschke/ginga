@@ -984,7 +984,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if oldchname is not None:
                 try:
                     self.ds.highlight_tab(oldchname, False)
-                except:
+                except Exception:
                     # old channel may not exist!
                     pass
             self.ds.highlight_tab(name, True)
@@ -1287,7 +1287,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         try:
             obj = self.gpmon.get_plugin('Log')
             self.gui_do(obj.log, text)
-        except:
+        except Exception:
             pass
 
     def set_loglevel(self, level):
@@ -1679,7 +1679,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         names = self.ds.get_wsnames()
         try:
             idx = names.index(self._lastwsname)
-        except:
+        except Exception:
             idx = 0
         for name in names:
             b.workspace.append_text(name)
@@ -1717,7 +1717,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         names = self.ds.get_wsnames()
         try:
             idx = names.index('channels')
-        except:
+        except Exception:
             idx = 0
         for name in names:
             b.workspace.append_text(name)
@@ -1819,7 +1819,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         names.insert(0, 'top level')
         try:
             idx = names.index('channels')
-        except:
+        except Exception:
             idx = 0
         for name in names:
             cbox.append_text(name)

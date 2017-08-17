@@ -88,9 +88,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.pixtbl_radius = 2
         self.txt_arr = None
         self.sum_arr = None
-        self.sizes = [ 1, 2, 3, 4 ]
+        self.sizes = [1, 2, 3, 4]
         self.maxdigits = 9
-        self.fmt_cell = '{:> %d.%dg}'% (self.maxdigits-1, self.maxdigits // 2)
+        self.fmt_cell = '{:> %d.%dg}' % (self.maxdigits - 1, self.maxdigits // 2)
         self.lastx = 0
         self.lasty = 0
         self.font = self.settings.get('font', 'fixed')
@@ -142,7 +142,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         cbox1 = Widgets.ComboBox()
         index = 0
         for i in self.sizes:
-            j = 1 + i*2
+            j = 1 + i * 2
             name = "%dx%d" % (j, j)
             cbox1.append_text(name)
             index += 1
@@ -195,7 +195,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         captions = [
             ('Font size:', 'label', 'Font size', 'combobox'),
-            ]
+        ]
         w, b = Widgets.build_info(captions)
         self.w.update(b)
         vbox2.add_widget(w, stretch=0)
@@ -235,7 +235,7 @@ class PixTable(GingaPlugin.LocalPlugin):
             try:
                 obj = self.canvas.get_object_by_tag(self.mark_selected)
                 obj.set_attr_all(color=self.mark_color)
-            except:
+            except Exception:
                 # old object may have been deleted
                 pass
 
@@ -342,7 +342,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         self.pixview = None
 
@@ -367,7 +367,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         # We report the value across the pixel, even though the coords
         # change halfway across the pixel
-        data_x, data_y = int(self.lastx+0.5), int(self.lasty+0.5)
+        data_x, data_y = int(self.lastx + 0.5), int(self.lasty + 0.5)
 
         # cutout image data
         data, x1, y1, x2, y2 = image.cutout_radius(data_x, data_y,
@@ -389,9 +389,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         rows = []
         objs = []
         max_x = 0
-        for row in range(self.pixtbl_radius*2+1):
+        for row in range(self.pixtbl_radius * 2 + 1):
             cols = []
-            for col in range(self.pixtbl_radius*2+1):
+            for col in range(self.pixtbl_radius * 2 + 1):
                 col_wd = font_wd * max_wd
                 x = col_wd * col + 4
                 max_x = max(max_x, x + col_wd)
@@ -414,7 +414,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         # add summary row(s)
         x = (font_wd + 2) + 4
-        y += font_ht+20
+        y += font_ht + 20
         dx, dy = crdmap.to_data((x, y))
         s1 = Text(dx, dy, text='', font=self.font,
                   color=color, fontsize=self.fontsize,
@@ -467,13 +467,12 @@ class PixTable(GingaPlugin.LocalPlugin):
                           linestyle='solid'),
             self.dc.Text(data_x + 10, data_y, "%d" % (self.mark_index),
                          color=color)),
-                              tag=tag)
+            tag=tag)
         self.marks.append(tag)
         self.w.marks.append_text(tag)
         self.select_mark(tag, pan=False)
 
-
     def __str__(self):
         return 'pixtable'
 
-#END
+# END
