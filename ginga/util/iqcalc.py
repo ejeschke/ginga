@@ -299,7 +299,7 @@ class IQCalc(object):
         radius (radius) from (data).  Returns the starting pixel (x0, y0)
         of each cut and the respective arrays (xarr, yarr).
         """
-        n = radius
+        n = int(round(radius))
         ht, wd = data.shape
         x, y = int(round(x)), int(round(y))
         x0, x1 = int(max(0, x-n)), int(min(wd-1, x+n))

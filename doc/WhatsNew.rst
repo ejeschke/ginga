@@ -11,6 +11,7 @@ Ver 2.6.6.dev
   - please install compatible pycairo from github.com/pygobject/pycairo
     if you get a "Not implemented yet" exception bubbling up from a
     method called cairo.ImageSurface.create_for_data()
+- Addition of a "Quick Mode" to the Pick plugin--see documentation
 
 Ver 2.6.5 (2017-07-31)
 ======================

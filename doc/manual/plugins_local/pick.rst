@@ -17,6 +17,11 @@ The Full Width Half Max (FWHM) is reported on the candidate object, as
 well as its size based on the plate scale of the detector.  Rough
 measurement of background, sky level and brightness is done.
 
+Plugin Type: Local
+------------------
+Pick is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
 Usage
 -----
 
@@ -42,9 +47,19 @@ determine what operation is being done to the pick area:
 * If "edit" is selected, then you can edit the pick area by dragging its
   control points, or moving it by dragging in the bounding box.
 
-After the area is moved, drawn or edited, it will perform a search on
-the area based on the criteria in the "Settings" tab of the UI
-(see "The Settings Tab", below) and try to locate a candidate.
+After the area is moved, drawn or edited, Pick will perform one of three
+actions:
+
+1) In Quick Mode ON, with "From Peak" OFF, it will simply attempt to
+   perform a calculation based on the coordinate under the crosshair in
+   the center of the pick area.
+2) In Quick Mode ON, with "From Peak" ON, it will perform a quick
+   detection of peaks in the pick area and perform a calculation on the
+   first one found, using the peak's coordinates.
+3) In Quick Mode OFF, it will search the area for all peaks and
+   evaluate the peaks based on the criteria in the "Settings" tab of the UI
+   (see "The Settings Tab", below) and try to locate the best candidate
+   matching the settings.
 
 If a candidate is found
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -97,18 +112,33 @@ The "Radial" tab contains a radial profile plot:
 Plotted points in blue are data values, and a line is fitted to the
 data.
 
+The "Cuts" tab contains a profile plot for the vertical and horizontal
+cuts represented by the crosshairs present in Quick Mode ON.  This plot
+is updated in real time as the pick area is moved.  In Quick Mode OFF
+this plot is not updated.  In the figure below, you can see the addition
+of the crosshair to the pick region, and the associated plot in the Cuts
+tab.
+
+  .. image:: figures/pick-cuts.png
+     :width: 800px
+     :align: center
+
 The "Readout" tab will be populated with a summary of the measurements:
 
   .. image:: figures/pick-readout.png
      :width: 400px
      :align: center
 
-There are two buttons in this tab:
+There are two buttons and two check boxes in this tab:
 
-* The "Pan to pick" button will pan the channel viewer to the
-  located center.
 * The "Default Region" button restores the pick region to the default
   shape and size.
+* The "Pan to pick" button will pan the channel viewer to the
+  located center.
+* The "Quick Mode" check box toggles Quick Mode on and off.  This affects
+  the behavior of the pick region as described above.
+* The "From Peak" check box changes the behavior of Quick Mode slightly
+  as described above.
 
 The "Controls" tab has a couple of buttons that will work off of the
 measurements:
@@ -168,13 +198,14 @@ The image cutout will be taken from this central area and so the "Image"
 tab will still have content.  It will also be marked with a central red
 "X" as shown.
 
-The contour plot will still be produced from the cutout:
+The contour plot will still be produced from the cutout, and the cuts
+plot will be updated in Quick Mode.
 
   .. image:: figures/pick-contour-no-candidate.png
      :width: 400px
      :align: center
 
-But all the other plots will be cleared.
+All the other plots will be cleared.
 
 
 The Settings Tab

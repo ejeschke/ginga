@@ -357,6 +357,7 @@ class RadialPlot(Plot):
 
     def plot_radial(self, x, y, radius, image):
 
+        x, y, radius = int(round(x)), int(round(y)), int(round(radius))
         img_data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
 
         self.ax.cla()
@@ -441,6 +442,7 @@ class FWHMPlot(Plot):
     def plot_fwhm(self, x, y, radius, image, cutout_data=None,
                   iqcalc=None, fwhm_method='gaussian'):
 
+        x, y, radius = int(round(x)), int(round(y)), int(round(radius))
         x0, y0, xarr, yarr = image.cutout_cross(x, y, radius)
 
         if iqcalc is None:
