@@ -161,6 +161,10 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
         return (text_x, text_y, text_h)
 
     def draw(self, viewer):
+        image = viewer.get_image()
+        if image is None:
+            return
+
         points = self.get_points()
         x1, y1 = points[0]
         x2, y2 = points[1]
@@ -329,6 +333,10 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         return self.within_radius(viewer, pt, p0, self.cap_radius)
 
     def draw(self, viewer):
+        image = viewer.get_image()
+        if image is None:
+            return
+
         cr = viewer.renderer.setup_cr(self)
         cr.set_font_from_shape(self)
 
@@ -475,6 +483,8 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
 
             else:
                 image = viewer.get_image()
+                if image is None:
+                    return
                 # NOTE: x, y are assumed to be in data coordinates
                 info = image.info_xy(self.x, self.y, viewer.get_settings())
                 if self.format == 'coords':

@@ -84,6 +84,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # hook to allow special processing before inlining
         self.preprocess = lambda x: x
 
+        self.fv.add_callback('remove-image', self._remove_image_cb)
+
         self.gui_up = False
 
 
@@ -321,9 +323,13 @@ class Mosaic(GingaPlugin.LocalPlugin):
         time_intr1 = time.time()
 
         # Add description for ChangeHistory
-        iminfo = self.channel.get_image_info(self.img_mosaic.get('name'))
-        iminfo.reason_modified = 'Added {0}'.format(
-            ','.join([im.get('name') for im in images]))
+        try:
+            iminfo = self.channel.get_image_info(self.img_mosaic.get('name'))
+            iminfo.reason_modified = 'Added {0}'.format(
+                ','.join([im.get('name') for im in images]))
+        except KeyError:
+            # mosaic image may have been deleted from channel
+            pass
 
         loc = self.img_mosaic.mosaic_inline(images,
                                             bg_ref=bg_ref,
@@ -582,6 +588,13 @@ class Mosaic(GingaPlugin.LocalPlugin):
         num_threads = int(w.get_text())
         self.w.num_threads.set_text(str(num_threads))
         self.settings.set(num_threads=num_threads)
+
+    def _remove_image_cb(self, fv, chname, imname, impath):
+        # clear our handle to the mosaic image if it has been
+        # deleted from the channel
+        if self.img_mosaic is not None:
+            if imname == self.img_mosaic.get('name', None):
+                self.img_mosaic = None
 
     def update_status(self, text):
         if self.gui_up:

@@ -111,7 +111,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
-                     'add-image-info', 'add-operation'):
+                     'add-image-info', 'remove-image-info', 'add-operation'):
             self.enable_callback(name)
 
         # Initialize the timer factory
@@ -892,13 +892,23 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 str(imname), str(e)))
 
     def redo_plugins(self, image, channel):
+        if image is not None:
+            imname = image.get('name', None)
+            if (imname is not None) and (imname not in channel):
+                # image may have been removed--
+                # skip updates to this channel's plugins
+                return
+
         # New data in channel
         # update active global plugins
         opmon = self.gpmon
         for key in opmon.get_active():
             obj = opmon.get_plugin(key)
             try:
-                self.gui_do(obj.redo, channel, image)
+                if image is None:
+                    self.gui_do(obj.blank, channel)
+                else:
+                    self.gui_do(obj.redo, channel, image)
 
             except Exception as e:
                 self.logger.error(
@@ -910,7 +920,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         for key in opmon.get_active():
             obj = opmon.get_plugin(key)
             try:
-                self.gui_do(obj.redo)
+                if image is None:
+                    self.gui_do(obj.blank)
+                else:
+                    self.gui_do(obj.redo)
 
             except Exception as e:
                 self.logger.error(
@@ -938,13 +951,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             # add cb so that if image is modified internally
             #  our plugins get updated
-            image.add_callback('modified', self.redo_plugins, channel)
+            if image is not None:
+                image.add_callback('modified', self.redo_plugins, channel)
 
             self.logger.debug("executing redo() in plugins...")
             self.redo_plugins(image, channel)
 
             split_time1 = time.time()
-            self.logger.info("Large image update: %.4f sec" % (
+            self.logger.info("Channel image update: %.4f sec" % (
                 split_time1 - start_time))
 
     def change_channel(self, chname, image=None, raisew=True):
@@ -1233,8 +1247,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 viewer.clear()
 
         channel.remove_image(imname)
-        self.make_async_gui_callback('remove-image',
-                                     channel.name, imname, impath)
 
     def move_image_by_name(self, from_chname, imname, to_chname, impath=None):
 
