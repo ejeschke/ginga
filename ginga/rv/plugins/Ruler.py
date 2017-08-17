@@ -7,6 +7,7 @@
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
+
 class Ruler(GingaPlugin.LocalPlugin):
     """
     Ruler
@@ -174,7 +175,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         self.canvas.ui_set_active(False)
         self.fv.show_status("")
@@ -198,7 +199,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         # remove the old ruler
         try:
             self.canvas.delete_object_by_tag(self.ruletag)
-        except:
+        except Exception:
             pass
 
         # change some characteristics of the drawn image and

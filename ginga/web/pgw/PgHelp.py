@@ -11,7 +11,7 @@ from tornado.ioloop import IOLoop
 
 import random
 import json
-import os, time
+import time
 import datetime
 import binascii
 from collections import namedtuple
@@ -34,6 +34,7 @@ GestureEvent = namedtuple("GestureEvent", ["type", "id", "x", "y", "dx", "dy",
                                            "isfinal"])
 WidgetEvent = namedtuple("WidgetEvent", ["type", "id", "value"])
 TimerEvent = namedtuple("TimerEvent", ["type", "id", "value"])
+
 
 class ApplicationHandler(tornado.websocket.WebSocketHandler):
 
@@ -75,7 +76,7 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
             "panend": GestureEvent,
             "tap": GestureEvent,
             "swipe": GestureEvent,
-            }
+        }
 
         #self.interval = 10
         interval = self.settings.get("timer_interval", default_interval)
@@ -123,8 +124,9 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
         # TODO: should exceptions thrown from this be caught and ignored
         self.app.widget_event(event)
 
-        delta = datetime.timedelta(milliseconds = self.interval)
+        delta = datetime.timedelta(milliseconds=self.interval)
         self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+
 
 class WindowHandler(tornado.web.RequestHandler):
 
@@ -214,7 +216,7 @@ class Timer(Callback.Callbacks):
     def stop(self):
         try:
             self._timer.stop()
-        except:
+        except Exception:
             pass
 
     def cancel(self):
@@ -226,11 +228,13 @@ class Timer(Callback.Callbacks):
 
     clear = cancel
 
+
 def get_image_src_from_buffer(img_buf, imgtype='png'):
     img_string = binascii.b2a_base64(img_buf)
     if isinstance(img_string, bytes):
         img_string = img_string.decode("utf-8")
     return ('data:image/%s;base64,' % imgtype) + img_string
+
 
 def get_icon(iconpath, size=None, format='png'):
     image = io_rgb.PILimage.open(iconpath)
@@ -246,8 +250,9 @@ def get_icon(iconpath, size=None, format='png'):
     icon = get_image_src_from_buffer(img_buf.getvalue(), imgtype=format)
     return icon
 
+
 def get_font(font_family, point_size):
     font = '%s %d' % (font_family, point_size)
     return font
 
-#END
+# END

@@ -788,7 +788,7 @@ class Timer(Callback.Callbacks):
             if self._timer is not None:
                 GObject.source_remove(self._timer)
                 self._timer = None
-        except:
+        except Exception:
             pass
 
     def cancel(self):

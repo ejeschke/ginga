@@ -77,13 +77,13 @@ class SaveImage(GlobalPlugin):
         # changed by GUI.
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_SaveImage')
-        self.settings.add_defaults(output_directory = '.',
-                                   output_suffix = 'ginga',
-                                   include_chname = True,
-                                   clobber = False,
-                                   modified_only = True,
-                                   max_mosaic_size = 1e8,
-                                   max_rows_for_col_resize = 5000)
+        self.settings.add_defaults(output_directory='.',
+                                   output_suffix='ginga',
+                                   include_chname=True,
+                                   clobber=False,
+                                   modified_only=True,
+                                   max_mosaic_size=1e8,
+                                   max_rows_for_col_resize=5000)
         self.settings.load(onError='silent')
 
         self.outdir = os.path.abspath(
@@ -348,7 +348,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         history_plgname = 'ChangeHistory'
         try:
             history_obj = self.fv.gpmon.getPlugin(history_plgname)
-        except:
+        except Exception:
             self.logger.error(
                 '{0} plugin is not loaded. No HISTORY will be written to '
                 '{1}.'.format(history_plgname, pfx))
@@ -374,7 +374,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         # Add each HISTORY prettily into header, sorted by timestamp
         for s in sorted(chistory):
             for i in range(0, len(s), linechar):
-                subs = s[i:i+linechar]
+                subs = s[i:i + linechar]
                 if i > 0:
                     subs = ind + subs.lstrip()
                 hdu.header.add_history(subs)
@@ -535,5 +535,5 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
 # Replace module docstring with config doc for auto insert by Sphinx.
 # In the future, if we need the real docstring, we can append instead of
 # overwrite.
-from ginga.util.toolbox import generate_cfg_example
+from ginga.util.toolbox import generate_cfg_example  # noqa
 __doc__ = generate_cfg_example('plugin_SaveImage', package='ginga')

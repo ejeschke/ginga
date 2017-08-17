@@ -24,6 +24,7 @@ class ComposeImage(RGBImage.RGBImage, LayerImage.LayerImage):
         RGBImage.RGBImage.__init__(self, *args, **kwdargs)
         LayerImage.LayerImage.__init__(self)
 
+
 class Compose(GingaPlugin.LocalPlugin):
     """
     Compose
@@ -156,7 +157,7 @@ class Compose(GingaPlugin.LocalPlugin):
         num_layers = self.limage.num_layers()
         for i in range(num_layers):
             layer = self.limage.get_layer(i)
-            captions.append((layer.name+':', 'label', 'layer_%d' % i, 'hscale'))
+            captions.append((layer.name + ':', 'label', 'layer_%d' % i, 'hscale'))
 
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -219,7 +220,7 @@ class Compose(GingaPlugin.LocalPlugin):
 
         attrs = self._get_layer_attributes()
         self.limage.insert_layer(attrs.idx, image, name=attrs.name,
-                                alpha=attrs.alpha)
+                                 alpha=attrs.alpha)
 
         self._gui_config_layers()
 
@@ -334,7 +335,7 @@ class Compose(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         self.canvas.ui_set_active(False)
         self.fv.show_status("")

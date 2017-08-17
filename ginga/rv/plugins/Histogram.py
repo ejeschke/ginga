@@ -257,7 +257,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         # remove the rect from the canvas
         ## try:
         ##     self.canvas.delete_object_by_tag(self.histtag)
-        ## except:
+        ## except Exception:
         ##     pass
         ##self.histtag = None
 
@@ -265,7 +265,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         self.gui_up = False
         self.fv.show_status("")
@@ -274,12 +274,12 @@ class Histogram(GingaPlugin.LocalPlugin):
         canvas = self.canvas
         try:
             canvas.delete_object_by_tag(self.histtag)
-        except:
+        except Exception:
             pass
 
         image = self.fitsimage.get_image()
         width, height = image.get_size()
-        x1, y1, x2, y2 = 0, 0, width-1, height-1
+        x1, y1, x2, y2 = 0, 0, width - 1, height - 1
         tag = canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
                                            color='cyan',
                                            linestyle='dash'))
@@ -319,7 +319,7 @@ class Histogram(GingaPlugin.LocalPlugin):
                                  int(bbox.x2), int(bbox.y2),
                                  pct=1.0, numbins=numbins)
             # used with 'steps-post' drawstyle, this x and y assignment
-                # gives correct histogram-steps
+            # gives correct histogram-steps
             x = res.bins
             y = numpy.append(res.dist, res.dist[-1])
             ## y, x = y[i:j+1], x[i:j+1]
@@ -392,11 +392,11 @@ class Histogram(GingaPlugin.LocalPlugin):
         dy = (data_y - y)
 
         # calculate new coords
-        x1, y1, x2, y2 = bbox.x1+dx, bbox.y1+dy, bbox.x2+dx, bbox.y2+dy
+        x1, y1, x2, y2 = bbox.x1 + dx, bbox.y1 + dy, bbox.x2 + dx, bbox.y2 + dy
 
         try:
             canvas.delete_object_by_tag(self.histtag)
-        except:
+        except Exception:
             pass
 
         tag = canvas.add(self.dc.Rectangle(
@@ -427,12 +427,12 @@ class Histogram(GingaPlugin.LocalPlugin):
         dy = (data_y - y)
 
         # calculate new coords
-        x1, y1, x2, y2 = bbox.x1+dx, bbox.y1+dy, bbox.x2+dx, bbox.y2+dy
+        x1, y1, x2, y2 = bbox.x1 + dx, bbox.y1 + dy, bbox.x2 + dx, bbox.y2 + dy
 
         if obj.kind == 'compound':
             try:
                 canvas.delete_object_by_tag(self.histtag)
-            except:
+            except Exception:
                 pass
 
             self.histtag = canvas.add(self.dc.Rectangle(
@@ -452,7 +452,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         if self.histtag:
             try:
                 canvas.delete_object_by_tag(self.histtag)
-            except:
+            except Exception:
                 pass
 
         x1, y1, x2, y2 = obj.get_llur()
@@ -460,7 +460,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         tag = canvas.add(self.dc.CompoundObject(
             self.dc.Rectangle(x1, y1, x2, y2,
                               color=self.histcolor),
-            self.dc.Text(x1, y2+4, "Histogram",
+            self.dc.Text(x1, y2 + 4, "Histogram",
                          color=self.histcolor)))
         self.histtag = tag
 
@@ -525,7 +525,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         try:
             self.loline.remove()
             self.hiline.remove()
-        except:
+        except Exception:
             pass
         self.loline = self.plot.ax.axvline(loval, 0.0, 0.99,
                                            linestyle='-', color='black')

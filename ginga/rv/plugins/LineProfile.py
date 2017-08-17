@@ -257,7 +257,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         # Deactivate previously selected axis
         if self.selected_axis is not None:
-            children[self.selected_axis-1].set_state(False)
+            children[self.selected_axis - 1].set_state(False)
 
         # Check if the old axis has been clicked
         if pos == self.selected_axis:
@@ -265,7 +265,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
             self.clear_plot()
         else:
             self.selected_axis = pos
-            children[pos-1].set_state(tf)
+            children[pos - 1].set_state(tf)
             if self.gui_up:
                 self.redraw_mark()
 
@@ -679,7 +679,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
 
         # Don't hang on to current image

@@ -2419,7 +2419,7 @@ class BindingMapper(Callback.Callbacks):
     def reset_mode(self, viewer):
         try:
             bnch = self.mode_map['mode_%s' % self._kbdmode]
-        except:
+        except Exception:
             bnch = None
         self._kbdmode = None
         self._kbdmode_type = 'held'
