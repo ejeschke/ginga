@@ -52,7 +52,9 @@ __all__ = ['ChangeHistory']
 
 
 class ChangeHistory(GingaPlugin.GlobalPlugin):
-
+    """
+    Keep track of buffer change history.
+    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(ChangeHistory, self).__init__(fv)
@@ -304,4 +306,6 @@ if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_ChangeHistory', package='ginga')
 
 # Need this for offline WBrowser doc
-ChangeHistory.__doc__ = __doc__
+from ginga.util import six  # noqa
+if not six.PY2:  # Class doc is read-only in Python 2
+    ChangeHistory.__doc__ = __doc__
