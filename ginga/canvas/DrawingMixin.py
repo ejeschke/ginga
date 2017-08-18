@@ -685,15 +685,17 @@ class DrawingMixin(object):
             obj.make_callback('pick-enter', canvas, event, pt)
 
         # pick down/up
+        res = False
         for obj in self._pick_sel_objs:
             cb_name = 'pick-%s' % (ptype)
             self.logger.debug("%s event in %s obj at x, y = %d, %d" % (
                 cb_name, obj.kind, data_x, data_y))
 
             pt = obj.crdmap.data_to((data_x, data_y))
-            obj.make_callback(cb_name, canvas, event, pt)
+            if obj.make_callback(cb_name, canvas, event, pt):
+                res = True
 
-        return True
+        return res
 
     def pick_start(self, canvas, event, data_x, data_y, viewer):
         return self._do_pick(canvas, event, data_x, data_y,

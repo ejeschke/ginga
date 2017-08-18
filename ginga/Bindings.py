@@ -2500,6 +2500,85 @@ class BindingMapper(Callback.Callbacks):
         for pfx in self.event_names:
             # TODO: add moded versions of callbacks?
             viewer.enable_callback('%s-none' % (pfx))
+        # initial callback to enable a mode
+        viewer.add_callback('keydown-none', self.mode_key_down)
+
+    def mode_key_down(self, viewer, event, data_x, data_y):
+        """This method is called when a key is pressed and was not handled
+        by some other handler with precedence, such as a subcanvas.
+        """
+        keyname = event.key
+        # Is this a mode key?
+        if keyname not in self.mode_map:
+            # No
+            return False
+
+        bnch = self.mode_map[keyname]
+        mode_name = bnch.name
+
+        if mode_name == self._kbdmode:
+            # <== same key was pressed that started the mode we're in
+            # standard handling is to close the mode when we press the
+            # key again that started that mode
+            self.reset_mode(viewer)
+            return True
+
+        if self._delayed_reset:
+            # <== this shouldn't happen, but put here to reset handling
+            # of delayed_reset just in case (see cursor up handling)
+            self._delayed_reset = False
+            return True
+
+        if (self._kbdmode is None) or (self._kbdmode_type != 'locked'):
+            if self._kbdmode is not None:
+                self.reset_mode(viewer)
+
+            # activate this mode
+            if self._kbdmode is None:
+                mode_type = bnch.type
+                if mode_type == None:
+                    mode_type = self._kbdmode_type_default
+                self.set_mode(mode_name, mode_type)
+                if bnch.msg is not None:
+                    viewer.onscreen_message(bnch.msg)
+
+                # TODO: these callbacks really should have been
+                # enabled and registered at an earlier time, but
+                # add_mode() does not take a viewer parameter
+                cb_name = 'keydown-%s' % (mode_name)
+                if not viewer.has_callback(cb_name):
+                    viewer.set_callback(cb_name, self.mode_key_down)
+                cb_name = 'keyup-%s' % (mode_name)
+                if not viewer.has_callback(cb_name):
+                    viewer.set_callback(cb_name, self.mode_key_up)
+
+                return True
+
+        return False
+
+    def mode_key_up(self, viewer, event, data_x, data_y):
+        """This method is called when a key is pressed in a mode and was
+        not handled by some other handler with precedence, such as a
+        subcanvas.
+        """
+        keyname = event.key
+        # Is this a mode key?
+        if keyname not in self.mode_map:
+            # <== no
+            return False
+
+        bnch = self.mode_map[keyname]
+        if self._kbdmode == bnch.name:
+            # <-- the current mode key is being released
+            if bnch.type == 'held':
+                if self._button == 0:
+                    # if no button is being held, then reset mode
+                    self.reset_mode(viewer)
+                else:
+                    self._delayed_reset = True
+            return True
+
+        return False
 
     def window_map(self, viewer):
         return True
@@ -2526,21 +2605,18 @@ class BindingMapper(Callback.Callbacks):
             return True
 
         trigger = 'kp_' + keyname
-        has_mapping = False
         try:
-            kbdmode = self._kbdmode
             # TEMP: hack to get around the issue of how keynames
             # are generated.
             if keyname == 'escape':
                 idx = (None, self._empty_set, trigger)
-                kbdmode = True
             else:
-                idx = (kbdmode, self._modifiers, trigger)
+                idx = (self._kbdmode, self._modifiers, trigger)
             emap = self.eventmap[idx]
             cbname = 'keydown-%s' % (emap.name)
-            has_mapping = (kbdmode is not None)
 
         except KeyError:
+            # no entry for this mode, try non-mode entry
             try:
                 idx = (None, self._empty_set, trigger)
                 emap = self.eventmap[idx]
@@ -2548,32 +2624,6 @@ class BindingMapper(Callback.Callbacks):
 
             except KeyError:
                 cbname = 'keydown-%s' % str(self._kbdmode).lower()
-
-        # Is this a mode key?
-        if keyname in self.mode_map:
-            bnch = self.mode_map[keyname]
-            if bnch.name == self._kbdmode:
-                # <== same key was pressed that started the mode we're in
-                self.reset_mode(viewer)
-                return True
-
-            if self._delayed_reset:
-                self._delayed_reset = False
-                return False
-
-            if (not has_mapping) and (self._kbdmode_type != 'locked'):
-                # <== there is not a mapping for the key in this mode
-                self.reset_mode(viewer)
-
-                # activate this mode
-                if self._kbdmode is None:
-                    mode_type = bnch.type
-                    if mode_type == None:
-                        mode_type = self._kbdmode_type_default
-                    self.set_mode(bnch.name, mode_type)
-                    if bnch.msg is not None:
-                        viewer.onscreen_message(bnch.msg)
-                    return True
 
         self.logger.debug("idx=%s" % (str(idx)))
         last_x, last_y = viewer.get_last_data_xy()
@@ -2594,12 +2644,10 @@ class BindingMapper(Callback.Callbacks):
             return True
 
         trigger = 'kp_' + keyname
-        has_mapping = False
         try:
             idx = (self._kbdmode, self._modifiers, trigger)
             emap = self.eventmap[idx]
             cbname = 'keyup-%s' % (emap.name)
-            has_mapping = True
 
         except KeyError:
             try:
@@ -2610,28 +2658,12 @@ class BindingMapper(Callback.Callbacks):
             except KeyError:
                 cbname = 'keyup-%s' % str(self._kbdmode).lower()
 
-        # Is this a mode key?
-        if keyname in self.mode_map:
-            bnch = self.mode_map[keyname]
-            if self._kbdmode == bnch.name:
-                # <-- the current mode key is being released
-                if bnch.type == 'held':
-                    if self._button == 0:
-                        # if no button is being held, then reset mode
-                        self.reset_mode(viewer)
-                    else:
-                        self._delayed_reset = True
-                return True
-
-        # release mode if this is a oneshot mode
-        ## if self._kbdmode_type == 'oneshot':
-        ##     self.reset_mode(viewer)
-
         last_x, last_y = viewer.get_last_data_xy()
 
         event = KeyEvent(key=keyname, state='up', mode=self._kbdmode,
                          modifiers=self._modifiers, viewer=viewer,
                          data_x=last_x, data_y=last_y)
+
         return viewer.make_ui_callback(cbname, event, last_x, last_y)
 
 
@@ -2647,7 +2679,7 @@ class BindingMapper(Callback.Callbacks):
             cbname = '%s-down' % (emap.name)
 
         except KeyError:
-            # no entry for this mode, try unmodified entry
+            # no entry for this mode, try non-mode entry
             try:
                 idx = (None, self._modifiers, trigger)
                 emap = self.eventmap[idx]
@@ -2677,7 +2709,7 @@ class BindingMapper(Callback.Callbacks):
             cbname = '%s-move' % (emap.name)
 
         except KeyError:
-            # no entry for this mode, try unmodified entry
+            # no entry for this mode, try non-mode entry
             try:
                 idx = (None, self._modifiers, trigger)
                 emap = self.eventmap[idx]
@@ -2711,7 +2743,7 @@ class BindingMapper(Callback.Callbacks):
             cbname = '%s-up' % (emap.name)
 
         except KeyError:
-            # no entry for this mode, try unmodified entry
+            # no entry for this mode, try non-mode entry
             try:
                 idx = (None, self._modifiers, trigger)
                 emap = self.eventmap[idx]
@@ -2734,7 +2766,7 @@ class BindingMapper(Callback.Callbacks):
             cbname = '%s-scroll' % (emap.name)
 
         except KeyError:
-            # no entry for this mode, try unmodified entry
+            # no entry for this mode, try non-mode entry
             try:
                 idx = (None, self._modifiers, 'sc_scroll')
                 emap = self.eventmap[idx]
@@ -2760,7 +2792,7 @@ class BindingMapper(Callback.Callbacks):
             cbname = '%s-pinch' % (emap.name)
 
         except KeyError:
-            # no entry for this mode, try unmodified entry
+            # no entry for this mode, try non-mode entry
             try:
                 idx = (None, self._modifiers, trigger)
                 emap = self.eventmap[idx]
@@ -2788,7 +2820,7 @@ class BindingMapper(Callback.Callbacks):
             cbname = '%s-pan' % (emap.name)
 
         except KeyError:
-            # no entry for this mode, try unmodified entry
+            # no entry for this mode, try non-mode entry
             try:
                 idx = (None, self._modifiers, trigger)
                 emap = self.eventmap[idx]

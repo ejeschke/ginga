@@ -148,7 +148,6 @@ class Cuts(GingaPlugin.LocalPlugin):
                              key=self.keydown)
         canvas.set_draw_mode('draw')
         canvas.register_for_cursor_drawing(self.fitsimage)
-        #canvas.set_callback('key-press', self.keydown)
         canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
