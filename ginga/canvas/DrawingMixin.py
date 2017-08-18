@@ -8,7 +8,6 @@ import time
 
 from ginga import trcalc
 from ginga.misc.Bunch import Bunch
-from ginga.Bindings import KeyEvent
 from ginga.util.six.moves import filter
 
 from .CanvasMixin import CanvasMixin
@@ -66,7 +65,7 @@ class DrawingMixin(object):
                            poly_delete=self.edit_poly_delete)
         self.add_draw_mode('pick', down=self.pick_start,
                            move=self.pick_motion, up=self.pick_stop,
-                           hover=self.pick_hover,
+                           hover=self.pick_hover, key=self.pick_key,
                            poly_add=self.edit_poly_add,
                            poly_delete=self.edit_poly_delete)
 
@@ -91,6 +90,10 @@ class DrawingMixin(object):
                      'edit-select', 'drag-drop', 'cursor-changed'):
             self.enable_callback(name)
 
+        for name in ['keydown', 'keyup', 'btn-down', 'btn-move', 'btn-up',
+                     'scroll', 'pinch', 'pan']:
+            self.enable_callback('%s-none' % (name))
+
     def set_surface(self, viewer):
         self.viewer = viewer
 
@@ -103,7 +106,7 @@ class DrawingMixin(object):
         canvas.add_callback('draw-move', self.draw_motion, viewer)
         canvas.add_callback('draw-up', self.draw_stop, viewer)
 
-        canvas.add_callback('key-press', self._draw_key, 'key', viewer)
+        canvas.add_callback('keydown-none', self._draw_op, 'key', viewer)
         canvas.add_callback('keydown-poly_add', self._draw_op, 'poly_add',
                           viewer)
         canvas.add_callback('keydown-poly_del', self._draw_op, 'poly_delete',
@@ -161,17 +164,6 @@ class DrawingMixin(object):
         if method is not None:
             return method(canvas, event, data_x, data_y, viewer)
         return False
-
-    def _draw_key(self, canvas, keyname, opn, viewer):
-        # synthesize a KeyEvent
-        # TODO: this is hacky--see if we can rethink how this is handled
-        #  so that we get passed an event similar to _draw_op()
-        last_x, last_y = viewer.get_last_data_xy()
-        event = KeyEvent(key=keyname, state='down', mode=self._mode,
-                         modifiers=[], viewer=viewer,
-                         data_x=last_x, data_y=last_y)
-
-        return self._draw_op(canvas, event, last_x, last_y, opn, viewer)
 
     ##### DRAWING LOGIC #####
 
@@ -714,6 +706,10 @@ class DrawingMixin(object):
     def pick_hover(self, canvas, event, data_x, data_y, viewer):
         return self._do_pick(canvas, event, data_x, data_y,
                              'hover', viewer)
+
+    def pick_key(self, canvas, event, data_x, data_y, viewer):
+        return self._do_pick(canvas, event, data_x, data_y,
+                             'key', viewer)
 
     def pick_stop(self, canvas, event, data_x, data_y, viewer):
         return self._do_pick(canvas, event, data_x, data_y,

@@ -241,6 +241,7 @@ class FitsViewer(object):
         obj.add_callback('pick-hover', self.pick_cb, 'hover')
         obj.add_callback('pick-enter', self.pick_cb, 'enter')
         obj.add_callback('pick-leave', self.pick_cb, 'leave')
+        obj.add_callback('pick-key', self.pick_cb, 'key')
         obj.pickable = True
         obj.add_callback('edited', self.edit_cb)
 

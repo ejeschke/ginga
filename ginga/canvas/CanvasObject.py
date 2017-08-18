@@ -62,7 +62,8 @@ class CanvasObjectBase(Callback.Callbacks):
 
         # For callbacks
         for name in ('edited', 'pick-down', 'pick-move', 'pick-up',
-                     'pick-hover', 'pick-enter', 'pick-leave'):
+                     'pick-hover', 'pick-enter', 'pick-leave',
+                     'pick-key'):
             self.enable_callback(name)
 
     def initialize(self, canvas, viewer, logger):

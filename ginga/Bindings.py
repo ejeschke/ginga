@@ -326,7 +326,7 @@ class ImageViewBindings(object):
                 mode_name = name[5:]
                 keyname, mode_type, curname = value
                 bindmap.add_mode(keyname, mode_name, mode_type=mode_type,
-                                     msg=None)
+                                 msg=None)
                 if curname is not None:
                     self.cursor_map[mode_name] = curname
 
@@ -2336,6 +2336,9 @@ class BindingMapper(Callback.Callbacks):
         self.logger = logger
 
         # For event mapping
+        self.event_names = ['keydown', 'keyup',
+                            'btn-down', 'btn-move', 'btn-up',
+                            'scroll', 'pinch', 'pan']
         self.eventmap = {}
 
         self._kbdmode = None
@@ -2374,7 +2377,6 @@ class BindingMapper(Callback.Callbacks):
         # For callbacks
         for name in ('mode-set', ):
             self.enable_callback(name)
-
 
     def add_modifier(self, keyname, modname):
         bnch = Bunch.Bunch(name=modname)
@@ -2494,6 +2496,10 @@ class BindingMapper(Callback.Callbacks):
             viewer.add_callback('pinch', self.window_pinch)
         if viewer.has_callback('pan'):
             viewer.add_callback('pan', self.window_pan)
+
+        for pfx in self.event_names:
+            # TODO: add moded versions of callbacks?
+            viewer.enable_callback('%s-none' % (pfx))
 
     def window_map(self, viewer):
         return True
