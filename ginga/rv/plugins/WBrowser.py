@@ -103,6 +103,7 @@ class WBrowser(GlobalPlugin):
         # This can block as long as it takes without blocking the UI.
         url = get_doc(logger=self.logger, plugin=plugin,
                       reporthook=_dl_indicator)
+        #url = None  # DEBUG: Use this to force offline mode.
 
         self.fv.gui_do(self._load_doc, url, no_url_callback=no_url_callback)
 

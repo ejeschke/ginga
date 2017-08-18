@@ -1,60 +1,58 @@
-#
-# ChangeHistory.py -- ChangeHistory global plugin for Ginga.
-#
-from ginga import GingaPlugin
-from ginga.gw import Widgets
-from ginga.misc import Bunch
-from ginga.util.iohelper import shorten_name
+"""
+ChangeHistory
+=============
 
+Keep track of buffer change history.
 
-class ChangeHistory(GingaPlugin.GlobalPlugin):
-    """
-    ChangeHistory
-    =============
-    Keep track of buffer change history.
+.. image:: figures/changehistory-plugin.png
 
-    Plugin Type: Global
-    -------------------
-    ChangeHistory is a global plugin.  Only one instance can be opened.
+**Plugin Type: Global**
 
-    This plugin is used to log any changes to data buffer. For example,
-    a change log would appear here if a new image is added to a mosaic via the
-    `Mosaic` plugin. Like `Contents`, the log is sorted by channel, and then
-    by image name.
+``ChangeHistory`` is a global plugin.  Only one instance can be opened.
 
-    Notes
-    -----
-    History should stay no matter what channel or image is active.
-    New history can be added, but old history cannot be deleted,
-    unless the image/channel itself is deleted.
+This plugin is used to log any changes to data buffer. For example,
+a change log would appear here if a new image is added to a mosaic via the
+`~ginga.rv.plugins.Mosaic` plugin. Like `~ginga.rv.plugins.Contents`,
+the log is sorted by channel, and then by image name.
 
-    The `redo()` method picks up a ``'modified'`` event and displays
-    related metadata here. The metadata is obtained as follows:
+**Notes**
 
-    .. code-block:: python
+History should stay no matter what channel or image is active.
+New history can be added, but old history cannot be deleted,
+unless the image/channel itself is deleted.
+
+The ``redo()`` method picks up a ``'modified'`` event and displays
+related metadata here. The metadata is obtained as follows::
 
         channel = self.fv.get_channel_info(chname)
         iminfo = channel.get_image_info(imname)
         timestamp = iminfo.time_modified
         description = iminfo.reason_modified  # Optional
 
-    While ``'time_modified'`` is automatically added by Ginga,
-    ``'reason_modified'`` is optional and has be to explicitly set
-    by the calling plugin in the same method that issues the
-    ``'modified'`` callback, like this:
-
-    .. code-block:: python
+While ``'time_modified'`` is automatically added by Ginga,
+``'reason_modified'`` is optional and has be to explicitly set
+by the calling plugin in the same method that issues the
+``'modified'`` callback, like this::
 
         # This issues the 'modified' callback and sets the timestamp
         image.set_data(new_data, ...)
-
         # Manually add the description
         chname = self.fv.get_channel_name(self.fitsimage)
         channel = self.fv.get_channel_info(chname)
         iminfo = channel.get_image_info(image.get('name'))
         iminfo.reason_modified = 'Something was done to this image buffer'
 
-    """
+"""
+from ginga import GingaPlugin
+from ginga.gw import Widgets
+from ginga.misc import Bunch
+from ginga.util.iohelper import shorten_name
+
+__all__ = ['ChangeHistory']
+
+
+class ChangeHistory(GingaPlugin.GlobalPlugin):
+
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(ChangeHistory, self).__init__(fv)
@@ -300,8 +298,10 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         return 'changehistory'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
+# Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
-__doc__ = generate_cfg_example('plugin_ChangeHistory', package='ginga')
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_ChangeHistory', package='ginga')
+
+# Need this for offline WBrowser doc
+ChangeHistory.__doc__ = __doc__
