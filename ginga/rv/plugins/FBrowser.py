@@ -397,10 +397,13 @@ class FBrowser(GingaPlugin.LocalPlugin):
             chname = self.fv.get_channel_name(chviewer)
             channel = self.fv.get_channel(chname)
 
+        self.fv.nongui_do(self._add_info, channel, filelist)
+
+    def _add_info(self, channel, filelist):
         for path in filelist:
             name = self.fv.name_image_from_path(path)
             info = Bunch.Bunch(name=name, path=path)
-            self.fv.nongui_do(channel.add_image_info, info)
+            self.fv.gui_call(channel.add_image_info, info)
 
     def start(self):
         self.win = None

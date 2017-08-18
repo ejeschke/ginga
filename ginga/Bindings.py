@@ -108,6 +108,10 @@ class ImageViewBindings(object):
             kp_pan_right = ['pan+*+right', 'freepan+*+right'],
             kp_pan_up = ['pan+*+up', 'freepan+*+up'],
             kp_pan_down = ['pan+*+down', 'freepan+*+down'],
+            kp_pan_home = ['pan+*+home', 'freepan+*+home'],
+            kp_pan_end = ['pan+*+end', 'freepan+*+end'],
+            kp_pan_page_up = ['pan+*+page_up', 'freepan+*+page_up'],
+            kp_pan_page_down = ['pan+*+page_down', 'freepan+*+page_down'],
             kp_pan_px_xminus = ['shift+left'],
             kp_pan_px_xplus = ['shift+right'],
             kp_pan_px_yminus = ['shift+down'],
@@ -290,10 +294,10 @@ class ImageViewBindings(object):
 
     def setup_settings_events(self, viewer, bindmap):
 
-        d = self.settings.getDict()
+        d = self.settings.get_dict()
         if len(d) == 0:
             self.initialize_settings(self.settings)
-            d = self.settings.getDict()
+            d = self.settings.get_dict()
 
         # First scan settings for buttons and modes
         bindmap.clear_modifier_map()
@@ -306,7 +310,7 @@ class ImageViewBindings(object):
             if name.startswith('mod_'):
                 modname = name[4:]
                 for combo in value:
-                    # NOTE: for now no chorded combinations
+                    # NOTE: for now no chorded combinations to make modifiers
                     keyname = combo
                     bindmap.add_modifier(keyname, modname)
 
@@ -1080,29 +1084,53 @@ class ImageViewBindings(object):
         if not self.canpan:
             return False
         amt = self._get_key_pan_pct(event)
-        self.pan_lr(viewer, amt, -1.0, msg=msg)
+        self.pan_lr(viewer, amt, -0.1, msg=msg)
         return True
 
     def kp_pan_right(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
         amt = self._get_key_pan_pct(event)
-        self.pan_lr(viewer, amt, 1.0, msg=msg)
+        self.pan_lr(viewer, amt, 0.1, msg=msg)
         return True
 
     def kp_pan_up(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
         amt = self._get_key_pan_pct(event)
-        self.pan_ud(viewer, amt, 1.0, msg=msg)
+        self.pan_ud(viewer, amt, 0.1, msg=msg)
         return True
 
     def kp_pan_down(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
         amt = self._get_key_pan_pct(event)
+        self.pan_ud(viewer, amt, -0.1, msg=msg)
+        return True
+
+    def kp_pan_page_up(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        amt = self._get_key_pan_pct(event)
+        self.pan_ud(viewer, amt, 1.0, msg=msg)
+        return True
+
+    def kp_pan_page_down(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        amt = self._get_key_pan_pct(event)
         self.pan_ud(viewer, amt, -1.0, msg=msg)
         return True
+
+    def kp_pan_home(self, viewer, event, data_x, data_y, msg=True):
+        res = self.calc_pan_pct(viewer, pad=0)
+        # 1.0 == max Y
+        self.pan_by_pct(viewer, res.pan_pct_x, 1.0)
+
+    def kp_pan_end(self, viewer, event, data_x, data_y, msg=True):
+        res = self.calc_pan_pct(viewer, pad=0)
+        # 0.0 == min Y
+        self.pan_by_pct(viewer, res.pan_pct_x, 0.0)
 
     def kp_pan_px_xminus(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:

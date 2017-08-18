@@ -75,7 +75,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    highlight_tracks_keyboard_focus=True,
                                    label_font_color='white',
                                    label_font_size=10,
-                                   label_bg_color='lightgreen')
+                                   label_bg_color='lightgreen',
+                                   thumb_pan_accel=1.5)
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumb_width = self.settings.get('thumb_length', 180)
@@ -144,16 +145,23 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         canvas = c_v.get_canvas()
         canvas.register_for_cursor_drawing(c_v)
-        c_v.add_callback('scroll', self.scroll_cb)
         canvas.set_draw_mode('pick')
         canvas.ui_set_active(True)
         self.canvas = canvas
 
         bd = c_v.get_bindings()
         bd.enable_pan(True)
-        # disable zooming so scrolling can be used to pan up/down
+        # disable zooming  TODO: reconsider--could be useful
         bd.enable_zoom(False)
         bd.enable_cmap(False)
+
+        # remap some bindings for pan mode into no mode needed
+        bm = c_v.get_bindmap()
+        for name in ['home', 'end', 'page_up', 'page_down',
+                     'left', 'right', 'up', 'down']:
+            bm.map_event(None, [], 'kp_%s' % name, 'pan_%s' % name)
+        # scroll wheel
+        bm.map_event(None, [], 'sc_scroll', 'pan')
 
         iw = Viewers.GingaScrolledViewerWidget(c_v)
         iw.resize(self._wd, self._ht)
@@ -175,24 +183,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         container.add_widget(vbox, stretch=1)
 
         self.gui_up = True
-
-    def scroll_cb(self, viewer, direction, amt, data_x, data_y):
-        """Called when the user scrolls in the thumb pane.
-        Pan up or down to show additional thumbs.
-        """
-        bd = viewer.get_bindings()
-        direction = bd.get_direction(direction)
-        pan_x, pan_y = viewer.get_pan()[:2]
-        qty = self.thumb_vsep * amt * self.settings.get('thumb_pan_accel', 1.0)
-        if direction == 'up':
-            pan_y -= qty
-        else:
-            pan_y += qty
-
-        limits = viewer.get_limits(coord='data')
-        pan_y = min(max(pan_y, limits[0][1]), limits[1][1])
-
-        viewer.set_pan(pan_x, pan_y)
 
     def drag_drop_cb(self, viewer, urls):
         """Punt drag-drops to the ginga shell.
@@ -896,6 +886,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self._auto_scroll(xi, yi)
 
         self.c_view.redraw(whence=0)
+        self.fv.update_pending()
 
         self.logger.debug("Reordering done")
 
