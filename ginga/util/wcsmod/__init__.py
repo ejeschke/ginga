@@ -36,9 +36,6 @@ import sys
 import os.path
 import glob
 
-import numpy as np
-
-from ginga.util.six.moves import map
 from ginga.misc.ModuleManager import my_import
 
 from . import common
@@ -61,6 +58,7 @@ wcs_try_order = ('astropy', 'astropy2', 'kapteyn', 'starlink', 'astlib',
                  'barebones')
 
 wcs_home = os.path.split(sys.modules[__name__].__file__)[0]
+
 
 def use(wcspkg, raise_err=True):
     """Choose WCS package."""
@@ -103,6 +101,7 @@ if not wcs_configured:
         modname = modname[4:]   # strip off "wcs_"
         if use(name, raise_err=False):
             break
+
 
 def get_wcs_wrappers():
     return list(common.custom_wcs.keys())
