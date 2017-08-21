@@ -2606,8 +2606,6 @@ class BindingMapper(Callback.Callbacks):
 
         trigger = 'kp_' + keyname
         try:
-            # TEMP: hack to get around the issue of how keynames
-            # are generated.
             if keyname == 'escape':
                 idx = (None, self._empty_set, trigger)
             else:
@@ -2616,14 +2614,22 @@ class BindingMapper(Callback.Callbacks):
             cbname = 'keydown-%s' % (emap.name)
 
         except KeyError:
-            # no entry for this mode, try non-mode entry
             try:
-                idx = (None, self._empty_set, trigger)
+                # TEMP: hack to get around the issue of how keynames
+                # are generated--shifted characters with no modifiers
+                idx = (self._kbdmode, self._empty_set, trigger)
                 emap = self.eventmap[idx]
                 cbname = 'keydown-%s' % (emap.name)
 
             except KeyError:
-                cbname = 'keydown-%s' % str(self._kbdmode).lower()
+                # no entry for this mode, try non-mode entry
+                try:
+                    idx = (None, self._empty_set, trigger)
+                    emap = self.eventmap[idx]
+                    cbname = 'keydown-%s' % (emap.name)
+
+                except KeyError:
+                    cbname = 'keydown-%s' % str(self._kbdmode).lower()
 
         self.logger.debug("idx=%s" % (str(idx)))
         last_x, last_y = viewer.get_last_data_xy()
@@ -2651,12 +2657,18 @@ class BindingMapper(Callback.Callbacks):
 
         except KeyError:
             try:
-                idx = (None, self._empty_set, trigger)
+                idx = (self._kbdmode, self._empty_set, trigger)
                 emap = self.eventmap[idx]
                 cbname = 'keyup-%s' % (emap.name)
 
             except KeyError:
-                cbname = 'keyup-%s' % str(self._kbdmode).lower()
+                try:
+                    idx = (None, self._empty_set, trigger)
+                    emap = self.eventmap[idx]
+                    cbname = 'keyup-%s' % (emap.name)
+
+                except KeyError:
+                    cbname = 'keyup-%s' % str(self._kbdmode).lower()
 
         last_x, last_y = viewer.get_last_data_xy()
 

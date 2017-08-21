@@ -34,8 +34,13 @@ class Callbacks(object):
             self.clear_callback(name)
 
     def has_callback(self, name):
-        # return self.cb.has_key(name) and (len(self.cb[name]) > 0)
         return name in self.cb
+
+    def num_callbacks(self, name):
+        return len(self.cb[name])
+
+    def will_callback(self, name):
+        return self.has_callback(name) and self.num_callbacks(name) > 0
 
     def delete_callback(self, name):
         try:
