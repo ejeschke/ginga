@@ -386,15 +386,15 @@ class RadialPlot(Plot):
 
             # compute and plot radial fitting
             # note: you might wanna change `deg` here.
-            coefficients = numpy.polyfit(x=r, y=v, deg=10)
+            coefficients = numpy.polyfit(x=r, y=v, deg=9)
             polynomial = numpy.poly1d(coefficients)
 
             x_curve = numpy.linspace(numpy.min(r), numpy.max(r), len(r))
             y_curve = polynomial(x_curve)
 
             yerror = 0   # for now, no error bars
-            self.ax.errorbar(r, v, yerr=yerror, marker='x', ls='none',
-                             color='blue')
+            self.ax.errorbar(r, v, yerr=yerror, marker='s', ls='none',
+                             mfc='none', mec='blue')
             self.ax.plot(x_curve, y_curve, '-', color='green', lw=2)
 
             #self.fig.tight_layout()
