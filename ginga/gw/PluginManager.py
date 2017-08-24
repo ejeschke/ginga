@@ -214,22 +214,27 @@ class PluginManager(Callback.Callbacks):
         # If this is a local plugin, raise the channel associated with the
         # plug in
         if p_info.chinfo is not None:
-            itab = p_info.chinfo.name
-            self.logger.debug("raising channel tab %s" % (itab))
-            self.ds.raise_tab(itab)
-
             self.logger.debug("resuming plugin %s" % (name))
             p_info.obj.resume()
 
+        self.focus.add(lname)
         self.make_callback('focus-plugin', bnch)
 
-        self.focus.add(lname)
         if p_info.widget is not None:
             self.logger.debug("raising plugin tab %s" % (p_info.tabname))
             if p_info.is_toplevel:
                 p_info.widget.raise_()
             else:
                 self.ds.raise_tab(p_info.tabname)
+
+        if p_info.chinfo is not None:
+            chname = p_info.chinfo.name
+            self.logger.debug("changing channel to %s" % (chname))
+            # Alternative could just be to raise the channel tab rather
+            # than making all the global plugins switch over to the new
+            # channel
+            #self.ds.raise_tab(chname)
+            self.fv.change_channel(chname)
 
     def clear_focus(self, name):
         self.logger.debug("Unfocusing plugin '%s'" % (name))
@@ -446,26 +451,31 @@ class PluginManager(Callback.Callbacks):
         # A tab in a workspace in which we started a plugin has been
         # raised.  Check for this widget and focus the plugin
         title = widget.extdata.get('tab_title', None)
-        if title is not None:
-            # is this a local plugin tab?
-            if ':' in title:
-                chname, plname = title.split(':')
-                plname = plname.strip()
-                try:
-                    info = self.get_info(plname)
-                except KeyError:
-                    # no
-                    return
-                p_info = info.pInfo
-                # important: make sure channel matches ours!
-                if p_info.tabname == title:
-                    if self.is_active(p_info.name):
-                        if not self.has_focus(p_info.name):
-                            self.set_focus(p_info.name)
-                        elif p_info.chinfo is not None:
-                            # raise the channel associated with the plugin
-                            itab = p_info.chinfo.name
-                            self.ds.raise_tab(itab)
+        # is this a local plugin tab?
+        if title is None or ':' not in title:
+            return
+
+        chname, plname = title.split(':')
+        plname = plname.strip()
+        try:
+            info = self.get_info(plname)
+        except KeyError:
+            # no
+            return
+        p_info = info.pInfo
+        # important: make sure channel matches ours!
+        if p_info.tabname == title:
+            if self.is_active(p_info.name):
+                if not self.has_focus(p_info.name):
+                    self.set_focus(p_info.name)
+                elif p_info.chinfo is not None:
+                    # raise the channel associated with the plugin
+                    chname = p_info.chinfo.name
+                    # Alternative could just be to raise the channel tab
+                    # rather than making all the global plugins switch
+                    # over to the new channel
+                    #self.ds.raise_tab(chname)
+                    self.fv.change_channel(chname)
 
     def dispose_gui(self, p_info):
         self.logger.debug("disposing of gui")
