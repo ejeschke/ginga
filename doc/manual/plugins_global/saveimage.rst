@@ -26,7 +26,7 @@ optional and can be omitted using plugin configuration file (see below).
 The modified extension(s)
 will have new header or data extracted from Ginga, while those not modified will
 remain untouched. Relevant change log entries from
-`~ginga.rv.plugins.ChangeHistory` global plugin will be inserted into the
+:ref:`sec-plugins-changehistory` global plugin will be inserted into the
 history of its ``PRIMARY`` header.
 
 .. automodule:: ginga.rv.plugins.SaveImage

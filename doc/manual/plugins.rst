@@ -21,10 +21,6 @@ This chapter describes the set of plugins that come with Ginga.  Those
 interested in writing their own custom plugins should refer to
 :ref:`sec-writing-global-plugins` or :ref:`sec-writing-local-plugins`.
 
-.. automodapi:: ginga.rv.plugins.ChangeHistory
-   :no-heading:
-   :skip: ChangeHistory
-
 .. _sec-globalplugins:
 
 ==============
@@ -50,6 +46,7 @@ Global plugins
    plugins_global/errors
    plugins_global/rc
    plugins_global/wcsmatch
+   plugins_global/changehistory
    plugins_global/samp
    plugins_global/iraf
    plugins_global/log
