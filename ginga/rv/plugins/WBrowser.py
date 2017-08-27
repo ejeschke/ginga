@@ -43,6 +43,11 @@ class WBrowser(GlobalPlugin):
         # superclass defines some variables for us, like logger
         super(WBrowser, self).__init__(fv)
 
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_WBrowser')
+        self.settings.add_defaults(offline_doc_only=False)
+        self.settings.load(onError='silent')
+
     def build_gui(self, container):
         if not Widgets.has_webkit:
             self.browser = Widgets.Label(
@@ -101,9 +106,11 @@ class WBrowser(GlobalPlugin):
             self.fv.gui_do(self.entry.set_text, msg)
 
         # This can block as long as it takes without blocking the UI.
-        url = get_doc(logger=self.logger, plugin=plugin,
-                      reporthook=_dl_indicator)
-        #url = None  # DEBUG: Use this to force offline mode.
+        if self.settings.get('offline_doc_only', False):
+            url = None  # DEBUG: Use this to force offline mode.
+        else:
+            url = get_doc(logger=self.logger, plugin=plugin,
+                          reporthook=_dl_indicator)
 
         self.fv.gui_do(self._load_doc, url, no_url_callback=no_url_callback)
 
