@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy
+import numpy as np
 import time
 import threading
 
@@ -80,12 +80,12 @@ class AutoCutsBase(object):
             f = data - loval
             f.clip(0.0, 1.0, out=f)
             # threshold
-            f[numpy.nonzero(f)] = 1.0
+            f[np.nonzero(f)] = 1.0
 
         # f = f.clip(0.0, 1.0) * vmax
         # NOTE: optimization using in-place outputs for speed
         f.clip(0.0, 1.0, out=f)
-        numpy.multiply(f, vmax, out=f)
+        np.multiply(f, vmax, out=f)
         return f
 
     def __str__(self):
@@ -148,6 +148,13 @@ class Histogram(AutoCutsBase):
     def calc_cut_levels(self, image):
         if self.usecrop:
             data = self.get_crop(image)
+            count = np.count_nonzero(np.isfinite(data))
+            if count < (self.crop_radius ** 2.0) * 0.50:
+                # if we have less than 50% finite pixels then fall back
+                # to using the whole array
+                self.logger.info("too many non-finite values in crop--"
+                                 "falling back to full image data")
+                data = image.get_data()
         else:
             data = image.get_data()
         bnch = self.calc_histogram(data, pct=self.pct, numbins=self.numbins)
@@ -164,8 +171,8 @@ class Histogram(AutoCutsBase):
             width, height))
 
         total_px = width * height
-        dsum = numpy.sum(data)
-        if numpy.isnan(dsum) or numpy.isinf(dsum):
+        dsum = np.sum(data)
+        if np.isnan(dsum) or np.isinf(dsum):
             # Oh crap, the array has a NaN or Inf value.
             # We have to workaround this by making a copy of the array
             # and substituting for the problem values, otherwise numpy's
@@ -173,20 +180,20 @@ class Histogram(AutoCutsBase):
             self.logger.warning("NaN's found in data, using workaround for histogram")
             data = data.copy()
             # TODO: calculate a reasonable replacement value
-            data[numpy.isinf(data)] = 0.0
-            minval = numpy.nanmin(data)
-            maxval = numpy.nanmax(data)
+            data[np.isinf(data)] = 0.0
+            minval = np.nanmin(data)
+            maxval = np.nanmax(data)
             substval = (minval + maxval)/2.0
-            data[numpy.isnan(data)] = substval
-            data[numpy.isinf(data)] = substval
-            ## dsum = numpy.sum(data)
-            ## if numpy.isnan(dsum) or numpy.isinf(dsum):
+            data[np.isnan(data)] = substval
+            data[np.isinf(data)] = substval
+            ## dsum = np.sum(data)
+            ## if np.isnan(dsum) or np.isinf(dsum):
             ##     print "NaNs STILL PRESENT"
 
-            dist, bins = numpy.histogram(data, bins=numbins,
+            dist, bins = np.histogram(data, bins=numbins,
                                          density=False)
         else:
-            dist, bins = numpy.histogram(data, bins=numbins,
+            dist, bins = np.histogram(data, bins=numbins,
                                          density=False)
 
         cutoff = int((float(total_px)*(1.0-pct))/2.0)
@@ -195,8 +202,8 @@ class Histogram(AutoCutsBase):
         #print "DIST: %s\nBINS: %s" % (str(dist), str(bins))
 
         # calculate low cutoff
-        cumsum = numpy.cumsum(dist)
-        li = numpy.flatnonzero(cumsum > cutoff)
+        cumsum = np.cumsum(dist)
+        li = np.flatnonzero(cumsum > cutoff)
         if len(li) > 0:
             i = li[0]
             count_px = cumsum[i]
@@ -222,8 +229,8 @@ class Histogram(AutoCutsBase):
 
         # calculate high cutoff
         revdist = dist[::-1]
-        cumsum = numpy.cumsum(revdist)
-        li = numpy.flatnonzero(cumsum > cutoff)
+        cumsum = np.cumsum(revdist)
+        li = np.flatnonzero(cumsum > cutoff)
         if len(li) > 0:
             i = li[0]
             count_px = cumsum[i]
@@ -280,6 +287,13 @@ class StdDev(AutoCutsBase):
     def calc_cut_levels(self, image):
         if self.usecrop:
             data = self.get_crop(image)
+            count = np.count_nonzero(np.isfinite(data))
+            if count < (self.crop_radius ** 2.0) * 0.50:
+                # if we have less than 50% finite pixels then fall back
+                # to using the whole array
+                self.logger.info("too many non-finite values in crop--"
+                                 "falling back to full image data")
+                data = image.get_data()
         else:
             data = image.get_data()
 
@@ -289,9 +303,9 @@ class StdDev(AutoCutsBase):
 
     def calc_stddev(self, data, hensa_lo=35.0, hensa_hi=90.0):
         # This is the method used in the old SOSS fits viewer
-        mdata = numpy.ma.masked_array(data, numpy.isnan(data))
-        mean = numpy.mean(mdata)
-        sdev = numpy.std(mdata)
+        mdata = np.ma.masked_array(data, np.isnan(data))
+        mean = np.mean(mdata)
+        sdev = np.std(mdata)
         self.logger.debug("mean=%f std=%f" % (mean, sdev))
 
         hensa_lo_factor = (hensa_lo - 50.0) / 10.0
@@ -333,7 +347,7 @@ class MedianFilter(AutoCutsBase):
         xmax = wd - 1
         ymax = ht - 1
         # evenly spaced sampling over rows and cols
-        xskip = int(max(1.0, numpy.sqrt(xmax * ymax / float(self.num_points))))
+        xskip = int(max(1.0, np.sqrt(xmax * ymax / float(self.num_points))))
         yskip = xskip
 
         cutout = image.cutout_data(0, 0, xmax, ymax,
@@ -350,8 +364,8 @@ class MedianFilter(AutoCutsBase):
             length = 5
 
         xout = scipy.ndimage.filters.median_filter(data, size=length)
-        loval = numpy.nanmin(xout)
-        hival = numpy.nanmax(xout)
+        loval = np.nanmin(xout)
+        hival = np.nanmax(xout)
 
         return loval, hival
 
@@ -396,7 +410,7 @@ class ZScale(AutoCutsBase):
         xmax = wd - 1
         ymax = ht - 1
         # evenly spaced sampling over rows and cols
-        xskip = int(max(1.0, numpy.sqrt(xmax * ymax / float(num_points))))
+        xskip = int(max(1.0, np.sqrt(xmax * ymax / float(num_points))))
         yskip = xskip
 
         cutout = image.cutout_data(0, 0, xmax, ymax,
@@ -419,9 +433,9 @@ class ZScale(AutoCutsBase):
             contrast))
 
         # remove masked elements, they cause problems
-        data = data[numpy.logical_not(numpy.ma.getmaskarray(data))]
+        data = data[np.logical_not(np.ma.getmaskarray(data))]
         # remove NaN and Inf from samples
-        samples = data[numpy.isfinite(data)].flatten()
+        samples = data[np.isfinite(data)].flatten()
         samples = samples[:num_points]
 
         loval, hival = zscale.zscale_samples(samples, contrast=contrast)
@@ -521,7 +535,7 @@ class ZScale2(AutoCutsBase):
             contrast))
 
         # calculate num_points parameter, if omitted
-        total_points = numpy.size(data)
+        total_points = np.size(data)
         if num_points is None:
             num_points = max(int(total_points * 0.0002), 600)
         num_points = min(num_points, total_points)
@@ -542,7 +556,7 @@ class ZScale2(AutoCutsBase):
         ymax = ht - 1
         yskip = max(ymax // num_rows, 1)
         # evenly spaced sampling over rows and cols
-        ## xskip = int(max(1.0, numpy.sqrt(xmax * ymax / float(num_points))))
+        ## xskip = int(max(1.0, np.sqrt(xmax * ymax / float(num_points))))
         ## yskip = xskip
 
         cutout = data[0:ymax:yskip, 0:xmax:xskip]
@@ -556,11 +570,11 @@ class ZScale2(AutoCutsBase):
             num_pix, num_points))
 
         # sort the data by value
-        cutout = numpy.sort(cutout)
+        cutout = np.sort(cutout)
 
         # flat distribution?
-        data_min = numpy.nanmin(cutout)
-        data_max = numpy.nanmax(cutout)
+        data_min = np.nanmin(cutout)
+        data_max = np.nanmax(cutout)
         if (data_min == data_max) or (contrast == 0.0):
             return (data_min, data_max)
 
@@ -574,8 +588,8 @@ class ZScale2(AutoCutsBase):
             num_pix, midpoint, median))
 
         ## # Remove outliers to aid fitting
-        ## threshold = numpy.std(cutout) * 2.5
-        ## cutout = cutout[numpy.where(numpy.fabs(cutout - median) > threshold)]
+        ## threshold = np.std(cutout) * 2.5
+        ## cutout = cutout[np.where(np.fabs(cutout - median) > threshold)]
         ## num_pix = len(cutout)
 
         # zscale fitting function:
@@ -585,10 +599,10 @@ class ZScale2(AutoCutsBase):
             return y
 
         # compute a least squares fit
-        X = numpy.arange(num_pix)
+        X = np.arange(num_pix)
         Y = cutout
-        sigma = numpy.array([ 1.0 ]* num_pix)
-        guess = numpy.array([0.0, 0.0])
+        sigma = np.array([ 1.0 ]* num_pix)
+        guess = np.array([0.0, 0.0])
 
         # Curve fit
         with _lock:
