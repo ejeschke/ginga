@@ -6,6 +6,7 @@
 
 from ginga import colors
 from ginga.misc import Bunch, Callback
+from ginga.fonts import font_asst
 
 import matplotlib.textpath as textpath
 
@@ -27,6 +28,7 @@ class Brush(object):
 
 class Font(object):
     def __init__(self, fontname='sans', fontsize=12.0, color='black'):
+        fontname = font_asst.resolve_alias(fontname, fontname)
         self.fontname = fontname
         self.fontsize = fontsize
         self.color = color
@@ -35,6 +37,13 @@ class Font(object):
         fontdict = dict(color=self.color, family=self.fontname,
                         size=self.fontsize, transform=None)
         return fontdict
+
+
+def load_font(font_name, font_file):
+    # TODO!
+    ## raise ValueError("Loading fonts dynamically is an unimplemented"
+    ##                  " feature for matplotlib back end")
+    return font_name
 
 
 class MplContext(object):

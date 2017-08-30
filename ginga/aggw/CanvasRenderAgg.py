@@ -5,13 +5,15 @@
 # Please see the file LICENSE.txt for details.
 
 import math
+from itertools import chain
 
 import aggdraw as agg
+
 from . import AggHelp
-from itertools import chain
 # force registration of all canvas types
 import ginga.canvas.types.all
 from ginga import trcalc
+
 
 class RenderContext(object):
 

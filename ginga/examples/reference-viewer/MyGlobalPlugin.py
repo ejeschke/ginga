@@ -63,9 +63,9 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         vbox.set_spacing(2)
 
         # Take a text widget to show some instructions
-        self.msgFont = self.fv.get_font("sansFont", 12)
+        self.msg_font = self.fv.get_font("sans", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         # Frame for instructions and add the text widget with another

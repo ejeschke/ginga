@@ -4,11 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import tornado.web
-import tornado.websocket
-import tornado.template
-from tornado.ioloop import IOLoop
-
+import re
 import random
 import json
 import time
@@ -17,8 +13,16 @@ import binascii
 from collections import namedtuple
 from io import BytesIO
 
+import tornado.web
+import tornado.websocket
+import tornado.template
+from tornado.ioloop import IOLoop
+
 from ginga.misc import Bunch, Callback
 from ginga.util import io_rgb
+from ginga.fonts import font_asst
+
+font_regex = re.compile(r'^(.+)\s+(\d+)$')
 
 default_interval = 10
 
@@ -230,6 +234,8 @@ class Timer(Callback.Callbacks):
 
 
 def get_image_src_from_buffer(img_buf, imgtype='png'):
+    if not isinstance(img_buf, bytes):
+        img_buf = img_buf.encode('latin1')
     img_string = binascii.b2a_base64(img_buf)
     if isinstance(img_string, bytes):
         img_string = img_string.decode("utf-8")
@@ -251,8 +257,35 @@ def get_icon(iconpath, size=None, format='png'):
     return icon
 
 
+def font_info(font_str):
+    """Extract font information from a font string, such as supplied to the
+    'font' argument to a widget.
+    """
+    vals = font_str.split(';')
+    point_size, style, weight = 8, 'normal', 'normal'
+    family = vals[0]
+    if len(vals) > 1:
+        style = vals[1]
+    if len(vals) > 2:
+        weight = vals[2]
+
+    match = font_regex.match(family)
+    if match:
+        family, point_size = match.groups()
+        point_size = int(point_size)
+
+    return Bunch.Bunch(family=family, point_size=point_size,
+                       style=style, weight=weight)
+
 def get_font(font_family, point_size):
-    font = '%s %d' % (font_family, point_size)
-    return font
+    font_family = font_asst.resolve_alias(font_family, font_family)
+    font_str = '%s %d' % (font_family, point_size)
+    return font_info(font_str)
+
+def load_font(font_name, font_file):
+    # TODO!
+    ## raise ValueError("Loading fonts dynamically is an unimplemented"
+    ##                  " feature for pg back end")
+    return font_name
 
 # END

@@ -6,9 +6,7 @@
 
 import math
 
-from PIL import Image, ImageDraw, ImageFont
 from . import PilHelp
-from itertools import chain
 
 # force registration of all canvas types
 import ginga.canvas.types.all

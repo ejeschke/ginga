@@ -45,6 +45,9 @@ rc['keymap.xscale'] = []         # toggle scaling of x-axes ('log'/'linear')
 rc['keymap.all_axes'] = []       # enable all axes
 
 
+MPL_V1 = matplotlib.__version__.startswith('1')
+
+
 class ImageViewMplError(ImageView.ImageViewError):
     pass
 
@@ -90,7 +93,9 @@ class ImageViewMpl(ImageView.ImageViewBase):
         #ax = fig.add_subplot(111)
         self.ax_img = ax
         # We don't want the axes cleared every time plot() is called
-        ax.hold(False)
+        if MPL_V1:
+            # older versions of matplotlib
+            ax.hold(False)
         # TODO: is this needed, since frame_on == False?
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
@@ -106,7 +111,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
                                      #viewer=self,
                                      #projection='ginga'
                                      )
-        newax.hold(True)
+        if MPL_V1:
+            newax.hold(True)
         newax.autoscale(enable=False)
         newax.get_xaxis().set_visible(False)
         newax.get_yaxis().set_visible(False)

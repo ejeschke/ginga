@@ -32,6 +32,7 @@ import platform
 os.environ['QT_API'] = 'pyqt'
 
 import matplotlib
+MPL_V1 = matplotlib.__version__.startswith('1')
 options = ['Qt4Agg', 'GTK', 'GTKAgg', 'MacOSX', 'GTKCairo', 'WXAgg',
            'TkAgg', 'QtAgg', 'FltkAgg', 'WX']
 # Force a specific toolkit on mac
@@ -85,7 +86,9 @@ fi.set_image(image)
 
 # Note adding axis from ginga (mpl backend) object
 ax = fi.add_axes()
-ax.hold(True)
+if MPL_V1:
+    # old matplotlib API
+    ax.hold(True)
 
 wd, ht = image.get_size()
 

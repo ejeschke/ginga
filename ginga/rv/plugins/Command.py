@@ -65,7 +65,7 @@ class Command(GingaPlugin.GlobalPlugin):
 
         vbox = Widgets.VBox()
 
-        self.msg_font = self.fv.get_font("Courier", 12)
+        self.msg_font = self.fv.get_font('fixed', 12)
 
         vbox.add_widget(Widgets.Label("Output:"))
         tw = Widgets.TextArea(wrap=True, editable=False)

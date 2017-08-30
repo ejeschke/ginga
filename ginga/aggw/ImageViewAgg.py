@@ -56,7 +56,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
     def configure_surface(self, width, height):
         # create agg surface the size of the window
-        self.surface = agg.Draw("RGBA", (width, height), 'black')
+        self.surface = agg.Draw(self.rgb_order, (width, height), 'black')
 
         # inform the base class about the actual window size
         self.configure(width, height)
@@ -72,7 +72,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
         # Get agg surface as a numpy array
         surface = self.get_surface()
         arr8 = numpy.fromstring(surface.tobytes(), dtype=numpy.uint8)
-        arr8 = arr8.reshape((ht, wd, 4))
+        arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
         return arr8
 
     def get_image_as_buffer(self, output=None):

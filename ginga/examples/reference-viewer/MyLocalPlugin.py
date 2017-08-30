@@ -53,7 +53,7 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
         vbox.set_spacing(2)
 
         # Take a text widget to show some instructions
-        self.msg_font = self.fv.get_font("sansFont", 12)
+        self.msg_font = self.fv.get_font("sans", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
         tw.set_font(self.msg_font)
         self.tw = tw

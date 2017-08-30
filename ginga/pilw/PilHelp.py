@@ -9,29 +9,27 @@ import numpy as np
 from PIL import Image, ImageFont, ImageDraw
 
 from ginga import colors
-import ginga.fonts
+from ginga.fonts import font_asst
 from ginga.util.six.moves import map
 
-# Set up known fonts
-fontdir, xx = os.path.split(ginga.fonts.__file__)
-known_font = os.path.join(fontdir, 'Roboto', 'Roboto-Regular.ttf')
-
-font_cache = {}
-
-def get_cached_font(fontpath, fontsize):
-    global font_cache
-
-    key = (fontpath, fontsize)
+def get_cached_font(fontname, fontsize):
+    key = (fontname, fontsize)
     try:
-        return font_cache[key]
+        return font_asst.get_cache(key)
 
     except KeyError:
-        # TODO: try to lookup font before overriding
-        fontpath = known_font
+        # see if we can build the font
+        info = font_asst.get_font_info(fontname, subst_ok=True)
 
-        font = ImageFont.truetype(fontpath, fontsize)
-        font_cache[key] = font
+        font = ImageFont.truetype(info.font_path, fontsize)
+        font_asst.add_cache(key, font)
+
         return font
+
+def load_font(font_name, font_file):
+    if not font_asst.have_font(font_name):
+        font_asst.add_font(font_file, font_name=font_name)
+    return font_name
 
 
 class Pen(object):
@@ -47,8 +45,9 @@ class Brush(object):
         self.alpha = alpha
 
 class Font(object):
-    def __init__(self, fontname='ariel', fontsize=12.0, color='black',
+    def __init__(self, fontname='Roboto', fontsize=12.0, color='black',
                  linewidth=1, alpha=1.0):
+        fontname = font_asst.resolve_alias(fontname, fontname)
         self.fontname = fontname
         self.fontsize = int(fontsize)
         self.color = color

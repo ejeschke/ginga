@@ -8,7 +8,7 @@ import os.path
 from functools import reduce
 
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
-                              QImage, QCursor, have_pyqt4)
+                              QImage, QCursor, QFont, have_pyqt4)
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch, LineHistory
@@ -151,7 +151,9 @@ class TextEntry(WidgetBase):
     def set_editable(self, tf):
         self.widget.setReadOnly(not tf)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
         self.widget.setFont(font)
 
     def set_length(self, numchars):
@@ -190,7 +192,9 @@ class TextEntrySet(WidgetBase):
     def set_editable(self, tf):
         self.entry.setReadOnly(not tf)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
         self.widget.setFont(font)
 
     def set_length(self, numchars):
@@ -262,7 +266,9 @@ class TextArea(WidgetBase):
         # self.widget.setMaximumBlockCount(numlines)
         pass
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
         self.widget.setCurrentFont(font)
 
     def set_wrap(self, tf):
@@ -324,7 +330,9 @@ class Label(WidgetBase):
     def set_text(self, text):
         self.widget.setText(text)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
         self.widget.setFont(font)
 
     def set_color(self, fg=None, bg=None):

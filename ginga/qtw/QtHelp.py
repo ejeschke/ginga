@@ -11,6 +11,7 @@ import math
 import ginga.toolkit
 from ginga.util import iohelper
 from ginga.misc import Callback, Bunch
+from ginga.fonts import font_asst
 
 configured = False
 
@@ -35,7 +36,7 @@ try:
     from qtpy import QtWidgets as QtGui
     from qtpy.QtGui import (QImage, QColor, QFont, QPixmap, QIcon, QCursor,
                             QPainter, QPen, QPolygonF, QPolygon, QTextCursor,
-                            QDrag, QPainterPath, QBrush)  # noqa
+                            QDrag, QPainterPath, QBrush, QFontDatabase)  # noqa
     from qtpy.QtCore import QItemSelectionModel  # noqa
     from qtpy.QtWidgets import QApplication  # noqa
     try:
@@ -350,7 +351,25 @@ def get_icon(iconpath, size=None):
 
 
 def get_font(font_family, point_size):
+    font_family = font_asst.resolve_alias(font_family, font_family)
     font = QFont(font_family, point_size)
     return font
+
+def load_font(font_name, font_file):
+    # NOTE: you need to have created a QApplication() first (see
+    # qtw.Widgets.Application) for this to work correctly, or you will get
+    # a crash!
+    font_id = QFontDatabase.addApplicationFont(font_file)
+    if font_id < 0:
+        raise ValueError("Unspecified Qt problem loading font from '%s'" % (
+            font_file))
+
+    font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+
+    if font_name != font_family:
+        # If Qt knows this under a different name, add an alias
+        font_asst.add_alias(font_name, font_family)
+
+    return font_name
 
 # END

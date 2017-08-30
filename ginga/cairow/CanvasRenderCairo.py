@@ -8,6 +8,7 @@ import math
 import cairo
 
 from ginga import colors
+from ginga.fonts import font_asst
 # force registration of all canvas types
 import ginga.canvas.types.all
 
@@ -73,16 +74,17 @@ class RenderContext(object):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
-            self.cr.select_font_face(shape.font)
+            fontname = font_asst.resolve_alias(shape.font, shape.font)
+            self.cr.select_font_face(fontname)
             self.cr.set_font_size(fontsize)
 
     def initialize_from_shape(self, shape, line=True, fill=True, font=True):
+        if font:
+            self.set_font_from_shape(shape)
         if line:
             self.set_line_from_shape(shape)
         if fill:
             self.set_fill_from_shape(shape)
-        if font:
-            self.set_font_from_shape(shape)
 
     def set_line(self, color, alpha=1.0, linewidth=1, style='solid'):
 
@@ -101,6 +103,7 @@ class RenderContext(object):
             self.fill_alpha = alpha
 
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
+        fontname = font_asst.resolve_alias(fontname, fontname)
         self.cr.select_font_face(fontname)
         self.cr.set_font_size(fontsize)
         self._set_color(color, alpha=alpha)

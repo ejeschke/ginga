@@ -57,17 +57,22 @@ class ImageViewPg(ImageView):
         # format for rendering image on HTML5 canvas
         # NOTE: 'jpeg' has much better performance than 'png', but can show
         # some artifacts, especially noticeable with small text
-        self.t_.setDefaults(html5_canvas_format=default_html_fmt)
+        self.t_.set_defaults(html5_canvas_format=default_html_fmt)
 
+        # Format 'png' is ok with 'RGBA', but 'jpeg' only works with 'RGB'
+        self.rgb_order = 'RGB'
         #self.defer_redraw = False
 
 
-    def set_widget(self, canvas):
+    def set_widget(self, canvas_w):
         """Call this method with the widget that will be used
         for the display.
         """
-        self.logger.debug("set widget canvas=%s" % canvas)
-        self.pgcanvas = canvas
+        self.logger.debug("set widget canvas_w=%s" % canvas_w)
+        self.pgcanvas = canvas_w
+
+        ## wd, ht = canvas_w.get_size()
+        ## self.configure_window(wd, ht)
 
     def get_widget(self):
         return self.pgcanvas
