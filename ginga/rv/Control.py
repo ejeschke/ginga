@@ -32,6 +32,7 @@ from ginga.util.six.moves import map
 from ginga.gw import GwHelp, GwMain, PluginManager
 from ginga.gw import Widgets, Viewers, Desktop
 from ginga import toolkit
+from ginga.fonts import font_asst
 
 # Version
 from ginga import __version__
@@ -135,8 +136,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         bindprefs = self.prefs.create_category('bindings')
         bindprefs.load(onError='silent')
 
-        self.settings.add_defaults(fixedFont='Monospace',
-                                   sansFont='Sans',
+        self.settings.add_defaults(fixedFont=None,
+                                   serifFont=None,
+                                   sansFont=None,
                                    channel_follows_focus=False,
                                    scrollbars='off',
                                    share_readout=True,
@@ -179,6 +181,33 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fo.register_type('image', AstroImage.AstroImage)
         fo.register_type('table', AstroTable.AstroTable)
         self.fits_opener = fo
+
+        # Try to load some bundled truetype fonts we might like to use
+        for font_name in font_asst.get_loadable_fonts():
+            self.logger.info("trying to load bundled font '%s'" % (font_name))
+            font_info = font_asst.get_font_info(font_name)
+            try:
+                GwHelp.load_font(font_name, font_info.font_path)
+
+            except Exception as e:
+                # quietly ignore font-loading problems for now--
+                # other fonts will be substituted
+                self.logger.warning("Error loading font '%s': %s" % (
+                    font_name, str(e)))
+                font_asst.remove_font(font_name)
+
+        # add user preferred fonts for aliases, if present
+        fixed_font = self.settings.get('fixedFont', None)
+        if fixed_font is not None:
+            font_asst.add_alias('fixed', fixed_font)
+
+        serif_font = self.settings.get('serifFont', None)
+        if serif_font is not None:
+            font_asst.add_alias('serif', serif_font)
+
+        sans_font = self.settings.get('sansFont', None)
+        if sans_font is not None:
+            font_asst.add_alias('sans', sans_font)
 
         # GUI initialization
         self.w = Bunch.Bunch()
@@ -438,7 +467,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         vbox.set_margins(4, 4, 4, 4)
         vbox.set_spacing(2)
 
-        msg_font = self.get_font("Courier", 12)
+        msg_font = self.get_font('fixed', 12)
         tw = Widgets.TextArea(wrap=False, editable=False)
         tw.set_font(msg_font)
         tw.set_text(help_txt)
@@ -1330,10 +1359,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def build_toplevel(self):
 
-        self.font = self.get_font('fixedFont', 12)
-        self.font11 = self.get_font('fixedFont', 11)
-        self.font14 = self.get_font('fixedFont', 14)
-        self.font18 = self.get_font('fixedFont', 18)
+        self.font = self.get_font('fixed', 12)
+        self.font11 = self.get_font('fixed', 11)
+        self.font14 = self.get_font('fixed', 14)
+        self.font18 = self.get_font('fixed', 18)
 
         self.w.tooltips = None
 

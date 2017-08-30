@@ -9,6 +9,7 @@ import numpy
 import cv2
 
 from ginga import colors
+from ginga.fonts import font_asst
 
 
 class Pen(object):
@@ -26,6 +27,7 @@ class Brush(object):
 class Font(object):
     def __init__(self, fontname='ariel', fontsize=12.0, color='black',
                  linewidth=1, alpha=1.0):
+        fontname = font_asst.resolve_alias(fontname, fontname)
         self.fontname = fontname
         self.fontsize = fontsize
         self.color = color
@@ -36,6 +38,12 @@ class Font(object):
         # TODO: currently there is only support for some simple built-in
         # fonts.  What kind of fonts/lookup can we use for this?
         self.font = cv2.FONT_HERSHEY_SIMPLEX
+
+def load_font(font_name, font_file):
+    # TODO!
+    ## raise ValueError("Loading fonts dynamically is an unimplemented"
+    ##                  " feature for cv back end")
+    return font_name
 
 
 class CvContext(object):

@@ -169,7 +169,9 @@ class TextEntry(WidgetBase):
     def set_editable(self, tf):
         self.widget.set_editable(tf)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.widget.modify_font(font)
 
     def set_length(self, numchars):
@@ -210,7 +212,9 @@ class TextEntrySet(WidgetBase):
     def set_editable(self, tf):
         self.entry.set_editable(tf)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.widget.modify_font(font)
 
     def set_length(self, numchars):
@@ -293,7 +297,9 @@ class TextArea(WidgetBase):
     def set_editable(self, tf):
         self.tw.set_editable(tf)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.tw.modify_font(font)
 
     def set_wrap(self, tf):
@@ -362,7 +368,9 @@ class Label(WidgetBase):
     def set_text(self, text):
         self.label.set_text(text)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.label.modify_font(font)
 
     def set_color(self, fg=None, bg=None):

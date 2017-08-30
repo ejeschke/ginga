@@ -95,6 +95,10 @@ class ImageViewPil(ImageView.ImageViewBase):
             return None
         return obuf
 
+    def get_rgb_image_as_bytes(self, format='png', quality=90):
+        buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
+        return buf.getvalue()
+
     def update_image(self):
         # subclass implements this method to actually update a widget
         # from the PIL surface

@@ -19,7 +19,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
-        self.msg_font = self.fv.get_font("fixedFont", 10)
+        self.msg_font = self.fv.get_font('fixed', 10)
 
         vbox = Widgets.VBox()
 

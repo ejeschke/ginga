@@ -103,4 +103,9 @@ class GingaViewerWidget(Widgets.Canvas):
             # TODO: dump traceback to debug log
 
 
+class GingaScrolledViewerWidget(GingaViewerWidget):
+    # until implemented
+    pass
+
+
 #END

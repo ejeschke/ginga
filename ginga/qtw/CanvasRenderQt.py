@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QPainter, QPen, \
-     QPolygonF, QPolygon, QColor, QPainterPath
+     QPolygonF, QPolygon, QColor, QPainterPath, get_font
 
 from ginga import colors
 from ginga.util.six.moves import map, zip
@@ -69,7 +69,8 @@ class RenderContext(object):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
-            self.cr.setFont(QFont(shape.font, pointSize=fontsize))
+            font = get_font(shape.font, fontsize)
+            self.cr.setFont(font)
 
     def initialize_from_shape(self, shape, line=True, fill=True, font=True):
         if line:
@@ -98,7 +99,8 @@ class RenderContext(object):
 
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
         self.set_line(color, alpha=alpha)
-        self.cr.setFont(QFont(fontname, pointSize=fontsize))
+        font = get_font(fontname, fontsize)
+        self.cr.setFont(font)
 
     def text_extents(self, text):
         fm = self.cr.fontMetrics()

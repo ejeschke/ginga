@@ -7,7 +7,6 @@
 import os.path
 import threading
 import time
-import re
 from functools import reduce
 
 from ginga.misc import Callback, Bunch, LineHistory
@@ -40,28 +39,7 @@ tab_idx = 0
 # reference to the created application
 _app = None
 
-default_font = "Arial 8"
-
-
-def _font_info(font_str):
-    """Extract font information from a font string, such as supplied to the
-    'font' argument to a widget.
-    """
-    vals = font_str.split(';')
-    point_size, style, weight = 8, 'normal', 'normal'
-    family = vals[0]
-    if len(vals) > 1:
-        style = vals[1]
-    if len(vals) > 2:
-        weight = vals[2]
-
-    match = re.match(r'^(.+)\s+(\d+)$', family)
-    if match:
-        family, point_size = match.groups()
-        point_size = int(point_size)
-
-    return Bunch.Bunch(family=family, point_size=point_size,
-                       style=style, weight=weight)
+default_font = PgHelp.font_info("Arial 8")
 
 
 # BASE
@@ -132,8 +110,11 @@ class WidgetBase(Callback.Callbacks):
     def hide(self):
         pass
 
-    def get_font(self, font_family, point_size):
-        font = '%s %s' % (font_family, point_size)
+    def get_font(self, font, size):
+        if PgHelp.font_regex.match(font) is None:
+            font = PgHelp.font_info('%s %d' % (font, size))
+        else:
+            font = PgHelp.font_info(font)
         return font
 
     def cfg_expand(self, horizontal=0, vertical=0):
@@ -178,7 +159,9 @@ class TextEntry(WidgetBase):
     def set_editable(self, tf):
         self.editable = tf
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.font = font
 
     def set_length(self, numchars):
@@ -219,7 +202,9 @@ class TextEntrySet(WidgetBase):
         app = self.get_app()
         app.do_operation('update_value', id=self.id, value=text)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.font = font
 
     def set_editable(self, tf):
@@ -281,7 +266,9 @@ class TextArea(WidgetBase):
     def set_editable(self, tf):
         self.editable = tf
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.font = font
 
     def set_wrap(self, tf):
@@ -320,7 +307,9 @@ class Label(WidgetBase):
         app = self.get_app()
         app.do_operation('update_label', id=self.id, value=text)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.font = font
 
     def set_color(self, fg=None, bg=None):
@@ -339,7 +328,7 @@ class Label(WidgetBase):
             style += ("color: %s; " % self.fgcolor)
         if self.bgcolor is not None:
             style += ("background-color: %s; " % self.bgcolor)
-        f_info = _font_info(self.font)
+        f_info = self.font
         style += ("font-family: %s; " % f_info.family)
         style += ("font-size: %s; " % f_info.point_size)
         style += ("font-style: %s; " % f_info.style)

@@ -9,6 +9,7 @@ import os.path
 import math
 
 from ginga.misc import Bunch, Callback
+from ginga.fonts import font_asst
 import ginga.toolkit
 
 import gi
@@ -858,8 +859,15 @@ def get_icon(iconpath, size=None):
     return pixbuf
 
 def get_font(font_family, point_size):
+    font_family = font_asst.resolve_alias(font_family, font_family)
     font = Pango.FontDescription('%s %d' % (font_family, point_size))
     return font
+
+def load_font(font_name, font_file):
+    # TODO!
+    ## raise ValueError("Loading fonts dynamically is an unimplemented"
+    ##                  " feature for gtk3 back end")
+    return font_name
 
 def pixbuf_new_from_xpm_data(xpm_data):
     xpm_data = bytes('\n'.join(xpm_data))

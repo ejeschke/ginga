@@ -11,6 +11,7 @@ from ginga import GingaPlugin, toolkit
 from ginga.misc import Bunch
 from ginga.gw import Widgets, Readout
 from ginga.ImageView import ImageViewNoDataError
+from ginga.fonts import font_asst
 
 
 class Cursor(GingaPlugin.GlobalPlugin):
@@ -58,6 +59,8 @@ class Cursor(GingaPlugin.GlobalPlugin):
     def _build_readout(self):
         readout = Readout.Readout(-1, 24)
 
+        font_name = font_asst.resolve_alias('fixed', 'Courier')
+
         # NOTE: Special hack for certain platforms, otherwise the font
         # on the readout is too small
         macos_ver = platform.mac_ver()[0]
@@ -66,9 +69,9 @@ class Cursor(GingaPlugin.GlobalPlugin):
             readout.set_font('monaco', 16)
         elif toolkit.get_family().startswith('gtk'):
             # Gtk
-            readout.set_font('fixed', 14)
+            readout.set_font(font_name, 14)
         else:
-            readout.set_font('fixed', 11)
+            readout.set_font(font_name, 11)
         return readout
 
     def build_gui(self, container):
