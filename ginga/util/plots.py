@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import numpy
-from astropy.utils.introspection import minversion
 
 import matplotlib as mpl
 from matplotlib.figure import Figure
@@ -16,7 +15,7 @@ from ginga.misc import Callback
 # fix issue of negative numbers rendering incorrectly with default font
 mpl.rcParams['axes.unicode_minus'] = False
 
-MPL_GE_2_0 = minversion(mpl, '2.0')
+MPL_GE_2_0 = mpl.__version__[0] not in ('0', '1')
 
 
 class Plot(Callback.Callbacks):
@@ -274,35 +273,40 @@ class ContourPlot(Plot):
         x = int(self.plot_panx * wd)
         y = int(self.plot_pany * ht)
 
-        if self.plot_zoomlevel >= 1.0:
-            scalefactor = 1.0 / self.plot_zoomlevel
-        elif self.plot_zoomlevel < -1.0:
-            scalefactor = - self.plot_zoomlevel
+        zval = self.plot_zoomlevel
+        if zval >= 0.0:
+            zval += 1
+
+        if zval >= 1.0:
+            scalefactor = 1.0 / zval
+        elif zval < -1.0:
+            scalefactor = - zval
         else:
             # wierd condition?--reset to 1:1
             scalefactor = 1.0
-            self.plot_zoomlevel = 1.0
+            zval = self.plot_zoomlevel = 1.0
 
-        xdelta = int(scalefactor * (wd/2.0))
-        ydelta = int(scalefactor * (ht/2.0))
-        xlo, xhi = x-xdelta, x+xdelta
+        xdelta = int(scalefactor * (wd / 2.0))
+        ydelta = int(scalefactor * (ht / 2.0))
+
+        xlo, xhi = x - xdelta, x + xdelta
         # distribute remaining x space from plot
         if xlo < 0:
             xsh = abs(xlo)
-            xlo, xhi = 0, min(wd-1, xhi+xsh)
+            xlo, xhi = 0, min(wd - 1, xhi + xsh)
         elif xhi >= wd:
             xsh = xhi - wd
-            xlo, xhi = max(0, xlo-xsh), wd-1
+            xlo, xhi = max(0, xlo - xsh), wd - 1
         self.ax.set_xlim(xlo, xhi)
 
-        ylo, yhi = y-ydelta, y+ydelta
+        ylo, yhi = y - ydelta, y + ydelta
         # distribute remaining y space from plot
         if ylo < 0:
             ysh = abs(ylo)
-            ylo, yhi = 0, min(ht-1, yhi+ysh)
+            ylo, yhi = 0, min(ht - 1, yhi + ysh)
         elif yhi >= ht:
             ysh = yhi - ht
-            ylo, yhi = max(0, ylo-ysh), ht-1
+            ylo, yhi = max(0, ylo - ysh), ht - 1
         self.ax.set_ylim(ylo, yhi)
 
         self.draw()

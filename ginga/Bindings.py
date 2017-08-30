@@ -188,7 +188,7 @@ class ImageViewBindings(object):
             pan_reverse = False,
             pan_multiplier = 1.0,
             pan_min_scroll_thumb_pct = 0.0,
-            pan_max_scroll_thumb_pct = 0.8,
+            pan_max_scroll_thumb_pct = 1.0,
             zoom_scroll_reverse = False,
 
             # MOUSE/BUTTON
@@ -580,7 +580,7 @@ class ImageViewBindings(object):
 
         # calculate the width of the slider arms as a ratio
         min_pct = self.settings.get('pan_min_scroll_thumb_pct', 0.0)
-        max_pct = self.settings.get('pan_max_scroll_thumb_pct', 0.8)
+        max_pct = self.settings.get('pan_max_scroll_thumb_pct', 1.0)
         xthm_pct = max(min_pct, min(abs_x / (rx2 - rx1), max_pct))
         ythm_pct = max(min_pct, min(abs_y / (ry2 - ry1), max_pct))
 

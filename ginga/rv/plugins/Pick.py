@@ -356,8 +356,8 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # For contour plot
         self.num_contours = self.settings.get('num_contours', 8)
-        self.contour_size_max = self.settings.get('contour_size_limit', 70)
-        self.contour_size_min = self.settings.get('contour_size_min', 10)
+        self.contour_size_max = self.settings.get('contour_size_limit', 100)
+        self.contour_size_min = self.settings.get('contour_size_min', 30)
         self.contour_interpolation = self.settings.get('contour_interpolation',
                                                        'bilinear')
 
@@ -445,9 +445,11 @@ class Pick(GingaPlugin.LocalPlugin):
             zoom = Widgets.Slider(orientation='vertical', track=True)
             zoom.set_limits(1, max_z, incr_value=1)
             zoom.set_value(zv)
+            self.w.zoom_sldr = zoom
 
             def zoom_contour_cb(w, val):
-                self.contour_plot.plot_zoom(val / 10.0)
+                zl = val / 10.0
+                self.contour_plot.plot_zoom(zl)
 
             zoom.add_callback('value-changed', zoom_contour_cb)
             hbox.add_widget(zoom, stretch=0)
@@ -997,7 +999,7 @@ class Pick(GingaPlugin.LocalPlugin):
             recut = True
 
         if recut:
-            radius = max(wd, ht)
+            radius = max(wd, ht) // 2
 
             if self.pick_qs is not None:
                 x, y = self.pick_qs.x, self.pick_qs.y
@@ -1012,6 +1014,10 @@ class Pick(GingaPlugin.LocalPlugin):
         try:
             self.contour_plot.plot_contours_data(x, y, data,
                                                  num_contours=self.num_contours)
+            # make zoom control match contour zoom
+            zl = self.contour_plot.plot_zoomlevel
+            zv = int(round(max(1, min(zl * 10, 100))))
+            self.w.zoom_sldr.set_value(zv)
 
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (

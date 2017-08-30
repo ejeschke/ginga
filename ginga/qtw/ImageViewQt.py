@@ -613,6 +613,7 @@ class QtEventMixin(object):
                 dx, dy = point.x(), point.y()
 
                 # Synthesize this as a pan gesture event
+                event.accept()
                 self.make_ui_callback('pan', 'start', 0, 0)
                 self.make_ui_callback('pan', 'move', dx, dy)
                 return self.make_ui_callback('pan', 'stop', 0, 0)
