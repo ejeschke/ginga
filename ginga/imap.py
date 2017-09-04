@@ -1,13 +1,10 @@
 #
 # imap.py -- intensity maps for fits viewing
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy
+#import numpy as np
 
 # Some built in intensity maps
 
@@ -3384,7 +3381,7 @@ min_imap_len = 256
 class IntensityMap(object):
     def __init__(self, name, ilst):
         self.name = name
-        #self.arr = numpy.array(ilst)
+        #self.arr = np.array(ilst)
         self.ilst = ilst
 
 def add_imap(name, ilst):
@@ -3395,10 +3392,15 @@ def add_imap(name, ilst):
     imaps[name] = IntensityMap(name, ilst)
 
 def get_imap(name):
-    """Get an intensity map array.  May raise a KeyError if a map of the given name
-    does not exist.
+    """Get an intensity map array.
+    Will raise a KeyError if a map of the given name does not exist.
     """
     return imaps[name]
+
+def has_imap(name):
+    """Does intensity map exist? Return True/False
+    """
+    return name in cmaps
 
 def get_names():
     res = list(imaps.keys())

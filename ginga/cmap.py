@@ -8,9 +8,9 @@ from __future__ import absolute_import, print_function
 from .util import six
 from .util.six.moves import map, zip
 
-import numpy
+import numpy as np
 
-__all__ = ['ColorMap', 'add_cmap', 'get_cmap', 'get_names',
+__all__ = ['ColorMap', 'add_cmap', 'get_cmap', 'has_cmap', 'get_names',
            'matplotlib_to_ginga_cmap', 'add_matplotlib_cmap',
            'add_matplotlib_cmaps']
 
@@ -13259,11 +13259,15 @@ def add_cmap(name, clst):
 
 
 def get_cmap(name):
-    """Get a color map array.  May raise a KeyError if a map of the given name
-    does not exist.
+    """Get a color map array.
+    Will raise a KeyError if a map of the given name does not exist.
     """
     return cmaps[name]
 
+def has_cmap(name):
+    """Does color map exist? Return True/False
+    """
+    return name in cmaps
 
 def get_names():
     """Get colormap names."""
@@ -13276,8 +13280,8 @@ def matplotlib_to_ginga_cmap(cm, name=None):
     """Convert matplotlib colormap to Ginga's."""
     if name is None:
         name = cm.name
-    arr = cm(numpy.arange(min_cmap_len))
-    clst = tuple(map(lambda rec: tuple(rec)[:3], arr))
+    arr = cm(np.arange(0, min_cmap_len) / np.float(min_cmap_len - 1))
+    clst = arr[:, 0:3]
     return ColorMap(name, clst)
 
 def ginga_to_matplotlib_cmap(cm, name=None):
@@ -13285,8 +13289,8 @@ def ginga_to_matplotlib_cmap(cm, name=None):
     if name is None:
         name = cm.name
     from matplotlib.colors import ListedColormap
-    carr = numpy.asarray(cm.clst)
-    mpl_cm = ListedColormap(carr, name=name, N=256)
+    carr = np.asarray(cm.clst)
+    mpl_cm = ListedColormap(carr, name=name, N=len(carr))
     return mpl_cm
 
 def add_matplotlib_cmap(cm, name=None):
@@ -13313,8 +13317,8 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
             cm = _cm.get_cmap(name)
             add_matplotlib_cmap(cm, name=name)
         except Exception as e:
-            print("Error adding colormap '%s': %s" % (name, str(e)))
-            #pass
+            if fail_on_import_error:
+                print("Error adding colormap '%s': %s" % (name, str(e)))
 
 
 # Add colormaps from this file
@@ -13323,5 +13327,8 @@ for name, value in list(globals().items()):
     if name.startswith('cmap_'):
         key = name[5:]
         add_cmap(key, value)
+
+# by default add matplotlib colormaps, if available
+add_matplotlib_cmaps(fail_on_import_error=False)
 
 #END

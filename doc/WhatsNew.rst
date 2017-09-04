@@ -12,6 +12,8 @@ Ver 2.6.6.dev
     if you get a "Not implemented yet" exception bubbling up from a
     method called cairo.ImageSurface.create_for_data()
 - Addition of a "Quick Mode" to the Pick plugin--see documentation
+- More consistent font handing between widgets and Ginga canvases 
+- Bug fix for importing some types of matplotlib color maps
 
 Ver 2.6.5 (2017-07-31)
 ======================
