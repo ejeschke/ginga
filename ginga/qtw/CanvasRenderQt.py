@@ -21,6 +21,7 @@ class RenderContext(object):
 
         # TODO: encapsulate this drawable
         self.cr = QPainter(self.viewer.pixmap)
+        self.cr.setRenderHint(QPainter.Antialiasing)
 
     def __get_color(self, color, alpha):
         clr = QColor()

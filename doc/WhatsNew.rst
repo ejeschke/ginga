@@ -14,6 +14,7 @@ Ver 2.6.6.dev
 - Addition of a "Quick Mode" to the Pick plugin--see documentation
 - More consistent font handing between widgets and Ginga canvases 
 - Bug fix for importing some types of matplotlib color maps
+- Add antialiasing for Qt back end
 
 Ver 2.6.5 (2017-07-31)
 ======================
