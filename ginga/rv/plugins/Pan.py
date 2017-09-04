@@ -88,6 +88,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         pi.set_callback('none-move', self.motion_cb)
         pi.set_callback('zoom-scroll', self.zoom_cb)
         pi.set_callback('zoom-pinch', self.zoom_pinch_cb)
+        pi.set_callback('pan-pan', self.pan_pan_cb)
         pi.set_callback('configure', self.reconfigure)
         # for debugging
         pi.set_name('panimage')
@@ -366,6 +367,17 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         if hasattr(bd, 'pi_zoom'):
             return bd.pi_zoom(chviewer, event)
+
+        return False
+
+    def pan_pan_cb(self, fitsimage, event):
+        """Pan event in the pan window.  Just pan the channel viewer.
+        """
+        chviewer = self.fv.getfocus_viewer()
+        bd = chviewer.get_bindings()
+
+        if hasattr(bd, 'pa_pan'):
+            return bd.pa_pan(chviewer, event)
 
         return False
 

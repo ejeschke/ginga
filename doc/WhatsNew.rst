@@ -15,6 +15,8 @@ Ver 2.6.6.dev
 - More consistent font handing between widgets and Ginga canvases 
 - Bug fix for importing some types of matplotlib color maps
 - Add antialiasing for Qt back end
+- Bug fixes and enhancements for Qt gestures
+  - holding shift with pinch now keeps position under cursor
 
 Ver 2.6.5 (2017-07-31)
 ======================

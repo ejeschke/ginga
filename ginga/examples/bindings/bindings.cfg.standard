@@ -183,6 +183,7 @@ mouse_rotate_acceleration = 0.75
 # "scroll zoom" (sc_zoom*) features above because the two kinds don't play
 # well together.
 pi_zoom = ['pinch']
+pi_zoom_origin = ['shift+pinch']
 pa_pan = ['pan']
 
 # This controls what operations the pinch gesture controls.  Possibilities are

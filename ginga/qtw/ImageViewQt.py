@@ -595,6 +595,8 @@ class QtEventMixin(object):
 
     def scroll_event(self, widget, event):
         x, y = event.x(), event.y()
+        # accept event here so it doesn't get propagated to parent
+        event.accept()
         self.last_win_x, self.last_win_y = x, y
 
         data_x, data_y = self.check_cursor_location()
@@ -613,7 +615,6 @@ class QtEventMixin(object):
                 dx, dy = point.x(), point.y()
 
                 # Synthesize this as a pan gesture event
-                event.accept()
                 self.make_ui_callback('pan', 'start', 0, 0)
                 self.make_ui_callback('pan', 'move', dx, dy)
                 return self.make_ui_callback('pan', 'stop', 0, 0)

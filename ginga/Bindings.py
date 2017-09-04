@@ -219,6 +219,7 @@ class ImageViewBindings(object):
 
             # GESTURES (some backends only)
             pi_zoom = ['pinch'],
+            pi_zoom_origin = ['shift+pinch'],
             pa_pan = ['pan'],
 
             pinch_actions = ['zoom'],
@@ -687,12 +688,12 @@ class ImageViewBindings(object):
         """
         Translate a direction in compass degrees into 'up' or 'down'.
         """
-        if (direction < 90.0) or (direction > 270.0):
+        if (direction < 90.0) or (direction >= 270.0):
             if not rev:
                 return 'up'
             else:
                 return 'down'
-        elif (90.0 < direction < 270.0):
+        elif (90.0 <= direction < 270.0):
             if not rev:
                 return 'down'
             else:
@@ -1851,7 +1852,7 @@ class ImageViewBindings(object):
 
             if origin is not None:
                 # get cartesian canvas coords of data item under cursor
-                data_x, data_y = origin
+                data_x, data_y = origin[:2]
                 off_x, off_y = viewer.data_to_offset(data_x, data_y)
                 # set the pan position to the data item
                 viewer.set_pan(data_x, data_y)
@@ -2015,43 +2016,6 @@ class ImageViewBindings(object):
 
     ##### GESTURE ACTION CALLBACKS #####
 
-    def gs_pinch(self, viewer, state, rot_deg, scale, msg=True):
-        pinch_actions = self.settings.get('pinch_actions', [])
-        if state == 'start':
-            self._start_scale_x, self._start_scale_y = viewer.get_scale_xy()
-            self._start_rot = viewer.get_rotation()
-
-        else:
-            msg_str = None
-            if self.canzoom and ('zoom' in pinch_actions):
-                scale_accel = self.settings.get('pinch_zoom_acceleration', 1.0)
-                scale = scale * scale_accel
-                # NOTE: scale reported by Qt (the only toolkit that really gives
-                # us a pinch gesture right now) the scale reports are iterative
-                # so it makes more sense to keep updating the scale than to base
-                # the scale on the original scale captured when the gesture starts
-                ## scale_x, scale_y = (self._start_scale_x * scale,
-                ##                     self._start_scale_y * scale)
-                scale_x, scale_y = viewer.get_scale_xy()
-                scale_x, scale_y = scale_x * scale, scale_y * scale
-
-                viewer.scale_to(scale_x, scale_y)
-                msg_str = viewer.get_scale_text()
-                msg = self.settings.get('msg_zoom', True)
-
-            if self.canrotate and ('rotate' in pinch_actions):
-                deg = self._start_rot - rot_deg
-                rotate_accel = self.settings.get('pinch_rotate_acceleration', 1.0)
-                deg = rotate_accel * deg
-                viewer.rotate(deg)
-                if msg_str is None:
-                    msg_str = "Rotate: %.2f" % (deg)
-                    msg = self.settings.get('msg_rotate', msg)
-
-            if msg and (msg_str is not None):
-                viewer.onscreen_message(msg_str, delay=0.4)
-        return True
-
     def gs_pan(self, viewer, state, dx, dy, msg=True):
         if not self.canpan:
             return True
@@ -2138,8 +2102,73 @@ class ImageViewBindings(object):
                 viewer.onscreen_message(msg_str, delay=0.4)
         return True
 
+    def _pinch_zoom_rotate(self, viewer, state, rot_deg, scale, msg=True,
+                           origin=None):
+        pinch_actions = self.settings.get('pinch_actions', [])
+
+        with viewer.suppress_redraw:
+
+            if state == 'start':
+                self._start_scale_x, self._start_scale_y = viewer.get_scale_xy()
+                self._start_rot = viewer.get_rotation()
+                return True
+
+            if origin is not None:
+                # get cartesian canvas coords of data item under cursor
+                data_x, data_y = origin[:2]
+                off_x, off_y = viewer.data_to_offset(data_x, data_y)
+                # set the pan position to the data item
+                viewer.set_pan(data_x, data_y)
+
+            msg_str = None
+            if self.canzoom and ('zoom' in pinch_actions):
+                # scale by the desired means
+                scale_accel = self.settings.get('pinch_zoom_acceleration', 1.0)
+                scale = scale * scale_accel
+                # NOTE: scale reported by Qt (the only toolkit that really gives
+                # us a pinch gesture right now) the scale reports are iterative
+                # so it makes more sense to keep updating the scale than to base
+                # the scale on the original scale captured when the gesture starts
+                ## scale_x, scale_y = (self._start_scale_x * scale,
+                ##                     self._start_scale_y * scale)
+                scale_x, scale_y = viewer.get_scale_xy()
+                scale_x, scale_y = scale_x * scale, scale_y * scale
+
+                viewer.scale_to(scale_x, scale_y)
+                msg_str = viewer.get_scale_text()
+                msg = self.settings.get('msg_zoom', True)
+
+            if self.canrotate and ('rotate' in pinch_actions):
+                deg = self._start_rot - rot_deg
+                rotate_accel = self.settings.get('pinch_rotate_acceleration', 1.0)
+                deg = rotate_accel * deg
+                viewer.rotate(deg)
+                if msg_str is None:
+                    msg_str = "Rotate: %.2f" % (deg)
+                    msg = self.settings.get('msg_rotate', msg)
+
+            if origin is not None:
+                # now adjust the pan position to keep the offset
+                data_x2, data_y2 = viewer.offset_to_data(off_x, off_y)
+                dx, dy = data_x2 - data_x , data_y2 - data_y
+                viewer.panset_xy(data_x - dx, data_y - dy)
+
+            if msg and (msg_str is not None):
+                viewer.onscreen_message(msg_str, delay=0.4)
+
+        return True
+
+    def gs_pinch(self, viewer, state, rot_deg, scale, msg=True):
+        return self._pinch_zoom_rotate(viewer, state, rot_deg, scale, msg=msg)
+
     def pi_zoom(self, viewer, event, msg=True):
-        return self.gs_pinch(viewer, event.state, event.rot_deg, event.scale, msg=msg)
+        return self._pinch_zoom_rotate(viewer, event.state, event.rot_deg,
+                                       event.scale, msg=msg)
+
+    def pi_zoom_origin(self, viewer, event, msg=True):
+        origin = (event.data_x, event.data_y)
+        return self._pinch_zoom_rotate(viewer, event.state, event.rot_deg,
+                                       event.scale, msg=msg, origin=origin)
 
     def pa_pan(self, viewer, event, msg=True):
         return self.gs_pan(viewer, event.state, event.delta_x, event.delta_y, msg=msg)
@@ -2297,7 +2326,8 @@ class ScrollEvent(UIEvent):
 
 class PinchEvent(UIEvent):
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
-                 rot_deg=None, scale=None, viewer=None):
+                 rot_deg=None, scale=None, data_x=None, data_y=None,
+                 viewer=None):
         super(PinchEvent, self).__init__()
         self.button = button
         self.state = state
@@ -2305,11 +2335,14 @@ class PinchEvent(UIEvent):
         self.modifiers = modifiers
         self.rot_deg = rot_deg
         self.scale = scale
+        self.data_x = data_x
+        self.data_y = data_y
         self.viewer = viewer
 
 class PanEvent(UIEvent):
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
-                 delta_x=None, delta_y=None, viewer=None):
+                 delta_x=None, delta_y=None, data_x=None, data_y=None,
+                 viewer=None):
         super(PanEvent, self).__init__()
         self.button = button
         self.state = state
@@ -2317,6 +2350,8 @@ class PanEvent(UIEvent):
         self.modifiers = modifiers
         self.delta_x = delta_x
         self.delta_y = delta_y
+        self.data_x = data_x
+        self.data_y = data_y
         self.viewer = viewer
 
 class BindingMapError(Exception):
@@ -2814,9 +2849,11 @@ class BindingMapper(Callback.Callbacks):
                 idx = None
                 cbname = 'pinch-%s' % (str(self._kbdmode).lower())
 
+        last_x, last_y = viewer.get_last_data_xy()
         event = PinchEvent(button=button, state=state, mode=self._kbdmode,
-                            modifiers=self._modifiers, viewer=viewer,
-                            rot_deg=rot_deg, scale=scale)
+                           modifiers=self._modifiers, viewer=viewer,
+                           rot_deg=rot_deg, scale=scale,
+                           data_x=last_x, data_y=last_y)
 
         self.logger.debug("making callback for %s (mode=%s)" % (
             cbname, self._kbdmode))
@@ -2842,9 +2879,11 @@ class BindingMapper(Callback.Callbacks):
                 idx = None
                 cbname = 'pan-%s' % (str(self._kbdmode).lower())
 
+        last_x, last_y = viewer.get_last_data_xy()
         event = PanEvent(button=button, state=state, mode=self._kbdmode,
                          modifiers=self._modifiers, viewer=viewer,
-                         delta_x=delta_x, delta_y=delta_y)
+                         delta_x=delta_x, delta_y=delta_y,
+                         data_x=last_x, data_y=last_y)
 
         self.logger.debug("making callback for %s (mode=%s)" % (
             cbname, self._kbdmode))

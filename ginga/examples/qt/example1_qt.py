@@ -96,7 +96,7 @@ def main(options, args):
     # ginga needs a logger.
     # If you don't want to log anything you can create a null logger by
     # using null=True in this call instead of log_stderr=True
-    logger = log.get_logger("example1", log_stderr=True)
+    logger = log.get_logger("example1", log_stderr=True, level=40)
 
     w = FitsViewer(logger)
     w.resize(524, 540)
