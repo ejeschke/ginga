@@ -93,7 +93,12 @@ class RenderContext(object):
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         fontdict = self.font.get_fontdict()
-        self.cr.axes.text(cx, cy, text, fontdict=fontdict)
+        self.cr.push(allow=['alpha', 'color'])
+        self.cr.set(rotation=rot_deg)
+
+        self.cr.axes.text(cx, cy, text, fontdict=fontdict,
+                          **self.cr.kwdargs)
+        self.cr.pop()
 
     def draw_polygon(self, cpoints):
         self.cr.init(closed=True, transform=None)

@@ -117,11 +117,15 @@ class ImageViewPil(ImageView.ImageViewBase):
 
 
 class CanvasView(ImageViewPil):
+    """This class is defined to provide a non-event handling invisible
+    viewer.
+    """
 
     def __init__(self, logger=None, settings=None, rgbmap=None,
                  bindmap=None, bindings=None):
         ImageViewPil.__init__(self, logger=logger, settings=settings,
                               rgbmap=rgbmap)
+        self.defer_redraw = False
 
         # Needed for UIMixin to propagate events correctly
         self.objects = [self.private_canvas]
@@ -135,5 +139,8 @@ class CanvasView(ImageViewPil):
     def update_image(self):
         # no widget to update
         pass
+
+    def configure_window(self, width, height):
+        return super(CanvasView, self).configure_surface(width, height)
 
 #END

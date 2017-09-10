@@ -288,11 +288,27 @@ class ImageViewMpl(ImageView.ImageViewBase):
         return ax
 
     def get_png_image_as_buffer(self, output=None):
-        ibuf = output
-        if ibuf is None:
-            ibuf = BytesIO()
-        qimg = self.figure.write_to_png(ibuf)
-        return ibuf
+        """DO NOT USE: *** TO BE DEPRECATED ***
+        Use get_rgb_image_as_buffer() instead.
+        """
+        return self.get_rgb_image_as_buffer(output=output, format='png')
+
+    def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
+        if self.figure is None:
+            raise ImageViewMplError("No matplotlib figure defined")
+
+        obuf = output
+        if obuf is None:
+            obuf = BytesIO()
+
+        qimg = self.figure.savefig(obuf, format=format, pad_inches=0)
+        if output is not None:
+            return None
+        return obuf
+
+    def get_rgb_image_as_bytes(self, format='png', quality=90):
+        buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
+        return buf.getvalue()
 
     def update_image(self):
         pass

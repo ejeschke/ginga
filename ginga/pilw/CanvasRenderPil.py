@@ -98,6 +98,7 @@ class RenderContext(object):
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         wd, ht = self.cr.text_extents(text, self.font)
 
+        # NOTE: rotation ignored in PIL, for now
         self.cr.text((cx, cy-ht), text, self.font, self.pen)
 
     def draw_polygon(self, cpoints):

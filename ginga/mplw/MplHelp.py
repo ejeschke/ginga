@@ -15,9 +15,9 @@ class Pen(object):
     def __init__(self, color='black', linewidth=1, linestyle='solid'):
         self.color = color
         self.linewidth = linewidth
-        self.linestyle = 'solid'
         if linestyle == 'dash':
-            self.linestyle = 'dashdot'
+            linestyle = 'dashdot'
+        self.linestyle = linestyle
 
 
 class Brush(object):
@@ -51,6 +51,7 @@ class MplContext(object):
     def __init__(self, axes):
         self.axes = axes
         self.kwdargs = dict()
+        self.stack = []
 
     def set_canvas(self, axes):
         self.axes = axes
@@ -61,6 +62,15 @@ class MplContext(object):
 
     def set(self, **kwdargs):
         self.kwdargs.update(kwdargs)
+
+    def push(self, allow=[]):
+        self.stack.append(self.kwdargs.copy())
+        d = { name: self.kwdargs[name]
+              for name in allow if name in self.kwdargs }
+        self.kwdargs = d
+
+    def pop(self):
+        self.kwdargs = self.stack.pop()
 
     def update_fill(self, brush):
         if brush is None:

@@ -116,4 +116,31 @@ class ImageViewCv(ImageView.ImageViewBase):
         self.delayed_redraw()
 
 
+class CanvasView(ImageViewCv):
+    """This class is defined to provide a non-event handling invisible
+    viewer.
+    """
+
+    def __init__(self, logger=None, settings=None, rgbmap=None,
+                 bindmap=None, bindings=None):
+        ImageViewCv.__init__(self, logger=logger, settings=settings,
+                              rgbmap=rgbmap)
+        self.defer_redraw = False
+
+        # Needed for UIMixin to propagate events correctly
+        self.objects = [self.private_canvas]
+
+    def set_canvas(self, canvas, private_canvas=None):
+        super(CanvasView, self).set_canvas(canvas,
+                                           private_canvas=private_canvas)
+
+        self.objects[0] = self.private_canvas
+
+    def update_image(self):
+        # no widget to update
+        pass
+
+    def configure_window(self, width, height):
+        return super(CanvasView, self).configure_surface(width, height)
+
 #END
