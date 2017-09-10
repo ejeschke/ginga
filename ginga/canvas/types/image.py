@@ -56,9 +56,9 @@ class Image(OnePointMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ## Param(name='flipy', type=_bool,
-            ##       default=True, valid=[False, True],
-            ##       description="Flip image in Y direction"),
+            Param(name='flipy', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Flip image in Y direction"),
             Param(name='optimize', type=_bool,
                   default=True, valid=[False, True],
                   description="Optimize rendering for this object"),
@@ -153,8 +153,7 @@ class Image(OnePointMixin, CanvasObjectBase):
             xmax = int(np.ceil(np.max(pts[0])))
             ymax = int(np.ceil(np.max(pts[1])))
 
-            # destination location in data_coords
-            #dst_x, dst_y = self.x, self.y + ht
+            # get destination location in data_coords
             dst_x, dst_y = self.crdmap.to_data((self.x, self.y))
 
             a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
@@ -179,7 +178,6 @@ class Image(OnePointMixin, CanvasObjectBase):
 
             res = self.image.get_scaled_cutout2((a1, b1), (a2, b2),
                                                 (_scale_x, _scale_y),
-                                                #flipy=self.flipy,
                                                 method=self.interpolation)
 
             # don't ask for an alpha channel from overlaid image if it
@@ -193,7 +191,10 @@ class Image(OnePointMixin, CanvasObjectBase):
             ##                                          image_order)
             ## else:
             ##     cache.cutout = res.data
-            cache.cutout = res.data
+            data = res.data
+            if self.flipy:
+                data = np.flipud(data)
+            cache.cutout = data
 
             # calculate our offset from the pan position
             pan_x, pan_y = viewer.get_pan()
@@ -355,7 +356,7 @@ class NormImage(Image):
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
             ## Param(name='flipy', type=_bool,
-            ##       default=True, valid=[False, True],
+            ##       default=False, valid=[False, True],
             ##       description="Flip image in Y direction"),
             Param(name='optimize', type=_bool,
                   default=True, valid=[False, True],
