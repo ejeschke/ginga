@@ -152,8 +152,8 @@ class Histogram(AutoCutsBase):
             if count < (self.crop_radius ** 2.0) * 0.50:
                 # if we have less than 50% finite pixels then fall back
                 # to using the whole array
-                self.logger.info("too many non-finite values in crop--"
-                                 "falling back to full image data")
+                self.logger.debug("too many non-finite values in crop--"
+                                  "falling back to full image data")
                 data = image.get_data()
         else:
             data = image.get_data()

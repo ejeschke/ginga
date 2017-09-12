@@ -5,14 +5,14 @@
 # Please see the file LICENSE.txt for details.
 #
 import threading
-import numpy
+import numpy as np
 import time
 from collections import OrderedDict
 
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
-from ginga.util import iqcalc, wcs
-from ginga import GingaPlugin, colors
+from ginga.util import iqcalc, wcs, contour
+from ginga import GingaPlugin, colors, cmap, trcalc
 from ginga.util.six.moves import map
 
 try:
@@ -230,6 +230,13 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pick_obj = None
         self._textlabel = 'Pick'
 
+        self.contour_image = None
+        self.contour_plot = None
+        self.fwhm_plot = None
+        self.radial_plot = None
+        self.cuts_plot = None
+        self.contour_interp_methods = trcalc.interpolation_methods
+
         # types of pick shapes that can be drawn
         self.drawtypes = ['rectangle', 'box', 'squarebox',
                           'circle', 'ellipse',
@@ -267,7 +274,6 @@ class Pick(GingaPlugin.LocalPlugin):
                                                   30.0)
 
         self.iqcalc = iqcalc.IQCalc(self.logger)
-        self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
         self.copy_attrs = ['transforms', 'cutlevels', 'autocuts']
         if (self.settings.get('pick_cmap_name', None) is None and
                 self.settings.get('pick_imap_name', None) is None):
@@ -359,7 +365,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.contour_size_max = self.settings.get('contour_size_limit', 100)
         self.contour_size_min = self.settings.get('contour_size_min', 30)
         self.contour_interpolation = self.settings.get('contour_interpolation',
-                                                       'bilinear')
+                                                       'nearest')
 
     def build_gui(self, container):
         assert iqcalc.have_scipy is True, \
@@ -385,7 +391,9 @@ class Pick(GingaPlugin.LocalPlugin):
         di.set_desired_size(width, height)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
-        di.zoom_to(3)
+        di.set_zoom_algorithm('rate')
+        di.set_zoomrate(1.6)
+        di.zoom_to(2)
         settings = di.get_settings()
         settings.get_setting('zoomlevel').add_callback('set', self.zoomset, di)
 
@@ -411,7 +419,7 @@ class Pick(GingaPlugin.LocalPlugin):
         bd.enable_cuts(True)
         bd.enable_cmap(True)
 
-        di.configure(width, height)
+        di.set_desired_size(width, height)
 
         p_canvas = di.get_canvas()
         tag = p_canvas.add(self.dc.Point(width / 2, height / 2, 5,
@@ -422,38 +430,88 @@ class Pick(GingaPlugin.LocalPlugin):
         iw.resize(width, height)
         nb.add_widget(iw, title="Image")
 
-        if have_mpl:
-            # Contour plot
-            hbox = Widgets.HBox()
-            self.contour_plot = plots.ContourPlot(logger=self.logger,
-                                                  width=width, height=height)
-            if plots.MPL_GE_2_0:
-                kwargs = {'facecolor': 'black'}
+        if contour.have_skimage:
+            # Contour plot, Ginga-style
+            ci = Viewers.CanvasView(logger=self.logger)
+            width, height = 400, 300
+            ci.set_desired_size(width, height)
+            ci.enable_autozoom('once')
+            ci.enable_autocuts('override')
+            ci.set_zoom_algorithm('rate')
+            ci.set_zoomrate(1.6)
+            ci.zoom_to(3)
+            ci.set_autocut_params('histogram')
+
+            t_ = ci.get_settings()
+            if self.contour_interpolation not in self.contour_interp_methods:
+                self.contour_interpolation = 'basic'
+            t_.set(interpolation=self.contour_interpolation)
+
+            ci.set_bg(0.4, 0.4, 0.4)
+            # for debugging
+            ci.set_name('contour_image')
+
+            self.contour_canvas = self.dc.DrawingCanvas()
+            ci.get_canvas().add(self.contour_canvas)
+            if cmap.has_cmap('RdYlGn_r'):
+                ci.set_color_map('RdYlGn_r')
             else:
-                kwargs = {'axisbg': 'black'}
-            self.contour_plot.add_axis(**kwargs)
-            pw = Plot.PlotWidget(self.contour_plot)
-            pw.resize(width, height)
-            hbox.add_widget(pw, stretch=1)
+                ci.set_color_map('pastel')
+            ci.show_color_bar(True)
+            self.contour_image = ci
 
-            # calc contour zoom setting
-            max_z = 100
-            zv = int(numpy.sqrt(self.dx**2 + self.dy**2) * 0.15)
-            zv = max(1, min(zv, 100))
-            self.contour_plot.plot_zoomlevel = zv
+            bd = ci.get_bindings()
+            bd.enable_pan(True)
+            bd.enable_zoom(True)
+            bd.enable_cuts(True)
+            bd.enable_cmap(True)
 
-            zoom = Widgets.Slider(orientation='vertical', track=True)
-            zoom.set_limits(1, max_z, incr_value=1)
-            zoom.set_value(zv)
-            self.w.zoom_sldr = zoom
+            ci.set_desired_size(width, height)
 
-            def zoom_contour_cb(w, val):
-                zl = val / 10.0
-                self.contour_plot.plot_zoom(zl)
+            ciw = Viewers.GingaScrolledViewerWidget(viewer=ci)
+            ciw.scroll_bars(horizontal='on', vertical='on')
+            ciw.resize(width, height)
 
-            zoom.add_callback('value-changed', zoom_contour_cb)
-            hbox.add_widget(zoom, stretch=0)
-            nb.add_widget(hbox, title="Contour")
+            nb.add_widget(ciw, title="Contour")
+
+        if have_mpl:
+            if not contour.have_skimage:
+                # Contour plot
+                hbox = Widgets.HBox()
+                self.contour_plot = plots.ContourPlot(logger=self.logger,
+                                                      width=width, height=height)
+                if plots.MPL_GE_2_0:
+                    kwargs = {'facecolor': 'black'}
+                else:
+                    kwargs = {'axisbg': 'black'}
+                self.contour_plot.add_axis(**kwargs)
+                pw = Plot.PlotWidget(self.contour_plot)
+                pw.resize(width, height)
+                hbox.add_widget(pw, stretch=1)
+
+                self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
+                if self.contour_interpolation not in self.contour_interp_methods:
+                    self.contour_interpolation = 'nearest'
+                self.contour_plot.interpolation = self.contour_interpolation
+
+                # calc contour zoom setting
+                max_z = 100
+                zv = int(np.sqrt(self.dx**2 + self.dy**2) * 0.15)
+                zv = max(1, min(zv, 100))
+                self.contour_plot.plot_zoomlevel = zv
+
+                zoom = Widgets.Slider(orientation='vertical', track=True)
+                zoom.set_limits(1, max_z, incr_value=1)
+                zoom.set_value(zv)
+                self.w.zoom_sldr = zoom
+
+                def zoom_contour_cb(w, val):
+                    zl = val / 10.0
+                    self.contour_plot.plot_zoom(zl)
+
+                zoom.add_callback('value-changed', zoom_contour_cb)
+                hbox.add_widget(zoom, stretch=0)
+                nb.add_widget(hbox, title="Contour")
 
             # FWHM gaussians plot
             self.fwhm_plot = plots.FWHMPlot(logger=self.logger,
@@ -723,7 +781,11 @@ class Pick(GingaPlugin.LocalPlugin):
         def chg_contour_interp(w, idx):
             self.contour_interpolation = self.contour_interp_methods[idx]
             self.w.xlbl_cinterp.set_text(self.contour_interpolation)
-            self.contour_plot.interpolation = self.contour_interpolation
+            if self.contour_image is not None:
+                t_ = self.contour_image.get_settings()
+                t_.set(interpolation=self.contour_interpolation)
+            elif self.contour_plot is not None:
+                self.contour_plot.interpolation = self.contour_interpolation
             return True
 
         for name in self.contour_interp_methods:
@@ -731,7 +793,8 @@ class Pick(GingaPlugin.LocalPlugin):
         index = self.contour_interp_methods.index(self.contour_interpolation)
         combobox.set_index(index)
         self.w.xlbl_cinterp.set_text(self.contour_interpolation)
-        self.contour_plot.interpolation = self.contour_interpolation
+        if self.contour_plot is not None:
+            self.contour_plot.interpolation = self.contour_interpolation
         combobox.add_callback('activated', chg_contour_interp)
 
         b.show_candidates.set_state(self.show_candidates)
@@ -1012,19 +1075,43 @@ class Pick(GingaPlugin.LocalPlugin):
             x, y = self.pickcenter.x, self.pickcenter.y
 
         try:
-            self.contour_plot.plot_contours_data(x, y, data,
-                                                 num_contours=self.num_contours)
-            # make zoom control match contour zoom
-            zl = self.contour_plot.plot_zoomlevel
-            zv = int(round(max(1, min(zl * 10, 100))))
-            self.w.zoom_sldr.set_value(zv)
+            if self.contour_image is not None:
+                cv = self.contour_image
+                cv.set_data(data)
+                cv.panset_xy(x, y)
+
+                canvas = self.contour_canvas
+                try:
+                    canvas.delete_object_by_tag('_$cntr', redraw=False)
+                except KeyError:
+                    pass
+
+                # calculate contour polygons
+                contour_grps = contour.calc_contours(data, self.num_contours)
+
+                # get compound polygons object
+                c_obj = contour.create_contours_obj(canvas, contour_grps,
+                                                    colors=['black'],
+                                                    linewidth=2)
+                canvas.add(c_obj, tag='_$cntr')
+
+            if self.contour_plot is not None:
+                self.contour_plot.plot_contours_data(x, y, data,
+                                                     num_contours=self.num_contours)
+                # make zoom control match contour zoom
+                zl = self.contour_plot.plot_zoomlevel
+                zv = int(round(max(1, min(zl * 10, 100))))
+                self.w.zoom_sldr.set_value(zv)
 
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (
                 str(e)))
 
     def clear_contours(self):
-        self.contour_plot.clear()
+        if self.contour_image is not None:
+            self.contour_canvas.delete_all_objects()
+        if self.contour_plot is not None:
+            self.contour_plot.clear()
 
     def plot_fwhm(self, qs, image):
         # Make a FWHM plot
@@ -1455,14 +1542,14 @@ class Pick(GingaPlugin.LocalPlugin):
         x0, y0, xarr, yarr = self.iqcalc.cut_cross(x, y, radius, data)
 
         # plot horizontal cut
-        xpts = numpy.arange(len(xarr))
+        xpts = np.arange(len(xarr))
         self.cuts_plot.plot(xpts, xarr, color=hl.color,
                             xtitle="Line Index", ytitle="Pixel Value",
                             title=None, rtitle="Cuts",
                             alpha=1.0, linewidth=1.0, linestyle='-')
 
         # plot vertical cut
-        ypts = numpy.arange(len(yarr))
+        ypts = np.arange(len(yarr))
         self.cuts_plot.plot(ypts, yarr, color=vl.color,
                             alpha=1.0, linewidth=1.0, linestyle='-')
 
@@ -1668,7 +1755,7 @@ class Pick(GingaPlugin.LocalPlugin):
         x1, x2 = view[1].start, view[1].stop
 
         # mask non-containing members
-        mdata = numpy.ma.array(data, mask=numpy.logical_not(mask))
+        mdata = np.ma.array(data, mask=np.logical_not(mask))
 
         return (x1, y1, x2, y2, mdata)
 

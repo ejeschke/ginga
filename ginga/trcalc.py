@@ -357,6 +357,9 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
                            interpolation='basic', logger=None):
 
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+    new_wd, new_ht = int(new_wd), int(new_ht)
+
     rdim = data_np.shape[2:]
     open_cl_ok = (len(rdim) == 0 or (len(rdim) == 1 and rdim[0] == 4))
 
@@ -438,6 +441,8 @@ def get_scaled_cutout_basic_view(shp, p1, p2, scales):
 def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
                             interpolation='basic', logger=None):
 
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+
     rdim = data_np.shape[2:]
     open_cl_ok = (len(rdim) == 0 or (len(rdim) == 1 and rdim[0] == 4))
 
@@ -448,6 +453,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = cv2_resize[interpolation]
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], None,
                              fx=scale_x, fy=scale_y,
                              interpolation=method)
