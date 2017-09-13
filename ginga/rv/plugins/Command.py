@@ -1,55 +1,49 @@
-#
-# Command.py -- Command plugin for Ginga
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
+"""
+This plugin provides a command line interface to the reference viewer.
+
+.. note:: The command line is for use *within* the plugin UI.
+          If you are looking for a *remote* command line interface,
+          please see the ``RC`` plugin.
+
+**Plugin Type: Global**
+
+``Command`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+Get a list of commands and parameters::
+
+        g> help
+
+Execute a shell command::
+
+        g> !cmd arg arg ...
+
+**Notes**
+
+An especially powerful tool is to use the ``reload_local`` and
+``reload_global`` commands to reload a plugin when you are developing
+that plugin.  This avoids having to restart the reference viewer and
+laboriously reload data, etc.  Simply close the plugin, execute the
+appropriate "reload" command (see the help!) and then start the plugin
+again.
+
+.. note:: If you have modifed modules *other* than the plugin itself,
+          these will not be reloaded by these commands.
+
+"""
 import time
 import os
 import glob
 
 from ginga.gw import Widgets
-from ginga import GingaPlugin, AstroImage
-from ginga.misc import Bunch
+from ginga import GingaPlugin
 from ginga.util import grc
 
+__all__ = ['Command']
+
+
 class Command(GingaPlugin.GlobalPlugin):
-    """
-    Command
-    =======
-    This plugin provides a command line interface to the reference viewer.
-
-    .. note:: The command line is for use *within* the plugin UI.
-              If you are looking for a *remote* command line interface,
-              please see the "RC" plugin.
-
-    Plugin Type: Global
-    -------------------
-    Command is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    Get a list of commands and parameters:
-
-      g> help
-
-    Execute a shell command:
-
-      g>!cmd arg arg ...
-
-    Notes
-    -----
-    An especially powerful tool is to use the `reload_local` and
-    `reload_global` commands to reload a plugin when you are developing
-    that plugin.  This avoids having to restart the reference viewer and
-    laboriously reload data, etc.  Simply close the plugin, execute the
-    appropriate "reload" command (see the help!) and then start the plugin
-    again.
-
-    .. note:: If you have modifed modules *other* than the plugin itself,
-              these will not be reloaded by these commands.
-
-    """
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
@@ -136,7 +130,6 @@ class Command(GingaPlugin.GlobalPlugin):
         except Exception as e:
             self.log("|E| Error executing '%s': %s" % (text, str(e)))
             # TODO: add traceback
-
 
     def exec_cmd_cb(self, w):
         text = w.get_text()
@@ -518,9 +511,11 @@ class CommandInterpreter(object):
 
         else:
             if x is not None:
-                if y is None: y = x
+                if y is None:
+                    y = x
             if y is not None:
-                if x is None: x = y
+                if x is None:
+                    x = y
             viewer.scale_to(x, y)
 
     def cmd_z(self, lvl=None, ch=None):
@@ -595,4 +590,4 @@ class CommandInterpreter(object):
                     x = pan_x
             viewer.set_pan(x, y)
 
-#END
+# END

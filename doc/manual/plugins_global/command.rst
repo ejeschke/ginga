@@ -3,4 +3,6 @@
 Command
 =======
 
-TBD
+.. automodapi:: ginga.rv.plugins.Command
+   :no-heading:
+   :skip: Command

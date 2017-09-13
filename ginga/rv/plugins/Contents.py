@@ -1,47 +1,44 @@
-#
-# Contents.py -- Table of Contents plugin for fits viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
-from ginga.util.six import itervalues
-from ginga.util.six.moves import map, filter
+"""
+The ``Contents`` plugin provides a table of contents-like interface for all
+the images viewed since the program was started.  Unlike ``Thumbs``,
+``Contents`` is sorted by channel.  The contents also shows some configurable
+metadata from the image.
+
+**Plugin Type: Global**
+
+``Contents`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+Double-click on a column heading to sort the table by that column's
+value.  The image in the currently focused channel will normally be
+highlighted.  You can click on any image to force that image to be shown
+in the associated channel.
+
+.. note:: The columns and their values are drawn from the FITS header.
+          This can be customized by setting the "columns" parameter in
+          the "plugin_Contents.cfg" settings file.
+
+"""
+from ginga.util.six.moves import map
 
 from ginga import GingaPlugin
 from ginga.misc import Bunch
 
 from ginga.gw import Widgets
-import time
+
+__all__ = ['Contents']
 
 
 class Contents(GingaPlugin.GlobalPlugin):
-    """
-    Contents
-    ========
-    The Contents plugin provides a table of contents like interface for all
-    the images viewed since the program was started.  Unlike Thumbs,
-    Contents is sorted by channel.  The contents also shows some configurable
-    metadata from the image.
 
-    Plugin Type: Global
-    -------------------
-    Header is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    Double-click on a column heading to sort the table by that column's
-    value.  The image in the currently focused channel will normally be
-    highlighted.  You can click on any image to force that image to be shown
-    in the associated channel.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Contents, self).__init__(fv)
 
-        columns = [ ('Name', 'NAME'), ('Object', 'OBJECT'),
-                    ('Date', 'DATE-OBS'), ('Time UT', 'UT'),
-                    ('Modified', 'MODIFIED')
-                    ]
+        columns = [('Name', 'NAME'), ('Object', 'OBJECT'),
+                   ('Date', 'DATE-OBS'), ('Time UT', 'UT'),
+                   ('Modified', 'MODIFIED')]
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Contents')
@@ -167,7 +164,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         chname, bnch = res[0]
 
-        if not 'path' in bnch:
+        if 'path' not in bnch:
             # may be a top-level channel node, e.g. in gtk
             return
         path = bnch.path
@@ -227,11 +224,11 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.logger.debug("Resized columns for {0} row(s)".format(n_rows))
 
     def is_in_contents(self, chname, imname):
-        if not chname in self.name_dict:
+        if chname not in self.name_dict:
             return False
 
         file_dict = self.name_dict[chname]
-        if not imname in file_dict:
+        if imname not in file_dict:
             return False
 
         return True
@@ -250,7 +247,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         bnch = self.get_info(chname, name, image, image_info)
 
-        if not chname in self.name_dict:
+        if chname not in self.name_dict:
             # channel does not exist yet in contents
             # Note: this typically shouldn't happen, because add_channel_cb()
             # will have added an empty dict
@@ -259,7 +256,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         else:
             file_dict = self.name_dict[chname]
 
-        if not name in file_dict:
+        if name not in file_dict:
             # new image
             file_dict[name] = bnch
         else:
@@ -341,7 +338,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return False
 
-        tree_dict = { chname: { } }
+        tree_dict = {chname: {}}
         self.treeview.add_tree(tree_dict)
 
         self._rebuild_channels()
@@ -386,7 +383,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.treeview.highlight_path(hl_path, tf, font_color=fc)
         except Exception as e:
             self.logger.info('Error changing highlight on treeview path '
-                              '({0}): {1}'.format(hl_path, str(e)))
+                             '({0}): {1}'.format(hl_path, str(e)))
 
     def update_highlights(self, old_highlight_set, new_highlight_set):
         """Unhighlight the entries represented by ``old_highlight_set``
@@ -526,4 +523,10 @@ class Contents(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'contents'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Contents', package='ginga')
+
+# END
