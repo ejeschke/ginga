@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import threading
+import sys, traceback
 import numpy as np
 import time
 from collections import OrderedDict
@@ -1309,10 +1310,12 @@ class Pick(GingaPlugin.LocalPlugin):
                 for qs in results:
                     qs.x += x1
                     qs.y += y1
-                    qs.objx += x1
-                    qs.objy += y1
-                    qs.oid_x += x1
-                    qs.oid_y += y1
+                    if qs.objx is not None:
+                        qs.objx += x1
+                        qs.objy += y1
+                    if qs.oid_x is not None:
+                        qs.oid_x += x1
+                        qs.oid_y += y1
 
                 # pick main result
                 qs = results[0]
@@ -1477,6 +1480,12 @@ class Pick(GingaPlugin.LocalPlugin):
                 str(e))
             self.logger.error(errmsg)
             self.fv.show_error(errmsg, raisetab=False)
+            try:
+                (type, value, tb) = sys.exc_info()
+                tb_str = "\n".join(traceback.format_tb(tb))
+            except Exception as e:
+                tb_str = "Traceback information unavailable."
+            self.logger.error(tb_str)
             #self.update_status("Error")
             for key in ('sky_level', 'background', 'brightness',
                         'star_size', 'fwhm_x', 'fwhm_y',
@@ -1597,10 +1606,12 @@ class Pick(GingaPlugin.LocalPlugin):
             qs = objlist[0]
             qs.x += x1
             qs.y += y1
-            qs.objx += x1
-            qs.objy += y1
-            qs.oid_x += x1
-            qs.oid_y += y1
+            if qs.objx is not None:
+                qs.objx += x1
+                qs.objy += y1
+            if qs.oid_x is not None:
+                qs.oid_x += x1
+                qs.oid_y += y1
 
         except Exception as e:
             msg = str(e)

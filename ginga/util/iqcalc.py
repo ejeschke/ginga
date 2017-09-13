@@ -7,7 +7,7 @@
 
 import math
 import logging
-import numpy
+import numpy as np
 import threading
 try:
     import scipy.optimize as optimize
@@ -21,12 +21,12 @@ from ginga.misc import Bunch
 
 
 def get_mean(data_np):
-    mdata = numpy.ma.masked_array(data_np, numpy.isnan(data_np))
-    return numpy.mean(mdata)
+    mdata = np.ma.masked_array(data_np, np.isnan(data_np))
+    return np.mean(mdata)
 
 def get_median(data_np):
-    mdata = numpy.ma.masked_array(data_np, numpy.isnan(data_np))
-    return numpy.median(mdata)
+    mdata = np.ma.masked_array(data_np, np.isnan(data_np))
+    return np.median(mdata)
 
 
 class IQCalcError(Exception):
@@ -56,8 +56,8 @@ class IQCalc(object):
 
         p[0]==mean, p[1]==sdev, p[2]=maxv
         """
-        y = (1.0 / (p[1] * numpy.sqrt(2 * numpy.pi)) *
-             numpy.exp(-(x - p[0]) ** 2 / (2 * p[1] ** 2))) * p[2]
+        y = (1.0 / (p[1] * np.sqrt(2 * np.pi)) *
+             np.exp(-(x - p[0]) ** 2 / (2 * p[1] ** 2))) * p[2]
         return y
 
     def calc_fwhm_gaussian(self, arr1d, medv=None, gauss_fn=None):
@@ -69,12 +69,12 @@ class IQCalc(object):
             gauss_fn = self.gaussian
 
         N = len(arr1d)
-        X = numpy.array(list(range(N)))
+        X = np.array(list(range(N)))
         Y = arr1d
         # Fitting works more reliably if we do the following
         # a. subtract sky background
         if medv is None:
-            medv = numpy.median(Y)
+            medv = np.median(Y)
         Y = Y - medv
         maxv = Y.max()
         # b. clamp to 0..max (of the sky subtracted field)
@@ -100,7 +100,7 @@ class IQCalc(object):
         self.logger.debug("mu=%f sdev=%f maxv=%f" % (mu, sdev, maxv))
 
         # Now that we have the sdev from fitting, we can calculate FWHM
-        fwhm = 2.0 * numpy.sqrt(2.0 * numpy.log(2.0)) * sdev
+        fwhm = 2.0 * np.sqrt(2.0 * np.log(2.0)) * sdev
         # some routines choke on numpy values and need "pure" Python floats
         # e.g. when marshalling through a remote procedure interface
         fwhm = float(fwhm)
@@ -128,12 +128,12 @@ class IQCalc(object):
             moffat_fn = self.moffat
 
         N = len(arr1d)
-        X = numpy.array(list(range(N)))
+        X = np.array(list(range(N)))
         Y = arr1d
         # Fitting works more reliably if we do the following
         # a. subtract sky background
         if medv is None:
-            medv = numpy.median(Y)
+            medv = np.median(Y)
         Y = Y - medv
         maxv = Y.max()
         # b. clamp to 0..max (of the sky subtracted field)
@@ -156,11 +156,11 @@ class IQCalc(object):
             raise IQCalcError("FWHM moffat fitting failed")
 
         mu, width, power, maxv = p1
-        width = numpy.abs(width)
+        width = np.abs(width)
         self.logger.debug("mu=%f width=%f power=%f maxv=%f" % (
             mu, width, power, maxv))
 
-        fwhm = 2.0 * width * numpy.sqrt(2.0 ** (1.0 / power) - 1.0)
+        fwhm = 2.0 * width * np.sqrt(2.0 ** (1.0 / power) - 1.0)
 
         # some routines choke on numpy values and need "pure" Python floats
         # e.g. when marshalling through a remote procedure interface
@@ -189,7 +189,7 @@ class IQCalc(object):
         radius.
         """
         if medv is None:
-            medv = numpy.median(data)
+            medv = np.median(data)
 
         # Get two cuts of the data, one in X and one in Y
         x0, y0, xarr, yarr = self.cut_cross(x, y, radius, data)
@@ -218,7 +218,9 @@ class IQCalc(object):
     def centroid(self, data, xc, yc, radius):
         xc, yc = int(xc), int(yc)
         x0, y0, arr = self.cut_region(xc, yc, int(radius), data)
-        cy, cx = ndimage.center_of_mass(arr)
+        # See https://stackoverflow.com/questions/25369982/center-of-mass-for-roi-in-python
+        cp_arr = np.asarray(arr)
+        cy, cx = ndimage.center_of_mass(cp_arr)
         return (x0 + cx, y0 + cy)
 
 
@@ -226,19 +228,19 @@ class IQCalc(object):
 
     def get_threshold(self, data, sigma=5.0):
         # remove masked elements
-        fdata = data[numpy.logical_not(numpy.ma.getmaskarray(data))]
+        fdata = data[np.logical_not(np.ma.getmaskarray(data))]
         # remove Inf or NaN
-        fdata = fdata[numpy.isfinite(fdata)]
+        fdata = fdata[np.isfinite(fdata)]
 
         # find the median
-        median = numpy.median(fdata)
+        median = np.median(fdata)
 
         # NOTE: for this method a good default sigma is 5.0
-        dist = numpy.fabs(fdata - median).mean()
+        dist = np.fabs(fdata - median).mean()
         threshold = median + sigma * dist
 
         # NOTE: for this method a good default sigma is 2.0
-        ## std = numpy.std(fdata - median)
+        ## std = np.std(fdata - median)
         ## threshold = median + sigma * std
 
         self.logger.debug("calc threshold=%f" % (threshold))
@@ -314,7 +316,7 @@ class IQCalc(object):
         from (x, y) in (data).
         """
         x0, y0, arr = self.cut_region(x, y, radius, data)
-        arr2 = numpy.sort(arr.flat)
+        arr2 = np.sort(arr.flat)
         idx = int(len(arr2) * 0.8)
         res = arr2[idx] - medv
         return float(res)
@@ -338,7 +340,7 @@ class IQCalc(object):
         w4 = float(width) * 4.0
 
         # Find the median (sky/background) level
-        median = float(numpy.median(data))
+        median = float(np.median(data))
         #skylevel = median
         # Old SOSS qualsize() applied this calculation to skylevel
         skylevel = median * self.skylevel_magnification + self.skylevel_offset
@@ -408,16 +410,6 @@ class IQCalc(object):
                 cb_fn(obj)
 
         return objlist
-
-    # def _compare(self, obj1, obj2):
-    #     val1 = obj1.brightness * obj1.pos/math.sqrt(obj1.fwhm)
-    #     val2 = obj2.brightness * obj2.pos/math.sqrt(obj2.fwhm)
-    #     if val1 > val2:
-    #         return -1
-    #     elif val2 > val1:
-    #         return 1
-    #     else:
-    #         return 0
 
     def _sortkey(self, obj):
         val = obj.brightness * obj.pos/math.sqrt(obj.fwhm)
