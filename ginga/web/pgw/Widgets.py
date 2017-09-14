@@ -11,6 +11,7 @@ from functools import reduce
 
 from ginga.misc import Callback, Bunch, LineHistory
 from ginga.web.pgw import PgHelp
+from ginga.util import six
 
 # For future support of WebView widget
 has_webkit = False
