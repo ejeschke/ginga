@@ -1079,6 +1079,13 @@ class Pick(GingaPlugin.LocalPlugin):
             if self.contour_image is not None:
                 cv = self.contour_image
                 cv.set_data(data)
+                # copy orientation of main image, so that contour will
+                # make sense.  Don't do rotation, for now.
+                flips = self.fitsimage.get_transforms()
+                cv.transform(*flips)
+                #rot_deg = self.fitsimage.get_rotation()
+                #cv.rotate(rot_deg)
+
                 cv.panset_xy(x, y)
 
                 canvas = self.contour_canvas
