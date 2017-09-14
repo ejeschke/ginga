@@ -1,9 +1,59 @@
+"""
+The ``IRAF`` plugin implements a remote control interface for the Ginga FITS
+viewer from an IRAF session.  In particular, it supports the use of the
+IRAF ``display`` and ``imexamine`` commands.
+
+**Plugin Type: Global**
+
+``IRAF`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+The ``IRAF`` plugin allows Ginga to interoperate with IRAF in a manner
+similar to IRAF and DS9.  The following IRAF commands are supported:
+``imexamine``, ``rimcursor``, ``display``, and ``tvmark``.
+
+To use the ``IRAF`` plugin, first make sure the environment variable ``IMTDEV``
+is set appropriately, e.g.::
+
+        $ export IMTDEV=inet:45005
+
+or::
+
+        $ export IMTDEV=unix:/tmp/.imtg45
+
+If the environment variable is not set, Ginga will default to that used
+by IRAF.
+
+Use the "Start IRAF" menu item from the "Plugins" menu.
+The GUI for the ``IRAF`` plugin will appear in the tabs on the right.
+
+It can be more convenient to load images via Ginga than IRAF.  From
+Ginga, you can load images via drag and drop or via the ``FBrowser``
+plugin and then use ``imexamine`` from IRAF to do analysis tasks on
+them.  You can also use the ``display`` command from IRAF to show
+images already loaded in IRAF in Ginga, and then use ``imexamine`` to
+select areas graphically for analysis.
+
+When using ``imexamine`` or ``rimcursor``, the plugin disables
+normal UI processing on the channel image so that keystrokes,
+etc. normally caught by Ginga are passed through to IRAF.  You can
+toggle back and forth between local Ginga control (e.g., keystrokes to
+zoom and pan the image, or apply cut levels, etc.) and IRAF control
+using the radio buttons at the top of the tab.
+
+IRAF deals with images in enumerated "frames", whereas Ginga uses
+named channels.  The bottom of the ``IRAF`` plugin GUI will show the mapping
+from Ginga channels to IRAF frames.
+
+"""
 import os
 import threading
+import time
 import socket
 import array
+
 import numpy
-import time
 
 import ginga.util.six as six
 from ginga import GingaPlugin, AstroImage
@@ -19,43 +69,11 @@ if six.PY2:
 else:
     import queue as Queue
 
+__all__ = ['IRAF']
+
 
 class IRAF(GingaPlugin.GlobalPlugin):
-    """
-    IRAF
-    ====
-    The IRAF plugin implements a remote control interface for the Ginga FITS
-    viewer from an IRAF session.  In particular it supports the use of the
-    IRAF 'display' and 'imexamine' commands.
 
-    Plugin Type: Global
-    -------------------
-    IRAF is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-
-    Set the environment variable IMTDEV appropriately, e.g.::
-
-        $ export IMTDEV=inet:45005         (or)
-        $ export IMTDEV=unix:/tmp/.imtg45
-
-    Ginga will try to use the default value if none is assigned.
-
-    Start IRAF plugin (Plugins->Start IRAF).
-
-    From Ginga you can load images and then use 'imexamine' from IRAF to load
-    them, do photometry, etc.  You can also use the 'display' command from IRAF
-    to show images in Ginga.  The 'IRAF' tab will show the mapping from Ginga
-    channels to IRAF numerical 'frames'.
-
-    When using imexamine, the plugin disables normal UI processing on the
-    channel image so that keystrokes, etc. are passed through to IRAF.  You can
-    toggle back and forth between local Ginga control and IRAF control using
-    the radio buttons at the top of the tab or using the space bar.
-
-    IRAF commands that have been tested: display, imexam, rimcur and tvmark.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(IRAF, self).__init__(fv)
@@ -422,7 +440,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
 
         try:
             data = fb.buffer
-            byteswap = False
+            byteswap = False  # noqa
             dims = (fb.height, fb.width)
             dtype = numpy.uint8
             metadata = {}
@@ -511,7 +529,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         # Find out which frame we are looking at
         #frame = self.current_frame
         frame = self.channel_to_frame(chinfo.name)
-        image = fitsimage.get_image()
+        image = fitsimage.get_image()  # noqa
 
         self.start_imexamine(fitsimage, chinfo.name)
 
@@ -546,7 +564,7 @@ class IRAF(GingaPlugin.GlobalPlugin):
         self.canvas.set_surface(fitsimage)
         # insert layer if it is not already
         try:
-            obj = fitsimage.get_object_by_tag(self.layertag)
+            fitsimage.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer

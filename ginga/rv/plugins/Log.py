@@ -1,45 +1,41 @@
-#
-# Log.py -- Logging plugin for fits viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
+"""
+See the logging output of the reference viewer.
+
+**Plugin Type: Global**
+
+``Log`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+The ``Log`` plugin builds a UI that includes a large scrolling text widget
+showing the active output of the logger.  The latest output shows up at
+the bottom.  This can be useful for troubleshooting problems.
+
+There are four controls:
+
+* The combo box on the lower left allows you to choose the level of
+  logging desired.  The four levels, in order of verbosity are: "debug",
+  "info", "warn", and "error".
+* The box with the number on the lower right allows you to set how many
+  lines of input to keep in the display buffer (e.g., keep only the last
+  1000 lines).
+* The checkbox "Auto scroll", if checked, will cause the large text
+  widget to scroll to the end as new log messages are added.  Uncheck
+  this if you want to peruse the older messages and study them.
+* The "Clear" button is used to clear the text widget, so that only new
+  logging shows up.
+
+"""
 import logging
 
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
+__all__ = ['Log']
+
+
 class Log(GingaPlugin.GlobalPlugin):
-    """
-    Log
-    ===
-    See the logging output of the reference viewer.
 
-    Plugin Type: Global
-    -------------------
-    Log is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    The Log plugin builds a UI that includes a large, scrolling text widget
-    showing the active output of the logger.  The latest output shows up at
-    the bottom.  This can be useful for troubleshooting problems.
-
-    There are four controls:
-
-    * The combo box on the lower left allows you to choose the level of
-      logging desired.  The four levels, in order of verbosity are: "debug",
-      "info", "warn" and "error".
-    * The box with the number on the lower right allows you to set how many
-      lines of input to keep in the display buffer (e.g. keep only the last
-      1000 lines).
-    * The checkbox "Auto scroll", if checked, will cause the large text
-      widget to scroll to the end as new log messages are added.  Uncheck
-      this if you want to peruse the older messages and study them.
-    * The "Clear" button is used to clear the text widget, so that only new
-      logging shows up.
-
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Log, self).__init__(fv)
@@ -47,8 +43,8 @@ class Log(GingaPlugin.GlobalPlugin):
         self.histlimit = 1000
         self.histmax = 10000
         self.levels = (('Error', logging.ERROR),
-                       ('Warn',  logging.WARN),
-                       ('Info',  logging.INFO),
+                       ('Warn', logging.WARN),
+                       ('Info', logging.INFO),
                        ('Debug', logging.DEBUG))
         self.autoscroll = True
         self.tw = None
@@ -112,8 +108,9 @@ class Log(GingaPlugin.GlobalPlugin):
         container.add_widget(vbox, stretch=1)
 
     def set_history(self, histlimit):
-        assert histlimit <= self.histmax, \
-               Exception("Limit exceeds maximum value of %d" % (self.histmax))
+        if histlimit > self.histmax:
+            raise Exception(
+                "Limit exceeds maximum value of %d" % (self.histmax))
         self.histlimit = histlimit
         self.logger.debug("Logging history limit set to %d" % (
             histlimit))
@@ -148,4 +145,4 @@ class Log(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'log'
 
-#END
+# END

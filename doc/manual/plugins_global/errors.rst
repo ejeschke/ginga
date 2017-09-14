@@ -3,4 +3,6 @@
 Errors
 ======
 
-TBD
+.. automodapi:: ginga.rv.plugins.Errors
+   :no-heading:
+   :skip: Errors

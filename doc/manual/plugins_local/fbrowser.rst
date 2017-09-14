@@ -3,4 +3,6 @@
 FBrowser
 ========
 
-TBD
+.. automodapi:: ginga.rv.plugins.FBrowser
+   :no-heading:
+   :skip: FBrowser

@@ -1,20 +1,28 @@
-#
-# Operations.py -- Operations management plugin for Ginga viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
+"""
+This plugin defines the GUI for managing local plugins, a.k.a., "operations".
+
+**Plugin Type: Global**
+
+``Operations`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+The ``Operations`` plugin acts as a visual interface to the reference viewer
+plugin manager.  With this plugin, you can change the active channel,
+start, stop, or unfocus a local plugin on a channel, and see which local
+plugins are running.
+
+.. note:: By replacing or subclassing this plugin, you can customize the way
+          the reference viewer starts and manages operations.
+
+"""
 from ginga import GingaPlugin
-from ginga.misc import Bunch
 from ginga.gw import Widgets
+
+__all__ = ['Operations']
 
 
 class Operations(GingaPlugin.GlobalPlugin):
-    """
-    This plugin defines the GUI for managing local plugins, AKA "operations".
-    By replacing or subclassing this plugin you can customize the way
-    the reference viewer starts and manages operations.
-    """
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
@@ -84,7 +92,6 @@ class Operations(GingaPlugin.GlobalPlugin):
         hbox.add_widget(self.w.optray, stretch=1)
         container.add_widget(hbox, stretch=0)
         self.gui_up = True
-
 
     def add_channel_cb(self, viewer, channel):
         chname = channel.name
@@ -235,4 +242,10 @@ class Operations(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'operations'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Operations', package='ginga')
+
+# END
