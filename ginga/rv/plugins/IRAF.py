@@ -62,7 +62,10 @@ from ginga.gw import Widgets
 from ginga.misc import Bunch
 
 # XImage protocol support
-import IIS_DataListener as iis
+try:
+    import IIS_DataListener as iis
+except ImportError:  # Need this for Sphinx build
+    pass
 
 if six.PY2:
     import Queue
