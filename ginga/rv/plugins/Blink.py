@@ -1,41 +1,40 @@
-#
-# Blink.py -- Blink plugin for Ginga reference viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
+"""
+``Blink`` switches through the images shown in a channel at a rate
+chosen by the user.  Alternatively, it can switch between channels
+in the main workspace.  In both cases, the primary purpose is to
+compare and contrast the images (within a channel, or across
+channels) visually within a short timescale -- like blinking your
+eyes.
+
+**Plugin Type: Local or Global**
+
+``Blink`` can be invoked either as a local plugin, in which case
+it cycles through the images in the channel, or as a global
+plugin, in which case it cycles through the channels.
+
+Local plugins are started from the "Operations" button, while
+global plugins are started from the "Plugins" menu.
+
+**Usage**
+
+Set the interval between image changes in terms of seconds in
+the box labeled "Interval".  Then, press "Start Blink" to start
+the timed cycling, and "Stop Blink" to stop the cycling.
+
+You can change the number in "Interval" and press ``Enter`` to
+dynamically change the cycle time while the cycle is running.
+
+"""
 import time
 
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
+__all__ = ['Blink']
+
+
 class Blink(GingaPlugin.LocalPlugin):
-    """
-    Blink
-    =====
-    Blink switches through the images shown in a channel at a rate
-    chosen by the user.  Alternatively, it can switch between channels
-    in the main workspace.  In both cases, the primary purpose is to
-    compare and contrast the images (within a channel, or across
-    channels) visually within a short timescale--like blinking your
-    eyes.
 
-    NOTE: Blink can be invoked either as a local plugin, in which case
-    it cycles through the images in the channel, or as a global
-    plugin, in which case it cycles through the channels.
-
-    Local plugins are started from the "Operations" button, while
-    global plugins are started from the "Plugins" menu.
-
-    Usage
-    -----
-    Set the interval between image changes in terms of seconds in
-    the box labeled "Interval".  Finally, press "Start Blink" to start
-    the timed cycling, and "Stop Blink" to stop the cycling.
-
-    You can change the number in "Interval" and press Enter to
-    dynamically change the cycle time while the cycle is running.
-    """
     def __init__(self, *args):
         # superclass defines some variables for us, like logger
         if len(args) == 2:
@@ -176,7 +175,9 @@ class Blink(GingaPlugin.LocalPlugin):
             # Don't start blinking if there are no multiple images to blink
             # in this channel
             if len(self.channel) <= 1:
-                self.fv.show_error("Blink opened in local mode and there are not multiple images to blink in this channel")
+                self.fv.show_error(
+                    "Blink opened in local mode and there are not multiple "
+                    "images to blink in this channel")
                 return
 
         self._set_interval_cb()
@@ -196,4 +197,10 @@ class Blink(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'blink'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Blink', package='ginga')
+
+# END

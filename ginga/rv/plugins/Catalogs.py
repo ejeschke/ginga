@@ -1,13 +1,52 @@
-#
-# Catalogs.py -- Catalogs plugin for Ginga reference viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
+"""
+A plugin for plotting object locations from a catalog on an image.
+
+**Plugin Type: Local**
+
+``Catalogs`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+Before ``Catalogs`` can be used, you need to define at least one catalog or
+image server to be queried in ``ginga_config.py``. Here is an example for
+defining three cone search catalogs for guide stars::
+
+        def pre_gui_config(ginga):
+            from ginga.util.catalog import AstroPyCatalogServer
+
+            # Add Cone Search services
+            catalogs = [
+                ('The HST Guide Star Catalog, Version 1.2 (Lasker+ 1996) 1',
+                 'GSC_1.2'),
+                ('The PMM USNO-A1.0 Catalogue (Monet 1997) 1', 'USNO_A1'),
+                ('The USNO-A2.0 Catalogue (Monet+ 1998) 1', 'USNO_A2'),
+            ]
+            bank = ginga.get_ServerBank()
+            for longname, shortname in catalogs:
+                obj = AstroPyCatalogServer(
+                    ginga.logger, longname, shortname, '', shortname)
+                bank.addCatalogServer(obj)
+
+        def post_gui_config(ginga):
+            pass
+
+Then, start Ginga and then start the ``Catalogs`` local plugin from the
+channel you want to perform searchs on. You will see the catalogs listed
+in a drop-down menu on the plugin GUI.
+
+Draw a shape on the displayed image and adjust search parameters as desired.
+When you are ready, press on the button to perform the search.
+When search results are available, they will be displayed on the image and
+also listed in a table on the plugin GUI. You can click on either the table
+or the image to highlight selection.
+
+"""
 import os
 import math
-import numpy as np
 from collections import OrderedDict
+
+import numpy as np
 
 from ginga.misc import Bunch
 from ginga import GingaPlugin
@@ -16,22 +55,11 @@ from ginga.util import wcs
 from ginga.util.six.moves import map
 from ginga.gw import ColorBar, Widgets
 
+__all__ = ['Catalogs']
+
 
 class Catalogs(GingaPlugin.LocalPlugin):
-    """
-    Catalogs
-    ========
-    A plugin for plotting object locations from a catalog on an image.
 
-    Plugin Type: Local
-    ------------------
-    Catalogs is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Usage
-    -----
-    TBD
-    """
     def __init__(self, fv, fitsimage):
         super(Catalogs, self).__init__(fv, fitsimage)
 
@@ -1308,5 +1336,11 @@ class CatalogListing(object):
 
     def sort_cb(self):
         self.replot_stars()
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Catalogs', package='ginga')
 
 # END
