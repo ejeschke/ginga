@@ -670,6 +670,11 @@ class Image(WidgetBase):
     def _set_image(self, native_image):
         self.image.set_from_pixbuf(native_image.get_pixbuf())
 
+    def load_file(self, img_path, format=None):
+        # format ignored at present
+        pixbuf = GtkHelp.pixbuf_new_from_file(img_path)
+        self.image.set_from_pixbuf(pixbuf)
+
 
 class ProgressBar(WidgetBase):
     def __init__(self):
@@ -1732,11 +1737,15 @@ class Menubar(ContainerBase):
         self.widget = Gtk.MenuBar()
         self.menus = Bunch.Bunch(caseless=True)
 
-    def add_widget(self, child):
-        menu_w = child.get_widget()
-        self.widget.addMenu(menu_w)
+    def add_widget(self, child, name):
+        if not isinstance(child, Menu):
+            raise ValueError("child widget needs to be a Menu object")
+        item_w = Gtk.MenuItem(label=name)
+        item_w.set_submenu(child.get_widget())
         self.add_ref(child)
-        menu_w.show()
+        self.widget.append(item_w)
+        self.menus[name] = child
+        item_w.show()
         return child
 
     def add_name(self, name):

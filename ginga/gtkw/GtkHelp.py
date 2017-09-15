@@ -854,6 +854,9 @@ def pixbuf_new_from_data(rgb_buf, rgbtype, hasAlpha, bpp, dawd, daht, stride):
     return gtk.gdk.pixbuf_new_from_data(rgb_buf, rgbtype, hasAlpha, bpp,
                                         dawd, daht, stride)
 
+def pixbuf_new_from_file(file_path):
+    return gtk.gdk.pixbuf_new_from_file(file_path)
+
 def pixbuf_new_from_file_at_size(foldericon, width, height):
     return gtk.gdk.pixbuf_new_from_file_at_size(foldericon,
                                                 width, height)

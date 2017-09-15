@@ -895,6 +895,9 @@ def pixbuf_new_from_file_at_size(foldericon, width, height):
     return GdkPixbuf.Pixbuf.new_from_file_at_size(foldericon,
                                                   width, height)
 
+def pixbuf_new_from_file(file_path):
+    return GdkPixbuf.Pixbuf.new_from_file(file_path)
+
 def make_cursor(widget, iconpath, x, y):
     image = Gtk.Image()
     image.set_from_file(iconpath)

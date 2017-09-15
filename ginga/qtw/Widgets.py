@@ -606,6 +606,10 @@ class Image(WidgetBase):
         pixmap = QPixmap.fromImage(native_image)
         self.widget.setPixmap(pixmap)
 
+    def load_file(self, img_path, format=None):
+        pixmap = QPixmap()
+        pixmap.load(img_path, format=format)
+        self.widget.setPixmap(pixmap)
 
 class ProgressBar(WidgetBase):
     def __init__(self):
@@ -1619,10 +1623,14 @@ class Menubar(ContainerBase):
         self.widget = QtGui.QMenuBar()
         self.menus = Bunch.Bunch(caseless=True)
 
-    def add_widget(self, child):
-        menu_w = child.get_widget()
-        self.widget.addMenu(menu_w)
+    def add_widget(self, child, name):
+        if not isinstance(child, Menu):
+            raise ValueError("child widget needs to be a Menu object")
+        menu_w = self.widget.addMenu(name)
+        child.widget = menu_w
         self.add_ref(child)
+        self.menus[name] = child
+        return child
 
     def add_name(self, name):
         menu_w = self.widget.addMenu(name)

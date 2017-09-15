@@ -677,6 +677,10 @@ class Image(WidgetBase):
         app = self.get_app()
         app.do_operation('update_imgsrc', id=self.id, value=self.img_src)
 
+    def load_file(self, img_path, format=None):
+        img = PgHelp.get_native_image(img_path, format=format)
+        self._set_image(img)
+
     def render(self):
         # TODO: callback for click
         d = dict(id=self.id, src=self.img_src, tooltip=self.tooltip,
@@ -1344,12 +1348,21 @@ class Menubar(HBox):
         self.set_border_width(2)
         self.set_spacing(8)
 
+    def add_widget(self, child, name):
+        if not isinstance(child, Menu):
+            raise ValueError("child widget needs to be a Menu object")
+        self.menus[name] = child
+        menu_w = Label(text=name, halign='left', style='clickable',
+                       menu=child)
+        super(Menubar, self).add_widget(menu_w)
+        return child
+
     def add_name(self, name):
         child = Menu()
         self.menus[name] = child
         menu_w = Label(text=name, halign='left', style='clickable',
                        menu=child)
-        self.add_widget(menu_w)
+        super(Menubar, self).add_widget(menu_w)
         return child
 
     def get_menu(self, name):
