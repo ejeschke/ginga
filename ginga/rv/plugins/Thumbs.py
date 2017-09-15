@@ -1,9 +1,27 @@
-#
-# Thumbs.py -- Thumbs plugin for Ginga image viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
+"""
+The ``Thumbs`` plugin provides a thumbnail index of all images viewed since
+the program was started.
+
+**Plugin Type: Global**
+
+``Thumbs`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+By default, ``Thumbs`` appear in cronological viewing history,
+with the newest images at the bottom and the oldest at the top.
+The sorting can be made alphanumeric by a setting in the
+"plugin_Thumbs.cfg" configuration file.
+
+Clicking on a thumbnail navigates you directly to that image in the
+associated channel.  Hovering the cursor over a thumbnail will show a
+tool tip that contains a couple of useful pieces of metadata from the
+image.
+
+The "Auto Scroll" checkbox, if checked, will cause the ``Thumbs`` pan to
+scroll to the active image.
+
+"""
 import os
 import time
 import threading
@@ -14,33 +32,13 @@ from ginga.misc import Bunch
 from ginga.util import iohelper
 from ginga.gw import Widgets, Viewers
 from ginga.util.paths import icondir
-from ginga import cmap, RGBImage
 from ginga.pilw.ImageViewPil import CanvasView
 
+__all__ = ['Thumbs']
+
+
 class Thumbs(GingaPlugin.GlobalPlugin):
-    """
-    Thumbs
-    ======
-    The Thumbs plugin provides a thumbnail index of all images viewed since
-    the program was started.  By default, Thumbs appear in cronological viewing
-    history, with the newest images at the bottom and the oldest at the top.
-    The sorting can be made alphanumeric by a setting in the "plugin_Thumbs.cfg"
-    configuration file.
 
-    Plugin Type: Global
-    -------------------
-    Thumbs is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    Clicking on a thumbnail navigates you directly to that image in the
-    associated channel.  Hovering the cursor over a thumbnail will show a
-    tool tip that contains a couple of useful pieces of metadata from the
-    image.
-
-    The "Auto Scroll" checkbox, if checked, will cause the Thumbs pan to
-    scroll to the active image.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Thumbs, self).__init__(fv)
@@ -246,7 +244,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         self.fv.gui_do(self._make_thumb, chname, thmb_image, info, thumbkey,
                        save_thumb=save_thumb, thumbpath=thumbpath)
-
 
     def _add_image(self, viewer, chname, image):
         channel = self.fv.get_channel(chname)
@@ -495,7 +492,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             return
 
         self.redo_thumbnail_image(channel, image, info, save_thumb=save_thumb)
-
 
     def redo_thumbnail_image(self, channel, image, info, save_thumb=None):
         # image is flagged not to make a thumbnail?
@@ -758,7 +754,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         thumbname = info.name
         self.logger.debug("inserting thumb %s" % (thumbname))
         # make a context menu
-        menu = self._mk_context_menu(thumbkey, chname, info)
+        menu = self._mk_context_menu(thumbkey, chname, info)  # noqa
 
         # Get any previously stored thumb information in the image info
         thumb_extra = info.setdefault('thumb_extras', Bunch.Bunch())
@@ -868,7 +864,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
                 row, col = self.thumb_row_count, self.thumb_col_count
                 self.thumb_col_count = ((self.thumb_col_count + 1) %
-                                      self.thumb_num_cols)
+                                        self.thumb_num_cols)
                 if self.thumb_col_count == 0:
                     self.thumb_row_count += 1
 
@@ -949,8 +945,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self.c_view.redraw(whence=0)
             self.logger.debug("update finished.")
 
-
     def __str__(self):
         return 'thumbs'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Thumbs', package='ginga')
+
+# END

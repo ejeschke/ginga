@@ -1,41 +1,37 @@
-#
-# WCSMatch.py -- WCSMatch plugin for Ginga reference viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
+"""
+``WCSMatch`` is a global plugin for the Ginga image viewer that allows
+you to roughly align images with different scales and orientations
+using the images' World Coordinate System (WCS) for viewing purposes.
+
+**Plugin Type: Global**
+
+``WCSMatch`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+To use, simply start the plugin, and from the plugin GUI select a
+channel from the drop-down menu labeled "Reference Channel".  The
+image contained in that channel will be used as a reference for
+zooming and orienting the images in the other channels.
+
+The channels will be synchronized in viewing (zoom, pan, rotate, and
+transform).  To "unlock" the synchronization, simply select "None"
+from the "Reference Channel" drop-down menu.
+
+Currently, there is no way to limit the channels that are affected
+by the plugin.
+
+"""
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 from ginga.util import wcs
 from ginga.misc import Bunch
 
+__all__ = ['WCSMatch']
+
 
 class WCSMatch(GingaPlugin.GlobalPlugin):
-    """
-    WCSMatch
-    ========
-    WCSMatch is a global plugin for the Ginga image viewer that allows
-    you to roughly align images with different scales and orientations
-    using the images' World Coordinate System for viewing purposes.
 
-    Plugin Type: Global
-    -------------------
-    WCSMatch is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    To use, simply start the plugin, and from the plugin GUI select a
-    channel from the drop-down menu labeled "Reference Channel".  The
-    image contained in that channel will be used as a reference for
-    zooming and orienting the images in the other channels.
-
-    The channels will be synchronized in viewing (zoom, pan, rotate,
-    transform).  To "unlock" the synchronization, simply select "None"
-    from the "Reference Channel" drop-down menu.
-
-    Currently there is no way to limit the channels that are affected
-    by the plugin.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(WCSMatch, self).__init__(fv)
@@ -93,7 +89,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         self._reset_channels_gui()
 
     def add_channel(self, viewer, channel):
-        chname = channel.name
         info = Bunch.Bunch(chinfo=channel)
         channel.extdata._wcsmatch_info = info
 
@@ -101,17 +96,16 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         # transform settings changes
         chviewer = channel.fitsimage
         fitssettings = chviewer.get_settings()
-        fitssettings.get_setting('scale').add_callback('set',
-                                                       self.zoomset_cb, chviewer, info)
-        fitssettings.get_setting('rot_deg').add_callback('set',
-                                                         self.rotset_cb, chviewer, info)
+        fitssettings.get_setting('scale').add_callback(
+            'set', self.zoomset_cb, chviewer, info)
+        fitssettings.get_setting('rot_deg').add_callback(
+            'set', self.rotset_cb, chviewer, info)
         for name in ('flip_x', 'flip_y', 'swap_xy'):
-            fitssettings.get_setting(name).add_callback('set',
-                                                        self.xfmset_cb, chviewer, info)
-        fitssettings.get_setting('pan').add_callback('set',
-                                                     self.panset_cb, chviewer, info)
+            fitssettings.get_setting(name).add_callback(
+                'set', self.xfmset_cb, chviewer, info)
+        fitssettings.get_setting('pan').add_callback(
+            'set', self.panset_cb, chviewer, info)
         self.fv.gui_do(self._reset_channels_gui)
-
 
     def delete_channel(self, viewer, channel):
         chname = channel.name
@@ -131,14 +125,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
             self.w.ref_channel.append_text(chname)
 
     # CALLBACKS
-
-    def redo(self, channel, image):
-        info = channel.extdata._wcsmatch_info
-
-        self.logger.info("Channel '%s' setting image" % (info.chinfo.name))
-        if info.chinfo == self.ref_channel:
-            self.ref_image = image
-        return True
 
     def set_reference_channel_cb(self, w, idx):
         chname = self.chnames[idx]
@@ -206,8 +192,8 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         # get native scale relative to reference image
         image = chviewer.get_image()
         ort = wcs.get_relative_orientation(image, self.ref_image)
-        self.logger.info("scale for channel '%s' relative to ref image %f,%f" % (
-            chinfo.name, ort.rscale_x, ort.rscale_y))
+        self.logger.info("scale for channel '%s' relative to ref image "
+                         "%f,%f" % (chinfo.name, ort.rscale_x, ort.rscale_y))
 
         scale_x, scale_y = chviewer.get_scale_xy()
         #scale_x, scale_y = value
@@ -233,7 +219,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
             self.logger.info("changing scale for channel '%s' to %f,%f" % (
                 chinfo2.name, new_scale_x, new_scale_y))
             chinfo2.fitsimage.scale_to(new_scale_x, new_scale_y)
-
 
     def rotset_cb(self, setting, value, chviewer, info):
         """This callback is called when a channel window is rotated.
@@ -266,8 +251,8 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         if self.ref_image is None:
             return
         ort = wcs.get_relative_orientation(image, self.ref_image)
-        self.logger.info("rotation for channel '%s' relative to ref image %f" % (
-            chinfo.name, ort.rrot_deg))
+        self.logger.info("rotation for channel '%s' relative to ref image "
+                         "%f" % (chinfo.name, ort.rrot_deg))
 
         rot_deg = chviewer.get_rotation()
 
@@ -292,7 +277,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
                 chinfo2.name, new_rot_deg))
             chinfo2.fitsimage.rotate(new_rot_deg)
 
-
     def panset_cb(self, setting, value, chviewer, info):
         """This callback is called when a channel window is panned.
         """
@@ -315,7 +299,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         finally:
             self._cur_opn_viewer = None
 
-
     def pan_all_relative(self, chviewer, chinfo):
         if self.ref_image is None:
             return
@@ -337,7 +320,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
                 continue
             data_x, data_y = image.radectopix(pan_ra, pan_dec)
             chinfo2.fitsimage.panset_xy(data_x, data_y)
-
 
     def xfmset_cb(self, setting, value, chviewer, info):
         """This callback is called when a channel window is transformed
@@ -362,7 +344,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         finally:
             self._cur_opn_viewer = None
 
-
     def transform_all_relative(self, chviewer, chinfo):
         if self.ref_image is None:
             return
@@ -384,6 +365,12 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
                 continue
             chinfo2.fitsimage.transform(flip_x, flip_y, swap_xy)
 
+    #def redo(self, channel, image):
+    #    info = channel.extdata._wcsmatch_info
+    #    self.logger.info("Channel '%s' setting image" % (info.chinfo.name))
+    #    if info.chinfo == self.ref_channel:
+    #        self.ref_image = image
+    #    return True
 
     def redo(self):
         if self.ref_image is None:
@@ -405,4 +392,4 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'wcsmatch'
 
-#END
+# END

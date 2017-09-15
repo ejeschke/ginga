@@ -1,10 +1,22 @@
-#
-# WBrowser.py -- Web Browser plugin for Ginga
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
-"""Browse help for Ginga."""
+"""
+Web browser plugin for Ginga.
+
+**Plugin Type: Global**
+
+``WBrowser`` is a global plugin. Only one instance can be opened.
+
+**Usage**
+
+This global plugin is used to browse help pages for Ginga.
+
+When a "Help" button is pressed from a plugin (e.g., ``Pick``),
+Ginga will attempt to download an existing documentation build
+from *ReadTheDocs* for the matching version. If successful,
+plugin documentation from that download is displayed.
+If not successful or deliberately disabled in "plugin_WBrowser.cfg",
+Ginga will render the plugin's docstring locally.
+
+"""
 from __future__ import absolute_import, division, print_function
 
 import os
@@ -13,7 +25,7 @@ import os
 from ginga.GingaPlugin import GlobalPlugin
 from ginga.gw import Widgets
 
-__all__ = []
+__all__ = ['WBrowser']
 
 WAIT_HTML = """<html><title>Downloading documentation</title>
 <body>
@@ -26,19 +38,7 @@ This may take several seconds (or longer, depending on your connection).</p>
 
 
 class WBrowser(GlobalPlugin):
-    """
-    WBrowser
-    ========
-    Web Browser plugin for Ginga.
 
-    Plugin Type: Global
-    -------------------
-    WBrowser is a global plugin. Only one instance can be opened.
-
-    This global plugin is used to browse help pages for Ginga.
-    When available, a local help page is displayed.
-
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(WBrowser, self).__init__(fv)
@@ -181,5 +181,11 @@ class WBrowser(GlobalPlugin):
 
     def __str__(self):
         return 'wbrowser'
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_WBrowser', package='ginga')
 
 # END
