@@ -1373,6 +1373,9 @@ class ImageViewBase(Callback.Callbacks):
         """
         outarr = self.getwin_array(order=order)
 
+        if not hasattr(outarr, 'tobytes'):
+            # older versions of numpy
+            return outarr.tostring(order='C')
         return outarr.tobytes(order='C')
 
     def get_datarect(self):
@@ -3277,7 +3280,11 @@ class ImageViewBase(Callback.Callbacks):
             obuf = BytesIO()
 
         arr8 = self.get_image_as_array()
-        obuf.write(arr8.tobytes(order='C'))
+        if not hasattr(arr8, 'tobytes'):
+            # older versions of numpy
+            obuf.write(arr8.tostring(order='C'))
+        else:
+            obuf.write(arr8.tobytes(order='C'))
 
         ## if output is not None:
         ##     return None
