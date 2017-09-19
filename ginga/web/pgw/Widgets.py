@@ -1026,7 +1026,8 @@ class TabWidget(ContainerBase):
 
     def _cb_redirect(self, event):
         self.index = event.value
-        self.make_callback('page-switch', self.index)
+        child = self.index_to_widget(self.index)
+        self.make_callback('page-switch', child)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
