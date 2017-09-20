@@ -13329,6 +13329,8 @@ for name, value in list(globals().items()):
         add_cmap(key, value)
 
 # by default add matplotlib colormaps, if available
-add_matplotlib_cmaps(fail_on_import_error=False)
+# NOTE: disable until we can figure out how to iterate over all the colormaps
+# without forcing warnings for maps to be deprecated
+#add_matplotlib_cmaps(fail_on_import_error=False)
 
 #END
