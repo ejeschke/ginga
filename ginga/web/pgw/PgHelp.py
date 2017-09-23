@@ -111,9 +111,8 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
             event_class = self.event_callbacks[event_type]
 
         except KeyError:
-            print("I don't know how to process '%s' events!" % (
-                event_type))
-            return
+            # Attempt to turn this into a widget event
+            event_class = WidgetEvent
 
         event = event_class(**message)
         self.app.widget_event(event)

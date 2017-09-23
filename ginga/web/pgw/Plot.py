@@ -27,7 +27,6 @@ class PlotWidget(Widgets.Canvas):
         self.logger = plot.logger
 
         self._configured = False
-        self.refresh_delay = 0.010
 
         self.set_plot(plot)
 
@@ -72,18 +71,15 @@ class PlotWidget(Widgets.Canvas):
 
         self.plot.add_callback('draw-canvas', self.draw_cb)
 
-        self.add_timer('refresh', self.refresh_cb)
-
     def get_plot(self):
         return self.plot
 
     def ignore_event(self, event):
         pass
 
-    def refresh_cb(self):
+    def do_refresh(self):
         app = self.get_app()
         app.do_operation('refresh_canvas', id=self.id)
-        self.reset_timer('refresh', self.refresh_delay)
 
     def get_rgb_buffer(self, plot):
         buf = BytesIO()
@@ -102,8 +98,6 @@ class PlotWidget(Widgets.Canvas):
         self.logger.debug("drawing %dx%d image" % (wd, ht))
         self.draw_image(buf, 0, 0, wd, ht)
 
-        self.reset_timer('refresh', self.refresh_delay)
-
     def configure_window(self, wd, ht):
         self.logger.debug("canvas resized to %dx%d" % (wd, ht))
         fig = self.plot.get_figure()
@@ -114,6 +108,7 @@ class PlotWidget(Widgets.Canvas):
         self.configure_window(wd, ht)
 
         self.plot.draw()
+        self.do_refresh()
 
     def resize_event(self, event):
         wd, ht = event.width, event.height

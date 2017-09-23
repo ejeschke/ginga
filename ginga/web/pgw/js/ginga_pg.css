@@ -1,0 +1,22 @@
+/*
+ * CSS for Ginga pg widgets
+ */
+
+.vbox {
+    display: flex;
+    flex-direction: column;
+    align-content: flex-start;
+    overflow: hidden;
+}
+
+.hbox {
+    display: flex;
+    flex-direction: row;
+    align-content: flex-start;
+    flex-wrap: wrap;
+    overflow: hidden;
+    align-items: stretch;
+    align-content: stretch;
+}
+
+/*END*/

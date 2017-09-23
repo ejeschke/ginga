@@ -20,7 +20,6 @@ class GingaViewerWidget(Widgets.Canvas):
         self.logger = viewer.logger
 
         self._configured = False
-        self.refresh_delay = 0.010
 
         self.set_viewer(viewer)
 
@@ -64,7 +63,6 @@ class GingaViewerWidget(Widgets.Canvas):
             "swipe": viewer.swipe_event,
             }
 
-        self.add_timer('refresh', self.refresh_cb)
         self.add_timer('redraw', self.viewer.delayed_redraw)
         self.add_timer('msg', self.viewer.clear_onscreen_message)
 
@@ -78,12 +76,8 @@ class GingaViewerWidget(Widgets.Canvas):
 
     def map_event_cb(self, event):
         self.viewer.map_event(event)
-        self.reset_timer('refresh', self.refresh_delay)
-
-    def refresh_cb(self, *args):
         app = self.get_app()
         app.do_operation('refresh_canvas', id=self.id)
-        self.reset_timer('refresh', self.refresh_delay)
 
     def do_update(self, buf):
         self.clear_rect(0, 0, self.width, self.height)
