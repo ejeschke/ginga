@@ -2,18 +2,26 @@
  * CSS for Ginga pg widgets
  */
 
+* {
+    box-sizing: border-box;
+}
+
+
 .vbox {
     display: flex;
     flex-direction: column;
-    align-content: flex-start;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
     overflow: hidden;
+    align-items: stretch;
+    align-content: stretch;
 }
 
 .hbox {
     display: flex;
     flex-direction: row;
-    align-content: flex-start;
-    flex-wrap: wrap;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
     overflow: hidden;
     align-items: stretch;
     align-content: stretch;

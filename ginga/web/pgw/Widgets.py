@@ -67,10 +67,7 @@ class WidgetBase(Callback.Callbacks):
         widget_id += 1
         self.id = widget_id
         widget_dict[widget_id] = self
-
-        self.add_css_styles([('position', 'absolute'),
-                             ('left', '0px'), ('right', '0px'),
-                             ('top', '0px'), ('bottom', '0px')])
+        self.margins = (0, 0, 0, 0)   # T, R, B, L,
 
     def get_url(self):
         app = self.get_app()
@@ -131,6 +128,14 @@ class WidgetBase(Callback.Callbacks):
         padding = "%dpx %dpx %dpx %dpx" % (top, right, bottom, left)
         self.add_css_styles([('padding', padding)])
 
+    def set_margins(self, top, right, bottom, left):
+        self.margins = (top, right, bottom, left)
+        margin = "%dpx %dpx %dpx %dpx" % self.margins
+        self.add_css_styles([('margin', margin)])
+
+    def set_border_width(self, pix):
+        self.add_css_styles([('border-width', '%dpx' % pix)])
+
     def get_css_classes(self, fmt=None):
         classes = self.extdata.setdefault('css_classes', [])
         if fmt == 'str':
@@ -147,7 +152,7 @@ class WidgetBase(Callback.Callbacks):
     def get_css_styles(self, fmt=None):
         styles = self.extdata.setdefault('inline_styles', [])
         if fmt == 'str':
-            styles = [ "%s: %s" % (x, repr(y)) for x, y in styles ]
+            styles = [ "%s: %s" % (x, y) for x, y in styles ]
             styles = "; ".join(styles)
         return styles
 
@@ -229,7 +234,8 @@ class TextEntry(WidgetBase):
 class TextEntrySet(WidgetBase):
 
     html_template = '''
-        <span> <input id=%(id)s type="text" size=%(size)d name="%(id)s"
+        <span class="%(classes)s" style="%(styles)s">
+        <input id=%(id)s type="text" size=%(size)d name="%(id)s"
            class="%(classes)s" style="%(styles)s"
            %(disabled)s onchange="ginga_app.widget_handler('activate', '%(id)s',
               document.getElementById('%(id)s').value)" value="%(text)s"/>
@@ -782,9 +788,9 @@ class RadioButton(WidgetBase):
 
     html_template = '''
     <input id=%(id)s name="%(group)s" type="radio"
-         class="%(classes)s" style="%(style)s"
+         class="%(classes)s" style="%(styles)s"
          %(disabled)s onchange="ginga_app.widget_handler('activate', '%(id)s',
-                document.getElementById('%(id)s').value)" % (checked)s
+                document.getElementById('%(id)s').value)" %(checked)s
          value="true">%(text)s
     '''
     group_cnt = 0
@@ -1042,9 +1048,6 @@ support HTML5 canvas.</canvas>
         self.width = width
         self.height = height
         self.name = ''
-        self.add_css_styles([('position', 'absolute'),
-                             ('left', '0px'), ('right', '0px'),
-                             ('top', '0px'), ('bottom', '0px')])
         self.timers = {}
 
     def _cb_redirect(self, event):
@@ -1093,7 +1096,6 @@ class ContainerBase(WidgetBase):
         super(ContainerBase, self).__init__()
         # TODO: probably need to maintain children as list of widget ids
         self.children = []
-        self.margins = (0, 0, 0, 0)   # L, R, T, B
 
     def add_ref(self, ref):
         # TODO: should this be a weakref?
@@ -1119,31 +1121,30 @@ class ContainerBase(WidgetBase):
     def render(self):
         return self.render_children()
 
-    def set_margins(self, top, right, bottom, left):
-        self.margins = (top, right, bottom, left)
-        margin = "%dpx %dpx %dpx %dpx" % self.margins
-        self.add_css_styles([('margin', margin)])
-
-    def set_border_width(self, pix):
-        self.add_css_styles([('border-width', '%dpx' % pix)])
-
     def render_children(self, ifx=' ', spacing=0, spacing_side='right'):
-        def _render_child(child):
-            content = child.render()
-            style = []
-            if spacing > 0:
-                style.append("margin-%s: %dpx;" % (spacing_side, spacing))
-            if len(style) == 0:
-                return content
-            return '''<span style="%s">%s</span>''' % (
-                ' '.join(style), child.render())
-        return ifx.join(map(_render_child, self.get_children()))
+        # TODO: find a way to avoid overriding any padding specifically
+        # set in the child
+        if spacing_side == 'right':
+            margins = (0, spacing, 0, 0)
+        else:
+            margins = (0, 0, spacing, 0)
+
+        res = []
+        children = self.get_children()
+        for child in children:
+            if child != children[-1]:
+                child.set_margins(*margins)
+            res.append(child.render())
+
+        return ifx.join(res)
 
 
 class Box(ContainerBase):
 
     html_template = '''
-    <div id=%(id)s class="%(classes)s" style="%(styles)s">%(content)s</div>
+    <div id=%(id)s class="%(classes)s" style="%(styles)s">
+      %(content)s
+    </div>
     '''
 
     def __init__(self, orientation='horizontal'):
@@ -1161,7 +1162,7 @@ class Box(ContainerBase):
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         flex = int(round(stretch))
-        child.add_css_styles([('display', 'flex'), ('flex', flex)])
+        child.add_css_styles([('flex-grow', flex), ('flex-shrink', 0)])
 
         app = self.get_app()
         app.do_operation('update_html', id=self.id, value=self.render())
@@ -1227,9 +1228,9 @@ class Expander(ContainerBase):
 
     html_template = """
     <div id='%(id)s'  class="%(classes)s" style="%(styles)s">
-      <div>%(title)s</div>
+      <div> %(title)s </div>
       <div>
-      %(content)s
+        %(content)s
       </div>
     </div>
     <script type="text/javascript">
@@ -1491,7 +1492,7 @@ class Splitter(ContainerBase):
         self.make_callback('activated', self.sizes)
 
     def render(self):
-        panels = [ '''<div>%s</div>''' % (child.render())
+        panels = [ '''<div> %s </div>''' % (child.render())
                    for child in self.get_children() ]
         sizes = [ '''{ size: %d }''' % size
                   for size in self.sizes ]
