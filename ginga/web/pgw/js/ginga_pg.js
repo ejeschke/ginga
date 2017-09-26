@@ -147,6 +147,8 @@ ginga_initialize_canvas = function (canvas, id, app) {
     pg_canvas.canvas_id = id
     pg_canvas.app = app
     app.canvases[id] = pg_canvas
+    pg_canvas.width = canvas.width;
+    pg_canvas.height = canvas.height;
 
     // request animation frame from browser
     pg_canvas.animFrame = window.requestAnimationFrame ||
@@ -269,7 +271,13 @@ ginga_initialize_canvas = function (canvas, id, app) {
         // If an element is obscured it's size will be reported as 0.
         // In such a case we don't want to reset the peer's idea of the size
         // unnecessarily, so only report size changes > 0
-        if ((width != 0) && (height != 0)) {
+        if ((width != 0) && (height != 0) &&
+            ((width != pg_canvas.width) || (height != pg_canvas.height))) {
+            // update saved values
+            pg_canvas.width = width
+            pg_canvas.height = height
+
+            // update canvas
             canvas.width = width
             canvas.height = height
     

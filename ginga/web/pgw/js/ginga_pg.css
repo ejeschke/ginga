@@ -7,10 +7,27 @@
 }
 
 
-.vbox {
+html {
+    height: 100%;
+}
+
+body {
+    height: 100%;
+    margin: 0px;
+}
+
+
+.hbox, .vbox {
+    box-sizing: border-box;
+
+    margin: 0px;
+
+    display: -webkit-flex;
+    display: -ms-flexbox;  /* IE 10 */
+    display: -ms-flex;     /* IE 11 */
+    display: -moz-flex;
     display: flex;
-    flex-direction: column;
-    flex-wrap: nowrap;
+
     justify-content: flex-start;
     overflow: hidden;
     align-items: stretch;
@@ -18,13 +35,25 @@
 }
 
 .hbox {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    flex-wrap: nowrap;
+    -webkit-flex-flow: row;
+    -ms-flex-flow: row;
+    -moz-flex-flow: row;
+    flex-flow: row;
+    width: 100%;
+}
+
+.vbox {
+    -webkit-flex-flow: column;
+    -ms-flex-flow: column;
+    -moz-flex-flow: column;
+    flex-flow: column;
+    height: 100%;
+}
+
+div {
+    box-sizing: border-box;
+    white-space: nowrap;
     overflow: hidden;
-    align-items: stretch;
-    align-content: stretch;
 }
 
 /*END*/

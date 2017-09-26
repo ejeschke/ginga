@@ -242,8 +242,9 @@ class TextEntrySet(WidgetBase):
         <input type="button" %(disabled)s
             class="%(classes)s" style="%(styles)s"
             onclick="ginga_app.widget_handler('activate', '%(id)s',
-              document.getElementById('%(id)s').value)" value="Set"/> </span>
-              '''
+              document.getElementById('%(id)s').value)" value="Set"/>
+        </span>
+        '''
 
     def __init__(self, text='', editable=True):
         super(TextEntrySet, self).__init__()
@@ -705,12 +706,14 @@ class ScrollBar(WidgetBase):
 class CheckBox(WidgetBase):
 
     html_template = '''
+    <span class="%(classes)s" style="%(styles)s">
     <input id=%(id)s type="checkbox" %(disabled)s
-        class="%(classes)s" style="%(styles)s"
+        class="%(classes)s"
         onchange="ginga_app.widget_handler('activate', '%(id)s',
                     document.getElementById('%(id)s').checked)"
         value="%(text)s"><label for="%(id)s">%(text)s</label>
-        '''
+    </span>
+    '''
 
     def __init__(self, text=''):
         super(CheckBox, self).__init__()
@@ -745,11 +748,13 @@ class CheckBox(WidgetBase):
 class ToggleButton(WidgetBase):
 
     html_template = '''
+    <span class="%(classes)s" style="%(styles)s">
     <input id=%(id)s type="checkbox" %(disabled)s
-         class="%(classes)s" style="(styles)s"
+         class="%(classes)s"
          onchange="ginga_app.widget_handler('activate', '%(id)s',
                         document.getElementById('%(id)s').checked)"
          value="%(text)s"><label for="%(id)s">%(text)s</label>
+    </span>
     '''
 
     def __init__(self, text=''):
@@ -787,11 +792,13 @@ class ToggleButton(WidgetBase):
 class RadioButton(WidgetBase):
 
     html_template = '''
+    <span class="%(classes)s" style="%(styles)s">
     <input id=%(id)s name="%(group)s" type="radio"
-         class="%(classes)s" style="%(styles)s"
+         class="%(classes)s"
          %(disabled)s onchange="ginga_app.widget_handler('activate', '%(id)s',
                 document.getElementById('%(id)s').value)" %(checked)s
          value="true">%(text)s
+    </span>
     '''
     group_cnt = 0
 
@@ -1162,6 +1169,9 @@ class Box(ContainerBase):
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         flex = int(round(stretch))
+        # Consider whether we need to add the following:
+        #   -webkit-flex-grow, -ms-flex-grow, -moz-flex-grow
+        # and their "shrink" conterparts
         child.add_css_styles([('flex-grow', flex), ('flex-shrink', 0)])
 
         app = self.get_app()
@@ -1273,9 +1283,8 @@ class TabWidget(ContainerBase):
     </div>
     <script type="text/javascript">
         $(document).ready(function () {
-            $('#%(id)s').jqxTabs({ width: '100%%', height: '100%%',
-                                   position: '%(pos)s' });
-            $('#%(id)s').on('tabclick', function (event) {
+            $('#%(id)s').tabs({ active: '%(pos)s', heightStyle: 'fill' });
+            $('#%(id)s').on('tabsactivate', function (event, ui) {
                 ginga_app.widget_handler('activate', '%(id)s',
                                            event['owner']['selectedItem']);
             });
@@ -1283,7 +1292,7 @@ class TabWidget(ContainerBase):
             // see python method set_index() in this widget
             ginga_app.add_custom_method('select_tab',
                 function (elt, msg) {
-                    $(elt).jqxTabs('select', msg.index);
+                    $(elt).tabs('option', 'active', msg.index);
             });
         });
     </script>
@@ -1301,6 +1310,7 @@ class TabWidget(ContainerBase):
         self.index = 0
         self.set_tab_position(tabpos)
         self.titles = []
+        self.add_css_classes(['ui-tabs'])
         self._tabs_visible = True
 
         for name in ('page-switch', 'page-close', 'page-move', 'page-detach'):
@@ -1360,13 +1370,15 @@ class TabWidget(ContainerBase):
 
         if self._tabs_visible:
             # draw tabs
-            res = ["<ul>\n"]
+            res = ['''<ul class="ui-tabs-nav">\n''']
             for child in self.get_children():
-                res.append("<li> %s </li>\n" % child.extdata.tab_title)
+                res.append('''<li> <a href="#%s-%s"> %s </a></li>\n''' % (
+                    self.id, child.id, child.extdata.tab_title))
             res.append("</ul>\n")
             d['tabs'] = '\n'.join(res)
 
-        res = ["<div> %s </div>\n" % child.render()
+        res = ['''<div id="%s-%s"> %s </div>\n''' % (
+            self.id, child.id, child.render())
                 for child in self.get_children()]
         d['content'] = '\n'.join(res)
 
@@ -1453,10 +1465,9 @@ class Splitter(ContainerBase):
     </div>
     <script type="text/javascript">
         $(document).ready(function () {
-            $('#%(id)s').jqxSplitter({ width: '%(width)s', height: '%(height)s',
-                                       orientation: '%(orient)s',
-                                       disabled: %(disabled)s,
-                                       panels: [] });
+            $('#%(id)s').jqxSplitter({ orientation: '%(orient)s',
+                                       disabled: %(disabled)s
+                                        });
             $('#%(id)s').on('resize', function (event) {
                  var sizes = [];
                  for (i = 0; i < event.args.panels.length; i++) {
@@ -2232,8 +2243,8 @@ class Dialog(ContainerBase):
         self.value = None
         self.modal = modal
         self.body = VBox()
-        self.enable_callback('activated')
-        self.enable_callback('close')
+        for name in ('activated', 'open', 'close', 'resize'):
+            self.enable_callback(name)
         if callback:
             self.add_callback('activated', callback)
 
@@ -2256,10 +2267,15 @@ class Dialog(ContainerBase):
         parent.add_dialog(self)
 
     def _cb_redirect(self, event):
-        if event == 'dialog-resize':
-            self.make_callback('resize')
+        if event.type == 'dialog-resize':
+            wd, ht = int(event.value['width']), int(event.value['height'])
+            self.make_callback('resize', (wd, ht))
 
-        elif event == 'dialog-close':
+        elif event.type == 'dialog-open':
+            # TODO: don't allow dialog to be closed
+            self.make_callback('open')
+
+        elif event.type == 'dialog-close':
             # TODO: don't allow dialog to be closed
             self.make_callback('close')
 
