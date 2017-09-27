@@ -1,24 +1,13 @@
-#
-# Unit Tests for the imap.py functions
-#
-# Rajul Srivastava  (rajul09@gmail.com)
-#
-import unittest
-import logging
+"""Unit Tests for the imap.py functions"""
+
 import numpy as np
+import pytest
 
 import ginga.imap
 from ginga.imap import IntensityMap
 
 
-class TestError(Exception):
-    pass
-
-
-class TestCmap(unittest.TestCase):
-
-    def setUp(self):
-        pass
+class TestCmap(object):
 
     def test_IntensityMap_init(self):
         test_ilst = tuple(np.linspace(0, 1, ginga.imap.min_imap_len))
@@ -34,10 +23,11 @@ class TestCmap(unittest.TestCase):
 
         expected = test_ilst
         actual = test_intensity_map.ilst
-        assert np.allclose(expected, actual)
+        np.testing.assert_allclose(expected, actual)
 
     def test_IntensityMap_init_exception(self):
-        self.assertRaises(TypeError, IntensityMap, 'test-name')
+        with pytest.raises(TypeError):
+            IntensityMap('test-name')
 
     def test_imaps(self):
         count = 0
@@ -57,15 +47,15 @@ class TestCmap(unittest.TestCase):
         expected = IntensityMap('test-name', test_ilst)
         actual = ginga.imap.imaps['test-name']
         assert expected.name == actual.name
-        assert np.allclose(expected.ilst, actual.ilst)
+        np.testing.assert_allclose(expected.ilst, actual.ilst)
 
         # Teardown
         del ginga.imap.imaps['test-name']
 
     def test_add_imap_exception(self):
         test_ilst = (0.0, 1.0)
-        self.assertRaises(
-            AssertionError, ginga.imap.add_imap, 'test-name', test_ilst)
+        with pytest.raises(AssertionError):
+            ginga.imap.add_imap('test-name', test_ilst)
 
     def test_get_imap(self):
         test_ilst = tuple(np.linspace(0, 1, ginga.imap.min_imap_len))
@@ -75,13 +65,14 @@ class TestCmap(unittest.TestCase):
         expected = IntensityMap('test-name', test_ilst)
         actual = ginga.imap.get_imap('test-name')
         assert expected.name == actual.name
-        assert np.allclose(expected.ilst, actual.ilst)
+        np.testing.assert_allclose(expected.ilst, actual.ilst)
 
         # Teardown
         del ginga.imap.imaps['test-name']
 
     def test_get_imap_exception(self):
-        self.assertRaises(KeyError, ginga.imap.get_imap, 'non-existent-name')
+        with pytest.raises(KeyError):
+            ginga.imap.get_imap('non-existent-name')
 
     def test_get_names(self):
         names = []
@@ -92,11 +83,5 @@ class TestCmap(unittest.TestCase):
         expected = sorted(names)
         actual = ginga.imap.get_names()
         assert expected == actual
-
-    def tearDown(self):
-        pass
-
-if __name__ == '__main__':
-    unittest.main()
 
 # END
