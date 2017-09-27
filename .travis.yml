@@ -1,8 +1,7 @@
 language: python
 
 python:
-    - 2.7
-    - 3.5
+    - 3.6
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
@@ -40,7 +39,7 @@ env:
     matrix:
         # Make sure that egg_info works without dependencies
         - SETUP_CMD='egg_info'
-        # Try all python versions with the latest numpy
+        # Try all python versions with the latest Numpy
         - SETUP_CMD='test'
 
 matrix:
@@ -50,51 +49,40 @@ matrix:
 
     include:
 
-        # Do a coverage test in Python 2.
+        # Test egg_info in Python 2
+        - python: 2.7
+          env: ASTROPY_VERSION=lts SETUP_CMD='egg_info'
+
+        # Do a coverage test in Python 3.
         # *** TODO: `python setup.py test --coverage` doesn't work yet for `ginga` ... skipping for now
-        # - python: 2.7
+        # - python: 3.6
         #  env: SETUP_CMD='test --coverage'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
         # *** TODO: The `-w` option doesn't work with `python setup.py build_sphinx` yet for `ginga` ... removing it for now
-        - python: 2.7
+        - python: 3.6
           # env: SETUP_CMD='build_docs -w'
           env: SETUP_CMD='build_docs' PIP_DEPENDENCIES='sphinx_rtd_theme'
 
-        # Try Astropy development version
-        # NOTE: Uncomment this if global version is stable, not dev
+        # Try older Numpy versions
         - python: 2.7
-          env: ASTROPY_VERSION=development
+          env: NUMPY_VERSION=1.10 ASTROPY_VERSION=lts
         - python: 3.5
-          env: ASTROPY_VERSION=development
-
-        # Try Astropy LTS version (disabled for now)
-        #- python: 2.7
-        #  env: ASTROPY_VERSION=lts
-        #- python: 3.5
-        #  env: ASTROPY_VERSION=lts
-
-        # Try older numpy versions
-        - python: 2.7
-          env: NUMPY_VERSION=1.10
-        - python: 2.7
-          env: NUMPY_VERSION=1.9
-        - python: 3.5
-          env: NUMPY_VERSION=1.10
-        - python: 3.5
-          env: NUMPY_VERSION=1.9
-
-        # Try numpy pre-release
+          env: NUMPY_VERSION=1.11
         - python: 3.6
-          env: NUMPY_VERSION=prerelease
+          env: NUMPY_VERSION=1.12
+
+        # Try Numpy pre-release and Astropy dev
+        - python: 3.6
+          env: NUMPY_VERSION=prerelease ASTROPY_VERSION=development
 
         # Do a PEP8 test with pycodestyle
-        - python: 3.5
+        - python: 3.6
           env: MAIN_CMD='pycodestyle ginga --count' SETUP_CMD=''
 
     allow_failures:
-        - python: 3.5
+        - python: 3.6
           env: MAIN_CMD='pycodestyle ginga --count' SETUP_CMD=''
 
 before_install:
