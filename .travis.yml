@@ -66,8 +66,9 @@ matrix:
           env: SETUP_CMD='build_docs' PIP_DEPENDENCIES='sphinx_rtd_theme'
 
         # Try older Numpy versions
+        # TODO: Pin Python 2.7 to ASTROPY_VERSION=lts after Astropy v3 release
         - python: 2.7
-          env: NUMPY_VERSION=1.10 ASTROPY_VERSION=lts
+          env: NUMPY_VERSION=1.10
         - python: 3.5
           env: NUMPY_VERSION=1.11
         - python: 3.6
