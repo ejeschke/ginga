@@ -3,4 +3,6 @@
 Drawing
 =======
 
-TBD
+.. automodapi:: ginga.rv.plugins.Drawing
+   :no-heading:
+   :skip: Drawing

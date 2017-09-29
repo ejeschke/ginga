@@ -1,9 +1,35 @@
-#
-# Compose.py -- Compose plugin for Ginga reference viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
+"""
+A plugin for composing RGB images from constituent monochrome images.
+
+**Plugin Type: Local**
+
+``Compose`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+Start the ``Compose`` plugin from the "Operations" menu -- the tab should
+show up under "Dialogs".
+
+1. Press "New Image" to start composing a new RGB image.
+2. Drag your three constituent images that will make up the R, G, and B
+   planes to the main viewer window -- drag them in the order R (red),
+   G (green), and B (blue).
+
+In the plugin, the R, G, and B images should show up as three slider
+controls in the "Layers" area of the plugin.
+
+You should now have a composite three-color image in the ``Compose`` preview
+window.  Most likely the image does not have good cut levels set, so you
+may want to set cut levels on the image using any of the usual cut levels
+controls.
+
+3. Play with the alpha levels of each layer using the sliders in the
+   ``Compose`` plugin; When you release a slider, the image should update.
+4. When you see something you like, you can save it to a file using the
+   "Save As" button.
+
+"""
 import os
 
 from ginga.gw import Widgets
@@ -11,12 +37,14 @@ from ginga.misc import Bunch
 from ginga import RGBImage, LayerImage
 from ginga import GingaPlugin
 
-import numpy
+import numpy as np
 try:
     from PIL import Image
     have_PIL = True
 except ImportError:
     have_PIL = False
+
+__all__ = ['Compose']
 
 
 class ComposeImage(RGBImage.RGBImage, LayerImage.LayerImage):
@@ -26,39 +54,7 @@ class ComposeImage(RGBImage.RGBImage, LayerImage.LayerImage):
 
 
 class Compose(GingaPlugin.LocalPlugin):
-    """
-    Compose
-    =======
-    A plugin for composing RGB images from constituent monochrome images.
 
-    Plugin Type: Local
-    ------------------
-    Compose is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Usage
-    -----
-    Start the Compose plugin from the Operation menu--the tab should
-    show up under "Dialogs"
-
-    1) Press "New Image" to start composing a new RGB image.
-    2) drag your three constituent images that will make up the R, G and B
-       planes to the main viewer window--drag them in the order R (red),
-       G (green) and B (blue).
-
-    In the plugin, the R, G and B iamges should show up as three slider
-    controls in the Layers area of the plugin.
-
-    You should now have a composite three color image in the Compose preview
-    window.  Most likely the image does not have good cut levels set, so you
-    may want to set cut levels on the image using any of the usual cut levels
-    controls.
-
-    3) Play with the alpha levels of each layer using the sliders in the
-       Compose plugin, when you release a slider the image should update.
-    4) When you see something you like you can save it to a file using the
-       "Save As" button.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Compose, self).__init__(fv, fitsimage)
@@ -288,8 +284,8 @@ class Compose(GingaPlugin.LocalPlugin):
                                    vmin=vmin, vmax=vmax)
 
         # result becomes an index array fed to the RGB mapper
-        if not numpy.issubdtype(data.dtype, numpy.dtype('uint')):
-            data = data.astype(numpy.uint)
+        if not np.issubdtype(data.dtype, np.dtype('uint')):
+            data = data.astype(np.uint)
 
         # get RGB array using settings from viewer
         rgbobj = rgbmap.get_rgbarray(data, order=order,
@@ -316,7 +312,7 @@ class Compose(GingaPlugin.LocalPlugin):
         # start ruler drawing operation
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add ruler layer
@@ -347,4 +343,4 @@ class Compose(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'compose'
 
-#END
+# END

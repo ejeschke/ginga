@@ -1,10 +1,50 @@
-#
-# Histogram.py -- Histogram plugin for Ginga reference viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
-import numpy
+"""
+``Histogram`` plots a histogram for a region drawn in the image, or for the
+entire image.
+
+**Plugin Type: Local**
+
+``Histogram`` is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
+**Usage**
+
+Click and drag to define a region within the image that will be used to
+calculate the histogram.  To take the histogram of the full image, click
+the button in the UI labeled "Full Image".
+
+.. note:: Depending on the size of the image, calculating the
+          full histogram may take time.
+
+If a new image is selected for the channel, the histogram plot will be
+recalculated based on the current parameters with the new data.
+
+**UI Controls**
+
+Three radio buttons at the bottom of the UI are used to control the
+effects of the click/drag action:
+
+* select "Move" to drag the region to a different location
+* select "Draw" to draw a new region
+* select "Edit" to edit the region
+
+To make a log plot of the histogram, check the "Log Histogram" checkbox.
+To plot by the full range of values in the image instead of by the range
+within the cut values, uncheck the "Plot By Cuts" checkbox.
+
+The "NumBins" parameter determines how many bins are used in calculating
+the histogram.  Type a number in the box and press "Enter" to change the
+default value.
+
+**Cut Levels Convenience Controls**
+
+Because a histogram is useful feedback for setting the cut levels,
+controls are provided in the UI for setting the low and high cut levels
+in the image, as well as for performing an auto cut levels, according to
+the auto cut levels settings in the channel preferences.
+
+"""
+import numpy as np
 
 from ginga.gw import Widgets
 from ginga import GingaPlugin
@@ -17,53 +57,11 @@ try:
 except ImportError:
     have_mpl = False
 
+__all__ = ['Histogram']
+
 
 class Histogram(GingaPlugin.LocalPlugin):
-    """
-    Histogram
-    =========
-    Histogram plots a histogram for a region drawn in the image, or for the
-    entire image.
 
-    Plugin Type: Local
-    ------------------
-    Histogram is a local plugin, which means it is associated with a channel.
-    An instance can be opened for each channel.
-
-    If a new image is selected for the channel the histogram plot will be
-    recalculated based on the current parameters with the new data.
-
-    Usage
-    -----
-    Click and drag to define a region within the image that will be used to
-    calculate the histogram.  To take the histogram of the full image, click
-    the button in the UI labeled "Full Image" (NOTE: depending on the size
-    of the image calculating the full histogram can take time).
-
-    UI Controls
-    -----------
-    Three radio buttons at the bottom of the UI are used to control the
-    effects of the click/drag action:
-
-    * select "Move" to drag the region to a different location
-    * select "Draw" to draw a new region
-    * select "Edit" to edit the region
-
-    To make a log plot of the histogram, check the "Log Histogram" checkbox.
-    To plot by the full range of values in the image instead of by the range
-    within the cut values, uncheck the "Plot By Cuts" checkbox.
-
-    The "NumBins" parameter determines how many bins are used in calculating
-    the histogram.  Type a number in the box and press Enter to change the
-    default value.
-
-    Cut Levels Convenience Controls
-    -------------------------------
-    Because a histogram is useful feedback for setting the cut levels,
-    controls are provided in the UI for setting the low and high cut levels
-    in the image, as well as for performing an auto cut levels, according to
-    the auto cut levels settings in the channel preferences.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Histogram, self).__init__(fv, fitsimage)
@@ -234,7 +232,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add ruler layer
@@ -321,11 +319,11 @@ class Histogram(GingaPlugin.LocalPlugin):
             # used with 'steps-post' drawstyle, this x and y assignment
             # gives correct histogram-steps
             x = res.bins
-            y = numpy.append(res.dist, res.dist[-1])
+            y = np.append(res.dist, res.dist[-1])
             ## y, x = y[i:j+1], x[i:j+1]
             ymax = y.max()
             if self.plot.logy:
-                y = numpy.choose(y > 0, (.1, y))
+                y = np.choose(y > 0, (.1, y))
             self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
                            title="Pixel Value Distribution",
                            color='blue', alpha=1.0, drawstyle='steps-post')
@@ -339,11 +337,11 @@ class Histogram(GingaPlugin.LocalPlugin):
                 # used with 'steps-post' drawstyle, this x and y assignment
                 # gives correct histogram-steps
                 x = res.bins
-                y = numpy.append(res.dist, res.dist[-1])
+                y = np.append(res.dist, res.dist[-1])
                 ## y, x = y[i:j+1], x[i:j+1]
                 ymax = max(ymax, y.max())
                 if self.plot.logy:
-                    y = numpy.choose(y > 0, (.1, y))
+                    y = np.choose(y > 0, (.1, y))
                 self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
                                title="Pixel Value Distribution",
                                color=colors[z], alpha=0.33,
@@ -580,5 +578,11 @@ class Histogram(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'histogram'
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Histogram', package='ginga')
 
 # END
