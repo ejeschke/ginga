@@ -166,6 +166,12 @@ class WidgetBase(Callback.Callbacks):
                   list(filter(lambda t: t[0] not in od, new_styles))
         self.extdata.inline_styles = styles
 
+    def call_custom_method(self, future, method_name, **kwargs):
+        app = self.get_app()
+        c_id = app.get_caller_id()
+        app.callers[c_id] = future
+        app.do_operation(method_name, id=self.id, caller_id=c_id, **kwargs)
+
     def render(self):
         text = "'%s' NOT YET IMPLEMENTED" % (str(self.__class__))
         d = dict(id=self.id, text=text)
@@ -902,7 +908,7 @@ class ProgressBar(WidgetBase):
                                           width: %(width)s, height: %(height)s,
                                           orientation: '%(orient)s' });
             // see python method set_index() in this widget
-            ginga_app.add_custom_method('set_progress',
+            ginga_app.add_widget_custom_method('%(id)s', 'set_progress',
                 function (elt, msg) {
                     $(elt).jqxProgressBar('val', msg.value);
             });
@@ -1172,7 +1178,7 @@ class Box(ContainerBase):
         # Consider whether we need to add the following:
         #   -webkit-flex-grow, -ms-flex-grow, -moz-flex-grow
         # and their "shrink" conterparts
-        child.add_css_styles([('flex-grow', flex), ('flex-shrink', 0)])
+        child.add_css_styles([('flex-grow', flex), ('flex-shrink', 1)])
 
         app = self.get_app()
         app.do_operation('update_html', id=self.id, value=self.render())
@@ -1290,7 +1296,7 @@ class TabWidget(ContainerBase):
             });
 
             // see python method set_index() in this widget
-            ginga_app.add_custom_method('select_tab',
+            ginga_app.add_widget_custom_method('%(id)s', 'select_tab',
                 function (elt, msg) {
                     $(elt).tabs('option', 'active', msg.index);
             });
@@ -1465,8 +1471,10 @@ class Splitter(ContainerBase):
     </div>
     <script type="text/javascript">
         $(document).ready(function () {
-            $('#%(id)s').jqxSplitter({ orientation: '%(orient)s',
-                                       disabled: %(disabled)s
+            $('#%(id)s').jqxSplitter({ width: '100%', height: '100%',
+                                       orientation: '%(orient)s',
+                                       disabled: %(disabled)s,
+                                       panels: %(sizes)s
                                         });
             $('#%(id)s').on('resize', function (event) {
                  var sizes = [];
@@ -1475,6 +1483,7 @@ class Splitter(ContainerBase):
                      sizes.push(panel.size);
                  }
                  ginga_app.widget_handler('activate', '%(id)s', sizes); });
+            });
         });
     </script>
     """
@@ -1496,6 +1505,9 @@ class Splitter(ContainerBase):
 
     def set_sizes(self, sizes):
         self.sizes = sizes
+
+        # TODO:
+        #self.call_custom_method('set_sizes', sizes=self.sizes)
 
     def _cb_redirect(self, event):
         self.set_sizes(event.value)
@@ -1716,7 +1728,7 @@ class Menu(ContainerBase):
             });
 
             // see python method popup() in this widget
-            ginga_app.add_custom_method('popup_menu',
+            ginga_app.add_widget_custom_method('%(id)s', 'popup_menu',
                 function (elt, msg) {
                     var top = $(window).scrollTop();
                     var left = $(window).scrollLeft();
@@ -2012,6 +2024,10 @@ class Application(Callback.Callbacks):
         self.screen_wd = 1600
         self.screen_ht = 1200
 
+        # for tracking remote ecmascript calls
+        self.caller_id = 0
+        self.callers = {}
+
         for name in ('shutdown', ):
             self.enable_callback(name)
 
@@ -2047,6 +2063,10 @@ class Application(Callback.Callbacks):
         w = TopLevel(title=title)
         self.add_window(w, wid=wid)
         return w
+
+    def get_caller_id(self):
+        c_id, self.caller_id = self.caller_id, self.caller_id + 1
+        return c_id
 
     def _cb_redirect(self, event):
         #print("application got an event (%s)" % (str(event)))
@@ -2112,12 +2132,21 @@ class Application(Callback.Callbacks):
             timer.timer = time.time() + time_sec
 
     def widget_event(self, event):
-        if event.type == "timer":
+        if event.type == 'timer':
             self.on_timer_event(event)
             return
 
         # get the widget associated with this id
         w_id = event.id
+
+        if event.type == 'ecma_call_result':
+            caller_id = event.value['caller_id']
+            f = self.callers.get(caller_id, None)
+            if f is not None:
+                del self.callers[caller_id]
+                f.resolve(event.value['caller_result'])
+            return
+
         try:
             w_id = int(event.id)
             widget = widget_dict[w_id]
@@ -2181,18 +2210,19 @@ class Dialog(ContainerBase):
         $(document).ready(function () {
             $('#%(id)s').dialog({
                 autoOpen: false, modal: %(modal)s,
+                autoResize: true,
                 title: "%(title)s",
                 closeOnEscape: false,
                 position: { x: 50, y: 50},
                 draggable: true,
-                width: %(width)d, height: %(height)d,
+                minWidth: 'auto', minHeight: 'auto',
                 maxWidth: '100%%', maxHeight: '100%%',
             });
             // otherwise we get scrollbars in the dialog
-            $('#%(id)s').css('overflow', 'hidden');
+            $('#%(id)s').css('overflow', 'visible');
 
             $('#%(id)s').on('beforeClose', function (event) {
-                ginga_app.widget_handler('dialog-close', '%(id)s', True);
+                ginga_app.widget_handler('dialog-close', '%(id)s', true);
             });
 
             $('#%(id)s').on("dialogresize", function (event, ui) {
@@ -2201,30 +2231,28 @@ class Dialog(ContainerBase):
                                 x: ui.position.left,
                                 y: ui.position.top }
                 ginga_app.widget_handler('dialog-resize', '%(id)s', payload);
-
-                //$('#%(body_id)s').css('width', payload.width)
-                //$('#%(body_id)s').css('height', payload.height)
             });
 
             // $('#%(id)s').on("dialogfocus", function (event, ui) {
-            //     ginga_app.widget_handler('dialog-focus', '%(id)s', True);
+            //     ginga_app.widget_handler('dialog-focus', '%(id)s', true);
             // });
 
             $('#%(id)s').on("dialogopen", function (event, ui) {
-                ginga_app.widget_handler('dialog-open', '%(id)s', True);
+                ginga_app.widget_handler('dialog-open', '%(id)s', true);
             });
 
             // see python method show() in this widget
-            ginga_app.add_custom_method('show_dialog',
+            ginga_app.add_widget_custom_method('%(id)s', 'show_dialog',
                 function (elt, msg) {
                     $(elt).dialog('open');
             });
 
             // see python method hide() in this widget
-            ginga_app.add_custom_method('hide_dialog',
+            ginga_app.add_widget_custom_method('%(id)s', 'hide_dialog',
                 function (elt, msg) {
                     $(elt).dialog('close');
             });
+
         });
     </script>
     """

@@ -9,6 +9,7 @@ ginga_make_application = function (ws_url, debug_flag) {
     // set this to true to get javascript console debugging
     ginga_app.debug = debug_flag
     ginga_app.custom_methods = {}
+    ginga_app.widget_custom_methods = {}
     
     ginga_app.onmessage_handler = function(e) {
         try {
@@ -69,7 +70,8 @@ ginga_make_application = function (ws_url, debug_flag) {
 	        }
                 else {
                     // call custom widget method
-                    ginga_app.custom_methods[message.operation](elt, message)
+                    var wtbl = ginga_app.widget_custom_methods[message.id];
+                    wtbl[message.operation](elt, message);
                 }
             };
         }
@@ -110,6 +112,12 @@ ginga_make_application = function (ws_url, debug_flag) {
 
     ginga_app.add_custom_method = function (name, fn) {
         ginga_app.custom_methods[name] = fn
+    }
+
+    ginga_app.add_widget_custom_method = function (wid, name, fn) {
+        var wtbl = ginga_app.widget_custom_methods;
+        var tbl = wtbl.hasOwnProperty(wid) ? wtbl[wid] : (wtbl[wid] = {});
+        tbl[name] = fn;
     }
 
     ginga_app.resize_window = function (e) {

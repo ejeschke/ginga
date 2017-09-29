@@ -29,7 +29,7 @@ body {
     display: flex;
 
     justify-content: flex-start;
-    overflow: hidden;
+    overflow: visible;
     align-items: stretch;
     align-content: stretch;
 }
@@ -53,7 +53,18 @@ body {
 div {
     box-sizing: border-box;
     white-space: nowrap;
-    overflow: hidden;
+    overflow: visible;
 }
 
+.ui-dialog .ui-dialog-content  {
+    /* Fix Dialog resizing issue where resize shrinks the content too
+     * much.  See https://stackoverflow.com/questions/31584544/jquery-ui-dialog-on-resizing-shrinks-the-content-of-the-dialog
+     */
+    padding: 3.5px;
+}
+
+.ui-dialog .ui-dialog-titlebar  {
+    /* Adjust the titlebar so it is equal to the content fix */
+    margin: 3.5px;
+}
 /*END*/
