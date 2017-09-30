@@ -1246,10 +1246,10 @@ class TreeView(WidgetBase):
         app = self.get_app()
         app.do_operation('scroll_to_path', id=self.id, index=item['rowid'])
 
-    def sort_on_column(self, i, dir):
+    def sort_on_column(self, i):
         colTitle, fieldName = self.columns[i]
         app = self.get_app()
-        app.do_operation('sort_on_column', id=self.id, dataField=fieldName, sortOrder=dir)
+        app.do_operation('sort_on_column', id=self.id, dataField=fieldName, sortOrder='asc')
 
     def set_column_width(self, i, width):
         self.columnWidths[i] = width
