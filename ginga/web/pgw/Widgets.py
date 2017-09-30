@@ -7,6 +7,7 @@
 import os.path
 import threading
 import time
+import json
 from functools import reduce
 
 from ginga.misc import Callback, Bunch, LineHistory
@@ -955,56 +956,272 @@ class StatusBar(Label):
 
 
 class TreeView(WidgetBase):
+
+    html_template = """
+    <div id="%(id)s">
+    </div>
+    <script type="text/javascript">
+        var source = %(source)s;
+        var columns = %(columns)s;
+        var dataAdapter = new $.jqx.dataAdapter(source);
+        $(document).ready(function () {
+            $("#%(id)s").jqxTreeGrid({
+                                       altRows: %(use_alt_row_color)s,
+                                       sortable: %(sortable)s,
+                                       source: dataAdapter,
+                                       width: %(width)s,
+                                       columns: columns,
+                                       columnsResize: true,
+                                       selectionMode: "%(selectionMode)s"
+                                       });
+            // The rowSelect event tells us that a row has been selected.
+            $("#%(id)s").on("rowSelect", function (event) {
+                // Call the getSelection method to get the list of selected
+                // rows so we can send the list back to the Python code.
+                var rowsSelected = $("#%(id)s").jqxTreeGrid("getSelection");
+                var payload = [];
+                // Send only the list of rowid values back to the Python code
+                for (var i = 0; i < rowsSelected.length; i++) {
+                        payload[i] = rowsSelected[i]["rowid"];
+                }
+                ginga_app.widget_handler("row-select", "%(id)s", payload);
+            });
+            // The rowDoubleClick event tells us that a cell has been double-clicked on.
+            $("#%(id)s").on("rowDoubleClick", function (event) {
+                var payload = {rowid: event.args.row["rowid"], dataField: event.args.dataField}
+                ginga_app.widget_handler("double-click", "%(id)s", payload);
+            });
+            // see python method clear() in this widget
+            ginga_app.add_widget_custom_method("%(id)s","clear",
+                function (elt, msg) {
+                    $(elt).jqxTreeGrid("clear");
+            });
+            // see python method clear_selection() in this widget
+            ginga_app.add_widget_custom_method("%(id)s","clear_selection",
+                function (elt, msg) {
+                    $(elt).jqxTreeGrid("clearSelection");
+            });
+            // see python method scroll_to_path() in this widget
+            ginga_app.add_widget_custom_method("%(id)s","scroll_to_path",
+                function (elt, msg) {
+                    $(elt).jqxTreeGrid("ensureRowVisible", msg.index);
+            });
+            // see python method select_path() in this widget
+            ginga_app.add_widget_custom_method("%(id)s","select_row",
+                function (elt, msg) {
+                    var method;
+                    if (msg.state) {
+                        method = "selectRow";
+                    } else {
+                        method = "unselectRow";
+                    }
+                    $(elt).jqxTreeGrid(method, msg.index);
+            });
+            // see python method sort_on_column() in this widget
+            ginga_app.add_widget_custom_method("%(id)s","sort_on_column",
+                function (elt, msg) {
+                    $(elt).jqxTreeGrid("sortBy", msg.dataField, msg.sortOrder);
+            });
+            // see python method set_column_width() in this widget
+            ginga_app.add_widget_custom_method("%(id)s","set_column_property",
+                function (elt, msg) {
+                    $(elt).jqxTreeGrid("setColumnProperty", msg.dataField, msg.property, msg.width);
+            });
+        });
+    </script>
+    """
+
     def __init__(self, auto_expand=False, sortable=False, selection='single',
                  use_alt_row_color=False, dragable=False):
         super(TreeView, self).__init__()
 
         self.auto_expand = auto_expand
         self.sortable = sortable
-        self.selection = selection
+
+        self.jQWidgetsSelectionModes = dict(single='singleRow', multiple='multipleRows')
+        self.selection = self.jQWidgetsSelectionModes[selection]
+
+        self.use_alt_row_color = use_alt_row_color
+        # TODO: "dragable" actions not yet implemented
         self.dragable = dragable
         self.levels = 1
         self.leaf_key = None
         self.leaf_idx = 0
         self.columns = []
+        self.columnWidths = []
         self.datakeys = []
         # shadow index
         self.shadow = {}
         self.widget = None
+        # self.localData will be populated in the manner required by
+        # jqxTreeGrid.
+        self.localData = []
+        self.rowid = -1
+        self.rows = []
+        # We need to keep track of the row(s) that the user has
+        # selected.
+        self.selectedRows = []
 
         for cbname in ('selected', 'activated', 'drag-start'):
             self.enable_callback(cbname)
 
     def setup_table(self, columns, levels, leaf_key):
         self.clear()
-        # TODO
+        self.columns = columns
+        self.levels = levels
+        self.leaf_key = leaf_key
+        for i in range(len(columns)):
+            self.columnWidths.append(None)
 
     def set_tree(self, tree_dict):
+        self.rowid = -1
         self.clear()
+        self.localData = []
         self.add_tree(tree_dict)
 
     def add_tree(self, tree_dict):
-        # TODO
-        pass
+        if self.sortable:
+            keys = sorted(tree_dict)
+        else:
+            keys = tree_dict.keys()
+        for key in keys:
+            self._add_subtree(1, self.shadow, None, key, tree_dict[key])
+
+    def _add_subtree(self, level, shadow, parent_item, key, node):
+        def _addTopLevelItem(item):
+            self.localData.append(item)
+
+        def _addChild(parent_item, item):
+            parent_item['children'].append(item)
+
+        if level >= self.levels:
+            # leaf node
+            try:
+                bnch = shadow[key]
+                item = bnch.item
+                # TODO: update leaf item
+            except KeyError:
+                # new item
+                item = node
+                self.rowid += 1
+                item['rowid'] = self.rowid
+                if level == 1:
+                    item['parentRowNum'] = None
+                    _addTopLevelItem(item)
+                else:
+                    item['parentRowNum'] = parent_item['rowid']
+                    _addChild(parent_item, item)
+
+                shadow[key] = Bunch.Bunch(node=node, item=item, terminal=True)
+                self.rows.append(item)
+
+        else:
+            try:
+                # node already exists
+                bnch = shadow[key]
+                item = bnch.item
+                d = bnch.node
+
+            except KeyError:
+                # new node
+                self.rowid += 1
+                item = {self.leaf_key: str(key), 'expanded': self.auto_expand, 'rowid':self.rowid, 'children': []}
+                if level == 1:
+                    item['parentRowNum'] = None
+                    _addTopLevelItem(item)
+                else:
+                    item['parentRowNum'] = parent_item['rowid']
+                    _addChild(parent_item, item)
+
+                d = {}
+                shadow[key] = Bunch.Bunch(node=d, item=item, terminal=False)
+                self.rows.append(item)
+
+            # recurse for non-leaf interior node
+            if self.sortable:
+                keys = sorted(node)
+            else:
+                keys = node.keys()
+            for key in keys:
+                self._add_subtree(level+1, d, item, key, node[key])
 
     def _selection_cb(self):
         res_dict = self.get_selected()
         self.make_callback('selected', res_dict)
 
-    def _cb_redirect(self, item):
+    def _cb_redirect(self, event):
         res_dict = {}
-        self._get_item(res_dict, item)
-        self.make_callback('activated', res_dict)
+        # We handle the following two event types:
+        #   1. row-select
+        #   2. double-click
+        if event.type == 'row-select':
+            self.selectedRows = event.value
+            res_dict = self.get_selected()
+            self.make_callback('selected', res_dict)
+        elif event.type == 'double-click':
+            self._get_item(res_dict, event.value['rowid'])
+            self.make_callback('activated', res_dict)
+
+    def _get_path(self, rowNum):
+        if rowNum is None:
+            return []
+
+        row = self.rows[rowNum]
+        try:
+            childCount = len(row['children'])
+        except KeyError:
+            childCount = 0
+        if childCount == 0:
+            path_rest = self._get_path(row['parentRowNum'])
+            myname = row[self.leaf_key]
+            path_rest.append(myname)
+            return path_rest
+
+        colTitle0, fieldName0 = self.columns[0]
+        myname = row[fieldName0]
+        parentRowNum = row['parentRowNum']
+        path_rest = self._get_path(parentRowNum)
+        path_rest.append(myname)
+        return path_rest
+
+    def _get_item(self, res_dict, rowNum):
+        path = self._get_path(rowNum)
+        d, s = res_dict, self.shadow
+        for name in path[:-1]:
+            d = d.setdefault(name, {})
+            s = s[name].node
+
+        dst_key = path[-1]
+        try:
+            d[dst_key] = s[dst_key].node
+        except KeyError:
+            d[dst_key] = None
 
     def get_selected(self):
         res_dict = {}
+        for rowNum in self.selectedRows:
+            try:
+                children = self.rows[rowNum]['children']
+                if len(children) > 0:
+                    continue
+            except KeyError:
+                pass
+            self._get_item(res_dict, rowNum)
         return res_dict
 
     def clear(self):
+        app = self.get_app()
+        app.do_operation('clear', id=self.id)
+        self.rowid = -1
+        self.rows = []
+        self.localData = []
         self.shadow = {}
+        self.selectedRows = []
 
     def clear_selection(self):
-        pass
+        self.selectedRows = []
+        app = self.get_app()
+        app.do_operation('clear_selection', id=self.id)
 
     def _path_to_item(self, path):
         s = self.shadow
@@ -1014,22 +1231,31 @@ class TreeView(WidgetBase):
         return item
 
     def select_path(self, path, state=True):
-        item = self._path_to_item(path)  # noqa
-        # TODO - True to select, False to de-select
+        item = self._path_to_item(path)
+        if self.selectedRows.count(item) < 1:
+            self.selectedRows.append(item)
+        app = self.get_app()
+        app.do_operation('select_row', id=self.id, index=item['rowid'], state=state)
 
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)  # noqa
-        # TODO
+        # TODO - Is there be a way to do this with CSS?
 
     def scroll_to_path(self, path):
-        item = self._path_to_item(path)  # noqa
-        # TODO
+        item = self._path_to_item(path)
+        app = self.get_app()
+        app.do_operation('scroll_to_path', id=self.id, index=item['rowid'])
 
-    def sort_on_column(self, i):
-        pass
+    def sort_on_column(self, i, dir):
+        colTitle, fieldName = self.columns[i]
+        app = self.get_app()
+        app.do_operation('sort_on_column', id=self.id, dataField=fieldName, sortOrder=dir)
 
     def set_column_width(self, i, width):
-        pass
+        self.columnWidths[i] = width
+        colTitle, fieldName = self.columns[i]
+        app = self.get_app()
+        app.do_operation('set_column_property', id=self.id, dataField=fieldName, property='width', width=width)
 
     def set_column_widths(self, lwidths):
         for i, width in enumerate(lwidths):
@@ -1037,9 +1263,45 @@ class TreeView(WidgetBase):
                 self.set_column_width(i, width)
 
     def set_optimal_column_widths(self):
+        # TODO - looks like jqxTreeGrid API doesn't have a way to
+        # automatically re-size the column width to fit the contents
         for i in range(len(self.columns)):
             pass
 
+    def columns_to_js(self):
+        col_arr = []
+        for i, colTuple in enumerate(self.columns):
+            colTitle, fieldName = colTuple
+            col_arr.append(dict(text=colTitle, dataField=fieldName))
+            if self.columnWidths[i] is not None:
+                col_arr[i]['width'] = self.columnWidths[i]
+        columns_js = json.dumps(col_arr)
+        return columns_js
+
+    def source_obj_js(self):
+        s = dict(dataType='json',
+                 dataFields=[{'name':'rowid',    'type':'number'},
+                             {'name':'children', 'type':'array'},
+                             {'name':'expanded', 'type':'bool'}],
+                 localData=self.localData,
+                 hierarchy={'root': 'children'},
+                 id='rowid',
+                 sortColumn='rowid')
+        for colTitle, fieldName in self.columns:
+            s['dataFields'].append(dict(name=fieldName, type='string'))
+        source_js = json.dumps(s)
+        return source_js
+
+    def render(self):
+        self.columns_to_js()
+        d = dict(id=self.id,
+                 columns=self.columns_to_js(),
+                 source=self.source_obj_js(),
+                 use_alt_row_color=json.dumps(self.use_alt_row_color),
+                 sortable=json.dumps(self.sortable),
+                 width=self.width,
+                 selectionMode=self.selection)
+        return self.html_template % d
 
 class Canvas(WidgetBase):
 
@@ -1882,6 +2144,7 @@ class TopLevel(ContainerBase):
     <!-- For jQWidgets -->
     <link rel="stylesheet" href="/js/jqwidgets/styles/jqx.base.css" type="text/css" />
     <script type="text/javascript" src="/js/jqwidgets/jqxcore.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxdata.js"></script>
     <script type="text/javascript" src="/js/jqwidgets/jqxbuttons.js"></script>
     <script type="text/javascript" src="/js/jqwidgets/jqxscrollbar.js"></script>
     <script type="text/javascript" src="/js/jqwidgets/jqxsplitter.js"></script>
@@ -1891,6 +2154,8 @@ class TopLevel(ContainerBase):
     <script type="text/javascript" src="/js/jqwidgets/jqxprogressbar.js"></script>
     <script type="text/javascript" src="/js/jqwidgets/jqxmenu.js"></script>
     <script type="text/javascript" src="/js/jqwidgets/jqxtoolbar.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxdatatable.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxtreegrid.js"></script>
 
     <!-- For Ginga -->
     <link rel="stylesheet" href="/js/ginga_pg.css" type="text/css" />
