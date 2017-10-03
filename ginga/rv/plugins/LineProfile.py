@@ -1,9 +1,38 @@
-#
-# LineProfile.py -- LineProfile plugin for Ginga reference viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
+"""
+A plugin to graph the pixel values along a straight line bisecting a cube.
+
+**Plugin Type: Local**
+
+``LineProfile`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+.. warning::
+
+   There are no restrictions to what axes can be chosen.
+   As such, the plot can be meaningless.
+
+The ``LineProfile`` plugin is used for multidimensional (i.e., 3D or higher)
+images. It plots the values of the pixels at the current cursor
+position through the selected axis; or if a region is selected, it plots the
+mean in each frame. This can be used to create normal spectral line profiles.
+A marker is placed at the data point of the currently displayed frame.
+
+Displayed X-axis is constructed using ``CRVAL*``, ``CDELT*``, ``CRPIX*``,
+``CTYPE*``, and ``CUNIT*`` keywords from FITS header. If any of the keywords
+are unavailabled, the axis falls back to ``NAXIS*`` values instead.
+
+Displayed Y-axis is constructed using ``BTYPE`` and ``BUNIT``. If they are not
+available, it simply labels pixel values as "Flux".
+
+To use this plugin:
+
+1. Select an axis.
+2. Pick a point or draw a region using the cursor.
+3. Use ``MultiDim`` to change step values of axes, if applicable.
+
+"""
 import numpy as np
 
 from ginga import GingaPlugin
@@ -16,24 +45,11 @@ try:
 except ImportError:
     have_mpl = False
 
+__all__ = ['LineProfile']
+
 
 class LineProfile(GingaPlugin.LocalPlugin):
-    """
-    LineProfile
-    ===========
-    A plugin to graph the pixel values along a straight line bisecting a cube.
 
-    Plugin Type: Local
-    ------------------
-    LineProfile is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Usage
-    -----
-    1. Select an axis.
-    2. Pick a point or draw a region using the cursor.
-    3. Use MultiDim to change step values of axes, if applicable.
-    """
     def __init__(self, fv, fitsimage):
         super(LineProfile, self).__init__(fv, fitsimage)
 
@@ -690,8 +706,9 @@ class LineProfile(GingaPlugin.LocalPlugin):
         return 'lineprofile'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
+# Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
-__doc__ = generate_cfg_example('plugin_LineProfile', package='ginga')
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_LineProfile', package='ginga')
+
+# END
