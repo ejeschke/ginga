@@ -1,9 +1,5 @@
-#
-# Unit Tests for the Task class
-#
-# Eric Jeschke  (eric@naoj.org)
-# Bruce Bon     (bon@naoj.org)  2007-08-31
-#
+"""Unit Tests for the Task class"""
+
 from __future__ import absolute_import
 from ...util import six
 

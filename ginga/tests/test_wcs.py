@@ -1,14 +1,15 @@
-from __future__ import print_function
-import unittest
 import logging
-import numpy
+
+import numpy as np
+import pytest
 
 from ginga import AstroImage
 from ginga.util import wcsmod
 
-class TestImageView(unittest.TestCase):
 
-    def setUp(self):
+class TestImageView(object):
+
+    def setup_class(self):
         self.logger = logging.getLogger("TestWCS")
         self.header = {'ADC-END': 6.28,
                        'ADC-STR': 6.16,
@@ -185,13 +186,14 @@ class TestImageView(unittest.TestCase):
                        'ZD-END': 18.2,
                        'ZD-STR': 17.858}
 
-
-    def pixtoradec_scalar_runtest(self, modname):
+    @pytest.mark.parametrize(
+        'modname', ['kapteyn', 'starlink', 'astlib', 'astropy'])
+    def test_pixtoradec_scalar(self, modname):
         if not wcsmod.use(modname, raise_err=False):
-            return False
+            pytest.skip("WCS '{}' not available".format(modname))
         wcs = wcsmod.WCS(self.logger)
-        if wcs.wcs is None:
-            return False
+        #if wcs.wcs is None:
+        #    pytest.skip("WCS '{}' not available".format(modname))
         wcs.load_header(self.header)
         img = AstroImage.AstroImage(logger=self.logger)
         img.wcs = wcs
@@ -201,36 +203,17 @@ class TestImageView(unittest.TestCase):
         dec_deg_v1 = 22.691653517073615
 
         ra_deg, dec_deg = img.pixtoradec(120, 100)
-        assert numpy.isclose(ra_deg, ra_deg_v1), \
-               ValueError("RA deg does not match (%f != %f)" % (ra_deg,
-                                                                ra_deg_v1))
-        assert numpy.isclose(dec_deg, dec_deg_v1), \
-               ValueError("DEC deg does not match (%f != %f)" % (dec_deg,
-                                                                 dec_deg_v1))
-        return True
+        np.testing.assert_allclose(ra_deg, ra_deg_v1),
+        np.testing.assert_allclose(dec_deg, dec_deg_v1)
 
-    def test_pixtoradec_scalar_kapteyn(self):
-        if not self.pixtoradec_scalar_runtest('kapteyn'):
-            print("WCS '%s' not available--skipping test" % ('kapteyn'))
-
-    def test_pixtoradec_scalar_starlink(self):
-        if not self.pixtoradec_scalar_runtest('starlink'):
-            print("WCS '%s' not available--skipping test" % ('starlink'))
-
-    def test_pixtoradec_scalar_astlib(self):
-        if not self.pixtoradec_scalar_runtest('astlib'):
-            print("WCS '%s' not available--skipping test" % ('astlib'))
-
-    def test_pixtoradec_scalar_astropy(self):
-        if not self.pixtoradec_scalar_runtest('astropy'):
-            print("WCS '%s' not available--skipping test" % ('astropy'))
-
-    def radectopix_scalar_runtest(self, modname):
+    @pytest.mark.parametrize(
+        'modname', ['kapteyn', 'starlink', 'astlib', 'astropy'])
+    def test_radectopix_scalar(self, modname):
         if not wcsmod.use(modname, raise_err=False):
-            return False
+            pytest.skip("WCS '{}' not available".format(modname))
         wcs = wcsmod.WCS(self.logger)
-        if wcs.wcs is None:
-            return False
+        #if wcs.wcs is None:
+        #    pytest.skip("WCS '{}' not available".format(modname))
         wcs.load_header(self.header)
         img = AstroImage.AstroImage(logger=self.logger)
         img.wcs = wcs
@@ -240,33 +223,7 @@ class TestImageView(unittest.TestCase):
         y_v1 = 100
 
         x, y = img.radectopix(300.2308791294835, 22.691653517073615)
-        assert numpy.isclose(x, x_v1), \
-               ValueError("x does not match (%f != %f)" % (x, x_v1))
-        assert numpy.isclose(y, y_v1), \
-               ValueError("y does not match (%f != %f)" % (y, y_v1))
-        return True
+        np.testing.assert_allclose(x, x_v1)
+        np.testing.assert_allclose(y, y_v1)
 
-    def test_radectopix_scalar_kapteyn(self):
-        if not self.radectopix_scalar_runtest('kapteyn'):
-            print("WCS '%s' not available--skipping test" % ('kapteyn'))
-
-    def test_radectopix_scalar_starlink(self):
-        if not self.radectopix_scalar_runtest('starlink'):
-            print("WCS '%s' not available--skipping test" % ('starlink'))
-
-    def test_radectopix_scalar_astlib(self):
-        if not self.radectopix_scalar_runtest('astlib'):
-            print("WCS '%s' not available--skipping test" % ('astlib'))
-
-    def test_radectopix_scalar_astropy(self):
-        if not self.radectopix_scalar_runtest('astropy'):
-            print("WCS '%s' not available--skipping test" % ('astropy'))
-
-    def tearDown(self):
-        pass
-
-
-if __name__ == '__main__':
-    unittest.main()
-
-#END
+# END

@@ -1,23 +1,11 @@
-#
-# Unit Tests for the Callbacks class
-#
-# Rajul Srivastava  (rajul09@gmail.com)
-#
-import unittest
-import logging
-import numpy as np
+"""Unit Tests for the Callbacks class."""
+
+import pytest
 
 import ginga.misc.Callback as Callback
 
 
-class TestError(Exception):
-    pass
-
-
-class TestCallbacks(unittest.TestCase):
-
-    def setUp(self):
-        pass
+class TestCallbacks(object):
 
     def test_init(self):
         test_callbacks = Callback.Callbacks()
@@ -154,20 +142,14 @@ class TestCallbacks(unittest.TestCase):
 
         test_callbacks.cb["test_name"] = [(test_callbacks, (), {}), ]
 
-        self.assertRaises(
-            Callback.CallbackError,
-            test_callbacks.delete_callback,
-            "non_existent_name"
-        )
+        with pytest.raises(Callback.CallbackError):
+            test_callbacks.delete_callback("non_existent_name")
 
     def test_delete_callback_non_existent_name_empty_dict(self):
         test_callbacks = Callback.Callbacks()
 
-        self.assertRaises(
-            Callback.CallbackError,
-            test_callbacks.delete_callback,
-            "non_existent_name"
-        )
+        with pytest.raises(Callback.CallbackError):
+            test_callbacks.delete_callback("non_existent_name")
 
     def test_add_callback(self):
         test_callbacks = Callback.Callbacks()
@@ -240,12 +222,8 @@ class TestCallbacks(unittest.TestCase):
         def test_callback_function(obj, *args, **kwargs):
             pass
 
-        self.assertRaises(
-            Callback.CallbackError,
-            test_callbacks.add_callback,
-            "test_name",
-            test_callback_function
-        )
+        with pytest.raises(Callback.CallbackError):
+            test_callbacks.add_callback("test_name", test_callback_function)
 
     def test_set_callback(self):
         test_callbacks = Callback.Callbacks()
@@ -437,11 +415,5 @@ class TestCallbacks(unittest.TestCase):
         expected = True
         actual = test_callbacks.make_callback("test_name")
         assert expected == actual
-
-    def tearDown(self):
-        pass
-
-if __name__ == '__main__':
-    unittest.main()
 
 # END

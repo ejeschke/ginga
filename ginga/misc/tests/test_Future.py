@@ -1,23 +1,21 @@
-#
-# Unit Tests for the Future class
-#
-# Rajul Srivastava  (rajul09@gmail.com)
-#
-import unittest
+"""Unit Tests for the Future class"""
+
+import sys
 import threading
 import time
-import sys
+
+import pytest
 
 from ginga.misc.Future import Future, TimeoutError
 
 
-class TestError(Exception):
+class _TestError(Exception):
     pass
 
 
-class TestFuture(unittest.TestCase):
+class TestFuture(object):
 
-    def setUp(self):
+    def setup_class(self):
         self.future_thread = None
 
     def test_init(self):
@@ -152,7 +150,8 @@ class TestFuture(unittest.TestCase):
         test_future.freeze(
             test_method, "arg1", "arg2", kwarg1="test", kwarg2="test")
 
-        self.assertRaises(TypeError, test_future.thaw, False)
+        with pytest.raises(TypeError):
+            test_future.thaw(False)
 
         assert test_future.res is None
         assert test_future.evt.isSet() is False
@@ -226,7 +225,8 @@ class TestFuture(unittest.TestCase):
         self.future_thread = threading.Thread(target=test_future.thaw)
         self.future_thread.start()
 
-        self.assertRaises(TimeoutError, test_future.wait, 1)
+        with pytest.raises(TimeoutError):
+            test_future.wait(1)
 
     def test_get_value_block_no_timeout(self):
         test_future = Future("TestData")
@@ -256,8 +256,8 @@ class TestFuture(unittest.TestCase):
         self.future_thread = threading.Thread(target=test_future.thaw)
         self.future_thread.start()
 
-        self.assertRaises(
-            TimeoutError, test_future.get_value, True, 1)
+        with pytest.raises(TimeoutError):
+            test_future.get_value(True, 1)
 
     def test_get_value_no_block_fail(self):
         test_future = Future("TestData")
@@ -271,7 +271,8 @@ class TestFuture(unittest.TestCase):
         self.future_thread = threading.Thread(target=test_future.thaw)
         self.future_thread.start()
 
-        self.assertRaises(TimeoutError, test_future.get_value, False)
+        with pytest.raises(TimeoutError):
+            test_future.get_value(False)
 
     def test_get_value_no_block_pass(self):
         test_future = Future("TestData")
@@ -296,7 +297,7 @@ class TestFuture(unittest.TestCase):
         test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
-            raise TestError("Test Error")
+            raise _TestError("Test Error")
 
         test_future.freeze(test_method)
 
@@ -310,21 +311,18 @@ class TestFuture(unittest.TestCase):
         test_future = Future("TestData")
 
         def test_method(*args, **kwargs):
-            raise TestError("Test Error")
+            raise _TestError("Test Error")
 
         test_future.freeze(test_method)
 
         self.future_thread = threading.Thread(target=test_future.thaw)
         self.future_thread.start()
 
-        self.assertRaises(TestError, test_future.get_value)
+        with pytest.raises(_TestError):
+            test_future.get_value()
 
-    def tearDown(self):
+    def teardown_class(self):
         if self.future_thread is not None:
             self.future_thread.join()
-
-
-if __name__ == '__main__':
-    unittest.main()
 
 # END
