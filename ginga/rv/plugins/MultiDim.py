@@ -1,9 +1,39 @@
-#
-# MultiDim.py -- Multidimensional plugin for Ginga reference viewer
-#
-# This is open-source software licensed under a BSD license.
-# Please see the file LICENSE.txt for details.
-#
+"""
+A plugin to navigate HDUs in a FITS file or planes in a 3D cube or
+higher dimension dataset.
+
+**Plugin Type: Local**
+
+``MultiDim`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+``MultiDim`` is a plugin designed to handle data cubes and multi-HDU FITS
+files. If you have opened such an image in Ginga, starting this plugin
+will enable you to browse to other slices of the cube or view other
+HDUs.
+
+For a data cube, you can save a slice as an image using the "Save Slice"
+button or create a movie using the "Save Movie" button by entering the
+"Start" and "End" slice indices. This feature requires ``mencoder`` to be
+installed.
+
+For a FITS table, its data are read in using Astropy table.
+Column units are displayed right under the main header ("None" if no unit).
+For masked columns, masked values are replaced with pre-defined fill values.
+
+**Browsing HDUs**
+
+Use the HDU drop down list in the upper part of the UI to browse and
+select an HDU to open in the channel.
+
+**Navigating Cubes**
+
+Use the controls in the lower part of the UI to select the axis and
+to step through the planes in that axis.
+
+"""
 import time
 import re
 import os
@@ -22,29 +52,11 @@ have_mencoder = False
 if spawn.find_executable("mencoder"):
     have_mencoder = True
 
+__all__ = ['MultiDim']
+
 
 class MultiDim(GingaPlugin.LocalPlugin):
-    """
-    MultiDim
-    ========
-    A plugin to navigate HDUs in a FITS file or planes in a 3D cube or
-    higher dimension dataset.
 
-    Plugin Type: Local
-    ------------------
-    MultiDim is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Browsing HDUs
-    -------------
-    Use the HDU drop down list in the upper part of the UI to browse and
-    select an HDU to open in the channel.
-
-    Navigating Cubes
-    ----------------
-    Use the controls in the lower part of the UI to select the axis and
-    to step through the planes in that axis.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(MultiDim, self).__init__(fv, fitsimage)
@@ -694,8 +706,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         return 'multidim'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
+# Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
-__doc__ = generate_cfg_example('plugin_MultiDim', package='ginga')
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_MultiDim', package='ginga')
+
+# END
