@@ -9,7 +9,7 @@ This example illustrates using a Ginga as the driver of a Jupyter web widget.
 
 Basic usage in a Jupyter notebook:
 
-from ipywidgets import *
+import ipywidgets as widgets
 
 # create a Jupyter image that will be our display surface
 # format can be 'jpeg' or 'png'; specify width and height to set viewer size
@@ -19,11 +19,14 @@ jp_img = widgets.Image(format='jpeg', width=500, height=500)
 # this could be simplified by creating a class that created viewers
 # as a factory.
 from ginga.misc.log import get_logger
-logger = get_logger("v1", log_stderr=True, level=20)
+logger = get_logger("v1", log_stderr=True, level=40)
 
 from ginga.web.jupyterw.ImageViewJpw import EnhancedCanvasView
 v1 = EnhancedCanvasView(logger=logger)
 v1.set_widget(jp_img)
+
+bd = v1.get_bindings()
+bd.enable_all(True)
 
 # You can now build a GUI with the image widget and other Jupyter
 # widgets.  Here we just show the image widget.
@@ -38,6 +41,8 @@ from ginga import AstroImage
 from ginga import Mixins, Bindings
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 
+from ginga.web.jupyterw import JpHelp
+
 
 class ImageViewJpw(ImageView):
 
@@ -49,10 +54,8 @@ class ImageViewJpw(ImageView):
         self.jp_img = None
         self.jp_dom = None
 
-        self.defer_redraw = False
         self._defer_task = None
         self.msgtask = None
-
 
     def set_widget(self, jp_img):
         """Call this method with the Jupyter image widget (image_w) and
@@ -63,12 +66,12 @@ class ImageViewJpw(ImageView):
         # TODO: need configure (resize) event callback
 
         # see reschedule_redraw() method
-        ## self._defer_task = TkHelp.Timer(tkcanvas=canvas)
-        ## self._defer_task.add_callback('expired',
-        ##                               lambda timer: self.delayed_redraw())
-        ## self.msgtask = TkHelp.Timer(tkcanvas=canvas)
-        ## self.msgtask.add_callback('expired',
-        ##                           lambda timer: self.onscreen_message(None))
+        self._defer_task = JpHelp.Timer()
+        self._defer_task.add_callback('expired',
+                                      lambda timer: self.delayed_redraw())
+        self.msgtask = JpHelp.Timer()
+        self.msgtask.add_callback('expired',
+                                  lambda timer: self.onscreen_message(None))
 
         # for some reason these are stored as strings!
         wd, ht = int(jp_img.width), int(jp_img.height)
@@ -101,10 +104,10 @@ class ImageViewJpw(ImageView):
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.jp_img is None:
             return
-        #self.msgtask.stop()
+        self.msgtask.stop()
         self.set_onscreen_message(text, redraw=redraw)
-        ## if delay is not None:
-        ##     self.msgtask.start(delay)
+        if delay is not None:
+            self.msgtask.start(delay)
 
 
 class ImageViewEvent(ImageViewJpw):
