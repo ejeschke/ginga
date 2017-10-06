@@ -1,28 +1,28 @@
-#
-# Pipeline.py -- Simple data reduction pipeline plugin for Ginga FITS viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
-from __future__ import print_function
-import numpy
+"""
+Simple data reduction pipeline plugin for Ginga.
 
-from ginga import AstroImage
+.. note:: This plugin is available but not loaded into Ginga
+          reference viewer by default because it is experimental.
+
+**Plugin Type: Local**
+
+``Pipeline`` is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
+"""
+from __future__ import print_function
+
 from ginga.util import dp
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
+__all__ = ['Pipeline']
+
 
 class Pipeline(GingaPlugin.LocalPlugin):
-    """
-    Pipeline
-    ========
 
-    Plugin Type: Local
-    ------------------
-    Crosshair is a local plugin, which means it is associated with a channel.
-    An instance can be opened for each channel.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Pipeline, self).__init__(fv, fitsimage)
@@ -37,12 +37,11 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.imglist = []
 
         # For applying flat fielding
-        self.flat  = None
+        self.flat = None
         # For subtracting bias
-        self.bias  = None
+        self.bias = None
 
         self.gui_up = False
-
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -52,22 +51,12 @@ class Pipeline(GingaPlugin.LocalPlugin):
         vbox1.set_border_width(4)
         vbox1.set_spacing(2)
 
-        self.msg_font = self.fv.get_font('sans', 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        fr = Widgets.Frame("Instructions")
-        fr.set_widget(tw)
-        vbox1.add_widget(fr, stretch=0)
-
         # Main pipeline control area
         captions = [
             ("Subtract Bias", 'button', "Bias Image:", 'label',
              'bias_image', 'llabel'),
             ("Apply Flat Field", 'button', "Flat Image:", 'label',
-             'flat_image', 'llabel'),
-            ]
+             'flat_image', 'llabel')]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
@@ -119,7 +108,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         # Image list
         captions = [
             ("Append", 'button', "Prepend", 'button', "Clear", 'button'),
-            ]
+        ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
@@ -146,7 +135,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         # Bias
         captions = [
             ("Make Bias", 'button', "Set Bias", 'button'),
-            ]
+        ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
@@ -155,14 +144,16 @@ class Pipeline(GingaPlugin.LocalPlugin):
         vbox1.add_widget(fr, stretch=0)
 
         b.make_bias.add_callback('activated', self.make_bias_cb)
-        b.make_bias.set_tooltip("Makes a bias image from a stack of individual images")
+        b.make_bias.set_tooltip(
+            "Makes a bias image from a stack of individual images")
         b.set_bias.add_callback('activated', self.set_bias_cb)
-        b.set_bias.set_tooltip("Set the currently loaded image as the bias image")
+        b.set_bias.set_tooltip(
+            "Set the currently loaded image as the bias image")
 
         # Flat fielding
         captions = [
             ("Make Flat Field", 'button', "Set Flat Field", 'button'),
-            ]
+        ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
@@ -171,9 +162,11 @@ class Pipeline(GingaPlugin.LocalPlugin):
         vbox1.add_widget(fr, stretch=0)
 
         b.make_flat_field.add_callback('activated', self.make_flat_cb)
-        b.make_flat_field.set_tooltip("Makes a flat field from a stack of individual flats")
+        b.make_flat_field.set_tooltip(
+            "Makes a flat field from a stack of individual flats")
         b.set_flat_field.add_callback('activated', self.set_flat_cb)
-        b.set_flat_field.set_tooltip("Set the currently loaded image as the flat field")
+        b.set_flat_field.set_tooltip(
+            "Set the currently loaded image as the flat field")
 
         spacer = Widgets.Label('')
         vbox1.add_widget(spacer, stretch=1)
@@ -186,12 +179,14 @@ class Pipeline(GingaPlugin.LocalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
 
         container.add_widget(top, stretch=1)
         self.gui_up = True
-
 
     def close(self):
         chname = self.fv.get_channel_name(self.fitsimage)
@@ -199,11 +194,8 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.gui_up = False
         return True
 
-    def instructions(self):
-        self.tw.set_text("""TBD.""")
-
     def start(self):
-        self.instructions()
+        pass
 
     def stop(self):
         self.fv.show_status("")
@@ -212,7 +204,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.fv.gui_do(self.w.eval_status.set_text, text)
 
     def update_stack_gui(self):
-        stack = [ image.get('name', "NoName") for image in self.imglist ]
+        stack = [image.get('name', "NoName") for image in self.imglist]
         self.w.stack.set_text(str(stack))
 
     def append_image_cb(self, w):
@@ -297,5 +289,9 @@ class Pipeline(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'pipeline'
 
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Pipeline', package='ginga')
 
-#END
+# END

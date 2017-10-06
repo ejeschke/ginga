@@ -3,5 +3,6 @@
 Pipeline
 ========
 
-This plugin is available but not loaded into Ginga reference viewer by default
-because it is experimental.
+.. automodapi:: ginga.rv.plugins.Pipeline
+   :no-heading:
+   :skip: Pipeline
