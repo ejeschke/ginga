@@ -40,6 +40,7 @@ from ginga.pilw.ImageViewPil import ImageViewPil as ImageView
 from ginga import AstroImage
 from ginga import Mixins, Bindings
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
+from ginga.util.toolbox import ModeIndicator
 
 from ginga.web.jupyterw import JpHelp
 
@@ -143,11 +144,8 @@ class ImageViewEvent(ImageViewJpw):
             'altright': 'alt_r',
             'osleft': 'super_l',
             'osright': 'super_r',
-            'contextmenu': 'meta_right',
-            '`': 'backquote',
-            '"': 'doublequote',
-            "'": 'singlequote',
-            '220': 'backslash',
+            'contextmenu': 'menu_r',
+            'backslash': 'backslash',
             'space': 'space',
             'escape': 'escape',
             'enter': 'return',
@@ -158,6 +156,24 @@ class ImageViewEvent(ImageViewJpw):
             'arrowdown': 'down',
             'pageup': 'page_up',
             'pagedown': 'page_down',
+            'f1': 'f1',
+            'f2': 'f2',
+            'f3': 'f3',
+            'f4': 'f4',
+            'f5': 'f5',
+            'f6': 'f6',
+            'f7': 'f7',
+            'f8': 'f8',
+            'f9': 'f9',
+            'f10': 'f10',
+            'f11': 'f11',
+            'f12': 'f12',
+            }
+
+        self._keytbl2 = {
+            '`': 'backquote',
+            '"': 'doublequote',
+            "'": 'singlequote',
             }
 
         # Define cursors for pick and pan
@@ -204,7 +220,10 @@ class ImageViewEvent(ImageViewJpw):
         if keyname is None:
             keyname = keycode
         self.logger.debug("key code in jupyter '%s'" % (keycode))
-        return self._keytbl.get(keycode, keyname)
+        res = self._keytbl.get(keycode, None)
+        if res is None:
+            res = self._keytbl2.get(keyname, keyname)
+        return res
 
     def get_keyTable(self):
         return self._keytbl
@@ -350,31 +369,13 @@ class CanvasView(ImageViewZoom):
         # Needed for UIMixin to propagate events correctly
         self.objects = [self.private_canvas]
 
+        self._mi = ModeIndicator(self)
+
     def set_canvas(self, canvas, private_canvas=None):
         super(CanvasView, self).set_canvas(canvas,
                                            private_canvas=private_canvas)
 
         self.objects[0] = self.private_canvas
-
-
-class ImageViewCanvas(ImageViewZoom,
-                      DrawingMixin, CanvasMixin, CompoundMixin):
-
-    def __init__(self, logger=None, rgbmap=None, settings=None,
-                 bindmap=None, bindings=None):
-        ImageViewZoom.__init__(self, logger=logger,
-                               rgbmap=rgbmap,
-                               settings=settings,
-                               bindmap=bindmap,
-                               bindings=bindings)
-        CompoundMixin.__init__(self)
-        CanvasMixin.__init__(self)
-        DrawingMixin.__init__(self)
-
-        # we are both a viewer and a canvas
-        self.set_canvas(self, private_canvas=self)
-
-        self._mi = ModeIndicator(self)
 
 
 class EnhancedCanvasView(CanvasView):
