@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 The ``SAMP`` plugin implements a SAMP interface for the Ginga reference
 viewer.

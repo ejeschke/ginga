@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 ``Blink`` switches through the images shown in a channel at a rate
 chosen by the user.  Alternatively, it can switch between channels

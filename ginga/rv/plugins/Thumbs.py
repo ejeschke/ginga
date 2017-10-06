@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 The ``Thumbs`` plugin provides a thumbnail index of all images viewed since
 the program was started.

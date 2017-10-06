@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 The ``Pan`` plugin provides a small panning image that gives an overall
 "birds-eye" view of the channel image that last had the focus.  If the

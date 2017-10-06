@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 The ``Contents`` plugin provides a table of contents-like interface for all
 the images viewed since the program was started.  Unlike ``Thumbs``,

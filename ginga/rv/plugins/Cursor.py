@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 The ``Cursor`` plugin displays a summary line of text that changes as the
 user moves the cursor around an image.  In the standard reference viewer

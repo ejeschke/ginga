@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 This plugin defines the GUI for managing local plugins, a.k.a., "operations".
 

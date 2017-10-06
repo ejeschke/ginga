@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 The ``Colorbar`` plugin shows a colorbar indicating the colormap applied
 to the image and showing the example values along the range.

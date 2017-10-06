@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 The ``IRAF`` plugin implements a remote control interface for the Ginga FITS
 viewer from an IRAF session.  In particular, it supports the use of the

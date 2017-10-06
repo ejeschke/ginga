@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 ``Toolbar`` provides a set of convenience UI controls for common operations
 on viewers.

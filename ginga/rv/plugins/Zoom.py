@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 The ``Zoom`` plugin shows an enlarged image of a cutout region centered
 under the cursor position in the associated channel image.  As the

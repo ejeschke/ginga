@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 The ``ColorMapPicker`` plugin is used to graphically browse and select a
 colormap for a channel image viewer.

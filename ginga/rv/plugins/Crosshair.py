@@ -1,3 +1,5 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
 """
 ``Crosshair`` is a simple plugin to draw crosshairs labeled with the
 position of the cross in pixels coordinates, WCS coordinates, or
