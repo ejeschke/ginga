@@ -4,10 +4,10 @@
 General Operation
 +++++++++++++++++
 
-This chapter describes the general manipulations of images using Ginga.  
+This chapter describes the general manipulations of images using Ginga.
 
 For the most part these manipulations apply both to Ginga ImageView classes that can be embedded in a Python application, as well as to the reference viewer
-distributed with Ginga.  
+distributed with Ginga.
 
 .. note::
 
@@ -35,10 +35,10 @@ In this documentation we will use the following terms to describe the operations
   mouse button.
 
 Mouse operations are also modified by the keyboard buttons *Shift*,
-and *Ctrl*.  
+and *Ctrl*.
 
 *Shift-click* means to press *and hold* the
-Shift key while clicking with left mouse button. 
+Shift key while clicking with left mouse button.
 *Shift-right-click* is the same using the right mouse button,
 etc.
 
@@ -49,7 +49,7 @@ terminated by releasing the mouse button (if the operation employs a
 drag), and clicking on the image or by pressing the `Esc` key (if not a
 drag operation).
 
-.. note:: 
+.. note::
 
   We describe the standard key and mouse bindings here. However these bindings can be changed completely by the user. For more information on changing the bindings, see Section :ref:`sec-bindings`.
 
@@ -84,8 +84,8 @@ complete listing of default keyboard and mouse bindings.
 
 For example:
 
-- The scroll wheel of the mouse can be used to zoom in and out, along with the "+" and "-" keys.  
-- The backquote key will fit the image to the window.  
+- The scroll wheel of the mouse can be used to zoom in and out, along with the "+" and "-" keys.
+- The backquote key will fit the image to the window.
 - Digit keys (1, 2, etc.) will zoom in to the corresponding zoom level, while holding Shift and pressing a zoom key zooms out to the corresponding level.
 
 When zoomed in, panning is enabled. Panning takes two forms:
@@ -123,7 +123,8 @@ center of the image, press 'c'.
 
 Ginga has an auto zoom feature to automatically fit newly loaded images
 to the window, similar to what happens when the backquote key is
-pressed.  See section :ref:`preferences_zoom` for details.
+pressed.  See "Zoom Preferences" section in :ref:`sec-plugins-preferences`
+for details.
 
 ----
 
@@ -136,7 +137,7 @@ The process of mapping a monochrome science image to color in Ginga involves fou
 1) Applying the *cut levels*, which scales all values in the image to a specified range [#f1]_,
 2) Applying a *color distribution algorithm*, which distributes values within that range to indexes into a color map table, and
 3) Applying a *shift map*, which shifts and stretches or shrinks the values according to the user's contrast adjustment [#f2]_, and finally,
-4) Applying an *intensity map* and *color map* to map the final output to RGB pixel values. 
+4) Applying an *intensity map* and *color map* to map the final output to RGB pixel values.
 
 ----
 
@@ -180,9 +181,10 @@ Ginga can algorithmically estimate and set the cut levels--called *auto (cut) le
 
 ``[RV]`` The auto cut levels feature is controlled by several factors in the
 preferences, including the choice of algorithm and some parameters to
-the algorithm.  See section :ref:`preferences_autocuts` for details.
+the algorithm.  See "Auto Cuts Preferences" section in
+:ref:`sec-plugins-preferences` for details.
 
-Ginga can also automatically set the cut levels for new images displayed in the view.  See section :ref:`preferences_newimages` for details.
+Ginga can also automatically set the cut levels for new images displayed in the view.  See "New Image Preferences" section in :ref:`sec-plugins-preferences` for details.
 
 ----------------------------------------
 Setting the color distribution algorithm
@@ -190,19 +192,19 @@ Setting the color distribution algorithm
 
 Ginga supports a number of color scale distribution algorithms, including:
 
-- "linear", 
-- "log", 
-- "power", 
-- "sqrt", 
-- "squared", 
-- "asinh", 
+- "linear",
+- "log",
+- "power",
+- "sqrt",
+- "squared",
+- "asinh",
 - "sinh", and
-- "histeq" (histogram equalization).  
+- "histeq" (histogram equalization).
 
 These can be sampled with the
 current color and intensity maps by pressing the "d" key to go into
 "dist" mode, and then scrolling the mouse, pressing the up/down keys, or
-the "b" and "n" keys.  
+the "b" and "n" keys.
 
 Press Esc to exit the "dist" mode.
 
@@ -246,16 +248,16 @@ distribution "log", the effect is doubly applied.
 
 Possible values for the intensity map are:
 
-- "equa", 
-- "expo", 
+- "equa",
+- "expo",
 - "gamma",
-- "jigsaw", 
-- "lasritt", 
-- "log", 
-- "neg", 
-- "neglog", 
+- "jigsaw",
+- "lasritt",
+- "log",
+- "neg",
+- "neglog",
 - "null", "ramp" and
-- "stairs".  
+- "stairs".
 
 "ramp" is the default value.
 
@@ -272,7 +274,7 @@ scrolling the mouse, pressing the up/down keys, or the "b" and "n" keys.
 While in "cmap" mode, pressing "I" (uppercase) will invert the current
 color map.
 
-.. note:: 
+.. note::
 
   Setting a new color map will cancel the color map inversion. Some color maps are available in both regular and inverted forms. If selecting an already inverted (aka "reversed") color map it is not necessary to explicitly invert it.
 
@@ -298,12 +300,13 @@ An interactive rotate operation can be initiated by pressing "r" in the
 image and then dragging the mouse horizontally left or right to set the
 angle.  Press "R" (Shift+R) to restore the angle to 0 (unrotated).
 
-.. note:: 
+.. note::
 
   It is less computationally-intensive to rotate the image using the simple transforms (flip, swap) than by the rotation feature.  Rotation may slow down some viewing operations.
 
-``[RV]`` The image can also be transformed in the channel Preferences (see :ref:`preferences_transform`) which has checkboxes for flip X, flip Y,
-swap XY and a box for rotation by degrees.
+``[RV]`` The image can also be transformed in the channel
+:ref:`sec-plugins-preferences` (see "Transform Preferences") which has
+checkboxes for flip X, flip Y, swap XY and a box for rotation by degrees.
 
 
 .. rubric:: Footnotes
