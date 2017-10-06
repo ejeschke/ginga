@@ -1,68 +1,65 @@
-#
-# PixTable.py -- Pixel Table plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
-import numpy
+"""
+``PixTable`` provides a way to check or monitor the pixel values in
+a region.
+
+**Plugin Type: Local**
+
+``PixTable`` is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
+**Basic Use**
+
+In the most basic use, simply move the cursor around the channel
+viewer; an array of pixel values will appear in the "Pixel Values"
+display in the plugin UI.  The center value is highlighted, and this
+corresponds to the value under the cursor.
+
+You can choose a 3x3, 5x5, 7x7, or 9x9 grid from the left-most
+combobox control.  It may help to adjust the "Font Size" control
+to prevent having the array values cut off on the sides.  You can
+also enlarge the plugin workspace to see more of the table.
+
+.. note:: The order of the value table shown will not necessarily match to
+          the channel viewer if the images is flipped, transposed, or rotated.
+
+**Using Marks**
+
+If you click in the channel viewer, it will set a mark.  There can
+be any number of marks, and they are each noted with an "X"
+annotated with a number.  When that mark is selected, it will only
+show the values around the mark.  Simply change the mark control to
+select a different mark to see the values around it.
+
+The marks will stay in position even if a new image is loaded and
+they will show the values for the new image.  In this way you can
+monitor the area around a spot if the image is updating frequently.
+
+If the "Pan to mark" checkbox is selected, then when you select a
+different mark from the mark control, the channel viewer will pan to
+that mark.  This can be useful to inspect the same spots in several
+different images.
+
+.. note:: If you change the mark control back to "None", then the pixel
+          table will again update as you move the cursor around the viewer.
+
+**Deleting Marks**
+
+To delete a mark, select it in the mark control and then press the
+button marked "Delete".  To delete all the marks, press the button
+marked "Delete All".
+
+"""
+import numpy as np
 
 from ginga.gw import Widgets, Viewers
 from ginga import GingaPlugin, colors
 
+__all__ = ['PixTable']
+
 
 class PixTable(GingaPlugin.LocalPlugin):
-    """
-    PixTable
-    ========
-    PixTable provides a way to check or monitor the pixel values in
-    a region.
-
-    Plugin Type: Local
-    ------------------
-    PixTable is a local plugin, which means it is associated with a channel.
-    An instance can be opened for each channel.
-
-    Basic Use
-    ---------
-    In the most basic use, simply move the cursor around the channel
-    viewer; an array of pixel values will appear in the "Pixel Values"
-    display in the plugin UI.  The center value is highlighted, and this
-    corresponds to the value under the cursor.
-
-    You can choose a 3x3, 5x5, 7x7 or 9x9 grid from the leftmost
-    combobox control.  It may help to adjust the "Font Size" control
-    to prevent having the array values cut off on the sides.  You can
-    also enlarge the plugin workspace to see more of the table.
-
-    NOTE: the order of the value table shown will not necessarily match to
-    the channel viewer if the images is flipped, transposed or rotated.
-
-    Using Marks
-    -----------
-    If you click in the channel viewer, it will set a mark.  There can
-    be any number of marks, and they are each noted with an "X"
-    annotated with a number.  When that mark is selected it will only
-    show the values around the mark.  Simply change the mark control to
-    select a different mark to see the values around it.
-
-    The marks will stay in position even if a new image is loaded and
-    they will show the values for the new image.  In this way you can
-    monitor the area around a spot if the image is updating frequently.
-
-    If the "Pan to mark" checkbox is selected, then when you select a
-    different mark from the mark control, the channel viewer will pan to
-    that mark.  This can be useful to inspect the same spots in several
-    different images.
-
-    NOTE: if you change the mark control back to "None" then the pixel
-    table will again update as you move the cursor around the viewer.
-
-    Deleting Marks
-    --------------
-    To delete a mark, select it in the mark control and then press the
-    button marked "Delete".  To delete all the marks, press the button
-    marked "Delete All".
-    """
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
@@ -125,7 +122,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         bg = colors.lookup_color('#202030')
         pixview.set_bg(*bg)
 
-        bd = pixview.get_bindings()
+        bd = pixview.get_bindings()  # noqa
 
         self.pixview = pixview
         self.pix_w = Viewers.GingaViewerWidget(pixview)
@@ -293,18 +290,18 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         # Because most FITS data is stored with lower Y indexes to
         # bottom
-        data = numpy.flipud(data)
+        data = np.flipud(data)
 
         width, height = self.fitsimage.get_dims(data)
         if self.txt_arr is None:
             return
 
-        maxval = numpy.nanmax(data)
-        minval = numpy.nanmin(data)
-        avgval = numpy.average(data)
+        maxval = np.nanmax(data)
+        minval = np.nanmin(data)
+        avgval = np.average(data)
         fmt_cell = self.fmt_cell
 
-        # can we do this with a numpy.vectorize() fn call and
+        # can we do this with a np.vectorize() fn call and
         # speed things up?
         for i in range(width):
             for j in range(height):
@@ -329,7 +326,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -410,7 +407,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
             rows.append(cols)
 
-        self.txt_arr = numpy.array(rows)
+        self.txt_arr = np.array(rows)
 
         # add summary row(s)
         x = (font_wd + 2) + 4
@@ -420,7 +417,7 @@ class PixTable(GingaPlugin.LocalPlugin):
                   color=color, fontsize=self.fontsize,
                   coord='data')
         objs.append(s1)
-        self.sum_arr = numpy.array([s1])
+        self.sum_arr = np.array([s1])
 
         # add all of the text objects to the canvas as one large
         # compound object
@@ -474,5 +471,11 @@ class PixTable(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'pixtable'
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_PixTable', package='ginga')
 
 # END

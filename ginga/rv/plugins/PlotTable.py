@@ -1,9 +1,24 @@
-#
-# PlotTable.py -- Table plotting plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+A plugin to display basic plot for any two selected columns
+in a table.
+
+**Plugin Type: Local**
+
+``PlotTable`` is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
+**Usage**
+
+``PlotTable`` is a plugin designed to plot any two selected columns for a given
+FITS table HDU (can be accessed via ``MultiDim``).
+For masked columns, masked data is not shown (even if only one of the
+``(X, Y)`` pair is masked).
+It is meant as a way to quickly look at table data and not for detailed
+scientific analysis.
+
+"""
 import numpy as np
 
 from ginga.GingaPlugin import LocalPlugin
@@ -17,12 +32,11 @@ try:
 except ImportError:
     have_mpl = False
 
+__all__ = ['PlotTable']
+
 
 class PlotTable(LocalPlugin):
-    """A plugin to display basic plot for any two selected columns
-    in a table.
 
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(PlotTable, self).__init__(fv, fitsimage)
@@ -461,8 +475,9 @@ class PlotTable(LocalPlugin):
         return 'plottable'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
+# Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
-__doc__ = generate_cfg_example('plugin_PlotTable', package='ginga')
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_PlotTable', package='ginga')
+
+# END
