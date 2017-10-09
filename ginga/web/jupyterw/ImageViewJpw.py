@@ -198,8 +198,10 @@ class ImageViewEvent(ImageViewJpw):
         self.jp_dom = ipywidgets.DOMListener(source=jp_imgw)
         self.jp_dom.watched_events = [
             'keydown', 'keyup', 'mouseenter', 'mouseleave',
-            'mousedown', 'mouseup', 'mousemove', 'wheel'
+            'mousedown', 'mouseup', 'mousemove', 'wheel',
+            'contextmenu'
             ]
+        self.jp_dom.prevent_default_action = True
 
         self.jp_dom.on_dom_event(self._handle_event)
         self.logger.info("installed event handlers")
