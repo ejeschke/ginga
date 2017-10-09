@@ -1,53 +1,54 @@
-#
-# Ruler.py -- Ruler plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+``Ruler`` is a simple plugin designed to measure distances on an image.
+
+**Plugin Type: Local**
+
+``Ruler`` is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
+**Usage**
+
+``Ruler`` measures distance by calculating a spherical triangulation
+via WCS mapping of three points defined by a single line drawn on the image.
+By default, the distance is shown in arcminutes of sky, but using the
+"Units" control, it can be changed to show degrees or pixel distance instead.
+
+Click and drag to establish a ruler between two points.
+
+Display the "Zoom" tab at the same time to precisely see detail
+while drawing the ruler, if desired.
+
+To erase the old and make a new ruler, click and drag again.
+When another line is drawn, it replaces the first one.
+When the plugin is closed, the graphic overlay is removed.
+Should you want "sticky rulers", use the ``Drawing`` plugin
+(and choose "Ruler" as the drawing type).
+
+**Editing**
+
+To edit an existing ruler, click the radio button in the plugin
+UI labeled "Edit".  If the ruler does not become selected
+immediately, click on it.  This should establish a bounding box around
+the ruler and show its control points.  Drag within the bounding box to
+move the ruler or click and drag the endpoints to edit the ruler.
+
+**Units**
+
+The units shown for distance can be selected from the drop-down box
+in the UI.  You have a choice of "arcmin", "degrees", or "pixels".
+The first two require a valid and working WCS in the image.
+
+"""
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
+__all__ = ['Ruler']
+
 
 class Ruler(GingaPlugin.LocalPlugin):
-    """
-    Ruler
-    =====
-    Ruler is a simple plugin designed to measure distances on an image.
-    It does this by calculating a spherical triangulation via WCS mapping
-    of three points defined by a single line drawn on the image.  By default,
-    the distance is shown in arcminutes of sky, but using the Units control
-    it can be changed to show degrees or pixel distance instead.
 
-    [ Should you want "sticky rulers", use the Drawing plugin (and choose
-    "Ruler" as the drawing type). ]
-
-    Plugin Type: Local
-    ------------------
-    Ruler is a local plugin, which means it is associated with a channel.
-    An instance can be opened for each channel.
-
-    Usage
-    -----
-    Click and drag to establish a ruler between two points.
-
-    Display the Zoom tab at the same time to precisely see detail
-    while drawing the ruler, if desired.
-
-    To erase the old and make a new ruler, click and drag again.
-
-    Editing
-    -------
-    To edit an existing ruler, click the radio button in the plugin
-    UI labeled 'Edit'.  If the ruler does not become selected
-    immediately, click on it.  Then click and drag the points to edit
-    the ruler.
-
-    Units
-    -----
-    The units shown for distance can be selected from the drop-down box
-    in the UI.  You have a choice of 'arcmin', 'degrees' or 'pixels'.
-    The first two require a valid and working WCS in the image.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Ruler, self).__init__(fv, fitsimage)
@@ -103,14 +104,16 @@ class Ruler(GingaPlugin.LocalPlugin):
         hbox = Widgets.HBox()
         btn1 = Widgets.RadioButton("Draw")
         btn1.set_state(mode == 'draw')
-        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+        btn1.add_callback(
+            'activated', lambda w, val: self.set_mode_cb('draw', val))
         btn1.set_tooltip("Choose this to draw a ruler")
         self.w.btn_draw = btn1
         hbox.add_widget(btn1)
 
         btn2 = Widgets.RadioButton("Edit", group=btn1)
         btn2.set_state(mode == 'edit')
-        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn2.add_callback(
+            'activated', lambda w, val: self.set_mode_cb('edit', val))
         btn2.set_tooltip("Choose this to edit a ruler")
         self.w.btn_edit = btn2
         hbox.add_widget(btn2)
@@ -231,4 +234,4 @@ class Ruler(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'ruler'
 
-#END
+# END
