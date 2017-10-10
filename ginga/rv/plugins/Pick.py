@@ -177,6 +177,8 @@ The "Redo Pick" button will redo the search operation.  It's convenient
 if you have changed some parameters and want to see the effect based on the
 current pick area without disturbing it.
 
+**User Configuration**
+
 """
 import threading
 import sys

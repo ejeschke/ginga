@@ -35,6 +35,8 @@ select an HDU to open in the channel.
 Use the controls in the lower part of the UI to select the axis and
 to step through the planes in that axis.
 
+**User Configuration**
+
 """
 import time
 import re

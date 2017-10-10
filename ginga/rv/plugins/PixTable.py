@@ -50,6 +50,8 @@ To delete a mark, select it in the mark control and then press the
 button marked "Delete".  To delete all the marks, press the button
 marked "Delete All".
 
+**User Configuration**
+
 """
 import numpy as np
 

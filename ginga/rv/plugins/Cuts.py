@@ -93,6 +93,8 @@ pixels, etc.
 Use the "Save" button to save the ``Cuts`` plot as as image and
 data as a Numpy compressed archive.
 
+**User Configuration**
+
 """
 import numpy as np
 

@@ -13,7 +13,7 @@ image.
 The ``Header`` plugin shows the FITS keyword metadata from the image.
 Initially only the Primary HDU metadata is shown.  However, in
 conjunction with the ``MultiDim`` plugin, the metadata for other HDUs will be
-shown.  See `~ginga.rv.plugins.MultiDim` for details.
+shown.  See ``MultiDim`` for details.
 
 If the "Sortable" checkbox has been checked in the lower left of the UI,
 then clicking on a column header will sort the table by values in that

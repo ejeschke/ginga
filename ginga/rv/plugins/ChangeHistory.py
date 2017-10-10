@@ -9,10 +9,10 @@ Keep track of buffer change history.
 
 This plugin is used to log any changes to data buffer. For example,
 a change log would appear here if a new image is added to a mosaic via the
-`~ginga.rv.plugins.Mosaic` plugin. Like `~ginga.rv.plugins.Contents`,
+``Mosaic`` plugin. Like ``Contents``,
 the log is sorted by channel, and then by image name.
 
-**Notes**
+**Usage**
 
 History should stay no matter what channel or image is active.
 New history can be added, but old history cannot be deleted,

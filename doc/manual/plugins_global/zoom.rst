@@ -4,7 +4,7 @@ Zoom
 ====
 
 .. image:: figures/zoom-plugin.png
-   :width: 400px
+   :width: 250px
    :align: center
    :alt: Zoom plugin
 

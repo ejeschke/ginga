@@ -12,67 +12,96 @@ Pick
    :no-heading:
    :skip: Pick
 
-.. image:: figures/pick-move-draw-edit.png
+**Figures to show specific plugin usage**
+
+.. figure:: figures/pick-move-draw-edit.png
    :width: 400px
    :align: center
    :alt: Defining a Pick area
 
-.. image:: figures/pick-cutout.png
+   Defining a ``Pick`` area.
+
+.. figure:: figures/pick-cutout.png
    :width: 400px
    :align: center
    :alt: Image tab of Pick area
 
-.. image:: figures/pick-contour.png
+   "Image" tab of ``Pick`` area.
+
+.. figure:: figures/pick-contour.png
    :width: 400px
    :align: center
    :alt: Contour tab of Pick area
 
-.. image:: figures/pick-fwhm.png
+   "Contour" tab of ``Pick`` area.
+
+.. figure:: figures/pick-fwhm.png
    :width: 400px
    :align: center
    :alt: FWHM tab of Pick area
 
-.. image:: figures/pick-radial.png
+   "FWHM" tab of ``Pick`` area.
+
+.. figure:: figures/pick-radial.png
    :width: 400px
    :align: center
    :alt: Radial tab of Pick area
 
-.. image:: figures/pick-cuts.png
+   "Radial" tab of ``Pick`` area.
+
+.. figure:: figures/pick-cuts.png
    :width: 800px
    :align: center
    :alt: Cut tab of Pick area
 
-.. image:: figures/pick-readout.png
+   "Cut" tab of ``Pick`` area.
+
+.. figure:: figures/pick-readout.png
    :width: 400px
    :align: center
    :alt: Readout tab of Pick area
 
-.. image:: figures/pick-controls.png
+   "Readout" tab of ``Pick`` area.
+
+.. figure:: figures/pick-controls.png
    :width: 400px
    :align: center
    :alt: Controls tab of Pick area
 
-.. image:: figures/pick-report.png
+   "Controls" tab of ``Pick`` area.
+
+.. figure:: figures/pick-report.png
    :width: 400px
    :align: center
    :alt: Report tab of Pick area
 
-.. image:: figures/pick-no-candidate.png
+   "Report" tab of ``Pick`` area.
+
+.. figure:: figures/pick-no-candidate.png
    :width: 800px
    :align: center
    :alt: Marker when no candidate found
 
-.. image:: figures/pick-contour-no-candidate.png
+   Marker when no candidate found.
+
+.. figure:: figures/pick-contour-no-candidate.png
    :width: 400px
    :align: center
-   :alt: Contour when no candidate found
+   :alt: Contour when no candidate found.
 
-.. image:: figures/pick-settings.png
+   Contour when no candidate found.
+
+
+.. figure:: figures/pick-settings.png
    :width: 400px
    :align: center
    :alt: Settings tab of Pick plugin
 
-.. image:: figures/pick-candidates.png
+   "Settings" tab of ``Pick`` plugin.
+
+.. figure:: figures/pick-candidates.png
    :width: 800px
    :align: center
    :alt: The channel viewer when "Show candidates" is checked.
+
+   The channel viewer when "Show candidates" is checked.

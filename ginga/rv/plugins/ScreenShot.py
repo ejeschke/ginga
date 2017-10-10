@@ -19,7 +19,7 @@ JPEG and PNG formats).
    There is no need to add the file extension; it will be added, if needed.
 6. Press the "Save" button.  The file will be saved where you specified.
 
-**Comments**
+**Notes**
 
 * PNG offers less artifacts for overlaid graphics, but files are larger
   than JPEG.

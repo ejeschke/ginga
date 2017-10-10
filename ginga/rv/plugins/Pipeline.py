@@ -11,6 +11,8 @@ Simple data reduction pipeline plugin for Ginga.
 ``Pipeline`` is a local plugin, which means it is associated with a channel.
 An instance can be opened for each channel.
 
+**Usage**
+
 """
 from __future__ import print_function
 

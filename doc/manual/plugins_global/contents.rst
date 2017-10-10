@@ -4,7 +4,7 @@ Contents
 ========
 
 .. image:: figures/contents-plugin.png
-   :width: 700px
+   :width: 600px
    :align: center
    :alt: Contents plugin
 

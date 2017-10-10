@@ -45,6 +45,8 @@ controls are provided in the UI for setting the low and high cut levels
 in the image, as well as for performing an auto cut levels, according to
 the auto cut levels settings in the channel preferences.
 
+**User Configuration**
+
 """
 import numpy as np
 

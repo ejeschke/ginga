@@ -4,7 +4,7 @@ Header
 ======
 
 .. image:: figures/header-plugin.png
-   :width: 400px
+   :width: 250px
    :align: center
    :alt: Header plugin
 

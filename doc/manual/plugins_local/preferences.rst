@@ -7,34 +7,52 @@ Preferences
    :no-heading:
    :skip: Preferences
 
-.. image:: figures/cdist-prefs.png
-   :align: center
-   :alt: Color Distribution Preferences
+**Figures to show specific plugin usage**
 
-.. image:: figures/cmap-prefs.png
+.. figure:: figures/cdist-prefs.png
    :align: center
-   :alt: Color Mapping Preferences
+   :alt: Color Distribution preferences
 
-.. image:: figures/zoom-prefs.png
+   "Color Distribution" preferences.
+
+.. figure:: figures/cmap-prefs.png
    :align: center
-   :alt: Zoom Preferences
+   :alt: Color Mapping preferences
 
-.. image:: figures/pan-prefs.png
+   "Color Mapping" preferences.
+
+.. figure:: figures/zoom-prefs.png
+   :align: center
+   :alt: Zoom preferences
+
+   "Zoom" preferences.
+
+.. figure:: figures/pan-prefs.png
    :align: center
    :alt: Pan Preferences
 
-.. image:: figures/transform-prefs.png
+   "Pan" preferences.
+
+.. figure:: figures/transform-prefs.png
    :align: center
    :alt: Transform Preferences
 
-.. image:: figures/autocuts-prefs.png
+   "Transform" preferences.
+
+.. figure:: figures/autocuts-prefs.png
    :align: center
    :alt: Auto Cuts Preferences
 
-.. image:: figures/wcs-prefs.png
+   "Auto Cuts" preferences.
+
+.. figure:: figures/wcs-prefs.png
    :align: center
    :alt: WCS Preferences
 
-.. image:: figures/newimages-prefs.png
+   "WCS" preferences.
+
+.. figure:: figures/newimages-prefs.png
    :align: center
    :alt: New Image Preferences
+
+   "New Image" preferences.
