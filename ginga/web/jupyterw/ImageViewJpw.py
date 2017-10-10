@@ -35,12 +35,18 @@ v1.embed()
 """
 import ipywidgets
 
-# TODO: try for Agg backend first and fall back to PIL if not available
-from ginga.pilw.ImageViewPil import ImageViewPil as ImageView
 from ginga import AstroImage
 from ginga import Mixins, Bindings
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 from ginga.util.toolbox import ModeIndicator
+
+try:
+    # See if we have aggdraw module--best choice
+    from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView
+
+except ImportError:
+    # fall back to pillow if aggdraw not available
+    from ginga.pilw.ImageViewPil import ImageViewPil as ImageView
 
 from ginga.web.jupyterw import JpHelp
 
