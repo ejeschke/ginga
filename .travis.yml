@@ -66,10 +66,8 @@ matrix:
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
-        # *** TODO: The `-w` option doesn't work with `python setup.py build_sphinx` yet for `ginga` ... removing it for now
         - python: 3.6
-          # env: SETUP_CMD='build_docs -w'
-          env: SETUP_CMD='build_docs' PIP_DEPENDENCIES='sphinx_rtd_theme'
+          env: SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_rtd_theme'
 
         # Try older Numpy versions
         # TODO: Pin Python 2.7 to ASTROPY_VERSION=lts after Astropy v3 release
