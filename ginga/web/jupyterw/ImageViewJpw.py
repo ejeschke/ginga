@@ -261,8 +261,7 @@ class ImageViewEvent(ImageViewJpw):
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
-        if event['buttons'] > 0:
-            button |= 0x1 << event['button']
+        button |= 0x1 << event['button']
         self._button = button
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
@@ -275,8 +274,7 @@ class ImageViewEvent(ImageViewJpw):
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
-        if event['buttons'] > 0:
-            button |= 0x1 << event['button']
+        button |= 0x1 << event['button']
         self._button = 0
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
