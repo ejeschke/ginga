@@ -12,14 +12,28 @@ metadata from the image.
 
 **Usage**
 
-Double-click on a column heading to sort the table by that column's
-value.  The image in the currently focused channel will normally be
-highlighted.  You can click on any image to force that image to be shown
-in the associated channel.
+Click on a column heading to sort the table by that column;
+Click again to sort the other way.
 
-.. note:: The columns and their values are drawn from the FITS header.
+.. note:: The columns and their values are drawn from the FITS header,
+          if applicable.
           This can be customized by setting the "columns" parameter in
           the "plugin_Contents.cfg" settings file.
+
+The active image in the currently focused channel will normally be
+highlighted. Double-click on an image will force that image to be
+shown in the associated channel. Single-click on any image to
+activate the buttons at the bottom of the UI:
+
+* "Display": Make the image the active image.
+* "Move": Move the image to another channel.
+* "Copy": Copy the image to another channel.
+* "Remove": Remove the image from the channel.
+
+If "Move" or "Copy" is done on an image that has been modified in Ginga
+(which would have an entry under ``ChangeHistory``, if used), the
+modification history will be retained as well. Removing an image from
+a channel destroys any unsaved changes.
 
 """
 from ginga.util.six.moves import map
