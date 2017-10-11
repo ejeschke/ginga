@@ -176,7 +176,7 @@ class WidgetBase(Callback.Callbacks):
     def render(self):
         text = "'%s' NOT YET IMPLEMENTED" % (str(self.__class__))
         d = dict(id=self.id, text=text)
-        return '''<span id=%(id)s>%(text)s</span>''' % d
+        return '''<div id=%(id)s>%(text)s</div>''' % d
 
 
 # BASIC WIDGETS
@@ -377,7 +377,7 @@ class TextArea(WidgetBase):
 class Label(WidgetBase):
 
     html_template = '''
-    <span id=%(id)s class="%(classes)s" style="%(styles)s">%(text)s</span>
+    <div id=%(id)s class="%(classes)s" style="%(styles)s">%(text)s</div>
     '''
 
     def __init__(self, text='', halign='left', style='normal', menu=None):
