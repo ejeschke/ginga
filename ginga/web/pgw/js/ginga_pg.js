@@ -8,8 +8,8 @@ ginga_make_application = function (ws_url, debug_flag) {
     ginga_app.canvases = {}
     // set this to true to get javascript console debugging
     ginga_app.debug = debug_flag
-    ginga_app.dialogs = {}
-    ginga_app.tab_widgets = {}
+    ginga_app.custom_methods = {}
+    ginga_app.widget_custom_methods = {}
     
     ginga_app.onmessage_handler = function(e) {
         try {
@@ -25,12 +25,6 @@ ginga_make_application = function (ws_url, debug_flag) {
                 if (message.id in ginga_app.canvases) {
                     ginga_app.canvases[message.id].drawShape(message["shape"]);
                 };
-            }
-            else if (message.operation == "dialog_action") {
-                ginga_app.dialogs[message.id].fn(message.action);
-	    }
-            else if (message.operation == "set_tab") {
-	        ginga_app.tab_widgets[message.id].fn(message.value);
             }
             else {
                 elt = document.getElementById(message.id)
@@ -73,7 +67,12 @@ ginga_make_application = function (ws_url, debug_flag) {
                 else if (message.operation == "reload_page") {
                     // js 1.2-- do we need a check for this?
                     window.location.reload(true);
-	        };
+	        }
+                else {
+                    // call custom widget method
+                    var wtbl = ginga_app.widget_custom_methods[message.id];
+                    wtbl[message.operation](elt, message);
+                }
             };
         }
         catch (err) {
@@ -100,15 +99,25 @@ ginga_make_application = function (ws_url, debug_flag) {
         ws.send(JSON.stringify(message));
         };
     
-    ginga_app.widget_handler = function (id, value) {
+    ginga_app.widget_handler = function (msgtype, id, value) {
         if (ginga_app.debug) console.log("callback for widget changed");
         var ws = ginga_app.socket;
         var message = {
-            type: "activate",
+            type: msgtype,
             id: id,
             value: value,
         }
         ginga_app.send_pkt(message);
+    }
+
+    ginga_app.add_custom_method = function (name, fn) {
+        ginga_app.custom_methods[name] = fn
+    }
+
+    ginga_app.add_widget_custom_method = function (wid, name, fn) {
+        var wtbl = ginga_app.widget_custom_methods;
+        var tbl = wtbl.hasOwnProperty(wid) ? wtbl[wid] : (wtbl[wid] = {});
+        tbl[name] = fn;
     }
 
     ginga_app.resize_window = function (e) {
@@ -146,6 +155,8 @@ ginga_initialize_canvas = function (canvas, id, app) {
     pg_canvas.canvas_id = id
     pg_canvas.app = app
     app.canvases[id] = pg_canvas
+    pg_canvas.width = canvas.width;
+    pg_canvas.height = canvas.height;
 
     // request animation frame from browser
     pg_canvas.animFrame = window.requestAnimationFrame ||
@@ -256,7 +267,7 @@ ginga_initialize_canvas = function (canvas, id, app) {
         console.log("canvas " + pg_canvas.canvas_id + " resize cb");
         //e.preventDefault();
         canvas = document.getElementById(pg_canvas.canvas_id);
-        console.log("current height is "+canvas.width.toFixed(0)+"x"+canvas.height.toFixed(0)+" pixels")
+        console.log("current dimensions are "+canvas.width.toFixed(0)+"x"+canvas.height.toFixed(0)+" pixels")
 
         // Set the canvas size to the pixel size reported for the
         // display area--important--we need to ensure no canvas scaling
@@ -268,7 +279,13 @@ ginga_initialize_canvas = function (canvas, id, app) {
         // If an element is obscured it's size will be reported as 0.
         // In such a case we don't want to reset the peer's idea of the size
         // unnecessarily, so only report size changes > 0
-        if ((width != 0) && (height != 0)) {
+        if ((width != 0) && (height != 0) &&
+            ((width != pg_canvas.width) || (height != pg_canvas.height))) {
+            // update saved values
+            pg_canvas.width = width
+            pg_canvas.height = height
+
+            // update canvas
             canvas.width = width
             canvas.height = height
     
@@ -293,9 +310,10 @@ ginga_initialize_canvas = function (canvas, id, app) {
         var hidCvs = pg_canvas.hiddenCanvas;
         var animFrame = pg_canvas.animFrame;
     
+        ctx.drawImage(hidCvs, 0, 0);
+
         animFrame(function () {
-            //ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(hidCvs, 0, 0);
+            pg_canvas.redrawCanvas();
             //console.log("Refresh canvas");
         });
     }
@@ -303,21 +321,18 @@ ginga_initialize_canvas = function (canvas, id, app) {
     pg_canvas.drawShape = function(shape) {
         var ctx = pg_canvas.hiddenContext;
         var operation = pg_canvas.shapeToFunc[shape["type"]];
-        var animFrame = pg_canvas.animFrame;
     
         if (operation === undefined) {
             console.log("Could not find operation for shape " + shape["type"]);
         }
-        animFrame(function () {
-            ctx.save();
-            if (shape.rotate) {
-                ctx.translate(shape.rotate.x, shape.rotate.y);
-                ctx.rotate(shape.rotate.theta);
-                ctx.translate(-shape.rotate.x, -shape.rotate.y);
-            }
-            operation(ctx, shape);
-            ctx.restore();
-        });
+        ctx.save();
+        if (shape.rotate) {
+            ctx.translate(shape.rotate.x, shape.rotate.y);
+            ctx.rotate(shape.rotate.theta);
+            ctx.translate(-shape.rotate.x, -shape.rotate.y);
+        }
+        operation(ctx, shape);
+        ctx.restore();
     }
     
     pg_canvas.drawRect = function (ctx, rect) {
@@ -501,40 +516,4 @@ ginga_initialize_canvas = function (canvas, id, app) {
     return pg_canvas;
 }
 
-ginga_initialize_dialog = function (doc_elem, id, title, buttons, modal, app) {
 
-    var pg_dialog = {};
-    pg_dialog.dialog_id = id;
-    pg_dialog.app = app;
-    app.dialogs[id] = pg_dialog;
-
-    pg_dialog.options = {autoOpen: false, modal: modal, title: title, buttons: buttons};
-
-    pg_dialog.dialogObj = $("#"+id).dialog(pg_dialog.options);
-
-    pg_dialog.fn = function(action) {
-	pg_dialog.dialogObj.dialog(action);
-    }
-
-    return pg_dialog;
-}
-
-ginga_initialize_tab_widget = function (doc_elem, id, app) {
-
-    var pg_tab_widget = {};
-    pg_tab_widget.tab_widget_id = id;
-    pg_tab_widget.app = app;
-    app.tab_widgets[id] = pg_tab_widget;
-
-    pg_tab_widget.options = {
-	activate: function(event, ui) {ginga_app.widget_handler(id, ui.newTab.index());},
-    };
-
-    pg_tab_widget.tabObj = $("#"+id).tabs(pg_tab_widget.options);
-
-    pg_tab_widget.fn = function(idx) {
-	pg_tab_widget.tabObj.tabs("option", "active", idx);
-    }
-
-    return pg_tab_widget;
-}

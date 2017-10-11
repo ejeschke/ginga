@@ -597,6 +597,14 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
         self.bindings = bindings
         bindings.set_bindings(self)
 
+    def center_cursor(self):
+        # NOP
+        pass
+
+    def position_cursor(self, data_x, data_y):
+        # NOP
+        pass
+
 
 class CanvasView(ImageViewZoom):
 

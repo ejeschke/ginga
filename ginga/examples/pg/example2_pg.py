@@ -26,7 +26,7 @@ class FitsViewer(object):
         self.top.add_callback('close', self.closed)
 
         vbox = Widgets.VBox()
-        vbox.set_border_width(2)
+        vbox.set_margins(2, 2, 2, 2)
         vbox.set_spacing(1)
 
         fi = Viewers.CanvasView(logger)
@@ -79,7 +79,7 @@ class FitsViewer(object):
         vbox.add_widget(self.readout, stretch=0)
 
         hbox = Widgets.HBox()
-        hbox.set_border_width(2)
+        hbox.set_margins(2, 2, 2, 2)
         hbox.set_spacing(4)
 
         wdrawtype = Widgets.ComboBox()
@@ -175,7 +175,7 @@ class FitsViewer(object):
         self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
 
     def load_file(self, filepath):
         image = AstroImage.AstroImage(logger=self.logger)
@@ -293,7 +293,7 @@ def main(options, args):
     viewer = FitsViewer(logger, window)
     #server.add_callback('shutdown', viewer.quit)
 
-    #window.resize(700, 540)
+    window.resize(700, 540)
 
     if len(args) > 0:
         viewer.load_file(args[0])

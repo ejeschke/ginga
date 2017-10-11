@@ -87,6 +87,7 @@ class FitsViewer(object):
 
         hbox = Widgets.HBox()
         hbox.set_border_width(2)
+        hbox.set_spacing(4)
 
         wdrawtype = Widgets.ComboBox()
         for name in self.drawtypes:
@@ -131,6 +132,7 @@ class FitsViewer(object):
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
+        hbox.set_spacing(4)
         btn1 = Widgets.RadioButton("Draw")
         btn1.set_state(mode == 'draw')
         btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))

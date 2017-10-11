@@ -42,6 +42,7 @@ def popup_dialog(parent):
 logger = log.get_logger('test', log_stderr=True, level=20)
 
 app = Widgets.Application(logger=logger)
+app.script_imports.append('jqx')
 app.add_callback('shutdown', quit)
 top = app.make_window("Ginga Wrapped Widgets Example: %s" % (wname))
 top.add_callback('close', quit)
@@ -58,6 +59,7 @@ if wname == 'label':
 
 elif wname == 'button':
     w = Widgets.Button("Press me")
+    w.add_callback('activated', lambda w: logger.info("button was clicked"))
     w.add_callback('activated', lambda w: popup_dialog(top))
     vbox.add_widget(w, stretch=1)
 
@@ -110,6 +112,7 @@ elif wname == 'slider':
 
 elif wname == 'scrollbar':
     w = Widgets.ScrollBar(orientation='horizontal')
+    w.add_callback('activated', lambda w, val: logger.info("value is %d" % val))
     vbox.add_widget(w)
 
 elif wname == 'progressbar':
@@ -186,7 +189,14 @@ elif wname == 'tabwidget':
     w = Widgets.TabWidget()
     w.add_widget(Widgets.Label('Content of Tab 1'), title='Tab 1')
     w.add_widget(Widgets.Label('Content of Tab 2'), title='Tab 2')
+    hbox = Widgets.HBox()
+    sbox = Widgets.SpinBox(dtype=int)
+    sbox.set_limits(0, 1, incr_value=1)
+    sbox.set_value(0)
+    sbox.add_callback('value-changed', lambda sbx, val: w.set_index(val))
+    hbox.add_widget(sbox)
     vbox.add_widget(w, stretch=1)
+    vbox.add_widget(hbox, stretch=0)
 
 elif wname == 'stackwidget':
     w = Widgets.StackWidget()
@@ -211,18 +221,24 @@ elif wname == 'gridbox':
 elif wname == 'menubar':
     w = Widgets.Menubar()
     menu = w.add_name('Menu 1')
-    menu.add_name('Larry')
-    menu.add_name('Curly')
-    menu.add_name('Moe')
+    menu.add_name('Larry').add_callback('activated',
+                                        lambda *args: print("chose Larry"))
+    menu.add_name('Curly').add_callback('activated',
+                                        lambda *args: logger.info("chose Curly"))
+    menu.add_name('Moe').add_callback('activated',
+                                        lambda *args: logger.info("chose Moe"))
     vbox.add_widget(w)
     vbox.add_widget(Widgets.Label("App content"), stretch=1)
 
 elif wname == 'toolbar':
     w = Widgets.Toolbar()
     menu = w.add_menu('Menu Type 1', mtype='tool')
-    menu.add_name('Larry')
-    menu.add_name('Curly')
-    menu.add_name('Moe')
+    menu.add_name('Larry').add_callback('activated',
+                                        lambda w: logger.info("chose Larry"))
+    menu.add_name('Curly').add_callback('activated',
+                                        lambda w: logger.info("chose Curly"))
+    menu.add_name('Moe').add_callback('activated',
+                                        lambda w: logger.info("chose Moe"))
     menu = w.add_menu('Menu Type 2', mtype='mbar')
     menu.add_name('Frank')
     menu.add_name('Dean')
@@ -237,13 +253,23 @@ elif wname == 'toolbar':
 elif wname == 'dialog':
     dia = Widgets.Dialog(title="Dialog Title",
                          buttons=[('ok', 0), ('cancel', 1)],
-                         parent=top, modal=True)
+                         parent=top, modal=False)
+    dia.add_callback('activated',
+                     lambda w, rsp: logger.info("user chose %s" % (rsp)))
     cntr = dia.get_content_area()
     cntr.add_widget(Widgets.Label("My Dialog Content"))
 
     # add some content to main app widget
     w = Widgets.Label("Hello World label")
     vbox.add_widget(w, stretch=1)
+    hbox = Widgets.HBox()
+    w = Widgets.Button("Open Dialog")
+    w.add_callback('activated', lambda w: dia.show())
+    hbox.add_widget(w)
+    w = Widgets.Button("Close Dialog")
+    w.add_callback('activated', lambda w: dia.hide())
+    hbox.add_widget(w)
+    vbox.add_widget(hbox)
 
 else:
     # default to label
