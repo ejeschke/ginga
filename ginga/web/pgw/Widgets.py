@@ -2134,28 +2134,7 @@ class TopLevel(ContainerBase):
       content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, target-densitydpi=device-dpi" />
 </head>
 <body>
-    <script type="text/javascript" src="/js/hammer.js"></script>
-
-    <!-- jQuery foundation -->
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
-    <script src="//code.jquery.com/jquery-1.12.4.js"></script>
-    <script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-
-    <!-- For jQWidgets -->
-    <link rel="stylesheet" href="/js/jqwidgets/styles/jqx.base.css" type="text/css" />
-    <script type="text/javascript" src="/js/jqwidgets/jqxcore.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxdata.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxbuttons.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxscrollbar.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxsplitter.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxtabs.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxpanel.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxexpander.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxprogressbar.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxmenu.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxtoolbar.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxdatatable.js"></script>
-    <script type="text/javascript" src="/js/jqwidgets/jqxtreegrid.js"></script>
+    %(script_imports)s
 
     <!-- For Ginga -->
     <link rel="stylesheet" href="/js/ginga_pg.css" type="text/css" />
@@ -2166,10 +2145,12 @@ class TopLevel(ContainerBase):
         var ws_url = "ws://" + window.location.host + "/app/socket?wid=%(wid)s";
         var ginga_app = ginga_make_application(ws_url, %(debug)s);
     </script>
+
 <div id=%(id)s>%(content)s</div>
 </body>
 </html>
 '''
+
     def __init__(self, title=""):
         super(TopLevel, self).__init__()
 
@@ -2180,6 +2161,7 @@ class TopLevel(ContainerBase):
         self.url = None
         self.app = None
         self.debug = False
+        self.script_imports = None
         # widget.closeEvent = lambda event: self._quit(event)
 
         self.enable_callback('close')
@@ -2251,15 +2233,54 @@ class TopLevel(ContainerBase):
             debug = 'true'
         else:
             debug = 'false'
+
+        # prepare javascript imports
+        if self.script_imports is None:
+            self.script_imports = self.app.script_imports
+        script_imports = [self.app.script_decls[key]
+                           for key in self.script_imports]
+
         d = dict(title=self.title, content=self.render_children(),
                  wid=self.wid, id=self.id, url=url, ws_url=ws_url,
-                 debug=debug,
+                 debug=debug, script_imports='\n'.join(script_imports),
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
+
         return self.html_template % d  # noqa
 
 
 class Application(Callback.Callbacks):
+
+    script_decls = {
+    'hammer': '''
+    <script type="text/javascript" src="/js/hammer.js"></script>
+    ''',
+
+    'jquery': '''
+    <!-- jQuery foundation -->
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
+    <script src="//code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    ''',
+
+    'jqx': '''
+    <!-- For jQWidgets -->
+    <link rel="stylesheet" href="/js/jqwidgets/styles/jqx.base.css" type="text/css" />
+    <script type="text/javascript" src="/js/jqwidgets/jqxcore.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxdata.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxbuttons.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxscrollbar.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxsplitter.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxtabs.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxpanel.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxexpander.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxprogressbar.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxmenu.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxtoolbar.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxdatatable.js"></script>
+    <script type="text/javascript" src="/js/jqwidgets/jqxtreegrid.js"></script>
+    ''',
+    }
 
     def __init__(self, logger=None, base_url=None,
                  host='localhost', port=9909):
@@ -2272,6 +2293,9 @@ class Application(Callback.Callbacks):
         self.wincnt = 0
         # list of web socket handlers connected to this application
         self.ws_handlers = []
+        # default sections from script imports to insert in web pages
+        # see TopLevel widget, above
+        self.script_imports = ['hammer', 'jquery']
 
         _app = self
         widget_dict[0] = self

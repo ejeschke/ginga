@@ -42,6 +42,7 @@ def popup_dialog(parent):
 logger = log.get_logger('test', log_stderr=True, level=20)
 
 app = Widgets.Application(logger=logger)
+app.script_imports.append('jqx')
 app.add_callback('shutdown', quit)
 top = app.make_window("Ginga Wrapped Widgets Example: %s" % (wname))
 top.add_callback('close', quit)
