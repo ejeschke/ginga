@@ -10,12 +10,9 @@ import numpy
 
 from ginga import ImageView
 
-try:
-    from PIL import Image
-    from . import PilHelp  # noqa
-    from .CanvasRenderPil import CanvasRenderer
-except ImportError:  # Need this for Sphinx build
-    pass
+from PIL import Image
+from . import PilHelp  # noqa
+from .CanvasRenderPil import CanvasRenderer
 
 
 class ImageViewPilError(ImageView.ImageViewError):

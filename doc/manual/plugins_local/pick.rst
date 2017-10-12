@@ -17,9 +17,9 @@ Pick
 .. figure:: figures/pick-move-draw-edit.png
    :width: 400px
    :align: center
-   :alt: Defining a Pick area
+   :alt: Move, Draw and Edit buttons
 
-   Defining a ``Pick`` area.
+   "Move", "Draw", and "Edit" buttons.
 
 .. figure:: figures/pick-cutout.png
    :width: 400px
