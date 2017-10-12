@@ -20,6 +20,12 @@ in future Ginga sessions it will obtain the same settings.
 
 **Color Distribution Preferences**
 
+.. figure:: figures/cdist-prefs.png
+   :align: center
+   :alt: Color Distribution preferences
+
+   "Color Distribution" preferences.
+
 The "Color Distribution" preferences control the preferences used for the
 data value to color index conversion that occurs after cut levels are
 applied and just before final color mapping is performed.  It concerns
@@ -35,6 +41,12 @@ the data is mapped to the colors in the color map.  "linear" is the
 default.
 
 **Color Mapping Preferences**
+
+.. figure:: figures/cmap-prefs.png
+   :align: center
+   :alt: Color Mapping preferences
+
+   "Color Mapping" preferences.
 
 The "Color Mapping" preferences control the preferences used for the
 color map and intensity map, used during the final phase of the color
@@ -56,6 +68,12 @@ can load all the ones that it has.
 See "Customizing Ginga" for details.
 
 **Zoom Preferences**
+
+.. figure:: figures/zoom-prefs.png
+   :align: center
+   :alt: Zoom preferences
+
+   "Zoom" preferences.
 
 The "Zoom" preferences control Ginga's zooming/scaling behavior.
 Ginga supports two zoom algorithms, chosen using the "Zoom Alg" control:
@@ -98,6 +116,12 @@ default values.
 
 **Pan Preferences**
 
+.. figure:: figures/pan-prefs.png
+   :align: center
+   :alt: Pan Preferences
+
+   "Pan" preferences.
+
 The "Pan" preferences control Ginga's panning behavior.
 
 The "Pan X" and "Pan Y" controls offer direct access to set the pan
@@ -112,6 +136,12 @@ small reticle in the center of the image.  This is useful for knowing
 the pan position and for debugging.
 
 **Transform Preferences**
+
+.. figure:: figures/transform-prefs.png
+   :align: center
+   :alt: Transform Preferences
+
+   "Transform" preferences.
 
 The "Transform" preferences provide for transforming the view of the image
 by flipping the view in X or Y, swapping the X and Y axes, or rotating
@@ -134,6 +164,12 @@ is unflipped, unswapped, and unrotated.
 
 **Auto Cuts Preferences**
 
+.. figure:: figures/autocuts-prefs.png
+   :align: center
+   :alt: Auto Cuts Preferences
+
+   "Auto Cuts" preferences.
+
 The "Auto Cuts" preferences control the calculation of auto cut levels for
 the view when the auto cut levels button or key is pressed, or when
 loading a new image with auto cuts enabled.
@@ -147,6 +183,12 @@ allow changes to parameters particular to each algorithm.
 
 **WCS Preferences**
 
+.. figure:: figures/wcs-prefs.png
+   :align: center
+   :alt: WCS Preferences
+
+   "WCS" preferences.
+
 The "WCS" preferences control the display preferences for the World
 Coordinate System (WCS) calculations used to report the cursor position in the
 image.
@@ -158,6 +200,12 @@ The "WCS Display" control is used to select a sexagesimal (``H:M:S``)
 readout or a decimal degrees readout.
 
 **New Image Preferences**
+
+.. figure:: figures/newimages-prefs.png
+   :align: center
+   :alt: New Image Preferences
+
+   "New Image" preferences.
 
 The "New Images" preferences determine how Ginga reacts when a new image
 is loaded into the channel.  This includes when an older image is

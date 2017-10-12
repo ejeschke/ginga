@@ -25,6 +25,13 @@ pixels that encloses the search area.
 The move/draw/edit selector at the bottom of the plugin is used to
 determine what operation is being done to the pick area:
 
+.. figure:: figures/pick-move-draw-edit.png
+   :width: 400px
+   :align: center
+   :alt: Move, Draw and Edit buttons
+
+   "Move", "Draw", and "Edit" buttons.
+
 * If "move" is selected, then you can move the existing pick area by
   dragging it or clicking where you want the center of it placed.
   If there is no existing area, a default one will be created.
@@ -56,58 +63,119 @@ horizontal and vertical FWHM measurements.
 
 The top set of tabs in the UI will be populated as follows:
 
-* The "Image" tab will show the contents of the cutout area.
-  The widget in this tab is a Ginga widget and so can be zoomed and panned
-  with the usual keyboard and mouse bindings (e.g., scroll wheel).  It will
-  also be marked with a point centered on the object and additionally the
-  pan position will be set to the found center.
-* The "Contour" tab will show a contour plot.
-  This is a contour plot of the area immediately surrounding the
-  candidate, and not usually encompassing the entire region of the pick
-  area.  You can use the vertical slider to the right of the plot to
-  increase or decrease the area of the contour plot.
-* The "FWHM" tab will show a FWHM plot.
-  The blue lines show measurements in the X direction and the green lines
-  show measurements in the Y direction.  The solid lines indicate actual
-  pixel values and the dotted lines indicate the fitted 1D function.
-  The shaded green and blue regions indicate the FWHM measurements.
-* The "Radial" tab contains a radial profile plot.
-  Plotted points in blue are data values, and a line is fitted to the
-  data.
-* The "Cuts" tab contains a profile plot for the vertical and horizontal
-  cuts represented by the crosshairs present in "Quick Mode" ON.  This plot
-  is updated in real time as the pick area is moved.  In "Quick Mode" OFF,
-  this plot is not updated.
-* The "Readout" tab will be populated with a summary of the measurements.
-  There are two buttons and two check boxes in this tab:
+.. figure:: figures/pick-cutout.png
+   :width: 400px
+   :align: center
+   :alt: Image tab of Pick area
 
-    * The "Default Region" button restores the pick region to the default
-      shape and size.
-    * The "Pan to pick" button will pan the channel viewer to the
-      located center.
-    * The "Quick Mode" check box toggles "Quick Mode" on and off.
-      This affects the behavior of the pick region as described above.
-    * The "From Peak" check box changes the behavior of "Quick Mode" slightly
-      as described above.
+   "Image" tab of ``Pick`` area.
 
-* The "Controls" tab has a couple of buttons that will work off of the
-  measurements.
+The "Image" tab will show the contents of the cutout area.
+The widget in this tab is a Ginga widget and so can be zoomed and panned
+with the usual keyboard and mouse bindings (e.g., scroll wheel).  It will
+also be marked with a point centered on the object and additionally the
+pan position will be set to the found center.
 
-    * The "Bg cut" button will set the low cut level of the channel viewer
-      to the measured background level.  A delta to this value can be
-      applied by setting a value in the "Delta bg" box (press "Enter" to
-      change the setting).
-    * The "Sky cut" button will set the low cut level of the channel viewer
-      to the measured sky level.  A delta to this value can be
-      applied by setting a value in the "Delta sky" box (press "Enter" to
-      change the setting).
-    * The "Bright cut" button will set the high cut level of the channel
-      viewer to the measured sky+brightness levels. A delta to this value
-      can be applied by setting a value in the "Delta bright" box
-      (press "Enter" to change the setting).
+.. figure:: figures/pick-contour.png
+   :width: 400px
+   :align: center
+   :alt: Contour tab of Pick area
 
-* The "Report" tab is used to record information about the measurements in
-  tabular form.
+   "Contour" tab of ``Pick`` area.
+
+The "Contour" tab will show a contour plot.
+This is a contour plot of the area immediately surrounding the
+candidate, and not usually encompassing the entire region of the pick
+area.  You can use the vertical slider to the right of the plot to
+increase or decrease the area of the contour plot.
+
+.. figure:: figures/pick-fwhm.png
+   :width: 400px
+   :align: center
+   :alt: FWHM tab of Pick area
+
+   "FWHM" tab of ``Pick`` area.
+
+The "FWHM" tab will show a FWHM plot.
+The blue lines show measurements in the X direction and the green lines
+show measurements in the Y direction.  The solid lines indicate actual
+pixel values and the dotted lines indicate the fitted 1D function.
+The shaded green and blue regions indicate the FWHM measurements.
+
+.. figure:: figures/pick-radial.png
+   :width: 400px
+   :align: center
+   :alt: Radial tab of Pick area
+
+   "Radial" tab of ``Pick`` area.
+
+The "Radial" tab contains a radial profile plot.
+Plotted points in blue are data values, and a line is fitted to the
+data.
+
+.. figure:: figures/pick-cuts.png
+   :width: 800px
+   :align: center
+   :alt: Cut tab of Pick area
+
+   "Cut" tab of ``Pick`` area.
+
+The "Cuts" tab contains a profile plot for the vertical and horizontal
+cuts represented by the crosshairs present in "Quick Mode" ON.  This plot
+is updated in real time as the pick area is moved.  In "Quick Mode" OFF,
+this plot is not updated.
+
+.. figure:: figures/pick-readout.png
+   :width: 400px
+   :align: center
+   :alt: Readout tab of Pick area
+
+   "Readout" tab of ``Pick`` area.
+
+The "Readout" tab will be populated with a summary of the measurements.
+There are two buttons and two check boxes in this tab:
+
+* The "Default Region" button restores the pick region to the default
+  shape and size.
+* The "Pan to pick" button will pan the channel viewer to the
+  located center.
+* The "Quick Mode" check box toggles "Quick Mode" on and off.
+  This affects the behavior of the pick region as described above.
+* The "From Peak" check box changes the behavior of "Quick Mode" slightly
+  as described above.
+
+.. figure:: figures/pick-controls.png
+   :width: 400px
+   :align: center
+   :alt: Controls tab of Pick area
+
+   "Controls" tab of ``Pick`` area.
+
+The "Controls" tab has a couple of buttons that will work off of the
+measurements.
+
+* The "Bg cut" button will set the low cut level of the channel viewer
+  to the measured background level.  A delta to this value can be
+  applied by setting a value in the "Delta bg" box (press "Enter" to
+  change the setting).
+* The "Sky cut" button will set the low cut level of the channel viewer
+  to the measured sky level.  A delta to this value can be
+  applied by setting a value in the "Delta sky" box (press "Enter" to
+  change the setting).
+* The "Bright cut" button will set the high cut level of the channel
+  viewer to the measured sky+brightness levels. A delta to this value
+  can be applied by setting a value in the "Delta bright" box
+  (press "Enter" to change the setting).
+
+.. figure:: figures/pick-report.png
+   :width: 400px
+   :align: center
+   :alt: Report tab of Pick area
+
+   "Report" tab of ``Pick`` area.
+
+The "Report" tab is used to record information about the measurements in
+tabular form.
 
 By pressing the "Add Pick" button, the information about the most recent
 candidate is added to the table.  If the "Record Picks automatically"
@@ -130,6 +198,13 @@ automatically determined by the given extension (e.g., ".fits" is FITS and
 If no candidate can be found (based on the settings), then the pick area
 is marked with a red point centered on the pick area.
 
+.. figure:: figures/pick-no-candidate.png
+   :width: 800px
+   :align: center
+   :alt: Marker when no candidate found
+
+   Marker when no candidate found.
+
 The image cutout will be taken from this central area and so the "Image"
 tab will still have content.  It will also be marked with a central red
 "X".
@@ -137,9 +212,23 @@ tab will still have content.  It will also be marked with a central red
 The contour plot will still be produced from the cutout, and the cuts
 plot will be updated in "Quick Mode".
 
+.. figure:: figures/pick-contour-no-candidate.png
+   :width: 400px
+   :align: center
+   :alt: Contour when no candidate found.
+
+   Contour when no candidate found.
+
 All the other plots will be cleared.
 
 **The Settings Tab**
+
+.. figure:: figures/pick-settings.png
+   :width: 400px
+   :align: center
+   :alt: Settings tab of Pick plugin
+
+   "Settings" tab of ``Pick`` plugin.
 
 The "Settings" tab controls aspects of the search within the pick area:
 
@@ -176,6 +265,13 @@ The "Settings" tab controls aspects of the search within the pick area:
 The "Redo Pick" button will redo the search operation.  It's convenient
 if you have changed some parameters and want to see the effect based on the
 current pick area without disturbing it.
+
+.. figure:: figures/pick-candidates.png
+   :width: 800px
+   :align: center
+   :alt: The channel viewer when "Show candidates" is checked.
+
+   The channel viewer when "Show candidates" is checked.
 
 **User Configuration**
 
