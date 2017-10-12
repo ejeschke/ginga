@@ -1,45 +1,42 @@
-#
-# ColorMapPicker.py -- ColorMapPicker plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+The ``ColorMapPicker`` plugin is used to graphically browse and select a
+colormap for a channel image viewer.
+
+**Plugin Type: Global**
+
+``ColorMapPicker`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+Operation of the plugin is very simple: the colormaps are displayed in
+the form of colorbars and labels in the main view pane of the plugin.
+Click on any one of the bars to set the colormap of the currently
+active channel in the viewer.
+
+Change the channel to set the colormap on a different channel.
+
+You can scroll vertically or use the scroll bars to move through the
+colorbar samples.
+
+.. note:: When the plugin starts for the first time, it will generate
+          a bitmap RGB image of colorbars and labels corresponding to
+          all the available colormaps.  This can take a few seconds
+          depending on the number of colormaps installed.
+
+          Colormaps are shown with the "ramp" intensity map applied.
+
+"""
 from ginga.pilw.ImageViewPil import CanvasView
 from ginga.gw import Widgets, Viewers
 from ginga import GingaPlugin
 from ginga import cmap, RGBMap, RGBImage
 
+__all__ = ['ColorMapPicker']
+
 
 class ColorMapPicker(GingaPlugin.GlobalPlugin):
-    """
-    ColorMapPicker
-    ==============
-    The ColorMapPicker plugin is used to graphically browse and select a
-    color map for a channel image viewer.
-
-    Plugin Type: Global
-    -------------------
-    ColorMapPicker is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    Operation of the plugin is very simple: the color maps are displayed in
-    the form of color bars and labels in the main view pane of the plugin.
-    Click on any one of the bars to set the color map of the currently
-    active channel in the viewer.
-
-    Change the channel to set the color map on a different channel.
-
-    You can scroll vertically or use the scroll bars to move through the
-    color bar samples.
-
-    .. note:: When the plugin starts for the first time, it will generate
-              a bitmap RGB image of color bars and labels corresponding to
-              all the available color maps.  This can take a few seconds
-              depending on the number of color maps installed.
-
-              Color maps are shown with the "ramp" intensity map applied.
-    """
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
@@ -205,7 +202,7 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
             cbar = ColorBar(x1, y1, x2, y2, cm_name=name, showrange=False,
                             rgbmap=rgbmap, coord='window')
             l2.append(cbar)
-            l2.append(Text(x2+sep, y2, name, color='white', fontsize=16,
+            l2.append(Text(x2 + sep, y2, name, color='white', fontsize=16,
                            coord='window'))
 
         Compound = canvas.get_draw_class('compoundobject')
@@ -235,4 +232,10 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'colormappicker'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_ColorMapPicker', package='ginga')
+
+# END

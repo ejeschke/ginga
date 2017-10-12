@@ -1,48 +1,48 @@
-#
-# Pan.py -- Pan plugin for fits viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+The ``Pan`` plugin provides a small panning image that gives an overall
+"birds-eye" view of the channel image that last had the focus.  If the
+channel image is zoomed in 2X or greater, then the pan region is shown
+graphically in the ``Pan`` image by a rectangle.
+
+**Plugin Type: Global**
+
+``Pan`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+The channel image can be panned by clicking and/or dragging to place
+the rectangle.  Using the right mouse button to drag a rectangle will
+force the channel image viewer to try to match the region (taking into
+account the differences in the aspect ratio between the drawn rectangle
+and the window dimensions).  Scrolling in the ``Pan`` image will zoom the
+channel image.
+
+The color/intensity map and cut levels of the ``Pan`` image are updated
+when they are changed in the corresponding channel image.
+The ``Pan`` image also displays the World Coordinate System (WCS) compass, if
+valid WCS metadata is present in the FITS HDU being viewed in the
+channel.
+
+The ``Pan`` plugin usually appears as a sub-pane under the "Info" tab, next
+to the ``Info`` plugin.
+
+"""
 import sys
 import traceback
 import math
+
 from ginga.BaseImage import BaseImage
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 
+__all__ = ['Pan']
+
+
 class Pan(GingaPlugin.GlobalPlugin):
-    """
-    Pan
-    ===
-    The Pan plugin provides a small panning image that gives an overall
-    "birds-eye" view of the channel image that last had the focus.  If the
-    channel image is zoomed in 2X or greater then the pan region is shown
-    graphically in the Pan image by a rectangle.
 
-    Plugin Type: Global
-    -------------------
-    Pan is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    The channel image can be panned by clicking and/or dragging to place
-    the rectangle.  Using the right mouse button to drag a rectangle will
-    force the channel image viewer to try to match the region (taking into
-    account the differences in the aspect ratio between the drawn rectangle
-    and the window dimensions).  Scrolling in the Pan image will zoom the
-    channel image.
-
-    The color/intensity map and cut levels of the Pan image are updated
-    when they are changed in the corresponding channel image.
-    The Pan image also displays the World Coordinate System compass, if
-    valid WCS metadata is present in the FITS HDU being viewed in the
-    channel.
-
-    The Pan plugin usually appears as a sub-pane under the "Info" tab, next
-    to the Info plugin.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Pan, self).__init__(fv)
@@ -113,12 +113,11 @@ class Pan(GingaPlugin.GlobalPlugin):
     def add_channel(self, viewer, channel):
         fitsimage = channel.fitsimage
         panimage = self._create_pan_image(fitsimage)
-        chname = channel.name
 
         iw = Viewers.GingaViewerWidget(panimage)
         iw.resize(self._wd, self._ht)
         self.nb.add_widget(iw)
-        index = self.nb.index_of(iw)
+        #index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,
                               pancompass=None, panrect=None)
         channel.extdata._pan_info = paninfo
@@ -139,20 +138,19 @@ class Pan(GingaPlugin.GlobalPlugin):
             xfrmsettings.append('rot_deg')
         fitssettings.shareSettings(pansettings, xfrmsettings)
         for key in xfrmsettings:
-            pansettings.get_setting(key).add_callback('set', self.settings_cb,
-                                                     fitsimage, channel, paninfo, 0)
-
+            pansettings.get_setting(key).add_callback(
+                'set', self.settings_cb, fitsimage, channel, paninfo, 0)
 
         fitssettings.shareSettings(pansettings, ['cuts'])
-        pansettings.get_setting('cuts').add_callback('set', self.settings_cb,
-                                                    fitsimage, channel, paninfo, 1)
+        pansettings.get_setting('cuts').add_callback(
+            'set', self.settings_cb, fitsimage, channel, paninfo, 1)
 
         zoomsettings = ['zoom_algorithm', 'zoom_rate',
                         'scale_x_base', 'scale_y_base']
         fitssettings.shareSettings(pansettings, zoomsettings)
         for key in zoomsettings:
-            pansettings.get_setting(key).add_callback('set', self.zoom_ext_cb,
-                                                     fitsimage, channel, paninfo)
+            pansettings.get_setting(key).add_callback(
+                'set', self.zoom_ext_cb, fitsimage, channel, paninfo)
 
         fitsimage.add_callback('redraw', self.redraw_cb, channel, paninfo)
 
@@ -200,7 +198,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         # If the active widget has changed, then raise our Info widget
         # that corresponds to it
         if self.active != chname:
-            if not channel.extdata.has_key('_pan_info'):
+            if '_pan_info' not in channel.extdata:
                 self.add_channel(viewer, channel)
             paninfo = channel.extdata._pan_info
             iw = paninfo.widget
@@ -208,7 +206,6 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.nb.set_index(index)
             self.active = chname
             self.info = paninfo
-
 
     def reconfigure(self, panimage, width, height):
         self.logger.debug("new pan image dimensions are %dx%d" % (
@@ -268,7 +265,8 @@ class Pan(GingaPlugin.GlobalPlugin):
                 image.add_offset_xy(x, y, 1.0, 1.0)
 
                 paninfo.pancompass = p_canvas.add(self.dc.Compass(
-                    x, y, radius, color=self.settings.get('compass_color', 'skyblue'),
+                    x, y, radius,
+                    color=self.settings.get('compass_color', 'skyblue'),
                     fontsize=14))
 
             except Exception as e:
@@ -295,7 +293,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         points = fitsimage.get_pan_rect()
 
         # calculate pan position point radius
-        p_image = paninfo.panimage.get_image()
+        p_image = paninfo.panimage.get_image()  # noqa
         try:
             obj = paninfo.panimage.canvas.get_object_by_tag('__image')
         except KeyError:
@@ -322,10 +320,12 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         except KeyError:
             paninfo.panrect = p_canvas.add(self.dc.CompoundObject(
-                self.dc.Point(x, y, radius=radius, style='plus',
-                              color=self.settings.get('pan_position_color', 'yellow')),
-                self.dc.Polygon(points,
-                                color=self.settings.get('pan_rectangle_color', 'red'))))
+                self.dc.Point(
+                    x, y, radius=radius, style='plus',
+                    color=self.settings.get('pan_position_color', 'yellow')),
+                self.dc.Polygon(
+                    points,
+                    color=self.settings.get('pan_rectangle_color', 'red'))))
 
         #p_canvas.update_canvas(whence=0)
         paninfo.panimage.zoom_fit()
@@ -406,7 +406,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.logger.debug("wd_scale=%f ht_scale=%f scale=%f" % (
                 wd_scale, ht_scale, scale))
             if scale < 1.0:
-                zoomlevel = - max(2, int(math.ceil(1.0/scale)))
+                zoomlevel = - max(2, int(math.ceil(1.0 / scale)))
             else:
                 zoomlevel = max(1, int(math.floor(scale)))
             self.logger.debug("zoomlevel=%d" % (zoomlevel))
@@ -415,8 +415,13 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         return True
 
-
     def __str__(self):
         return 'pan'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Pan', package='ginga')
+
+# END

@@ -4,18 +4,20 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import numpy
 from io import BytesIO
 
-from PIL import Image
-from . import PilHelp
-from .CanvasRenderPil import CanvasRenderer
+import numpy
 
 from ginga import ImageView
+
+from PIL import Image
+from . import PilHelp  # noqa
+from .CanvasRenderPil import CanvasRenderer
 
 
 class ImageViewPilError(ImageView.ImageViewError):
     pass
+
 
 class ImageViewPil(ImageView.ImageViewBase):
 
@@ -50,7 +52,7 @@ class ImageViewPil(ImageView.ImageViewBase):
             width, height = self.get_window_size()
             canvas = Image.new("RGB", (width, height), color=0)
             assert p_image.size == canvas.size, \
-                   ImageViewPilError("Rendered image does not match window size")
+                ImageViewPilError("Rendered image does not match window size")
             self.surface = canvas
 
         canvas.paste(p_image)
@@ -143,4 +145,4 @@ class CanvasView(ImageViewPil):
     def configure_window(self, width, height):
         return super(CanvasView, self).configure_surface(width, height)
 
-#END
+# END

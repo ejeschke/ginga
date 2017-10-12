@@ -3,4 +3,6 @@
 Catalogs
 ========
 
-TBD
+.. automodapi:: ginga.rv.plugins.Catalogs
+   :no-heading:
+   :skip: Catalogs

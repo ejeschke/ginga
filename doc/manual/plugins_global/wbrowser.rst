@@ -3,4 +3,6 @@
 WBrowser
 ========
 
-TBD
+.. automodapi:: ginga.rv.plugins.WBrowser
+   :no-heading:
+   :skip: WBrowser

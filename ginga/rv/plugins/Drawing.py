@@ -1,14 +1,37 @@
-#
-# Drawing.py -- Drawing plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+A plugin for drawing canvas forms (overlaid graphics).
+
+**Plugin Type: Local**
+
+``Drawing`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+This plugin can be used to draw many different shapes on the image display.
+When it is in "draw" mode, select a shape from the drop-down menu, adjust
+the shape's parameters (if needed), and draw on the image by using left
+mouse button. You can choose to draw in pixel or WCS space.
+
+To move or edit an existing shape, set the plugin on "edit" or "move" mode,
+respectively.
+
+To save the drawn shape(s) as mask image, click the "Create Mask" button
+and you will see a new mask image created in Ginga. Then, use ``SaveImage``
+plugin to save it out as single-extension FITS. Note that the mask will
+take the size of the displayed image. Therefore, to create masks for
+different image dimensions, you need to repeat the steps multiple times.
+
+"""
 from ginga import GingaPlugin
 from ginga import colors
 from ginga.gw import Widgets
 from ginga.misc import ParamSet, Bunch
 from ginga.util import dp
+
+__all__ = ['Drawing']
 
 draw_colors = colors.get_colors()
 
@@ -19,20 +42,6 @@ fillkinds = ('circle', 'rectangle', 'polygon', 'triangle', 'righttriangle',
 
 
 class Drawing(GingaPlugin.LocalPlugin):
-    """
-    Drawing
-    =======
-    A plugin for drawing canvas forms (overlaid graphics).
-
-    Plugin Type: Local
-    ------------------
-    Drawing is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Usage
-    -----
-    TBD
-    """
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
@@ -90,7 +99,8 @@ class Drawing(GingaPlugin.LocalPlugin):
             combobox.append_text(name)
         index = self.drawtypes.index(default_drawtype)
         combobox.set_index(index)
-        combobox.add_callback('activated', lambda w, idx: self.set_drawtype_cb())
+        combobox.add_callback(
+            'activated', lambda w, idx: self.set_drawtype_cb())
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -99,14 +109,16 @@ class Drawing(GingaPlugin.LocalPlugin):
         hbox = Widgets.HBox()
         btn1 = Widgets.RadioButton("Draw")
         btn1.set_state(mode == 'draw')
-        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+        btn1.add_callback(
+            'activated', lambda w, val: self.set_mode_cb('draw', val))
         btn1.set_tooltip("Choose this to draw")
         self.w.btn_draw = btn1
         hbox.add_widget(btn1)
 
         btn2 = Widgets.RadioButton("Edit", group=btn1)
         btn2.set_state(mode == 'edit')
-        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn2.add_callback(
+            'activated', lambda w, val: self.set_mode_cb('edit', val))
         btn2.set_tooltip("Choose this to edit")
         self.w.btn_edit = btn2
         hbox.add_widget(btn2)
@@ -179,7 +191,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -278,8 +290,9 @@ class Drawing(GingaPlugin.LocalPlugin):
         if hasattr(obj, 'coord'):
             tomap = self.fitsimage.get_coordmap(obj.coord)
             if obj.crdmap != tomap:
-                self.logger.debug("coordmap has changed to '%s'--converting mapper" % (
-                    str(tomap)))
+                self.logger.debug(
+                    "coordmap has changed to '%s'--"
+                    "converting mapper" % (str(tomap)))
                 # user changed type of mapper; convert coordinates to
                 # new mapper and update widgets
                 obj.convert_mapper(tomap)
@@ -308,7 +321,8 @@ class Drawing(GingaPlugin.LocalPlugin):
 
             w = self.draw_params.build_params(paramlst,
                                               orientation=self.orientation)
-            self.draw_params.add_callback('changed', self.edit_params_changed_cb)
+            self.draw_params.add_callback(
+                'changed', self.edit_params_changed_cb)
 
             self.w.drawvbox.add_widget(w, stretch=1)
             self.w.delete_obj.set_enabled(True)
@@ -322,7 +336,8 @@ class Drawing(GingaPlugin.LocalPlugin):
             self.w.rotate_by.set_enabled(False)
 
     def edit_select_cb(self, fitsimage, obj):
-        self.logger.debug("editing selection status has changed for %s" % str(obj))
+        self.logger.debug(
+            "editing selection status has changed for %s" % str(obj))
         self.edit_initialize(fitsimage, obj)
 
     def set_mode_cb(self, mode, tf):

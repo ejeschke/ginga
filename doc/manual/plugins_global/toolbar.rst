@@ -3,4 +3,6 @@
 Toolbar
 =======
 
-TBD
+.. automodapi:: ginga.rv.plugins.Toolbar
+   :no-heading:
+   :skip: Toolbar

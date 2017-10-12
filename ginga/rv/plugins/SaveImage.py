@@ -1,11 +1,37 @@
-#
-# SaveImage.py -- Save output images global plugin for Ginga
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
-"""Save output images global plugin for Ginga."""
+"""
+Save images to output files.
+
+**Plugin Type: Global**
+
+``SaveImage`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+This global plugin is used to save any changes made in Ginga back to output
+images. For example, a mosaic image that was created by the ``Mosaic``
+plugin. Currently, only FITS images (single or multiple extensions) are
+supported.
+
+Given the output directory (e.g., ``/mypath/outputs/``), a suffix
+(e.g., ``ginga``), an image channel (``Image``), and a selected image
+(e.g., ``image1.fits``), the output file will be
+``/mypath/outputs/image1_ginga_Image.fits``. Inclusion of the channel name is
+optional and can be omitted using plugin configuration file,
+``plugin_SaveImage.cfg``.
+The modified extension(s) will have new header or data extracted from
+Ginga, while those not modified will remain untouched. Relevant change
+log entries from the ``ChangeHistory`` global plugin will be inserted into
+the history of its ``PRIMARY`` header.
+
+.. note:: This plugin uses the module ``astropy.io.fits`` to write the output
+          images, regardless of what is chosen for ``FITSpkg`` in the
+          ``general.cfg`` configuration file.
+
+"""
 from __future__ import absolute_import, division, print_function
+
 from ginga.util.six import itervalues
 from ginga.util.six.moves import map
 
@@ -29,43 +55,11 @@ try:
 except ImportError:  # This is needed for RTD to build
     pass
 
-__all__ = []
+__all__ = ['SaveImage']
 
 
 class SaveImage(GlobalPlugin):
-    """
-    SaveImage
-    =========
-    Save images to output files.
 
-    Plugin Type: Global
-    -------------------
-    SaveImage is a global plugin.  Only one instance can be opened.
-
-    This global plugin is used to save any changes made in Ginga back to output
-    images. For example, a mosaic image that was created by the `Mosaic`
-    plugin. Currently, only FITS images (single or multiple extensions) are
-    supported.
-
-    Usage
-    -----
-    Given the output directory (e.g., ``/mypath/outputs/``), a suffix
-    (e.g., ``ginga``), an image channel (``Image``), and a selected image
-    (e.g., ``image1.fits``), the output file will be
-    ``/mypath/outputs/image1_ginga_Image.fits``. Inclusion of the channel name is
-    optional and can be omitted using plugin configuration file (see below).
-    The modified extension(s) will have new header or data extracted from
-    Ginga, while those not modified will remain untouched. Relevant change
-    log entries from the `ChangeHistory` global plugin will be inserted into
-    the history of its ``PRIMARY`` header.
-
-    .. note::
-
-      This plugin uses the module `astropy.io.fits` to write the output images,
-      regardless of what is chosen for ``FITSpkg`` in your
-      ``~/.ginga/general.cfg`` configuration file.
-
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(SaveImage, self).__init__(fv)
@@ -532,8 +526,9 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         return 'saveimage'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
+# Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
-__doc__ = generate_cfg_example('plugin_SaveImage', package='ginga')
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_SaveImage', package='ginga')
+
+# END

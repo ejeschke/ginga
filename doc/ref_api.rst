@@ -28,6 +28,8 @@ Reference/API
    :no-inheritance-diagram:
 
 .. automodapi:: ginga.util.wcsmod
+   :skip: use
+   :skip: get_wcs_wrappers
 
 .. automodapi:: ginga.util.wcs
    :no-inheritance-diagram:

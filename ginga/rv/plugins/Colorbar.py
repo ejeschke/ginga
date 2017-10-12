@@ -1,35 +1,33 @@
-#
-# Colorbar.py -- Color bar plugin for Ginga viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+The ``Colorbar`` plugin shows a colorbar indicating the colormap applied
+to the image and showing the example values along the range.
+
+**Plugin Type: Global**
+
+``Colorbar`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+Clicking and dragging in the ``Colorbar`` window will shift the colormap
+left or right.  Scrolling will stretch or shrink the colormap at the
+cursor position.  Right-clicking will restore the colormap from any
+shift or stretch.
+
+If the focus shifts to another channel, the colorbar will be updated
+to reflect that channel's colormap and value information.
+
+"""
 from ginga import GingaPlugin
 from ginga.misc import Bunch
-from ginga.gw import Widgets, ColorBar
+from ginga.gw import ColorBar
+
+__all__ = ['Colorbar']
 
 
 class Colorbar(GingaPlugin.GlobalPlugin):
-    """
-    Colorbar
-    ========
-    The Colorbar plugin shows a color bar indicating the color map applied
-    to the image and showing the example values along the range.
 
-    Plugin Type: Global
-    -------------------
-    Colorbar is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    Clicking and dragging in the Colorbar window will shift the colormap
-    left or right.  Scrolling will stretch or shrink the colormap at the
-    cursor position.  Right-clicking will restore the colormap from any
-    shift or stretch.
-
-    If the focus shifts to another channel, the colorbar will be updated
-    to reflect that channel's colormap and value information.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Colorbar, self).__init__(fv)
@@ -155,4 +153,10 @@ class Colorbar(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'colorbar'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Colorbar', package='ginga')
+
+# END

@@ -8,9 +8,11 @@ Ver 2.6.6.dev
 - Fix for resize bug in switching in and out of grid view in gtk
   backends
 - Updated to have efficient support for gtk3
+
   - please install compatible pycairo from github.com/pygobject/pycairo
     if you get a "Not implemented yet" exception bubbling up from a
     method called cairo.ImageSurface.create_for_data()
+
 - Addition of a "Quick Mode" to the Pick plugin--see documentation
 - More consistent font handing between widgets and Ginga canvases 
 - Bug fix for importing some types of matplotlib color maps

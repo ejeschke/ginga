@@ -1,14 +1,288 @@
-#
-# Pick.py -- Pick plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+Perform quick astronomical stellar analysis.
+
+**Plugin Type: Local**
+
+``Pick`` is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
+**Usage**
+
+The ``Pick`` plugin is used to perform quick astronomical data quality analysis
+on stellar objects.  It locates stellar candidates within a drawn rectangle
+and picks the most likely candidate based on a set of search settings.
+The Full Width Half Max (FWHM) is reported on the candidate object, as
+well as its size based on the plate scale of the detector.  Rough
+measurement of background, sky level and brightness is also done.
+
+**Defining the pick area**
+
+The default pick area is defined as a rectangle of approximately 30x30
+pixels that encloses the search area.
+
+The move/draw/edit selector at the bottom of the plugin is used to
+determine what operation is being done to the pick area:
+
+.. figure:: figures/pick-move-draw-edit.png
+   :width: 400px
+   :align: center
+   :alt: Move, Draw and Edit buttons
+
+   "Move", "Draw", and "Edit" buttons.
+
+* If "move" is selected, then you can move the existing pick area by
+  dragging it or clicking where you want the center of it placed.
+  If there is no existing area, a default one will be created.
+* If "draw" is selected, then you can draw a shape with the cursor
+  to enclose and define a new pick area.  The default shape is a
+  rectangle, but other shapes can be selected in the "Settings" tab.
+* If "edit" is selected, then you can edit the pick area by dragging its
+  control points, or moving it by dragging in the bounding box.
+
+After the area is moved, drawn or edited, ``Pick`` will perform one of three
+actions:
+
+1. In "Quick Mode" ON, with "From Peak" OFF, it will simply attempt to
+   perform a calculation based on the coordinate under the crosshair in
+   the center of the pick area.
+2. In "Quick Mode" ON, with "From Peak" ON, it will perform a quick
+   detection of peaks in the pick area and perform a calculation on the
+   first one found, using the peak's coordinates.
+3. In "Quick Mode" OFF, it will search the area for all peaks and
+   evaluate the peaks based on the criteria in the "Settings" tab of the UI
+   (see "The Settings Tab" below) and try to locate the best candidate
+   matching the settings.
+
+**If a candidate is found**
+
+The candidate will be marked with a point (usually an "X") in the
+channel viewer canvas, centered on the object as determined by the
+horizontal and vertical FWHM measurements.
+
+The top set of tabs in the UI will be populated as follows:
+
+.. figure:: figures/pick-cutout.png
+   :width: 400px
+   :align: center
+   :alt: Image tab of Pick area
+
+   "Image" tab of ``Pick`` area.
+
+The "Image" tab will show the contents of the cutout area.
+The widget in this tab is a Ginga widget and so can be zoomed and panned
+with the usual keyboard and mouse bindings (e.g., scroll wheel).  It will
+also be marked with a point centered on the object and additionally the
+pan position will be set to the found center.
+
+.. figure:: figures/pick-contour.png
+   :width: 400px
+   :align: center
+   :alt: Contour tab of Pick area
+
+   "Contour" tab of ``Pick`` area.
+
+The "Contour" tab will show a contour plot.
+This is a contour plot of the area immediately surrounding the
+candidate, and not usually encompassing the entire region of the pick
+area.  You can use the vertical slider to the right of the plot to
+increase or decrease the area of the contour plot.
+
+.. figure:: figures/pick-fwhm.png
+   :width: 400px
+   :align: center
+   :alt: FWHM tab of Pick area
+
+   "FWHM" tab of ``Pick`` area.
+
+The "FWHM" tab will show a FWHM plot.
+The blue lines show measurements in the X direction and the green lines
+show measurements in the Y direction.  The solid lines indicate actual
+pixel values and the dotted lines indicate the fitted 1D function.
+The shaded green and blue regions indicate the FWHM measurements.
+
+.. figure:: figures/pick-radial.png
+   :width: 400px
+   :align: center
+   :alt: Radial tab of Pick area
+
+   "Radial" tab of ``Pick`` area.
+
+The "Radial" tab contains a radial profile plot.
+Plotted points in blue are data values, and a line is fitted to the
+data.
+
+.. figure:: figures/pick-cuts.png
+   :width: 800px
+   :align: center
+   :alt: Cut tab of Pick area
+
+   "Cut" tab of ``Pick`` area.
+
+The "Cuts" tab contains a profile plot for the vertical and horizontal
+cuts represented by the crosshairs present in "Quick Mode" ON.  This plot
+is updated in real time as the pick area is moved.  In "Quick Mode" OFF,
+this plot is not updated.
+
+.. figure:: figures/pick-readout.png
+   :width: 400px
+   :align: center
+   :alt: Readout tab of Pick area
+
+   "Readout" tab of ``Pick`` area.
+
+The "Readout" tab will be populated with a summary of the measurements.
+There are two buttons and two check boxes in this tab:
+
+* The "Default Region" button restores the pick region to the default
+  shape and size.
+* The "Pan to pick" button will pan the channel viewer to the
+  located center.
+* The "Quick Mode" check box toggles "Quick Mode" on and off.
+  This affects the behavior of the pick region as described above.
+* The "From Peak" check box changes the behavior of "Quick Mode" slightly
+  as described above.
+
+.. figure:: figures/pick-controls.png
+   :width: 400px
+   :align: center
+   :alt: Controls tab of Pick area
+
+   "Controls" tab of ``Pick`` area.
+
+The "Controls" tab has a couple of buttons that will work off of the
+measurements.
+
+* The "Bg cut" button will set the low cut level of the channel viewer
+  to the measured background level.  A delta to this value can be
+  applied by setting a value in the "Delta bg" box (press "Enter" to
+  change the setting).
+* The "Sky cut" button will set the low cut level of the channel viewer
+  to the measured sky level.  A delta to this value can be
+  applied by setting a value in the "Delta sky" box (press "Enter" to
+  change the setting).
+* The "Bright cut" button will set the high cut level of the channel
+  viewer to the measured sky+brightness levels. A delta to this value
+  can be applied by setting a value in the "Delta bright" box
+  (press "Enter" to change the setting).
+
+.. figure:: figures/pick-report.png
+   :width: 400px
+   :align: center
+   :alt: Report tab of Pick area
+
+   "Report" tab of ``Pick`` area.
+
+The "Report" tab is used to record information about the measurements in
+tabular form.
+
+By pressing the "Add Pick" button, the information about the most recent
+candidate is added to the table.  If the "Record Picks automatically"
+checkbox is checked, then any candidates are added to the table
+automatically.
+
+.. note:: If the "Show candidates" checkbox in the "Settings" tab is
+          checked, then *all* objects found in the region (according to
+          the settings) will be added to the table instead of just the
+          selected candidate.
+
+You can clear the table at any time by pressing the "Clear Log" button.
+The log can be saved to a table by putting a valid path and
+filename in the "File:" box and pressing "Save table". File type is
+automatically determined by the given extension (e.g., ".fits" is FITS and
+".txt" is plain text).
+
+**If no candidate is found**
+
+If no candidate can be found (based on the settings), then the pick area
+is marked with a red point centered on the pick area.
+
+.. figure:: figures/pick-no-candidate.png
+   :width: 800px
+   :align: center
+   :alt: Marker when no candidate found
+
+   Marker when no candidate found.
+
+The image cutout will be taken from this central area and so the "Image"
+tab will still have content.  It will also be marked with a central red
+"X".
+
+The contour plot will still be produced from the cutout, and the cuts
+plot will be updated in "Quick Mode".
+
+.. figure:: figures/pick-contour-no-candidate.png
+   :width: 400px
+   :align: center
+   :alt: Contour when no candidate found.
+
+   Contour when no candidate found.
+
+All the other plots will be cleared.
+
+**The Settings Tab**
+
+.. figure:: figures/pick-settings.png
+   :width: 400px
+   :align: center
+   :alt: Settings tab of Pick plugin
+
+   "Settings" tab of ``Pick`` plugin.
+
+The "Settings" tab controls aspects of the search within the pick area:
+
+* The "Show candidates" checkbox controls whether all detected sources
+  are marked or not (as shown in the figure below).  Additionally, if
+  checked, then all the found objects are added to the pick log table
+  when using the "Report" controls.
+* The "Draw type" parameter is used to choose the shape of the pick area
+  to be drawn.
+* The "Radius" parameter sets the radius to be used when finding and
+  evaluating bright peaks in the image.
+* The "Threshold" parameter is used to set a threshold for peak finding;
+  if set to "None", then a reasonable default value will be chosen.
+* The "Min FWHM" and "Max FWHM" parameters can be used to eliminate
+  certain sized objects from being candidates.
+* The "Ellipticity" parameter is used to eliminate candidates based on
+  their asymmetry in shape.
+* The "Edge" parameter is used to eliminate candidates based on how
+  close to the edge of the cutout they are.  *NOTE: currently this
+  works reliably only for non-rotated rectangular shapes.*
+* The "Max side" parameter is used to limit the size of the bounding box
+  that can be used in the pick shape.  Larger sizes take longer to
+  evaluate.
+* The "Coordinate Base" parameter is an offset to apply to located
+  sources.  Set to "1" if you want sources pixel locations reported
+  in a FITS-compliant manner and "0" if you prefer 0-based indexing.
+* The "Calc center" parameter is used to determine whether the center
+  is calculated from FWHM fitting ("fwhm") or centroiding ("centroid").
+* The "FWHM fitting" parameter is used to determine which function is
+  is used for FWHM fitting ("gaussian" or "moffat").
+* The "Contour Interpolation" parameter is used to set the interpolation
+  method used in rendering the background image in the "Contour" plot.
+
+The "Redo Pick" button will redo the search operation.  It's convenient
+if you have changed some parameters and want to see the effect based on the
+current pick area without disturbing it.
+
+.. figure:: figures/pick-candidates.png
+   :width: 800px
+   :align: center
+   :alt: The channel viewer when "Show candidates" is checked.
+
+   The channel viewer when "Show candidates" is checked.
+
+**User Configuration**
+
+"""
 import threading
-import sys, traceback
-import numpy as np
+import sys
+import traceback
 import time
 from collections import OrderedDict
+
+import numpy as np
 
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
@@ -26,200 +300,11 @@ except ImportError:
 region_default_width = 30
 region_default_height = 30
 
+__all__ = ['Pick']
+
 
 class Pick(GingaPlugin.LocalPlugin):
-    """
-    Pick
-    ====
-    Perform astronomical stellar quick analysis.
 
-    The Pick plugin is used to perform quick astronomical data quality analysis
-    on stellar objects.  It locates stellar candidates within a drawn rectangle,
-    and picks the most likely candidate based on a set of search settings.
-    The Full Width Half Max (FWHM) is reported on the candidate object, as
-    well as its size based on the plate scale of the detector.  Rough
-    measurement of background, sky level and brightness is done.
-
-    Plugin Type: Local
-    ------------------
-    Pick is a local plugin, which means it is associated with a channel.
-    An instance can be opened for each channel.
-
-    Usage
-    =====
-
-    Defining the pick area
-    ----------------------
-    The default pick area is defined as a rectangle of approximately 30x30
-    pixels that encloses the search area.
-
-    The move/draw/edit selector at the bottom of the plugin is used to
-    determine what operation is being done to the pick area:
-
-    * If "move" is selected then you can move the existing pick area by
-      dragging it or clicking where you want the center of it placed.
-      If there is no existing area a default one will be created.
-    * If "draw" is selected then you can draw a shape with the cursor
-      to enclose and define a new pick area.  The default shape is a
-      rectangle, but other shapes can be selected in the "Settings" tab.
-    * If "edit" is selected, then you can edit the pick area by dragging its
-      control points, or moving it by dragging in the bounding box.
-
-    After the area is moved, drawn or edited, Pick will perform one of three
-    actions:
-
-    1) In Quick Mode ON, with "From Peak" OFF, it will simply attempt to
-    perform a calculation based on the coordinate under the crosshair in
-    the center of the pick area.
-    2) In Quick Mode ON, with "From Peak" ON, it will perform a quick
-    detection of peaks in the pick area and perform a calculation on the
-    first one found, using the peak's coordinates.
-    3) In Quick Mode OFF, it will search the area for all peaks and
-    evaluate the peaks based on the criteria in the "Settings" tab of the UI
-    (see "The Settings Tab", below) and try to locate the best candidate
-    matching the settings.
-
-    If a candidate is found
-    -----------------------
-    The candidate will be marked with a `Point` (usually an "X") in the
-    channel viewer canvas, centered on the object as determined by the
-    horizontal and vertical FWHM measurements.
-
-    The top set of tabs in the UI will be populated as follows.
-
-    The "Image" tag will show the contents of the cutout area.
-
-    The widget in this tab is a Ginga widget and so can be zoomed and panned
-    with the usual keyboard and mouse bindings (e.g. scroll wheel).  It will
-    also be marked with a `Point` centered on the object and additionally the
-    pan position will be set to the found center.
-
-    The "Contour" tab will show a contour plot.
-
-    This is a contour plot of the area immediately surrounding the
-    candidate, and not usually encompassing the entire region of the pick
-    area.  You can use the vertical slider to the right of the plot to
-    increase or decrease the area of the contour plot.
-
-    The "FWHM" tab will show a FWHM plot.
-
-    The blue lines show measurements in the X direction and the green lines
-    show measurements in the Y direction.  The solid lines indicate actual
-    pixel values and the dotted lines indicate the fitted 1D gaussians.
-    The shaded green and blue regions indicate the FWHM measurements.
-
-    The "Radial" tab contains a radial profile plot.
-
-    Plotted points in blue are data values, and a line is fitted to the
-    data.
-
-    The "Cuts" tab contains a profile plot for the vertical and horizontal
-    cuts represented by the crosshairs present in Quick Mode ON.  This plot
-    is updated in real time as the pick area is moved.  In Quick Mode OFF
-    this plot is not updated.
-
-    The "Readout" tab will be populated with a summary of the measurements.
-
-    There are two buttons and two check boxes in this tab:
-
-    * The "Default Region" button restores the pick region to the default
-      shape and size.
-    * The "Pan to pick" button will pan the channel viewer to the
-      located center.
-    * The "Quick Mode" check box toggles Quick Mode on and off.  This affects
-      the behavior of the pick region as described above.
-    * The "From Peak" check box changes the behavior of Quick Mode slightly
-      as described above.
-
-    The "Controls" tab has a couple of buttons that will work off of the
-    measurements.
-
-    * The "Bg cut" button will set the low cut level of the channel viewer
-      to the measured background level.  A delta to this value can be
-      applied by setting a value in the "Delta bg" box (press Enter to
-      change the setting).
-    * The "Sky cut" button will set the low cut level of the channel viewer
-      to the measured sky level.  A delta to this value can be
-      applied by setting a value in the "Delta sky" box (press Enter to
-      change the setting).
-    * The "Bright cut" button will set the high cut level of the channel viewer
-      to the measured sky+brightness levels.  A delta to this value can be
-      applied by setting a value in the "Delta bright" box (press Enter to
-      change the setting).
-
-    The "Report" tab is used to record information about the measurements in
-    tabular form.
-
-    By pressing the "Add Pick" button the information about the most recent
-    candidate is added to the table.  If the "Record Picks automatically"
-    checkbox is checked, then any candidates are added to the table
-    automatically.
-
-    .. note:: If the "Show candidates" checkbox in the "Settings" tab is
-              checked, then *all* objects found in the region (according to
-              the Settings) will be added to the table instead of just the
-              selected candidate.
-
-    You can clear the table at any time by pressing the "Clear Log" button.
-    The log can be saved to a table by putting a valid path and
-    filename in the "File:" box and pressing "Save table". File type is
-    automatically determined by the given extension (e.g., ".fits" is FITS and
-    ".txt" is plain text).
-
-    If no candidate is found
-    ------------------------
-    If no candidate can be found (based on the Settings) then the pick area
-    is marked with a red `Point` centered on the pick area.
-
-    The image cutout will be taken from this central area and so the "Image"
-    tab will still have content.  It will also be marked with a central red
-    "X".
-
-    The contour plot will still be produced from the cutout, and the cuts
-    plot will be updated in Quick Mode.
-
-    All the other plots will be cleared.
-
-
-    The Settings Tab
-    ================
-
-    The "Settings" tab controls aspects of the search within the pick area:
-
-    * The "Show candidates" checkbox controls whether all detected sources
-      are marked or not (as shown in the figure below).  Additionally, if
-      checked then all the found objects are added to the pick log table
-      when using the Report controls.
-    * The "Draw type" parameter is used to choose the shape of the pick area
-      to be drawn.
-    * The "Radius" parameter sets the radius to be used when finding and
-      evaluating bright peaks in the image.
-    * The "Threshold" parameter is used to set a threshold for peak finding;
-      if set to None then a reasonable default value will be chosen.
-    * The "Min FWHM" and "Max FWHM" parameters can be used to eliminate
-      certain sized objects from being candidates.
-    * The "Ellipticity" parameter is used to eliminate candidates based on
-      their asymmetry in shape.
-    * The "Edge" parameter is used to eliminate candidates based on how
-      close to the edge of the cutout they are.  **NOTE: currently this
-      works reliably only for non-rotated rectangular shapes.**
-    * The "Max side" parameter is used to limit the size of the bounding box
-      that can be used in the pick shape.  Larger sizes take longer to
-      evaluate.
-    * The "Coordinate Base" parameter is an offset to apply to located
-      sources.  Set to "1" if you want sources pixel locations reported
-      in a FITS-compliant manner and "0" if you prefer 0-based indexing.
-    * The "Calc center" parameter is used to determine whether the center
-      is calculated from FWHM fitting ("fwhm") or centroiding ("centroid").
-    * The "FWHM fitting" parameter is used to determine which function is
-      is used for FWHM fitting ("gaussian" or "moffat").
-    * The "Contour Interpolation" parameter is used to set the interpolation
-      method used in rendering the background image in the "Contour" plot.
-
-    The "Redo Pick" button will redo the search operation.  It's convenient
-    if you have changed some parameters and want to see the effect based on the
-    current pick area without disturbing it.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Pick, self).__init__(fv, fitsimage)
@@ -305,8 +390,7 @@ class Pick(GingaPlugin.LocalPlugin):
         color2 = colors.lookup_color(cname2, format='hash')
         self.cross = self.dc.CompoundObject(
             self.dc.Line(0, 10, 20, 10, color=color1),
-            self.dc.Line(10, 0, 10, 20, color=color2)
-            )
+            self.dc.Line(10, 0, 10, 20, color=color2))
         if self.quick_mode:
             self.canvas.add(self.cross)
 
@@ -479,8 +563,8 @@ class Pick(GingaPlugin.LocalPlugin):
             if not contour.have_skimage:
                 # Contour plot
                 hbox = Widgets.HBox()
-                self.contour_plot = plots.ContourPlot(logger=self.logger,
-                                                      width=width, height=height)
+                self.contour_plot = plots.ContourPlot(
+                    logger=self.logger, width=width, height=height)
                 if plots.MPL_GE_2_0:
                     kwargs = {'facecolor': 'black'}
                 else:
@@ -975,21 +1059,24 @@ class Pick(GingaPlugin.LocalPlugin):
         hbox = Widgets.HBox()
         btn1 = Widgets.RadioButton("Move")
         btn1.set_state(mode == 'move')
-        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move', val))
+        btn1.add_callback(
+            'activated', lambda w, val: self.set_mode_cb('move', val))
         btn1.set_tooltip("Choose this to position pick")
         self.w.btn_move = btn1
         hbox.add_widget(btn1)
 
         btn2 = Widgets.RadioButton("Draw", group=btn1)
         btn2.set_state(mode == 'draw')
-        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+        btn2.add_callback(
+            'activated', lambda w, val: self.set_mode_cb('draw', val))
         btn2.set_tooltip("Choose this to draw a replacement pick")
         self.w.btn_draw = btn2
         hbox.add_widget(btn2)
 
         btn3 = Widgets.RadioButton("Edit", group=btn1)
         btn3.set_state(mode == 'edit')
-        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn3.add_callback(
+            'activated', lambda w, val: self.set_mode_cb('edit', val))
         btn3.set_tooltip("Choose this to edit or move a pick")
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
@@ -1104,8 +1191,8 @@ class Pick(GingaPlugin.LocalPlugin):
                 canvas.add(c_obj, tag='_$cntr')
 
             if self.contour_plot is not None:
-                self.contour_plot.plot_contours_data(x, y, data,
-                                                     num_contours=self.num_contours)
+                self.contour_plot.plot_contours_data(
+                    x, y, data, num_contours=self.num_contours)
                 # make zoom control match contour zoom
                 zl = self.contour_plot.plot_zoomlevel
                 zv = int(round(max(1, min(zl * 10, 100))))
@@ -1160,7 +1247,7 @@ class Pick(GingaPlugin.LocalPlugin):
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -1299,7 +1386,8 @@ class Pick(GingaPlugin.LocalPlugin):
 
                 num_candidates = len(objlist)
                 if num_candidates == 0:
-                    raise Exception("Error evaluating bright peaks: no candidates found")
+                    raise Exception(
+                        "Error evaluating bright peaks: no candidates found")
 
                 self.update_status("Selecting from %d candidates..." % (
                     num_candidates))
@@ -1351,7 +1439,8 @@ class Pick(GingaPlugin.LocalPlugin):
                 ra_txt, dec_txt = wcs.deg2fmt(ra_deg, dec_deg, 'str')
 
             except Exception as e:
-                self.logger.warning("Couldn't calculate sky coordinates: %s" % (str(e)))
+                self.logger.warning(
+                    "Couldn't calculate sky coordinates: %s" % (str(e)))
                 ra_deg, dec_deg = 0.0, 0.0
                 ra_txt = dec_txt = 'BAD WCS'
 
@@ -1364,26 +1453,27 @@ class Pick(GingaPlugin.LocalPlugin):
                 starsize = self.iqcalc.starsize(qs.fwhm_x, cdelt1,
                                                 qs.fwhm_y, cdelt2)
             except Exception as e:
-                self.logger.warning("Couldn't calculate star size: %s" % (str(e)))
+                self.logger.warning(
+                    "Couldn't calculate star size: %s" % (str(e)))
                 starsize = 0.0
 
             rpt_x = x + self.pixel_coords_offset
             rpt_y = y + self.pixel_coords_offset
 
             # make a report in the form of a dictionary
-            d.setvals(x = rpt_x, y = rpt_y,
-                      ra_deg = ra_deg, dec_deg = dec_deg,
-                      ra_txt = ra_txt, dec_txt = dec_txt,
-                      equinox = equinox,
-                      fwhm = qs.fwhm,
-                      fwhm_x = qs.fwhm_x, fwhm_y = qs.fwhm_y,
-                      ellipse = qs.elipse, background = qs.background,
-                      skylevel = qs.skylevel, brightness = qs.brightness,
-                      starsize = starsize,
-                      time_local = time.strftime("%Y-%m-%d %H:%M:%S",
-                                                 time.localtime()),
-                      time_ut = time.strftime("%Y-%m-%d %H:%M:%S",
-                                              time.gmtime()),
+            d.setvals(x=rpt_x, y=rpt_y,
+                      ra_deg=ra_deg, dec_deg=dec_deg,
+                      ra_txt=ra_txt, dec_txt=dec_txt,
+                      equinox=equinox,
+                      fwhm=qs.fwhm,
+                      fwhm_x=qs.fwhm_x, fwhm_y=qs.fwhm_y,
+                      ellipse=qs.elipse, background=qs.background,
+                      skylevel=qs.skylevel, brightness=qs.brightness,
+                      starsize=starsize,
+                      time_local=time.strftime("%Y-%m-%d %H:%M:%S",
+                                               time.localtime()),
+                      time_ut=time.strftime("%Y-%m-%d %H:%M:%S",
+                                            time.gmtime()),
                       )
         except Exception as e:
             self.logger.error("Error making report: %s" % (str(e)))
@@ -1972,5 +2062,11 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'pick'
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Pick', package='ginga')
 
 # END

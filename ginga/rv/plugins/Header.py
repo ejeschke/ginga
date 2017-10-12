@@ -1,27 +1,36 @@
-#
-# Header.py -- Image header plugin for Ginga viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+The ``Header`` plugin provides a listing of the metadata associated with the
+image.
+
+**Plugin Type: Global**
+
+``Header`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+The ``Header`` plugin shows the FITS keyword metadata from the image.
+Initially only the Primary HDU metadata is shown.  However, in
+conjunction with the ``MultiDim`` plugin, the metadata for other HDUs will be
+shown.  See ``MultiDim`` for details.
+
+If the "Sortable" checkbox has been checked in the lower left of the UI,
+then clicking on a column header will sort the table by values in that
+column, which may be useful for quickly locating a particular keyword.
+
+"""
 from collections import OrderedDict
 
 from ginga import GingaPlugin
 from ginga.misc import Bunch
 from ginga.gw import Widgets
 
+__all__ = ['Header']
+
 
 class Header(GingaPlugin.GlobalPlugin):
-    """
-    Header
-    ======
-    The Header plugin provides a listing of the metadata associated with the
-    image.
 
-    Plugin Type: Global
-    -------------------
-    Header is a global plugin.  Only one instance can be opened.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Header, self).__init__(fv)
@@ -174,5 +183,11 @@ class Header(GingaPlugin.GlobalPlugin):
 
     def __str__(self):
         return 'header'
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Header', package='ginga')
 
 # END

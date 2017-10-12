@@ -1,13 +1,37 @@
-#
-# Mosaic.py -- Mosaic plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+Plugin to create image mosaic.
+
+**Plugin Type: Local**
+
+``Mosaic`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+.. warning:: This can be very memory intensive.
+
+This plugin is used to automatically create a mosaic in the channel using
+images provided by the user (e.g., using ``FBrowser``).
+The position of an image on the mosaic is determined by its WCS without
+distortion correction. This is meant as a quick-look tool, not a
+replacement for image drizzling that takes account of image distortion, etc.
+The mosaic only exists in memory but you can save it out to a
+FITS file using ``SaveImage``.
+
+When a mosaic falls out of memory, it is no longer accessible in Ginga.
+To avoid this, you must configure your session such that your Ginga data cache
+is sufficiently large (see "Customizing Ginga" in the manual).
+
+To create a new mosaic, set the FOV and drag files onto the display window.
+
+"""
 import math
 import time
-import numpy
 import threading
+
+import numpy as np
 
 from ginga.AstroImage import AstroImage
 from ginga.util import wcs, iqcalc, dp
@@ -20,19 +44,11 @@ try:
 except ImportError:
     have_pyfits = False
 
+__all__ = ['Mosaic']
+
 
 class Mosaic(GingaPlugin.LocalPlugin):
-    """
-    Mosaic
-    ======
 
-    Plugin Type: Local
-    ------------------
-    Mosaic is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Set the FOV and drag files onto the window.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Mosaic, self).__init__(fv, fitsimage)
@@ -125,7 +141,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         b.new_mosaic.add_callback('activated', lambda w: self.new_mosaic_cb())
         labelem = self.settings.get('annotate_images', False)
         b.label_images.set_state(labelem)
-        b.label_images.set_tooltip("Label tiles with their names (only if allow_expand=False)")
+        b.label_images.set_tooltip(
+            "Label tiles with their names (only if allow_expand=False)")
         b.label_images.add_callback('activated', self.annotate_cb)
 
         trim_px = self.settings.get('trim_px', 0)
@@ -232,14 +249,14 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # TODO: handle skew (differing rotation for each axis)?
 
         skew_limit = self.settings.get('skew_limit', 0.1)
-        (rot_deg, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header,
-                                                               skew_threshold=skew_limit)
+        (rot_deg, cdelt1, cdelt2) = wcs.get_rotation_and_scale(
+            header, skew_threshold=skew_limit)
         self.logger.debug("image0 rot=%f cdelt1=%f cdelt2=%f" % (
             rot_deg, cdelt1, cdelt2))
 
         # TODO: handle differing pixel scale for each axis?
         px_scale = math.fabs(cdelt1)
-        cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
+        cdbase = [np.sign(cdelt1), np.sign(cdelt2)]
 
         reuse_image = self.settings.get('reuse_image', False)
         if (not reuse_image) or (self.img_mosaic is None):
@@ -280,7 +297,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         else:
             # <-- reuse image (faster)
             self.logger.debug("Reusing previous mosaic image")
-            self.fv.gui_do(self._prepare_mosaic1, "Reusing previous mosaic image...")
+            self.fv.gui_do(
+                self._prepare_mosaic1, "Reusing previous mosaic image...")
 
             img_mosaic = dp.recycle_image(self.img_mosaic,
                                           ra_deg, dec_deg,
@@ -291,8 +309,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                           pfx='mosaic')
 
         header = img_mosaic.get_header()
-        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header,
-                                                           skew_threshold=skew_limit)
+        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(
+            header, skew_threshold=skew_limit)
         self.logger.debug("mosaic rot=%f cdelt1=%f cdelt2=%f" % (
             rot, cdelt1, cdelt2))
 
@@ -362,7 +380,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -444,13 +462,13 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                 image = self.fv.fits_opener.load_hdu(hdu)
 
                             except Exception as e:
-                                self.logger.error("Failed to open HDU #%d: %s" % (
-                                    i, str(e)))
+                                self.logger.error(
+                                    "Failed to open HDU #%d: %s" % (i, str(e)))
                                 continue
 
                             if not isinstance(image, AstroImage):
-                                self.logger.debug("HDU #%d is not an image; skipping..." % (
-                                    i))
+                                self.logger.debug(
+                                    "HDU #%d is not an image; skipping..." % (i))
                                 continue
 
                             image.set(name='hdu%d' % (i))
@@ -617,10 +635,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         return 'mosaic'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
+# Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
-__doc__ = generate_cfg_example('plugin_Mosaic', package='ginga')
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Mosaic', package='ginga')
 
 # END

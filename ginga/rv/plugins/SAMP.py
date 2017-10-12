@@ -1,10 +1,38 @@
-#
-# SAMP.py -- SAMP plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
-#
+"""
+The ``SAMP`` plugin implements a SAMP interface for the Ginga reference
+viewer.
+
+.. note:: To run this plugin, you need to install ``astropy`` that has the
+          ``samp`` module.
+
+**Plugin Type: Global**
+
+``SAMP`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+Ginga includes a plugin for enabling SAMP (Simple Applications Messaging
+Protocol) support.  With SAMP support, Ginga can be controlled and
+interoperate with other astronomical desktop applications.
+
+The ``SAMP`` module is not started by default.  To start it when Ginga
+starts, specify the command line option::
+
+        --modules=SAMP
+
+Otherwise, start it using "Start SAMP" from the "Plugins" menu.
+
+Currently, SAMP support is limited to ``image.load.fits`` messages,
+meaning that Ginga will load a FITS file if it receives one of these
+messages.
+
+Ginga's ``SAMP`` plugin uses the ``astropy.samp`` module, so you will need to
+have ``astropy`` installed to use the plugin.  By default, Ginga's ``SAMP``
+plugin will attempt to start a SAMP hub if one is not found running.
+
+"""
 import os
 
 # astropy.vo.samp moved to astropy.samp in astropy v2.0.
@@ -23,29 +51,15 @@ from ginga.util import catalog
 from ginga.version import version
 from ginga.gw import Widgets
 
+__all__ = ['SAMP']
+
 
 class SAMPError(Exception):
     pass
 
 
 class SAMP(GingaPlugin.GlobalPlugin):
-    """
-    SAMP
-    ====
-    The SAMP plugin implements a SAMP interface for the Ginga reference
-    viewer.
 
-    .. note:: to run this plugin you need to install astropy that has the
-              samp module
-
-    Plugin Type: Global
-    -------------------
-    SAMP is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    Start the plugin.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(SAMP, self).__init__(fv)
@@ -325,5 +339,11 @@ class GingaWrapper(object):
         """
         self.fv.load_file(fitspath, chname=chname, wait=dowait)
         return 0
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_SAMP', package='ginga')
 
 # END

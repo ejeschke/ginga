@@ -36,8 +36,15 @@ class BasePlugin(object):
         pass
 
     def _help_docstring(self):
-        self.fv.help_text(str(self).capitalize(), self.__doc__,
-                          text_kind='rst', trim_pfx=4)
+        import inspect
+
+        # Insert section title at the beginning
+        plg_name = self.__class__.__name__
+        plg_mod = inspect.getmodule(self)
+        plg_doc = ('{}\n{}\n'.format(plg_name, '=' * len(plg_name)) +
+                   plg_mod.__doc__)
+
+        self.fv.help_text(plg_name, plg_doc, text_kind='rst', trim_pfx=4)
 
     def help(self):
         """Display help for the plugin."""

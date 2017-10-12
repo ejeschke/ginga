@@ -1,48 +1,45 @@
-#
-# Info.py -- FITS Info plugin for the Ginga fits viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
-import numpy
+"""
+The ``Info`` plugin provides a pane of commonly useful metadata about the
+associated channel image.  Common information includes some
+FITS header values, the equinox, dimensions of the image, minimum and
+maximum values, and the zoom level.  As the cursor is moved around the
+image, the X, Y, Value, RA, and DEC values are updated to reflect the
+value under the cursor.
 
+**Plugin Type: Global**
+
+``Info`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+At the bottom of the ``Info`` interface are the cut levels controls. Here
+the low and high cut levels are shown and can be adjusted.  Pressing the
+"Auto Levels" button will recalculate cut levels based on the current
+auto cut levels algorithm and parameters defined in the channel
+preferences.
+
+Below the "Auto Levels" button, the status of the settings for
+"Cut New", "Zoom New", and "Center New" are shown for the currently active
+channel.  These indicate how new images that are added to the channel
+will be affected by auto cut levels, fitting to the window and panning
+to the center of the image.
+
+As a global plugin, ``Info`` responds to a change of focus to a new channel
+by displaying the metadata from the new channel.
+It typically appears under the "Synopsis" tab in the user interface.
+
+"""
 from ginga.gw import Widgets
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 
+__all__ = ['Info']
+
 
 class Info(GingaPlugin.GlobalPlugin):
-    """
-    Info
-    ====
-    The Info plugin provides a pane of commonly useful metadata about the
-    associated channel image.  Common information includes some
-    FITS header values, the equinox, dimensions of the image, minimum and
-    maximum values and the zoom level.  As the cursor is moved around the
-    image, the X, Y, Value, RA and DEC values are updated to reflect the
-    value under the cursor.
 
-    Plugin Type: Global
-    -------------------
-    Info is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    At the bottom of the Info interface are the cut levels controls. Here
-    the low and high cut levels are shown and can be adjusted.  Pressing the
-    "Auto Levels" button will recalculate cut levels based on the current
-    auto cut levels algorithm and parameters defined in the channel
-    preferences.
-
-    Below the "Auto Levels" button, the status of the settings for
-    "Cut New", "Zoom New" and "Center New" are shown for the currently active
-    channel.  These indicate how new images that are added to the channel
-    will be affected by auto cut levels, fitting to the window and panning
-    to the center of the image.
-
-    The Info plugin typically appears under the "Synopsis" tab in the user
-    interface.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Info, self).__init__(fv)
@@ -154,7 +151,7 @@ class Info(GingaPlugin.GlobalPlugin):
         chname = channel.name
 
         self.nb.add_widget(sw, title=chname)
-        index = self.nb.index_of(sw)
+        index = self.nb.index_of(sw)  # noqa
         info = Bunch.Bunch(widget=sw, winfo=winfo,
                            mode_w=None,
                            chinfo=channel)
@@ -178,17 +175,17 @@ class Info(GingaPlugin.GlobalPlugin):
         fitsimage = channel.fitsimage
         fitssettings = fitsimage.get_settings()
         for name in ['cuts']:
-            fitssettings.get_setting(name).add_callback('set',
-                               self.cutset_cb, fitsimage, info)
+            fitssettings.get_setting(name).add_callback(
+                'set', self.cutset_cb, fitsimage, info)
         for name in ['scale']:
-            fitssettings.get_setting(name).add_callback('set',
-                               self.zoomset_cb, fitsimage, info)
-        fitssettings.get_setting('autocuts').add_callback('set',
-                               self.autocuts_cb, fitsimage, info)
-        fitssettings.get_setting('autozoom').add_callback('set',
-                               self.autozoom_cb, fitsimage, info)
-        fitssettings.get_setting('autocenter').add_callback('set',
-                               self.autocenter_cb, fitsimage, info)
+            fitssettings.get_setting(name).add_callback(
+                'set', self.zoomset_cb, fitsimage, info)
+        fitssettings.get_setting('autocuts').add_callback(
+            'set', self.autocuts_cb, fitsimage, info)
+        fitssettings.get_setting('autozoom').add_callback(
+            'set', self.autozoom_cb, fitsimage, info)
+        fitssettings.get_setting('autocenter').add_callback(
+            'set', self.autocenter_cb, fitsimage, info)
 
     def delete_channel(self, viewer, channel):
         chname = channel.name
@@ -212,7 +209,7 @@ class Info(GingaPlugin.GlobalPlugin):
         chname = channel.name
 
         if self.active != chname:
-            if not channel.extdata.has_key('_info_info'):
+            if '_info_info' not in channel.extdata:
                 self.add_channel(viewer, channel)
             info = channel.extdata._info_info
             widget = info.widget
@@ -257,7 +254,7 @@ class Info(GingaPlugin.GlobalPlugin):
     def autocenter_cb(self, setting, option, fitsimage, info):
         # Hack to convert old values that used to be T/F
         if isinstance(option, bool):
-            choice = { True: 'on', False: 'off' }
+            choice = {True: 'on', False: 'off'}
             option = choice[option]
         index = self.autocenter_options.index(option)
         info.winfo.center_new.set_index(index)
@@ -278,7 +275,7 @@ class Info(GingaPlugin.GlobalPlugin):
 
     def trunc(self, s):
         if len(s) > self.maxstr:
-            return s[:self.maxstr-3] + '...'
+            return s[:self.maxstr - 3] + '...'
         else:
             return s
 
@@ -327,15 +324,13 @@ class Info(GingaPlugin.GlobalPlugin):
         option = t_['autocenter']
         # Hack to convert old values that used to be T/F
         if isinstance(option, bool):
-            choice = { True: 'on', False: 'off' }
+            choice = {True: 'on', False: 'off'}
             option = choice[option]
         index = self.autocenter_options.index(option)
         info.winfo.center_new.set_index(index)
 
-
     def field_info(self, viewer, channel, info):
-        chname = channel.name
-        if not channel.extdata.has_key('_info_info'):
+        if '_info_info' not in channel.extdata:
             return
         obj = channel.extdata._info_info
 
@@ -346,8 +341,8 @@ class Info(GingaPlugin.GlobalPlugin):
             obj.winfo.ra.set_text(info.ra_txt)
             obj.winfo.dec.set_text(info.dec_txt)
         if 'ra_lbl' in info:
-            obj.winfo.lbl_ra.set_text(info.ra_lbl+':')
-            obj.winfo.lbl_dec.set_text(info.dec_lbl+':')
+            obj.winfo.lbl_ra.set_text(info.ra_lbl + ':')
+            obj.winfo.lbl_dec.set_text(info.dec_lbl + ':')
 
     def cut_levels(self, w, fitsimage, info):
         loval, hival = fitsimage.get_cut_levels()
@@ -373,4 +368,4 @@ class Info(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'info'
 
-#END
+# END
