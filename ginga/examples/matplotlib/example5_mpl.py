@@ -21,12 +21,22 @@ While in 'capture mode' you can draw points with the right mouse button.
 Press 'c' to clear the canvas of drawn points.
 """
 from __future__ import print_function
-import sys, os
+
+import sys
+import os
 import platform
+
+import matplotlib
+import matplotlib.pyplot as plt
+
+from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.mplw.ImageViewCanvasTypesMpl import DrawingCanvas
+from ginga.AstroImage import AstroImage
+from ginga.misc import log
+
 # just in case you want to use qt
 os.environ['QT_API'] = 'pyqt'
 
-import matplotlib
 options = ['Qt4Agg', 'GTK', 'GTKAgg', 'MacOSX', 'GTKCairo', 'WXAgg',
            'TkAgg', 'QtAgg', 'FltkAgg', 'WX']
 # Force a specific toolkit on mac
@@ -36,18 +46,10 @@ if len(macos_ver) > 0:
     # On Mac OS X I found the default choice for matplotlib is not stable
     # with ginga
     matplotlib.use('Qt4Agg')
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import numpy as np
-
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
-from ginga.mplw.ImageViewCanvasTypesMpl import DrawingCanvas
-from ginga.AstroImage import AstroImage
-from ginga.misc import log
-from ginga import cmap
 
 # Set to True to get diagnostic logging output
 use_logger = False
+
 
 class MyGingaFigure(object):
     def __init__(self, logger, fig):

@@ -5,7 +5,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, os
+import sys
 import logging
 
 from ginga.gtkw.ImageViewCanvasGtk import ImageViewCanvas
@@ -107,6 +107,7 @@ def main(options, args):
         fv.load_file(args[0])
 
     gtk.main()
+
 
 if __name__ == '__main__':
     main(None, sys.argv[1:])

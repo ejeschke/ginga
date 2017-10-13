@@ -1,5 +1,7 @@
 from __future__ import print_function
-import sys, os
+
+import sys
+import os
 
 from bokeh.plotting import figure, curdoc, vplot
 from bokeh.models.widgets import TextInput
@@ -9,13 +11,14 @@ from ginga.web.bokehw import ImageViewBokeh as ib
 from ginga.misc import log
 from ginga.AstroImage import AstroImage
 
+
 def main(options, args):
-    
+
     logger = log.get_logger("ginga", options=options)
 
     # create a new plot with default tools, using figure
-    fig = figure(x_range=[0,600], y_range=[0,600], plot_width=600, plot_height=600,
-                 toolbar_location=None)
+    fig = figure(x_range=[0, 600], y_range=[0, 600],
+                 plot_width=600, plot_height=600, toolbar_location=None)
 
     viewer = ib.CanvasView(logger)
     viewer.set_figure(fig)
@@ -43,7 +46,7 @@ def main(options, args):
 
 if __name__ == "__main__":
 
-    # Parse command line options 
+    # Parse command line options
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
@@ -76,7 +79,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

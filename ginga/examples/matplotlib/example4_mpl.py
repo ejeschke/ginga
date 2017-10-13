@@ -26,12 +26,23 @@ This shows how you can use the functionality with straight python/matplotlib
 sessions.  Run this by supplying a single FITS file on the command line.
 """
 from __future__ import print_function
-import sys, os
+
+import sys
+import os
 import platform
+
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
+from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.misc import log
+from ginga.AstroImage import AstroImage
+from ginga import cmap
+
 # just in case you want to use qt
 os.environ['QT_API'] = 'pyqt'
 
-import matplotlib
 MPL_V1 = matplotlib.__version__.startswith('1')
 options = ['Qt4Agg', 'GTK', 'GTKAgg', 'MacOSX', 'GTKCairo', 'WXAgg',
            'TkAgg', 'QtAgg', 'FltkAgg', 'WX']
@@ -43,14 +54,6 @@ if len(macos_ver) > 0:
     # with ginga
     matplotlib.use('Qt4Agg')
 
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import numpy as np
-
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
-from ginga.misc import log
-from ginga.AstroImage import AstroImage
-from ginga import cmap
 # add matplotlib colormaps to ginga's own set
 cmap.add_matplotlib_cmaps()
 
@@ -93,11 +96,10 @@ if MPL_V1:
 wd, ht = image.get_size()
 
 # plot a line
-l = ax.plot((wd*0.33, wd*0.75), (ht*0.5, ht*0.75), 'go-',
-            c="g",
+l = ax.plot((wd * 0.33, wd * 0.75), (ht * 0.5, ht * 0.75), 'go-', c="g",
             label='line1')
 # a rect
-r = patches.Rectangle((wd*0.10, ht*0.10), wd*0.6, ht*0.5, ec='b',
+r = patches.Rectangle((wd * 0.10, ht * 0.10), wd * 0.6, ht * 0.5, ec='b',
                       fill=False)
 ax.add_patch(r)
 
