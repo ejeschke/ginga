@@ -7,8 +7,12 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from matplotlib.backends.backend_agg import FigureCanvasAgg \
-     as FigureCanvas
+from __future__ import absolute_import
+
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
+from . import Widgets
+
 
 class PlotWidget(Widgets.WidgetBase):
 
@@ -23,4 +27,4 @@ class PlotWidget(Widgets.WidgetBase):
         fig = self.plot.get_figure()
         fig.set_size_inches(float(wd) / fig.dpi, float(ht) / fig.dpi)
 
-#END
+# END
