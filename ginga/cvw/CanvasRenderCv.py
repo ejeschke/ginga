@@ -4,12 +4,13 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import cv2
+import cv2  # noqa
 from . import CvHelp
 
 # force registration of all canvas types
-import ginga.canvas.types.all
+import ginga.canvas.types.all  # noqa
 from ginga import trcalc
+
 
 class RenderContext(object):
 
@@ -77,7 +78,6 @@ class RenderContext(object):
 
     def text_extents(self, text):
         return self.cr.text_extents(text, self.font)
-
 
     ##### DRAWING OPERATIONS #####
 
