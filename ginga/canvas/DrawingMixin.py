@@ -30,8 +30,8 @@ class DrawingMixin(object):
         self.dc = drawCatalog
         # canvas objects which we know how to draw have an "idraw"
         # class method
-        self.drawtypes = [ key for key in self.dc.keys()
-                           if hasattr(self.dc[key], 'idraw') ]
+        self.drawtypes = [key for key in self.dc.keys()
+                          if hasattr(self.dc[key], 'idraw')]
         self.drawtypes.sort()
         self.t_drawtype = 'point'
         self.t_drawparams = {}
@@ -108,9 +108,9 @@ class DrawingMixin(object):
 
         canvas.add_callback('keydown-none', self._draw_op, 'key', viewer)
         canvas.add_callback('keydown-poly_add', self._draw_op, 'poly_add',
-                          viewer)
+                            viewer)
         canvas.add_callback('keydown-poly_del', self._draw_op, 'poly_delete',
-                          viewer)
+                            viewer)
         canvas.add_callback('keydown-edit_del', self.edit_delete_cb, viewer)
         #canvas.add_callback('draw-scroll', self._edit_rotate_cb, viewer)
         #canvas.add_callback('draw-scroll', self._edit_scale_cb, viewer)
@@ -134,7 +134,7 @@ class DrawingMixin(object):
         return bnch
 
     def set_draw_mode(self, mode):
-        if not mode in self._mode_tbl:
+        if mode not in self._mode_tbl:
             modes = list(self._mode_tbl.keys())
             raise ValueError("mode must be one of: %s" % (str(modes)))
 
@@ -281,8 +281,8 @@ class DrawingMixin(object):
         if drawtype is not None:
             drawtype = drawtype.lower()
             assert drawtype in self.drawtypes, \
-                   ValueError("Bad drawing type '%s': must be one of %s" % (
-                drawtype, self.drawtypes))
+                ValueError("Bad drawing type '%s': must be one of %s" % (
+                    drawtype, self.drawtypes))
         self.t_drawtype = drawtype
         self.t_drawparams = drawparams.copy()
 
@@ -311,10 +311,9 @@ class DrawingMixin(object):
     def register_canvas_type(self, name, klass):
         drawtype = name.lower()
         self.dc[drawtype] = klass
-        if not drawtype in self.drawtypes:
+        if drawtype not in self.drawtypes:
             self.drawtypes.append(drawtype)
             self.drawtypes.sort()
-
 
     ##### EDITING LOGIC #####
 
@@ -488,8 +487,8 @@ class DrawingMixin(object):
             return False
 
         if (self._edit_tmp != self._edit_obj) or (
-            (self._edit_obj is not None) and
-            (self._edit_status != self.is_selected(self._edit_obj))):
+                (self._edit_obj is not None) and
+                (self._edit_status != self.is_selected(self._edit_obj))):
             # <-- editing status has changed
             #print("making edit-select callback")
             self.make_callback('edit-select', self._edit_obj)
@@ -517,8 +516,8 @@ class DrawingMixin(object):
         if not self.canedit:
             return False
         obj = self._edit_obj
-        if (obj is not None) and self.is_selected(obj) and \
-               (obj.kind in ('polygon', 'path')):
+        if ((obj is not None) and self.is_selected(obj) and
+                (obj.kind in ('polygon', 'path'))):
             self.logger.debug("checking points")
             # determine which line we are adding a point to
             points = list(obj.get_data_points())
@@ -526,7 +525,7 @@ class DrawingMixin(object):
                 points = points + [points[0]]
             x0, y0 = points[0]
             insert = None
-            for i in range(1, len(points[1:])+1):
+            for i in range(1, len(points[1:]) + 1):
                 x1, y1 = points[i]
                 self.logger.debug("checking line %d" % (i))
                 if obj.within_line(viewer, (data_x, data_y),
@@ -549,8 +548,8 @@ class DrawingMixin(object):
         if not self.canedit:
             return False
         obj = self._edit_obj
-        if (obj is not None) and self.is_selected(obj) and \
-               (obj.kind in ('polygon', 'path')):
+        if ((obj is not None) and self.is_selected(obj) and
+                (obj.kind in ('polygon', 'path'))):
             self.logger.debug("checking points")
             # determine which point we are deleting
             points = list(obj.get_data_points())
@@ -717,7 +716,6 @@ class DrawingMixin(object):
         return self._do_pick(canvas, event, data_x, data_y,
                              'up', viewer)
 
-
     # The canvas drawing
 
     def draw(self, viewer):
@@ -735,11 +733,10 @@ class DrawingMixin(object):
                 cr = viewer.renderer.setup_cr(obj)
                 obj.draw_edit(cr, viewer)
 
-
     ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
 
     setSurface = set_surface
     getDrawClass = get_draw_class
 
 
-#END
+# END

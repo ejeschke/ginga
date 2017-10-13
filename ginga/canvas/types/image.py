@@ -7,7 +7,7 @@
 import numpy as np
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
-                                       Point, MovePoint, ScalePoint,
+                                       Point, MovePoint,
                                        register_canvas_types,
                                        colors_plus_none, coord_names)
 from ginga.misc.ParamSet import Param
@@ -15,6 +15,7 @@ from ginga.misc import Bunch
 from ginga import trcalc
 
 from .mixins import OnePointMixin
+
 
 class Image(OnePointMixin, CanvasObjectBase):
     """Draws an image on a ImageViewCanvas.
@@ -62,7 +63,7 @@ class Image(OnePointMixin, CanvasObjectBase):
             Param(name='optimize', type=_bool,
                   default=True, valid=[False, True],
                   description="Optimize rendering for this object"),
-            ]
+        ]
 
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
                  interpolation='basic',
@@ -135,7 +136,6 @@ class Image(OnePointMixin, CanvasObjectBase):
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
-
     def draw_image(self, viewer, dstarr, whence=0.0):
         if self.image is None:
             return
@@ -162,9 +162,9 @@ class Image(OnePointMixin, CanvasObjectBase):
             # onto the final image--by only cutting out what is necessary
             # this speeds scaling greatly at zoomed in sizes
             ((dst_x, dst_y), (a1, b1), (a2, b2)) = \
-                 trcalc.calc_image_merge_clip((xmin, ymin), (xmax, ymax),
-                                              (dst_x, dst_y),
-                                              (a1, b1), (a2, b2))
+                trcalc.calc_image_merge_clip((xmin, ymin), (xmax, ymax),
+                                             (dst_x, dst_y),
+                                             (a1, b1), (a2, b2))
 
             # is image completely off the screen?
             if (a2 - a1 <= 0) or (b2 - b1 <= 0):
@@ -208,8 +208,8 @@ class Image(OnePointMixin, CanvasObjectBase):
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
             ht, wd, dp = dstarr.shape
-            cvs_x = int(np.round(wd / 2.0  + off_x))
-            cvs_y = int(np.round(ht / 2.0  + off_y))
+            cvs_x = int(np.round(wd / 2.0 + off_x))
+            cvs_y = int(np.round(ht / 2.0 + off_y))
             cache.cvs_pos = (cvs_x, cvs_y)
 
         # composite the image into the destination array at the
@@ -365,11 +365,11 @@ class NormImage(Image):
             ##       description="RGB mapper for the image"),
             ## Param(name='autocuts', type=?,
             ##       description="Cuts manager for the image"),
-            ]
+        ]
 
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
-                 interpolation='basic',
-                 linewidth=0, linestyle='solid', color='lightgreen', showcap=False,
+                 interpolation='basic', linewidth=0, linestyle='solid',
+                 color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
         super(NormImage, self).__init__(x, y, image=image, alpha=alpha,
@@ -381,7 +381,6 @@ class NormImage(Image):
                                         **kwdargs)
         self.rgbmap = rgbmap
         self.autocuts = autocuts
-
 
     def draw_image(self, viewer, dstarr, whence=0.0):
         if self.image is None:
@@ -406,9 +405,9 @@ class NormImage(Image):
             # onto the final image--by only cutting out what is necessary
             # this speeds scaling greatly at zoomed in sizes
             ((dst_x, dst_y), (a1, b1), (a2, b2)) = \
-                 trcalc.calc_image_merge_clip((xmin, ymin), (xmax, ymax),
-                                              (dst_x, dst_y),
-                                              (a1, b1), (a2, b2))
+                trcalc.calc_image_merge_clip((xmin, ymin), (xmax, ymax),
+                                             (dst_x, dst_y),
+                                             (a1, b1), (a2, b2))
 
             # is image completely off the screen?
             if (a2 - a1 <= 0) or (b2 - b1 <= 0):
@@ -437,8 +436,8 @@ class NormImage(Image):
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
             ht, wd, dp = dstarr.shape
-            cvs_x = int(np.round(wd / 2.0  + off_x))
-            cvs_y = int(np.round(ht / 2.0  + off_y))
+            cvs_x = int(np.round(wd / 2.0 + off_x))
+            cvs_y = int(np.round(ht / 2.0 + off_y))
             cache.cvs_pos = (cvs_x, cvs_y)
 
         if self.rgbmap is not None:
