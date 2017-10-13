@@ -8,16 +8,16 @@ import numpy as np
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        Point as XPoint, MovePoint, ScalePoint,
-                                       RotatePoint, EditPoint,
+                                       EditPoint,
                                        register_canvas_types,
                                        colors_plus_none, coord_names)
 from ginga import trcalc
 from ginga.misc.ParamSet import Param
-from ginga.util import wcs, bezier
-from ginga.util.six.moves import map
+from ginga.util import bezier
 
 from .mixins import (OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin,
                      OnePointTwoRadiusMixin, PolygonMixin)
+
 
 #
 #   ==== BASIC CLASSES FOR GRAPHICS OBJECTS ====
@@ -59,7 +59,7 @@ class Text(OnePointMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -89,8 +89,6 @@ class Text(OnePointMixin, CanvasObjectBase):
         cx, cy = viewer.get_canvas_xy(x, y)
         cr.draw_text(cx, cy, self.text, rot_deg=self.rot_deg)
 
-        if self.showcap:
-            self.draw_caps(cr, self.cap, cpoints)
 
 class Polygon(PolygonMixin, CanvasObjectBase):
     """Draws a polygon on a DrawingCanvas.
@@ -132,7 +130,7 @@ class Polygon(PolygonMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -160,8 +158,7 @@ class Polygon(PolygonMixin, CanvasObjectBase):
                                   fillalpha=fillalpha, **kwdargs)
         PolygonMixin.__init__(self)
 
-        assert len(points) > 2, \
-               ValueError("Polygons need at least 3 points")
+        assert len(points) > 2, ValueError("Polygons need at least 3 points")
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
@@ -204,7 +201,7 @@ class Path(PolygonMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -332,13 +329,13 @@ class BezierCurve(Path):
         data = image.get_data()
         wd, ht = image.get_size()
         if getvalues:
-            res = [ data[int(y), int(x)]
-                    if 0 <= x < wd and 0 <= y < ht else np.NaN
-                    for x, y in self.get_points_on_curve(image) ]
+            res = [data[int(y), int(x)]
+                   if 0 <= x < wd and 0 <= y < ht else np.NaN
+                   for x, y in self.get_points_on_curve(image)]
         else:
-            res = [ (int(x), int(y))
-                    if 0 <= x < wd and 0 <= y < ht else np.NaN
-                    for x, y in self.get_points_on_curve(image) ]
+            res = [(int(x), int(y))
+                   if 0 <= x < wd and 0 <= y < ht else np.NaN
+                   for x, y in self.get_points_on_curve(image)]
         return res
 
     def draw(self, viewer):
@@ -382,10 +379,10 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='xradius', type=float, default=1.0,  argpos=2,
+            Param(name='xradius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="X radius of object"),
-            Param(name='yradius', type=float, default=1.0,  argpos=3,
+            Param(name='yradius', type=float, default=1.0, argpos=3,
                   min=0.0,
                   description="Y radius of object"),
             Param(name='linewidth', type=int, default=1,
@@ -415,7 +412,7 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
             Param(name='rot_deg', type=float, default=0.0,
                   min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
                   description="Rotation about center of object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -496,7 +493,7 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='radius', type=float, default=1.0,  argpos=2,
+            Param(name='radius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="radius of object"),
             Param(name='linewidth', type=int, default=1,
@@ -526,7 +523,7 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
             Param(name='rot_deg', type=float, default=0.0,
                   min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
                   description="Rotation about center of object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -600,7 +597,7 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
         points = self.get_data_points(points=(
             self.crdmap.offset_pt((self.x, self.y),
                                   (self.radius, self.radius)),
-            ))
+        ))
         move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
         return [move_pt,
                 ScalePoint(*points[0]),
@@ -635,10 +632,10 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='xradius', type=float, default=1.0,  argpos=2,
+            Param(name='xradius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="X radius of object"),
-            Param(name='yradius', type=float, default=1.0,  argpos=3,
+            Param(name='yradius', type=float, default=1.0, argpos=3,
                   min=0.0,
                   description="Y radius of object"),
             Param(name='linewidth', type=int, default=1,
@@ -668,7 +665,7 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
             Param(name='rot_deg', type=float, default=0.0,
                   min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
                   description="Rotation about center of object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -814,10 +811,10 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='xradius', type=float, default=1.0,  argpos=2,
+            Param(name='xradius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="X radius of object"),
-            Param(name='yradius', type=float, default=1.0,  argpos=3,
+            Param(name='yradius', type=float, default=1.0, argpos=3,
                   min=0.0,
                   description="Y radius of object"),
             Param(name='linewidth', type=int, default=1,
@@ -847,7 +844,7 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
             Param(name='rot_deg', type=float, default=0.0,
                   min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
                   description="Rotation about center of object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -858,7 +855,7 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
-        self.kind='triangle'
+        self.kind = 'triangle'
         points = np.asarray([(x, y)], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
@@ -871,9 +868,9 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def get_points(self):
         points = (self.crdmap.offset_pt((self.x, self.y),
-                                        (-2*self.xradius, -self.yradius)),
+                                        (-2 * self.xradius, -self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
-                                        (2*self.xradius, -self.yradius)),
+                                        (2 * self.xradius, -self.yradius)),
                   self.crdmap.offset_pt((self.x, self.y),
                                         (0, self.yradius)),
                   )
@@ -903,16 +900,16 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
         (x1, y1), (x2, y2), (x3, y3) = self.get_points()
 
         # barycentric coordinate test
-        denominator = float((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
-        a = ((y2 - y3)*(xa - x3) + (x3 - x2)*(ya - y3)) / denominator
-        b = ((y3 - y1)*(xa - x3) + (x1 - x3)*(ya - y3)) / denominator
+        denominator = float((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3))
+        a = ((y2 - y3) * (xa - x3) + (x3 - x2) * (ya - y3)) / denominator
+        b = ((y3 - y1) * (xa - x3) + (x1 - x3) * (ya - y3)) / denominator
         c = 1.0 - a - b
 
         #tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
         contains = np.logical_and(
             np.logical_and(0.0 <= a, a <= 1.0),
             np.logical_and(np.logical_and(0.0 <= b, b <= 1.0),
-                              np.logical_and(0.0 <= c, c <= 1.0)))
+                           np.logical_and(0.0 <= c, c <= 1.0)))
         return contains
 
     def draw(self, viewer):
@@ -943,7 +940,7 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='radius', type=float, default=1.0,  argpos=2,
+            Param(name='radius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="Radius of object"),
             Param(name='linewidth', type=int, default=1,
@@ -970,12 +967,12 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
         radius = np.sqrt(abs(cxt.start_x - cxt.x)**2 +
-                         abs(cxt.start_y - cxt.y)**2 )
+                         abs(cxt.start_y - cxt.y)**2)
         return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
 
     def __init__(self, x, y, radius, color='yellow',
@@ -1002,7 +999,7 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
         points = self.get_data_points(points=(
             self.crdmap.offset_pt((self.x, self.y), (self.radius, 0)),
             self.crdmap.offset_pt((self.x, self.y), (0, self.radius)),
-            ))
+        ))
         (x2, y2), (x3, y3) = points
         xradius = max(x2, xd) - min(x2, xd)
         yradius = max(y3, yd) - min(y3, yd)
@@ -1017,7 +1014,7 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
         points = self.get_data_points(points=(
             (self.x, self.y),
             self.crdmap.offset_pt((self.x, self.y), (self.radius, 0)),
-            ))
+        ))
         return [MovePoint(*points[0]),
                 ScalePoint(*points[1]),
                 ]
@@ -1028,7 +1025,7 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
                                   (-self.radius, -self.radius)),
             self.crdmap.offset_pt((self.x, self.y),
                                   (self.radius, self.radius)),
-            ))
+        ))
         (x1, y1), (x2, y2) = points
         return self.swapxy(x1, y1, x2, y2)
 
@@ -1036,7 +1033,7 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
         points = self.get_data_points(points=(
             (self.x, self.y),
             self.crdmap.offset_pt((self.x, self.y), (0, self.radius)),
-            ))
+        ))
         cpoints = self.get_cpoints(viewer, points=points)
         cx, cy, cradius = self.calc_radius(viewer,
                                            cpoints[0], cpoints[1])
@@ -1066,7 +1063,7 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='radius', type=float, default=1.0,  argpos=2,
+            Param(name='radius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="Radius of object"),
             Param(name='style', type=str, default='cross',
@@ -1087,7 +1084,7 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -1126,7 +1123,7 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
         points = self.get_data_points(points=(
             (self.x, self.y),
             self.crdmap.offset_pt((self.x, self.y), (0, self.radius)),
-            ))
+        ))
         cpoints = self.get_cpoints(viewer, points=points)
         cx, cy, cradius = self.calc_radius(viewer,
                                            cpoints[0], cpoints[1])
@@ -1197,7 +1194,7 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -1265,6 +1262,7 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
+
 class Square(Rectangle):
 
     @classmethod
@@ -1275,8 +1273,9 @@ class Square(Rectangle):
         len_x = np.sign(len_x) * length
         len_y = np.sign(len_y) * length
         return cls(cxt.start_x, cxt.start_y,
-                   cxt.start_x-len_x, cxt.start_y-len_y,
+                   cxt.start_x - len_x, cxt.start_y - len_y,
                    **cxt.drawparams)
+
 
 class Line(TwoPointMixin, CanvasObjectBase):
     """Draws a line on a DrawingCanvas.
@@ -1318,7 +1317,7 @@ class Line(TwoPointMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -1424,7 +1423,7 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -1434,7 +1433,7 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  **kwdargs):
-        self.kind='righttriangle'
+        self.kind = 'righttriangle'
         points = np.asarray([(x1, y1), (x2, y2)], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
@@ -1459,16 +1458,16 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
         x3, y3 = points[2]
 
         # barycentric coordinate test
-        denominator = float((y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3))
-        a = ((y2 - y3)*(x_arr - x3) + (x3 - x2)*(y_arr - y3)) / denominator
-        b = ((y3 - y1)*(x_arr - x3) + (x1 - x3)*(y_arr - y3)) / denominator
+        denominator = float((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3))
+        a = ((y2 - y3) * (x_arr - x3) + (x3 - x2) * (y_arr - y3)) / denominator
+        b = ((y3 - y1) * (x_arr - x3) + (x1 - x3) * (y_arr - y3)) / denominator
         c = 1.0 - a - b
 
         #tf = (0.0 <= a <= 1.0 and 0.0 <= b <= 1.0 and 0.0 <= c <= 1.0)
         contains = np.logical_and(
             np.logical_and(0.0 <= a, a <= 1.0),
             np.logical_and(np.logical_and(0.0 <= b, b <= 1.0),
-                              np.logical_and(0.0 <= c, c <= 1.0)))
+                           np.logical_and(0.0 <= c, c <= 1.0)))
         return contains
 
     def draw(self, viewer):
@@ -1521,7 +1520,7 @@ class XRange(Rectangle):
                   description="Annotate with dimensions of object"),
             Param(name='font', type=str, default='Sans Serif',
                   description="Font family for text"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -1553,10 +1552,9 @@ class XRange(Rectangle):
         crdmap = viewer.get_coordmap('window')
         dx, dy = crdmap.to_data((0, win_ht // 2))
         pt = self.get_data_points(points=self.get_points())
-        return [ MovePoint((pt[0][0] + pt[2][0]) / 2.0, dy),
-                 EditPoint(pt[0][0], dy),
-                 EditPoint(pt[2][0], dy),
-                ]
+        return [MovePoint((pt[0][0] + pt[2][0]) / 2.0, dy),
+                EditPoint(pt[0][0], dy),
+                EditPoint(pt[2][0], dy)]
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
@@ -1621,7 +1619,7 @@ class YRange(Rectangle):
                   description="Annotate with dimensions of object"),
             Param(name='font', type=str, default='Sans Serif',
                   description="Font family for text"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -1653,10 +1651,9 @@ class YRange(Rectangle):
         crdmap = viewer.get_coordmap('window')
         dx, dy = crdmap.to_data((win_wd // 2, 0))
         pt = self.get_data_points(points=self.get_points())
-        return [ MovePoint(dx, (pt[0][1] + pt[2][1]) / 2.0),
-                 EditPoint(dx, pt[0][1]),
-                 EditPoint(dx, pt[2][1]),
-                ]
+        return [MovePoint(dx, (pt[0][1] + pt[2][1]) / 2.0),
+                EditPoint(dx, pt[0][1]),
+                EditPoint(dx, pt[2][1])]
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
