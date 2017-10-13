@@ -320,8 +320,8 @@ class BaseImage(ViewerObjectBase):
         return (data, x1, y1, x2, y2)
 
     def cutout_radius(self, x, y, radius, xstep=1, ystep=1, astype=None):
-        return self.cutout_adjust(x-radius, y-radius,
-                                  x+radius+1, y+radius+1,
+        return self.cutout_adjust(x - radius, y - radius,
+                                  x + radius + 1, y + radius + 1,
                                   xstep=xstep, ystep=ystep,
                                   astype=astype)
 
@@ -368,16 +368,16 @@ class BaseImage(ViewerObjectBase):
         if avoid_oob:
             # avoid out of bounds indexes
             wd, ht = self.get_size()
-            x1, x2 = max(0, x1), min(x2, wd-1)
-            y1, y2 = max(0, y1), min(y2, ht-1)
+            x1, x2 = max(0, x1), min(x2, wd - 1)
+            y1, y2 = max(0, y1), min(y2, ht - 1)
 
         # calculate pixel containment mask in bbox
-        yi = np.mgrid[y1:y2+1].reshape(-1, 1)
-        xi = np.mgrid[x1:x2+1].reshape(1, -1)
+        yi = np.mgrid[y1:y2 + 1].reshape(-1, 1)
+        xi = np.mgrid[x1:x2 + 1].reshape(1, -1)
         pts = np.asarray((xi, yi)).T
         contains = shape_obj.contains_pts(pts)
 
-        view = np.s_[y1:y2+1, x1:x2+1]
+        view = np.s_[y1:y2 + 1, x1:x2 + 1]
         return (view, contains)
 
     def cutout_shape(self, shape_obj):

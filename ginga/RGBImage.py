@@ -7,9 +7,10 @@
 from ginga import trcalc
 from ginga.util import io_rgb
 from ginga.misc import Bunch
-from ginga.BaseImage import BaseImage, ImageError, Header
+from ginga.BaseImage import BaseImage, Header
 
 import numpy
+
 
 class RGBImage(BaseImage):
 
@@ -35,7 +36,7 @@ class RGBImage(BaseImage):
 
     def load_file(self, filepath):
         kwds = Header()
-        metadata = { 'header': kwds, 'path': filepath }
+        metadata = {'header': kwds, 'path': filepath}
 
         # TODO: ideally we would be informed by channel order
         # in result by io_rgb
@@ -70,7 +71,7 @@ class RGBImage(BaseImage):
     def insert_alpha(self, pos, alpha):
         if not self.has_alpha():
             order = list(self.order)
-            l = [ self.get_slice(c) for c in order ]
+            l = [self.get_slice(c) for c in order]
             wd, ht = self.get_size()
             a = numpy.zeros((ht, wd), dtype=numpy.uint8)
             a.fill(alpha)
@@ -80,7 +81,7 @@ class RGBImage(BaseImage):
             self.order = ''.join(order)
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
-                                  method='basic'):
+                               method='basic'):
         newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_wdht(
             self._get_data(), x1, y1, x2, y2, new_wd, new_ht,
             interpolation=method, logger=self.logger)
