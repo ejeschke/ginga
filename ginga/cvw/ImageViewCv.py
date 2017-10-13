@@ -7,8 +7,7 @@
 import numpy
 from io import BytesIO
 
-import cv2
-from . import CvHelp
+import cv2  # noqa
 
 from ginga import ImageView
 from ginga.cvw.CanvasRenderCv import CanvasRenderer
@@ -22,6 +21,7 @@ except ImportError:
 
 class ImageViewCvError(ImageView.ImageViewError):
     pass
+
 
 class ImageViewCv(ImageView.ImageViewBase):
 
@@ -41,7 +41,6 @@ class ImageViewCv(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-
     def get_surface(self):
         return self.surface
 
@@ -57,7 +56,7 @@ class ImageViewCv(ImageView.ImageViewBase):
         # get window contents as an array and store it into the CV surface
         rgb_arr = self.getwin_array(order=self.rgb_order)
         # TODO: is there a faster way to copy this array in?
-        canvas[:,:,:] = rgb_arr
+        canvas[:, :, :] = rgb_arr
 
         # for debugging
         #self.save_rgb_image_as_file('/tmp/temp.png', format='png')
@@ -124,7 +123,7 @@ class CanvasView(ImageViewCv):
     def __init__(self, logger=None, settings=None, rgbmap=None,
                  bindmap=None, bindings=None):
         ImageViewCv.__init__(self, logger=logger, settings=settings,
-                              rgbmap=rgbmap)
+                             rgbmap=rgbmap)
         self.defer_redraw = False
 
         # Needed for UIMixin to propagate events correctly
