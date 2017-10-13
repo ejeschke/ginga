@@ -24,6 +24,7 @@ def get_cached_font(fontname, fontsize, color, alpha):
 
         return font
 
+
 def load_font(font_name, font_file):
     # try to load it as a sanity check
     #agg.Font('black', font_file, size=10, opacity=255)
@@ -51,7 +52,7 @@ class AggContext(object):
         else:
             r, g, b = 1.0, 1.0, 1.0
 
-        return (int(r*255), int(g*255), int(b*255))
+        return (int(r * 255), int(g * 255), int(b * 255))
 
     def get_pen(self, color, linewidth=1, alpha=1.0):
         # if hasattr(self, 'linestyle'):
@@ -80,4 +81,4 @@ class AggContext(object):
         wd, ht = self.canvas.textsize(text, font)
         return wd, ht
 
-#END
+# END
