@@ -6,14 +6,12 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
-import sys, os
-import logging
-import threading
 
-from ginga import AstroImage, colors
+import sys
+
 import ginga.toolkit as ginga_toolkit
+from ginga import AstroImage, colors
 from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.util.toolbox import ModeIndicator
 from ginga.misc import log
 
 
@@ -167,9 +165,9 @@ class FitsViewer(object):
         fill = self.wfill.get_state()
         alpha = self.walpha.get_value()
 
-        params = { 'color': self.drawcolors[index],
-                   'alpha': alpha,
-                   }
+        params = {'color': self.drawcolors[index],
+                  'alpha': alpha,
+                  }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
@@ -222,7 +220,7 @@ class FitsViewer(object):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -263,7 +261,7 @@ class FitsViewer(object):
 
     def quit(self, *args):
         self.logger.info("Attempting to shut down the application...")
-        if not self.top is None:
+        if self.top is not None:
             self.top.close()
         sys.exit()
 
@@ -311,6 +309,7 @@ def main(options, args):
         if viewer.top is not None:
             viewer.top.close()
 
+
 if __name__ == "__main__":
 
     # Parse command line options with nifty optparse module
@@ -319,7 +318,8 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
 
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+    optprs.add_option("--debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
                       default='qt',
@@ -349,7 +349,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

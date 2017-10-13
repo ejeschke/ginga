@@ -12,18 +12,19 @@ Run with no parameters.  Scroll to zoom in/out, click and drag to orbit.
 Requirements: Qt5, OpenGL, numpy
 """
 from __future__ import print_function
-import sys, os
-import logging
+
+import sys
+
 import numpy as np
 
 from ginga import toolkit
 toolkit.use('qt5')
 
-from ginga import colors
-from ginga.gw import Widgets, Viewers
-from ginga.opengl.ImageViewQtGL import CanvasView
-from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.misc import log
+from ginga.gw import Widgets  # noqa
+from ginga.opengl.ImageViewQtGL import CanvasView  # noqa
+from ginga.canvas.CanvasObject import get_canvas_types  # noqa
+from ginga.misc import log  # noqa
+
 
 class Viewer(object):
 
@@ -58,7 +59,6 @@ class Viewer(object):
 
         # little hack because we don't have a way yet to ask for this
         # variation of back end through ginga.toolkit
-        w = vw.get_widget()
         ww = Widgets.wrap(vw.get_widget())
 
         vbox = Widgets.VBox()
@@ -82,14 +82,15 @@ class Viewer(object):
         self.top.delete()
         sys.exit(0)
 
+
 def plot_octahedron(viewer, r):
     # octahedron
-    A = [ 0.17770898,  0.72315927,  0.66742804]
-    B = [-0.65327074, -0.4196453 ,  0.63018661]
-    C = [ 0.65382635,  0.42081934, -0.62882604]
+    A = [0.17770898, 0.72315927, 0.66742804]
+    B = [-0.65327074, -0.4196453, 0.63018661]
+    C = [0.65382635, 0.42081934, -0.62882604]
     D = [-0.17907021, -0.72084723, -0.66956189]
-    E = [-0.73452809,  0.5495376 , -0.39809158]
-    F = [ 0.73451554, -0.55094017,  0.39617148]
+    E = [-0.73452809, 0.5495376, -0.39809158]
+    F = [0.73451554, -0.55094017, 0.39617148]
     octo = [[E, A, B],
             [E, B, D],
             [E, D, C],
@@ -99,12 +100,13 @@ def plot_octahedron(viewer, r):
             [F, D, C],
             [F, C, A],
             ]
-    clrs = [('gray%d' % (i*10+5)) for i in range(8)]
+    clrs = [('gray%d' % (i * 10 + 5)) for i in range(8)]
     for i, tri in enumerate(octo):
         new_tri = [np.asarray(pt) * r for pt in tri]
         viewer.canvas.add(viewer.dc.Polygon(new_tri, color='yellow',
-                                        fill=True, fillcolor=clrs[i],
-                                        fillalpha=0.4))
+                                            fill=True, fillcolor=clrs[i],
+                                            fillalpha=0.4))
+
 
 def get_wireframe(viewer, x, y, z, **kwargs):
     """Produce a compound object of paths implementing a wireframe.
@@ -126,16 +128,18 @@ def get_wireframe(viewer, x, y, z, **kwargs):
 
     return viewer.dc.CompoundObject(*objs)
 
+
 def plot_sphere(viewer, r):
     # sphere
     u = np.linspace(0, np.pi, 30)
     v = np.linspace(0, 2 * np.pi, 30)
-    x = np.outer(np.sin (u), np.sin (v)) * r
-    y = np.outer(np.sin (u), np.cos (v)) * r
-    z = np.outer(np.cos (u), np.ones_like (v)) * r
+    x = np.outer(np.sin(u), np.sin(v)) * r
+    y = np.outer(np.sin(u), np.cos(v)) * r
+    z = np.outer(np.cos(u), np.ones_like(v)) * r
 
     wf = get_wireframe(viewer, x, y, z, color='cyan', alpha=0.3)
     viewer.canvas.add(wf)
+
 
 logger = log.get_logger('example', level=20, log_stderr=True)
 

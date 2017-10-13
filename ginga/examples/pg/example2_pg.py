@@ -6,7 +6,8 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
-import sys, os
+
+import sys
 import logging
 
 from ginga import AstroImage, colors
@@ -164,9 +165,9 @@ class FitsViewer(object):
         fill = self.wfill.get_state()
         alpha = self.walpha.get_value()
 
-        params = { 'color': self.drawcolors[index],
-                   'alpha': alpha,
-                   }
+        params = {'color': self.drawcolors[index],
+                  'alpha': alpha,
+                  }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
@@ -186,7 +187,7 @@ class FitsViewer(object):
 
     def open_file(self):
         res = Widgets.FileDialog.getOpenFileName(self, "Open FITS file",
-                                                     ".", "FITS files (*.fits)")
+                                                 ".", "FITS files (*.fits)")
         if isinstance(res, tuple):
             fileName = res[0]
         else:
@@ -226,7 +227,7 @@ class FitsViewer(object):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -241,7 +242,7 @@ class FitsViewer(object):
 
     def adjust_scrolling_accel_cb(self, val):
         def f(x):
-            return (1.0 / 2.0**(10.0-x))
+            return (1.0 / 2.0**(10.0 - x))
         val2 = f(val)
         self.logger.debug("slider value is %f, setting will be %f" % (val, val2))
         settings = self.fitsimage.get_bindings().get_settings()
@@ -257,7 +258,7 @@ class FitsViewer(object):
     def quit(self, *args):
         self.readout.set_text("Quitting!")
         self.logger.info("Attempting to shut down the application...")
-        if not self.top is None:
+        if self.top is not None:
             self.top.close()
         sys.exit()
 
@@ -280,7 +281,7 @@ def main(options, args):
         except Exception as e:
             logger.warning("Error using OpenCL: %s" % str(e))
 
-    base_url = "http://%s:%d/app" % (options.host, options.port)
+    #base_url = "http://%s:%d/app" % (options.host, options.port)
 
     # establish our widget application
     app = Widgets.Application(logger=logger,
@@ -307,6 +308,7 @@ def main(options, args):
     except KeyboardInterrupt:
         logger.info("Terminating viewer...")
         window.close()
+
 
 if __name__ == "__main__":
 
@@ -359,7 +361,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)
