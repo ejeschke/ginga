@@ -110,7 +110,6 @@ class AstroImage(BaseImage):
 
         self.set_naxispath(naxispath)
 
-
     def load_hdu(self, hdu, fobj=None, naxispath=None,
                  inherit_primary_header=None):
 
@@ -350,7 +349,7 @@ class AstroImage(BaseImage):
 
         # Calculate the length of this segment--it is pixels/deg
         x2, y2 = self.radectopix(ra2_deg, dec2_deg)
-        px_per_deg_e = math.sqrt(math.fabs(x2-x)**2 + math.fabs(y2-y)**2)
+        px_per_deg_e = math.sqrt(math.fabs(x2 - x)**2 + math.fabs(y2 - y)**2)
 
         # calculate radius based on desired radius_deg
         radius_px = px_per_deg_e * radius_deg
@@ -501,7 +500,7 @@ class AstroImage(BaseImage):
                 self.logger.debug("scaling piece by x(%f), y(%f)" % (
                     nscale_x, nscale_y))
                 data_np, (ascale_x, ascale_y) = trcalc.get_scaled_cutout_basic(
-                    data_np, 0, 0, wd-1, ht-1, nscale_x, nscale_y,
+                    data_np, 0, 0, wd - 1, ht - 1, nscale_x, nscale_y,
                     logger=self.logger)
 
             # Rotate piece into our orientation, according to wcs
@@ -604,12 +603,12 @@ class AstroImage(BaseImage):
                         (expand_pct > max_expand_pct)):
                     raise Exception("New area exceeds current one by %.2f %%;"
                                     "increase max_expand_pct (%.2f) to allow" %
-                                    (expand_pct*100, max_expand_pct))
+                                    (expand_pct * 100, max_expand_pct))
 
                 # go for it!
                 new_data = numpy.zeros((new_ht, new_wd))
                 # place current data into new data
-                new_data[ny1_off:ny1_off+myht, nx1_off:nx1_off+mywd] = \
+                new_data[ny1_off:ny1_off + myht, nx1_off:nx1_off + mywd] = \
                     mydata
                 self._data = new_data
                 mydata = new_data
@@ -652,7 +651,7 @@ class AstroImage(BaseImage):
         try:
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = self.get_data_xy(int(data_x+0.5), int(data_y+0.5))
+            value = self.get_data_xy(int(data_x + 0.5), int(data_y + 0.5))
 
         except Exception as e:
             value = None
@@ -709,8 +708,8 @@ class AstroImage(BaseImage):
                 elif system == 'ecliptic':
                     ra_lbl, dec_lbl = six.unichr(0x03BB), six.unichr(0x03B2)
                 elif system == 'helioprojective':
-                    ra_txt = "%+5.3f" % (lon_deg*3600)
-                    dec_txt = "%+5.3f" % (lat_deg*3600)
+                    ra_txt = "%+5.3f" % (lon_deg * 3600)
+                    dec_txt = "%+5.3f" % (lat_deg * 3600)
                     ra_lbl, dec_lbl = "x-Solar", "y-Solar"
 
         except Exception as e:

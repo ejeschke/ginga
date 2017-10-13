@@ -6,9 +6,10 @@
 #
 import math
 import numpy as np
-import time
 
 interpolation_methods = ['basic']
+
+
 def use(pkgname):
     global have_opencv, cv2, cv2_resize
     global have_opencl, trcalc_cl
@@ -18,12 +19,12 @@ def use(pkgname):
         have_opencv = True
         cv2_resize = {
             'nearest': cv2.INTER_NEAREST,
-            'linear' : cv2.INTER_LINEAR,
-            'area'   : cv2.INTER_AREA,
+            'linear': cv2.INTER_LINEAR,
+            'area': cv2.INTER_AREA,
             'bicubic': cv2.INTER_CUBIC,
             'lanczos': cv2.INTER_LANCZOS4,
-            }
-        if not 'nearest' in interpolation_methods:
+        }
+        if 'nearest' not in interpolation_methods:
             interpolation_methods.extend(cv2_resize.keys())
             interpolation_methods.sort()
 
@@ -35,6 +36,7 @@ def use(pkgname):
             trcalc_cl = CL.CL('trcalc.cl')
         except Exception as e:
             raise ImportError(e)
+
 
 have_opencv = False
 try:
@@ -77,6 +79,7 @@ except ImportError:
 #have_opencv = False
 #have_opencl = False
 
+
 def get_center(data_np):
     ht, wd = data_np.shape[:2]
 
@@ -99,7 +102,9 @@ def rotate_pt(x_arr, y_arr, theta_deg, xoff=0, yoff=0):
     bp = (a_arr * sin_t) + (b_arr * cos_t)
     return np.asarray((ap + xoff, bp + yoff))
 
+
 rotate_arr = rotate_pt
+
 
 def rotate_coord(coord, thetas, offsets):
     arr_t = np.asarray(coord).T
@@ -112,6 +117,7 @@ def rotate_coord(coord, thetas, offsets):
         arr = np.asarray([arr[0], arr[1]] + list(arr_t[2:]))
 
     return arr.T
+
 
 def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
                 out=None, use_opencl=True, logger=None):
@@ -150,8 +156,8 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             new_ht, new_wd = newdata.shape[:2]
 
             assert (wd == new_wd) and (ht == new_ht), \
-                   Exception("rotated cutout is %dx%d original=%dx%d" % (
-                new_wd, new_ht, wd, ht))
+                Exception("rotated cutout is %dx%d original=%dx%d" % (
+                    new_wd, new_ht, wd, ht))
 
     elif have_opencl and use_opencl:
         if logger is not None:
@@ -188,10 +194,10 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         # Optomizations to reuse existing intermediate arrays
         np.rint(ap, out=ap)
         ap = ap.astype('int')
-        ap.clip(0, wd-1, out=ap)
+        ap.clip(0, wd - 1, out=ap)
         np.rint(bp, out=bp)
         bp = bp.astype('int')
-        bp.clip(0, ht-1, out=bp)
+        bp.clip(0, ht - 1, out=bp)
 
         if out is not None:
             out[:, :, ...] = data_np[bp, ap]
@@ -201,8 +207,8 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             new_ht, new_wd = newdata.shape[:2]
 
             assert (wd == new_wd) and (ht == new_ht), \
-                   Exception("rotated cutout is %dx%d original=%dx%d" % (
-                new_wd, new_ht, wd, ht))
+                Exception("rotated cutout is %dx%d original=%dx%d" % (
+                    new_wd, new_ht, wd, ht))
 
     return newdata
 
@@ -243,8 +249,8 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None, pad=20,
 
         # TODO: fill with a different value?
         newdata = np.zeros(dims, dtype=data_np.dtype)
-        newdata[ncy-bdy:ncy+tdy, ncx-ldx:ncx+rdx] = \
-                                 data_np[ocy-bdy:ocy+tdy, ocx-ldx:ocx+rdx]
+        newdata[ncy - bdy:ncy + tdy, ncx - ldx:ncx + rdx] = \
+            data_np[ocy - bdy:ocy + tdy, ocx - ldx:ocx + rdx]
 
         # Now rotate with clip as usual
         newdata = rotate_clip(newdata, theta_deg,
@@ -288,7 +294,7 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
     else:
         # simple stepped view will do, because new view is same as old
         wd, ht = old_wd, old_ht
-        view = np.s_[y1:y2+1, x1:x2+1]
+        view = np.s_[y1:y2 + 1, x1:x2 + 1]
 
     # Calculate actual scale used (vs. desired)
     old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
@@ -297,6 +303,7 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
 
     # return view + actual scale factors used
     return (view, (scale_x, scale_y))
+
 
 def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
     """
@@ -342,7 +349,7 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
     else:
         # simple stepped view will do, because new view is same as old
         wd, ht, dp = old_wd, old_ht, old_dp
-        view = np.s_[y1:y2+1, x1:x2+1, z1:z2+1]
+        view = np.s_[y1:y2 + 1, x1:x2 + 1, z1:z2 + 1]
 
     # Calculate actual scale used (vs. desired)
     old_wd, old_ht, old_dp = max(old_wd, 1), max(old_ht, 1), max(old_dp, 1)
@@ -370,15 +377,15 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = cv2_resize[interpolation]
-        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], (new_wd, new_ht),
+        newdata = cv2.resize(data_np[y1:y2 + 1, x1:x2 + 1], (new_wd, new_ht),
                              interpolation=method)
 
         old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif (have_opencl and interpolation in ('basic', 'nearest')
-          and open_cl_ok):
+    elif (have_opencl and interpolation in ('basic', 'nearest') and
+            open_cl_ok):
         # opencl is almost as fast or sometimes faster, but currently
         # we only support nearest neighbor
         if logger is not None:
@@ -404,7 +411,8 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
 
     return newdata, (scale_x, scale_y)
 
-def get_scaled_cutout_wdhtdp(data_np, p1, p2, new_dims):
+
+def get_scaled_cutout_wdhtdp(data_np, p1, p2, new_dims, logger=None):
     if logger is not None:
         logger.debug('resizing by slicing')
     view, scales = get_scaled_cutout_wdhtdp_view(data_np.shape,
@@ -412,6 +420,7 @@ def get_scaled_cutout_wdhtdp(data_np, p1, p2, new_dims):
     newdata = data_np[view]
 
     return newdata, scales
+
 
 def get_scaled_cutout_basic_view(shp, p1, p2, scales):
     """
@@ -432,7 +441,7 @@ def get_scaled_cutout_basic_view(shp, p1, p2, scales):
     if len(scales) == 2:
         return get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht)
 
-    z1, z2, scale_x = p1[2], p2[2], scales[2]
+    z1, z2, scale_z = p1[2], p2[2], scales[2]
     old_dp = z2 - z1 + 1
     new_dp = int(round(scale_z * old_dp))
     return get_scaled_cutout_wdhtdp_view(shp, p1, p2, (new_wd, new_ht, new_dp))
@@ -454,20 +463,19 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
             interpolation = 'nearest'
         method = cv2_resize[interpolation]
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-        newdata = cv2.resize(data_np[y1:y2+1, x1:x2+1], None,
+        newdata = cv2.resize(data_np[y1:y2 + 1, x1:x2 + 1], None,
                              fx=scale_x, fy=scale_y,
                              interpolation=method)
         old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif (have_opencl and interpolation in ('basic', 'nearest')
-          and open_cl_ok):
+    elif (have_opencl and interpolation in ('basic', 'nearest') and
+            open_cl_ok):
         if logger is not None:
             logger.debug("resizing with OpenCL")
-        newdata, (scale_x, scale_y) = trcalc_cl.get_scaled_cutout_basic(data_np,
-                                                                        x1, y1, x2, y2,
-                                                                        scale_x, scale_y)
+        newdata, (scale_x, scale_y) = trcalc_cl.get_scaled_cutout_basic(
+            data_np, x1, y1, x2, y2, scale_x, scale_y)
 
     elif interpolation not in ('basic', 'nearest'):
         raise ValueError("Interpolation method not supported: '%s'" % (
@@ -486,7 +494,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
 
 
 def get_scaled_cutout_basic2(data_np, p1, p2, scales,
-                            interpolation='basic', logger=None):
+                             interpolation='basic', logger=None):
 
     if interpolation not in ('basic', 'nearest'):
         raise ValueError("Interpolation method not supported: '%s'" % (
@@ -603,7 +611,7 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
         src_wd -= dx
         dst_x = 0
 
-    if src_wd <= 0 or src_ht <=0:
+    if src_wd <= 0 or src_ht <= 0:
         return dstarr
 
     # Trim off parts of srcarr that would be "hidden"
@@ -635,7 +643,7 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
     # fill alpha channel in destination in the area we will be dropping
     # the image
     if fill and (da_idx >= 0):
-        dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, da_idx] = 255
+        dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, da_idx] = 255
 
     if src_ch > 3:
         sa_idx = src_order.index('A')
@@ -654,16 +662,17 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
     a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(np.uint8)
-    b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y+src_ht,
-                                    dst_x:dst_x+src_wd,
+    b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y + src_ht,
+                                    dst_x:dst_x + src_wd,
                                     slc]).astype(np.uint8)
 
     # Place our srcarr into this dstarr at dst offsets
     #dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, slc] += addarr[0:src_ht, 0:src_wd, slc]
-    dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, slc] = \
-             a_arr[0:src_ht, 0:src_wd, slc] + b_arr[0:src_ht, 0:src_wd, slc]
+    dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, slc] = \
+        a_arr[0:src_ht, 0:src_wd, slc] + b_arr[0:src_ht, 0:src_wd, slc]
 
     return dstarr
+
 
 def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
                      alpha=1.0, copy=False, fill=True, flipy=False):
@@ -695,7 +704,7 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         src_dp -= dz
         dst_z = 0
 
-    if src_wd <= 0 or src_ht <=0 or src_dp <= 0:
+    if src_wd <= 0 or src_ht <= 0 or src_dp <= 0:
         return dstarr
 
     # Trim off parts of srcarr that would be "hidden"
@@ -715,7 +724,7 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         srcarr = srcarr[:, :, :dst_dp]
         src_dp -= ex
 
-    if src_wd <= 0 or src_ht <=0 or src_dp <= 0:
+    if src_wd <= 0 or src_ht <= 0 or src_dp <= 0:
         return dstarr
 
     if copy:
@@ -735,8 +744,8 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     # fill alpha channel in destination in the area we will be dropping
     # the image
     if fill and (da_idx >= 0):
-        dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd,
-               dst_z:dst_z+src_dp, da_idx] = 255
+        dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
+               dst_z:dst_z + src_dp, da_idx] = 255
 
     if src_ch > 3:
         sa_idx = src_order.index('A')
@@ -744,9 +753,9 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         # and use it, otherwise use scalar keyword parameter
         alpha = srcarr[0:src_ht, 0:src_wd, 0:src_dp, sa_idx] / 255.0
         #alpha = np.dstack((alpha, alpha, alpha))
-        alpha = np.concatenate([ alpha[..., np.newaxis],
-                                 alpha[..., np.newaxis],
-                                 alpha[..., np.newaxis] ],
+        alpha = np.concatenate([alpha[..., np.newaxis],
+                                alpha[..., np.newaxis],
+                                alpha[..., np.newaxis]],
                                axis=-1)
 
     # reorder srcarr if necessary to match dstarr for alpha merge
@@ -760,18 +769,19 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     #   Co = CaAa + CbAb(1 - Aa)
     a_arr = (alpha * srcarr[0:src_ht, 0:src_wd,
                             0:src_dp, slc]).astype(np.uint8)
-    b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y+src_ht,
-                                    dst_x:dst_x+src_wd,
-                                    dst_z:dst_z+src_dp,
+    b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y + src_ht,
+                                    dst_x:dst_x + src_wd,
+                                    dst_z:dst_z + src_dp,
                                     slc]).astype(np.uint8)
 
     # Place our srcarr into this dstarr at dst offsets
-    dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd,
-           dst_z:dst_z+src_dp, slc] = \
-             a_arr[0:src_ht, 0:src_wd, 0:src_dp, slc] + \
-             b_arr[0:src_ht, 0:src_wd, 0:src_dp, slc]
+    dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
+           dst_z:dst_z + src_dp, slc] = \
+        a_arr[0:src_ht, 0:src_wd, 0:src_dp, slc] + \
+        b_arr[0:src_ht, 0:src_wd, 0:src_dp, slc]
 
     return dstarr
+
 
 def overlay_image(dstarr, pos, srcarr, **kwargs):
     method = overlay_image_2d
@@ -780,11 +790,13 @@ def overlay_image(dstarr, pos, srcarr, **kwargs):
 
     return method(dstarr, pos, srcarr, **kwargs)
 
+
 def reorder_image(dst_order, src_arr, src_order):
-    indexes = [ src_order.index(c) for c in dst_order ]
+    indexes = [src_order.index(c) for c in dst_order]
     #return np.dstack([ src_arr[..., idx] for idx in indexes ])
-    return np.concatenate([ src_arr[..., idx, np.newaxis]
-                               for idx in indexes ], axis=-1)
+    return np.concatenate([src_arr[..., idx, np.newaxis]
+                           for idx in indexes], axis=-1)
+
 
 def strip_z(pts):
     """Strips a Z component from `pts` if it is present."""
@@ -792,6 +804,7 @@ def strip_z(pts):
     if pts.shape[-1] > 2:
         pts = np.asarray((pts.T[0], pts.T[1])).T
     return pts
+
 
 def pad_z(pts, value=0.0):
     """Adds a Z component from `pts` if it is missing.
@@ -804,6 +817,7 @@ def pad_z(pts, value=0.0):
         pts = np.asarray((pts.T[0], pts.T[1], pad_col)).T
     return pts
 
+
 def get_bounds(pts):
     """Return the minimum point and maximum point bounding a
     set of points."""
@@ -812,4 +826,4 @@ def get_bounds(pts):
                        [np.max(_pts) for _pts in pts_t]))
 
 
-#END
+# END
