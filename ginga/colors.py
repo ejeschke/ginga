@@ -11,7 +11,7 @@
 import re
 
 color_dict = {
- 'aliceblue': (0.9411764705882353, 0.9725490196078431, 1.0),
+ 'aliceblue': (0.9411764705882353, 0.9725490196078431, 1.0),  # noqa
  'antiquewhite': (0.9803921568627451, 0.9215686274509803, 0.8431372549019608),
  'antiquewhite1': (1.0, 0.9372549019607843, 0.8588235294117647),
  'antiquewhite2': (0.9333333333333333, 0.8745098039215686, 0.8),
@@ -749,10 +749,12 @@ color_dict = {
 
 color_list = []
 
+
 def recalc_color_list():
     global color_list
     color_list = list(color_dict.keys())
     color_list.sort()
+
 
 def lookup_color(name, format='tuple'):
     color = None
@@ -767,18 +769,19 @@ def lookup_color(name, format='tuple'):
         try:
             color = color_dict[name]
         except KeyError:
-            raise KeyError("%s color does not exist in color_dict"%(name))
+            raise KeyError("%s color does not exist in color_dict" % name)
 
     if format == 'tuple':
         return color
     elif format == 'hash':
         return "#%02x%02x%02x" % (
-            int(color[0]*255), int(color[1]*255), int(color[2]*255))
+            int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
     else:
         raise ValueError("format needs to be 'tuple' or 'hash'")
 
+
 def _validate_color_tuple(tup):
-    if not(isinstance(tup, tuple) or isinstance(tup, list)) :
+    if not isinstance(tup, (tuple, list)):
         raise TypeError("the color element must be a tuple or list")
 
     if len(tup) != 3:
@@ -788,6 +791,7 @@ def _validate_color_tuple(tup):
         if rbg_value < 0.0 or rbg_value > 1.0:
             raise ValueError("RBG value can only be a number between 0 and 1")
 
+
 def add_color(name, tup):
     _validate_color_tuple(tup)
 
@@ -795,23 +799,27 @@ def add_color(name, tup):
     color_dict[name] = tuple(tup)
     recalc_color_list()
 
+
 # TODO: Should this throw KeyError if key not present or silently pass?
 def remove_color(name):
     global color_dict
     try:
         del color_dict[name]
     except KeyError:
-        raise KeyError("%s color does not exist in color_dict"%(name))
+        raise KeyError("%s color does not exist in color_dict" % name)
     recalc_color_list()
+
 
 def get_colors():
     return color_list
+
 
 def scan_rgbtxt(filepath):
     with open(filepath, 'r') as in_f:
         buf = in_f.read()
 
     return scan_rgbtxt_buf(buf)
+
 
 def scan_rgbtxt_buf(buf):
     res = {}
@@ -828,12 +836,15 @@ def scan_rgbtxt_buf(buf):
 
     return res
 
+
 # create initial color list
 recalc_color_list()
 
+
 if __name__ == "__main__":
-    import sys, pprint
+    import sys
+    import pprint
     res = scan_rgbtxt(sys.argv[1])
     pprint.pprint(res)
 
-#END
+# END

@@ -19,7 +19,7 @@ from ginga import RGBMap, AutoCuts, ColorDist
 from ginga import cmap, imap, colors, trcalc
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
-from ginga.util import rgb_cms
+from ginga.util import rgb_cms, six
 
 __all__ = ['ImageViewBase']
 
@@ -122,7 +122,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # for pan
         self.t_.add_defaults(pan=(1.0, 1.0), pan_coord='data')
-        for name in ['pan', ]:   #'pan_coord'
+        for name in ['pan', ]:  # 'pan_coord'
             self.t_.get_setting(name).add_callback('set', self.pan_cb)
 
         # for cut levels
@@ -181,12 +181,13 @@ class ImageViewBase(Callback.Callbacks):
 
         # embedded image "profiles"
         self.t_.add_defaults(profile_use_scale=False, profile_use_pan=False,
-                             profile_use_cuts=False, profile_use_transform=False,
+                             profile_use_cuts=False,
+                             profile_use_transform=False,
                              profile_use_rotation=False)
 
         # ICC profile support
         d = dict(icc_output_profile=None, icc_output_intent='perceptual',
-                 icc_proof_profile=None,  icc_proof_intent='perceptual',
+                 icc_proof_profile=None, icc_proof_intent='perceptual',
                  icc_black_point_compensation=False)
         self.t_.add_defaults(**d)
         for key in d:
@@ -272,15 +273,15 @@ class ImageViewBase(Callback.Callbacks):
 
         self.orientMap = {
             # tag: (flip_x, flip_y, swap_xy)
-            1: (False, True,  False),
-            2: (True,  True,  False),
-            3: (True,  False, False),
+            1: (False, True, False),
+            2: (True, True, False),
+            3: (True, False, False),
             4: (False, False, False),
-            5: (True,  False, True),
-            6: (True,  True,  True),
-            7: (False, True,  True),
+            5: (True, False, True),
+            6: (True, True, True),
+            7: (False, True, True),
             8: (False, False, True),
-            }
+        }
 
         # our canvas
         self.canvas = DrawingCanvas()
@@ -309,7 +310,7 @@ class ImageViewBase(Callback.Callbacks):
             None: coordmap.DataMapper(self),
             'offset': coordmap.OffsetMapper(self, None),
             'wcs': coordmap.WCSMapper(self),
-            }
+        }
 
         # cursors
         self.cursor = {}
@@ -782,8 +783,7 @@ class ImageViewBase(Callback.Callbacks):
                     self.canvas.get_object_by_tag(self._canvas_img_tag)
 
                 except KeyError:
-                    tag = self.canvas.add(canvas_img,
-                                          tag=self._canvas_img_tag)
+                    self.canvas.add(canvas_img, tag=self._canvas_img_tag)
                     #self.logger.debug("adding image to canvas %s" % self.canvas)
 
                 # move image to bottom of layers
@@ -829,8 +829,7 @@ class ImageViewBase(Callback.Callbacks):
         with self.suppress_redraw:
             # initialize transform
             if ((profile is not None) and
-                    (self.t_['profile_use_transform']) and
-                    profile.has_key('flip_x')):
+                    self.t_['profile_use_transform'] and 'flip_x' in profile):
                 flip_x, flip_y = profile['flip_x'], profile['flip_y']
                 swap_xy = profile['swap_xy']
                 self.transform(flip_x, flip_y, swap_xy)
@@ -841,8 +840,8 @@ class ImageViewBase(Callback.Callbacks):
                     self.auto_orient()
 
             # initialize scale
-            if ((profile is not None) and (self.t_['profile_use_scale']) and
-                    profile.has_key('scale_x')):
+            if ((profile is not None) and self.t_['profile_use_scale'] and
+                    'scale_x' in profile):
                 scale_x, scale_y = profile['scale_x'], profile['scale_y']
                 self.logger.debug("restoring scale to (%f,%f)" % (
                     scale_x, scale_y))
@@ -853,8 +852,8 @@ class ImageViewBase(Callback.Callbacks):
                     self.zoom_fit(no_reset=True)
 
             # initialize pan position
-            if ((profile is not None) and (self.t_['profile_use_pan']) and
-                   profile.has_key('pan_x')):
+            if ((profile is not None) and self.t_['profile_use_pan'] and
+                    'pan_x' in profile):
                 pan_x, pan_y = profile['pan_x'], profile['pan_y']
                 self.logger.debug("restoring pan position to (%f,%f)" % (
                     pan_x, pan_y))
@@ -868,14 +867,13 @@ class ImageViewBase(Callback.Callbacks):
 
             # initialize rotation
             if ((profile is not None) and
-                    (self.t_['profile_use_rotation']) and
-                    profile.has_key('rot_deg')):
+                    self.t_['profile_use_rotation'] and 'rot_deg' in profile):
                 rot_deg = profile['rot_deg']
                 self.rotate(rot_deg)
 
             # initialize cuts
-            if ((profile is not None) and (self.t_['profile_use_cuts']) and
-                   profile.has_key('cutlo')):
+            if ((profile is not None) and
+                    self.t_['profile_use_cuts'] and 'cutlo' in profile):
                 loval, hival = profile['cutlo'], profile['cuthi']
                 self.cut_levels(loval, hival, no_reset=True)
             else:
@@ -944,7 +942,6 @@ class ImageViewBase(Callback.Callbacks):
             Image metadata mapping keywords to their respective values.
 
         """
-        dims = data.shape
         image = AstroImage.AstroImage(data, metadata=metadata,
                                       logger=self.logger)
         self.set_image(image)
@@ -979,7 +976,7 @@ class ImageViewBase(Callback.Callbacks):
             image.set(profile=profile)
 
         self.logger.debug("saving to image profile: params=%s" % (
-                str(params)))
+            str(params)))
         profile.set(**params)
 
     ## def apply_profile(self, image, profile, redraw=False):
@@ -1255,9 +1252,9 @@ class ImageViewBase(Callback.Callbacks):
             time_delta = time_start - self.time_last_redraw
             time_elapsed = time_done - time_start
             self.time_last_redraw = time_done
-            self.logger.debug("widget '%s' redraw (whence=%d) delta=%.4f "
-                              "elapsed=%.4f sec" % (
-                self.name, whence, time_delta, time_elapsed))
+            self.logger.debug(
+                "widget '%s' redraw (whence=%d) delta=%.4f elapsed=%.4f sec" % (
+                    self.name, whence, time_delta, time_elapsed))
 
         except Exception as e:
             self.logger.error("Error redrawing image: %s" % (str(e)))
@@ -1355,7 +1352,8 @@ class ImageViewBase(Callback.Callbacks):
 
         # fill image array with the background color
         r, g, b = self.img_bg
-        bgval = dict(A=int(255*alpha), R=int(255*r), G=int(255*g), B=int(255*b))
+        bgval = dict(A=int(255 * alpha), R=int(255 * r), G=int(255 * g),
+                     B=int(255 * b))
 
         for i in range(len(order)):
             outarr[:, :, i] = bgval[order[i]]
@@ -1870,8 +1868,8 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         width, height = self.get_data_size()
-        x = int(float(xpct) * (width-1))
-        y = int(float(ypct) * (height-1))
+        x = int(float(xpct) * (width - 1))
+        y = int(float(ypct) * (height - 1))
         return (x, y)
 
     def get_pan_rect(self):
@@ -1934,7 +1932,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         dx = abs(x2 - x1)
         dy = abs(y2 - y1)
-        dist = np.sqrt(dx*dx + dy*dy)
+        dist = np.sqrt(dx * dx + dy * dy)
         dist = np.round(dist)
         return dist
 
@@ -1948,16 +1946,16 @@ class ImageViewBase(Callback.Callbacks):
 
         # final sanity check on resulting output image size
         if (win_wd * scale_x < 1) or (win_ht * scale_y < 1):
-            raise ValueError("resulting scale (%f, %f) "
-                             "would result in image size of <1 in width or height" % (
-                scale_x, scale_y))
+            raise ValueError(
+                "resulting scale (%f, %f) would result in image size of "
+                "<1 in width or height" % (scale_x, scale_y))
 
         sx = float(win_wd) / scale_x
         sy = float(win_ht) / scale_y
         if (sx < 1.0) or (sy < 1.0):
-            raise ValueError("resulting scale (%f, %f) "
-                             "would result in pixel size approaching window size" % (
-                scale_x, scale_y))
+            raise ValueError(
+                "resulting scale (%f, %f) would result in pixel size "
+                "approaching window size" % (scale_x, scale_y))
 
     def scale_to(self, scale_x, scale_y, no_reset=False):
         """Scale the image in a channel.
@@ -2130,7 +2128,7 @@ class ImageViewBase(Callback.Callbacks):
             text = '%.2fx' % (scalefactor)
         else:
             #text = '1/%dx' % (int(1.0/scalefactor))
-            text = '1/%.2fx' % (1.0/scalefactor)
+            text = '1/%.2fx' % (1.0 / scalefactor)
         return text
 
     def zoom_to(self, zoomlevel, no_reset=False):
@@ -2233,7 +2231,8 @@ class ImageViewBase(Callback.Callbacks):
 
             ctr_x, ctr_y, rot_deg = self.get_rotation_info()
             min_x, min_y, max_x, max_y = 0, 0, 0, 0
-            for x, y in ((0, 0), (width-1, 0), (width-1, height-1), (0, height-1)):
+            for x, y in ((0, 0), (width - 1, 0), (width - 1, height - 1),
+                         (0, height - 1)):
                 x0, y0 = trcalc.rotate_pt(x, y, rot_deg, xoff=ctr_x, yoff=ctr_y)
                 min_x, min_y = min(min_x, x0), min(min_y, y0)
                 max_x, max_y = max(max_x, x0), max(max_y, y0)
@@ -2320,7 +2319,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         name = name.lower()
         assert name in ('step', 'rate'), \
-              ImageViewError("Alg '%s' must be one of: step, rate" % name)
+            ImageViewError("Alg '%s' must be one of: step, rate" % name)
         self.t_.set(zoom_algorithm=name)
 
     def zoomalg_change_cb(self, setting, value):
@@ -2897,8 +2896,7 @@ class ImageViewBase(Callback.Callbacks):
             orient = header.get('Orientation', None)
             if not orient:
                 orient = header.get('Image Orientation', None)
-                self.logger.debug("orientation [%s]" % (
-                        orient))
+                self.logger.debug("orientation [%s]" % orient)
             if orient:
                 try:
                     orient = int(str(orient))
@@ -2981,7 +2979,7 @@ class ImageViewBase(Callback.Callbacks):
                               trcat.ScaleTransform(self) +
                               trcat.RotationTransform(self) +
                               trcat.CartesianNativeTransform(self)),
-            }
+        }
 
     def set_bg(self, r, g, b):
         """Set the background color.
@@ -3277,7 +3275,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         obuf = output
         if obuf is None:
-            obuf = BytesIO()
+            obuf = six.BytesIO()
 
         arr8 = self.get_image_as_array()
         if not hasattr(arr8, 'tobytes'):
