@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
-                                       register_canvas_types, get_canvas_type,
+                                       register_canvas_types,
                                        colors_plus_none)
 from .basic import Rectangle
 from ginga.misc.ParamSet import Param
@@ -51,7 +51,7 @@ class ColorBar(CanvasObjectBase):
             Param(name='fillalpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of fill"),
-            ]
+        ]
 
     def __init__(self, height=36, offset=40, side='bottom', showrange=True,
                  font='Sans Serif', fontsize=8,
@@ -71,7 +71,6 @@ class ColorBar(CanvasObjectBase):
         # for drawing range
         self.t_spacing = 40
         self.tick_ht = 4
-
 
     def draw(self, viewer):
         rgbmap = self.rgbmap
@@ -101,7 +100,7 @@ class ColorBar(CanvasObjectBase):
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
         spacing = 256 // nums
         start = spacing // 2
-        _interval = { start + i*spacing: True for i in range(0, nums-1) }
+        _interval = {start + i * spacing: True for i in range(0, nums - 1)}
         ## self.logger.debug("nums=%d spacing=%d intervals=%s" % (
         ##     nums, spacing, _interval))
 
@@ -110,7 +109,7 @@ class ColorBar(CanvasObjectBase):
             y_base = height - self.offset - pxht
         y_top = y_base + self.height
 
-        x1 = 0; x2 = pxwd
+        x2 = pxwd
         clr_wd = pxwd // 256
         rem_px = x2 - (clr_wd * 256)
         if rem_px > 0:
@@ -121,7 +120,8 @@ class ColorBar(CanvasObjectBase):
 
         dist = rgbmap.get_dist()
 
-        j = ival; off = 0
+        j = ival
+        off = 0
         range_pts = []
         for i in range(256):
 
@@ -135,12 +135,12 @@ class ColorBar(CanvasObjectBase):
             x = off
 
             (r, g, b) = rgbmap.get_rgbval(i)
-            color = (r/255., g/255., b/255.)
+            color = (r / 255., g / 255., b / 255.)
 
             cr.set_line(color, linewidth=0)
             cr.set_fill(color, alpha=self.fillalpha)
 
-            cx1, cy1, cx2, cy2 = x, y_base, x+wd, y_base+clr_ht
+            cx1, cy1, cx2, cy2 = x, y_base, x + wd, y_base + clr_ht
             cr.draw_polygon(tr.to_(((cx1, cy1), (cx2, cy1),
                                     (cx2, cy2), (cx1, cy2))))
 
@@ -167,7 +167,7 @@ class ColorBar(CanvasObjectBase):
             cr.set_line(self.bgcolor, linewidth=0)
 
             x = 0
-            cx1, cy1, cx2, cy2 = x, y_top - scale_ht, x+pxwd, y_top
+            cx1, cy1, cx2, cy2 = x, y_top - scale_ht, x + pxwd, y_top
             cp = tr.to_(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
             cr.draw_polygon(cp)
 
@@ -176,9 +176,9 @@ class ColorBar(CanvasObjectBase):
             cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
 
             cr.set_font(self.font, self.fontsize, color=self.color,
-                    alpha=self.alpha)
+                        alpha=self.alpha)
             for (cx, cy, cyy, text) in range_pts:
-                cp = tr.to_(((cx, cy), (cx, cy+self.tick_ht), (cx, cyy-2)))
+                cp = tr.to_(((cx, cy), (cx, cy + self.tick_ht), (cx, cyy - 2)))
                 # tick
                 #cr.draw_line(cx, cy, cx, cy+self.tick_ht)
                 cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
@@ -235,7 +235,7 @@ class DrawableColorBar(Rectangle):
             Param(name='fillalpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of fill"),
-            ]
+        ]
 
     def __init__(self, x1, y1, x2, y2, showrange=True,
                  font='Sans Serif', fontsize=8,
@@ -254,7 +254,6 @@ class DrawableColorBar(Rectangle):
         # for drawing range
         self.t_spacing = 40
         self.tick_ht = 4
-
 
     def draw(self, viewer):
         rgbmap = self.rgbmap
@@ -289,11 +288,11 @@ class DrawableColorBar(Rectangle):
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
         spacing = 256 // nums
         start = spacing // 2
-        _interval = { start + i*spacing: True for i in range(0, nums-1) }
+        _interval = {start + i * spacing: True for i in range(0, nums - 1)}
 
         x_base, y_base, x_top, y_top = cx1, cy1, cx2, cy2
 
-        x1 = cx1; x2 = pxwd
+        x2 = pxwd
         clr_wd = pxwd // 256
         rem_px = x2 - (clr_wd * 256)
         if rem_px > 0:
@@ -304,7 +303,8 @@ class DrawableColorBar(Rectangle):
 
         dist = rgbmap.get_dist()
 
-        j = ival; off = cx1
+        j = ival
+        off = cx1
         range_pts = []
         for i in range(256):
 
@@ -318,12 +318,12 @@ class DrawableColorBar(Rectangle):
             x = off
 
             (r, g, b) = rgbmap.get_rgbval(i)
-            color = (r/255., g/255., b/255.)
+            color = (r / 255., g / 255., b / 255.)
 
             cr.set_line(color, linewidth=0)
             cr.set_fill(color, alpha=self.fillalpha)
 
-            cx1, cy1, cx2, cy2 = x, y_base, x+wd, y_base+clr_ht
+            cx1, cy1, cx2, cy2 = x, y_base, x + wd, y_base + clr_ht
             cr.draw_polygon(tr.to_(((cx1, cy1), (cx2, cy1),
                                     (cx2, cy2), (cx1, cy2))))
 
@@ -358,9 +358,9 @@ class DrawableColorBar(Rectangle):
             cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
 
             cr.set_font(self.font, self.fontsize, color=self.color,
-                    alpha=self.alpha)
+                        alpha=self.alpha)
             for (cx, cy, cyy, text) in range_pts:
-                cp = tr.to_(((cx, cy), (cx, cy+self.tick_ht), (cx, cyy-2)))
+                cp = tr.to_(((cx, cy), (cx, cy + self.tick_ht), (cx, cyy - 2)))
                 # tick
                 #cr.draw_line(cx, cy, cx, cy+self.tick_ht)
                 cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
@@ -410,7 +410,7 @@ class ModeIndicator(CanvasObjectBase):
             Param(name='fillalpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of fill"),
-            ]
+        ]
 
     def __init__(self, corner='lr', offset=10, font='Sans Serif', fontsize=12,
                  color='yellow', alpha=1.0, fillalpha=1.0, **kwdargs):
@@ -498,7 +498,7 @@ class FocusIndicator(CanvasObjectBase):
             Param(name='linestyle', type=str, default='dash',
                   valid=['solid', 'dash'],
                   description="Style of outline (default: dash)"),
-            ]
+        ]
 
     def __init__(self, color='white', linewidth=2, linestyle='dash',
                  alpha=1.0, **kwdargs):
@@ -525,7 +525,8 @@ class FocusIndicator(CanvasObjectBase):
         cr.set_line(color=self.color, linewidth=lw, alpha=self.alpha,
                     style=self.linestyle)
 
-        cpoints = ((off, off), (wd-off, off), (wd-off, ht-off), (off, ht-off))
+        cpoints = ((off, off), (wd - off, off), (wd - off, ht - off),
+                   (off, ht - off))
         cr.draw_polygon(tr.to_(cpoints))
 
     def focus_cb(self, viewer, onoff):

@@ -2,10 +2,10 @@
 # convenience module for importing all canvas object classes
 #
 
-from .basic import *
-from .image import *
-from .layer import *
-from .utils import *
-from .astro import *
+from .basic import *  # noqa
+from .image import *  # noqa
+from .layer import *  # noqa
+from .utils import *  # noqa
+from .astro import *  # noqa
 
-#END
+# END
