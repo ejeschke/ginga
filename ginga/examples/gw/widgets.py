@@ -22,14 +22,17 @@ tkit = sys.argv[1]
 wname = sys.argv[2]
 
 ginga_toolkit.use(tkit)
-from ginga.gw import Widgets, Viewers, GwHelp
-from ginga.util.paths import icondir
+from ginga.gw import Widgets, Viewers, GwHelp  # noqa
+from ginga.util.paths import icondir  # noqa
 
 top = None
+
+
 def quit(*args):
     if top is not None:
         top.delete()
     sys.exit()
+
 
 def popup_dialog(parent):
     dia = Widgets.Dialog(title="Dialog Title",
@@ -38,6 +41,7 @@ def popup_dialog(parent):
     cntr = dia.get_content_area()
     cntr.add_widget(Widgets.Label("My Dialog Content"))
     dia.show()
+
 
 logger = log.get_logger('test', log_stderr=True, level=20)
 
@@ -132,7 +136,7 @@ elif wname == 'image':
 
 elif wname == 'treeview':
     w = Widgets.TreeView(selection='single', sortable=True,
-                                 use_alt_row_color=True)
+                         use_alt_row_color=True)
     columns = [("Meal", 'meal'), ("Critic 1", 'review1'),
                ("Critic 2", 'review2'), ("Critic 3", 'review3')]
     w.setup_table(columns, 1, 'meal')
@@ -226,7 +230,7 @@ elif wname == 'menubar':
     menu.add_name('Curly').add_callback('activated',
                                         lambda *args: logger.info("chose Curly"))
     menu.add_name('Moe').add_callback('activated',
-                                        lambda *args: logger.info("chose Moe"))
+                                      lambda *args: logger.info("chose Moe"))
     vbox.add_widget(w)
     vbox.add_widget(Widgets.Label("App content"), stretch=1)
 
@@ -238,7 +242,7 @@ elif wname == 'toolbar':
     menu.add_name('Curly').add_callback('activated',
                                         lambda w: logger.info("chose Curly"))
     menu.add_name('Moe').add_callback('activated',
-                                        lambda w: logger.info("chose Moe"))
+                                      lambda w: logger.info("chose Moe"))
     menu = w.add_menu('Menu Type 2', mtype='mbar')
     menu.add_name('Frank')
     menu.add_name('Dean')

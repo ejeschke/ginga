@@ -13,11 +13,12 @@ Usage:
 You need Qt4 with python bindings (or pyside) installed to run this example.
 """
 from __future__ import print_function
-import sys, os
-from ginga.qtw.QtHelp import QtGui, QtCore
+import sys
 
-from ginga import AstroImage
 from matplotlib.figure import Figure
+
+from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga import AstroImage
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
@@ -131,9 +132,9 @@ class FitsViewer(QtGui.QMainWindow):
         fill = (self.wfill.checkState() != 0)
         alpha = self.walpha.value()
 
-        params = { 'color': self.drawcolors[index],
-                   'alpha': alpha,
-                   }
+        params = {'color': self.drawcolors[index],
+                  'alpha': alpha,
+                  }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
@@ -153,7 +154,7 @@ class FitsViewer(QtGui.QMainWindow):
 
     def open_file(self):
         res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
-                                                     ".", "FITS files (*.fits)")
+                                                ".", "FITS files (*.fits)")
         if isinstance(res, tuple):
             fileName = res[0]
         else:
@@ -193,7 +194,7 @@ class FitsViewer(QtGui.QMainWindow):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -217,6 +218,7 @@ def main(options, args):
         w.load_file(args[0])
 
     app.exec_()
+
 
 if __name__ == "__main__":
 
@@ -247,7 +249,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

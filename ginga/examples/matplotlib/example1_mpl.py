@@ -11,11 +11,13 @@ Usage:
    example1_mpl.py [fits file]
 """
 from __future__ import print_function
-import sys, os
+
+import sys
+
+from matplotlib.figure import Figure
 
 from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
-from matplotlib.figure import Figure
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
@@ -105,7 +107,7 @@ class FitsViewer(QtGui.QMainWindow):
             #value = fitsimage.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = fitsimage.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = fitsimage.get_data(int(data_x + 0.5), int(data_y + 0.5))
 
         except Exception:
             value = None
@@ -124,7 +126,7 @@ class FitsViewer(QtGui.QMainWindow):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -157,7 +159,8 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
 
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+    optprs.add_option("--debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--log", dest="logfile", metavar="FILE",
                       help="Write logging output to FILE")
@@ -185,7 +188,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)
