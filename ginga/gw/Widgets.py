@@ -16,6 +16,7 @@ elif tkname == 'gtk3':
 elif tkname == 'pg':
     from ginga.web.pgw.Widgets import *  # noqa
 
+
 # MODULE FUNCTIONS
 
 def get_orientation(container):
@@ -34,17 +35,17 @@ def get_oriented_box(container, scrolled=True, fill=False):
     orientation = get_orientation(container)
 
     if orientation == 'vertical':
-        box1 = VBox()
-        box2 = VBox()
+        box1 = VBox()  # noqa
+        box2 = VBox()  # noqa
     else:
-        box1 = HBox()
-        box2 = VBox()
+        box1 = HBox()  # noqa
+        box2 = VBox()  # noqa
 
     box2.add_widget(box1, stretch=0)
     if not fill:
-        box2.add_widget(Label(''), stretch=1)
+        box2.add_widget(Label(''), stretch=1)  # noqa
     if scrolled:
-        sw = ScrollArea()
+        sw = ScrollArea()  # noqa
         sw.set_widget(box2)
     else:
         sw = box2
@@ -54,9 +55,9 @@ def get_oriented_box(container, scrolled=True, fill=False):
 
 def get_opposed_box(orientation):
     if orientation == 'vertical':
-        box = HBox()
+        box = HBox()  # noqa
     else:
-        box = VBox()
+        box = VBox()  # noqa
     return box
 
 # END

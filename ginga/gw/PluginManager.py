@@ -12,8 +12,10 @@ from ginga.gw import Widgets
 from ginga.misc import Bunch, Callback
 from ginga.util.six.moves import filter
 
+
 class PluginManagerError(Exception):
     pass
+
 
 class PluginManager(Callback.Callbacks):
     """
@@ -31,7 +33,7 @@ class PluginManager(Callback.Callbacks):
         self.lock = threading.RLock()
         self.plugin = Bunch.caselessDict()
         self.active = {}
-        self.focus  = set([])
+        self.focus = set([])
         self.exclusive = set([])
 
         for name in ('activate-plugin', 'deactivate-plugin',
@@ -196,7 +198,6 @@ class PluginManager(Callback.Callbacks):
 
         # and start it up again
         self.start_plugin_future(chname, name, None)
-
 
     def set_focus(self, name):
         self.logger.debug("Focusing plugin '%s'" % (name))
@@ -484,7 +485,6 @@ class PluginManager(Callback.Callbacks):
         vbox.hide()
         vbox.delete()
 
-
     ########################################################
     ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
 
@@ -494,4 +494,4 @@ class PluginManager(Callback.Callbacks):
     getPlugin = get_plugin
     getNames = get_names
 
-#END
+# END
