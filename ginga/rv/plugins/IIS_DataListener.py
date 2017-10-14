@@ -28,44 +28,44 @@ else:
     import socketserver as SocketServer
 
 # internal globals
-MEMORY            = 0o1              # frame buffer i/o
-LUT               = 0o2              # lut i/o
-FEEDBACK          = 0o5              # used for frame clears
-IMCURSOR          = 0o20             # logical image cursor
-WCS               = 0o21             # used to set WCS
+MEMORY            = 0o1             # frame buffer i/o  # noqa
+LUT               = 0o2             # lut i/o  # noqa
+FEEDBACK          = 0o5             # used for frame clears  # noqa
+IMCURSOR          = 0o20            # logical image cursor  # noqa
+WCS               = 0o21            # used to set WCS  # noqa
 
-IIS_VERSION       = 10              # version 1.0
+IIS_VERSION       = 10              # version 1.0  # noqa
 
-PACKED            = 0o040000
-COMMAND           = 0o100000
-IIS_READ          = 0o100000
-IMC_SAMPLE        = 0o040000
-IMT_FBCONFIG      = 0o77
-XYMASK            = 0o77777
+PACKED            = 0o040000        # noqa
+COMMAND           = 0o100000        # noqa
+IIS_READ          = 0o100000        # noqa
+IMC_SAMPLE        = 0o040000        # noqa
+IMT_FBCONFIG      = 0o77            # noqa
+XYMASK            = 0o77777         # noqa
 
-MAX_FBCONFIG      = 128             # max possible frame buf sizes
-MAX_FRAMES        = 15              # max number of frames (start from 0)
-MAX_CLIENTS       = 8               # max display server clients
-DEF_NFRAMES       = 1               # save memory; only one frame
-DEF_FRAME_WIDTH   = 512             # 512 square frame
-DEF_FRAME_HEIGHT  = 512             # 512 square frame
+MAX_FBCONFIG      = 128             # max possible frame buf sizes  # noqa
+MAX_FRAMES        = 15              # max no. of frames (start from 0)  # noqa
+MAX_CLIENTS       = 8               # max display server clients  # noqa
+DEF_NFRAMES       = 1               # save memory; only one frame  # noqa
+DEF_FRAME_WIDTH   = 512             # 512 square frame  # noqa
+DEF_FRAME_HEIGHT  = 512             # 512 square frame  # noqa
 
-SZ_LABEL          = 256             # main frame label string
-SZ_IMTITLE        = 128             # image title string
-SZ_WCSBUF         = 1024            # WCS text buffer size
-SZ_OLD_WCSBUF     = 320             # old WCS text buffer size
-SZ_FIFOBUF        = 4000            # transfer size for FIFO i/o
-SZ_FNAME          = 256
-SZ_LINE           = 256
-SZ_IMCURVAL       = 160
+SZ_LABEL          = 256             # main frame label string  # noqa
+SZ_IMTITLE        = 128             # image title string  # noqa
+SZ_WCSBUF         = 1024            # WCS text buffer size  # noqa
+SZ_OLD_WCSBUF     = 320             # old WCS text buffer size  # noqa
+SZ_FIFOBUF        = 4000            # transfer size for FIFO i/o  # noqa
+SZ_FNAME          = 256             # noqa
+SZ_LINE           = 256             # noqa
+SZ_IMCURVAL       = 160             # noqa
 
 # WCS definitions.
-W_UNITARY         = 0
-W_LINEAR          = 1
-W_LOG             = 2
-W_DEFFORMAT       = " %7.2f %7.2f %7.1f%c"
+W_UNITARY         = 0               # noqa
+W_LINEAR          = 1               # noqa
+W_LOG             = 2               # noqa
+W_DEFFORMAT       = " %7.2f %7.2f %7.1f%c"  # noqa
 
-VERBOSE           = 1
+VERBOSE           = 1               # noqa
 
 
 class socketTimeout(Exception):
@@ -339,8 +339,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 ct.dny = int(ct.dny)
                 ct.ref = string.strip(data[3])
                 # if this works, we also have the real size of the image
-                fb.img_width = ct.dnx + 1   # for some reason, the width is always
-                                            # 1 pixel smaller...
+                fb.img_width = ct.dnx + 1  # for some reason, the width is always 1 pixel smaller...
                 fb.img_height = ct.dny
             except Exception:
                 ct.region = 'none'
@@ -390,7 +389,7 @@ Where   nbytes | NB  = number of bytes expected or written
         self.frame = self.decode_frameno(pkt.z & 0o7777) - 1
 
         # erase the frame buffer
-        fb = self.server.controller.init_frame(self.frame)
+        self.server.controller.init_frame(self.frame)
         self.server.controller.set_frame(self.frame)
 
     def handle_lut(self, pkt):
@@ -399,7 +398,7 @@ Where   nbytes | NB  = number of bytes expected or written
         self.logger.debug("handle lut")
         if pkt.subunit & COMMAND:
             data_type = str(pkt.nbytes / 2) + 'h'
-            size = struct.calcsize(data_type)
+            #size = struct.calcsize(data_type)
             line = pkt.datain.read(pkt.nbytes)
             n = len(line)
             if (n < pkt.nbytes):
@@ -433,9 +432,9 @@ Where   nbytes | NB  = number of bytes expected or written
                 # init the framebuffer
                 #self.server.controller.init_frame(self.frame)
                 try:
-                    fb = self.server.controller.get_frame(self.frame)
+                    self.server.controller.get_frame(self.frame)
                 except KeyError:
-                    fb = self.server.controller.init_frame(self.frame)
+                    self.server.controller.init_frame(self.frame)
                 return
 
             self.logger.error("unable to select a frame.")
@@ -539,7 +538,7 @@ Where   nbytes | NB  = number of bytes expected or written
                 fb.height = None
 
             # do we have to deal with the new WCS format? (not used, for now)
-            new_wcs = (pkt.x & 0o777)
+            #new_wcs = (pkt.x & 0o777)
 
             # read the WCS info
             line = pkt.datain.read(pkt.nbytes)
@@ -592,7 +591,6 @@ Where   nbytes | NB  = number of bytes expected or written
         else:
             self.logger.debug("start memory write")
             # read the data from socket
-            t_bytes = 0
             self.logger.debug("data bytes=%d needs_update=%s" % (
                 pkt.nbytes, self.needs_update))
             if (fb.width is not None) and (fb.height is not None):
@@ -641,7 +639,6 @@ Where   nbytes | NB  = number of bytes expected or written
         position and keystrokes from the display client.
         """
         self.logger.debug("handle imcursor")
-        done = 0
 
         if pkt.tid & IIS_READ:
             if pkt.tid & IMC_SAMPLE:
@@ -937,17 +934,16 @@ class coord_tran(object):
 class framebuffer(object):
 
     def __init__(self):
-        self.width = None           # width of the framebuffer
-        self.height = None          # height of the framebuffer
-        self.img_width = None       # width of the image
-        self.img_height = None      # height of the image
-        self.config = None          # framebuffer config index
-                                    # (see fbconfigs dictionary)
-        self.wcs = None             # WCS
-        self.image = None           # the image data itself
-        self.bitmap = None          # the image bitmap
-        self.buffer = None          # used for screen updates
-        self.zoom = 1.0             # zoom level
+        self.width = None       # width of the framebuffer
+        self.height = None      # height of the framebuffer
+        self.img_width = None   # width of the image
+        self.img_height = None  # height of the image
+        self.config = None      # framebuffer config index (see fbconfigs dict)
+        self.wcs = None         # WCS
+        self.image = None       # the image data itself
+        self.bitmap = None      # the image bitmap
+        self.buffer = None      # used for screen updates
+        self.zoom = 1.0         # zoom level
         self.ct = coord_tran()
         self.chname = None
 
