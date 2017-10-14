@@ -4,13 +4,13 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QPainter, QPen, \
-     QPolygonF, QPolygon, QColor, QPainterPath, get_font
+from ginga.qtw.QtHelp import (QtCore, QPainter, QPen, QPolygon, QColor,
+                              QPainterPath, get_font)
 
 from ginga import colors
-from ginga.util.six.moves import map, zip
+from ginga.util.six.moves import map
 # force registration of all canvas types
-import ginga.canvas.types.all
+import ginga.canvas.types.all  # noqa
 from ginga import trcalc
 
 
@@ -38,7 +38,7 @@ class RenderContext(object):
 
         if hasattr(shape, 'linestyle'):
             if shape.linestyle == 'dash':
-                pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
+                pen.setDashPattern([3.0, 4.0, 6.0, 4.0])
                 pen.setDashOffset(5.0)
 
         alpha = getattr(shape, 'alpha', 1.0)
@@ -87,7 +87,7 @@ class RenderContext(object):
         pen.setColor(clr)
         pen.setWidthF(float(linewidth))
         if style == 'dash':
-            pen.setDashPattern([ 3.0, 4.0, 6.0, 4.0])
+            pen.setDashPattern([3.0, 4.0, 6.0, 4.0])
             pen.setDashOffset(5.0)
         self.cr.setPen(pen)
 
@@ -162,7 +162,7 @@ class RenderContext(object):
         self.cr.pen().setCapStyle(QtCore.Qt.RoundCap)
         for i in range(len(cpoints) - 1):
             cx1, cy1 = cpoints[i]
-            cx2, cy2 = cpoints[i+1]
+            cx2, cy2 = cpoints[i + 1]
             self.cr.drawLine(cx1, cy1, cx2, cy2)
 
 

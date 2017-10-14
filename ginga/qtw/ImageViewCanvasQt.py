@@ -11,8 +11,10 @@ from ginga.qtw import ImageViewQt
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 from ginga.util.toolbox import ModeIndicator
 
+
 class ImageViewCanvasError(ImageViewQt.ImageViewQtError):
     pass
+
 
 class ImageViewCanvas(ImageViewQt.ImageViewZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
