@@ -141,7 +141,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         # start ruler drawing operation
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add ruler layer

@@ -446,7 +446,7 @@ class TVMask(LocalPlugin):
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
         except KeyError:
             # Add drawing layer
             p_canvas.add(self.canvas, tag=self.layertag)
