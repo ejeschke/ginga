@@ -3,28 +3,23 @@
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+from __future__ import absolute_import
 
-import sys, re
-import numpy
-import threading
-import math
 from io import BytesIO
 
 # Matplotlib imports
 import matplotlib
-from matplotlib.image import FigureImage
-from matplotlib.figure import Figure
-import matplotlib.lines as lines
 #from matplotlib.path import Path
 
 from ginga import ImageView
-from ginga import Mixins, Bindings, colors
+from ginga import Mixins, Bindings
+
 # NOTE: this import is necessary to register the 'ginga' projection
 # used via matplotlib, even though the module is not directly
 # referenced within this code
-from . import transform
-from ginga.mplw.CanvasRenderMpl import CanvasRenderer
-from ginga.mplw.MplHelp import Timer
+from . import transform  # noqa
+from .CanvasRenderMpl import CanvasRenderer
+from .MplHelp import Timer
 
 # Override some matplotlib keyboard UI defaults
 rc = matplotlib.rcParams
@@ -34,7 +29,7 @@ rc.update(matplotlib.rcParamsDefault)
 rc['keymap.fullscreen'] = 'f'    # toggling full screen
 rc['keymap.home'] = 'home'       # home or reset mnemonic
 rc['keymap.back'] = 'left'       # forward / backward keys to enable
-rc['keymap.forward'] = 'right'   #   left handed quick navigation
+rc['keymap.forward'] = 'right'   # left handed quick navigation
 rc['keymap.pan'] = []            # pan mnemonic
 rc['keymap.zoom'] = []           # zoom mnemonic
 rc['keymap.save'] = 'ctrl+s'     # saving current figure
@@ -50,6 +45,7 @@ MPL_V1 = matplotlib.__version__.startswith('1')
 
 class ImageViewMplError(ImageView.ImageViewError):
     pass
+
 
 class ImageViewMpl(ImageView.ImageViewBase):
 
@@ -222,10 +218,10 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         if self.mpimage is None:
             img = self.ax_img.imshow(arr, interpolation='none',
-                                   origin="upper",
-                                   vmin=0, vmax=255,
-                                   extent=extent,
-                                   aspect=aspect)
+                                     origin="upper",
+                                     vmin=0, vmax=255,
+                                     extent=extent,
+                                     aspect=aspect)
             self.mpimage = img
 
         else:
@@ -301,7 +297,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         if obuf is None:
             obuf = BytesIO()
 
-        qimg = self.figure.savefig(obuf, format=format, pad_inches=0)
+        self.figure.savefig(obuf, format=format, pad_inches=0)
         if output is not None:
             return None
         return obuf
@@ -382,7 +378,7 @@ class ImageViewEvent(ImageViewMpl):
             'end': 'end',
             'pageup': 'page_up',
             'pagedown': 'page_down',
-            }
+        }
 
         # Define cursors for pick and pan
         #hand = openHandCursor()
@@ -527,7 +523,8 @@ class ImageViewEvent(ImageViewMpl):
         data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, amount,
-                                  data_x, data_y)
+                                     data_x, data_y)
+
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
