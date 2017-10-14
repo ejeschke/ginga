@@ -142,7 +142,7 @@ class Header(GingaPlugin.GlobalPlugin):
         chname = channel.name
 
         if self.active != chname:
-            if not channel.extdata.has_key('_header_info'):
+            if '_header_info' not in channel.extdata:
                 self.add_channel(viewer, channel)
             info = channel.extdata._header_info
             widget = info.widget

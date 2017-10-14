@@ -8,9 +8,8 @@ import numpy as np
 from astropy.table import Table
 
 from ginga.BaseImage import ViewerObjectBase, Header
-from ginga.misc import Callback
-from ginga.util import wcsmod, iohelper, io_fits
-from ginga.util.six import iteritems
+from ginga.util import wcsmod, io_fits
+
 
 class TableError(Exception):
     pass
@@ -37,7 +36,6 @@ class AstroTable(ViewerObjectBase):
     @classmethod
     def set_ioClass(cls, klass):
         cls.ioClass = klass
-
 
     def __init__(self, data_ap=None, metadata=None, logger=None, name=None,
                  wcsclass=wcsClass, ioclass=ioClass):

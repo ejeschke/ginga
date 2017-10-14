@@ -29,7 +29,7 @@ logging.captureWarnings(True)
 __all__ = ['ReferenceViewer']
 
 default_layout = ['seq', {},
-                   ['vbox', dict(name='top', width=1400, height=700),
+                   ['vbox', dict(name='top', width=1400, height=700),  # noqa
                     dict(row=['hbox', dict(name='menu')],
                          stretch=0),
                     dict(row=['hpanel', dict(name='hpnl'),
@@ -117,7 +117,7 @@ global_plugins = [
           category='Global'),
     Bunch(module='Log', tab='Log', workspace='right', start=False,
           category='Global'),
-    ]
+]
 
 local_plugins = [
     Bunch(module='Pick', workspace='dialogs', category=None),
@@ -142,7 +142,7 @@ local_plugins = [
     Bunch(module='Compose', workspace='dialogs', category=None),
     Bunch(module='PlotTable', workspace='dialogs', category=None),
     Bunch(module='ScreenShot', workspace='dialogs', category=None),
-    ]
+]
 
 
 class ReferenceViewer(object):
