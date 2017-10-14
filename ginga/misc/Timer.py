@@ -5,14 +5,16 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
+
 import time
-import threading
 
 from ginga.misc import Bunch, Callback
 from ginga.util.heaptimer import Timer as HeapTimer, TimerHeap
 
+
 class TimerError(Exception):
     pass
+
 
 class TimerFactory(object):
 
@@ -20,7 +22,6 @@ class TimerFactory(object):
         # ev_quit retained for past and possible future use
         self.ev_quit = ev_quit
         self.timer_heap = TimerHeap("TimerFactory", logger=logger)
-
 
     def timer(self):
         """Creates and returns a new Timer."""
@@ -137,11 +138,11 @@ def main():
 
     cb(None, '0')
     print("Setting timers")
-    t1 = tfact.set(0.0015, cb, 'B')
+    t1 = tfact.set(0.0015, cb, 'B')  # noqa
     t2 = tfact.set(0.0020, cb, 'D')
-    t3 = tfact.set(0.0016, cb, 'C')
-    t4 = tfact.set(0.0001, cb, 'A')
-    t5 = tfact.set(0.0030, cb, 'E')
+    t3 = tfact.set(0.0016, cb, 'C')  # noqa
+    t4 = tfact.set(0.0001, cb, 'A')  # noqa
+    t5 = tfact.set(0.0030, cb, 'E')  # noqa
     t2.clear()
 
     print("Waiting on timers")

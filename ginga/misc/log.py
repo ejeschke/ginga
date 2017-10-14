@@ -11,8 +11,9 @@ import logging.handlers
 LOG_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 # max size of log file before rotating
-log_maxsize = 20 * 1024*1024
+log_maxsize = 20 * 1024 * 1024
 log_backups = 4
+
 
 class NullLogger(object):
     """
@@ -76,12 +77,11 @@ def get_logger(name='ginga', level=None, null=False,
 
     if log_file is not None:
         if ((options is not None) and (getattr(options, 'rmlog', False)) and
-            os.path.exists(log_file)):
+                os.path.exists(log_file)):
             os.remove(log_file)
         # TODO: get maxsize and backup from options, if present
-        fileHdlr  = logging.handlers.RotatingFileHandler(log_file,
-                                                         maxBytes=log_maxsize,
-                                                         backupCount=log_backups)
+        fileHdlr = logging.handlers.RotatingFileHandler(
+            log_file, maxBytes=log_maxsize, backupCount=log_backups)
         fileHdlr.setLevel(level)
         fileHdlr.setFormatter(fmt)
         logger.addHandler(fileHdlr)
