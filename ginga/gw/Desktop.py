@@ -255,7 +255,7 @@ class Desktop(Callback.Callbacks):
             width, height = child.get_size()
 
             wsname = str(time.time())
-            ws = self.create_toplevel_ws(wsname, width, height+100)
+            ws = self.create_toplevel_ws(wsname, width, height + 100)
 
             # get title of child
             try:
@@ -885,7 +885,7 @@ class SymmetricGridWidget(Widgets.GridBox):
         # add them back in, in a grid
         for i in range(0, rows):
             for j in range(0, cols):
-                index = i*cols + j
+                index = i * cols + j
                 if index < num_widgets:
                     child = widgets[index]
                     super(SymmetricGridWidget, self).add_widget(child, i, j,
@@ -905,7 +905,7 @@ class SymmetricGridWidget(Widgets.GridBox):
             # size of matrix has not changed--
             # we can be a little efficient here and skip rebuilding
             j = num_widgets - ((rows - 1) * cols) - 1
-            super(SymmetricGridWidget, self).add_widget(child, rows-1, j,
+            super(SymmetricGridWidget, self).add_widget(child, rows - 1, j,
                                                         stretch=1)
         else:
             widgets = list(self.get_children())
