@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from ginga.util.six.moves import map, filter
 
 # THIRD-PARTY
 import numpy as np
@@ -15,8 +16,6 @@ try:
 except ImportError:
     pass
 
-from ginga.util.six.moves import map, filter
-
 
 def get_contours(data, levels):
     """Get sets of contour points for numpy array `data`.
@@ -27,11 +26,11 @@ def get_contours(data, levels):
     if not have_skimage:
         raise Exception("Please install scikit-image > 0.13"
                         "to use this function")
-    res = [ filter(lambda arr: len(arr) >= 3,
-                   measure.find_contours(data, level))
-            for level in levels ]
-    res = [ map(lambda arr: np.roll(arr, 1, axis=1),
-                 arrs) for arrs in res ]
+    res = [filter(lambda arr: len(arr) >= 3,
+                  measure.find_contours(data, level))
+           for level in levels]
+    res = [map(lambda arr: np.roll(arr, 1, axis=1),
+               arrs) for arrs in res]
     return res
 
 

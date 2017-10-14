@@ -13,10 +13,12 @@ Usage:
    $ ./mosaic.py -o output.fits input1.fits input2.fits ... inputN.fits
 """
 from __future__ import print_function
-import sys, os
+
+import sys
+import os
 import math
 
-import numpy
+import numpy as np
 
 from ginga import AstroImage
 from ginga.util import wcs, io_fits, dp
@@ -56,7 +58,7 @@ def mosaic(logger, itemlist, fov_deg=None):
         # TODO: calculate fov?
         expand = True
 
-    cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
+    cdbase = [np.sign(cdelt1), np.sign(cdelt2)]
     img_mosaic = dp.create_blank_image(ra_deg, dec_deg,
                                        fov_deg, px_scale, rot_deg,
                                        cdbase=cdbase,
@@ -66,7 +68,7 @@ def mosaic(logger, itemlist, fov_deg=None):
     logger.debug("mosaic rot=%f cdelt1=%f cdelt2=%f" % (rot, cdelt1, cdelt2))
 
     logger.debug("Processing '%s' ..." % (name))
-    tup = img_mosaic.mosaic_inline([ image0 ],
+    tup = img_mosaic.mosaic_inline([image0],
                                    allow_expand=expand)
     logger.debug("placement %s" % (str(tup)))
 
@@ -83,7 +85,7 @@ def mosaic(logger, itemlist, fov_deg=None):
             image.load_file(filepath)
 
         logger.debug("Inlining '%s' ..." % (name))
-        tup = img_mosaic.mosaic_inline([ image ])
+        tup = img_mosaic.mosaic_inline([image])
         logger.debug("placement %s" % (str(tup)))
         count += 1
 
@@ -151,7 +153,6 @@ if __name__ == "__main__":
 
         print("%s profile:" % sys.argv[0])
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

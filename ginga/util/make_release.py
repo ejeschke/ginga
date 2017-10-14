@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 import os
 import time
 
@@ -7,6 +8,7 @@ minor = 5
 
 rlfile = 'version.py'
 backup = 'version.py.bak'
+
 
 def make_release():
     release = time.strftime("%Y%m%d%H%M%S", time.gmtime(time.time()))
@@ -26,6 +28,7 @@ def make_release():
         out_f.write("\n")
         out_f.write("version = '%d.%d.%d' % (major, minor, release)\n")
         out_f.write("\n")
+
 
 if __name__ == "__main__":
     print(make_release())
