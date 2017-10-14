@@ -7,9 +7,13 @@
 #
 from __future__ import print_function
 
-import sys, os
-import logging
+import sys
+
+from ginga import AstroImage
+from ginga.tkw.ImageViewTk import ImageViewCanvas
+from ginga.misc import log
 from ginga.util import six
+
 if six.PY2:
     import Tkinter
     from tkFileDialog import askopenfilename
@@ -17,12 +21,8 @@ else:
     import tkinter as Tkinter
     from tkinter.filedialog import askopenfilename
 
-from ginga import AstroImage
-from ginga.tkw.ImageViewTk import ImageViewCanvas
-from ginga.misc import log
-
-
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
+
 
 class FitsViewer(object):
 
@@ -110,7 +110,7 @@ class FitsViewer(object):
         self.walpha = walpha
 
         wclear = Tkinter.Button(hbox, text="Clear Canvas",
-                            command=self.clear_canvas)
+                                command=self.clear_canvas)
         wopen = Tkinter.Button(hbox, text="Open File",
                                command=self.open_file)
         wquit = Tkinter.Button(hbox, text="Quit",
@@ -118,7 +118,6 @@ class FitsViewer(object):
         for w in (wquit, wclear, walpha, Tkinter.Label(hbox, text='Alpha:'),
                   wfill, wdrawcolor, wdrawtype, wopen):
             w.pack(side=Tkinter.RIGHT)
-
 
     def get_widget(self):
         return self.root
@@ -129,10 +128,10 @@ class FitsViewer(object):
         alpha = float(self.walpha.get())
         fill = self.vfill.get() != 0
 
-        params = { 'color': color,
-                   'alpha': alpha,
-                   #'cap': 'ball',
-                   }
+        params = {'color': color,
+                  'alpha': alpha,
+                  #'cap': 'ball',
+                  }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
@@ -151,8 +150,8 @@ class FitsViewer(object):
         self.root.title(filepath)
 
     def open_file(self):
-        filename = askopenfilename(filetypes=[("allfiles","*"),
-                                              ("fitsfiles","*.fits")])
+        filename = askopenfilename(filetypes=[("allfiles", "*"),
+                                              ("fitsfiles", "*.fits")])
         self.load_file(filename)
 
     def cursor_cb(self, viewer, button, data_x, data_y):
@@ -183,7 +182,7 @@ class FitsViewer(object):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -216,7 +215,8 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
 
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+    optprs.add_option("--debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--profile", dest="profile", action="store_true",
                       default=False,
@@ -237,7 +237,6 @@ if __name__ == "__main__":
 
         print("%s profile:" % sys.argv[0])
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

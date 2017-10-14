@@ -4,7 +4,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
-import sys, os
+import sys
 import logging
 
 from ginga import AstroImage, colors
@@ -185,10 +185,10 @@ class FitsViewer(object):
         alpha = self.walpha.get_value()
         coord = 'data'
 
-        params = { 'color': self.drawcolors[index],
-                   'alpha': alpha,
-                   'coord': coord,
-                   }
+        params = {'color': self.drawcolors[index],
+                  'alpha': alpha,
+                  'coord': coord,
+                  }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
@@ -207,8 +207,10 @@ class FitsViewer(object):
         self.top.set_title(filepath)
 
     def open_file(self):
+        from ginga.gw import Widgets
+
         res = Widgets.FileDialog.getOpenFileName(self, "Open FITS file",
-                                                     ".", "FITS files (*.fits)")
+                                                 ".", "FITS files (*.fits)")
         if isinstance(res, tuple):
             fileName = res[0]
         else:
@@ -228,7 +230,7 @@ class FitsViewer(object):
             #value = viewer.get_data(data_x, data_y)
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = viewer.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x + 0.5), int(data_y + 0.5))
 
         except Exception:
             value = None
@@ -247,7 +249,7 @@ class FitsViewer(object):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -267,7 +269,7 @@ class FitsViewer(object):
 
     def quit(self, *args):
         self.logger.info("Attempting to shut down the application...")
-        if not self.top is None:
+        if self.top is not None:
             self.top.close()
         sys.exit()
 
@@ -305,6 +307,7 @@ def main(options, args):
         if viewer.top is not None:
             viewer.top.close()
 
+
 if __name__ == "__main__":
 
     # Parse command line options with nifty optparse module
@@ -313,7 +316,8 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
 
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+    optprs.add_option("--debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--log", dest="logfile", metavar="FILE",
                       help="Write logging output to FILE")
@@ -344,7 +348,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)
