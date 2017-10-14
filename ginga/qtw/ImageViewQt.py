@@ -4,18 +4,17 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, os
-import math
-import numpy
+import os
 from io import BytesIO
 
-from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QImage, \
-     QPixmap, QCursor, QPainter, have_pyqt5, Timer, get_scroll_info
-from ginga import ImageView, Mixins, Bindings
 import ginga.util.six as six
-from ginga.util.six.moves import map, zip
-from ginga.qtw.CanvasRenderQt import CanvasRenderer
+from ginga.util.six.moves import map
+from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
+from ginga.qtw.QtHelp import (QtGui, QtCore, QColor, QImage, QPixmap, QCursor,
+                              QPainter, Timer, get_scroll_info)
+
+from .CanvasRenderQt import CanvasRenderer
 
 
 class ImageViewQtError(ImageView.ImageViewError):
@@ -164,7 +163,6 @@ class ImageViewQt(ImageView.ImageViewBase):
                           qimage,
                           QtCore.QRect(0, 0, width, height))
 
-
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
@@ -189,13 +187,13 @@ class ImageViewQt(ImageView.ImageViewBase):
             # You will get scrollbars unless you account for this
             # See http://stackoverflow.com/questions/3513788/qt-qgraphicsview-without-scrollbar
             width, height = width - 2, height - 2
-            self.scene.setSceneRect(1, 1, width-2, height-2)
+            self.scene.setSceneRect(1, 1, width - 2, height - 2)
         # If we need to build a new pixmap do it here.  We allocate one
         # twice as big as necessary to prevent having to reinstantiate it
         # all the time.  On Qt this causes unpleasant flashing in the display.
-        if (self.pixmap is None) or (self.pixmap.width() < width) or \
-           (self.pixmap.height() < height):
-            pixmap = QPixmap(width*2, height*2)
+        if ((self.pixmap is None) or (self.pixmap.width() < width) or
+                (self.pixmap.height() < height)):
+            pixmap = QPixmap(width * 2, height * 2)
             #pixmap.fill(QColor("black"))
             self.pixmap = pixmap
             self.imgwin.set_pixmap(pixmap)
@@ -219,13 +217,12 @@ class ImageViewQt(ImageView.ImageViewBase):
 
     def get_rgb_image_as_widget(self):
         imgwin_wd, imgwin_ht = self.get_window_size()
-        qpix = self.pixmap.copy(0, 0,
-                                imgwin_wd, imgwin_ht)
+        qpix = self.pixmap.copy(0, 0, imgwin_wd, imgwin_ht)
         return qpix.toImage()
 
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         qimg = self.get_rgb_image_as_widget()
-        res = qimg.save(filepath, format=format, quality=quality)
+        qimg.save(filepath, format=format, quality=quality)
 
     def get_plain_image_as_widget(self):
         """Used for generating thumbnails.  Does not include overlaid
@@ -240,7 +237,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         graphics.
         """
         qimg = self.get_plain_image_as_widget()
-        res = qimg.save(filepath, format=format, quality=quality)
+        qimg.save(filepath, format=format, quality=quality)
 
     def reschedule_redraw(self, time_sec):
         self._defer_task.stop()
@@ -304,7 +301,7 @@ class ImageViewQt(ImageView.ImageViewBase):
 
     def _get_color(self, r, g, b):
         n = 255.0
-        clr = QColor(int(r*n), int(g*n), int(b*n))
+        clr = QColor(int(r * n), int(g * n), int(b * n))
         return clr
 
     def onscreen_message(self, text, delay=None, redraw=True):
@@ -363,17 +360,17 @@ class RenderMixin(object):
         return super(RenderMixin, self).event(event)
 
     def dragEnterEvent(self, event):
-#         if event.mimeData().hasFormat('text/plain'):
-#             event.accept()
-#         else:
-#             event.ignore()
+        #if event.mimeData().hasFormat('text/plain'):
+        #    event.accept()
+        #else:
+        #    event.ignore()
         event.accept()
 
     def dragMoveEvent(self, event):
-#         if event.mimeData().hasFormat('text/plain'):
-#             event.accept()
-#         else:
-#             event.ignore()
+        #if event.mimeData().hasFormat('text/plain'):
+        #    event.accept()
+        #else:
+        #    event.ignore()
         event.accept()
 
     def dropEvent(self, event):
@@ -382,6 +379,7 @@ class RenderMixin(object):
 
 class RenderWidgetZoom(RenderMixin, RenderWidget):
     pass
+
 
 class RenderGraphicsViewZoom(RenderMixin, RenderGraphicsView):
     pass
@@ -425,7 +423,7 @@ class QtEventMixin(object):
             "'": 'singlequote',
             '\\': 'backslash',
             ' ': 'space',
-            }
+        }
         self._fnkeycodes = [QtCore.Qt.Key_F1, QtCore.Qt.Key_F2,
                             QtCore.Qt.Key_F3, QtCore.Qt.Key_F4,
                             QtCore.Qt.Key_F5, QtCore.Qt.Key_F6,
@@ -437,7 +435,7 @@ class QtEventMixin(object):
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
-                     'pinch', 'pan', #'swipe', 'tap'
+                     'pinch', 'pan',  # 'swipe', 'tap'
                      ):
             self.enable_callback(name)
 
@@ -484,7 +482,7 @@ class QtEventMixin(object):
             return 'meta_right'
         if keycode in self._fnkeycodes:
             index = self._fnkeycodes.index(keycode)
-            return 'f%d' % (index+1)
+            return 'f%d' % (index + 1)
 
         try:
             return self._keytbl[keyname.lower()]
@@ -610,7 +608,7 @@ class QtEventMixin(object):
             if _src == QtCore.Qt.MouseEventNotSynthesized:
                 src = 'wheel'
             else:
-                src = 'trackpad'
+                src = 'trackpad'  # noqa
                 point = event.pixelDelta()
                 dx, dy = point.x(), point.y()
 
@@ -716,14 +714,14 @@ class QtEventMixin(object):
                 thumbstr = str(dropdata.data("text/thumb"))
             else:
                 thumbstr = str(dropdata.data("text/thumb"), encoding='ascii')
-            data = [ thumbstr ]
+            data = [thumbstr]
             self.logger.debug("dropped thumb(s): %s" % (str(data)))
         elif dropdata.hasUrls():
             urls = list(dropdata.urls())
-            data = [ str(url.toString()) for url in urls ]
+            data = [str(url.toString()) for url in urls]
             self.logger.debug("dropped filename(s): %s" % (str(data)))
         elif "text/plain" in formats:
-            data = [ dropdata.text() ]
+            data = [dropdata.text()]
             self.logger.debug("dropped filename(s): %s" % (str(data)))
         else:
             # No format that we understand--just pass it along

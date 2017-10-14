@@ -41,6 +41,7 @@ class WidgetError(Exception):
     """For errors thrown in this module."""
     pass
 
+
 _app = None
 
 
@@ -611,6 +612,7 @@ class Image(WidgetBase):
         pixmap.load(img_path, format=format)
         self.widget.setPixmap(pixmap)
 
+
 class ProgressBar(WidgetBase):
     def __init__(self):
         super(ProgressBar, self).__init__()
@@ -768,7 +770,7 @@ class TreeView(WidgetBase):
 
             # recurse for non-leaf interior node
             for key in node:
-                self._add_subtree(level+1, d, item, key, node[key])
+                self._add_subtree(level + 1, d, item, key, node[key])
 
     def _selection_cb(self):
         res_dict = self.get_selected()
@@ -1980,11 +1982,11 @@ def build_info(captions, orientation='vertical'):
         while col < numcols:
             idx = col * 2
             if idx < len(tup):
-                title, wtype = tup[idx:idx+2]
+                title, wtype = tup[idx:idx + 2]
                 if not title.endswith(':'):
                     name = name_mangle(title)
                 else:
-                    name = name_mangle('lbl_'+title[:-1])
+                    name = name_mangle('lbl_' + title[:-1])
                 w = make_widget(title, wtype)
                 table.addWidget(w.widget, row, col)
                 wb[name] = w
