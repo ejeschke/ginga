@@ -5,7 +5,9 @@
 # Please see the file LICENSE.txt for details.
 #
 """This module handles image viewers."""
-import numpy as np
+
+from io import BytesIO
+
 import math
 import logging
 import threading
@@ -13,13 +15,15 @@ import sys
 import traceback
 import time
 
+import numpy as np
+
 from ginga.misc import Callback, Settings
 from ginga import BaseImage, AstroImage
 from ginga import RGBMap, AutoCuts, ColorDist
 from ginga import cmap, imap, colors, trcalc
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
-from ginga.util import rgb_cms, six
+from ginga.util import rgb_cms
 
 __all__ = ['ImageViewBase']
 
@@ -3275,7 +3279,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         obuf = output
         if obuf is None:
-            obuf = six.BytesIO()
+            obuf = BytesIO()
 
         arr8 = self.get_image_as_array()
         if not hasattr(arr8, 'tobytes'):
