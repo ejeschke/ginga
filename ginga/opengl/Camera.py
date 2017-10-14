@@ -13,6 +13,7 @@ from OpenGL import GL as gl
 
 from .geometry_helper import Point3D, Vector3D, Matrix4x4
 
+
 class Camera(object):
 
     def __init__(self):
@@ -116,7 +117,7 @@ class Camera(object):
             -0.5 * vport_wd, 0.5 * vport_wd,    # left, right
             -0.5 * vport_ht, 0.5 * vport_ht,    # bottom, top
             self.near_plane, self.far_plane
-            )
+        )
 
         M = Matrix4x4.look_at(self.position, self.target, self.up, False)
         gl.glMultMatrixf(M.get())
@@ -218,7 +219,6 @@ class Camera(object):
             #print("fov is now %.4f" % fov_deg)
             self.fov_deg = fov_deg
 
-
     def frustum_dimensions_at_target(self, vfov_deg=None):
         if vfov_deg is None:
             vfov_deg = self.fov_deg
@@ -244,6 +244,7 @@ def frustum_height_at_distance(vfov_deg, distance):
     """
     height = 2.0 * distance * np.tan(np.radians(vfov_deg * 0.5))
     return height
+
 
 def fov_for_height_and_distance(height, distance):
     """Calculate the FOV needed to get a given frustum height at a
