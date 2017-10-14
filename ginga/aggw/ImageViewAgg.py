@@ -8,7 +8,6 @@ import numpy
 from io import BytesIO
 
 import aggdraw as agg
-from . import AggHelp
 
 from ginga import ImageView
 from ginga.aggw.CanvasRenderAgg import CanvasRenderer
@@ -22,6 +21,7 @@ except ImportError:
 
 class ImageViewAggError(ImageView.ImageViewError):
     pass
+
 
 class ImageViewAgg(ImageView.ImageViewBase):
 
@@ -121,7 +121,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         with open(filepath, 'w') as out_f:
             self.get_rgb_image_as_buffer(output=out_f, format=format,
-                                          quality=quality)
+                                         quality=quality)
         self.logger.debug("wrote %s file '%s'" % (format, filepath))
 
     def update_image(self):
@@ -150,7 +150,7 @@ class CanvasView(ImageViewAgg):
                  bindmap=None, bindings=None):
         # NOTE: bindmap, bindings are ignored
         ImageViewAgg.__init__(self, logger=logger, settings=settings,
-                               rgbmap=rgbmap)
+                              rgbmap=rgbmap)
         self.defer_redraw = False
 
         # Needed for UIMixin to propagate events correctly
@@ -168,4 +168,4 @@ class CanvasView(ImageViewAgg):
     def configure_window(self, width, height):
         return super(CanvasView, self).configure_surface(width, height)
 
-#END
+# END
