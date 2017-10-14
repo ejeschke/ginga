@@ -4,15 +4,16 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy
 from io import BytesIO
 
+import ginga.util.six as six
 from ginga.qtw.QtHelp import QtCore
 from ginga.qtw import ImageViewQt
 from ginga import Mixins, Bindings
-import ginga.util.six as six
-from ginga.util.six.moves import map, zip
 from ginga.canvas import transform
+
+# Local imports
+from .CanvasRenderGL import CanvasRenderer
 
 # GL imports
 # TODO: find how to import this from qtpy
@@ -20,9 +21,6 @@ if six.PY2:
     from PyQt4.QtOpenGL import QGLWidget as QOpenGLWidget
 else:
     from PyQt5.QtOpenGL import QGLWidget as QOpenGLWidget
-
-# Local imports
-from ginga.opengl.CanvasRenderGL import CanvasRenderer, WindowGLTransform
 
 
 class ImageViewQtGLError(ImageViewQt.ImageViewQtError):
@@ -69,7 +67,7 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         # we replace two transforms in the catalog for OpenGL rendering
         #self.trcat['WindowNativeTransform'] = WindowGLTransform
         self.trcat['WindowNativeTransform'] = \
-                     transform.CartesianWindowTransform.inverted_class()
+            transform.CartesianWindowTransform.inverted_class()
         self.trcat['CartesianNativeTransform'] = transform.PassThruTransform
         self.recalc_transforms()
 
@@ -101,7 +99,7 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
             ibuf = BytesIO()
 
         qimg = self.get_rgb_image_as_widget()
-        res = qimg.save(ibuf, format=format, quality=quality)
+        qimg.save(ibuf, format=format, quality=quality)
         return ibuf
 
     def update_image(self):
