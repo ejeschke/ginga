@@ -12,7 +12,8 @@ The ModuleManager class
 
 from __future__ import absolute_import
 
-import sys, os
+import sys
+import os
 import importlib
 
 __all__ = ['ModuleManager']
@@ -96,11 +97,10 @@ class ModuleManager(object):
         except KeyError:
             return sys.modules[module_name]
 
-
     ########################################################
     ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
 
     loadModule = load_module
     getModule = get_module
 
-#END
+# END

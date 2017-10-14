@@ -8,6 +8,7 @@
 #
 import threading
 
+
 class caselessDict(object):
     """
     Case-insensitive dictionary.  Adapted from
@@ -131,7 +132,7 @@ class caselessDict(object):
         return item.lower() in self.dict
 
     def __repr__(self):
-        items = ", ".join([("%r: %r" % (k,v)) for k,v in self.items()])
+        items = ", ".join([("%r: %r" % (k, v)) for k, v in self.items()])
         return "{%s}" % items
 
     def __str__(self):
@@ -186,7 +187,6 @@ class Bunch(object):
         # an item.
         self.__initialised = True
 
-
     def __getitem__(self, key):
         """Maps dictionary keys to values.
         Called for dictionary style access of this object.
@@ -209,7 +209,6 @@ class Bunch(object):
         """
         return self.tbl[attr]
 
-
     def __setattr__(self, attr, value):
         """Maps attributes to values for assignment.  Called for attribute style access
         of this object for assignment.
@@ -228,18 +227,14 @@ class Bunch(object):
             else:
                 self.tbl[attr] = value
 
-
     def __str__(self):
         return self.tbl.__str__()
-
 
     def __repr__(self):
         return self.tbl.__repr__()
 
-
     def __getstate__(self):
         return self.tbl.__repr__()
-
 
     def __setstate__(self, pickled_state):
         self.tbl = eval(pickled_state)
@@ -330,24 +325,20 @@ class threadSafeBunch(object):
         # an item.
         self.__initialised = True
 
-
     def enter(self):
         """Acquires the lock used for this Bunch.  USE WITH EXTREME CAUTION!
         """
         return self.lock.acquire()
-
 
     def leave(self):
         """Releases the lock on this Bunch.  USE WITH EXTREME CAUTION!
         """
         return self.lock.release()
 
-
     def getlock(self):
         """Returns the lock used for this Bunch.  USE WITH EXTREME CAUTION!
         """
         return self.lock
-
 
     def getitem(self, key):
         """Maps dictionary keys to values.
@@ -356,10 +347,8 @@ class threadSafeBunch(object):
         with self.lock:
             return self.tbl[key]
 
-
     def __getitem__(self, key):
         return self.getitem(key)
-
 
     def fetch(self, keyDict):
         """Like update(), but for retrieving values.
@@ -367,7 +356,6 @@ class threadSafeBunch(object):
         with self.lock:
             for key in keyDict.keys():
                 keyDict[key] = self.tbl[key]
-
 
     def fetchDict(self, keyDict):
         with self.lock:
@@ -377,7 +365,6 @@ class threadSafeBunch(object):
 
             return res
 
-
     def fetchList(self, keySeq):
         with self.lock:
             res = []
@@ -386,7 +373,6 @@ class threadSafeBunch(object):
 
             return res
 
-
     def setitem(self, key, value):
         """Maps dictionary keys to values for assignment.  Called for
         dictionary style access with assignment.
@@ -394,14 +380,11 @@ class threadSafeBunch(object):
         with self.lock:
             self.tbl[key] = value
 
-
     def __setitem__(self, key, value):
         return self.setitem(key, value)
 
-
     def setvals(self, **kwdargs):
         return self.update(kwdargs)
-
 
     def delitem(self, key):
         """Deletes key/value pairs from object.
@@ -416,14 +399,12 @@ class threadSafeBunch(object):
     def __delitem__(self, key):
         return self.delitem(key)
 
-
     def __getattr__(self, key):
         """Maps values to attributes.
         Only called if there *isn't* an attribute with this name.
         Called for attribute style access of this object.
         """
         return self.getitem(key)
-
 
     def __setattr__(self, key, value):
         """Maps attributes to values for assignment.
@@ -445,23 +426,19 @@ class threadSafeBunch(object):
                 else:
                     self.tbl[key] = value
 
-
     def __delattr__(self, key):
         """Deletes key/value pairs from object.
         """
         with self.lock:
             del self.tbl[key]
 
-
     def __str__(self):
         with self.lock:
             return self.tbl.__str__()
 
-
     def __len__(self):
         with self.lock:
             return len(self.tbl)
-
 
     def __repr__(self):
         with self.lock:
@@ -483,13 +460,11 @@ class threadSafeBunch(object):
         with self.lock:
             return key in self.tbl
 
-
     def keys(self):
         """Returns list of keys.
         """
         with self.lock:
             return self.tbl.keys()
-
 
     def values(self):
         """Returns list of values.
@@ -505,13 +480,11 @@ class threadSafeBunch(object):
             for (key, value) in updict.items():
                 self.setitem(key, value)
 
-
     def items(self):
         """Returns list of items.
         """
         with self.lock:
             return self.tbl.items()
-
 
     def copy(self):
         with self.lock:
@@ -527,7 +500,6 @@ class threadSafeBunch(object):
 
             else:
                 return alt
-
 
     def setdefault(self, key, value):
         """Atomic store conditional.  Stores _value_ into dictionary
@@ -574,7 +546,6 @@ class threadSafeList(object):
 
         self.lock = threading.RLock()
         self.list = list(args)
-
 
     def append(self, item):
         with self.lock:
