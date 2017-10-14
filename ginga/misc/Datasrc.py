@@ -65,8 +65,8 @@ class Datasrc(object):
         if len(args) == 0:
             return self.remove(self.history[0])
 
-        assert len(args) == 1, \
-               ValueError("Too many parameters to pop()")
+        if len(args) != 1:
+            raise ValueError("Too many parameters to pop()")
         return self.remove(args[0])
 
     def remove(self, key):

@@ -27,7 +27,7 @@ else:
     _swival = 0.000001
     sys.setswitchinterval(_swival)
 
-from . import Callback
+from . import Callback  # noqa
 
 
 class TaskError(Exception):
@@ -645,7 +645,7 @@ class newConcurrentAndTaskset(Task):
         with self._lock_c:
             self.count += 1
             self.logger.debug('Concurrent task %d/%d has completed' % (
-                    self.count, self.numtasks))
+                self.count, self.numtasks))
             self.taskset.remove(task)
             self.totaltime += task.getExecutionTime()
             self.results[(self.count, task)] = result
