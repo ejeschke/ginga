@@ -1,4 +1,3 @@
-import sys
 import gtk
 
 from ginga.gtkw import ColorBar
