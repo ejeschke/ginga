@@ -1,7 +1,4 @@
-
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import numpy as np
 
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.misc import log
@@ -17,8 +14,9 @@ cmap.add_matplotlib_cmaps()
 class CustomMplViewer(ImageViewCanvas):
 
     def get_nb_image(self):
-        return Image(data=bytes(self.get_rgb_image_as_bytes(format='png')),
-                     format='png', embed=True)
+        return AstroImage(
+            data=bytes(self.get_rgb_image_as_bytes(format='png')),
+            format='png', embed=True)
 
     def load(self, filepath):
         image = AstroImage(logger=self.logger)

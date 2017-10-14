@@ -14,12 +14,8 @@ from __future__ import print_function
 import matplotlib
 from matplotlib.axes import Axes
 from matplotlib.path import Path
-from matplotlib.transforms import Affine2D, BboxTransformTo, Transform, \
-     blended_transform_factory
+from matplotlib.transforms import BboxTransformTo, Transform
 from matplotlib.projections import register_projection
-
-import numpy as np
-from ginga.util.six.moves import map, zip
 
 
 class GingaAxes(Axes):
@@ -241,7 +237,7 @@ class GingaAxes(Axes):
             ipath = path.interpolated(path._interpolation_steps)
             return Path(self.transform(ipath.vertices), ipath.codes)
         transform_path_non_affine.__doc__ = \
-                Transform.transform_path_non_affine.__doc__
+            Transform.transform_path_non_affine.__doc__
 
         if matplotlib.__version__ < '1.2':
             # Note: For compatibility with matplotlib v1.1 and older, you'll
@@ -294,8 +290,9 @@ class GingaAxes(Axes):
 
         inverted.__doc__ = Transform.inverted.__doc__
 
+
 # Now register the projection with matplotlib so the user can select
 # it.
 register_projection(GingaAxes)
 
-#END
+# END
