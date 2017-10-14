@@ -6,13 +6,13 @@
 #
 import matplotlib
 matplotlib.use('GTK3Cairo')
-from  matplotlib.backends.backend_gtk3cairo import FigureCanvasGTK3Cairo \
-     as FigureCanvas
+from matplotlib.backends.backend_gtk3cairo import FigureCanvasGTK3Cairo as FigureCanvas  # noqa
 ## matplotlib.use('GTK3Agg')
 ## from  matplotlib.backends.backend_gtk3agg import FigureCanvasGTK3Agg \
 ##      as FigureCanvas
 
-from ginga.gtk3w import Widgets
+from ginga.gtk3w import Widgets  # noqa
+
 
 class PlotWidget(Widgets.WidgetBase):
 
@@ -30,4 +30,4 @@ class PlotWidget(Widgets.WidgetBase):
         fig = self.plot.get_figure()
         fig.set_size_inches(float(wd) / fig.dpi, float(ht) / fig.dpi)
 
-#END
+# END
