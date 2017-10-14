@@ -26,13 +26,12 @@ __author__ = 'Christian Hopps'
 __version__ = '1.0'
 __docformat__ = "restructuredtext en"
 
-
 _logger = logging.getLogger(__name__)
 
 
 @functools.total_ordering
 class Timer (object):
-    def __init__ (self, heap, jitter, action, *args, **kwargs):
+    def __init__(self, heap, jitter, action, *args, **kwargs):
         self.jitter = jitter
         self.action = action
         self.args = args
@@ -45,7 +44,8 @@ class Timer (object):
         try:
             self.action(*self.args, **self.kwargs)
         except Exception as ex:
-            self.logger.error("Ignoring uncaught exception within timer action: %s", str(ex))
+            self.logger.error(
+                "Ignoring uncaught exception within timer action: %s", str(ex))
 
     def __hash__(self):
         return id(self)

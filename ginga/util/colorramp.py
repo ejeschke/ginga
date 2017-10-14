@@ -2,7 +2,7 @@
 # colorramp.py -- utility functions for making ginga colormaps
 #
 from __future__ import print_function
-import sys
+
 
 def hue_sat_to_cmap(hue, sat):
     """Mkae a color map from a hue and saturation value.
@@ -21,6 +21,7 @@ def hue_sat_to_cmap(hue, sat):
 
     return res
 
+
 def rgbarr_to_colormap(rgb_data_np):
 
     data = rgb_data_np
@@ -31,11 +32,12 @@ def rgbarr_to_colormap(rgb_data_np):
     mid_y = ht // 2
 
     slc = data[mid_y, :, :]
-    l = [ tuple(slc[int(float(i) / 256 * wd), :]) for i in range(0, 256) ]
+    l = [tuple(slc[int(float(i) / 256 * wd), :]) for i in range(0, 256)]
     assert len(l) == 256
 
-    clst = [ (r / 255., g / 255., b / 255.) for r, g, b in l ]
+    clst = [(r / 255., g / 255., b / 255.) for r, g, b in l]
     return clst
+
 
 def png_to_colormap(png_file):
 
@@ -56,4 +58,4 @@ def print_colorramp(name, clst):
     print("                )")
     print("")
 
-#END
+# END

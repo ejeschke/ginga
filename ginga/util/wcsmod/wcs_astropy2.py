@@ -2,28 +2,25 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import absolute_import
+
+import numpy as np
+
 import astropy
-
-from distutils.version import LooseVersion
-if LooseVersion(astropy.__version__) <= LooseVersion('1'):
-    raise ImportError("astropy2 wrapper requires version 1 of astropy")
-
 import astropy.coordinates
 import astropy.wcs as pywcs
-from astropy.io import fits as pyfits
 import astropy.units as u  # noqa
+from astropy.io import fits as pyfits
+
+from . import common
 
 try:
-    import sunpy.coordinates
+    import sunpy.coordinates  # noqa
 except ImportError:
     pass
 
 coord_types = [f.name for f in
                astropy.coordinates.frame_transform_graph.frame_set]
-
-import numpy as np
-
-from ginga.util.wcsmod import common
 
 
 class AstropyWCS2(common.BaseWCS):
@@ -147,8 +144,6 @@ class AstropyWCS2(common.BaseWCS):
         """
         Convert the pixel value to the native coordinate frame of the header
         """
-        import astropy.units as u
-
         if coords == 'data':
             origin = 0
         else:
