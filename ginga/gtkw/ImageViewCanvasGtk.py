@@ -12,6 +12,7 @@ from ginga.util.toolbox import ModeIndicator
 class ImageViewCanvasError(ImageViewGtk.ImageViewGtkError):
     pass
 
+
 class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
@@ -31,4 +32,4 @@ class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
 
         self._mi = ModeIndicator(self)
 
-#END
+# END
