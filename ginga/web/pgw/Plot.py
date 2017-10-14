@@ -10,6 +10,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 from ginga.web.pgw import Widgets
 
+
 class PlotWidget(Widgets.Canvas):
     """
     This class implements the server-side backend of the surface for a
@@ -67,7 +68,7 @@ class PlotWidget(Widgets.Canvas):
             "panstart": self.ignore_event,
             "panend": self.ignore_event,
             "swipe": self.ignore_event,
-            }
+        }
 
         self.plot.add_callback('draw-canvas', self.draw_cb)
 

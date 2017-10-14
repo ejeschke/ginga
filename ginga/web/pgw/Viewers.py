@@ -1,6 +1,6 @@
-from ginga.web.pgw.ImageViewPg import CanvasView, ImageViewCanvas
+from ginga.web.pgw.ImageViewPg import CanvasView
 from ginga.web.pgw import Widgets
-from ginga.misc import Bunch
+
 
 class GingaViewerWidget(Widgets.Canvas):
     """
@@ -16,7 +16,7 @@ class GingaViewerWidget(Widgets.Canvas):
         super(GingaViewerWidget, self).__init__(width=width, height=height)
 
         if viewer is None:
-            viewer = CanvasView(logger)
+            viewer = CanvasView()
         self.logger = viewer.logger
 
         self._configured = False
@@ -61,7 +61,7 @@ class GingaViewerWidget(Widgets.Canvas):
             "panstart": viewer.pan_event,
             "panend": viewer.pan_event,
             "swipe": viewer.swipe_event,
-            }
+        }
 
         self.add_timer('redraw', self.viewer.delayed_redraw)
         self.add_timer('msg', self.viewer.clear_onscreen_message)

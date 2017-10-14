@@ -276,10 +276,12 @@ def font_info(font_str):
     return Bunch.Bunch(family=family, point_size=point_size,
                        style=style, weight=weight)
 
+
 def get_font(font_family, point_size):
     font_family = font_asst.resolve_alias(font_family, font_family)
     font_str = '%s %d' % (font_family, point_size)
     return font_info(font_str)
+
 
 def load_font(font_name, font_file):
     # TODO!
