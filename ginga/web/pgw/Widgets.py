@@ -34,6 +34,7 @@ class WidgetError(Exception):
     """For errors thrown in this module."""
     pass
 
+
 # widget id counter
 widget_id = 0
 # widget dict
@@ -147,13 +148,13 @@ class WidgetBase(Callback.Callbacks):
         # add any new classes
         classes = self.get_css_classes()
         classes = classes + \
-                  list(filter(lambda t: t not in classes, new_classes))
+            list(filter(lambda t: t not in classes, new_classes))
         self.extdata.css_classes = classes
 
     def get_css_styles(self, fmt=None):
         styles = self.extdata.setdefault('inline_styles', [])
         if fmt == 'str':
-            styles = [ "%s: %s" % (x, y) for x, y in styles ]
+            styles = ["%s: %s" % (x, y) for x, y in styles]
             styles = "; ".join(styles)
         return styles
 
@@ -163,8 +164,8 @@ class WidgetBase(Callback.Callbacks):
         od = dict(styles)
         nd = dict(new_styles)
         styles = [(a, b) if a not in nd else (a, nd[a])
-                  for a, b in styles ] + \
-                  list(filter(lambda t: t[0] not in od, new_styles))
+                  for a, b in styles] + \
+            list(filter(lambda t: t[0] not in od, new_styles))
         self.extdata.inline_styles = styles
 
     def call_custom_method(self, future, method_name, **kwargs):
@@ -860,6 +861,7 @@ class Image(WidgetBase):
     <img id=%(id)s src="%(src)s"  alt="%(tooltip)s"
          class="%(classes)s" style="%(styles)s">
     '''
+
     def __init__(self, native_image=None, style='normal', menu=None):
         super(Image, self).__init__()
 
@@ -1125,7 +1127,8 @@ class TreeView(WidgetBase):
             except KeyError:
                 # new node
                 self.rowid += 1
-                item = {self.leaf_key: str(key), 'expanded': self.auto_expand, 'rowid':self.rowid, 'children': []}
+                item = {self.leaf_key: str(key), 'expanded': self.auto_expand,
+                        'rowid': self.rowid, 'children': []}
                 if level == 1:
                     item['parentRowNum'] = None
                     _addTopLevelItem(item)
@@ -1143,7 +1146,7 @@ class TreeView(WidgetBase):
             else:
                 keys = node.keys()
             for key in keys:
-                self._add_subtree(level+1, d, item, key, node[key])
+                self._add_subtree(level + 1, d, item, key, node[key])
 
     def _selection_cb(self):
         res_dict = self.get_selected()
@@ -1280,9 +1283,9 @@ class TreeView(WidgetBase):
 
     def source_obj_js(self):
         s = dict(dataType='json',
-                 dataFields=[{'name':'rowid',    'type':'number'},
-                             {'name':'children', 'type':'array'},
-                             {'name':'expanded', 'type':'bool'}],
+                 dataFields=[{'name': 'rowid', 'type': 'number'},
+                             {'name': 'children', 'type': 'array'},
+                             {'name': 'expanded', 'type': 'bool'}],
                  localData=self.localData,
                  hierarchy={'root': 'children'},
                  id='rowid',
@@ -1302,6 +1305,7 @@ class TreeView(WidgetBase):
                  width=self.width,
                  selectionMode=self.selection)
         return self.html_template % d
+
 
 class Canvas(WidgetBase):
 
@@ -1481,6 +1485,7 @@ class Frame(ContainerBase):
       %(content)s
     </fieldset>
     '''
+
     def __init__(self, title=None):
         super(Frame, self).__init__()
 
@@ -1541,6 +1546,7 @@ class Expander(ContainerBase):
                  styles=self.get_css_styles(fmt='str'))
 
         return self.html_template % d
+
 
 class TabWidget(ContainerBase):
 
@@ -1606,7 +1612,7 @@ class TabWidget(ContainerBase):
         # attach title to child
         child.extdata.tab_title = title
 
-        app = self.get_app()
+        app = self.get_app()  # noqa
         # app.do_operation('update_html', id=self.id, value=self.render())
         # this is a hack--we really don't want to reload the page, but just
         # re-rendering the HTML does not seem to process the CSS right
@@ -1645,9 +1651,9 @@ class TabWidget(ContainerBase):
             res.append("</ul>\n")
             d['tabs'] = '\n'.join(res)
 
-        res = ['''<div id="%s-%s"> %s </div>\n''' % (
-            self.id, child.id, child.render())
-                for child in self.get_children()]
+        res = ['''<div id="%s-%s"> %s </div>\n''' % (self.id, child.id,
+                                                     child.render())
+               for child in self.get_children()]
         d['content'] = '\n'.join(res)
 
         return self.html_template % d
@@ -1777,10 +1783,10 @@ class Splitter(ContainerBase):
         self.make_callback('activated', self.sizes)
 
     def render(self):
-        panels = [ '''<div> %s </div>''' % (child.render())
-                   for child in self.get_children() ]
-        sizes = [ '''{ size: %d }''' % size
-                  for size in self.sizes ]
+        panels = ['''<div> %s </div>''' % (child.render())
+                  for child in self.get_children()]
+        sizes = ['''{ size: %d }''' % size
+                 for size in self.sizes]
         disabled = str(not self.enabled).lower()
         if self.orientation == 'vertical':
             orient = 'horizontal'
@@ -1829,8 +1835,8 @@ class GridBox(ContainerBase):
 
     def add_widget(self, child, row, col, stretch=0):
         self.add_ref(child)
-        self.num_rows = max(self.num_rows, row+1)
-        self.num_cols = max(self.num_cols, col+1)
+        self.num_rows = max(self.num_rows, row + 1)
+        self.num_cols = max(self.num_cols, col + 1)
         self.tbl[(row, col)] = child
 
         app = self.get_app()
@@ -2040,9 +2046,9 @@ class Menu(ContainerBase):
         app.do_operation('popup_menu', id=self.id, x=x, y=y)
 
     def render(self):
-        content = [ '''<li data-menuitem-id="%s"> %s </li>''' % (
-                    child.id, child.render())
-                    for child in self.get_children() ]
+        content = ['''<li data-menuitem-id="%s"> %s </li>''' % (
+                   child.id, child.render())
+                   for child in self.get_children()]
         disabled = str(not self.enabled).lower()
         d = dict(id=self.id, content='\n'.join(content), disabled=disabled,
                  classes=self.get_css_classes(fmt='str'),
@@ -2102,7 +2108,7 @@ class Menubar(ContainerBase):
         # each child should be a Menu
         content = ['''<li data-menuitem-id="%s"> %s %s </li>''' % (
             child.id, child.extdata.get('text', ''), child.render())
-                   for child in self.get_children()]
+            for child in self.get_children()]
         disabled = str(not self.enabled).lower()
         d = dict(id=self.id, content='\n'.join(content), disabled=disabled,
                  width='100%', height=self.thickness,
@@ -2238,7 +2244,7 @@ class TopLevel(ContainerBase):
         if self.script_imports is None:
             self.script_imports = self.app.script_imports
         script_imports = [self.app.script_decls[key]
-                           for key in self.script_imports]
+                          for key in self.script_imports]
 
         d = dict(title=self.title, content=self.render_children(),
                  wid=self.wid, id=self.id, url=url, ws_url=ws_url,
@@ -2252,18 +2258,18 @@ class TopLevel(ContainerBase):
 class Application(Callback.Callbacks):
 
     script_decls = {
-    'hammer': '''
+        'hammer': '''
     <script type="text/javascript" src="/js/hammer.js"></script>
     ''',
 
-    'jquery': '''
+        'jquery': '''
     <!-- jQuery foundation -->
     <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
     <script src="//code.jquery.com/jquery-1.12.4.js"></script>
     <script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     ''',
 
-    'jqx': '''
+        'jqx': '''
     <!-- For jQWidgets -->
     <link rel="stylesheet" href="/js/jqwidgets/styles/jqx.base.css" type="text/css" />
     <script type="text/javascript" src="/js/jqwidgets/jqxcore.js"></script>
@@ -2458,15 +2464,14 @@ class Application(Callback.Callbacks):
         self.server = tornado.web.Application([
             # (r"/js/(.*\.js)", tornado.web.StaticFileHandler,
             (r"/js/(.*)", tornado.web.StaticFileHandler,
-             {"path":  js_path}),
+             {"path": js_path}),
             (r"/js/jquery/(.*)", tornado.web.StaticFileHandler,
-             {"path":  os.path.join(js_path, 'jquery')}),
+             {"path": os.path.join(js_path, 'jquery')}),
             (r"/app", PgHelp.WindowHandler,
              dict(name='Application', url='/app', app=self)),
             (r"/app/socket", PgHelp.ApplicationHandler,
              dict(name='ApplicationSocketInterface', app=self)),
-            ],
-               app=self, logger=self.logger)
+        ], app=self, logger=self.logger)
 
         self.server.listen(self.port, self.host)
 
@@ -2728,11 +2733,11 @@ def build_info(captions, orientation='vertical'):
         while col < numcols:
             idx = col * 2
             if idx < len(tup):
-                title, wtype = tup[idx:idx+2]
+                title, wtype = tup[idx:idx + 2]
                 if not title.endswith(':'):
                     name = name_mangle(title)
                 else:
-                    name = name_mangle('lbl_'+title[:-1])
+                    name = name_mangle('lbl_' + title[:-1])
                 w = make_widget(title, wtype)
                 table.add_widget(w, row, col)
                 wb[name] = w

@@ -16,10 +16,12 @@ class Pen(object):
         self.linewidth = linewidth
         self.linestyle = linestyle
 
+
 class Brush(object):
     def __init__(self, color='black', fill=False):
         self.color = color
         self.fill = fill
+
 
 class Font(object):
     def __init__(self, fontname='sans', fontsize=12.0, color='black'):
@@ -82,7 +84,7 @@ class BokehContext(object):
         # from the Bokeh docs:
         # "a 4-tuple of (r,g,b,a) where r, g, b are integers between
         #  0 and 255 and a is a floating point value between 0 and 1"
-        ri, gi, bi = int(255*r), int(255*g), int(255*b)
+        ri, gi, bi = int(255 * r), int(255 * g), int(255 * b)
 
         return (ri, gi, bi, alpha)
 
@@ -99,6 +101,8 @@ class BokehContext(object):
         return Font(fontname=name, fontsize=size, color=color)
 
     def text_extents(self, text, font):
+        import matplotlib.textpath as textpath
+
         # This is not completely accurate because it depends a lot
         # on the renderer used, but that is complicated under Bokeh
         t = textpath.TextPath((0, 0), text, size=font.fontsize,
@@ -107,4 +111,4 @@ class BokehContext(object):
         wd, ht = bb.width, bb.height
         return (wd, ht)
 
-#END
+# END

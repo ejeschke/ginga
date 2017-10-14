@@ -6,37 +6,33 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
-import threading
-import time
 
 from ginga import Mixins, Bindings
-from ginga.misc import log, Bunch
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 from ginga.util.toolbox import ModeIndicator
-from ginga.web.pgw import PgHelp
 
 
 try:
     # See if we have aggdraw module--best choice
     from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView, \
-         ImageViewAggError as ImageViewError
+        ImageViewAggError as ImageViewError
 
 except ImportError:
     try:
         # No, hmm..ok, see if we have PIL module...
         from ginga.pilw.ImageViewPil import ImageViewPil as ImageView, \
-             ImageViewPilError as ImageViewError
+            ImageViewPilError as ImageViewError
 
     except ImportError:
         try:
             # No dice. How about the OpenCv module?
             from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
-                 ImageViewCvError as ImageViewError
+                ImageViewCvError as ImageViewError
 
         except ImportError:
             # Fall back to mock--there will be no graphic overlays
             from ginga.mockw.ImageViewMock import ImageViewMock as ImageView, \
-                 ImageViewMockError as ImageViewError
+                ImageViewMockError as ImageViewError
 
 
 default_html_fmt = 'jpeg'
@@ -44,6 +40,7 @@ default_html_fmt = 'jpeg'
 
 class ImageViewPgError(ImageViewError):
     pass
+
 
 class ImageViewPg(ImageView):
 
@@ -62,7 +59,6 @@ class ImageViewPg(ImageView):
         # Format 'png' is ok with 'RGBA', but 'jpeg' only works with 'RGB'
         self.rgb_order = 'RGB'
         #self.defer_redraw = False
-
 
     def set_widget(self, canvas_w):
         """Call this method with the widget that will be used
@@ -269,7 +265,7 @@ class ImageViewEvent(ImageViewPg):
             220: 'backslash',
             221: ']',
             222: 'singlequote',
-            }
+        }
 
         # this is an auxilliary table used to map shifted keys to names
         # see key_down_event() and key_up_event()
@@ -321,7 +317,7 @@ class ImageViewEvent(ImageViewPg):
             ('shift_l', ','): '<',
             ('shift_l', '.'): '>',
             ('shift_l', '/'): '?',
-            }
+        }
 
         # this table is used to map special characters to character names
         # see key_press_event()
@@ -331,7 +327,7 @@ class ImageViewEvent(ImageViewPg):
             "'": 'singlequote',
             "`": 'backquote',
             " ": 'space',
-            }
+        }
 
         # list of keys for which javascript will give us a keydown event,
         # but not a keypress event.  We use this list to synthesize one.
@@ -440,7 +436,8 @@ class ImageViewEvent(ImageViewPg):
         return self.make_ui_callback('key-release', keyname)
 
     def button_press_event(self, event):
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
         button = 0
         button |= 0x1 << event.button
@@ -452,7 +449,8 @@ class ImageViewEvent(ImageViewPg):
 
     def button_release_event(self, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
         button = 0
         button |= 0x1 << event.button
@@ -494,7 +492,7 @@ class ImageViewEvent(ImageViewPg):
         data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, numDegrees,
-                                  data_x, data_y)
+                                     data_x, data_y)
 
     def drop_event(self, event):
         data = event.delta
@@ -502,7 +500,6 @@ class ImageViewEvent(ImageViewPg):
         paths = data.split('\n')
         self.logger.debug("dropped text(s): %s" % (str(paths)))
         return self.make_ui_callback('drag-drop', paths)
-
 
     def pinch_event(self, event):
         self.logger.debug("pinch: event=%s" % (str(event)))
@@ -545,7 +542,7 @@ class ImageViewEvent(ImageViewPg):
 
     def swipe_event(self, event):
         if event.isfinal:
-            state = 'end'
+            state = 'end'  # noqa
             self.logger.debug("swipe gesture event=%s" % (str(event)))
             ## self.logger.debug("swipe gesture hdir=%s vdir=%s" % (
             ##     hdir, vdir))
@@ -553,8 +550,9 @@ class ImageViewEvent(ImageViewPg):
 
     def tap_event(self, event):
         if event.isfinal:
-            state = 'end'
+            state = 'end'  # noqa
             self.logger.debug("tap gesture event=%s" % (str(event)))
+
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
