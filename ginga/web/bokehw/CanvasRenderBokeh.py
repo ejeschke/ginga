@@ -6,14 +6,16 @@
 
 import numpy as np
 
-from . import BokehHelp
-from ginga.canvas.mixins import *
+# Bokeh imports
+#from bokeh.plotting import figure
+
+#from ginga.canvas.mixins import *
+
 # force registration of all canvas types
-import ginga.canvas.types.all
+import ginga.canvas.types.all  # noqa
 from ginga import trcalc
 
-# Bokeh imports
-from bokeh.plotting import figure
+from . import BokehHelp
 
 
 class RenderContext(object):
@@ -85,7 +87,6 @@ class RenderContext(object):
     def text_extents(self, text):
         return self.cr.text_extents(text, self.font)
 
-
     ##### DRAWING OPERATIONS #####
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
@@ -126,7 +127,7 @@ class RenderContext(object):
         self.cr.update_patch(self.pen, self.brush)
 
         self.cr.plot.oval(x=[cx], y=[cy],
-                          width=[cxradius*2.0], height=[cyradius*2.0],
+                          width=[cxradius * 2.0], height=[cyradius * 2.0],
                           angle=[np.radians(theta)], **self.cr.kwdargs)
 
     def draw_line(self, cx1, cy1, cx2, cy2):
