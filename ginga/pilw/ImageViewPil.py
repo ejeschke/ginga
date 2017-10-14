@@ -6,11 +6,11 @@
 
 from io import BytesIO
 
-import numpy
+import numpy as np
+from PIL import Image
 
 from ginga import ImageView
 
-from PIL import Image
 from . import PilHelp  # noqa
 from .CanvasRenderPil import CanvasRenderer
 
@@ -77,7 +77,7 @@ class ImageViewPil(ImageView.ImageViewBase):
 
         # Get PIL surface
         p_image = self.get_surface()
-        arr8 = numpy.array(p_image, dtype=numpy.uint8)
+        arr8 = np.array(p_image, dtype=np.uint8)
         arr8 = arr8.reshape((ht, wd, 3))
         return arr8
 
