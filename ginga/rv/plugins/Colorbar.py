@@ -60,8 +60,8 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
     def add_channel_cb(self, viewer, channel):
         settings = channel.settings
-        settings.get_setting('cuts').add_callback('set',
-                              self.change_range_cb, channel.fitsimage, self.colorbar)
+        settings.get_setting('cuts').add_callback(
+            'set', self.change_range_cb, channel.fitsimage, self.colorbar)
 
         chname = channel.name
         info = Bunch.Bunch(chname=chname, channel=channel)

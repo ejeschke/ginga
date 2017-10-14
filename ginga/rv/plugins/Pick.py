@@ -1508,12 +1508,9 @@ class Pick(GingaPlugin.LocalPlugin):
                 reports = list(map(lambda x: self._make_report(image, x),
                                    objlist))
                 for obj in objlist:
-                    tag = self.canvas.add(self.dc.Point(obj.objx,
-                                                        obj.objy,
-                                                        5,
-                                                        linewidth=1,
-                                                        color=self.candidate_color),
-                                          tagpfx='peak')
+                    self.canvas.add(self.dc.Point(
+                        obj.objx, obj.objy, 5, linewidth=1,
+                        color=self.candidate_color), tagpfx='peak')
             else:
                 reports = [self._make_report(image, qs)]
 
@@ -1717,7 +1714,6 @@ class Pick(GingaPlugin.LocalPlugin):
         self.fv.gui_do(self.update_pick, 0, objlist, qs,
                        x1, y1, wd, ht, data, self.pick_obj, msg)
 
-
     def draw_cb(self, canvas, tag):
         obj = canvas.get_object_by_tag(tag)
         canvas.delete_object_by_tag(tag)
@@ -1772,7 +1768,7 @@ class Pick(GingaPlugin.LocalPlugin):
         obj.color = self.pickcolor
         args = [obj,
                 self.dc.Point(x, y, 10, color='red'),
-                self.dc.Text(x1, y2+4, '{0}: calc'.format(self._textlabel),
+                self.dc.Text(x1, y2 + 4, '{0}: calc'.format(self._textlabel),
                              color=self.pickcolor)
                 ]
 
