@@ -9,10 +9,10 @@
 #
 import matplotlib
 matplotlib.use('GTKCairo')
-from  matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo \
-     as FigureCanvas
+from matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo as FigureCanvas  # noqa
 
-from ginga.gtkw import Widgets
+from ginga.gtkw import Widgets  # noqa
+
 
 class PlotWidget(Widgets.WidgetBase):
 
@@ -30,4 +30,4 @@ class PlotWidget(Widgets.WidgetBase):
         fig = self.plot.get_figure()
         fig.set_size_inches(float(wd) / fig.dpi, float(ht) / fig.dpi)
 
-#END
+# END
