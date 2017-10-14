@@ -17,13 +17,13 @@ import sys
 
 import numpy as np
 
-from ginga.gw import Widgets
-from ginga.opengl.ImageViewQtGL import CanvasView
-from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.misc import log
-
 from ginga import toolkit
 toolkit.use('qt5')
+
+from ginga.gw import Widgets  # noqa
+from ginga.opengl.ImageViewQtGL import CanvasView  # noqa
+from ginga.canvas.CanvasObject import get_canvas_types  # noqa
+from ginga.misc import log  # noqa
 
 
 class Viewer(object):

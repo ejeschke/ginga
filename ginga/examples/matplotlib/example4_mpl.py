@@ -30,19 +30,10 @@ from __future__ import print_function
 import sys
 import os
 import platform
-
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
-from ginga.misc import log
-from ginga.AstroImage import AstroImage
-from ginga import cmap
-
 # just in case you want to use qt
 os.environ['QT_API'] = 'pyqt'
 
+import matplotlib
 MPL_V1 = matplotlib.__version__.startswith('1')
 options = ['Qt4Agg', 'GTK', 'GTKAgg', 'MacOSX', 'GTKCairo', 'WXAgg',
            'TkAgg', 'QtAgg', 'FltkAgg', 'WX']
@@ -53,6 +44,14 @@ if len(macos_ver) > 0:
     # On Mac OS X I found the default choice for matplotlib is not stable
     # with ginga
     matplotlib.use('Qt4Agg')
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
+from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.misc import log
+from ginga.AstroImage import AstroImage
+from ginga import cmap
 
 # add matplotlib colormaps to ginga's own set
 cmap.add_matplotlib_cmaps()
