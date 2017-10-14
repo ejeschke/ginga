@@ -2,16 +2,15 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import absolute_import
-
 import numpy as np
 
 import astropy.wcs as pywcs
 from astropy.io import fits as pyfits
 from astropy import coordinates, units
 
-from ..six.moves import map
-from . import common
+# Note: Relative import breaks test in PY2
+from ginga.util.six.moves import map
+from ginga.util.wcsmod import common
 
 if hasattr(coordinates, 'SkyCoord'):
     try:
