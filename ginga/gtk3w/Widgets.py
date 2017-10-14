@@ -434,7 +434,7 @@ class ComboBox(WidgetBase):
             if model[i][0] > text:
                 model.insert(j, tup)
                 return
-        model.insert(j+1, tup)
+        model.insert(j + 1, tup)
 
     def append_text(self, text):
         model = self.widget.get_model()
@@ -879,7 +879,7 @@ class TreeView(WidgetBase):
 
             # recurse for non-leaf interior node
             for key in node:
-                self._add_subtree(level+1, d, model, item, key, node[key])
+                self._add_subtree(level + 1, d, model, item, key, node[key])
 
     def _selection_cb(self, treeview):
         path, column = treeview.get_cursor()
@@ -1580,7 +1580,7 @@ class GridBox(ContainerBase):
         else:
             xoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
             yoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
-        self.widget.attach(w, col, col+1, row, row+1,
+        self.widget.attach(w, col, col + 1, row, row + 1,
                            xoptions=xoptions, yoptions=yoptions,
                            xpadding=0, ypadding=0)
         self.widget.show_all()
@@ -2210,13 +2210,13 @@ def build_info(captions, orientation='vertical'):
         while col < numcols:
             idx = col * 2
             if idx < len(tup):
-                title, wtype = tup[idx:idx+2]
+                title, wtype = tup[idx:idx + 2]
                 if not title.endswith(':'):
                     name = name_mangle(title)
                 else:
-                    name = name_mangle('lbl_'+title[:-1])
+                    name = name_mangle('lbl_' + title[:-1])
                 w = make_widget(title, wtype)
-                table.attach(w.get_widget(), col, col+1, row, row+1,
+                table.attach(w.get_widget(), col, col + 1, row, row + 1,
                              xoptions=Gtk.AttachOptions.FILL,
                              yoptions=Gtk.AttachOptions.FILL,
                              xpadding=1, ypadding=1)
