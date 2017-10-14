@@ -4,7 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import math
 import numpy as np
 
 from ginga.misc import Callback
@@ -13,6 +12,7 @@ from ginga import ColorDist
 
 class RGBMapError(Exception):
     pass
+
 
 class RGBPlanes(object):
 
@@ -33,7 +33,7 @@ class RGBPlanes(object):
 
     def get_order_indexes(self, cs):
         cs = cs.upper()
-        return [ self.order.index(c) for c in cs ]
+        return [self.order.index(c) for c in cs]
 
     def get_array(self, order):
         """Get Numpy array that represents the RGB layers.
@@ -52,14 +52,14 @@ class RGBPlanes(object):
         order = order.upper()
         if order == self.order:
             return self.rgbarr
-        l = [ self.get_slice(c) for c in order ]
-        return np.concatenate([ arr[..., np.newaxis]
-                                for arr in l ], axis=-1)
-
+        l = [self.get_slice(c) for c in order]
+        return np.concatenate([arr[..., np.newaxis]
+                               for arr in l], axis=-1)
 
     def get_size(self):
         """Returns (height, width) tuple of slice size."""
         return self.get_slice('R').shape
+
 
 class RGBMapper(Callback.Callbacks):
 
@@ -147,7 +147,7 @@ class RGBMapper(Callback.Callbacks):
         mapped by the value of `index`.
         """
         assert (index >= 0) and (index <= self.maxv), \
-               RGBMapError("Index must be in range 0-%d !" % (self.maxv))
+            RGBMapError("Index must be in range 0-%d !" % (self.maxv))
         index = self.sarr[index].clip(0, self.maxv)
         return (self.arr[0][index],
                 self.arr[1][index],
@@ -184,7 +184,7 @@ class RGBMapper(Callback.Callbacks):
     def set_sarr(self, sarr, callback=True):
         maxlen = self.maxv + 1
         assert len(sarr) == maxlen, \
-               RGBMapError("shift map length %d != %d" % (len(sarr), maxlen))
+            RGBMapError("shift map length %d != %d" % (len(sarr), maxlen))
         self.sarr = sarr.astype(np.uint)
         self.scale_pct = 1.0
 
@@ -245,7 +245,7 @@ class RGBMapper(Callback.Callbacks):
             # explicitly set
             return [0, 1, 2]
         cs = cs.upper()
-        return [ order.index(c) for c in cs ]
+        return [order.index(c) for c in cs]
 
     def _get_rgbarray(self, idx, rgbobj, image_order=''):
         # NOTE: data is assumed to be in the range 0-maxv at this point
@@ -307,8 +307,8 @@ class RGBMapper(Callback.Callbacks):
         else:
             # TODO: assertion check on shape of out
             assert res_shape == out.shape, \
-                   RGBMapError("Output array shape %s doesn't match result shape %s" % (
-                str(out.shape), str(res_shape)))
+                RGBMapError("Output array shape %s doesn't match result "
+                            "shape %s" % (str(out.shape), str(res_shape)))
 
         res = RGBPlanes(out, order)
 
@@ -334,7 +334,7 @@ class RGBMapper(Callback.Callbacks):
             if num > 0:
                 arr[0:num] = sarr[0]
             elif num < 0:
-                arr[n+num:n] = sarr[-1]
+                arr[n + num:n] = sarr[-1]
         return arr
 
     def _stretch(self, sarr, scale):
@@ -346,7 +346,7 @@ class RGBMapper(Callback.Callbacks):
         iscale_x = float(old_wd) / float(new_wd)
 
         xi = (xi * iscale_x).astype('int')
-        xi = xi.clip(0, old_wd-1)
+        xi = xi.clip(0, old_wd - 1)
         newdata = sarr[xi]
         return newdata
 
@@ -354,7 +354,7 @@ class RGBMapper(Callback.Callbacks):
         work = self._shift(self.sarr, pct, rotate=rotate)
         maxlen = self.maxv + 1
         assert len(work) == maxlen, \
-               RGBMapError("shifted shift map is != %d" % (maxlen))
+            RGBMapError("shifted shift map is != %d" % maxlen)
         self.sarr = work
         if callback:
             self.make_callback('changed')
@@ -375,7 +375,7 @@ class RGBMapper(Callback.Callbacks):
         if n < maxlen:
             # pad on the lowest and highest values of the shift map
             m = (maxlen - n) // 2 + 1
-            barr = np.array([0]*m)
+            barr = np.array([0] * m)
             tarr = np.array([self.maxv] * m)
             work = np.concatenate([barr, work, tarr])
             work = work[:maxlen]
@@ -385,19 +385,18 @@ class RGBMapper(Callback.Callbacks):
         # BEFORE shifting
         n = len(work) // 2
         halflen = maxlen // 2
-        work = work[n-halflen:n+halflen].astype(np.uint)
+        work = work[n - halflen:n + halflen].astype(np.uint)
         assert len(work) == maxlen, \
-               RGBMapError("scaled shift map is != %d" % (maxlen))
+            RGBMapError("scaled shift map is != %d" % maxlen)
 
         # shift map according to the shift_pct
         work = self._shift(work, shift_pct)
         assert len(work) == maxlen, \
-               RGBMapError("shifted shift map is != %d" % (maxlen))
+            RGBMapError("shifted shift map is != %d" % maxlen)
 
         self.sarr = work
         if callback:
             self.make_callback('changed')
-
 
     def stretch(self, scale_factor, callback=True):
         """Stretch the color map via altering the shift map.

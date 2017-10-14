@@ -8,8 +8,10 @@
 toolkit = 'choose'
 family = None
 
+
 class ToolKitError(Exception):
     pass
+
 
 def use(name):
     """
@@ -27,7 +29,7 @@ def use(name):
         if name == 'qt':
             name = 'qt4'
         assert name in ('qt4', 'pyside', 'qt5'), \
-               ToolKitError("ToolKit '%s' not supported!" % (name))
+            ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('gtk'):
         if name in ('gtk', 'gtk2'):
@@ -36,32 +38,36 @@ def use(name):
         elif name in ('gtk3',):
             family = 'gtk3'
         assert name in ('gtk2', 'gtk3'), \
-               ToolKitError("ToolKit '%s' not supported!" % (name))
+            ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('tk'):
         family = 'tk'
         assert name in ('tk', ), \
-               ToolKitError("ToolKit '%s' not supported!" % (name))
+            ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('pg'):
         family = 'pg'
         assert name in ('pg', ), \
-               ToolKitError("ToolKit '%s' not supported!" % (name))
+            ToolKitError("ToolKit '%s' not supported!" % (name))
 
     else:
         ToolKitError("ToolKit '%s' not supported!" % (name))
 
     toolkit = name
 
+
 def get_toolkit():
     return toolkit
+
 
 def get_family():
     return family
 
+
 def get_rv_toolkits():
     """Returns a list of reference viewer supported toolkits."""
     return ['qt4', 'qt5', 'pyside', 'gtk2', 'gtk3', 'pg']
+
 
 def choose():
     try:
@@ -72,4 +78,4 @@ def choose():
         except ImportError:
             raise ImportError("qt or gtk variants not found")
 
-#END
+# END
