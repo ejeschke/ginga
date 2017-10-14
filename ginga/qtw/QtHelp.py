@@ -34,9 +34,7 @@ have_pyside = False
 try:
     from qtpy import QtCore
     from qtpy import QtWidgets as QtGui
-    from qtpy.QtGui import (QImage, QColor, QFont, QPixmap, QIcon, QCursor,
-                            QPainter, QPen, QPolygonF, QPolygon, QTextCursor,
-                            QDrag, QPainterPath, QBrush, QFontDatabase)  # noqa
+    from qtpy.QtGui import QImage, QColor, QFont, QPixmap, QIcon, QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, QDrag, QPainterPath, QBrush, QFontDatabase  # noqa
     from qtpy.QtCore import QItemSelectionModel  # noqa
     from qtpy.QtWidgets import QApplication  # noqa
     try:
@@ -354,6 +352,7 @@ def get_font(font_family, point_size):
     font_family = font_asst.resolve_alias(font_family, font_family)
     font = QFont(font_family, point_size)
     return font
+
 
 def load_font(font_name, font_file):
     # NOTE: you need to have created a QApplication() first (see
