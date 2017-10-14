@@ -23,7 +23,7 @@ class simpleTask(Task.Task):
         super(simpleTask, self).__init__()
 
     def execute(self):
-        time.sleep(0.5*random.random())
+        time.sleep(0.5 * random.random())
         return self.val
 
 
@@ -175,8 +175,9 @@ class TestTask01(object):
         t = make_CompoundTask(Task.ConcurrentAndTaskset, 't3', 3)
         t.init_and_start(self.parentTask)
 
-        res = t.wait()
-        resTuple = ( t.taskseq[0].result, t.taskseq[1].result, t.taskseq[2].result )
+        t.wait()
+        resTuple = (t.taskseq[0].result, t.taskseq[1].result,
+                    t.taskseq[2].result)
         self.logger.debug("resTuple = %s" % (str(resTuple)))
         self.logger.debug("Total time is %f" % t.getExecutionTime())
         # test against the values assigned in make_CompoundTask()
@@ -191,8 +192,8 @@ class TestTask01(object):
         t = Task.ConcurrentAndTaskset([t1, t2])
         t.init_and_start(self.parentTask)
 
-        res = t.wait()
-        resTuple = ( t1.result, t2.result )
+        t.wait()
+        resTuple = (t1.result, t2.result)
         self.logger.debug("resTuple = %s" % (str(resTuple)))
         self.logger.debug("Total time is %f" % t.getExecutionTime())
         # test against the values assigned to final task in each make_CompoundTask()
@@ -207,7 +208,7 @@ class TestTask01(object):
         t.init_and_start(self.parentTask)
 
         res = t.wait()
-        resTuple = ( t1.result, t2.result )
+        resTuple = (t1.result, t2.result)
         self.logger.debug("resTuple = %s" % (str(resTuple)))
         self.logger.debug("Total time is %f" % t.getExecutionTime())
         assert 't5b_2' == res
@@ -222,9 +223,11 @@ class TestTask01(object):
         t = Task.ConcurrentAndTaskset([t1, t2])
         t.init_and_start(self.parentTask)
 
-        res = t.wait()
-        resTuple = ( t1.taskseq[0].result, t1.taskseq[1].result, t1.taskseq[2].result,
-                     t2.taskseq[0].result, t2.taskseq[1].result, t2.taskseq[2].result )
+        t.wait()
+        resTuple = (t1.taskseq[0].result, t1.taskseq[1].result,
+                    t1.taskseq[2].result,
+                    t2.taskseq[0].result, t2.taskseq[1].result,
+                    t2.taskseq[2].result)
         self.logger.debug("resTuple = %s" % (str(resTuple)))
         self.logger.debug("Total time is %f" % t.getExecutionTime())
         assert t.taskseq[0].result in ('t6a_0', 't6a_1', 't6a_2')
@@ -256,4 +259,4 @@ class TestTask01(object):
         self.logger.debug("Total time is %f" % t.getExecutionTime())
         assert 'ct_4' == res
 
-#END
+# END
