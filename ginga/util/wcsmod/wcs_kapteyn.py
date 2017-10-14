@@ -2,14 +2,14 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import numpy as np
 from kapteyn import wcs as kapwcs
 
-import numpy as np
-
-from ginga.util.six.moves import map
-from ginga.util.wcsmod import common
+from ..six.moves import map
+from . import common
 
 coord_types = ['icrs', 'fk5', 'fk4', 'galactic', 'ecliptic']
+
 
 class KapteynWCS(common.BaseWCS):
     """
@@ -51,14 +51,14 @@ class KapteynWCS(common.BaseWCS):
     def spectral_coord(self, idxs, coords='data'):
         # Kapteyn's WCS needs pixels referenced from 1
         if coords == 'data':
-            idxs = tuple(map(lambda x: x+1, idxs))
+            idxs = tuple(map(lambda x: x + 1, idxs))
         else:
             idxs = tuple(idxs)
 
         try:
             res = self.wcs.toworld(idxs)
             if len(res) > 0:
-                return res[self.wcs.specaxnum-1]
+                return res[self.wcs.specaxnum - 1]
 
         except Exception as e:
             self.logger.error(
@@ -68,7 +68,7 @@ class KapteynWCS(common.BaseWCS):
     def pixtoradec(self, idxs, coords='data'):
         # Kapteyn's WCS needs pixels referenced from 1
         if coords == 'data':
-            idxs = tuple(map(lambda x: x+1, idxs))
+            idxs = tuple(map(lambda x: x + 1, idxs))
         else:
             idxs = tuple(idxs)
         # print("indexes=%s" % (str(idxs)))
@@ -77,8 +77,8 @@ class KapteynWCS(common.BaseWCS):
             res = self.wcs.toworld(idxs)
             if ((self.wcs.lonaxnum is not None) and
                     (self.wcs.lataxnum is not None)):
-                ra_deg = res[self.wcs.lonaxnum-1]
-                dec_deg = res[self.wcs.lataxnum-1]
+                ra_deg = res[self.wcs.lonaxnum - 1]
+                dec_deg = res[self.wcs.lataxnum - 1]
             else:
                 ra_deg, dec_deg = res[0], res[1]
 
@@ -103,7 +103,7 @@ class KapteynWCS(common.BaseWCS):
 
         if coords == 'data':
             # Kapteyn's WCS returns pixels referenced from 1
-            pix = tuple(map(lambda x: x-1, pix))
+            pix = tuple(map(lambda x: x - 1, pix))
 
         x, y = pix[0], pix[1]
         return (x, y)

@@ -2,11 +2,14 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import numpy as np
+
 import astropy.wcs as pywcs
 from astropy.io import fits as pyfits
+from astropy import coordinates, units
 
-from astropy import coordinates
-from astropy import units
+from ..six.moves import map
+from . import common
 
 if hasattr(coordinates, 'SkyCoord'):
     try:
@@ -17,12 +20,6 @@ if hasattr(coordinates, 'SkyCoord'):
                    coordinates.frame_transform_graph.frame_set]
 else:
     coord_types = ['icrs', 'fk5', 'fk4', 'galactic']
-
-
-import numpy as np
-
-from ginga.util.six.moves import map
-from ginga.util.wcsmod import common
 
 
 class AstropyWCS(common.BaseWCS):
@@ -49,7 +46,7 @@ class AstropyWCS(common.BaseWCS):
                 'fk5': coordinates.FK5,
                 'fk4': coordinates.FK4,
                 'galactic': coordinates.Galactic,
-                }
+            }
 
         else:
             # v0.2 series astropy
@@ -58,7 +55,7 @@ class AstropyWCS(common.BaseWCS):
                 'fk5': coordinates.FK5Coordinates,
                 'fk4': coordinates.FK4Coordinates,
                 'galactic': coordinates.GalacticCoordinates,
-                }
+            }
         self.kind = 'astropy/WCSLIB'
 
     def load_header(self, header, fobj=None):

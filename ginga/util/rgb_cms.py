@@ -5,9 +5,14 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
+
 import os
 import glob
 import hashlib
+
+from ginga.misc import Bunch
+
+from . import paths
 
 # How about color management (ICC profile) support?
 try:
@@ -22,9 +27,6 @@ try:
     have_pilutil = True
 except ImportError:
     pass
-
-from ginga.util import paths
-from ginga.misc import Bunch
 
 basedir = paths.ginga_home
 
@@ -55,17 +57,21 @@ class ColorManager(object):
         # If we have a working color profile then handle any embedded
         # profile or color space information, if possible
         if not have_cms:
-            self.logger.warning("No CMS is installed; leaving image unprofiled.")
+            self.logger.warning(
+                "No CMS is installed; leaving image unprofiled.")
             return image
 
         if not have_profile(working_profile):
-            self.logger.warning("No working profile defined; leaving image unprofiled.")
+            self.logger.warning(
+                "No working profile defined; leaving image unprofiled.")
             return image
 
         out_profile = profile[working_profile].name
 
         if not os.path.exists(profile[out_profile].path):
-            self.logger.warning("Working profile '%s' (%s) not found; leaving image unprofiled." % (out_profile, profile[out_profile].path))
+            self.logger.warning(
+                "Working profile '%s' (%s) not found; leaving image "
+                "unprofiled." % (out_profile, profile[out_profile].path))
             return image
 
         if intent is None:
@@ -89,7 +95,7 @@ class ColorManager(object):
             # see if there is any EXIF tag about the colorspace
             elif 'ColorSpace' in kwds:
                 csp = kwds['ColorSpace']
-                iop = kwds.get('InteroperabilityIndex', None)
+                #iop = kwds.get('InteroperabilityIndex', None)
                 if (csp == 0x2) or (csp == 0xffff):
                     # NOTE: 0xffff is really "undefined" and should be
                     # combined with a test of EXIF tag 0x0001
@@ -147,6 +153,7 @@ def convert_profile_pil(image_pil, inprof_path, outprof_path, intent_name,
         return image_pil
     return image_out
 
+
 def convert_profile_pil_transform(image_pil, transform, inPlace=False):
     if not have_cms:
         return image_pil
@@ -155,6 +162,7 @@ def convert_profile_pil_transform(image_pil, transform, inPlace=False):
     if inPlace:
         return image_pil
     return image_out
+
 
 def convert_profile_numpy(image_np, inprof_path, outprof_path, intent_name):
     if (not have_pilutil) or (not have_cms):
@@ -166,6 +174,7 @@ def convert_profile_numpy(image_np, inprof_path, outprof_path, intent_name):
     image_out = fromimage(out_image_pil)
     return image_out
 
+
 def convert_profile_numpy_transform(image_np, transform):
     if (not have_pilutil) or (not have_cms):
         return image_np
@@ -175,14 +184,15 @@ def convert_profile_numpy_transform(image_np, transform):
     image_out = fromimage(in_image_pil)
     return image_out
 
+
 def get_transform_key(from_name, to_name, to_intent, proof_name,
                       proof_intent, flags):
-    return (from_name, to_name, to_intent, proof_name, proof_intent,
-            flags)
+    return (from_name, to_name, to_intent, proof_name, proof_intent, flags)
+
 
 def get_transform(from_name, to_name, to_intent='perceptual',
-                    proof_name=None, proof_intent=None,
-                    use_black_pt=False):
+                  proof_name=None, proof_intent=None,
+                  use_black_pt=False):
     global icc_transform
 
     flags = 0
@@ -230,6 +240,7 @@ def get_transform(from_name, to_name, to_intent='perceptual',
             raise Exception("Failed to build profile transform: %s" % (str(e)))
 
     return output_transform
+
 
 def convert_profile_fromto(image_np, from_name, to_name,
                            to_intent='perceptual',
@@ -289,15 +300,18 @@ if have_cms:
 def have_profile(name):
     return name in profile.keys()
 
+
 def get_profiles():
     names = list(profile.keys())
     names.sort()
     return names
 
+
 def get_intents():
     names = list(intents.keys())
     names.sort()
     return names
+
 
 def set_profile_alias(alias, profname):
     global profile

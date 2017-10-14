@@ -5,13 +5,16 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
-import sys, time
-import numpy
+
+import sys
+import time
 import mimetypes
 from io import BytesIO
 
-from ginga.util import iohelper, rgb_cms
-from ginga.util.six.moves import map, zip
+import numpy as np
+
+from . import iohelper, rgb_cms
+from .six.moves import map
 
 try:
     # do we have Python Imaging Library available?
@@ -23,7 +26,7 @@ except ImportError:
 
 have_pilutil = False
 try:
-    from scipy.misc import imresize, imsave, toimage, fromimage
+    from scipy.misc import imresize, imsave, toimage, fromimage  # noqa
     have_pilutil = True
 except ImportError:
     pass
@@ -60,6 +63,7 @@ class RGBFileHandler(object):
 
     def save_file_as(self, filepath, data_np, header):
         if not have_pil:
+            from ginga.BaseImage import ImageError
             raise ImageError("Install PIL to be able to save images")
 
         # TODO: save keyword metadata!
@@ -103,9 +107,10 @@ class RGBFileHandler(object):
                 image = self.clr_mgr.profile_to_working_pil(image, kwds)
 
             # convert from PIL to numpy
-            data_np = numpy.array(image)
+            data_np = np.array(image)
 
         else:
+            from ginga.BaseImage import ImageError
             raise ImageError("No way to load image format '%s/%s'" % (
                 typ, subtyp))
 
@@ -135,7 +140,7 @@ class RGBFileHandler(object):
             return None
 
         image = PILimage.open(BytesIO.BytesIO(buf))
-        data_np = numpy.array(image)
+        data_np = np.array(image)
         return data_np
 
     def get_buffer(self, data_np, header, format, output=None):
@@ -171,6 +176,7 @@ class RGBFileHandler(object):
             newdata = imresize(data, zoom, interp=method)
 
         else:
+            from ginga.BaseImage import ImageError
             raise ImageError("No way to scale image smoothly")
 
         end_time = time.time()
@@ -183,7 +189,7 @@ class RGBFileHandler(object):
 # UTILITY FUNCTIONS
 
 def open_ppm(filepath):
-    infile = open(filepath,'rb')
+    infile = open(filepath, 'rb')
     # Get type: PPM or PGM
     header = infile.readline()
     ptype = header.strip().upper()
@@ -205,21 +211,19 @@ def open_ppm(filepath):
     # Get unit size
     maxval = int(header)
     if maxval <= 255:
-        dtype = numpy.uint8
+        dtype = np.uint8
     elif maxval <= 65535:
-        dtype = numpy.uint16
+        dtype = np.uint16
     #print width, height, maxval
 
     # read image
     if depth > 1:
-        arr = numpy.fromfile(infile, dtype=dtype).reshape((height, width,
-                                                           depth))
+        arr = np.fromfile(infile, dtype=dtype).reshape((height, width, depth))
     else:
-        arr = numpy.fromfile(infile, dtype=dtype).reshape((height, width))
+        arr = np.fromfile(infile, dtype=dtype).reshape((height, width))
 
     if sys.byteorder == 'little':
         arr = arr.byteswap()
     return arr
 
-
-#END
+# END
