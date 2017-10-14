@@ -6,10 +6,13 @@
 #
 import re
 
+import numpy as np
+
 from ginga.misc import Bunch
 
 # Holds custom WCSes that are registered
 custom_wcs = Bunch.caselessDict()
+
 
 class WCSError(Exception):
     pass
@@ -328,6 +331,7 @@ def register_wcs(name, wrapper_class, coord_types):
     custom_wcs[name] = Bunch.Bunch(name=name,
                                    wrapper_class=wrapper_class,
                                    coord_types=coord_types)
+
 
 def choose_coord_units(header):
     """Return the appropriate key code for the units value for the axes by

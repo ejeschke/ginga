@@ -69,7 +69,7 @@ def use(wcspkg, raise_err=True):
         modname = 'wcs_%s' % (wcspkg)
         path = os.path.join(wcs_home, '%s.py' % (modname))
         try:
-            mod = my_import(modname, path)
+            my_import(modname, path)
         except ImportError:
             return False
 

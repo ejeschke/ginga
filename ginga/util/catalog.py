@@ -101,12 +101,12 @@ class AstroPyCatalogServer(object):
             mag = 0.0
 
         # Make sure we have at least these Ginga standard fields defined
-        d = {'name':        data[ext['id']],
-             'ra_deg':      float(data[ext['ra']]),
-             'dec_deg':     float(data[ext['dec']]),
-             'mag':         mag,
-             'preference':  0.0,
-             'priority':    0,
+        d = {'name': data[ext['id']],
+             'ra_deg': float(data[ext['ra']]),
+             'dec_deg': float(data[ext['dec']]),
+             'mag': mag,
+             'preference': 0.0,
+             'priority': 0,
              'description': 'fake magnitude'}
         data.update(d)
         data['ra'] = wcs.raDegToString(data['ra_deg'])
@@ -302,12 +302,12 @@ class PyVOCatalogServer(object):
             mag = 0.0
 
         # Make sure we have at least these Ginga standard fields defined
-        d = {'name':        data[ext['id']],
-             'ra_deg':      float(data[ext['ra']]),
-             'dec_deg':     float(data[ext['dec']]),
-             'mag':         mag,
-             'preference':  0.0,
-             'priority':    0,
+        d = {'name': data[ext['id']],
+             'ra_deg': float(data[ext['ra']]),
+             'dec_deg': float(data[ext['dec']]),
+             'mag': mag,
+             'preference': 0.0,
+             'priority': 0,
              'description': 'fake magnitude'}
         data.update(d)
         data['ra'] = wcs.raDegToString(data['ra_deg'])
@@ -643,7 +643,7 @@ class CatalogServer(URLServer):
         self.logger.debug("offset=%d" % (offset))
 
         results = []
-        table = [lines[offset-2]]
+        table = [lines[offset - 2]]
 
         for line in lines[offset:]:
             line = line.strip()
