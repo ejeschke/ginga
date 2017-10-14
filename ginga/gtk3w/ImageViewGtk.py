@@ -4,10 +4,10 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import sys, os
+import os
 
 from ginga.gtk3w import GtkHelp
-from ginga import Mixins, Bindings, colors
+from ginga import Mixins, Bindings
 from ginga.util.paths import icondir
 
 from ginga.cairow.ImageViewCairo import (ImageViewCairo as ImageView,
@@ -21,6 +21,7 @@ import cairo
 
 class ImageViewGtkError(ImageViewError):
     pass
+
 
 class ImageViewGtk(ImageView):
 
@@ -86,7 +87,7 @@ class ImageViewGtk(ImageView):
         daht = self.surface.get_height()
         rgb_buf = bytes(self.surface.get_data())
         pixbuf = GtkHelp.pixbuf_new_from_data(rgb_buf, GdkPixbuf.Colorspace.RGB,
-                                              False, 8, dawd, daht, dawd*3)
+                                              False, 8, dawd, daht, dawd * 3)
 
         return pixbuf
 
@@ -114,7 +115,6 @@ class ImageViewGtk(ImageView):
             # Process expose events right away so window is responsive
             # to scrolling
             win.process_updates(True)
-
 
     def draw_event(self, widget, cr):
         self.logger.debug("updating window from surface")
@@ -214,18 +214,18 @@ class ImageViewEvent(ImageViewGtk):
         imgwin.connect("key_release_event", self.key_release_event)
         imgwin.connect("scroll_event", self.scroll_event)
         mask = imgwin.get_events()
-        imgwin.set_events(mask
-                          | Gdk.EventMask.ENTER_NOTIFY_MASK
-                          | Gdk.EventMask.LEAVE_NOTIFY_MASK
-                          | Gdk.EventMask.FOCUS_CHANGE_MASK
-                          | Gdk.EventMask.STRUCTURE_MASK
-                          | Gdk.EventMask.BUTTON_PRESS_MASK
-                          | Gdk.EventMask.BUTTON_RELEASE_MASK
-                          | Gdk.EventMask.KEY_PRESS_MASK
-                          | Gdk.EventMask.KEY_RELEASE_MASK
-                          | Gdk.EventMask.POINTER_MOTION_MASK
-                          | Gdk.EventMask.POINTER_MOTION_HINT_MASK
-                          | Gdk.EventMask.SCROLL_MASK)
+        imgwin.set_events(mask |
+                          Gdk.EventMask.ENTER_NOTIFY_MASK |
+                          Gdk.EventMask.LEAVE_NOTIFY_MASK |
+                          Gdk.EventMask.FOCUS_CHANGE_MASK |
+                          Gdk.EventMask.STRUCTURE_MASK |
+                          Gdk.EventMask.BUTTON_PRESS_MASK |
+                          Gdk.EventMask.BUTTON_RELEASE_MASK |
+                          Gdk.EventMask.KEY_PRESS_MASK |
+                          Gdk.EventMask.KEY_RELEASE_MASK |
+                          Gdk.EventMask.POINTER_MOTION_MASK |
+                          Gdk.EventMask.POINTER_MOTION_HINT_MASK |
+                          Gdk.EventMask.SCROLL_MASK)
 
         # Set up widget as a drag and drop destination
         imgwin.connect("drag-data-received", self.drop_event_cb)
@@ -308,7 +308,7 @@ class ImageViewEvent(ImageViewGtk):
             'end': 'end',
             'page_up': 'page_up',
             'page_down': 'page_down',
-            }
+        }
 
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
@@ -374,7 +374,8 @@ class ImageViewEvent(ImageViewGtk):
 
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -388,7 +389,8 @@ class ImageViewEvent(ImageViewGtk):
 
     def button_release_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -423,7 +425,8 @@ class ImageViewEvent(ImageViewGtk):
 
     def scroll_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         # NOTE: for future use in distinguishing mouse wheel vs.
@@ -442,18 +445,18 @@ class ImageViewEvent(ImageViewGtk):
         data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, degrees,
-                                  data_x, data_y)
+                                     data_x, data_y)
 
     def drag_drop_cb(self, widget, context, x, y, time):
         self.logger.debug('drag_drop_cb')
         # initiates a drop
-        success = delete = False
+        success = delete = False  # noqa
         targets = context.list_targets()
         for mimetype in targets:
             if str(mimetype) in ("text/thumb", "text/plain", "text/uri-list"):
                 Gdk.drop_reply(context, True, time)
                 success = True
-                return True
+                return success
 
         self.logger.debug("dropped format type did not match known types")
         Gdk.drop_reply(context, False, time)
