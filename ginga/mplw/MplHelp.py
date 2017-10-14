@@ -65,8 +65,8 @@ class MplContext(object):
 
     def push(self, allow=[]):
         self.stack.append(self.kwdargs.copy())
-        d = { name: self.kwdargs[name]
-              for name in allow if name in self.kwdargs }
+        d = {name: self.kwdargs[name]
+             for name in allow if name in self.kwdargs}
         self.kwdargs = d
 
     def pop(self):
