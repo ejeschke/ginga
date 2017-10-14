@@ -15,6 +15,7 @@ known_font = os.path.join(fontdir, 'Roboto', 'Roboto-Regular.ttf')
 
 font_cache = {}
 
+
 def get_cached_font(fontpath, fontsize):
     global font_cache
 
@@ -23,6 +24,8 @@ def get_cached_font(fontpath, fontsize):
         return font_cache[key]
 
     except KeyError:
+        from PIL import ImageFont
+
         # TODO: try to lookup font before overriding
         fontpath = known_font
 
@@ -39,11 +42,13 @@ class Pen(object):
         self.linestyle = linestyle
         self.alpha = alpha
 
+
 class Brush(object):
     def __init__(self, color='black', fill=False, alpha=1.0):
         self.color = color
         self.fill = fill
         self.alpha = alpha
+
 
 class Font(object):
     def __init__(self, fontname='ariel', fontsize=12.0, color='black',

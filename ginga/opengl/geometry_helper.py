@@ -10,6 +10,7 @@
 #
 import numpy as np
 
+
 class Point3D(object):
 
     def __init__(self, x=0, y=0, z=0):
@@ -124,8 +125,8 @@ class Vector3D(object):
 
     def __mul__(self, other):
         if isinstance(other, Vector3D):
-           # dot product
-           return self.x * other.x + self.y * other.y + self.z * other.z
+            # dot product
+            return self.x * other.x + self.y * other.y + self.z * other.z
 
         # scalar product
         return Vector3D(self.x * other, self.y * other, self.z * other)
@@ -140,7 +141,7 @@ class Vector3D(object):
         return Vector3D(
             self.y * other.z - self.z * other.y,
             self.z * other.x - self.x * other.z,
-            self.x * other.y - self.y * other.x )
+            self.x * other.y - self.y * other.x)
 
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y and self.z == other.z
@@ -187,23 +188,29 @@ class Matrix4x4(object):
         s = np.sin(angle_rad)
         one_minus_c = 1 - c
         M = Matrix4x4()
-        M.f[ 0] = c + one_minus_c * axis_vector.x * axis_vector.x
-        M.f[ 5] = c + one_minus_c * axis_vector.y * axis_vector.y
+        M.f[0] = c + one_minus_c * axis_vector.x * axis_vector.x
+        M.f[5] = c + one_minus_c * axis_vector.y * axis_vector.y
         M.f[10] = c + one_minus_c * axis_vector.z * axis_vector.z
-        M.f[ 1] = M.f[ 4] = one_minus_c * axis_vector.x * axis_vector.y
-        M.f[ 2] = M.f[ 8] = one_minus_c * axis_vector.x * axis_vector.z
-        M.f[ 6] = M.f[ 9] = one_minus_c * axis_vector.y * axis_vector.z
+        M.f[1] = M.f[4] = one_minus_c * axis_vector.x * axis_vector.y
+        M.f[2] = M.f[8] = one_minus_c * axis_vector.x * axis_vector.z
+        M.f[6] = M.f[9] = one_minus_c * axis_vector.y * axis_vector.z
         xs = axis_vector.x * s
         ys = axis_vector.y * s
         zs = axis_vector.z * s
-        M.f[ 1] += zs;  M.f[ 4] -= zs
-        M.f[ 2] -= ys;  M.f[ 8] += ys
-        M.f[ 6] += xs;  M.f[ 9] -= xs
+        M.f[1] += zs
+        M.f[4] -= zs
+        M.f[2] -= ys
+        M.f[8] += ys
+        M.f[6] += xs
+        M.f[9] -= xs
 
         M.f[12] = 0.0
         M.f[13] = 0.0
         M.f[14] = 0.0
-        M.f[ 3] = 0.0;   M.f[ 7] = 0.0;   M.f[11] = 0.0;   M.f[15] = 1.0
+        M.f[3] = 0.0
+        M.f[7] = 0.0
+        M.f[11] = 0.0
+        M.f[15] = 1.0
         return M
 
     @staticmethod
@@ -241,20 +248,44 @@ class Matrix4x4(object):
 
         if is_inverted:
             # the rotation matrix
-            M.f[ 0] = x.x;   M.f[ 4] = y.x;   M.f[ 8] = z.x;   M.f[12] = 0.0
-            M.f[ 1] = x.y;   M.f[ 5] = y.y;   M.f[ 9] = z.y;   M.f[13] = 0.0
-            M.f[ 2] = x.z;   M.f[ 6] = y.z;   M.f[10] = z.z;   M.f[14] = 0.0
-            M.f[ 3] = 0.0;   M.f[ 7] = 0.0;   M.f[11] = 0.0;   M.f[15] = 1.0
+            M.f[0] = x.x
+            M.f[4] = y.x
+            M.f[8] = z.x
+            M.f[12] = 0.0
+            M.f[1] = x.y
+            M.f[5] = y.y
+            M.f[9] = z.y
+            M.f[13] = 0.0
+            M.f[2] = x.z
+            M.f[6] = y.z
+            M.f[10] = z.z
+            M.f[14] = 0.0
+            M.f[3] = 0.0
+            M.f[7] = 0.0
+            M.f[11] = 0.0
+            M.f[15] = 1.0
 
             # step two: premultiply by a translation matrix
             return Matrix4x4.translation(eye_point.as_Vector3D()) * M
 
         else:
             # the rotation matrix
-            M.f[ 0] = x.x;   M.f[ 4] = x.y;   M.f[ 8] = x.z;   M.f[12] = 0.0
-            M.f[ 1] = y.x;   M.f[ 5] = y.y;   M.f[ 9] = y.z;   M.f[13] = 0.0
-            M.f[ 2] = z.x;   M.f[ 6] = z.y;   M.f[10] = z.z;   M.f[14] = 0.0
-            M.f[ 3] = 0.0;   M.f[ 7] = 0.0;   M.f[11] = 0.0;   M.f[15] = 1.0
+            M.f[0] = x.x
+            M.f[4] = x.y
+            M.f[8] = x.z
+            M.f[12] = 0.0
+            M.f[1] = y.x
+            M.f[5] = y.y
+            M.f[9] = y.z
+            M.f[13] = 0.0
+            M.f[2] = z.x
+            M.f[6] = z.y
+            M.f[10] = z.z
+            M.f[14] = 0.0
+            M.f[3] = 0.0
+            M.f[7] = 0.0
+            M.f[11] = 0.0
+            M.f[15] = 1.0
 
             # step two: postmultiply by a translation matrix
             return M * Matrix4x4.translation(- eye_point.as_Vector3D())
@@ -263,42 +294,58 @@ class Matrix4x4(object):
         a = self
         if isinstance(b, Matrix4x4):
             M = Matrix4x4()
-            M.f[ 0] = a.f[ 0]*b.f[ 0] + a.f[ 4]*b.f[ 1] + a.f[ 8]*b.f[ 2] + a.f[12]*b.f[ 3];
-            M.f[ 1] = a.f[ 1]*b.f[ 0] + a.f[ 5]*b.f[ 1] + a.f[ 9]*b.f[ 2] + a.f[13]*b.f[ 3];
-            M.f[ 2] = a.f[ 2]*b.f[ 0] + a.f[ 6]*b.f[ 1] + a.f[10]*b.f[ 2] + a.f[14]*b.f[ 3];
-            M.f[ 3] = a.f[ 3]*b.f[ 0] + a.f[ 7]*b.f[ 1] + a.f[11]*b.f[ 2] + a.f[15]*b.f[ 3];
+            M.f[0] = (a.f[0] * b.f[0] + a.f[4] * b.f[1] +
+                      a.f[8] * b.f[2] + a.f[12] * b.f[3])
+            M.f[1] = (a.f[1] * b.f[0] + a.f[5] * b.f[1] +
+                      a.f[9] * b.f[2] + a.f[13] * b.f[3])
+            M.f[2] = (a.f[2] * b.f[0] + a.f[6] * b.f[1] +
+                      a.f[10] * b.f[2] + a.f[14] * b.f[3])
+            M.f[3] = (a.f[3] * b.f[0] + a.f[7] * b.f[1] +
+                      a.f[11] * b.f[2] + a.f[15] * b.f[3])
 
-            M.f[ 4] = a.f[ 0]*b.f[ 4] + a.f[ 4]*b.f[ 5] + a.f[ 8]*b.f[ 6] + a.f[12]*b.f[ 7];
-            M.f[ 5] = a.f[ 1]*b.f[ 4] + a.f[ 5]*b.f[ 5] + a.f[ 9]*b.f[ 6] + a.f[13]*b.f[ 7];
-            M.f[ 6] = a.f[ 2]*b.f[ 4] + a.f[ 6]*b.f[ 5] + a.f[10]*b.f[ 6] + a.f[14]*b.f[ 7];
-            M.f[ 7] = a.f[ 3]*b.f[ 4] + a.f[ 7]*b.f[ 5] + a.f[11]*b.f[ 6] + a.f[15]*b.f[ 7];
+            M.f[4] = (a.f[0] * b.f[4] + a.f[4] * b.f[5] +
+                      a.f[8] * b.f[6] + a.f[12] * b.f[7])
+            M.f[5] = (a.f[1] * b.f[4] + a.f[5] * b.f[5] +
+                      a.f[9] * b.f[6] + a.f[13] * b.f[7])
+            M.f[6] = (a.f[2] * b.f[4] + a.f[6] * b.f[5] +
+                      a.f[10] * b.f[6] + a.f[14] * b.f[7])
+            M.f[7] = (a.f[3] * b.f[4] + a.f[7] * b.f[5] +
+                      a.f[11] * b.f[6] + a.f[15] * b.f[7])
 
-            M.f[ 8] = a.f[ 0]*b.f[ 8] + a.f[ 4]*b.f[ 9] + a.f[ 8]*b.f[10] + a.f[12]*b.f[11];
-            M.f[ 9] = a.f[ 1]*b.f[ 8] + a.f[ 5]*b.f[ 9] + a.f[ 9]*b.f[10] + a.f[13]*b.f[11];
-            M.f[10] = a.f[ 2]*b.f[ 8] + a.f[ 6]*b.f[ 9] + a.f[10]*b.f[10] + a.f[14]*b.f[11];
-            M.f[11] = a.f[ 3]*b.f[ 8] + a.f[ 7]*b.f[ 9] + a.f[11]*b.f[10] + a.f[15]*b.f[11];
+            M.f[8] = (a.f[0] * b.f[8] + a.f[4] * b.f[9] +
+                      a.f[8] * b.f[10] + a.f[12] * b.f[11])
+            M.f[9] = (a.f[1] * b.f[8] + a.f[5] * b.f[9] +
+                      a.f[9] * b.f[10] + a.f[13] * b.f[11])
+            M.f[10] = (a.f[2] * b.f[8] + a.f[6] * b.f[9] +
+                       a.f[10] * b.f[10] + a.f[14] * b.f[11])
+            M.f[11] = (a.f[3] * b.f[8] + a.f[7] * b.f[9] +
+                       a.f[11] * b.f[10] + a.f[15] * b.f[11])
 
-            M.f[12] = a.f[ 0]*b.f[12] + a.f[ 4]*b.f[13] + a.f[ 8]*b.f[14] + a.f[12]*b.f[15];
-            M.f[13] = a.f[ 1]*b.f[12] + a.f[ 5]*b.f[13] + a.f[ 9]*b.f[14] + a.f[13]*b.f[15];
-            M.f[14] = a.f[ 2]*b.f[12] + a.f[ 6]*b.f[13] + a.f[10]*b.f[14] + a.f[14]*b.f[15];
-            M.f[15] = a.f[ 3]*b.f[12] + a.f[ 7]*b.f[13] + a.f[11]*b.f[14] + a.f[15]*b.f[15];
+            M.f[12] = (a.f[0] * b.f[12] + a.f[4] * b.f[13] +
+                       a.f[8] * b.f[14] + a.f[12] * b.f[15])
+            M.f[13] = (a.f[1] * b.f[12] + a.f[5] * b.f[13] +
+                       a.f[9] * b.f[14] + a.f[13] * b.f[15])
+            M.f[14] = (a.f[2] * b.f[12] + a.f[6] * b.f[13] +
+                       a.f[10] * b.f[14] + a.f[14] * b.f[15])
+            M.f[15] = (a.f[3] * b.f[12] + a.f[7] * b.f[13] +
+                       a.f[11] * b.f[14] + a.f[15] * b.f[15])
             return M
 
         elif isinstance(b, Vector3D):
             # We treat the vector as if its (homogeneous) 4th component were zero.
             return Vector3D(
-                a.f[ 0]*b.x + a.f[ 4]*b.y + a.f[ 8]*b.z, # + a.f[12]*b.w(),
-                a.f[ 1]*b.x + a.f[ 5]*b.y + a.f[ 9]*b.z, # + a.f[13]*b.w(),
-                a.f[ 2]*b.x + a.f[ 6]*b.y + a.f[10]*b.z  # + a.f[14]*b.w(),
-                # a.f[ 3]*b.x + a.f[ 7]*b.y + a.f[11]*b.z + a.f[15]*b.w()
-                )
+                a.f[0] * b.x + a.f[4] * b.y + a.f[8] * b.z,  # + a.f[12]*b.w(),
+                a.f[1] * b.x + a.f[5] * b.y + a.f[9] * b.z,  # + a.f[13]*b.w(),
+                a.f[2] * b.x + a.f[6] * b.y + a.f[10] * b.z  # + a.f[14]*b.w(),
+                # a.f[3] * b.x + a.f[7] * b.y + a.f[11] * b.z + a.f[15]*b.w()
+            )
 
         elif isinstance(b, Point3D):
             # We treat the point as if its (homogeneous) 4th component were one.
             return Point3D(
-                a.f[ 0]*b.x + a.f[ 4]*b.y + a.f[ 8]*b.z + a.f[12],
-                a.f[ 1]*b.x + a.f[ 5]*b.y + a.f[ 9]*b.z + a.f[13],
-                a.f[ 2]*b.x + a.f[ 6]*b.y + a.f[10]*b.z + a.f[14]
-                )
+                a.f[0] * b.x + a.f[4] * b.y + a.f[8] * b.z + a.f[12],
+                a.f[1] * b.x + a.f[5] * b.y + a.f[9] * b.z + a.f[13],
+                a.f[2] * b.x + a.f[6] * b.y + a.f[10] * b.z + a.f[14]
+            )
 
 # END

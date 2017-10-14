@@ -4,13 +4,14 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, os
+import sys
+import os
 
 import numpy as np
 
-module_home = os.path.split(sys.modules[__name__].__file__)[0]
-
 import pyopencl as cl
+
+module_home = os.path.split(sys.modules[__name__].__file__)[0]
 
 
 class CL(object):
@@ -73,14 +74,14 @@ class CL(object):
                             hostbuf=data_np)
         dst_buf = cl.Buffer(self.ctx, mf.WRITE_ONLY, numbytes)
 
-        evt = self.program.image_rotate_float64(self.queue, [out_ht, out_wd], None,
-                                                src_buf, dst_buf,
-                                                np.int32(rotctr_x), np.int32(rotctr_y),
-                                                np.int32(width), np.int32(height),
-                                                np.int32(out_wd), np.int32(out_ht),
-                                                np.int32(out_dx), np.int32(out_dy),
-                                                np.float64(sin_theta), np.float64(cos_theta),
-                                                np.float64(clip_val))
+        self.program.image_rotate_float64(
+            self.queue, [out_ht, out_wd], None, src_buf, dst_buf,
+            np.int32(rotctr_x), np.int32(rotctr_y),
+            np.int32(width), np.int32(height),
+            np.int32(out_wd), np.int32(out_ht),
+            np.int32(out_dx), np.int32(out_dy),
+            np.float64(sin_theta), np.float64(cos_theta),
+            np.float64(clip_val))
 
         if dtype == np.float64:
             out_np = out
@@ -125,14 +126,14 @@ class CL(object):
                             hostbuf=data_np)
         dst_buf = cl.Buffer(self.ctx, mf.WRITE_ONLY, numbytes)
 
-        evt = self.program.image_rotate_float64(self.queue, [height, width], None,
-                                                src_buf, dst_buf,
-                                                np.int32(rotctr_x), np.int32(rotctr_y),
-                                                np.int32(width), np.int32(height),
-                                                np.int32(out_wd), np.int32(out_ht),
-                                                np.int32(out_dx), np.int32(out_dy),
-                                                np.float64(sin_theta), np.float64(cos_theta),
-                                                np.float64(clip_val))
+        self.program.image_rotate_float64(
+            self.queue, [height, width], None, src_buf, dst_buf,
+            np.int32(rotctr_x), np.int32(rotctr_y),
+            np.int32(width), np.int32(height),
+            np.int32(out_wd), np.int32(out_ht),
+            np.int32(out_dx), np.int32(out_dy),
+            np.float64(sin_theta), np.float64(cos_theta),
+            np.float64(clip_val))
 
         out_np = np.empty_like(data_np)
         cl.enqueue_read_buffer(self.queue, dst_buf, out_np).wait()
@@ -170,14 +171,14 @@ class CL(object):
                             hostbuf=data_np)
         dst_buf = cl.Buffer(self.ctx, mf.WRITE_ONLY, out.nbytes)
 
-        evt = self.program.image_rotate_uint32(self.queue, [height, width], None,
-                                               src_buf, dst_buf,
-                                               np.int32(rotctr_x), np.int32(rotctr_y),
-                                               np.int32(width), np.int32(height),
-                                               np.int32(out_wd), np.int32(out_ht),
-                                               np.int32(out_dx), np.int32(out_dy),
-                                               np.float64(sin_theta), np.float64(cos_theta),
-                                               np.uint32(clip_val))
+        self.program.image_rotate_uint32(
+            self.queue, [height, width], None, src_buf, dst_buf,
+            np.int32(rotctr_x), np.int32(rotctr_y),
+            np.int32(width), np.int32(height),
+            np.int32(out_wd), np.int32(out_ht),
+            np.int32(out_dx), np.int32(out_dy),
+            np.float64(sin_theta), np.float64(cos_theta),
+            np.uint32(clip_val))
 
         cl.enqueue_read_buffer(self.queue, dst_buf, out).wait()
 
@@ -212,14 +213,14 @@ class CL(object):
                             hostbuf=data_np)
         dst_buf = cl.Buffer(self.ctx, mf.WRITE_ONLY, out.nbytes)
 
-        evt = self.program.image_rotate_uint32(self.queue, [out_ht, out_wd], None,
-                                               src_buf, dst_buf,
-                                               np.int32(rotctr_x), np.int32(rotctr_y),
-                                               np.int32(width), np.int32(height),
-                                               np.int32(out_wd), np.int32(out_ht),
-                                               np.int32(out_dx), np.int32(out_dy),
-                                               np.float64(sin_theta), np.float64(cos_theta),
-                                               np.uint32(clip_val))
+        self.program.image_rotate_uint32(
+            self.queue, [out_ht, out_wd], None, src_buf, dst_buf,
+            np.int32(rotctr_x), np.int32(rotctr_y),
+            np.int32(width), np.int32(height),
+            np.int32(out_wd), np.int32(out_ht),
+            np.int32(out_dx), np.int32(out_dy),
+            np.float64(sin_theta), np.float64(cos_theta),
+            np.uint32(clip_val))
 
         cl.enqueue_read_buffer(self.queue, dst_buf, out).wait()
 
@@ -244,18 +245,17 @@ class CL(object):
                             hostbuf=data_np)
         dst_buf = cl.Buffer(self.ctx, mf.WRITE_ONLY, data_np.nbytes)
 
-        evt = self.program.image_transform_uint32(self.queue, [height, width], None,
-                                                  src_buf, dst_buf,
-                                                  np.int32(width), np.int32(height),
-                                                  np.int32(flip_x), np.int32(flip_y),
-                                                  np.int32(swap_xy))
+        self.program.image_transform_uint32(
+            self.queue, [height, width], None, src_buf, dst_buf,
+            np.int32(width), np.int32(height),
+            np.int32(flip_x), np.int32(flip_y),
+            np.int32(swap_xy))
 
         if out is None:
             out = np.empty_like(data_np).reshape(new_size)
         cl.enqueue_read_buffer(self.queue, dst_buf, out).wait()
 
         return out
-
 
     def resize_uint32(self, data_np, scale_x, scale_y, out=None):
 
@@ -275,10 +275,10 @@ class CL(object):
         num_bytes = new_ht * new_wd * np.uint32(0).nbytes
         dst_buf = cl.Buffer(self.ctx, mf.WRITE_ONLY, num_bytes)
 
-        evt = self.program.image_resize_uint32(self.queue, [new_ht, new_wd], None,
-                                               src_buf, dst_buf,
-                                               np.int32(width), np.int32(new_wd),
-                                               np.float64(scale_x), np.float64(scale_y))
+        self.program.image_resize_uint32(
+            self.queue, [new_ht, new_wd], None, src_buf, dst_buf,
+            np.int32(width), np.int32(new_wd),
+            np.float64(scale_x), np.float64(scale_y))
 
         if out is None:
             out = np.empty(new_shape, dtype=data_np.dtype)
@@ -306,10 +306,10 @@ class CL(object):
         num_bytes = new_ht * new_wd * np.float64(0).nbytes
         dst_buf = cl.Buffer(self.ctx, mf.WRITE_ONLY, num_bytes)
 
-        evt = self.program.image_resize_float64(self.queue, [new_ht, new_wd], None,
-                                                src_buf, dst_buf,
-                                                np.int32(width), np.int32(new_wd),
-                                                np.float64(scale_x), np.float64(scale_y))
+        self.program.image_resize_float64(
+            self.queue, [new_ht, new_wd], None, src_buf, dst_buf,
+            np.int32(width), np.int32(new_wd),
+            np.float64(scale_x), np.float64(scale_y))
 
         if dtype == np.float64:
             out_np = out
@@ -330,11 +330,11 @@ class CL(object):
                                 out=None):
 
         if (data_np.dtype == np.uint32) or ((data_np.dtype == np.uint8) and
-                                               (len(data_np.shape) == 3)):
-            newdata = self.resize_uint32(data_np[y1:y2+1, x1:x2+1, ...],
+                                            (len(data_np.shape) == 3)):
+            newdata = self.resize_uint32(data_np[y1:y2 + 1, x1:x2 + 1, ...],
                                          scale_x, scale_y, out=out)
         else:
-            newdata = self.resize(data_np[y1:y2+1, x1:x2+1],
+            newdata = self.resize(data_np[y1:y2 + 1, x1:x2 + 1],
                                   scale_x, scale_y, out=out)
 
         old_ht, old_wd = data_np.shape[:2]
