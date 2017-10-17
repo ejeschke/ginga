@@ -13,6 +13,7 @@ from ginga.gw import Widgets
 
 # import any other modules you want here--it's a python world!
 
+
 class MyLocalPlugin(GingaPlugin.LocalPlugin):
 
     def __init__(self, fv, fitsimage):

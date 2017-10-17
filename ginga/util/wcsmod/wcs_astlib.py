@@ -2,16 +2,17 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from __future__ import absolute_import
 
 from astLib import astWCS, astCoords
 # astlib requires pyfits (or astropy) in order
 # to create a WCS object from a FITS header.
 from astropy.io import fits as pyfits
 
-astWCS.NUMPY_MODE = True
+from ..six.moves import map
+from . import common
 
-from ginga.util.six.moves import map
-from ginga.util.wcsmod import common
+astWCS.NUMPY_MODE = True
 
 coord_types = ['j2000', 'b1950', 'galactic']
 
@@ -68,7 +69,7 @@ class AstLibWCS(common.BaseWCS):
     def pixtoradec(self, idxs, coords='data'):
         if coords == 'fits':
             # Via astWCS.NUMPY_MODE, we've forced pixels referenced from 0
-            idxs = tuple(map(lambda x: x-1, idxs))
+            idxs = tuple(map(lambda x: x - 1, idxs))
 
         try:
             ra_deg, dec_deg = self.wcs.pix2wcs(idxs[0], idxs[1])
@@ -89,7 +90,7 @@ class AstLibWCS(common.BaseWCS):
 
         if coords == 'fits':
             # Via astWCS.NUMPY_MODE, we've forced pixels referenced from 0
-            x, y = x+1, y+1
+            x, y = x + 1, y + 1
 
         return (x, y)
 

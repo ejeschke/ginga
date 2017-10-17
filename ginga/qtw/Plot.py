@@ -7,17 +7,16 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+
 # GUI imports
-from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga.qtw import QtHelp, Widgets
+from ginga.qtw import Widgets
 from ginga.toolkit import toolkit
 
 if toolkit == 'qt5':
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg \
-         as FigureCanvas
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 else:
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg \
-         as FigureCanvas
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+
 
 class PlotWidget(Widgets.WidgetBase):
 

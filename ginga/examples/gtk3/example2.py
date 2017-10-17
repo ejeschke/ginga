@@ -6,7 +6,8 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
-import sys, os
+
+import sys
 
 from ginga import AstroImage
 from ginga.gtk3w import GtkHelp
@@ -18,6 +19,7 @@ from ginga.misc import log
 from gi.repository import Gtk
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
+
 
 class FitsViewer(object):
 
@@ -141,10 +143,10 @@ class FitsViewer(object):
         fill = self.wfill.get_active()
         alpha = self.walpha.get_value()
 
-        params = { 'color': self.drawcolors[index],
-                   'alpha': alpha,
-                   #'cap': 'ball',
-                   }
+        params = {'color': self.drawcolors[index],
+                  'alpha': alpha,
+                  #'cap': 'ball',
+                  }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
@@ -197,7 +199,7 @@ class FitsViewer(object):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -238,6 +240,7 @@ def main(options, args):
 
     Gtk.main()
 
+
 if __name__ == "__main__":
 
     # Parse command line options with nifty optparse module
@@ -246,7 +249,8 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
 
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+    optprs.add_option("--debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--opencv", dest="opencv", default=False,
                       action="store_true",
@@ -273,7 +277,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

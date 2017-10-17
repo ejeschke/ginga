@@ -7,6 +7,7 @@ from ginga.util.wcsmod import common
 
 coord_types = ['pixel']
 
+
 class BareBonesWCS(common.BaseWCS):
     """A dummy placeholder WCS.
 

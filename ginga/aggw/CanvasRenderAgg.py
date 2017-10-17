@@ -11,7 +11,7 @@ import aggdraw as agg
 
 from . import AggHelp
 # force registration of all canvas types
-import ginga.canvas.types.all
+import ginga.canvas.types.all  # noqa
 from ginga import trcalc
 
 
@@ -117,8 +117,9 @@ class RenderContext(object):
                                self.pen, self.brush)
 
     def draw_circle(self, cx, cy, cradius):
-        self.cr.canvas.ellipse((cx-cradius, cy-cradius, cx+cradius, cy+cradius),
-                               self.pen, self.brush)
+        self.cr.canvas.ellipse(
+            (cx - cradius, cy - cradius, cx + cradius, cy + cradius),
+            self.pen, self.brush)
 
     def draw_bezier_curve(self, cp):
         # there is a bug in path handling of some versions of aggdraw--

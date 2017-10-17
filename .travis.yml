@@ -86,10 +86,6 @@ matrix:
         - python: 3.6
           env: MAIN_CMD='flake8 ginga --count $FLAKE8_OPT' SETUP_CMD=''
 
-    allow_failures:
-        - python: 3.6
-          env: MAIN_CMD='flake8 ginga --count $FLAKE8_OPT' SETUP_CMD=''
-
 before_install:
 
     # If there are matplotlib tests, comment these out to

@@ -18,8 +18,10 @@ __all__ = ['TransformError', 'BaseTransform', 'ComposedTransform',
            'WCSDataTransform', 'get_catalog'
            ]
 
+
 class TransformError(Exception):
     pass
+
 
 class BaseTransform(object):
 

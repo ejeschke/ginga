@@ -11,13 +11,13 @@ from io import BytesIO
 
 import cairo
 
-import ginga.util.six as six
 from ginga import ImageView
 from ginga.cairow.CanvasRenderCairo import CanvasRenderer
 
 
 class ImageViewCairoError(ImageView.ImageViewError):
     pass
+
 
 class ImageViewCairo(ImageView.ImageViewBase):
 
@@ -39,7 +39,6 @@ class ImageViewCairo(ImageView.ImageViewBase):
         self.renderer = CanvasRenderer(self)
 
         self.cr = None
-
 
     def _render_offscreen(self, surface, data, dst_x, dst_y,
                           width, height):
@@ -95,7 +94,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
 
     def configure_surface(self, width, height):
         #surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
-        arr8 = np.zeros(height*width*4, dtype=np.uint8)
+        arr8 = np.zeros(height * width * 4, dtype=np.uint8)
 
         stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
                                                             width)
@@ -118,7 +117,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
         ibuf = output
         if ibuf is None:
             ibuf = BytesIO()
-        qimg = self.surface.write_to_png(ibuf)
+        self.surface.write_to_png(ibuf)
         return ibuf
 
     def update_image(self):
@@ -152,5 +151,4 @@ class ImageViewCairo(ImageView.ImageViewBase):
     ##     return (x, y)
 
 
-
-#END
+# END

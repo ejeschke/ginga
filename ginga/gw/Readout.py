@@ -8,6 +8,7 @@ from ginga.gw import Widgets, Viewers
 from ginga.misc import log
 from ginga import colors
 
+
 class Readout(object):
 
     def __init__(self, width, height):
@@ -27,7 +28,7 @@ class Readout(object):
         canvas = readout.get_canvas()
         Text = canvas.get_draw_class('text')
         xoff, yoff = 4, 4
-        self.text_obj = Text(xoff, height-yoff, text='',
+        self.text_obj = Text(xoff, height - yoff, text='',
                              color='lightgreen', fontsize=14,
                              coord='window')
         canvas.add(self.text_obj, redraw=False)

@@ -10,9 +10,10 @@
 #
 """This module handles calculations based on world coordinate system."""
 import math
-import re
 from collections import OrderedDict
-import numpy
+
+import numpy as np
+
 from ginga.misc import Bunch
 
 __all__ = ['hmsToDeg', 'dmsToDeg', 'decTimeToDeg', 'degToHms', 'degToDms',
@@ -28,16 +29,16 @@ class WCSError(Exception):
     pass
 
 
-degPerHMSHour = 15.0      #360/24
-degPerHMSMin  = 0.25      #360.0/24/60
-degPerHMSSec  = 1.0/240.0 #360.0/24/60/60
+degPerHMSHour = 15.0        # 360/24
+degPerHMSMin = 0.25         # 360.0/24/60
+degPerHMSSec = 1.0 / 240.0  # 360.0/24/60/60
 
-degPerDmsMin  = 1.0/60.0
-degPerDmsSec  = 1.0/3600.0
+degPerDmsMin = 1.0 / 60.0
+degPerDmsSec = 1.0 / 3600.0
 
-HMSHourPerDeg = 1.0/15.0
-HMSMinPerDeg  = 4.0
-HMSSecPerDeg  = 240.0
+HMSHourPerDeg = 1.0 / 15.0
+HMSMinPerDeg = 4.0
+HMSSecPerDeg = 240.0
 
 
 def hmsToDeg(h, m, s):
@@ -69,10 +70,10 @@ def degToHms(ra):
     """
     assert (ra >= 0.0), WCSError("RA (%f) is negative" % (ra))
     assert ra < 360.0, WCSError("RA (%f) > 360.0" % (ra))
-    rah   = ra / degPerHMSHour
+    rah = ra / degPerHMSHour
     ramin = (ra % degPerHMSHour) * HMSMinPerDeg
-    rasec = (ra % degPerHMSMin)  * HMSSecPerDeg
-    return  (int(rah), int(ramin), rasec)
+    rasec = (ra % degPerHMSMin) * HMSSecPerDeg
+    return (int(rah), int(ramin), rasec)
 
 
 def degToDms(dec, isLatitude=True):
@@ -95,7 +96,7 @@ def degToDms(dec, isLatitude=True):
     # e.g. dec +311600.00 -> 31.2666666667 degree
     # deg=31 min=15 sec=60 instead deg=31 min=16 sec=0.0
     # bug fixed
-    mnt, sec = divmod(dec*3600, 60)
+    mnt, sec = divmod(dec * 3600, 60)
     deg, mnt = divmod(mnt, 60)
 
     return (int(sign), int(deg), int(mnt), sec)
@@ -118,7 +119,7 @@ def dmsStrToDeg(dec):
     """Convert a string representation of DEC into a float in degrees."""
     sign_deg, min, sec = dec.split(':')
     sign = sign_deg[0:1]
-    if not sign in ('+', '-'):
+    if sign not in ('+', '-'):
         sign = '+'
         deg = sign_deg
     else:
@@ -144,31 +145,34 @@ def decDegToString(dec_deg, format='%s%02d:%02d:%05.2f'):
     return format % (sign_sym, int(dec_degree), int(dec_min), dec_sec)
 
 
-def trans_coeff (eq, x, y, z):
+def trans_coeff(eq, x, y, z):
     """This function is provided by MOKA2 Development Team (1996.xx.xx)
     and used in SOSS system."""
     tt = (eq - 2000.0) / 100.0
 
-    zeta = 2306.2181*tt+0.30188*tt*tt+0.017998*tt*tt*tt
-    zetto = 2306.2181*tt+1.09468*tt*tt+0.018203*tt*tt*tt
-    theta = 2004.3109*tt-0.42665*tt*tt-0.041833*tt*tt*tt
+    zeta = 2306.2181 * tt + 0.30188 * tt * tt + 0.017998 * tt * tt * tt
+    zetto = 2306.2181 * tt + 1.09468 * tt * tt + 0.018203 * tt * tt * tt
+    theta = 2004.3109 * tt - 0.42665 * tt * tt - 0.041833 * tt * tt * tt
 
     zeta = math.radians(zeta) / 3600.0
     zetto = math.radians(zetto) / 3600.0
     theta = math.radians(theta) / 3600.0
 
-
-    p11 = math.cos(zeta)*math.cos(theta)*math.cos(zetto)-math.sin(zeta)*math.sin(zetto)
-    p12 = -math.sin(zeta)*math.cos(theta)*math.cos(zetto)-math.cos(zeta)*math.sin(zetto)
-    p13 = -math.sin(theta)*math.cos(zetto)
-    p21 = math.cos(zeta)*math.cos(theta)*math.sin(zetto)+math.sin(zeta)*math.cos(zetto)
-    p22 = -math.sin(zeta)*math.cos(theta)*math.sin(zetto)+math.cos(zeta)*math.cos(zetto)
-    p23 = -math.sin(theta)*math.sin(zetto)
-    p31 = math.cos(zeta)*math.sin(theta)
-    p32 = -math.sin(zeta)*math.sin(theta)
+    p11 = (math.cos(zeta) * math.cos(theta) * math.cos(zetto) -
+           math.sin(zeta) * math.sin(zetto))
+    p12 = (-math.sin(zeta) * math.cos(theta) * math.cos(zetto) -
+           math.cos(zeta) * math.sin(zetto))
+    p13 = -math.sin(theta) * math.cos(zetto)
+    p21 = (math.cos(zeta) * math.cos(theta) * math.sin(zetto) +
+           math.sin(zeta) * math.cos(zetto))
+    p22 = (-math.sin(zeta) * math.cos(theta) * math.sin(zetto) +
+           math.cos(zeta) * math.cos(zetto))
+    p23 = -math.sin(theta) * math.sin(zetto)
+    p31 = math.cos(zeta) * math.sin(theta)
+    p32 = -math.sin(zeta) * math.sin(theta)
     p33 = math.cos(theta)
 
-    return (p11,p12,p13, p21, p22, p23, p31,p32, p33)
+    return (p11, p12, p13, p21, p22, p23, p31, p32, p33)
 
 
 def eqToEq2000(ra_deg, dec_deg, eq):
@@ -180,24 +184,24 @@ def eqToEq2000(ra_deg, dec_deg, eq):
     y = math.cos(dec_rad) * math.sin(ra_rad)
     z = math.sin(dec_rad)
 
-    p11, p12, p13, p21, p22, p23, p31, p32, p33 = trans_coeff (eq, x, y, z)
+    p11, p12, p13, p21, p22, p23, p31, p32, p33 = trans_coeff(eq, x, y, z)
 
-    x0 = p11*x + p21*y + p31*z
-    y0 = p12*x + p22*y + p32*z
-    z0 = p13*x + p23*y + p33*z
+    x0 = p11 * x + p21 * y + p31 * z
+    y0 = p12 * x + p22 * y + p32 * z
+    z0 = p13 * x + p23 * y + p33 * z
 
     new_dec = math.asin(z0)
     if x0 == 0.0:
         new_ra = math.pi / 2.0
     else:
-        new_ra = math.atan( y0/x0 )
+        new_ra = math.atan(y0 / x0)
 
-    if ((y0*math.cos(new_dec) > 0.0 and x0*math.cos(new_dec) <= 0.0)  or
-        (y0*math.cos(new_dec) <= 0.0 and x0*math.cos(new_dec) < 0.0) ):
-            new_ra += math.pi
+    if ((y0 * math.cos(new_dec) > 0.0 and x0 * math.cos(new_dec) <= 0.0) or
+            (y0 * math.cos(new_dec) <= 0.0 and x0 * math.cos(new_dec) < 0.0)):
+        new_ra += math.pi
 
     elif new_ra < 0.0:
-        new_ra += 2.0*math.pi
+        new_ra += 2.0 * math.pi
 
     #new_ra = new_ra * 12.0 * 3600.0 / math.pi
     new_ra_deg = new_ra * 12.0 / math.pi * 15.0
@@ -220,7 +224,7 @@ def get_xy_rotation_and_scale(header):
         # if (ctype EQ 'DEC-') or (strmid(ctype, 1) EQ 'LAT')  then $
         #    cd = reverse(cd,1)
 
-        det = cd1_1*cd2_2 - cd1_2*cd2_1
+        det = cd1_1 * cd2_2 - cd1_2 * cd2_1
         if det < 0:
             sgn = -1
         else:
@@ -340,7 +344,6 @@ def get_relative_orientation(image, ref_image):
     header = ref_image.get_header()
     ((xrot_ref, yrot_ref),
      (cdelt1_ref, cdelt2_ref)) = get_xy_rotation_and_scale(header)
-    ref_rot = yrot_ref
 
     scale_x, scale_y = math.fabs(cdelt1_ref), math.fabs(cdelt2_ref)
 
@@ -360,18 +363,18 @@ def get_relative_orientation(image, ref_image):
     # flip_y = False
 
     # ## # Flip X due to negative CDELT1
-    # ## if numpy.sign(cdelt1) < 0:
+    # ## if np.sign(cdelt1) < 0:
     # ##     flip_x = True
 
     # ## # Flip Y due to negative CDELT2
-    # ## if numpy.sign(cdelt2) < 0:
+    # ## if np.sign(cdelt2) < 0:
     # ##     flip_y = True
 
     # # Optomization for 180 rotations
-    # if numpy.isclose(math.fabs(rrot_dx), 180.0):
+    # if np.isclose(math.fabs(rrot_dx), 180.0):
     #     flip_x = not flip_x
     #     rrot_dx = 0.0
-    # if numpy.isclose(math.fabs(rrot_dy), 180.0):
+    # if np.isclose(math.fabs(rrot_dy), 180.0):
     #     flip_y = not flip_y
     #     rrot_dy = 0.0
 
@@ -419,22 +422,22 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
 
     """
     # center of the projection
-    crpix = (px_x+1, px_y+1)  # pixel position (WCS is 1 based)
-    crval = (ra_deg, dec_deg) # RA, Dec (degrees)
+    crpix = (px_x + 1, px_y + 1)  # pixel position (WCS is 1 based)
+    crval = (ra_deg, dec_deg)  # RA, Dec (degrees)
 
     # image scale in deg/pix
-    cdelt = numpy.array(cdbase) * px_scale_deg_px
+    cdelt = np.array(cdbase) * px_scale_deg_px
 
     # Create rotation matrix for position angle of north (radians E of N)
-    rot_rad = numpy.radians(rot_deg)
-    cpa = numpy.cos(rot_rad)
-    spa = numpy.sin(rot_rad)
+    rot_rad = np.radians(rot_deg)
+    cpa = np.cos(rot_rad)
+    spa = np.sin(rot_rad)
     # a) clockwise rotation
-    pc = numpy.array([[cpa, spa], [-spa, cpa]])
+    pc = np.array([[cpa, spa], [-spa, cpa]])
     # b) counter clockwise
-    #pc = numpy.array([[cpa, -spa], [spa, cpa]])
+    #pc = np.array([[cpa, -spa], [spa, cpa]])
 
-    cd = pc * cdelt
+    #cd = pc * cdelt
 
     res = OrderedDict((('CRVAL1', crval[0]),
                        ('CRVAL2', crval[1]),
@@ -450,10 +453,10 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
                        # according to the Calabretta papers
                        ('CDELT1', cdelt[0]),
                        ('CDELT2', cdelt[1]),
-                       ('PC1_1' , pc[0, 0]),
-                       ('PC1_2' , pc[0, 1]),
-                       ('PC2_1' , pc[1, 0]),
-                       ('PC2_2' , pc[1, 1])
+                       ('PC1_1', pc[0, 0]),
+                       ('PC1_2', pc[0, 1]),
+                       ('PC2_1', pc[1, 0]),
+                       ('PC2_2', pc[1, 1])
                        ## ('CD1_1' , cd[0, 0]),
                        ## ('CD1_2' , cd[0, 1]),
                        ## ('CD2_1' , cd[1, 0]),
@@ -513,7 +516,7 @@ def dispos(dra0, decd0, dra, decd):
         Distance in arcmin.
 
     """
-    radian = 180.0/math.pi
+    radian = 180.0 / math.pi
 
     # coord transformed in radians
     alf = dra / radian
@@ -526,21 +529,21 @@ def dispos(dra0, decd0, dra, decd):
     cd0 = math.cos(del0)
     cd = math.cos(del_)
     cosda = math.cos(alf - alf0)
-    cosd = sd0*sd + cd0*cd*cosda
+    cosd = sd0 * sd + cd0 * cd * cosda
     dist = math.acos(cosd)
     phi = 0.0
     if dist > 0.0000004:
         sind = math.sin(dist)
-        cospa = (sd*cd0 - cd*sd0*cosda)/sind
+        cospa = (sd * cd0 - cd * sd0 * cosda) / sind
         #if cospa > 1.0:
         #    cospa=1.0
         if math.fabs(cospa) > 1.0:
             # 2005-06-02: fix from awicenec@eso.org
-            cospa = cospa/math.fabs(cospa)
-        sinpa = cd*math.sin(alf-alf0)/sind
-        phi = math.acos(cospa)*radian
+            cospa = cospa / math.fabs(cospa)
+        sinpa = cd * math.sin(alf - alf0) / sind
+        phi = math.acos(cospa) * radian
         if sinpa < 0.0:
-            phi = 360.0-phi
+            phi = 360.0 - phi
     dist *= radian
     dist *= 60.0
     if decd0 == 90.0:
@@ -553,7 +556,7 @@ def dispos(dra0, decd0, dra, decd):
 def deltaStarsRaDecDeg1(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
     """Spherical triangulation."""
     phi, dist = dispos(ra1_deg, dec1_deg, ra2_deg, dec2_deg)
-    return arcsecToDeg(dist*60.0)
+    return arcsecToDeg(dist * 60.0)
 
 
 def deltaStarsRaDecDeg2(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
@@ -562,11 +565,12 @@ def deltaStarsRaDecDeg2(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
     ra2_rad = math.radians(ra2_deg)
     dec2_rad = math.radians(dec2_deg)
 
-    sep_rad = math.acos(math.cos(90.0-dec1_rad) * math.cos(90.0-dec2_rad) +
-                        math.sin(90.0-dec1_rad) * math.sin(90.0-dec2_rad) *
+    sep_rad = math.acos(math.cos(90.0 - dec1_rad) * math.cos(90.0 - dec2_rad) +
+                        math.sin(90.0 - dec1_rad) * math.sin(90.0 - dec2_rad) *
                         math.cos(ra1_rad - ra2_rad))
     res = math.degrees(sep_rad)
     return res
+
 
 # Use spherical triangulation
 deltaStarsRaDecDeg = deltaStarsRaDecDeg1
@@ -606,7 +610,7 @@ def add_offset_radec(ra_deg, dec_deg, delta_deg_ra, delta_deg_dec):
     ra2 = math.fmod(ra2, twopi)
     if ra2 < 0.0:
         ra2 += twopi
-    dec2 = math.atan2(sdecz + y * cdecz, math.sqrt(x*x + d*d))
+    dec2 = math.atan2(sdecz + y * cdecz, math.sqrt(x * x + d * d))
 
     # back to degrees
     ra2_deg = math.degrees(ra2)
@@ -629,16 +633,18 @@ def get_RaDecOffsets(ra1_deg, dec1_deg, ra2_deg, dec2_deg):
     delta_dec_deg = dec1_deg - dec2_deg
     return (delta_ra_deg, delta_dec_deg)
 
+
 def calc_midpoint_radec(ra1, dec1, ra2, dec2):
     delta_ra = ra2 - ra1
-    bx = numpy.cos(dec2) * numpy.cos(delta_ra)
-    by = numpy.cos(dec2) * numpy.sin(delta_ra)
-    dec_term1 = numpy.sin(dec1) + numpy.sin(dec2)
-    dec_term2 = numpy.sqrt(numpy.power((numpy.cos(dec1) + bx), 2) +
-                           numpy.power(by, 2))
-    dec_mid = numpy.arctan2(dec_term1, dec_term2)
-    ra_mid = ra1 + numpy.arctan2(by, np.cos(dec1) + bx)
+    bx = np.cos(dec2) * np.cos(delta_ra)
+    by = np.cos(dec2) * np.sin(delta_ra)
+    dec_term1 = np.sin(dec1) + np.sin(dec2)
+    dec_term2 = np.sqrt(np.power((np.cos(dec1) + bx), 2) +
+                        np.power(by, 2))
+    dec_mid = np.arctan2(dec_term1, dec_term2)
+    ra_mid = ra1 + np.arctan2(by, np.cos(dec1) + bx)
     return (ra_mid, dec_mid)
+
 
 def lon_to_deg(lon):
     """Convert longitude to degrees."""
@@ -647,6 +653,7 @@ def lon_to_deg(lon):
         lon_deg = hmsStrToDeg(lon)
     else:
         lon_deg = float(lon)
+    return lon_deg
 
 
 def lat_to_deg(lat):
@@ -656,5 +663,6 @@ def lat_to_deg(lat):
         lat_deg = dmsStrToDeg(lat)
     else:
         lat_deg = float(lat)
+    return lat_deg
 
-#END
+# END

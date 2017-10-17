@@ -24,12 +24,14 @@ def add_alias(alias_name, font_name):
     global aliases
     aliases[alias_name] = font_name
 
+
 def resolve_alias(alias_name, alt_font_name):
     """Resolve an alias for a font family name, providing an alternate
     name if the font alias does not exist.
     e.g. resolve_alias('fixed', 'Courier')
     """
     return aliases.get(alias_name, alt_font_name)
+
 
 def get_cache(font_key):
     """Return a previously cached font object appropriate to the backend
@@ -38,6 +40,7 @@ def get_cache(font_key):
     """
     font = font_cache[font_key]
     return font
+
 
 def add_cache(font_key, font):
     """Add a `font` object to the cache, placed under key `font_key`.
@@ -62,6 +65,7 @@ def add_font(font_file, font_name=None):
 
     return font_name
 
+
 def have_font(font_name):
     """Return True if the given font name is registered as one of our
     externally loadable fonts.  If `font_name` is not found, it will try
@@ -71,13 +75,15 @@ def have_font(font_name):
         return True
 
     # try it as an alias
-    font_name = resolve_font(font_name, font_name)
+    font_name = resolve_alias(font_name, font_name)
     return font_name in font_dir
+
 
 def get_loadable_fonts():
     """Return the sequence of externally loadable fonts.
     """
     return list(font_dir.keys())
+
 
 def get_font_info(font_name, subst_ok=True):
     """Return known info on an externally loadable font (including its path).
@@ -96,6 +102,7 @@ def get_font_info(font_name, subst_ok=True):
         raise KeyError(font_name)
 
     return font_info
+
 
 def remove_font(font_name):
     """Remove `font_name` from the directory of loadable fonts.

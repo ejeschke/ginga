@@ -15,6 +15,7 @@ from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 class ImageViewCanvasError(ImageViewMock.ImageViewMockError):
     pass
 
+
 class ImageViewCanvas(ImageViewMock.ImageViewZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 

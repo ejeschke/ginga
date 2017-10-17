@@ -10,7 +10,8 @@ import cairo
 from ginga import colors
 from ginga.fonts import font_asst
 # force registration of all canvas types
-import ginga.canvas.types.all
+import ginga.canvas.types.all  # noqa
+
 
 class RenderContext(object):
 
@@ -55,7 +56,7 @@ class RenderContext(object):
 
         if hasattr(shape, 'linestyle'):
             if shape.linestyle == 'dash':
-                self.cr.set_dash([ 3.0, 4.0, 6.0, 4.0], 5.0)
+                self.cr.set_dash([3.0, 4.0, 6.0, 4.0], 5.0)
 
     def set_fill_from_shape(self, shape):
         self.fill = getattr(shape, 'fill', False)
@@ -92,7 +93,7 @@ class RenderContext(object):
         self.cr.set_line_width(linewidth)
 
         if style == 'dash':
-            self.cr.set_dash([ 3.0, 4.0, 6.0, 4.0], 5.0)
+            self.cr.set_dash([3.0, 4.0, 6.0, 4.0], 5.0)
 
     def set_fill(self, color, alpha=1.0):
         if color is None:
@@ -137,7 +138,7 @@ class RenderContext(object):
         self.cr.new_path()
 
     def draw_circle(self, cx, cy, cradius):
-        self.cr.arc(cx, cy, cradius, 0, 2*math.pi)
+        self.cr.arc(cx, cy, cradius, 0, 2 * math.pi)
         self.cr.stroke_preserve()
 
         self._draw_fill()
@@ -195,4 +196,4 @@ class CanvasRenderer(object):
         return cr.text_extents(shape.text)
 
 
-#END
+# END

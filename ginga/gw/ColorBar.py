@@ -10,8 +10,10 @@ from ginga import RGBMap
 from ginga.gw import Viewers
 from ginga.canvas.types import utils
 
+
 class ColorBarError(Exception):
     pass
+
 
 class ColorBar(Callback.Callbacks):
 

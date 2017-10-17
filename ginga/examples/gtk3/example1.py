@@ -5,7 +5,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, os
+import sys
 import logging
 
 from ginga.gtk3w.ImageViewGtk import CanvasView, ScrolledView
@@ -16,6 +16,7 @@ from gi.repository import Gtk
 
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
+
 
 class FitsViewer(object):
 
@@ -104,6 +105,7 @@ def main(options, args):
         fv.load_file(args[0])
 
     Gtk.main()
+
 
 if __name__ == '__main__':
     main(None, sys.argv[1:])

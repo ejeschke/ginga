@@ -14,6 +14,7 @@ from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 class ImageViewCanvasError(ImageViewCv.ImageViewCvError):
     pass
 
+
 class ImageViewCanvas(ImageViewCv.ImageViewCv,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 

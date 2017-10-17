@@ -11,15 +11,14 @@ import numpy as np
 from OpenGL import GLU as glu
 from OpenGL import GL as gl
 
-from ginga import colors
-from ginga.util.six.moves import map, zip
 # force registration of all canvas types
-import ginga.canvas.types.all
-from ginga.canvas.transform import BaseTransform, TransformError
+import ginga.canvas.types.all  # noqa
+from ginga.canvas.transform import BaseTransform
 
 # Local imports
 from .Camera import Camera
 from . import GlHelp
+
 
 class RenderContext(object):
 
@@ -91,7 +90,6 @@ class RenderContext(object):
     def text_extents(self, text):
         return self.cr.text_extents(text, self.font)
 
-
     ##### DRAWING OPERATIONS #####
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
@@ -158,6 +156,7 @@ class RenderContext(object):
 
     def draw_path(self, cpoints):
         self._draw_pts(gl.GL_LINE_STRIP, cpoints)
+
 
 class CanvasRenderer(object):
 
@@ -302,18 +301,18 @@ class CanvasRenderer(object):
                 # draw orienting spines radiating in x, y and z
                 gl.glColor(1.0, 0.0, 0.0)
                 gl.glBegin(gl.GL_LINES)
-                gl.glVertex( self.mn_x, 0, 0)
-                gl.glVertex( self.mx_x, 0, 0)
+                gl.glVertex(self.mn_x, 0, 0)
+                gl.glVertex(self.mx_x, 0, 0)
                 gl.glEnd()
                 gl.glColor(0.0, 1.0, 0.0)
                 gl.glBegin(gl.GL_LINES)
-                gl.glVertex( 0, self.mn_y, 0)
-                gl.glVertex( 0, self.mx_y, 0)
+                gl.glVertex(0, self.mn_y, 0)
+                gl.glVertex(0, self.mx_y, 0)
                 gl.glEnd()
                 gl.glColor(0.0, 0.0, 1.0)
                 gl.glBegin(gl.GL_LINES)
-                gl.glVertex( 0, 0, self.mn_z)
-                gl.glVertex( 0, 0, self.mx_z)
+                gl.glVertex(0, 0, self.mn_z)
+                gl.glVertex(0, 0, self.mx_z)
                 gl.glEnd()
 
             # Draw the overlays
@@ -376,7 +375,7 @@ class WindowGLTransform(BaseTransform):
         return np.asarray([self.pix2canvas(pt) for pt in pts])
 
     def from_(self, cvs_pts):
-        return np.asarray([self.canvas2pix(pt) for pt in pts])
+        return np.asarray([self.canvas2pix(pt) for pt in cvs_pts])
 
 
-#END
+# END

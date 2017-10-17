@@ -12,6 +12,7 @@ from ginga.gw import Widgets
 
 # import any other modules you want here--it's a python world!
 
+
 class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
 
     def __init__(self, fv):
@@ -122,14 +123,14 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         Callback from the reference viewer shell when a channel is added.
         """
         self.set_info("Channel '%s' has been added" % (
-                channel.name))
+            channel.name))
 
     def delete_channel(self, viewer, channel):
         """
         Callback from the reference viewer shell when a channel is deleted.
         """
         self.set_info("Channel '%s' has been deleted" % (
-                channel.name))
+            channel.name))
         return True
 
     def focus_cb(self, viewer, channel):

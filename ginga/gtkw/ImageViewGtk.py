@@ -4,19 +4,20 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import sys, os
+import os
 
 import gtk
 import cairo
 
 from ginga.gtkw import GtkHelp
 from ginga.cairow import ImageViewCairo
-from ginga import Mixins, Bindings, colors
+from ginga import Mixins, Bindings
 from ginga.util.paths import icondir
 
 
 class ImageViewGtkError(ImageViewCairo.ImageViewCairoError):
     pass
+
 
 class ImageViewGtk(ImageViewCairo.ImageViewCairo):
 
@@ -47,7 +48,6 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         self.msgtask.add_callback('expired',
                                   lambda timer: self.onscreen_message(None))
 
-
     def get_widget(self):
         return self.imgwin
 
@@ -55,16 +55,16 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         arr = self.getwin_array(order='RGB')
 
         try:
-            pixbuf = GtkHelp.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,
-                                                  8)
+            pixbuf = GtkHelp.pixbuf_new_from_array(
+                arr, gtk.gdk.COLORSPACE_RGB, 8)
         except Exception as e:
             self.logger.warning("Error making pixbuf: %s" % (str(e)))
             # pygtk might have been compiled without numpy support
             daht, dawd, depth = arr.shape
             rgb_buf = self._get_rgbbuf(arr)
-            pixbuf = GtkHelp.pixbuf_new_from_data(rgb_buf,
-                                                  gtk.gdk.COLORSPACE_RGB,
-                                                  False, 8, dawd, daht, dawd*3)
+            pixbuf = GtkHelp.pixbuf_new_from_data(
+                rgb_buf, gtk.gdk.COLORSPACE_RGB,
+                False, 8, dawd, daht, dawd * 3)
 
         return pixbuf
 
@@ -93,7 +93,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         daht = self.surface.get_height()
         rgb_buf = bytes(self.surface.get_data())
         pixbuf = GtkHelp.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
-                                              False, 8, dawd, daht, dawd*3)
+                                              False, 8, dawd, daht, dawd * 3)
 
         return pixbuf
 
@@ -121,12 +121,11 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
             # to scrolling
             win.process_updates(True)
 
-
     def expose_event(self, widget, event):
         """When an area of the window is exposed, we just copy out of the
         server-side, off-screen surface to that area.
         """
-        x , y, width, height = event.area
+        x, y, width, height = event.area
         self.logger.debug("surface is %s" % self.surface)
         if self.surface is not None:
             win = widget.get_window()
@@ -240,18 +239,18 @@ class ImageViewEvent(ImageViewGtk):
         imgwin.connect("key_release_event", self.key_release_event)
         imgwin.connect("scroll_event", self.scroll_event)
         mask = imgwin.get_events()
-        imgwin.set_events(mask
-                         | gtk.gdk.ENTER_NOTIFY_MASK
-                         | gtk.gdk.LEAVE_NOTIFY_MASK
-                         | gtk.gdk.FOCUS_CHANGE_MASK
-                         | gtk.gdk.STRUCTURE_MASK
-                         | gtk.gdk.BUTTON_PRESS_MASK
-                         | gtk.gdk.BUTTON_RELEASE_MASK
-                         | gtk.gdk.KEY_PRESS_MASK
-                         | gtk.gdk.KEY_RELEASE_MASK
-                         | gtk.gdk.POINTER_MOTION_MASK
-                         | gtk.gdk.POINTER_MOTION_HINT_MASK
-                         | gtk.gdk.SCROLL_MASK)
+        imgwin.set_events(mask |
+                          gtk.gdk.ENTER_NOTIFY_MASK |
+                          gtk.gdk.LEAVE_NOTIFY_MASK |
+                          gtk.gdk.FOCUS_CHANGE_MASK |
+                          gtk.gdk.STRUCTURE_MASK |
+                          gtk.gdk.BUTTON_PRESS_MASK |
+                          gtk.gdk.BUTTON_RELEASE_MASK |
+                          gtk.gdk.KEY_PRESS_MASK |
+                          gtk.gdk.KEY_RELEASE_MASK |
+                          gtk.gdk.POINTER_MOTION_MASK |
+                          gtk.gdk.POINTER_MOTION_HINT_MASK |
+                          gtk.gdk.SCROLL_MASK)
 
         # Set up widget as a drag and drop destination
         imgwin.connect("drag-data-received", self.drop_event)
@@ -259,11 +258,11 @@ class ImageViewEvent(ImageViewGtk):
         imgwin.connect("drag-drop", self.drag_drop_cb)
         self.TARGET_TYPE_TEXT = 0
         self.TARGET_TYPE_THUMB = 1
-        toImage = [ ( "text/plain", 0, self.TARGET_TYPE_TEXT ),
-                    #( "text/uri-list", 0, self.TARGET_TYPE_TEXT ),
-                    ( "text/thumb", gtk.TARGET_SAME_APP,
-                      self.TARGET_TYPE_THUMB ),
-                    ]
+        toImage = [("text/plain", 0, self.TARGET_TYPE_TEXT),
+                   #( "text/uri-list", 0, self.TARGET_TYPE_TEXT),
+                   ("text/thumb", gtk.TARGET_SAME_APP,
+                    self.TARGET_TYPE_THUMB),
+                   ]
         imgwin.drag_dest_set(gtk.DEST_DEFAULT_ALL, toImage,
                              gtk.gdk.ACTION_COPY)
 
@@ -339,7 +338,7 @@ class ImageViewEvent(ImageViewGtk):
             'end': 'end',
             'page_up': 'page_up',
             'page_down': 'page_down',
-            }
+        }
 
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
@@ -403,7 +402,8 @@ class ImageViewEvent(ImageViewGtk):
 
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -417,7 +417,8 @@ class ImageViewEvent(ImageViewGtk):
 
     def button_release_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -452,7 +453,8 @@ class ImageViewEvent(ImageViewGtk):
 
     def scroll_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         degrees, direction = GtkHelp.get_scroll_info(event)
@@ -462,17 +464,17 @@ class ImageViewEvent(ImageViewGtk):
         data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, degrees,
-                                  data_x, data_y)
+                                     data_x, data_y)
 
     def drag_drop_cb(self, widget, context, x, y, time):
         self.logger.debug('drag_drop_cb')
         # initiates a drop
-        success = delete = False
+        success = delete = False  # noqa
         for mimetype in context.targets:
             if mimetype in ("text/thumb", "text/plain", "text/uri-list"):
                 context.drop_reply(True, time)
                 success = True
-                return True
+                return success
 
         self.logger.debug("dropped format type did not match known types")
         context.drop_reply(False, time)

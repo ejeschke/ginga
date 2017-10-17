@@ -13,8 +13,10 @@ These algorithms are modeled after the ones described for ds9 here:
 import math
 import numpy
 
+
 class ColorDistError(Exception):
     pass
+
 
 class ColorDistBase(object):
 
@@ -25,7 +27,7 @@ class ColorDistBase(object):
         if colorlen is None:
             colorlen = 256
         self.colorlen = colorlen
-        self.maxhashsize = 1024*1024
+        self.maxhashsize = 1024 * 1024
         # this actually holds the hash array
         self.hash = None
         self.calc_hash()
@@ -33,7 +35,7 @@ class ColorDistBase(object):
     def hash_array(self, idx):
         # NOTE: data could be assumed to be in the range 0..hashsize-1
         # at this point but clip as a precaution
-        idx = idx.clip(0, self.hashsize-1)
+        idx = idx.clip(0, self.hashsize - 1)
         arr = self.hash[idx]
         return arr
 
@@ -42,14 +44,15 @@ class ColorDistBase(object):
 
     def set_hash_size(self, size):
         assert (size >= self.colorlen) and (size <= self.maxhashsize), \
-               ColorDistError("Bad hash size!")
+            ColorDistError("Bad hash size!")
         self.hashsize = size
         self.calc_hash()
 
     def check_hash(self):
         hashlen = len(self.hash)
         assert hashlen == self.hashsize, \
-               ColorDistError("Computed hash table size (%d) != specified size (%d)" % (hashlen, self.hashsize))
+            ColorDistError("Computed hash table size (%d) != specified size "
+                           "(%d)" % (hashlen, self.hashsize))
 
     def calc_hash(self):
         raise ColorDistError("Subclass needs to override this method")
@@ -268,7 +271,7 @@ class HistogramEqualizationDist(ColorDistBase):
 
     def __init__(self, hashsize, colorlen=None):
         super(HistogramEqualizationDist, self).__init__(hashsize,
-                                                         colorlen=colorlen)
+                                                        colorlen=colorlen)
 
     def calc_hash(self):
         pass
@@ -282,7 +285,7 @@ class HistogramEqualizationDist(ColorDistBase):
     def hash_array(self, idx):
         # NOTE: data could be assumed to be in the range 0..hashsize-1
         # at this point but clip as a precaution
-        idx = idx.clip(0, self.hashsize-1)
+        idx = idx.clip(0, self.hashsize - 1)
 
         #get image histogram
         hist, bins = numpy.histogram(idx.flatten(),
@@ -306,7 +309,6 @@ class HistogramEqualizationDist(ColorDistBase):
         return 'histeq'
 
 
-
 distributions = {
     'linear': LinearDist,
     'log': LogDist,
@@ -316,11 +318,13 @@ distributions = {
     'asinh': AsinhDist,
     'sinh': SinhDist,
     'histeq': HistogramEqualizationDist,
-    }
+}
+
 
 def add_dist(name, distClass):
     global distributions
     distributions[name.lower()] = distClass
+
 
 def get_dist_names():
     a_names = set(distributions.keys())
@@ -331,9 +335,10 @@ def get_dist_names():
         std_names = std_names + list(rest)
     return std_names
 
+
 def get_dist(name):
-    if not name in distributions:
+    if name not in distributions:
         raise ColorDistError("Invalid distribution algorithm '%s'" % (name))
     return distributions[name]
 
-#END
+# END
