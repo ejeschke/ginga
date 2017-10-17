@@ -42,7 +42,7 @@ class AstroImage(BaseImage):
         cls.ioClass = klass
 
     def __init__(self, data_np=None, metadata=None, logger=None,
-                 name=None, wcsclass=wcsClass, ioclass=ioClass,
+                 name=None, wcsclass=None, ioclass=None,
                  inherit_primary_header=False):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
@@ -50,12 +50,19 @@ class AstroImage(BaseImage):
 
         # wcsclass specifies a pluggable WCS module
         if wcsclass is None:
-            wcsclass = wcsmod.WCS
+             if self.wcsClass is None:
+                 wcsclass = wcsmod.WCS
+             else:
+                 wcsclass = self.wcsClass
         self.wcs = wcsclass(self.logger)
 
         # ioclass specifies a pluggable IO module
         if ioclass is None:
-            ioclass = io_fits.fitsLoaderClass
+            if self.ioClass is None:
+                ioclass = io_fits.fitsLoaderClass
+            else:
+                ioclass = self.ioClass
+            
         self.io = ioclass(self.logger)
         self.io.register_type('image', self.__class__)
 
