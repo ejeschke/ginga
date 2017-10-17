@@ -6,8 +6,8 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
+
 import sys
-import logging
 
 from ginga import AstroImage
 from ginga.gtkw import GtkHelp
