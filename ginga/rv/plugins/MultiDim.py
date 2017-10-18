@@ -652,7 +652,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             # save canceled
             return
 
-        with open(target, 'w') as target_file:
+        with open(target, 'wb') as target_file:
             hival = self.fitsimage.get_cut_levels()[1]
             image = self.fitsimage.get_image()
             curr_slice_data = image.get_data()
