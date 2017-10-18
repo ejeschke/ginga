@@ -103,6 +103,7 @@ class caselessDict(object):
         k = self.lower(key)
         del self.dict[k]
 
+    # TODO: Should deprecate this and encourage __contains__ like Python dict
     def has_key(self, key):
         k = self.lower(key)
         return k in self.dict
@@ -279,6 +280,7 @@ class Bunch(object):
     def keys(self):
         return self.tbl.keys()
 
+    # TODO: Should deprecate this and encourage __contains__ like Python dict
     def has_key(self, key):
         return key in self.tbl
 
@@ -454,6 +456,7 @@ class threadSafeBunch(object):
     # the following methods are inherited by subclasses
     ##############################################################
 
+    # TODO: Should deprecate this and encourage __contains__ like Python dict
     def has_key(self, key):
         """Checks for membership of dictionary key.
         """

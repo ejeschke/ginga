@@ -143,7 +143,11 @@ class SettingGroup(object):
     def __setitem__(self, key, value):
         self.group[key].set(value)
 
+    # TODO: Should deprecate this and encourage __contains__ like Python dict
     def has_key(self, key):
+        return key in self.group
+
+    def __contains__(self, key):
         return key in self.group
 
     def load(self, onError='raise'):

@@ -34,6 +34,7 @@ class Datasrc(object):
         with self.cond:
             return key in self.datums
 
+    # TODO: Should deprecate this and encourage __contains__ like Python dict
     def has_key(self, key):
         with self.cond:
             return key in self.datums

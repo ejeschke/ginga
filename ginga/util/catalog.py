@@ -67,6 +67,7 @@ class Star(object):
     def __setitem__(self, key, value):
         self.starInfo[key] = value
 
+    # TODO: Should deprecate this and encourage __contains__ like Python dict
     def has_key(self, key):
         return key in self.starInfo
 
