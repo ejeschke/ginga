@@ -50,10 +50,10 @@ class AstroImage(BaseImage):
 
         # wcsclass specifies a pluggable WCS module
         if wcsclass is None:
-             if self.wcsClass is None:
-                 wcsclass = wcsmod.WCS
-             else:
-                 wcsclass = self.wcsClass
+            if self.wcsClass is None:
+                wcsclass = wcsmod.WCS
+            else:
+                wcsclass = self.wcsClass
         self.wcs = wcsclass(self.logger)
 
         # ioclass specifies a pluggable IO module
@@ -62,7 +62,7 @@ class AstroImage(BaseImage):
                 ioclass = io_fits.fitsLoaderClass
             else:
                 ioclass = self.ioClass
-            
+
         self.io = ioclass(self.logger)
         self.io.register_type('image', self.__class__)
 
