@@ -1,4 +1,4 @@
-from ginga.web.pgw.ImageViewPg import CanvasView
+from ginga.web.pgw.ImageViewPg import CanvasView, ImageViewCanvas  # noqa
 from ginga.web.pgw import Widgets
 
 

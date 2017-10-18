@@ -1,4 +1,5 @@
 from ginga.gtk3w.ImageViewGtk import CanvasView, ScrolledView
+from ginga.gtk3w.ImageViewCanvasGtk import ImageViewCanvas  # noqa
 from ginga.gtk3w import Widgets
 
 
