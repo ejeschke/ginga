@@ -46,15 +46,19 @@ class FitsViewer(QtGui.QMainWindow):
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
+        canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='lightblue')
         canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         #fi.add(canvas)
         private_canvas = fi.get_canvas()
-        private_canvas.register_for_cursor_drawing(fi)
         private_canvas.add(canvas)
+        canvas.register_for_cursor_drawing(fi)
+        canvas.add_callback('draw-event', self.draw_cb)
+        canvas.set_draw_mode('draw')
         canvas.ui_set_active(True)
+
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
@@ -119,6 +123,33 @@ class FitsViewer(QtGui.QMainWindow):
                   QtGui.QLabel('Alpha:'), walpha, wclear, wquit):
             hbox.addWidget(w, stretch=0)
 
+        hw = QtGui.QWidget()
+        hw.setLayout(hbox)
+        vbox.addWidget(hw, stretch=0)
+
+        mode = self.canvas.get_draw_mode()
+        hbox = QtGui.QHBoxLayout()
+        hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
+
+        btn1 = QtGui.QRadioButton("Draw")
+        btn1.setChecked(mode == 'draw')
+        btn1.toggled.connect(lambda val: self.set_mode_cb('draw', val))
+        btn1.setToolTip("Choose this to draw on the canvas")
+        hbox.addWidget(btn1)
+
+        btn2 = QtGui.QRadioButton("Edit")
+        btn2.setChecked(mode == 'edit')
+        btn2.toggled.connect(lambda val: self.set_mode_cb('edit', val))
+        btn2.setToolTip("Choose this to edit things on the canvas")
+        hbox.addWidget(btn2)
+
+        btn3 = QtGui.QRadioButton("Pick")
+        btn3.setChecked(mode == 'pick')
+        btn3.toggled.connect(lambda val: self.set_mode_cb('pick', val))
+        btn3.setToolTip("Choose this to pick things on the canvas")
+        hbox.addWidget(btn3)
+
+        hbox.addWidget(QtGui.QLabel(''), stretch=1)
         hw = QtGui.QWidget()
         hw.setLayout(hbox)
         vbox.addWidget(hw, stretch=0)
@@ -202,6 +233,33 @@ class FitsViewer(QtGui.QMainWindow):
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.setText(text)
+
+    def set_mode_cb(self, mode, tf):
+        self.logger.info("canvas mode changed (%s) %s" % (mode, tf))
+        if not (tf is False):
+            self.canvas.set_draw_mode(mode)
+        return True
+
+    def draw_cb(self, canvas, tag):
+        obj = canvas.get_object_by_tag(tag)
+        obj.add_callback('pick-down', self.pick_cb, 'down')
+        obj.add_callback('pick-up', self.pick_cb, 'up')
+        obj.add_callback('pick-move', self.pick_cb, 'move')
+        obj.add_callback('pick-hover', self.pick_cb, 'hover')
+        obj.add_callback('pick-enter', self.pick_cb, 'enter')
+        obj.add_callback('pick-leave', self.pick_cb, 'leave')
+        obj.add_callback('pick-key', self.pick_cb, 'key')
+        obj.pickable = True
+        obj.add_callback('edited', self.edit_cb)
+
+    def pick_cb(self, obj, canvas, event, pt, ptype):
+        self.logger.info("pick event '%s' with obj %s at (%.2f, %.2f)" % (
+            ptype, obj.kind, pt[0], pt[1]))
+        return True
+
+    def edit_cb(self, obj):
+        self.logger.info("object %s has been edited" % (obj.kind))
+        return True
 
     def quit(self, *args):
         self.logger.info("Attempting to shut down the application...")
