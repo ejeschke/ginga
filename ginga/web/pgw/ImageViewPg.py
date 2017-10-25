@@ -475,7 +475,15 @@ class ImageViewEvent(ImageViewPg):
     def scroll_event(self, event):
         x, y = event.x, event.y
         delta = event.delta
+        dx, dy = event.dx, event.dy
         self.last_win_x, self.last_win_y = x, y
+
+        if (dx != 0 or dy != 0):
+            # <= This browser gives us deltas for x and y
+            # Synthesize this as a pan gesture event
+            self.make_ui_callback('pan', 'start', 0, 0)
+            self.make_ui_callback('pan', 'move', dx, dy)
+            return self.make_ui_callback('pan', 'stop', 0, 0)
 
         # 15 deg is standard 1-click turn for a wheel mouse
         # delta usually returns +/- 1.0

@@ -137,6 +137,7 @@ class BasicCanvasView(Viewers.CanvasView):
         canvas.register_for_cursor_drawing(self)
         # add the canvas to the view.
         my_canvas.add(canvas, tag=tag)
+        canvas.set_draw_mode(None)
 
         return canvas
 

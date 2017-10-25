@@ -28,7 +28,7 @@ default_interval = 10
 
 ConfigEvent = namedtuple("ConfigEvent", ["type", "id", "width", "height"])
 InputEvent = namedtuple("InputEvent", ["type", "id", "x", "y", "button",
-                                       "delta", "alt_key", "ctrl_key",
+                                       "delta", "dx", "dy", "alt_key", "ctrl_key",
                                        "meta_key", "shift_key", "key_code",
                                        "key_name"])
 GestureEvent = namedtuple("GestureEvent", ["type", "id", "x", "y", "dx", "dy",
