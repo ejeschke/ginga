@@ -34,6 +34,7 @@ class Datasrc(object):
         with self.cond:
             return key in self.datums
 
+    # TODO: Should deprecate this and encourage __contains__ like Python dict
     def has_key(self, key):
         with self.cond:
             return key in self.datums
@@ -65,8 +66,8 @@ class Datasrc(object):
         if len(args) == 0:
             return self.remove(self.history[0])
 
-        assert len(args) == 1, \
-               ValueError("Too many parameters to pop()")
+        if len(args) != 1:
+            raise ValueError("Too many parameters to pop()")
         return self.remove(args[0])
 
     def remove(self, key):

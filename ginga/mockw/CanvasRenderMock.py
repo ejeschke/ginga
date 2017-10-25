@@ -5,9 +5,10 @@
 # Please see the file LICENSE.txt for details.
 #
 # force registration of all canvas types
-import ginga.canvas.types.all
+import ginga.canvas.types.all  # noqa
 from ginga import trcalc
 from ginga.fonts import font_asst
+
 
 class RenderContext(object):
 
@@ -84,11 +85,12 @@ class RenderContext(object):
         cpoints = trcalc.strip_z(cpoints)
         for i in range(len(cpoints) - 1):
             cx1, cy1 = cpoints[i]
-            cx2, cy2 = cpoints[i+1]
+            cx2, cy2 = cpoints[i + 1]
             #self.cr.draw_line(cx1, cy1, cx2, cy2)
 
     def draw_bezier_curve(self, cp):
         pass
+
 
 class CanvasRenderer(object):
 

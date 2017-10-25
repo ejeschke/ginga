@@ -575,7 +575,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             # Download the file if a URL was passed
             def _dl_indicator(count, blksize, totalsize):
                 pct = float(count * blksize) / float(totalsize)
-                msg = "Downloading: %%%.2f complete" % (pct*100.0)
+                msg = "Downloading: %%%.2f complete" % (pct * 100.0)
                 self.gui_do(self.show_status, msg)
 
             # Try to download the URL.  We press our generic URL server
@@ -583,7 +583,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             try:
                 dl = catalog.URLServer(self.logger, "downloader", "dl",
                                        info.url, "")
-                filepath = dl.retrieve(info.url, filepath=info.filepath,
+                filepath = dl.retrieve(info.url, filepath=info.filepath,  # noqa
                                        cb_fn=_dl_indicator)
             finally:
                 self.gui_do(self.show_status, "")
@@ -1117,7 +1117,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             name = chname
             if settings is None:
-                settings = self.prefs.create_category('channel_'+name)
+                settings = self.prefs.create_category('channel_' + name)
                 try:
                     settings.load(onError='raise')
 
@@ -1217,7 +1217,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             self.ds.remove_tab(chname)
             del self.channel[name]
-            self.prefs.remove_settings('channel_'+chname)
+            self.prefs.remove_settings('channel_' + chname)
 
             # pick new channel
             num_channels = len(self.channel_names)
@@ -1240,7 +1240,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             text = '%.2fx' % (scalefactor)
         else:
             #text = '1/%dx' % (int(1.0/scalefactor))
-            text = '1/%.2fx' % (1.0/scalefactor)
+            text = '1/%.2fx' % (1.0 / scalefactor)
         return text
 
     def banner(self, raiseTab=False):

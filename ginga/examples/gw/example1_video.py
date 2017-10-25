@@ -10,29 +10,36 @@ This example shows how you can set up a recurring refresh rate in Ginga.
 It reads a video file and displays frames in a Ginga viewer.
 
 Caveats:
-    1. There is no sound.  This is due to the lack of a decent python module
-    that can read video files and provide _both_ audio and video streams.
 
-    2. Currently, it expects an OpenCV readable file as a command line parameter.
-    Only formats supported by OpenCV can be used (typically JPEG encoded).
+1. There is no sound.  This is due to the lack of a decent python module
+   that can read video files and provide _both_ audio and video streams.
 
-    Requirements:
-    To run this example you will need the OpenCV bindings for Python installed.
-    This module lets us access the video stream of a video file frame-by-frame.
+2. Currently, it expects an OpenCV readable file as a command line parameter.
+   Only formats supported by OpenCV can be used (typically JPEG encoded).
 
-Usage:
+Requirements:
+
+To run this example you will need the OpenCV bindings for Python installed.
+This module lets us access the video stream of a video file frame-by-frame.
+
+Usage::
+
     $ example1_video.py [log options] <video file>
 
 Workings:
-    Two threads are created: a GUI handling thread and a worker thread to
-    read frames from the file.  This allows the viewer to remain fairly
-    responsive to user actions.
+
+Two threads are created: a GUI handling thread and a worker thread to
+read frames from the file.  This allows the viewer to remain fairly
+responsive to user actions.
+
 """
 from __future__ import print_function
-import sys, os
+
+import sys
 import time
 import threading
-import numpy
+
+import numpy as np
 
 import ginga.toolkit as ginga_toolkit
 from ginga import RGBImage
@@ -58,7 +65,7 @@ class GingaVision(object):
         self.logger = logger
         self.ev_quit = ev_quit
 
-        from ginga.gw import Widgets, Viewers, GwHelp, GwMain
+        from ginga.gw import Widgets, Viewers, GwMain
 
         self.card = 'default'
         # playback rate; changed when we know the actual rate
@@ -168,7 +175,7 @@ class GingaVision(object):
         height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
         self.logger.info("Video is %dx%d resolution" % (width, height))
         bd = 50
-        self.main.gui_do(self.top.resize, width+bd, height+bd)
+        self.main.gui_do(self.top.resize, width + bd, height + bd)
 
         # Get the frame count
         num_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -177,12 +184,12 @@ class GingaVision(object):
         # Get the frame rate
         fps = cap.get(cv2.CAP_PROP_FPS)
         if self.fps is None:
-            if (fps is not None and not numpy.isnan(fps)
-                and float(fps) >= 1.0):
+            if fps is not None and not np.isnan(fps) and float(fps) >= 1.0:
                 self.fps = float(fps)
             else:
                 self.fps = 30.0
-                self.logger.warn("No video rate found in metadata; assuming %.2f fps" % (self.fps))
+                self.logger.warn("No video rate found in metadata; "
+                                 "assuming %.2f fps" % (self.fps))
 
         else:
             self.logger.info("Forcing a video rate of %d fps" % (self.fps))
@@ -211,13 +218,17 @@ class GingaVision(object):
                 done = True
 
             end_time = time.time()
-            self.logger.debug("update frame time %.4f sec" % (end_time-split_time))
+            self.logger.debug(
+                "update frame time %.4f sec" % (end_time - split_time))
 
             if end_time - last_report > 5.0:
                 # report measured FPS every 5 sec or so
                 last_report = end_time
                 stats = self.viewer.get_refresh_stats()
-                self.logger.info("screen fps: %(fps).2f jitter: %(jitter).5f late pct,avg: %(late_pct).1f%%, %(late_avg).4f early pct,avg: %(early_pct).1f%%, %(early_avg).4f" % stats)
+                self.logger.info(
+                    "screen fps: %(fps).2f jitter: %(jitter).5f "
+                    "late pct,avg: %(late_pct).1f%%, %(late_avg).4f "
+                    "early pct,avg: %(early_pct).1f%%, %(early_avg).4f" % stats)
 
             elapsed_time = end_time - start_time
             sleep_time = self.playback_rate - elapsed_time
@@ -263,6 +274,7 @@ def main(options, args):
     logger.info("program terminating...")
     sys.exit(0)
 
+
 if __name__ == '__main__':
     # Parse command line options with nifty optparse module
     from optparse import OptionParser
@@ -270,7 +282,8 @@ if __name__ == '__main__':
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
 
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+    optprs.add_option("--debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--fps", dest="fps", metavar="FPS",
                       type='float', default=None,
@@ -301,9 +314,7 @@ if __name__ == '__main__':
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
 
-
     else:
         main(options, args)
 
-
-#END
+# END

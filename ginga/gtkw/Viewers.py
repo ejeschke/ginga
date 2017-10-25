@@ -1,6 +1,7 @@
 from ginga.gtkw.ImageViewGtk import CanvasView, ScrolledView
-from ginga.gtkw.ImageViewCanvasGtk import ImageViewCanvas
+from ginga.gtkw.ImageViewCanvasGtk import ImageViewCanvas  # noqa
 from ginga.gtkw import Widgets
+
 
 class GingaViewerWidget(Widgets.WidgetBase):
 
@@ -8,11 +9,12 @@ class GingaViewerWidget(Widgets.WidgetBase):
         super(GingaViewerWidget, self).__init__()
 
         if viewer is None:
-            viewer = CanvasView(logger)
+            viewer = CanvasView()
         self.logger = viewer.logger
 
         self.viewer = viewer
         self.widget = viewer.get_widget()
+
 
 class GingaScrolledViewerWidget(Widgets.WidgetBase):
 
@@ -20,7 +22,7 @@ class GingaScrolledViewerWidget(Widgets.WidgetBase):
         super(GingaScrolledViewerWidget, self).__init__()
 
         if viewer is None:
-            viewer = CanvasView(logger)
+            viewer = CanvasView()
         self.logger = viewer.logger
 
         self.viewer = viewer
@@ -30,4 +32,4 @@ class GingaScrolledViewerWidget(Widgets.WidgetBase):
         self.widget.scroll_bars(horizontal=horizontal,
                                 vertical=vertical)
 
-#END
+# END

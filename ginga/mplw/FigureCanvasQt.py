@@ -6,13 +6,12 @@
 # Please see the file LICENSE.txt for details.
 from __future__ import print_function
 
+from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.toolkit import toolkit
 if toolkit == 'qt5':
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as QtFigureCanvas
 else:
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as QtFigureCanvas
-
-from ginga.qtw.QtHelp import QtGui, QtCore
 
 
 def setup_Qt(widget, viewer):
@@ -58,7 +57,6 @@ class FigureCanvas(QtFigureCanvas):
                                    QtGui.QSizePolicy.Expanding,
                                    QtGui.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
-
 
     def resizeEvent(self, event):
         rect = self.geometry()

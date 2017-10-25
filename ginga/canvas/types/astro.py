@@ -78,7 +78,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -262,7 +262,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='radius', type=float, default=1.0,  argpos=2,
+            Param(name='radius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="Radius of object"),
             Param(name='linewidth', type=int, default=1,
@@ -285,7 +285,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -443,7 +443,7 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
             Param(name='format', type=str, default='xy',
                   valid=['xy', 'value', 'coords'],
                   description="Format for text annotation (default: xy)"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -506,7 +506,7 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
 
         txtwd, txtht = cr.text_extents(text)
         cr.set_line(self.textcolor, alpha=self.alpha)
-        cr.draw_text(cx+10, cy+4+txtht, text)
+        cr.draw_text(cx + 10, cy + 4 + txtht, text)
 
 
 class AnnulusMixin(object):
@@ -555,7 +555,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='radius', type=float, default=1.0,  argpos=2,
+            Param(name='radius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="Inner radius of annulus"),
             Param(name='width', type=float, default=None,
@@ -576,7 +576,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
             Param(name='alpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of outline"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -711,7 +711,7 @@ class WCSAxes(CompoundObject):
             Param(name='fontsize', type=int, default=8,
                   min=8, max=72,
                   description="Font size of text (default: 8)"),
-            ]
+        ]
 
     def __init__(self, color='cyan',
                  linewidth=1, linestyle='dash', alpha=1.0,

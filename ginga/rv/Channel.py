@@ -4,14 +4,15 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import threading
 import time
 from datetime import datetime
 
 from ginga.misc import Bunch, Datasrc, Callback, Future
 
+
 class ChannelError(Exception):
     pass
+
 
 class Channel(Callback.Callbacks):
     """Class to manage a channel.
@@ -66,7 +67,7 @@ class Channel(Callback.Callbacks):
             'set', self._sort_changed_ext_cb)
 
     def connect_viewer(self, viewer):
-        if not viewer in self.viewers:
+        if viewer not in self.viewers:
             self.viewers.append(viewer)
             self.viewer_dict[viewer.vname] = viewer
 
@@ -121,7 +122,7 @@ class Channel(Callback.Callbacks):
         return info
 
     def get_image_names(self):
-        return [ info.name for info in self.history ]
+        return [info.name for info in self.history]
 
     def get_loaded_image(self, imname):
         """Get an image from memory.
@@ -148,8 +149,8 @@ class Channel(Callback.Callbacks):
     def add_image(self, image, silent=False, bulk_add=False):
 
         imname = image.get('name', None)
-        assert imname is not None, \
-               ValueError("image has no name")
+        if imname is None:
+            raise ValueError("image has no name")
 
         self.logger.debug("Adding image '%s' in channel %s" % (
             imname, self.name))
@@ -240,7 +241,7 @@ class Channel(Callback.Callbacks):
             return
 
         info = self.history[self.cursor]
-        if self.datasrc.has_key(info.name):
+        if info.name in self.datasrc:
             # image still in memory
             image = self.datasrc[info.name]
             self.switch_image(image)
@@ -352,7 +353,7 @@ class Channel(Callback.Callbacks):
         vname = vnames[0]
 
         # if we don't have this viewer type then install one in the channel
-        if not vname in self.viewer_dict:
+        if vname not in self.viewer_dict:
             self.fv.make_viewer(vname, self)
 
         self.viewer = self.viewer_dict[vname]
@@ -362,7 +363,6 @@ class Channel(Callback.Callbacks):
 
         # and load the data
         self.viewer.set_image(dataobj)
-
 
     def switch_image(self, image):
 
@@ -387,13 +387,13 @@ class Channel(Callback.Callbacks):
 
             # queue next and previous files for preloading
             index = self.cursor
-            if index < len(self.history)-1:
-                info = self.history[index+1]
+            if index < len(self.history) - 1:
+                info = self.history[index + 1]
                 if info.path is not None:
                     self.fv.add_preload(self.name, info)
 
             if index > 0:
-                info = self.history[index-1]
+                info = self.history[index - 1]
                 if info.path is not None:
                     self.fv.add_preload(self.name, info)
 
@@ -402,7 +402,7 @@ class Channel(Callback.Callbacks):
 
     def switch_name(self, imname):
 
-        if self.datasrc.has_key(imname):
+        if imname in self.datasrc:
             # Image is still in the heap
             image = self.datasrc[imname]
             self.switch_image(image)
@@ -419,6 +419,7 @@ class Channel(Callback.Callbacks):
         if info.image_future is not None:
             self.logger.info("Image '%s' is no longer in memory; attempting "
                              "image future" % (imname))
+
             # TODO: recode this--it's a bit messy
             def _switch(image):
                 # this will be executed in the gui thread

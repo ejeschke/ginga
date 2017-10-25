@@ -6,7 +6,7 @@
 
 from io import BytesIO
 
-import numpy
+import numpy as np
 
 # Bokeh imports
 #from bokeh.plotting import figure, show, curdoc
@@ -99,14 +99,14 @@ class ImageViewBokeh2(ImageViewSS):
 
         # Get surface as a numpy array
         surface = self.get_surface()
-        if isinstance(surface, numpy.ndarray):
+        if isinstance(surface, np.ndarray):
             arr8 = surface
         else:
-            arr8 = numpy.fromstring(surface.tostring(), dtype=numpy.uint8)
+            arr8 = np.fromstring(surface.tostring(), dtype=np.uint8)
             arr8 = arr8.reshape((ht, wd, 4))
 
         # Bokeh expects a 32-bit uint array type
-        view = arr8.view(dtype=numpy.uint32).reshape((ht, wd))
+        view = arr8.view(dtype=np.uint32).reshape((ht, wd))
 
         dst_x = dst_y = 0
 
@@ -129,6 +129,8 @@ class ImageViewBokeh2(ImageViewSS):
             d_src.data["dh"] = [ht]
 
         if self._push_server:
+            from bokeh.plotting import cursession
+
             try:
                 #self.bkimage.data_source.push_notebook()
                 #push_notebook()
@@ -143,7 +145,7 @@ class ImageViewBokeh2(ImageViewSS):
             ##     self.figure.after_cancel(self._defer_task)
             ## except Exception:
             ##     pass
-            time_ms = int(time_sec * 1000)
+            time_ms = int(time_sec * 1000)  # noqa
             ## self._defer_task = self.figure.after(time_ms,
             ##                                        self.delayed_redraw)
 
@@ -168,9 +170,9 @@ class ImageViewBokeh2(ImageViewSS):
         self.message = text
         self.redraw(whence=3)
         if delay:
-            ms = int(delay * 1000.0)
-            ## self.msgtask = self.figure.after(ms,
-            ##                                   lambda: self.onscreen_message(None))
+            ms = int(delay * 1000.0)  # noqa
+            ## self.msgtask = self.figure.after(
+            ##     ms, lambda: self.onscreen_message(None))
 
 
 class ImageViewBokeh(ImageView.ImageViewBase):
@@ -250,7 +252,7 @@ class ImageViewBokeh(ImageView.ImageViewBase):
         ht, wd = data.shape[:2]
 
         # Bokeh expects a 32-bit uint array type
-        view = data.view(dtype=numpy.uint32).reshape((ht, wd))
+        view = data.view(dtype=np.uint32).reshape((ht, wd))
 
         dst_x = dst_y = 0
 
@@ -291,6 +293,8 @@ class ImageViewBokeh(ImageView.ImageViewBase):
                              text_align='center')
 
         if self._push_server:
+            from bokeh.plotting import cursession
+
             # force an update of the figure
             try:
                 cursession().store_objects(d_src)
@@ -316,7 +320,7 @@ class ImageViewBokeh(ImageView.ImageViewBase):
         ibuf = output
         if ibuf is None:
             ibuf = BytesIO()
-        qimg = self.figure.write_to_png(ibuf)
+        self.figure.write_to_png(ibuf)
         return ibuf
 
     def update_image(self):
@@ -348,7 +352,7 @@ class ImageViewBokeh(ImageView.ImageViewBase):
         self.redraw(whence=3)
 
         if delay:
-            time_ms = int(delay * 1000.0)
+            time_ms = int(delay * 1000.0)  # noqa
             ## self._msg_timer.interval = time_ms
             ## self._msg_timer.start()
 

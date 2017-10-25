@@ -10,8 +10,10 @@
 from ginga.misc import Callback, Bunch
 from ginga.gw import Widgets
 
+
 class Param(Bunch.Bunch):
     pass
+
 
 class ParamSet(Callback.Callbacks):
     def __init__(self, logger, obj):
@@ -54,14 +56,13 @@ class ParamSet(Callback.Callbacks):
         for param in paramlst:
             title = param.get('title', param.name)
             wtype = param.get('widget', None)
-            ptype = param.get('type', str)
             if wtype is None:
                 # set default widget type if none specified
                 wtype = 'entry'
-                if param.has_key('valid'):
+                if 'valid' in param:
                     wtype = 'combobox'
 
-            captions.append((title+':', 'label', param.name, wtype))
+            captions.append((title + ':', 'label', param.name, wtype))
 
         w, b = Widgets.build_info(captions, orientation=orientation)
 
@@ -76,7 +77,7 @@ class ParamSet(Callback.Callbacks):
                 for value in valid:
                     widget.append_text(str(value))
 
-            elif hasattr(widget, 'set_limits') and param.has_key('incr'):
+            elif hasattr(widget, 'set_limits') and 'incr' in param:
                 # configure spinbox/slider
                 widget.set_limits(param.min, param.max,
                                   incr_value=param.incr)
@@ -123,7 +124,7 @@ class ParamSet(Callback.Callbacks):
                     value = param.type(value)
             setattr(self.obj, param.name, value)
 
-            if param.has_key('argpos'):
+            if 'argpos' in param:
                 # TODO: ensure arg positioning is correct
                 args.append(value)
             else:

@@ -5,18 +5,19 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
-import pprint
 import ast
-import numpy
+
+import numpy as np
 
 from . import Callback
 from . import Bunch
 
-
 unset_value = ("^^UNSET^^")
+
 
 class SettingError(Exception):
     pass
+
 
 class Setting(Callback.Callbacks):
 
@@ -51,8 +52,8 @@ class Setting(Callback.Callbacks):
                     self.name))
             else:
                 assert len(args) == 1, \
-                       SettingError("Illegal parameter use to get(): %s" % (
-                    str(args)))
+                    SettingError("Illegal parameter use to get(): %s" % (
+                        str(args)))
                 return args[0]
         return self.value
 
@@ -99,7 +100,7 @@ class SettingGroup(object):
         if key in self.group:
             return self.group[key].get(value)
         else:
-            d = { key: value }
+            d = {key: value}
             self.add_settings(**d)
             return self.group[key].get(value)
 
@@ -142,7 +143,11 @@ class SettingGroup(object):
     def __setitem__(self, key, value):
         self.group[key].set(value)
 
+    # TODO: Should deprecate this and encourage __contains__ like Python dict
     def has_key(self, key):
+        return key in self.group
+
+    def __contains__(self, key):
         return key in self.group
 
     def load(self, onError='raise'):
@@ -160,7 +165,7 @@ class SettingGroup(object):
                     try:
                         i = line.index('=')
                         key = line[:i].strip()
-                        val = ast.literal_eval(line[i+1:].strip())
+                        val = ast.literal_eval(line[i + 1:].strip())
                         d[key] = val
                     except Exception as e:
                         # silently skip parse errors, for now
@@ -183,9 +188,9 @@ class SettingGroup(object):
                 d[key] = self._check(value)
             return d
         try:
-            if numpy.isnan(d):
+            if np.isnan(d):
                 return 0.0
-            elif numpy.isinf(d):
+            elif np.isinf(d):
                 return 0.0
         except Exception:
             pass
@@ -255,7 +260,6 @@ class Preferences(object):
     def get_dict(self):
         return dict([[name, self.settings[name].get_dict()] for name in
                      self.settings.keys()])
-
 
     ########################################################
     ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED

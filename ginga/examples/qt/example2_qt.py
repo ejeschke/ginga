@@ -6,10 +6,10 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
-import sys, os
-import logging
-from ginga.qtw.QtHelp import QtGui, QtCore
 
+import sys
+
+from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga import AstroImage, colors
 from ginga.qtw.ImageViewQt import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
@@ -165,9 +165,9 @@ class FitsViewer(QtGui.QMainWindow):
         fill = (self.wfill.checkState() != 0)
         alpha = self.walpha.value()
 
-        params = { 'color': self.drawcolors[index],
-                   'alpha': alpha,
-                   }
+        params = {'color': self.drawcolors[index],
+                  'alpha': alpha,
+                  }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
@@ -187,7 +187,7 @@ class FitsViewer(QtGui.QMainWindow):
 
     def open_file(self):
         res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
-                                                     ".", "FITS files (*.fits)")
+                                                ".", "FITS files (*.fits)")
         if isinstance(res, tuple):
             fileName = res[0]
         else:
@@ -227,7 +227,7 @@ class FitsViewer(QtGui.QMainWindow):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -265,6 +265,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.logger.info("Attempting to shut down the application...")
         self.deleteLater()
 
+
 def main(options, args):
 
     #QtGui.QApplication.setGraphicsSystem('raster')
@@ -300,6 +301,7 @@ def main(options, args):
 
     app.exec_()
 
+
 if __name__ == "__main__":
 
     # Parse command line options with nifty optparse module
@@ -308,7 +310,8 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
 
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+    optprs.add_option("--debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--opencv", dest="opencv", default=False,
                       action="store_true",
@@ -335,7 +338,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

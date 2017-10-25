@@ -74,7 +74,7 @@ class Callbacks(object):
     def add_callback(self, name, fn, *args, **kwdargs):
         try:
             tup = (fn, args, kwdargs)
-            if not tup in self.cb[name]:
+            if tup not in self.cb[name]:
                 self.cb[name].append(tup)
         except KeyError:
             raise CallbackError("No callback category of '%s'" % (

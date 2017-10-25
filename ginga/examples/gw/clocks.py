@@ -16,21 +16,20 @@ Usage:
   $ clock.py --show-timezones
   $ clock.py --show-colors
 """
-import sys, os
-import logging
-import pytz
+import sys
+import os
 from datetime import datetime
+
+import pytz
 from dateutil import tz
 
-from ginga import colors
 import ginga.toolkit as ginga_toolkit
-from ginga.canvas.CanvasObject import get_canvas_types
+from ginga import colors
 from ginga.misc import log
+from ginga.misc.Bunch import Bunch
 from ginga.misc.Settings import SettingGroup
 from ginga.util.six.moves import map
-from ginga.misc.Bunch import Bunch
 from ginga.util.paths import ginga_home
-
 
 width, height = 300, 230
 
@@ -57,7 +56,7 @@ class Clock(object):
         self.show_seconds = show_seconds
 
         # now import our items
-        from ginga.gw import Widgets, Viewers, GwHelp
+        from ginga.gw import Viewers
 
         fi = Viewers.CanvasView(logger=logger)
         fi.set_bg(0.2, 0.2, 0.2)
@@ -100,7 +99,7 @@ class Clock(object):
         self.canvas.add(self.time_txt, tag='_time', redraw=False)
 
         # for supplementary info (date, timezone, etc)
-        self.suppl_txt = Text(x, height-10, text='', color=self.color,
+        self.suppl_txt = Text(x, height - 10, text='', color=self.color,
                               font=self.font, fontsize=self.smallsize,
                               coord='window')
         self.canvas.add(self.suppl_txt, tag='_suppl', redraw=False)
@@ -144,13 +143,12 @@ class ClockApp(object):
         self.colors = self.settings.get('colors', colors)
 
         # now import our items
-        from ginga.gw import Widgets, Viewers, GwHelp
+        from ginga.gw import Widgets, GwHelp
 
         self.app = Widgets.Application(logger=logger)
         self.app.add_callback('shutdown', self.quit)
         self.top = self.app.make_window("Clocks")
         self.top.add_callback('close', self.closed)
-
 
         menubar = Widgets.Menubar()
         clockmenu = menubar.add_name('Clock')
@@ -165,7 +163,6 @@ class ClockApp(object):
         self.grid.set_spacing(2)
         vbox.add_widget(self.grid, stretch=1)
         self.top.set_widget(vbox)
-
 
         hbox = Widgets.HBox()
 
@@ -188,8 +185,8 @@ class ClockApp(object):
         self.time_offset = Widgets.SpinBox(dtype=float)
         self.time_offset.set_decimals(2)
         self.time_offset.set_limits(-12, 12)
-        self.timezone_button =  Widgets.Button('Add by Timezone')
-        self.offset_button =  Widgets.Button('Add by Offset')
+        self.timezone_button = Widgets.Button('Add by Timezone')
+        self.offset_button = Widgets.Button('Add by Offset')
 
         self.timezone_button.widget.clicked.connect(self.more_clock_by_timezone)
         self.offset_button.widget.clicked.connect(self.more_clock_by_offset)
@@ -218,7 +215,7 @@ class ClockApp(object):
         location = self.location.get_text()
         time_offset = self.time_offset.get_value()
         sec_hour = 3600
-        timezone = Bunch(location=location, time_offset=time_offset*sec_hour)
+        timezone = Bunch(location=location, time_offset=time_offset * sec_hour)
         color = self.colors[self.color_index % len(self.colors)]
         self.color_index += 1
         self.add_clock(timezone=timezone, color=color)
@@ -291,7 +288,7 @@ class ClockApp(object):
 
     def quit(self, *args):
         self.logger.info("Attempting to shut down the application...")
-        if not self.top is None:
+        if self.top is not None:
             self.top.close()
         sys.exit()
 
@@ -429,7 +426,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

@@ -8,21 +8,22 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, os
+import sys
 import logging
 
 import ginga.util.six as six
+from ginga.tkw.ImageViewTk import ImageViewCanvas
+from ginga import AstroImage
+
 if six.PY2:
     import Tkinter
     from tkFileDialog import askopenfilename
 else:
     import tkinter as Tkinter
     from tkinter.filedialog import askopenfilename
-from ginga.tkw.ImageViewTk import ImageViewCanvas
-from ginga import AstroImage
-
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
+
 
 class FitsViewer(object):
 
@@ -69,7 +70,6 @@ class FitsViewer(object):
         for w in (wquit, wopen):
             w.pack(side=Tkinter.RIGHT)
 
-
     def get_widget(self):
         return self.root
 
@@ -80,8 +80,8 @@ class FitsViewer(object):
         self.root.title(filepath)
 
     def open_file(self):
-        filename = askopenfilename(filetypes=[("allfiles","*"),
-                                              ("fitsfiles","*.fits")])
+        filename = askopenfilename(filetypes=[("allfiles", "*"),
+                                              ("fitsfiles", "*.fits")])
         self.load_file(filename)
 
     def quit(self, root):

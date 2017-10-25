@@ -1,24 +1,26 @@
 from __future__ import print_function
 
-import sys, os
+import sys
+import os
+
 from bokeh.plotting import figure, curdoc, vplot
 from bokeh.client import push_session
 from bokeh.models.widgets import TextInput
-from bokeh.models import BoxSelectTool, TapTool
 
 from ginga.web.bokehw import ImageViewBokeh as ib
 from ginga.misc import log
 from ginga.AstroImage import AstroImage
 
+
 def main(options, args):
-    
+
     logger = log.get_logger("ginga", options=options)
 
     TOOLS = "pan,wheel_zoom,box_select,tap"
-    
+
     # create a new plot with default tools, using figure
-    fig = figure(x_range=[0,600], y_range=[0,600], plot_width=600, plot_height=600,
-                 tools=TOOLS)
+    fig = figure(x_range=[0, 600], y_range=[0, 600],
+                 plot_width=600, plot_height=600, tools=TOOLS)
 
     viewer = ib.CanvasView(logger)
     viewer.set_figure(fig)
@@ -52,20 +54,22 @@ def main(options, args):
         load_file(args[0])
 
     # open the document in a browser
-    session.show() 
+    session.show()
 
     # run forever
-    session.loop_until_closed() 
+    session.loop_until_closed()
+
 
 if __name__ == "__main__":
 
-    # Parse command line options 
+    # Parse command line options
     from optparse import OptionParser
 
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
 
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+    optprs.add_option("--debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("-d", "--indir", dest="indir", metavar="DIR",
                       default=os.environ['HOME'],
@@ -92,7 +96,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

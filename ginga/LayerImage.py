@@ -13,6 +13,7 @@ import time
 from ginga import BaseImage
 from ginga.misc import Bunch
 
+
 class LayerImage(object):
     """Mixin class for BaseImage subclasses.  Adds layers and alpha/rgb
     compositing.
@@ -34,14 +35,14 @@ class LayerImage(object):
         self._layer.insert(idx, bnch)
 
     def insert_layer(self, idx, image, alpha=None, name=None,
-                    compose=True):
+                     compose=True):
         self._insert_layer(idx, image, alpha=alpha, name=name)
 
         if compose:
             self.compose_layers()
 
     def set_layer(self, idx, image, alpha=None, name=None,
-                    compose=True):
+                  compose=True):
         self.delete_layer(idx, compose=False)
         self._insert_layer(idx, image, alpha=alpha, name=name)
 
@@ -119,7 +120,6 @@ class LayerImage(object):
             res[:, :, 1] = data[:, :, 1] * alpha
             res[:, :, 2] = data[:, :, 2] * alpha
             return res
-
 
     def alpha_compose(self):
         start_time = time.time()
@@ -218,8 +218,8 @@ class LayerImage(object):
 
     def set_compose_type(self, ctype):
         assert ctype in self.compose_types, \
-               BaseImage.ImageError("Bad compose type '%s': must be one of %s" % (
-            ctype, str(self.compose_types)))
+            BaseImage.ImageError("Bad compose type '%s': must be one of %s" % (
+                ctype, str(self.compose_types)))
         self.compose = ctype
 
         self.compose_layers()

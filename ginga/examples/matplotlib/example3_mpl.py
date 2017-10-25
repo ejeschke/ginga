@@ -23,21 +23,21 @@ ginga pane.
 You need Qt4 with python bindings (or pyside) installed to run this example.
 """
 from __future__ import print_function
+
 import sys
-import numpy
+
+import matplotlib
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga import AstroImage
 from ginga import cmap, imap
 from ginga.misc import log
-from ginga.util.six.moves import map, zip
-
-import matplotlib
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.colors import ListedColormap
+from ginga.util.six.moves import map
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
+
 
 class FitsViewer(QtGui.QMainWindow):
 
@@ -99,8 +99,6 @@ class FitsViewer(QtGui.QMainWindow):
 
         self.cm = cmap.get_cmap('gray')
         self.im = imap.get_imap('ramp')
-
-        settings = fi.get_settings()
 
         # color map selection widget
         wcmap = QtGui.QComboBox()
@@ -224,10 +222,9 @@ class FitsViewer(QtGui.QMainWindow):
             self.logger.warning("Can't calculate compass: %s" % (
                 str(e)))
 
-
     def open_file(self):
         res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
-                                                     ".", "FITS files (*.fits)")
+                                                ".", "FITS files (*.fits)")
         if isinstance(res, tuple):
             fileName = res[0]
         else:
@@ -270,7 +267,7 @@ class FitsViewer(QtGui.QMainWindow):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -310,7 +307,7 @@ class FitsViewer(QtGui.QMainWindow):
 
         # Get the data extents
         x0, y0 = fi.get_data_xy(0, 0)
-        x1, y1 = fi.get_data_xy(wd-1, ht-1)
+        x1, y1 = fi.get_data_xy(wd - 1, ht - 1)
         flipx, flipy, swapxy = fi.get_transforms()
         if swapxy:
             x0, x1, y0, y1 = y0, y1, x0, x1
@@ -336,12 +333,12 @@ class FitsViewer(QtGui.QMainWindow):
         ax.set_ylabel(ylabel)
 
         # make the equivalent color map for matplotlib
-        cm = self.make_mpl_colormap(fi)
+        self.make_mpl_colormap(fi)
 
-        img = ax.imshow(arr, interpolation="nearest", origin="upper",
-                        vmin=0, vmax=255,
-                        extent=extent,
-                        aspect=aspect)
+        ax.imshow(arr, interpolation="nearest", origin="upper",
+                  vmin=0, vmax=255,
+                  extent=extent,
+                  aspect=aspect)
 
         # force an update of the figure
         self.fig.canvas.draw()
@@ -398,6 +395,7 @@ def main(options, args):
 
     app.exec_()
 
+
 if __name__ == "__main__":
 
     # Parse command line options with nifty optparse module
@@ -406,7 +404,8 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
 
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+    optprs.add_option("--debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("--log", dest="logfile", metavar="FILE",
                       help="Write logging output to FILE")
@@ -434,7 +433,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

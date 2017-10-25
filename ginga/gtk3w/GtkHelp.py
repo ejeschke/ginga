@@ -14,12 +14,11 @@ import ginga.toolkit
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
-from gi.repository import Gdk
-from gi.repository import GdkPixbuf
-from gi.repository import GObject
-from gi.repository import Pango
-import cairo
+from gi.repository import Gtk  # noqa
+from gi.repository import Gdk  # noqa
+from gi.repository import GdkPixbuf  # noqa
+from gi.repository import GObject  # noqa
+from gi.repository import Pango  # noqa
 
 ginga.toolkit.use('gtk3')
 
@@ -60,6 +59,7 @@ class TopLevel(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self)
 
+
 class CheckButton(WidgetMask, Gtk.CheckButton):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
@@ -71,6 +71,7 @@ class CheckButton(WidgetMask, Gtk.CheckButton):
             self.change()
 
         super(CheckButton, self).set_active(newval)
+
 
 class ToggleButton(WidgetMask, Gtk.ToggleButton):
     def __init__(self, *args, **kwdargs):
@@ -146,6 +147,7 @@ class HScale(WidgetMask, Gtk.HScale):
 
         super(HScale, self).set_value(newval)
 
+
 class VScale(WidgetMask, Gtk.VScale):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
@@ -177,7 +179,7 @@ class ComboBoxMixin(object):
             if model[i][0] > text:
                 model.insert(j, tup)
                 return
-        model.insert(j+1, tup)
+        model.insert(j + 1, tup)
 
     def insert_text(self, idx, text):
         model = self.get_model()
@@ -201,6 +203,7 @@ class ComboBoxMixin(object):
             if model[i][0] == text:
                 self.set_active(i)
                 return
+
 
 class ComboBox(WidgetMask, Gtk.ComboBox, ComboBoxMixin):
     def __init__(self, *args, **kwdargs):
@@ -247,10 +250,12 @@ class MultiDragDropTreeView(Gtk.TreeView):
         # Here we intercept mouse clicks on selected items so that we can
         # drag multiple items without the click selecting only one
         target = self.get_path_at_pos(int(event.x), int(event.y))
-        if (target
-           and event.type == Gdk.EventType.BUTTON_PRESS
-           and not (event.state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK))
-           and self.get_selection().path_is_selected(target[0])):
+        if (target and
+                event.type == Gdk.EventType.BUTTON_PRESS and
+                not (event.state &
+                     (Gdk.ModifierType.CONTROL_MASK |
+                      Gdk.ModifierType.SHIFT_MASK)) and
+                self.get_selection().path_is_selected(target[0])):
             # disable selection
             self.get_selection().set_select_function(lambda *ignore: False)
             self.defer_select = target[0]
@@ -260,12 +265,12 @@ class MultiDragDropTreeView(Gtk.TreeView):
         self.get_selection().set_select_function(lambda *ignore: True)
 
         target = self.get_path_at_pos(int(event.x), int(event.y))
-        if (self.defer_select and target
-           and self.defer_select == target[0]
-           and not (event.x==0 and event.y==0)): # certain drag and drop
+        if (self.defer_select and target and
+                self.defer_select == target[0] and
+                not (event.x == 0 and event.y == 0)):  # certain drag and drop
             self.set_cursor(target[0], target[1], False)
 
-        self.defer_select=False
+        self.defer_select = False
 
 
 class MDISubWindow(Callback.Callbacks):
@@ -342,18 +347,18 @@ class MDIWidget(Gtk.Layout):
         self.connect("button_press_event", self.button_press_event)
         self.connect("button_release_event", self.button_release_event)
         mask = self.get_events()
-        self.set_events(mask
-                        | Gdk.EventMask.ENTER_NOTIFY_MASK
-                        | Gdk.EventMask.LEAVE_NOTIFY_MASK
-                        | Gdk.EventMask.FOCUS_CHANGE_MASK
-                        | Gdk.EventMask.STRUCTURE_MASK
-                        | Gdk.EventMask.BUTTON_PRESS_MASK
-                        | Gdk.EventMask.BUTTON_RELEASE_MASK
-                        | Gdk.EventMask.KEY_PRESS_MASK
-                        | Gdk.EventMask.KEY_RELEASE_MASK
-                        | Gdk.EventMask.POINTER_MOTION_MASK
-                        | Gdk.EventMask.POINTER_MOTION_HINT_MASK
-                        | Gdk.EventMask.SCROLL_MASK)
+        self.set_events(mask |
+                        Gdk.EventMask.ENTER_NOTIFY_MASK |
+                        Gdk.EventMask.LEAVE_NOTIFY_MASK |
+                        Gdk.EventMask.FOCUS_CHANGE_MASK |
+                        Gdk.EventMask.STRUCTURE_MASK |
+                        Gdk.EventMask.BUTTON_PRESS_MASK |
+                        Gdk.EventMask.BUTTON_RELEASE_MASK |
+                        Gdk.EventMask.KEY_PRESS_MASK |
+                        Gdk.EventMask.KEY_RELEASE_MASK |
+                        Gdk.EventMask.POINTER_MOTION_MASK |
+                        Gdk.EventMask.POINTER_MOTION_HINT_MASK |
+                        Gdk.EventMask.SCROLL_MASK)
 
         self.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray50"))
 
@@ -376,6 +381,7 @@ class MDIWidget(Gtk.Layout):
 
     def set_tab_reorderable(self, w, tf):
         pass
+
     def set_tab_detachable(self, w, tf):
         pass
 
@@ -394,7 +400,7 @@ class MDIWidget(Gtk.Layout):
 
     def set_current_page(self, idx):
         subwin = self.children[idx]
-        frame = subwin.frame
+        #frame = subwin.frame
         #frame.show()
         self.raise_widget(subwin)
         self.cur_index = idx
@@ -425,22 +431,22 @@ class MDIWidget(Gtk.Layout):
 
     def get_widget_position(self, widget):
         rect = widget.get_allocation()
-        x, y, width, height = rect.x, rect.y, rect.width, rect.height
+        x, y = rect.x, rect.y
         return x, y
 
     def get_widget_size(self, widget):
         rect = widget.get_allocation()
-        x, y, width, height = rect.x, rect.y, rect.width, rect.height
+        width, height = rect.width, rect.height
         return width, height
 
     def update_subwin_position(self, subwin):
         rect = subwin.frame.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        x, y, = rect.x, rect.y
         subwin.x, subwin.y = x, y
 
     def update_subwin_size(self, subwin):
         rect = subwin.frame.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        wd, ht = rect.width, rect.height
         subwin.width, subwin.height = wd, ht
 
     def raise_widget(self, subwin):
@@ -520,7 +526,6 @@ class MDIWidget(Gtk.Layout):
         return True
 
     def button_press_event(self, widget, event):
-        x = event.x; y = event.y
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
@@ -562,7 +567,6 @@ class MDIWidget(Gtk.Layout):
         if 'w' in updates or 'h' in updates:
             # this works better if it is not self.resize_page()
             subwin.frame.set_size_request(wd, ht)
-
 
     def button_release_event(self, widget, event):
         x_root, y_root = event.x_root, event.y_root
@@ -628,13 +632,13 @@ class MDIWidget(Gtk.Layout):
 
         # find out how big each window should be
         rect = self.get_allocation()
-        _x, _y, width, height = rect.x, rect.y, rect.width, rect.height
+        width, height = rect.width, rect.height
         wd, ht = width // cols, height // rows
 
         # and move and resize them into place
         for i in range(0, rows):
             for j in range(0, cols):
-                index = i*cols + j
+                index = i * cols + j
                 if index < num_widgets:
                     subwin = self.children[index]
 
@@ -666,7 +670,7 @@ class MDIWidget(Gtk.Layout):
 
     def maximize_page(self, subwin):
         rect = self.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        wd, ht = rect.width, rect.height
 
         self.raise_widget(subwin)
         self.resize_page(subwin, wd, ht)
@@ -674,16 +678,16 @@ class MDIWidget(Gtk.Layout):
 
     def minimize_page(self, subwin):
         rect = self.get_allocation()
-        _x, _y, width, height = rect.x, rect.y, rect.width, rect.height
+        height = rect.height
 
         rect = subwin.frame.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        x = rect.x
 
         rect = subwin.label.get_allocation()
-        _x, _y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        ht = rect.height
 
         self.resize_page(subwin, self.minimized_width, ht)
-        self.move_page(subwin, x, height-ht)
+        self.move_page(subwin, x, height - ht)
         #self.lower_widget(subwin)
 
     def close_page(self, subwin):
@@ -811,6 +815,7 @@ def combo_box_new_text():
     combobox.add_attribute(cell, 'text', 0)
     return combobox
 
+
 def get_scroll_info(event):
     """
     Returns the (degrees, direction) of a scroll motion Gtk event.
@@ -850,6 +855,7 @@ def get_scroll_info(event):
 
     return (num_degrees, direction)
 
+
 def get_icon(iconpath, size=None):
     if size is not None:
         wd, ht = size
@@ -858,10 +864,12 @@ def get_icon(iconpath, size=None):
     pixbuf = pixbuf_new_from_file_at_size(iconpath, wd, ht)
     return pixbuf
 
+
 def get_font(font_family, point_size):
     font_family = font_asst.resolve_alias(font_family, font_family)
     font = Pango.FontDescription('%s %d' % (font_family, point_size))
     return font
+
 
 def load_font(font_name, font_file):
     # TODO!
@@ -869,9 +877,11 @@ def load_font(font_name, font_file):
     ##                  " feature for gtk3 back end")
     return font_name
 
+
 def pixbuf_new_from_xpm_data(xpm_data):
     xpm_data = bytes('\n'.join(xpm_data))
     return GdkPixbuf.Pixbuf.new_from_xpm_data(xpm_data)
+
 
 def pixbuf_new_from_array(data, rgbtype, bpp):
     # NOTE: there is a bug in gtk3 with pixbuf_new_from_array()
@@ -887,16 +897,19 @@ def pixbuf_new_from_array(data, rgbtype, bpp):
     pixl.close()
     return pix
 
+
 def pixbuf_new_from_data(rgb_buf, rgbtype, hasAlpha, bpp, dawd, daht, stride):
     return GdkPixbuf.Pixbuf.new_from_data(rgb_buf, rgbtype, hasAlpha, bpp,
                                           dawd, daht, stride, None, None)
 
+
 def pixbuf_new_from_file_at_size(foldericon, width, height):
-    return GdkPixbuf.Pixbuf.new_from_file_at_size(foldericon,
-                                                  width, height)
+    return GdkPixbuf.Pixbuf.new_from_file_at_size(foldericon, width, height)
+
 
 def pixbuf_new_from_file(file_path):
     return GdkPixbuf.Pixbuf.new_from_file(file_path)
+
 
 def make_cursor(widget, iconpath, x, y):
     image = Gtk.Image()
@@ -905,6 +918,7 @@ def make_cursor(widget, iconpath, x, y):
     screen = widget.get_screen()
     display = screen.get_display()
     return Gdk.Cursor(display, pixbuf, x, y)
+
 
 def set_default_style():
     style_provider = Gtk.CssProvider()
@@ -919,6 +933,6 @@ def set_default_style():
     Gtk.StyleContext.add_provider_for_screen(
         Gdk.Screen.get_default(), style_provider,
         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
+    )
 
-#END
+# END
