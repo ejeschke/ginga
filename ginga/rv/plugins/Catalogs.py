@@ -349,7 +349,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         # stop catalog operation
         try:
             self.clear_all()
-        except:
+        except Exception:
             pass
         # remove the canvas from the image
         self.canvas.ui_set_active(False)

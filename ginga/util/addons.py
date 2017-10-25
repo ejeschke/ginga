@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 
+
 def show_pan_mark(viewer, tf, color='red'):
     """Show a mark in the pan position (center of window).
 
@@ -191,8 +192,10 @@ def add_zoom_buttons(viewer, canvas=None, color='black'):
         zoomout.pickable = True
         zoomout.add_callback('pick-down', zoom, viewer, -1)
         objs.append(zoomout)
-        objs.append(Text(x1-4, y1+6, text='+', fontsize=18, color=color, coord='window'))
-        objs.append(Text(x2-4, y2+6, text='--', fontsize=18, color=color, coord='window'))
+        objs.append(Text(x1 - 4, y1 + 6, text='+', fontsize=18, color=color,
+                         coord='window'))
+        objs.append(Text(x2 - 4, y2 + 6, text='--', fontsize=18, color=color,
+                         coord='window'))
         obj = Compound(*objs)
         obj.opaque = False
         canvas.add(obj, tag=tag)

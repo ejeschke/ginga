@@ -237,11 +237,11 @@ class Compose(GingaPlugin.LocalPlugin):
     def make_reduced_image(self, image):
         wd, ht = image.get_size()[:2]
         res = image.get_scaled_cutout_basic(0, 0, wd, ht,
-                                             self.pct_reduce, self.pct_reduce)
+                                            self.pct_reduce, self.pct_reduce)
         image2 = RGBImage.RGBImage(data_np=res.data, order=image.order)
         #image2.set_data(data)
         return image2
-        
+
     def insert_image(self, image):
         if self.limage is None:
             self.new_cb()
@@ -257,7 +257,7 @@ class Compose(GingaPlugin.LocalPlugin):
 
         self.images.append(image)
         sm_img = self.make_reduced_image(image)
-        
+
         attrs = self._get_layer_attributes(self.limage)
         self.limage.insert_layer(attrs.idx, sm_img, name=attrs.name,
                                  alpha=attrs.alpha)
@@ -400,7 +400,7 @@ class Compose(GingaPlugin.LocalPlugin):
 
         self.limage = None
         self.images = []
-        
+
         self.fv.show_status("")
         self.gui_up = False
 
