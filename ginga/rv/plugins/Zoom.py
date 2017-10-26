@@ -191,8 +191,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
     def prepare(self, fitsimage):
         fitssettings = fitsimage.get_settings()
         zoomsettings = self.zoomimage.get_settings()
-        # TODO: should we add our own canvas instead?
-        fitsimage.add_callback('motion', self.motion_cb)
+        fitsimage.add_callback('cursor-changed', self.motion_cb)
         for name in ['cuts']:
             fitssettings.get_setting(name).add_callback(
                 'set', self.cutset_cb, fitsimage)
