@@ -168,6 +168,7 @@ class Overlays(GingaPlugin.LocalPlugin):
             p_canvas.delete_object_by_tag(self.layertag)
         except Exception:
             pass
+        self.canvas.update_canvas(whence=0)  # Force redraw
         #self.canvas.ui_set_active(False)
         self.fv.show_status("")
 

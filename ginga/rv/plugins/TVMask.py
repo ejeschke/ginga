@@ -471,6 +471,7 @@ class TVMask(LocalPlugin):
         except Exception:
             pass
 
+        self.canvas.update_canvas(whence=0)  # Force redraw
         self.gui_up = False
         self.fv.show_status('')
 
