@@ -41,13 +41,11 @@ background as cyan crosses, as shown above):
 
 Selecting an entry (or multiple entries) from the table listing will
 highlight the marking(s) on the image. The highlight uses the same shape
-and color, but a slightly thicker line. Clicking on a marking on the image
-will highlight it and its neighbors (if they are close enough) both on the
-image and the table listing.
+and color, but a slightly thicker line.
 
 You can also highlight all the markings within a region both on the image
-and the table listing by drawing a rectangle on the image using the right mouse
-button while this plugin is active.
+and the table listing by drawing a rectangle on the image
+while this plugin is active.
 
 Pressing the "Hide" button will hide the markings but does not clear the
 plugin's memory; That is, when you press "Show", the same markings will
@@ -120,7 +118,7 @@ class TVMark(LocalPlugin):
         self.settings = prefs.create_category('plugin_TVMark')
         self.settings.add_defaults(marktype='circle', markcolor='green',
                                    marksize=5, markwidth=1, pixelstart=1,
-                                   searchradius=10, use_radec=True,
+                                   use_radec=True,
                                    ra_colname='ra', dec_colname='dec',
                                    x_colname='x', y_colname='y',
                                    extra_columns=[])
@@ -156,7 +154,8 @@ class TVMark(LocalPlugin):
         canvas.enable_draw(True)
         canvas.enable_edit(False)
         canvas.set_callback('draw-event', self.hl_canvas2table_box)
-        canvas.set_callback('cursor-down', self.hl_canvas2table)
+        #canvas.set_callback('cursor-down', self.hl_canvas2table)
+        canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_drawtype('rectangle', color='green', linestyle='dash')
         self.canvas = canvas
@@ -625,6 +624,7 @@ class TVMark(LocalPlugin):
         for hlpath in self._treepaths[mask]:
             self._highlight_path(hlpath)
 
+    # NOTE: This does not work anymore when left click is used to draw box.
     def hl_canvas2table(self, canvas, button, data_x, data_y):
         """Highlight marking on table when user click on canvas."""
         self.treeview.clear_selection()
@@ -650,7 +650,7 @@ class TVMark(LocalPlugin):
                 len(self._treepaths) == 0):
             return
 
-        sr = self.settings.get('searchradius', 10)
+        sr = 10  # self.settings.get('searchradius', 10)
         dx = data_x - self._xarr
         dy = data_y - self._yarr
         dr = np.sqrt(dx * dx + dy * dy)

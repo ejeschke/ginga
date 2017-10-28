@@ -26,12 +26,11 @@ shown above):
 
 Selecting an entry (or multiple entries) from the table listing will
 highlight the mask(s) on the image. The highlight uses a pre-defined color and
-alpha (customizable below). Clicking on a masked pixel will highlight the
-mask(s) both on the image and the table listing.
+alpha (customizable below).
 
 You can also highlight all the masks within a region both on the image
-and the table listing by drawing a rectangle on the image using the right mouse
-button while this plugin is active.
+and the table listing by drawing a rectangle on the image
+while this plugin is active.
 
 Pressing the "Hide" button will hide the masks but does not clear the
 plugin's memory; That is, when you press "Show", the same masks will
@@ -122,7 +121,8 @@ class TVMask(LocalPlugin):
         canvas.enable_draw(True)
         canvas.enable_edit(False)
         canvas.set_callback('draw-event', self.hl_canvas2table_box)
-        canvas.set_callback('cursor-down', self.hl_canvas2table)
+        #canvas.set_callback('cursor-down', self.hl_canvas2table)
+        canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_drawtype('rectangle', color='green', linestyle='dash')
         self.canvas = canvas
@@ -379,6 +379,7 @@ class TVMask(LocalPlugin):
             if np.any(mask1 & mask2):
                 self._highlight_path(self._treepaths[i])
 
+    # NOTE: This does not work anymore when left click is used to draw box.
     def hl_canvas2table(self, canvas, button, data_x, data_y):
         """Highlight mask on table when user click on canvas."""
         self.treeview.clear_selection()
@@ -407,7 +408,7 @@ class TVMask(LocalPlugin):
             mask1 = self._rgbtomask(mobj)
 
             # Highlight mask covering selected cursor position
-            if mask1[data_y, data_x]:
+            if mask1[int(data_y), int(data_x)]:
                 self._highlight_path(self._treepaths[i])
 
     def _highlight_path(self, hlpath):
@@ -471,6 +472,7 @@ class TVMask(LocalPlugin):
         except Exception:
             pass
 
+        self.canvas.update_canvas(whence=0)  # Force redraw
         self.gui_up = False
         self.fv.show_status('')
 
