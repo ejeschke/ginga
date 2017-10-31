@@ -199,7 +199,7 @@ class ImageViewEvent(ImageViewJpw):
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
-                     ):
+                     'pinch', 'rotate', 'pan', 'swipe', 'tap'):
             self.enable_callback(name)
 
     def set_widget(self, jp_imgw):
@@ -315,7 +315,7 @@ class ImageViewEvent(ImageViewJpw):
             # <= This browser gives us deltas for x and y
             # Synthesize this as a pan gesture event
             self.make_ui_callback('pan', 'start', 0, 0)
-            self.make_ui_callback('pan', 'move', dx, dy)
+            self.make_ui_callback('pan', 'move', -dx, -dy)
             return self.make_ui_callback('pan', 'stop', 0, 0)
 
         # <= This code path should not be followed
