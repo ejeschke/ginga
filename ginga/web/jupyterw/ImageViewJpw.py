@@ -7,6 +7,12 @@
 """
 This example illustrates using a Ginga as the driver of a Jupyter web widget.
 
+REQUIREMENTS:
+  To use this code you will need the "ipywidgets" and "ipyevents" python
+  modules installed.  These are easily installed via:
+     $ pip install ipyevents
+     $ jupyter nbextension enable --py --sys-prefix ipyevents
+
 Basic usage in a Jupyter notebook:
 
 import ipywidgets as widgets
@@ -33,7 +39,7 @@ bd.enable_all(True)
 v1.embed()
 
 """
-import ipywidgets
+from ipyevents import Event as EventListener
 
 from ginga import AstroImage
 from ginga import Mixins, Bindings
@@ -59,14 +65,16 @@ class ImageViewJpw(ImageView):
                            settings=settings)
 
         self.jp_img = None
-        self.jp_dom = None
+        self.jp_evt = None
+        # Format 'png' is ok with 'RGBA', but 'jpeg' only works with 'RGB'
+        self.rgb_order = 'RGB'
 
         self._defer_task = None
         self.msgtask = None
 
     def set_widget(self, jp_img):
-        """Call this method with the Jupyter image widget (image_w) and
-        DOM widget (dom_w) that will be used.
+        """Call this method with the Jupyter image widget (image_w)
+        that will be used.
         """
         self.jp_img = jp_img
 
@@ -128,7 +136,7 @@ class ImageViewEvent(ImageViewJpw):
 
         self._button = 0
 
-        # maps DOMListener events to callback handlers
+        # maps EventListener events to callback handlers
         self._evt_dispatch = {
             'mousedown': self.button_press_event,
             'mouseup': self.button_release_event,
@@ -140,7 +148,7 @@ class ImageViewEvent(ImageViewJpw):
             'keyup': self.key_release_event,
             }
 
-        # mapping from DOMListener key events to ginga key events
+        # mapping from EventListener key events to ginga key events
         self._keytbl = {
             'shiftleft': 'shift_l',
             'shiftright': 'shift_r',
@@ -196,20 +204,20 @@ class ImageViewEvent(ImageViewJpw):
             self.enable_callback(name)
 
     def set_widget(self, jp_imgw):
-        """Call this method with the Jupyter image widget (image_w) and
-        DOM widget (dom_w) that will be used.
+        """Call this method with the Jupyter image widget (image_w)
+        that will be used.
         """
         super(ImageViewEvent, self).set_widget(jp_imgw)
 
-        self.jp_dom = ipywidgets.DOMListener(source=jp_imgw)
-        self.jp_dom.watched_events = [
+        self.jp_evt = EventListener(source=jp_imgw)
+        self.jp_evt.watched_events = [
             'keydown', 'keyup', 'mouseenter', 'mouseleave',
             'mousedown', 'mouseup', 'mousemove', 'wheel',
             'contextmenu'
             ]
-        self.jp_dom.prevent_default_action = True
+        self.jp_evt.prevent_default_action = True
 
-        self.jp_dom.on_dom_event(self._handle_event)
+        self.jp_evt.on_dom_event(self._handle_event)
         self.logger.info("installed event handlers")
 
         return self.make_callback('map')
