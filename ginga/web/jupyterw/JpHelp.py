@@ -87,7 +87,7 @@ class TimerFactory(object):
 
     def reset_timer(self, timer, time_sec):
         with self.timer_lock:
-            if not timer in self.timer:
+            if timer not in self.timer:
                 self.timer[timer.name] = timer
             self.logger.debug("setting timer...")
             timer.deadline = time.time() + time_sec

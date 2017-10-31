@@ -43,7 +43,6 @@ from ipyevents import Event as EventListener
 
 from ginga import AstroImage
 from ginga import Mixins, Bindings
-from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 from ginga.util.toolbox import ModeIndicator
 
 try:
@@ -146,7 +145,7 @@ class ImageViewEvent(ImageViewJpw):
             'mouseleave': self.leave_notify_event,
             'keydown': self.key_press_event,
             'keyup': self.key_release_event,
-            }
+        }
 
         # mapping from EventListener key events to ginga key events
         self._keytbl = {
@@ -182,13 +181,13 @@ class ImageViewEvent(ImageViewJpw):
             'f10': 'f10',
             'f11': 'f11',
             'f12': 'f12',
-            }
+        }
 
         self._keytbl2 = {
             '`': 'backquote',
             '"': 'doublequote',
             "'": 'singlequote',
-            }
+        }
 
         # Define cursors for pick and pan
         #hand = openHandCursor()
@@ -214,7 +213,7 @@ class ImageViewEvent(ImageViewJpw):
             'keydown', 'keyup', 'mouseenter', 'mouseleave',
             'mousedown', 'mouseup', 'mousemove', 'wheel',
             'contextmenu'
-            ]
+        ]
         self.jp_evt.prevent_default_action = True
 
         self.jp_evt.on_dom_event(self._handle_event)
@@ -271,7 +270,7 @@ class ImageViewEvent(ImageViewJpw):
         return self.make_ui_callback('key-release', keyname)
 
     def button_press_event(self, event):
-        x = event['arrayX']; y = event['arrayY']
+        x, y = event['arrayX'], event['arrayY']
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -284,7 +283,7 @@ class ImageViewEvent(ImageViewJpw):
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
-        x = event['arrayX']; y = event['arrayY']
+        x, y = event['arrayX'], event['arrayY']
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -298,7 +297,7 @@ class ImageViewEvent(ImageViewJpw):
 
     def motion_notify_event(self, event):
         button = self._button
-        x = event['arrayX']; y = event['arrayY']
+        x, y = event['arrayX'], event['arrayY']
         self.last_win_x, self.last_win_y = x, y
 
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
@@ -308,10 +307,21 @@ class ImageViewEvent(ImageViewJpw):
         return self.make_ui_callback('motion', button, data_x, data_y)
 
     def scroll_event(self, event):
-        x = event['arrayX']; y = event['arrayY']
+        x, y = event['arrayX'], event['arrayY']
         self.last_win_x, self.last_win_y = x, y
-
         dx, dy = event['deltaX'], event['deltaY']
+
+        if (dx != 0 or dy != 0):
+            # <= This browser gives us deltas for x and y
+            # Synthesize this as a pan gesture event
+            self.make_ui_callback('pan', 'start', 0, 0)
+            self.make_ui_callback('pan', 'move', dx, dy)
+            return self.make_ui_callback('pan', 'stop', 0, 0)
+
+        # <= This code path should not be followed
+        # we leave it here in case we want to make the scroll
+        # callback configurable in the future
+
         # TODO: calculate actual angle of direction
         if dy < 0:
             direction = 0.0   # up
@@ -329,6 +339,7 @@ class ImageViewEvent(ImageViewJpw):
 
         return self.make_ui_callback('scroll', direction, num_deg,
                                      data_x, data_y)
+
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
