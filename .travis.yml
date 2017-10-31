@@ -5,6 +5,8 @@ compiler: gcc
 os:
     - linux
 
+stage: Initial tests
+
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
 
@@ -45,6 +47,12 @@ env:
         # Try all python versions with the latest Numpy
         - SETUP_CMD='test'
 
+stages:
+    # Do the style check and a single test job, don't proceed if it fails
+    - name: Initial tests
+    # Do the rest of the tests
+    - name: Comprehensive tests
+
 matrix:
 
     # Don't wait for allowed failures
@@ -58,25 +66,25 @@ matrix:
 
         # Do a coverage test in Python 3.
         # *** TODO: `python setup.py test --coverage` doesn't work yet for `ginga` ... skipping for now
-        # - os: linux
-        #  env: SETUP_CMD='test --coverage'
+        # - stage: Comprehensive tests
+        #   env: SETUP_CMD='test --coverage'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
-        - os: linux
+        - stage: Comprehensive tests
           env: SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_rtd_theme pillow'
 
         # Try older Numpy versions
         # TODO: Pin Python 2.7 to ASTROPY_VERSION=lts after Astropy v3 release
-        - os: linux
+        - stage: Comprehensive tests
           env: PYTHON_VERSION=2.7 NUMPY_VERSION=1.10
-        - os: linux
+        - stage: Comprehensive tests
           env: PYTHON_VERSION=3.5 NUMPY_VERSION=1.11
-        - os: linux
+        - stage: Comprehensive tests
           env: NUMPY_VERSION=1.12
 
         # Try Numpy pre-release and Astropy dev
-        - os: linux
+        - stage: Comprehensive tests
           env: NUMPY_VERSION=prerelease ASTROPY_VERSION=development
 
         # Do a PEP8 test with flake8 (white-list in setup.cfg)
