@@ -7,6 +7,8 @@
 from __future__ import absolute_import, print_function
 from .util import six
 
+import warnings
+
 import numpy as np
 
 __all__ = ['ColorMap', 'add_cmap', 'get_cmap', 'has_cmap', 'get_names',
@@ -13307,9 +13309,10 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
     """Add all matplotlib colormaps."""
     try:
         from matplotlib import cm as _cm
-    except ImportError as e:
+        from matplotlib.cbook import mplDeprecation
+    except ImportError:
         if fail_on_import_error:
-            raise e
+            raise
         # silently fail
         return
 
@@ -13317,8 +13320,11 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
         if not isinstance(name, six.string_types):
             continue
         try:
-            cm = _cm.get_cmap(name)
-            add_matplotlib_cmap(cm, name=name)
+            # Do not load deprecated colormaps
+            with warnings.catch_warnings():
+                warnings.simplefilter('error', mplDeprecation)
+                cm = _cm.get_cmap(name)
+                add_matplotlib_cmap(cm, name=name)
         except Exception as e:
             if fail_on_import_error:
                 print("Error adding colormap '%s': %s" % (name, str(e)))
@@ -13332,8 +13338,6 @@ for name, value in list(globals().items()):
         add_cmap(key, value)
 
 # by default add matplotlib colormaps, if available
-# NOTE: disable until we can figure out how to iterate over all the colormaps
-# without forcing warnings for maps to be deprecated
-#add_matplotlib_cmaps(fail_on_import_error=False)
+add_matplotlib_cmaps(fail_on_import_error=False)
 
-#END
+# END
