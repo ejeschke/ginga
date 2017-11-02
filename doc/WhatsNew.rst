@@ -2,8 +2,8 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.6.6.dev
-=============
+Ver 2.6.6 (2017-11-02)
+======================
 - Fix for broken sorting in Contents plugin in gtk backends
 - Fix for resize bug in switching in and out of grid view in gtk
   backends

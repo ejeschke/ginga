@@ -10,6 +10,7 @@ This example illustrates using a Ginga as the driver of a Jupyter web widget.
 REQUIREMENTS:
   To use this code you will need the "ipywidgets" and "ipyevents" python
   modules installed.  These are easily installed via:
+
      $ pip install ipyevents
      $ jupyter nbextension enable --py --sys-prefix ipyevents
 
