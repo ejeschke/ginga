@@ -2,6 +2,9 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.7.0.dev
+=============
+
 Ver 2.6.6 (2017-11-02)
 ======================
 - Fix for broken sorting in Contents plugin in gtk backends
