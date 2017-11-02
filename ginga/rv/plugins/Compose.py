@@ -84,7 +84,6 @@ from ginga.misc import Bunch
 from ginga import RGBImage, LayerImage, AstroImage
 from ginga import GingaPlugin
 
-import numpy as np
 try:
     from PIL import Image
     have_PIL = True
@@ -98,6 +97,7 @@ class RGBComposeImage(RGBImage.RGBImage, LayerImage.LayerImage):
     def __init__(self, *args, **kwargs):
         RGBImage.RGBImage.__init__(self, *args, **kwargs)
         LayerImage.LayerImage.__init__(self)
+
 
 class AlphaComposeImage(AstroImage.AstroImage, LayerImage.LayerImage):
     def __init__(self, *args, **kwargs):
