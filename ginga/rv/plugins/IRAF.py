@@ -613,7 +613,8 @@ class IRAF(GingaPlugin.GlobalPlugin):
                 keyname = chr(4)
 
         # Get cursor position
-        fitsimage = canvas.get_surface()
+        # TODO: not sure that this attribute will be permanent...
+        fitsimage = canvas.viewer
         last_x, last_y = fitsimage.get_last_data_xy()
 
         # Correct for surrounding framebuffer
