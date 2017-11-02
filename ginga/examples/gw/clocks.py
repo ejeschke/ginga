@@ -180,11 +180,13 @@ class ClockApp(object):
         # also let user set timezone by UTC offset
         self.location_label = Widgets.Label('Location')
         self.location = Widgets.TextEntry()
+        self.location.set_tooltip("Type a label to denote this UTC offset")
         #self.location.set_length(10)
         self.timeoffset_label = Widgets.Label('UTC Offset(hour)')
         self.time_offset = Widgets.SpinBox(dtype=float)
         self.time_offset.set_decimals(2)
         self.time_offset.set_limits(-12, 12)
+        self.time_offset.set_tooltip("Time offset from UTC")
         self.timezone_button = Widgets.Button('Add by Timezone')
         self.offset_button = Widgets.Button('Add by Offset')
 

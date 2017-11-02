@@ -19,6 +19,10 @@ Ver 2.6.6.dev
 - Add antialiasing for Qt back end
 - Bug fixes and enhancements for Qt gestures
   - holding shift with pinch now keeps position under cursor
+- New Jupyter notebooks back end based on ipywidgets
+  - requirements: $ pip install ipyevents      
+  - see examples/jupyter-notebook/
+- Fixes to various reference viewer plugins
 
 Ver 2.6.5 (2017-07-31)
 ======================
