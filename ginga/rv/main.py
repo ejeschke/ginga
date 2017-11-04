@@ -382,7 +382,7 @@ class ReferenceViewer(object):
             # Add matplotlib color maps if matplotlib is installed
             try:
                 from ginga import cmap
-                cmap.add_matplotlib_cmaps()
+                cmap.add_matplotlib_cmaps(fail_on_import_error=False)
             except Exception as e:
                 logger.warning(
                     "failed to load matplotlib colormaps: %s" % (str(e)))
