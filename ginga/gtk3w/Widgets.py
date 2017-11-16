@@ -22,7 +22,7 @@ has_webkit = False
 try:
     # this is necessary to prevent a warning message on import
     import gi
-    gi.require_version('WebKit', '3.0')
+    gi.require_version('WebKit2', '4.0')
 
     from gi.repository import WebKit  # noqa
     has_webkit = True
