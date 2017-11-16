@@ -301,6 +301,7 @@ class ImageViewBindings(object):
             d = self.settings.get_dict()
 
         # First scan settings for buttons and modes
+        bindmap.clear_button_map()
         bindmap.clear_modifier_map()
         bindmap.clear_mode_map()
 
@@ -333,6 +334,8 @@ class ImageViewBindings(object):
 
         modes_set = bindmap.get_modes()
         modifiers_set = bindmap.get_modifiers()
+
+        bindmap.clear_event_map()
 
         # Add events
         for name, value in d.items():
@@ -1966,7 +1969,9 @@ class ImageViewBindings(object):
         return self.sc_pan(viewer, event, msg=msg)
 
     def sc_naxis(self, viewer, event, msg=True):
-
+        """Interactively change the slice of the image in a data cube
+        by scrolling.
+        """
         # TODO: be able to pick axis
         axis = 2
         direction = self.get_direction(event.direction)
@@ -1995,19 +2000,23 @@ class ImageViewBindings(object):
         image.set_naxispath(naxispath)
 
     def sc_dist(self, viewer, event, msg=True):
-
+        """Interactively change the color distribution algorithm
+        by scrolling.
+        """
         direction = self.get_direction(event.direction)
         self._cycle_dist(viewer, msg, direction=direction)
         return True
 
     def sc_cmap(self, viewer, event, msg=True):
-
+        """Interactively change the color map by scrolling.
+        """
         direction = self.get_direction(event.direction)
         self._cycle_cmap(viewer, msg, direction=direction)
         return True
 
     def sc_imap(self, viewer, event, msg=True):
-
+        """Interactively change the intensity map by scrolling.
+        """
         direction = self.get_direction(event.direction)
         self._cycle_imap(viewer, msg, direction=direction)
         return True
@@ -2158,16 +2167,72 @@ class ImageViewBindings(object):
         return self._pinch_zoom_rotate(viewer, state, rot_deg, scale, msg=msg)
 
     def pi_zoom(self, viewer, event, msg=True):
+        """Zoom and/or rotate the viewer by a pinch gesture.
+        (the back end must support gestures)
+        """
         return self._pinch_zoom_rotate(viewer, event.state, event.rot_deg,
                                        event.scale, msg=msg)
 
     def pi_zoom_origin(self, viewer, event, msg=True):
+        """Like pi_zoom(), but pans the image as well to keep the
+        coordinate under the cursor in that same position relative
+        to the window.
+        """
         origin = (event.data_x, event.data_y)
         return self._pinch_zoom_rotate(viewer, event.state, event.rot_deg,
                                        event.scale, msg=msg, origin=origin)
 
     def pa_pan(self, viewer, event, msg=True):
-        return self.gs_pan(viewer, event.state, event.delta_x, event.delta_y, msg=msg)
+        """Interactively pan the image by a pan gesture.
+        (the back end must support gestures)
+        """
+        return self.gs_pan(viewer, event.state,
+                           event.delta_x, event.delta_y, msg=msg)
+
+    def _pa_synth_scroll_event(self, event):
+
+        dx, dy = float(event.delta_x), float(event.delta_y)
+        amount = math.sqrt(dx ** 2.0 + dy ** 2.0)
+        if dx == 0.0:
+            if dy > 0:
+                direction = 90.0
+            else:
+                direction = 270.0
+        else:
+            direction = math.atan(dy / dx)
+
+        self.logger.debug("scroll amount=%f direction=%f" % (
+            amount, direction))
+
+        # synthesize a scroll event
+        event = ScrollEvent(button=event.button, state=event.state,
+                            mode=event.mode, modifiers=event.modifiers,
+                            direction=direction, amount=amount,
+                            data_x=event.data_x, data_y=event.data_y,
+                            viewer=event.viewer)
+        return event
+
+    def pa_zoom(self, viewer, event, msg=True):
+        """Interactively zoom the image by a pan gesture.
+        (the back end must support gestures)
+        """
+        event = self._pa_synth_scroll_event(event)
+        if event.state != 'move':
+            return False
+        self._sc_zoom(viewer, event, msg=msg, origin=None)
+        return True
+
+    def pa_zoom_origin(self, viewer, event, msg=True):
+        """Like pa_zoom(), but pans the image as well to keep the
+        coordinate under the cursor in that same position relative
+        to the window.
+        """
+        event = self._pa_synth_scroll_event(event)
+        if event.state != 'move':
+            return False
+        origin = (event.data_x, event.data_y)
+        self._sc_zoom(viewer, event, msg=msg, origin=origin)
+        return True
 
     ##### CAMERA MOTION CALLBACKS #####
 

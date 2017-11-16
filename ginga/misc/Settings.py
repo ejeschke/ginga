@@ -150,12 +150,13 @@ class SettingGroup(object):
     def __contains__(self, key):
         return key in self.group
 
-    def load(self, onError='raise'):
+    def load(self, onError='raise', buf=None):
         try:
             d = {}
-            with open(self.preffile, 'r') as in_f:
-                buf = in_f.read()
-            for line in buf.split('\n'):
+            if buf is None:
+                with open(self.preffile, 'r') as in_f:
+                    buf = in_f.read()
+            for line_no, line in enumerate(buf.split('\n')):
                 line = line.strip()
                 # skip comments and anything that doesn't look like an
                 # assignment
@@ -168,7 +169,10 @@ class SettingGroup(object):
                         val = ast.literal_eval(line[i + 1:].strip())
                         d[key] = val
                     except Exception as e:
-                        # silently skip parse errors, for now
+                        if self.logger is not None:
+                            self.logger.warn("Error loading '%s' at line %d: "
+                                             "%s" % (self.preffile, line_no,
+                                                     str(e)))
                         continue
 
             self.set_dict(d)

@@ -14,6 +14,10 @@ REQUIREMENTS:
      $ pip install ipyevents
      $ jupyter nbextension enable --py --sys-prefix ipyevents
 
+  or via conda:
+
+     $ conda install -c conda-forge ipyevents
+
 Basic usage in a Jupyter notebook:
 
 import ipywidgets as widgets
@@ -319,7 +323,8 @@ class ImageViewEvent(ImageViewJpw):
             self.make_ui_callback('pan', 'move', -dx, -dy)
             return self.make_ui_callback('pan', 'stop', 0, 0)
 
-        # <= This code path should not be followed
+        # <= This code path should not be followed under normal
+        # circumstances.
         # we leave it here in case we want to make the scroll
         # callback configurable in the future
 
