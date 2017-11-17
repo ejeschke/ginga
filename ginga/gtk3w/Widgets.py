@@ -29,7 +29,7 @@ try:
     has_webkit = True
 except Exception:
     gi.require_version('WebKit', '3.0')
-    from gi.repository import WebKit  #noqa
+    from gi.repository import WebKit  # noqa
 
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox',
