@@ -23,7 +23,6 @@ has_webkit = False
 
 try:
     # this is necessary to prevent a warning message on import
-    #import gi
     gi.require_version('WebKit2', '4.0')
 
     from gi.repository import WebKit2 as WebKit  # noqa
@@ -31,7 +30,6 @@ try:
 except Exception:
     gi.require_version('WebKit', '3.0')
     from gi.repository import WebKit  #noqa
-    #pass
 
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox',
