@@ -18,16 +18,18 @@ from gi.repository import Gdk
 from gi.repository import GObject
 from gi.repository import GdkPixbuf
 
+import gi
 has_webkit = False
+
 try:
     # this is necessary to prevent a warning message on import
-    import gi
-    gi.require_version('WebKit', '3.0')
+    gi.require_version('WebKit2', '4.0')
 
-    from gi.repository import WebKit  # noqa
+    from gi.repository import WebKit2 as WebKit  # noqa
     has_webkit = True
-except ImportError:
-    pass
+except Exception:
+    gi.require_version('WebKit', '3.0')
+    from gi.repository import WebKit  # noqa
 
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox',
