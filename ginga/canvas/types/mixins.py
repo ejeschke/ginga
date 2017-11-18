@@ -350,7 +350,8 @@ class PolygonMixin(object):
             cross = ((xi + (ya - yi).astype(np.float) /
                       (yj - yi) * (xj - xi)) < xa)
 
-            result[tf is True] ^= cross[tf is True]
+            idx = np.nonzero(tf)
+            result[idx] ^= cross[idx]
             xj, yj = xi, yi
 
         if promoted:
