@@ -3,6 +3,7 @@
 # Please see the file LICENSE.txt for details.
 #
 
+# Note: Relative import breaks test in PY2
 from ginga.util.wcsmod import common
 
 coord_types = ['pixel']

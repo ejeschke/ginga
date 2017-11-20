@@ -72,9 +72,9 @@ matrix:
         - python: 3.6
           env: NUMPY_VERSION=1.12
 
-        # Try Numpy pre-release and Astropy dev
+        # Try Numpy pre-release and Astropy dev, with matplotlib installed
         - python: 3.6
-          env: NUMPY_VERSION=prerelease ASTROPY_VERSION=development
+          env: NUMPY_VERSION=prerelease ASTROPY_VERSION=development CONDA_DEPENDENCIES='pyqt matplotlib'
 
         # Do a PEP8 test with flake8 (white-list in setup.cfg)
         - python: 3.6

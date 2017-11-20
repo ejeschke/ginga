@@ -12,7 +12,8 @@ import astropy.wcs as pywcs
 import astropy.units as u  # noqa
 from astropy.io import fits as pyfits
 
-from . import common
+# Note: Relative import breaks test in PY2
+from ginga.util.wcsmod import common
 
 try:
     import sunpy.coordinates  # noqa
