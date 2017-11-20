@@ -7,8 +7,9 @@ from __future__ import absolute_import
 import numpy as np
 from kapteyn import wcs as kapwcs
 
-from ..six.moves import map
-from . import common
+# Note: Relative import breaks test in PY2
+from ginga.util.six.moves import map
+from ginga.util.wcsmod import common
 
 coord_types = ['icrs', 'fk5', 'fk4', 'galactic', 'ecliptic']
 

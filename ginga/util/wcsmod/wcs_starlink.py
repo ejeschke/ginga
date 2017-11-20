@@ -7,6 +7,7 @@ import starlink.Atl as Atl  # noqa
 
 import numpy as np
 
+# Note: Relative import breaks test in PY2
 from ginga.util.six.moves import map
 from ginga.util.wcsmod import common
 

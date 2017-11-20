@@ -9,8 +9,9 @@ from astLib import astWCS, astCoords
 # to create a WCS object from a FITS header.
 from astropy.io import fits as pyfits
 
-from ..six.moves import map
-from . import common
+# Note: Relative import breaks test in PY2
+from ginga.util.six.moves import map
+from ginga.util.wcsmod import common
 
 astWCS.NUMPY_MODE = True
 
