@@ -44,8 +44,8 @@ class TestCmap(object):
                 count = count + 1
 
         expected = count
-        actual = len(ginga.cmap.cmaps)
-        assert expected == actual
+        actual = len(ginga.cmap.cmaps)  # Can include matplotlib colormaps
+        assert expected <= actual
 
     def test_add_cmap(self):
         test_clst = tuple([(x, x, x)
@@ -88,9 +88,9 @@ class TestCmap(object):
             if attribute_name.startswith('cmap_'):
                 names.append(attribute_name[5:])
 
-        expected = sorted(names, key=lambda s: s.lower())
-        actual = ginga.cmap.get_names()
-        assert expected == actual
+        expected = set(names)
+        actual = set(ginga.cmap.get_names())  # Can include matplotlib names
+        assert expected <= actual
 
     # TODO: Add tests for matplotlib functions
 
