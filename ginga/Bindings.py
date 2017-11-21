@@ -221,6 +221,8 @@ class ImageViewBindings(object):
             pi_zoom=['pinch'],
             pi_zoom_origin=['shift+pinch'],
             pa_pan=['pan'],
+            pa_zoom=[],
+            pa_zoom_origin=[],
 
             pinch_actions=['zoom'],
             pinch_zoom_acceleration=1.0,

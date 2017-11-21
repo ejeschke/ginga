@@ -178,13 +178,15 @@ ms_naxis = ['naxis+left']
 mouse_zoom_acceleration = 1.085
 mouse_rotate_acceleration = 0.75
 
-# GESTURES (Qt version only)
+# GESTURES (some back ends only)
 # NOTE: if using Qt4 back end, it is *highly* recommended to disable any
 # "scroll zoom" (sc_zoom*) features above because the two kinds don't play
 # well together.
 pi_zoom = ['pinch']
 pi_zoom_origin = ['shift+pinch']
 pa_pan = ['pan']
+pa_zoom = []
+pa_zoom_origin = []
 
 # This controls what operations the pinch gesture controls.  Possibilities are
 # (empty list or) some combination of 'zoom' and 'rotate'.

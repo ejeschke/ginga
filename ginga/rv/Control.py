@@ -791,7 +791,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         idx = ws.nb.get_index()
         child = ws.nb.index_to_widget(idx)
         chname = child.extdata.tab_title
-        self.change_channel(chname, raisew=True)
+        if self.has_channel(chname):
+            self.change_channel(chname, raisew=True)
 
     def prev_channel(self):
         ws = self.get_current_workspace()
@@ -811,7 +812,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         idx = ws.nb.get_index()
         child = ws.nb.index_to_widget(idx)
         chname = child.extdata.tab_title
-        self.change_channel(chname, raisew=True)
+        if self.has_channel(chname):
+            self.change_channel(chname, raisew=True)
 
     def next_channel(self):
         ws = self.get_current_workspace()

@@ -4,6 +4,10 @@ What's New in Ginga?
 
 Ver 2.7.0.dev
 =============
+- Fix for gtk 4.0 (use "gtk3" backend, it works for 4.0)
+- Fix for broken polygon containment test
+- Addition of configurable zoom handlers for pan gestures
+- Fix for some broken tests under python 2.7
 
 Ver 2.6.6 (2017-11-02)
 ======================
