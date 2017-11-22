@@ -189,6 +189,12 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
 
         imname = image.get('name', 'none')
         iminfo = channel.get_image_info(imname)
+
+        #  Avoid inserting entries from MultiDim
+        reason = iminfo.get('reason_modified', 'Not given')
+        if reason == 'Multidim set_naxis no-op':
+            return
+
         timestamp = iminfo.time_modified
 
         if timestamp is None:
