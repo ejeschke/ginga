@@ -458,6 +458,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
             image.set_naxispath(self.naxispath)
             self.logger.debug("NAXIS%d slice %d loaded." % (n + 1, idx + 1))
 
+            # Avoid inserting entries into ChangeHistory
+            iminfo = self.channel.get_image_info(image.get('name'))
+            iminfo.reason_modified = 'Multidim set_naxis no-op'
+
             if self.play_indices:
                 # save play index
                 self.play_indices[m] = idx
