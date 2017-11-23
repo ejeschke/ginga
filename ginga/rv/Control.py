@@ -887,6 +887,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         self.make_gui_callback('add-image', chname, image, info)
 
+    def update_image_info(self, image, info):
+        for chname in self.get_channel_names():
+            channel = self.get_channel(chname)
+            channel.update_image_info(image, info)
+
     def bulk_add_image(self, imname, image, chname):
         channel = self.get_channel_on_demand(chname)
         channel.add_image(image, bulk_add=True)
