@@ -192,6 +192,16 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         timestamp = iminfo.time_modified
 
         if timestamp is None:
+            reason = iminfo.get('reason_modified', None)
+            if reason is not None:
+                self.fv.show_error(
+                    "{0} invoked 'modified' callback to ChangeHistory with a "
+                    "reason but without a timestamp. The plugin invoking the "
+                    "callback is no longer be compatible with Ginga. "
+                    "Please contact plugin developer to update the plugin "
+                    "to use self.fv.update_image_info() like Mosaic "
+                    "plugin.".format(imname))
+
             # Image somehow lost its history
             self.remove_image_info_cb(self.fv, channel, iminfo)
             return
