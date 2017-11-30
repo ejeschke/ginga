@@ -15,12 +15,11 @@ slider to zoom the image.
 from __future__ import print_function
 
 import sys
-import os
 
 from bokeh.io import curdoc
 from bokeh.layouts import column
 from bokeh.plotting import figure
-from bokeh.client import push_session
+#from bokeh.client import push_session
 from bokeh.models import TextInput, Slider
 
 from ginga.web.bokehw import ImageViewBokeh as ib

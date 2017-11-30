@@ -15,9 +15,11 @@ from bokeh.plotting import curdoc
 from bokeh.models import PanTool, ColumnDataSource
 #from bokeh.client import push_session
 from bokeh.io import push_notebook
+# from bokeh.events import (MouseEnter, MouseLeave, MouseMove, MouseWheel,
+#                           Pan, PanEnd, PanStart, Pinch, PinchEnd, PinchStart,
+#                           Press, Tap, DoubleTap, SelectionGeometry)
 from bokeh.events import (MouseEnter, MouseLeave, MouseMove, MouseWheel,
-                          Pan, PanEnd, PanStart, Pinch, PinchEnd, PinchStart,
-                          Press, Tap, DoubleTap, SelectionGeometry)
+                          Tap)
 
 from ginga import ImageView
 from ginga import Mixins, Bindings
@@ -321,7 +323,6 @@ class ImageViewBokeh2(ImageView.ImageViewBase):
             self.logger.error("Error updating image: %s" % (str(e)))
             return
 
-
     def set_cursor(self, cursor):
         pass
 
@@ -329,7 +330,7 @@ class ImageViewBokeh2(ImageView.ImageViewBase):
         doc = curdoc()
         try:
             doc.remove_timeout_callback(self._msg_timer)
-        except:
+        except Exception:
             pass
 
         if text is not None:
@@ -347,7 +348,7 @@ class ImageViewBokeh2(ImageView.ImageViewBase):
         doc = curdoc()
         try:
             doc.remove_timeout_callback(self._defer_timer)
-        except:
+        except Exception:
             pass
         msec = int(time_sec * 1000.0)
         self._defer_timer = curdoc().add_timeout_callback(self.timer_cb,
@@ -421,7 +422,7 @@ class ImageViewEvent(ImageViewBokeh):
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
-                     'pinch', 'pan',  'press', 'tap',
+                     'pinch', 'pan', 'press', 'tap',
                      ):
             self.enable_callback(name)
 
@@ -429,7 +430,6 @@ class ImageViewEvent(ImageViewBokeh):
         super(ImageViewEvent, self).set_figure(figure, handle=handle)
 
     def _setup_handlers(self, source):
-        #source.on_change('selected', self, 'select_event_cb')
         source.on_change('selected', self.select_event_cb)
 
         ## self._box_select_tool = self.figure.select(dict(type=BoxSelectTool))
@@ -488,9 +488,6 @@ class ImageViewEvent(ImageViewBokeh):
         if self.enter_focus:
             self.focus_event(event, False)
         return self.make_callback('leave')
-
-    def select_event_cb(self, attr, old, new):
-        self.logger.info("selection!")
 
     def key_press_event(self, event):
         keyname = event.key
