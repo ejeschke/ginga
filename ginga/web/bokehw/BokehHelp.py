@@ -68,7 +68,7 @@ class BokehContext(object):
     def update_font(self, pen, font):
         self.kwdargs['text_font'] = font.fontname
         # Bokeh expects font size specified as a string
-        self.kwdargs['text_font_size'] = str(font.fontsize)
+        self.kwdargs['text_font_size'] = "%dpt" % (int(font.fontsize))
         self.kwdargs['text_color'] = pen.color
 
     def get_color(self, color, alpha):
