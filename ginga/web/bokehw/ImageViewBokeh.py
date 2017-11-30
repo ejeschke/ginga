@@ -12,7 +12,8 @@ import numpy as np
 # Bokeh imports
 from bokeh.plotting import curdoc
 #from bokeh.models import BoxSelectTool, TapTool
-from bokeh.models import PanTool, ColumnDataSource
+#from bokeh.models import PanTool
+from bokeh.models import ColumnDataSource
 #from bokeh.client import push_session
 from bokeh.io import push_notebook
 # from bokeh.events import (MouseEnter, MouseLeave, MouseMove, MouseWheel,
