@@ -2197,9 +2197,9 @@ class ImageViewBindings(object):
         amount = math.sqrt(dx ** 2.0 + dy ** 2.0)
         if dx == 0.0:
             if dy > 0:
-                direction = 90.0
+                direction = 0.0
             else:
-                direction = 270.0
+                direction = 180.0
         else:
             direction = math.atan(dy / dx)
 
