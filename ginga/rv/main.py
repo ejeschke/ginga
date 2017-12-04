@@ -81,7 +81,7 @@ global_plugins = [
     Bunch(module='Header', tab='Header', workspace='left', start=True,
           hidden=True, category='system'),
     Bunch(module='Zoom', tab='Zoom', workspace='left', start=True,
-          hidden=True, category='system'),
+          category='global'),
     Bunch(module='Thumbs', tab='Thumbs', workspace='right', start=True,
           hidden=True, category='system'),
     Bunch(module='Contents', tab='Contents', workspace='right', start=True,

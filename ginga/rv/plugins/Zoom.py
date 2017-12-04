@@ -96,6 +96,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('channel-change', self.focus_cb)
 
+        self.gui_up = False
+
     def build_gui(self, container):
 
         vbox, sw, orientation = Widgets.get_oriented_box(container,
@@ -186,7 +188,21 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         vbox.add_widget(vpaned, stretch=1)
 
+        btns = Widgets.HBox()
+        btns.set_border_width(4)
+        btns.set_spacing(4)
+
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(btns, stretch=0)
+
         container.add_widget(sw, stretch=1)
+        self.gui_up = True
 
     def prepare(self, fitsimage):
         fitssettings = fitsimage.get_settings()
@@ -203,13 +219,24 @@ class Zoom(GingaPlugin.GlobalPlugin):
             'set', self.zoomset_cb, fitsimage)
 
     def add_channel(self, viewer, chinfo):
+        if not self.gui_up:
+            return
         self.prepare(chinfo.fitsimage)
 
     def start(self):
         names = self.fv.get_channel_names()
         for name in names:
-            chinfo = self.fv.get_channel(name)
-            self.add_channel(self.fv, chinfo)
+            channel = self.fv.get_channel(name)
+            self.add_channel(self.fv, channel)
+
+        # set up for currently focused channel
+        channel = self.fv.get_channel_info()
+        if channel is not None:
+            self.focus_cb(self.fv, channel)
+
+    def stop(self):
+        self.gui_up = False
+        return True
 
     # CALLBACKS
 
@@ -220,6 +247,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fitsimage.copy_attributes(self.zoomimage, self.copy_attrs)
 
     def redo(self, channel, image):
+        if not self.gui_up:
+            return
         fitsimage = channel.fitsimage
         if fitsimage != self.fv.getfocus_viewer():
             return True
@@ -227,10 +256,14 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.update_zoomviewer(channel)
 
     def focus_cb(self, viewer, channel):
+        if not self.gui_up:
+            return
         self.update_zoomviewer(channel)
 
     # Match cut-levels to the ones in the "main" image
     def cutset_cb(self, setting, value, fitsimage):
+        if not self.gui_up:
+            return
         if fitsimage != self.fitsimage_focus:
             return True
 
@@ -239,6 +272,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         return True
 
     def transform_cb(self, fitsimage):
+        if not self.gui_up:
+            return
         if fitsimage != self.fitsimage_focus:
             return True
         flip_x, flip_y, swap_xy = fitsimage.get_transforms()
@@ -246,6 +281,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         return True
 
     def rotate_cb(self, setting, deg, fitsimage):
+        if not self.gui_up:
+            return
         if fitsimage != self.fitsimage_focus:
             return True
         if not self.zoom_rotate:
@@ -273,6 +310,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
     def zoomset_cb(self, setting, zoomlevel, fitsimage):
         """This method is called when a main FITS widget changes zoom level.
         """
+        if not self.gui_up:
+            return
         fac_x, fac_y = fitsimage.get_scale_base_xy()
         fac_x_me, fac_y_me = self.zoomimage.get_scale_base_xy()
         if (fac_x != fac_x_me) or (fac_y != fac_y_me):
@@ -329,11 +368,15 @@ class Zoom(GingaPlugin.GlobalPlugin):
         return True
 
     def motion_cb(self, fitsimage, button, data_x, data_y):
+        if not self.gui_up:
+            return
         # TODO: pass _canvas_ and cut from that
         self.showxy(fitsimage, data_x, data_y)
         return False
 
     def showzoom_timer_cb(self, timer):
+        if not self.gui_up:
+            return
         data = timer.data
         self.showzoom(data.image, data.data_x, data.data_y)
 
@@ -374,6 +417,10 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.refresh_interval = val / 1000.0
         self.logger.debug("Setting refresh time to %.4f sec" % (
             self.refresh_interval))
+
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
 
     def __str__(self):
         return 'zoom'
