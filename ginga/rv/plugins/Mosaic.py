@@ -346,7 +346,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                             suppress_callback=True)
 
         # Add description for ChangeHistory
-        info = dict(time_modified = datetime.utcnow(),
+        info = dict(time_modified=datetime.utcnow(),
                     reason_modified='Added {0}'.format(
             ','.join([im.get('name') for im in images])))
         self.fv.update_image_info(self.img_mosaic, info)
