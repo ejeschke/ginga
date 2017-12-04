@@ -29,6 +29,7 @@ To create a new mosaic, set the FOV and drag files onto the display window.
 """
 import math
 import time
+from datetime import datetime
 import threading
 
 import numpy as np
@@ -336,15 +337,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         time_intr1 = time.time()
 
-        # Add description for ChangeHistory
-        try:
-            iminfo = self.channel.get_image_info(self.img_mosaic.get('name'))
-            iminfo.reason_modified = 'Added {0}'.format(
-                ','.join([im.get('name') for im in images]))
-        except KeyError:
-            # mosaic image may have been deleted from channel
-            pass
-
         loc = self.img_mosaic.mosaic_inline(images,
                                             bg_ref=bg_ref,
                                             trim_px=trim_px,
@@ -352,6 +344,12 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                             allow_expand=allow_expand,
                                             expand_pad_deg=expand_pad_deg,
                                             suppress_callback=True)
+
+        # Add description for ChangeHistory
+        info = dict(time_modified = datetime.utcnow(),
+                    reason_modified='Added {0}'.format(
+            ','.join([im.get('name') for im in images])))
+        self.fv.update_image_info(self.img_mosaic, info)
 
         # annotate ingested image with its name?
         if annotate and (not allow_expand):

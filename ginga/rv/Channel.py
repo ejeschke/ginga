@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
-from datetime import datetime
 
 from ginga.misc import Bunch, Datasrc, Callback, Future
 
@@ -98,7 +97,6 @@ class Channel(Callback.Callbacks):
 
         if was_not_there_already:
             channel.datasrc[imname] = image
-            image.add_callback('modified', channel._image_modified_cb)
 
             if not silent:
                 self.fv.gui_do(channel._add_image_update, image, info)
@@ -171,10 +169,6 @@ class Channel(Callback.Callbacks):
                                     idx=idx)
             image.set(image_info=info)
 
-        # we'll get notified if an image changes and can update
-        # metadata and make a chained callback
-        image.add_callback('modified', self._image_modified_cb)
-
         if not silent:
             if not bulk_add:
                 self._add_image_update(image, info)
@@ -203,6 +197,27 @@ class Channel(Callback.Callbacks):
     def get_image_info(self, imname):
         return self.image_index[imname]
 
+    def update_image_info(self, image, info):
+        imname = image.get('name', None)
+        if (imname is None) or (imname not in self.image_index):
+            return False
+
+        # don't update based on image name alone--actual image must match
+        try:
+            my_img = self.get_loaded_image(imname)
+            if my_img is not image:
+                return False
+
+        except KeyError:
+            return False
+
+        # update the info record
+        iminfo = self.get_image_info(imname)
+        iminfo.update(info)
+
+        self.fv.make_async_gui_callback('add-image-info', self, iminfo)
+        return True
+
     def _add_image_update(self, image, info):
         self.fv.make_async_gui_callback('add-image', self.name, image, info)
 
@@ -221,18 +236,6 @@ class Channel(Callback.Callbacks):
             channel = self.fv.get_current_channel()
             if channel != self:
                 self.fv.change_channel(self.name)
-
-    def _image_modified_cb(self, image):
-        imname = image.get('name', None)
-        if (imname is None) or (imname not in self.image_index):
-            # not one of ours apparently (maybe used to be, but got removed)
-            return
-
-        info = self.image_index[imname]
-        info.time_modified = datetime.utcnow()
-        self.logger.debug("image modified; making chained callback")
-
-        self.fv.make_async_gui_callback('add-image-info', self, info)
 
     def refresh_cursor_image(self):
         if self.cursor < 0:
@@ -280,7 +283,7 @@ class Channel(Callback.Callbacks):
         return True
 
     def _add_info(self, info):
-        if info in self.image_index:
+        if info.name in self.image_index:
             # image info is already present
             return False
 
