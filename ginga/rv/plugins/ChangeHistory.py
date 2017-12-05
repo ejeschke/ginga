@@ -18,7 +18,7 @@ History should stay no matter what channel or image is active.
 New history can be added, but old history cannot be deleted,
 unless the image/channel itself is deleted.
 
-The ``redo()`` method picks up a ``'modified'`` event and displays
+The ``redo()`` method picks up an ``'add-image-info'`` event and displays
 related metadata here. The metadata is obtained as follows::
 
         channel = self.fv.get_channel_info(chname)
@@ -26,18 +26,16 @@ related metadata here. The metadata is obtained as follows::
         timestamp = iminfo.time_modified
         description = iminfo.reason_modified  # Optional
 
-While ``'time_modified'`` is automatically added by Ginga,
-``'reason_modified'`` is optional and has be to explicitly set
+Both ``'time_modified'`` and ``'reason_modified'`` have to be explicitly set
 by the calling plugin in the same method that issues the
-``'modified'`` callback, like this::
+``'add-image-info'`` callback, like this::
 
-        # This issues the 'modified' callback and sets the timestamp
+        # This changes the data buffer
         image.set_data(new_data, ...)
-        # Manually add the description
-        chname = self.fv.get_channel_name(self.fitsimage)
-        channel = self.fv.get_channel_info(chname)
-        iminfo = channel.get_image_info(image.get('name'))
-        iminfo.reason_modified = 'Something was done to this image buffer'
+        # Add description for ChangeHistory
+        info = dict(time_modified = datetime.utcnow(),
+                    reason_modified='Data has changed')
+        self.fv.update_image_info(image, info)
 
 """
 from ginga import GingaPlugin
