@@ -90,16 +90,20 @@ For example:
 
 When zoomed in, panning is enabled. Panning takes two forms:
 
-1) *Proportional panning* or "drag panning" pans the image in direct proportion to the distance the mouse is moved. You can think of this as dragging the image canvas in the direction you want to move it under the window portal. To utilize a proportional pan, Ctrl-drag the canvas, or press
-"q" to go into pan mode, and then drag the canvas.
+1) *Proportional panning* or "drag panning" pans the image in direct
+   proportion to the distance the mouse is moved. You can think of this
+   as dragging the image canvas in the direction you want to move it
+   under the window portal. To utilize a proportional pan, Ctrl-drag the
+   canvas, or press Space followed by "q" to go into pan mode, and then
+   drag the canvas. 
 
-2) *Free panning* allows scrolling around the entire image by mapping
-the entire image boundaries to the window boundaries.  For example,
+2) *Free panning* allows scrolling around the entire image by mapping 
+the entire image boundaries to the window boundaries.  For example, 
 moving the mouse to the upper right-hand corner of the window will pan to
 the upper right hand corner of the image, etc.  You can think of this
 mode as moving the window portal around over the canvas.
-To initiate a free pan, press "w" to enter "freepan" mode and then
-Scroll-drag to move around the window.
+To initiate a free pan, press Space followed by "w" to enter "freepan"
+mode and then Scroll-drag to move around the window.
 
 ``[RV]`` The ``Pan`` plugin (usually embedded under the *Info* tab) shows the
 outline of the current pan position as a rectangle on a small version of
@@ -157,7 +161,7 @@ Manually setting cut levels
 
 There are several ways to manually set the cut levels:
 
-* Pressing and releasing the "s" key will put the viewer into
+* Pressing Space followed by "s" key will put the viewer into
   "cuts" mode.  Here you can invoke a dual (high and low) interactive cut levels. Click and drag the mouse horizontally in the window to interactively set the high level, and vertically to set the low
   level; and when you reach the desired levels, release the mouse
   button. Scrolling the mouse wheel in this mode will also change the
@@ -201,10 +205,9 @@ Ginga supports a number of color scale distribution algorithms, including:
 - "sinh", and
 - "histeq" (histogram equalization).
 
-These can be sampled with the
-current color and intensity maps by pressing the "d" key to go into
-"dist" mode, and then scrolling the mouse, pressing the up/down keys, or
-the "b" and "n" keys.
+These can be sampled with the current color and intensity maps by
+pressing Space followed by "d" key to go into "dist" mode, and then
+scrolling the mouse, pressing the up/down keys, or the "b" and "n" keys.
 
 Press Esc to exit the "dist" mode.
 
@@ -267,12 +270,13 @@ to cycle through the intensity maps.
 Color Maps
 ----------
 
-To change color maps from the keyboard shortcuts, press "Y" to go into
-"cmap" mode. While in "cmap" mode you can change color maps by
-scrolling the mouse, pressing the up/down keys, or the "b" and "n" keys.
+To change color maps from the keyboard shortcuts, press Space followed
+by "y" to go into "cmap" mode. While in "cmap" mode you can change color
+maps by scrolling the mouse, pressing the up/down keys, or the "b" and
+"n" keys. 
 
 While in "cmap" mode, pressing "I" (uppercase) will invert the current
-color map.
+color map.  Press Esc to exit cmap mode.
 
 .. note::
 
@@ -296,9 +300,10 @@ thereof. These operations can be done by keyboard shortcuts:
 
 The image can also be rotated in arbitrary amounts.
 
-An interactive rotate operation can be initiated by pressing "r" in the
-image and then dragging the mouse horizontally left or right to set the
-angle.  Press "R" (Shift+R) to restore the angle to 0 (unrotated).
+An interactive rotate operation can be initiated by pressing Space
+follwed by "r" in the image and then dragging the mouse horizontally
+left or right to set the angle.  Press "R" (Shift+R) to restore the
+angle to 0 (unrotated). 
 
 .. note::
 

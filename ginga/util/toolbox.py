@@ -42,6 +42,7 @@ class ModeIndicator(object):
         self.xpad = 8
         self.ypad = 4
         self.offset = 10
+        self.modetbl = dict(locked='L', softlock='S', held='H', oneshot='O')
 
         # for displaying modal keyboard state
         self.mode_obj = None
@@ -69,15 +70,14 @@ class ModeIndicator(object):
             Polygon = canvas.get_draw_class('polygon')
             Compound = canvas.get_draw_class('compoundobject')
 
-            if modetype == 'locked':
-                text = '%s [L]' % (mode)
-            elif modetype == 'softlock':
-                text = '%s [SL]' % (mode)
-            else:
-                text = mode
+            text = mode
+            if modetype in self.modetbl:
+                text += ' [%s]' % self.modetbl[modetype]
+
+            color = 'cyan' if mode == 'meta' else 'yellow'
 
             o1 = Text(0, 0, text,
-                      fontsize=self.fontsize, color='yellow', coord='window')
+                      fontsize=self.fontsize, color=color, coord='window')
 
             txt_wd, txt_ht = self.viewer.renderer.get_dimensions(o1)
 
