@@ -73,7 +73,7 @@ class ImageViewBindings(object):
             # Set up our standard modifiers
             mod_shift=['shift_l', 'shift_r'],
             mod_ctrl=['control_l', 'control_r'],
-            mod_meta=['meta_right'],
+            mod_win=['meta_right'],
 
             # Define our modes
             # Mode 'meta' is special: it is an intermediate mode that
@@ -201,7 +201,7 @@ class ImageViewBindings(object):
             ms_none=['nobtn'],
             ms_cursor=['left'],
             ms_wheel=[],
-            ms_draw=['draw+left', 'meta+left', 'right'],
+            ms_draw=['draw+left', 'win+left', 'right'],
 
             ms_rotate=['rotate+left'],
             ms_rotate_reset=['rotate+right'],
@@ -2481,7 +2481,7 @@ class BindingMapper(Callback.Callbacks):
             for keyname in ('control_l', 'control_r'):
                 self.add_modifier(keyname, 'ctrl')
             for keyname in ('meta_right',):
-                self.add_modifier(keyname, 'meta')
+                self.add_modifier(keyname, 'win')
         else:
             self.modifier_map = modifier_map
 

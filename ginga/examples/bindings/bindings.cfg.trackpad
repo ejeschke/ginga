@@ -32,25 +32,31 @@ btn_right = 0x4
 mod_shift = ['shift_l', 'shift_r']
 # same setting ends up as "Ctrl" on a pc and "Command" on a mac:
 mod_ctrl = ['control_l', 'control_r']
-# "Control" key on a mac:
-mod_meta = ['meta_right']
+# "Control" key on a mac, "Windows" key on a pc keyboard:
+mod_win = ['meta_right']
 
 # Define up our custom modifiers.
 # These are typically "normal" keys.  The modifier is defined by a triplet:
 # [ keyname, modtype, msg ], where
 # keyname is a key whose press initiates the modifier,
-# modtype is either None or a type in {'held', 'oneshot', 'locked'}
+# modtype is either None or a type in {'held', 'oneshot', 'locked', 'softlock'}
 # msg is a string to be shown in the display or None for no indicator
-dmod_draw = ['space', None, None]
-dmod_edit = ['b', None, None]
-dmod_cmap = ['y', None, None]
-dmod_cuts = ['s', None, None]
-dmod_dist = ['d', None, None]
-dmod_contrast = ['t', None, None]
-dmod_rotate = ['r', None, None]
-dmod_pan = ['q', None, None]
-dmod_freepan = ['w', None, None]
-dmod_naxis = [None, None, None]
+# Mode 'meta' is special: it is an intermediate mode that
+# is used primarily to launch other modes
+# If the mode initiation character is preceeded by a double
+# underscore, then the mode must be initiated from the "meta"
+# mode.
+dmod_meta = ['space', None, None]
+dmod_draw = ['__b', None, None]
+dmod_cmap = ['__y', None, None]
+dmod_cuts = ['__s', None, None]
+dmod_dist = ['__d', None, None]
+dmod_contrast = ['__t', None, None]
+dmod_rotate = ['__r', None, None]
+dmod_pan = ['__q', None, 'pan']
+dmod_freepan = ['__w', None, 'pan']
+dmod_camera = ['__c', None, 'pan']
+dmod_naxis = ['__n', None, None]
 
 default_mode_type = 'oneshot'
 default_lock_mode_type = 'softlock'
@@ -112,8 +118,11 @@ kp_poly_add = ['v', 'draw+v']
 kp_poly_del = ['z', 'draw+z']
 kp_edit_del = ['draw+x']
 kp_reset = ['escape']
-kp_lock = ['L']
-kp_softlock = ['l']
+kp_lock = ['L', 'meta+L']
+kp_softlock = ['l', 'meta+l']
+kp_camera_save = ['camera+s']
+kp_camera_reset = ['camera+r']
+kp_camera_toggle3d = ['camera+3']
 
 # pct of a window of data to move with pan key commands
 key_pan_pct = 0.666667
@@ -134,6 +143,7 @@ sc_cuts_alg = []
 sc_dist = ['dist+scroll']
 sc_cmap = ['cmap+scroll']
 sc_imap = ['cmap+ctrl+scroll']
+sc_camera_track = ['camera+scroll']
 sc_naxis = ['naxis+scroll']
 
 # This controls how fast panning occurs with the sc_pan* functions.
@@ -153,7 +163,7 @@ scroll_zoom_direct_scale = False
 ms_none = ['nobtn']
 ms_cursor = ['left']
 ms_wheel = []
-ms_draw = ['draw+left', 'meta+left', 'right']
+ms_draw = ['draw+left', 'win+left', 'right']
 ms_edit = ['edit+left']
 
 # mouse commands initiated by a preceeding keystroke (see above)
@@ -173,6 +183,8 @@ ms_cut_auto = ['cuts+right']
 ms_panset = ['pan+middle', 'shift+left', 'middle']
 ms_cmap_rotate = ['cmap+left']
 ms_cmap_restore = ['cmap+right']
+ms_camera_orbit = ['camera+left']
+ms_camera_pan_delta = ['camera+right']
 ms_naxis = ['naxis+left']
 
 mouse_zoom_acceleration = 1.085
