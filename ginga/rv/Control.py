@@ -352,6 +352,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.logger.error("Unable to load global plugin '%s': %s" % (
                 name, str(e)))
 
+    def add_plugin(self, spec):
+        ptype = spec.get('ptype', 'local')
+        if ptype == 'global':
+            self.add_global_plugin(spec)
+        else:
+            self.add_local_plugin(spec)
+
     def show_error(self, errmsg, raisetab=True):
         if self.gpmon.has_plugin('Errors'):
             obj = self.gpmon.get_plugin('Errors')

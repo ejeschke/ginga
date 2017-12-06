@@ -51,6 +51,7 @@ class Operations(GingaPlugin.GlobalPlugin):
 
         self.focuscolor = self.settings.get('focuscolor', "lightgreen")
         self.use_popup = True
+        self._start_op_args = ()
         self.spacer = None
         self.gui_up = False
 
@@ -68,18 +69,18 @@ class Operations(GingaPlugin.GlobalPlugin):
             hbox.add_widget(cbox1, stretch=0)
 
         self.use_popup = self.settings.get('use_popup_menu', True)
-        if self.use_popup:
-            opmenu = Widgets.Menu()
-            btn = Widgets.Button("Operation")
-        else:
-            opmenu = Widgets.ComboBox()
-            opmenu.set_tooltip("Select an operation")
-            hbox.add_widget(opmenu, stretch=0)
+        opmenu = Widgets.Menu()
+        btn = Widgets.Button("Operation")
+        btn.set_tooltip("Invoke operation")
+        btn.add_callback('activated', self.invoke_popup_cb)
+        if not self.use_popup:
+            hbox.add_widget(btn, stretch=0)
+            self.w.opname = Widgets.Label('')
+            hbox.add_widget(self.w.opname, stretch=0)
             btn = Widgets.Button("Go")
+            btn.add_callback('activated', self.invoke_op_cb)
 
         self.w.operation = opmenu
-        btn.add_callback('activated', self.invoke_op_cb)
-        btn.set_tooltip("Invoke operation")
         self.w.opbtn = btn
         hbox.add_widget(btn, stretch=0)
 
@@ -127,29 +128,33 @@ class Operations(GingaPlugin.GlobalPlugin):
     def add_operation_cb(self, viewer, opname, optype, spec):
         if not self.gui_up:
             return
-
         category = spec.get('category', None)
+        categories = None
+        if category is not None:
+            categories = category.split('.')
         menuname = spec.get('menu', opname)
 
         opmenu = self.w.operation
-        if self.use_popup:
-            menu = opmenu
-            if category is not None:
-                categories = category.split('.')
-                for catname in categories:
-                    try:
-                        menu = menu.get_menu(catname)
-                    except KeyError:
-                        menu = menu.add_menu(catname)
+        menu = opmenu
+        if categories is not None:
+            for catname in categories:
+                try:
+                    menu = menu.get_menu(catname)
+                except KeyError:
+                    menu = menu.add_menu(catname)
 
-            item = menu.add_name(menuname)
+        item = menu.add_name(menuname)
+        if self.use_popup:
             item.add_callback('activated',
                               lambda *args: self.start_operation_cb(opname,
                                                                     optype,
                                                                     spec))
         else:
-            # TODO: use menuname
-            opmenu.insert_alpha(opname)
+            item.add_callback('activated',
+                              lambda *args: self.set_operation_cb(menuname,
+                                                                  opname,
+                                                                  optype,
+                                                                  spec))
 
     def start_operation_cb(self, name, optype, spec):
         self.logger.debug("invoking operation menu")
@@ -163,6 +168,10 @@ class Operations(GingaPlugin.GlobalPlugin):
         chname = str(self.w.channel.get_alpha(idx))
         self.fv.error_wrap(self.fv.start_local_plugin, chname, name, None)
 
+    def set_operation_cb(self, menuname, name, optype, spec):
+        self._start_op_args = (name, optype, spec)
+        self.w.opname.set_text(menuname)
+
     def channel_select_cb(self, widget, index):
         if index >= 0:
             chname = self.fv.get_channel_names()[index]
@@ -174,15 +183,16 @@ class Operations(GingaPlugin.GlobalPlugin):
         # Update the channel control
         self.w.channel.show_text(channel.name)
 
-    def invoke_op_cb(self, btn_w):
+    def invoke_popup_cb(self, btn_w):
         self.logger.debug("invoking operation menu")
         menu = self.w.operation
-        if self.use_popup:
-            menu.popup(btn_w)
-        else:
-            idx = menu.get_index()
-            opname = str(menu.get_alpha(idx))
-            self.start_operation_cb(opname)
+        menu.popup(btn_w)
+
+    def invoke_op_cb(self, btn_w):
+        args = self._start_op_args
+        if len(args) == 0:
+            return
+        self.start_operation_cb(*args)
 
     def activate_plugin_cb(self, pl_mgr, bnch):
         hidden = bnch.pInfo.spec.get('hidden', False)
