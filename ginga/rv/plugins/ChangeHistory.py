@@ -33,7 +33,7 @@ by the calling plugin in the same method that issues the
         # This changes the data buffer
         image.set_data(new_data, ...)
         # Add description for ChangeHistory
-        info = dict(time_modified = datetime.utcnow(),
+        info = dict(time_modified=datetime.utcnow(),
                     reason_modified='Data has changed')
         self.fv.update_image_info(image, info)
 
