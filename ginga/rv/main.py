@@ -159,7 +159,7 @@ plugins = [
     Bunch(module='WBrowser', tab='Help', workspace='channels', start=False,
           menu="Help [G]", category='Help', ptype='global'),
     Bunch(module='Zoom', tab='Zoom', workspace='left', start=False,
-          hidden=False, category='Utils', ptype='global'),
+          menu="Zoom [G]", category='Utils', ptype='global'),
     ]
 
 
