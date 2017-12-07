@@ -298,6 +298,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def stop_global_plugin(self, plugin_name):
         self.gpmon.deactivate(plugin_name)
 
+    def start_plugin(self, plugin_name, spec):
+        ptype = spec.get('ptype', 'local')
+        if ptype == 'local':
+            self.start_operation(plugin_name)
+        else:
+            self.start_global_plugin(plugin_name)
+
     def add_local_plugin(self, spec):
         try:
             spec.setdefault('ptype', 'local')
@@ -310,6 +317,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             hidden = spec.get('hidden', False)
             if not hidden:
+                self.add_plugin_menu(name, spec)
                 self.add_operation(name, 'local', spec)
 
         except Exception as e:
@@ -341,7 +349,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             hidden = spec.get('hidden', False)
             if not hidden:
                 menuname = spec.get('menu', name)
-                self.add_plugin_menu(name, menuname)
+                self.add_plugin_menu(name, spec)
                 self.add_operation(name, 'global', spec)
 
             start = spec.get('start', True)
@@ -1512,12 +1520,27 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if hasattr(GwHelp, 'FileSelection'):
             self.filesel = GwHelp.FileSelection(self.w.root.get_widget())
 
-    def add_plugin_menu(self, name, menuname):
+    def add_plugin_menu(self, name, spec):
         # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
-        if 'menu_plug' in self.w:
-            item = self.w.menu_plug.add_name("Start %s" % (menuname))
-            item.add_callback('activated',
-                              lambda *args: self.start_global_plugin(name))
+        if 'menu_plug' not in self.w:
+            return
+        category = spec.get('category', None)
+        categories = None
+        if category is not None:
+            categories = category.split('.')
+        menuname = spec.get('menu', name)
+
+        menu = self.w.menu_plug
+        if categories is not None:
+            for catname in categories:
+                try:
+                    menu = menu.get_menu(catname)
+                except KeyError:
+                    menu = menu.add_menu(catname)
+
+        item = menu.add_name(menuname)
+        item.add_callback('activated',
+                          lambda *args: self.start_plugin(name, spec))
 
     def add_statusbar(self, holder):
         self.w.status = Widgets.StatusBar()
