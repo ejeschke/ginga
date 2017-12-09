@@ -1070,17 +1070,6 @@ class ImageViewBindings(object):
 
     #####  KEYBOARD ACTION CALLBACKS #####
 
-    def kp_mode_change(self, viewer, event, data_x, data_y, msg=True):
-        """Change the mode of the viewer."""
-        bd = viewer.get_bindmap()
-        if event.key not in bd.mode_tbl:
-            viewer.onscreen_message("? Key: '%s'" % event.key, delay=0.5)
-            return True
-
-        mode = bd.mode_tbl[event.key]
-        bd.set_mode(mode)
-        return True
-
     def kp_pan_set(self, viewer, event, data_x, data_y, msg=True):
         """Sets the pan position under the cursor."""
         if self.canpan:

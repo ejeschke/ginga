@@ -85,6 +85,14 @@ triggered from meta mode.
 | d                    | Enter dist (distribution) mode.                  |
 +----------------------+--------------------------------------------------+
 
+.. note:: For modes initiated from meta mode, the locked and softlock
+          mode types work the same way, which is slightly different
+          from that described above: you press the meta mode key to
+          switch back to meta mode, from which you can enter another
+          mode by pressing its key.  You can always press `Esc` in any
+          mode (including meta mode) to exit the mode.
+
+
 .. _panning_zooming_commands:
 
 Panning and zooming commands
