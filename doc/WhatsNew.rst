@@ -8,6 +8,11 @@ Ver 2.7.0.dev
 - Fix for broken polygon containment test
 - Addition of configurable zoom handlers for pan gestures
 - Fix for some broken tests under python 2.7
+- Update to mode handling via keyboard shortcuts
+  - addition of a new "meta" mode used primarily for mode switching
+  - most modes now initiated from meta mode, which frees up keys
+    for other uses
+  - see quick reference for details on how the new bindings work
 
 Ver 2.6.6 (2017-11-02)
 ======================
