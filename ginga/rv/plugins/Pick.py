@@ -553,8 +553,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             ci.set_desired_size(width, height)
 
-            ciw = Viewers.GingaScrolledViewerWidget(viewer=ci)
-            ciw.scroll_bars(horizontal='on', vertical='on')
+            ciw = Viewers.GingaViewerWidget(viewer=ci)
             ciw.resize(width, height)
 
             nb.add_widget(ciw, title="Contour")
