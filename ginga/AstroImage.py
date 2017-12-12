@@ -138,7 +138,8 @@ class AstroImage(BaseImage):
         self.setup_data(hdu.data)
 
         # Try to make a wcs object on the header
-        self.wcs.load_header(hdu.header, fobj=fobj)
+        if hasattr(self, 'wcs') and self.wcs is not None:
+            self.wcs.load_header(hdu.header, fobj=fobj)
 
     def load_file(self, filespec, **kwargs):
 
@@ -255,7 +256,7 @@ class AstroImage(BaseImage):
             hdr[kwd.upper()] = val
 
         # Try to make a wcs object on the header
-        if hasattr(self, 'wcs'):
+        if hasattr(self, 'wcs') and self.wcs is not None:
             self.wcs.load_header(hdr)
 
     def set_keywords(self, **kwds):
@@ -273,7 +274,7 @@ class AstroImage(BaseImage):
             self.metadata[key] = val
 
         # refresh the WCS
-        if hasattr(self, 'wcs'):
+        if hasattr(self, 'wcs') and self.wcs is not None:
             header = self.get_header()
             self.wcs.load_header(header)
 
