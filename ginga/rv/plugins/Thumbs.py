@@ -159,7 +159,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         bd = c_v.get_bindings()
         bd.enable_pan(True)
-        # disable zooming  TODO: reconsider--could be useful
         bd.enable_zoom(False)
         bd.enable_cmap(False)
 
@@ -621,6 +620,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         rect.y2 = rect.y1 + b + 4
 
         obj = canvas.dc.CompoundObject(*l)
+
+        # sanity check and adjustment so that popup will be minimally obscured
+        # by a window edge
+        x3, y3, x4, y4 = viewer.get_datarect()
+        if rect.x2 > x4:
+            off = rect.x2 - x4
+            rect.x1 -= off
+            rect.x2 -= off
+            point.x -= off
+
         return obj
 
     def show_tt(self, obj, canvas, event, pt,
