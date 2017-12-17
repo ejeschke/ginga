@@ -404,9 +404,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 bnch = self.thumb_dict[thumbkey]
                 path = bnch.info.path
                 placeholder = bnch.image.get_image().get('placeholder', False)
-                self.logger.info("[%s] build missing %s" % (placeholder,
-                                                            str(thumbkey)))
-
+                if placeholder:
+                    self.logger.debug("build missing [%s]" % (path))
 
     def update_highlights(self, old_highlight_set, new_highlight_set):
         """Unhighlight the thumbnails represented by `old_highlight_set`
@@ -782,7 +781,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         i = max(0, row1 * self.thumb_num_cols)
         j = min(len(self.thumb_list) - 1, row2 * self.thumb_num_cols)
         self.logger.debug("i, j = %d, %d" % (i, j))
-        thumbs = [ self.thumb_list[n] for n in range(i, j+1) ]
+        thumbs = [self.thumb_list[n] for n in range(i, j + 1)]
         return thumbs
 
     def add_visible_thumbs(self):
@@ -920,8 +919,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def reorder_thumbs(self):
         self.logger.debug("Reordering thumb grid")
-        canvas = self.c_view.get_canvas()
-
         xi, yi = None, None
         with self.thmblock:
             #self.clear_widget()
