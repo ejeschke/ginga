@@ -501,7 +501,7 @@ class ReferenceViewer(object):
                 menu_name = "%s [G]" % (plugin_name)
                 spec = Bunch(name=plugin_name, module=plugin_name,
                              ptype='global', tab=plugin_name,
-                             menu=menu_name,
+                             menu=menu_name, category="Custom",
                              workspace='right', pfx=pfx)
                 self.add_plugin_spec(spec)
 
@@ -517,7 +517,8 @@ class ReferenceViewer(object):
                     plugin_name = long_plugin_name
                     pfx = None
                 spec = Bunch(module=plugin_name, workspace='dialogs',
-                             ptype='local', hidden=False, pfx=pfx)
+                             ptype='local', category="Custom",
+                             hidden=False, pfx=pfx)
                 self.add_plugin_spec(spec)
 
         # Sort plugins according to desired order
