@@ -223,32 +223,37 @@ Adding or Removing Plugins
 ==========================
 
 A plugin can be added to the reference viewer in `pre_gui_config()`
-using one of two methods.  The first method is using the
-`add_local_plugin()` or `add_global_plugin()` methods, 
-depending on whether it is a local or global plugin, respectively::
+using the `add_plugin()` method with a specification ("spec") for
+the plugin::
+
+    from ginga.misc.Bunch import Bunch
 
     def pre_gui_config(ginga_shell):
         ...
 
-        ginga_shell.add_local_plugin('DQCheck', "dialogs")
+        spec = Bunch(module='DQCheck', klass='DQCheck', workspace='dialogs',
+                     category='Utils', ptype='local')
+        ginga_shell.add_plugin(spec)
 
 The above call would try to load a local plugin called "DQCheck" from a
 module called "DQCheck".  When invoked from the Operations menu it would
 occupy a spot in the "dialogs" workspace (see layout discussion above).
 
-.. note:: It is a convention in Ginga plugins that the module name and
-          plugin name (a class name) are the same.
+Other keywords that can be used in a spec:
 
-Global plugins are similar, except that some of them are considered
-critical to the viewers basic operation and so should be started when
-the program starts::
+* Global plugins use `ptype='global'`.
 
-    def pre_gui_config(ginga_shell):
-        ...
+* If a plugin should be hidden from the menus (e.g. it is started under
+  program control, not by the user), specify `hidden=True`.
 
-        ginga_shell.add_global_plugin('SpecScope', "left",
-                                      tab_name="Spec Scope", start_plugin=True)
+* If the plugin should be started when the program starts, specify
+  `start=True`.
 
+* To use a different name in the menu for starting the plugin, specify
+  `menu="Custom Name"`.
+
+* To use a different name in the tab that is showing the plugin GUI,
+  specify `tab="Tab Name"`.
 
 ==============================
 Making a Custom Startup Script
@@ -264,15 +269,13 @@ a personal settings area.  To do this we make use of the `main` module::
 
     my_layout = [ ... ]
 
+    plugins = [ ... ]
+
     if __name__ == "__main__":
         viewer = ReferenceViewer(layout=my_layout)
-        # add global plugins
-        viewer.add_global_plugin(...)
-        viewer.add_global_plugin(...)
-
-        # add local plugins
-        viewer.add_local_plugin(...)
-        viewer.add_local_plugin(...)
+        # add plugins
+        for spec in plugins:
+            viewer.add_plugin(spec)
 
         # Parse command line options with optparse module
         usage = "usage: %prog [options] cmd [args]"

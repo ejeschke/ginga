@@ -160,7 +160,7 @@ plugins = [
           menu="Help [G]", category='Help', ptype='global'),
     Bunch(module='Zoom', tab='Zoom', workspace='left', start=False,
           menu="Zoom [G]", category='Utils', ptype='global'),
-    ]
+]
 
 
 class ReferenceViewer(object):
@@ -652,6 +652,7 @@ class ReferenceViewer(object):
             Bunch(module=module_name, workspace=ws_name, tab=tab_name,
                   path=path, klass=klass, category=category,
                   ptype='global', start=start_plugin, pfx=pfx))
+
 
 def reference_viewer(sys_argv):
     """Create reference viewer from command line."""

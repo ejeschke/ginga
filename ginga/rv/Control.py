@@ -311,8 +311,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             hidden = spec.get('hidden', False)
             if not hidden:
-                self.add_plugin_menu(name, spec)
-                self.add_operation(name, 'local', spec)
+                menuname = spec.get('menu', name)
+                self.add_plugin_menu(menuname, spec)
 
         except Exception as e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
@@ -333,8 +333,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             hidden = spec.get('hidden', False)
             if not hidden:
                 menuname = spec.get('menu', name)
-                self.add_plugin_menu(name, spec)
-                self.add_operation(name, 'global', spec)
+                self.add_plugin_menu(menuname, spec)
 
             start = spec.get('start', True)
             if start:
