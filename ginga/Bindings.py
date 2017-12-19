@@ -2648,8 +2648,7 @@ class BindingMapper(Callback.Callbacks):
             return True
 
         if ((self._kbdmode in (None, 'meta')) or
-            (self._kbdmode_type != 'locked') or
-            (mode_name == 'meta')):
+            (self._kbdmode_type != 'locked') or (mode_name == 'meta')):
             if self._kbdmode is not None:
                 self.reset_mode(viewer)
 
