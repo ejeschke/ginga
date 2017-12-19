@@ -911,7 +911,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs,
                                new_thumbkey=thumbkey)
 
-
     def auto_scroll(self, thumbkey):
         """Scroll the window to the thumb."""
         if not self.gui_up:
@@ -922,11 +921,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             return
 
         bnch = self.thumb_dict[thumbkey]
-        xi, yi = bnch.image.x, bnch.image.y
 
         # override X parameter because we only want to scroll vertically
         pan_x, pan_y = self.c_view.get_pan()
-        self.c_view.panset_xy(pan_x, yi)
+        self.c_view.panset_xy(pan_x, bnch.image.y)
 
     def clear_widget(self):
         """
