@@ -62,9 +62,6 @@ pluginconfpfx = None
 
 package_home = os.path.split(sys.modules['ginga.version'].__file__)[0]
 
-## gw_dir = os.path.join(package_home, 'gw')
-## sys.path.insert(0, gw_dir)
-
 # pick up plugins specific to our chosen toolkit
 tkname = toolkit.get_family()
 if tkname is not None:
@@ -112,7 +109,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
-                     'add-image-info', 'remove-image-info', 'add-operation'):
+                     'add-image-info', 'remove-image-info'):
             self.enable_callback(name)
 
         # Initialize the timer factory
@@ -153,8 +150,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channel_follows_focus']
 
-        self.global_plugins = {}
-        self.local_plugins = {}
+        self.plugins = []
 
         # some default colormap info
         self.cm = cmap.get_cmap("gray")
@@ -167,8 +163,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # Initialize catalog and image server bank
         self.imgsrv = catalog.ServerBank(self.logger)
-
-        self.operations = {}
 
         # state for implementing field-info callback
         self._cursor_task = self.get_timer()
@@ -309,7 +303,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         try:
             spec.setdefault('ptype', 'local')
             name = spec.setdefault('name', spec.get('klass', spec.module))
-            self.local_plugins[name] = spec
+            self.plugins.append(spec)
 
             pfx = spec.get('pfx', pluginconfpfx)
             path = spec.get('path', None)
@@ -324,21 +318,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.logger.error("Unable to load local plugin '%s': %s" % (
                 name, str(e)))
 
-    def add_operation(self, opname, optype, spec):
-        category = spec.get('category', None)
-        l = self.operations.setdefault(category, [])
-        l.append(opname)
-        self.make_callback('add-operation', opname, optype, spec)
-
-    def get_operations(self, category=None):
-        l = self.operations.setdefault(category, [])
-        return l
-
     def add_global_plugin(self, spec):
         try:
             spec.setdefault('ptype', 'global')
             name = spec.setdefault('name', spec.get('klass', spec.module))
-            self.global_plugins[name] = spec
+            self.plugins.append(spec)
 
             pfx = spec.get('pfx', pluginconfpfx)
             path = spec.get('path', None)
@@ -366,6 +350,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.add_global_plugin(spec)
         else:
             self.add_local_plugin(spec)
+
+    def get_plugins(self):
+        return self.plugins
 
     def show_error(self, errmsg, raisetab=True):
         if self.gpmon.has_plugin('Errors'):
@@ -1207,8 +1194,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 self.cur_channel = channel
 
         # Prepare local plugins for this channel
-        for opname, spec in self.local_plugins.items():
-            opmon.load_plugin(opname, spec, chinfo=channel)
+        for spec in self.get_plugins():
+            opname = spec.get('module')
+            if spec.get('ptype', 'global') == 'local':
+                opmon.load_plugin(opname, spec, chinfo=channel)
 
         self.make_gui_callback('add-channel', channel)
         return channel

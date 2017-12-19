@@ -178,6 +178,13 @@ class ReferenceViewer(object):
     def clear_default_plugins(self):
         self.plugins = []
 
+    def get_plugin_menuname(self, spec):
+        category = spec.get('category', None)
+        menu = spec.get('menu', spec.get('tab', spec.get('module')))
+        if category is None:
+            return menu
+        return category + '.' + menu
+
     def add_default_plugins(self, except_global=[], except_local=[]):
         """
         Add the ginga-distributed default set of plugins to the
@@ -491,8 +498,10 @@ class ReferenceViewer(object):
                 else:
                     plugin_name = long_plugin_name
                     pfx = None
+                menu_name = "%s [G]" % (plugin_name)
                 spec = Bunch(name=plugin_name, module=plugin_name,
                              ptype='global', tab=plugin_name,
+                             menu=menu_name,
                              workspace='right', pfx=pfx)
                 self.add_plugin_spec(spec)
 
@@ -511,6 +520,9 @@ class ReferenceViewer(object):
                              ptype='local', hidden=False, pfx=pfx)
                 self.add_plugin_spec(spec)
 
+        # Sort plugins according to desired order
+        self.plugins.sort(key=self.get_plugin_menuname)
+
         # Add desired plugins
         for spec in self.plugins:
             if not spec.module.lower() in disabled_plugins:
@@ -524,7 +536,7 @@ class ReferenceViewer(object):
         if 'info' in tab_names:
             ginga_shell.ds.raise_tab('Info')
         if 'synopsis' in tab_names:
-            ginga_shell.ds.raise_tab('synopsis')
+            ginga_shell.ds.raise_tab('Synopsis')
         if 'thumbs' in tab_names:
             ginga_shell.ds.raise_tab('Thumbs')
 

@@ -40,7 +40,6 @@ class Operations(GingaPlugin.GlobalPlugin):
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
         fv.add_callback('channel-change', self.change_channel_cb)
-        fv.add_callback('add-operation', self.add_operation_cb)
 
         # Add in global plugin manager
         pl_mgr = self.fv.gpmon
@@ -120,19 +119,22 @@ class Operations(GingaPlugin.GlobalPlugin):
             channel = self.fv.get_channel(name)
             self.add_channel_cb(self.fv, channel)
 
-        # TODO: get the list of plugins and populate our operation control
-        ## operations = self.fv.get_operations()
-        ## for opname in operations:
-        ##     self.add_operation_cb(self.fv, opname, optype, spec)
+        plugins = self.fv.get_plugins()
+        for spec in plugins:
+            if spec.get('hidden', False):
+                continue
+            self.add_operation(self.fv, spec)
 
-    def add_operation_cb(self, viewer, opname, optype, spec):
+    def add_operation(self, viewer, spec):
         if not self.gui_up:
             return
+        opname = spec.get('module')
+        optype = spec.get('optype', 'global')
         category = spec.get('category', None)
         categories = None
         if category is not None:
             categories = category.split('.')
-        menuname = spec.get('menu', opname)
+        menuname = spec.get('menu', spec.get('tab', spec.get('module')))
 
         opmenu = self.w.operation
         menu = opmenu
