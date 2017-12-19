@@ -437,12 +437,12 @@ class ModeIndicator(CanvasObjectBase):
         tr = viewer.tform['window_to_native']
 
         text = mode
-        if modetype in self.modetbl:
-            text += ' [%s]' % self.modetbl[modetype]
+        if mode_type in self.modetbl:
+            text += ' [%s]' % self.modetbl[mode_type]
 
         color = 'cyan' if mode == 'meta' else self.color
 
-        cr.set_font(self.font, self.fontsize, color=self.color,
+        cr.set_font(self.font, self.fontsize, color=color,
                     alpha=self.alpha)
         txt_wd, txt_ht = cr.text_extents(text)
 
@@ -465,7 +465,7 @@ class ModeIndicator(CanvasObjectBase):
                                 (cx2, cy2), (cx1, cy2))))
 
         # draw fg
-        cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
+        cr.set_line(color=color, linewidth=1, alpha=self.alpha)
 
         cx, cy = x_base + self.xpad, y_base + txt_ht + self.ypad
         cx, cy = tr.to_((cx, cy))
