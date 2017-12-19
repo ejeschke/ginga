@@ -9,10 +9,12 @@ Ver 2.7.0.dev
 - Addition of configurable zoom handlers for pan gestures
 - Fix for some broken tests under python 2.7
 - Update to mode handling via keyboard shortcuts
+
   - addition of a new "meta" mode used primarily for mode switching
   - most modes now initiated from meta mode, which frees up keys
     for other uses
   - see Ginga quick reference for details on how the new bindings work
+
 - Efficiency update for Thumbs plugin when many thumbs are present
 
 Ver 2.6.6 (2017-11-02)
