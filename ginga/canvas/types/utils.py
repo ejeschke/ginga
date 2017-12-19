@@ -421,6 +421,7 @@ class ModeIndicator(CanvasObjectBase):
         self.kind = 'modeindicator'
         self.xpad = 8
         self.ypad = 4
+        self.modetbl = dict(locked='L', softlock='S', held='H', oneshot='O')
 
     def draw(self, viewer):
 
@@ -435,12 +436,11 @@ class ModeIndicator(CanvasObjectBase):
         cr = viewer.renderer.setup_cr(self)
         tr = viewer.tform['window_to_native']
 
-        if mode_type == 'locked':
-            text = '%s [L]' % (mode)
-        elif mode_type == 'softlock':
-            text = '%s [SL]' % (mode)
-        else:
-            text = mode
+        text = mode
+        if modetype in self.modetbl:
+            text += ' [%s]' % self.modetbl[modetype]
+
+        color = 'cyan' if mode == 'meta' else self.color
 
         cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)

@@ -73,19 +73,25 @@ class ImageViewBindings(object):
             # Set up our standard modifiers
             mod_shift=['shift_l', 'shift_r'],
             mod_ctrl=['control_l', 'control_r'],
-            mod_meta=['meta_right'],
+            mod_win=['meta_right'],
 
             # Define our modes
-            dmod_draw=['space', None, None],
-            dmod_cmap=['y', None, None],
-            dmod_cuts=['s', None, None],
-            dmod_dist=['d', None, None],
-            dmod_contrast=['t', None, None],
-            dmod_rotate=['r', None, None],
-            dmod_pan=['q', None, 'pan'],
-            dmod_freepan=['w', None, 'pan'],
-            dmod_camera=[None, None, 'pan'],
-            dmod_naxis=[None, None, None],
+            # Mode 'meta' is special: it is an intermediate mode that
+            # is used primarily to launch other modes
+            # If the mode initiation character is preceeded by a double
+            # underscore, then the mode must be initiated from the "meta"
+            # mode.
+            dmod_meta=['space', None, None],
+            dmod_draw=['__b', None, None],
+            dmod_cmap=['__y', None, None],
+            dmod_cuts=['__s', None, None],
+            dmod_dist=['__d', None, None],
+            dmod_contrast=['__t', None, None],
+            dmod_rotate=['__r', None, None],
+            dmod_pan=['__q', None, 'pan'],
+            dmod_freepan=['__w', None, 'pan'],
+            dmod_camera=['__c', None, 'pan'],
+            dmod_naxis=['__n', None, None],
 
             default_mode_type='oneshot',
             default_lock_mode_type='softlock',
@@ -149,8 +155,8 @@ class ImageViewBindings(object):
             kp_poly_del=['z', 'draw+z'],
             kp_edit_del=['draw+x'],
             kp_reset=['escape'],
-            kp_lock=['L'],
-            kp_softlock=['l'],
+            kp_lock=['L', 'meta+L'],
+            kp_softlock=['l', 'meta+l'],
             kp_camera_save=['camera+s'],
             kp_camera_reset=['camera+r'],
             kp_camera_toggle3d=['camera+3'],
@@ -195,7 +201,7 @@ class ImageViewBindings(object):
             ms_none=['nobtn'],
             ms_cursor=['left'],
             ms_wheel=[],
-            ms_draw=['draw+left', 'meta+left', 'right'],
+            ms_draw=['draw+left', 'win+left', 'right'],
 
             ms_rotate=['rotate+left'],
             ms_rotate_reset=['rotate+right'],
@@ -2464,9 +2470,9 @@ class BindingMapper(Callback.Callbacks):
             for keyname in ('control_l', 'control_r'):
                 self.add_modifier(keyname, 'ctrl')
             for keyname in ('meta_right',):
-                self.add_modifier(keyname, 'meta')
+                self.add_modifier(keyname, 'win')
         else:
-            self.modifier_map = mode_map
+            self.modifier_map = modifier_map
 
         # Set up mode mapping
         if mode_map is None:
@@ -2475,6 +2481,7 @@ class BindingMapper(Callback.Callbacks):
             self.mode_map = mode_map
 
         self._empty_set = frozenset([])
+        self.mode_tbl = dict()
 
         # For callbacks
         for name in ('mode-set', ):
@@ -2520,8 +2527,12 @@ class BindingMapper(Callback.Callbacks):
 
         bnch = Bunch.Bunch(name=mode_name, type=mode_type, msg=msg)
         if keyname is not None:
-            # No key to launch this mode
-            self.mode_map[keyname] = bnch
+            # Key to launch this mode
+            if keyname[0:2] == '__':
+                keyname = keyname[2]
+                self.mode_tbl[keyname] = bnch
+            else:
+                self.mode_map[keyname] = bnch
         self.mode_map['mode_%s' % mode_name] = bnch
 
     def set_mode(self, name, mode_type=None):
@@ -2612,11 +2623,16 @@ class BindingMapper(Callback.Callbacks):
         keyname = event.key
         # Is this a mode key?
         if keyname not in self.mode_map:
-            # No
-            return False
+            if (keyname not in self.mode_tbl) or (self._kbdmode != 'meta'):
+                # No
+                return False
+            bnch = self.mode_tbl[keyname]
+        else:
+            bnch = self.mode_map[keyname]
 
-        bnch = self.mode_map[keyname]
         mode_name = bnch.name
+        self.logger.debug("cur mode='%s' mode pressed='%s'" % (
+            self._kbdmode, mode_name))
 
         if mode_name == self._kbdmode:
             # <== same key was pressed that started the mode we're in
@@ -2631,12 +2647,14 @@ class BindingMapper(Callback.Callbacks):
             self._delayed_reset = False
             return True
 
-        if (self._kbdmode is None) or (self._kbdmode_type != 'locked'):
+        if ((self._kbdmode in (None, 'meta'))
+            or (self._kbdmode_type != 'locked')
+            or (mode_name == 'meta')):
             if self._kbdmode is not None:
                 self.reset_mode(viewer)
 
             # activate this mode
-            if self._kbdmode is None:
+            if self._kbdmode in (None, 'meta'):
                 mode_type = bnch.type
                 if mode_type is None:
                     mode_type = self._kbdmode_type_default
