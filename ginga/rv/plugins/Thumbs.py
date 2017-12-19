@@ -332,7 +332,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         with self.thmblock:
             self.thumb_list = []
             self.thumb_dict = {}
+            self._displayed_thumb_keys = set([])
             self._tkf_highlight = set([])
+            self.canvas.delete_all_objects(redraw=False)
+            self.canvas.update_canvas(whence=0)
 
         self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs)
 
@@ -364,7 +367,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             if self.have_thumbnail(fitsimage, image):
                 # schedule an update of the thumbnail to pick up changes
                 self.redo_delay(fitsimage)
-
         else:
             # no image has the focus
             new_highlight = set([])
@@ -901,21 +903,30 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
             # thumb will be added to canvas later in reorder_thumbs()
 
-        sort_order = self.settings.get('sort_order', None)
-        if sort_order:
-            self.thumb_list.sort()
+            sort_order = self.settings.get('sort_order', None)
+            if sort_order:
+                self.thumb_list.sort()
+            self.logger.debug("added thumb for %s" % (info.name))
 
-        self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs)
+        self.fv.gui_do_oneshot('thumbs-reorder', self.reorder_thumbs,
+                               new_thumbkey=thumbkey)
 
-        self.logger.debug("added thumb for %s" % (info.name))
 
-    def _auto_scroll(self, xi, yi):
+    def auto_scroll(self, thumbkey):
+        """Scroll the window to the thumb."""
+        if not self.gui_up:
+            return
         # force scroll to bottom of thumbs, if checkbox is set
         scrollp = self.w.auto_scroll.get_state()
-        if scrollp:
-            # override X parameter because we only want to scroll vertically
-            pan_x, pan_y = self.c_view.get_pan()
-            self.c_view.panset_xy(0, yi)
+        if not scrollp:
+            return
+
+        bnch = self.thumb_dict[thumbkey]
+        xi, yi = bnch.image.x, bnch.image.y
+
+        # override X parameter because we only want to scroll vertically
+        pan_x, pan_y = self.c_view.get_pan()
+        self.c_view.panset_xy(pan_x, yi)
 
     def clear_widget(self):
         """
@@ -926,11 +937,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         canvas.delete_all_objects()
         self.c_view.redraw(whence=0)
 
-    def reorder_thumbs(self):
+    def reorder_thumbs(self, new_thumbkey=None):
         self.logger.debug("Reordering thumb grid")
         xi, yi = None, None
         with self.thmblock:
-            #self.clear_widget()
 
             # Add thumbs back in by rows
             self.thumb_col_count = 0
@@ -953,11 +963,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             xi += self.thumb_width * 2
             xm, ym, x_, y_ = self._calc_thumb_pos(0, 0)
             self.c_view.set_limits([(xm, ym), (xi, yi)], coord='data')
-            self._auto_scroll(xi, yi)
-
-        self.add_visible_thumbs()
 
         self.logger.debug("Reordering done")
+
+        if new_thumbkey is not None:
+            self.auto_scroll(new_thumbkey)
+
+        self.add_visible_thumbs()
 
     def _mk_tooltip_text(self, metadata):
         result = []
