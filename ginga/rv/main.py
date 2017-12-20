@@ -256,6 +256,9 @@ class ReferenceViewer(object):
                           help="X geometry for initial size and placement")
         optprs.add_option("--modules", dest="modules", metavar="NAMES",
                           help="Specify additional modules to load")
+        optprs.add_option("--norestore", dest="norestore", default=False,
+                          action="store_true",
+                          help="Don't restore the GUI from a saved layout")
         optprs.add_option("--nosplash", dest="nosplash", default=False,
                           action="store_true",
                           help="Don't display the splash screen")
@@ -319,7 +322,7 @@ class ReferenceViewer(object):
                               WCSpkg='choose', FITSpkg='choose',
                               recursion_limit=2000,
                               icc_working_profile=None,
-                              save_layout=False)
+                              save_layout=True)
 
         # default of 1000 is a little too small
         sys.setrecursionlimit(settings.get('recursion_limit'))
@@ -453,7 +456,7 @@ class ReferenceViewer(object):
                                  ev_quit=ev_quit)
 
         layout_file = None
-        if settings.get('save_layout', False):
+        if not options.norestore and settings.get('save_layout', False):
             layout_file = os.path.join(basedir, 'layout')
 
         ginga_shell.set_layout(self.layout, layout_file=layout_file)

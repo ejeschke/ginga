@@ -49,6 +49,24 @@ inherit them.  You can also manually copy the example file from
 `.../ginga/examples/configs/channel_Image.cfg` to your configuration
 area and edit it if you prefer.
 
+============================================
+Saving the workspace layout between sessions
+============================================
+
+By default, Ginga will will write its window size, position and some layout
+information to a "layout" file in the configuration directory when the
+program is closed.  Upon a subsequent startup Ginga will attempt to
+restore the window to the saved configuration.  If this behavior is not
+desired you can add the option `save_layout = False` to your
+`general.cfg` file in the Ginga configuration directory.
+
+There is a sample `general.cfg` file in `.../ginga/examples/configs`.
+
+Invoking the program with the `--norestore` option also prevents it from
+reading the saved layout file.  This may be needed in some cases when
+the layout changes in an incompatible way between when the program was
+last stopped and when it was started again.
+
 .. _sec-bindings:
 
 ==================
