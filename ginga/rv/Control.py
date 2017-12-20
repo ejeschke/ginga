@@ -62,9 +62,6 @@ pluginconfpfx = None
 
 package_home = os.path.split(sys.modules['ginga.version'].__file__)[0]
 
-## gw_dir = os.path.join(package_home, 'gw')
-## sys.path.insert(0, gw_dir)
-
 # pick up plugins specific to our chosen toolkit
 tkname = toolkit.get_family()
 if tkname is not None:
@@ -112,7 +109,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
-                     'add-image-info', 'remove-image-info', 'add-operation'):
+                     'add-image-info', 'remove-image-info'):
             self.enable_callback(name)
 
         # Initialize the timer factory
@@ -153,8 +150,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channel_follows_focus']
 
-        self.global_plugins = {}
-        self.local_plugins = {}
+        self.plugins = []
 
         # some default colormap info
         self.cm = cmap.get_cmap("gray")
@@ -167,8 +163,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # Initialize catalog and image server bank
         self.imgsrv = catalog.ServerBank(self.logger)
-
-        self.operations = {}
 
         # state for implementing field-info callback
         self._cursor_task = self.get_timer()
@@ -298,11 +292,18 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def stop_global_plugin(self, plugin_name):
         self.gpmon.deactivate(plugin_name)
 
+    def start_plugin(self, plugin_name, spec):
+        ptype = spec.get('ptype', 'local')
+        if ptype == 'local':
+            self.start_operation(plugin_name)
+        else:
+            self.start_global_plugin(plugin_name)
+
     def add_local_plugin(self, spec):
         try:
             spec.setdefault('ptype', 'local')
             name = spec.setdefault('name', spec.get('klass', spec.module))
-            self.local_plugins[name] = spec
+            self.plugins.append(spec)
 
             pfx = spec.get('pfx', pluginconfpfx)
             path = spec.get('path', None)
@@ -310,27 +311,18 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             hidden = spec.get('hidden', False)
             if not hidden:
-                self.add_operation(name, 'local', spec)
+                menuname = spec.get('menu', name)
+                self.add_plugin_menu(menuname, spec)
 
         except Exception as e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
                 name, str(e)))
 
-    def add_operation(self, opname, optype, spec):
-        category = spec.get('category', None)
-        l = self.operations.setdefault(category, [])
-        l.append(opname)
-        self.make_callback('add-operation', opname, optype, spec)
-
-    def get_operations(self, category=None):
-        l = self.operations.setdefault(category, [])
-        return l
-
     def add_global_plugin(self, spec):
         try:
             spec.setdefault('ptype', 'global')
             name = spec.setdefault('name', spec.get('klass', spec.module))
-            self.global_plugins[name] = spec
+            self.plugins.append(spec)
 
             pfx = spec.get('pfx', pluginconfpfx)
             path = spec.get('path', None)
@@ -341,8 +333,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             hidden = spec.get('hidden', False)
             if not hidden:
                 menuname = spec.get('menu', name)
-                self.add_plugin_menu(name, menuname)
-                self.add_operation(name, 'global', spec)
+                self.add_plugin_menu(menuname, spec)
 
             start = spec.get('start', True)
             if start:
@@ -351,6 +342,16 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         except Exception as e:
             self.logger.error("Unable to load global plugin '%s': %s" % (
                 name, str(e)))
+
+    def add_plugin(self, spec):
+        ptype = spec.get('ptype', 'local')
+        if ptype == 'global':
+            self.add_global_plugin(spec)
+        else:
+            self.add_local_plugin(spec)
+
+    def get_plugins(self):
+        return self.plugins
 
     def show_error(self, errmsg, raisetab=True):
         if self.gpmon.has_plugin('Errors'):
@@ -1192,8 +1193,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 self.cur_channel = channel
 
         # Prepare local plugins for this channel
-        for opname, spec in self.local_plugins.items():
-            opmon.load_plugin(opname, spec, chinfo=channel)
+        for spec in self.get_plugins():
+            opname = spec.get('module')
+            if spec.get('ptype', 'global') == 'local':
+                opmon.load_plugin(opname, spec, chinfo=channel)
 
         self.make_gui_callback('add-channel', channel)
         return channel
@@ -1505,12 +1508,27 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if hasattr(GwHelp, 'FileSelection'):
             self.filesel = GwHelp.FileSelection(self.w.root.get_widget())
 
-    def add_plugin_menu(self, name, menuname):
+    def add_plugin_menu(self, name, spec):
         # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
-        if 'menu_plug' in self.w:
-            item = self.w.menu_plug.add_name("Start %s" % (menuname))
-            item.add_callback('activated',
-                              lambda *args: self.start_global_plugin(name))
+        if 'menu_plug' not in self.w:
+            return
+        category = spec.get('category', None)
+        categories = None
+        if category is not None:
+            categories = category.split('.')
+        menuname = spec.get('menu', name)
+
+        menu = self.w.menu_plug
+        if categories is not None:
+            for catname in categories:
+                try:
+                    menu = menu.get_menu(catname)
+                except KeyError:
+                    menu = menu.add_menu(catname)
+
+        item = menu.add_name(menuname)
+        item.add_callback('activated',
+                          lambda *args: self.start_plugin(name, spec))
 
     def add_statusbar(self, holder):
         self.w.status = Widgets.StatusBar()

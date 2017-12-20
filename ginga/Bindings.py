@@ -312,6 +312,7 @@ class ImageViewBindings(object):
         bindmap.clear_button_map()
         bindmap.clear_modifier_map()
         bindmap.clear_mode_map()
+        bindmap.clear_event_map()
 
         mode_type = self.settings.get('default_mode_type', 'oneshot')
         bindmap.set_default_mode_type(mode_type)
@@ -340,13 +341,15 @@ class ImageViewBindings(object):
                 if curname is not None:
                     self.cursor_map[mode_name] = curname
 
+        self.merge_actions(viewer, bindmap, self, d.items())
+
+    def merge_actions(self, viewer, bindmap, obj, tups):
+
         modes_set = bindmap.get_modes()
         modifiers_set = bindmap.get_modifiers()
 
-        bindmap.clear_event_map()
-
         # Add events
-        for name, value in d.items():
+        for name, value in tups:
             if len(name) <= 3:
                 continue
 
@@ -371,7 +374,7 @@ class ImageViewBindings(object):
 
             # Register for this symbolic event if we have a handler for it
             try:
-                cb_method = getattr(self, name)
+                cb_method = getattr(obj, name)
 
             except AttributeError:
                 # Do we need a warning here?
