@@ -151,6 +151,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.channel_follows_focus = self.settings['channel_follows_focus']
 
         self.plugins = []
+        self._plugin_sort_method = self.get_plugin_menuname
 
         # some default colormap info
         self.cm = cmap.get_cmap("gray")
@@ -297,22 +298,17 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if ptype == 'local':
             self.start_operation(plugin_name)
         else:
-            self.start_global_plugin(plugin_name)
+            self.start_global_plugin(plugin_name, raise_tab=True)
 
     def add_local_plugin(self, spec):
         try:
             spec.setdefault('ptype', 'local')
             name = spec.setdefault('name', spec.get('klass', spec.module))
-            self.plugins.append(spec)
 
             pfx = spec.get('pfx', pluginconfpfx)
             path = spec.get('path', None)
             self.mm.load_module(spec.module, pfx=pfx, path=path)
-
-            hidden = spec.get('hidden', False)
-            if not hidden:
-                menuname = spec.get('menu', name)
-                self.add_plugin_menu(menuname, spec)
+            self.plugins.append(spec)
 
         except Exception as e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
@@ -322,22 +318,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         try:
             spec.setdefault('ptype', 'global')
             name = spec.setdefault('name', spec.get('klass', spec.module))
-            self.plugins.append(spec)
 
             pfx = spec.get('pfx', pluginconfpfx)
             path = spec.get('path', None)
             self.mm.load_module(spec.module, pfx=pfx, path=path)
+            self.plugins.append(spec)
 
             self.gpmon.load_plugin(name, spec)
-
-            hidden = spec.get('hidden', False)
-            if not hidden:
-                menuname = spec.get('menu', name)
-                self.add_plugin_menu(menuname, spec)
-
-            start = spec.get('start', True)
-            if start:
-                self.start_global_plugin(name, raise_tab=False)
 
         except Exception as e:
             self.logger.error("Unable to load global plugin '%s': %s" % (
@@ -350,8 +337,40 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         else:
             self.add_local_plugin(spec)
 
+    def set_plugins(self, plugins):
+        self.plugins = []
+        for spec in plugins:
+            self.add_plugin(spec)
+
     def get_plugins(self):
         return self.plugins
+
+    def get_plugin_menuname(self, spec):
+        category = spec.get('category', None)
+        name = spec.setdefault('name', spec.get('klass', spec.module))
+        menu = spec.get('menu', spec.get('tab', name))
+        if category is None:
+            return menu
+        return category + '.' + menu
+
+    def set_plugin_sortmethod(self, fn):
+        self._plugin_sort_method = fn
+
+    def boot_plugins(self):
+        # Sort plugins according to desired order
+        self.plugins.sort(key=self._plugin_sort_method)
+
+        for spec in self.plugins:
+            name = spec.setdefault('name', spec.get('klass', spec.module))
+            hidden = spec.get('hidden', False)
+            if not hidden:
+                self.add_plugin_menu(name, spec)
+
+            start = spec.get('start', True)
+            # for now only start global plugins that have start==True
+            # channels are not yet created by this time
+            if start and spec.get('ptype', 'local') == 'global':
+                self.error_wrap(self.start_plugin, name, spec)
 
     def show_error(self, errmsg, raisetab=True):
         if self.gpmon.has_plugin('Errors'):
@@ -1194,7 +1213,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # Prepare local plugins for this channel
         for spec in self.get_plugins():
-            opname = spec.get('module')
+            opname = spec.get('klass', spec.get('module'))
             if spec.get('ptype', 'global') == 'local':
                 opmon.load_plugin(opname, spec, chinfo=channel)
 
@@ -1516,7 +1535,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         categories = None
         if category is not None:
             categories = category.split('.')
-        menuname = spec.get('menu', name)
+        menuname = spec.get('menu', spec.get('tab', name))
 
         menu = self.w.menu_plug
         if categories is not None:

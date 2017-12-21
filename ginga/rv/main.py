@@ -72,25 +72,23 @@ default_layout = ['seq', {},
 plugins = [
     # hidden plugins, started at program initialization
     Bunch(module='Operations', workspace='operations', start=True,
-          hidden=True, category='system', ptype='global'),
+          hidden=True, category='System', ptype='global'),
     Bunch(module='Toolbar', workspace='toolbar', start=True,
-          hidden=True, category='system', ptype='global'),
+          hidden=True, category='System', ptype='global'),
     Bunch(module='Pan', workspace='uleft', start=True,
-          hidden=True, category='system', ptype='global'),
+          hidden=True, category='System', ptype='global'),
     Bunch(module='Info', tab='Synopsis', workspace='lleft', start=True,
-          hidden=True, category='system', ptype='global'),
-    Bunch(module='Header', tab='Header', workspace='left', start=True,
-          hidden=True, category='system', ptype='global'),
+          hidden=True, category='System', ptype='global'),
     Bunch(module='Thumbs', tab='Thumbs', workspace='right', start=True,
-          hidden=True, category='system', ptype='global'),
+          hidden=True, category='System', ptype='global'),
     Bunch(module='Contents', tab='Contents', workspace='right', start=True,
-          hidden=True, category='system', ptype='global'),
+          hidden=True, category='System', ptype='global'),
     Bunch(module='Colorbar', workspace='cbar', start=True,
-          hidden=True, category='system', ptype='global'),
+          hidden=True, category='System', ptype='global'),
     Bunch(module='Cursor', workspace='readout', start=True,
-          hidden=True, category='system', ptype='global'),
+          hidden=True, category='System', ptype='global'),
     Bunch(module='Errors', tab='Errors', workspace='right', start=True,
-          hidden=True, category='system', ptype='global'),
+          hidden=True, category='System', ptype='global'),
 
     # optional, user-started plugins
     Bunch(module='Blink', tab='Blink Channels', workspace='right', start=False,
@@ -146,7 +144,7 @@ plugins = [
     Bunch(module='ChangeHistory', tab='History', workspace='right',
           menu="History [G]", start=False, category='Utils', ptype='global'),
     Bunch(module='Mosaic', workspace='dialogs', category='Utils', ptype='local'),
-    Bunch(module='FBrowser', tab='FBrowser', workspace='right',
+    Bunch(module='FBrowser', tab='Open File', workspace='right',
           menu="Open File [G]", start=False, category='Utils', ptype='global'),
     Bunch(module='Preferences', workspace='dialogs', category='Utils',
           ptype='local'),
@@ -158,6 +156,8 @@ plugins = [
           ptype='local'),
     Bunch(module='WBrowser', tab='Help', workspace='channels', start=False,
           menu="Help [G]", category='Help', ptype='global'),
+    Bunch(module='Header', tab='Header', workspace='left', start=False,
+          menu="Header [G]", hidden=False, category='Utils', ptype='global'),
     Bunch(module='Zoom', tab='Zoom', workspace='left', start=False,
           menu="Zoom [G]", category='Utils', ptype='global'),
 ]
@@ -177,13 +177,6 @@ class ReferenceViewer(object):
 
     def clear_default_plugins(self):
         self.plugins = []
-
-    def get_plugin_menuname(self, spec):
-        category = spec.get('category', None)
-        menu = spec.get('menu', spec.get('tab', spec.get('module')))
-        if category is None:
-            return menu
-        return category + '.' + menu
 
     def add_default_plugins(self, except_global=[], except_local=[]):
         """
@@ -524,19 +517,18 @@ class ReferenceViewer(object):
                              hidden=False, pfx=pfx)
                 self.add_plugin_spec(spec)
 
-        # Sort plugins according to desired order
-        self.plugins.sort(key=self.get_plugin_menuname)
+        # Add non-disabled plugins
+        enabled_plugins = [spec for spec in self.plugins
+                           if not spec.module.lower() in disabled_plugins]
+        ginga_shell.set_plugins(enabled_plugins)
 
-        # Add desired plugins
-        for spec in self.plugins:
-            if not spec.module.lower() in disabled_plugins:
-                ginga_shell.add_plugin(spec)
-
+        # start any plugins that have start=True
+        ginga_shell.boot_plugins()
         ginga_shell.update_pending()
 
         # TEMP?
-        tab_names = list(map(lambda name: name.lower(),
-                             ginga_shell.ds.get_tabnames(group=None)))
+        tab_names = [name.lower()
+                     for name in ginga_shell.ds.get_tabnames(group=None)]
         if 'info' in tab_names:
             ginga_shell.ds.raise_tab('Info')
         if 'synopsis' in tab_names:

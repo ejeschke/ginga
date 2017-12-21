@@ -123,18 +123,18 @@ class Operations(GingaPlugin.GlobalPlugin):
         for spec in plugins:
             if spec.get('hidden', False):
                 continue
-            self.add_operation(self.fv, spec)
+            self.fv.error_wrap(self.add_operation, self.fv, spec)
 
     def add_operation(self, viewer, spec):
         if not self.gui_up:
             return
-        opname = spec.get('module')
-        optype = spec.get('optype', 'global')
+        opname = spec.get('name', spec.get('klass', spec.get('module')))
+        ptype = spec.get('ptype', 'local')
         category = spec.get('category', None)
         categories = None
         if category is not None:
             categories = category.split('.')
-        menuname = spec.get('menu', spec.get('tab', spec.get('module')))
+        menuname = spec.get('menu', spec.get('tab', opname))
 
         opmenu = self.w.operation
         menu = opmenu
@@ -149,18 +149,18 @@ class Operations(GingaPlugin.GlobalPlugin):
         if self.use_popup:
             item.add_callback('activated',
                               lambda *args: self.start_operation_cb(opname,
-                                                                    optype,
+                                                                    ptype,
                                                                     spec))
         else:
             item.add_callback('activated',
                               lambda *args: self.set_operation_cb(menuname,
                                                                   opname,
-                                                                  optype,
+                                                                  ptype,
                                                                   spec))
 
-    def start_operation_cb(self, name, optype, spec):
+    def start_operation_cb(self, name, ptype, spec):
         self.logger.debug("invoking operation menu")
-        if optype == 'global':
+        if ptype == 'global':
             # global plugin
             self.fv.error_wrap(self.fv.start_global_plugin, name,
                                raise_tab=True)
@@ -170,8 +170,8 @@ class Operations(GingaPlugin.GlobalPlugin):
         chname = str(self.w.channel.get_alpha(idx))
         self.fv.error_wrap(self.fv.start_local_plugin, chname, name, None)
 
-    def set_operation_cb(self, menuname, name, optype, spec):
-        self._start_op_args = (name, optype, spec)
+    def set_operation_cb(self, menuname, name, ptype, spec):
+        self._start_op_args = (name, ptype, spec)
         self.w.opname.set_text(menuname)
 
     def channel_select_cb(self, widget, index):

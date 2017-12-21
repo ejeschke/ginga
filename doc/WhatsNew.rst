@@ -16,6 +16,14 @@ Ver 2.7.0.dev
   - see Ginga quick reference for details on how the new bindings work
 
 - Efficiency update for Thumbs plugin when many thumbs are present
+- Default for the save_layout option is now True, so the reference
+  viewer will write out its layout state on exit and restore it on
+  startup.  See documentation in the "customization" section of the
+  manual.
+- Plugins can now be organized by category and these categories are
+  used to construct a hierarchical Operations menu
+- Zoom and Header plugins are now not started by default
+- Fix for "sortable" checkbox behavior on Header plugin
 
 Ver 2.6.6 (2017-11-02)
 ======================
