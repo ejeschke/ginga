@@ -384,8 +384,12 @@ class Preferences(GingaPlugin.LocalPlugin):
             options.append(name)
             combobox.append_text(name)
             index += 1
-        index = self.calg_names.index(self.t_.get('color_algorithm', "linear"))
-        combobox.set_index(index)
+        try:
+            index = self.calg_names.index(self.t_.get('color_algorithm',
+                                                      "linear"))
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_calg_cb)
 
         ## entry = b.table_size
@@ -460,8 +464,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.autocut_methods:
             combobox.append_text(name)
             index += 1
-        index = self.autocut_methods.index(method)
-        combobox.set_index(index)
+        try:
+            index = self.autocut_methods.index(method)
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_autocut_method_cb)
         b.auto_method.set_tooltip("Choose algorithm for auto levels")
         vbox2.add_widget(w, stretch=0)
@@ -564,8 +571,11 @@ class Preferences(GingaPlugin.LocalPlugin):
             b.zoom_alg.append_text(name.capitalize())
             index += 1
         zoomalg = self.t_.get('zoom_algorithm', "step")
-        index = self.zoomalg_names.index(zoomalg)
-        b.zoom_alg.set_index(index)
+        try:
+            index = self.zoomalg_names.index(zoomalg)
+            b.zoom_alg.set_index(index)
+        except Exception:
+            pass
         b.zoom_alg.set_tooltip("Choose Zoom algorithm")
         b.zoom_alg.add_callback('activated', self.set_zoomalg_cb)
 
@@ -834,8 +844,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.icc_profiles:
             combobox.append_text(str(name))
             index += 1
-        index = self.icc_profiles.index(value)
-        combobox.set_index(index)
+        try:
+            index = self.icc_profiles.index(value)
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
         combobox.set_tooltip("ICC profile for the viewer display")
 
@@ -845,8 +858,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.icc_intents:
             combobox.append_text(name)
             index += 1
-        index = self.icc_intents.index(value)
-        combobox.set_index(index)
+        try:
+            index = self.icc_intents.index(value)
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
         combobox.set_tooltip("Rendering intent for the viewer display")
 
@@ -856,8 +872,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.icc_profiles:
             combobox.append_text(str(name))
             index += 1
-        index = self.icc_profiles.index(value)
-        combobox.set_index(index)
+        try:
+            index = self.icc_profiles.index(value)
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
         combobox.set_tooltip("ICC profile for soft proofing")
 
@@ -867,8 +886,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.icc_intents:
             combobox.append_text(name)
             index += 1
-        index = self.icc_intents.index(value)
-        combobox.set_index(index)
+        try:
+            index = self.icc_intents.index(value)
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
         combobox.set_tooltip("Rendering intent for soft proofing")
 
@@ -1088,8 +1110,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.zoom_new.set_index(index)
 
     def config_autocut_params(self, method):
-        index = self.autocut_methods.index(method)
-        self.w.auto_method.set_index(index)
+        try:
+            index = self.autocut_methods.index(method)
+            self.w.auto_method.set_index(index)
+        except Exception:
+            pass
 
         # remove old params
         self.w.acvbox.remove_all()
