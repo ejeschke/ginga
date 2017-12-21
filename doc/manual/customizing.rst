@@ -273,6 +273,9 @@ Other keywords that can be used in a spec:
 * To use a different name in the tab that is showing the plugin GUI,
   specify `tab="Tab Name"`.
 
+* To prevent a control icon from appearing in the Operations plugin
+  manager tray specify `optray=False`.
+
 ==============================
 Making a Custom Startup Script
 ==============================

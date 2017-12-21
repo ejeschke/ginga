@@ -519,7 +519,7 @@ class ReferenceViewer(object):
 
         # Add non-disabled plugins
         enabled_plugins = [spec for spec in self.plugins
-                           if not spec.module.lower() in disabled_plugins]
+                           if spec.module.lower() not in disabled_plugins]
         ginga_shell.set_plugins(enabled_plugins)
 
         # start any plugins that have start=True

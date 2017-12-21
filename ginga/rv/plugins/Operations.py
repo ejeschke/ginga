@@ -197,7 +197,11 @@ class Operations(GingaPlugin.GlobalPlugin):
         self.start_operation_cb(*args)
 
     def activate_plugin_cb(self, pl_mgr, bnch):
-        hidden = bnch.pInfo.spec.get('hidden', False)
+        spec = bnch.pInfo.spec
+        optray = spec.get('optray', True)
+        if not optray:
+            return
+        hidden = spec.get('hidden', False)
         if hidden:
             return
 
