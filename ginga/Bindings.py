@@ -2616,14 +2616,11 @@ class BindingMapper(Callback.Callbacks):
         for pfx in self.event_names:
             # TODO: add moded versions of callbacks?
             viewer.enable_callback('%s-none' % (pfx))
-        # initial callback to enable a mode
-        viewer.add_callback('keydown-none', self.mode_key_down)
 
-    def mode_key_down(self, viewer, event, data_x, data_y):
+    def mode_key_down(self, viewer, keyname):
         """This method is called when a key is pressed and was not handled
         by some other handler with precedence, such as a subcanvas.
         """
-        keyname = event.key
         # Is this a mode key?
         if keyname not in self.mode_map:
             if (keyname not in self.mode_tbl) or (self._kbdmode != 'meta'):
@@ -2664,26 +2661,15 @@ class BindingMapper(Callback.Callbacks):
                 if bnch.msg is not None:
                     viewer.onscreen_message(bnch.msg)
 
-                # TODO: these callbacks really should have been
-                # enabled and registered at an earlier time, but
-                # add_mode() does not take a viewer parameter
-                cb_name = 'keydown-%s' % (mode_name)
-                if not viewer.has_callback(cb_name):
-                    viewer.set_callback(cb_name, self.mode_key_down)
-                cb_name = 'keyup-%s' % (mode_name)
-                if not viewer.has_callback(cb_name):
-                    viewer.set_callback(cb_name, self.mode_key_up)
-
                 return True
 
         return False
 
-    def mode_key_up(self, viewer, event, data_x, data_y):
+    def mode_key_up(self, viewer, keyname):
         """This method is called when a key is pressed in a mode and was
         not handled by some other handler with precedence, such as a
         subcanvas.
         """
-        keyname = event.key
         # Is this a mode key?
         if keyname not in self.mode_map:
             # <== no
@@ -2724,6 +2710,9 @@ class BindingMapper(Callback.Callbacks):
         if keyname in self.modifier_map:
             bnch = self.modifier_map[keyname]
             self._modifiers = self._modifiers.union(set([bnch.name]))
+            return True
+
+        if self.mode_key_down(viewer, keyname):
             return True
 
         trigger = 'kp_' + keyname
@@ -2768,6 +2757,9 @@ class BindingMapper(Callback.Callbacks):
         if keyname in self.modifier_map:
             bnch = self.modifier_map[keyname]
             self._modifiers = self._modifiers.difference(set([bnch.name]))
+            return True
+
+        if self.mode_key_up(viewer, keyname):
             return True
 
         trigger = 'kp_' + keyname
