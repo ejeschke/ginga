@@ -93,7 +93,7 @@ class ImageViewBindings(object):
             dmod_camera=['__c', None, 'pan'],
             dmod_naxis=['__n', None, None],
 
-            default_mode_type='oneshot',
+            default_mode_type='locked',
             default_lock_mode_type='softlock',
 
             # KEYBOARD

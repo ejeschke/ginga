@@ -527,5 +527,5 @@ Reference Viewer Only
 	  mouse button is used to draw a shape for the operation.
 
 	  On the Mac, Ctrl + mouse button can also be used to draw
-	  or right-click. You can also press and release the space bar
-	  to make the next drag operation a drawing operation.
+          or right-click. You can also invoke draw mode as described
+          above in the section on modes.
