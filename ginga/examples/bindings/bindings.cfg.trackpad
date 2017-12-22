@@ -198,7 +198,7 @@ pi_zoom = ['pinch']
 pi_zoom_origin = ['shift+pinch']
 pa_pan = ['pan']
 pa_zoom = []
-pa_zoom_origin = []
+pa_zoom_origin = ['freepan+pan']
 
 # This controls what operations the pinch gesture controls.  Possibilities are
 # (empty list or) some combination of 'zoom' and 'rotate'.

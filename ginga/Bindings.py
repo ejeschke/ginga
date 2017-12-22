@@ -228,7 +228,7 @@ class ImageViewBindings(object):
             pi_zoom_origin=['shift+pinch'],
             pa_pan=['pan'],
             pa_zoom=[],
-            pa_zoom_origin=[],
+            pa_zoom_origin=['freepan+pan'],
 
             pinch_actions=['zoom'],
             pinch_zoom_acceleration=1.0,
@@ -1579,7 +1579,9 @@ class ImageViewBindings(object):
             return True
 
         with viewer.suppress_redraw:
-            viewer.panset_xy(data_x, data_y)
+            # TODO: think about whether it is the correct behavior to
+            # set the pan position when zooming out
+            #viewer.panset_xy(data_x, data_y)
 
             if self.settings.get('scroll_zoom_direct_scale', True):
                 zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
@@ -2740,7 +2742,7 @@ class BindingMapper(Callback.Callbacks):
                     cbname = 'keydown-%s' % (emap.name)
 
                 except KeyError:
-                    cbname = 'keydown-%s' % str(self._kbdmode).lower()
+                    cbname = 'key-down-%s' % str(self._kbdmode).lower()
 
         self.logger.debug("idx=%s" % (str(idx)))
         last_x, last_y = viewer.get_last_data_xy()
@@ -2781,7 +2783,7 @@ class BindingMapper(Callback.Callbacks):
                     cbname = 'keyup-%s' % (emap.name)
 
                 except KeyError:
-                    cbname = 'keyup-%s' % str(self._kbdmode).lower()
+                    cbname = 'key-up-%s' % str(self._kbdmode).lower()
 
         last_x, last_y = viewer.get_last_data_xy()
 
