@@ -56,6 +56,15 @@ div {
     overflow: visible;
 }
 
+canvas {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+}
+
 .ui-dialog .ui-dialog-content  {
     /* Fix Dialog resizing issue where resize shrinks the content too
      * much.  See https://stackoverflow.com/questions/31584544/jquery-ui-dialog-on-resizing-shrinks-the-content-of-the-dialog
@@ -67,4 +76,5 @@ div {
     /* Adjust the titlebar so it is equal to the content fix */
     margin: 3.5px;
 }
+
 /*END*/

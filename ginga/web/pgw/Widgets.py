@@ -1312,8 +1312,9 @@ class Canvas(WidgetBase):
     canvas_template = '''
     <canvas id="%(id)s" tabindex="%(tab_idx)d"
        class="%(classes)s" style="%(styles)s"
-       width="%(width)s" height="%(height)s">Your browser does not appear to
-support HTML5 canvas.</canvas>
+       width="%(width)s" height="%(height)s"
+       minWidth=1 minHeight=1>
+       Your browser does not appear to support HTML5 canvas.</canvas>
     <script type="text/javascript">
         ginga_initialize_canvas(document.getElementById("%(id)s"), "%(id)s",
                                   ginga_app);
@@ -2508,7 +2509,7 @@ class Dialog(ContainerBase):
                 title: "%(title)s",
                 closeOnEscape: false,
                 position: { x: 50, y: 50},
-                draggable: true,
+                draggable: true, resizeable: true,
                 minWidth: 'auto', minHeight: 'auto',
                 maxWidth: '100%%', maxHeight: '100%%',
             });
@@ -2519,12 +2520,16 @@ class Dialog(ContainerBase):
                 ginga_app.widget_handler('dialog-close', '%(id)s', true);
             });
 
+            var resize_timer;
             $('#%(id)s').on("dialogresize", function (event, ui) {
+                clearTimeout(resize_timer);
+                resize_timer = setTimeout(function () {
                 var payload = { width: ui.size.width,
                                 height: ui.size.height,
                                 x: ui.position.left,
                                 y: ui.position.top }
                 ginga_app.widget_handler('dialog-resize', '%(id)s', payload);
+                }, 250);
             });
 
             // $('#%(id)s').on("dialogfocus", function (event, ui) {

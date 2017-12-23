@@ -133,10 +133,10 @@ key_pan_px_delta = 1.0
 sc_pan = ['ctrl+scroll']
 sc_pan_fine = ['pan+shift+scroll']
 sc_pan_coarse = ['pan+ctrl+scroll']
-sc_zoom = ['scroll']
+sc_zoom = ['scroll', 'freepan+scroll']
 sc_zoom_fine = []
 sc_zoom_coarse = []
-sc_zoom_origin = ['shift+scroll', 'freepan+scroll']
+sc_zoom_origin = ['shift+scroll', 'freepan+shift+scroll']
 sc_cuts_fine = ['cuts+ctrl+scroll']
 sc_cuts_coarse = ['cuts+scroll']
 sc_cuts_alg = []
@@ -197,8 +197,8 @@ mouse_rotate_acceleration = 0.75
 pi_zoom = ['pinch']
 pi_zoom_origin = ['shift+pinch']
 pa_pan = ['pan']
-pa_zoom = []
-pa_zoom_origin = ['freepan+pan']
+pa_zoom = ['freepan+pan']
+pa_zoom_origin = ['freepan+shift+pan']
 
 # This controls what operations the pinch gesture controls.  Possibilities are
 # (empty list or) some combination of 'zoom' and 'rotate'.
