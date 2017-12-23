@@ -393,7 +393,7 @@ class ImageViewEvent(ImageViewMock):
         Adjust method signature as appropriate for callback.
         """
         x, y = event.x, event.y
-        numDegrees = 0
+        num_degrees = 0
         direction = 0
 
         # x, y = coordinates of mouse
@@ -401,14 +401,14 @@ class ImageViewEvent(ImageViewMock):
 
         # calculate number of degrees of scroll and direction of scroll
         # both floats in the 0-359.999 range
-        # numDegrees =
+        # num_degrees =
         # direction =
         self.logger.debug("scroll deg=%f direction=%f" % (
-            numDegrees, direction))
+            num_degrees, direction))
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('scroll', direction, numDegrees,
+        return self.make_ui_callback('scroll', direction, num_degrees,
                                      data_x, data_y)
 
     def drop_event(self, widget, event):

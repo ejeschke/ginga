@@ -3,6 +3,7 @@
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
 from __future__ import absolute_import
 
 from ginga.util import six
@@ -321,13 +322,13 @@ class ImageViewEvent(ImageViewTk):
                     # down
                     direction = 180.0
                 # 15 deg is standard 1-click turn for a wheel mouse
-                numDegrees = 15.0
+                num_degrees = 15.0
                 self.logger.debug("scroll deg=%f direction=%f" % (
-                    numDegrees, direction))
+                    num_degrees, direction))
 
                 data_x, data_y = self.check_cursor_location()
 
-                return self.make_ui_callback('scroll', direction, numDegrees,
+                return self.make_ui_callback('scroll', direction, num_degrees,
                                              data_x, data_y)
 
             button |= 0x1 << (event.num - 1)
