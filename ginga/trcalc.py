@@ -11,12 +11,12 @@ interpolation_methods = ['basic']
 
 
 def use(pkgname):
+    global interpolation_methods
     global have_opencv, cv2, cv2_resize
     global have_opencl, trcalc_cl
 
     if pkgname == 'opencv':
         import cv2
-        have_opencv = True
         cv2_resize = {
             'nearest': cv2.INTER_NEAREST,
             'linear': cv2.INTER_LINEAR,
@@ -24,8 +24,10 @@ def use(pkgname):
             'bicubic': cv2.INTER_CUBIC,
             'lanczos': cv2.INTER_LANCZOS4,
         }
+        have_opencv = True
         if 'nearest' not in interpolation_methods:
-            interpolation_methods.extend(cv2_resize.keys())
+            interpolation_methods = list(set(['basic'] +
+                                             list(cv2_resize.keys())))
             interpolation_methods.sort()
 
     elif pkgname == 'opencl':
