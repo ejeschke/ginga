@@ -102,7 +102,7 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         c_v.add_callback('scroll', self.scroll_cb)
 
         bd = c_v.get_bindings()
-        bd.enable_pan(False)
+        bd.enable_pan(True)
         # disable zooming so scrolling can be used to pan up/down
         bd.enable_zoom(False)
         bd.enable_cmap(False)
