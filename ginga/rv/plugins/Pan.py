@@ -75,7 +75,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.nb = nb
         container.add_widget(self.nb, stretch=1)
 
-    def _create_pan_image(self, fitsimage):
+    def _create_pan_viewer(self, fitsimage):
         pi = Viewers.CanvasView(logger=self.logger)
         pi.enable_autozoom('on')
         pi.enable_autocuts('off')
@@ -92,7 +92,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         pi.set_callback('configure', self.reconfigure)
         # for debugging
         pi.set_name('panimage')
-        #pi.ui_set_active(True)
 
         my_canvas = pi.get_canvas()
         my_canvas.enable_draw(True)
@@ -112,7 +111,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     def add_channel(self, viewer, channel):
         fitsimage = channel.fitsimage
-        panimage = self._create_pan_image(fitsimage)
+        panimage = self._create_pan_viewer(fitsimage)
 
         iw = Viewers.GingaViewerWidget(panimage)
         iw.resize(self._wd, self._ht)
@@ -136,18 +135,18 @@ class Pan(GingaPlugin.GlobalPlugin):
         xfrmsettings = ['flip_x', 'flip_y', 'swap_xy']
         if self.settings.get('rotate_pan_image', False):
             xfrmsettings.append('rot_deg')
-        fitssettings.shareSettings(pansettings, xfrmsettings)
+        fitssettings.share_settings(pansettings, xfrmsettings)
         for key in xfrmsettings:
             pansettings.get_setting(key).add_callback(
                 'set', self.settings_cb, fitsimage, channel, paninfo, 0)
 
-        fitssettings.shareSettings(pansettings, ['cuts'])
+        fitssettings.share_settings(pansettings, ['cuts'])
         pansettings.get_setting('cuts').add_callback(
             'set', self.settings_cb, fitsimage, channel, paninfo, 1)
 
         zoomsettings = ['zoom_algorithm', 'zoom_rate',
                         'scale_x_base', 'scale_y_base']
-        fitssettings.shareSettings(pansettings, zoomsettings)
+        fitssettings.share_settings(pansettings, zoomsettings)
         for key in zoomsettings:
             pansettings.get_setting(key).add_callback(
                 'set', self.zoom_ext_cb, fitsimage, channel, paninfo)
@@ -177,14 +176,13 @@ class Pan(GingaPlugin.GlobalPlugin):
         panimage.redraw(whence=1)
 
     def redo(self, channel, image):
+        self.logger.debug("redo")
         paninfo = channel.extdata._pan_info
 
         if (image is None) or not isinstance(image, BaseImage):
+            self.logger.debug("no main image--clearing Pan viewer")
             paninfo.panimage.clear()
             return
-
-        loval, hival = channel.fitsimage.get_cut_levels()
-        paninfo.panimage.cut_levels(loval, hival)
 
         self.set_image(channel, paninfo, image)
 
@@ -207,6 +205,14 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.active = chname
             self.info = paninfo
 
+        # TODO: this check should not be necessary.  But under some
+        # circumstances it seems to be needed.
+        image = channel.fitsimage.get_image()
+        p_image = self.info.panimage.get_image()
+        if image != p_image:
+            self.logger.debug("pan viewer seems to be missing image--calling redo()")
+            self.redo(channel, image)
+
     def reconfigure(self, panimage, width, height):
         self.logger.debug("new pan image dimensions are %dx%d" % (
             width, height))
@@ -215,12 +221,10 @@ class Pan(GingaPlugin.GlobalPlugin):
         return True
 
     def redraw_cb(self, fitsimage, channel, paninfo):
-        #paninfo.panimage.redraw(whence=whence)
         self.panset(channel.fitsimage, channel, paninfo)
         return True
 
     def settings_cb(self, setting, value, fitsimage, channel, paninfo, whence):
-        #paninfo.panimage.redraw(whence=whence)
         self.panset(channel.fitsimage, channel, paninfo)
         return True
 
@@ -238,10 +242,12 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     def set_image(self, channel, paninfo, image):
         if (image is None) or not isinstance(image, BaseImage):
+            self.logger.debug("no main image--clearing Pan viewer")
             paninfo.panimage.clear()
             return
 
         if not self.use_shared_canvas:
+            self.logger.debug("setting Pan viewer image")
             paninfo.panimage.set_image(image)
         else:
             paninfo.panimage.zoom_fit()
@@ -298,14 +304,12 @@ class Pan(GingaPlugin.GlobalPlugin):
             obj = paninfo.panimage.canvas.get_object_by_tag('__image')
         except KeyError:
             obj = None
-        #print(('panset', image, p_image, obj, obj.image, paninfo.panimage._imgobj))
 
         width, height = image.get_size()
         edgew = math.sqrt(width**2 + height**2)
         radius = int(0.015 * edgew)
 
         # Mark pan rectangle and pan position
-        #p_canvas = paninfo.panimage.get_canvas()
         p_canvas = paninfo.panimage.get_private_canvas()
         try:
             obj = p_canvas.get_object_by_tag(paninfo.panrect)
@@ -327,7 +331,6 @@ class Pan(GingaPlugin.GlobalPlugin):
                     points,
                     color=self.settings.get('pan_rectangle_color', 'red'))))
 
-        #p_canvas.update_canvas(whence=0)
         paninfo.panimage.zoom_fit()
         return True
 

@@ -24,7 +24,7 @@ This module lets us access the video stream of a video file frame-by-frame.
 
 Usage::
 
-    $ example1_video.py [log options] <video file>
+    $ example1_video.py [log options] --optimize <video file>
 
 Workings:
 

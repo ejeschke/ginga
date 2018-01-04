@@ -1211,14 +1211,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if len(self.channel_names) == 1:
                 self.cur_channel = channel
 
-        # Prepare local plugins for this channel
-        for spec in self.get_plugins():
-            opname = spec.get('klass', spec.get('module'))
-            if spec.get('ptype', 'global') == 'local':
-                opmon.load_plugin(opname, spec, chinfo=channel)
+            # Prepare local plugins for this channel
+            for spec in self.get_plugins():
+                opname = spec.get('klass', spec.get('module'))
+                if spec.get('ptype', 'global') == 'local':
+                    opmon.load_plugin(opname, spec, chinfo=channel)
 
-        self.make_gui_callback('add-channel', channel)
-        return channel
+            self.make_gui_callback('add-channel', channel)
+            return channel
 
     def delete_channel(self, chname):
         """Delete a given channel from viewer."""
