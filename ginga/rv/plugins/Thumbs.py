@@ -786,8 +786,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # calc in data coords
         thumb_height = self.thumb_width
         twd_vplus = thumb_height + text_ht + self.thumb_vsep
-        row1 = int(math.floor(abs(y1) / twd_vplus) - 1)
-        row2 = int(math.ceil(abs(y2) / twd_vplus) + 1)
+        row1 = int(math.floor(abs(y1) / twd_vplus) - 2)
+        row2 = int(math.ceil(abs(y2) / twd_vplus) + 2)
         self.logger.debug("row1, row2 = %d, %d" % (row1, row2))
         i = max(0, row1 * self.thumb_num_cols)
         j = min(len(self.thumb_list) - 1, row2 * self.thumb_num_cols)

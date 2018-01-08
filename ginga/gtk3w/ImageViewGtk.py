@@ -656,6 +656,9 @@ class ScrolledView(Gtk.Table):
             bd = self.viewer.get_bindings()
             bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
 
+            # This shouldn't be necessary, but seems to be
+            self.viewer.redraw(whence=0)
+
         finally:
             self._scrolling = False
 
