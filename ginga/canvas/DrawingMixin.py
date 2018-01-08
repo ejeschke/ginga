@@ -90,7 +90,7 @@ class DrawingMixin(object):
                      'edit-select', 'drag-drop', 'cursor-changed'):
             self.enable_callback(name)
 
-        for name in ['keydown', 'keyup', 'btn-down', 'btn-move', 'btn-up',
+        for name in ['key-down', 'key-up', 'btn-down', 'btn-move', 'btn-up',
                      'scroll', 'pinch', 'pan']:
             self.enable_callback('%s-none' % (name))
 
@@ -106,7 +106,7 @@ class DrawingMixin(object):
         canvas.add_callback('draw-move', self.draw_motion, viewer)
         canvas.add_callback('draw-up', self.draw_stop, viewer)
 
-        canvas.add_callback('keydown-none', self._draw_op, 'key', viewer)
+        canvas.add_callback('key-down-none', self._draw_op, 'key', viewer)
         canvas.add_callback('keydown-poly_add', self._draw_op, 'poly_add',
                             viewer)
         canvas.add_callback('keydown-poly_del', self._draw_op, 'poly_delete',

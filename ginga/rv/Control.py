@@ -1678,7 +1678,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         fi.add_callback('cursor-changed', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
-        fi.add_callback('keydown-none', self.keypress)
+        fi.add_callback('key-down-none', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
         fi.ui_setActive(True)
 
