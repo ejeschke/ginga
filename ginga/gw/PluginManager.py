@@ -269,10 +269,12 @@ class PluginManager(Callback.Callbacks):
             return
         if chname is not None:
             # local plugin
-            plname = chname.upper() + ': ' + p_info.name
+            plname = chname.upper() + ': ' + p_info.spec.get('tab', p_info.name)
+            p_info.tabname = plname
         else:
             # global plugin
             plname = p_info.name
+            p_info.tabname = p_info.spec.get('tab', plname)
         lname = p_info.name.lower()
         if lname in self.active:
             if alreadyOpenOk:
@@ -282,7 +284,6 @@ class PluginManager(Callback.Callbacks):
                 plname))
 
         # Raise tab with GUI
-        p_info.tabname = p_info.spec.get('tab', plname)
         vbox = None
         had_error = False
         try:
