@@ -107,7 +107,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.timer_autoload = fv.get_timer()
         self.timer_autoload.set_callback('expired', self.timer_autoload_cb)
         self.autoload_interval = self.settings.get('autoload_interval',
-                                                        1.0)
+                                                   1.0)
         self.autoload_visible = self.settings.get('autoload_visible_thumbs',
                                                   False)
         self._to_build = set([])
