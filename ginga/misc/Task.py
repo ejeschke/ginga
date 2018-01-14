@@ -184,7 +184,7 @@ class Task(Callback.Callbacks):
         """
         self.ev_done.wait(timeout=timeout)
 
-        if not self.ev_done.isSet():
+        if not self.ev_done.is_set():
             raise TaskTimeout("Task %s timed out." % self)
 
         # --> self.result is set
@@ -223,7 +223,7 @@ class Task(Callback.Callbacks):
         # [??] Should this be in a critical section?
 
         # Has done() already been called on this task?
-        if self.ev_done.isSet():
+        if self.ev_done.is_set():
             # ??
             if isinstance(self.result, Exception) and (not noraise):
                 raise self.result
@@ -753,7 +753,7 @@ class QueueTaskset(Task):
         self.count = 0
         self.totaltime = 0
         self.logger.debug("Queue Taskset starting")
-        while not self.ev_quit.isSet():
+        while not self.ev_quit.is_set():
             try:
                 self.check_state()
 
@@ -932,7 +932,7 @@ class WorkerThread(object):
 
         try:
             self.setstatus('idle')
-            while not self.ev_quit.isSet():
+            while not self.ev_quit.is_set():
                 try:
 
                     # Wait on our queue for a task; will timeout in
@@ -1012,7 +1012,7 @@ class ThreadPool(object):
         self.logger.debug("startall called")
         with self.regcond:
             while self.status != 'down':
-                if self.status in ('start', 'up') or self.ev_quit.isSet():
+                if self.status in ('start', 'up') or self.ev_quit.is_set():
                     # For now, abandon additional request to start
                     self.logger.error("ignoring duplicate request to start thread pool")
                     return
@@ -1022,7 +1022,7 @@ class ThreadPool(object):
                 self.regcond.wait()
 
             #assert(self.status == 'down')
-            if self.ev_quit.isSet():
+            if self.ev_quit.is_set():
                 return
 
             self.runningcount = 0
@@ -1046,7 +1046,7 @@ class ThreadPool(object):
             # themselves and last one up will set status to "up"
             if wait:
                 # Threads are on the way up.  Wait until last one starts.
-                while self.status != 'up' and not self.ev_quit.isSet():
+                while self.status != 'up' and not self.ev_quit.is_set():
                     self.logger.debug("waiting for threads: count=%d" %
                                       self.runningcount)
                     self.regcond.wait()
@@ -1076,7 +1076,7 @@ class ThreadPool(object):
         self.logger.debug("stopall called")
         with self.regcond:
             while self.status != 'up':
-                if self.status in ('stop', 'down') or self.ev_quit.isSet():
+                if self.status in ('stop', 'down') or self.ev_quit.is_set():
                     # For now, silently abandon additional request to stop
                     self.logger.warning("ignoring duplicate request to stop thread pool.")
                     return

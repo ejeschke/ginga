@@ -117,7 +117,7 @@ class IIS_DataListener(object):
     # so we don't have to block indefinitely on the socket.accept() method.
     # See SocketServer.py
     def get_request(self):
-        while not self.ev_quit.isSet():
+        while not self.ev_quit.is_set():
             #self.logger.debug("Ready to accept request, socket %s" % (
             #        str(self.socket)))
             inputs = [self.socket]
@@ -174,7 +174,7 @@ class IIS_DataListener(object):
     def mainloop(self):
         """main control loop."""
         try:
-            while (not self.ev_quit.isSet()):
+            while (not self.ev_quit.is_set()):
                 try:
                     self.handle_request()
 

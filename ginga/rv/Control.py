@@ -512,7 +512,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     # BASIC IMAGE OPERATIONS
 
-    def load_image(self, filepath, idx=None):
+    def load_image(self, filepath, idx=None, show_error=True):
 
         info = iohelper.get_fileinfo(filepath, cache_dir=self.tmpdir)
         filepfx = info.filepath
@@ -561,8 +561,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 tb_str = "\n".join(traceback.format_tb(tb))
             except Exception as e:
                 tb_str = "Traceback information unavailable."
-            self.gui_do(self.show_error, errmsg + '\n' + tb_str)
-            #channel.viewer.onscreen_message("Failed to load file", delay=1.0)
+            if show_error:
+                self.gui_do(self.show_error, errmsg + '\n' + tb_str)
             raise ControlError(errmsg)
 
         self.logger.debug("Successfully loaded file into object.")
@@ -2398,18 +2398,20 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.next_channel()
         return True
 
-    def dragdrop(self, viewer, urls):
+    def dragdrop(self, chviewer, urls):
         """Called when a drop operation is performed on a channel viewer.
         We are called back with a URL and we attempt to load it if it
         names a file.
         """
-        to_chname = self.get_channel_name(viewer)
+        # find out our channel
+        chname = self.get_channel_name(chviewer)
+
         for url in urls:
             # NOTE: this used to be a nongui_do(), but there is some
             # subtle interaction inside the toolkit code with the
             # loading that makes it unstable
-            self.gui_do_priority(20, self.load_file, url, chname=to_chname,
-                                 wait=False)
+            self.gui_do(self.load_file, url, chname=chname, wait=False)
+
         return True
 
     def force_focus_cb(self, viewer, event, data_x, data_y):

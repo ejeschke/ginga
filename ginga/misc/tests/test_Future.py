@@ -28,7 +28,7 @@ class TestFuture(object):
         elif sys.version_info.major == 3:
             assert isinstance(test_future.evt, threading.Event)
 
-        assert test_future.evt.isSet() is False
+        assert test_future.evt.is_set() is False
         assert test_future.res is None
         assert test_future.data is None
         assert 'resolved' in test_future.cb
@@ -47,7 +47,7 @@ class TestFuture(object):
         elif sys.version_info.major == 3:
             assert isinstance(test_future.evt, threading.Event)
 
-        assert test_future.evt.isSet() is False
+        assert test_future.evt.is_set() is False
         assert test_future.res is None
         assert test_future.data == "TestData"
         assert 'resolved' in test_future.cb
@@ -108,7 +108,7 @@ class TestFuture(object):
         assert expected == actual
 
         assert test_future.res is True
-        assert test_future.evt.isSet() is True
+        assert test_future.evt.is_set() is True
 
     def test_thaw_suppress_exception_exception(self):
         test_future = Future("TestData")
@@ -124,7 +124,7 @@ class TestFuture(object):
         assert isinstance(test_result, TypeError)
 
         assert isinstance(test_future.res, TypeError)
-        assert test_future.evt.isSet() is True
+        assert test_future.evt.is_set() is True
 
     def test_thaw_not_suppress_exception_no_exception(self):
         test_future = Future("TestData")
@@ -139,7 +139,7 @@ class TestFuture(object):
         assert expected == actual
 
         assert test_future.res is True
-        assert test_future.evt.isSet() is True
+        assert test_future.evt.is_set() is True
 
     def test_thaw_not_suppress_exception_raise_exception(self):
         test_future = Future("TestData")
@@ -154,7 +154,7 @@ class TestFuture(object):
             test_future.thaw(False)
 
         assert test_future.res is None
-        assert test_future.evt.isSet() is False
+        assert test_future.evt.is_set() is False
 
     def test_has_value_unset(self):
         test_future = Future("TestData")
@@ -178,7 +178,7 @@ class TestFuture(object):
         test_future.resolve(True)
 
         assert test_future.res is True
-        assert test_future.evt.isSet() is True
+        assert test_future.evt.is_set() is True
 
     def test_resolve_callback(self):
         test_future = Future("TestData")
@@ -195,7 +195,7 @@ class TestFuture(object):
 
         # Callback reverses the boolean 'res' value
         assert test_future.res is False
-        assert test_future.evt.isSet() is True
+        assert test_future.evt.is_set() is True
 
     def test_wait(self):
         test_future = Future("TestData")

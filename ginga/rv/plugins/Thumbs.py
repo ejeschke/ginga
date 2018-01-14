@@ -65,7 +65,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    cache_location='local',
                                    auto_scroll=False,
                                    rebuild_wait=0.5,
-                                   build_missing_interval=1.0,
                                    tt_keywords=tt_keywords,
                                    mouseover_name_key='NAME',
                                    thumb_length=180,
@@ -78,20 +77,24 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    label_font_color='white',
                                    label_font_size=10,
                                    label_bg_color='lightgreen',
-                                   thumb_pan_accel=1.5)
+                                   autoload_visible_thumbs=True,
+                                   autoload_interval=1.0,
+                                   transfer_attrs=['transforms',
+                                                   'cutlevels', 'rgbmap'])
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumb_width = self.settings.get('thumb_length', 180)
         # distance in pixels between thumbs
         self.thumb_hsep = self.settings.get('thumb_hsep', 15)
         self.thumb_vsep = self.settings.get('thumb_vsep', 15)
+        self.transfer_attrs = self.settings.get('transfer_attrs', [])
 
         # Build our thumb generator
         tg = CanvasView(logger=self.logger)
         tg.configure_surface(self.thumb_width, self.thumb_width)
         tg.enable_autozoom('on')
-        tg.set_autocut_params('zscale')
-        tg.enable_autocuts('override')
+        tg.set_autocut_params('histogram')
+        tg.enable_autocuts('on')
         tg.enable_auto_orient(True)
         tg.defer_redraw = False
         tg.set_bg(0.7, 0.7, 0.7)
@@ -101,10 +104,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thmbtask.set_callback('expired', self.redo_delay_timer)
         self.lagtime = self.settings.get('rebuild_wait', 0.5)
         self.thmblock = threading.RLock()
-        self.timer_build = fv.get_timer()
-        self.timer_build.set_callback('expired', self.timer_build_missing_cb)
-        self.build_missing_interval = self.settings.get('build_missing_time',
+        self.timer_autoload = fv.get_timer()
+        self.timer_autoload.set_callback('expired', self.timer_autoload_cb)
+        self.autoload_interval = self.settings.get('autoload_interval',
                                                         1.0)
+        self.autoload_visible = self.settings.get('autoload_visible_thumbs',
+                                                  False)
+        self._to_build = set([])
 
         # this will hold the thumbnails pane viewer
         self.c_view = None
@@ -397,16 +403,35 @@ class Thumbs(GingaPlugin.GlobalPlugin):
     def redo_delay_timer(self, timer):
         self.fv.gui_do(self.redo_thumbnail, timer.data.fitsimage)
 
-    def timer_build_missing_cb(self, timer):
-        self.logger.info("build missing thumbs")
+    def timer_autoload_cb(self, timer):
+        self.logger.debug("autoload missing thumbs")
 
         with self.thmblock:
-            for thumbkey in self.get_visible_thumbs():
-                bnch = self.thumb_dict[thumbkey]
-                path = bnch.info.path
-                placeholder = bnch.image.get_image().get('placeholder', False)
-                if placeholder:
-                    self.logger.debug("build missing [%s]" % (path))
+            if len(self._to_build) == 0:
+                return
+            thumbkey = self._to_build.pop()
+            bnch = self.thumb_dict[thumbkey]
+
+        self.fv.nongui_do(self.force_load_for_thumb, thumbkey, bnch, timer)
+
+    def force_load_for_thumb(self, thumbkey, bnch, timer):
+        placeholder = bnch.image.get_image().get('placeholder', False)
+        path = bnch.info.path
+        if placeholder and (path is not None):
+            self.logger.debug("autoload missing [%s]" % (path))
+            info = bnch.info
+            chname = thumbkey[0]
+            channel = self.fv.get_channel(chname)
+            try:
+                image = self.fv.load_image(path, show_error=False)
+                self.logger.debug("loaded [%s]" % (path))
+                self.fv.gui_do(self.redo_thumbnail_image, channel, image, info)
+            except Exception as e:
+                # load errors will be reported in self.fv.load_image()
+                # Just ignore autoload errors for now...
+                pass
+
+        timer.cond_set(0.10)
 
     def update_highlights(self, old_highlight_set, new_highlight_set):
         """Unhighlight the thumbnails represented by `old_highlight_set`
@@ -550,7 +575,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                         os.remove(thumbpath)
                     thmb_image.save_as_file(thumbpath)
 
-        self.update_thumbnail(thumbkey, thmb_image, metadata)
+            self.update_thumbnail(thumbkey, thmb_image, metadata)
+        self.fv.update_pending()
 
     def delete_channel_cb(self, viewer, channel):
         """Called when a channel is deleted from the main interface.
@@ -650,12 +676,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def _regen_thumb_image(self, image, viewer):
         self.logger.debug("generating new thumbnail")
-        if viewer is not None:
-            viewer.copy_attributes(self.thumb_generator,
-                                   ['transforms', 'cutlevels', 'rgbmap'])
 
-        thumb_np = image.get_thumbnail(self.thumb_width)
-        self.thumb_generator.set_data(thumb_np)
+        self.thumb_generator.set_image(image)
+        if viewer is not None:
+            v_img = viewer.get_image()
+            if v_img is not None:
+                viewer.copy_attributes(self.thumb_generator,
+                                       self.transfer_attrs)
 
         rgb_img = self.thumb_generator.get_image_as_array()
         thmb_image = RGBImage.RGBImage(rgb_img)
@@ -700,6 +727,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             try:
                 # try to load the thumbnail image
                 thmb_image.load_file(thumbpath)
+                thmb_image = self._regen_thumb_image(thmb_image, None)
                 thumb_extra.rgbimg = thmb_image
                 return thmb_image
 
@@ -808,6 +836,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             to_add = thumb_keys - self._displayed_thumb_keys
 
             self._displayed_thumb_keys = thumb_keys
+            # make a copy of these for potential building thumbs
+            self._to_build = set(self._displayed_thumb_keys)
 
             # delete thumbs from canvas that are no longer visible
             for thumbkey in to_delete:
@@ -819,14 +849,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 bnch = self.thumb_dict[thumbkey]
                 canvas.add(bnch.widget, redraw=False)
 
-        self.c_view.redraw(whence=0)
+            self.c_view.redraw(whence=0)
+
+        self.fv.update_pending()
+        if self.autoload_visible:
+            # load and create thumbnails for any placeholder icons
+            self.timer_autoload.set(self.autoload_interval)
 
     def thumbs_pan_cb(self, viewer, pan_vec):
-        self.add_visible_thumbs()
-        #self.fv.update_pending()
-
-        # TODO: create thumbnails for placeholder icons
-        # self.timer_build.set(self.build_missing_interval)
+        #self.add_visible_thumbs()
+        self.fv.gui_do_oneshot('thumbs_pan', self.add_visible_thumbs)
 
     def insert_thumbnail(self, thumb_img, thumbkey, chname,
                          thumbpath, metadata, info):

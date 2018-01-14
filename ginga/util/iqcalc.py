@@ -344,7 +344,7 @@ class IQCalc(object):
         # Form a list of objects and their characteristics
         objlist = []
         for x, y in peaks:
-            if ev_intr and ev_intr.isSet():
+            if ev_intr and ev_intr.is_set():
                 raise IQCalcError("Evaluation interrupted!")
 
             # Find the fwhm in x and y

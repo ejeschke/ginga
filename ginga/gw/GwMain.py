@@ -245,7 +245,7 @@ class GwMain(Callback.Callbacks):
         # Mark our thread id
         self.gui_thread_id = thread.get_ident()
 
-        while not self.ev_quit.isSet():
+        while not self.ev_quit.is_set():
 
             self.update_pending(timeout=timeout)
 

@@ -647,7 +647,7 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
     if fill and (da_idx >= 0):
         dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, da_idx] = 255
 
-    if src_ch > 3:
+    if (src_ch > 3) and ('A' in src_order):
         sa_idx = src_order.index('A')
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter
@@ -749,7 +749,7 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
                dst_z:dst_z + src_dp, da_idx] = 255
 
-    if src_ch > 3:
+    if (src_ch > 3) and ('A' in src_order):
         sa_idx = src_order.index('A')
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter

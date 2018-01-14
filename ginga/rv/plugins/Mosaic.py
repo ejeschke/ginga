@@ -439,7 +439,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         try:
             for url in paths:
-                if self.ev_intr.isSet():
+                if self.ev_intr.is_set():
                     break
                 mosaic_hdus = self.settings.get('mosaic_hdus', False)
                 if mosaic_hdus:
