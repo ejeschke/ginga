@@ -99,7 +99,8 @@ class Channel(Callback.Callbacks):
             channel.datasrc[imname] = image
 
             if not silent:
-                self.fv.gui_do(channel._add_image_update, image, info)
+                self.fv.gui_do(channel.add_image_update, image, info,
+                               update_viewer=False)
 
     def remove_image(self, imname):
         info = self.image_index[imname]
@@ -170,15 +171,8 @@ class Channel(Callback.Callbacks):
             image.set(image_info=info)
 
         if not silent:
-            if not bulk_add:
-                self._add_image_update(image, info)
-                return
-
-            # By using gui_do() here, more images may be bulk added
-            # before the _add_image_update executes--it will then
-            # only update the gui for the latest image, which saves
-            # work
-            self.fv.gui_do(self._add_image_update, image, info)
+            self.add_image_update(image, info,
+                                  update_viewer=not bulk_add)
 
     def add_image_info(self, info):
 
@@ -218,8 +212,11 @@ class Channel(Callback.Callbacks):
         self.fv.make_async_gui_callback('add-image-info', self, iminfo)
         return True
 
-    def _add_image_update(self, image, info):
+    def add_image_update(self, image, info, update_viewer=False):
         self.fv.make_async_gui_callback('add-image', self.name, image, info)
+
+        if not update_viewer:
+            return
 
         current = self.datasrc.youngest()
         curname = current.get('name')

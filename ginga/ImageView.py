@@ -1023,13 +1023,17 @@ class ImageViewBase(Callback.Callbacks):
             See :meth:`get_rgb_object`.
 
         """
-        if not self.defer_redraw:
-            if self._hold_redraw_cnt == 0:
-                self.redraw_now(whence=whence)
-            return
-
         with self._defer_lock:
             whence = min(self._defer_whence, whence)
+
+            if not self.defer_redraw:
+                if self._hold_redraw_cnt == 0:
+                    self._defer_whence = self._defer_whence_reset
+                    self.redraw_now(whence=whence)
+                else:
+                    self._defer_whence = whence
+                return
+
             elapsed = time.time() - self.time_last_redraw
 
             # If there is no redraw scheduled, or we are overdue for one:

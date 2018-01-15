@@ -695,7 +695,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if wait:
                 self.gui_call(self.add_image, name, image, chname=chname)
             else:
-                self.gui_do(self.bulk_add_image, name, image, chname)
+                self.gui_do(self.add_image, name, image, chname=chname)
+        else:
+            self.gui_do(self.bulk_add_image, name, image, chname)
 
         # Return the image
         return image
@@ -2406,11 +2408,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # find out our channel
         chname = self.get_channel_name(chviewer)
 
-        for url in urls:
-            # NOTE: this used to be a nongui_do(), but there is some
-            # subtle interaction inside the toolkit code with the
-            # loading that makes it unstable
-            self.gui_do(self.load_file, url, chname=chname, wait=False)
+        # NOTE: this used to be a nongui_do(), but there is some
+        # subtle interaction inside the toolkit code with the
+        # loading that makes it unstable
+        self.gui_do(self.load_file, urls[-1], chname=chname, wait=True)
+        self.update_pending()
+
+        for url in urls[:-1]:
+            self.gui_do(self.load_file, url, chname=chname,
+                        display_image=False)
 
         return True
 
