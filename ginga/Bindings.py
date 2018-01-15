@@ -229,6 +229,7 @@ class ImageViewBindings(object):
             pa_pan=['pan'],
             pa_zoom=['freepan+pan'],
             pa_zoom_origin=['freepan+shift+pan'],
+            pa_naxis=['naxis+pan'],
 
             pinch_actions=['zoom'],
             pinch_zoom_acceleration=1.0,
@@ -1040,6 +1041,33 @@ class ImageViewBindings(object):
         if msg:
             viewer.onscreen_message("Orient: rot=%.2f flipx=%s" % (
                 degn, str(xflip)), delay=1.0)
+
+    def _nav_naxis(self, viewer, axis, direction, msg=True):
+        """Interactively change the slice of the image in a data cube
+        by scrolling.
+        """
+        image = viewer.get_image()
+        if image is None:
+            return
+        mddata = image.get_mddata()
+        if len(mddata.shape) < (axis + 1):
+            # image dimensions < 3D
+            return
+
+        naxispath = list(image.naxispath)
+        axis_lim = mddata.shape[axis]
+        m = axis - 2
+
+        idx = naxispath[m]
+        if direction == 'down':
+            idx = (idx + 1) % axis_lim
+        else:
+            idx = idx - 1
+            if idx < 0:
+                idx = axis_lim - 1
+
+        naxispath[m] = idx
+        image.set_naxispath(naxispath)
 
     def to_default_mode(self, viewer):
         self.reset(viewer)
@@ -1989,28 +2017,7 @@ class ImageViewBindings(object):
         axis = 2
         direction = self.get_direction(event.direction)
 
-        image = viewer.get_image()
-        if image is None:
-            return
-        mddata = image.get_mddata()
-        if len(mddata.shape) < (axis + 1):
-            # image dimensions < 3D
-            return
-
-        naxispath = list(image.naxispath)
-        axis_lim = mddata.shape[axis]
-        m = axis - 2
-
-        idx = naxispath[m]
-        if direction == 'down':
-            idx = (idx + 1) % axis_lim
-        else:
-            idx = idx - 1
-            if idx < 0:
-                idx = axis_lim - 1
-
-        naxispath[m] = idx
-        image.set_naxispath(naxispath)
+        return self._nav_naxis(viewer, axis, direction, msg=msg)
 
     def sc_dist(self, viewer, event, msg=True):
         """Interactively change the color distribution algorithm
@@ -2246,6 +2253,20 @@ class ImageViewBindings(object):
         origin = (event.data_x, event.data_y)
         self._sc_zoom(viewer, event, msg=msg, origin=origin)
         return True
+
+    def pa_naxis(self, viewer, event, msg=True):
+        """Interactively change the slice of the image in a data cube
+        by pan gesture.
+        """
+        event = self._pa_synth_scroll_event(event)
+        if event.state != 'move':
+            return False
+
+        # TODO: be able to pick axis
+        axis = 2
+        direction = self.get_direction(event.direction)
+
+        return self._nav_naxis(viewer, axis, direction, msg=msg)
 
     ##### CAMERA MOTION CALLBACKS #####
 
