@@ -2511,6 +2511,7 @@ class Dialog(ContainerBase):
                 position: { x: 50, y: 50},
                 draggable: true, resizeable: true,
                 minWidth: 'auto', minHeight: 'auto',
+                width: 'auto', height: 'auto',
                 maxWidth: '100%%', maxHeight: '100%%',
             });
             // otherwise we get scrollbars in the dialog
@@ -2522,12 +2523,14 @@ class Dialog(ContainerBase):
 
             var resize_timer;
             $('#%(id)s').on("dialogresize", function (event, ui) {
+                event.preventDefault()
                 clearTimeout(resize_timer);
                 resize_timer = setTimeout(function () {
                 var payload = { width: ui.size.width,
                                 height: ui.size.height,
                                 x: ui.position.left,
                                 y: ui.position.top }
+                ginga_app.resize_window();
                 ginga_app.widget_handler('dialog-resize', '%(id)s', payload);
                 }, 250);
             });
@@ -2537,6 +2540,7 @@ class Dialog(ContainerBase):
             // });
 
             $('#%(id)s').on("dialogopen", function (event, ui) {
+                ginga_app.resize_window();
                 ginga_app.widget_handler('dialog-open', '%(id)s', true);
             });
 

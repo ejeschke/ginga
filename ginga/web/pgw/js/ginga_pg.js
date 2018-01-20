@@ -41,6 +41,9 @@ ginga_make_application = function (ws_url, debug_flag) {
                     // update widget value
                     elt.value = message.value;
                 }
+                else if (message.operation == "check_size") {
+                    ginga_app.resize_window();
+	        }
                 else if (message.operation == "update_index") {
                     // update widget value
                     elt.selectedIndex = message.value;
@@ -120,35 +123,35 @@ ginga_make_application = function (ws_url, debug_flag) {
         tbl[name] = fn;
     }
 
-    ginga_app.resize_window = function (e) {
+    ginga_app.resize_window = function () {
         console.log("browser window is resized");
-        e.preventDefault();
 
         for (var key in ginga_app.canvases) {
-            ginga_app.canvases[key].resize_canvas(e)
+            ginga_app.canvases[key].resize_canvas()
         }
     }
-    //document.body.onresize = ginga_app.resize_window;
 
     document.body.onresize = function (e) {
         var resize_timer;
+        e.preventDefault();
+
         clearTimeout(resize_timer);
         resize_timer = setTimeout(function () {
-            ginga_app.resize_window(e)
+            ginga_app.resize_window()
         }, 200);
     }
 
 
     ginga_app.init_socket();
   
-    ginga_app.socket.onopen = function(e) {
+    ginga_app.socket.onopen = function (e) {
         // initialize all our canvases
         for (var key in ginga_app.canvases) {
             ginga_app.canvases[key].initialize_canvas(e)
         }
 
         // report initial sizes
-        ginga_app.resize_window(e)
+        ginga_app.resize_window()
     }
 
     return ginga_app;
@@ -273,10 +276,9 @@ ginga_initialize_canvas = function (canvas, id, app) {
         e.preventDefault();
     }
     
-    //pg_canvas.resize_window = function resize_canvas(e) {
-    pg_canvas.resize_canvas = function (e) {
+    //pg_canvas.resize_window = function resize_canvas() {
+    pg_canvas.resize_canvas = function () {
         console.log("canvas " + pg_canvas.canvas_id + " resize cb");
-        e.preventDefault();
 
         canvas = document.getElementById(pg_canvas.canvas_id);
         console.log("current dimensions are "+canvas.width.toFixed(0)+"x"+canvas.height.toFixed(0)+" pixels")

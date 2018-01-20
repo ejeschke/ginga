@@ -58,7 +58,8 @@ class ImageViewPg(ImageView):
 
         # Format 'png' is ok with 'RGBA', but 'jpeg' only works with 'RGB'
         self.rgb_order = 'RGB'
-        #self.defer_redraw = False
+        # this should already be so, but just in case...
+        self.defer_redraw = True
 
     def set_widget(self, canvas_w):
         """Call this method with the widget that will be used
