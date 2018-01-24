@@ -1740,7 +1740,7 @@ class Splitter(ContainerBase):
     </div>
     <script type="text/javascript">
         $(document).ready(function () {
-            $('#%(id)s').jqxSplitter({ width: '100%', height: '100%',
+            $('#%(id)s').jqxSplitter({ width: '100%%', height: '100%%',
                                        orientation: '%(orient)s',
                                        disabled: %(disabled)s,
                                        panels: %(sizes)s
@@ -1751,7 +1751,7 @@ class Splitter(ContainerBase):
                      var panel = event.args.panels[i];
                      sizes.push(panel.size);
                  }
-                 ginga_app.widget_handler('activate', '%(id)s', sizes); });
+                 ginga_app.widget_handler('activate', '%(id)s', sizes);
             });
         });
     </script>
@@ -1987,7 +1987,7 @@ class Menu(ContainerBase):
     </div>
     <script type="text/javascript">
         $(document).ready(function () {
-            $("#%(id)s").jqxMenu({ width: '%(width)s', height: '%(height)s',
+            $("#%(id)s").jqxMenu({
                                    mode: 'popup', disabled: %(disabled)s });
             $('#%(id)s').on('itemclick', function (event) {
                 // get the clicked LI element.
@@ -2390,7 +2390,8 @@ class Application(Callback.Callbacks):
         if len(bad_handlers) > 0:
             with self._timer_lock:
                 for handler in bad_handlers:
-                    self.ws_handlers.remove(handler)
+                    if handler in self.ws_handlers:
+                        self.ws_handlers.remove(handler)
 
     def on_timer_event(self, event):
         # self.logger.debug("timer update")

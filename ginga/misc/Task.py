@@ -488,7 +488,7 @@ class oldConcurrentAndTaskset(Task):
         self.totaltime = time.time()
 
         # Register termination callbacks for all my child tasks.
-        for task in self.taskseq:
+        for task in list(self.taskseq):
             self.taskset.append(task)
             task.add_callback('resolved', self.child_done, self.count)
             self.count += 1
@@ -497,7 +497,7 @@ class oldConcurrentAndTaskset(Task):
 
         # Now start each child task.
         with self.regcond:
-            for task in self.taskset:
+            for task in list(self.taskset):
                 task.initialize(self)
 
                 task.start()
