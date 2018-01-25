@@ -25,6 +25,7 @@ Ver 2.7.0.dev
 - Zoom and Header plugins are now not started by default
 - Fix for "sortable" checkbox behavior on Header plugin
 - Default keyboard mode type is now 'locked' (prev 'oneshot')
+- Fixes for missing CSS file in installation script
 
 Ver 2.6.6 (2017-11-02)
 ======================
