@@ -611,7 +611,7 @@ class Slider(WidgetBase):
        orient="%(orient)s">
     '''
 
-    def __init__(self, orientation='horizontal', track=False, dtype=int):
+    def __init__(self, orientation='horizontal', dtype=int, track=False):
         super(Slider, self).__init__()
 
         self.orientation = orientation

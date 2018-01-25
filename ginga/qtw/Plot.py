@@ -1,9 +1,6 @@
 #
 # Plot.py -- Plotting widget canvas wrapper.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -27,6 +24,12 @@ class PlotWidget(Widgets.WidgetBase):
         self.widget._resizeEvent = self.widget.resizeEvent
         self.widget.resizeEvent = self.resize_event
         self.plot = plot
+        self.logger = plot.logger
+
+    def set_plot(self, plot):
+        self.plot = plot
+        self.logger = plot.logger
+        self.logger.debug("set_plot called")
 
     def configure_window(self, wd, ht):
         fig = self.plot.get_figure()

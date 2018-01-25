@@ -508,8 +508,10 @@ class SpinBox(WidgetBase):
 
 
 class Slider(WidgetBase):
-    def __init__(self, orientation='horizontal', track=False):
+    def __init__(self, orientation='horizontal', dtype=int, track=False):
         super(Slider, self).__init__()
+
+        # NOTE: parameter dtype is ignored for now for gtk3
 
         if orientation == 'horizontal':
             w = GtkHelp.HScale()

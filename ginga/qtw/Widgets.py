@@ -443,8 +443,10 @@ class SpinBox(WidgetBase):
 
 
 class Slider(WidgetBase):
-    def __init__(self, orientation='horizontal', track=False):
+    def __init__(self, orientation='horizontal', dtype=int, track=False):
         super(Slider, self).__init__()
+
+        # NOTE: parameter dtype is ignored for now for Qt
 
         if orientation == 'horizontal':
             w = QtGui.QSlider(QtCore.Qt.Horizontal)
@@ -1799,6 +1801,9 @@ class Application(Callback.Callbacks):
 
     def mainloop(self):
         self._qtapp.exec_()
+
+    def quit(self):
+        self._qtapp.quit()
 
 
 class Dialog(TopLevelMixin, WidgetBase):

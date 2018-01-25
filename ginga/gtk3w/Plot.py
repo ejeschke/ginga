@@ -21,9 +21,15 @@ class PlotWidget(Widgets.WidgetBase):
 
         self.widget = FigureCanvas(plot.get_figure())
         self.plot = plot
+        self.logger = plot.logger
 
         self.widget.set_size_request(width, height)
         self.widget.show_all()
+
+    def set_plot(self, plot):
+        self.plot = plot
+        self.logger = plot.logger
+        self.logger.debug("set_plot called")
 
     def configure_window(self, wd, ht):
         self.logger.debug("canvas resized to %dx%d" % (wd, ht))

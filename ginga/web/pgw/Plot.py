@@ -31,8 +31,9 @@ class PlotWidget(Widgets.Canvas):
         self.set_plot(plot)
 
     def set_plot(self, plot):
-        self.logger.debug("set_plot called")
         self.plot = plot
+        self.logger = plot.logger
+        self.logger.debug("set_plot called")
 
         self._dispatch_event_table = {
             "activate": self.ignore_event,
