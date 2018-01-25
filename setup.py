@@ -79,6 +79,8 @@ package_info = get_package_info()
 # Add the project-global data
 package_info['package_data'].setdefault(PACKAGENAME, [])
 package_info['package_data'][PACKAGENAME].append('examples/*/*')
+package_info['package_data'][PACKAGENAME].append('web/pgw/js/*.js')
+package_info['package_data'][PACKAGENAME].append('web/pgw/js/*.css')
 
 # Define entry points for command-line scripts
 entry_points = {'console_scripts': []}
