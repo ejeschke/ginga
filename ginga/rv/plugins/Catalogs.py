@@ -1157,12 +1157,11 @@ class CatalogListing(object):
             combobox.append_text(name)
             index += 1
         combobox.set_index(0)
-        combobox.add_callback('activated',
-                              lambda w, idx: self.do_operation_cb(idx))
         self.btn['oprn'] = combobox
         btns.add_widget(combobox, stretch=0)
 
         btn = Widgets.Button("Do it")
+        btn.add_callback('activated', self.do_operation_cb, combobox)
         btns.add_widget(btn, stretch=0)
 
         vbox.add_widget(btns, stretch=0)
@@ -1330,8 +1329,8 @@ class CatalogListing(object):
         fieldname = self.columns[index][1]
         self.set_field(fieldname)
 
-    def do_operation_cb(self, w):
-        index = w.get_index()
+    def do_operation_cb(self, btn_w, combo_w):
+        index = combo_w.get_index()
         if index >= 0:
             fn = self.operation_table[index][1]
             fn(self.selected)
