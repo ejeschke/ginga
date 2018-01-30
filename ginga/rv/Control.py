@@ -776,6 +776,24 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if hasattr(viewer, 'auto_levels'):
             viewer.auto_levels()
 
+    def prev_img_ws(self, ws, loop=True):
+        """Go to the previous image in the focused channel in the workspace.
+        """
+        channel = self.get_active_channel_ws(ws)
+        if channel is None:
+            return
+        channel.prev_image()
+        return True
+
+    def next_img_ws(self, ws, loop=True):
+        """Go to the next image in the focused channel in the workspace.
+        """
+        channel = self.get_active_channel_ws(ws)
+        if channel is None:
+            return
+        channel.next_image()
+        return True
+
     def prev_img(self, loop=True):
         """Go to the previous image in the channel.
         """
@@ -803,18 +821,44 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         ws = self.ds.get_ws(channel.workspace)
         return ws
 
+    def get_active_channel_ws(self, ws):
+        children = list(ws.nb.get_children())
+        if len(children) == 0:
+            return None
+        # Not exactly the most robust or straightforward way to find the
+        # active channel in this workspace...
+        idx = ws.nb.get_index()
+        child = ws.nb.index_to_widget(idx)
+        chname = child.extdata.tab_title
+        if self.has_channel(chname):
+            return self.get_channel(chname)
+        return None
+
     def prev_channel_ws(self, ws):
         children = list(ws.nb.get_children())
         if len(children) == 0:
             self.show_error("No channels in this workspace.",
                             raisetab=True)
             return
+
         ws.to_previous()
-        idx = ws.nb.get_index()
-        child = ws.nb.index_to_widget(idx)
-        chname = child.extdata.tab_title
-        if self.has_channel(chname):
-            self.change_channel(chname, raisew=True)
+
+        channel = self.get_active_channel_ws(ws)
+        if self.has_channel(channel.name):
+            self.change_channel(channel.name, raisew=True)
+
+    def next_channel_ws(self, ws):
+        children = list(ws.nb.get_children())
+        if len(children) == 0:
+            self.show_error("No channels in this workspace.",
+                            raisetab=True)
+            return
+
+        ws.to_next()
+
+        channel = self.get_active_channel_ws(ws)
+        if self.has_channel(channel.name):
+            self.change_channel(channel.name, raisew=True)
 
     def prev_channel(self):
         ws = self.get_current_workspace()
@@ -823,19 +867,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                             raisetab=True)
             return
         self.prev_channel_ws(ws)
-
-    def next_channel_ws(self, ws):
-        children = list(ws.nb.get_children())
-        if len(children) == 0:
-            self.show_error("No channels in this workspace.",
-                            raisetab=True)
-            return
-        ws.to_next()
-        idx = ws.nb.get_index()
-        child = ws.nb.index_to_widget(idx)
-        chname = child.extdata.tab_title
-        if self.has_channel(chname):
-            self.change_channel(chname, raisew=True)
 
     def next_channel(self):
         ws = self.get_current_workspace()
@@ -2087,23 +2118,23 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             # add toolbar buttons for navigating images in the channel
             iconpath = os.path.join(self.iconpath, "up_48.png")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
-            btn.set_tooltip("Previous object in current channel")
-            btn.add_callback('activated', lambda w: self.prev_img())
+            btn.set_tooltip("Previous object in workspace active channel")
+            btn.add_callback('activated', lambda w: self.prev_img_ws(ws))
             iconpath = os.path.join(self.iconpath, "down_48.png")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
-            btn.set_tooltip("Next object in current channel")
-            btn.add_callback('activated', lambda w: self.next_img())
+            btn.set_tooltip("Next object in workspace active channel")
+            btn.add_callback('activated', lambda w: self.next_img_ws(ws))
 
             tb.add_separator()
 
             # add toolbar buttons for navigating between channels
             iconpath = os.path.join(self.iconpath, "prev_48.png")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
-            btn.set_tooltip("Focus previous channel in this workspace")
+            btn.set_tooltip("Focus previous tab in this workspace")
             btn.add_callback('activated', lambda w: self.prev_channel_ws(ws))
             iconpath = os.path.join(self.iconpath, "next_48.png")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
-            btn.set_tooltip("Focus next channel in this workspace")
+            btn.set_tooltip("Focus next tab in this workspace")
             btn.add_callback('activated', lambda w: self.next_channel_ws(ws))
 
             tb.add_separator()

@@ -26,6 +26,8 @@ Ver 2.7.0.dev
 - Fix for "sortable" checkbox behavior on Header plugin
 - Default keyboard mode type is now 'locked' (prev 'oneshot')
 - Fixes for missing CSS file in installation script
+- Less confusing behavior for workspace toolbar arrow button behavior
+  - up/down buttons now only change image in same workspace channel
 
 Ver 2.6.6 (2017-11-02)
 ======================

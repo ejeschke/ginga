@@ -55,13 +55,6 @@ class Desktop(Callback.Callbacks):
         if (wstype == 'tabs') and show_tabs:
             nb.set_tab_position(tabpos)
 
-        # # create a Workspace pulldown menu, and add it to the tool bar
-        # if ws.toolbar is not None:
-        #     winmenu = ws.toolbar.add_menu("Workspace")
-        #     item = winmenu.add_name("Take Tab")
-        #     item.add_callback('activated',
-        #                       lambda *args: self.take_tab_cb(nb, args))
-
         self.workspace[name] = ws
         return ws
 
@@ -339,9 +332,6 @@ class Desktop(Callback.Callbacks):
                         wexp = 0
                     if hexp is None:
                         hexp = 0
-                    # This is causing issues with resizing (see issue #478);
-                    # temporarily disabling it
-                    #widget.cfg_expand(wexp, hexp)
 
                 # User wants to place window somewhere
                 if params.xpos >= 0:
@@ -690,11 +680,6 @@ class Workspace(Widgets.WidgetBase):
             self.toolbar.add_widget(cbox)
 
             mdi_menu = self.toolbar.add_menu("MDI")
-            # item = mdi_menu.add_name("Panes as Tabs", checkable=True)
-            # item.add_callback('activated',
-            #                   lambda w, tf: self.tabstoggle_cb(tf))
-            # is_tabs = (self.nb.get_mode() == 'tabs')
-            # item.set_state(is_tabs)
 
             item = mdi_menu.add_name("Tile Panes")
             item.add_callback('activated',
