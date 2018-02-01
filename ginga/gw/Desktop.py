@@ -692,7 +692,7 @@ class Workspace(Widgets.WidgetBase):
             self._update_mdi_menu()
 
         for name in ('page-switch', 'page-detach', 'page-close',
-                     'ws-close'):
+                     'page-removed', 'page-added', 'ws-close'):
             self.enable_callback(name)
 
     def _set_wstype(self, wstype):
@@ -717,6 +717,10 @@ class Workspace(Widgets.WidgetBase):
             self.nb.add_callback('page-detach', self._detach_page_cb)
         if self.nb.has_callback('page-close'):
             self.nb.add_callback('page-close', self._close_page_cb)
+        if self.nb.has_callback('widget-added'):
+            self.nb.add_callback('widget-added', self._page_added_cb)
+        if self.nb.has_callback('widget-removed'):
+            self.nb.add_callback('widget-removed', self._page_removed_cb)
 
         self.wstype = wstype
 
@@ -742,16 +746,30 @@ class Workspace(Widgets.WidgetBase):
 
     def _switch_page_cb(self, nb, child):
         self.focus_index()
+        # redirect widget callback into workspace callback
         self.make_callback('page-switch', child)
 
     def _detach_page_cb(self, nb, child):
+        # redirect widget callback into workspace callback
         self.make_callback('page-detach', child)
 
+    def _page_added_cb(self, nb, child):
+        # redirect widget callback into workspace callback
+        self.make_callback('page-added', child)
+
+    def _page_removed_cb(self, nb, child):
+        # redirect widget callback into workspace callback
+        self.make_callback('page-removed', child)
+
     def _close_page_cb(self, nb, child):
+        # redirect widget callback into workspace callback
         self.make_callback('page-close', child)
 
     def _close_menuitem_cb(self, *args):
         self.make_callback('ws-close')
+
+    def num_pages(self):
+        return self.nb.num_children()
 
     def configure_wstype(self, wstype):
         old_widget = self.nb
@@ -843,7 +861,8 @@ class SymmetricGridWidget(Widgets.GridBox):
         self.set_spacing(2)
         self.cur_index = 0
 
-        self.enable_callback('page-switch')
+        for name in ['page-switch']:
+            self.enable_callback(name)
 
     def _calc_dims(self, num_widgets):
         rows = int(round(math.sqrt(num_widgets)))
@@ -896,6 +915,8 @@ class SymmetricGridWidget(Widgets.GridBox):
             widgets = list(self.get_children())
             widgets.append(child)
             self._relayout(widgets)
+
+        self.make_callback('widget-added', child)
 
     def remove(self, child, delete=False):
 

@@ -1096,6 +1096,9 @@ class ContainerBase(WidgetBase):
         super(ContainerBase, self).__init__()
         self.children = []
 
+        for name in ['widget-added', 'widget-removed']:
+            self.enable_callback(name)
+
     def add_ref(self, ref):
         # TODO: should this be a weakref?
         self.children.append(ref)
@@ -1105,16 +1108,17 @@ class ContainerBase(WidgetBase):
         if delete:
             childw.destroy()
 
-    def remove(self, w, delete=False):
-        if w not in self.children:
+    def remove(self, child, delete=False):
+        if child not in self.children:
             raise KeyError("Widget is not a child of this container")
-        self.children.remove(w)
+        self.children.remove(child)
 
-        self._remove(w.get_widget(), delete=delete)
+        self._remove(child.get_widget(), delete=delete)
+        self.make_callback('widget-removed', child)
 
     def remove_all(self, delete=False):
-        for w in list(self.children):
-            self.remove(w, delete=delete)
+        for child in list(self.children):
+            self.remove(child, delete=delete)
 
     def get_children(self):
         return self.children
@@ -1160,6 +1164,7 @@ class Box(ContainerBase):
         expand = (float(stretch) > 0.0)
         self.widget.pack_start(child_w, expand, True, 0)
         self.widget.show_all()
+        self.make_callback('widget-added', child)
 
 
 class VBox(Box):
@@ -1220,8 +1225,10 @@ class TabWidget(ContainerBase):
             nb.connect("create-window", self._tab_detach_cb)
         nb.connect("page-added", self._tab_insert_cb)
         nb.connect("page-removed", self._tab_remove_cb)
-        nb.sconnect("switch-page", self._cb_redirect)
-        # nb.connect("switch-page", self._cb_redirect)
+        # contrary to some other widgets, we want the "tab changed" event
+        # when the index is switched programmatically as well as by user
+        ## nb.sconnect("switch-page", self._cb_redirect)
+        nb.connect("switch-page", self._cb_redirect)
         self.widget = nb
         self.set_tab_position(tabpos)
 
@@ -1265,8 +1272,12 @@ class TabWidget(ContainerBase):
 
     def _tab_remove_cb(self, nbw, nchild_w, page_num):
         global _widget_move_event
-        child = self._native_to_child(nchild_w)
-        _widget_move_event = WidgetMoveEvent(self, child)
+        try:
+            child = self._native_to_child(nchild_w)
+            _widget_move_event = WidgetMoveEvent(self, child)
+        except ValueError:
+            # we were triggered by a removal that is not a move
+            pass
 
     def _cb_redirect(self, nbw, gptr, index):
         child = self.index_to_widget(index)
@@ -1292,6 +1303,7 @@ class TabWidget(ContainerBase):
         self.widget.show_all()
         # attach title to child
         child.extdata.tab_title = title
+        self.make_callback('widget-added', child)
 
     def get_index(self):
         return self.widget.get_current_page()
@@ -1341,10 +1353,14 @@ class MDIWidget(ContainerBase):
         self.widget = sw
         w = GtkHelp.MDIWidget()
         self.mdi_w = w
+        # Monkey patching the internal callbacks so that we can make
+        # the correct callbacks
         w._move_page = w.move_page
         w.move_page = self._window_moved
         w._resize_page = w.resize_page
         w.resize_page = self._window_resized
+        w._set_current_page = w.set_current_page
+        w.set_current_page = self._set_current_page
 
         sw.set_hadjustment(self.mdi_w.get_hadjustment())
         sw.set_vadjustment(self.mdi_w.get_vadjustment())
@@ -1381,15 +1397,12 @@ class MDIWidget(ContainerBase):
             self.mdi_w.move_page(subwin, x, y)
 
         subwin.add_callback('close', self._window_close, child)
+        self.make_callback('widget-added', child)
 
     def _remove(self, childw, delete=False):
         self.mdi_w.remove(childw)
         if delete:
             childw.destroy()
-
-    def _cb_redirect(self, nbw, gptr, index):
-        child = self.index_to_widget(index)
-        self.make_callback('page-switch', child)
 
     def _window_resized(self, subwin, wd, ht):
         self.mdi_w._resize_page(subwin, wd, ht)
@@ -1411,6 +1424,13 @@ class MDIWidget(ContainerBase):
 
     def _window_close(self, subwin, child):
         return self.make_callback('page-close', child)
+
+    def _set_current_page(self, idx):
+        _idx = self.mdi_w.get_current_page()
+        self.mdi_w._set_current_page(idx)
+        if _idx != idx:
+            child = self.index_to_widget(idx)
+            self.make_callback('page-switch', child)
 
     def get_index(self):
         return self.mdi_w.get_current_page()
@@ -1512,6 +1532,7 @@ class Splitter(ContainerBase):
             last.pack2(w)
 
         self.widget.show_all()
+        self.make_callback('widget-added', child)
 
     def _get_sizes(self, pane):
         rect = pane.get_allocation()
@@ -1588,6 +1609,7 @@ class GridBox(ContainerBase):
                            xoptions=xoptions, yoptions=yoptions,
                            xpadding=0, ypadding=0)
         self.widget.show_all()
+        self.make_callback('widget-added', child)
 
 
 class Toolbar(ContainerBase):
@@ -1625,12 +1647,14 @@ class Toolbar(ContainerBase):
         tool_w = Gtk.ToolItem.new()
         w = child.get_widget()
         tool_w.add(w)
+        w.show()
         tool = ContainerBase()
         tool.widget = tool_w
         tool_w.show()
         tool.add_ref(child)
         self.add_ref(tool)
         self.widget.insert(tool_w, -1)
+        self.make_callback('widget-added', child)
         return tool
 
     def add_menu(self, text, menu=None, mtype='tool'):
@@ -1699,6 +1723,7 @@ class Menu(ContainerBase):
         self.widget.append(menuitem_w)
         self.add_ref(child)
         # self.widget.show_all()
+        self.make_callback('widget-added', child)
 
     def add_name(self, name, checkable=False):
         child = MenuAction(text=name, checkable=checkable)
@@ -1750,6 +1775,7 @@ class Menubar(ContainerBase):
         self.widget.append(item_w)
         self.menus[name] = child
         item_w.show()
+        self.make_callback('widget-added', child)
         return child
 
     def add_name(self, name):

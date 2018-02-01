@@ -844,7 +844,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         ws.to_previous()
 
         channel = self.get_active_channel_ws(ws)
-        if self.has_channel(channel.name):
+        if (channel is not None) and self.has_channel(channel.name):
             self.change_channel(channel.name, raisew=True)
 
     def next_channel_ws(self, ws):
@@ -857,7 +857,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         ws.to_next()
 
         channel = self.get_active_channel_ws(ws)
-        if self.has_channel(channel.name):
+        if (channel is not None) and self.has_channel(channel.name):
             self.change_channel(channel.name, raisew=True)
 
     def prev_channel(self):
@@ -1877,8 +1877,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.ds.show_dialog(dialog)
 
     def gui_delete_channel_ws(self, ws):
-        children = list(ws.nb.get_children())
-        if len(children) == 0:
+        num_children = ws.num_pages()
+        if num_children == 0:
             self.show_error("No channels in this workspace to delete.",
                             raisetab=True)
             return
@@ -2110,32 +2110,28 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             ws.add_callback('page-close', self.page_close_cb)
         if ws.has_callback('page-switch'):
             ws.add_callback('page-switch', self.page_switch_cb)
+        if ws.has_callback('page-added'):
+            ws.add_callback('page-added', self.page_added_cb)
+        if ws.has_callback('page-removed'):
+            ws.add_callback('page-removed', self.page_removed_cb)
 
         if ws.toolbar is not None:
             tb = ws.toolbar
             tb.add_separator()
 
-            # add toolbar buttons for navigating images in the channel
-            iconpath = os.path.join(self.iconpath, "up_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
-            btn.set_tooltip("Previous object in workspace active channel")
-            btn.add_callback('activated', lambda w: self.prev_img_ws(ws))
-            iconpath = os.path.join(self.iconpath, "down_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
-            btn.set_tooltip("Next object in workspace active channel")
-            btn.add_callback('activated', lambda w: self.next_img_ws(ws))
-
-            tb.add_separator()
-
-            # add toolbar buttons for navigating between channels
+            # add toolbar buttons for navigating between tabs
             iconpath = os.path.join(self.iconpath, "prev_48.png")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
             btn.set_tooltip("Focus previous tab in this workspace")
             btn.add_callback('activated', lambda w: self.prev_channel_ws(ws))
+            ws.extdata.w_prev_tab = btn
+            btn.set_enabled(False)
             iconpath = os.path.join(self.iconpath, "next_48.png")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
             btn.set_tooltip("Focus next tab in this workspace")
             btn.add_callback('activated', lambda w: self.next_channel_ws(ws))
+            ws.extdata.w_next_tab = btn
+            btn.set_enabled(False)
 
             tb.add_separator()
 
@@ -2145,11 +2141,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             btn.set_tooltip("Add a channel to this workspace")
             btn.add_callback('activated',
                              lambda w: self.add_channel_auto_ws(ws))
+            ws.extdata.w_new_channel = btn
             iconpath = os.path.join(self.iconpath, "inbox_minus_48.png")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 23))
             btn.set_tooltip("Delete current channel from this workspace")
             btn.add_callback('activated',
                              lambda w: self.gui_delete_channel_ws(ws))
+            btn.set_enabled(False)
+            ws.extdata.w_del_channel = btn
 
     def add_ws_cb(self, w, rsp, b, names):
         try:
@@ -2249,6 +2248,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             viewer = channel.viewer
             if viewer != self.getfocus_viewer():
                 chname = channel.name
+
                 self.logger.debug("Active channel switch to '%s'" % (
                     chname))
                 self.change_channel(chname, raisew=False)
@@ -2257,8 +2257,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def workspace_closed_cb(self, ws):
         self.logger.debug("workspace requests close")
-        children = list(ws.nb.get_children())
-        if len(children) > 0:
+        num_children = ws.num_pages()
+        if num_children > 0:
             self.show_error(
                 "Please close all windows in this workspace first!",
                 raisetab=True)
@@ -2295,7 +2295,26 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         return True
 
+    def page_added_cb(self, ws, child):
+        self.logger.debug("page added in %s: '%s'" % (ws.name, str(child)))
+
+        num_pages = ws.num_pages()
+        if num_pages > 1:
+            ws.extdata.w_prev_tab.set_enabled(True)
+            ws.extdata.w_next_tab.set_enabled(True)
+        ws.extdata.w_del_channel.set_enabled(True)
+
+    def page_removed_cb(self, ws, child):
+        self.logger.debug("page removed in %s: '%s'" % (ws.name, str(child)))
+        num_pages = ws.num_pages()
+        if num_pages <= 1:
+            ws.extdata.w_prev_tab.set_enabled(False)
+            ws.extdata.w_next_tab.set_enabled(False)
+            if num_pages <= 0:
+                ws.extdata.w_del_channel.set_enabled(False)
+
     def page_close_cb(self, ws, child):
+        # user is attempting to close the page
         self.logger.debug("page closed in %s: '%s'" % (ws.name, str(child)))
 
         channel = self._get_channel_by_container(child)
@@ -2463,7 +2482,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if not self.channel_follows_focus:
             return True
 
-        self.logger.debug("Focus %s=%s" % (name, tf))
+        self.logger.info("Focus %s=%s" % (name, tf))
         if tf:
             if viewer != self.getfocus_viewer():
                 self.change_channel(name, raisew=False)

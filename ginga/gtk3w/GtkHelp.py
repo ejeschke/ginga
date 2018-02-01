@@ -330,7 +330,7 @@ class MDIWidget(Gtk.Layout):
     """
     Multiple Document Interface type widget for Gtk.
 
-    NOTE: *** This is a work in progress! ***
+    NOTE: *** This is somewhat of a work in progress! ***
     """
     def __init__(self):
         Gtk.Layout.__init__(self)

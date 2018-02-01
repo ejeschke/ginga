@@ -1377,17 +1377,21 @@ class ContainerBase(WidgetBase):
         # TODO: probably need to maintain children as list of widget ids
         self.children = []
 
+        for name in ['widget-added', 'widget-removed']:
+            self.enable_callback(name)
+
     def add_ref(self, ref):
         # TODO: should this be a weakref?
         self.children.append(ref)
 
-    def remove(self, w, delete=False):
-        if w not in self.children:
+    def remove(self, child, delete=False):
+        if child not in self.children:
             raise KeyError("Widget is not a child of this container")
-        self.children.remove(w)
+        self.children.remove(child)
 
         app = self.get_app()
         app.do_operation('update_html', id=self.id, value=self.render())
+        self.make_callback('widget-removed', child)
 
     def remove_all(self):
         self.children[:] = []
@@ -1449,6 +1453,7 @@ class Box(ContainerBase):
 
         app = self.get_app()
         app.do_operation('update_html', id=self.id, value=self.render())
+        self.make_callback('widget-added', child)
 
     def set_spacing(self, val):
         self.spacing = val
@@ -1618,6 +1623,7 @@ class TabWidget(ContainerBase):
         # this is a hack--we really don't want to reload the page, but just
         # re-rendering the HTML does not seem to process the CSS right
         #app.do_operation('reload_page', id=self.id)
+        self.make_callback('widget-added', child)
 
     def get_index(self):
         return self.index
@@ -1768,6 +1774,7 @@ class Splitter(ContainerBase):
 
     def add_widget(self, child):
         self.add_ref(child)
+        self.make_callback('widget-added', child)
 
     def get_sizes(self):
         return self.sizes
@@ -1843,6 +1850,7 @@ class GridBox(ContainerBase):
         app = self.get_app()
         app.do_operation('update_html', id=self.id,
                          value=self.render_body())
+        self.make_callback('widget-added', child)
 
     def render_body(self):
         res = []
@@ -1921,6 +1929,7 @@ class Toolbar(ContainerBase):
 
     def add_widget(self, child):
         self.add_ref(child)
+        self.make_callback('widget-added', child)
 
     def add_menu(self, text, menu=None, mtype='tool'):
         if menu is None:
@@ -2016,6 +2025,7 @@ class Menu(ContainerBase):
 
     def add_widget(self, child):
         self.add_ref(child)
+        self.make_callback('widget-added', child)
 
     def add_name(self, name, checkable=False):
         child = MenuAction(text=name, checkable=checkable)
@@ -2096,6 +2106,7 @@ class Menubar(ContainerBase):
         child.widget = self
         self.menus[name] = child
         self.add_ref(child)
+        self.make_callback('widget-added', child)
         return child
 
     def add_name(self, name):
@@ -2182,6 +2193,7 @@ class TopLevel(ContainerBase):
         app = self.get_app()
         app.do_operation('update_html', id=self.id,
                          value=self.render_children())
+        self.make_callback('widget-added', child)
 
     def show(self):
         pass

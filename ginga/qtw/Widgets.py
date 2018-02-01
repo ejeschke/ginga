@@ -921,6 +921,9 @@ class ContainerBase(WidgetBase):
         super(ContainerBase, self).__init__()
         self.children = []
 
+        for name in ['widget-added', 'widget-removed']:
+            self.enable_callback(name)
+
     def add_ref(self, ref):
         # TODO: should this be a weakref?
         self.children.append(ref)
@@ -934,11 +937,13 @@ class ContainerBase(WidgetBase):
         if delete:
             childw.deleteLater()
 
-    def remove(self, w, delete=False):
-        if w not in self.children:
+    def remove(self, child, delete=False):
+        if child not in self.children:
             raise ValueError("Widget is not a child of this container")
-        self.children.remove(w)
-        self._remove(w.get_widget(), delete=delete)
+        self.children.remove(child)
+
+        self._remove(child.get_widget(), delete=delete)
+        self.make_callback('widget-removed', child)
 
     def remove_all(self, delete=False):
         for w in list(self.children):
@@ -994,6 +999,7 @@ class Box(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         self.layout.addWidget(child_w, stretch=stretch)
+        self.make_callback('widget-added', child)
 
     def set_spacing(self, val):
         self.layout.setSpacing(val)
@@ -1144,6 +1150,7 @@ class TabWidget(ContainerBase):
         self.widget.addTab(child_w, title)
         # attach title to child
         child.extdata.tab_title = title
+        self.make_callback('widget-added', child)
 
     def _remove(self, nchild, delete=False):
         idx = self.widget.indexOf(nchild)
@@ -1186,9 +1193,8 @@ class StackWidget(ContainerBase):
 
         self.widget = QtGui.QStackedWidget()
 
-        # TODO: currently only provided for compatibility with other
-        # like widgets
-        self.enable_callback('page-switch')
+        for name in ['page-switch']:
+            self.enable_callback(name)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
@@ -1196,13 +1202,18 @@ class StackWidget(ContainerBase):
         self.widget.addWidget(child_w)
         # attach title to child
         child.extdata.tab_title = title
+        self.make_callback('widget-added', child)
 
     def get_index(self):
         return self.widget.currentIndex()
 
     def set_index(self, idx):
+        _idx = self.widget.currentIndex()
         self.widget.setCurrentIndex(idx)
-        # child = self.index_to_widget(idx)
+
+        child = self.index_to_widget(idx)
+        if _idx != idx:
+            self.make_callback('page-switch', child)
         # child.focus()
 
     def index_of(self, child):
@@ -1317,6 +1328,8 @@ class MDIWidget(ContainerBase):
             x, y = pos
             w.move(x, y)
 
+        # Monkey-patching the widget to take control of resize and move
+        # events
         w._resizeEvent = w.resizeEvent
         w.resizeEvent = lambda event: self._window_resized(event, w, child)
         w._moveEvent = w.moveEvent
@@ -1324,6 +1337,7 @@ class MDIWidget(ContainerBase):
         w.setWindowTitle(title)
         child_w.show()
         w.show()
+        self.make_callback('widget-added', child)
 
     def _remove(self, nchild, delete=False):
         subwins = list(self.widget.subWindowList())
@@ -1434,6 +1448,7 @@ class Splitter(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         self.widget.addWidget(child_w)
+        self.make_callback('widget-added', child)
 
     def get_sizes(self):
         return list(self.widget.sizes())
@@ -1468,6 +1483,7 @@ class GridBox(ContainerBase):
         self.add_ref(child)
         w = child.get_widget()
         self.widget.layout().addWidget(w, row, col)
+        self.make_callback('widget-added', child)
 
 
 class ToolbarAction(WidgetBase):
@@ -1532,6 +1548,7 @@ class Toolbar(ContainerBase):
         self.add_ref(child)
         w = child.get_widget()
         self.widget.addWidget(w)
+        self.make_callback('widget-added', child)
 
     def add_menu(self, text, menu=None, mtype='tool'):
         if menu is None:
@@ -1589,6 +1606,7 @@ class Menu(ContainerBase):
             w.setCheckable(True)
         child.widget = w
         self.add_ref(child)
+        self.make_callback('widget-added', child)
 
     def add_name(self, name, checkable=False):
         child = MenuAction(text=name, checkable=checkable)
@@ -1634,6 +1652,7 @@ class Menubar(ContainerBase):
         child.widget = menu_w
         self.add_ref(child)
         self.menus[name] = child
+        self.make_callback('widget-added', child)
         return child
 
     def add_name(self, name):
