@@ -2,8 +2,8 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.7.0.dev
-=============
+Ver 2.7.0 (2018-02-02)
+======================
 - Fix for gtk 4.0 (use "gtk3" backend, it works for 4.0)
 - Fix for broken polygon containment test
 - Addition of configurable zoom handlers for pan gestures
@@ -26,8 +26,7 @@ Ver 2.7.0.dev
 - Fix for "sortable" checkbox behavior on Header plugin
 - Default keyboard mode type is now 'locked' (prev 'oneshot')
 - Fixes for missing CSS file in installation script
-- Less confusing behavior for workspace toolbar arrow button behavior
-  - up/down buttons now only change image in same workspace channel
+- Less confusing behavior for workspace and toolbar arrow buttons
 
 Ver 2.6.6 (2017-11-02)
 ======================
