@@ -10,7 +10,6 @@ from ginga.qtw.QtHelp import (QtCore, QPainter, QPen, QPolygon, QColor,
 from ginga import colors
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
-from ginga import trcalc
 
 
 class RenderContext(object):
@@ -154,10 +153,10 @@ class RenderContext(object):
         self.cr.pen().setCapStyle(QtCore.Qt.RoundCap)
         self.cr.drawLine(cx1, cy1, cx2, cy2)
 
-    def draw_path(self, cpoints):
+    def draw_path(self, cp):
         self.cr.pen().setCapStyle(QtCore.Qt.RoundCap)
         pts = [QtCore.QLineF(QtCore.QPointF(cp[i][0], cp[i][1]),
-                             QtCore.QPointF(cp[i+1][0], cp[i+1][1]))
+                             QtCore.QPointF(cp[i + 1][0], cp[i + 1][1]))
                for i in range(len(cp) - 1)]
         self.cr.drawLines(pts)
 
