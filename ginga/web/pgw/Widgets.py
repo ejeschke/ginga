@@ -1402,6 +1402,9 @@ class ContainerBase(WidgetBase):
     def get_children(self):
         return self.children
 
+    def num_children(self):
+        return len(self.children)
+
     def render(self):
         return self.render_children()
 

@@ -8,7 +8,6 @@ from ginga.qtw.QtHelp import (QtCore, QPainter, QPen, QPolygon, QColor,
                               QPainterPath, get_font)
 
 from ginga import colors
-from ginga.util.six.moves import map
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga import trcalc
@@ -121,8 +120,7 @@ class RenderContext(object):
         self.cr.restore()
 
     def draw_polygon(self, cpoints):
-        qpoints = list(map(lambda p: QtCore.QPoint(p[0], p[1]),
-                           cpoints))
+        qpoints = [QtCore.QPoint(p[0], p[1]) for p in cpoints]
         p = cpoints[0]
         qpoints.append(QtCore.QPoint(p[0], p[1]))
         qpoly = QPolygon(qpoints)
@@ -157,13 +155,11 @@ class RenderContext(object):
         self.cr.drawLine(cx1, cy1, cx2, cy2)
 
     def draw_path(self, cpoints):
-        cpoints = trcalc.strip_z(cpoints)
-
         self.cr.pen().setCapStyle(QtCore.Qt.RoundCap)
-        for i in range(len(cpoints) - 1):
-            cx1, cy1 = cpoints[i]
-            cx2, cy2 = cpoints[i + 1]
-            self.cr.drawLine(cx1, cy1, cx2, cy2)
+        pts = [QtCore.QLineF(QtCore.QPointF(cp[i][0], cp[i][1]),
+                             QtCore.QPointF(cp[i+1][0], cp[i+1][1]))
+               for i in range(len(cp) - 1)]
+        self.cr.drawLines(pts)
 
 
 class CanvasRenderer(object):

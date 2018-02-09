@@ -334,7 +334,7 @@ class Desktop(Callback.Callbacks):
                         hexp = 0
 
                 # User wants to place window somewhere
-                if params.xpos >= 0:
+                if (kind in ['top',]) and (params.xpos >= 0):
                     widget.move(params.xpos, params.ypos)
 
             return bnch
@@ -516,11 +516,66 @@ class Desktop(Callback.Callbacks):
             pack(widget)
             return ['vbox', params] + res
 
+        # top-level dialog box
+        def dialog(params, rows, pack):
+            if len(self.toplevels) == 0:
+                raise ValueError("Need a top-level window to parent a dialog")
+
+            # any old top-level will do, for now...
+            top_w = self.toplevels[0]
+            widget = Widgets.Dialog(parent=top_w)
+            container = widget.get_content_area()
+
+            res = []
+            for dct in rows:
+                if isinstance(dct, dict):
+                    stretch = dct.get('stretch', 1)
+                    row = dct.get('row', None)
+                else:
+                    # assume a list defining the row
+                    stretch = 1
+                    row = dct
+                if row is not None:
+                    r = make(row,
+                             lambda w: container.add_widget(w,
+                                                            stretch=stretch))
+                    r = dict(row=r, stretch=stretch)
+                    res.append(r)
+
+            process_common_params('dialog', widget, params)
+
+            widget.show()
+            return ['dialog', params] + res
+
+        # top-level window
+        def toplevel(params, rows, pack):
+            widget = self.app.make_window()
+            self.toplevels.append(widget)
+
+            if len(rows) != 1:
+                raise ValueError("top-level windows can only have 1 child")
+
+            res = []
+            dct = rows[0]
+            if isinstance(dct, dict):
+                row = dct.get('row', None)
+            else:
+                # assume a list defining the row
+                row = dct
+            if row is not None:
+                r = make(row, lambda w: widget.set_widget(w))
+                r = dict(row=r)
+                res.append(r)
+
+            process_common_params('top', widget, params)
+
+            widget.show()
+            return ['top', params] + res
+
         # Sequence of separate top-level items
         def seq(params, cols, pack):
             def mypack(w):
                 w_top = self.app.make_window()
-                # w_top.cfg_expand(8, 8)
                 # Ask the size of the widget that wants to get packed
                 # and resize the top-level to fit
                 wd, ht = w.get_size()
@@ -533,15 +588,15 @@ class Desktop(Callback.Callbacks):
             res = []
             for dct in cols:
                 if isinstance(dct, dict):
-                    stretch = dct.get('stretch', 0)  # noqa
                     col = dct.get('col', None)
                 else:
                     # assume a list defining the col
-                    stretch = 0  # noqa
                     col = dct
                 if col is not None:
                     res.append(make(col, mypack))
 
+            # presumably, the passed-in pack is a no-op, so this
+            # should do nothing
             widget = Widgets.Label("Placeholder")
             pack(widget)
             return ['seq', params] + res
@@ -562,6 +617,10 @@ class Desktop(Callback.Callbacks):
                 res = vbox(params, rest, pack)
             elif kind == 'hbox':
                 res = hbox(params, rest, pack)
+            elif kind == 'dialog':
+                res = dialog(params, rest, pack)
+            elif kind == 'top':
+                res = toplevel(params, rest, pack)
             elif kind == 'seq':
                 res = seq(params, rest, pack)
             elif kind in ('ws', 'mdi', 'widget'):
