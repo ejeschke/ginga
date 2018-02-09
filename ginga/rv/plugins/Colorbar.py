@@ -43,6 +43,8 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
+        self.colorbar = None
+        self.gui_up = False
 
     def build_gui(self, container):
         cbar = ColorBar.ColorBar(self.logger, settings=self.settings)
@@ -53,15 +55,16 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         cbar_w.resize(-1, cbar_ht)
 
         self.colorbar = cbar
-        self.fv.add_callback('channel-change', self.change_cbar, cbar)
+        self.fv.add_callback('channel-change', self.change_cbar)
         cbar.add_callback('motion', self.cbar_value_cb)
 
         container.add_widget(cbar_w, stretch=0)
+        self.gui_up = True
 
     def add_channel_cb(self, viewer, channel):
         settings = channel.settings
         settings.get_setting('cuts').add_callback(
-            'set', self.change_range_cb, channel.fitsimage, self.colorbar)
+            'set', self.change_range_cb, channel.fitsimage)
 
         chname = channel.name
         info = Bunch.Bunch(chname=chname, channel=channel)
@@ -89,8 +92,9 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         # to change the ColorBar's rgbmap to match our
         colorbar.set_rgbmap(rgbmap)
 
-    def change_cbar(self, viewer, channel, cbar):
-        self._match_cmap(channel.fitsimage, cbar)
+    def change_cbar(self, viewer, channel):
+        if self.gui_up and (self.colorbar is not None):
+            self._match_cmap(channel.fitsimage, self.colorbar)
 
     # def focus_cb(self, viewer, channel):
     #     chname = channel.name
@@ -104,18 +108,18 @@ class Colorbar(GingaPlugin.GlobalPlugin):
     #         return
     #     # install rgbmap
 
-    def change_range_cb(self, setting, value, fitsimage, cbar):
+    def change_range_cb(self, setting, value, fitsimage):
         """
         This method is called when the cut level values (lo/hi) have
         changed in a channel.  We adjust them in the ColorBar to match.
         """
-        if cbar is None:
+        if not self.gui_up:
             return
         if fitsimage != self.fv.getfocus_viewer():
             # values have changed in a channel that doesn't have the focus
             return False
         loval, hival = value
-        cbar.set_range(loval, hival)
+        self.colorbar.set_range(loval, hival)
 
     def cbar_value_cb(self, cbar, value, event):
         """
@@ -140,8 +144,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         fitsimage = channel.fitsimage
         if fitsimage != self.fv.getfocus_fitsimage():
             return False
-        if self.colorbar is not None:
-            self.change_cbar(self.fv, channel, self.colorbar)
+        self.change_cbar(self.fv, channel)
 
     def start(self):
         ## names = self.fv.get_channel_names()
@@ -149,6 +152,9 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         ##     channel = self.fv.get_channel(name)
         ##     self.add_channel_cb(self.fv, channel)
         pass
+
+    def stop(self):
+        self.gui_up = False
 
     def __str__(self):
         return 'colorbar'

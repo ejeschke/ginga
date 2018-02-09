@@ -282,8 +282,7 @@ class Desktop(Callback.Callbacks):
 
         def process_common_params(kind, widget, params):
             subst_params = Bunch.Bunch(name=None, height=-1, width=-1,
-                                       xpos=-1, ypos=-1, spacing=None,
-                                       wexp=None, hexp=None)
+                                       xpos=-1, ypos=-1, spacing=None)
             subst_params.update(params)
             params.update(subst_params)
 
@@ -298,8 +297,6 @@ class Desktop(Callback.Callbacks):
                                name=name, params=params)
             self.node[name] = bnch
 
-            wexp, hexp = params.wexp, params.hexp
-
             # User is specifying the size of the widget
             if isinstance(widget, Widgets.WidgetBase):
 
@@ -310,32 +307,18 @@ class Desktop(Callback.Callbacks):
                 if (params.width >= 0) or (params.height >= 0):
                     if params.width < 0:
                         width = widget.get_size()[0]
-                        if wexp is None:
-                            wexp = 8
                     else:
                         width = params.width
-                        if wexp is None:
-                            wexp = 1 | 4
                     if params.height < 0:
                         height = widget.get_size()[1]
-                        if hexp is None:
-                            hexp = 8
                     else:
                         height = params.height
-                        if hexp is None:
-                            hexp = 1 | 4
                     widget.resize(width, height)
 
-                # specify expansion policy of widget
-                if (wexp is not None) or (hexp is not None):
-                    if wexp is None:
-                        wexp = 0
-                    if hexp is None:
-                        hexp = 0
-
                 # User wants to place window somewhere
-                if (kind in ['top',]) and (params.xpos >= 0):
-                    widget.move(params.xpos, params.ypos)
+                if kind in ['top', 'dialog']:
+                    if params.xpos >= 0:
+                        widget.move(params.xpos, params.ypos)
 
             return bnch
 
