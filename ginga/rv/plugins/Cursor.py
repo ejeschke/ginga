@@ -115,12 +115,12 @@ class Cursor(GingaPlugin.GlobalPlugin):
         pass
 
     def readout_config(self, fitsimage, image, readout):
+        if (readout is None) or (image is None):
+            return True
         self.logger.debug("configuring readout (%s)" % (str(readout)))
         # Configure readout for this image.
         # Get and store the sizes of the fields necessary to display
         # all X, Y coords as well as values.
-        if image is None:
-            return True
 
         try:
             width, height = fitsimage.get_data_size()
