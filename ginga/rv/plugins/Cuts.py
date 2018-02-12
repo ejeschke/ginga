@@ -761,6 +761,8 @@ class Cuts(GingaPlugin.LocalPlugin):
         text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
                                 ref_obj=line_obj)
         obj = self.dc.CompoundObject(line_obj, text_obj)
+        # this is necessary for drawing cuts with width feature
+        obj.initialize(self.canvas, self.fitsimage, self.logger)
         obj.set_data(cuts=True)
         return obj
 
@@ -783,7 +785,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                                           getvalues=False)
         crdmap = OffsetMapper(self.fitsimage, line)
         num_ticks = max(len(coords) // self.tine_spacing_px, 3)
-        interval = len(coords) // num_ticks
+        interval = max(1, len(coords) // num_ticks)
         for i in range(0, len(coords), interval):
             x, y = coords[i]
             x1, y1, x2, y2 = self.get_orthogonal_points(line, x, y,
@@ -918,9 +920,9 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         coords = []
         if cuttype == 'horizontal':
-            coords.append((0, data_y, wd - 1, data_y))
+            coords.append((0, data_y, wd, data_y))
         elif cuttype == 'vertical':
-            coords.append((data_x, 0, data_x, ht - 1))
+            coords.append((data_x, 0, data_x, ht))
 
         count = self._get_cut_index()
         tag = "cuts%d" % (count)
