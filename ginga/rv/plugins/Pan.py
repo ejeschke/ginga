@@ -69,11 +69,13 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         self._wd = 200
         self._ht = 200
+        self.gui_up = False
 
     def build_gui(self, container):
         nb = Widgets.StackWidget()
         self.nb = nb
         container.add_widget(self.nb, stretch=1)
+        self.gui_up = True
 
     def _create_pan_viewer(self, fitsimage):
         pi = Viewers.CanvasView(logger=self.logger)
@@ -110,6 +112,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         return pi
 
     def add_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
         fitsimage = channel.fitsimage
         panimage = self._create_pan_viewer(fitsimage)
 
@@ -156,6 +160,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.logger.debug("channel '%s' added." % (channel.name))
 
     def delete_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
         chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
         widget = channel.extdata._pan_info.widget
@@ -169,6 +175,9 @@ class Pan(GingaPlugin.GlobalPlugin):
             channel = self.fv.get_channel(name)
             self.add_channel(self.fv, channel)
 
+    def stop(self):
+        self.gui_up = False
+
     # CALLBACKS
 
     def rgbmap_cb(self, rgbmap, panimage):
@@ -176,6 +185,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         panimage.redraw(whence=1)
 
     def redo(self, channel, image):
+        if not self.gui_up:
+            return
         self.logger.debug("redo")
         paninfo = channel.extdata._pan_info
 

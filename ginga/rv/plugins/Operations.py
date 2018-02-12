@@ -96,6 +96,8 @@ class Operations(GingaPlugin.GlobalPlugin):
         self.gui_up = True
 
     def add_channel_cb(self, viewer, channel):
+        if not self.gui_up:
+            return
         chname = channel.name
         self.w.channel.insert_alpha(chname)
 
@@ -159,6 +161,8 @@ class Operations(GingaPlugin.GlobalPlugin):
                                                                   spec))
 
     def start_operation_cb(self, name, ptype, spec):
+        if not self.gui_up:
+            return
         self.logger.debug("invoking operation menu")
         if ptype == 'global':
             # global plugin
@@ -197,6 +201,8 @@ class Operations(GingaPlugin.GlobalPlugin):
         self.start_operation_cb(*args)
 
     def activate_plugin_cb(self, pl_mgr, bnch):
+        if not self.gui_up:
+            return
         spec = bnch.pInfo.spec
         optray = spec.get('optray', True)
         if not optray:
@@ -231,6 +237,8 @@ class Operations(GingaPlugin.GlobalPlugin):
         lbl.add_callback('activated', lambda w: pl_mgr.set_focus(lname))
 
     def deactivate_plugin_cb(self, pl_mgr, bnch):
+        if not self.gui_up:
+            return
         hidden = bnch.pInfo.spec.get('hidden', False)
         if hidden:
             return
@@ -242,6 +250,8 @@ class Operations(GingaPlugin.GlobalPlugin):
         bnch.label = None
 
     def focus_plugin_cb(self, pl_mgr, bnch):
+        if not self.gui_up:
+            return
         self.logger.debug("highlighting widget")
         # plugin may not have been started by us, so don't assume it has
         # a label
@@ -250,12 +260,17 @@ class Operations(GingaPlugin.GlobalPlugin):
             bnch.label.set_color(bg=self.focuscolor)
 
     def unfocus_plugin_cb(self, pl_mgr, bnch):
+        if not self.gui_up:
+            return
         self.logger.debug("unhighlighting widget")
         # plugin may not have been started by us, so don't assume it has
         # a label
         bnch.setdefault('label', None)
         if bnch.label is not None:
             bnch.label.set_color(bg='grey')
+
+    def stop(self):
+        self.gui_up = False
 
     def __str__(self):
         return 'operations'

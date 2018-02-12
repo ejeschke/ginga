@@ -57,11 +57,13 @@ class Info(GingaPlugin.GlobalPlugin):
         fv.add_callback('delete-channel', self.delete_channel)
         fv.add_callback('field-info', self.field_info)
         fv.add_callback('channel-change', self.focus_cb)
+        self.gui_up = False
 
     def build_gui(self, container):
         nb = Widgets.StackWidget()
         self.nb = nb
         container.add_widget(self.nb, stretch=1)
+        self.gui_up = True
 
     def _create_info_window(self):
         sw = Widgets.ScrollArea()
@@ -147,6 +149,8 @@ class Info(GingaPlugin.GlobalPlugin):
         return sw, b
 
     def add_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
         sw, winfo = self._create_info_window()
         chname = channel.name
 
@@ -188,6 +192,8 @@ class Info(GingaPlugin.GlobalPlugin):
             'set', self.autocenter_cb, fitsimage, info)
 
     def delete_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
         chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
         info = channel.extdata._info_info
@@ -199,6 +205,8 @@ class Info(GingaPlugin.GlobalPlugin):
     # CALLBACKS
 
     def redo(self, channel, image):
+        if not self.gui_up:
+            return
         fitsimage = channel.fitsimage
         info = channel.extdata._info_info
 
@@ -206,6 +214,8 @@ class Info(GingaPlugin.GlobalPlugin):
         return True
 
     def focus_cb(self, viewer, channel):
+        if not self.gui_up:
+            return
         chname = channel.name
 
         if self.active != chname:
@@ -223,6 +233,8 @@ class Info(GingaPlugin.GlobalPlugin):
     def zoomset_cb(self, setting, value, fitsimage, info):
         """This callback is called when the main window is zoomed.
         """
+        if not self.gui_up:
+            return
         #scale_x, scale_y = fitsimage.get_scale_xy()
         scale_x, scale_y = value
 
@@ -236,6 +248,8 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.zoom.set_text(text)
 
     def cutset_cb(self, setting, value, fitsimage, info):
+        if not self.gui_up:
+            return
         loval, hival = value
         #info.winfo.cut_low.set_text('%.4g' % (loval))
         info.winfo.cut_low_value.set_text('%.4g' % (loval))
@@ -243,15 +257,21 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.cut_high_value.set_text('%.4g' % (hival))
 
     def autocuts_cb(self, setting, option, fitsimage, info):
+        if not self.gui_up:
+            return
         self.logger.debug("autocuts changed to %s" % option)
         index = self.autocut_options.index(option)
         info.winfo.cut_new.set_index(index)
 
     def autozoom_cb(self, setting, option, fitsimage, info):
+        if not self.gui_up:
+            return
         index = self.autozoom_options.index(option)
         info.winfo.zoom_new.set_index(index)
 
     def autocenter_cb(self, setting, option, fitsimage, info):
+        if not self.gui_up:
+            return
         # Hack to convert old values that used to be T/F
         if isinstance(option, bool):
             choice = {True: 'on', False: 'off'}
@@ -260,14 +280,20 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.center_new.set_index(index)
 
     def set_autocuts_cb(self, w, index, fitsimage, info):
+        if not self.gui_up:
+            return
         option = self.autocut_options[index]
         fitsimage.enable_autocuts(option)
 
     def set_autozoom_cb(self, w, index, fitsimage, info):
+        if not self.gui_up:
+            return
         option = self.autozoom_options[index]
         fitsimage.enable_autozoom(option)
 
     def set_autocenter_cb(self, w, index, fitsimage, info):
+        if not self.gui_up:
+            return
         option = self.autocenter_options[index]
         fitsimage.enable_autocenter(option)
 
