@@ -12,6 +12,8 @@ import threading
 class TimeoutError(Exception):
     pass
 
+class Empty(Exception):
+    pass
 
 class Datasrc(object):
     """Class to handle internal data cache."""
@@ -61,11 +63,14 @@ class Datasrc(object):
             self.cond.notify()
 
     def pop_one(self):
-        return self.remove(self.history[0])
+        with self.cond:
+            if len(self.history) == 0:
+                raise Empty("No items")
+            return self.remove(self.history[0])
 
     def pop(self, *args):
         if len(args) == 0:
-            return self.remove(self.history[0])
+            return self.pop_one()
 
         if len(args) != 1:
             raise ValueError("Too many parameters to pop()")
