@@ -12,8 +12,10 @@ import threading
 class TimeoutError(Exception):
     pass
 
+
 class Empty(Exception):
     pass
+
 
 class Datasrc(object):
     """Class to handle internal data cache."""
