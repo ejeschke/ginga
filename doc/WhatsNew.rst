@@ -2,6 +2,11 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.7.1.dev
+=============
+- Fix for image rendering bug which shows last row and column of image
+  being drawn twice
+
 Ver 2.7.0 (2018-02-02)
 ======================
 - Fix for gtk 4.0 (use "gtk3" backend, it works for 4.0)

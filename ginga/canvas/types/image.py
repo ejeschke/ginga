@@ -156,7 +156,7 @@ class Image(OnePointMixin, CanvasObjectBase):
             # get destination location in data_coords
             dst_x, dst_y = self.crdmap.to_data((self.x, self.y))
 
-            a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
+            a1, b1, a2, b2 = 0, 0, self.image.width - 1, self.image.height - 1
 
             # calculate the cutout that we can make and scale to merge
             # onto the final image--by only cutting out what is necessary
@@ -399,7 +399,7 @@ class NormImage(Image):
             # destination location in data_coords
             dst_x, dst_y = self.crdmap.to_data((self.x, self.y))
 
-            a1, b1, a2, b2 = 0, 0, self.image.width, self.image.height
+            a1, b1, a2, b2 = 0, 0, self.image.width - 1, self.image.height - 1
 
             # calculate the cutout that we can make and scale to merge
             # onto the final image--by only cutting out what is necessary
