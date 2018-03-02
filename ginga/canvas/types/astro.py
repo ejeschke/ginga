@@ -265,6 +265,9 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
             Param(name='radius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="Radius of object"),
+            Param(name='ctype', type=str, default='wcs',
+                  valid=['pixel', 'wcs'],
+                  description="Type of compass (wcs (N/E), or pixel (X/Y))"),
             Param(name='linewidth', type=int, default=1,
                   min=1, max=20, widget='spinbutton', incr=1,
                   description="Width of outline"),
@@ -292,12 +295,12 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         radius = max(abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y))
         return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
 
-    def __init__(self, x, y, radius, color='skyblue',
+    def __init__(self, x, y, radius, ctype='wcs', color='skyblue',
                  linewidth=1, fontsize=None, font='Sans Serif',
                  alpha=1.0, linestyle='solid', showcap=True, **kwdargs):
         self.kind = 'compass'
         points = np.asarray([(x, y)], dtype=np.float)
-        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+        CanvasObjectBase.__init__(self, ctype=ctype, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
                                   points=points, radius=radius,
@@ -309,10 +312,15 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         # TODO: this attribute will be deprecated--fix!
         viewer = self.viewer
 
-        image = viewer.get_image()
-        x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
-                                                         self.y,
-                                                         self.radius)
+        if self.ctype == 'wcs':
+            image = viewer.get_image()
+            x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
+                                                             self.y,
+                                                             self.radius)
+        elif self.ctype == 'pixel':
+            x, y = self.x, self.y
+            xn, yn, xe, ye = x, y + self.radius, x + self.radius, y
+
         return [(x, y), (xn, yn), (xe, ye)]
 
     def get_edit_points(self, viewer):
@@ -342,7 +350,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
 
         try:
             (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints(viewer)
-        except ValueError:
+        except Exception as e:
             cr.draw_text(self.x, self.y, 'BAD WCS')
             return
 
@@ -354,11 +362,15 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         cr.draw_line(cx1, cy1, cx3, cy3)
         self.draw_arrowhead(cr, cx1, cy1, cx3, cy3)
 
-        # draw "N" & "E"
-        cx, cy = self.get_textpos(cr, 'N', cx1, cy1, cx2, cy2)
-        cr.draw_text(cx, cy, 'N')
-        cx, cy = self.get_textpos(cr, 'E', cx1, cy1, cx3, cy3)
-        cr.draw_text(cx, cy, 'E')
+        # draw "N" & "E" or "X" and "Y"
+        if self.ctype == 'pixel':
+            te, tn = 'X', 'Y'
+        else:
+            te, tn = 'E', 'N'
+        cx, cy = self.get_textpos(cr, tn, cx1, cy1, cx2, cy2)
+        cr.draw_text(cx, cy, tn)
+        cx, cy = self.get_textpos(cr, te, cx1, cy1, cx3, cy3)
+        cr.draw_text(cx, cy, te)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))

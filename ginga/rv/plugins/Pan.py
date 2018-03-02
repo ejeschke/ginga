@@ -1,5 +1,7 @@
+#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
 """
 The ``Pan`` plugin provides a small panning image that gives an overall
 "birds-eye" view of the channel image that last had the focus.  If the
@@ -122,7 +124,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.nb.add_widget(iw)
         #index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,
-                              pancompass=None, panrect=None)
+                              compass_wcs=None, compass_xy=None,
+                              panrect=None)
         channel.extdata._pan_info = paninfo
 
         # Extract RGBMap object from main image and attach it to this
@@ -264,30 +267,42 @@ class Pan(GingaPlugin.GlobalPlugin):
             paninfo.panimage.zoom_fit()
 
         p_canvas = paninfo.panimage.get_private_canvas()
-        # remove old compass
+        # remove old compasses
         try:
-            p_canvas.delete_object_by_tag(paninfo.pancompass)
+            p_canvas.delete_object_by_tag(paninfo.compass_wcs)
         except Exception:
             pass
+        try:
+            p_canvas.delete_object_by_tag(paninfo.compass_xy)
+        except Exception:
+            pass
+
+        width, height = image.get_size()
+        x, y = width / 2.0, height / 2.0
+        # radius we want the arms to be (approx 1/4 or 1/5 the
+        #   largest dimension)
+        radius = float(max(width, height)) / 5.0
+
+        paninfo.compass_xy = p_canvas.add(self.dc.Compass(
+            x, y, radius,
+            color=self.settings.get('xy_compass_color', 'yellow'),
+            fontsize=14, ctype='pixel'))
 
         # create compass
         if image.has_valid_wcs() and hasattr(image, 'calc_compass_radius'):
             try:
-                width, height = image.get_size()
-                x, y = width / 2.0, height / 2.0
-                # radius we want the arms to be (approx 1/4 the largest dimension)
-                radius = float(max(width, height)) / 4.0
-
                 # HACK: force a wcs error here if one is going to happen
                 image.add_offset_xy(x, y, 1.0, 1.0)
 
-                paninfo.pancompass = p_canvas.add(self.dc.Compass(
+                radius = float(max(width, height)) / 3.0
+                paninfo.compass_wcs = p_canvas.add(self.dc.Compass(
                     x, y, radius,
                     color=self.settings.get('compass_color', 'skyblue'),
-                    fontsize=14))
+                    fontsize=14, ctype='wcs'))
 
             except Exception as e:
-                self.logger.warning("Can't calculate compass: %s" % (
+                paninfo.compass_wcs = None
+                self.logger.warning("Can't calculate wcs compass: %s" % (
                     str(e)))
                 try:
                     # log traceback, if possible
