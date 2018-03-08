@@ -191,7 +191,7 @@ class Info(GingaPlugin.GlobalPlugin):
         winfo.follow_new.add_callback('activated', self.set_follow_cb,
                                       channel.fitsimage, info)
         winfo.raise_new.add_callback('activated', self.set_raise_cb,
-                                      channel.fitsimage, info)
+                                     channel.fitsimage, info)
 
         fitsimage = channel.fitsimage
         fitssettings = fitsimage.get_settings()
