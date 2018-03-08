@@ -29,6 +29,7 @@ There are four controls:
 
 """
 import logging
+from collections import deque
 
 from ginga import GingaPlugin
 from ginga.gw import Widgets
@@ -50,6 +51,7 @@ class Log(GingaPlugin.GlobalPlugin):
                        ('Debug', logging.DEBUG))
         self.autoscroll = True
         self.tw = None
+        self._lines = deque([], self.histlimit)
 
     def build_gui(self, container):
         vbox = Widgets.VBox()
@@ -59,6 +61,8 @@ class Log(GingaPlugin.GlobalPlugin):
         tw.set_font(self.msg_font)
         tw.set_limit(self.histlimit)
         self.tw = tw
+        tw.set_text('\n'.join(self._lines))
+        self._lines.clear()
 
         sw = Widgets.ScrollArea()
         sw.set_widget(self.tw)
@@ -114,9 +118,11 @@ class Log(GingaPlugin.GlobalPlugin):
             raise Exception(
                 "Limit exceeds maximum value of %d" % (self.histmax))
         self.histlimit = histlimit
+        self._lines = deque(self._lines, histlimit)
         self.logger.debug("Logging history limit set to %d" % (
             histlimit))
-        self.tw.set_limit(histlimit)
+        if self.tw is not None:
+            self.tw.set_limit(histlimit)
 
     def set_history_cb(self, w, val):
         self.set_history(val)
@@ -134,9 +140,12 @@ class Log(GingaPlugin.GlobalPlugin):
         if self.tw is not None:
             self.tw.append_text(text + '\n',
                                 autoscroll=self.autoscroll)
+        else:
+            self._lines.append(text)
 
     def clear(self):
         self.tw.clear()
+        self._lines.clear()
         return True
 
     def close(self):
