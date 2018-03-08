@@ -2,11 +2,10 @@
 # Please see the file LICENSE.txt for details.
 """
 The ``Info`` plugin provides a pane of commonly useful metadata about the
-associated channel image.  Common information includes some
-FITS header values, the equinox, dimensions of the image, minimum and
-maximum values, and the zoom level.  As the cursor is moved around the
-image, the X, Y, Value, RA, and DEC values are updated to reflect the
-value under the cursor.
+associated channel image.  Common information includes some metadata
+header values, coordinates, dimensions of the image, minimum and
+maximum values, etc.  As the cursor is moved around the image, the X, Y,
+Value, RA, and DEC values are updated to reflect the value under the cursor.
 
 **Plugin Type: Global**
 
@@ -14,7 +13,7 @@ value under the cursor.
 
 **Usage**
 
-At the bottom of the ``Info`` interface are the cut levels controls. Here
+At the bottom of the ``Info`` interface the cut levels controls. Here
 the low and high cut levels are shown and can be adjusted.  Pressing the
 "Auto Levels" button will recalculate cut levels based on the current
 auto cut levels algorithm and parameters defined in the channel
@@ -25,6 +24,13 @@ Below the "Auto Levels" button, the status of the settings for
 channel.  These indicate how new images that are added to the channel
 will be affected by auto cut levels, fitting to the window and panning
 to the center of the image.
+
+The "Follow New" checkbox controls whether the viewer will automatically
+display new images added to the channel.  The "Raise New" checkbox controls
+whether an image viewer window is raised when a new image is added.  These
+two controls can be useful, for example, if an external program is adding
+images to the viewer, and you wish to prevent interruption of your work
+examining a particular image.
 
 As a global plugin, ``Info`` responds to a change of focus to a new channel
 by displaying the metadata from the new channel.
@@ -97,16 +103,19 @@ class Info(GingaPlugin.GlobalPlugin):
         sw2.set_widget(col)
         vbox.add_widget(sw2, stretch=1)
 
-        captions = (('Zoom:', 'label', 'Zoom', 'llabel'),
+        captions = (('Channel:', 'label', 'Channel', 'llabel'),
+                    ('Zoom:', 'label', 'Zoom', 'llabel'),
                     ('Cut Low:', 'label', 'Cut Low Value', 'llabel',
                      'Cut Low', 'entry'),
                     ('Cut High:', 'label', 'Cut High Value', 'llabel',
                      'Cut High', 'entry'),
-                    ('Auto Levels', 'button', 'spacer1', 'spacer',
+                    ('Auto Levels', 'button', 'spacer_1', 'spacer',
                      'Cut Levels', 'button'),
                     ('Cut New:', 'label', 'Cut New', 'combobox'),
-                    ('Zoom New:', 'label', 'Zoom New', 'combobox'),
-                    ('Center New:', 'label', 'Center New', 'combobox'),
+                    ('Zoom New:', 'label', 'Zoom New', 'combobox',
+                     'Follow New', 'checkbutton'),
+                    ('Center New:', 'label', 'Center New', 'combobox',
+                     'Raise New', 'checkbutton'),
                     )
 
         w, b2 = Widgets.build_info(captions)
@@ -139,6 +148,9 @@ class Info(GingaPlugin.GlobalPlugin):
             index += 1
         b.center_new.set_tooltip("Automatically center new images in window")
 
+        b.follow_new.set_tooltip("Automatically switch to new images in channel")
+        b.raise_new.set_tooltip("Automatically raise channel viewer for new images")
+
         row = Widgets.HBox()
         row.set_spacing(0)
         row.set_border_width(0)
@@ -161,6 +173,7 @@ class Info(GingaPlugin.GlobalPlugin):
                            chinfo=channel)
         channel.extdata._info_info = info
 
+        winfo.channel.set_text(chname)
         winfo.cut_low.add_callback('activated', self.cut_levels,
                                    channel.fitsimage, info)
         winfo.cut_high.add_callback('activated', self.cut_levels,
@@ -174,6 +187,10 @@ class Info(GingaPlugin.GlobalPlugin):
         winfo.zoom_new.add_callback('activated', self.set_autozoom_cb,
                                     channel.fitsimage, info)
         winfo.center_new.add_callback('activated', self.set_autocenter_cb,
+                                      channel.fitsimage, info)
+        winfo.follow_new.add_callback('activated', self.set_follow_cb,
+                                      channel.fitsimage, info)
+        winfo.raise_new.add_callback('activated', self.set_raise_cb,
                                       channel.fitsimage, info)
 
         fitsimage = channel.fitsimage
@@ -190,6 +207,12 @@ class Info(GingaPlugin.GlobalPlugin):
             'set', self.autozoom_cb, fitsimage, info)
         fitssettings.get_setting('autocenter').add_callback(
             'set', self.autocenter_cb, fitsimage, info)
+        fitssettings.get_setting('switchnew').add_callback(
+            'set', self.follow_cb, fitsimage, info)
+        fitssettings.get_setting('raisenew').add_callback(
+            'set', self.raise_cb, fitsimage, info)
+
+        self.set_info(info, fitsimage)
 
     def delete_channel(self, viewer, channel):
         if not self.gui_up:
@@ -279,6 +302,16 @@ class Info(GingaPlugin.GlobalPlugin):
         index = self.autocenter_options.index(option)
         info.winfo.center_new.set_index(index)
 
+    def follow_cb(self, setting, option, fitsimage, info):
+        if not self.gui_up:
+            return
+        info.winfo.follow_new.set_state(option)
+
+    def raise_cb(self, setting, option, fitsimage, info):
+        if not self.gui_up:
+            return
+        info.winfo.raise_new.set_state(option)
+
     def set_autocuts_cb(self, w, index, fitsimage, info):
         if not self.gui_up:
             return
@@ -297,6 +330,16 @@ class Info(GingaPlugin.GlobalPlugin):
         option = self.autocenter_options[index]
         fitsimage.enable_autocenter(option)
 
+    def set_follow_cb(self, w, tf, fitsimage, info):
+        if not self.gui_up:
+            return
+        fitsimage.get_settings().set(switchnew=tf)
+
+    def set_raise_cb(self, w, tf, fitsimage, info):
+        if not self.gui_up:
+            return
+        fitsimage.get_settings().set(raisenew=tf)
+
     # LOGIC
 
     def trunc(self, s):
@@ -306,35 +349,12 @@ class Info(GingaPlugin.GlobalPlugin):
             return s
 
     def set_info(self, info, fitsimage):
-        image = fitsimage.get_image()
-        if image is None:
-            return
-        header = image.get_header()
-
-        # Update info panel
-        name = self.trunc(image.get('name', 'Noname'))
-        info.winfo.name.set_text(name)
-        objtext = self.trunc(header.get('OBJECT', 'UNKNOWN'))
-        info.winfo.object.set_text(objtext)
-        equinox = header.get('EQUINOX', '')
-        info.winfo.equinox.set_text(str(equinox))
-
-        # Show min, max values
-        width, height = fitsimage.get_data_size()
-        minval, maxval = image.get_minmax(noinf=False)
-        info.winfo.max.set_text(str(maxval))
-        info.winfo.min.set_text(str(minval))
-
         # Show cut levels
         loval, hival = fitsimage.get_cut_levels()
         #info.winfo.cut_low.set_text('%.4g' % (loval))
         info.winfo.cut_low_value.set_text('%.4g' % (loval))
         #info.winfo.cut_high.set_text('%.4g' % (hival))
         info.winfo.cut_high_value.set_text('%.4g' % (hival))
-
-        # Show dimensions
-        dim_txt = "%dx%d" % (width, height)
-        info.winfo.dimensions.set_text(dim_txt)
 
         # update zoom indicator
         scalefactor = fitsimage.get_scale()
@@ -354,6 +374,31 @@ class Info(GingaPlugin.GlobalPlugin):
             option = choice[option]
         index = self.autocenter_options.index(option)
         info.winfo.center_new.set_index(index)
+        info.winfo.follow_new.set_state(t_['switchnew'])
+        info.winfo.raise_new.set_state(t_['raisenew'])
+
+        image = fitsimage.get_image()
+        if image is None:
+            return
+        header = image.get_header()
+
+        # Update info panel
+        name = self.trunc(image.get('name', 'Noname'))
+        info.winfo.name.set_text(name)
+        objtext = self.trunc(header.get('OBJECT', 'UNKNOWN'))
+        info.winfo.object.set_text(objtext)
+        equinox = header.get('EQUINOX', '')
+        info.winfo.equinox.set_text(str(equinox))
+
+        # Show min, max values
+        width, height = fitsimage.get_data_size()
+        minval, maxval = image.get_minmax(noinf=False)
+        info.winfo.max.set_text(str(maxval))
+        info.winfo.min.set_text(str(minval))
+
+        # Show dimensions
+        dim_txt = "%dx%d" % (width, height)
+        info.winfo.dimensions.set_text(dim_txt)
 
     def field_info(self, viewer, channel, info):
         if '_info_info' not in channel.extdata:
