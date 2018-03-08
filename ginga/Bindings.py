@@ -147,6 +147,7 @@ class ImageViewBindings(object):
             kp_flip_y=[']', '}', 'rotate+]', 'rotate+}'],
             kp_swap_xy=['backslash', '|', 'rotate+backslash', 'rotate+|'],
             kp_rotate_reset=['R', 'rotate+R'],
+            kp_save_profile=['S'],
             kp_rotate_inc90=['.', 'rotate+.'],
             kp_rotate_dec90=[',', 'rotate+,'],
             kp_orient_lh=['o', 'rotate+o'],
@@ -1523,6 +1524,12 @@ class ImageViewBindings(object):
 
     def kp_softlock(self, viewer, event, data_x, data_y):
         self._toggle_lock(viewer, 'softlock')
+        return True
+
+    def kp_save_profile(self, viewer, event, data_x, data_y, msg=True):
+        viewer.checkpoint_profile()
+        if msg:
+            viewer.onscreen_message("Profile saved", delay=0.5)
         return True
 
     #####  MOUSE ACTION CALLBACKS #####

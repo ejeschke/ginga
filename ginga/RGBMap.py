@@ -221,16 +221,29 @@ class RGBMapper(Callback.Callbacks):
 
     def set_sarr(self, sarr, callback=True):
         maxlen = self.maxc + 1
-        assert len(sarr) == maxlen, \
-            RGBMapError("shift map length %d != %d" % (len(sarr), maxlen))
-        self.sarr = sarr.astype(np.uint, copy=False)
+        sarr = np.asarray(sarr, dtype=np.uint)
+        _len = len(sarr)
+        if _len != maxlen:
+            raise RGBMapError("shift map length %d != %d" % (_len, maxlen))
+        self.sarr = sarr
         self.scale_pct = 1.0
-
         if callback:
             self.make_callback('changed')
 
     def get_sarr(self):
         return self.sarr
+
+    def set_carr(self, carr, callback=True):
+        carr = np.asarray(carr)
+        maxlen = self.maxv + 1
+        self.carr = carr.astype(self.nptype)
+        _len = carr.shape[1]
+        if _len != maxlen:
+            raise RGBMapError("color map length %d != %d" % (_len, maxlen))
+        self.recalc(callback=callback)
+
+    def get_carr(self):
+        return self.carr
 
     def recalc(self, callback=True):
         self.arr = np.copy(self.carr)

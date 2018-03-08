@@ -82,19 +82,20 @@ class SettingGroup(object):
     def get_setting(self, key):
         return self.group[key]
 
+    def keys(self):
+        return self.group.keys()
+
     def share_settings(self, other, keylist=None):
         if keylist is None:
             keylist = self.group.keys()
         for key in keylist:
             other.group[key] = self.group[key]
 
-    def copy_settings(self, other, keylist=None):
+    def copy_settings(self, other, keylist=None, callback=True):
         if keylist is None:
             keylist = self.group.keys()
-        d = {}
-        for key in keylist:
-            d[key] = self.get(key)
-        other.setDict(d)
+        d = {key: self.get(key) for key in keylist}
+        other.set_dict(d, callback=callback)
 
     def setdefault(self, key, value):
         if key in self.group:

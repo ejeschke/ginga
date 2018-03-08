@@ -48,7 +48,7 @@ class ImageViewBase(Callback.Callbacks):
     using Numpy array manipulations (even color and intensity mapping)
     so that only a minimal mapping to a pixel buffer is necessary in
     concrete subclasses that connect to an actual rendering surface
-    (e.g., Qt or GTK).
+    (e.g., Qt, GTK, Tk, HTML5).
 
     Parameters
     ----------
@@ -97,30 +97,15 @@ class ImageViewBase(Callback.Callbacks):
         # for color mapping
         self.t_.add_defaults(color_map='gray', intensity_map='ramp',
                              color_algorithm='linear',
-                             color_hashsize=65535)
+                             color_hashsize=65535,
+                             color_array=None, shift_array=None)
         for name in ('color_map', 'intensity_map', 'color_algorithm',
-                     'color_hashsize'):
+                     'color_hashsize', 'color_array', 'shift_array'):
             self.t_.get_setting(name).add_callback('set', self.cmap_changed_cb)
 
         # Initialize RGBMap
-        cmap_name = self.t_.get('color_map', 'gray')
-        try:
-            cm = cmap.get_cmap(cmap_name)
-        except KeyError:
-            cm = cmap.get_cmap('gray')
-        rgbmap.set_cmap(cm)
-        imap_name = self.t_.get('intensity_map', 'ramp')
-        try:
-            im = imap.get_imap(imap_name)
-        except KeyError:
-            im = imap.get_imap('ramp')
-        rgbmap.set_imap(im)
-        hash_size = self.t_.get('color_hashsize', 65535)
-        rgbmap.set_hash_size(hash_size)
-        hash_alg = self.t_.get('color_algorithm', 'linear')
-        rgbmap.set_hash_algorithm(hash_alg)
-
         rgbmap.add_callback('changed', self.rgbmap_cb)
+        self._settings_to_rgbmap(rgbmap, callback=False)
 
         # for scale
         self.t_.add_defaults(scale=(1.0, 1.0))
@@ -192,7 +177,8 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.add_defaults(profile_use_scale=False, profile_use_pan=False,
                              profile_use_cuts=False,
                              profile_use_transform=False,
-                             profile_use_rotation=False)
+                             profile_use_rotation=False,
+                             profile_use_color_map=False)
 
         # ICC profile support
         d = dict(icc_output_profile=None, icc_output_intent='perceptual',
@@ -203,6 +189,17 @@ class ImageViewBase(Callback.Callbacks):
             # Note: transform_cb will redraw enough to pick up
             #       ICC profile change
             self.t_.get_setting(key).add_callback('set', self.transform_cb)
+
+        # viewer profile support
+        self.use_image_profile = False
+        self.profile_keylist = ['flip_x', 'flip_y', 'swap_xy', 'scale',
+                                'pan', 'pan_coord', 'rot_deg', 'cuts',
+                                'color_algorithm', 'color_hashsize',
+                                'color_map', 'intensity_map',
+                                'color_array', 'shift_array']
+        for name in self.t_.keys():
+            self.t_.get_setting(name).add_callback('set',
+                                                   self._update_profile_cb)
 
         # Object that calculates auto cut levels
         name = self.t_.get('autocut_method', 'zscale')
@@ -597,10 +594,8 @@ class ImageViewBase(Callback.Callbacks):
             (see `~ginga.ColorDist`).
 
         """
-        distClass = ColorDist.get_dist(calg_name)
-        hashsize = self.rgbmap.get_hash_size()
-        dist = distClass(hashsize, **kwdargs)
-        self.set_calg(dist)
+        # TEMP: ignore kwdargs
+        self.t_.set(color_algorithm=calg_name)
 
     def get_color_algorithms(self):
         """Get available color distribution algorithm names.
@@ -665,8 +660,61 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.rgbmap.restore_cmap()
 
+    def _rgbmap_to_settings(self, rgbmap, callback=False):
+        """Internal method to update our settings with any changes
+        from our RGBMapper.
+        """
+        # TODO: this could go away if we refactor RGBMapper objects to
+        # share a SettingsGroup object with us
+        cm = rgbmap.get_cmap()
+        color_map = cm.name
+        im = rgbmap.get_imap()
+        intensity_map = im.name
+        color_hashsize = rgbmap.get_hash_size()
+        color_algorithm = rgbmap.get_hash_algorithm()
+        color_array = rgbmap.get_carr()
+        shift_array = rgbmap.get_sarr()
+
+        self.t_.set_dict(dict(color_map=color_map,
+                              intensity_map=intensity_map,
+                              color_algorithm=color_algorithm,
+                              color_hashsize=color_hashsize,
+                              color_array=color_array,
+                              shift_array=shift_array),
+                         # no call back
+                         callback=callback)
+
+    def _settings_to_rgbmap(self, rgbmap, callback=True):
+        """Internal method to update our RGBMapper with any changes
+        from our settings.
+        """
+        # TODO: this could go away if we refactor RGBMapper objects to
+        # share a SettingsGroup object with us
+        cmap_name = self.t_.get('color_map', "gray")
+        cm = cmap.get_cmap(cmap_name)
+        rgbmap.set_cmap(cm, callback=False)
+
+        imap_name = self.t_.get('intensity_map', "ramp")
+        im = imap.get_imap(imap_name)
+        rgbmap.set_imap(im, callback=False)
+
+        color_array = self.t_.get('color_array', None)
+        if color_array is not None:
+            rgbmap.set_carr(color_array, callback=False)
+
+        shift_array = self.t_.get('shift_array', None)
+        if shift_array is not None:
+            rgbmap.set_sarr(shift_array, callback=False)
+
+        hash_size = self.t_.get('color_hashsize', 65535)
+        rgbmap.set_hash_size(hash_size, callback=False)
+
+        hash_alg = self.t_.get('color_algorithm', "linear")
+        rgbmap.set_hash_algorithm(hash_alg, callback=callback)
+
     def rgbmap_cb(self, rgbmap):
         """Handle callback for when RGB map has changed."""
+        self._rgbmap_to_settings(rgbmap)
         self.logger.debug("RGB map has changed.")
         self.redraw(whence=2)
 
@@ -676,21 +724,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.logger.debug("Color settings have changed.")
-
-        # Update our RGBMapper with any changes
-        cmap_name = self.t_.get('color_map', "gray")
-        cm = cmap.get_cmap(cmap_name)
-        self.rgbmap.set_cmap(cm, callback=False)
-
-        imap_name = self.t_.get('intensity_map', "ramp")
-        im = imap.get_imap(imap_name)
-        self.rgbmap.set_imap(im, callback=False)
-
-        hash_size = self.t_.get('color_hashsize', 65535)
-        self.rgbmap.set_hash_size(hash_size, callback=False)
-
-        hash_alg = self.t_.get('color_algorithm', "linear")
-        self.rgbmap.set_hash_algorithm(hash_alg, callback=True)
+        self._settings_to_rgbmap(self.rgbmap)
 
     def get_rgbmap(self):
         """Get the RGB map object used by this instance.
@@ -714,6 +748,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.rgbmap = rgbmap
+        self._rgbmap_to_settings(rgbmap)
         rgbmap.add_callback('changed', self.rgbmap_cb)
         self.redraw(whence=2)
 
@@ -806,7 +841,7 @@ class ImageViewBase(Callback.Callbacks):
                     #self.logger.debug("adding image to canvas %s" % self.canvas)
 
                 # move image to bottom of layers
-                self.canvas.lowerObject(canvas_img)
+                self.canvas.lower_object(canvas_img)
 
             #self.canvas.update_canvas(whence=0)
 
@@ -832,7 +867,7 @@ class ImageViewBase(Callback.Callbacks):
         self.make_callback('image-set', image)
 
     def apply_profile_or_settings(self, image):
-        """Apply an embedded profile in an image to the viewer.
+        """Apply a profile to the viewer.
 
         Parameters
         ----------
@@ -840,67 +875,123 @@ class ImageViewBase(Callback.Callbacks):
             Image object.
 
         This function is used to initialize the viewer when a new image
-        is loaded.  Either the profile settings embedded in the image or
-        the default settings are applied as specified in the preferences.
+        is loaded.  Either the embedded profile settings or the default
+        settings are applied as specified in the channel preferences.
         """
         profile = image.get('profile', None)
-
+        keylist = []
         with self.suppress_redraw:
-            # initialize transform
-            if ((profile is not None) and
-                    self.t_['profile_use_transform'] and 'flip_x' in profile):
-                flip_x, flip_y = profile['flip_x'], profile['flip_y']
-                swap_xy = profile['swap_xy']
-                self.transform(flip_x, flip_y, swap_xy)
-            else:
+            if profile is not None:
+                if self.t_['profile_use_transform'] and 'flip_x' in profile:
+                    keylist.extend(['flip_x', 'flip_y', 'swap_xy'])
+
+                if self.t_['profile_use_scale'] and 'scale' in profile:
+                    keylist.extend(['scale'])
+
+                if self.t_['profile_use_pan'] and 'pan' in profile:
+                    keylist.extend(['pan'])
+
+                if self.t_['profile_use_rotation'] and 'rot_deg' in profile:
+                    keylist.extend(['rot_deg'])
+
+                if self.t_['profile_use_cuts'] and 'cuts' in profile:
+                    keylist.extend(['cuts'])
+
+                if self.t_['profile_use_color_map'] and 'color_map' in profile:
+                    keylist.extend(['color_algorithm', 'color_hashsize',
+                                    'color_map', 'intensity_map',
+                                    'color_array', 'shift_array'])
+
+                self.apply_profile(profile, keylist=keylist)
+
+            # proceed with initialization that is not in the profile
+            # initialize transforms
+            if self.t_['auto_orient'] and 'flip_x' not in keylist:
                 self.logger.debug(
                     "auto orient (%s)" % (self.t_['auto_orient']))
-                if self.t_['auto_orient']:
-                    self.auto_orient()
+                self.auto_orient()
 
             # initialize scale
-            if ((profile is not None) and self.t_['profile_use_scale'] and
-                    'scale_x' in profile):
-                scale_x, scale_y = profile['scale_x'], profile['scale_y']
-                self.logger.debug("restoring scale to (%f,%f)" % (
-                    scale_x, scale_y))
-                self.scale_to(scale_x, scale_y, no_reset=True)
-            else:
+            if self.t_['autozoom'] != 'off' and 'scale' not in keylist:
                 self.logger.debug("auto zoom (%s)" % (self.t_['autozoom']))
-                if self.t_['autozoom'] != 'off':
-                    self.zoom_fit(no_reset=True)
+                self.zoom_fit(no_reset=True)
 
             # initialize pan position
-            if ((profile is not None) and self.t_['profile_use_pan'] and
-                    'pan_x' in profile):
-                pan_x, pan_y = profile['pan_x'], profile['pan_y']
-                self.logger.debug("restoring pan position to (%f,%f)" % (
-                    pan_x, pan_y))
-                self.set_pan(pan_x, pan_y, no_reset=True)
-            else:
-                # NOTE: False a possible value from historical use
+            # NOTE: False a possible value from historical use
+            if (self.t_['autocenter'] not in ('off', False) and
+                'pan' not in keylist):
                 self.logger.debug(
                     "auto center (%s)" % (self.t_['autocenter']))
-                if not self.t_['autocenter'] in ('off', False):
-                    self.center_image(no_reset=True)
-
-            # initialize rotation
-            if ((profile is not None) and
-                    self.t_['profile_use_rotation'] and 'rot_deg' in profile):
-                rot_deg = profile['rot_deg']
-                self.rotate(rot_deg)
+                self.center_image(no_reset=True)
 
             # initialize cuts
-            if ((profile is not None) and
-                    self.t_['profile_use_cuts'] and 'cutlo' in profile):
-                loval, hival = profile['cutlo'], profile['cuthi']
-                self.cut_levels(loval, hival, no_reset=True)
-            else:
+            if self.t_['autocuts'] != 'off' and 'cuts' not in keylist:
                 self.logger.debug("auto cuts (%s)" % (self.t_['autocuts']))
-                if self.t_['autocuts'] != 'off':
-                    self.auto_levels()
+                self.auto_levels()
 
-            self.canvas.update_canvas(whence=0)
+            # save the profile in the image
+            if self.use_image_profile:
+                self.checkpoint_profile()
+
+            self.redraw(whence=0)
+
+    def apply_profile(self, profile, keylist=None):
+        """Apply a profile to the viewer.
+
+        Parameters
+        ----------
+        profile : `~ginga.misc.Settings.SettingGroup`
+
+        This function is used to initialize the viewer to a known state.
+        The keylist, if given, will limit the items to be transferred
+        from the profile to viewer settings, otherwise all items are
+        copied.
+        """
+        with self.suppress_redraw:
+            profile.copy_settings(self.t_, keylist=keylist,
+                                  callback=True)
+            self._settings_to_rgbmap(self.rgbmap, callback=True)
+            self.redraw(whence=0)
+
+    def capture_profile(self, profile):
+        self.t_.copy_settings(profile)
+        self.logger.debug("profile attributes set")
+
+    def checkpoint_profile(self):
+        profile = self.save_profile()
+        self.capture_profile(profile)
+        return profile
+
+    def save_profile(self, **params):
+        """Save the given parameters into profile settings.
+
+        Parameters
+        ----------
+        params : dict
+            Keywords and values to be saved.
+
+        """
+        image = self.get_image()
+        if (image is None):
+            return
+
+        profile = image.get('profile', None)
+        if profile is None:
+            # If image has no profile then create one
+            profile = Settings.SettingGroup()
+            image.set(profile=profile)
+
+        self.logger.debug("saving to image profile: params=%s" % (
+            str(params)))
+        profile.set(**params)
+        return profile
+
+    def _update_profile_cb(self, setting, value):
+        key = setting.name
+        if self.use_image_profile:
+            # ? and key in self.profile_keylist
+            kwargs = {key: value}
+            profile = self.save_profile(**kwargs)
 
     def _image_modified_cb(self, image):
 
@@ -974,48 +1065,6 @@ class ImageViewBase(Callback.Callbacks):
             self.redraw()
         except KeyError:
             pass
-
-    def save_profile(self, **params):
-        """Save the given parameters into profile settings.
-
-        Parameters
-        ----------
-        params : dict
-            Keywords and values to be saved.
-
-        """
-        image = self.get_image()
-        if (image is None):
-            return
-
-        profile = image.get('profile', None)
-        if (profile is None):
-            # If image has no profile then create one
-            profile = Settings.SettingGroup()
-            image.set(profile=profile)
-
-        self.logger.debug("saving to image profile: params=%s" % (
-            str(params)))
-        profile.set(**params)
-
-    ## def apply_profile(self, image, profile, redraw=False):
-
-    ##     self.logger.info("applying existing profile found in image")
-
-    ##     if profile.has_key('scale_x'):
-    ##         scale_x, scale_y = profile['scale_x'], profile['scale_y']
-    ##         self.scale_to(scale_x, scale_y, no_reset=True, redraw=False)
-
-    ##     if profile.has_key('pan_x'):
-    ##         pan_x, pan_y = profile['pan_x'], profile['pan_y']
-    ##         self.set_pan(pan_x, pan_y, no_reset=True, redraw=False)
-
-    ##     if profile.has_key('cutlo'):
-    ##         loval, hival = profile['cutlo'], profile['cuthi']
-    ##         self.cut_levels(loval, hival, no_reset=True, redraw=False)
-
-    ##     if redraw:
-    ##         self.redraw(whence=0)
 
     def copy_to_dst(self, target):
         """Extract our image and call :meth:`set_image` on the target with it.
@@ -2058,10 +2107,6 @@ class ImageViewBase(Callback.Callbacks):
         if (not no_reset) and (self.t_['autozoom'] in ('override', 'once')):
             self.t_.set(autozoom='off')
 
-        if self.t_['profile_use_scale']:
-            # Save scale with this image embedded profile
-            self.save_profile(scale_x=scale_x, scale_y=scale_y)
-
     def scale_cb(self, setting, value):
         """Handle callback related to image scaling."""
         scale_x, scale_y = value
@@ -2450,10 +2495,6 @@ class ImageViewBase(Callback.Callbacks):
         if (not no_reset) and (self.t_['autocenter'] in ('override', 'once')):
             self.t_.set(autocenter='off')
 
-        if self.t_['profile_use_pan']:
-            # Save pan position with this image embedded profile
-            self.save_profile(pan_x=pan_x, pan_y=pan_y)
-
     def pan_cb(self, setting, value):
         """Handle callback related to changes in pan."""
         pan_x, pan_y = value
@@ -2646,10 +2687,6 @@ class ImageViewBase(Callback.Callbacks):
         if (not no_reset) and (self.t_['autocuts'] in ('once', 'override')):
             self.t_.set(autocuts='off')
 
-        if self.t_['profile_use_cuts']:
-            # Save cut levels with this image embedded profile
-            self.save_profile(cutlo=loval, cuthi=hival)
-
     def auto_levels(self, autocuts=None):
         """Apply auto-cut levels on the image view.
 
@@ -2788,13 +2825,10 @@ class ImageViewBase(Callback.Callbacks):
         with self.suppress_redraw:
             self.t_.set(flip_x=flip_x, flip_y=flip_y, swap_xy=swap_xy)
 
-        if self.t_['profile_use_transform']:
-            # Save transform with this image embedded profile
-            self.save_profile(flip_x=flip_x, flip_y=flip_y, swap_xy=swap_xy)
-
     def transform_cb(self, setting, value):
         """Handle callback related to changes in transformations."""
         self.make_callback('transform')
+
         # whence=0 because need to calculate new extents for proper
         # cutout for rotation (TODO: always make extents consider
         #  room for rotation)
@@ -2816,34 +2850,37 @@ class ImageViewBase(Callback.Callbacks):
             ``'pan'``, ``'autocuts'``.
 
         """
+        # TODO: change API to just go with settings names
+        keylist = []
+        if 'transforms' in attrlist:
+            keylist.extend(['flip_x', 'flip_y', 'swap_xy'])
+
+        if 'rotation' in attrlist:
+            keylist.extend(['rot_deg'])
+
+        if 'autocuts' in attrlist:
+            keylist.extend(['autocut_method', 'autocut_params'])
+
+        if 'cutlevels' in attrlist:
+            keylist.extend(['cuts'])
+
+        if 'rgbmap' in attrlist:
+            keylist.extend(['color_algorithm', 'color_hashsize',
+                            'color_map', 'intensity_map',
+                            'color_array', 'shift_array'])
+
+        if 'zoom' in attrlist:
+            keylist.extend(['scale'])
+
+        if 'pan' in attrlist:
+            keylist.extend(['pan'])
+
         with dst_fi.suppress_redraw:
-            if 'transforms' in attrlist:
-                dst_fi.transform(self.t_['flip_x'], self.t_['flip_y'],
-                                 self.t_['swap_xy'])
-
-            if 'rotation' in attrlist:
-                dst_fi.rotate(self.t_['rot_deg'])
-
-            if 'autocuts' in attrlist:
-                dst_fi.t_.set(autocut_method=self.t_['autocut_method'],
-                              autocut_params=self.t_['autocut_params'])
-
-            if 'cutlevels' in attrlist:
-                loval, hival = self.t_['cuts']
-                dst_fi.cut_levels(loval, hival)
-
+            self.t_.copy_settings(dst_fi.get_settings(),
+                                  keylist=keylist, callback=False)
             if 'rgbmap' in attrlist:
-                #dst_fi.set_rgbmap(self.rgbmap)
-                #dst_fi.rgbmap = self.rgbmap
-                self.rgbmap.copy_attributes(dst_fi.rgbmap)
-
-            if 'zoom' in attrlist:
-                dst_fi.zoom_to(self.t_['zoomlevel'])
-
-            if 'pan' in attrlist:
-                pan_x, pan_y = self.get_pan()[:2]
-                pan_coord = self.t_['pan_coord']
-                dst_fi.set_pan(pan_x, pan_y, coord=pan_coord)
+                dst_fi._settings_to_rgbmap(dst_fi.get_rgbmap(),
+                                           callback=False)
 
             dst_fi.redraw(whence=0)
 
@@ -2873,10 +2910,6 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.t_.set(rot_deg=deg)
-
-        if self.t_['profile_use_rotation']:
-            # Save rotation with this image embedded profile
-            self.save_profile(rot_deg=deg)
 
     def rotation_change_cb(self, setting, value):
         """Handle callback related to changes in rotation angle."""

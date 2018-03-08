@@ -802,7 +802,8 @@ class Preferences(GingaPlugin.LocalPlugin):
                      'Save Pan', 'checkbutton'),
                     ('Save Transform', 'checkbutton',
                     'Save Rotation', 'checkbutton'),
-                    ('Save Cuts', 'checkbutton'),
+                    ('Save Cuts', 'checkbutton',
+                     'Save Color Map', 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -824,6 +825,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.save_cuts.set_state(self.t_.get('profile_use_cuts', False))
         self.w.save_cuts.add_callback('activated', self.set_profile_cb)
         self.w.save_cuts.set_tooltip("Remember cut levels with image")
+        # TEMP: until this feature is working
+        self.w.save_color_map.set_enabled(False)
+        self.w.save_color_map.set_state(False)
+            #self.t_.get('profile_use_color_map', False))
+        self.w.save_color_map.add_callback('activated', self.set_profile_cb)
+        self.w.save_color_map.set_tooltip("Remember color map with image")
 
         fr = Widgets.Frame()
         fr.set_widget(w)
@@ -1348,10 +1355,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         save_cuts = (self.w.save_cuts.get_state() != 0)
         save_transform = (self.w.save_transform.get_state() != 0)
         save_rotation = (self.w.save_rotation.get_state() != 0)
+        save_color_map = (self.w.save_color_map.get_state() != 0)
         self.t_.set(profile_use_scale=save_scale, profile_use_pan=save_pan,
                     profile_use_cuts=save_cuts,
                     profile_use_transform=save_transform,
-                    profile_use_rotation=save_rotation)
+                    profile_use_rotation=save_rotation,
+                    profile_use_color_map=save_color_map)
 
     def set_buffer_cb(self, *args):
         num_images = int(self.w.num_images.get_text())
@@ -1493,6 +1502,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.save_transform.set_state(prefs['profile_use_transform'])
         prefs.setdefault('profile_use_rotation', False)
         self.w.save_rotation.set_state(prefs['profile_use_rotation'])
+        prefs.setdefault('profile_use_color_map', False)
+        self.w.save_color_map.set_state(prefs['profile_use_color_map'])
 
     def save_preferences(self):
         self.t_.save()

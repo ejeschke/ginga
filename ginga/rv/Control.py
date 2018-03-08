@@ -1725,6 +1725,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             focus_ind = self.settings.get('show_focus_indicator', False)
         fi.show_focus_indicator(focus_ind)
         fi.enable_auto_orient(True)
+        fi.use_image_profile = True
 
         fi.add_callback('cursor-changed', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
