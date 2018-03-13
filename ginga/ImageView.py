@@ -83,10 +83,13 @@ class ImageViewBase(Callback.Callbacks):
 
         # RGB mapper
         if rgbmap:
-            self.rgbmap = rgbmap
+            # which way should the settings be migrated--
+            # rgbmap to viewer or vice-versa?
+            t_ = rgbmap.get_settings()
+            t_.share_settings(self.t_, keylist=rgbmap.settings_keys)
         else:
-            rgbmap = RGBMap.RGBMapper(self.logger)
-            self.rgbmap = rgbmap
+            rgbmap = RGBMap.RGBMapper(self.logger, settings=self.t_)
+        self.rgbmap = rgbmap
 
         # Renderer
         self.renderer = None
@@ -94,18 +97,8 @@ class ImageViewBase(Callback.Callbacks):
         # for debugging
         self.name = str(self)
 
-        # for color mapping
-        self.t_.add_defaults(color_map='gray', intensity_map='ramp',
-                             color_algorithm='linear',
-                             color_hashsize=65535,
-                             color_array=None, shift_array=None)
-        for name in ('color_map', 'intensity_map', 'color_algorithm',
-                     'color_hashsize', 'color_array', 'shift_array'):
-            self.t_.get_setting(name).add_callback('set', self.cmap_changed_cb)
-
         # Initialize RGBMap
         rgbmap.add_callback('changed', self.rgbmap_cb)
-        self._settings_to_rgbmap(rgbmap, callback=False)
 
         # for scale
         self.t_.add_defaults(scale=(1.0, 1.0))
@@ -660,71 +653,10 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.rgbmap.restore_cmap()
 
-    def _rgbmap_to_settings(self, rgbmap, callback=False):
-        """Internal method to update our settings with any changes
-        from our RGBMapper.
-        """
-        # TODO: this could go away if we refactor RGBMapper objects to
-        # share a SettingsGroup object with us
-        cm = rgbmap.get_cmap()
-        color_map = cm.name
-        im = rgbmap.get_imap()
-        intensity_map = im.name
-        color_hashsize = rgbmap.get_hash_size()
-        color_algorithm = rgbmap.get_hash_algorithm()
-        color_array = rgbmap.get_carr()
-        shift_array = rgbmap.get_sarr()
-
-        self.t_.set_dict(dict(color_map=color_map,
-                              intensity_map=intensity_map,
-                              color_algorithm=color_algorithm,
-                              color_hashsize=color_hashsize,
-                              color_array=color_array,
-                              shift_array=shift_array),
-                         # no call back
-                         callback=callback)
-
-    def _settings_to_rgbmap(self, rgbmap, callback=True):
-        """Internal method to update our RGBMapper with any changes
-        from our settings.
-        """
-        # TODO: this could go away if we refactor RGBMapper objects to
-        # share a SettingsGroup object with us
-        cmap_name = self.t_.get('color_map', "gray")
-        cm = cmap.get_cmap(cmap_name)
-        rgbmap.set_cmap(cm, callback=False)
-
-        imap_name = self.t_.get('intensity_map', "ramp")
-        im = imap.get_imap(imap_name)
-        rgbmap.set_imap(im, callback=False)
-
-        color_array = self.t_.get('color_array', None)
-        if color_array is not None:
-            rgbmap.set_carr(color_array, callback=False)
-
-        shift_array = self.t_.get('shift_array', None)
-        if shift_array is not None:
-            rgbmap.set_sarr(shift_array, callback=False)
-
-        hash_size = self.t_.get('color_hashsize', 65535)
-        rgbmap.set_hash_size(hash_size, callback=False)
-
-        hash_alg = self.t_.get('color_algorithm', "linear")
-        rgbmap.set_hash_algorithm(hash_alg, callback=callback)
-
     def rgbmap_cb(self, rgbmap):
         """Handle callback for when RGB map has changed."""
-        self._rgbmap_to_settings(rgbmap)
         self.logger.debug("RGB map has changed.")
         self.redraw(whence=2)
-
-    def cmap_changed_cb(self, setting, value):
-        """Handle callback that is invoked when the color settings
-        have changed in some way.
-
-        """
-        self.logger.debug("Color settings have changed.")
-        self._settings_to_rgbmap(self.rgbmap)
 
     def get_rgbmap(self):
         """Get the RGB map object used by this instance.
@@ -748,7 +680,8 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.rgbmap = rgbmap
-        self._rgbmap_to_settings(rgbmap)
+        t_ = rgbmap.get_settings()
+        t_.share_settings(self.t_, keylist=rgbmap.settings_keys)
         rgbmap.add_callback('changed', self.rgbmap_cb)
         self.redraw(whence=2)
 
@@ -950,7 +883,6 @@ class ImageViewBase(Callback.Callbacks):
         with self.suppress_redraw:
             profile.copy_settings(self.t_, keylist=keylist,
                                   callback=True)
-            self._settings_to_rgbmap(self.rgbmap, callback=True)
             self.redraw(whence=0)
 
     def capture_profile(self, profile):
@@ -2244,8 +2176,8 @@ class ImageViewBase(Callback.Callbacks):
                 scalefactor = 1.0
             scale_x = scale_y = scalefactor
 
-        ## print("scale_x=%f scale_y=%f zoom=%f" % (
-        ##     scale_x, scale_y, zoomlevel))
+        ## self.logger.debug("scale_x=%f scale_y=%f zoom=%f" % (
+        ##                     scale_x, scale_y, zoomlevel))
         self._scale_to(scale_x, scale_y, no_reset=no_reset)
 
     def zoom_in(self):
@@ -2604,9 +2536,6 @@ class ImageViewBase(Callback.Callbacks):
                 return
 
         self.panset_xy(data_x, data_y, no_reset=no_reset)
-        # See Footnote [1]
-        ## if redraw:
-        ##     self.redraw(whence=0)
 
         if self.t_['autocenter'] == 'once':
             self.t_.set(autocenter='off')
@@ -2835,7 +2764,7 @@ class ImageViewBase(Callback.Callbacks):
         whence = 0
         self.redraw(whence=whence)
 
-    def copy_attributes(self, dst_fi, attrlist):
+    def copy_attributes(self, dst_fi, attrlist, share=False):
         """Copy interesting attributes of our configuration to another
         image view.
 
@@ -2849,8 +2778,11 @@ class ImageViewBase(Callback.Callbacks):
             ``'rotation'``, ``'cutlevels'``, ``'rgbmap'``, ``'zoom'``,
             ``'pan'``, ``'autocuts'``.
 
+        share : bool
+            If True, the designated settings will be shared, otherwise the
+            values are simply copied.
         """
-        # TODO: change API to just go with settings names
+        # TODO: change API to just go with settings names?
         keylist = []
         if 'transforms' in attrlist:
             keylist.extend(['flip_x', 'flip_y', 'swap_xy'])
@@ -2876,12 +2808,12 @@ class ImageViewBase(Callback.Callbacks):
             keylist.extend(['pan'])
 
         with dst_fi.suppress_redraw:
-            self.t_.copy_settings(dst_fi.get_settings(),
-                                  keylist=keylist, callback=False)
-            if 'rgbmap' in attrlist:
-                dst_fi._settings_to_rgbmap(dst_fi.get_rgbmap(),
-                                           callback=False)
-
+            if share:
+                self.t_.share_settings(dst_fi.get_settings(),
+                                       keylist=keylist)
+            else:
+                self.t_.copy_settings(dst_fi.get_settings(),
+                                      keylist=keylist)
             dst_fi.redraw(whence=0)
 
     def get_rotation(self):

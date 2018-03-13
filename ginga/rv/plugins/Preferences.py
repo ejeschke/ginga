@@ -292,6 +292,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.imap_names = imap.get_names()
         self.zoomalg_names = ('step', 'rate')
 
+        self.t_ = self.fitsimage.get_settings()
         self.autocuts_cache = {}
         self.gui_up = False
 
@@ -303,13 +304,21 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.pancoord_options = ('data', 'wcs')
         self.sort_options = ('loadtime', 'alpha')
 
-        self.t_ = self.fitsimage.get_settings()
-        self.t_.get_setting('autocuts').add_callback(
-            'set', self.autocuts_changed_ext_cb)
+        for key in ['color_map','intensity_map',
+                    'color_algorithm', 'color_hashsize']:
+            self.t_.get_setting(key).add_callback(
+                'set', self.rgbmap_changed_ext_cb)
+
         self.t_.get_setting('autozoom').add_callback(
             'set', self.autozoom_changed_ext_cb)
         self.t_.get_setting('autocenter').add_callback(
             'set', self.autocenter_changed_ext_cb)
+        self.t_.get_setting('autocuts').add_callback(
+            'set', self.autocuts_changed_ext_cb)
+        for key in ['switchnew', 'raisenew', 'genthumb']:
+            self.t_.get_setting(key).add_callback(
+                'set', self.set_chprefs_ext_cb)
+
         for key in ['pan']:
             self.t_.get_setting(key).add_callback(
                 'set', self.pan_changed_ext_cb)
@@ -330,12 +339,8 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.t_.get_setting(name).add_callback(
                 'set', self.set_transform_ext_cb)
 
-        ## for name in ('autocut_method', 'autocut_params'):
-        ##     self.t_.get_setting(name).add_callback('set', self.set_autocuts_ext_cb)
-
-        ## for key in ['color_algorithm', 'color_hashsize', 'color_map',
-        ##             'intensity_map']:
-        ##     self.t_.get_setting(key).add_callback('set', self.cmap_changed_ext_cb)
+        for name in ('autocut_method', 'autocut_params'):
+            self.t_.get_setting(name).add_callback('set', self.set_autocut_method_ext_cb)
 
         self.t_.setdefault('wcs_coords', 'icrs')
         self.t_.setdefault('wcs_display', 'sexagesimal')
@@ -825,10 +830,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.save_cuts.set_state(self.t_.get('profile_use_cuts', False))
         self.w.save_cuts.add_callback('activated', self.set_profile_cb)
         self.w.save_cuts.set_tooltip("Remember cut levels with image")
-        # TEMP: until this feature is working
-        self.w.save_color_map.set_enabled(False)
-        self.w.save_color_map.set_state(False)
-            #self.t_.get('profile_use_color_map', False))
+        self.w.save_color_map.set_state(
+            self.t_.get('profile_use_color_map', False))
         self.w.save_color_map.add_callback('activated', self.set_profile_cb)
         self.w.save_color_map.set_tooltip("Remember color map with image")
 
@@ -944,60 +947,24 @@ class Preferences(GingaPlugin.LocalPlugin):
         """This callback is invoked when the user selects a new color
         map from the preferences pane."""
         name = cmap.get_names()[index]
-        self.set_cmap_byname(name)
         self.t_.set(color_map=name)
-
-    def set_cmap_byname(self, name):
-        # Get colormap
-        try:
-            cm = cmap.get_cmap(name)
-        except KeyError:
-            raise ValueError("No such color map name: '%s'" % (name))
-
-        rgbmap = self.fitsimage.get_rgbmap()
-        rgbmap.set_cmap(cm)
 
     def set_imap_cb(self, w, index):
         """This callback is invoked when the user selects a new intensity
         map from the preferences pane."""
         name = imap.get_names()[index]
-        self.set_imap_byname(name)
         self.t_.set(intensity_map=name)
-
-    def set_imap_byname(self, name):
-        # Get intensity map
-        try:
-            im = imap.get_imap(name)
-        except KeyError:
-            raise ValueError("No such intensity map name: '%s'" % (name))
-
-        rgbmap = self.fitsimage.get_rgbmap()
-        rgbmap.set_imap(im)
 
     def set_calg_cb(self, w, index):
         """This callback is invoked when the user selects a new color
         hashing algorithm from the preferences pane."""
         #index = w.get_index()
         name = self.calg_names[index]
-        self.set_calg_byname(name)
+        self.t_.set(color_algorithm=name)
 
     def set_tablesize_cb(self, w):
         value = int(w.get_text())
-        rgbmap = self.fitsimage.get_rgbmap()
-        rgbmap.set_hash_size(value)
         self.t_.set(color_hashsize=value)
-
-    def set_calg_byname(self, name):
-        # Get color mapping algorithm
-        rgbmap = self.fitsimage.get_rgbmap()
-        try:
-            rgbmap.set_hash_algorithm(name)
-        except KeyError:
-            raise ValueError("No such color algorithm name: '%s'" % (name))
-
-        # Doesn't this force a redraw?  Following redraw should be unecessary.
-        self.t_.set(color_algorithm=name)
-        self.fitsimage.redraw(whence=2)
 
     def set_default_cmaps(self):
         cmap_name = "gray"
@@ -1006,22 +973,15 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.cmap_choice.set_index(index)
         index = self.imap_names.index(imap_name)
         self.w.imap_choice.set_index(index)
-        self.set_cmap_byname(cmap_name)
-        self.t_.set(color_map=cmap_name)
-        self.set_imap_byname(imap_name)
-        self.t_.set(intensity_map=imap_name)
+        self.t_.set(color_map=cmap_name, intensity_map=imap_name)
 
     def set_default_distmaps(self):
         name = 'linear'
         index = self.calg_names.index(name)
         self.w.calg_choice.set_index(index)
-        self.set_calg_byname(name)
-        self.t_.set(color_algorithm=name)
         hashsize = 65535
-        self.t_.set(color_hashsize=hashsize)
         ## self.w.table_size.set_text(str(hashsize))
-        rgbmap = self.fitsimage.get_rgbmap()
-        rgbmap.set_hash_size(hashsize)
+        self.t_.set(color_algorithm=name, color_hashsize=hashsize)
 
     def set_zoomrate_cb(self, w, rate):
         self.t_.set(zoom_rate=rate)
@@ -1152,23 +1112,22 @@ class Preferences(GingaPlugin.LocalPlugin):
         # Add this set of widgets to the pane
         self.w.acvbox.add_widget(w, stretch=1)
 
-    def set_autocuts_ext_cb(self, setting, value):
+    def set_autocut_method_ext_cb(self, setting, value):
         if not self.gui_up:
             return
 
-        if setting.name == 'autocut_method':
-            # NOTE: use gui_do?
-            self.config_autocut_params(value)
+        autocut_method = self.t_['autocut_method']
+        # NOTE: use gui_do?
+        self.config_autocut_params(autocut_method)
 
-        elif setting.name == 'autocut_params':
-            # NOTE: use gui_do?
-            # TODO: set the params from this tuple
-            #params = dict(value)
-            #self.ac_params.params.update(params)
-            self.ac_params.params_to_widgets()
+        params = self.t_['autocut_params']
+        # NOTE: use gui_do?
+        # TODO: set the params from this tuple
+        params_d = dict(params)
+        #self.ac_params.params.update(params_d)
+        #self.ac_params.params_to_widgets()
 
     def set_autocut_method_cb(self, w, idx):
-        #idx = self.w.auto_method.get_index()
         method = self.autocut_methods[idx]
 
         self.config_autocut_params(method)
@@ -1211,6 +1170,31 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.flip_x.set_state(flip_x)
         self.w.flip_y.set_state(flip_y)
         self.w.swap_xy.set_state(swap_xy)
+
+    def rgbmap_changed_ext_cb(self, setting, value):
+        if not self.gui_up:
+            return
+
+        calg_name = self.t_['color_algorithm']
+        try:
+            idx = self.calg_names.index(calg_name)
+        except IndexError:
+            idx = 0
+        self.w.algorithm.set_index(idx)
+
+        cmap_name = self.t_['color_map']
+        try:
+            idx = self.cmap_names.index(cmap_name)
+        except IndexError:
+            idx = 0
+        self.w.colormap.set_index(idx)
+
+        imap_name = self.t_['intensity_map']
+        try:
+            idx = self.imap_names.index(imap_name)
+        except IndexError:
+            idx = 0
+        self.w.intensity.set_index(idx)
 
     def set_buflen_ext_cb(self, setting, value):
         num_images = self.t_['numImages']
@@ -1348,6 +1332,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         genthumb = (self.w.create_thumbnail.get_state() != 0)
         self.t_.set(switchnew=switchnew, raisenew=raisenew,
                     genthumb=genthumb)
+
+    def set_chprefs_ext_cb(self, *args):
+        if self.gui_up:
+            self.w.follow_new.set_state(self.t_['switchnew'])
+            self.w.raise_new.set_state(self.t_['raisenew'])
+            self.w.create_thumbnail.set_state(self.t_['genthumb'])
 
     def set_profile_cb(self, *args):
         save_scale = (self.w.save_scale.get_state() != 0)

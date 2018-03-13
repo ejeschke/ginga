@@ -85,11 +85,16 @@ class SettingGroup(object):
     def keys(self):
         return self.group.keys()
 
-    def share_settings(self, other, keylist=None):
+    def share_settings(self, other, keylist=None, callback=True):
         if keylist is None:
             keylist = self.group.keys()
         for key in keylist:
             other.group[key] = self.group[key]
+        if callback:
+            # make callbacks only after all items are set in the group
+            # TODO: only make callbacks for values that changed?
+            for key in keylist:
+                other.group[key].make_callback('set', other.group[key].value)
 
     def copy_settings(self, other, keylist=None, callback=True):
         if keylist is None:

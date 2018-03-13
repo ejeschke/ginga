@@ -933,7 +933,7 @@ class ImageViewBindings(object):
                 if idx < 0:
                     idx = len(cmapnames) - 1
             cmapname = cmapnames[idx]
-            rgbmap.set_cmap(cmap.get_cmap(cmapname))
+            viewer.set_color_map(cmapname)
             if msg:
                 viewer.onscreen_message("Color map: %s" % (cmapname),
                                         delay=1.0)
@@ -944,7 +944,7 @@ class ImageViewBindings(object):
             rgbmap = viewer.get_rgbmap()
             # default
             cmapname = 'gray'
-            rgbmap.set_cmap(cmap.get_cmap(cmapname))
+            viewer.set_color_map(cmapname)
             if msg:
                 viewer.onscreen_message("Color map: %s" % (cmapname),
                                         delay=1.0)
@@ -973,7 +973,7 @@ class ImageViewBindings(object):
                 if idx < 0:
                     idx = len(imapnames) - 1
             imapname = imapnames[idx]
-            rgbmap.set_imap(imap.get_imap(imapname))
+            viewer.set_intensity_map(imapname)
             if msg:
                 viewer.onscreen_message("Intensity map: %s" % (imapname),
                                         delay=1.0)
@@ -984,7 +984,7 @@ class ImageViewBindings(object):
             rgbmap = viewer.get_rgbmap()
             # default
             imapname = 'ramp'
-            rgbmap.set_imap(imap.get_imap(imapname))
+            viewer.set_intensity_map(imapname)
             if msg:
                 viewer.onscreen_message("Intensity map: %s" % (imapname),
                                         delay=1.0)
