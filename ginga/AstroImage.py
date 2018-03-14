@@ -135,7 +135,7 @@ class AstroImage(BaseImage):
 
             self.io.fromHDU(fobj[0], self._primary_hdr)
 
-        self.setup_data(hdu.data)
+        self.setup_data(hdu.data, naxispath=naxispath)
 
         # Try to make a wcs object on the header
         if hasattr(self, 'wcs') and self.wcs is not None:
