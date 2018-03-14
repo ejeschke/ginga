@@ -89,12 +89,23 @@ class SettingGroup(object):
         if keylist is None:
             keylist = self.group.keys()
         for key in keylist:
-            other.group[key] = self.group[key]
+            oset, mset = other.group[key], self.group[key]
+            other.group[key] = mset
+            oset.merge_callbacks_to(mset)
         if callback:
             # make callbacks only after all items are set in the group
             # TODO: only make callbacks for values that changed?
             for key in keylist:
                 other.group[key].make_callback('set', other.group[key].value)
+
+    def unshare_settings(self, keylist=None, callback=True):
+        kwargs = self.get_dict(keylist=keylist)
+        self.add_settings(**kwargs)
+        if callback:
+            # make callbacks only after all items are set in the group
+            # TODO: only make callbacks for values that changed?
+            for key in keylist:
+                self.group[key].make_callback('set', self.group[key].value)
 
     def copy_settings(self, other, keylist=None, callback=True):
         if keylist is None:
@@ -124,9 +135,11 @@ class SettingGroup(object):
         if len(args) == 2:
             return self.setdefault(key, args[1])
 
-    def get_dict(self):
+    def get_dict(self, keylist=None):
+        if keylist is None:
+            keylist = self.group.keys()
         return dict([[name, self.group[name].value]
-                     for name in self.group.keys()])
+                     for name in keylist])
 
     def set_dict(self, d, callback=True):
         for key, value in d.items():
@@ -206,15 +219,23 @@ class SettingGroup(object):
             pass
         return d
 
-    def save(self):
-        d = self.get_dict()
+    def save(self, keylist=None, output=None):
+        d = self.get_dict(keylist=keylist)
         # sanitize data -- hard to parse NaN or Inf
         self._check(d)
         try:
             # sort keys for easy reading/editing
             keys = list(d.keys())
             keys.sort()
-            with open(self.preffile, 'w') as out_f:
+
+            if output is None:
+                output = self.preffile
+            if isinstance(output, str):
+                with open(output, 'wb') as out_f:
+                    for key in keys:
+                        out_f.write("%s = %s\n" % (key, repr(d[key])))
+            else:
+                out_f = output
                 for key in keys:
                     out_f.write("%s = %s\n" % (key, repr(d[key])))
 

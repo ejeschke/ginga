@@ -158,6 +158,8 @@ plugins = [
           menu="Header [G]", hidden=False, category='Utils', ptype='global'),
     Bunch(module='Zoom', tab='Zoom', workspace='left', start=False,
           menu="Zoom [G]", category='Utils', ptype='global'),
+    Bunch(module='Profiles', tab='Profiles', workspace='right', start=False,
+          menu="Profiles [G]", category='Utils', ptype='global'),
 ]
 
 

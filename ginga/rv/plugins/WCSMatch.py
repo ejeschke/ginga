@@ -1,5 +1,7 @@
+#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
 """
 ``WCSMatch`` is a global plugin for the Ginga image viewer that allows
 you to roughly align images with different scales and orientations

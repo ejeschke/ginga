@@ -91,6 +91,12 @@ class Callbacks(object):
             raise CallbackError("No callback category of '%s'" % (
                 name))
 
+    def merge_callbacks_to(self, other):
+        for name, cb_tups in self.cb.items():
+            for tup in cb_tups:
+                if tup not in other.cb[name]:
+                    other.cb[name].append(tup)
+
     # TODO: to be deprecated ?
     def set_callback(self, name, fn, *args, **kwdargs):
         if not self.has_callback(name):
