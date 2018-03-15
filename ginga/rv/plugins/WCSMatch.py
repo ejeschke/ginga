@@ -172,11 +172,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         if not self.gui_up or self.ref_image is None:
             return
 
-        # if this is not a zoom event from the focus window then
-        # don't do anything
-        ## focus_chviewer = self.fv.getfocus_viewer()
-        ## if chviewer != focus_chviewer:
-        ##     return
         if self._cur_opn_viewer is not None:
             return
 
@@ -198,7 +193,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
                          "%f,%f" % (chinfo.name, ort.rscale_x, ort.rscale_y))
 
         scale_x, scale_y = chviewer.get_scale_xy()
-        #scale_x, scale_y = value
 
         chg_x, chg_y = scale_x / ort.rscale_x, scale_y / ort.rscale_y
         self.logger.info("scale changed for channel '%s' by %f,%f" % (
@@ -229,11 +223,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         if not self.gui_up or self.ref_image is None:
             return
 
-        # if this is not a zoom event from the focus window then
-        # don't do anything
-        ## focus_chviewer = self.fv.getfocus_viewer()
-        ## if chviewer != focus_chviewer:
-        ##     return
         if self._cur_opn_viewer is not None:
             return
 
@@ -286,11 +275,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         if not self.gui_up or self.ref_image is None:
             return
 
-        # if this is not a zoom event from the focus window then
-        # don't do anything
-        ## focus_chviewer = self.fv.getfocus_viewer()
-        ## if chviewer != focus_chviewer:
-        ##     return
         if self._cur_opn_viewer is not None:
             return
 
@@ -331,11 +315,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         if not self.gui_up or self.ref_image is None:
             return
 
-        # if this is not a zoom event from the focus window then
-        # don't do anything
-        ## focus_chviewer = self.fv.getfocus_chviewer()
-        ## if chviewer != focus_chviewer:
-        ##     return
         if self._cur_opn_viewer is not None:
             return
 
@@ -366,30 +345,6 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
             if image is None:
                 continue
             chinfo2.fitsimage.transform(flip_x, flip_y, swap_xy)
-
-    #def redo(self, channel, image):
-    #    info = channel.extdata._wcsmatch_info
-    #    self.logger.info("Channel '%s' setting image" % (info.chinfo.name))
-    #    if info.chinfo == self.ref_channel:
-    #        self.ref_image = image
-    #    return True
-
-    def redo(self):
-        if self.ref_image is None:
-            # no reference image
-            return
-
-        chinfo = self.fv.get_channel_info()
-        viewer = chinfo.fitsimage
-
-        image = viewer.get_image()
-        ## if image == self.ref_image:
-        ##     # current image is same as reference image
-        ##     return
-
-        info = wcs.get_relative_orientation(image, self.ref_image)
-        self.logger.info("rscale_x=%f rscale_y=%f rrot_deg=%f" % (
-            info.rscale_x, info.rscale_y, info.rrot_deg))
 
     def __str__(self):
         return 'wcsmatch'
