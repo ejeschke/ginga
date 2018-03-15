@@ -7,6 +7,7 @@
 import sys
 import math
 import traceback
+from collections import OrderedDict
 
 import numpy
 
@@ -143,6 +144,28 @@ class AstroImage(BaseImage):
         # Try to make a wcs object on the header
         if hasattr(self, 'wcs') and self.wcs is not None:
             self.wcs.load_header(hdu.header, fobj=fobj)
+
+    def load_nddata(self, ndd, naxispath=None):
+        """Load from an astropy.nddata.NDData object.
+        """
+        self.clear_metadata()
+
+        # Make a header based on any NDData metadata
+        ahdr = self.get_header()
+        ahdr.update(ndd.meta)
+
+        self.setup_data(ndd.data, naxispath=naxispath)
+
+        if ndd.wcs is None:
+            # no wcs in ndd obj--let's try to make one from the header
+            self.wcs = wcsmod.WCS(logger=self.logger)
+            self.wcs.load_header(adhr)
+        else:
+            # already have a valid wcs in the ndd object
+            # we assume it needs an astropy compatible wcs
+            wcsinfo = wcsmod.get_wcs_class('astropy')
+            self.wcs = wcsinfo.wrapper_class(logger=self.logger)
+            self.wcs.load_nddata(ndd)
 
     def load_file(self, filespec, **kwargs):
 
@@ -304,6 +327,48 @@ class AstroImage(BaseImage):
         other = AstroImage(data, logger=self.logger)
         self.transfer(other, astype=astype)
         return other
+
+    def as_nddata(self, nddata_class=None):
+        "Return a version of ourself as an astropy.nddata.NDData object"
+        if nddata_class is None:
+            from astropy.nddata import NDData
+            nddata_class = NDData
+
+        # transfer header, preserving ordering
+        ahdr = self.get_header()
+        header = OrderedDict(ahdr.items())
+        data = self.get_mddata()
+
+        wcs = None
+        if hasattr(self, 'wcs') and self.wcs is not None:
+            # for now, assume self.wcs wraps an astropy wcs object
+            wcs = self.wcs.wcs
+
+        ndd = nddata_class(data, wcs=wcs, meta=header)
+        return ndd
+
+    def as_hdu(self):
+        "Return a version of ourself as an astropy.io.fits.PrimaryHDU object"
+        from astropy.io import fits
+
+        # transfer header, preserving ordering
+        ahdr = self.get_header()
+        header = fits.Header(ahdr.items())
+        data = self.get_mddata()
+
+        hdu = fits.PrimaryHDU(data=data, header=header)
+        return hdu
+
+    def astype(self, type_name):
+        """Convert AstroImage object to some other kind of object.
+        """
+        if type_name == 'nddata':
+            return self.as_nddata()
+
+        if type_name == 'hdu':
+            return self.as_hdu()
+
+        raise ValueError("Unrecognized conversion type '%s'" % (type_name))
 
     def save_as_file(self, filepath, **kwdargs):
         data = self._get_data()

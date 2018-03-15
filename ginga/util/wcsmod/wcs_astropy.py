@@ -63,12 +63,34 @@ class AstropyWCS(common.BaseWCS):
         try:
             # reconstruct a pyfits header, because otherwise we take an
             # incredible performance hit in astropy.wcs
-            self.logger.debug("Reconstructing PyFITS header")
+            self.logger.debug("Reconstructing astropy.io.fits header")
             self.header = pyfits.Header(header.items())
 
             self.logger.debug("Trying to make astropy-- wcs object")
             self.wcs = pywcs.WCS(self.header, fobj=fobj, relax=True)
             self.logger.debug("made astropy wcs object")
+
+            self.coordsys = common.get_coord_system_name(self.header)
+            self.logger.debug("Coordinate system is: %s" % (self.coordsys))
+
+        except Exception as e:
+            self.logger.error("Error making WCS object: %s" % (str(e)))
+            self.wcs = None
+
+    def load_nddata(self, ndd):
+        try:
+            # reconstruct a pyfits header, because otherwise we take an
+            # incredible performance hit in astropy.wcs
+            self.logger.debug("Reconstructing astropy.io.fits header")
+            self.header = pyfits.Header(ndd.meta)
+
+            if ndd.wcs is None:
+                self.logger.debug("Trying to make astropy-- wcs object")
+                self.wcs = pywcs.WCS(self.header, relax=True)
+                self.logger.debug("made astropy wcs object")
+            else:
+                self.logger.debug("reused nddata wcs object")
+                self.wcs = ndd.wcs
 
             self.coordsys = common.get_coord_system_name(self.header)
             self.logger.debug("Coordinate system is: %s" % (self.coordsys))
