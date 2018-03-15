@@ -159,7 +159,7 @@ class AstroImage(BaseImage):
         if ndd.wcs is None:
             # no wcs in ndd obj--let's try to make one from the header
             self.wcs = wcsmod.WCS(logger=self.logger)
-            self.wcs.load_header(adhr)
+            self.wcs.load_header(ahdr)
         else:
             # already have a valid wcs in the ndd object
             # we assume it needs an astropy compatible wcs
