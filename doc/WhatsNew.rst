@@ -7,7 +7,10 @@ Ver 2.7.1.dev
 - Fix for image rendering bug which shows last row and column of image
   being drawn twice
 - Added option to "Compass" draw type to be in pixels (X/Y) or wcs (N/E)
-- Changed Pan plugin to attempt to draw both kinds of compasses    
+- Changed Pan plugin to attempt to draw both kinds of compasses
+- Log plugin enhanced to show lines logged before it was opened
+- Info plugin adds convenience controls for "Follow New" and "Raise New"
+- WCSMatch plugin enhanced to offer fine grained control over sync    
 
 Ver 2.7.0 (2018-02-02)
 ======================
