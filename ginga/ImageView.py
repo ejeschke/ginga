@@ -1453,7 +1453,8 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.set(limits=limits)
 
     def _set_limits_cb(self, setting, limits):
-        # TODO: deprecate this callback ?
+        # TODO: deprecate this chained callback and have users just use
+        # 'set' callback for "limits" setting ?
         self.make_callback('limits-set', limits)
 
     def get_rgb_object(self, whence=0):

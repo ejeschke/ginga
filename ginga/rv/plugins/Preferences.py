@@ -757,7 +757,8 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         captions = (('Num Images:', 'label', 'Num Images', 'entryset'),
                     ('Sort Order:', 'label', 'Sort Order', 'combobox'),
-                    ('Preload Images', 'checkbutton'),
+                    ('Use scrollbars', 'checkbutton',
+                     'Preload Images', 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -778,6 +779,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_sort_cb)
         b.sort_order.set_tooltip("Sort order for images in channel")
+
+        scrollbars = self.t_.get('scrollbars', 'off')
+        self.w.use_scrollbars.set_state(scrollbars != 'off')
+        self.w.use_scrollbars.add_callback('activated', self.set_scrollbars_cb)
+        b.use_scrollbars.set_tooltip("Use scrollbars around viewer")
 
         preload_images = self.t_.get('preload_images', False)
         self.w.preload_images.set_state(preload_images)
@@ -1221,6 +1227,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         """This callback is invoked when the user checks the preload images
         box in the preferences pane."""
         self.t_.set(preload_images=tf)
+
+    def set_scrollbars_cb(self, w, tf):
+        """This callback is invoked when the user checks the 'Use Scrollbars'
+        box in the preferences pane."""
+        scrollbars = 'on' if tf else 'off'
+        self.t_.set(scrollbars=scrollbars)
 
     def set_icc_profile_cb(self, setting, idx):
         idx = self.w.output_icc_profile.get_index()

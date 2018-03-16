@@ -1738,15 +1738,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # build image viewer & widget
         fi = self.build_viewpane(settings, size=size)
 
-        # add scrollbar interface around this viewer
+        # add scrollbar support
+        # general settings as backup value if not overridden in channel
         scr_onoff = self.settings.get('scrollbars', 'off')
-        scr = settings.get('scrollbars', scr_onoff)
-        if scr != 'off':
-            si = Viewers.ScrolledView(fi)
-            si.scroll_bars(horizontal=scr, vertical=scr)
-            iw = Widgets.wrap(si)
-        else:
-            iw = Viewers.GingaViewerWidget(viewer=fi)
+        scr_val = settings.setdefault('scrollbars', scr_onoff)
+        scr_set = settings.get_setting('scrollbars')
+        si = Viewers.ScrolledView(fi)
+        si.scroll_bars(horizontal=scr_val, vertical=scr_val)
+        scr_set.add_callback('set', self._toggle_scrollbars, si)
+        iw = Widgets.wrap(si)
 
         stk_w = Widgets.StackWidget()
         stk_w.add_widget(iw, title='image')
@@ -1764,6 +1764,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                            widget=stk_w, container=vbox,
                            workspace=workspace)
         return bnch
+
+    def _toggle_scrollbars(self, setting, value, widget):
+        widget.scroll_bars(horizontal=value, vertical=value)
 
     def gui_add_channel(self, chname=None):
         chpfx = "Image"

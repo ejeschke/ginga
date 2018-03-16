@@ -10,7 +10,8 @@ Ver 2.7.1.dev
 - Changed Pan plugin to attempt to draw both kinds of compasses
 - Log plugin enhanced to show lines logged before it was opened
 - Info plugin adds convenience controls for "Follow New" and "Raise New"
-- WCSMatch plugin enhanced to offer fine grained control over sync    
+- WCSMatch plugin enhanced to offer fine grained control over sync
+- User can dynamically add scrollbars to channel viewers in Preferences
 
 Ver 2.7.0 (2018-02-02)
 ======================
