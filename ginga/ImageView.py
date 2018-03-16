@@ -181,7 +181,9 @@ class ImageViewBase(Callback.Callbacks):
                              show_focus_indicator=False,
                              onscreen_font='Sans Serif',
                              onscreen_font_size=24,
-                             color_fg="#D0F0E0", color_bg="#404040")
+                             color_fg="#D0F0E0", color_bg="#404040",
+                             limits=None)
+        self.t_.get_setting('limits').add_callback('set', self._set_limits_cb)
 
         # embedded image "profiles"
         self.t_.add_defaults(profile_use_scale=False, profile_use_pan=False,
@@ -225,8 +227,6 @@ class ImageViewBase(Callback.Callbacks):
         # offset from pan position (at center) in this array
         self._org_xoff = 0
         self._org_yoff = 0
-        # limits for data
-        self._limits = None
 
         # viewer window backend has its canvas origin (0, 0) in upper left
         self.origin_upper = True
@@ -1407,11 +1407,9 @@ class ImageViewBase(Callback.Callbacks):
                ``(ll_pt, ur_pt)``.
 
         """
-        if self._limits is not None:
-            # User set limits
-            limits = self._limits
+        limits = self.t_['limits']
 
-        else:
+        if limits is None:
             # No user defined limits.  If there is an image loaded
             # use its dimensions as the limits
             image = self.get_image()
@@ -1445,13 +1443,17 @@ class ImageViewBase(Callback.Callbacks):
             ``(ll_pt, ur_pt)``.
         """
         if limits is not None:
-            assert len(limits) == 2, ValueError("limits takes a 2 tuple")
+            if len(limits) != 2:
+                raise ValueError("limits takes a 2 tuple")
 
             # convert to data coordinates
             crdmap = self.get_coordmap(coord)
             limits = crdmap.to_data(limits)
 
-        self._limits = limits
+        self.t_.set(limits=limits)
+
+    def _set_limits_cb(self, setting, limits):
+        # TODO: deprecate this callback ?
         self.make_callback('limits-set', limits)
 
     def get_rgb_object(self, whence=0):
