@@ -155,9 +155,6 @@ class ImageViewEvent(ImageViewTk):
         ImageViewTk.__init__(self, logger=logger, rgbmap=rgbmap,
                              settings=settings)
 
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
-
         self._button = 0
 
         # @$%&^(_)*&^ tk!!
@@ -274,14 +271,13 @@ class ImageViewEvent(ImageViewTk):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
-
     def focus_event(self, event, hasFocus):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, event):
-        if self.enter_focus:
+        # Does widget accept focus when mouse enters window
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             self.tkcanvas.focus_set()
         return self.make_callback('enter')
 

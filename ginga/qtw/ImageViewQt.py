@@ -408,9 +408,6 @@ class QtEventMixin(object):
         #imgwin.grabGesture(QtCore.Qt.TapGesture)
         #imgwin.grabGesture(QtCore.Qt.TapAndHoldGesture)
 
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
-
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
                                   ('pick', 'thinCrossCursor.png')):
@@ -440,9 +437,6 @@ class QtEventMixin(object):
                      'pinch', 'pan',  # 'swipe', 'tap'
                      ):
             self.enable_callback(name)
-
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
 
     def transkey(self, keycode, keyname):
         self.logger.debug("keycode=%d keyname='%s'" % (
@@ -508,7 +502,8 @@ class QtEventMixin(object):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, widget, event):
-        if self.enter_focus:
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             widget.setFocus()
         return self.make_callback('enter')
 

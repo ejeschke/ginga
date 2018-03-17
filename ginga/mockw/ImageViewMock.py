@@ -217,9 +217,6 @@ class ImageViewEvent(ImageViewMock):
         # gestures
         #...
 
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
-
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
                                   ('pick', 'thinCrossCursor.png')):
@@ -270,9 +267,6 @@ class ImageViewEvent(ImageViewMock):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
-
     def map_event(self, widget, event):
         """
         Called when the window is mapped to the screen.
@@ -293,7 +287,8 @@ class ImageViewEvent(ImageViewMock):
         Called when the mouse cursor enters the window.
         Adjust method signature as appropriate for callback.
         """
-        if self.enter_focus:
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             # set focus on widget
             pass
         return self.make_callback('enter')

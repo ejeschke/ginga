@@ -163,9 +163,6 @@ class ImageViewEvent(ImageViewPg):
         ImageViewPg.__init__(self, logger=logger, rgbmap=rgbmap,
                              settings=settings)
 
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
-
         self._button = 0
 
         # @$%&^(_)*&^ javascript!!
@@ -380,16 +377,14 @@ class ImageViewEvent(ImageViewPg):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
-
     def focus_event(self, event, hasFocus):
         self.logger.debug("focus event: focus=%s" % (hasFocus))
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, event):
         self.logger.debug("entering widget...")
-        ## if self.enter_focus:
+        ## enter_focus = self.t_.get('enter_focus', False)
+        ## if enter_focus:
         ##     self.pgcanvas.focus_set()
         return self.make_callback('enter')
 

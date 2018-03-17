@@ -135,9 +135,6 @@ class ImageViewEvent(ImageViewJpw):
         ImageViewJpw.__init__(self, logger=logger, rgbmap=rgbmap,
                               settings=settings)
 
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
-
         self._button = 0
 
         # maps EventListener events to callback handlers
@@ -248,14 +245,12 @@ class ImageViewEvent(ImageViewJpw):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
-
     def focus_event(self, event, has_focus):
         return self.make_callback('focus', has_focus)
 
     def enter_notify_event(self, event):
-        if self.enter_focus:
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             # TODO: set focus on canvas
             pass
         return self.make_callback('enter')

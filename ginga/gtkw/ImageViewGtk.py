@@ -266,9 +266,6 @@ class ImageViewEvent(ImageViewGtk):
         imgwin.drag_dest_set(gtk.DEST_DEFAULT_ALL, toImage,
                              gtk.gdk.ACTION_COPY)
 
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
-
         # @$%&^(_)*&^ gnome!!
         self._keytbl = {
             'shift_l': 'shift_l',
@@ -363,9 +360,6 @@ class ImageViewEvent(ImageViewGtk):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
-
     def map_event(self, widget, event):
         super(ImageViewZoom, self).configure_event(widget, event)
         return self.make_callback('map')
@@ -374,7 +368,8 @@ class ImageViewEvent(ImageViewGtk):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, widget, event):
-        if self.enter_focus:
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             widget.grab_focus()
         return self.make_callback('enter')
 

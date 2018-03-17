@@ -1210,7 +1210,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                           self.settings.get('numImages', 1))
             settings.set_defaults(switchnew=True, numImages=num_images,
                                   raisenew=True, genthumb=True,
-                                  enter_focus=True, focus_indicator=False,
+                                  focus_indicator=False,
                                   preload_images=False, sort_order='loadtime')
 
             self.logger.debug("Adding channel '%s'" % (chname))
@@ -1703,7 +1703,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         canvas.enable_draw(False)
         fi.set_canvas(canvas)
 
-        fi.set_enter_focus(settings.get('enter_focus', True))
+        enter_focus = self.settings.get('enter_focus', False)
+        fi.set_enter_focus(settings.get('enter_focus', enter_focus))
         # check general settings for default value of focus indicator
         focus_ind = self.settings.get('focus_indicator', False)
         fi.show_focus_indicator(self.settings.get('focus_indicator', focus_ind))

@@ -3112,10 +3112,8 @@ class ImageViewBase(Callback.Callbacks):
         tf : bool
             If True the widget will grab focus when the cursor moves into
             the window.
-
-        This should be implemented by subclasses.
         """
-        self.logger.warning("Subclass should override this abstract method!")
+        self.t_.set(enter_focus=tf)
 
     def update_image(self):
         """Update image.

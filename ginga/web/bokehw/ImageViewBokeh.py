@@ -378,8 +378,6 @@ class ImageViewEvent(ImageViewBokeh):
         # last known data mouse position
         self.last_data_x = 0
         self.last_data_y = 0
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
 
         # @$%&^(_)*&^ gnome!!
         self._keytbl = {
@@ -472,21 +470,20 @@ class ImageViewEvent(ImageViewBokeh):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
-
     def focus_event(self, event, hasFocus):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, event):
         self.logger.info("entering widget...")
-        if self.enter_focus:
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             self.focus_event(event, True)
         return self.make_callback('enter')
 
     def leave_notify_event(self, event):
         self.logger.info("leaving widget...")
-        if self.enter_focus:
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             self.focus_event(event, False)
         return self.make_callback('leave')
 
