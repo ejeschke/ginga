@@ -565,6 +565,7 @@ class ScrolledView(Gtk.Table):
         self._adjusting = False
         self._scrolling = False
         self.pad = 20
+        self.sb_thickness = 20
         self.rng_x = 100.0
         self.rng_y = 100.0
 
@@ -661,24 +662,24 @@ class ScrolledView(Gtk.Table):
 
     def scroll_bars(self, horizontal='on', vertical='on'):
         if horizontal == 'on':
-            pass
+            self.hsb.set_size_request(-1, self.sb_thickness)
         elif horizontal == 'off':
-            pass
+            self.hsb.set_size_request(-1, 0)
         elif horizontal == 'auto':
-            pass
+            self.hsb.set_size_request(-1, self.sb_thickness)
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (horizontal))
 
         if vertical == 'on':
-            pass
+            self.vsb.set_size_request(self.sb_thickness, -1)
         elif vertical == 'off':
-            pass
+            self.vsb.set_size_request(0, -1)
         elif vertical == 'auto':
-            pass
+            self.vsb.set_size_request(self.sb_thickness, -1)
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
 
-        self.viewer.logger.warning("scroll_bar(): settings for gtk3 currently ignored!")
+        #self.viewer.logger.warning("scroll_bar(): settings for gtk currently ignored!")
 
 
 #END

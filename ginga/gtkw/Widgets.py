@@ -108,7 +108,7 @@ class WidgetBase(Callback.Callbacks):
         self.widget.set_size_request(width, height)
         # hackish way to allow the widget to be resized down again later
         # NOTE: for gtk2 we can't do this because it affects get_size()
-        # gobject.idle_add(self.widget.set_size_request, -1, -1)
+        gobject.idle_add(self.widget.set_size_request, -1, -1)
 
     def get_font(self, font_family, point_size):
         font = GtkHelp.get_font(font_family, point_size)

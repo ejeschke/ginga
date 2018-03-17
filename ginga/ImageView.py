@@ -182,7 +182,7 @@ class ImageViewBase(Callback.Callbacks):
                              onscreen_font='Sans Serif',
                              onscreen_font_size=24,
                              color_fg="#D0F0E0", color_bg="#404040",
-                             limits=None)
+                             limits=None, enter_focus=True)
         self.t_.get_setting('limits').add_callback('set', self._set_limits_cb)
 
         # embedded image "profiles"
