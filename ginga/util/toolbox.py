@@ -13,7 +13,7 @@ import os
 import warnings
 
 # THIRD-PARTY
-from astropy.utils.data import get_pkg_data_contents
+from astropy.utils.data import _find_pkg_data_path
 from astropy.utils.exceptions import AstropyUserWarning
 
 
@@ -162,8 +162,9 @@ def generate_cfg_example(config_name, cfgpath='examples/configs', **kwargs):
     cfgname = config_name + '.cfg'
 
     try:
-        cfgdata = get_pkg_data_contents(
-            os.path.join(cfgpath, cfgname), **kwargs)
+        cfgfile = _find_pkg_data_path(os.path.join(cfgpath, cfgname), **kwargs)
+        with open(cfgfile) as f:
+            cfgdata = f.readlines()
     except Exception as e:
         warnings.warn(str(e), AstropyUserWarning)
         return ''
@@ -179,7 +180,7 @@ is your HOME directory:
 
 """.format(userfile, homepath))
 
-    for line in cfgdata.split('\n'):
+    for line in cfgdata:
         line = line.strip()
 
         if len(line) == 0:
