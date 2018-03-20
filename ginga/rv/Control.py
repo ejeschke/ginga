@@ -2486,7 +2486,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if not self.channel_follows_focus:
             return True
 
-        self.logger.info("Focus %s=%s" % (name, tf))
+        self.logger.debug("focus %s=%s" % (name, tf))
         if tf:
             if viewer != self.getfocus_viewer():
                 self.change_channel(name, raisew=False)

@@ -592,14 +592,12 @@ class ScrolledView(gtk.Table):
 
         self.hsb = gtk.HScrollbar()
         self.hsb.set_round_digits(4)
+        self.hsb.set_size_request(-1, self.sb_thickness)
         self.hsb.connect('value-changed', self._scroll_contents)
-        self.attach(self.hsb, 0, 1, 1, 2,
-                    xoptions=gtk.FILL, yoptions=0, xpadding=0, ypadding=0)
         self.vsb = gtk.VScrollbar()
         self.vsb.set_round_digits(4)
+        self.vsb.set_size_request(self.sb_thickness, -1)
         self.vsb.connect('value-changed', self._scroll_contents)
-        self.attach(self.vsb, 1, 2, 0, 1,
-                    xoptions=0, yoptions=gtk.FILL, xpadding=0, ypadding=0)
 
         self.viewer.add_callback('redraw', self._calc_scrollbars)
         self.viewer.add_callback('limits-set',
@@ -670,21 +668,21 @@ class ScrolledView(gtk.Table):
         return True
 
     def scroll_bars(self, horizontal='on', vertical='on'):
-        if horizontal == 'on':
-            self.hsb.set_size_request(-1, self.sb_thickness)
+        if horizontal in ('on', 'auto'):
+            self.attach(self.hsb, 0, 1, 1, 2,
+                        xoptions=gtk.FILL, yoptions=0, xpadding=0, ypadding=0)
+            self.hsb.show()
         elif horizontal == 'off':
-            self.hsb.set_size_request(-1, 0)
-        elif horizontal == 'auto':
-            self.hsb.set_size_request(-1, self.sb_thickness)
+            self.remove(self.hsb)
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (horizontal))
 
-        if vertical == 'on':
-            self.vsb.set_size_request(self.sb_thickness, -1)
+        if vertical in ('on', 'auto'):
+            self.attach(self.vsb, 1, 2, 0, 1,
+                        xoptions=0, yoptions=gtk.FILL, xpadding=0, ypadding=0)
+            self.vsb.show()
         elif vertical == 'off':
-            self.vsb.set_size_request(0, -1)
-        elif vertical == 'auto':
-            self.vsb.set_size_request(self.sb_thickness, -1)
+            self.remove(self.vsb)
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
 
