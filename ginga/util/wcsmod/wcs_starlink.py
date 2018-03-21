@@ -164,6 +164,9 @@ class StarlinkWCS(common.BaseWCS):
 
     def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
 
+        # force to array representation
+        datapt = np.asarray(datapt)
+
         # Starlink's WCS needs pixels referenced from 1
         if coords == 'data':
             datapt = datapt + 1.0
@@ -191,6 +194,9 @@ class StarlinkWCS(common.BaseWCS):
         return wcspt
 
     def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
+
+        # force to array representation
+        wcspt = np.asarray(wcspt)
 
         # Starlink works on angles in radians
         wcspt = np.radians(wcspt)

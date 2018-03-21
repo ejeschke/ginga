@@ -216,7 +216,7 @@ class BaseWCS(object):
         if naxispath:
             raise NotImplementedError
 
-        return np.asarray([self.pixtoradec(pt[0], pt[1], coords=coords)
+        return np.asarray([self.pixtoradec((pt[0], pt[1]), coords=coords)
                            for pt in datapt])
 
     def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
