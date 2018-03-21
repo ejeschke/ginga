@@ -232,6 +232,8 @@ class CompoundMixin(object):
         x, y = np.average(t_[0]), np.average(t_[1])
         return (x, y)
 
+    get_center_pt = get_reference_pt
+
     def reorder_layers(self):
         self.objects.sort(key=lambda obj: getattr(obj, '_zorder', 0))
         for obj in self.objects:

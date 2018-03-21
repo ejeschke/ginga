@@ -2503,7 +2503,15 @@ class ImageViewBase(Callback.Callbacks):
             width, height = self.get_data_size()
 
         except ImageViewNoDataError:
-            return
+            # No data, so try to get limits
+            try:
+                xy_mn, xy_mx = self.get_limits()
+                width = abs(xy_mx[0] - xy_mn[0])
+                height = abs(xy_mx[1] - xy_mn[1])
+
+            except Exception as e:
+                self.logger.error("Can't compute limits: %s" % (str(e)))
+                return
 
         data_x, data_y = width * pct_x, height * pct_y
         self.panset_xy(data_x, data_y)
@@ -2519,11 +2527,18 @@ class ImageViewBase(Callback.Callbacks):
         """
         try:
             width, height = self.get_data_size()
+            data_x, data_y = float(width) / 2.0, float(height) / 2.0
 
         except ImageViewNoDataError:
-            return
+            # No data, so try to get center of any plotted objects
+            canvas = self.get_canvas()
+            try:
+                data_x, data_y = canvas.get_center_pt()[:2]
 
-        data_x, data_y = float(width) / 2.0, float(height) / 2.0
+            except Exception as e:
+                self.logger.error("Can't compute center point: %s" % (str(e)))
+                return
+
         self.panset_xy(data_x, data_y, no_reset=no_reset)
         # See Footnote [1]
         ## if redraw:

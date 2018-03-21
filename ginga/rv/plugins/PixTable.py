@@ -1,5 +1,7 @@
+#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
 """
 ``PixTable`` provides a way to check or monitor the pixel values in
 a region.
@@ -96,6 +98,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.fontsize = self.settings.get('fontsize', 12)
         self.fontsizes = [6, 8, 9, 10, 11, 12, 14, 16]
         self.pixview = None
+        self._wd = 400
+        self._ht = 300
 
         # For "marks" feature
         self.mark_radius = 10
@@ -110,27 +114,29 @@ class PixTable(GingaPlugin.LocalPlugin):
         top = Widgets.VBox()
         top.set_border_width(4)
 
-        vbox, sw, orientation = Widgets.get_oriented_box(container,
-                                                         fill=True)
-        vbox.set_border_width(4)
-        vbox.set_spacing(2)
+        box, sw, orientation = Widgets.get_oriented_box(container)
+        box.set_border_width(4)
+        box.set_spacing(2)
 
         fr = Widgets.Frame("Pixel Values")
 
         # We just use a ginga widget to implement the pixtable
         pixview = Viewers.CanvasView(logger=self.logger)
-        width, height = 300, 300
-        pixview.set_desired_size(width, height)
+        pixview.set_desired_size(self._wd, self._ht)
         bg = colors.lookup_color('#202030')
         pixview.set_bg(*bg)
 
-        bd = pixview.get_bindings()  # noqa
+        bd = pixview.get_bindings()
+        bd.enable_zoom(True)
+        bd.enable_pan(True)
 
         self.pixview = pixview
         self.pix_w = Viewers.GingaViewerWidget(pixview)
-        #self.pix_w.resize(width, height)
         fr.set_widget(self.pix_w)
-        vbox.add_widget(fr, stretch=1)
+        self.pix_w.resize(self._wd, self._ht)
+
+        paned = Widgets.Splitter(orientation=orientation)
+        paned.add_widget(fr)
 
         self._rebuild_table()
 
@@ -206,12 +212,17 @@ class PixTable(GingaPlugin.LocalPlugin):
         b.font_size.add_callback('activated', self.set_font_size_cb)
 
         vbox2.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(vbox2, stretch=1)
+        box.add_widget(vbox2, stretch=1)
 
         ## spacer = Widgets.Label('')
-        ## vbox.add_widget(spacer, stretch=1)
+        ## box.add_widget(spacer, stretch=1)
 
-        top.add_widget(sw, stretch=1)
+        paned.add_widget(sw)
+        # hack to set a reasonable starting position for the splitter
+        _sz = max(self._wd, self._ht)
+        paned.set_sizes([_sz, _sz])
+
+        top.add_widget(paned, stretch=1)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -317,8 +328,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.sum_arr[0].text = fmt_stat.format(minval, maxval, avgval)
 
         # update the pixtable
-        #self.pixview.redraw(whence=3)
         self.pixview.panset_xy(ctr_txt.x, ctr_txt.y)
+        #self.pixview.redraw(whence=3)
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
