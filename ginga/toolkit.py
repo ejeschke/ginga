@@ -32,11 +32,12 @@ def use(name):
             ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('gtk'):
-        if name in ('gtk', 'gtk2'):
-            name = 'gtk2'
-            family = 'gtk'
-        elif name in ('gtk3',):
+        # default for "gtk" is gtk3
+        if name in ('gtk', 'gtk3'):
+            name = 'gtk3'
             family = 'gtk3'
+        elif name in ('gtk2',):
+            family = 'gtk2'
         assert name in ('gtk2', 'gtk3'), \
             ToolKitError("ToolKit '%s' not supported!" % (name))
 

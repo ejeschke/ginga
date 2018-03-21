@@ -11,7 +11,11 @@ Ver 2.7.1.dev
 - Log plugin enhanced to show lines logged before it was opened
 - Info plugin adds convenience controls for "Follow New" and "Raise New"
 - WCSMatch plugin enhanced to offer fine grained control over sync
+- fixed an issue in Debian build that caused long start up times
 - User can dynamically add scrollbars to channel viewers in Preferences
+- Made Gtk backend default to 'gtk3'
+  - "-t gtk" now invokes gtk3 instead of gtk2
+  - choose "-t gtk2" if you want the gtk2 back end
 
 Ver 2.7.0 (2018-02-02)
 ======================
