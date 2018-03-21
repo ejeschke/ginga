@@ -90,8 +90,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
                 self.settings.get('zoom_imap_name', None) is None):
             self.copy_attrs.append('rgbmap')
 
-        self._wd = 200
-        self._ht = 200
+        self._wd = 300
+        self._ht = 300
 
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('channel-change', self.focus_cb)
@@ -100,12 +100,10 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
     def build_gui(self, container):
 
-        vbox, sw, orientation = Widgets.get_oriented_box(container,
-                                                         fill=True,
-                                                         scrolled=False)
-        vbox.set_border_width(4)
-        vbox.set_spacing(2)
+        vtop = Widgets.VBox()
+        vtop.set_border_width(4)
 
+        box, sw, orientation = Widgets.get_oriented_box(container)
         # Uncomment to debug; passing parent logger generates too
         # much noise in the main logger
         #zi = Viewers.CanvasView(logger=self.logger)
@@ -113,7 +111,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         zi.set_desired_size(self._wd, self._ht)
         zi.enable_autozoom('off')
         zi.enable_autocuts('off')
-        #zi.set_scale_limits(0.001, 1000.0)
         zi.zoom_to(self.default_zoom)
         settings = zi.get_settings()
         settings.get_setting('zoomlevel').add_callback(
@@ -137,8 +134,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         iw = Viewers.GingaViewerWidget(zi)
         iw.resize(self._wd, self._ht)
-        vpaned = Widgets.Splitter(orientation=orientation)
-        vpaned.add_widget(iw)
+        paned = Widgets.Splitter(orientation=orientation)
+        paned.add_widget(iw)
 
         vbox2 = Widgets.VBox()
         captions = (("Zoom Radius:", 'label', 'Zoom Radius', 'hscale'),
@@ -184,9 +181,14 @@ class Zoom(GingaPlugin.GlobalPlugin):
         spacer = Widgets.Label('')
         vbox2.add_widget(spacer, stretch=1)
 
-        vpaned.add_widget(vbox2)
+        box.add_widget(vbox2, stretch=1)
 
-        vbox.add_widget(vpaned, stretch=1)
+        paned.add_widget(sw)
+        # hack to set a reasonable starting position for the splitter
+        _sz = max(self._wd, self._ht)
+        paned.set_sizes([_sz, _sz])
+
+        vtop.add_widget(paned, stretch=5)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -199,9 +201,9 @@ class Zoom(GingaPlugin.GlobalPlugin):
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(btns, stretch=0)
+        vtop.add_widget(btns, stretch=0)
 
-        container.add_widget(sw, stretch=1)
+        container.add_widget(vtop, stretch=5)
         self.gui_up = True
 
     def prepare(self, fitsimage):
