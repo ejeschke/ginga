@@ -261,14 +261,15 @@ def test_scalar_2d(modname):
     # If this works here, should already work for other cases.
     assert img.wcs.has_valid_wcs()
 
+    # 0.01% agreement is good enough across different libraries.
     radec = img.pixtoradec(*xy_v1)
-    assert_allclose(radec, radec_deg_v1)
+    assert_allclose(radec, radec_deg_v1, rtol=1e-4)
 
     xy = img.radectopix(*radec_deg_v1)
     assert_allclose(xy, xy_v1)
 
     gal = img.wcs.pixtosystem(xy_v1, system='galactic')
-    assert_allclose(gal, (60.97030081935234, -3.9706229385605307))
+    assert_allclose(gal, (60.97030081935234, -3.9706229385605307), rtol=1e-4)
 
 
 @pytest.mark.parametrize('modname', _wcsmods)
@@ -284,19 +285,23 @@ def test_vectorized_2d(modname):
     gal_v1 = np.array([(60.96903325, -3.97929572),
                        (60.97030081935234, -3.9706229385605307)])
 
+    # 0.01% agreement is good enough across different libraries.
     radec = img.wcs.datapt_to_wcspt(xy_v1)
-    assert_allclose(radec, radec_deg_v1)
+    assert_allclose(radec, radec_deg_v1, rtol=1e-4)
 
     xy = img.wcs.wcspt_to_datapt(radec_deg_v1)
-    # TODO: Check with Eric J on this.
     assert_allclose(xy, xy_v1, atol=7e-5)
 
-    gal = img.wcs.datapt_to_system(xy_v1, system='galactic')
-    if modname == 'astropy':
-        assert_allclose(gal.l.degree, gal_v1[:, 0])
-        assert_allclose(gal.b.degree, gal_v1[:, 1])
+    if modname == 'astlib':
+        with pytest.raises(NotImplementedError):
+            img.wcs.datapt_to_system(xy_v1, system='galactic')
     else:
-        assert_allclose(gal, gal_v1)
+        gal = img.wcs.datapt_to_system(xy_v1, system='galactic')
+        if modname == 'astropy':
+            assert_allclose(gal.l.degree, gal_v1[:, 0])
+            assert_allclose(gal.b.degree, gal_v1[:, 1])
+        else:
+            assert_allclose(gal, gal_v1, rtol=1e-4)
 
 
 @pytest.mark.parametrize('modname', _wcsmods)
@@ -306,19 +311,31 @@ def test_scalar_3d(modname):
 
     img = img_dict[modname]['3d']
     idxs = (0, 0, 0)
+    ra_deg_v1 = -50.569931842112965
+    dec_deg_v1 = 59.79236398619401
+    vel_v1 = -159000.00382
 
-    c = img.spectral_coord(idxs)
-    assert_allclose(c, -159000.00382)
+    if modname == 'astlib':
+        with pytest.raises(wcsmod.common.WCSError):
+            img.spectral_coord(idxs)
+    else:
+        c = img.spectral_coord(idxs)
+        if modname == 'starlink':
+            assert_allclose(c, vel_v1 * 1e-3)
+        else:
+            assert_allclose(c, vel_v1)
 
+    # 0.01% agreement is good enough across different libraries.
+    # RA can be off by 360 degrees and still be valid.
     c = img.pixtoradec(*idxs[:2])
-    assert_allclose(c, (-50.569931842112965, 59.79236398619401))
+    assert (np.allclose(c, (ra_deg_v1, dec_deg_v1), rtol=1e-4) or
+            np.allclose(c, (ra_deg_v1 + 360, dec_deg_v1), rtol=1e-4))
 
     px = img.radectopix(*c)
-    # TODO: Check with Eric J on this.
-    assert_allclose(px, idxs[:2], atol=3e-11)
+    assert_allclose(px, idxs[:2], atol=1e-3)
 
     c = img.wcs.pixtosystem(idxs, system='galactic')
-    assert_allclose(c, (95.62934261967311, 11.172927294480449))
+    assert_allclose(c, (95.62934261967311, 11.172927294480449), rtol=1e-4)
 
 
 @pytest.mark.parametrize('modname', _wcsmods)
@@ -330,26 +347,57 @@ def test_vectorized_3d(modname):
 
     xy_v1 = [(0, 0), (120, 100)]
     nxp = [0]
-    radec_deg_v1 = [[-5.05699318e+01, 5.97923640e+01],
-                    [-5.23010162e+01, 6.05064254e+01]]
+    radec_deg_v1 = np.array([[-50.5699318, 59.7923640],
+                             [-52.3010162, 60.5064254]])
     gal_v1 = np.array([(95.62934262, 11.17292729),
                        (95.72174081, 12.28825976)])
 
-    radec = img.wcs.datapt_to_wcspt(xy_v1, naxispath=nxp)
-    assert_allclose(radec[:, :2], radec_deg_v1)
-    assert_allclose(radec[:, 2], -154800.004)
-
-    xy = img.wcs.wcspt_to_datapt(radec_deg_v1, naxispath=nxp)
-    # TODO: Check with Eric J on this.
-    assert_allclose(xy, xy_v1, atol=3e-6)
-
-    gal = img.wcs.datapt_to_system([(0, 0, 0), (120, 100, 0)],
-                                   system='galactic')
-    if modname == 'astropy':
-        assert_allclose(gal.l.degree, gal_v1[:, 0])
-        assert_allclose(gal.b.degree, gal_v1[:, 1])
+    if modname == 'kapteyn':
+        vel_v1 = -159000.00382
     else:
-        assert_allclose(gal, gal_v1)
+        vel_v1 = -154800.004
+
+    # 0.01% agreement is good enough across different libraries.
+    # RA can be off by 360 degrees and still be valid.
+    if modname == 'astlib':
+        with pytest.raises(NotImplementedError):
+            img.wcs.datapt_to_wcspt(xy_v1, naxispath=nxp)
+    else:
+        radec = img.wcs.datapt_to_wcspt(xy_v1, naxispath=nxp)
+        assert (np.allclose(radec[:, 0], radec_deg_v1[:, 0]) or
+                np.allclose(radec[:, 0], radec_deg_v1[:, 0] + 360))
+        assert_allclose(radec[:, 1], radec_deg_v1[:, 1], rtol=1e-4)
+        if modname == 'starlink':
+            with pytest.raises(IndexError):
+                radec[:, 2]
+        else:
+            assert_allclose(radec[:, 2], vel_v1, rtol=1e-4)
+
+    if modname == 'astlib':
+        with pytest.raises(NotImplementedError):
+            img.wcs.wcspt_to_datapt(radec_deg_v1, naxispath=nxp)
+    else:
+        xy = img.wcs.wcspt_to_datapt(radec_deg_v1, naxispath=nxp)
+        assert_allclose(xy[:, :2], xy_v1, atol=3e-6)
+        if modname == 'kapteyn':
+            assert_allclose(xy[:, 2], 36.85715, atol=3e-6)
+
+    if modname == 'astlib':
+        with pytest.raises(NotImplementedError):
+            img.wcs.datapt_to_system([(0, 0, 0), (120, 100, 0)],
+                                     system='galactic')
+    elif modname == 'kapteyn':
+        with pytest.raises(Exception):
+            img.wcs.datapt_to_system([(0, 0, 0), (120, 100, 0)],
+                                     system='galactic')
+    else:
+        gal = img.wcs.datapt_to_system([(0, 0, 0), (120, 100, 0)],
+                                       system='galactic')
+        if modname == 'astropy':
+            assert_allclose(gal.l.degree, gal_v1[:, 0])
+            assert_allclose(gal.b.degree, gal_v1[:, 1])
+        else:
+            assert_allclose(gal, gal_v1, rtol=1e-4)
 
 
 def test_fixheader():
