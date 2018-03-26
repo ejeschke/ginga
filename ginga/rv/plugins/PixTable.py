@@ -96,7 +96,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.lasty = 0
         self.font = self.settings.get('font', 'fixed')
         self.fontsize = self.settings.get('fontsize', 12)
-        self.fontsizes = [6, 8, 9, 10, 11, 12, 14, 16]
+        self.fontsizes = [6, 8, 9, 10, 11, 12, 14, 16, 18, 24, 28, 32]
         self.pixview = None
         self._wd = 400
         self._ht = 300
@@ -206,7 +206,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         vbox2.add_widget(w, stretch=0)
 
         b.font_size.set_tooltip("Set font size for pixel display")
-        for size in (8, 9, 10, 11, 12, 14, 16):
+        for size in self.fontsizes:
             b.font_size.append_text(str(size))
         b.font_size.show_text(str(self.fontsize))
         b.font_size.add_callback('activated', self.set_font_size_cb)
