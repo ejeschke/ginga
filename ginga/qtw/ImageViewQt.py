@@ -125,8 +125,10 @@ class ImageViewQt(ImageView.ImageViewBase):
             raise ImageViewQtError("Undefined render type: '%s'" % (render))
         self.imgwin.viewer = self
         self.pixmap = None
-        # Qt expects 32bit BGRA data for color images
+        # NOTE: we could use the following, but it is only for Qt5.x
+        # Asking for image in BGRA puts numpy array in ARGB format
         self.rgb_order = 'BGRA'
+        self.qimg_fmt = QImage.Format_ARGB32
 
         self.renderer = CanvasRenderer(self)
 
@@ -292,13 +294,12 @@ class ImageViewQt(ImageView.ImageViewBase):
     def make_timer(self):
         return Timer()
 
-    def _get_qimage(self, bgra):
-        h, w, channels = bgra.shape
+    def _get_qimage(self, rgb_data):
+        ht, wd, channels = rgb_data.shape
 
-        fmt = QImage.Format_ARGB32
-        result = QImage(bgra.data, w, h, fmt)
+        result = QImage(rgb_data.data, wd, ht, self.qimg_fmt)
         # Need to hang on to a reference to the array
-        result.ndarray = bgra
+        result.ndarray = rgb_data
         return result
 
     def _get_color(self, r, g, b):

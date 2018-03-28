@@ -84,7 +84,8 @@ class RGBMapper(Callback.Callbacks):
         self.carr = None
         self.sarr = None
         self.scale_pct = 1.0
-        self.maxv = 255
+        self.bpp = 8
+        self.maxv = 2 ** self.bpp - 1
         self.nptype = np.uint8
 
         # For scaling algorithms
@@ -488,5 +489,24 @@ class PassThruRGBMapper(RGBMapper):
         out[..., ri] = idx[..., rj]
         out[..., gi] = idx[..., gj]
         out[..., bi] = idx[..., bj]
+
+
+class HiBppMapper(NonColorMapper):
+    """
+    A kind of color mapper for data that is already in RGB form.
+
+    This mapper is based off of NonColorMapper, but supports high bit depth
+    images.
+    """
+    def __init__(self, logger, dist=None, bpp=16):
+        super(HiBppMapper, self).__init__(logger)
+
+        self.bpp = bpp
+        self.maxv = 2 ** bpp - 1
+        self.nptype = np.uint16
+
+        maxlen = self.maxv + 1
+        self.dist.set_hash_size(maxlen)
+        self.reset_sarr(callback=False)
 
 #END
