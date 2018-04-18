@@ -236,7 +236,7 @@ class RGBMapper(Callback.Callbacks):
 
     def get_rgbval(self, index):
         """
-        Return a tuple of (R, G, B) values in the 0-maxv range associated
+        Return a tuple of (R, G, B) values in the 0-maxc range associated
         mapped by the value of `index`.
         """
         assert (index >= 0) and (index <= self.maxc), \
@@ -320,7 +320,7 @@ class RGBMapper(Callback.Callbacks):
         if carr is not None:
             carr = np.asarray(carr)
             maxlen = self.maxc + 1
-            self.carr = carr.astype(self.nptype, copy=False)
+            self.carr = carr.astype(self.dtype, copy=False)
             _len = carr.shape[1]
             if _len != maxlen:
                 raise RGBMapError("color map length %d != %d" % (_len, maxlen))
@@ -389,7 +389,7 @@ class RGBMapper(Callback.Callbacks):
         return [order.index(c) for c in cs]
 
     def _get_rgbarray(self, idx, rgbobj, image_order=''):
-        # NOTE: data is assumed to be in the range 0-maxv at this point
+        # NOTE: data is assumed to be in the range 0-maxc at this point
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
@@ -564,7 +564,7 @@ class NonColorMapper(RGBMapper):
         self.reset_sarr(callback=False)
 
     def _get_rgbarray(self, idx, rgbobj, image_order='RGB'):
-        # NOTE: data is assumed to be in the range 0-maxv at this point
+        # NOTE: data is assumed to be in the range 0-maxc at this point
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
@@ -600,12 +600,12 @@ class PassThruRGBMapper(RGBMapper):
         self.dist = ColorDist.LinearDist(maxlen)
 
     def get_hasharray(self, idx):
-        # data is already constrained to 0..maxv and we want to
+        # data is already constrained to 0..maxc and we want to
         # bypass color redistribution
         return idx
 
     def _get_rgbarray(self, idx, rgbobj, image_order='RGB'):
-        # NOTE: data is assumed to be in the range 0-maxv at this point
+        # NOTE: data is assumed to be in the range 0-maxc at this point
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards

@@ -99,9 +99,8 @@ class ColorBar(CanvasObjectBase):
 
         pxwd, pxht = width, max(self.height, scale_ht)
 
-        maxc = max(rgbmap.maxc, 256)
-        maxv = rgbmap.maxv
-        maxf = float(maxv)
+        maxc = max(rgbmap.maxc + 1, 256)
+        maxf = float(maxc)
 
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
@@ -295,8 +294,7 @@ class DrawableColorBar(Rectangle):
         pxwd, pxht = max(pxwd, 1), max(pxht, 1)
 
         maxc = max(rgbmap.maxc + 1, 256)
-        maxv = rgbmap.maxv
-        maxf = float(maxv)
+        maxf = float(maxc)
 
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
