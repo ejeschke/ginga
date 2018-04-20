@@ -20,6 +20,7 @@ class ImgWCS(common.BaseWCS):
         self.header.update(header.items())
         # Load WCS x-image
         if 'WCS-XIMG' in self.header.keys():
+            print("READING THE HEADER")
             from astropy.io import fits as pyfits
             hdu = pyfits.open(self.header['WCS-XIMG'])
             head0 = hdu[0].header
