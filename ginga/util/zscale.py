@@ -33,8 +33,7 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 DAMAGE.
 """
-import math
-import numpy
+import numpy as np
 
 MAX_REJECT = 0.5
 MIN_NPIXELS = 5
@@ -65,15 +64,16 @@ def zsc_sample(image, maxpix, bpmask=None, zmask=None):
     # Sample in a square grid, and return the first maxpix in the sample
     nc = image.shape[0]
     nl = image.shape[1]
-    stride = max(1.0, math.sqrt((nc - 1) * (nl - 1) / float(maxpix)))
+    stride = max(1.0, np.sqrt((nc - 1) * (nl - 1) / float(maxpix)))
     stride = int(stride)
     samples = image[::stride, ::stride].flatten()
     # remove NaN and Inf
-    samples = samples[numpy.isfinite(samples)]
+    samples = samples[np.isfinite(samples)]
     return samples[:maxpix]
 
 
 def zscale_samples(samples, contrast=0.25):
+    samples = np.asarray(samples, dtype=np.float)
     npix = len(samples)
     samples.sort()
     zmin = samples[0]
@@ -111,7 +111,7 @@ def zsc_fit_line(samples, npix, krej, ngrow, maxiter):
     #
     # First re-map indices from -1.0 to 1.0
     xscale = 2.0 / (npix - 1)
-    xnorm = numpy.arange(npix)
+    xnorm = np.arange(npix)
     xnorm = xnorm * xscale - 1.0
 
     ngoodpix = npix
@@ -119,7 +119,7 @@ def zsc_fit_line(samples, npix, krej, ngrow, maxiter):
     last_ngoodpix = npix + 1
 
     # This is the mask used in k-sigma clipping.  0 is good, 1 is bad
-    badpix = numpy.zeros(npix, dtype="int32")
+    badpix = np.zeros(npix, dtype=np.int)
 
     #
     #  Iterate
@@ -130,7 +130,7 @@ def zsc_fit_line(samples, npix, krej, ngrow, maxiter):
             break
 
         # Accumulate sums to calculate straight line fit
-        goodpixels = numpy.where(badpix == GOOD_PIXEL)
+        goodpixels = np.where(badpix == GOOD_PIXEL)
         sumx = xnorm[goodpixels].sum()
         sumxx = (xnorm[goodpixels] * xnorm[goodpixels]).sum()
         sumxy = (xnorm[goodpixels] * samples[goodpixels]).sum()
@@ -154,17 +154,17 @@ def zsc_fit_line(samples, npix, krej, ngrow, maxiter):
         # Detect and reject pixels further than k*sigma from the fitted line
         lcut = -threshold
         hcut = threshold
-        below = numpy.where(flat < lcut)
-        above = numpy.where(flat > hcut)
+        below = np.where(flat < lcut)
+        above = np.where(flat > hcut)
 
         badpix[below] = BAD_PIXEL
         badpix[above] = BAD_PIXEL
 
         # Convolve with a kernel of length ngrow
-        kernel = numpy.ones(ngrow, dtype="int32")
-        badpix = numpy.convolve(badpix, kernel, mode='same')
+        kernel = np.ones(ngrow, dtype=np.int)
+        badpix = np.convolve(badpix, kernel, mode='same')
 
-        ngoodpix = len(numpy.where(badpix == GOOD_PIXEL)[0])
+        ngoodpix = len(np.where(badpix == GOOD_PIXEL)[0])
 
         niter += 1
 
@@ -181,7 +181,7 @@ def zsc_compute_sigma(flat, badpix, npix):
     # Ignore rejected pixels
 
     # Accumulate sum and sum of squares
-    goodpixels = numpy.where(badpix == GOOD_PIXEL)
+    goodpixels = np.where(badpix == GOOD_PIXEL)
     sumz = flat[goodpixels].sum()
     sumsq = (flat[goodpixels] * flat[goodpixels]).sum()
     ngoodpix = len(goodpixels[0])
@@ -198,6 +198,6 @@ def zsc_compute_sigma(flat, badpix, npix):
         if temp < 0:
             sigma = 0.0
         else:
-            sigma = math.sqrt(temp)
+            sigma = np.sqrt(temp)
 
     return ngoodpix, mean, sigma
