@@ -39,11 +39,6 @@ from ginga.util import wcs, iqcalc, dp
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
-try:
-    import astropy.io.fits as pyfits
-    have_pyfits = True
-except ImportError:
-    have_pyfits = False
 
 __all__ = ['Mosaic']
 
@@ -444,20 +439,15 @@ class Mosaic(GingaPlugin.LocalPlugin):
                 mosaic_hdus = self.settings.get('mosaic_hdus', False)
                 if mosaic_hdus:
                     self.logger.debug("loading hdus")
+                    opener = self.fv.fits_opener.get_factory()
                     # User wants us to mosaic HDUs
                     # TODO: do this in a different thread?
-                    with pyfits.open(url, 'readonly') as in_f:
-                        i = 0
-                        for hdu in in_f:
-                            i += 1
-                            # TODO: I think we need a little more rigorous test
-                            # than just whether the data section is empty
-                            if hdu.data is None:
-                                continue
+                    opener.open_file(url, memmap=False)
+                    try:
+                        for i in range(len(opener)):
                             self.logger.debug("ingesting hdu #%d" % (i))
-                            image = None
                             try:
-                                image = self.fv.fits_opener.load_hdu(hdu)
+                                image = opener.get_hdu(i)
 
                             except Exception as e:
                                 self.logger.error(
@@ -479,6 +469,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                     self.total_files += 1
 
                             self.ingest_one(image)
+                    finally:
+                        opener.close()
+                        opener = None
 
                 else:
                     image = image_loader(url)

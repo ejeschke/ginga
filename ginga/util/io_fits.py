@@ -227,7 +227,9 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             # by numerical index
             self.hdu_db[idx] = d
             # by (hduname, extver)
-            self.hdu_db[(name, extver)] = d
+            key = (name, extver)
+            if key not in self.hdu_db:
+                self.hdu_db[key] = d
             idx += 1
 
         self.extver_db = extver_db
@@ -444,7 +446,9 @@ class FitsioFileHandler(BaseFitsFileHandler):
             # by numerical index
             self.hdu_db[idx] = d
             # by (hduname, extver)
-            self.hdu_db[(name, extver)] = d
+            key = (name, extver)
+            if len(name) > 0 and extver >= 0 and key not in self.hdu_db:
+                self.hdu_db[key] = d
 
     def close(self):
         self.hdu_info = None

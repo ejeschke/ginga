@@ -457,6 +457,9 @@ class AstroImage(BaseImage):
             count += 1
 
             data_np = image._get_data()
+            if 0 in data_np.shape:
+                self.logger.info("Skipping image with zero length axis")
+                continue
 
             # Calculate sky position at the center of the piece
             ctr_x, ctr_y = trcalc.get_center(data_np)

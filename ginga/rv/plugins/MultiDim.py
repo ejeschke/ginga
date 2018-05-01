@@ -383,10 +383,11 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def stop(self):
         self.gui_up = False
         self.play_stop()
-        try:
-            self.file_obj.close()
-        except Exception:
-            pass
+        if self.file_obj is not None:
+            try:
+                self.file_obj.close()
+            except Exception:
+                pass
         self.file_obj = None
         self.img_path = None
         self.img_name = None
@@ -410,7 +411,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.curhdu = idx
             image = chinfo.datasrc[imname]
             self.fv.switch_name(chname, imname)
-
             return
 
         # Nope, we'll have to load it
@@ -418,7 +418,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         try:
             self.curhdu = idx
             info = self.file_obj.hdu_info[idx]
-
             image = self.file_obj.get_hdu(idx)
 
             # create a future for reconstituting this HDU
@@ -563,7 +562,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         w.clear()
 
         for idx, d in enumerate(hdu_info):
-
             toc_ent = "%(index)4d %(name)-12.12s (%(extver)3d) %(htype)-12.12s %(dtype)-8.8s" % d  # noqa
             w.append_text(toc_ent)
 
@@ -589,6 +587,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
         if path != self.img_path:
             # <-- New file is being looked at
             self.img_path = path
+
+            # close previous file opener, if any
+            if self.file_obj is not None:
+                try:
+                    self.file_obj.close()
+                except Exception:
+                    pass
 
             self.file_obj = self.fv.fits_opener.get_factory()
             # TODO: specify 'readonly' somehow?

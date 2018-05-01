@@ -25,6 +25,8 @@ REQUIRED
 Highly recommended, because some features will not be available without it:
 
 * scipy
+* pillow
+* opencv
 
 For opening `FITS <https://fits.gsfc.nasa.gov/>`_ files you will 
 need one of the following packages:
@@ -35,10 +37,10 @@ need one of the following packages:
 For `WCS <https://fits.gsfc.nasa.gov/fits_wcs.html>`_ resolution 
 you will need one of the following packages:
 
+* astropy
 * kapteyn
 * astLib
 * starlink
-* astropy
 
 BACKENDS (one or more)
 ======================
@@ -67,7 +69,7 @@ will not work without the following packages:
 * webkit (required by: WBrowser (used for online help))
 * scipy (required by: Pick, some built-in `auto cuts algorithms <http://ginga.readthedocs.io/en/latest/manual/operation.html#automatically-setting-cut-levels>`_ 
   used when you load an image)
-* astropy (required by: MultiDim, SAMP)
+* astropy (required by: SAMP)
 
 To save a movie:
 
@@ -75,9 +77,9 @@ To save a movie:
 
 Helpful, but not necessary (may optimize or speed up certain operations):
 
-* python-opencv (speeds up rotation and some transformations)
-* python-pyopencl (speeds up rotation and some transformations)
-* python-numexpr (speeds up rotation)
+* python-opencv (speeds up rotation, mosaicing and some transformations)
+* python-pyopencl (speeds up rotation, mosaicing and some transformations)
+* python-numexpr (speeds up rotation a little)
 * python-filemagic (aids in identifying files when opening them)
 * python-PIL or pillow (useful for various RGB file manipulations)
 
