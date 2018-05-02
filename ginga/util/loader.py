@@ -86,6 +86,7 @@ def load_fits(filepath, logger=None, **kwargs):
 #
 viewer_registry = {}
 
+
 def add_loader(mimetype, loader):
     global viewer_registry
     # TODO: can/should we store other preferences/customizations along
