@@ -4,10 +4,10 @@
 #
 import sys
 
-from ginga import AstroImage
 from ginga.misc import log
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
+from ginga.util.loader import load_data
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -24,6 +24,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
+        fi.enable_auto_orient(True)
         self.fitsimage = fi
 
         # enable some user interaction
@@ -62,8 +63,7 @@ class FitsViewer(QtGui.QMainWindow):
         vw.setLayout(vbox)
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
+        image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
         self.setWindowTitle(filepath)
 

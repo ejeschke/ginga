@@ -15,11 +15,11 @@ import sys
 
 from matplotlib.figure import Figure
 
-from ginga import AstroImage
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
+from ginga.util.loader import load_data
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -34,6 +34,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi = ImageViewCanvas(logger=self.logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
+        fi.enable_auto_orient(True)
         fi.enable_autozoom('on')
         #fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
@@ -80,9 +81,7 @@ class FitsViewer(QtGui.QMainWindow):
         return self.fitsimage
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
-
+        image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
 
     def open_file(self):

@@ -68,6 +68,14 @@ def use(fitspkg, raise_err=True):
 
 class BaseFitsFileHandler(object):
 
+    # holds datatype/class objects for instantiating objects
+    # loaded from FITS files
+    factory_dict = {}
+
+    @classmethod
+    def register_type(cls, name, klass):
+        cls.factory_dict[name.lower()] = klass
+
     def __init__(self, logger):
         super(BaseFitsFileHandler, self).__init__()
 
@@ -77,14 +85,9 @@ class BaseFitsFileHandler(object):
         self.hdu_info = []
         self.hdu_db = {}
         self.extver_db = {}
-        self.factory_dict = {}
-
-    def register_type(self, name, klass):
-        self.factory_dict[name.lower()] = klass
 
     def get_factory(self):
         hdlr = self.__class__(self.logger)
-        hdlr.factory_dict.update(self.factory_dict)
         return hdlr
 
 
@@ -568,5 +571,6 @@ if not fits_configured:
 
 def get_fitsloader(kind=None, logger=None):
     return fitsLoaderClass(logger)
+
 
 # END
