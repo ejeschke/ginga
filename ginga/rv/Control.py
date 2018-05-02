@@ -23,7 +23,7 @@ import queue as Queue  # noqa
 
 # Local application imports
 from ginga import cmap, imap
-from ginga import AstroImage, RGBImage, BaseImage
+from ginga import AstroImage, BaseImage
 from ginga.table import AstroTable
 from ginga.misc import Bunch, Timer, Future
 from ginga.util import catalog, iohelper, loader, io_fits, toolbox

@@ -67,16 +67,19 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
                            **kwargs)
     return data_obj
 
+
 def load_rgb(filepath, logger=None, **kwargs):
     loader = io_rgb.get_rgbloader(logger=logger)
     image = loader.load_file(filepath, **kwargs)
     return image
+
 
 def load_fits(filepath, logger=None, **kwargs):
     loader = io_fits.get_fitsloader(logger=logger)
     numhdu = kwargs.pop('idx', None)
     image = loader.load_file(filepath, numhdu=numhdu, **kwargs)
     return image
+
 
 # This contains a registry of upper-level loaders with their secondary
 # loading functions
@@ -89,6 +92,7 @@ def add_loader(mimetype, loader):
     # with the loader?
     viewer_registry[mimetype] = Bunch.Bunch(loader=loader,
                                             mimetype=mimetype)
+
 
 # built ins
 # ### FITS ###

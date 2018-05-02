@@ -9,7 +9,7 @@ import numpy as np
 from ginga import trcalc
 from ginga.util import io_rgb
 from ginga.misc import Bunch
-from ginga.BaseImage import BaseImage, Header, ImageError
+from ginga.BaseImage import BaseImage, ImageError
 
 
 class RGBImage(BaseImage):
