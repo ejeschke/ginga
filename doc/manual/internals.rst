@@ -16,7 +16,7 @@ The MVC pattern spells out a division of responsibilities and
 encapsulation where the Model provides various ways to access and
 interface to the data, the View provides ways to display the data and
 the Controller provides the methods and user interface hooks for
-controlling the view. 
+controlling the view.
 
 The Model
 ---------
@@ -26,7 +26,7 @@ The Model
    :scale: 100%
    :figclass: h
 
-   Hierarchy of Ginga ``AstroImage`` class 
+   Hierarchy of Ginga ``AstroImage`` class
 
 The Model classes are rooted in the base class ``BaseImage``.  The basic
 interface to the data is expected to be a Numpy-like array object that is
@@ -36,7 +36,7 @@ and methods for getting and setting key-value like metadata.
 
 There are two subclasses defined on BaseImage: ``RGBImage`` and
 ``AstroImage``.  RGBImage is used for displaying 3 channel RGB type
-images such as JPEG, TIFF, PNG, etc.  AstroImage is the subclass used to 
+images such as JPEG, TIFF, PNG, etc.  AstroImage is the subclass used to
 represent astronomical images and its organization is shown in
 Figure :ref:`fig-astroimage`.  It has two delegate objects devoted to
 handling World Coordinate System transformations and file IO.
@@ -49,7 +49,7 @@ As long as the model
 it can be loaded into a view object with the ``set_image()`` method.
 AstroImage provides convenience methods for accessing WCS information
 that may be necessary when using the model in canvas subclasses of a
-View that allow graphics drawing. 
+View that allow graphics drawing.
 
 The View
 --------
@@ -59,7 +59,7 @@ The View
    :scale: 100%
    :figclass: h
 
-   Class structure of Ginga basic widget viewer 
+   Class structure of Ginga basic widget viewer
 
 Figure :ref:`fig-imageviewzoom` shows the class inheritance of the
 ImageViewZoom class, which is a typical end class to use in a program if
@@ -114,7 +114,7 @@ Graphics on Ginga
    :scale: 100%
    :figclass: h
 
-   Class structure of Ginga ``DrawingCanvas`` class. 
+   Class structure of Ginga ``DrawingCanvas`` class.
 
 Ginga's graphics are all rendered from objects placed on a
 ``DrawingCanvas``.  All objects that can be put on a ``DrawingCanvas``
@@ -138,27 +138,33 @@ in the AstroImage class.  Your WCS should implement this abstract class:
     def MyWCS(object):
         def __init__(self, logger):
             self.logger = logger
-           
+
         def get_keyword(self, key):
             return self.header[key]
-        
+
         def get_keywords(self, *args):
             return map(lambda key: self.header[key], args)
-        
+
         def load_header(self, header, fobj=None):
             pass
-    
+
         def pixtoradec(self, idxs, coords='data'):
             # calculate ra_deg, dec_deg
             return (ra_deg, dec_deg)
-        
+
         def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
             # calculate x, y
             return (x, y)
-    
+
         def pixtosystem(self, idxs, system=None, coords='data'):
             return (deg1, deg2)
-    
+
+        def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
+            return [[ra_deg_0, dec_deg_0], [ra_deg_1, dec_deg_1], ...,
+                    [ra_deg_n, dec_deg_n]]
+
+        def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
+            return [[x0, y0], [x1, y1], ..., [xn, yn]]
 
 To use your WCS with Ginga create your images like this:
 
@@ -211,7 +217,7 @@ in the AstroImage class.  You should implement this abstract class:
             # class in self.factory_dict, under the keys 'image' or
             # 'table'
             return dstobj
-    
+
         def save_as_file(self, path, data, header, **kwdargs):
             pass
 
@@ -243,10 +249,10 @@ or you can override the io handler on a case-by-case basis:
     view.set_image(image)
 
 You could also subclass AstroImage or BaseImage and implement your own
-I/O handling. 
+I/O handling.
 
 .. note:: Both `naxispath` and `numhdu` are valid keyword arguments to
-          the load_file() method.  
+          the load_file() method.
 
           You probably want to treat `numhdu` as a kind of index into
           your file, similarly to the meaning within a FITS file
@@ -256,7 +262,7 @@ I/O handling.
           your load_file method) you simply return that value that they
           passed as the middle element of the return tuple. If they
           passed None (default), then you return the index you used
-          to access the data area that you loaded.  
+          to access the data area that you loaded.
 
           You probably want to treat `naxispath` as any kind of path
           that you would need to take to navigate through your kind of
@@ -268,13 +274,10 @@ I/O handling.
           your load_file method) you simply return that value that they
           passed. If they passed None (default), then you return
           whatever path you used to access the data slice that you
-          returned.  
+          returned.
 
 
 Porting Ginga to a New Widget Set
 ---------------------------------
 
 [*TBD*]
-
-
-    
