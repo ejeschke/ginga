@@ -206,7 +206,7 @@ class AstroImage(BaseImage):
             # under the metadata keyword 'header'
             hdr = self.metadata['header']
 
-            if include_primary_header == None:
+            if include_primary_header is None:
                 include_primary_header = self.inherit_primary_header
 
             if include_primary_header and self._primary_hdr is not None:

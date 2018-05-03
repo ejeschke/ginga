@@ -124,8 +124,8 @@ class Header(GingaPlugin.GlobalPlugin):
         self.logger.debug("setting header")
 
         if self.gui_up:
-            has_prihdr = (hasattr(image, 'has_primary_header')
-                          and image.has_primary_header())
+            has_prihdr = (hasattr(image, 'has_primary_header') and
+                          image.has_primary_header())
             self.w.chk_prihdr.set_enabled(has_prihdr)
 
         header = image.get_header(include_primary_header=self.flg_prihdr)
