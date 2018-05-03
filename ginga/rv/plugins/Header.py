@@ -19,6 +19,10 @@ If the "Sortable" checkbox has been checked in the lower left of the UI,
 then clicking on a column header will sort the table by values in that
 column, which may be useful for quickly locating a particular keyword.
 
+If the "Include primary header" checkbox toggles the inclusion of the
+primary HDU keywords or not.  This option may be disabled if the image
+was created with an option not to save the primary header.
+
 """
 from collections import OrderedDict
 
@@ -51,6 +55,8 @@ class Header(GingaPlugin.GlobalPlugin):
         self.settings.load(onError='silent')
 
         self.flg_sort = self.settings.get('sortable', False)
+        prihdr = self.fv.settings.get('inherit_primary_header', False)
+        self.flg_prihdr = self.settings.get('include_primary_header', prihdr)
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
         fv.add_callback('channel-change', self.focus_cb)
@@ -71,6 +77,11 @@ class Header(GingaPlugin.GlobalPlugin):
         cb = Widgets.CheckBox("Sortable")
         cb.set_state(self.flg_sort)
         cb.add_callback('activated', lambda w, tf: self.set_sortable_cb(tf))
+        hbox.add_widget(cb, stretch=0)
+        cb = Widgets.CheckBox("Include primary header")
+        cb.set_state(self.flg_prihdr)
+        cb.add_callback('activated', lambda w, tf: self.set_prihdr_cb(tf))
+        self.w.chk_prihdr = cb
         hbox.add_widget(cb, stretch=0)
         hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
@@ -111,7 +122,13 @@ class Header(GingaPlugin.GlobalPlugin):
             # we've already handled this header
             return
         self.logger.debug("setting header")
-        header = image.get_header()
+
+        if self.gui_up:
+            has_prihdr = (hasattr(image, 'has_primary_header')
+                          and image.has_primary_header())
+            self.w.chk_prihdr.set_enabled(has_prihdr)
+
+        header = image.get_header(include_primary_header=self.flg_prihdr)
         table = info.table
 
         is_sorted = self.flg_sort
@@ -215,6 +232,15 @@ class Header(GingaPlugin.GlobalPlugin):
 
     def set_sortable_cb(self, tf):
         self.flg_sort = tf
+        self._image = None
+        if self.info is not None:
+            info = self.info
+            channel = self.fv.get_channel(info.chname)
+            image = channel.get_current_image()
+            self.set_header(info, image)
+
+    def set_prihdr_cb(self, tf):
+        self.flg_prihdr = tf
         self._image = None
         if self.info is not None:
             info = self.info
