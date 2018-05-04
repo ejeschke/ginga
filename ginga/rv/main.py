@@ -584,9 +584,10 @@ class ReferenceViewer(object):
                 if '[' in imgfile and imgfile.endswith(']'):
                     s = imgfile.split('[')
                     ext = '[' + s[1]
+                    imgfile = s[0]
                 else:
                     ext = ''
-                for fname in glob.iglob(s[0]):
+                for fname in glob.iglob(imgfile):
                     expanded_args.append(fname + ext)
             else:
                 expanded_args.append(imgfile)

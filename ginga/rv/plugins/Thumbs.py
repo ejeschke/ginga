@@ -30,7 +30,7 @@ import time
 import threading
 
 from ginga import GingaPlugin
-from ginga import RGBImage
+from ginga import RGBImage, BaseImage
 from ginga.misc import Bunch
 from ginga.util import iohelper
 from ginga.gw import Widgets, Viewers
@@ -681,6 +681,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def _regen_thumb_image(self, image, viewer):
         self.logger.debug("generating new thumbnail")
+
+        if not isinstance(image, BaseImage.BaseImage):
+            # this is not a regular image type
+            image = RGBImage.RGBImage()
+            tmp_path = os.path.join(icondir, 'fits.png')
+            image.load_file(tmp_path)
 
         self.thumb_generator.set_image(image)
         if viewer is not None:

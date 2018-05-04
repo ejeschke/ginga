@@ -772,6 +772,10 @@ class ImageViewBase(Callback.Callbacks):
             Add image to canvas.
 
         """
+        if not isinstance(image, BaseImage.BaseImage):
+            raise ValueError("Wrong type of object to load: %s" % (
+                str(type(image))))
+
         canvas_img = self.get_canvas_image()
 
         old_image = canvas_img.get_image()
