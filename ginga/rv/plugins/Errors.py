@@ -1,13 +1,24 @@
-#
-# Errors.py -- Error reporting plugin for fits viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+The ``Errors`` plugin reports error messages on the viewer.
+
+**Plugin Type: Global**
+
+``Errors`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+When an error occurs in Ginga, its message may be reported here.
+
+"""
 import time
 
 from ginga import GingaPlugin
 from ginga.gw import Widgets
+
+__all__ = ['Errors']
+
 
 class Errors(GingaPlugin.GlobalPlugin):
 
@@ -19,7 +30,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
-        self.msg_font = self.fv.get_font("fixedFont", 10)
+        self.msg_font = self.fv.get_font('fixed', 10)
 
         vbox = Widgets.VBox()
 
@@ -96,4 +107,4 @@ class Errors(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'errors'
 
-#END
+# END

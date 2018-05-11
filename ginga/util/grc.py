@@ -5,19 +5,18 @@
 # Please see the file LICENSE.txt for details.
 #
 import threading
-import binascii
 from io import BytesIO
 
 import ginga.util.six as six
+from ginga.util.six.moves import map, zip
+from ginga.misc import Task, log
+
 if six.PY2:
     import xmlrpclib
     import SimpleXMLRPCServer
 else:
     import xmlrpc.client as xmlrpclib
     import xmlrpc.server as SimpleXMLRPCServer
-
-from ginga.util.six.moves import map, zip
-from ginga.misc import Task, log
 
 # undefined passed value--for a data type that cannot be converted
 undefined = '#UNDEFINED'
@@ -34,6 +33,7 @@ class _ginga_proxy(object):
             return self._fn(name, *args, **kwdargs)
         return _call
 
+
 class _canvas_proxy(object):
     """ Links to the canvas method in ginga.rv.plugins.RC.GingaWrapper
     User has to be savvy on the objects that can be passed through
@@ -49,6 +49,7 @@ class _canvas_proxy(object):
         def _call(*args, **kwdargs):
             return self._fn(self._chname, command, *args, **kwdargs)
         return _call
+
 
 class _channel_proxy(object):
 
@@ -157,6 +158,7 @@ class _channel_proxy(object):
                                 Blob(fitsbuf),
                                 num_hdu, {})
 
+
 class RemoteClient(object):
 
     def __init__(self, host, port):
@@ -261,7 +263,6 @@ class RemoteServer(object):
         raise AttributeError("No such method: '%s'" % (method_name))
 
 
-
 # List of XML-RPC types
 base_types = [str, int, float, bool]
 compound_types = [list, tuple, dict]
@@ -291,13 +292,13 @@ def marshall(obj):
     if isinstance(obj, Blob):
         return xmlrpclib.Binary(obj.buf)
 
-    if not typ in base_types:
+    if typ not in base_types:
         obj = undefined
 
     return obj
 
+
 def unmarshall(obj):
-    typ = type(obj)
 
     # take care of compound types
     if isinstance(obj, list):
@@ -312,6 +313,7 @@ def unmarshall(obj):
 
     return obj
 
+
 def prep_arg(arg):
     try:
         return float(arg)
@@ -320,6 +322,7 @@ def prep_arg(arg):
             return int(arg)
         except ValueError:
             return arg
+
 
 def prep_args(args):
     a, k = [], {}
@@ -330,6 +333,7 @@ def prep_args(args):
         else:
             a.append(prep_arg(arg))
     return a, k
+
 
 def get_exitcode_stdout_stderr(cmd):
     """

@@ -6,14 +6,12 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
-import sys, os
-import logging
-import threading
 
-from ginga import AstroImage, colors
+import sys
+
 import ginga.toolkit as ginga_toolkit
+from ginga import AstroImage, colors
 from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.util.toolbox import ModeIndicator
 from ginga.misc import log
 
 
@@ -52,7 +50,7 @@ class FitsViewer(object):
         bd.enable_all(True)
 
         # add a color bar
-        fi.private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
+        #fi.private_canvas.add(self.dc.ColorBar(side='bottom', offset=10))
 
         # add little mode indicator that shows modal states in
         # lower left hand corner
@@ -87,6 +85,7 @@ class FitsViewer(object):
 
         hbox = Widgets.HBox()
         hbox.set_border_width(2)
+        hbox.set_spacing(4)
 
         wdrawtype = Widgets.ComboBox()
         for name in self.drawtypes:
@@ -131,6 +130,7 @@ class FitsViewer(object):
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
+        hbox.set_spacing(4)
         btn1 = Widgets.RadioButton("Draw")
         btn1.set_state(mode == 'draw')
         btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
@@ -165,9 +165,9 @@ class FitsViewer(object):
         fill = self.wfill.get_state()
         alpha = self.walpha.get_value()
 
-        params = { 'color': self.drawcolors[index],
-                   'alpha': alpha,
-                   }
+        params = {'color': self.drawcolors[index],
+                  'alpha': alpha,
+                  }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
@@ -220,7 +220,7 @@ class FitsViewer(object):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -235,11 +235,19 @@ class FitsViewer(object):
 
     def draw_cb(self, canvas, tag):
         obj = canvas.get_object_by_tag(tag)
-        obj.add_callback('pick-down', self.pick_cb)
+        obj.add_callback('pick-down', self.pick_cb, 'down')
+        obj.add_callback('pick-up', self.pick_cb, 'up')
+        obj.add_callback('pick-move', self.pick_cb, 'move')
+        obj.add_callback('pick-hover', self.pick_cb, 'hover')
+        obj.add_callback('pick-enter', self.pick_cb, 'enter')
+        obj.add_callback('pick-leave', self.pick_cb, 'leave')
+        obj.add_callback('pick-key', self.pick_cb, 'key')
+        obj.pickable = True
         obj.add_callback('edited', self.edit_cb)
 
-    def pick_cb(self, obj, canvas, event, pt):
-        self.logger.info("pick point is %s" % (str(pt)))
+    def pick_cb(self, obj, canvas, event, pt, ptype):
+        self.logger.info("pick event '%s' with obj %s at (%.2f, %.2f)" % (
+            ptype, obj.kind, pt[0], pt[1]))
         return True
 
     def edit_cb(self, obj):
@@ -253,7 +261,7 @@ class FitsViewer(object):
 
     def quit(self, *args):
         self.logger.info("Attempting to shut down the application...")
-        if not self.top is None:
+        if self.top is not None:
             self.top.close()
         sys.exit()
 
@@ -301,6 +309,7 @@ def main(options, args):
         if viewer.top is not None:
             viewer.top.close()
 
+
 if __name__ == "__main__":
 
     # Parse command line options with nifty optparse module
@@ -309,7 +318,8 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] cmd [args]"
     optprs = OptionParser(usage=usage, version=('%%prog'))
 
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
+    optprs.add_option("--debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enter the pdb debugger on main()")
     optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
                       default='qt',
@@ -339,7 +349,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

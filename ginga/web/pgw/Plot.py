@@ -1,7 +1,6 @@
 #
 # Plot.py -- Plotting widget canvas wrapper.
 #
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -9,6 +8,7 @@ from io import BytesIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 from ginga.web.pgw import Widgets
+
 
 class PlotWidget(Widgets.Canvas):
     """
@@ -27,13 +27,13 @@ class PlotWidget(Widgets.Canvas):
         self.logger = plot.logger
 
         self._configured = False
-        self.refresh_delay = 0.010
 
         self.set_plot(plot)
 
     def set_plot(self, plot):
-        self.logger.debug("set_plot called")
         self.plot = plot
+        self.logger = plot.logger
+        self.logger.debug("set_plot called")
 
         self._dispatch_event_table = {
             "activate": self.ignore_event,
@@ -68,11 +68,9 @@ class PlotWidget(Widgets.Canvas):
             "panstart": self.ignore_event,
             "panend": self.ignore_event,
             "swipe": self.ignore_event,
-            }
+        }
 
         self.plot.add_callback('draw-canvas', self.draw_cb)
-
-        self.add_timer('refresh', self.refresh_cb)
 
     def get_plot(self):
         return self.plot
@@ -80,10 +78,9 @@ class PlotWidget(Widgets.Canvas):
     def ignore_event(self, event):
         pass
 
-    def refresh_cb(self):
+    def do_refresh(self):
         app = self.get_app()
         app.do_operation('refresh_canvas', id=self.id)
-        self.reset_timer('refresh', self.refresh_delay)
 
     def get_rgb_buffer(self, plot):
         buf = BytesIO()
@@ -102,8 +99,6 @@ class PlotWidget(Widgets.Canvas):
         self.logger.debug("drawing %dx%d image" % (wd, ht))
         self.draw_image(buf, 0, 0, wd, ht)
 
-        self.reset_timer('refresh', self.refresh_delay)
-
     def configure_window(self, wd, ht):
         self.logger.debug("canvas resized to %dx%d" % (wd, ht))
         fig = self.plot.get_figure()
@@ -114,6 +109,7 @@ class PlotWidget(Widgets.Canvas):
         self.configure_window(wd, ht)
 
         self.plot.draw()
+        self.do_refresh()
 
     def resize_event(self, event):
         wd, ht = event.width, event.height

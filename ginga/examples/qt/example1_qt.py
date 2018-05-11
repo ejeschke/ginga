@@ -2,8 +2,7 @@
 #
 # example1_qt.py -- Simple FITS viewer using the Ginga toolkit and Qt widgets.
 #
-import sys, os
-import logging
+import sys
 
 from ginga import AstroImage
 from ginga.misc import log
@@ -96,7 +95,7 @@ def main(options, args):
     # ginga needs a logger.
     # If you don't want to log anything you can create a null logger by
     # using null=True in this call instead of log_stderr=True
-    logger = log.get_logger("example1", log_stderr=True)
+    logger = log.get_logger("example1", log_stderr=True, level=40)
 
     w = FitsViewer(logger)
     w.resize(524, 540)
@@ -109,6 +108,7 @@ def main(options, args):
         w.load_file(args[0])
 
     app.exec_()
+
 
 if __name__ == '__main__':
     main(None, sys.argv[1:])

@@ -6,6 +6,7 @@
 
 from ginga import colors
 from ginga.misc import Bunch, Callback
+from ginga.fonts import font_asst
 
 import matplotlib.textpath as textpath
 
@@ -14,17 +15,20 @@ class Pen(object):
     def __init__(self, color='black', linewidth=1, linestyle='solid'):
         self.color = color
         self.linewidth = linewidth
-        self.linestyle = 'solid'
         if linestyle == 'dash':
-            self.linestyle = 'dashdot'
+            linestyle = 'dashdot'
+        self.linestyle = linestyle
+
 
 class Brush(object):
     def __init__(self, color='black', fill=False):
         self.color = color
         self.fill = fill
 
+
 class Font(object):
     def __init__(self, fontname='sans', fontsize=12.0, color='black'):
+        fontname = font_asst.resolve_alias(fontname, fontname)
         self.fontname = fontname
         self.fontsize = fontsize
         self.color = color
@@ -35,11 +39,19 @@ class Font(object):
         return fontdict
 
 
+def load_font(font_name, font_file):
+    # TODO!
+    ## raise ValueError("Loading fonts dynamically is an unimplemented"
+    ##                  " feature for matplotlib back end")
+    return font_name
+
+
 class MplContext(object):
 
     def __init__(self, axes):
         self.axes = axes
         self.kwdargs = dict()
+        self.stack = []
 
     def set_canvas(self, axes):
         self.axes = axes
@@ -50,6 +62,15 @@ class MplContext(object):
 
     def set(self, **kwdargs):
         self.kwdargs.update(kwdargs)
+
+    def push(self, allow=[]):
+        self.stack.append(self.kwdargs.copy())
+        d = {name: self.kwdargs[name]
+             for name in allow if name in self.kwdargs}
+        self.kwdargs = d
+
+    def pop(self):
+        self.kwdargs = self.stack.pop()
 
     def update_fill(self, brush):
         if brush is None:
@@ -155,7 +176,7 @@ class Timer(Callback.Callbacks):
     def stop(self):
         try:
             self._timer.stop()
-        except:
+        except Exception:
             pass
 
     def cancel(self):
@@ -167,4 +188,4 @@ class Timer(Callback.Callbacks):
 
     clear = cancel
 
-#END
+# END

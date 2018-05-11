@@ -4,18 +4,19 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, os
-import math
-import numpy
+from __future__ import absolute_import
+
+import os
 from io import BytesIO
 
-from ginga.qtw.QtHelp import QtGui, QtCore, QFont, QColor, QImage, \
-     QPixmap, QCursor, QPainter, have_pyqt5, Timer, get_scroll_info
-from ginga import ImageView, Mixins, Bindings
 import ginga.util.six as six
-from ginga.util.six.moves import map, zip
-from ginga.qtw.CanvasRenderQt import CanvasRenderer
+from ginga.util.six.moves import map
+from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
+from ginga.qtw.QtHelp import (QtGui, QtCore, QColor, QImage, QPixmap, QCursor,
+                              QPainter, Timer, get_scroll_info)
+
+from .CanvasRenderQt import CanvasRenderer
 
 
 class ImageViewQtError(ImageView.ImageViewError):
@@ -37,8 +38,8 @@ class RenderGraphicsView(QtGui.QGraphicsView):
         if not self.pixmap:
             return
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         # redraw the screen from backing pixmap
         rect = QtCore.QRect(x1, y1, width, height)
@@ -47,8 +48,8 @@ class RenderGraphicsView(QtGui.QGraphicsView):
     def resizeEvent(self, event):
         rect = self.geometry()
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         self.viewer.configure_window(width, height)
 
@@ -79,8 +80,8 @@ class RenderWidget(QtGui.QWidget):
             return
         rect = event.rect()
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         # redraw the screen from backing pixmap
         painter = QPainter(self)
@@ -90,8 +91,8 @@ class RenderWidget(QtGui.QWidget):
     def resizeEvent(self, event):
         rect = self.geometry()
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         self.viewer.configure_window(width, height)
         #self.update()
@@ -124,8 +125,10 @@ class ImageViewQt(ImageView.ImageViewBase):
             raise ImageViewQtError("Undefined render type: '%s'" % (render))
         self.imgwin.viewer = self
         self.pixmap = None
-        # Qt expects 32bit BGRA data for color images
+        # NOTE: we could use the following, but it is only for Qt5.x
+        # Asking for image in BGRA puts numpy array in ARGB format
         self.rgb_order = 'BGRA'
+        self.qimg_fmt = QImage.Format_ARGB32
 
         self.renderer = CanvasRenderer(self)
 
@@ -164,7 +167,6 @@ class ImageViewQt(ImageView.ImageViewBase):
                           qimage,
                           QtCore.QRect(0, 0, width, height))
 
-
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
@@ -189,13 +191,13 @@ class ImageViewQt(ImageView.ImageViewBase):
             # You will get scrollbars unless you account for this
             # See http://stackoverflow.com/questions/3513788/qt-qgraphicsview-without-scrollbar
             width, height = width - 2, height - 2
-            self.scene.setSceneRect(1, 1, width-2, height-2)
+            self.scene.setSceneRect(1, 1, width - 2, height - 2)
         # If we need to build a new pixmap do it here.  We allocate one
         # twice as big as necessary to prevent having to reinstantiate it
         # all the time.  On Qt this causes unpleasant flashing in the display.
-        if (self.pixmap is None) or (self.pixmap.width() < width) or \
-           (self.pixmap.height() < height):
-            pixmap = QPixmap(width*2, height*2)
+        if ((self.pixmap is None) or (self.pixmap.width() < width) or
+                (self.pixmap.height() < height)):
+            pixmap = QPixmap(width * 2, height * 2)
             #pixmap.fill(QColor("black"))
             self.pixmap = pixmap
             self.imgwin.set_pixmap(pixmap)
@@ -219,13 +221,12 @@ class ImageViewQt(ImageView.ImageViewBase):
 
     def get_rgb_image_as_widget(self):
         imgwin_wd, imgwin_ht = self.get_window_size()
-        qpix = self.pixmap.copy(0, 0,
-                                imgwin_wd, imgwin_ht)
+        qpix = self.pixmap.copy(0, 0, imgwin_wd, imgwin_ht)
         return qpix.toImage()
 
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         qimg = self.get_rgb_image_as_widget()
-        res = qimg.save(filepath, format=format, quality=quality)
+        qimg.save(filepath, format=format, quality=quality)
 
     def get_plain_image_as_widget(self):
         """Used for generating thumbnails.  Does not include overlaid
@@ -240,7 +241,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         graphics.
         """
         qimg = self.get_plain_image_as_widget()
-        res = qimg.save(filepath, format=format, quality=quality)
+        qimg.save(filepath, format=format, quality=quality)
 
     def reschedule_redraw(self, time_sec):
         self._defer_task.stop()
@@ -293,18 +294,17 @@ class ImageViewQt(ImageView.ImageViewBase):
     def make_timer(self):
         return Timer()
 
-    def _get_qimage(self, bgra):
-        h, w, channels = bgra.shape
+    def _get_qimage(self, rgb_data):
+        ht, wd, channels = rgb_data.shape
 
-        fmt = QImage.Format_ARGB32
-        result = QImage(bgra.data, w, h, fmt)
+        result = QImage(rgb_data.data, wd, ht, self.qimg_fmt)
         # Need to hang on to a reference to the array
-        result.ndarray = bgra
+        result.ndarray = rgb_data
         return result
 
     def _get_color(self, r, g, b):
         n = 255.0
-        clr = QColor(int(r*n), int(g*n), int(b*n))
+        clr = QColor(int(r * n), int(g * n), int(b * n))
         return clr
 
     def onscreen_message(self, text, delay=None, redraw=True):
@@ -363,17 +363,17 @@ class RenderMixin(object):
         return super(RenderMixin, self).event(event)
 
     def dragEnterEvent(self, event):
-#         if event.mimeData().hasFormat('text/plain'):
-#             event.accept()
-#         else:
-#             event.ignore()
+        #if event.mimeData().hasFormat('text/plain'):
+        #    event.accept()
+        #else:
+        #    event.ignore()
         event.accept()
 
     def dragMoveEvent(self, event):
-#         if event.mimeData().hasFormat('text/plain'):
-#             event.accept()
-#         else:
-#             event.ignore()
+        #if event.mimeData().hasFormat('text/plain'):
+        #    event.accept()
+        #else:
+        #    event.ignore()
         event.accept()
 
     def dropEvent(self, event):
@@ -382,6 +382,7 @@ class RenderMixin(object):
 
 class RenderWidgetZoom(RenderMixin, RenderWidget):
     pass
+
 
 class RenderGraphicsViewZoom(RenderMixin, RenderGraphicsView):
     pass
@@ -408,12 +409,9 @@ class QtEventMixin(object):
         #imgwin.grabGesture(QtCore.Qt.TapGesture)
         #imgwin.grabGesture(QtCore.Qt.TapAndHoldGesture)
 
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
-
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
-                               ('pick', 'thinCrossCursor.png')):
+                                  ('pick', 'thinCrossCursor.png')):
             path = os.path.join(icondir, filename)
             cur = self.make_cursor(path, 8, 8)
             self.define_cursor(curname, cur)
@@ -425,7 +423,7 @@ class QtEventMixin(object):
             "'": 'singlequote',
             '\\': 'backslash',
             ' ': 'space',
-            }
+        }
         self._fnkeycodes = [QtCore.Qt.Key_F1, QtCore.Qt.Key_F2,
                             QtCore.Qt.Key_F3, QtCore.Qt.Key_F4,
                             QtCore.Qt.Key_F5, QtCore.Qt.Key_F6,
@@ -437,11 +435,9 @@ class QtEventMixin(object):
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
-                     'pinch', 'pan', 'swipe', 'tap'):
+                     'pinch', 'pan',  # 'swipe', 'tap'
+                     ):
             self.enable_callback(name)
-
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
 
     def transkey(self, keycode, keyname):
         self.logger.debug("keycode=%d keyname='%s'" % (
@@ -483,7 +479,7 @@ class QtEventMixin(object):
             return 'meta_right'
         if keycode in self._fnkeycodes:
             index = self._fnkeycodes.index(keycode)
-            return 'f%d' % (index+1)
+            return 'f%d' % (index + 1)
 
         try:
             return self._keytbl[keyname.lower()]
@@ -497,8 +493,8 @@ class QtEventMixin(object):
     def map_event(self, widget, event):
         rect = widget.geometry()
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         self.configure_window(width, height)
         return self.make_callback('map')
@@ -507,7 +503,8 @@ class QtEventMixin(object):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, widget, event):
-        if self.enter_focus:
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             widget.setFocus()
         return self.make_callback('enter')
 
@@ -594,11 +591,11 @@ class QtEventMixin(object):
 
     def scroll_event(self, widget, event):
         x, y = event.x(), event.y()
+        # accept event here so it doesn't get propagated to parent
+        event.accept()
         self.last_win_x, self.last_win_y = x, y
 
-        num_degrees, direction = get_scroll_info(event)
-        self.logger.debug("scroll deg={} direction={}".format(
-            num_degrees, direction))
+        data_x, data_y = self.check_cursor_location()
 
         # NOTE: for future use in distinguishing mouse wheel vs.
         # trackpad events
@@ -609,9 +606,18 @@ class QtEventMixin(object):
             if _src == QtCore.Qt.MouseEventNotSynthesized:
                 src = 'wheel'
             else:
-                src = 'trackpad'
+                src = 'trackpad'  # noqa
+                point = event.pixelDelta()
+                dx, dy = point.x(), point.y()
 
-        data_x, data_y = self.check_cursor_location()
+                # Synthesize this as a pan gesture event
+                self.make_ui_callback('pan', 'start', 0, 0)
+                self.make_ui_callback('pan', 'move', dx, dy)
+                return self.make_ui_callback('pan', 'stop', 0, 0)
+
+        num_degrees, direction = get_scroll_info(event)
+        self.logger.debug("scroll deg={} direction={}".format(
+            num_degrees, direction))
 
         return self.make_ui_callback('scroll', direction, num_degrees,
                                      data_x, data_y)
@@ -624,9 +630,9 @@ class QtEventMixin(object):
         elif state == QtCore.Qt.GestureUpdated:
             gstate = 'move'
         elif state == QtCore.Qt.GestureFinished:
-            gstate = 'end'
+            gstate = 'stop'
         elif state == QtCore.Qt.GestureCancelled:
-            gstate = 'end'
+            gstate = 'stop'
 
         # dispatch on gesture type
         gtype = event.gesture(QtCore.Qt.SwipeGesture)
@@ -652,7 +658,7 @@ class QtEventMixin(object):
         return True
 
     def gs_swiping(self, event, gesture, gstate):
-        if gstate == 'end':
+        if gstate == 'stop':
             _hd = gesture.horizontalDirection()
             hdir = None
             if _hd == QtGui.QSwipeGesture.Left:
@@ -673,7 +679,6 @@ class QtEventMixin(object):
             return self.make_ui_callback('swipe', gstate, hdir, vdir)
 
     def gs_pinching(self, event, gesture, gstate):
-        #print("PINCHING")
         rot = gesture.rotationAngle()
         scale = gesture.scaleFactor()
         self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
@@ -682,13 +687,6 @@ class QtEventMixin(object):
         return self.make_ui_callback('pinch', gstate, rot, scale)
 
     def gs_panning(self, event, gesture, gstate):
-        #print("PANNING")
-        # x, y = event.x(), event.y()
-        # self.last_win_x, self.last_win_y = x, y
-
-        # data_x, data_y = self.get_data_xy(x, y)
-        # self.last_data_x, self.last_data_y = data_x, data_y
-
         d = gesture.delta()
         dx, dy = d.x(), d.y()
         self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
@@ -714,14 +712,14 @@ class QtEventMixin(object):
                 thumbstr = str(dropdata.data("text/thumb"))
             else:
                 thumbstr = str(dropdata.data("text/thumb"), encoding='ascii')
-            data = [ thumbstr ]
+            data = [thumbstr]
             self.logger.debug("dropped thumb(s): %s" % (str(data)))
         elif dropdata.hasUrls():
             urls = list(dropdata.urls())
-            data = [ str(url.toString()) for url in urls ]
+            data = [str(url.toString()) for url in urls]
             self.logger.debug("dropped filename(s): %s" % (str(data)))
         elif "text/plain" in formats:
-            data = [ dropdata.text() ]
+            data = [dropdata.text()]
             self.logger.debug("dropped filename(s): %s" % (str(data)))
         else:
             # No format that we understand--just pass it along
@@ -866,8 +864,8 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         vp = self.viewport()
         rect = vp.geometry()
         x1, y1, x2, y2 = rect.getCoords()
-        width = x2 - x1
-        height = y2 - y1
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
 
         self.v_w.resize(width, height)
 
@@ -936,6 +934,9 @@ class ScrolledView(QtGui.QAbstractScrollArea):
 
             bd = self.viewer.get_bindings()
             bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
+
+            # This shouldn't be necessary, but seems to be
+            self.viewer.redraw(whence=0)
 
         finally:
             self._scrolling = False

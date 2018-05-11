@@ -78,6 +78,10 @@ class TableViewBase(Callback.Callbacks):
         return self.logger
 
     def set_table(self, table):
+        if not isinstance(table, AstroTable.AstroTable):
+            raise ValueError("Wrong type of object to load: %s" % (
+                str(type(table))))
+
         self._table = table
 
         self.make_callback('table-set', table)

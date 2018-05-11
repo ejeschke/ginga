@@ -15,20 +15,28 @@ from . import coordmap
 __all__ = ['CanvasObjectBase', 'get_canvas_type', 'get_canvas_types',
            'register_canvas_type', 'register_canvas_types']
 
-colors_plus_none = [ None ] + colors.get_colors()
+colors_plus_none = [None] + colors.get_colors()
 
 coord_names = ['data', 'wcs', 'cartesian', 'window']
 
 Point = namedtuple('Point', ['x', 'y'])
 
+
 class EditPoint(Point):
     edit_color = 'yellow'
+
+
 class MovePoint(EditPoint):
     edit_color = 'orangered'
+
+
 class ScalePoint(EditPoint):
     edit_color = 'green'
+
+
 class RotatePoint(EditPoint):
     edit_color = 'skyblue'
+
 
 class CanvasObjectError(Exception):
     pass
@@ -62,7 +70,8 @@ class CanvasObjectBase(Callback.Callbacks):
 
         # For callbacks
         for name in ('edited', 'pick-down', 'pick-move', 'pick-up',
-                     'pick-hover', 'pick-enter', 'pick-leave'):
+                     'pick-hover', 'pick-enter', 'pick-leave',
+                     'pick-key'):
             self.enable_callback(name)
 
     def initialize(self, canvas, viewer, logger):
@@ -101,14 +110,16 @@ class CanvasObjectBase(Callback.Callbacks):
             except KeyError:
                 return args[1]
         else:
-            raise CanvasObjectError("method get_data() takes at most 2 arguments")
+            raise CanvasObjectError(
+                "method get_data() takes at most 2 arguments")
 
     def use_coordmap(self, mapobj):
         self.crdmap = mapobj
 
     def canvascoords(self, viewer, data_x, data_y, center=None):
         if center is not None:
-            self.logger.warn("`center` keyword is ignored and will be deprecated")
+            self.logger.warn(
+                "`center` keyword is ignored and will be deprecated")
 
         return viewer.get_canvas_xy(data_x, data_y)
 
@@ -146,7 +157,7 @@ class CanvasObjectBase(Callback.Callbacks):
                 # Draw edit control points in different colors than the others
                 if isinstance(pt, EditPoint):
                     cr.set_fill('black', alpha=alpha)
-                    cr.draw_circle(cx, cy, radius+2.0)
+                    cr.draw_circle(cx, cy, radius + 2.0)
 
                     color = pt.edit_color
 
@@ -164,14 +175,15 @@ class CanvasObjectBase(Callback.Callbacks):
 
         points = self.get_edit_points(viewer)
         cpoints = self.get_cpoints(viewer, points=points)
+
         # preserve point types for coloring
         def _map_cpt(pt, cpt):
             if isinstance(pt, EditPoint):
                 return pt.__class__(*cpt)
             return cpt
 
-        cpoints = tuple([ _map_cpt(points[i], cpoints[i])
-                          for i in range(len(points)) ])
+        cpoints = tuple([_map_cpt(points[i], cpoints[i])
+                         for i in range(len(points))])
         self.draw_caps(cr, 'ball', cpoints)
 
     def calc_radius(self, viewer, p1, p2):
@@ -182,14 +194,14 @@ class CanvasObjectBase(Callback.Callbacks):
         return (x1, y1, radius)
 
     def calc_vertexes(self, start_cx, start_cy, end_cx, end_cy,
-                     arrow_length=10, arrow_degrees=0.35):
+                      arrow_length=10, arrow_degrees=0.35):
 
         angle = np.arctan2(end_cy - start_cy, end_cx - start_cx) + np.pi
 
-        cx1 = end_cx + arrow_length * np.cos(angle - arrow_degrees);
-        cy1 = end_cy + arrow_length * np.sin(angle - arrow_degrees);
-        cx2 = end_cx + arrow_length * np.cos(angle + arrow_degrees);
-        cy2 = end_cy + arrow_length * np.sin(angle + arrow_degrees);
+        cx1 = end_cx + arrow_length * np.cos(angle - arrow_degrees)
+        cy1 = end_cy + arrow_length * np.sin(angle - arrow_degrees)
+        cx2 = end_cx + arrow_length * np.cos(angle + arrow_degrees)
+        cy2 = end_cy + arrow_length * np.sin(angle + arrow_degrees)
 
         return (cx1, cy1, cx2, cy2)
 
@@ -363,7 +375,6 @@ class CanvasObjectBase(Callback.Callbacks):
 
         self.set_data_points(data_pts)
 
-
     def point_within_radius(self, points, pt, canvas_radius,
                             scales=(1.0, 1.0)):
         """Points `points` and point `pt` are in data coordinates.
@@ -417,12 +428,12 @@ class CanvasObjectBase(Callback.Callbacks):
         div = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
         a_arr, b_arr = np.asarray(points).T
-        d = np.fabs((x2 - x1)*(y1 - b_arr) - (x1 - a_arr)*(y2 - y1)) / div
+        d = np.fabs((x2 - x1) * (y1 - b_arr) - (x1 - a_arr) * (y2 - y1)) / div
 
         contains = np.logical_and(
             np.logical_and(xmin <= a_arr, a_arr <= xmax),
             np.logical_and(d <= canvas_radius,
-                              np.logical_and(ymin <= b_arr, b_arr <= ymax)))
+                           np.logical_and(ymin <= b_arr, b_arr <= ymax)))
         return contains
 
     def within_line(self, viewer, points, p_start, p_stop, canvas_radius):
@@ -504,7 +515,6 @@ class CanvasObjectBase(Callback.Callbacks):
         else:
             return trcalc.strip_z(trcalc.get_bounds(points))
 
-
     # --- TO BE DEPRECATED METHODS ---
 
     def move_delta(self, xoff, yoff):
@@ -566,31 +576,35 @@ class CanvasObjectBase(Callback.Callbacks):
 # this is the data structure to which drawing classes are registered
 drawCatalog = Bunch.Bunch(caseless=True)
 
+
 def get_canvas_types():
     # force registration of all canvas types
-    import ginga.canvas.types.all
+    import ginga.canvas.types.all  # noqa
 
     return drawCatalog
 
+
 def get_canvas_type(name):
     # force registration of all canvas types
-    import ginga.canvas.types.all
+    import ginga.canvas.types.all  # noqa
 
     return drawCatalog[name]
+
 
 def register_canvas_type(name, klass):
     global drawCatalog
     drawCatalog[name] = klass
 
+
 def register_canvas_types(klass_dict):
     global drawCatalog
     drawCatalog.update(klass_dict)
 
+
 # funky boolean converter
-_bool = lambda st: str(st).lower() == 'true'
+_bool = lambda st: str(st).lower() == 'true'  # noqa
 
 # color converter
-_color = lambda name: name
-
+_color = lambda name: name  # noqa
 
 # END

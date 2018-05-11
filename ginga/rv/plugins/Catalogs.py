@@ -1,13 +1,54 @@
-#
-# Catalogs.py -- Catalogs plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+A plugin for plotting object locations from a catalog on an image.
+
+**Plugin Type: Local**
+
+``Catalogs`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+Before ``Catalogs`` can be used, you need to define at least one catalog or
+image server to be queried in ``ginga_config.py``. Here is an example for
+defining three cone search catalogs for guide stars::
+
+        def pre_gui_config(ginga):
+            from ginga.util.catalog import AstroPyCatalogServer
+
+            # Add Cone Search services
+            catalogs = [
+                ('The HST Guide Star Catalog, Version 1.2 (Lasker+ 1996) 1',
+                 'GSC_1.2'),
+                ('The PMM USNO-A1.0 Catalogue (Monet 1997) 1', 'USNO_A1'),
+                ('The USNO-A2.0 Catalogue (Monet+ 1998) 1', 'USNO_A2'),
+            ]
+            bank = ginga.get_ServerBank()
+            for longname, shortname in catalogs:
+                obj = AstroPyCatalogServer(
+                    ginga.logger, longname, shortname, '', shortname)
+                bank.addCatalogServer(obj)
+
+        def post_gui_config(ginga):
+            pass
+
+Then, start Ginga and then start the ``Catalogs`` local plugin from the
+channel you want to perform searchs on. You will see the catalogs listed
+in a drop-down menu on the plugin GUI.
+
+Draw a shape on the displayed image and adjust search parameters as desired.
+When you are ready, press on the button to perform the search.
+When search results are available, they will be displayed on the image and
+also listed in a table on the plugin GUI. You can click on either the table
+or the image to highlight selection.
+
+"""
 import os
 import math
-import numpy as np
 from collections import OrderedDict
+
+import numpy as np
 
 from ginga.misc import Bunch
 from ginga import GingaPlugin
@@ -16,22 +57,11 @@ from ginga.util import wcs
 from ginga.util.six.moves import map
 from ginga.gw import ColorBar, Widgets
 
+__all__ = ['Catalogs']
+
 
 class Catalogs(GingaPlugin.LocalPlugin):
-    """
-    Catalogs
-    ========
-    A plugin for plotting object locations from a catalog on an image.
 
-    Plugin Type: Local
-    ------------------
-    Catalogs is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Usage
-    -----
-    TBD
-    """
     def __init__(self, fv, fitsimage):
         super(Catalogs, self).__init__(fv, fitsimage)
 
@@ -317,17 +347,20 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
     def stop(self):
         # stop catalog operation
-        self.clear_all()
+        try:
+            self.clear_all()
+        except Exception:
+            pass
         # remove the canvas from the image
         self.canvas.ui_set_active(False)
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         try:
             self.table.close()
-        except:
+        except Exception:
             pass
         self.gui_up = False
         self.fv.show_status("")
@@ -398,11 +431,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
             # width and height are specified in arcmin
             sgn, deg, mn, sec = wcs.degToDms(wd_deg)
-            wd = deg*60.0 + float(mn) + sec/60.0
+            wd = deg * 60.0 + float(mn) + sec / 60.0
             sgn, deg, mn, sec = wcs.degToDms(ht_deg)
-            ht = deg*60.0 + float(mn) + sec/60.0
+            ht = deg * 60.0 + float(mn) + sec / 60.0
             sgn, deg, mn, sec = wcs.degToDms(radius_deg)
-            radius = deg*60.0 + float(mn) + sec/60.0
+            radius = deg * 60.0 + float(mn) + sec / 60.0
             #wd, ht, radius = wd_deg, ht_deg, radius_deg
 
         except Exception as e:
@@ -497,7 +530,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if self.areatag:
             try:
                 canvas.delete_object_by_tag(self.areatag)
-            except:
+            except Exception:
                 pass
 
         obj.color = self.color_outline
@@ -609,7 +642,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             return starlist, info
 
         except Exception as e:
-            errmsg ="Failed to load catalog: %s" % (str(e))
+            errmsg = "Failed to load catalog: %s" % (str(e))
             raise Exception(errmsg)
 
     def getcatalog(self, server, params, obj):
@@ -647,7 +680,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             num_cat = len(starlist)
             self.logger.debug("number of incoming stars=%d" % (num_cat))
             coords = np.asarray([(star['ra_deg'], star['dec_deg'])
-                                    for star in starlist])
+                                 for star in starlist])
 
             # vectorized wcs transform to data coords
             coords = image.wcs.wcspt_to_datapt(coords)
@@ -752,7 +785,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             obj.canvobj = None
 
         # plot stars in range
-        subset = self.table.get_subset_from_starlist(i, i+length)
+        subset = self.table.get_subset_from_starlist(i, i + length)
 
         with self.fitsimage.suppress_redraw:
             for obj in subset:
@@ -781,7 +814,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if num_stars > 0:
             adj = self.w.plotgrp
             #page_size = self.plot_limit
-            self.plot_start = min(self.plot_start, num_stars-1)
+            self.plot_start = min(self.plot_start, num_stars - 1)
             adj.set_limits(0, num_stars, incr_value=1)
 
         self.replot_stars()
@@ -812,7 +845,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             if 'label' in bnch:
                 text = bnch.label
             #captions.append((text, 'entry'))
-            captions.append((text+':', 'label', bnch.name, 'entry'))
+            captions.append((text + ':', 'label', bnch.name, 'entry'))
 
         # TODO: put RA/DEC first, and other stuff not in random orders
         w, b = Widgets.build_info(captions)
@@ -920,7 +953,7 @@ class CatalogListing(object):
     def get_color(self, obj):
         try:
             mag = obj[self.mag_field]
-        except:
+        except Exception:
             return self.color_default
 
         # calculate range of values
@@ -1029,7 +1062,7 @@ class CatalogListing(object):
         self.replot_stars()
 
     def set_minmax(self, i, length):
-        subset = self.get_subset_from_starlist(i, i+length)
+        subset = self.get_subset_from_starlist(i, i + length)
         values = list(map(lambda star: float(star[self.mag_field]),
                           subset))
         if len(values) > 0:
@@ -1124,12 +1157,11 @@ class CatalogListing(object):
             combobox.append_text(name)
             index += 1
         combobox.set_index(0)
-        combobox.add_callback('activated',
-                              lambda w, idx: self.do_operation_cb(idx))
         self.btn['oprn'] = combobox
         btns.add_widget(combobox, stretch=0)
 
         btn = Widgets.Button("Do it")
+        btn.add_callback('activated', self.do_operation_cb, combobox)
         btns.add_widget(btn, stretch=0)
 
         vbox.add_widget(btns, stretch=0)
@@ -1297,13 +1329,19 @@ class CatalogListing(object):
         fieldname = self.columns[index][1]
         self.set_field(fieldname)
 
-    def do_operation_cb(self, w):
-        index = w.get_index()
+    def do_operation_cb(self, btn_w, combo_w):
+        index = combo_w.get_index()
         if index >= 0:
             fn = self.operation_table[index][1]
             fn(self.selected)
 
     def sort_cb(self):
         self.replot_stars()
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Catalogs', package='ginga')
 
 # END

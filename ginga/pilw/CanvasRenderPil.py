@@ -6,13 +6,12 @@
 
 import math
 
-from PIL import Image, ImageDraw, ImageFont
-from . import PilHelp
-from itertools import chain
-
 # force registration of all canvas types
-import ginga.canvas.types.all
+import ginga.canvas.types.all  # noqa
 from ginga import trcalc
+
+from . import PilHelp
+
 
 class RenderContext(object):
 
@@ -89,10 +88,10 @@ class RenderContext(object):
         sine = math.sin(math.radians(rot_deg))
         a = cosine / sx
         b = sine / sx
-        c = x - nx*a - ny*b
+        c = x - nx * a - ny * b
         d = -sine / sy
         e = cosine / sy
-        f = y - nx*d - ny*e
+        f = y - nx * d - ny * e
         return (a, b, c, d, e, f)
 
     ##### DRAWING OPERATIONS #####
@@ -100,7 +99,8 @@ class RenderContext(object):
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         wd, ht = self.cr.text_extents(text, self.font)
 
-        self.cr.text((cx, cy-ht), text, self.font, self.pen)
+        # NOTE: rotation ignored in PIL, for now
+        self.cr.text((cx, cy - ht), text, self.font, self.pen)
 
     def draw_polygon(self, cpoints):
         cpoints = trcalc.strip_z(cpoints)

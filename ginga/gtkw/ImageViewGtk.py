@@ -4,21 +4,20 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import sys, os
-
-import numpy
+import os
 
 import gtk
 import cairo
 
 from ginga.gtkw import GtkHelp
 from ginga.cairow import ImageViewCairo
-from ginga import Mixins, Bindings, colors
+from ginga import Mixins, Bindings
 from ginga.util.paths import icondir
 
 
 class ImageViewGtkError(ImageViewCairo.ImageViewCairoError):
     pass
+
 
 class ImageViewGtk(ImageViewCairo.ImageViewCairo):
 
@@ -49,7 +48,6 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         self.msgtask.add_callback('expired',
                                   lambda timer: self.onscreen_message(None))
 
-
     def get_widget(self):
         return self.imgwin
 
@@ -57,16 +55,16 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         arr = self.getwin_array(order='RGB')
 
         try:
-            pixbuf = GtkHelp.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB,
-                                                  8)
+            pixbuf = GtkHelp.pixbuf_new_from_array(
+                arr, gtk.gdk.COLORSPACE_RGB, 8)
         except Exception as e:
             self.logger.warning("Error making pixbuf: %s" % (str(e)))
             # pygtk might have been compiled without numpy support
             daht, dawd, depth = arr.shape
             rgb_buf = self._get_rgbbuf(arr)
-            pixbuf = GtkHelp.pixbuf_new_from_data(rgb_buf,
-                                                  gtk.gdk.COLORSPACE_RGB,
-                                                  False, 8, dawd, daht, dawd*3)
+            pixbuf = GtkHelp.pixbuf_new_from_data(
+                rgb_buf, gtk.gdk.COLORSPACE_RGB,
+                False, 8, dawd, daht, dawd * 3)
 
         return pixbuf
 
@@ -95,7 +93,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         daht = self.surface.get_height()
         rgb_buf = bytes(self.surface.get_data())
         pixbuf = GtkHelp.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
-                                              False, 8, dawd, daht, dawd*3)
+                                              False, 8, dawd, daht, dawd * 3)
 
         return pixbuf
 
@@ -123,12 +121,11 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
             # to scrolling
             win.process_updates(True)
 
-
     def expose_event(self, widget, event):
         """When an area of the window is exposed, we just copy out of the
         server-side, off-screen surface to that area.
         """
-        x , y, width, height = event.area
+        x, y, width, height = event.area
         self.logger.debug("surface is %s" % self.surface)
         if self.surface is not None:
             win = widget.get_window()
@@ -242,18 +239,18 @@ class ImageViewEvent(ImageViewGtk):
         imgwin.connect("key_release_event", self.key_release_event)
         imgwin.connect("scroll_event", self.scroll_event)
         mask = imgwin.get_events()
-        imgwin.set_events(mask
-                         | gtk.gdk.ENTER_NOTIFY_MASK
-                         | gtk.gdk.LEAVE_NOTIFY_MASK
-                         | gtk.gdk.FOCUS_CHANGE_MASK
-                         | gtk.gdk.STRUCTURE_MASK
-                         | gtk.gdk.BUTTON_PRESS_MASK
-                         | gtk.gdk.BUTTON_RELEASE_MASK
-                         | gtk.gdk.KEY_PRESS_MASK
-                         | gtk.gdk.KEY_RELEASE_MASK
-                         | gtk.gdk.POINTER_MOTION_MASK
-                         | gtk.gdk.POINTER_MOTION_HINT_MASK
-                         | gtk.gdk.SCROLL_MASK)
+        imgwin.set_events(mask |
+                          gtk.gdk.ENTER_NOTIFY_MASK |
+                          gtk.gdk.LEAVE_NOTIFY_MASK |
+                          gtk.gdk.FOCUS_CHANGE_MASK |
+                          gtk.gdk.STRUCTURE_MASK |
+                          gtk.gdk.BUTTON_PRESS_MASK |
+                          gtk.gdk.BUTTON_RELEASE_MASK |
+                          gtk.gdk.KEY_PRESS_MASK |
+                          gtk.gdk.KEY_RELEASE_MASK |
+                          gtk.gdk.POINTER_MOTION_MASK |
+                          gtk.gdk.POINTER_MOTION_HINT_MASK |
+                          gtk.gdk.SCROLL_MASK)
 
         # Set up widget as a drag and drop destination
         imgwin.connect("drag-data-received", self.drop_event)
@@ -261,16 +258,13 @@ class ImageViewEvent(ImageViewGtk):
         imgwin.connect("drag-drop", self.drag_drop_cb)
         self.TARGET_TYPE_TEXT = 0
         self.TARGET_TYPE_THUMB = 1
-        toImage = [ ( "text/plain", 0, self.TARGET_TYPE_TEXT ),
-                    #( "text/uri-list", 0, self.TARGET_TYPE_TEXT ),
-                    ( "text/thumb", gtk.TARGET_SAME_APP,
-                      self.TARGET_TYPE_THUMB ),
-                    ]
+        toImage = [("text/plain", 0, self.TARGET_TYPE_TEXT),
+                   #( "text/uri-list", 0, self.TARGET_TYPE_TEXT),
+                   ("text/thumb", gtk.TARGET_SAME_APP,
+                    self.TARGET_TYPE_THUMB),
+                   ]
         imgwin.drag_dest_set(gtk.DEST_DEFAULT_ALL, toImage,
                              gtk.gdk.ACTION_COPY)
-
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
 
         # @$%&^(_)*&^ gnome!!
         self._keytbl = {
@@ -341,7 +335,7 @@ class ImageViewEvent(ImageViewGtk):
             'end': 'end',
             'page_up': 'page_up',
             'page_down': 'page_down',
-            }
+        }
 
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
@@ -366,9 +360,6 @@ class ImageViewEvent(ImageViewGtk):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
-
     def map_event(self, widget, event):
         super(ImageViewZoom, self).configure_event(widget, event)
         return self.make_callback('map')
@@ -377,7 +368,8 @@ class ImageViewEvent(ImageViewGtk):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, widget, event):
-        if self.enter_focus:
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             widget.grab_focus()
         return self.make_callback('enter')
 
@@ -405,7 +397,8 @@ class ImageViewEvent(ImageViewGtk):
 
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -419,7 +412,8 @@ class ImageViewEvent(ImageViewGtk):
 
     def button_release_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -454,7 +448,8 @@ class ImageViewEvent(ImageViewGtk):
 
     def scroll_event(self, widget, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         degrees, direction = GtkHelp.get_scroll_info(event)
@@ -464,17 +459,17 @@ class ImageViewEvent(ImageViewGtk):
         data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback('scroll', direction, degrees,
-                                  data_x, data_y)
+                                     data_x, data_y)
 
     def drag_drop_cb(self, widget, context, x, y, time):
         self.logger.debug('drag_drop_cb')
         # initiates a drop
-        success = delete = False
+        success = delete = False  # noqa
         for mimetype in context.targets:
             if mimetype in ("text/thumb", "text/plain", "text/uri-list"):
                 context.drop_reply(True, time)
                 success = True
-                return True
+                return success
 
         self.logger.debug("dropped format type did not match known types")
         context.drop_reply(False, time)
@@ -566,125 +561,6 @@ class CanvasView(ImageViewZoom):
         self.objects[0] = self.private_canvas
 
 
-class ScrolledView1(gtk.ScrolledWindow):
-    """A class that can take a viewer as a parameter and add scroll bars
-    that respond to the pan/zoom levels.
-    """
-
-    def __init__(self, viewer, parent=None):
-        self.viewer = viewer
-        super(ScrolledView, self).__init__()
-
-        # the window jiggles annoyingly as the scrollbar is alternately
-        # shown and hidden if we use the default "automatic" policy, so
-        # default to always showing them (user can change this after
-        # calling the constructor, if desired)
-        self.scroll_bars(horizontal='on', vertical='on')
-
-        self.set_border_width(0)
-
-        self._adjusting = False
-        self._scrolling = False
-        self.pad = 20
-        self.upper_h = 100.0
-        self.upper_v = 100.0
-
-        # reparent the viewer widget
-        self.v_w = viewer.get_widget()
-        self.add(self.v_w)
-
-        hsb = self.get_hadjustment()
-        hsb.connect('value-changed', self._scroll_contents)
-        vsb = self.get_vadjustment()
-        vsb.connect('value-changed', self._scroll_contents)
-
-        self.viewer.add_callback('redraw', self._calc_scrollbars)
-        self.viewer.add_callback('limits-set',
-                                 lambda v, l: self._calc_scrollbars(v))
-
-    def get_widget(self):
-        return self
-
-    def _calc_scrollbars(self, viewer):
-        """Calculate and set the scrollbar handles from the pan and
-        zoom positions.
-        """
-        if self._scrolling:
-            return
-
-        # flag that suppresses a cyclical callback
-        self._adjusting = True
-        try:
-            bd = self.viewer.get_bindings()
-            res = bd.calc_pan_pct(self.viewer, pad=self.pad)
-            if res is None:
-                return
-
-            hsb = self.get_hadjustment()
-            vsb = self.get_vadjustment()
-
-            page_h, page_v = (int(round(res.thm_pct_x * 100)),
-                              int(round(res.thm_pct_y * 100)))
-
-            self.upper_h, self.upper_v = 100 + page_h, 100 + page_v
-
-            ## val_h, val_v = (int(round(res.pan_pct_x * 100)),
-            ##                 int(round((1.0 - res.pan_pct_y) * 100)))
-            val_h, val_v = (int(round(res.pan_pct_x * 100.0)),
-                            int(round((1.0 - res.pan_pct_y) * 100.0)))
-
-            hsb.configure(val_h, 0, self.upper_h, 1, page_h, page_h)
-            vsb.configure(val_v, 0, self.upper_v, 1, page_v, page_v)
-
-        finally:
-            self._adjusting = False
-
-    def _scroll_contents(self, adj):
-        """Called when the scroll bars are adjusted by the user.
-        """
-        if self._adjusting:
-            return
-
-        self._scrolling = True
-        try:
-            hsb = self.get_hadjustment()
-            vsb = self.get_vadjustment()
-
-            pos_x = hsb.get_value()
-            pos_y = vsb.get_value()
-
-            pct_x = pos_x / 100.0
-            # invert Y pct because of orientation of scrollbar
-            pct_y = 1.0 - (pos_y / 100.0)
-
-            bd = self.viewer.get_bindings()
-            bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
-
-        finally:
-            self._scrolling = False
-
-    def scroll_bars(self, horizontal='on', vertical='on'):
-        if horizontal == 'on':
-            hpolicy = gtk.POLICY_ALWAYS
-        elif horizontal == 'off':
-            hpolicy = gtk.POLICY_NEVER
-        elif horizontal == 'auto':
-            hpolicy = gtk.POLICY_AUTOMATIC
-        else:
-            raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (horizontal))
-
-        if vertical == 'on':
-            vpolicy = gtk.POLICY_ALWAYS
-        elif vertical == 'off':
-            vpolicy = gtk.POLICY_NEVER
-        elif vertical == 'auto':
-            vpolicy = gtk.POLICY_AUTOMATIC
-        else:
-            raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
-
-        self.set_policy(hpolicy, vpolicy)
-
-
 class ScrolledView(gtk.Table):
     """A class that can take a viewer as a parameter and add scroll bars
     that respond to the pan/zoom levels.
@@ -701,6 +577,7 @@ class ScrolledView(gtk.Table):
         self._adjusting = False
         self._scrolling = False
         self.pad = 20
+        self.sb_thickness = 20
         self.rng_x = 100.0
         self.rng_y = 100.0
 
@@ -715,14 +592,12 @@ class ScrolledView(gtk.Table):
 
         self.hsb = gtk.HScrollbar()
         self.hsb.set_round_digits(4)
+        self.hsb.set_size_request(-1, self.sb_thickness)
         self.hsb.connect('value-changed', self._scroll_contents)
-        self.attach(self.hsb, 0, 1, 1, 2,
-                    xoptions=gtk.FILL, yoptions=0, xpadding=0, ypadding=0)
         self.vsb = gtk.VScrollbar()
         self.vsb.set_round_digits(4)
+        self.vsb.set_size_request(self.sb_thickness, -1)
         self.vsb.connect('value-changed', self._scroll_contents)
-        self.attach(self.vsb, 1, 2, 0, 1,
-                    xoptions=0, yoptions=gtk.FILL, xpadding=0, ypadding=0)
 
         self.viewer.add_callback('redraw', self._calc_scrollbars)
         self.viewer.add_callback('limits-set',
@@ -784,30 +659,33 @@ class ScrolledView(gtk.Table):
             bd = self.viewer.get_bindings()
             bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
 
+            # This shouldn't be necessary, but seems to be
+            self.viewer.redraw(whence=0)
+
         finally:
             self._scrolling = False
 
         return True
 
     def scroll_bars(self, horizontal='on', vertical='on'):
-        if horizontal == 'on':
-            pass
+        if horizontal in ('on', 'auto'):
+            self.attach(self.hsb, 0, 1, 1, 2,
+                        xoptions=gtk.FILL, yoptions=0, xpadding=0, ypadding=0)
+            self.hsb.show()
         elif horizontal == 'off':
-            pass
-        elif horizontal == 'auto':
-            pass
+            self.remove(self.hsb)
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (horizontal))
 
-        if vertical == 'on':
-            pass
+        if vertical in ('on', 'auto'):
+            self.attach(self.vsb, 1, 2, 0, 1,
+                        xoptions=0, yoptions=gtk.FILL, xpadding=0, ypadding=0)
+            self.vsb.show()
         elif vertical == 'off':
-            pass
-        elif vertical == 'auto':
-            pass
+            self.remove(self.vsb)
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
 
-        self.viewer.logger.warning("scroll_bar(): settings for gtk currently ignored!")
+        #self.viewer.logger.warning("scroll_bar(): settings for gtk currently ignored!")
 
 #END

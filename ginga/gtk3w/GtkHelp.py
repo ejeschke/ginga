@@ -9,16 +9,16 @@ import os.path
 import math
 
 from ginga.misc import Bunch, Callback
+from ginga.fonts import font_asst
 import ginga.toolkit
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
-from gi.repository import Gdk
-from gi.repository import GdkPixbuf
-from gi.repository import GObject
-from gi.repository import Pango
-import cairo
+from gi.repository import Gtk  # noqa
+from gi.repository import Gdk  # noqa
+from gi.repository import GdkPixbuf  # noqa
+from gi.repository import GObject  # noqa
+from gi.repository import Pango  # noqa
 
 ginga.toolkit.use('gtk3')
 
@@ -59,6 +59,7 @@ class TopLevel(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self)
 
+
 class CheckButton(WidgetMask, Gtk.CheckButton):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
@@ -70,6 +71,7 @@ class CheckButton(WidgetMask, Gtk.CheckButton):
             self.change()
 
         super(CheckButton, self).set_active(newval)
+
 
 class ToggleButton(WidgetMask, Gtk.ToggleButton):
     def __init__(self, *args, **kwdargs):
@@ -145,6 +147,7 @@ class HScale(WidgetMask, Gtk.HScale):
 
         super(HScale, self).set_value(newval)
 
+
 class VScale(WidgetMask, Gtk.VScale):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
@@ -176,7 +179,7 @@ class ComboBoxMixin(object):
             if model[i][0] > text:
                 model.insert(j, tup)
                 return
-        model.insert(j+1, tup)
+        model.insert(j + 1, tup)
 
     def insert_text(self, idx, text):
         model = self.get_model()
@@ -200,6 +203,7 @@ class ComboBoxMixin(object):
             if model[i][0] == text:
                 self.set_active(i)
                 return
+
 
 class ComboBox(WidgetMask, Gtk.ComboBox, ComboBoxMixin):
     def __init__(self, *args, **kwdargs):
@@ -246,10 +250,12 @@ class MultiDragDropTreeView(Gtk.TreeView):
         # Here we intercept mouse clicks on selected items so that we can
         # drag multiple items without the click selecting only one
         target = self.get_path_at_pos(int(event.x), int(event.y))
-        if (target
-           and event.type == Gdk.EventType.BUTTON_PRESS
-           and not (event.state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK))
-           and self.get_selection().path_is_selected(target[0])):
+        if (target and
+                event.type == Gdk.EventType.BUTTON_PRESS and
+                not (event.state &
+                     (Gdk.ModifierType.CONTROL_MASK |
+                      Gdk.ModifierType.SHIFT_MASK)) and
+                self.get_selection().path_is_selected(target[0])):
             # disable selection
             self.get_selection().set_select_function(lambda *ignore: False)
             self.defer_select = target[0]
@@ -259,50 +265,21 @@ class MultiDragDropTreeView(Gtk.TreeView):
         self.get_selection().set_select_function(lambda *ignore: True)
 
         target = self.get_path_at_pos(int(event.x), int(event.y))
-        if (self.defer_select and target
-           and self.defer_select == target[0]
-           and not (event.x==0 and event.y==0)): # certain drag and drop
+        if (self.defer_select and target and
+                self.defer_select == target[0] and
+                not (event.x == 0 and event.y == 0)):  # certain drag and drop
             self.set_cursor(target[0], target[1], False)
 
-        self.defer_select=False
+        self.defer_select = False
 
 
-class MDIWidget(Gtk.Layout):
-    """
-    Multiple Document Interface type widget for Gtk.
+class MDISubWindow(Callback.Callbacks):
 
-    NOTE: *** This is a work in progress! ***
-    """
-    def __init__(self):
-        super(MDIWidget, self).__init__()
+    def __init__(self, widget, label):
+        super(MDISubWindow, self).__init__()
 
-        self.children = []
-        self.cur_index = -1
-        self.selected_child = None
-        self.kbdmouse_mask = 0
-        self.cascade_offset = 50
-        self.minimized_width = 50
+        self.widget = widget
 
-        self.connect("motion_notify_event", self.motion_notify_event)
-        self.connect("button_press_event", self.button_press_event)
-        self.connect("button_release_event", self.button_release_event)
-        mask = self.get_events()
-        self.set_events(mask
-                        | Gdk.EventMask.ENTER_NOTIFY_MASK
-                        | Gdk.EventMask.LEAVE_NOTIFY_MASK
-                        | Gdk.EventMask.FOCUS_CHANGE_MASK
-                        | Gdk.EventMask.STRUCTURE_MASK
-                        | Gdk.EventMask.BUTTON_PRESS_MASK
-                        | Gdk.EventMask.BUTTON_RELEASE_MASK
-                        | Gdk.EventMask.KEY_PRESS_MASK
-                        | Gdk.EventMask.KEY_RELEASE_MASK
-                        | Gdk.EventMask.POINTER_MOTION_MASK
-                        | Gdk.EventMask.POINTER_MOTION_HINT_MASK
-                        | Gdk.EventMask.SCROLL_MASK)
-
-        self.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray50"))
-
-    def append_page(self, widget, label):
         vbox = Gtk.VBox()
         vbox.set_border_width(4)
         hbox = Gtk.HBox()
@@ -316,6 +293,8 @@ class MDIWidget(Gtk.Layout):
         evbox = Gtk.EventBox()
         evbox.add(label)
         evbox.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray90"))
+        self.label = evbox
+        self.evbox = evbox
         hbox.pack_start(evbox, True, True, 2)
 
         vbox.pack_start(hbox, False, False, 0)
@@ -323,42 +302,86 @@ class MDIWidget(Gtk.Layout):
 
         # what size does the widget want to be?
         rect = widget.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        self.x, self.y, wd, ht = rect.x, rect.y, rect.width, rect.height
         ## wd = widget.get_preferred_width()
         ## ht = widget.get_preferred_height()
         ## wd, ht = widget.get_size_request()
-        wd, ht = max(wd, 300), max(ht, 300)
+        self.width, self.height = max(wd, 300), max(ht, 300)
 
         frame = Gtk.EventBox()
-        frame.set_size_request(wd, ht)
+        frame.set_size_request(self.width, self.height)
         frame.props.visible_window = True
         frame.set_border_width(0)
         frame.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray70"))
+        self.frame = frame
 
         frame.add(vbox)
         frame.show_all()
 
-        pos = self.get_widget_position(frame)
-        if pos is None:
-            x, y = 0, 0
-        else:
-            x, y = pos
-        wd, ht = self.get_widget_size(frame)
-        subwin = Bunch.Bunch(widget=widget, label=evbox, frame=frame,
-                             x=x, y=y, width=wd, height=ht)
+        for name in ('close', 'maximize', 'minimize'):
+            self.enable_callback(name)
+
+        maxim.connect('clicked', lambda *args: self.make_callback('maximize'))
+        minim.connect('clicked', lambda *args: self.make_callback('minimize'))
+        close.connect('clicked', lambda *args: self.make_callback('close'))
+
+
+class MDIWidget(Gtk.Layout):
+    """
+    Multiple Document Interface type widget for Gtk.
+
+    NOTE: *** This is somewhat of a work in progress! ***
+    """
+    def __init__(self):
+        Gtk.Layout.__init__(self)
+
+        self.children = []
+        self.cur_index = -1
+        self.selected_child = None
+        self.kbdmouse_mask = 0
+        self.cascade_offset = 50
+        self.minimized_width = 50
+        self.delta_px = 50
+
+        self.connect("motion_notify_event", self.motion_notify_event)
+        self.connect("button_press_event", self.button_press_event)
+        self.connect("button_release_event", self.button_release_event)
+        mask = self.get_events()
+        self.set_events(mask |
+                        Gdk.EventMask.ENTER_NOTIFY_MASK |
+                        Gdk.EventMask.LEAVE_NOTIFY_MASK |
+                        Gdk.EventMask.FOCUS_CHANGE_MASK |
+                        Gdk.EventMask.STRUCTURE_MASK |
+                        Gdk.EventMask.BUTTON_PRESS_MASK |
+                        Gdk.EventMask.BUTTON_RELEASE_MASK |
+                        Gdk.EventMask.KEY_PRESS_MASK |
+                        Gdk.EventMask.KEY_RELEASE_MASK |
+                        Gdk.EventMask.POINTER_MOTION_MASK |
+                        Gdk.EventMask.POINTER_MOTION_HINT_MASK |
+                        Gdk.EventMask.SCROLL_MASK)
+
+        self.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray50"))
+
+    def append_page(self, widget, label):
+
+        subwin = MDISubWindow(widget, label)
         self.children.append(subwin)
 
-        evbox.connect("button_press_event", self.select_child_cb, subwin)
-        frame.connect("button_press_event", self.start_resize_cb, subwin)
-        maxim.connect('clicked', lambda *args: self.maximize_page(subwin))
-        minim.connect('clicked', lambda *args: self.minimize_page(subwin))
-        close.connect('clicked', lambda *args: self.close_page(subwin))
+        subwin.evbox.connect("button_press_event", self.select_child_cb, subwin)
+        subwin.frame.connect("button_press_event", self.start_resize_cb, subwin)
+        subwin.add_callback('maximize', lambda *args: self.maximize_page(subwin))
+        subwin.add_callback('minimize', lambda *args: self.minimize_page(subwin))
 
-        self.put(frame, self.cascade_offset, self.cascade_offset)
+        self.put(subwin.frame, self.cascade_offset, self.cascade_offset)
+
+        self.update_subwin_position(subwin)
+        self.update_subwin_size(subwin)
+
         return subwin
 
     def set_tab_reorderable(self, w, tf):
         pass
+
     def set_tab_detachable(self, w, tf):
         pass
 
@@ -377,7 +400,7 @@ class MDIWidget(Gtk.Layout):
 
     def set_current_page(self, idx):
         subwin = self.children[idx]
-        frame = subwin.frame
+        #frame = subwin.frame
         #frame.show()
         self.raise_widget(subwin)
         self.cur_index = idx
@@ -408,22 +431,22 @@ class MDIWidget(Gtk.Layout):
 
     def get_widget_position(self, widget):
         rect = widget.get_allocation()
-        x, y, width, height = rect.x, rect.y, rect.width, rect.height
+        x, y = rect.x, rect.y
         return x, y
 
     def get_widget_size(self, widget):
         rect = widget.get_allocation()
-        x, y, width, height = rect.x, rect.y, rect.width, rect.height
+        width, height = rect.width, rect.height
         return width, height
 
     def update_subwin_position(self, subwin):
         rect = subwin.frame.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        x, y, = rect.x, rect.y
         subwin.x, subwin.y = x, y
 
     def update_subwin_size(self, subwin):
         rect = subwin.frame.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        wd, ht = rect.width, rect.height
         subwin.width, subwin.height = wd, ht
 
     def raise_widget(self, subwin):
@@ -435,7 +458,7 @@ class MDIWidget(Gtk.Layout):
         self.put(frame, subwin.x, subwin.y)
 
     def select_child_cb(self, layout, event, subwin):
-        ex, ey = event.x_root, event.y_root
+        x_root, y_root = event.x_root, event.y_root
 
         x, y = self.get_widget_position(subwin.frame)
         subwin.x, subwin.y = x, y
@@ -446,27 +469,107 @@ class MDIWidget(Gtk.Layout):
             self.set_current_page(idx)
 
         self.selected_child = Bunch.Bunch(subwin=subwin, action='move',
-                                          x_origin=x, y_origin=y, dx=ex, dy=ey)
+                                          x_origin=x, y_origin=y,
+                                          x_root=x_root, y_root=y_root)
         return True
 
     def start_resize_cb(self, widget, event, subwin):
-        ex, ey = event.x_root, event.y_root
-        x, y = self.get_widget_position(subwin.frame)
-        subwin.x, subwin.y = x, y
+        self.update_subwin_size(subwin)
+
+        x_root, y_root = event.x_root, event.y_root
+        x, y = widget.translate_coordinates(self, event.x, event.y)
+
+        rect = subwin.frame.get_allocation()
+        x1, y1, wd, ht = rect.x, rect.y, rect.width, rect.height
+        x2, y2 = x1 + wd, y1 + ht
+        subwin.x, subwin.y = x1, y1
+        subwin.width, subwin.height = wd, ht
+
+        updates = set([])
+        if abs(x - x2) < self.delta_px:
+            # right side
+            if abs(y - y2) < self.delta_px:
+                # lower right corner
+                origin = 'lr'
+                updates = set(['w', 'h'])
+            elif abs(y - y1) < self.delta_px:
+                origin = 'ur'
+                updates = set(['w', 'h', 'y'])
+            else:
+                origin = 'r'
+                updates = set(['w'])
+        elif abs(x - x1) < self.delta_px:
+            # left side
+            if abs(y - y2) < self.delta_px:
+                # lower left corner
+                origin = 'll'
+                updates = set(['w', 'h', 'x'])
+            elif abs(y - y1) < self.delta_px:
+                origin = 'ul'
+                updates = set(['w', 'h', 'x', 'y'])
+            else:
+                origin = 'l'
+                updates = set(['w', 'x'])
+        elif abs(y - y2) < self.delta_px:
+            # bottom
+            origin = 'b'
+            updates = set(['h'])
+        else:
+            origin = 't'
+            updates = set(['h', 'y'])
 
         self.selected_child = Bunch.Bunch(subwin=subwin, action='resize',
-                                          x_origin=x, y_origin=y, dx=ex, dy=ey)
+                                          x_origin=x1, y_origin=y1,
+                                          wd=wd, ht=ht,
+                                          x_root=x_root, y_root=y_root,
+                                          origin=origin, updates=updates)
         return True
 
     def button_press_event(self, widget, event):
-        x = event.x; y = event.y
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
         return True
 
+    def _resize(self, bnch, x_root, y_root):
+        subwin = bnch.subwin
+        updates = bnch.updates
+
+        dx, dy = x_root - bnch.x_root, y_root - bnch.y_root
+
+        wd = bnch.wd
+        if 'w' in updates:
+            wd = int(wd + dx)
+        ht = bnch.ht
+        if 'h' in updates:
+            ht = int(ht + dy)
+
+        if 'x' in updates or 'y' in updates:
+            x = bnch.x_origin
+            if 'x' in updates:
+                x = int(x + dx)
+                if x < bnch.x_origin:
+                    wd = bnch.wd + abs(dx)
+                else:
+                    wd = bnch.wd + -abs(dx)
+
+            y = bnch.y_origin
+            if 'y' in updates:
+                y = int(y + dy)
+                if y < bnch.y_origin:
+                    ht = bnch.ht + abs(dy)
+                else:
+                    ht = bnch.ht + -abs(dy)
+
+            # this works better if it is not self.move_page()
+            self.move(subwin.frame, x, y)
+
+        if 'w' in updates or 'h' in updates:
+            # this works better if it is not self.resize_page()
+            subwin.frame.set_size_request(wd, ht)
+
     def button_release_event(self, widget, event):
-        x = event.x_root; y = event.y_root
+        x_root, y_root = event.x_root, event.y_root
         button = self.kbdmouse_mask
         if event.button != 0:
             button |= 0x1 << (event.button - 1)
@@ -475,21 +578,27 @@ class MDIWidget(Gtk.Layout):
             bnch = self.selected_child
             subwin = bnch.subwin
             if bnch.action == 'move':
-                x = int(subwin.x + (x - bnch.dx))
-                y = int(subwin.y + (y - bnch.dy))
+                x = int(subwin.x + (x_root - bnch.x_root))
+                y = int(subwin.y + (y_root - bnch.y_root))
                 self.move_page(subwin, x, y)
 
             elif bnch.action == 'resize':
-                wd = int(subwin.width + (x - bnch.dx))
-                ht = int(subwin.height + (y - bnch.dy))
-                self.resize_page(subwin, wd, ht)
+                self._resize(bnch, x_root, y_root)
+
+                self.update_subwin_position(subwin)
+                # NOTE: necessary for wrapped widget to remember position
+                self.move_page(subwin, subwin.x, subwin.y)
+
+                self.update_subwin_size(subwin)
+                # NOTE: necessary for wrapped widget to remember size
+                self.resize_page(subwin, subwin.width, subwin.height)
 
             self.selected_child = None
         return True
 
     def motion_notify_event(self, widget, event):
         button = self.kbdmouse_mask
-        x, y, state = event.x_root, event.y_root, event.state
+        x_root, y_root, state = event.x_root, event.y_root, event.state
 
         if state & Gdk.ModifierType.BUTTON1_MASK:
             button |= 0x1
@@ -502,16 +611,13 @@ class MDIWidget(Gtk.Layout):
             bnch = self.selected_child
             subwin = bnch.subwin
             if bnch.action == 'move':
-                x = int(subwin.x + (x - bnch.dx))
-                y = int(subwin.y + (y - bnch.dy))
+                x = int(subwin.x + (x_root - bnch.x_root))
+                y = int(subwin.y + (y_root - bnch.y_root))
                 # this works better if it is not self.move_page()
                 self.move(subwin.frame, x, y)
 
             elif bnch.action == 'resize':
-                wd = int(subwin.width + (x - bnch.dx))
-                ht = int(subwin.height + (y - bnch.dy))
-                # this works better if it is not self.resize_page()
-                subwin.frame.set_size_request(wd, ht)
+                self._resize(bnch, x_root, y_root)
 
         return True
 
@@ -526,13 +632,13 @@ class MDIWidget(Gtk.Layout):
 
         # find out how big each window should be
         rect = self.get_allocation()
-        _x, _y, width, height = rect.x, rect.y, rect.width, rect.height
+        width, height = rect.width, rect.height
         wd, ht = width // cols, height // rows
 
         # and move and resize them into place
         for i in range(0, rows):
             for j in range(0, cols):
-                index = i*cols + j
+                index = i * cols + j
                 if index < num_widgets:
                     subwin = self.children[index]
 
@@ -564,7 +670,7 @@ class MDIWidget(Gtk.Layout):
 
     def maximize_page(self, subwin):
         rect = self.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        wd, ht = rect.width, rect.height
 
         self.raise_widget(subwin)
         self.resize_page(subwin, wd, ht)
@@ -572,20 +678,21 @@ class MDIWidget(Gtk.Layout):
 
     def minimize_page(self, subwin):
         rect = self.get_allocation()
-        _x, _y, width, height = rect.x, rect.y, rect.width, rect.height
+        height = rect.height
 
         rect = subwin.frame.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        x = rect.x
 
         rect = subwin.label.get_allocation()
-        _x, _y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        ht = rect.height
 
         self.resize_page(subwin, self.minimized_width, ht)
-        self.move_page(subwin, x, height-ht)
+        self.move_page(subwin, x, height - ht)
         #self.lower_widget(subwin)
 
     def close_page(self, subwin):
         pass
+
 
 class FileSelection(object):
 
@@ -686,7 +793,7 @@ class Timer(Callback.Callbacks):
             if self._timer is not None:
                 GObject.source_remove(self._timer)
                 self._timer = None
-        except:
+        except Exception:
             pass
 
     def cancel(self):
@@ -707,6 +814,7 @@ def combo_box_new_text():
     combobox.pack_start(cell, True)
     combobox.add_attribute(cell, 'text', 0)
     return combobox
+
 
 def get_scroll_info(event):
     """
@@ -747,6 +855,7 @@ def get_scroll_info(event):
 
     return (num_degrees, direction)
 
+
 def get_icon(iconpath, size=None):
     if size is not None:
         wd, ht = size
@@ -755,13 +864,24 @@ def get_icon(iconpath, size=None):
     pixbuf = pixbuf_new_from_file_at_size(iconpath, wd, ht)
     return pixbuf
 
+
 def get_font(font_family, point_size):
+    font_family = font_asst.resolve_alias(font_family, font_family)
     font = Pango.FontDescription('%s %d' % (font_family, point_size))
     return font
+
+
+def load_font(font_name, font_file):
+    # TODO!
+    ## raise ValueError("Loading fonts dynamically is an unimplemented"
+    ##                  " feature for gtk3 back end")
+    return font_name
+
 
 def pixbuf_new_from_xpm_data(xpm_data):
     xpm_data = bytes('\n'.join(xpm_data))
     return GdkPixbuf.Pixbuf.new_from_xpm_data(xpm_data)
+
 
 def pixbuf_new_from_array(data, rgbtype, bpp):
     # NOTE: there is a bug in gtk3 with pixbuf_new_from_array()
@@ -777,13 +897,19 @@ def pixbuf_new_from_array(data, rgbtype, bpp):
     pixl.close()
     return pix
 
+
 def pixbuf_new_from_data(rgb_buf, rgbtype, hasAlpha, bpp, dawd, daht, stride):
     return GdkPixbuf.Pixbuf.new_from_data(rgb_buf, rgbtype, hasAlpha, bpp,
                                           dawd, daht, stride, None, None)
 
+
 def pixbuf_new_from_file_at_size(foldericon, width, height):
-    return GdkPixbuf.Pixbuf.new_from_file_at_size(foldericon,
-                                                  width, height)
+    return GdkPixbuf.Pixbuf.new_from_file_at_size(foldericon, width, height)
+
+
+def pixbuf_new_from_file(file_path):
+    return GdkPixbuf.Pixbuf.new_from_file(file_path)
+
 
 def make_cursor(widget, iconpath, x, y):
     image = Gtk.Image()
@@ -792,6 +918,7 @@ def make_cursor(widget, iconpath, x, y):
     screen = widget.get_screen()
     display = screen.get_display()
     return Gdk.Cursor(display, pixbuf, x, y)
+
 
 def set_default_style():
     style_provider = Gtk.CssProvider()
@@ -806,6 +933,6 @@ def set_default_style():
     Gtk.StyleContext.add_provider_for_screen(
         Gdk.Screen.get_default(), style_provider,
         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
+    )
 
-#END
+# END

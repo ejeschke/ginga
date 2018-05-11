@@ -1,47 +1,60 @@
-#
-# Contents.py -- Table of Contents plugin for fits viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
-from ginga.util.six import itervalues
+"""
+The ``Contents`` plugin provides a table of contents-like interface for all
+the images viewed since the program was started.  Unlike ``Thumbs``,
+``Contents`` is sorted by channel.  The contents also shows some configurable
+metadata from the image.
+
+**Plugin Type: Global**
+
+``Contents`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+Click on a column heading to sort the table by that column;
+Click again to sort the other way.
+
+.. note:: The columns and their values are drawn from the FITS header,
+          if applicable.
+          This can be customized by setting the "columns" parameter in
+          the "plugin_Contents.cfg" settings file.
+
+The active image in the currently focused channel will normally be
+highlighted. Double-click on an image will force that image to be
+shown in the associated channel. Single-click on any image to
+activate the buttons at the bottom of the UI:
+
+* "Display": Make the image the active image.
+* "Move": Move the image to another channel.
+* "Copy": Copy the image to another channel.
+* "Remove": Remove the image from the channel.
+
+If "Move" or "Copy" is done on an image that has been modified in Ginga
+(which would have an entry under ``ChangeHistory``, if used), the
+modification history will be retained as well. Removing an image from
+a channel destroys any unsaved changes.
+
+"""
 from ginga.util.six.moves import map
 
 from ginga import GingaPlugin
 from ginga.misc import Bunch
 
 from ginga.gw import Widgets
-import time
+
+__all__ = ['Contents']
 
 
 class Contents(GingaPlugin.GlobalPlugin):
-    """
-    Contents
-    ========
-    The Contents plugin provides a table of contents like interface for all
-    the images viewed since the program was started.  Unlike Thumbs,
-    Contents is sorted by channel.  The contents also shows some configurable
-    metadata from the image.
 
-    Plugin Type: Global
-    -------------------
-    Header is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    Double-click on a column heading to sort the table by that column's
-    value.  The image in the currently focused channel will normally be
-    highlighted.  You can click on any image to force that image to be shown
-    in the associated channel.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Contents, self).__init__(fv)
 
-        columns = [ ('Name', 'NAME'), ('Object', 'OBJECT'),
-                    ('Date', 'DATE-OBS'), ('Time UT', 'UT'),
-                    ('Modified', 'MODIFIED')
-                    ]
+        columns = [('Name', 'NAME'), ('Object', 'OBJECT'),
+                   ('Date', 'DATE-OBS'), ('Time UT', 'UT'),
+                   ('Modified', 'MODIFIED')]
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Contents')
@@ -62,10 +75,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.highlight_tracks_keyboard_focus = self.settings.get(
             'highlight_tracks_keyboard_focus', True)
         self._hl_path = set([])
+        self.chnames = []
 
         fv.add_callback('add-image', self.add_image_cb)
-        fv.add_callback('add-image-info', self.add_image_info_cb)
         fv.add_callback('remove-image', self.remove_image_cb)
+        fv.add_callback('add-image-info', self.add_image_info_cb)
+        fv.add_callback('remove-image-info', self.remove_image_info_cb)
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
         fv.add_callback('channel-change', self.focus_cb)
@@ -73,33 +88,103 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
+        vbox = Widgets.VBox()
+        vbox.set_border_width(2)
+        vbox.set_spacing(4)
+
         # create the Treeview
         always_expand = self.settings.get('always_expand', False)
         color_alternate = self.settings.get('color_alternate_rows', True)
         treeview = Widgets.TreeView(auto_expand=always_expand,
                                     sortable=True,
+                                    selection='multiple',
                                     use_alt_row_color=color_alternate)
         self.treeview = treeview
         treeview.setup_table(self.columns, 2, 'NAME')
 
-        treeview.add_callback('selected', self.switch_image)
-        container.add_widget(treeview, stretch=1)
+        treeview.add_callback('activated', self.dblclick_cb)
+        treeview.add_callback('selected', self.select_cb)
+        vbox.add_widget(treeview, stretch=1)
 
+        btns = Widgets.HBox()
+        btns.set_spacing(4)
+        b1 = Widgets.Button('Display')
+        b1.add_callback('activated', self.display_cb)
+        b1.set_tooltip("Display the selected object in its channel viewer")
+        b1.set_enabled(False)
+        btns.add_widget(b1)
+        b2 = Widgets.Button('Move')
+        b2.add_callback('activated', lambda w: self.ask_action_images('move'))
+        b2.set_tooltip("Move the selected objects to a channel")
+        b2.set_enabled(False)
+        btns.add_widget(b2)
+        b3 = Widgets.Button('Copy')
+        b3.add_callback('activated', lambda w: self.ask_action_images('copy'))
+        b3.set_tooltip("Copy the selected objects to a channel")
+        b3.set_enabled(False)
+        btns.add_widget(b3)
+        b4 = Widgets.Button('Remove')
+        b4.add_callback('activated', lambda w: self.ask_action_images('remove'))
+        b4.set_tooltip("Remove the selected objects from a channel")
+        b4.set_enabled(False)
+        btns.add_widget(b4)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        self.btn_list = [b1, b2, b3, b4]
+
+        self._rebuild_channels()
+
+        vbox.add_widget(btns, stretch=0)
+
+        container.add_widget(vbox, stretch=1)
         self.gui_up = True
 
     def stop(self):
         self.gui_up = False
 
-    def switch_image(self, widget, res_dict):
+    def get_selected(self):
+        res = []
+        res_dict = self.treeview.get_selected()
         if len(res_dict) == 0:
-            return
-        chname = list(res_dict.keys())[0]
-        img_dict = res_dict[chname]
-        if len(img_dict) == 0:
-            return
-        imname = list(img_dict.keys())[0]
-        bnch = img_dict[imname]
+            return res
+        for chname in res_dict.keys():
+            img_dict = res_dict[chname]
+            if len(img_dict) == 0:
+                continue
+            for imname in img_dict.keys():
+                bnch = img_dict[imname]
+                res.append((chname, bnch))
+        return res
+
+    def dblclick_cb(self, widget, d):
+        chname = list(d.keys())[0]
+        imname = list(d[chname].keys())[0]
+        bnch = d[chname][imname]
         path = bnch.path
+        self.logger.debug("chname=%s name=%s path=%s" % (
+            chname, imname, path))
+
+        self.fv.switch_name(chname, imname, path=path,
+                            image_future=bnch.image_future)
+
+    def select_cb(self, widget, d):
+        res = self.get_selected()
+        tf = (len(res) > 0)
+        for btn in self.btn_list:
+            btn.set_enabled(tf)
+
+    def display_cb(self, widget):
+        res = self.get_selected()
+        if len(res) != 1:
+            self.fv.show_error("Please select just one file to display!")
+            return
+
+        chname, bnch = res[0]
+
+        if 'path' not in bnch:
+            # may be a top-level channel node, e.g. in gtk
+            return
+        path = bnch.path
+        imname = bnch.imname
         self.logger.debug("chname=%s name=%s path=%s" % (
             chname, imname, path))
 
@@ -155,11 +240,11 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.logger.debug("Resized columns for {0} row(s)".format(n_rows))
 
     def is_in_contents(self, chname, imname):
-        if not chname in self.name_dict:
+        if chname not in self.name_dict:
             return False
 
         file_dict = self.name_dict[chname]
-        if not imname in file_dict:
+        if imname not in file_dict:
             return False
 
         return True
@@ -178,7 +263,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         bnch = self.get_info(chname, name, image, image_info)
 
-        if not chname in self.name_dict:
+        if chname not in self.name_dict:
             # channel does not exist yet in contents
             # Note: this typically shouldn't happen, because add_channel_cb()
             # will have added an empty dict
@@ -187,7 +272,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         else:
             file_dict = self.name_dict[chname]
 
-        if not name in file_dict:
+        if name not in file_dict:
             # new image
             file_dict[name] = bnch
         else:
@@ -204,7 +289,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.logger.debug("%s added to Contents" % (name))
 
     def add_image_info_cb(self, viewer, channel, image_info):
-        """Almost the same as add_image_info(), except that the image
+        """Almost the same as add_image_cb(), except that the image
         may not be loaded in memory.
         """
         chname = channel.name
@@ -243,6 +328,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.recreate_toc()
         self.logger.debug("%s removed from Contents" % (name))
 
+    def remove_image_info_cb(self, viewer, channel, image_info):
+        """Almost the same as remove_image_cb().
+        """
+        return self.remove_image_cb(viewer, channel.name,
+                                    image_info.name, image_info.path)
+
     def clear(self):
         self.name_dict = Bunch.caselessDict()
         self._hl_path = set([])
@@ -263,8 +354,10 @@ class Contents(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return False
 
-        tree_dict = { chname: { } }
+        tree_dict = {chname: {}}
         self.treeview.add_tree(tree_dict)
+
+        self._rebuild_channels()
 
     def delete_channel_cb(self, viewer, channel):
         """Called when a channel is deleted from the main interface.
@@ -283,6 +376,11 @@ class Contents(GingaPlugin.GlobalPlugin):
             return False
         self.recreate_toc()
 
+        self._rebuild_channels()
+
+    def _rebuild_channels(self):
+        self.chnames = self.fv.get_channel_names()
+
     def _get_hl_key(self, chname, image):
         return (chname, image.get('name', 'none'))
 
@@ -300,8 +398,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         try:
             self.treeview.highlight_path(hl_path, tf, font_color=fc)
         except Exception as e:
-            self.logger.error('Error changing highlight on treeview path '
-                              '({0}): {1}'.format(hl_path, str(e)))
+            self.logger.info('Error changing highlight on treeview path '
+                             '({0}): {1}'.format(hl_path, str(e)))
 
     def update_highlights(self, old_highlight_set, new_highlight_set):
         """Unhighlight the entries represented by ``old_highlight_set``
@@ -370,7 +468,81 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.update_highlights(self._hl_path, new_highlight)
             self._hl_path = new_highlight
 
+    def ask_action_images(self, action):
+
+        images = self.get_selected()
+        if len(images) == 0:
+            self.fv.show_error("Please select some images first")
+            return
+
+        l_img = list(map(lambda tup: "%s/%s" % (tup[0], tup[1].imname),
+                         images))
+
+        verb = action.capitalize()
+        l_img.insert(0, "%s images\n" % (verb))
+
+        # build dialog
+        dialog = Widgets.Dialog(title="%s Images" % (verb),
+                                flags=0,
+                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                parent=self.treeview)
+        box = dialog.get_content_area()
+        box.set_border_width(6)
+        if len(l_img) < 12:
+            text = Widgets.Label("\n".join(l_img))
+        else:
+            text = Widgets.TextArea(wrap=None)
+            text.set_text("\n".join(l_img))
+        box.add_widget(text, stretch=1)
+
+        if action != 'remove':
+            hbox = Widgets.HBox()
+            hbox.add_widget(Widgets.Label("To channel: "))
+            chnl = Widgets.ComboBox()
+            for chname in self.chnames:
+                chnl.append_text(chname)
+            hbox.add_widget(chnl)
+            hbox.add_widget(Widgets.Label(''), stretch=1)
+            box.add_widget(hbox)
+        else:
+            chnl = None
+
+        dialog.add_callback('activated',
+                            lambda w, rsp: self.action_images_cb(w, rsp,
+                                                                 chnl,
+                                                                 images,
+                                                                 action))
+
+        self.fv.ds.show_dialog(dialog)
+
+    def action_images_cb(self, w, rsp, chnl_w, images, action):
+        # dst channel
+        if chnl_w is not None:
+            idx = chnl_w.get_index()
+            chname = self.chnames[idx]
+            dst_channel = self.fv.get_channel(chname)
+
+        self.fv.ds.remove_dialog(w)
+        if rsp == 0:
+            # user canceled
+            return
+
+        for chname, info in images:
+            src_channel = self.fv.get_channel(chname)
+            if action == 'copy':
+                src_channel.copy_image_to(info.imname, dst_channel)
+            elif action == 'move':
+                src_channel.move_image_to(info.imname, dst_channel)
+            elif action == 'remove':
+                src_channel.remove_image(info.imname)
+
     def __str__(self):
         return 'contents'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Contents', package='ginga')
+
+# END

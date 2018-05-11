@@ -4,9 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, os
-import numpy
-from io import BytesIO
+import os
 
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.io_rgb import RGBFileHandler
@@ -73,7 +71,6 @@ class ImageViewMock(ImageView.ImageViewBase):
         ##                   data,
         ##                   Rect(0, 0, width, height))
 
-
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the offscreen pixmap.
@@ -133,7 +130,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         img_w = self.get_rgb_image_as_widget()
         # assumes that the image widget has some method for saving to
         # a file
-        res = img_w.save(filepath, format=format, quality=quality)
+        img_w.save(filepath, format=format, quality=quality)
 
     def get_plain_image_as_widget(self):
         """Used for generating thumbnails.  Does not include overlaid
@@ -152,7 +149,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         img_w = self.get_plain_image_as_widget()
         # assumes that the image widget has some method for saving to
         # a file
-        res = qimg.save(filepath, format=format, quality=quality)
+        img_w.save(filepath, format=format, quality=quality)
 
     def reschedule_redraw(self, time_sec):
         # stop any pending redraws, if possible
@@ -187,7 +184,8 @@ class ImageViewMock(ImageView.ImageViewBase):
         """Convert the numpy array (which is in our expected order)
         to a native image object in this widget set.
         """
-        return result
+        #return result
+        raise NotImplementedError
 
     def _get_color(self, r, g, b):
         """Convert red, green and blue values specified in floats with
@@ -219,9 +217,6 @@ class ImageViewEvent(ImageViewMock):
         # gestures
         #...
 
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
-
         # Define cursors
         for curname, filename in (('pan', 'openHandCursor.png'),
                                   ('pick', 'thinCrossCursor.png')):
@@ -237,7 +232,7 @@ class ImageViewEvent(ImageViewMock):
             "'": 'singlequote',
             '\\': 'backslash',
             ' ': 'space',
-            }
+        }
 
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
@@ -272,15 +267,12 @@ class ImageViewEvent(ImageViewMock):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
-
     def map_event(self, widget, event):
         """
         Called when the window is mapped to the screen.
         Adjust method signature as appropriate for callback.
         """
-        self.configure_window(width, height)
+        #self.configure_window(width, height)
         return self.make_callback('map')
 
     def focus_event(self, widget, event, hasFocus):
@@ -295,7 +287,8 @@ class ImageViewEvent(ImageViewMock):
         Called when the mouse cursor enters the window.
         Adjust method signature as appropriate for callback.
         """
-        if self.enter_focus:
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             # set focus on widget
             pass
         return self.make_callback('enter')
@@ -316,7 +309,7 @@ class ImageViewEvent(ImageViewMock):
         # get keyname or keycode and translate to ginga standard
         # keyname =
         # keycode =
-        keyname = self.transkey(keyname, keycode)
+        keyname = ''  # self.transkey(keyname, keycode)
         self.logger.debug("key press event, key=%s" % (keyname))
         return self.make_ui_callback('key-press', keyname)
 
@@ -328,7 +321,7 @@ class ImageViewEvent(ImageViewMock):
         # get keyname or keycode and translate to ginga standard
         # keyname =
         # keycode =
-        keyname = self.transkey(keyname, keycode)
+        keyname = ''  # self.transkey(keyname, keycode)
         self.logger.debug("key release event, key=%s" % (keyname))
         return self.make_ui_callback('key-release', keyname)
 
@@ -337,6 +330,8 @@ class ImageViewEvent(ImageViewMock):
         Called when a mouse button is pressed in the widget.
         Adjust method signature as appropriate for callback.
         """
+        x, y = event.x, event.y
+
         # x, y = coordinates where the button was pressed
         self.last_win_x, self.last_win_y = x, y
 
@@ -357,6 +352,8 @@ class ImageViewEvent(ImageViewMock):
         Called when a mouse button is released after being pressed.
         Adjust method signature as appropriate for callback.
         """
+        x, y = event.x, event.y
+
         # x, y = coordinates where the button was released
         self.last_win_x, self.last_win_y = x, y
 
@@ -372,6 +369,8 @@ class ImageViewEvent(ImageViewMock):
         Called when a mouse cursor is moving in the widget.
         Adjust method signature as appropriate for callback.
         """
+        x, y = event.x, event.y
+
         # x, y = coordinates of cursor
         self.last_win_x, self.last_win_y = x, y
 
@@ -388,20 +387,24 @@ class ImageViewEvent(ImageViewMock):
         finger scrolling in the trackpad).
         Adjust method signature as appropriate for callback.
         """
+        x, y = event.x, event.y
+        num_degrees = 0
+        direction = 0
+
         # x, y = coordinates of mouse
         self.last_win_x, self.last_win_y = x, y
 
         # calculate number of degrees of scroll and direction of scroll
         # both floats in the 0-359.999 range
-        # numDegrees =
+        # num_degrees =
         # direction =
         self.logger.debug("scroll deg=%f direction=%f" % (
-            numDegrees, direction))
+            num_degrees, direction))
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('scroll', direction, numDegrees,
-                                  data_x, data_y)
+        return self.make_ui_callback('scroll', direction, num_degrees,
+                                     data_x, data_y)
 
     def drop_event(self, widget, event):
         """
@@ -409,8 +412,9 @@ class ImageViewEvent(ImageViewMock):
         Adjust method signature as appropriate for callback.
         """
         # make a call back with a list of URLs that were dropped
-        self.logger.debug("dropped filename(s): %s" % (str(paths)))
-        self.make_ui_callback('drag-drop', paths)
+        #self.logger.debug("dropped filename(s): %s" % (str(paths)))
+        #self.make_ui_callback('drag-drop', paths)
+        raise NotImplementedError
 
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):

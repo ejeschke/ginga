@@ -3,8 +3,9 @@
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
+from __future__ import absolute_import
 
-import numpy
 from ginga.util import six
 
 import PIL.Image as PILimage
@@ -20,36 +21,38 @@ except ImportError:
     else:
         from tkinter import PhotoImage
 
-from ginga import Mixins, Bindings, colors
-from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
-from ginga.util.toolbox import ModeIndicator
-from ginga.tkw import TkHelp
+from ginga import Mixins, Bindings  # noqa
+from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin  # noqa
+from ginga.util.toolbox import ModeIndicator  # noqa
+
+from . import TkHelp  # noqa
 
 try:
     # See if we have aggdraw module--best choice
     from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView, \
-         ImageViewAggError as ImageViewError
+        ImageViewAggError as ImageViewError
 
 except ImportError:
     try:
         # No dice. How about the PIL module?
         from ginga.pilw.ImageViewPil import ImageViewPil as ImageView, \
-             ImageViewPilError as ImageViewError
+            ImageViewPilError as ImageViewError
 
     except ImportError:
         try:
             # No, hmm..ok, see if we have opencv module...
             from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
-                 ImageViewCvError as ImageViewError
+                ImageViewCvError as ImageViewError
 
         except ImportError:
             # Fall back to mock--there will be no graphic overlays
             from ginga.mockw.ImageViewMock import ImageViewMock as ImageView, \
-                 ImageViewMockError as ImageViewError
+                ImageViewMockError as ImageViewError
 
 
 class ImageViewTkError(ImageViewError):
     pass
+
 
 class ImageViewTk(ImageView):
 
@@ -63,7 +66,6 @@ class ImageViewTk(ImageView):
 
         self._defer_task = None
         self.msgtask = None
-
 
     def set_widget(self, canvas):
         """Call this method with the Tkinter canvas that will be used
@@ -153,9 +155,6 @@ class ImageViewEvent(ImageViewTk):
         ImageViewTk.__init__(self, logger=logger, rgbmap=rgbmap,
                              settings=settings)
 
-        # Does widget accept focus when mouse enters window
-        self.enter_focus = self.t_.get('enter_focus', True)
-
         self._button = 0
 
         # @$%&^(_)*&^ tk!!
@@ -227,7 +226,7 @@ class ImageViewEvent(ImageViewTk):
             'end': 'end',
             'prior': 'page_up',
             'next': 'page_down',
-            }
+        }
 
         # Define cursors for pick and pan
         #hand = openHandCursor()
@@ -272,14 +271,13 @@ class ImageViewEvent(ImageViewTk):
     def get_keyTable(self):
         return self._keytbl
 
-    def set_enter_focus(self, tf):
-        self.enter_focus = tf
-
     def focus_event(self, event, hasFocus):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, event):
-        if self.enter_focus:
+        # Does widget accept focus when mouse enters window
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
             self.tkcanvas.focus_set()
         return self.make_callback('enter')
 
@@ -306,7 +304,8 @@ class ImageViewEvent(ImageViewTk):
         return self.make_ui_callback('key-release', keyname)
 
     def button_press_event(self, event):
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -319,14 +318,14 @@ class ImageViewEvent(ImageViewTk):
                     # down
                     direction = 180.0
                 # 15 deg is standard 1-click turn for a wheel mouse
-                numDegrees = 15.0
+                num_degrees = 15.0
                 self.logger.debug("scroll deg=%f direction=%f" % (
-                    numDegrees, direction))
+                    num_degrees, direction))
 
                 data_x, data_y = self.check_cursor_location()
 
-                return self.make_ui_callback('scroll', direction, numDegrees,
-                                          data_x, data_y)
+                return self.make_ui_callback('scroll', direction, num_degrees,
+                                             data_x, data_y)
 
             button |= 0x1 << (event.num - 1)
         self._button = button
@@ -338,7 +337,8 @@ class ImageViewEvent(ImageViewTk):
 
     def button_release_event(self, event):
         # event.button, event.x, event.y
-        x = event.x; y = event.y
+        x = event.x
+        y = event.y
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -444,6 +444,7 @@ class CanvasView(ImageViewZoom):
 
 class ImageViewCanvasError(ImageViewTkError):
     pass
+
 
 class ImageViewCanvas(ImageViewZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):

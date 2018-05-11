@@ -2,10 +2,88 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.6.5.dev
+Ver 2.7.1.dev
 =============
-- Vectorized all steps of coordinate transforms
-- Set minimum astropy version to 1.X
+- Fix for image rendering bug which shows last row and column of image
+  being drawn twice
+- Added option to "Compass" draw type to be in pixels (X/Y) or wcs (N/E)
+- Changed Pan plugin to attempt to draw both kinds of compasses
+- Log plugin enhanced to show lines logged before it was opened
+- Info plugin adds convenience controls for "Follow New" and "Raise New"
+- WCSMatch plugin enhanced to offer fine grained control over sync
+- fixed an issue in Debian build that caused long start up times
+- User can dynamically add scrollbars to channel viewers in Preferences
+- Made Gtk backend default to 'gtk3'
+  - "-t gtk" now invokes gtk3 instead of gtk2
+  - choose "-t gtk2" if you want the gtk2 back end
+
+Ver 2.7.0 (2018-02-02)
+======================
+- Fix for gtk 4.0 (use "gtk3" backend, it works for 4.0)
+- Fix for broken polygon containment test
+- Addition of configurable zoom handlers for pan gestures
+- Fix for some broken tests under python 2.7
+- Update to mode handling via keyboard shortcuts
+
+  - addition of a new "meta" mode used primarily for mode switching
+  - most modes now initiated from meta mode, which frees up keys
+    for other uses
+  - see Ginga quick reference for details on how the new bindings work
+
+- Efficiency update for Thumbs plugin when many thumbs are present
+- Default for the save_layout option is now True, so the reference
+  viewer will write out its layout state on exit and restore it on
+  startup.  See documentation in the "customization" section of the
+  manual.
+- Plugins can now be organized by category and these categories are
+  used to construct a hierarchical Operations menu
+- Zoom and Header plugins are now not started by default
+- Fix for "sortable" checkbox behavior on Header plugin
+- Default keyboard mode type is now 'locked' (prev 'oneshot')
+- Fixes for missing CSS file in installation script
+- Less confusing behavior for workspace and toolbar arrow buttons
+
+Ver 2.6.6 (2017-11-02)
+======================
+- Fix for broken sorting in Contents plugin in gtk backends
+- Fix for resize bug in switching in and out of grid view in gtk
+  backends
+- Updated to have efficient support for gtk3
+
+  - please install compatible pycairo from github.com/pygobject/pycairo
+    if you get a "Not implemented yet" exception bubbling up from a
+    method called cairo.ImageSurface.create_for_data()
+
+- Addition of a "Quick Mode" to the Pick plugin--see documentation
+- More consistent font handing between widgets and Ginga canvases 
+- Bug fix for importing some types of matplotlib color maps
+- Add antialiasing for Qt back end
+- Bug fixes and enhancements for Qt gestures
+  - holding shift with pinch now keeps position under cursor
+- New Jupyter notebooks back end based on ipywidgets
+  - requirements: $ pip install ipyevents      
+  - see examples/jupyter-notebook/
+- Fixes to various reference viewer plugins
+
+Ver 2.6.5 (2017-07-31)
+======================
+- Coordinate transforms refactored for speed and code clarity
+- Some canvas shapes refactored for better code reuse
+- Allow max and min scale limits to be disabled (by None)
+- Fixed a bug that prevented the reference viewer from resizing
+  correctly with Qt back end
+- Refactored WCS wrapper module for code clarity
+- Set minimum astropy version requirement to 1.X
+- Fixed a bug in NAXIS selection GUI (MultiDim plugin)
+- Fixed MDI window resizing with Gtk back ends
+- Fixed an error where zoom 100% button did not correctly zoom to 1:1 scale
+- Several fixes for astropy 2.0 compatibility
+- Fixed a bug in the FBrowser plugin when channel displaying a table
+  and attempting to load a new file
+- Fixed a bug when setting the pan position manually by wcs coordinates
+- Updates for changes in PIL.ImageCms module
+- Fix for window corruption on certain expose events
+- New default bindings for touch pads and differentiation from wheel zoom
 
 Ver 2.6.4 (2017-06-07)
 ======================

@@ -8,10 +8,10 @@ import numpy as np
 
 from ginga import trcalc
 from ginga.util import wcs
-from ginga.util.six.moves import map
 
 __all__ = ['NativeMapper', 'WindowMapper', 'CartesianMapper',
            'DataMapper', 'OffsetMapper', 'WCSMapper']
+
 
 class CoordMapError(Exception):
     pass
@@ -187,7 +187,7 @@ class OffsetMapper(BaseMapper):
     def offset_pt(self, pts, offset):
         # A no-op because this object's points are always considered
         # relative to the reference object
-        return pt
+        return pts
 
     def rotate_pt(self, pts, theta, offset):
         # TODO?  Not sure if it is needed with this mapper type
@@ -225,7 +225,7 @@ class WCSMapper(BaseMapper):
         data_off = self.to_data(offset)
         data_pts = self.to_data(pts)
 
-        xoff, yoff = numpy.transpose(data_off)
+        xoff, yoff = np.transpose(data_off)
         data_x, data_y = data_pts.T
         data_rot = trcalc.rotate_pt(data_x, data_y, theta,
                                     xoff=xoff, yoff=yoff)
@@ -233,4 +233,4 @@ class WCSMapper(BaseMapper):
         return self.data_to(data_rot.T)
 
 
-#END
+# END

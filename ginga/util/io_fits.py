@@ -19,7 +19,7 @@ To force the use of one, do:
 (replace 'package' with one of {'astropy', 'fitsio'}) before you load
 any images.  Otherwise Ginga will try to pick one for you.
 """
-import numpy
+import numpy as np
 
 from ginga.misc import Bunch
 from ginga.util import iohelper
@@ -35,9 +35,8 @@ class FITSError(Exception):
 
 
 def use(fitspkg, raise_err=True):
-    global fits_configured, fitsLoaderClass, \
-           have_astropy, pyfits, \
-           have_fitsio, fitsio
+    global fits_configured, fitsLoaderClass, have_astropy, pyfits, \
+        have_fitsio, fitsio
 
     if fitspkg == 'astropy':
         try:
@@ -228,7 +227,9 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             # by numerical index
             self.hdu_db[idx] = d
             # by (hduname, extver)
-            self.hdu_db[(name, extver)] = d
+            key = (name, extver)
+            if key not in self.hdu_db:
+                self.hdu_db[key] = d
             idx += 1
 
         self.extver_db = extver_db
@@ -260,7 +261,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                                         )):
                     continue
 
-                if not isinstance(hdu.data, numpy.ndarray):
+                if not isinstance(hdu.data, np.ndarray):
                     # We need to open a numpy array
                     continue
 
@@ -445,7 +446,9 @@ class FitsioFileHandler(BaseFitsFileHandler):
             # by numerical index
             self.hdu_db[idx] = d
             # by (hduname, extver)
-            self.hdu_db[(name, extver)] = d
+            key = (name, extver)
+            if len(name) > 0 and extver >= 0 and key not in self.hdu_db:
+                self.hdu_db[key] = d
 
     def close(self):
         self.hdu_info = None
@@ -475,7 +478,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
                     continue
                 data = hdu.read()
 
-                if not isinstance(data, numpy.ndarray):
+                if not isinstance(data, np.ndarray):
                     # We need to open a numpy array
                     continue
 

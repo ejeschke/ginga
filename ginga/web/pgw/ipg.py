@@ -19,7 +19,9 @@ You will need a reasonably modern web browser with HTML5 canvas support.
 Tested with Chromium 41.0.2272.76, Firefox 37.0.2, Safari 7.1.6
 """
 from __future__ import print_function
-import sys, os
+
+import sys
+import os
 import logging
 import threading
 
@@ -33,7 +35,7 @@ from ginga.Bindings import ImageViewBindings
 from ginga.misc.Settings import SettingGroup
 from ginga.util.paths import ginga_home
 
-from ginga.web.pgw import templates, js, PgHelp, Widgets, Viewers
+from ginga.web.pgw import js, PgHelp, Widgets, Viewers
 
 
 class BasicCanvasView(Viewers.CanvasView):
@@ -135,6 +137,7 @@ class BasicCanvasView(Viewers.CanvasView):
         canvas.register_for_cursor_drawing(self)
         # add the canvas to the view.
         my_canvas.add(canvas, tag=tag)
+        canvas.set_draw_mode(None)
 
         return canvas
 
@@ -145,7 +148,7 @@ class BasicCanvasView(Viewers.CanvasView):
         does not have as good of performance as 'jpeg'.
         """
         fmt = fmt.lower()
-        if not fmt in ('jpeg', 'png'):
+        if fmt not in ('jpeg', 'png'):
             raise ValueError("Format must be one of {jpeg|png} not '%s'" % (
                 fmt))
 
@@ -200,7 +203,7 @@ class EnhancedCanvasView(BasicCanvasView):
         try:
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = viewer.get_data(int(data_x+0.5), int(data_y+0.5))
+            value = viewer.get_data(int(data_x + 0.5), int(data_y + 0.5))
 
         except Exception:
             value = None
@@ -220,7 +223,7 @@ class EnhancedCanvasView(BasicCanvasView):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
@@ -412,15 +415,14 @@ class WebServer(object):
 
         self.server = tornado.web.Application([
             (r"/js/(.*\.js)", tornado.web.StaticFileHandler,
-             {"path":  js_path}),
+             {"path": js_path}),
             (r"/viewer", FileHandler,
-              dict(name='Ginga', factory=self.factory)),
+             dict(name='Ginga', factory=self.factory)),
             (r"/app", PgHelp.WindowHandler,
-              dict(name='Application', url='/app', app=self.app)),
+             dict(name='Application', url='/app', app=self.app)),
             (r"/app/socket", PgHelp.ApplicationHandler,
-              dict(name='Ginga', app=self.app)),
-            ],
-               factory=self.factory, logger=self.logger)
+             dict(name='Ginga', app=self.app)),
+        ], factory=self.factory, logger=self.logger)
 
         self.http_server = self.server.listen(self.port, self.host)
 
@@ -560,7 +562,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

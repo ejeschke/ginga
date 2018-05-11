@@ -6,13 +6,12 @@
 
 import matplotlib.patches as patches
 import matplotlib.lines as lines
-import matplotlib.text as text
 from matplotlib.path import Path as MplPath
 
 from . import MplHelp
-from ginga.canvas.mixins import *
+from ginga.canvas.mixins import *  # noqa
 # force registration of all canvas types
-import ginga.canvas.types.all
+import ginga.canvas.types.all  # noqa
 from ginga import trcalc
 
 
@@ -88,12 +87,16 @@ class RenderContext(object):
     def text_extents(self, text):
         return self.cr.text_extents(text, self.font)
 
-
     ##### DRAWING OPERATIONS #####
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         fontdict = self.font.get_fontdict()
-        self.cr.axes.text(cx, cy, text, fontdict=fontdict)
+        self.cr.push(allow=['alpha', 'color'])
+        self.cr.set(rotation=rot_deg)
+
+        self.cr.axes.text(cx, cy, text, fontdict=fontdict,
+                          **self.cr.kwdargs)
+        self.cr.pop()
 
     def draw_polygon(self, cpoints):
         self.cr.init(closed=True, transform=None)
@@ -117,9 +120,9 @@ class RenderContext(object):
         self.cr.init(transform=None)
         self.cr.update_patch(self.pen, None)
 
-        codes = [ MplPath.MOVETO,
-                  MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
-                  ]
+        codes = [MplPath.MOVETO,
+                 MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                 ]
         path = MplPath(verts, codes)
 
         p = patches.PathPatch(path, **self.cr.kwdargs)
@@ -130,12 +133,12 @@ class RenderContext(object):
         self.cr.update_patch(self.pen, self.brush)
 
         # draw 4 bezier curves to make the ellipse
-        codes = [ MplPath.MOVETO,
-                  MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
-                  MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
-                  MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
-                  MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
-                  ]
+        codes = [MplPath.MOVETO,
+                 MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                 MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                 MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                 MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                 ]
         path = MplPath(verts, codes)
 
         p = patches.PathPatch(path, **self.cr.kwdargs)

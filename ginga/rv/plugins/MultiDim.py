@@ -1,9 +1,43 @@
-#
-# MultiDim.py -- Multidimensional plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+A plugin to navigate HDUs in a FITS file or planes in a 3D cube or
+higher dimension dataset.
+
+**Plugin Type: Local**
+
+``MultiDim`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+``MultiDim`` is a plugin designed to handle data cubes and multi-HDU FITS
+files. If you have opened such an image in Ginga, starting this plugin
+will enable you to browse to other slices of the cube or view other
+HDUs.
+
+For a data cube, you can save a slice as an image using the "Save Slice"
+button or create a movie using the "Save Movie" button by entering the
+"Start" and "End" slice indices. This feature requires ``mencoder`` to be
+installed.
+
+For a FITS table, its data are read in using Astropy table.
+Column units are displayed right under the main header ("None" if no unit).
+For masked columns, masked values are replaced with pre-defined fill values.
+
+**Browsing HDUs**
+
+Use the HDU drop down list in the upper part of the UI to browse and
+select an HDU to open in the channel.
+
+**Navigating Cubes**
+
+Use the controls in the lower part of the UI to select the axis and
+to step through the planes in that axis.
+
+**User Configuration**
+
+"""
 import time
 import re
 import os
@@ -15,7 +49,6 @@ from ginga.misc import Future
 from ginga import GingaPlugin
 from ginga.util.iohelper import get_hdu_suffix
 from ginga.util.videosink import VideoSink
-from ginga.table.AstroTable import AstroTable
 
 import numpy as np
 
@@ -23,29 +56,11 @@ have_mencoder = False
 if spawn.find_executable("mencoder"):
     have_mencoder = True
 
+__all__ = ['MultiDim']
+
 
 class MultiDim(GingaPlugin.LocalPlugin):
-    """
-    MultiDim
-    ========
-    A plugin to navigate HDUs in a FITS file or planes in a 3D cube or
-    higher dimension dataset.
 
-    Plugin Type: Local
-    ------------------
-    MultiDim is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Browsing HDUs
-    -------------
-    Use the HDU drop down list in the upper part of the UI to browse and
-    select an HDU to open in the channel.
-
-    Navigating Cubes
-    ----------------
-    Use the controls in the lower part of the UI to select the axis and
-    to step through the planes in that axis.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(MultiDim, self).__init__(fv, fitsimage)
@@ -61,8 +76,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # For animation feature
         self.play_image = None
         self.play_axis = 2
-        self.play_idx = 1
-        self.play_max = 1
+        self.play_idx = 0
+        self.play_max = 0
         self.play_int_sec = 0.1
         self.play_min_sec = 1.0 / 30
         self.play_last_time = 0.0
@@ -208,16 +223,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         except Exception as e:
             self.logger.error("Error loading HDU #%d: %s" % (
-                idx+1, str(e)))
+                idx + 1, str(e)))
 
-    def set_naxis_cb(self, w, idx, n):
-        # idx = int(w.get_value()) - 1
-        self.set_naxis(idx, n)
-        # schedule a redraw
-        self.fitsimage.redraw(whence=0)
+    def set_naxis_cb(self, widget, idx, n):
+        play_idx = int(idx) - 1
+        self.set_naxis(play_idx, n)
 
     def build_naxis(self, dims, image):
-        imname = image.get('name')
         self.naxispath = list(image.naxispath)
 
         # build a vbox of NAXIS controls
@@ -225,33 +237,42 @@ class MultiDim(GingaPlugin.LocalPlugin):
                     ("NAXIS2:", 'label', 'NAXIS2', 'llabel')]
 
         for n in range(2, len(dims)):
-            key = 'naxis%d' % (n+1)
+            key = 'naxis%d' % (n + 1)
             title = key.upper()
             maxn = int(dims[n])
-            self.logger.debug("NAXIS%d=%d" % (n+1, maxn))
+            self.logger.debug("NAXIS%d=%d" % (n + 1, maxn))
             if maxn <= 1:
-                captions.append((title+':', 'label', title, 'llabel'))
+                captions.append((title + ':', 'label', title, 'llabel'))
             else:
-                captions.append((title+':', 'label', title, 'llabel',
-                                # "Choose %s" % (title), 'spinbutton'))
+                captions.append((title + ':', 'label', title, 'llabel',
                                  "Choose %s" % (title), 'hscale'))
-
-        if len(dims) > 3:  # only add radiobuttons if we have more than 3 dim
-            radiobuttons = []
-            for i in range(2, len(dims)):
-                title = 'AXIS%d' % (i+1)
-                radiobuttons.extend((title, 'radiobutton'))
-            captions.append(radiobuttons)
 
         # Remove old naxis widgets
         for key in self.w:
             if key.startswith('choose_'):
                 self.w[key] = None
 
+        hbox = Widgets.HBox()
+
+        if len(dims) > 3:  # only add radiobuttons if we have more than 3 dim
+            group = None
+            for i in range(2, len(dims)):
+                title = 'AXIS%d' % (i + 1)
+                btn = Widgets.RadioButton(title, group=group)
+                if group is None:
+                    group = btn
+                hbox.add_widget(btn)
+                self.w[title.lower()] = btn
+
         w, b = Widgets.build_info(captions, orientation=self.orientation)
         self.w.update(b)
+
+        vbox = Widgets.VBox()
+        vbox.add_widget(w)
+        vbox.add_widget(hbox)
+
         for n in range(0, len(dims)):
-            key = 'naxis%d' % (n+1)
+            key = 'naxis%d' % (n + 1)
             lbl = b[key]
             maxn = int(dims[n])
             lbl.set_text("%d" % maxn)
@@ -271,13 +292,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 # slider.set_digits(0)
                 # slider.set_wrap(True)
                 slider.add_callback('value-changed', self.set_naxis_cb, n)
+
             # Disable playback if there is only 1 slice in the higher dimension
             if n > 2 and dims[n] == 1:
-                radiobutton = b['axis%d' % (n+1)]
+                radiobutton = self.w['axis%d' % (n + 1)]
                 radiobutton.set_enabled(False)
 
         # Add vbox of naxis controls to gui
-        self.naxisfr.set_widget(w)
+        self.naxisfr.set_widget(vbox)
 
         # for storing play_idx for each dim of image. used for going back to
         # the idx where you left off.
@@ -291,15 +313,18 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 # widget callable needs (widget, value) args
                 def play_axis_change():
 
-                    self.play_indices[self.play_axis - 2] = (self.play_idx - 1) % dims[self.play_axis]  # noqa
+                    self.play_indices[self.play_axis - 2] = self.play_idx % dims[self.play_axis]  # noqa
 
                     self.play_axis = n
                     self.logger.debug("play_axis changed to %d" % n)
 
                     if self.play_axis < len(dims):
-                        self.play_max = dims[self.play_axis]
+                        self.play_max = dims[self.play_axis] - 1
 
                     self.play_idx = self.play_indices[n - 2]
+
+                    self.fv.gui_do(self.set_naxis, self.play_idx,
+                                   self.play_axis)
 
                 def check_if_we_need_change(w, v):
                     if self.play_axis is not n:
@@ -317,15 +342,15 @@ class MultiDim(GingaPlugin.LocalPlugin):
         is_dc = len(dims) > 2
         self.play_axis = 2
         if self.play_axis < len(dims):
-            self.play_max = dims[self.play_axis]
+            self.play_max = dims[self.play_axis] - 1
         if is_dc:
-            self.play_idx = self.naxispath[self.play_axis - 2] + 1
+            self.play_idx = self.naxispath[self.play_axis - 2]
         else:
-            self.play_idx = 1
+            self.play_idx = 0
         if self.play_indices:
             text = [i + 1 for i in self.naxispath]
         else:
-            text = self.play_idx
+            text = self.play_idx + 1
         self.w.slice.set_text(str(text))
 
         # Enable or disable NAXIS animation controls
@@ -358,10 +383,11 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def stop(self):
         self.gui_up = False
         self.play_stop()
-        try:
-            self.file_obj.close()
-        except:
-            pass
+        if self.file_obj is not None:
+            try:
+                self.file_obj.close()
+            except Exception:
+                pass
         self.file_obj = None
         self.img_path = None
         self.img_name = None
@@ -385,16 +411,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.curhdu = idx
             image = chinfo.datasrc[imname]
             self.fv.switch_name(chname, imname)
-
             return
 
         # Nope, we'll have to load it
         self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))
         try:
             self.curhdu = idx
-            dims = [0, 0]
             info = self.file_obj.hdu_info[idx]
-
             image = self.file_obj.get_hdu(idx)
 
             # create a future for reconstituting this HDU
@@ -414,12 +437,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.fv.show_error(errmsg, raisetab=True)
 
     def set_naxis(self, idx, n):
+        """Change the slice shown in the channel viewer.
+        `idx` is the slice index (0-based); `n` is the axis (0-based)
+        """
         self.play_idx = idx
-        idx = idx - 1
-        self.logger.debug("naxis %d index is %d" % (n+1, idx+1))
+        self.logger.debug("naxis %d index is %d" % (n + 1, idx + 1))
 
         image = self.fitsimage.get_image()
-        slidername = 'choose_naxis%d' % (n+1)
+        slidername = 'choose_naxis%d' % (n + 1)
         try:
             if image is None:
                 raise ValueError("Please load an image cube")
@@ -430,9 +455,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.logger.debug("m=%d naxispath=%s" % (m, str(self.naxispath)))
 
             image.set_naxispath(self.naxispath)
-            self.logger.debug("NAXIS%d slice %d loaded." % (n+1, idx+1))
+            self.logger.debug("NAXIS%d slice %d loaded." % (n + 1, idx + 1))
 
             if self.play_indices:
+                # save play index
                 self.play_indices[m] = idx
                 text = [i + 1 for i in self.naxispath]
                 if slidername in self.w:
@@ -443,9 +469,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
                     self.w[slidername].set_value(text)
             self.w.slice.set_text(str(text))
 
+            # schedule a redraw
+            self.fitsimage.redraw(whence=0)
+
         except Exception as e:
             errmsg = "Error loading NAXIS%d slice %d: %s" % (
-                n+1, idx+1, str(e))
+                n + 1, idx + 1, str(e))
             self.logger.error(errmsg)
             self.fv.error(errmsg)
 
@@ -497,12 +526,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.play_image = None
 
     def first_slice(self):
-        play_idx = 1
-        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+        play_idx = 0
+        self.fv.gui_do(self.set_naxis, play_idx, self.play_axis)
 
     def last_slice(self):
         play_idx = self.play_max
-        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+        self.fv.gui_do(self.set_naxis, play_idx, self.play_axis)
 
     def prev_slice(self):
         if np.isscalar(self.play_idx):
@@ -510,9 +539,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         else:
             m = self.play_axis - 2
             play_idx = self.play_idx[m] - 1
-        if play_idx < 1:
+        if play_idx < 0:
             play_idx = self.play_max
-        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+        self.fv.gui_do(self.set_naxis, play_idx, self.play_axis)
 
     def next_slice(self):
         if np.isscalar(self.play_idx):
@@ -521,8 +550,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             m = self.play_axis - 2
             play_idx = self.play_idx[m] + 1
         if play_idx > self.play_max:
-            play_idx = 1
-        self.fv.gui_do(self.set_naxis_cb, None, play_idx, self.play_axis)
+            play_idx = 0
+        self.fv.gui_do(self.set_naxis, play_idx, self.play_axis)
 
     def play_int_cb(self, w, val):
         # force at least play_min_sec, otherwise playback is untenable
@@ -533,7 +562,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         w.clear()
 
         for idx, d in enumerate(hdu_info):
-
             toc_ent = "%(index)4d %(name)-12.12s (%(extver)3d) %(htype)-12.12s %(dtype)-8.8s" % d  # noqa
             w.append_text(toc_ent)
 
@@ -560,6 +588,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
             # <-- New file is being looked at
             self.img_path = path
 
+            # close previous file opener, if any
+            if self.file_obj is not None:
+                try:
+                    self.file_obj.close()
+                except Exception:
+                    pass
+
             self.file_obj = self.fv.fits_opener.get_factory()
             # TODO: specify 'readonly' somehow?
             self.file_obj.open_file(path)
@@ -567,8 +602,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             upper = len(self.file_obj) - 1
             self.prep_hdu_menu(self.w.hdu, self.file_obj.hdu_info)
             self.num_hdu = upper
-            self.logger.debug("there are %d hdus" % (upper+1))
-            self.w.numhdu.set_text("%d" % (upper+1))
+            self.logger.debug("there are %d hdus" % (upper + 1))
+            self.w.numhdu.set_text("%d" % (upper + 1))
 
             self.w.hdu.set_enabled(len(self.file_obj) > 0)
 
@@ -622,7 +657,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
             # save canceled
             return
 
-        with open(target, 'w') as target_file:
+        with open(target, 'wb') as target_file:
             hival = self.fitsimage.get_cut_levels()[1]
             image = self.fitsimage.get_image()
             curr_slice_data = image.get_data()
@@ -636,15 +671,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         end = int(self.w.end_slice.get_text())
         if not start or not end:
             return
-        elif start < 0 or end > self.play_max:
+        elif start < 1 or end > (self.play_max + 1):
             self.fv.show_status("Wrong slice index")
             return
         elif start > end:
             self.fv.show_status("Wrong slice order")
             return
 
-        if start == 1:
-            start = 0
+        start, end = start - 1, end - 1
 
         w = Widgets.SaveDialog(title='Save Movie',
                                selectedfilter='*.avi')
@@ -681,8 +715,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         return 'multidim'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
+# Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
-__doc__ = generate_cfg_example('plugin_MultiDim', package='ginga')
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_MultiDim', package='ginga')
+
+# END

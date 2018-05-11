@@ -13,7 +13,7 @@ import os
 import warnings
 
 # THIRD-PARTY
-from astropy.utils.data import get_pkg_data_contents
+from astropy.utils.data import _find_pkg_data_path
 from astropy.utils.exceptions import AstropyUserWarning
 
 
@@ -42,13 +42,13 @@ class ModeIndicator(object):
         self.xpad = 8
         self.ypad = 4
         self.offset = 10
+        self.modetbl = dict(locked='L', softlock='S', held='H', oneshot='O')
 
         # for displaying modal keyboard state
         self.mode_obj = None
         bm = viewer.get_bindmap()
         bm.add_callback('mode-set', self.mode_change_cb)
         viewer.add_callback('configure', self._configure_cb)
-
 
     def mode_change_cb(self, bindmap, mode, modetype):
         # delete the old indicator
@@ -58,27 +58,26 @@ class ModeIndicator(object):
         if obj:
             try:
                 canvas.delete_object(obj)
-            except:
+            except Exception:
                 pass
 
         if not self.visible:
             return True
 
         # if not one of the standard modifiers, display the new one
-        if not mode in (None, 'ctrl', 'shift'):
+        if mode not in (None, 'ctrl', 'shift'):
             Text = canvas.get_draw_class('text')
             Polygon = canvas.get_draw_class('polygon')
             Compound = canvas.get_draw_class('compoundobject')
 
-            if modetype == 'locked':
-                text = '%s [L]' % (mode)
-            elif modetype == 'softlock':
-                text = '%s [SL]' % (mode)
-            else:
-                text = mode
+            text = mode
+            if modetype in self.modetbl:
+                text += ' [%s]' % self.modetbl[modetype]
+
+            color = 'cyan' if mode == 'meta' else 'yellow'
 
             o1 = Text(0, 0, text,
-                      fontsize=self.fontsize, color='yellow', coord='window')
+                      fontsize=self.fontsize, color=color, coord='window')
 
             txt_wd, txt_ht = self.viewer.renderer.get_dimensions(o1)
 
@@ -92,9 +91,9 @@ class ModeIndicator(object):
             cx1, cy1, cx2, cy2 = x_base, y_base, x_base + box_wd, y_base + box_ht
             poly_pts = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
             o2 = Compound(Polygon(poly_pts,
-                               color='black', coord='window',
-                               fill=True, fillcolor='black'),
-                               o1)
+                                  color='black', coord='window',
+                                  fill=True, fillcolor='black'),
+                          o1)
             self.mode_obj = o2
             canvas.add(o2)
 
@@ -163,8 +162,9 @@ def generate_cfg_example(config_name, cfgpath='examples/configs', **kwargs):
     cfgname = config_name + '.cfg'
 
     try:
-        cfgdata = get_pkg_data_contents(
-            os.path.join(cfgpath, cfgname), **kwargs)
+        cfgfile = _find_pkg_data_path(os.path.join(cfgpath, cfgname), **kwargs)
+        with open(cfgfile) as f:
+            cfgdata = f.readlines()
     except Exception as e:
         warnings.warn(str(e), AstropyUserWarning)
         return ''
@@ -180,7 +180,7 @@ is your HOME directory:
 
 """.format(userfile, homepath))
 
-    for line in cfgdata.split('\n'):
+    for line in cfgdata:
         line = line.strip()
 
         if len(line) == 0:

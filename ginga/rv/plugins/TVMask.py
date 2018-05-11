@@ -1,4 +1,59 @@
-"""Non-interactive masks display local plugin for Ginga."""
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+"""
+Display masks from file (non-interative mode) on an image.
+
+**Plugin Type: Local**
+
+``TVMask`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+This plugin allows non-interactive display of mask by reading in a FITS
+file, where non-zero is assumed to be masked data.
+
+To display different masks (e.g., some masked as green and some as pink, as
+shown above):
+
+1. Select green from the drop-down menu. Alternately, enter desired
+   alpha value.
+2. Using "Load Mask" button, load the relevant FITS file.
+3. Repeat (1) but now select pink from the drop-down menu.
+4. Repeat (2) but choose another FITS file.
+5. To display a third mask as pink too, repeat (4) without changing the
+   drop-down menu.
+
+Selecting an entry (or multiple entries) from the table listing will
+highlight the mask(s) on the image. The highlight uses a pre-defined color and
+alpha (customizable below).
+
+You can also highlight all the masks within a region both on the image
+and the table listing by drawing a rectangle on the image
+while this plugin is active.
+
+Pressing the "Hide" button will hide the masks but does not clear the
+plugin's memory; That is, when you press "Show", the same masks will
+reappear on the same image. However, pressing "Forget" will clear the masks
+both from display and memory; That is, you will need to reload your file(s) to
+recreate the masks.
+
+To redraw the same masks with different color or alpha, press "Forget"
+and repeat the steps above, as necessary.
+
+If images of very different pointings/dimensions are displayed in the same
+channel, masks that belong to one image but fall outside another will not
+appear in the latter.
+
+To create a mask that this plugin can read, one can use results from
+the ``Drawing`` plugin (press "Create Mask" after drawing and save the
+mask using ``SaveImage``), in addition to creating a FITS
+file by hand using ``astropy.io.fits``, etc.
+
+Used together with ``TVMark``, you can overlay both point sources and
+masked regions in Ginga.
+
+"""
 from __future__ import absolute_import, division, print_function
 from ginga.util.six import itervalues
 
@@ -23,65 +78,11 @@ try:
 except ImportError:
     pass
 
-__all__ = []
+__all__ = ['TVMask']
 
 
 class TVMask(LocalPlugin):
-    """
-    TVMask
-    ======
-    Display masks from file (non-interative mode) on an image.
 
-    Plugin Type: Local
-    ------------------
-    TVMask is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Usage
-    -----
-    This plugin allows non-interactive display of mask by reading in a FITS
-    file, where non-zero is assumed to be masked data.
-
-    To display different masks (e.g., some masked as green and some as pink, as
-    shown above):
-
-    1. Select green from the drop-down menu. Alternately, enter desired alpha value.
-    2. Using "Load Mask" button, load the relevant FITS file.
-    3. Repeat Step 1 but now select pink from the drop-down menu.
-    4. Repeat Step 2 but choose another FITS file.
-    5. To display a third mask as pink too, repeat Step 4 without changing the
-       drop-down menu.
-
-    Selecting an entry (or multiple entries) from the table listing will
-    highlight the mask(s) on the image. The highlight uses a pre-defined color and
-    alpha (customizable below). Clicking on a masked pixel will highlight the
-    mask(s) both on the image and the table listing.
-
-    You can also highlight all the masks within a region both on the image
-    and the table listing by drawing a rectangle on the image using the right mouse
-    button while this plugin is active.
-
-    Pressing the "Hide" button will hide the masks but does not clear the
-    plugin's memory; That is, when you press "Show", the same masks will
-    reappear on the same image. However, pressing "Forget" will clear the masks
-    both from display and memory; That is, you will need to reload your file(s) to
-    recreate the masks.
-
-    To redraw the same masks with different color or alpha, press "Forget"
-    and repeat the steps above, as necessary.
-
-    If images of very different pointings/dimensions are displayed in the same
-    channel, masks that belong to one image but fall outside another will not
-    appear in the latter.
-
-    To create a mask that this plugin can read, one can use results from
-    the `Drawing` plugin (press "Create Mask" after drawing and save the
-    mask using `SaveImage`), in addition to creating a FITS
-    file by hand using `astropy.io.fits`, etc.
-
-    Used together with `TVMark`, you can overlay both point sources and
-    masked regions in Ginga.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(TVMask, self).__init__(fv, fitsimage)
@@ -96,6 +97,8 @@ class TVMask(LocalPlugin):
         # changed by GUI.
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_TVMask')
+        self.settings.add_defaults(maskcolor='green', maskalpha=0.5,
+                                   hlcolor='white', hlalpha=1.0)
         self.settings.load(onError='silent')
         self.maskcolor = self.settings.get('maskcolor', 'green')
         self.maskalpha = self.settings.get('maskalpha', 0.5)
@@ -118,7 +121,8 @@ class TVMask(LocalPlugin):
         canvas.enable_draw(True)
         canvas.enable_edit(False)
         canvas.set_callback('draw-event', self.hl_canvas2table_box)
-        canvas.set_callback('cursor-down', self.hl_canvas2table)
+        #canvas.set_callback('cursor-down', self.hl_canvas2table)
+        canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_drawtype('rectangle', color='green', linestyle='dash')
         self.canvas = canvas
@@ -231,13 +235,13 @@ class TVMask(LocalPlugin):
         if self.masktag:
             try:
                 self.canvas.delete_object_by_tag(self.masktag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         if self.maskhltag:
             try:
                 self.canvas.delete_object_by_tag(self.maskhltag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         self.treeview.clear()  # Clear table too
@@ -315,7 +319,7 @@ class TVMask(LocalPlugin):
         if self.maskhltag:
             try:
                 self.canvas.delete_object_by_tag(self.maskhltag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         for sub_dict in itervalues(res_dict):
@@ -346,13 +350,13 @@ class TVMask(LocalPlugin):
         if self.maskhltag:
             try:
                 canvas.delete_object_by_tag(self.maskhltag, redraw=True)
-            except:
+            except Exception:
                 pass
 
         # Nothing to do if no masks are displayed
         try:
             obj = canvas.get_object_by_tag(self.masktag)
-        except:
+        except Exception:
             return
 
         if obj.kind != 'compound':
@@ -375,6 +379,7 @@ class TVMask(LocalPlugin):
             if np.any(mask1 & mask2):
                 self._highlight_path(self._treepaths[i])
 
+    # NOTE: This does not work anymore when left click is used to draw box.
     def hl_canvas2table(self, canvas, button, data_x, data_y):
         """Highlight mask on table when user click on canvas."""
         self.treeview.clear_selection()
@@ -383,13 +388,13 @@ class TVMask(LocalPlugin):
         if self.maskhltag:
             try:
                 canvas.delete_object_by_tag(self.maskhltag, redraw=True)
-            except:
+            except Exception:
                 pass
 
         # Nothing to do if no masks are displayed
         try:
             obj = canvas.get_object_by_tag(self.masktag)
-        except:
+        except Exception:
             return
 
         if obj.kind != 'compound':
@@ -403,7 +408,7 @@ class TVMask(LocalPlugin):
             mask1 = self._rgbtomask(mobj)
 
             # Highlight mask covering selected cursor position
-            if mask1[data_y, data_x]:
+            if mask1[int(data_y), int(data_x)]:
                 self._highlight_path(self._treepaths[i])
 
     def _highlight_path(self, hlpath):
@@ -442,7 +447,7 @@ class TVMask(LocalPlugin):
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
         except KeyError:
             # Add drawing layer
             p_canvas.add(self.canvas, tag=self.layertag)
@@ -464,9 +469,10 @@ class TVMask(LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
 
+        self.canvas.update_canvas(whence=0)  # Force redraw
         self.gui_up = False
         self.fv.show_status('')
 
@@ -478,8 +484,9 @@ class TVMask(LocalPlugin):
         return 'tvmask'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
-from ginga.util.toolbox import generate_cfg_example
-__doc__ = generate_cfg_example('plugin_TVMask', package='ginga')
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_TVMask', package='ginga')
+
+# END

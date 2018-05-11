@@ -4,11 +4,11 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import math
-import numpy
+import numpy as np
 import cv2
 
 from ginga import colors
+from ginga.fonts import font_asst
 
 
 class Pen(object):
@@ -17,15 +17,18 @@ class Pen(object):
         self.linewidth = linewidth
         self.alpha = alpha
 
+
 class Brush(object):
     def __init__(self, color='black', fill=False, alpha=1.0):
         self.color = color
         self.fill = fill
         self.alpha = alpha
 
+
 class Font(object):
     def __init__(self, fontname='ariel', fontsize=12.0, color='black',
                  linewidth=1, alpha=1.0):
+        fontname = font_asst.resolve_alias(fontname, fontname)
         self.fontname = fontname
         self.fontsize = fontsize
         self.color = color
@@ -36,6 +39,13 @@ class Font(object):
         # TODO: currently there is only support for some simple built-in
         # fonts.  What kind of fonts/lookup can we use for this?
         self.font = cv2.FONT_HERSHEY_SIMPLEX
+
+
+def load_font(font_name, font_file):
+    # TODO!
+    ## raise ValueError("Loading fonts dynamically is an unimplemented"
+    ##                  " feature for cv back end")
+    return font_name
 
 
 class CvContext(object):
@@ -60,7 +70,7 @@ class CvContext(object):
         # BUT, seems we need to specify RGBA--I suppose we need to match
         # what is defined as rgb_order attribute in ImageViewCv class
         #return (int(alpha*255), int(b*255), int(g*255), int(r*255))
-        return (int(r*255), int(g*255), int(b*255), int(alpha*255))
+        return (int(r * 255), int(g * 255), int(b * 255), int(alpha * 255))
 
     def get_pen(self, color, linewidth=1, alpha=1.0):
         # if hasattr(self, 'linestyle'):
@@ -121,16 +131,16 @@ class CvContext(object):
                     pen.color, pen.linewidth)
 
     def polygon(self, points, pen, brush):
-        pts = numpy.array(points, numpy.int32)
+        pts = np.array(points, np.int32)
         pts = pts.reshape((-1, 1, 2))
         cv2.polylines(self.canvas, [pts], True, pen.color, pen.linewidth)
         if (brush is not None) and brush.fill:
             cv2.fillPoly(self.canvas, [pts], brush.color)
 
     def path(self, points, pen):
-        pts = numpy.array(points, numpy.int32)
+        pts = np.array(points, np.int32)
         pts = pts.reshape((-1, 1, 2))
         cv2.polylines(self.canvas, [pts], False, pen.color, pen.linewidth)
 
 
-#END
+# END

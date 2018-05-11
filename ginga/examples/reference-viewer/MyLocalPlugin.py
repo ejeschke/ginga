@@ -13,6 +13,7 @@ from ginga.gw import Widgets
 
 # import any other modules you want here--it's a python world!
 
+
 class MyLocalPlugin(GingaPlugin.LocalPlugin):
 
     def __init__(self, fv, fitsimage):
@@ -53,7 +54,7 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
         vbox.set_spacing(2)
 
         # Take a text widget to show some instructions
-        self.msg_font = self.fv.get_font("sansFont", 12)
+        self.msg_font = self.fv.get_font("sans", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
         tw.set_font(self.msg_font)
         self.tw = tw

@@ -1,6 +1,6 @@
-from ginga.web.pgw.ImageViewPg import CanvasView, ImageViewCanvas
+from ginga.web.pgw.ImageViewPg import CanvasView, ImageViewCanvas  # noqa
 from ginga.web.pgw import Widgets
-from ginga.misc import Bunch
+
 
 class GingaViewerWidget(Widgets.Canvas):
     """
@@ -13,14 +13,13 @@ class GingaViewerWidget(Widgets.Canvas):
     """
 
     def __init__(self, viewer=None, width=600, height=600):
-        super(GingaViewerWidget, self).__init__(width=600, height=600)
+        super(GingaViewerWidget, self).__init__(width=width, height=height)
 
         if viewer is None:
-            viewer = CanvasView(logger)
+            viewer = CanvasView()
         self.logger = viewer.logger
 
         self._configured = False
-        self.refresh_delay = 0.010
 
         self.set_viewer(viewer)
 
@@ -62,9 +61,8 @@ class GingaViewerWidget(Widgets.Canvas):
             "panstart": viewer.pan_event,
             "panend": viewer.pan_event,
             "swipe": viewer.swipe_event,
-            }
+        }
 
-        self.add_timer('refresh', self.refresh_cb)
         self.add_timer('redraw', self.viewer.delayed_redraw)
         self.add_timer('msg', self.viewer.clear_onscreen_message)
 
@@ -78,12 +76,8 @@ class GingaViewerWidget(Widgets.Canvas):
 
     def map_event_cb(self, event):
         self.viewer.map_event(event)
-        self.reset_timer('refresh', self.refresh_delay)
-
-    def refresh_cb(self, *args):
         app = self.get_app()
         app.do_operation('refresh_canvas', id=self.id)
-        self.reset_timer('refresh', self.refresh_delay)
 
     def do_update(self, buf):
         self.clear_rect(0, 0, self.width, self.height)
@@ -101,6 +95,11 @@ class GingaViewerWidget(Widgets.Canvas):
             self.logger.error("error redirecting '%s' event: %s" % (
                 event.type, str(e)))
             # TODO: dump traceback to debug log
+
+
+class GingaScrolledViewerWidget(GingaViewerWidget):
+    # until implemented
+    pass
 
 
 #END

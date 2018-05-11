@@ -6,7 +6,7 @@
 #
 from ginga.util.six.moves import map
 
-import numpy
+import numpy as np
 import logging
 
 from ginga.misc import Bunch, Callback
@@ -87,7 +87,7 @@ class BaseImage(ViewerObjectBase):
                                   name=name)
 
         if data_np is None:
-            data_np = numpy.zeros((1, 1))
+            data_np = np.zeros((1, 1))
         self._data = data_np
         self.order = ''
         self.name = name
@@ -163,7 +163,7 @@ class BaseImage(ViewerObjectBase):
         assert (x >= 0) and (y >= 0), \
             ImageError("Indexes out of range: (x=%d, y=%d)" % (
                 x, y))
-        view = numpy.s_[y, x]
+        view = np.s_[y, x]
         return self._slice(view)
 
     def set_data(self, data_np, metadata=None, order=None, astype=None):
@@ -189,7 +189,7 @@ class BaseImage(ViewerObjectBase):
         super(BaseImage, self).clear_all()
 
         # unreference data array
-        self._data = numpy.zeros((1, 1))
+        self._data = np.zeros((1, 1))
 
     def _slice(self, view):
         return self._get_data()[view]
@@ -207,7 +207,7 @@ class BaseImage(ViewerObjectBase):
         if order == self.order:
             return self._get_data()
         l = [self.get_slice(c) for c in order]
-        return numpy.dstack(l)
+        return np.dstack(l)
 
     def set_order(self, order):
         self.order = order.upper()
@@ -226,7 +226,7 @@ class BaseImage(ViewerObjectBase):
             shape = self.shape
             if len(shape) <= 2:
                 self.order = 'M'
-            elif self.dtype != numpy.uint8:
+            elif self.dtype != np.uint8:
                 self.order = 'M'
             else:
                 depth = shape[-1]
@@ -246,27 +246,27 @@ class BaseImage(ViewerObjectBase):
     def _set_minmax(self):
         data = self._get_fast_data()
         try:
-            self.maxval = numpy.nanmax(data)
-            self.minval = numpy.nanmin(data)
+            self.maxval = np.nanmax(data)
+            self.minval = np.nanmin(data)
         except Exception:
             self.maxval = 0
             self.minval = 0
 
         # TODO: see if there is a faster way to ignore infinity
         try:
-            if numpy.isfinite(self.maxval):
+            if np.isfinite(self.maxval):
                 self.maxval_noinf = self.maxval
             else:
-                self.maxval_noinf = numpy.nanmax(data[numpy.isfinite(data)])
-        except:
+                self.maxval_noinf = np.nanmax(data[np.isfinite(data)])
+        except Exception:
             self.maxval_noinf = self.maxval
 
         try:
-            if numpy.isfinite(self.minval):
+            if np.isfinite(self.minval):
                 self.minval_noinf = self.minval
             else:
-                self.minval_noinf = numpy.nanmin(data[numpy.isfinite(data)])
-        except:
+                self.minval_noinf = np.nanmin(data[np.isfinite(data)])
+        except Exception:
             self.minval_noinf = self.minval
 
     def get_minmax(self, noinf=False):
@@ -291,7 +291,7 @@ class BaseImage(ViewerObjectBase):
     def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):
         """cut out data area based on coords.
         """
-        view = numpy.s_[y1:y2:ystep, x1:x2:xstep]
+        view = np.s_[y1:y2:ystep, x1:x2:xstep]
         data = self._slice(view)
         if astype:
             data = data.astype(astype)
@@ -320,8 +320,8 @@ class BaseImage(ViewerObjectBase):
         return (data, x1, y1, x2, y2)
 
     def cutout_radius(self, x, y, radius, xstep=1, ystep=1, astype=None):
-        return self.cutout_adjust(x-radius, y-radius,
-                                  x+radius+1, y+radius+1,
+        return self.cutout_adjust(x - radius, y - radius,
+                                  x + radius + 1, y + radius + 1,
                                   xstep=xstep, ystep=ystep,
                                   astype=astype)
 
@@ -335,8 +335,8 @@ class BaseImage(ViewerObjectBase):
         x0, x1 = max(0, x - n), min(wd - 1, x + n)
         y0, y1 = max(0, y - n), min(ht - 1, y + n)
 
-        xview = numpy.s_[y, x0:x1 + 1]
-        yview = numpy.s_[y0:y1 + 1, x]
+        xview = np.s_[y, x0:x1 + 1]
+        yview = np.s_[y0:y1 + 1, x]
 
         xarr = self._slice(xview)
         yarr = self._slice(yview)
@@ -348,9 +348,10 @@ class BaseImage(ViewerObjectBase):
         Return full mask where True marks pixels within the given shape.
         """
         wd, ht = self.get_size()
-        yi = numpy.mgrid[:ht].reshape(-1, 1)
-        xi = numpy.mgrid[:wd].reshape(1, -1)
-        contains = shape_obj.contains_arr(xi, yi)
+        yi = np.mgrid[:ht].reshape(-1, 1)
+        xi = np.mgrid[:wd].reshape(1, -1)
+        pts = np.asarray((xi, yi)).T
+        contains = shape_obj.contains_pts(pts)
         return contains
 
     def get_shape_view(self, shape_obj, avoid_oob=True):
@@ -367,15 +368,16 @@ class BaseImage(ViewerObjectBase):
         if avoid_oob:
             # avoid out of bounds indexes
             wd, ht = self.get_size()
-            x1, x2 = max(0, x1), min(x2, wd-1)
-            y1, y2 = max(0, y1), min(y2, ht-1)
+            x1, x2 = max(0, x1), min(x2, wd - 1)
+            y1, y2 = max(0, y1), min(y2, ht - 1)
 
         # calculate pixel containment mask in bbox
-        yi = numpy.mgrid[y1:y2+1].reshape(-1, 1)
-        xi = numpy.mgrid[x1:x2+1].reshape(1, -1)
-        contains = shape_obj.contains_arr(xi, yi)
+        yi = np.mgrid[y1:y2 + 1].reshape(-1, 1)
+        xi = np.mgrid[x1:x2 + 1].reshape(1, -1)
+        pts = np.asarray((xi, yi)).T
+        contains = shape_obj.contains_pts(pts)
 
-        view = numpy.s_[y1:y2+1, x1:x2+1]
+        view = np.s_[y1:y2 + 1, x1:x2 + 1]
         return (view, contains)
 
     def cutout_shape(self, shape_obj):
@@ -391,7 +393,7 @@ class BaseImage(ViewerObjectBase):
         data = self._slice(view)
 
         # mask non-containing members
-        mdata = numpy.ma.array(data, mask=numpy.logical_not(mask))
+        mdata = np.ma.array(data, mask=np.logical_not(mask))
         return mdata
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
@@ -519,7 +521,7 @@ class BaseImage(ViewerObjectBase):
                 try:
                     val = self.get_data_xy(x, y)
                 except Exception:
-                    val = numpy.NaN
+                    val = np.NaN
                 res.append(val)
             else:
                 res.append((x, y))
@@ -613,4 +615,4 @@ class Header(dict):
     def asdict(self):
         return dict([(key, self[key]) for key in self.keys()])
 
-#END
+# END

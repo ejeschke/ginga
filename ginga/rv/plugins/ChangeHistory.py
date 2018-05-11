@@ -1,60 +1,53 @@
-#
-# ChangeHistory.py -- ChangeHistory global plugin for Ginga.
-#
-from ginga import GingaPlugin
-from ginga.gw import Widgets
-from ginga.misc import Bunch
-from ginga.util.iohelper import shorten_name
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+"""
+Keep track of buffer change history.
 
+**Plugin Type: Global**
 
-class ChangeHistory(GingaPlugin.GlobalPlugin):
-    """
-    ChangeHistory
-    =============
-    Keep track of buffer change history.
+``ChangeHistory`` is a global plugin.  Only one instance can be opened.
 
-    Plugin Type: Global
-    -------------------
-    ChangeHistory is a global plugin.  Only one instance can be opened.
+This plugin is used to log any changes to data buffer. For example,
+a change log would appear here if a new image is added to a mosaic via the
+``Mosaic`` plugin. Like ``Contents``,
+the log is sorted by channel, and then by image name.
 
-    This plugin is used to log any changes to data buffer. For example,
-    a change log would appear here if a new image is added to a mosaic via the
-    `Mosaic` plugin. Like `Contents`, the log is sorted by channel, and then
-    by image name.
+**Usage**
 
-    Notes
-    -----
-    History should stay no matter what channel or image is active.
-    New history can be added, but old history cannot be deleted,
-    unless the image/channel itself is deleted.
+History should stay no matter what channel or image is active.
+New history can be added, but old history cannot be deleted,
+unless the image/channel itself is deleted.
 
-    The `redo()` method picks up a ``'modified'`` event and displays
-    related metadata here. The metadata is obtained as follows:
-
-    .. code-block:: python
+The ``redo()`` method picks up an ``'add-image-info'`` event and displays
+related metadata here. The metadata is obtained as follows::
 
         channel = self.fv.get_channel_info(chname)
         iminfo = channel.get_image_info(imname)
         timestamp = iminfo.time_modified
         description = iminfo.reason_modified  # Optional
 
-    While ``'time_modified'`` is automatically added by Ginga,
-    ``'reason_modified'`` is optional and has be to explicitly set
-    by the calling plugin in the same method that issues the
-    ``'modified'`` callback, like this:
+Both ``'time_modified'`` and ``'reason_modified'`` have to be explicitly set
+by the calling plugin in the same method that issues the
+``'add-image-info'`` callback, like this::
 
-    .. code-block:: python
-
-        # This issues the 'modified' callback and sets the timestamp
+        # This changes the data buffer
         image.set_data(new_data, ...)
+        # Add description for ChangeHistory
+        info = dict(time_modified=datetime.utcnow(),
+                    reason_modified='Data has changed')
+        self.fv.update_image_info(image, info)
 
-        # Manually add the description
-        chname = self.fv.get_channel_name(self.fitsimage)
-        channel = self.fv.get_channel_info(chname)
-        iminfo = channel.get_image_info(image.get('name'))
-        iminfo.reason_modified = 'Something was done to this image buffer'
+"""
+from ginga import GingaPlugin
+from ginga.gw import Widgets
+from ginga.misc import Bunch
+from ginga.util.iohelper import shorten_name
 
-    """
+__all__ = ['ChangeHistory']
+
+
+class ChangeHistory(GingaPlugin.GlobalPlugin):
+
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(ChangeHistory, self).__init__(fv)
@@ -73,7 +66,8 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
                                    ts_colwidth=250)
         self.settings.load(onError='silent')
 
-        fv.add_callback('remove-image', self.remove_image_cb)
+        fv.add_callback('add-image-info', self.add_image_info_cb)
+        fv.add_callback('remove-image-info', self.remove_image_info_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
 
         self.gui_up = False
@@ -187,14 +181,32 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
     def redo(self, channel, image):
         """Add an entry with image modification info."""
         chname = channel.name
+        if image is None:
+            # shouldn't happen, but let's play it safe
+            return
+
         imname = image.get('name', 'none')
         iminfo = channel.get_image_info(imname)
         timestamp = iminfo.time_modified
 
-        # Image fell out of cache and lost its history
         if timestamp is None:
-            self.remove_image_cb(self.fv, chname, imname, image.get('path'))
+            reason = iminfo.get('reason_modified', None)
+            if reason is not None:
+                self.fv.show_error(
+                    "{0} invoked 'modified' callback to ChangeHistory with a "
+                    "reason but without a timestamp. The plugin invoking the "
+                    "callback is no longer be compatible with Ginga. "
+                    "Please contact plugin developer to update the plugin "
+                    "to use self.fv.update_image_info() like Mosaic "
+                    "plugin.".format(imname))
+
+            # Image somehow lost its history
+            self.remove_image_info_cb(self.fv, channel, iminfo)
             return
+
+        self.add_entry(chname, iminfo)
+
+    def add_entry(self, chname, iminfo):
 
         # Add info to internal log
         if chname not in self.name_dict:
@@ -202,10 +214,12 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
 
         fileDict = self.name_dict[chname]
 
+        imname = iminfo.name
         if imname not in fileDict:
             fileDict[imname] = {}
 
         # Z: Zulu time, GMT, UTC
+        timestamp = iminfo.time_modified
         timestamp = timestamp.strftime('%Y-%m-%dZ %H:%M:%SZ')
         reason = iminfo.get('reason_modified', 'Not given')
         bnch = Bunch.Bunch(CHNAME=chname, NAME=imname, MODIFIED=timestamp,
@@ -221,13 +235,15 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         if self.gui_up:
             self.recreate_toc()
 
-    def remove_image_cb(self, viewer, chname, name, path):
+    def remove_image_info_cb(self, gshell, channel, iminfo):
         """Delete entries related to deleted image."""
+        chname = channel.name
         if chname not in self.name_dict:
             return
 
         fileDict = self.name_dict[chname]
 
+        name = iminfo.name
         if name not in fileDict:
             return
 
@@ -240,7 +256,17 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         self.clear_selected_history()
         self.recreate_toc()
 
-    def delete_channel_cb(self, viewer, chinfo):
+    def add_image_info_cb(self, gshell, channel, iminfo):
+        """Add entries related to an added image."""
+
+        timestamp = iminfo.time_modified
+        if timestamp is None:
+            # Not an image we are interested in tracking
+            return
+
+        self.add_entry(channel.name, iminfo)
+
+    def delete_channel_cb(self, gshell, chinfo):
         """Called when a channel is deleted from the main interface.
         Parameter is chinfo (a bunch)."""
         chname = chinfo.name
@@ -277,8 +303,7 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         return 'changehistory'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
+# Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
-__doc__ = generate_cfg_example('plugin_ChangeHistory', package='ginga')
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_ChangeHistory', package='ginga')

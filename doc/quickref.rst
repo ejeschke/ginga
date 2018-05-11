@@ -19,10 +19,10 @@ Mode control commands
 About modes
 -----------
 
-Certain keystrokes invoke a *mode*---modes are usually indicated by a
-small black rectangle with the mode name in one corner of the view.
-In a mode, there are usually some special key, cursor, and scroll bindings
-that override *some* of the default ones.
+Certain keystrokes invoke a *mode*---modes are usually indicated by the
+*mode indicator*: a small black rectangle with the mode name in one corner
+of the view.  In a mode, there are usually some special key, cursor, and
+scroll bindings that override *some* of the default ones.
 
 Modes additionally have a *mode type* which can be set to one of the following:
 
@@ -33,11 +33,16 @@ Modes additionally have a *mode type* which can be set to one of the following:
 * `softlock`: mode is locked until another mode key is pressed (or `Esc`)
 
 By default, most modes are activated in "oneshot" type, unless the mode
-lock is toggled.
+lock is toggled.  The mode type is indicated in the brackets after the
+mode name in the mode indicator.  The following keys are important for
+initiating a mode:
 
 +----------------------+--------------------------------------------------+
 | Commmand             | Description                                      |
 +======================+==================================================+
+| Space                | Enter "meta" mode. Next keystroke will trigger   |
+|                      | a particular mode.                               |
++----------------------+--------------------------------------------------+
 | Esc                  | Exit any mode. Does not toggle the lock.         |
 +----------------------+--------------------------------------------------+
 | l                    | Toggle the soft lock to the current mode or any  |
@@ -46,6 +51,47 @@ lock is toggled.
 | L                    | Toggle the normal lock to the current mode or    |
 |                      | any future modes.                                |
 +----------------------+--------------------------------------------------+
+
+.. _meta_mode:
+
+"meta" mode
+-----------
+
+Most modes are defined so that they are invoked from a special intermediate
+mode called "meta".  In that case a two-key sequence is required to enter
+the mode: pressing the key that invokes "meta" and then pressing the key that
+invokes the desired mode.  The following table shows the modes that can be
+triggered from meta mode.
+
++----------------------+--------------------------------------------------+
+| Commmand             | Description                                      |
++======================+==================================================+
+| Space                | Exit/Enter "meta" mode.                          |
++----------------------+--------------------------------------------------+
+| b                    | Enter draw mode (canvas must be enabled to draw).|
++----------------------+--------------------------------------------------+
+| q                    | Enter pan mode.                                  |
++----------------------+--------------------------------------------------+
+| w                    | Enter freepan mode.                              |
++----------------------+--------------------------------------------------+
+| r                    | Enter rotate mode.                               |
++----------------------+--------------------------------------------------+
+| t                    | Enter contrast mode.                             |
++----------------------+--------------------------------------------------+
+| y                    | Enter cmap (color map) mode.                     |
++----------------------+--------------------------------------------------+
+| s                    | Enter cuts mode.                                 |
++----------------------+--------------------------------------------------+
+| d                    | Enter dist (distribution) mode.                  |
++----------------------+--------------------------------------------------+
+
+.. note:: For modes initiated from meta mode, the locked and softlock
+          mode types work the same way, which is slightly different
+          from that described above: you press the meta mode key to
+          switch back to meta mode, from which you can enter another
+          mode by pressing its key.  You can always press `Esc` in any
+          mode (including meta mode) to exit the mode.
+
 
 .. _panning_zooming_commands:
 
@@ -481,5 +527,5 @@ Reference Viewer Only
 	  mouse button is used to draw a shape for the operation.
 
 	  On the Mac, Ctrl + mouse button can also be used to draw
-	  or right-click. You can also press and release the space bar
-	  to make the next drag operation a drawing operation.
+          or right-click. You can also invoke draw mode as described
+          above in the section on modes.

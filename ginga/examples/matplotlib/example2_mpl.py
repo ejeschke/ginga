@@ -13,11 +13,12 @@ Usage:
 You need Qt4 with python bindings (or pyside) installed to run this example.
 """
 from __future__ import print_function
-import sys, os
-from ginga.qtw.QtHelp import QtGui, QtCore
+import sys
 
-from ginga import AstroImage
 from matplotlib.figure import Figure
+
+from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga import AstroImage
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
@@ -54,13 +55,15 @@ class FitsViewer(QtGui.QMainWindow):
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
-        #canvas.enable_edit(True)
+        canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='lightblue')
         canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
-        fi.add(canvas)
+        fi.get_canvas().add(canvas)
         canvas.ui_set_active(True)
+        canvas.register_for_cursor_drawing(fi)
+        canvas.add_callback('draw-event', self.draw_cb)
 
         w.resize(512, 512)
 
@@ -120,6 +123,33 @@ class FitsViewer(QtGui.QMainWindow):
         hw.setLayout(hbox)
         vbox.addWidget(hw, stretch=0)
 
+        mode = self.canvas.get_draw_mode()
+        hbox = QtGui.QHBoxLayout()
+        hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
+
+        btn1 = QtGui.QRadioButton("Draw")
+        btn1.setChecked(mode == 'draw')
+        btn1.toggled.connect(lambda val: self.set_mode_cb('draw', val))
+        btn1.setToolTip("Choose this to draw on the canvas")
+        hbox.addWidget(btn1)
+
+        btn2 = QtGui.QRadioButton("Edit")
+        btn2.setChecked(mode == 'edit')
+        btn2.toggled.connect(lambda val: self.set_mode_cb('edit', val))
+        btn2.setToolTip("Choose this to edit things on the canvas")
+        hbox.addWidget(btn2)
+
+        btn3 = QtGui.QRadioButton("Pick")
+        btn3.setChecked(mode == 'pick')
+        btn3.toggled.connect(lambda val: self.set_mode_cb('pick', val))
+        btn3.setToolTip("Choose this to pick things on the canvas")
+        hbox.addWidget(btn3)
+
+        hbox.addWidget(QtGui.QLabel(''), stretch=1)
+        hw = QtGui.QWidget()
+        hw.setLayout(hbox)
+        vbox.addWidget(hw, stretch=0)
+
         vw = QtGui.QWidget()
         self.setCentralWidget(vw)
         vw.setLayout(vbox)
@@ -131,9 +161,9 @@ class FitsViewer(QtGui.QMainWindow):
         fill = (self.wfill.checkState() != 0)
         alpha = self.walpha.value()
 
-        params = { 'color': self.drawcolors[index],
-                   'alpha': alpha,
-                   }
+        params = {'color': self.drawcolors[index],
+                  'alpha': alpha,
+                  }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
@@ -153,7 +183,7 @@ class FitsViewer(QtGui.QMainWindow):
 
     def open_file(self):
         res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
-                                                     ".", "FITS files (*.fits)")
+                                                ".", "FITS files (*.fits)")
         if isinstance(res, tuple):
             fileName = res[0]
         else:
@@ -193,12 +223,39 @@ class FitsViewer(QtGui.QMainWindow):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt  = 'BAD WCS'
+            ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)
         self.readout.setText(text)
+
+    def set_mode_cb(self, mode, tf):
+        self.logger.info("canvas mode changed (%s) %s" % (mode, tf))
+        if not (tf is False):
+            self.canvas.set_draw_mode(mode)
+        return True
+
+    def draw_cb(self, canvas, tag):
+        obj = canvas.get_object_by_tag(tag)
+        obj.add_callback('pick-down', self.pick_cb, 'down')
+        obj.add_callback('pick-up', self.pick_cb, 'up')
+        obj.add_callback('pick-move', self.pick_cb, 'move')
+        obj.add_callback('pick-hover', self.pick_cb, 'hover')
+        obj.add_callback('pick-enter', self.pick_cb, 'enter')
+        obj.add_callback('pick-leave', self.pick_cb, 'leave')
+        obj.add_callback('pick-key', self.pick_cb, 'key')
+        obj.pickable = True
+        obj.add_callback('edited', self.edit_cb)
+
+    def pick_cb(self, obj, canvas, event, pt, ptype):
+        self.logger.info("pick event '%s' with obj %s at (%.2f, %.2f)" % (
+            ptype, obj.kind, pt[0], pt[1]))
+        return True
+
+    def edit_cb(self, obj):
+        self.logger.info("object %s has been edited" % (obj.kind))
+        return True
 
 
 def main(options, args):
@@ -217,6 +274,7 @@ def main(options, args):
         w.load_file(args[0])
 
     app.exec_()
+
 
 if __name__ == "__main__":
 
@@ -247,7 +305,6 @@ if __name__ == "__main__":
 
         print(("%s profile:" % sys.argv[0]))
         profile.run('main(options, args)')
-
 
     else:
         main(options, args)

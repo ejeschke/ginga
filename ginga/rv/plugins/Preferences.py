@@ -1,10 +1,276 @@
-#
-# Preferences.py -- Preferences plugin for Ginga channels
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+Make changes to channel settings graphically in the UI.
+
+**Plugin Type: Local**
+
+``Preferences`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+The ``Preferences`` plugin sets the preferences on a per-channel basis.
+The preferences for a given channel are inherited from the "Image"
+channel until they are explicitly set and saved using this plugin.
+
+If "Save Settings" is pressed, it will save the settings to the user's
+home Ginga folder so that when a channel with the same name is created
+in future Ginga sessions it will obtain the same settings.
+
+**Color Distribution Preferences**
+
+.. figure:: figures/cdist-prefs.png
+   :align: center
+   :alt: Color Distribution preferences
+
+   "Color Distribution" preferences.
+
+The "Color Distribution" preferences control the preferences used for the
+data value to color index conversion that occurs after cut levels are
+applied and just before final color mapping is performed.  It concerns
+how the values between the low and high cut levels are distributed to
+the color and intensity mapping phase.
+
+The "Algorithm" control is used to set the algorithm used for the
+mapping.  Click the control to show the list, or simply scroll the mouse
+wheel while hovering the cursor over the control.  There are eight
+algorithms available: linear, log, power, sqrt, squared, asinh, sinh,
+and histeq.  The name of each algorithm is indicative of how
+the data is mapped to the colors in the color map.  "linear" is the
+default.
+
+**Color Mapping Preferences**
+
+.. figure:: figures/cmap-prefs.png
+   :align: center
+   :alt: Color Mapping preferences
+
+   "Color Mapping" preferences.
+
+The "Color Mapping" preferences control the preferences used for the
+color map and intensity map, used during the final phase of the color
+mapping process. Together with the "Color Distribution" preferences, these
+control the mapping of data values into a 24-bpp RGB visual representation.
+
+The "Colormap" control selects which color map should be loaded and
+used.  Click the control to show the list, or simply scroll the mouse
+wheel while hovering the cursor over the control.
+
+The "Intensity" control selects which intensity map should be used
+with the color map.  The intensity map is applied just before the color
+map, and can be used to change the standard linear scale of values into
+an inverted scale, logarithmic, etc.
+
+Ginga comes with a good selection of color maps, but should you want
+more, you can add custom ones or, if ``matplotlib`` is installed, you
+can load all the ones that it has.
+See "Customizing Ginga" for details.
+
+**Zoom Preferences**
+
+.. figure:: figures/zoom-prefs.png
+   :align: center
+   :alt: Zoom preferences
+
+   "Zoom" preferences.
+
+The "Zoom" preferences control Ginga's zooming/scaling behavior.
+Ginga supports two zoom algorithms, chosen using the "Zoom Alg" control:
+
+* The "step" algorithm zooms the image inwards in discrete
+  steps of 1X, 2X, 3X, etc. or outwards in steps of 1/2X, 1/3X, 1/4X,
+  etc.  This algorithm results in the least artifacts visually, but is a
+  bit slower to zoom over wide ranges when using a scrolling motion
+  because more "throw" is required to achieve a large zoom change
+  (this is not the case if one uses of the shortcut zoom keys, such as
+  the digit keys).
+
+* The "rate" algorithm zooms the image by advancing the scaling at
+  a rate defined by the value in the "Zoom Rate" box.  This rate defaults
+  to the square root of 2.  Larger numbers cause larger changes in scale
+  between zoom levels.  If you like to zoom your images rapidly, at a
+  small cost in image quality, you would likely want to choose this
+  option.
+
+Note that regardless of which method is chosen for the zoom algorithm,
+the zoom can be controlled by holding down ``Ctrl`` (coarse) or ``Shift``
+(fine) while scrolling to constrain the zoom rate (assuming the default
+mouse bindings).
+
+The "Stretch XY" control can be used to stretch one of the axes (X or
+Y) relative to the other.  Select an axis with this control and roll the
+scroll wheel while hovering over the "Stretch Factor" control to
+stretch the pixels in the selected axis.
+
+The "Scale X" and "Scale Y" controls offer direct access to the
+underlying scaling, bypassing the discrete zoom steps.  Here, exact
+values can be typed to scale the image.  Conversely, you will see these
+values change as the image is zoomed.
+
+The "Scale Min" and "Scale Max" controls can be used to place a
+limit on how much the image can be scaled.
+
+The "Zoom Defaults" button will restore the controls to the Ginga
+default values.
+
+**Pan Preferences**
+
+.. figure:: figures/pan-prefs.png
+   :align: center
+   :alt: Pan Preferences
+
+   "Pan" preferences.
+
+The "Pan" preferences control Ginga's panning behavior.
+
+The "Pan X" and "Pan Y" controls offer direct access to set the pan
+position in the image (the part of the image located at the center of
+the window) -- you can see them change as you pan around the image.
+
+The "Center Image" button sets the pan position to the center of the
+image, as calculated by halving the dimensions in X and Y.
+
+The "Mark Center" check box, when checked, will cause Ginga to draw a
+small reticle in the center of the image.  This is useful for knowing
+the pan position and for debugging.
+
+**Transform Preferences**
+
+.. figure:: figures/transform-prefs.png
+   :align: center
+   :alt: Transform Preferences
+
+   "Transform" preferences.
+
+The "Transform" preferences provide for transforming the view of the image
+by flipping the view in X or Y, swapping the X and Y axes, or rotating
+the image in arbitrary amounts.
+
+The "Flip X" and "Flip Y" checkboxes cause the image view to be
+flipped in the corresponding axis.
+
+The "Swap XY" checkbox causes the image view to be altered by swapping
+the X and Y axes.  This can be combined with "Flip X" and "Flip Y" to rotate
+the image in 90 degree increments.  These views will render more quickly
+than arbitrary rotations using the "Rotate" control.
+
+The "Rotate" control will rotate the image view the specified amount.
+The value should be specified in degrees.  "Rotate" can be specified in
+conjunction with flipping and swapping.
+
+The "Restore" button will restore the view to the default view, which
+is unflipped, unswapped, and unrotated.
+
+**Auto Cuts Preferences**
+
+.. figure:: figures/autocuts-prefs.png
+   :align: center
+   :alt: Auto Cuts Preferences
+
+   "Auto Cuts" preferences.
+
+The "Auto Cuts" preferences control the calculation of auto cut levels for
+the view when the auto cut levels button or key is pressed, or when
+loading a new image with auto cuts enabled.
+
+The "Auto Method" control is used to choose which auto cuts algorithm
+used: "minmax" (minimum maximum values), "histogram" (based on an image
+histogram), "stddev" (based on the standard deviation of pixel values), or
+"zscale" (based on the ZSCALE algorithm popularized by IRAF).
+As the algorithm is changed, the boxes under it may also change to
+allow changes to parameters particular to each algorithm.
+
+**WCS Preferences**
+
+.. figure:: figures/wcs-prefs.png
+   :align: center
+   :alt: WCS Preferences
+
+   "WCS" preferences.
+
+The "WCS" preferences control the display preferences for the World
+Coordinate System (WCS) calculations used to report the cursor position in the
+image.
+
+The "WCS Coords" control is used to select the coordinate system in
+which to display the result.
+
+The "WCS Display" control is used to select a sexagesimal (``H:M:S``)
+readout or a decimal degrees readout.
+
+**New Image Preferences**
+
+.. figure:: figures/newimages-prefs.png
+   :align: center
+   :alt: New Image Preferences
+
+   "New Image" preferences.
+
+The "New Images" preferences determine how Ginga reacts when a new image
+is loaded into the channel.  This includes when an older image is
+revisited by clicking on its thumbnail in the ``Thumbs`` plugin pane.
+
+The "Cut New" setting controls whether an automatic cut-level
+calculation should be performed on the new image, or whether the
+currently set cut levels should be applied.  The possible settings are:
+
+* "on": calculate a new cut levels always;
+* "override": calculate a new cut levels until the user overrides
+  it by manually setting a cut levels, then turn "off"; or
+* "off": always use the currently set cut levels.
+
+.. tip:: The "override" setting is provided for the convenience of
+         having automatic cut levels, while preventing a manually set
+         cuts from being overridden when a new image is ingested.  When
+         typed in the image window, the semicolon key can be used to
+         toggle the mode back to override (from "off"), while colon will
+         set the preference to "on".  The ``Info`` panel shows
+         the state of this setting.
+
+The "Zoom New" setting controls whether a newly visited image should
+be zoomed to fit the window.  There are three possible values: on,
+override, and off:
+
+* "on": the new image is always zoomed to fit;
+* "override": images are automatically fitted until the zoom level is
+  changed manually, then the mode automatically changes to "off", or
+* "off": always use the currently set zoom levels.
+
+.. tip:: The "override" setting is provided for the convenience of
+         having an automatic zoom, while preventing a manually set zoom
+         level from being overridden when a new image is ingested.  When
+         typed in the image window,  the apostrophe (a.k.a. "single quote")
+         key can be used to toggle the mode back to "override" (from
+         "off"), while quote (a.k.a. double quote) will set the preference
+         to "on".  The global plugin ``Info`` panel shows the state of this
+         setting.
+
+The "Center New" box, if checked, will cause newly visited images to
+always have the pan position reset to the center of the image.  If
+unchecked, the pan position is unchanged from the previous image.
+
+The "Follow New" setting is used to control whether Ginga will change
+the display if a new image is loaded into the channel.  If unchecked,
+the image is loaded (as seen, for example, by its appearance in the
+``Thumbs`` tab), but the display will not change to the new image.  This
+setting is useful in cases where new images are being loaded by some
+automated means into a channel and the user wishes to study the current
+image without being interrupted.
+
+The "Raise New" setting controls whether Ginga will raise the tab of a
+channel when an image is loaded into that channel.  If unchecked, then
+Ginga will not raise the tab when an image is loaded into that
+particular channel.
+
+The "Create Thumbnail" setting controls whether Ginga will create a
+thumbnail for images loaded into that channel.  In cases where many
+images are being loaded into a channel frequently (e.g., a low frequency
+video feed), it may be undesirable to create thumbnails for all of them.
+
+"""
 import math
+
 from ginga.gw import Widgets
 from ginga.misc import ParamSet, Bunch
 
@@ -13,27 +279,11 @@ from ginga import GingaPlugin
 from ginga import AutoCuts, ColorDist
 from ginga.util import wcs, wcsmod, rgb_cms
 
-from ginga.misc import Bunch
+__all_ = ['Preferences']
+
 
 class Preferences(GingaPlugin.LocalPlugin):
-    """
-    Preferences
-    ===========
-    A plugin to manage the settings for a channel.
 
-    Plugin Type: Local
-    ------------------
-    Preferences is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Usage
-    -----
-    Make changes to settings graphically in the UI.
-
-    If "Save Settings" is pressed it will save the settings to the user's
-    home Ginga folder so that when a channel with the same name is created
-    in future Ginga sessions it will obtain the same settings.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Preferences, self).__init__(fv, fitsimage)
@@ -54,26 +304,31 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.sort_options = ('loadtime', 'alpha')
 
         self.t_ = self.fitsimage.get_settings()
-        self.t_.get_setting('autocuts').add_callback('set',
-                                               self.autocuts_changed_ext_cb)
-        self.t_.get_setting('autozoom').add_callback('set',
-                                               self.autozoom_changed_ext_cb)
-        self.t_.get_setting('autocenter').add_callback('set',
-                                                      self.autocenter_changed_ext_cb)
+        self.t_.get_setting('autocuts').add_callback(
+            'set', self.autocuts_changed_ext_cb)
+        self.t_.get_setting('autozoom').add_callback(
+            'set', self.autozoom_changed_ext_cb)
+        self.t_.get_setting('autocenter').add_callback(
+            'set', self.autocenter_changed_ext_cb)
         for key in ['pan']:
-            self.t_.get_setting(key).add_callback('set',
-                                          self.pan_changed_ext_cb)
+            self.t_.get_setting(key).add_callback(
+                'set', self.pan_changed_ext_cb)
         for key in ['scale']:
-            self.t_.get_setting(key).add_callback('set',
-                                          self.scale_changed_ext_cb)
+            self.t_.get_setting(key).add_callback(
+                'set', self.scale_changed_ext_cb)
 
-        self.t_.get_setting('zoom_algorithm').add_callback('set', self.set_zoomalg_ext_cb)
-        self.t_.get_setting('zoom_rate').add_callback('set', self.set_zoomrate_ext_cb)
+        self.t_.get_setting('zoom_algorithm').add_callback(
+            'set', self.set_zoomalg_ext_cb)
+        self.t_.get_setting('zoom_rate').add_callback(
+            'set', self.set_zoomrate_ext_cb)
         for key in ['scale_x_base', 'scale_y_base']:
-            self.t_.get_setting(key).add_callback('set', self.scalebase_changed_ext_cb)
-        self.t_.get_setting('rot_deg').add_callback('set', self.set_rotate_ext_cb)
+            self.t_.get_setting(key).add_callback(
+                'set', self.scalebase_changed_ext_cb)
+        self.t_.get_setting('rot_deg').add_callback(
+            'set', self.set_rotate_ext_cb)
         for name in ('flip_x', 'flip_y', 'swap_xy'):
-            self.t_.get_setting(name).add_callback('set', self.set_transform_ext_cb)
+            self.t_.get_setting(name).add_callback(
+                'set', self.set_transform_ext_cb)
 
         ## for name in ('autocut_method', 'autocut_params'):
         ##     self.t_.get_setting(name).add_callback('set', self.set_autocuts_ext_cb)
@@ -129,8 +384,12 @@ class Preferences(GingaPlugin.LocalPlugin):
             options.append(name)
             combobox.append_text(name)
             index += 1
-        index = self.calg_names.index(self.t_.get('color_algorithm', "linear"))
-        combobox.set_index(index)
+        try:
+            index = self.calg_names.index(self.t_.get('color_algorithm',
+                                                      "linear"))
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_calg_cb)
 
         ## entry = b.table_size
@@ -205,8 +464,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.autocut_methods:
             combobox.append_text(name)
             index += 1
-        index = self.autocut_methods.index(method)
-        combobox.set_index(index)
+        try:
+            index = self.autocut_methods.index(method)
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_autocut_method_cb)
         b.auto_method.set_tooltip("Choose algorithm for auto levels")
         vbox2.add_widget(w, stretch=0)
@@ -309,8 +571,11 @@ class Preferences(GingaPlugin.LocalPlugin):
             b.zoom_alg.append_text(name.capitalize())
             index += 1
         zoomalg = self.t_.get('zoom_algorithm', "step")
-        index = self.zoomalg_names.index(zoomalg)
-        b.zoom_alg.set_index(index)
+        try:
+            index = self.zoomalg_names.index(zoomalg)
+            b.zoom_alg.set_index(index)
+        except Exception:
+            pass
         b.zoom_alg.set_tooltip("Choose Zoom algorithm")
         b.zoom_alg.add_callback('activated', self.set_zoomalg_cb)
 
@@ -394,21 +659,25 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         pan_x, pan_y = self.fitsimage.get_pan()
         coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
+        pan_coord = self.t_.get('pan_coord', "data")
+        if pan_coord == 'data':
+            pan_x, pan_y = pan_x + coord_offset, pan_y + coord_offset
         b.pan_x.set_tooltip("Coordinate for the pan position in X axis")
-        b.pan_x.set_text(str(pan_x + coord_offset))
+        b.pan_x.set_text(str(pan_x))
         #b.pan_x.add_callback('activated', self.set_pan_cb)
         b.pan_y.set_tooltip("Coordinate for the pan position in Y axis")
-        b.pan_y.set_text(str(pan_y + coord_offset))
+        b.pan_y.set_text(str(pan_y))
         #b.pan_y.add_callback('activated', self.set_pan_cb)
         b.apply_pan.add_callback('activated', self.set_pan_cb)
         b.apply_pan.set_tooltip("Set the pan position")
         b.wcs_sexagesimal.set_tooltip("Display pan position in sexagesimal")
+        b.wcs_sexagesimal.add_callback('activated',
+                                       lambda w, tf: self._update_pan_coords())
 
         index = 0
         for name in self.pancoord_options:
             b.pan_coord.append_text(name)
             index += 1
-        pan_coord = self.t_.get('pan_coord', "data")
         index = self.pancoord_options.index(pan_coord)
         b.pan_coord.set_index(index)
         b.pan_coord.set_tooltip("Pan coordinates type")
@@ -463,7 +732,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         option = self.t_.get('autocenter', "off")
         # Hack to convert old values that used to be T/F
         if isinstance(option, bool):
-            choice = { True: 'on', False: 'off' }
+            choice = {True: 'on', False: 'off'}
             option = choice[option]
         index = self.autocenter_options.index(option)
         combobox.set_index(index)
@@ -488,12 +757,14 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         captions = (('Num Images:', 'label', 'Num Images', 'entryset'),
                     ('Sort Order:', 'label', 'Sort Order', 'combobox'),
-                    ('Preload Images', 'checkbutton'),
+                    ('Use scrollbars', 'checkbutton',
+                     'Preload Images', 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        b.num_images.set_tooltip("Maximum number of in memory images in channel (0==unlimited)")
+        b.num_images.set_tooltip(
+            "Maximum number of in memory images in channel (0==unlimited)")
         num_images = self.t_.get('numImages', 0)
         self.w.num_images.set_text(str(num_images))
         self.w.num_images.add_callback('activated', self.set_buffer_cb)
@@ -509,10 +780,16 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.add_callback('activated', self.set_sort_cb)
         b.sort_order.set_tooltip("Sort order for images in channel")
 
+        scrollbars = self.t_.get('scrollbars', 'off')
+        self.w.use_scrollbars.set_state(scrollbars != 'off')
+        self.w.use_scrollbars.add_callback('activated', self.set_scrollbars_cb)
+        b.use_scrollbars.set_tooltip("Use scrollbars around viewer")
+
         preload_images = self.t_.get('preload_images', False)
         self.w.preload_images.set_state(preload_images)
         self.w.preload_images.add_callback('activated', self.set_preload_cb)
-        b.preload_images.set_tooltip("Preload adjacent images to speed up access")
+        b.preload_images.set_tooltip(
+            "Preload adjacent images to speed up access")
 
         fr = Widgets.Frame()
         fr.set_widget(w)
@@ -536,10 +813,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.save_pan.set_state(self.t_.get('profile_use_pan', False))
         self.w.save_pan.add_callback('activated', self.set_profile_cb)
         self.w.save_pan.set_tooltip("Remember pan position with image")
-        self.w.save_transform.set_state(self.t_.get('profile_use_transform', False))
+        self.w.save_transform.set_state(
+            self.t_.get('profile_use_transform', False))
         self.w.save_transform.add_callback('activated', self.set_profile_cb)
         self.w.save_transform.set_tooltip("Remember transform with image")
-        self.w.save_rotation.set_state(self.t_.get('profile_use_rotation', False))
+        self.w.save_rotation.set_state(
+            self.t_.get('profile_use_rotation', False))
         self.w.save_rotation.add_callback('activated', self.set_profile_cb)
         self.w.save_rotation.set_tooltip("Remember rotation with image")
         self.w.save_cuts.set_state(self.t_.get('profile_use_cuts', False))
@@ -553,9 +832,12 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         exp = Widgets.Expander("ICC Profiles")
 
-        captions = (('Output ICC profile:', 'label', 'Output ICC profile', 'combobox'),
-                    ('Rendering intent:', 'label', 'Rendering intent', 'combobox'),
-                    ('Proof ICC profile:', 'label', 'Proof ICC profile', 'combobox'),
+        captions = (('Output ICC profile:', 'label', 'Output ICC profile',
+                     'combobox'),
+                    ('Rendering intent:', 'label', 'Rendering intent',
+                     'combobox'),
+                    ('Proof ICC profile:', 'label', 'Proof ICC profile',
+                     'combobox'),
                     ('Proof intent:', 'label', 'Proof intent', 'combobox'),
                     ('__x', 'spacer', 'Black point compensation', 'checkbutton'),
                     )
@@ -568,8 +850,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.icc_profiles:
             combobox.append_text(str(name))
             index += 1
-        index = self.icc_profiles.index(value)
-        combobox.set_index(index)
+        try:
+            index = self.icc_profiles.index(value)
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
         combobox.set_tooltip("ICC profile for the viewer display")
 
@@ -579,8 +864,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.icc_intents:
             combobox.append_text(name)
             index += 1
-        index = self.icc_intents.index(value)
-        combobox.set_index(index)
+        try:
+            index = self.icc_intents.index(value)
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
         combobox.set_tooltip("Rendering intent for the viewer display")
 
@@ -590,8 +878,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.icc_profiles:
             combobox.append_text(str(name))
             index += 1
-        index = self.icc_profiles.index(value)
-        combobox.set_index(index)
+        try:
+            index = self.icc_profiles.index(value)
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
         combobox.set_tooltip("ICC profile for soft proofing")
 
@@ -601,14 +892,18 @@ class Preferences(GingaPlugin.LocalPlugin):
         for name in self.icc_intents:
             combobox.append_text(name)
             index += 1
-        index = self.icc_intents.index(value)
-        combobox.set_index(index)
+        try:
+            index = self.icc_intents.index(value)
+            combobox.set_index(index)
+        except Exception:
+            pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
         combobox.set_tooltip("Rendering intent for soft proofing")
 
         value = self.t_.get('icc_black_point_compensation', False)
         b.black_point_compensation.set_state(value)
-        b.black_point_compensation.add_callback('activated', self.set_icc_profile_cb)
+        b.black_point_compensation.add_callback(
+            'activated', self.set_icc_profile_cb)
         b.black_point_compensation.set_tooltip("Use black point compensation")
 
         fr = Widgets.Frame()
@@ -821,8 +1116,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.zoom_new.set_index(index)
 
     def config_autocut_params(self, method):
-        index = self.autocut_methods.index(method)
-        self.w.auto_method.set_index(index)
+        try:
+            index = self.autocut_methods.index(method)
+            self.w.auto_method.set_index(index)
+        except Exception:
+            pass
 
         # remove old params
         self.w.acvbox.remove_all()
@@ -929,6 +1227,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         """This callback is invoked when the user checks the preload images
         box in the preferences pane."""
         self.t_.set(preload_images=tf)
+
+    def set_scrollbars_cb(self, w, tf):
+        """This callback is invoked when the user checks the 'Use Scrollbars'
+        box in the preferences pane."""
+        scrollbars = 'on' if tf else 'off'
+        self.t_.set(scrollbars=scrollbars)
 
     def set_icc_profile_cb(self, setting, idx):
         idx = self.w.output_icc_profile.get_index()
@@ -1106,8 +1410,8 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         zoomrate = self.t_.get('zoom_rate', math.sqrt(2.0))
         self.w.zoom_rate.set_value(zoomrate)
-        self.w.zoom_rate.set_enabled(zoomalg!='step')
-        self.w.stretch_factor.set_enabled(zoomalg!='step')
+        self.w.zoom_rate.set_enabled(zoomalg != 'step')
+        self.w.stretch_factor.set_enabled(zoomalg != 'step')
 
         self.scalebase_changed_ext_cb(prefs, None)
 
@@ -1215,4 +1519,4 @@ class Preferences(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'preferences'
 
-#END
+# END

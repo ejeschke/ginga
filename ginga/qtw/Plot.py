@@ -1,23 +1,19 @@
 #
 # Plot.py -- Plotting widget canvas wrapper.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c)  Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+
 # GUI imports
-from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga.qtw import QtHelp, Widgets
+from ginga.qtw import Widgets
 from ginga.toolkit import toolkit
 
 if toolkit == 'qt5':
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg \
-         as FigureCanvas
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 else:
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg \
-         as FigureCanvas
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+
 
 class PlotWidget(Widgets.WidgetBase):
 
@@ -28,6 +24,12 @@ class PlotWidget(Widgets.WidgetBase):
         self.widget._resizeEvent = self.widget.resizeEvent
         self.widget.resizeEvent = self.resize_event
         self.plot = plot
+        self.logger = plot.logger
+
+    def set_plot(self, plot):
+        self.plot = plot
+        self.logger = plot.logger
+        self.logger.debug("set_plot called")
 
     def configure_window(self, wd, ht):
         fig = self.plot.get_figure()

@@ -1,4 +1,4 @@
-Copyright (c) 2011-2017, Eric R. Jeschke
+Copyright (c) 2011-2018, Eric R. Jeschke
 
 All rights reserved.
 

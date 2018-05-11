@@ -4,18 +4,20 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import numpy
 from io import BytesIO
 
+import numpy as np
 from PIL import Image
-from . import PilHelp
-from .CanvasRenderPil import CanvasRenderer
 
 from ginga import ImageView
+
+from . import PilHelp  # noqa
+from .CanvasRenderPil import CanvasRenderer
 
 
 class ImageViewPilError(ImageView.ImageViewError):
     pass
+
 
 class ImageViewPil(ImageView.ImageViewBase):
 
@@ -50,7 +52,7 @@ class ImageViewPil(ImageView.ImageViewBase):
             width, height = self.get_window_size()
             canvas = Image.new("RGB", (width, height), color=0)
             assert p_image.size == canvas.size, \
-                   ImageViewPilError("Rendered image does not match window size")
+                ImageViewPilError("Rendered image does not match window size")
             self.surface = canvas
 
         canvas.paste(p_image)
@@ -75,7 +77,7 @@ class ImageViewPil(ImageView.ImageViewBase):
 
         # Get PIL surface
         p_image = self.get_surface()
-        arr8 = numpy.array(p_image, dtype=numpy.uint8)
+        arr8 = np.array(p_image, dtype=np.uint8)
         arr8 = arr8.reshape((ht, wd, 3))
         return arr8
 
@@ -95,6 +97,10 @@ class ImageViewPil(ImageView.ImageViewBase):
             return None
         return obuf
 
+    def get_rgb_image_as_bytes(self, format='png', quality=90):
+        buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
+        return buf.getvalue()
+
     def update_image(self):
         # subclass implements this method to actually update a widget
         # from the PIL surface
@@ -113,11 +119,15 @@ class ImageViewPil(ImageView.ImageViewBase):
 
 
 class CanvasView(ImageViewPil):
+    """This class is defined to provide a non-event handling invisible
+    viewer.
+    """
 
     def __init__(self, logger=None, settings=None, rgbmap=None,
                  bindmap=None, bindings=None):
         ImageViewPil.__init__(self, logger=logger, settings=settings,
                               rgbmap=rgbmap)
+        self.defer_redraw = False
 
         # Needed for UIMixin to propagate events correctly
         self.objects = [self.private_canvas]
@@ -132,4 +142,7 @@ class CanvasView(ImageViewPil):
         # no widget to update
         pass
 
-#END
+    def configure_window(self, width, height):
+        return super(CanvasView, self).configure_surface(width, height)
+
+# END

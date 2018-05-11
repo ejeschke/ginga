@@ -4,34 +4,32 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import os.path
 import numpy as np
-from PIL import Image, ImageFont, ImageDraw
+from PIL import ImageFont, ImageDraw
 
 from ginga import colors
-import ginga.fonts
-from ginga.util.six.moves import map
+from ginga.fonts import font_asst
 
-# Set up known fonts
-fontdir, xx = os.path.split(ginga.fonts.__file__)
-known_font = os.path.join(fontdir, 'Roboto', 'Roboto-Regular.ttf')
 
-font_cache = {}
-
-def get_cached_font(fontpath, fontsize):
-    global font_cache
-
-    key = (fontpath, fontsize)
+def get_cached_font(fontname, fontsize):
+    key = (fontname, fontsize)
     try:
-        return font_cache[key]
+        return font_asst.get_cache(key)
 
     except KeyError:
-        # TODO: try to lookup font before overriding
-        fontpath = known_font
+        # see if we can build the font
+        info = font_asst.get_font_info(fontname, subst_ok=True)
 
-        font = ImageFont.truetype(fontpath, fontsize)
-        font_cache[key] = font
+        font = ImageFont.truetype(info.font_path, fontsize)
+        font_asst.add_cache(key, font)
+
         return font
+
+
+def load_font(font_name, font_file):
+    if not font_asst.have_font(font_name):
+        font_asst.add_font(font_file, font_name=font_name)
+    return font_name
 
 
 class Pen(object):
@@ -40,15 +38,18 @@ class Pen(object):
         self.linewidth = linewidth
         self.alpha = alpha
 
+
 class Brush(object):
     def __init__(self, color='black', fill=False, alpha=1.0):
         self.color = color
         self.fill = fill
         self.alpha = alpha
 
+
 class Font(object):
-    def __init__(self, fontname='ariel', fontsize=12.0, color='black',
+    def __init__(self, fontname='Roboto', fontsize=12.0, color='black',
                  linewidth=1, alpha=1.0):
+        fontname = font_asst.resolve_alias(fontname, fontname)
         self.fontname = fontname
         self.fontsize = int(fontsize)
         self.color = color
@@ -79,7 +80,7 @@ class PilContext(object):
         else:
             r, g, b = 1.0, 1.0, 1.0
 
-        return (int(r*255), int(g*255), int(b*255), int(alpha*255))
+        return (int(r * 255), int(g * 255), int(b * 255), int(alpha * 255))
 
     def get_pen(self, color, linewidth=1, alpha=1.0):
         # if hasattr(self, 'linestyle'):
@@ -101,7 +102,7 @@ class PilContext(object):
     def _cvt_points(self, points):
         # PIL seems to have trouble with numpy arrays as sequences
         # of points, so just convert to a list
-        return [ (p[0], p[1]) for p in points ]
+        return [(p[0], p[1]) for p in points]
 
     def text_extents(self, text, font):
         retval = self.ctx.textsize(text, font.font)
@@ -122,10 +123,12 @@ class PilContext(object):
         x, y = pt
         radius = int(radius)
         if (brush is not None) and brush.fill:
-            self.ctx.ellipse(((x-radius, y-radius), (x+radius, y+radius)),
+            self.ctx.ellipse(((x - radius, y - radius),
+                              (x + radius, y + radius)),
                              fill=brush.color, outline=pen.color)
         else:
-            self.ctx.ellipse(((x-radius, y-radius), (x+radius, y+radius)),
+            self.ctx.ellipse(((x - radius, y - radius),
+                              (x + radius, y + radius)),
                              outline=pen.color)
 
     def polygon(self, points, pen, brush):

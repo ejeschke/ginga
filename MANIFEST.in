@@ -1,5 +1,6 @@
 include README.txt
 include CHANGES.rst
+include LICENSE.*
 include ginga.desktop
 
 include ez_setup.py

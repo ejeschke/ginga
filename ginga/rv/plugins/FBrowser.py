@@ -1,17 +1,41 @@
-#
-# FBrowser.py -- file browser plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
-import os, glob
-import stat, time
+"""
+A plugin for browsing the local filesystem and loading files.
+
+**Plugin Type: Global or Local**
+
+``FBrowser`` is a hybrid global/local plugin, which means it can be invoked
+in either fashion.  If invoked as a local plugin then it is associated
+with a channel, and an instance can be opened for each channel.  It can
+also be opened as a global plugin.
+
+**Usage**
+
+Navigate the directory tree until you come to the location files
+you want to load.  You can double click a file to load it into the
+associated channel, or drag a file into a channel viewer window to
+load it into any channel viewer.
+
+Multiple files can be selected by holding down ``Ctrl`` (``Command`` on Mac),
+or ``Shift``-clicking to select a contiguous range of files.
+
+You may also enter full path to the desired image(s) in the text box as
+``/my/path/to/image.fits``, ``/my/path/to/image.fits[ext]``,
+``/my/path/to/image*.fits``, or ``/my/path/to/image*.fits[ext]``.
+
+Because it is a local plugin, ``FBrowser`` will remember its last
+directory if closed and then restarted.
+
+"""
+import glob
+import os
+import time
 
 from ginga.misc import Bunch
 from ginga import GingaPlugin
-from ginga import AstroImage
 from ginga.util import paths, iohelper
-from ginga.util.six.moves import map, zip
+from ginga.util.six.moves import map
 from ginga.gw import Widgets
 
 try:
@@ -20,33 +44,11 @@ try:
 except ImportError:
     have_astropy = False
 
+__all__ = ['FBrowser']
+
 
 class FBrowser(GingaPlugin.LocalPlugin):
-    """
-    FBrowser
-    ========
-    A plugin for browsing the local filesystem and loading files.
 
-    Plugin Type: Global or Local
-    ----------------------------
-    FBrowser is a hybrid global/local plugin, which means it can be invoked
-    in either fashion.  If invoked as a local plugin then it is associated
-    with a channel, and an instance can be opened for each channel.  It can
-    also be opened as a global plugin.
-
-    Usage
-    -----
-    Navigate the directory tree until you come to the location files
-    you want to load.  You can double click a file to load it into the
-    associated channel, or drag a file into a channel viewer window to
-    load it into any channel viewer.
-
-    Multiple files can be selected by holding down Ctrl (Command on Mac),
-    or Shift-clicking to select a contiguous range of files.
-
-    Because it is a local plugin, FBrowser will remember its last
-    directory if closed and then restarted.
-    """
     def __init__(self, *args):
         # superclass defines some variables for us, like logger
         if len(args) == 2:
@@ -54,16 +56,14 @@ class FBrowser(GingaPlugin.LocalPlugin):
         else:
             super(FBrowser, self).__init__(args[0], None)
 
-        keywords = [ ('Object', 'OBJECT'),
-                     ('Date', 'DATE-OBS'),
-                     ('Time UT', 'UT'),
-                     ]
+        keywords = [('Object', 'OBJECT'),
+                    ('Date', 'DATE-OBS'),
+                    ('Time UT', 'UT')]
         columns = [('Type', 'icon'),
                    ('Name', 'name'),
                    ('Size', 'st_size_str'),
                    ('Mode', 'st_mode_oct'),
-                   ('Last Changed', 'st_mtime_str')
-                   ]
+                   ('Last Changed', 'st_mtime_str')]
 
         self.jumpinfo = []
 
@@ -88,7 +88,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         self.keywords = self.settings.get('keywords', keywords)
         self.columns = self.settings.get('columns', columns)
         self.moving_cursor = False
-        self.na_dict = { attrname: 'N/A' for colname, attrname in self.columns }
+        self.na_dict = {attrname: 'N/A' for colname, attrname in self.columns}
 
         # Make icons
         icondir = self.fv.iconpath
@@ -125,32 +125,28 @@ class FBrowser(GingaPlugin.LocalPlugin):
         vbox.add_widget(self.entry, stretch=0)
         self.entry.add_callback('activated', self.browse_cb)
 
-        hbox = Widgets.HBox()
-        btn = Widgets.Button("Load")
-        btn.add_callback('activated', lambda w: self.load_cb())
-        hbox.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Save Image As")
-        hbox.add_widget(btn, stretch=0)
-        self.entry2 = Widgets.TextEntry()
-        hbox.add_widget(self.entry2, stretch=1)
-        vbox.add_widget(hbox, stretch=0)
-        self.entry2.add_callback('activated', self.save_as_cb)
-        btn.add_callback('activated', lambda w: self.save_as_cb())
-
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
+        btn.set_tooltip("Close this plugin")
         btns.add_widget(btn, stretch=0)
         btn = Widgets.Button("Help")
         btn.add_callback('activated', lambda w: self.help())
+        btn.set_tooltip("Show documentation for this plugin")
         btns.add_widget(btn, stretch=0)
         btn = Widgets.Button("Refresh")
         btn.add_callback('activated', lambda w: self.refresh())
+        btn.set_tooltip("Refresh the file list from the directory")
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Load")
+        btn.add_callback('activated', lambda w: self.load_cb())
+        btn.set_tooltip("Load files selected in file pane")
         btns.add_widget(btn, stretch=0)
         btn = Widgets.Button("Make Thumbs")
         btn.add_callback('activated', lambda w: self.make_thumbs())
+        btn.set_tooltip("Make thumbnails for files in directory")
         btns.add_widget(btn, stretch=0)
 
         vbox.add_widget(btns, stretch=0)
@@ -161,8 +157,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
         if self.fitsimage is not None:
             self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
         else:
-            chviewer = self.fv.getfocus_viewer()
-            self.fv.gui_do(chviewer.make_callback, 'drag-drop', paths)
+            channel = self.fv.get_channel_info()
+            if channel is None:
+                return
+            self.fv.gui_do(self.fv.dragdrop, channel.fitsimage, paths)
 
     def load_cb(self):
         # Load from text box
@@ -174,7 +172,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         # Load from tree view
         #curdir, curglob = os.path.split(self.curpath)
         select_dict = self.treeview.get_selected()
-        paths = [ info.path for key, info in select_dict.items() ]
+        paths = [info.path for key, info in select_dict.items()]
         self.logger.debug('Loading {0}'.format(paths))
 
         # Open directory
@@ -199,8 +197,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
             bnch.setvals(icon=icon)
             entry_key = bnch.name
 
-            assert entry_key is not None, \
-                   Exception("No key for tuple")
+            if entry_key is None:
+                raise Exception("No key for tuple")
 
             tree_dict[entry_key] = bnch
 
@@ -213,7 +211,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
             self.logger.debug("Resized columns for {0} row(s)".format(n_rows))
 
     def get_path_from_item(self, res_dict):
-        paths = [ info.path for key, info in res_dict.items() ]
+        paths = [info.path for key, info in res_dict.items()]
         path = paths[0]
         return path
 
@@ -222,7 +220,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         self.open_file(path)
 
     def item_drag_cb(self, widget, drag_pkg, res_dict):
-        urls = [ "file://" + info.path for key, info in res_dict.items() ]
+        urls = ["file://" + info.path for key, info in res_dict.items()]
         self.logger.info("urls: %s" % (urls))
         drag_pkg.set_urls(urls)
 
@@ -235,18 +233,6 @@ class FBrowser(GingaPlugin.LocalPlugin):
         # Open directory
         if not retcode:
             self.browse(path)
-
-    def save_as_cb(self):
-        path = str(self.entry2.get_text()).strip()
-        if not path.startswith('/'):
-            path = os.path.join(self.curpath, path)
-
-        image = self.fitsimage.get_image()
-        if image is None:
-            self.logger.error('No image to save')
-            return
-
-        self.fv.error_wrap(image.save_as_file, path)
 
     def close(self):
         if self.fitsimage is None:
@@ -263,7 +249,6 @@ class FBrowser(GingaPlugin.LocalPlugin):
         else:
             pb = self.filepb
         return pb
-
 
     def open_files(self, path):
         """Load file(s) -- image*.fits, image*.fits[ext].
@@ -365,8 +350,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
             if num_files <= self.scan_limit:
                 self.scan_fits()
             else:
-                self.logger.warning("Number of files (%d) is greater than scan limit (%d)--skipping header scan" % (
-                    num_files, self.scan_limit))
+                self.logger.warning(
+                    "Number of files (%d) is greater than scan limit (%d)"
+                    "--skipping header scan" % (num_files, self.scan_limit))
 
         self.makelisting(path)
 
@@ -379,12 +365,13 @@ class FBrowser(GingaPlugin.LocalPlugin):
                 continue
             try:
                 with pyfits.open(bnch.path, 'readonly') as in_f:
-                    kwds = { attrname: in_f[0].header.get(kwd, 'N/A')
-                                  for attrname, kwd in self.keywords}
+                    kwds = {attrname: in_f[0].header.get(kwd, 'N/A')
+                            for attrname, kwd in self.keywords}
                 bnch.update(kwds)
             except Exception as e:
-                self.logger.warning("Error reading FITS keywords from '%s': %s" % (
-                    bnch.path, str(e)))
+                self.logger.warning(
+                    "Error reading FITS keywords from "
+                    "'%s': %s" % (bnch.path, str(e)))
                 continue
         elapsed = time.time() - start_time
         self.logger.info("done scanning--scan time: %.2f sec" % (elapsed))
@@ -411,10 +398,13 @@ class FBrowser(GingaPlugin.LocalPlugin):
             chname = self.fv.get_channel_name(chviewer)
             channel = self.fv.get_channel(chname)
 
+        self.fv.nongui_do(self._add_info, channel, filelist)
+
+    def _add_info(self, channel, filelist):
         for path in filelist:
             name = self.fv.name_image_from_path(path)
             info = Bunch.Bunch(name=name, path=path)
-            self.fv.nongui_do(channel.add_image_info, info)
+            self.fv.gui_call(channel.add_image_info, info)
 
     def start(self):
         self.win = None
@@ -435,4 +425,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'fbrowser'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_FBrowser', package='ginga')
+
+# END

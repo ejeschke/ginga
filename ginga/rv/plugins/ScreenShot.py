@@ -1,9 +1,33 @@
-#
-# Screenshot.py -- Screenshot plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+Capture PNG or JPEG images of the channel viewer image.
+
+**Usage**
+
+1. Select the RGB graphics type for the snap from the "Type" combo box.
+2. Press "Snap" when you have the channel image the way you want to capture it.
+
+A copy of the RGB image will be loaded into the ``ScreenShot`` viewer.
+You can pan and zoom within the ``ScreenShot`` viewer like a normal Ginga
+viewer to examine detail (e.g., see the magnified difference between
+JPEG and PNG formats).
+
+3. Repeat (1) and (2) until you have the image you want.
+4. Enter a valid path for a new file into the "Folder" text box.
+5. Enter a valid name for a new file into the "Name" text box.
+   There is no need to add the file extension; it will be added, if needed.
+6. Press the "Save" button.  The file will be saved where you specified.
+
+**Notes**
+
+* PNG offers less artifacts for overlaid graphics, but files are larger
+  than JPEG.
+* The "Center" button will center the snap image; "Fit" will set the
+  zoom to fit it to the window; and "Clear" will clear the image.
+* Press "1" in the screenshot viewer to zoom to 100% pixels.
+
+"""
 import os.path
 import shutil
 import tempfile
@@ -12,34 +36,11 @@ from ginga import GingaPlugin
 from ginga.RGBImage import RGBImage
 from ginga.gw import Widgets, Viewers
 
+__all__ = ['ScreenShot']
+
+
 class ScreenShot(GingaPlugin.LocalPlugin):
-    """
-    Screenshot
-    ==========
-    Capture PNG or JPEG images of the channel viewer image.
 
-    Usage
-    -----
-    a) Select the RGB graphics type for the snap from the "Type" combo box.
-    b) Press "Snap" when you have the channel image the way you want to capture it.
-
-    A copy of the RGB image will be loaded into the screenshot viewer.
-    You can pan and zoom within the screenshot viewer like a normal Ginga
-    viewer to examine detail (e.g. see the magnified difference between
-    JPEG and PNG formats).
-
-    c) Repeat (a) and (b) until you have the image you want.
-    d) Put a valid path for a new file into the "Folder" box.
-    e) Put a valid name for a new file into the "Name" box.  There is no need to add the file extension; it will be added if needed.
-    f) Press the "Save" button.  The file will be saved where you specified.
-
-    Comments
-    --------
-    * PNG offers less artefacts for overlaid graphics, but files are larger than JPEG.
-    * The "Center" button will center the snap image; "Fit" will set the zoom to fit it to the window; "Clear" will clear the image.
-    * Press "1" in the screenshot viewer to zoom to 100% pixels.
-
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(ScreenShot, self).__init__(fv, fitsimage)
@@ -107,7 +108,8 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         combobox.add_callback('activated', lambda w, idx: self.set_type(idx))
         combobox.set_tooltip("Set the format of the snap image")
 
-        b.snap.set_tooltip("Click to grab a snapshot of this channel viewer image")
+        b.snap.set_tooltip(
+            "Click to grab a snapshot of this channel viewer image")
         b.snap.add_callback('activated', self.snap_cb)
         b.clear.set_tooltip("Clear the snap image")
         b.clear.add_callback('activated', self.clear_cb)
@@ -238,4 +240,4 @@ class ScreenShot(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'screenshot'
 
-#END
+# END

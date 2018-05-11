@@ -1,14 +1,19 @@
 #
-# Eric Jeschke (eric@naoj.org)
+# Datasrc.py -- implementation of a queue type data source
 #
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
+# TODO: use (or subclass) python collections.deque instead?
 #
 import threading
 
 
 class TimeoutError(Exception):
+    pass
+
+
+class Empty(Exception):
     pass
 
 
@@ -34,6 +39,7 @@ class Datasrc(object):
         with self.cond:
             return key in self.datums
 
+    # TODO: Should deprecate this and encourage __contains__ like Python dict
     def has_key(self, key):
         with self.cond:
             return key in self.datums
@@ -59,14 +65,17 @@ class Datasrc(object):
             self.cond.notify()
 
     def pop_one(self):
-        return self.remove(self.history[0])
+        with self.cond:
+            if len(self.history) == 0:
+                raise Empty("No items")
+            return self.remove(self.history[0])
 
     def pop(self, *args):
         if len(args) == 0:
-            return self.remove(self.history[0])
+            return self.pop_one()
 
-        assert len(args) == 1, \
-               ValueError("Too many parameters to pop()")
+        if len(args) != 1:
+            raise ValueError("Too many parameters to pop()")
         return self.remove(args[0])
 
     def remove(self, key):
@@ -127,7 +136,7 @@ class Datasrc(object):
         with self.cond:
             self.cond.wait(timeout=timeout)
 
-            if not self.newdata.isSet():
+            if not self.newdata.is_set():
                 raise TimeoutError("Timed out waiting for datum")
 
             self.newdata.clear()

@@ -36,8 +36,15 @@ class BasePlugin(object):
         pass
 
     def _help_docstring(self):
-        self.fv.help_text(str(self).capitalize(), self.__doc__,
-                          text_kind='rst', trim_pfx=4)
+        import inspect
+
+        # Insert section title at the beginning
+        plg_name = self.__class__.__name__
+        plg_mod = inspect.getmodule(self)
+        plg_doc = ('{}\n{}\n'.format(plg_name, '=' * len(plg_name)) +
+                   plg_mod.__doc__)
+
+        self.fv.help_text(plg_name, plg_doc, text_kind='rst', trim_pfx=4)
 
     def help(self):
         """Display help for the plugin."""
@@ -71,6 +78,10 @@ class GlobalPlugin(BasePlugin):
         """This method is called when an image is set in a channel."""
         pass
 
+    def blank(self, channel):
+        """This method is called when a channel is no longer displaying any object."""
+        pass
+
 
 class LocalPlugin(BasePlugin):
     """Class to handle a local plugin."""
@@ -84,6 +95,8 @@ class LocalPlugin(BasePlugin):
             self.channel = self.fv.get_channel(self.chname)
             # TO BE DEPRECATED
             self.chinfo = self.channel
+
+            self.fv.add_callback('delete-channel', self._delete_channel_cb)
 
     def modes_off(self):
         """Turn off any mode user may be in."""
@@ -120,5 +133,18 @@ class LocalPlugin(BasePlugin):
         it is doing.
         """
         pass
+
+    def blank(self):
+        """
+        This method is called when no object is displayed in the channel
+        associated with the plugin.  It can optionally clear whatever operation
+        it is doing.
+        """
+        pass
+
+    def _delete_channel_cb(self, fv, channel):
+        # stop ourself if our channel is deleted
+        if channel is self.channel:
+            self.stop()
 
 # END

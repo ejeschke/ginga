@@ -1,4 +1,75 @@
-"""Non-interactive points marking local plugin for Ginga."""
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+"""
+Mark points from file (non-interative mode) on an image.
+
+**Plugin Type: Local**
+
+``TVMark`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+This plugin allows non-interactive marking of points of interest by
+reading in a file containing a table with RA and DEC positions of those points.
+Any text or FITS table file that can be read by ``astropy.table`` is acceptable
+but user *must* define the column names correctly in the plugin configuration
+file (see below).
+An attempt will be made to convert RA and DEC values to degrees.
+If the unit conversion fails, they will be assumed to be in degrees already.
+
+Alternately, if the file has columns containing the direct pixel locations,
+you can read these columns instead by unchecking the "Use RADEC" box.
+Again, the column names must be correctly defined in the plugin configuration
+file (see below).
+Pixel values can be 0- or 1-indexed (i.e., whether the first pixel is 0 or 1)
+and is configurable (see below).
+This is useful when you want to mark the physical pixels regardless of WCS
+(e.g., marking hot pixels on a detector). RA and DEC will still be displayed if
+the image has WCS information but they will not affect the markings.
+
+To mark different groups (e.g., displaying galaxies as green circles and
+background as cyan crosses, as shown above):
+
+1. Select green circle from the drop-down menus. Alternately, enter desired
+   size or width.
+2. Make sure "Use RADEC" box is checked, if applicable.
+3. Using "Load Coords" button, load the file containing RA and DEC (or X and Y)
+   positions for galaxies *only*.
+4. Repeat Step 1 but now select cyan cross from the drop-down menus.
+5. Repeat Step 2 but choose the file containing background positions *only*.
+
+Selecting an entry (or multiple entries) from the table listing will
+highlight the marking(s) on the image. The highlight uses the same shape
+and color, but a slightly thicker line.
+
+You can also highlight all the markings within a region both on the image
+and the table listing by drawing a rectangle on the image
+while this plugin is active.
+
+Pressing the "Hide" button will hide the markings but does not clear the
+plugin's memory; That is, when you press "Show", the same markings will
+reappear on the same image. However, pressing "Forget" will clear the markings
+both from display and memory; That is, you will need to reload your file(s) to
+recreate the markings.
+
+To redraw the same positions with different marking parameters, press "Forget"
+and repeat the steps above, as necessary. However, if you simply wish to change
+the line width (thickness), pressing "Hide" and then "Show" after you entered
+the new width value will suffice.
+
+If images of very different pointings/dimensions are displayed in the same
+channel, markings that belong to one image but fall outside another will not
+appear in the latter.
+
+To create a table that this plugin can read, one can use results from
+the ``Pick`` plugin, in addition to creating a table by hand, using
+``astropy.table``, etc.
+
+Used together with ``TVMask``, you can overlay both point sources and masked
+regions in Ginga.
+
+"""
 from __future__ import absolute_import, division, print_function
 from ginga.util.six import iteritems, itervalues
 from ginga.util.six.moves import map, zip
@@ -24,83 +95,11 @@ try:
 except ImportError:
     pass
 
-__all__ = []
+__all__ = ['TVMark']
 
 
 class TVMark(LocalPlugin):
-    """
-    TVMark
-    ======
-    Mark points from file (non-interative mode) on an image.
 
-    Plugin Type: Local
-    ------------------
-    TVMark is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Usage
-    -----
-    This plugin allows non-interactive marking of points of interest by
-    reading in a file containing a table with RA and DEC positions of those points.
-    Any text or FITS table file that can be read by `astropy.table` is acceptable
-    but user *must* define the column names correctly in the plugin configuration
-    file (see below).
-    An attempt will be made to convert RA and DEC values to degrees.
-    If the unit conversion fails, they will be assumed to be in degrees already.
-
-    Alternately, if the file has columns containing the direct pixel locations,
-    you can read these columns instead by unchecking the "Use RADEC" box.
-    Again, the column names must be correctly defined in the plugin configuration
-    file (see below).
-    Pixel values can be 0- or 1-indexed (i.e., whether the first pixel is 0 or 1)
-    and is configurable (see below).
-    This is useful when you want to mark the physical pixels regardless of WCS
-    (e.g., marking hot pixels on a detector). RA and DEC will still be displayed if
-    the image has WCS information but they will not affect the markings.
-
-    To mark different groups (e.g., displaying galaxies as green circles and
-    background as cyan crosses, as shown above):
-
-    1. Select green circle from the drop-down menus. Alternately, enter desired
-       size or width.
-    2. Make sure "Use RADEC" box is checked, if applicable.
-    3. Using "Load Coords" button, load the file containing RA and DEC (or X and Y)
-       positions for galaxies *only*.
-    4. Repeat Step 1 but now select cyan cross from the drop-down menus.
-    5. Repeat Step 2 but choose the file containing background positions *only*.
-
-    Selecting an entry (or multiple entries) from the table listing will
-    highlight the marking(s) on the image. The highlight uses the same shape
-    and color, but a slightly thicker line. Clicking on a marking on the image
-    will highlight it and its neighbors (if they are close enough) both on the
-    image and the table listing.
-
-    You can also highlight all the markings within a region both on the image
-    and the table listing by drawing a rectangle on the image using the right mouse
-    button while this plugin is active.
-
-    Pressing the "Hide" button will hide the markings but does not clear the
-    plugin's memory; That is, when you press "Show", the same markings will
-    reappear on the same image. However, pressing "Forget" will clear the markings
-    both from display and memory; That is, you will need to reload your file(s) to
-    recreate the markings.
-
-    To redraw the same positions with different marking parameters, press "Forget"
-    and repeat the steps above, as necessary. However, if you simply wish to change
-    the line width (thickness), pressing "Hide" and then "Show" after you entered
-    the new width value will suffice.
-
-    If images of very different pointings/dimensions are displayed in the same
-    channel, markings that belong to one image but fall outside another will not
-    appear in the latter.
-
-    To create a table that this plugin can read, one can use results from
-    the `Pick` plugin, in addition to creating a table by hand, using
-    `astropy.table`, etc.
-
-    Used together with `TVMask`, you can overlay both point sources and masked
-    regions in Ginga.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(TVMark, self).__init__(fv, fitsimage)
@@ -117,6 +116,12 @@ class TVMark(LocalPlugin):
         # changed by GUI.
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_TVMark')
+        self.settings.add_defaults(marktype='circle', markcolor='green',
+                                   marksize=5, markwidth=1, pixelstart=1,
+                                   use_radec=True,
+                                   ra_colname='ra', dec_colname='dec',
+                                   x_colname='x', y_colname='y',
+                                   extra_columns=[])
         self.settings.load(onError='silent')
         self.marktype = self.settings.get('marktype', 'circle')
         self.markcolor = self.settings.get('markcolor', 'green')
@@ -149,7 +154,8 @@ class TVMark(LocalPlugin):
         canvas.enable_draw(True)
         canvas.enable_edit(False)
         canvas.set_callback('draw-event', self.hl_canvas2table_box)
-        canvas.set_callback('cursor-down', self.hl_canvas2table)
+        #canvas.set_callback('cursor-down', self.hl_canvas2table)
+        canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_drawtype('rectangle', color='green', linestyle='dash')
         self.canvas = canvas
@@ -412,13 +418,13 @@ class TVMark(LocalPlugin):
         if self.marktag:
             try:
                 self.canvas.delete_object_by_tag(self.marktag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         if self.markhltag:
             try:
                 self.canvas.delete_object_by_tag(self.markhltag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         self.treeview.clear()  # Clear table too
@@ -554,7 +560,7 @@ class TVMark(LocalPlugin):
         if self.markhltag:
             try:
                 self.canvas.delete_object_by_tag(self.markhltag, redraw=False)
-            except:
+            except Exception:
                 pass
 
         # Display highlighted entries only in second table
@@ -595,13 +601,13 @@ class TVMark(LocalPlugin):
         if self.markhltag:
             try:
                 canvas.delete_object_by_tag(self.markhltag, redraw=True)
-            except:
+            except Exception:
                 pass
 
         # Nothing to do if no markings are displayed
         try:
             obj = canvas.get_object_by_tag(self.marktag)
-        except:
+        except Exception:
             return
 
         if obj.kind != 'compound':
@@ -618,6 +624,7 @@ class TVMark(LocalPlugin):
         for hlpath in self._treepaths[mask]:
             self._highlight_path(hlpath)
 
+    # NOTE: This does not work anymore when left click is used to draw box.
     def hl_canvas2table(self, canvas, button, data_x, data_y):
         """Highlight marking on table when user click on canvas."""
         self.treeview.clear_selection()
@@ -626,13 +633,13 @@ class TVMark(LocalPlugin):
         if self.markhltag:
             try:
                 canvas.delete_object_by_tag(self.markhltag, redraw=True)
-            except:
+            except Exception:
                 pass
 
         # Nothing to do if no markings are displayed
         try:
             obj = canvas.get_object_by_tag(self.marktag)
-        except:
+        except Exception:
             return
 
         if obj.kind != 'compound':
@@ -643,7 +650,7 @@ class TVMark(LocalPlugin):
                 len(self._treepaths) == 0):
             return
 
-        sr = self.settings.get('searchradius', 10)
+        sr = 10  # self.settings.get('searchradius', 10)
         dx = data_x - self._xarr
         dy = data_y - self._yarr
         dr = np.sqrt(dx * dx + dy * dy)
@@ -702,7 +709,7 @@ class TVMark(LocalPlugin):
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
         except KeyError:
             # Add drawing layer
             p_canvas.add(self.canvas, tag=self.layertag)
@@ -724,7 +731,7 @@ class TVMark(LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
 
         # Free some memory, maybe
@@ -744,8 +751,9 @@ class TVMark(LocalPlugin):
         return 'tvmark'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
-from ginga.util.toolbox import generate_cfg_example
-__doc__ = generate_cfg_example('plugin_TVMark', package='ginga')
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_TVMark', package='ginga')
+
+# END

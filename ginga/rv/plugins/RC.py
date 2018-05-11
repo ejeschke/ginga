@@ -1,120 +1,205 @@
-#
-# RC.py -- Remote Control plugin for Ginga fits viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+The ``RC`` plugin implements a remote control interface for the Ginga
+viewer.
+
+**Plugin Type: Global**
+
+``RC`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+The ``RC`` (Remote Control) plugin provides a way to control Ginga remotely
+through the use of an XML-RPC interface.  Start the plugin from the
+"Plugins" menu (invoke "Start RC") or launch ginga with the ``--modules=RC``
+command line option to start it automatically.
+
+By default, the plugin starts up with server running on port 9000 bound
+to the localhost interface -- this allows connections only from the local
+host.  If you want to change this, set the host and port in the "Set
+Addr" control and press ``Enter`` -- you should see the address update in the
+"Addr:" display field.
+
+Please note that the host part (before the colon) does not indicate
+*which* host you want to allow access from, but to which interface to
+bind.  If you want to allow any host to connect, leave it blank (but
+include the colon and port number) to allow the server to bind on all
+interfaces. Press "Restart" to then restart the server at the new
+address.
+
+Once the plugin is started, you can use the ``ggrc`` script (included when
+``ginga`` is installed) to control Ginga.  Take a look at the script if you
+want to see how to write your own programmatic interface.
+
+Show example usage::
+
+        $ ggrc help
+
+Show help for a specific Ginga method::
+
+        $ ggrc help ginga <method>
+
+Show help for a specific channel method::
+
+        $ ggrc help channel <chname> <method>
+
+Ginga (viewer shell) methods can be called like this::
+
+        $ ggrc ginga <method> <arg1> <arg2> ...
+
+Per-channel methods can be called like this::
+
+        $ ggrc channel <chname> <method> <arg1> <arg2> ...
+
+Calls can be made from a remote host by adding the options::
+
+        --host=<hostname> --port=9000
+
+(In the plugin GUI, be sure to remove the "localhost" prefix
+from the "addr", but leave the colon and port.)
+
+**Examples**
+
+Create a new channel::
+
+        $ ggrc ginga add_channel FOO
+
+Load a file::
+
+        $ ggrc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
+
+Load a file into a specific channel::
+
+        $ ggrc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits FOO
+
+Cut levels::
+
+        $ ggrc channel FOO cut_levels 163 1300
+
+Auto cut levels::
+
+        $ ggrc channel FOO auto_levels
+
+Zoom to a specific level::
+
+        $ ggrc -- channel FOO zoom_to -7
+
+(Note the use of ``--`` to allow us to pass a parameter beginning with ``-``.)
+
+Zoom to fit::
+
+        $ ggrc channel FOO zoom_fit
+
+Transform (arguments are a boolean triplet: ``flipx`` ``flipy`` ``swapxy``)::
+
+        $ ggrc channel FOO transform 1 0 1
+
+Rotate::
+
+        $ ggrc channel FOO rotate 37.5
+
+Change colormap::
+
+        $ ggrc channel FOO set_color_map rainbow3
+
+Change color distribution algorithm::
+
+        $ ggrc channel FOO set_color_algorithm log
+
+Change intensity map::
+
+        $ ggrc channel FOO set_intensity_map neg
+
+In some cases, you may need to resort to shell escapes to be able to
+pass certain characters to Ginga.  For example, a leading dash character is
+usually interpreted as a program option.  In order to pass a signed
+integer, you may need to do something like::
+
+        $ ggrc -- channel FOO zoom -7
+
+**Interfacing from within Python**
+
+It is also possible to control Ginga in RC mode from within Python.
+The following describes some of the functionality.
+
+*Connecting*
+
+First, launch Ginga and start the ``RC`` plugin.
+This can be done from the command line::
+
+        ginga --modules=RC
+
+From within Python, connect with a ``RemoteClient`` object as
+follows::
+
+        from ginga.util import grc
+        host='localhost'
+        port=9000
+        viewer = grc.RemoteClient(host, port)
+
+This viewer object is now linked to the Ginga using ``RC``.
+
+*Load an Image*
+
+You can load an image from memory in a channel of
+your choosing.  First, connect to a channel::
+
+        ch = viewer.channel('Image')
+
+Then, load a Numpy image (i.e., any 2D ``ndarray``)::
+
+        import numpy as np
+        img = np.random.rand(500, 500) * 10000.0
+        ch.load_np('Image_Name', img, 'fits', {})
+
+The image will display in Ginga and can be manipulated
+as usual.
+
+*Overlay a Canvas Object*
+
+It is possible to add objects to the canvas in a given
+channel.  First, connect::
+
+        canvas = viewer.canvas('Image')
+
+This connects to the channel named "Image".  You can
+clear the objects drawn in the canvas::
+
+        canvas.clear()
+
+You can also add any basic canvas object.  The key issue to keep in
+mind is that the objects input must pass through the XMLRC
+protocol.  This means simple data types (``float``, ``int``, ``list``,
+or ``str``); No arrays.  Here is an example to plot a line through a series
+of points defined by two Numpy arrays::
+
+        x = np.arange(100)
+        y = np.sqrt(x)
+        points = list(zip(x.tolist(), y.tolist()))
+        canvas.add('path', points, color='red')
+
+This will draw a red line on the image.
+
+"""
 import sys
-import numpy
 import bz2
 from io import BytesIO
+
+import numpy
 
 from ginga import GingaPlugin
 from ginga import AstroImage
 from ginga.gw import Widgets
 from ginga.util import grc
-from ginga.util.six.moves import map, zip
+
+__all__ = ['RC']
 
 help_msg = sys.modules[__name__].__doc__
 
 
 class RC(GingaPlugin.GlobalPlugin):
-    """
-    RC
-    ==
-    The RC plugin implements a remote control interface for the Ginga FITS
-    viewer.
 
-    Plugin Type: Global
-    -------------------
-    RC is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    Start the plugin.  The remote interface is not up and listening unless
-    you do.
-
-    Usage from the Command-Line Client
-    ----------------------------------
-    Show example usage:
-
-      $ ggrc help
-
-    Show help for a specific ginga method:
-
-      $ ggrc help ginga <method>
-
-    Show help for a specific channel method:
-
-      $ ggrc help channel <chname> <method>
-
-    Ginga methods can be called like this:
-
-      $ ggrc ginga <method> <arg1> <arg2> ...
-
-    Channel methods can be called like this:
-
-      $ ggrc channel <chname> <method> <arg1> <arg2> ...
-
-    Calls can be made from a remote host by adding the options:
-
-       --host=<hostname> --port=9000
-
-    (in the plugin GUI be sure to remove the 'localhost' prefix
-    from the addr, but leave the colon and port)
-
-    Examples
-    --------
-
-    Create a new channel:
-
-      $ ggrc ginga add_channel FOO
-
-    Load a file into current channel:
-
-      $ ggrc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits
-
-    Load a file into a specific channel:
-
-      $ ggrc ginga load_file /home/eric/testdata/SPCAM/SUPA01118797.fits FOO
-
-    Cut levels:
-
-      $ ggrc channel FOO cut_levels 163 1300
-
-    Auto cut levels:
-
-      $ ggrc channel FOO auto_levels
-
-    Zoom to a specific level:
-
-      $ ggrc -- channel FOO zoom_to -7
-
-    Zoom to fit:
-
-      $ ggrc channel FOO zoom_fit
-
-    Transform (args are boolean triplet: (flipx flipy swapxy)):
-
-      $ ggrc channel FOO transform 1 0 1
-
-    Rotate:
-
-      $ ggrc channel FOO rotate 37.5
-
-    Change color map:
-
-      $ ggrc channel FOO set_color_map rainbow3
-
-    Change color distribution algorithm:
-
-      $ ggrc channel FOO set_color_algorithm log
-
-    Change intensity map:
-
-      $ ggrc channel FOO set_intensity_map neg
-
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(RC, self).__init__(fv)
@@ -133,8 +218,7 @@ class RC(GingaPlugin.GlobalPlugin):
 
         captions = [
             ("Addr:", 'label', "Addr", 'llabel', 'Restart', 'button'),
-            ("Set Addr:", 'label', "Set Addr", 'entry'),
-            ]
+            ("Set Addr:", 'label', "Set Addr", 'entry')]
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
@@ -168,7 +252,6 @@ class RC(GingaPlugin.GlobalPlugin):
         vbox.add_widget(btns)
 
         container.add_widget(vbox, stretch=1)
-
 
     def start(self):
         self.robj = GingaWrapper(self.fv, self.logger)
@@ -215,15 +298,15 @@ class GingaWrapper(object):
         Examples
         --------
         help('ginga', `method`)
-           name of the method for which you want help
+            name of the method for which you want help
 
         help('channel', `chname`, `method`)
-           name of the method in the channel for which you want help
+            name of the method in the channel for which you want help
 
         Returns
         -------
-        help: string
-          a help message
+        help : string
+            a help message
         """
         if len(args) == 0:
             return help_msg
@@ -243,7 +326,8 @@ class GingaWrapper(object):
             return _method.__doc__
 
         else:
-            return "Please use 'help ginga <method>' or 'help channel <chname> <method>'"
+            return ("Please use 'help ginga <method>' or "
+                    "'help channel <chname> <method>'")
 
     def load_buffer(self, imname, chname, img_buf, dims, dtype,
                     header, metadata, compressed):
@@ -251,21 +335,21 @@ class GingaWrapper(object):
 
         Parameters
         ----------
-        `imname`: string
+        imname : string
             a name to use for the image in Ginga
-        `chname`: string
+        chname : string
             channel in which to load the image
-        `img_buf`: string
+        img_buf : string
             the image data, as a bytes object
-        `dims`: tuple
+        dims : tuple
             image dimensions in pixels (usually (height, width))
-        `dtype`: string
+        dtype : string
             numpy data type of encoding (e.g. 'float32')
-        `header`: dict
+        header : dict
             fits file header as a dictionary
-        `metadata`: dict
+        metadata : dict
             other metadata about image to attach to image
-        `compressed`: bool
+        compressed : bool
             decompress buffer using "bz2"
 
         Returns
@@ -274,10 +358,12 @@ class GingaWrapper(object):
 
         Notes
         -----
+
         * Get array dims: data.shape
         * Get array dtype: str(data.dtype)
         * Make a string from a numpy array: buf = data.tostring()
         * Compress the buffer: buf = bz2.compress(buf)
+
         """
         self.logger.info("received image data len=%d" % (len(img_buf)))
 
@@ -285,7 +371,7 @@ class GingaWrapper(object):
         try:
             # Uncompress data if necessary
             decompress = metadata.get('decompress', None)
-            if compressed  or (decompress == 'bz2'):
+            if compressed or (decompress == 'bz2'):
                 img_buf = bz2.decompress(img_buf)
 
             # dtype string works for most instances
@@ -400,4 +486,4 @@ class GingaWrapper(object):
             print("Canvas RC command not recognized")
             return
 
-#END
+# END

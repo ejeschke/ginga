@@ -32,6 +32,7 @@ from ginga.util.six.moves import map
 from ginga.gw import GwHelp, GwMain, PluginManager
 from ginga.gw import Widgets, Viewers, Desktop
 from ginga import toolkit
+from ginga.fonts import font_asst
 
 # Version
 from ginga import __version__
@@ -60,9 +61,6 @@ except ImportError:
 pluginconfpfx = None
 
 package_home = os.path.split(sys.modules['ginga.version'].__file__)[0]
-
-## gw_dir = os.path.join(package_home, 'gw')
-## sys.path.insert(0, gw_dir)
 
 # pick up plugins specific to our chosen toolkit
 tkname = toolkit.get_family()
@@ -111,7 +109,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
-                     'add-image-info', 'add-operation'):
+                     'add-image-info', 'remove-image-info'):
             self.enable_callback(name)
 
         # Initialize the timer factory
@@ -135,8 +133,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         bindprefs = self.prefs.create_category('bindings')
         bindprefs.load(onError='silent')
 
-        self.settings.add_defaults(fixedFont='Monospace',
-                                   sansFont='Sans',
+        self.settings.add_defaults(fixedFont=None,
+                                   serifFont=None,
+                                   sansFont=None,
                                    channel_follows_focus=False,
                                    scrollbars='off',
                                    share_readout=True,
@@ -151,8 +150,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channel_follows_focus']
 
-        self.global_plugins = {}
-        self.local_plugins = {}
+        self.plugins = []
+        self._plugin_sort_method = self.get_plugin_menuname
 
         # some default colormap info
         self.cm = cmap.get_cmap("gray")
@@ -166,8 +165,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Initialize catalog and image server bank
         self.imgsrv = catalog.ServerBank(self.logger)
 
-        self.operations = {}
-
         # state for implementing field-info callback
         self._cursor_task = self.get_timer()
         self._cursor_task.set_callback('expired', self._cursor_timer_cb)
@@ -179,6 +176,33 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fo.register_type('image', AstroImage.AstroImage)
         fo.register_type('table', AstroTable.AstroTable)
         self.fits_opener = fo
+
+        # Try to load some bundled truetype fonts we might like to use
+        for font_name in font_asst.get_loadable_fonts():
+            self.logger.info("trying to load bundled font '%s'" % (font_name))
+            font_info = font_asst.get_font_info(font_name)
+            try:
+                GwHelp.load_font(font_name, font_info.font_path)
+
+            except Exception as e:
+                # quietly ignore font-loading problems for now--
+                # other fonts will be substituted
+                self.logger.warning("Error loading font '%s': %s" % (
+                    font_name, str(e)))
+                font_asst.remove_font(font_name)
+
+        # add user preferred fonts for aliases, if present
+        fixed_font = self.settings.get('fixedFont', None)
+        if fixed_font is not None:
+            font_asst.add_alias('fixed', fixed_font)
+
+        serif_font = self.settings.get('serifFont', None)
+        if serif_font is not None:
+            font_asst.add_alias('serif', serif_font)
+
+        sans_font = self.settings.get('sansFont', None)
+        if sans_font is not None:
+            font_asst.add_alias('sans', sans_font)
 
         # GUI initialization
         self.w = Bunch.Bunch()
@@ -269,59 +293,84 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def stop_global_plugin(self, plugin_name):
         self.gpmon.deactivate(plugin_name)
 
+    def start_plugin(self, plugin_name, spec):
+        ptype = spec.get('ptype', 'local')
+        if ptype == 'local':
+            self.start_operation(plugin_name)
+        else:
+            self.start_global_plugin(plugin_name, raise_tab=True)
+
     def add_local_plugin(self, spec):
         try:
             spec.setdefault('ptype', 'local')
             name = spec.setdefault('name', spec.get('klass', spec.module))
-            self.local_plugins[name] = spec
 
             pfx = spec.get('pfx', pluginconfpfx)
             path = spec.get('path', None)
             self.mm.load_module(spec.module, pfx=pfx, path=path)
-
-            hidden = spec.get('hidden', False)
-            if not hidden:
-                self.add_operation(name, 'local', spec)
+            self.plugins.append(spec)
 
         except Exception as e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
                 name, str(e)))
 
-    def add_operation(self, opname, optype, spec):
-        category = spec.get('category', None)
-        l = self.operations.setdefault(category, [])
-        l.append(opname)
-        self.make_callback('add-operation', opname, optype, spec)
-
-    def get_operations(self, category=None):
-        l = self.operations.setdefault(category, [])
-        return l
-
     def add_global_plugin(self, spec):
         try:
             spec.setdefault('ptype', 'global')
             name = spec.setdefault('name', spec.get('klass', spec.module))
-            self.global_plugins[name] = spec
 
             pfx = spec.get('pfx', pluginconfpfx)
             path = spec.get('path', None)
             self.mm.load_module(spec.module, pfx=pfx, path=path)
+            self.plugins.append(spec)
 
             self.gpmon.load_plugin(name, spec)
-
-            hidden = spec.get('hidden', False)
-            if not hidden:
-                menuname = spec.get('menu', name)
-                self.add_plugin_menu(name, menuname)
-                self.add_operation(name, 'global', spec)
-
-            start = spec.get('start', True)
-            if start:
-                self.start_global_plugin(name, raise_tab=False)
 
         except Exception as e:
             self.logger.error("Unable to load global plugin '%s': %s" % (
                 name, str(e)))
+
+    def add_plugin(self, spec):
+        ptype = spec.get('ptype', 'local')
+        if ptype == 'global':
+            self.add_global_plugin(spec)
+        else:
+            self.add_local_plugin(spec)
+
+    def set_plugins(self, plugins):
+        self.plugins = []
+        for spec in plugins:
+            self.add_plugin(spec)
+
+    def get_plugins(self):
+        return self.plugins
+
+    def get_plugin_menuname(self, spec):
+        category = spec.get('category', None)
+        name = spec.setdefault('name', spec.get('klass', spec.module))
+        menu = spec.get('menu', spec.get('tab', name))
+        if category is None:
+            return menu
+        return category + '.' + menu
+
+    def set_plugin_sortmethod(self, fn):
+        self._plugin_sort_method = fn
+
+    def boot_plugins(self):
+        # Sort plugins according to desired order
+        self.plugins.sort(key=self._plugin_sort_method)
+
+        for spec in self.plugins:
+            name = spec.setdefault('name', spec.get('klass', spec.module))
+            hidden = spec.get('hidden', False)
+            if not hidden:
+                self.add_plugin_menu(name, spec)
+
+            start = spec.get('start', True)
+            # for now only start global plugins that have start==True
+            # channels are not yet created by this time
+            if start and spec.get('ptype', 'local') == 'global':
+                self.error_wrap(self.start_plugin, name, spec)
 
     def show_error(self, errmsg, raisetab=True):
         if self.gpmon.has_plugin('Errors'):
@@ -438,7 +487,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         vbox.set_margins(4, 4, 4, 4)
         vbox.set_spacing(2)
 
-        msg_font = self.get_font("Courier", 12)
+        msg_font = self.get_font('fixed', 12)
         tw = Widgets.TextArea(wrap=False, editable=False)
         tw.set_font(msg_font)
         tw.set_text(help_txt)
@@ -463,7 +512,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     # BASIC IMAGE OPERATIONS
 
-    def load_image(self, filepath, idx=None):
+    def load_image(self, filepath, idx=None, show_error=True):
 
         info = iohelper.get_fileinfo(filepath, cache_dir=self.tmpdir)
         filepfx = info.filepath
@@ -512,8 +561,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 tb_str = "\n".join(traceback.format_tb(tb))
             except Exception as e:
                 tb_str = "Traceback information unavailable."
-            self.gui_do(self.show_error, errmsg + '\n' + tb_str)
-            #channel.viewer.onscreen_message("Failed to load file", delay=1.0)
+            if show_error:
+                self.gui_do(self.show_error, errmsg + '\n' + tb_str)
             raise ControlError(errmsg)
 
         self.logger.debug("Successfully loaded file into object.")
@@ -546,7 +595,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             # Download the file if a URL was passed
             def _dl_indicator(count, blksize, totalsize):
                 pct = float(count * blksize) / float(totalsize)
-                msg = "Downloading: %%%.2f complete" % (pct*100.0)
+                msg = "Downloading: %%%.2f complete" % (pct * 100.0)
                 self.gui_do(self.show_status, msg)
 
             # Try to download the URL.  We press our generic URL server
@@ -554,7 +603,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             try:
                 dl = catalog.URLServer(self.logger, "downloader", "dl",
                                        info.url, "")
-                filepath = dl.retrieve(info.url, filepath=info.filepath,
+                filepath = dl.retrieve(info.url, filepath=info.filepath,  # noqa
                                        cb_fn=_dl_indicator)
             finally:
                 self.gui_do(self.show_status, "")
@@ -646,7 +695,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if wait:
                 self.gui_call(self.add_image, name, image, chname=chname)
             else:
-                self.gui_do(self.bulk_add_image, name, image, chname)
+                self.gui_do(self.add_image, name, image, chname=chname)
+        else:
+            self.gui_do(self.bulk_add_image, name, image, chname)
 
         # Return the image
         return image
@@ -690,35 +741,58 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Zoom the view in one zoom step.
         """
         viewer = self.getfocus_viewer()
-        viewer.zoom_in()
+        if hasattr(viewer, 'zoom_in'):
+            viewer.zoom_in()
         return True
 
     def zoom_out(self):
         """Zoom the view out one zoom step.
         """
         viewer = self.getfocus_viewer()
-        viewer.zoom_out()
+        if hasattr(viewer, 'zoom_out'):
+            viewer.zoom_out()
         return True
 
     def zoom_1_to_1(self):
         """Zoom the view to a 1 to 1 pixel ratio (100 %%).
         """
         viewer = self.getfocus_viewer()
-        viewer.scale_to(1.0, 1.0)
+        if hasattr(viewer, 'scale_to'):
+            viewer.scale_to(1.0, 1.0)
         return True
 
     def zoom_fit(self):
         """Zoom the view to fit the image entirely in the window.
         """
         viewer = self.getfocus_viewer()
-        viewer.zoom_fit()
+        if hasattr(viewer, 'zoom_fit'):
+            viewer.zoom_fit()
         return True
 
     def auto_levels(self):
         """Perform an auto cut levels on the image.
         """
         viewer = self.getfocus_viewer()
-        viewer.auto_levels()
+        if hasattr(viewer, 'auto_levels'):
+            viewer.auto_levels()
+
+    def prev_img_ws(self, ws, loop=True):
+        """Go to the previous image in the focused channel in the workspace.
+        """
+        channel = self.get_active_channel_ws(ws)
+        if channel is None:
+            return
+        channel.prev_image()
+        return True
+
+    def next_img_ws(self, ws, loop=True):
+        """Go to the next image in the focused channel in the workspace.
+        """
+        channel = self.get_active_channel_ws(ws)
+        if channel is None:
+            return
+        channel.next_image()
+        return True
 
     def prev_img(self, loop=True):
         """Go to the previous image in the channel.
@@ -747,17 +821,44 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         ws = self.ds.get_ws(channel.workspace)
         return ws
 
+    def get_active_channel_ws(self, ws):
+        children = list(ws.nb.get_children())
+        if len(children) == 0:
+            return None
+        # Not exactly the most robust or straightforward way to find the
+        # active channel in this workspace...
+        idx = ws.nb.get_index()
+        child = ws.nb.index_to_widget(idx)
+        chname = child.extdata.tab_title
+        if self.has_channel(chname):
+            return self.get_channel(chname)
+        return None
+
     def prev_channel_ws(self, ws):
         children = list(ws.nb.get_children())
         if len(children) == 0:
             self.show_error("No channels in this workspace.",
                             raisetab=True)
             return
+
         ws.to_previous()
-        idx = ws.nb.get_index()
-        child = ws.nb.index_to_widget(idx)
-        chname = child.extdata.tab_title
-        self.change_channel(chname, raisew=True)
+
+        channel = self.get_active_channel_ws(ws)
+        if (channel is not None) and self.has_channel(channel.name):
+            self.change_channel(channel.name, raisew=True)
+
+    def next_channel_ws(self, ws):
+        children = list(ws.nb.get_children())
+        if len(children) == 0:
+            self.show_error("No channels in this workspace.",
+                            raisetab=True)
+            return
+
+        ws.to_next()
+
+        channel = self.get_active_channel_ws(ws)
+        if (channel is not None) and self.has_channel(channel.name):
+            self.change_channel(channel.name, raisew=True)
 
     def prev_channel(self):
         ws = self.get_current_workspace()
@@ -766,18 +867,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                             raisetab=True)
             return
         self.prev_channel_ws(ws)
-
-    def next_channel_ws(self, ws):
-        children = list(ws.nb.get_children())
-        if len(children) == 0:
-            self.show_error("No channels in this workspace.",
-                            raisetab=True)
-            return
-        ws.to_next()
-        idx = ws.nb.get_index()
-        child = ws.nb.index_to_widget(idx)
-        chname = child.extdata.tab_title
-        self.change_channel(chname, raisew=True)
 
     def next_channel(self):
         ws = self.get_current_workspace()
@@ -851,6 +940,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         self.make_gui_callback('add-image', chname, image, info)
 
+    def update_image_info(self, image, info):
+        for chname in self.get_channel_names():
+            channel = self.get_channel(chname)
+            channel.update_image_info(image, info)
+
     def bulk_add_image(self, imname, image, chname):
         channel = self.get_channel_on_demand(chname)
         channel.add_image(image, bulk_add=True)
@@ -887,13 +981,23 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 str(imname), str(e)))
 
     def redo_plugins(self, image, channel):
+        if image is not None:
+            imname = image.get('name', None)
+            if (imname is not None) and (imname not in channel):
+                # image may have been removed--
+                # skip updates to this channel's plugins
+                return
+
         # New data in channel
         # update active global plugins
         opmon = self.gpmon
         for key in opmon.get_active():
             obj = opmon.get_plugin(key)
             try:
-                self.gui_do(obj.redo, channel, image)
+                if image is None:
+                    self.gui_do(obj.blank, channel)
+                else:
+                    self.gui_do(obj.redo, channel, image)
 
             except Exception as e:
                 self.logger.error(
@@ -905,7 +1009,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         for key in opmon.get_active():
             obj = opmon.get_plugin(key)
             try:
-                self.gui_do(obj.redo)
+                if image is None:
+                    self.gui_do(obj.blank)
+                else:
+                    self.gui_do(obj.redo)
 
             except Exception as e:
                 self.logger.error(
@@ -933,13 +1040,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             # add cb so that if image is modified internally
             #  our plugins get updated
-            image.add_callback('modified', self.redo_plugins, channel)
+            if image is not None:
+                image.add_callback('modified', self.redo_plugins, channel)
 
             self.logger.debug("executing redo() in plugins...")
             self.redo_plugins(image, channel)
 
             split_time1 = time.time()
-            self.logger.info("Large image update: %.4f sec" % (
+            self.logger.info("Channel image update: %.4f sec" % (
                 split_time1 - start_time))
 
     def change_channel(self, chname, image=None, raisew=True):
@@ -965,7 +1073,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if oldchname is not None:
                 try:
                     self.ds.highlight_tab(oldchname, False)
-                except:
+                except Exception:
                     # old channel may not exist!
                     pass
             self.ds.highlight_tab(name, True)
@@ -1063,48 +1171,48 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             The channel info bunch.
 
         """
-        if self.has_channel(chname):
-            return self.get_channel(chname)
-
-        name = chname
-        if settings is None:
-            settings = self.prefs.create_category('channel_'+name)
-            try:
-                settings.load(onError='raise')
-
-            except Exception as e:
-                self.logger.warning("no saved preferences found for channel "
-                                    "'%s': %s" % (name, str(e)))
-
-                # copy template settings to new channel
-                if settings_template is not None:
-                    osettings = settings_template
-                    osettings.copy_settings(settings)
-                else:
-                    try:
-                        # use channel_Image as a template if one was not
-                        # provided
-                        osettings = self.prefs.get_settings('channel_Image')
-                        self.logger.debug("Copying settings from 'Image' to "
-                                          "'%s'" % (name))
-                        osettings.copy_settings(settings)
-                    except KeyError:
-                        pass
-
-        if (share_keylist is not None) and (settings_share is not None):
-            # caller wants us to share settings with another viewer
-            settings_share.share_settings(settings, keylist=share_keylist)
-
-        # Make sure these preferences are at least defined
-        if num_images is None:
-            num_images = settings.get('numImages',
-                                      self.settings.get('numImages', 1))
-        settings.set_defaults(switchnew=True, numImages=num_images,
-                              raisenew=True, genthumb=True,
-                              enter_focus=True, focus_indicator=False,
-                              preload_images=False, sort_order='loadtime')
-
         with self.lock:
+            if self.has_channel(chname):
+                return self.get_channel(chname)
+
+            name = chname
+            if settings is None:
+                settings = self.prefs.create_category('channel_' + name)
+                try:
+                    settings.load(onError='raise')
+
+                except Exception as e:
+                    self.logger.warning("no saved preferences found for channel "
+                                        "'%s': %s" % (name, str(e)))
+
+                    # copy template settings to new channel
+                    if settings_template is not None:
+                        osettings = settings_template
+                        osettings.copy_settings(settings)
+                    else:
+                        try:
+                            # use channel_Image as a template if one was not
+                            # provided
+                            osettings = self.prefs.get_settings('channel_Image')
+                            self.logger.debug("Copying settings from 'Image' to "
+                                              "'%s'" % (name))
+                            osettings.copy_settings(settings)
+                        except KeyError:
+                            pass
+
+            if (share_keylist is not None) and (settings_share is not None):
+                # caller wants us to share settings with another viewer
+                settings_share.share_settings(settings, keylist=share_keylist)
+
+            # Make sure these preferences are at least defined
+            if num_images is None:
+                num_images = settings.get('numImages',
+                                          self.settings.get('numImages', 1))
+            settings.set_defaults(switchnew=True, numImages=num_images,
+                                  raisenew=True, genthumb=True,
+                                  focus_indicator=False,
+                                  preload_images=False, sort_order='loadtime')
+
             self.logger.debug("Adding channel '%s'" % (chname))
             channel = Channel(chname, self, datasrc=None,
                               settings=settings)
@@ -1136,12 +1244,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if len(self.channel_names) == 1:
                 self.cur_channel = channel
 
-        # Prepare local plugins for this channel
-        for opname, spec in self.local_plugins.items():
-            opmon.load_plugin(opname, spec, chinfo=channel)
+            # Prepare local plugins for this channel
+            for spec in self.get_plugins():
+                opname = spec.get('klass', spec.get('module'))
+                if spec.get('ptype', 'global') == 'local':
+                    opmon.load_plugin(opname, spec, chinfo=channel)
 
-        self.make_gui_callback('add-channel', channel)
-        return channel
+            self.make_gui_callback('add-channel', channel)
+            return channel
 
     def delete_channel(self, chname):
         """Delete a given channel from viewer."""
@@ -1169,7 +1279,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             self.ds.remove_tab(chname)
             del self.channel[name]
-            self.prefs.remove_settings('channel_'+chname)
+            self.prefs.remove_settings('channel_' + chname)
 
             # pick new channel
             num_channels = len(self.channel_names)
@@ -1192,7 +1302,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             text = '%.2fx' % (scalefactor)
         else:
             #text = '1/%dx' % (int(1.0/scalefactor))
-            text = '1/%.2fx' % (1.0/scalefactor)
+            text = '1/%.2fx' % (1.0 / scalefactor)
         return text
 
     def banner(self, raiseTab=False):
@@ -1228,8 +1338,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 viewer.clear()
 
         channel.remove_image(imname)
-        self.make_async_gui_callback('remove-image',
-                                     channel.name, imname, impath)
 
     def move_image_by_name(self, from_chname, imname, to_chname, impath=None):
 
@@ -1270,7 +1378,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         try:
             obj = self.gpmon.get_plugin('Log')
             self.gui_do(obj.log, text)
-        except:
+        except Exception:
             pass
 
     def set_loglevel(self, level):
@@ -1313,10 +1421,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def build_toplevel(self):
 
-        self.font = self.get_font('fixedFont', 12)
-        self.font11 = self.get_font('fixedFont', 11)
-        self.font14 = self.get_font('fixedFont', 14)
-        self.font18 = self.get_font('fixedFont', 18)
+        self.font = self.get_font('fixed', 12)
+        self.font11 = self.get_font('fixed', 11)
+        self.font14 = self.get_font('fixed', 14)
+        self.font18 = self.get_font('fixed', 18)
 
         self.w.tooltips = None
 
@@ -1452,12 +1560,27 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if hasattr(GwHelp, 'FileSelection'):
             self.filesel = GwHelp.FileSelection(self.w.root.get_widget())
 
-    def add_plugin_menu(self, name, menuname):
+    def add_plugin_menu(self, name, spec):
         # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
-        if 'menu_plug' in self.w:
-            item = self.w.menu_plug.add_name("Start %s" % (menuname))
-            item.add_callback('activated',
-                              lambda *args: self.start_global_plugin(name))
+        if 'menu_plug' not in self.w:
+            return
+        category = spec.get('category', None)
+        categories = None
+        if category is not None:
+            categories = category.split('.')
+        menuname = spec.get('menu', spec.get('tab', name))
+
+        menu = self.w.menu_plug
+        if categories is not None:
+            for catname in categories:
+                try:
+                    menu = menu.get_menu(catname)
+                except KeyError:
+                    menu = menu.add_menu(catname)
+
+        item = menu.add_name(menuname)
+        item.add_callback('activated',
+                          lambda *args: self.start_plugin(name, spec))
 
     def add_statusbar(self, holder):
         self.w.status = Widgets.StatusBar()
@@ -1580,7 +1703,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         canvas.enable_draw(False)
         fi.set_canvas(canvas)
 
-        fi.set_enter_focus(settings.get('enter_focus', True))
+        enter_focus = self.settings.get('enter_focus', False)
+        fi.set_enter_focus(settings.get('enter_focus', enter_focus))
         # check general settings for default value of focus indicator
         focus_ind = self.settings.get('focus_indicator', False)
         fi.show_focus_indicator(self.settings.get('focus_indicator', focus_ind))
@@ -1588,7 +1712,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         fi.add_callback('cursor-changed', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
-        fi.set_callback('keydown-none', self.keypress)
+        fi.add_callback('key-down-none', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
         fi.ui_setActive(True)
 
@@ -1615,15 +1739,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # build image viewer & widget
         fi = self.build_viewpane(settings, size=size)
 
-        # add scrollbar interface around this viewer
+        # add scrollbar support
+        # general settings as backup value if not overridden in channel
         scr_onoff = self.settings.get('scrollbars', 'off')
-        scr = settings.get('scrollbars', scr_onoff)
-        if scr != 'off':
-            si = Viewers.ScrolledView(fi)
-            si.scroll_bars(horizontal=scr, vertical=scr)
-            iw = Widgets.wrap(si)
-        else:
-            iw = Viewers.GingaViewerWidget(viewer=fi)
+        scr_val = settings.setdefault('scrollbars', scr_onoff)
+        scr_set = settings.get_setting('scrollbars')
+        si = Viewers.ScrolledView(fi)
+        si.scroll_bars(horizontal=scr_val, vertical=scr_val)
+        scr_set.add_callback('set', self._toggle_scrollbars, si)
+        iw = Widgets.wrap(si)
 
         stk_w = Widgets.StackWidget()
         stk_w.add_widget(iw, title='image')
@@ -1641,6 +1765,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                            widget=stk_w, container=vbox,
                            workspace=workspace)
         return bnch
+
+    def _toggle_scrollbars(self, setting, value, widget):
+        widget.scroll_bars(horizontal=value, vertical=value)
 
     def gui_add_channel(self, chname=None):
         chpfx = "Image"
@@ -1662,7 +1789,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         names = self.ds.get_wsnames()
         try:
             idx = names.index(self._lastwsname)
-        except:
+        except Exception:
             idx = 0
         for name in names:
             b.workspace.append_text(name)
@@ -1700,7 +1827,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         names = self.ds.get_wsnames()
         try:
             idx = names.index('channels')
-        except:
+        except Exception:
             idx = 0
         for name in names:
             b.workspace.append_text(name)
@@ -1754,8 +1881,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.ds.show_dialog(dialog)
 
     def gui_delete_channel_ws(self, ws):
-        children = list(ws.nb.get_children())
-        if len(children) == 0:
+        num_children = ws.num_pages()
+        if num_children == 0:
             self.show_error("No channels in this workspace to delete.",
                             raisetab=True)
             return
@@ -1802,7 +1929,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         names.insert(0, 'top level')
         try:
             idx = names.index('channels')
-        except:
+        except Exception:
             idx = 0
         for name in names:
             cbox.append_text(name)
@@ -1941,7 +2068,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.ds.remove_dialog(w)
         # save name for next add
         self._lastwsname = wsname
-        if rsp == 0:
+        if rsp != 1:
             return
 
         if self.has_channel(chname):
@@ -1957,7 +2084,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         wsname = names[idx]
         num = int(b.number.get_value())
         self.ds.remove_dialog(w)
-        if (rsp == 0) or (num <= 0):
+        if (rsp != 1) or (num <= 0):
             return
 
         for i in range(num):
@@ -1967,14 +2094,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def delete_channel_cb(self, w, rsp, chname):
         self.ds.remove_dialog(w)
-        if rsp == 0:
+        if rsp != 1:
             return
         self.delete_channel(chname)
         return True
 
     def delete_tab_cb(self, w, rsp, tabname):
         self.ds.remove_dialog(w)
-        if rsp == 0:
+        if rsp != 1:
             return
         self.ds.remove_tab(tabname)
         return True
@@ -1987,52 +2114,51 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             ws.add_callback('page-close', self.page_close_cb)
         if ws.has_callback('page-switch'):
             ws.add_callback('page-switch', self.page_switch_cb)
+        if ws.has_callback('page-added'):
+            ws.add_callback('page-added', self.page_added_cb)
+        if ws.has_callback('page-removed'):
+            ws.add_callback('page-removed', self.page_removed_cb)
 
         if ws.toolbar is not None:
             tb = ws.toolbar
             tb.add_separator()
 
-            # add toolbar buttons for navigating images in the channel
-            iconpath = os.path.join(self.iconpath, "up_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
-            btn.set_tooltip("Previous object in current channel")
-            btn.add_callback('activated', lambda w: self.prev_img())
-            iconpath = os.path.join(self.iconpath, "down_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
-            btn.set_tooltip("Next object in current channel")
-            btn.add_callback('activated', lambda w: self.next_img())
-
-            tb.add_separator()
-
-            # add toolbar buttons for navigating between channels
+            # add toolbar buttons for navigating between tabs
             iconpath = os.path.join(self.iconpath, "prev_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
-            btn.set_tooltip("Focus previous channel in this workspace")
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
+            btn.set_tooltip("Focus previous tab in this workspace")
             btn.add_callback('activated', lambda w: self.prev_channel_ws(ws))
+            ws.extdata.w_prev_tab = btn
+            btn.set_enabled(False)
             iconpath = os.path.join(self.iconpath, "next_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
-            btn.set_tooltip("Focus next channel in this workspace")
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
+            btn.set_tooltip("Focus next tab in this workspace")
             btn.add_callback('activated', lambda w: self.next_channel_ws(ws))
+            ws.extdata.w_next_tab = btn
+            btn.set_enabled(False)
 
             tb.add_separator()
 
             # add toolbar buttons adding and deleting channels
-            iconpath = os.path.join(self.iconpath, "plus_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
+            iconpath = os.path.join(self.iconpath, "inbox_plus_48.png")
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 23))
             btn.set_tooltip("Add a channel to this workspace")
             btn.add_callback('activated',
                              lambda w: self.add_channel_auto_ws(ws))
-            iconpath = os.path.join(self.iconpath, "minus_48.png")
-            btn = tb.add_action(None, iconpath=iconpath, iconsize=(18, 18))
+            ws.extdata.w_new_channel = btn
+            iconpath = os.path.join(self.iconpath, "inbox_minus_48.png")
+            btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 23))
             btn.set_tooltip("Delete current channel from this workspace")
             btn.add_callback('activated',
                              lambda w: self.gui_delete_channel_ws(ws))
+            btn.set_enabled(False)
+            ws.extdata.w_del_channel = btn
 
     def add_ws_cb(self, w, rsp, b, names):
         try:
             wsname = str(b.workspace_name.get_text())
             idx = b.workspace_type.get_index()
-            if rsp == 0:
+            if rsp != 1:
                 self.ds.remove_dialog(w)
                 return
 
@@ -2126,6 +2252,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             viewer = channel.viewer
             if viewer != self.getfocus_viewer():
                 chname = channel.name
+
                 self.logger.debug("Active channel switch to '%s'" % (
                     chname))
                 self.change_channel(chname, raisew=False)
@@ -2134,8 +2261,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def workspace_closed_cb(self, ws):
         self.logger.debug("workspace requests close")
-        children = list(ws.nb.get_children())
-        if len(children) > 0:
+        num_children = ws.num_pages()
+        if num_children > 0:
             self.show_error(
                 "Please close all windows in this workspace first!",
                 raisetab=True)
@@ -2172,7 +2299,26 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         return True
 
+    def page_added_cb(self, ws, child):
+        self.logger.debug("page added in %s: '%s'" % (ws.name, str(child)))
+
+        num_pages = ws.num_pages()
+        if num_pages > 1:
+            ws.extdata.w_prev_tab.set_enabled(True)
+            ws.extdata.w_next_tab.set_enabled(True)
+        ws.extdata.w_del_channel.set_enabled(True)
+
+    def page_removed_cb(self, ws, child):
+        self.logger.debug("page removed in %s: '%s'" % (ws.name, str(child)))
+        num_pages = ws.num_pages()
+        if num_pages <= 1:
+            ws.extdata.w_prev_tab.set_enabled(False)
+            ws.extdata.w_next_tab.set_enabled(False)
+            if num_pages <= 0:
+                ws.extdata.w_del_channel.set_enabled(False)
+
     def page_close_cb(self, ws, child):
+        # user is attempting to close the page
         self.logger.debug("page closed in %s: '%s'" % (ws.name, str(child)))
 
         channel = self._get_channel_by_container(child)
@@ -2308,18 +2454,24 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.next_channel()
         return True
 
-    def dragdrop(self, viewer, urls):
-        """Called when a drop operation is performed on our main window.
+    def dragdrop(self, chviewer, urls):
+        """Called when a drop operation is performed on a channel viewer.
         We are called back with a URL and we attempt to load it if it
         names a file.
         """
-        to_chname = self.get_channel_name(viewer)
-        for url in urls:
-            # NOTE: this used to be a nongui_do(), but there is some
-            # subtle interaction inside the toolkit code with the
-            # loading that makes it unstable
-            self.gui_do_priority(20, self.load_file, url, chname=to_chname,
-                                 wait=False)
+        # find out our channel
+        chname = self.get_channel_name(chviewer)
+
+        # NOTE: this used to be a nongui_do(), but there is some
+        # subtle interaction inside the toolkit code with the
+        # loading that makes it unstable
+        self.gui_do(self.load_file, urls[-1], chname=chname, wait=True)
+        self.update_pending()
+
+        for url in urls[:-1]:
+            self.gui_do(self.load_file, url, chname=chname,
+                        display_image=False)
+
         return True
 
     def force_focus_cb(self, viewer, event, data_x, data_y):
@@ -2334,7 +2486,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if not self.channel_follows_focus:
             return True
 
-        self.logger.debug("Focus %s=%s" % (name, tf))
+        self.logger.debug("focus %s=%s" % (name, tf))
         if tf:
             if viewer != self.getfocus_viewer():
                 self.change_channel(name, raisew=False)

@@ -1,9 +1,19 @@
-#
-# WCSAxes.py -- WCS axes overlay plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+A plugin for generating WCS axes overlay in the loaded image.
+
+**Plugin Type: Local**
+
+``WCSAxes`` is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
+**Usage**
+
+As long as image as a valid WCS, WCS axes will be displayed.
+Use plugin GUI or configuration file to customize axes display.
+
+"""
 from __future__ import division
 
 import numpy as np
@@ -12,24 +22,11 @@ from ginga import colors
 from ginga.GingaPlugin import LocalPlugin
 from ginga.gw import Widgets
 
+__all__ = ['WCSAxes']
+
 
 class WCSAxes(LocalPlugin):
-    """
-    WCSAxes
-    =======
-    A plugin for generating WCS axes overlay in the loaded image.
 
-    Plugin Type: Local
-    ------------------
-    WCSAxes is a local plugin, which means it is associated with a channel.
-    An instance can be opened for each channel.
-
-    Usage
-    -----
-    As long as image as a valid WCS, WCS axes will be displayed.
-    Use plugin GUI or configuration file to customize axes display.
-
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(WCSAxes, self).__init__(fv, fitsimage)
@@ -332,7 +329,7 @@ class WCSAxes(LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
 
         self.gui_up = False
@@ -340,5 +337,11 @@ class WCSAxes(LocalPlugin):
 
     def __str__(self):
         return 'wcsaxes'
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_WCSAxes', package='ginga')
 
 # END

@@ -1,18 +1,15 @@
 #
 # imap.py -- intensity maps for fits viewing
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy
+#import numpy as np
 
 # Some built in intensity maps
 
 imap_equa = (
-                   0.06275,
+                   0.06275,  # noqa
                    0.13725,
                    0.22353,
                    0.30196,
@@ -527,10 +524,10 @@ imap_ultrasmooth = (
     0.992156862745,
     0.996078431373,
     1.0,
-    )
+)
 
 imap_lasritt = (
-                0.05882,
+                0.05882,  # noqa
                 0.12157,
                 0.18431,
                 0.24706,
@@ -789,7 +786,7 @@ imap_lasritt = (
         )
 
 imap_expo = (
-                0.00458,
+                0.00458,  # noqa
                 0.00689,
                 0.00920,
                 0.01152,
@@ -1048,7 +1045,7 @@ imap_expo = (
         )
 
 imap_jigsaw = (
-                0.00000,
+                0.00000,  # noqa
                 0.01569,
                 0.03137,
                 0.04706,
@@ -1307,7 +1304,7 @@ imap_jigsaw = (
         )
 
 imap_ramp = (
-                0.00000,
+                0.00000,  # noqa
                 0.00392,
                 0.00784,
                 0.01176,
@@ -1563,10 +1560,10 @@ imap_ramp = (
                 0.99216,
                 0.99608,
                 1.00000,
-        )
+)
 
 imap_neg = (
-                1.00000,
+                1.00000,  # noqa
                 0.99608,
                 0.99216,
                 0.98824,
@@ -1825,7 +1822,7 @@ imap_neg = (
         )
 
 imap_stairs = (
-                0.00000,
+                0.00000,  # noqa
                 0.00000,
                 0.00000,
                 0.00000,
@@ -2084,7 +2081,7 @@ imap_stairs = (
         )
 
 iamp_equa = (
-                0.06275,
+                0.06275,  # noqa
                 0.13725,
                 0.22353,
                 0.30196,
@@ -2343,7 +2340,7 @@ iamp_equa = (
         )
 
 imap_neglog = (
-                1.00000,
+                1.00000,  # noqa
                 0.98039,
                 0.94510,
                 0.91373,
@@ -2602,7 +2599,7 @@ imap_neglog = (
         )
 
 imap_log = (
-                0.00000,
+                0.00000,  # noqa
                 0.01961,
                 0.05490,
                 0.08627,
@@ -2858,10 +2855,10 @@ imap_log = (
                 1.00000,
                 1.00000,
                 1.00000,
-        )
+)
 
 imap_gamma = (
-                0.11285,
+                0.11285,  # noqa
                 0.13544,
                 0.15416,
                 0.17045,
@@ -3117,10 +3114,10 @@ imap_gamma = (
                 1.00000,
                 1.00000,
                 1.00000,
-        )
+)
 
 imap_null = (
-                0.00000,
+                0.00000,  # noqa
                 0.00000,
                 0.00000,
                 0.00000,
@@ -3384,31 +3381,42 @@ min_imap_len = 256
 class IntensityMap(object):
     def __init__(self, name, ilst):
         self.name = name
-        #self.arr = numpy.array(ilst)
+        #self.arr = np.array(ilst)
         self.ilst = ilst
+
 
 def add_imap(name, ilst):
     global imaps
     assert len(ilst) == min_imap_len, \
-           ValueError("intensity map '%s' length mismatch %d != %d (needed)" % (
-        name, len(ilst), min_imap_len))
+        ValueError("intensity map '%s' length mismatch %d != %d (needed)" % (
+            name, len(ilst), min_imap_len))
     imaps[name] = IntensityMap(name, ilst)
 
+
 def get_imap(name):
-    """Get an intensity map array.  May raise a KeyError if a map of the given name
-    does not exist.
+    """Get an intensity map array.
+    Will raise a KeyError if a map of the given name does not exist.
     """
     return imaps[name]
+
+
+def has_imap(name):
+    """Does intensity map exist? Return True/False
+    """
+    return name in imaps
+
 
 def get_names():
     res = list(imaps.keys())
     res.sort()
     return res
 
+
 imaps = {}
+
 for name, value in list(globals().items()):
     if name.startswith('imap_'):
         key = name[5:]
         add_imap(key, value)
 
-#END
+# END

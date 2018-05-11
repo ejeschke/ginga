@@ -5,13 +5,15 @@
 # Please see the file LICENSE.txt for details.
 
 import math
+from itertools import chain
 
 import aggdraw as agg
+
 from . import AggHelp
-from itertools import chain
 # force registration of all canvas types
-import ginga.canvas.types.all
+import ginga.canvas.types.all  # noqa
 from ginga import trcalc
+
 
 class RenderContext(object):
 
@@ -81,17 +83,17 @@ class RenderContext(object):
         return self.cr.text_extents(text, self.font)
 
     def get_affine_transform(self, cx, cy, rot_deg):
-        x, y = 0, 0          # old center
+        x, y = cx, cy        # old center
         nx, ny = cx, cy      # new center
         sx = sy = 1.0        # new scale
         cosine = math.cos(math.radians(rot_deg))
         sine = math.sin(math.radians(rot_deg))
         a = cosine / sx
         b = sine / sx
-        c = x - nx*a - ny*b
+        c = x - nx * a - ny * b
         d = -sine / sy
         e = cosine / sy
-        f = y - nx*d - ny*e
+        f = y - nx * d - ny * e
         return (a, b, c, d, e, f)
 
     ##### DRAWING OPERATIONS #####
@@ -100,14 +102,14 @@ class RenderContext(object):
 
         wd, ht = self.cr.text_extents(text, self.font)
 
-        self.cr.canvas.text((cx, cy-ht), text, self.font)
-        ## affine = self.get_affine_transform(cx, cy-ht, rot_deg)
-        ## self.cr.canvas.settransform(affine)
-
-        ## self.cr.canvas.text((0, 0), text, self.font)
-
-        ## # reset default transform
-        ## self.cr.canvas.settransform()
+        _cx, _cy = cx, cy - ht
+        affine = self.get_affine_transform(_cx, _cy, rot_deg)
+        self.cr.canvas.settransform(affine)
+        try:
+            self.cr.canvas.text((_cx, _cy), text, self.font)
+        finally:
+            # reset default transform
+            self.cr.canvas.settransform()
 
     def draw_polygon(self, cpoints):
         cpoints = trcalc.strip_z(cpoints)
@@ -115,8 +117,9 @@ class RenderContext(object):
                                self.pen, self.brush)
 
     def draw_circle(self, cx, cy, cradius):
-        self.cr.canvas.ellipse((cx-cradius, cy-cradius, cx+cradius, cy+cradius),
-                               self.pen, self.brush)
+        self.cr.canvas.ellipse(
+            (cx - cradius, cy - cradius, cx + cradius, cy + cradius),
+            self.pen, self.brush)
 
     def draw_bezier_curve(self, cp):
         # there is a bug in path handling of some versions of aggdraw--

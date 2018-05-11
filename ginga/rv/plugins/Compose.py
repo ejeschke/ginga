@@ -1,76 +1,128 @@
-#
-# Compose.py -- Compose plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+A plugin for composing RGB images from constituent monochrome images.
+
+**Plugin Type: Local**
+
+``Compose`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+Start the ``Compose`` plugin from the "Operations" menu -- the tab should
+show up under "Dialogs".
+
+1. Select the kind of composition you want to make from the "Compose Type"
+   drop down: "RGB" for composing three monochrome images into a color
+   image, "Alpha" to compose a series of images as layers with different
+   alpha values for each layer.
+2. Press "New Image" to start composing a new image.
+
+***For RGB composition***
+
+1. Drag your three constituent images that will make up the R, G, and B
+   planes to the "Preview" window -- drag them in the order R (red),
+   G (green), and B (blue).  Alternatively, you can load the images into
+   the channel viewer one by one and after each one pressing "Insert from
+   Channel" (similarly, do these in the order of R, G, and B).
+
+In the plugin GUI, the R, G, and B images should show up as three slider
+controls in the "Layers" area of the plugin, and the Preview should show
+a low resolution version of how the composite image looks with the sliders
+set.
+
+.. figure:: figures/compose-rgb.png
+   :width: 800px
+   :align: center
+   :alt: Composing an RGB image
+
+   Composing an RGB Image.
+
+2. Play with the alpha levels of each layer using the sliders in the
+   ``Compose`` plugin; as you adjust a slider the preview image should
+   update.
+3. When you see something you like, you can save it to a file using the
+   "Save As" button (use "jpeg" or "png" as the file extension), or insert
+   it into the channel using the "Save to Channel" button.
+
+***For Alpha composition***
+
+For Alpha-type composition the images are just combined in the order shown
+in the stack, with Layer 0 being the bottom layer, and successive layers
+stacked on top.  Each layer's alpha level is adjustible by a slider in the
+same manner as discussed above.
+
+.. figure:: figures/compose-alpha.png
+   :width: 800px
+   :align: center
+   :alt: Alpha-composing an image
+
+   Alpha-composing an image.
+
+1. Drag your N constituent images that will make up the layers to the
+   "Preview" window, or load the images into the channel viewer one by
+   one and after each one pressing "Insert from Channel" (the first image
+   will be at the bottom of the stack--layer 0).
+2. Play with the alpha levels of each layer using the sliders in the
+   ``Compose`` plugin; as you adjust a slider the preview image should
+   update.
+3. When you see something you like, you can save it to a file using the
+   "Save As" button (use "fits" as the file extension), or insert it into
+   the channel using the "Save to Channel" button.
+
+***General Notes***
+
+- The preview window is just a ginga widget, so all the usual bindings
+  apply; you can set color maps, cut levels, etc. with the mouse and key
+  bindings.
+"""
 import os
 
-from ginga.gw import Widgets
+from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
-from ginga import RGBImage, LayerImage
+from ginga import RGBImage, LayerImage, AstroImage
 from ginga import GingaPlugin
 
-import numpy
 try:
     from PIL import Image
     have_PIL = True
 except ImportError:
     have_PIL = False
 
+__all__ = ['Compose']
 
-class ComposeImage(RGBImage.RGBImage, LayerImage.LayerImage):
-    def __init__(self, *args, **kwdargs):
-        RGBImage.RGBImage.__init__(self, *args, **kwdargs)
+
+class RGBComposeImage(RGBImage.RGBImage, LayerImage.LayerImage):
+    def __init__(self, *args, **kwargs):
+        RGBImage.RGBImage.__init__(self, *args, **kwargs)
         LayerImage.LayerImage.__init__(self)
 
+
+class AlphaComposeImage(AstroImage.AstroImage, LayerImage.LayerImage):
+    def __init__(self, *args, **kwargs):
+        AstroImage.AstroImage.__init__(self, *args, **kwargs)
+        LayerImage.LayerImage.__init__(self)
+
+
 class Compose(GingaPlugin.LocalPlugin):
-    """
-    Compose
-    =======
-    A plugin for composing RGB images from constituent monochrome images.
 
-    Plugin Type: Local
-    ------------------
-    Compose is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Usage
-    -----
-    Start the Compose plugin from the Operation menu--the tab should
-    show up under "Dialogs"
-
-    1) Press "New Image" to start composing a new RGB image.
-    2) drag your three constituent images that will make up the R, G and B
-       planes to the main viewer window--drag them in the order R (red),
-       G (green) and B (blue).
-
-    In the plugin, the R, G and B iamges should show up as three slider
-    controls in the Layers area of the plugin.
-
-    You should now have a composite three color image in the Compose preview
-    window.  Most likely the image does not have good cut levels set, so you
-    may want to set cut levels on the image using any of the usual cut levels
-    controls.
-
-    3) Play with the alpha levels of each layer using the sliders in the
-       Compose plugin, when you release a slider the image should update.
-    4) When you see something you like you can save it to a file using the
-       "Save As" button.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Compose, self).__init__(fv, fitsimage)
 
         self.limage = None
+        self.images = []
         self.count = 0
+        self._wd = 300
+        self._ht = 200
+        self.pct_reduce = 0.1
 
         self.layertag = 'compose-canvas'
 
         self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.set_callback('drag-drop', self.drop_file_cb)
-        canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
         self.gui_up = False
@@ -86,7 +138,7 @@ class Compose(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Compositing")
 
         captions = (("Compose Type:", 'label', "Compose Type", 'combobox'),
-                    ("New Image", 'button', "Insert Layer", 'button'),
+                    ("New Image", 'button', "Insert from Channel", 'button'),
                     )
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -100,33 +152,62 @@ class Compose(GingaPlugin.LocalPlugin):
             combobox.append_text(name)
             index += 1
         combobox.set_index(1)
-        #combobox.add_callback('activated', self.set_combine_cb)
 
         b.new_image.add_callback('activated', lambda w: self.new_cb())
         b.new_image.set_tooltip("Start a new composite image")
-        b.insert_layer.add_callback('activated', lambda w: self.insert_cb())
-        b.insert_layer.set_tooltip("Insert channel image as layer")
+        b.insert_from_channel.add_callback('activated', lambda w: self.insert_cb())
+        b.insert_from_channel.set_tooltip("Insert channel image as layer")
+
+        zi = Viewers.CanvasView(logger=None)
+        zi.set_desired_size(self._wd, self._ht)
+        zi.enable_autozoom('on')
+        zi.enable_autocuts('off')
+        zi.cut_levels(0, 255)
+        zi.set_bg(0.4, 0.4, 0.4)
+        zi.set_name('compose_image')
+        self.preview_image = zi
+
+        bd = zi.get_bindings()
+        bd.enable_zoom(True)
+        bd.enable_pan(True)
+        bd.enable_flip(True)
+        bd.enable_cuts(True)
+        bd.enable_cmap(True)
+
+        iw = Viewers.GingaViewerWidget(zi)
+        iw.resize(self._wd, self._ht)
+
+        zi.get_canvas().add(self.canvas)
+        self.canvas.set_surface(zi)
+        self.canvas.ui_set_active(True)
+
+        fr = Widgets.Frame("Preview")
+        fr.set_widget(iw)
+
+        vpaned = Widgets.Splitter(orientation=orientation)
+        vpaned.add_widget(fr)
+        # spacer
+        vpaned.add_widget(Widgets.Label(''))
 
         fr = Widgets.Frame("Layers")
         self.w.scales = fr
+        #vpaned.add_widget(fr)
+        vbox.add_widget(vpaned, stretch=1)
         vbox.add_widget(fr, stretch=0)
 
-        hbox = Widgets.HBox()
-        hbox.set_border_width(4)
-        hbox.set_spacing(4)
-        btn = Widgets.Button("Save Image As")
-        btn.add_callback('activated', lambda w: self.save_as_cb())
-        hbox.add_widget(btn, stretch=0)
-        self.entry2 = Widgets.TextEntry()
-        hbox.add_widget(self.entry2, stretch=1)
+        captions = (("Save Image As", 'button', "Save Path", 'entry'),
+                    ("Save to Channel", 'button'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        b.save_to_channel.add_callback('activated', lambda w: self.save_to_channel_cb())
+        b.save_to_channel.set_tooltip("Save composite image to channel")
+        b.save_image_as.add_callback('activated', lambda w: self.save_as_cb())
+        self.entry2 = b.save_path
         self.entry2.add_callback('activated', lambda *args: self.save_as_cb())
+        vbox.add_widget(w, stretch=0)
 
-        vbox.add_widget(hbox, stretch=0)
-
-        # spacer
-        vbox.add_widget(Widgets.Label(''), stretch=1)
-
-        top.add_widget(sw, stretch=1)
+        top.add_widget(vbox, stretch=1)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -156,7 +237,7 @@ class Compose(GingaPlugin.LocalPlugin):
         num_layers = self.limage.num_layers()
         for i in range(num_layers):
             layer = self.limage.get_layer(i)
-            captions.append((layer.name+':', 'label', 'layer_%d' % i, 'hscale'))
+            captions.append((layer.name + ':', 'label', 'layer_%d' % i, 'hscale'))
 
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -167,7 +248,7 @@ class Compose(GingaPlugin.LocalPlugin):
             adj.set_limits(lower, upper, incr_value=1)
             #adj.set_decimals(2)
             adj.set_value(int(layer.alpha * 100.0))
-            #adj.set_tracking(True)
+            adj.set_tracking(True)
             adj.add_callback('value-changed', self.set_opacity_cb, i)
 
         self.logger.debug("adding layer alpha controls")
@@ -177,7 +258,8 @@ class Compose(GingaPlugin.LocalPlugin):
         #self.fitsimage.clear()
 
         name = "composite%d" % (self.count)
-        self.limage = ComposeImage(logger=self.logger, order='RGB')
+        self.limage = RGBComposeImage(logger=self.logger, order='RGB')
+        self.images = []
 
         # Alpha or RGB composition?
         index = self.w.compose_type.get_index()
@@ -188,10 +270,10 @@ class Compose(GingaPlugin.LocalPlugin):
         self._gui_config_layers()
         self.limage.set(name=name, nothumb=True)
 
-    def _get_layer_attributes(self):
+    def _get_layer_attributes(self, limage):
         # Get layer name
-        idx = self.limage.num_layers()
-        if self.limage.compose == 'rgb':
+        idx = limage.num_layers()
+        if limage.compose == 'rgb':
             idx = min(idx, 2)
             names = ['Red', 'Green', 'Blue']
             name = names[idx]
@@ -203,6 +285,13 @@ class Compose(GingaPlugin.LocalPlugin):
 
         bnch = Bunch.Bunch(name=name, alpha=alpha, idx=idx)
         return bnch
+
+    def make_reduced_image(self, image):
+        wd, ht = image.get_size()[:2]
+        res = image.get_scaled_cutout_basic(0, 0, wd, ht,
+                                            self.pct_reduce, self.pct_reduce)
+        sm_img = RGBImage.RGBImage(data_np=res.data, order=image.order)
+        return sm_img
 
     def insert_image(self, image):
         if self.limage is None:
@@ -217,14 +306,17 @@ class Compose(GingaPlugin.LocalPlugin):
             metadata = image.get_metadata()
             self.limage.update_metadata(metadata)
 
-        attrs = self._get_layer_attributes()
-        self.limage.insert_layer(attrs.idx, image, name=attrs.name,
-                                alpha=attrs.alpha)
+        self.images.append(image)
+        sm_img = self.make_reduced_image(image)
+
+        attrs = self._get_layer_attributes(self.limage)
+        self.limage.insert_layer(attrs.idx, sm_img, name=attrs.name,
+                                 alpha=attrs.alpha)
 
         self._gui_config_layers()
 
         self.logger.debug("setting layer image")
-        self.fitsimage.set_image(self.limage)
+        self.preview_image.set_image(self.limage)
 
     def insert_cb(self):
         image = self.fitsimage.get_image()
@@ -236,6 +328,35 @@ class Compose(GingaPlugin.LocalPlugin):
             image = self.fv.load_image(path)
             self.insert_image(image)
         return True
+
+    def create_image(self):
+        # create new composed image
+        if self.limage.compose == 'rgb':
+            fimage = RGBComposeImage(logger=self.logger, order='RGB')
+        else:
+            fimage = AlphaComposeImage(logger=self.logger)
+        fimage.compose = self.limage.compose
+        name = "composite%d" % (self.count)
+        self.count += 1
+
+        # copy metadata
+        metadata = self.images[0].get_metadata()
+        fimage.update_metadata(metadata)
+
+        # insert original full-size images into new layer image
+        # only compose at the end
+        for i in range(self.limage.num_layers()):
+            layer = self.limage.get_layer(i)
+            fimage.insert_layer(i, self.images[i], name=layer.name,
+                                alpha=layer.alpha, compose=False)
+        fimage.compose_layers()
+        fimage.set(name=name)
+        return fimage
+
+    def save_to_channel_cb(self):
+        fimage = self.create_image()
+        # and drop it in the channel
+        self.fv.add_image(fimage.get('name'), fimage)
 
     def set_opacity_cb(self, w, val, idx):
         alpha = val / 100.0
@@ -263,80 +384,52 @@ class Compose(GingaPlugin.LocalPlugin):
                 self.w[ctrlname].set_value(layer.alpha * 100.0)
             i += 1
 
-    def add_to_channel_cb(self):
-        image = self.limage.copy()
-        name = "composite%d" % (self.count)
-        self.count += 1
-        image.set(name=name)
-        self.fv.add_image(name, image)
+    def save_alpha_as_file(self, path):
+        fimage = self.create_image()
+        fimage.save_as_file(path)
 
-    def save_as_file(self, path, image, order='RGB'):
+    def save_rgb_as_file(self, path):
         if not have_PIL:
             raise Exception("You need to install PIL or pillow to save images")
 
-        data = image.get_data()
-        viewer = self.fitsimage
-
-        rgbmap = viewer.get_rgbmap()
-        vmin, vmax = 0, rgbmap.get_hash_size() - 1
-
-        # Cut levels on the full image, with settings from viewer
-        autocuts = viewer.autocuts
-        loval, hival = viewer.get_cut_levels()
-        data = autocuts.cut_levels(data, loval, hival,
-                                   vmin=vmin, vmax=vmax)
-
-        # result becomes an index array fed to the RGB mapper
-        if not numpy.issubdtype(data.dtype, numpy.dtype('uint')):
-            data = data.astype(numpy.uint)
-
-        # get RGB array using settings from viewer
-        rgbobj = rgbmap.get_rgbarray(data, order=order,
-                                     image_order='RGB')
-        data = rgbobj.get_array(order)
-
+        fimage = self.create_image()
+        data = fimage.get_data()
         # Save image using PIL
         p_image = Image.fromarray(data)
         p_image.save(path)
 
     def save_as_cb(self):
+        if self.limage is None:
+            self.fv.show_error("Please create a composite image first.")
+            return
+
         path = str(self.entry2.get_text()).strip()
         if not path.startswith('/'):
             path = os.path.join('.', path)
 
-        image = self.fitsimage.get_image()
-        self.fv.nongui_do(self.fv.error_wrap, self.save_as_file, path, image)
+        if self.limage.compose == 'rgb':
+            self.fv.nongui_do(self.fv.error_wrap, self.save_rgb_as_file, path)
+
+        else:
+            self.fv.nongui_do(self.fv.error_wrap, self.save_alpha_as_file, path)
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
     def start(self):
-        # start ruler drawing operation
-        p_canvas = self.fitsimage.get_canvas()
-        try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
-
-        except KeyError:
-            # Add ruler layer
-            p_canvas.add(self.canvas, tag=self.layertag)
-
         self.resume()
 
     def pause(self):
-        self.canvas.ui_set_active(False)
+        pass
 
     def resume(self):
-        self.canvas.ui_set_active(True)
+        pass
 
     def stop(self):
-        # remove the canvas from the image
-        p_canvas = self.fitsimage.get_canvas()
-        try:
-            p_canvas.delete_object_by_tag(self.layertag)
-        except:
-            pass
-        self.canvas.ui_set_active(False)
+        self.limage = None
+        self.images = []
+
         self.fv.show_status("")
         self.gui_up = False
 
@@ -346,4 +439,4 @@ class Compose(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'compose'
 
-#END
+# END

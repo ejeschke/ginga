@@ -12,6 +12,7 @@ from ginga.gw import Widgets
 
 # import any other modules you want here--it's a python world!
 
+
 class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
 
     def __init__(self, fv):
@@ -63,9 +64,9 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         vbox.set_spacing(2)
 
         # Take a text widget to show some instructions
-        self.msgFont = self.fv.get_font("sansFont", 12)
+        self.msg_font = self.fv.get_font("sans", 12)
         tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msgFont)
+        tw.set_font(self.msg_font)
         self.tw = tw
 
         # Frame for instructions and add the text widget with another
@@ -122,14 +123,14 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         Callback from the reference viewer shell when a channel is added.
         """
         self.set_info("Channel '%s' has been added" % (
-                channel.name))
+            channel.name))
 
     def delete_channel(self, viewer, channel):
         """
         Callback from the reference viewer shell when a channel is deleted.
         """
         self.set_info("Channel '%s' has been deleted" % (
-                channel.name))
+            channel.name))
         return True
 
     def focus_cb(self, viewer, channel):

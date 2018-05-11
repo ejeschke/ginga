@@ -1,43 +1,44 @@
-#
-# Cursor.py -- Cursor plugin for Ginga viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+The ``Cursor`` plugin displays a summary line of text that changes as the
+user moves the cursor around an image.  In the standard reference viewer
+configuration, it appears as a line containing green text just below the
+``Colorbar`` plugin.
+
+**Plugin Type: Global**
+
+``Cursor`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+``Cursor`` simply tracks the cursor as it moves around an image and displays
+information about the pixel coordinates, WCS coordinates (if available)
+and the value of the pixel under the cursor.
+
+There is no associated configuration GUI.
+
+.. note:: Pixel coordinates are affected by the general setting
+          "pixel_coords_offset" which can be set in the "general.cfg"
+          configuration file for ginga.  The default is value for this
+          setting is 1.0, which means pixel coordinates are reported
+          from an origin of 1, as per the FITS standard.
+
+"""
 import platform
+
 import numpy
 
 from ginga import GingaPlugin, toolkit
-from ginga.misc import Bunch
-from ginga.gw import Widgets, Readout
+from ginga.gw import Readout
 from ginga.ImageView import ImageViewNoDataError
+from ginga.fonts import font_asst
+
+__all__ = ['Cursor']
 
 
 class Cursor(GingaPlugin.GlobalPlugin):
-    """
-    Cursor
-    ======
-    The Cursor plugin displays a summary line of text that changes as the
-    user moves the cursor around an image.  In the standard reference viewer
-    configuration, it appears as a line containing green text just below the
-    Colorbar plugin.
 
-    Plugin Type: Global
-    -------------------
-    Cursor is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    Cursor simply tracks the cursor as it moves around an image and displays
-    information about the pixel coordinates, WCS coordinates (if available)
-    and the value of the pixel under the cursor.
-
-    NOTE: Pixel coordinates are affected by the general setting
-    "pixel_coords_offset" which can be set in the "general.cfg" configuration
-    file for ginga.  The default is value for this setting is 1.0, which
-    means pixel coordinates are reported from an origin of 1, as per the FITS
-    standard.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Cursor, self).__init__(fv)
@@ -58,6 +59,8 @@ class Cursor(GingaPlugin.GlobalPlugin):
     def _build_readout(self):
         readout = Readout.Readout(-1, 24)
 
+        font_name = font_asst.resolve_alias('fixed', 'Courier')
+
         # NOTE: Special hack for certain platforms, otherwise the font
         # on the readout is too small
         macos_ver = platform.mac_ver()[0]
@@ -66,9 +69,9 @@ class Cursor(GingaPlugin.GlobalPlugin):
             readout.set_font('monaco', 16)
         elif toolkit.get_family().startswith('gtk'):
             # Gtk
-            readout.set_font('fixed', 14)
+            readout.set_font(font_name, 14)
         else:
-            readout.set_font('fixed', 11)
+            readout.set_font(font_name, 11)
         return readout
 
     def build_gui(self, container):
@@ -100,7 +103,6 @@ class Cursor(GingaPlugin.GlobalPlugin):
 
         channel.extdata.readout = readout
 
-
     def delete_channel_cb(self, viewer, channel):
         chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
@@ -113,12 +115,12 @@ class Cursor(GingaPlugin.GlobalPlugin):
         pass
 
     def readout_config(self, fitsimage, image, readout):
+        if (readout is None) or (image is None):
+            return True
         self.logger.debug("configuring readout (%s)" % (str(readout)))
         # Configure readout for this image.
         # Get and store the sizes of the fields necessary to display
         # all X, Y coords as well as values.
-        if image is None:
-            return True
 
         try:
             width, height = fitsimage.get_data_size()
@@ -209,4 +211,10 @@ class Cursor(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'cursor'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Cursor', package='ginga')
+
+# END

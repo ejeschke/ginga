@@ -14,11 +14,11 @@ file LICENSE.txt in the top-level directory for details.
 # Affiliated packages may add whatever they like to this file, but
 # should keep this content at the top.
 # ----------------------------------------------------------------------------
-from ._astropy_init import *
+from ._astropy_init import *  # noqa
 # ----------------------------------------------------------------------------
 
 # For egg_info test builds to pass, put package imports here.
-if not _ASTROPY_SETUP_:
+if not _ASTROPY_SETUP_:  # noqa
     #from example_mod import *
     pass
 
@@ -30,6 +30,7 @@ try:
     __import__('pkg_resources').declare_namespace(__name__)
 except ImportError:
     pass
-__path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
-#END
+__path__ = __import__('pkgutil').extend_path(__path__, __name__)  # noqa
+
+# END

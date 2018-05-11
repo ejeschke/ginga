@@ -3,14 +3,16 @@
 # Please see the file LICENSE.txt for details.
 #
 import starlink.Ast as Ast
-import starlink.Atl as Atl
+import starlink.Atl as Atl  # noqa
 
 import numpy as np
 
+# Note: Relative import breaks test in PY2
 from ginga.util.six.moves import map
 from ginga.util.wcsmod import common
 
 coord_types = ['icrs', 'fk5', 'fk4', 'galactic', 'ecliptic']
+
 
 class StarlinkWCS(common.BaseWCS):
     """
@@ -67,7 +69,7 @@ class StarlinkWCS(common.BaseWCS):
     def spectral_coord(self, idxs, coords='data'):
         # Starlink's WCS needs pixels referenced from 1
         if coords == 'data':
-            idxs = np.array(map(lambda x: x+1, idxs))
+            idxs = np.array(map(lambda x: x + 1, idxs))
         else:
             idxs = np.array(idxs)
 
@@ -85,7 +87,7 @@ class StarlinkWCS(common.BaseWCS):
     def pixtoradec(self, idxs, coords='data'):
         # Starlink's WCS needs pixels referenced from 1
         if coords == 'data':
-            idxs = np.array(list(map(lambda x: x+1, idxs)))
+            idxs = np.array(list(map(lambda x: x + 1, idxs)))
         else:
             idxs = np.array(idxs)
 
@@ -127,7 +129,7 @@ class StarlinkWCS(common.BaseWCS):
 
         if coords == 'data':
             # Starlink's WCS returns pixels referenced from 1
-            x, y = x-1, y-1
+            x, y = x - 1, y - 1
 
         return (x, y)
 
@@ -162,6 +164,9 @@ class StarlinkWCS(common.BaseWCS):
 
     def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
 
+        # force to array representation
+        datapt = np.asarray(datapt)
+
         # Starlink's WCS needs pixels referenced from 1
         if coords == 'data':
             datapt = datapt + 1.0
@@ -189,6 +194,9 @@ class StarlinkWCS(common.BaseWCS):
         return wcspt
 
     def wcspt_to_datapt(self, wcspt, coords='data', naxispath=None):
+
+        # force to array representation
+        wcspt = np.asarray(wcspt)
 
         # Starlink works on angles in radians
         wcspt = np.radians(wcspt)

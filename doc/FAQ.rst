@@ -100,6 +100,13 @@ pantry and whip it up" type viewer.
 
 Please send a pull request!
 
+Can I get Ginga reference viewer to save its size and position?
+---------------------------------------------------------------
+Yes.  Add the line "save_layout = True" to your ~/.ginga/general.cfg
+
+If the file does not exist, create it, or copy the one from
+ginga/examples/configs/general.cfg.
+
 -----------------------
 World Coordinate System
 -----------------------
@@ -193,5 +200,5 @@ histogram and keyword "density".
 
 .. note:: You need a slightly newer version of NumPy.
 
-          I recommend getting at least NumPy>1.7.
+          I recommend getting at least NumPy>1.9.
 

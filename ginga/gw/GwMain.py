@@ -5,11 +5,17 @@
 # Please see the file LICENSE.txt for details.
 #
 from __future__ import print_function
-import sys, traceback
-import os
+
+import sys
+import traceback
 import threading
 import logging
 import time
+
+from ginga.util.six.moves import filter
+from ginga.misc import Task, Future, Callback
+from collections import deque
+
 import ginga.util.six as six
 if six.PY2:
     import thread
@@ -18,9 +24,6 @@ else:
     import _thread as thread
     import queue as Queue
 
-from ginga.util.six.moves import filter
-from ginga.misc import Task, Future, Callback
-from collections import deque
 
 class GwMain(Callback.Callbacks):
 
@@ -57,7 +60,6 @@ class GwMain(Callback.Callbacks):
 
         self.oneshots = {}
 
-
     def get_widget(self):
         return self.app
 
@@ -68,7 +70,7 @@ class GwMain(Callback.Callbacks):
         # Execute the GUI method
         try:
             try:
-                res = future.thaw(suppress_exception=False)
+                future.thaw(suppress_exception=False)
 
             except Exception as e:
                 self.logger.error("gui event loop error: %s" % str(e))
@@ -189,7 +191,7 @@ class GwMain(Callback.Callbacks):
         return future
 
     def gui_do_oneshot(self, catname, method, *args, **kwdargs):
-        if not catname in self.oneshots:
+        if catname not in self.oneshots:
             deq = self.oneshots.setdefault(catname, deque([], 1))
         else:
             deq = self.oneshots[catname]
@@ -230,20 +232,20 @@ class GwMain(Callback.Callbacks):
     def assert_gui_thread(self):
         my_id = thread.get_ident()
         assert my_id == self.gui_thread_id, \
-               Exception("Non-GUI thread (%d) is executing GUI code!" % (
-            my_id))
+            Exception("Non-GUI thread (%d) is executing GUI code!" % (
+                my_id))
 
     def assert_nongui_thread(self):
         my_id = thread.get_ident()
         assert my_id != self.gui_thread_id, \
-               Exception("GUI thread (%d) is executing non-GUI code!" % (
-            my_id))
+            Exception("GUI thread (%d) is executing non-GUI code!" % (
+                my_id))
 
     def mainloop(self, timeout=0.001):
         # Mark our thread id
         self.gui_thread_id = thread.get_ident()
 
-        while not self.ev_quit.isSet():
+        while not self.ev_quit.is_set():
 
             self.update_pending(timeout=timeout)
 

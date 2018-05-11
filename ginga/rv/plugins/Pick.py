@@ -1,20 +1,294 @@
-#
-# Pick.py -- Pick plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+Perform quick astronomical stellar analysis.
+
+**Plugin Type: Local**
+
+``Pick`` is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
+**Usage**
+
+The ``Pick`` plugin is used to perform quick astronomical data quality analysis
+on stellar objects.  It locates stellar candidates within a drawn rectangle
+and picks the most likely candidate based on a set of search settings.
+The Full Width Half Max (FWHM) is reported on the candidate object, as
+well as its size based on the plate scale of the detector.  Rough
+measurement of background, sky level and brightness is also done.
+
+**Defining the pick area**
+
+The default pick area is defined as a rectangle of approximately 30x30
+pixels that encloses the search area.
+
+The move/draw/edit selector at the bottom of the plugin is used to
+determine what operation is being done to the pick area:
+
+.. figure:: figures/pick-move-draw-edit.png
+   :width: 400px
+   :align: center
+   :alt: Move, Draw and Edit buttons
+
+   "Move", "Draw", and "Edit" buttons.
+
+* If "move" is selected, then you can move the existing pick area by
+  dragging it or clicking where you want the center of it placed.
+  If there is no existing area, a default one will be created.
+* If "draw" is selected, then you can draw a shape with the cursor
+  to enclose and define a new pick area.  The default shape is a
+  rectangle, but other shapes can be selected in the "Settings" tab.
+* If "edit" is selected, then you can edit the pick area by dragging its
+  control points, or moving it by dragging in the bounding box.
+
+After the area is moved, drawn or edited, ``Pick`` will perform one of three
+actions:
+
+1. In "Quick Mode" ON, with "From Peak" OFF, it will simply attempt to
+   perform a calculation based on the coordinate under the crosshair in
+   the center of the pick area.
+2. In "Quick Mode" ON, with "From Peak" ON, it will perform a quick
+   detection of peaks in the pick area and perform a calculation on the
+   first one found, using the peak's coordinates.
+3. In "Quick Mode" OFF, it will search the area for all peaks and
+   evaluate the peaks based on the criteria in the "Settings" tab of the UI
+   (see "The Settings Tab" below) and try to locate the best candidate
+   matching the settings.
+
+**If a candidate is found**
+
+The candidate will be marked with a point (usually an "X") in the
+channel viewer canvas, centered on the object as determined by the
+horizontal and vertical FWHM measurements.
+
+The top set of tabs in the UI will be populated as follows:
+
+.. figure:: figures/pick-cutout.png
+   :width: 400px
+   :align: center
+   :alt: Image tab of Pick area
+
+   "Image" tab of ``Pick`` area.
+
+The "Image" tab will show the contents of the cutout area.
+The widget in this tab is a Ginga widget and so can be zoomed and panned
+with the usual keyboard and mouse bindings (e.g., scroll wheel).  It will
+also be marked with a point centered on the object and additionally the
+pan position will be set to the found center.
+
+.. figure:: figures/pick-contour.png
+   :width: 400px
+   :align: center
+   :alt: Contour tab of Pick area
+
+   "Contour" tab of ``Pick`` area.
+
+The "Contour" tab will show a contour plot.
+This is a contour plot of the area immediately surrounding the
+candidate, and not usually encompassing the entire region of the pick
+area.  You can use the vertical slider to the right of the plot to
+increase or decrease the area of the contour plot.
+
+.. figure:: figures/pick-fwhm.png
+   :width: 400px
+   :align: center
+   :alt: FWHM tab of Pick area
+
+   "FWHM" tab of ``Pick`` area.
+
+The "FWHM" tab will show a FWHM plot.
+The blue lines show measurements in the X direction and the green lines
+show measurements in the Y direction.  The solid lines indicate actual
+pixel values and the dotted lines indicate the fitted 1D function.
+The shaded green and blue regions indicate the FWHM measurements.
+
+.. figure:: figures/pick-radial.png
+   :width: 400px
+   :align: center
+   :alt: Radial tab of Pick area
+
+   "Radial" tab of ``Pick`` area.
+
+The "Radial" tab contains a radial profile plot.
+Plotted points in blue are data values, and a line is fitted to the
+data.
+
+.. figure:: figures/pick-cuts.png
+   :width: 800px
+   :align: center
+   :alt: Cut tab of Pick area
+
+   "Cut" tab of ``Pick`` area.
+
+The "Cuts" tab contains a profile plot for the vertical and horizontal
+cuts represented by the crosshairs present in "Quick Mode" ON.  This plot
+is updated in real time as the pick area is moved.  In "Quick Mode" OFF,
+this plot is not updated.
+
+.. figure:: figures/pick-readout.png
+   :width: 400px
+   :align: center
+   :alt: Readout tab of Pick area
+
+   "Readout" tab of ``Pick`` area.
+
+The "Readout" tab will be populated with a summary of the measurements.
+There are two buttons and two check boxes in this tab:
+
+* The "Default Region" button restores the pick region to the default
+  shape and size.
+* The "Pan to pick" button will pan the channel viewer to the
+  located center.
+* The "Quick Mode" check box toggles "Quick Mode" on and off.
+  This affects the behavior of the pick region as described above.
+* The "From Peak" check box changes the behavior of "Quick Mode" slightly
+  as described above.
+
+.. figure:: figures/pick-controls.png
+   :width: 400px
+   :align: center
+   :alt: Controls tab of Pick area
+
+   "Controls" tab of ``Pick`` area.
+
+The "Controls" tab has a couple of buttons that will work off of the
+measurements.
+
+* The "Bg cut" button will set the low cut level of the channel viewer
+  to the measured background level.  A delta to this value can be
+  applied by setting a value in the "Delta bg" box (press "Enter" to
+  change the setting).
+* The "Sky cut" button will set the low cut level of the channel viewer
+  to the measured sky level.  A delta to this value can be
+  applied by setting a value in the "Delta sky" box (press "Enter" to
+  change the setting).
+* The "Bright cut" button will set the high cut level of the channel
+  viewer to the measured sky+brightness levels. A delta to this value
+  can be applied by setting a value in the "Delta bright" box
+  (press "Enter" to change the setting).
+
+.. figure:: figures/pick-report.png
+   :width: 400px
+   :align: center
+   :alt: Report tab of Pick area
+
+   "Report" tab of ``Pick`` area.
+
+The "Report" tab is used to record information about the measurements in
+tabular form.
+
+By pressing the "Add Pick" button, the information about the most recent
+candidate is added to the table.  If the "Record Picks automatically"
+checkbox is checked, then any candidates are added to the table
+automatically.
+
+.. note:: If the "Show candidates" checkbox in the "Settings" tab is
+          checked, then *all* objects found in the region (according to
+          the settings) will be added to the table instead of just the
+          selected candidate.
+
+You can clear the table at any time by pressing the "Clear Log" button.
+The log can be saved to a table by putting a valid path and
+filename in the "File:" box and pressing "Save table". File type is
+automatically determined by the given extension (e.g., ".fits" is FITS and
+".txt" is plain text).
+
+**If no candidate is found**
+
+If no candidate can be found (based on the settings), then the pick area
+is marked with a red point centered on the pick area.
+
+.. figure:: figures/pick-no-candidate.png
+   :width: 800px
+   :align: center
+   :alt: Marker when no candidate found
+
+   Marker when no candidate found.
+
+The image cutout will be taken from this central area and so the "Image"
+tab will still have content.  It will also be marked with a central red
+"X".
+
+The contour plot will still be produced from the cutout, and the cuts
+plot will be updated in "Quick Mode".
+
+.. figure:: figures/pick-contour-no-candidate.png
+   :width: 400px
+   :align: center
+   :alt: Contour when no candidate found.
+
+   Contour when no candidate found.
+
+All the other plots will be cleared.
+
+**The Settings Tab**
+
+.. figure:: figures/pick-settings.png
+   :width: 400px
+   :align: center
+   :alt: Settings tab of Pick plugin
+
+   "Settings" tab of ``Pick`` plugin.
+
+The "Settings" tab controls aspects of the search within the pick area:
+
+* The "Show candidates" checkbox controls whether all detected sources
+  are marked or not (as shown in the figure below).  Additionally, if
+  checked, then all the found objects are added to the pick log table
+  when using the "Report" controls.
+* The "Draw type" parameter is used to choose the shape of the pick area
+  to be drawn.
+* The "Radius" parameter sets the radius to be used when finding and
+  evaluating bright peaks in the image.
+* The "Threshold" parameter is used to set a threshold for peak finding;
+  if set to "None", then a reasonable default value will be chosen.
+* The "Min FWHM" and "Max FWHM" parameters can be used to eliminate
+  certain sized objects from being candidates.
+* The "Ellipticity" parameter is used to eliminate candidates based on
+  their asymmetry in shape.
+* The "Edge" parameter is used to eliminate candidates based on how
+  close to the edge of the cutout they are.  *NOTE: currently this
+  works reliably only for non-rotated rectangular shapes.*
+* The "Max side" parameter is used to limit the size of the bounding box
+  that can be used in the pick shape.  Larger sizes take longer to
+  evaluate.
+* The "Coordinate Base" parameter is an offset to apply to located
+  sources.  Set to "1" if you want sources pixel locations reported
+  in a FITS-compliant manner and "0" if you prefer 0-based indexing.
+* The "Calc center" parameter is used to determine whether the center
+  is calculated from FWHM fitting ("fwhm") or centroiding ("centroid").
+* The "FWHM fitting" parameter is used to determine which function is
+  is used for FWHM fitting ("gaussian" or "moffat").
+* The "Contour Interpolation" parameter is used to set the interpolation
+  method used in rendering the background image in the "Contour" plot.
+
+The "Redo Pick" button will redo the search operation.  It's convenient
+if you have changed some parameters and want to see the effect based on the
+current pick area without disturbing it.
+
+.. figure:: figures/pick-candidates.png
+   :width: 800px
+   :align: center
+   :alt: The channel viewer when "Show candidates" is checked.
+
+   The channel viewer when "Show candidates" is checked.
+
+**User Configuration**
+
+"""
 import threading
-import numpy
+import sys
+import traceback
 import time
 from collections import OrderedDict
-import os.path
+
+import numpy as np
 
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
-from ginga.util import iqcalc, wcs
-from ginga import GingaPlugin
-from ginga.util.six.moves import map, zip, filter
+from ginga.util import iqcalc, wcs, contour
+from ginga import GingaPlugin, colors, cmap, trcalc
+from ginga.util.six.moves import map
 
 try:
     from ginga.gw import Plot
@@ -26,179 +300,11 @@ except ImportError:
 region_default_width = 30
 region_default_height = 30
 
+__all__ = ['Pick']
+
 
 class Pick(GingaPlugin.LocalPlugin):
-    """
-    Pick
-    ====
-    Perform astronomical stellar quick analysis.
 
-    The Pick plugin is used to perform quick astronomical data quality analysis
-    on stellar objects.  It locates stellar candidates within a drawn rectangle,
-    and picks the most likely candidate based on a set of search settings.
-    The Full Width Half Max (FWHM) is reported on the candidate object, as
-    well as its size based on the plate scale of the detector.  Rough
-    measurement of background, sky level and brightness is done.
-
-    Plugin Type: Local
-    ------------------
-    Pick is a local plugin, which means it is associated with a channel.
-    An instance can be opened for each channel.
-
-    Usage
-    =====
-
-    Defining the pick area
-    ----------------------
-    The default pick area is defined as a rectangle of approximately 30x30
-    pixels that encloses the search area.
-
-    The move/draw/edit selector at the bottom of the plugin is used to
-    determine what operation is being done to the pick area:
-
-    * If "move" is selected then you can move the existing pick area by
-      dragging it or clicking where you want the center of it placed.
-      If there is no existing area a default one will be created.
-    * If "draw" is selected then you can draw a shape with the cursor
-      to enclose and define a new pick area.  The default shape is a
-      rectangle, but other shapes can be selected in the "Settings" tab.
-    * If "edit" is selected, then you can edit the pick area by dragging its
-      control points, or moving it by dragging in the bounding box.
-
-    After the area is moved, drawn or edited, it will perform a search on
-    the area based on the criteria in the "Settings" tab of the UI
-    (see "The Settings Tab", below) and try to locate a candidate.
-
-    If a candidate is found
-    -----------------------
-    The candidate will be marked with a `Point` (usually an "X") in the
-    channel viewer canvas, centered on the object as determined by the
-    horizontal and vertical FWHM measurements.
-
-    The top set of tabs in the UI will be populated as follows.
-    The "Image" tag will show the contents of the cutout area.
-
-    The widget in this tab is a Ginga widget and so can be zoomed and panned
-    with the usual keyboard and mouse bindings (e.g. scroll wheel).  It will
-    also be marked with a `Point` centered on the object and additionally the
-    pan position will be set to the found center.
-
-    The "Contour" tab will show a contour plot.
-
-    This is a contour plot of the area immediately surrounding the
-    candidate, and not usually encompassing the entire region of the pick
-    area.  You can use the vertical slider to the right of the plot to
-    increase or decrease the area of the contour plot.
-
-    The "FWHM" tab will show a FWHM plot.
-
-    The blue lines show measurements in the X direction and the green lines
-    show measurements in the Y direction.  The solid lines indicate actual
-    pixel values and the dotted lines indicate the fitted 1D gaussians.
-    The shaded green and blue regions indicate the FWHM measurements.
-
-    The "Radial" tab contains a radial profile plot.
-
-    Plotted points in blue are data values, and a line is fitted to the
-    data.
-
-    The "Readout" tab will be populated with a summary of the measurements.
-
-    There are two buttons in this tab:
-
-    * The "Pan to pick" button will pan the channel viewer to the
-      located center.
-    * The "Default Region" button restores the pick region to the default
-      shape and size.
-
-    The "Controls" tab has a couple of buttons that will work off of the
-    measurements.
-
-    * The "Bg cut" button will set the low cut level of the channel viewer
-      to the measured background level.  A delta to this value can be
-      applied by setting a value in the "Delta bg" box (press Enter to
-      change the setting).
-    * The "Sky cut" button will set the low cut level of the channel viewer
-      to the measured sky level.  A delta to this value can be
-      applied by setting a value in the "Delta sky" box (press Enter to
-      change the setting).
-    * The "Bright cut" button will set the high cut level of the channel viewer
-      to the measured sky+brightness levels.  A delta to this value can be
-      applied by setting a value in the "Delta bright" box (press Enter to
-      change the setting).
-
-    The "Report" tab is used to record information about the measurements in
-    tabular form.
-
-    By pressing the "Add Pick" button the information about the most recent
-    candidate is added to the table.  If the "Record Picks automatically"
-    checkbox is checked, then any candidates are added to the table
-    automatically.
-
-    .. note:: If the "Show candidates" checkbox in the "Settings" tab is
-              checked, then *all* objects found in the region (according to
-              the Settings) will be added to the table instead of just the
-              selected candidate.
-
-    You can clear the table at any time by pressing the "Clear Log" button.
-    The log can be saved to a table by putting a valid path and
-    filename in the "File:" box and pressing "Save table". File type is
-    automatically determined by the given extension (e.g., ".fits" is FITS and
-    ".txt" is plain text).
-
-    If no candidate is found
-    ------------------------
-    If no candidate can be found (based on the Settings) then the pick area
-    is marked with a red `Point` centered on the pick area.
-
-    The image cutout will be taken from this central area and so the "Image"
-    tab will still have content.  It will also be marked with a central red
-    "X" as shown.
-
-    The contour plot will still be produced from the cutout.
-
-    But all the other plots will be cleared.
-
-
-    The Settings Tab
-    ================
-
-    The "Settings" tab controls aspects of the search within the pick area:
-
-    * The "Show candidates" checkbox controls whether all detected sources
-      are marked or not (as shown in the figure below).  Additionally, if
-      checked then all the found objects are added to the pick log table
-      when using the Report controls.
-    * The "Draw type" parameter is used to choose the shape of the pick area
-      to be drawn.
-    * The "Radius" parameter sets the radius to be used when finding and
-      evaluating bright peaks in the image.
-    * The "Threshold" parameter is used to set a threshold for peak finding;
-      if set to None then a reasonable default value will be chosen.
-    * The "Min FWHM" and "Max FWHM" parameters can be used to eliminate
-      certain sized objects from being candidates.
-    * The "Ellipticity" parameter is used to eliminate candidates based on
-      their asymmetry in shape.
-    * The "Edge" parameter is used to eliminate candidates based on how
-      close to the edge of the cutout they are.  **NOTE: currently this
-      works reliably only for non-rotated rectangular shapes.**
-    * The "Max side" parametergit p is used to limit the size of the bounding box
-      that can be used in the pick shape.  Larger sizes take longer to
-      evaluate.
-    * The "Coordinate Base" parameter is an offset to apply to located
-      sources.  Set to "1" if you want sources pixel locations reported
-      in a FITS-compliant manner and "0" if you prefer 0-based indexing.
-    * The "Calc center" parameter is used to determine whether the center
-      is calculated from FWHM fitting ("fwhm") or centroiding ("centroid").
-    * The "FWHM fitting" parameter is used to determine which function is
-      is used for FWHM fitting ("gaussian" or "moffat").
-    * The "Contour Interpolation" parameter is used to set the interpolation
-      method used in rendering the background image in the "Contour" plot.
-
-    The "Redo Pick" button will redo the search operation.  It's convenient
-    if you have changed some parameters and want to see the effect based on the
-    current pick area without disturbing it.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Pick, self).__init__(fv, fitsimage)
@@ -207,12 +313,21 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pickimage = None
         self.pickcenter = None
         self.pick_qs = None
-        self.picktag = None
+        self.pick_obj = None
         self._textlabel = 'Pick'
 
+        self.contour_image = None
+        self.contour_plot = None
+        self.fwhm_plot = None
+        self.radial_plot = None
+        self.cuts_plot = None
+        self.contour_interp_methods = trcalc.interpolation_methods
+
         # types of pick shapes that can be drawn
-        self.drawtypes = ['rectangle', 'box', 'circle', 'ellipse',
-                          'freepolygon', 'polygon', 'triangle']
+        self.drawtypes = ['rectangle', 'box', 'squarebox',
+                          'circle', 'ellipse',
+                          'freepolygon', 'polygon', 'triangle',
+                          ]
 
         # get Pick preferences
         prefs = self.fv.get_preferences()
@@ -232,6 +347,8 @@ class Pick(GingaPlugin.LocalPlugin):
         self.lock = threading.RLock()
         self.lock2 = threading.RLock()
         self.ev_intr = threading.Event()
+        self.tmr_quick = fv.get_timer()
+        self.tmr_quick.set_callback('expired', self.quick_timer_cb)
 
         self.last_rpt = []
         self.rpt_dict = OrderedDict({})
@@ -243,10 +360,9 @@ class Pick(GingaPlugin.LocalPlugin):
                                                   30.0)
 
         self.iqcalc = iqcalc.IQCalc(self.logger)
-        self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
         self.copy_attrs = ['transforms', 'cutlevels', 'autocuts']
         if (self.settings.get('pick_cmap_name', None) is None and
-            self.settings.get('pick_imap_name', None) is None):
+                self.settings.get('pick_imap_name', None) is None):
             self.copy_attrs.append('rgbmap')
 
         self.dc = self.fv.get_draw_classes()
@@ -258,11 +374,25 @@ class Pick(GingaPlugin.LocalPlugin):
         canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('edit-event', self.edit_cb)
         canvas.add_draw_mode('move', down=self.btn_down,
-                             move=self.btn_drag, up=self.btn_up)
+                             move=self.btn_drag, up=self.btn_up,
+                             hover=self.hover_cb)
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_draw_mode('move')
         self.canvas = canvas
+
+        # quick cross marker
+        # these colors form the crosshair marking the cuts in canvas
+        # and also the cuts plot
+        cname1 = self.settings.get('quick_h_cross_color', 'magenta2')
+        color1 = colors.lookup_color(cname1, format='hash')
+        cname2 = self.settings.get('quick_v_cross_color', 'sienna3')
+        color2 = colors.lookup_color(cname2, format='hash')
+        self.cross = self.dc.CompoundObject(
+            self.dc.Line(0, 10, 20, 10, color=color1),
+            self.dc.Line(10, 0, 10, 20, color=color2))
+        if self.quick_mode:
+            self.canvas.add(self.cross)
 
         self.have_mpl = have_mpl
 
@@ -273,6 +403,11 @@ class Pick(GingaPlugin.LocalPlugin):
         if self.pickshape not in self.drawtypes:
             self.pickshape = 'box'
         self.candidate_color = self.settings.get('color_candidate', 'orange')
+        self.quick_mode = self.settings.get('quick_mode', False)
+        self.quick_update_interval = self.settings.get('quick_update_interval',
+                                                       0.25)
+        self.from_peak = self.settings.get('quick_from_peak', True)
+        self.drag_only = self.settings.get('quick_drag_only', True)
 
         # Peak finding parameters and selection criteria
         self.max_side = self.settings.get('max_side', 1024)
@@ -312,14 +447,14 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # For contour plot
         self.num_contours = self.settings.get('num_contours', 8)
-        self.contour_size_max = self.settings.get('contour_size_limit', 70)
-        self.contour_size_min = self.settings.get('contour_size_min', 10)
+        self.contour_size_max = self.settings.get('contour_size_limit', 100)
+        self.contour_size_min = self.settings.get('contour_size_min', 30)
         self.contour_interpolation = self.settings.get('contour_interpolation',
-                                                       'bilinear')
+                                                       'nearest')
 
     def build_gui(self, container):
-        assert iqcalc.have_scipy == True, \
-               Exception("Please install python-scipy to use this plugin")
+        assert iqcalc.have_scipy is True, \
+            Exception("Please install python-scipy to use this plugin")
 
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
@@ -341,10 +476,11 @@ class Pick(GingaPlugin.LocalPlugin):
         di.set_desired_size(width, height)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
-        di.zoom_to(3)
+        di.set_zoom_algorithm('rate')
+        di.set_zoomrate(1.6)
+        di.zoom_to(2)
         settings = di.get_settings()
-        settings.get_setting('zoomlevel').add_callback('set',
-                               self.zoomset, di)
+        settings.get_setting('zoomlevel').add_callback('set', self.zoomset, di)
 
         cmname = self.settings.get('pick_cmap_name', None)
         if cmname is not None:
@@ -368,7 +504,7 @@ class Pick(GingaPlugin.LocalPlugin):
         bd.enable_cuts(True)
         bd.enable_cmap(True)
 
-        di.configure(width, height)
+        di.set_desired_size(width, height)
 
         p_canvas = di.get_canvas()
         tag = p_canvas.add(self.dc.Point(width / 2, height / 2, 5,
@@ -379,36 +515,87 @@ class Pick(GingaPlugin.LocalPlugin):
         iw.resize(width, height)
         nb.add_widget(iw, title="Image")
 
-        if have_mpl:
-            # Contour plot
-            hbox = Widgets.HBox()
-            self.contour_plot = plots.ContourPlot(logger=self.logger,
-                                                  width=width, height=height)
-            if plots.MPL_GE_2_0:
-                kwargs = {'facecolor': 'black'}
+        if contour.have_skimage:
+            # Contour plot, Ginga-style
+            ci = Viewers.CanvasView(logger=self.logger)
+            width, height = 400, 300
+            ci.set_desired_size(width, height)
+            ci.enable_autozoom('once')
+            ci.enable_autocuts('override')
+            ci.set_zoom_algorithm('rate')
+            ci.set_zoomrate(1.6)
+            ci.zoom_to(3)
+            ci.set_autocut_params('histogram')
+
+            t_ = ci.get_settings()
+            if self.contour_interpolation not in self.contour_interp_methods:
+                self.contour_interpolation = 'basic'
+            t_.set(interpolation=self.contour_interpolation)
+
+            ci.set_bg(0.4, 0.4, 0.4)
+            # for debugging
+            ci.set_name('contour_image')
+
+            self.contour_canvas = self.dc.DrawingCanvas()
+            ci.get_canvas().add(self.contour_canvas)
+            if cmap.has_cmap('RdYlGn_r'):
+                ci.set_color_map('RdYlGn_r')
             else:
-                kwargs = {'axisbg': 'black'}
-            self.contour_plot.add_axis(**kwargs)
-            pw = Plot.PlotWidget(self.contour_plot)
-            pw.resize(width, height)
-            hbox.add_widget(pw, stretch=1)
+                ci.set_color_map('pastel')
+            ci.show_color_bar(True)
+            self.contour_image = ci
 
-            # calc contour zoom setting
-            max_z = 100
-            zv = int(numpy.sqrt(self.dx**2 + self.dy**2) * 0.15)
-            zv = max(1, min(zv, 100))
-            self.contour_plot.plot_zoomlevel = zv
+            bd = ci.get_bindings()
+            bd.enable_pan(True)
+            bd.enable_zoom(True)
+            bd.enable_cuts(True)
+            bd.enable_cmap(True)
 
-            zoom = Widgets.Slider(orientation='vertical', track=True)
-            zoom.set_limits(1, max_z, incr_value=1)
-            zoom.set_value(zv)
+            ci.set_desired_size(width, height)
 
-            def zoom_contour_cb(w, val):
-                self.contour_plot.plot_zoom(val/10.0)
+            ciw = Viewers.GingaViewerWidget(viewer=ci)
+            ciw.resize(width, height)
 
-            zoom.add_callback('value-changed', zoom_contour_cb)
-            hbox.add_widget(zoom, stretch=0)
-            nb.add_widget(hbox, title="Contour")
+            nb.add_widget(ciw, title="Contour")
+
+        if have_mpl:
+            if not contour.have_skimage:
+                # Contour plot
+                hbox = Widgets.HBox()
+                self.contour_plot = plots.ContourPlot(
+                    logger=self.logger, width=width, height=height)
+                if plots.MPL_GE_2_0:
+                    kwargs = {'facecolor': 'black'}
+                else:
+                    kwargs = {'axisbg': 'black'}
+                self.contour_plot.add_axis(**kwargs)
+                pw = Plot.PlotWidget(self.contour_plot)
+                pw.resize(width, height)
+                hbox.add_widget(pw, stretch=1)
+
+                self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
+                if self.contour_interpolation not in self.contour_interp_methods:
+                    self.contour_interpolation = 'nearest'
+                self.contour_plot.interpolation = self.contour_interpolation
+
+                # calc contour zoom setting
+                max_z = 100
+                zv = int(np.sqrt(self.dx**2 + self.dy**2) * 0.15)
+                zv = max(1, min(zv, 100))
+                self.contour_plot.plot_zoomlevel = zv
+
+                zoom = Widgets.Slider(orientation='vertical', track=True)
+                zoom.set_limits(1, max_z, incr_value=1)
+                zoom.set_value(zv)
+                self.w.zoom_sldr = zoom
+
+                def zoom_contour_cb(w, val):
+                    zl = val / 10.0
+                    self.contour_plot.plot_zoom(zl)
+
+                zoom.add_callback('value-changed', zoom_contour_cb)
+                hbox.add_widget(zoom, stretch=0)
+                nb.add_widget(hbox, title="Contour")
 
             # FWHM gaussians plot
             self.fwhm_plot = plots.FWHMPlot(logger=self.logger,
@@ -430,6 +617,15 @@ class Pick(GingaPlugin.LocalPlugin):
             pw.resize(width, height)
             nb.add_widget(pw, title="Radial")
 
+            # Cuts profile plot
+            self.cuts_plot = plots.CutsPlot(logger=self.logger,
+                                            width=width, height=height)
+            pw = Plot.PlotWidget(self.cuts_plot)
+            pw.resize(width, height)
+            ax = self.cuts_plot.add_axis()
+            ax.grid(True)
+            nb.add_widget(pw, title="Cuts")
+
         fr = Widgets.Frame(self._textlabel)
 
         nb = Widgets.TabWidget(tabpos='bottom')
@@ -450,8 +646,8 @@ class Pick(GingaPlugin.LocalPlugin):
                     ('FWHM:', 'label', 'FWHM', 'llabel',
                      'Star Size:', 'label', 'Star Size', 'llabel'),
                     ('Sample Area:', 'label', 'Sample Area', 'llabel',
-                     'Default Region', 'button'),
-                    ('Pan to pick', 'button'),
+                     'Default Region', 'button', 'Pan to pick', 'button'),
+                    ('Quick Mode', 'checkbutton', 'From Peak', 'checkbutton'),
                     )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -464,6 +660,23 @@ class Pick(GingaPlugin.LocalPlugin):
         b.pan_to_pick.add_callback('activated',
                                    lambda w: self.pan_to_pick_cb())
         b.pan_to_pick.set_tooltip("Pan image to pick center")
+        b.quick_mode.set_tooltip("Turn Quick Mode on or off.\n"
+                                 "ON: Pick object manually ('From Peak' off)\n"
+                                 "or simply evaluate first peak found\n"
+                                 "in pick region ('From Peak' on).\n"
+                                 "OFF: Compare all peaks against selection\n"
+                                 "criteria (Settings) to avoid objects\n"
+                                 "and/or find 'best' peak.")
+        b.quick_mode.add_callback('activated', self.quick_mode_cb)
+        b.quick_mode.set_state(self.quick_mode)
+        b.from_peak.set_tooltip("In quick mode, calculate from any peak\n"
+                                "found (on), or simply calculate from the\n"
+                                "center of pick shape (off).")
+        b.from_peak.add_callback('activated', self.from_peak_cb)
+        b.from_peak.set_state(self.from_peak)
+        ## b.drag_only.set_tooltip("In quick mode, require cursor press or follow cursor")
+        ## b.drag_only.add_callback('activated', self.drag_only_cb)
+        ## b.drag_only.set_state(self.drag_only)
 
         vbox1 = Widgets.VBox()
         vbox1.add_widget(w, stretch=0)
@@ -546,6 +759,7 @@ class Pick(GingaPlugin.LocalPlugin):
             pickshape = self.drawtypes[idx]
             self.set_drawtype(pickshape)
             return True
+
         combobox = b.draw_type
         for name in self.drawtypes:
             combobox.append_text(name)
@@ -575,6 +789,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.threshold = threshold
             self.w.xlbl_threshold.set_text(str(self.threshold))
             return True
+
         b.xlbl_threshold.set_text(str(self.threshold))
         b.threshold.add_callback('activated', chg_threshold)
 
@@ -583,10 +798,12 @@ class Pick(GingaPlugin.LocalPlugin):
         #b.min_fwhm.set_numeric(True)
         b.min_fwhm.set_limits(0.1, 200.0, incr_value=0.1)
         b.min_fwhm.set_value(self.min_fwhm)
+
         def chg_min(w, val):
             self.min_fwhm = float(val)
             self.w.xlbl_min_fwhm.set_text(str(self.min_fwhm))
             return True
+
         b.xlbl_min_fwhm.set_text(str(self.min_fwhm))
         b.min_fwhm.add_callback('value-changed', chg_min)
 
@@ -595,10 +812,12 @@ class Pick(GingaPlugin.LocalPlugin):
         #b.max_fwhm.set_numeric(True)
         b.max_fwhm.set_limits(0.1, 200.0, incr_value=0.1)
         b.max_fwhm.set_value(self.max_fwhm)
+
         def chg_max(w, val):
             self.max_fwhm = float(val)
             self.w.xlbl_max_fwhm.set_text(str(self.max_fwhm))
             return True
+
         b.xlbl_max_fwhm.set_text(str(self.max_fwhm))
         b.max_fwhm.add_callback('value-changed', chg_max)
 
@@ -611,6 +830,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.min_ellipse = minellipse
             self.w.xlbl_ellipticity.set_text(str(self.min_ellipse))
             return True
+
         b.xlbl_ellipticity.set_text(str(self.min_ellipse))
         b.ellipticity.add_callback('activated', chg_ellipticity)
 
@@ -623,6 +843,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.edgew = edgew
             self.w.xlbl_edge.set_text(str(self.edgew))
             return True
+
         b.xlbl_edge.set_text(str(self.edgew))
         b.edge.add_callback('activated', chg_edgew)
 
@@ -630,25 +851,34 @@ class Pick(GingaPlugin.LocalPlugin):
         #b.max_side.set_numeric(True)
         b.max_side.set_limits(5, 10000, incr_value=10)
         b.max_side.set_value(self.max_side)
+
         def chg_max_side(w, val):
             self.max_side = int(val)
             self.w.xlbl_max_side.set_text(str(self.max_side))
             return True
+
         b.xlbl_max_side.set_text(str(self.max_side))
         b.max_side.add_callback('value-changed', chg_max_side)
 
         combobox = b.contour_interpolation
+
         def chg_contour_interp(w, idx):
             self.contour_interpolation = self.contour_interp_methods[idx]
             self.w.xlbl_cinterp.set_text(self.contour_interpolation)
-            self.contour_plot.interpolation = self.contour_interpolation
+            if self.contour_image is not None:
+                t_ = self.contour_image.get_settings()
+                t_.set(interpolation=self.contour_interpolation)
+            elif self.contour_plot is not None:
+                self.contour_plot.interpolation = self.contour_interpolation
             return True
+
         for name in self.contour_interp_methods:
             combobox.append_text(name)
         index = self.contour_interp_methods.index(self.contour_interpolation)
         combobox.set_index(index)
         self.w.xlbl_cinterp.set_text(self.contour_interpolation)
-        self.contour_plot.interpolation = self.contour_interpolation
+        if self.contour_plot is not None:
+            self.contour_plot.interpolation = self.contour_interpolation
         combobox.add_callback('activated', chg_contour_interp)
 
         b.show_candidates.set_state(self.show_candidates)
@@ -661,6 +891,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.center_alg = self.center_algs[idx]
             self.w.xlbl_calccenter.set_text(self.center_alg)
             return True
+
         combobox = b.calc_center
         for name in self.center_algs:
             combobox.append_text(name)
@@ -673,6 +904,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fwhm_alg = self.fwhm_algs[idx]
             self.w.xlbl_fwhmfitting.set_text(self.fwhm_alg)
             return True
+
         combobox = b.fwhm_fitting
         for name in self.fwhm_algs:
             combobox.append_text(name)
@@ -704,7 +936,7 @@ class Pick(GingaPlugin.LocalPlugin):
              'xlbl_delta_sky', 'label', 'Delta sky', 'entry'),
             ('Bright cut', 'button', 'Delta bright:', 'label',
              'xlbl_delta_bright', 'label', 'Delta bright', 'entry'),
-            )
+        )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -721,6 +953,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.bg_cut_delta = b.delta_bg
         b.xlbl_delta_bg.set_text(str(self.delta_bg))
         b.delta_bg.set_text(str(self.delta_bg))
+
         def chg_delta_bg(w):
             delta_bg = 0.0
             val = w.get_text().strip()
@@ -729,6 +962,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.delta_bg = delta_bg
             self.w.xlbl_delta_bg.set_text(str(self.delta_bg))
             return True
+
         b.delta_bg.add_callback('activated', chg_delta_bg)
 
         b.sky_cut.set_enabled(False)
@@ -737,6 +971,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.sky_cut_delta = b.delta_sky
         b.xlbl_delta_sky.set_text(str(self.delta_sky))
         b.delta_sky.set_text(str(self.delta_sky))
+
         def chg_delta_sky(w):
             delta_sky = 0.0
             val = w.get_text().strip()
@@ -745,6 +980,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.delta_sky = delta_sky
             self.w.xlbl_delta_sky.set_text(str(self.delta_sky))
             return True
+
         b.delta_sky.add_callback('activated', chg_delta_sky)
 
         b.bright_cut.set_enabled(False)
@@ -754,6 +990,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.bright_cut_delta = b.delta_bright
         b.xlbl_delta_bright.set_text(str(self.delta_bright))
         b.delta_bright.set_text(str(self.delta_bright))
+
         def chg_delta_bright(w):
             delta_bright = 0.0
             val = w.get_text().strip()
@@ -762,6 +999,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.delta_bright = delta_bright
             self.w.xlbl_delta_bright.set_text(str(self.delta_bright))
             return True
+
         b.delta_bright.add_callback('activated', chg_delta_bright)
 
         vbox3.add_widget(w, stretch=0)
@@ -820,21 +1058,24 @@ class Pick(GingaPlugin.LocalPlugin):
         hbox = Widgets.HBox()
         btn1 = Widgets.RadioButton("Move")
         btn1.set_state(mode == 'move')
-        btn1.add_callback('activated', lambda w, val: self.set_mode_cb('move', val))
+        btn1.add_callback(
+            'activated', lambda w, val: self.set_mode_cb('move', val))
         btn1.set_tooltip("Choose this to position pick")
         self.w.btn_move = btn1
         hbox.add_widget(btn1)
 
         btn2 = Widgets.RadioButton("Draw", group=btn1)
         btn2.set_state(mode == 'draw')
-        btn2.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
+        btn2.add_callback(
+            'activated', lambda w, val: self.set_mode_cb('draw', val))
         btn2.set_tooltip("Choose this to draw a replacement pick")
         self.w.btn_draw = btn2
         hbox.add_widget(btn2)
 
         btn3 = Widgets.RadioButton("Edit", group=btn1)
         btn3.set_state(mode == 'edit')
-        btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
+        btn3.add_callback(
+            'activated', lambda w, val: self.set_mode_cb('edit', val))
         btn3.set_tooltip("Choose this to edit or move a pick")
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
@@ -908,7 +1149,7 @@ class Pick(GingaPlugin.LocalPlugin):
             recut = True
 
         if recut:
-            radius = max(wd, ht)
+            radius = max(wd, ht) // 2
 
             if self.pick_qs is not None:
                 x, y = self.pick_qs.x, self.pick_qs.y
@@ -921,15 +1162,50 @@ class Pick(GingaPlugin.LocalPlugin):
             x, y = self.pickcenter.x, self.pickcenter.y
 
         try:
-            self.contour_plot.plot_contours_data(x, y, data,
-                                                 num_contours=self.num_contours)
+            if self.contour_image is not None:
+                cv = self.contour_image
+                cv.set_data(data)
+                # copy orientation of main image, so that contour will
+                # make sense.  Don't do rotation, for now.
+                flips = self.fitsimage.get_transforms()
+                cv.transform(*flips)
+                #rot_deg = self.fitsimage.get_rotation()
+                #cv.rotate(rot_deg)
+
+                cv.panset_xy(x, y)
+
+                canvas = self.contour_canvas
+                try:
+                    canvas.delete_object_by_tag('_$cntr', redraw=False)
+                except KeyError:
+                    pass
+
+                # calculate contour polygons
+                contour_grps = contour.calc_contours(data, self.num_contours)
+
+                # get compound polygons object
+                c_obj = contour.create_contours_obj(canvas, contour_grps,
+                                                    colors=['black'],
+                                                    linewidth=2)
+                canvas.add(c_obj, tag='_$cntr')
+
+            if self.contour_plot is not None:
+                self.contour_plot.plot_contours_data(
+                    x, y, data, num_contours=self.num_contours)
+                # make zoom control match contour zoom
+                zl = self.contour_plot.plot_zoomlevel
+                zv = int(round(max(1, min(zl * 10, 100))))
+                self.w.zoom_sldr.set_value(zv)
 
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (
                 str(e)))
 
     def clear_contours(self):
-        self.contour_plot.clear()
+        if self.contour_image is not None:
+            self.contour_canvas.delete_all_objects()
+        if self.contour_plot is not None:
+            self.contour_plot.clear()
 
     def plot_fwhm(self, qs, image):
         # Make a FWHM plot
@@ -970,7 +1246,7 @@ class Pick(GingaPlugin.LocalPlugin):
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -998,25 +1274,28 @@ class Pick(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         self.fv.show_status("")
 
     def redo_manual(self):
-        serialnum = self.bump_serial()
-        self.ev_intr.set()
-
-        self._redo(serialnum)
+        if self.quick_mode:
+            self.redo_quick()
+            self.calc_quick()
+        else:
+            serialnum = self.bump_serial()
+            self.ev_intr.set()
+            self._redo(serialnum)
 
     def redo(self):
         serialnum = self.bump_serial()
         self._redo(serialnum)
 
     def _redo(self, serialnum):
-        if self.picktag is None:
+        if self.pick_obj is None:
             return
 
-        pickobj = self.canvas.get_object_by_tag(self.picktag)
+        pickobj = self.pick_obj
         if pickobj.kind != 'compound':
             return True
         shape = pickobj.objects[0]
@@ -1106,7 +1385,8 @@ class Pick(GingaPlugin.LocalPlugin):
 
                 num_candidates = len(objlist)
                 if num_candidates == 0:
-                    raise Exception("Error evaluating bright peaks: no candidates found")
+                    raise Exception(
+                        "Error evaluating bright peaks: no candidates found")
 
                 self.update_status("Selecting from %d candidates..." % (
                     num_candidates))
@@ -1124,10 +1404,12 @@ class Pick(GingaPlugin.LocalPlugin):
                 for qs in results:
                     qs.x += x1
                     qs.y += y1
-                    qs.objx += x1
-                    qs.objy += y1
-                    qs.oid_x += x1
-                    qs.oid_y += y1
+                    if qs.objx is not None:
+                        qs.objx += x1
+                        qs.objy += y1
+                    if qs.oid_x is not None:
+                        qs.oid_x += x1
+                        qs.oid_y += y1
 
                 # pick main result
                 qs = results[0]
@@ -1156,7 +1438,8 @@ class Pick(GingaPlugin.LocalPlugin):
                 ra_txt, dec_txt = wcs.deg2fmt(ra_deg, dec_deg, 'str')
 
             except Exception as e:
-                self.logger.warning("Couldn't calculate sky coordinates: %s" % (str(e)))
+                self.logger.warning(
+                    "Couldn't calculate sky coordinates: %s" % (str(e)))
                 ra_deg, dec_deg = 0.0, 0.0
                 ra_txt = dec_txt = 'BAD WCS'
 
@@ -1169,26 +1452,27 @@ class Pick(GingaPlugin.LocalPlugin):
                 starsize = self.iqcalc.starsize(qs.fwhm_x, cdelt1,
                                                 qs.fwhm_y, cdelt2)
             except Exception as e:
-                self.logger.warning("Couldn't calculate star size: %s" % (str(e)))
+                self.logger.warning(
+                    "Couldn't calculate star size: %s" % (str(e)))
                 starsize = 0.0
 
             rpt_x = x + self.pixel_coords_offset
             rpt_y = y + self.pixel_coords_offset
 
             # make a report in the form of a dictionary
-            d.setvals(x = rpt_x, y = rpt_y,
-                      ra_deg = ra_deg, dec_deg = dec_deg,
-                      ra_txt = ra_txt, dec_txt = dec_txt,
-                      equinox = equinox,
-                      fwhm = qs.fwhm,
-                      fwhm_x = qs.fwhm_x, fwhm_y = qs.fwhm_y,
-                      ellipse = qs.elipse, background = qs.background,
-                      skylevel = qs.skylevel, brightness = qs.brightness,
-                      starsize = starsize,
-                      time_local = time.strftime("%Y-%m-%d %H:%M:%S",
-                                                 time.localtime()),
-                      time_ut = time.strftime("%Y-%m-%d %H:%M:%S",
-                                              time.gmtime()),
+            d.setvals(x=rpt_x, y=rpt_y,
+                      ra_deg=ra_deg, dec_deg=dec_deg,
+                      ra_txt=ra_txt, dec_txt=dec_txt,
+                      equinox=equinox,
+                      fwhm=qs.fwhm,
+                      fwhm_x=qs.fwhm_x, fwhm_y=qs.fwhm_y,
+                      ellipse=qs.elipse, background=qs.background,
+                      skylevel=qs.skylevel, brightness=qs.brightness,
+                      starsize=starsize,
+                      time_local=time.strftime("%Y-%m-%d %H:%M:%S",
+                                               time.localtime()),
+                      time_ut=time.strftime("%Y-%m-%d %H:%M:%S",
+                                            time.gmtime()),
                       )
         except Exception as e:
             self.logger.error("Error making report: %s" % (str(e)))
@@ -1212,6 +1496,8 @@ class Pick(GingaPlugin.LocalPlugin):
             point = pickobj.objects[1]
             text = pickobj.objects[2]
             text.text = self._textlabel
+            _x1, _y1, x2, y2 = shape_obj.get_llur()
+            text.x, text.y = x1, y2 + 4
 
             if msg is not None:
                 raise Exception(msg)
@@ -1221,12 +1507,9 @@ class Pick(GingaPlugin.LocalPlugin):
                 reports = list(map(lambda x: self._make_report(image, x),
                                    objlist))
                 for obj in objlist:
-                    tag = self.canvas.add(self.dc.Point(obj.objx,
-                                                        obj.objy,
-                                                        5,
-                                                        linewidth=1,
-                                                        color=self.candidate_color),
-                                          tagpfx='peak')
+                    self.canvas.add(self.dc.Point(
+                        obj.objx, obj.objy, 5, linewidth=1,
+                        color=self.candidate_color), tagpfx='peak')
             else:
                 reports = [self._make_report(image, qs)]
 
@@ -1264,8 +1547,8 @@ class Pick(GingaPlugin.LocalPlugin):
             self.w.btn_bright_cut.set_enabled(True)
 
             # Mark center of object on pick image
-            i1 = point.x - x1
-            j1 = point.y - y1
+            i1 = obj_x - x1
+            j1 = obj_y - y1
             self.pickcenter.x = i1
             self.pickcenter.y = j1
             self.pickcenter.color = 'cyan'
@@ -1275,7 +1558,7 @@ class Pick(GingaPlugin.LocalPlugin):
             # Mark object center on image
             point.color = 'cyan'
             shape_obj.linestyle = 'solid'
-            #self.fitsimage.panset_xy(obj_x, obj_y)
+            shape_obj.color = self.pickcolor
 
             self.update_status("Done")
             self.plot_panx = float(i1) / wd
@@ -1290,6 +1573,12 @@ class Pick(GingaPlugin.LocalPlugin):
                 str(e))
             self.logger.error(errmsg)
             self.fv.show_error(errmsg, raisetab=False)
+            try:
+                (type, value, tb) = sys.exc_info()
+                tb_str = "\n".join(traceback.format_tb(tb))
+            except Exception as e:
+                tb_str = "Traceback information unavailable."
+            self.logger.error(tb_str)
             #self.update_status("Error")
             for key in ('sky_level', 'background', 'brightness',
                         'star_size', 'fwhm_x', 'fwhm_y',
@@ -1303,6 +1592,7 @@ class Pick(GingaPlugin.LocalPlugin):
             text.color = 'red'
             shape_obj.linestyle = 'dash'
 
+            self.pickimage.center_image()
             self.plot_panx = self.plot_pany = 0.5
             if self.have_mpl:
                 self.plot_contours(image)
@@ -1320,54 +1610,133 @@ class Pick(GingaPlugin.LocalPlugin):
     def eval_intr(self):
         self.ev_intr.set()
 
+    def redo_quick(self):
+        image = self.fitsimage.get_image()
+        if image is None:
+            return
+
+        self.cuts_plot.clear()
+
+        obj = self.pick_obj
+        if obj is None:
+            return
+        shape = obj.objects[0]
+
+        x1, y1, x2, y2, data = self.cutdetail(image, shape)
+        self.pick_x1, self.pick_y1 = x1, y1
+        self.pick_data = data
+
+        #ht, wd = data.shape[:2]
+        #x, y = wd // 2, ht // 2
+        x, y = shape.get_center_pt()[:2]
+        x, y = x - x1, y - y1
+        radius = min(x, y)
+
+        # update cross lines
+        hl = self.cross.objects[0]
+        hl.x1, hl.y1, hl.x2, hl.y2 = (x1 + x - radius, y1 + y,
+                                      x1 + x + radius, y1 + y)
+        vl = self.cross.objects[1]
+        vl.x1, vl.y1, vl.x2, vl.y2 = (x1 + x, y1 + y - radius,
+                                      x1 + x, y1 + y + radius)
+
+        # Get points on the lines
+        x0, y0, xarr, yarr = self.iqcalc.cut_cross(x, y, radius, data)
+
+        # plot horizontal cut
+        xpts = np.arange(len(xarr))
+        self.cuts_plot.plot(xpts, xarr, color=hl.color,
+                            xtitle="Line Index", ytitle="Pixel Value",
+                            title=None, rtitle="Cuts",
+                            alpha=1.0, linewidth=1.0, linestyle='-')
+
+        # plot vertical cut
+        ypts = np.arange(len(yarr))
+        self.cuts_plot.plot(ypts, yarr, color=vl.color,
+                            alpha=1.0, linewidth=1.0, linestyle='-')
+
+    def calc_quick(self):
+        if self.pick_data is None:
+            return
+
+        # examine cut area
+        data, x1, y1 = self.pick_data, self.pick_x1, self.pick_y1
+        ht, wd = data.shape[:2]
+        xc, yc = wd // 2, ht // 2
+        radius = min(xc, yc)
+        peaks = [(xc, yc)]
+
+        with_peak = self.w.from_peak.get_state()
+        if with_peak:
+            # find the peak in the area, if possible, and calc from that
+            try:
+                peaks = self.iqcalc.find_bright_peaks(data,
+                                                      threshold=self.threshold,
+                                                      radius=radius)
+            except Exception as e:
+                self.logger.debug("no peaks found in data--using center")
+
+            if len(peaks) > 0:
+                xc, yc = peaks[0]
+
+        self.pickcenter.x = xc
+        self.pickcenter.y = yc
+        self.pickcenter.color = 'red'
+        msg = qs = None
+
+        try:
+            radius = int(round(radius))
+            objlist = self.iqcalc.evaluate_peaks(peaks, data,
+                                                 fwhm_radius=radius,
+                                                 fwhm_method=self.fwhm_alg)
+
+            num_candidates = len(objlist)
+            if num_candidates == 0:
+                raise Exception("Error calculating image quality")
+
+            # Add back in offsets into image to get correct values with
+            # respect to the entire image
+            qs = objlist[0]
+            qs.x += x1
+            qs.y += y1
+            if qs.objx is not None:
+                qs.objx += x1
+                qs.objy += y1
+            if qs.oid_x is not None:
+                qs.oid_x += x1
+                qs.oid_y += y1
+
+        except Exception as e:
+            msg = str(e)
+            self.update_status(msg)
+
+        self.fv.gui_do(self.update_pick, 0, objlist, qs,
+                       x1, y1, wd, ht, data, self.pick_obj, msg)
+
     def draw_cb(self, canvas, tag):
         obj = canvas.get_object_by_tag(tag)
-        if obj.kind not in self.drawtypes:
-            return True
         canvas.delete_object_by_tag(tag)
 
-        if self.picktag is not None:
-            try:
-                canvas.delete_object_by_tag(self.picktag)
-            except:
-                pass
+        if obj.kind not in self.drawtypes:
+            return True
 
-        # determine center of bounding box
-        x1, y1, x2, y2 = obj.get_llur()
-        x = x1 + (x2 - x1) // 2
-        y = y1 + (y2 - y1) // 2
+        self.create_pick_box(obj)
 
-        obj.color = self.pickcolor
-        tag = canvas.add(self.dc.CompoundObject(
-            obj,
-            self.dc.Point(x, y, 10, color='red'),
-            self.dc.Text(x1, y2+4, '{0}: calc'.format(self._textlabel),
-                         color=self.pickcolor)))
-        self.picktag = tag
-
-        return self.redo_manual()
+        self.redo_manual()
 
     def edit_cb(self, canvas, obj):
         if obj.kind not in self.drawtypes:
             return True
 
-        # Get the compound object that sits on the canvas.
-        # Make sure edited rectangle was our pick rectangle.
-        c_obj = self.canvas.get_object_by_tag(self.picktag)
-        if (c_obj.kind != 'compound') or (len(c_obj.objects) < 3) or \
-               (c_obj.objects[0] != obj):
-            return False
-
-        return self.redo_manual()
+        if self.pick_obj is not None and self.pick_obj.has_object(obj):
+            self.redo_manual()
 
     def reset_region(self):
         self.dx = region_default_width
         self.dy = region_default_height
         self.set_drawtype('rectangle')
 
-        if not self.canvas.has_tag(self.picktag):
-            return
-        obj = self.canvas.get_object_by_tag(self.picktag)
+        obj = self.pick_obj
         if obj.kind != 'compound':
             return
         shape = obj.objects[0]
@@ -1380,11 +1749,30 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # replace shape
         # TODO: makes sense to change this to 'box'
-        Rect = self.canvas.get_draw_class('rectangle')
+        Rect = self.dc.Rectangle
         tag = self.canvas.add(Rect(x1, y1, x2, y2,
                                    color=self.pickcolor))
 
         self.draw_cb(self.canvas, tag)
+
+    def create_pick_box(self, obj):
+        pick_obj = self.pick_obj
+        if pick_obj is not None and self.canvas.has_object(pick_obj):
+            self.canvas.delete_object(pick_obj)
+
+        # determine center of object
+        x1, y1, x2, y2 = obj.get_llur()
+        x, y = obj.get_center_pt()
+
+        obj.color = self.pickcolor
+        args = [obj,
+                self.dc.Point(x, y, 10, color='red'),
+                self.dc.Text(x1, y2 + 4, '{0}: calc'.format(self._textlabel),
+                             color=self.pickcolor)
+                ]
+
+        self.pick_obj = self.dc.CompoundObject(*args)
+        self.canvas.add(self.pick_obj)
 
     def pan_to_pick_cb(self):
         if not self.pick_qs:
@@ -1470,7 +1858,7 @@ class Pick(GingaPlugin.LocalPlugin):
         x1, x2 = view[1].start, view[1].stop
 
         # mask non-containing members
-        mdata = numpy.ma.array(data, mask=numpy.logical_not(mask))
+        mdata = np.ma.array(data, mask=np.logical_not(mask))
 
         return (x1, y1, x2, y2, mdata)
 
@@ -1478,8 +1866,8 @@ class Pick(GingaPlugin.LocalPlugin):
         x1, x2 = self.w.ax.get_xlim()
         y1, y2 = self.w.ax.get_ylim()
 
-        self.w.ax.set_xlim(x1+xdelta, x2+xdelta)
-        self.w.ax.set_ylim(y1+ydelta, y2+ydelta)
+        self.w.ax.set_xlim(x1 + xdelta, x2 + xdelta)
+        self.w.ax.set_ylim(y1 + ydelta, y2 + ydelta)
         self.w.canvas.draw()
 
     def write_pick_log(self, filepath):
@@ -1535,34 +1923,40 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pickshape = shapename
         self.w.xlbl_drawtype.set_text(self.pickshape)
         self.canvas.set_drawtype(self.pickshape, color='cyan',
-                                     linestyle='dash')
+                                 linestyle='dash')
 
     def edit_select_pick(self):
-        if self.picktag is not None:
-            obj = self.canvas.get_object_by_tag(self.picktag)
+        obj = self.pick_obj
+        if obj is not None and self.canvas.has_object(obj):
             if obj.kind != 'compound':
                 return True
             # drill down to reference shape
             bbox = obj.objects[0]
             self.canvas.edit_select(bbox)
-        else:
-            self.canvas.clear_selected()
+            self.canvas.update_canvas()
+            return
+
+        self.canvas.clear_selected()
         self.canvas.update_canvas()
 
     def btn_down(self, canvas, event, data_x, data_y, viewer):
 
-        if (self.picktag is not None) and canvas.has_tag(self.picktag):
-            obj = self.canvas.get_object_by_tag(self.picktag)
-            if obj.kind != 'compound':
-                return False
+        if self.pick_obj is not None:
+            if not canvas.has_object(self.pick_obj):
+                self.canvas.add(self.pick_obj)
 
+            obj = self.pick_obj
             shape = obj.objects[0]
+            shape.color = 'cyan'
             shape.linestyle = 'dash'
             point = obj.objects[1]
             point.color = 'red'
 
             shape.move_to(data_x, data_y)
             self.canvas.update_canvas()
+
+            if self.quick_mode:
+                self.redo_quick()
 
         else:
             # No object yet? Add a default one.
@@ -1582,28 +1976,29 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def btn_drag(self, canvas, event, data_x, data_y, viewer):
 
-        if (self.picktag is not None) and canvas.has_tag(self.picktag):
-            obj = self.canvas.get_object_by_tag(self.picktag)
+        if self.pick_obj is not None:
+            obj = self.pick_obj
             if obj.kind != 'compound':
                 return False
 
             shape = obj.objects[0]
-
             shape.move_to(data_x, data_y)
             self.canvas.update_canvas()
+
+            if self.quick_mode:
+                self.redo_quick()
             return True
 
         return False
 
     def btn_up(self, canvas, event, data_x, data_y, viewer):
 
-        if (self.picktag is not None) and canvas.has_tag(self.picktag):
-            obj = self.canvas.get_object_by_tag(self.picktag)
+        if self.pick_obj is not None:
+            obj = self.pick_obj
             if obj.kind != 'compound':
                 return False
 
             shape = obj.objects[0]
-
             shape.move_to(data_x, data_y)
             self.canvas.update_canvas()
 
@@ -1611,6 +2006,30 @@ class Pick(GingaPlugin.LocalPlugin):
 
         return True
 
+    def hover_cb(self, canvas, event, data_x, data_y, viewer):
+
+        if self.quick_mode and (not self.drag_only):
+            if self.pick_obj is None:
+                return False
+            shape = self.pick_obj.objects[0]
+            shape.color = 'cyan'
+            shape.linestyle = 'dash'
+            point = self.pick_obj.objects[1]
+            point.color = 'red'
+
+            shape.move_to(data_x, data_y)
+            self.canvas.update_canvas()
+
+            self.redo_quick()
+            # set timer
+            self.tmr_quick.set(self.quick_update_interval)
+
+            return True
+
+        return False
+
+    def quick_timer_cb(self, timer):
+        self.calc_quick()
 
     def set_mode_cb(self, mode, tf):
         if tf:
@@ -1619,7 +2038,30 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.edit_select_pick()
         return True
 
+    def quick_mode_cb(self, w, tf):
+        self.quick_mode = tf
+        if self.quick_mode:
+            self.canvas.add(self.cross)
+            self.redo_quick()
+        else:
+            self.canvas.delete_object(self.cross)
+        return True
+
+    def from_peak_cb(self, w, tf):
+        self.from_peak = tf
+        return True
+
+    def drag_only_cb(self, w, tf):
+        self.drag_only = tf
+        return True
+
     def __str__(self):
         return 'pick'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Pick', package='ginga')
+
+# END

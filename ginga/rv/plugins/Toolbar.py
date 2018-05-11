@@ -1,27 +1,29 @@
-#
-# Toolbar.py -- Tool bar plugin for the Ginga fits viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+``Toolbar`` provides a set of convenience UI controls for common operations
+on viewers.
+
+**Plugin Type: Global**
+
+``Toolbar`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+Hovering over an icon on the toolbar should provide you with usage tool tip.
+
+"""
 import os.path
 
 from ginga.gw import Widgets
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 
+__all__ = ['Toolbar']
+
 
 class Toolbar(GingaPlugin.GlobalPlugin):
-    """
-    Toolbar
-    =======
-    Toolbar provides a set of convenience UI controls for common operations
-    on viewers.
 
-    Plugin Type: Global
-    -------------------
-    Toolbar is a global plugin.  Only one instance can be opened.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Toolbar, self).__init__(fv)
@@ -42,6 +44,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         fv.set_callback('add-channel', self.add_channel_cb)
         fv.set_callback('delete-channel', self.delete_channel_cb)
         fv.set_callback('channel-change', self.focus_cb)
+        fv.add_callback('add-image-info', self._ch_image_added_cb)
+        fv.add_callback('remove-image-info', self._ch_image_removed_cb)
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -73,10 +77,10 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             ("OrientLH", 'button', 'orient_ne_48', "Orient image N=Up E=Left",
              self.orient_lh_cb),
             ("---",),
-            ("Prev", 'button', 'prev_48', "Go to previous channel",
-             lambda w: self.fv.prev_channel()),
-            ("Next", 'button', 'next_48', "Go to next channel",
-             lambda w: self.fv.next_channel()),
+            ## ("Prev", 'button', 'prev_48', "Go to previous channel",
+            ##  lambda w: self.fv.prev_channel()),
+            ## ("Next", 'button', 'next_48', "Go to next channel",
+            ##  lambda w: self.fv.next_channel()),
             ("Up", 'button', 'up_48', "Go to previous image in channel",
              lambda w: self.fv.prev_img()),
             ("Down", 'button', 'down_48', "Go to next image in channel",
@@ -125,14 +129,14 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             ## ("Histogram", 'button', 'open_48', "Histogram and cut levels",
             ##  lambda w: self.start_plugin_cb('Histogram')),
             #("Quit", 'button', 'exit_48', "Quit the program"),
-            ):
+            ):  # noqa
 
             name = tup[0]
             if name == '---':
                 tb.add_separator()
                 continue
             iconpath = os.path.join(self.fv.iconpath, "%s.png" % (tup[2]))
-            btn = tb.add_action(None, toggle=(tup[1]=='toggle'),
+            btn = tb.add_action(None, toggle=(tup[1] == 'toggle'),
                                 iconpath=iconpath)
             if tup[3]:
                 btn.set_tooltip(tup[3])
@@ -171,6 +175,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         # to delete
 
     def focus_cb(self, viewer, channel):
+        self.update_channel_buttons(channel)
+
         fitsimage = channel.fitsimage
         self.active = fitsimage
         self._update_toolbar_state(fitsimage)
@@ -313,6 +319,22 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         view = channel.fitsimage
         return (view, view.get_bindings())
 
+    def _ch_image_added_cb(self, shell, channel, info):
+        if channel != shell.get_current_channel():
+            return
+        self.update_channel_buttons(channel)
+
+    def _ch_image_removed_cb(self, shell, channel, info):
+        if channel != shell.get_current_channel():
+            return
+        self.update_channel_buttons(channel)
+
+    def update_channel_buttons(self, channel):
+        # Update toolbar channel buttons
+        enabled = len(channel) > 1
+        self.w.btn_up.set_enabled(enabled)
+        self.w.btn_down.set_enabled(enabled)
+
     def _update_toolbar_state(self, fitsimage):
         if (fitsimage is None) or (not self.gui_up):
             return
@@ -338,7 +360,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             self.w.btn_contrast.set_state(modename == 'contrast')
 
             default_mode_type = bm.get_default_mode_type()
-            if self.w.has_key('btn_modelock'):
+            if 'btn_modelock' in self.w:
                 is_locked = (default_mode_type in ('locked', 'softlock'))
                 self.w.btn_modelock.set_state(is_locked)
 
@@ -349,4 +371,10 @@ class Toolbar(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'toolbar'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Toolbar', package='ginga')
+
+# END

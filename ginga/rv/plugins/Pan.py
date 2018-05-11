@@ -1,48 +1,50 @@
 #
-# Pan.py -- Pan plugin for fits viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+"""
+The ``Pan`` plugin provides a small panning image that gives an overall
+"birds-eye" view of the channel image that last had the focus.  If the
+channel image is zoomed in 2X or greater, then the pan region is shown
+graphically in the ``Pan`` image by a rectangle.
+
+**Plugin Type: Global**
+
+``Pan`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+The channel image can be panned by clicking and/or dragging to place
+the rectangle.  Using the right mouse button to drag a rectangle will
+force the channel image viewer to try to match the region (taking into
+account the differences in the aspect ratio between the drawn rectangle
+and the window dimensions).  Scrolling in the ``Pan`` image will zoom the
+channel image.
+
+The color/intensity map and cut levels of the ``Pan`` image are updated
+when they are changed in the corresponding channel image.
+The ``Pan`` image also displays the World Coordinate System (WCS) compass, if
+valid WCS metadata is present in the FITS HDU being viewed in the
+channel.
+
+The ``Pan`` plugin usually appears as a sub-pane under the "Info" tab, next
+to the ``Info`` plugin.
+
+"""
 import sys
 import traceback
 import math
+
 from ginga.BaseImage import BaseImage
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 
+__all__ = ['Pan']
+
+
 class Pan(GingaPlugin.GlobalPlugin):
-    """
-    Pan
-    ===
-    The Pan plugin provides a small panning image that gives an overall
-    "birds-eye" view of the channel image that last had the focus.  If the
-    channel image is zoomed in 2X or greater then the pan region is shown
-    graphically in the Pan image by a rectangle.
 
-    Plugin Type: Global
-    -------------------
-    Pan is a global plugin.  Only one instance can be opened.
-
-    Usage
-    -----
-    The channel image can be panned by clicking and/or dragging to place
-    the rectangle.  Using the right mouse button to drag a rectangle will
-    force the channel image viewer to try to match the region (taking into
-    account the differences in the aspect ratio between the drawn rectangle
-    and the window dimensions).  Scrolling in the Pan image will zoom the
-    channel image.
-
-    The color/intensity map and cut levels of the Pan image are updated
-    when they are changed in the corresponding channel image.
-    The Pan image also displays the World Coordinate System compass, if
-    valid WCS metadata is present in the FITS HDU being viewed in the
-    channel.
-
-    The Pan plugin usually appears as a sub-pane under the "Info" tab, next
-    to the Info plugin.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Pan, self).__init__(fv)
@@ -69,13 +71,15 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         self._wd = 200
         self._ht = 200
+        self.gui_up = False
 
     def build_gui(self, container):
         nb = Widgets.StackWidget()
         self.nb = nb
         container.add_widget(self.nb, stretch=1)
+        self.gui_up = True
 
-    def _create_pan_image(self, fitsimage):
+    def _create_pan_viewer(self, fitsimage):
         pi = Viewers.CanvasView(logger=self.logger)
         pi.enable_autozoom('on')
         pi.enable_autocuts('off')
@@ -87,10 +91,11 @@ class Pan(GingaPlugin.GlobalPlugin):
         pi.set_callback('cursor-move', self.drag_cb)
         pi.set_callback('none-move', self.motion_cb)
         pi.set_callback('zoom-scroll', self.zoom_cb)
+        pi.set_callback('zoom-pinch', self.zoom_pinch_cb)
+        pi.set_callback('pan-pan', self.pan_pan_cb)
         pi.set_callback('configure', self.reconfigure)
         # for debugging
         pi.set_name('panimage')
-        #pi.ui_set_active(True)
 
         my_canvas = pi.get_canvas()
         my_canvas.enable_draw(True)
@@ -109,16 +114,18 @@ class Pan(GingaPlugin.GlobalPlugin):
         return pi
 
     def add_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
         fitsimage = channel.fitsimage
-        panimage = self._create_pan_image(fitsimage)
-        chname = channel.name
+        panimage = self._create_pan_viewer(fitsimage)
 
         iw = Viewers.GingaViewerWidget(panimage)
         iw.resize(self._wd, self._ht)
         self.nb.add_widget(iw)
-        index = self.nb.index_of(iw)
+        #index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,
-                              pancompass=None, panrect=None)
+                              compass_wcs=None, compass_xy=None,
+                              panrect=None)
         channel.extdata._pan_info = paninfo
 
         # Extract RGBMap object from main image and attach it to this
@@ -135,28 +142,29 @@ class Pan(GingaPlugin.GlobalPlugin):
         xfrmsettings = ['flip_x', 'flip_y', 'swap_xy']
         if self.settings.get('rotate_pan_image', False):
             xfrmsettings.append('rot_deg')
-        fitssettings.shareSettings(pansettings, xfrmsettings)
+        fitssettings.share_settings(pansettings, xfrmsettings)
         for key in xfrmsettings:
-            pansettings.get_setting(key).add_callback('set', self.settings_cb,
-                                                     fitsimage, channel, paninfo, 0)
+            pansettings.get_setting(key).add_callback(
+                'set', self.settings_cb, fitsimage, channel, paninfo, 0)
 
-
-        fitssettings.shareSettings(pansettings, ['cuts'])
-        pansettings.get_setting('cuts').add_callback('set', self.settings_cb,
-                                                    fitsimage, channel, paninfo, 1)
+        fitssettings.share_settings(pansettings, ['cuts'])
+        pansettings.get_setting('cuts').add_callback(
+            'set', self.settings_cb, fitsimage, channel, paninfo, 1)
 
         zoomsettings = ['zoom_algorithm', 'zoom_rate',
                         'scale_x_base', 'scale_y_base']
-        fitssettings.shareSettings(pansettings, zoomsettings)
+        fitssettings.share_settings(pansettings, zoomsettings)
         for key in zoomsettings:
-            pansettings.get_setting(key).add_callback('set', self.zoom_ext_cb,
-                                                     fitsimage, channel, paninfo)
+            pansettings.get_setting(key).add_callback(
+                'set', self.zoom_ext_cb, fitsimage, channel, paninfo)
 
         fitsimage.add_callback('redraw', self.redraw_cb, channel, paninfo)
 
         self.logger.debug("channel '%s' added." % (channel.name))
 
     def delete_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
         chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
         widget = channel.extdata._pan_info.widget
@@ -170,6 +178,9 @@ class Pan(GingaPlugin.GlobalPlugin):
             channel = self.fv.get_channel(name)
             self.add_channel(self.fv, channel)
 
+    def stop(self):
+        self.gui_up = False
+
     # CALLBACKS
 
     def rgbmap_cb(self, rgbmap, panimage):
@@ -177,17 +188,21 @@ class Pan(GingaPlugin.GlobalPlugin):
         panimage.redraw(whence=1)
 
     def redo(self, channel, image):
+        if not self.gui_up:
+            return
+        self.logger.debug("redo")
         paninfo = channel.extdata._pan_info
 
         if (image is None) or not isinstance(image, BaseImage):
-            # TODO: clear not yet working
-            #paninfo.panimage.clear()
+            self.logger.debug("no main image--clearing Pan viewer")
+            paninfo.panimage.clear()
             return
 
-        loval, hival = channel.fitsimage.get_cut_levels()
-        paninfo.panimage.cut_levels(loval, hival)
-
         self.set_image(channel, paninfo, image)
+
+    def blank(self, channel):
+        paninfo = channel.extdata._pan_info
+        paninfo.panimage.clear()
 
     def focus_cb(self, viewer, channel):
         chname = channel.name
@@ -195,7 +210,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         # If the active widget has changed, then raise our Info widget
         # that corresponds to it
         if self.active != chname:
-            if not channel.extdata.has_key('_pan_info'):
+            if '_pan_info' not in channel.extdata:
                 self.add_channel(viewer, channel)
             paninfo = channel.extdata._pan_info
             iw = paninfo.widget
@@ -204,6 +219,13 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.active = chname
             self.info = paninfo
 
+        # TODO: this check should not be necessary.  But under some
+        # circumstances it seems to be needed.
+        image = channel.fitsimage.get_image()
+        p_image = self.info.panimage.get_image()
+        if image != p_image:
+            self.logger.debug("pan viewer seems to be missing image--calling redo()")
+            self.redo(channel, image)
 
     def reconfigure(self, panimage, width, height):
         self.logger.debug("new pan image dimensions are %dx%d" % (
@@ -213,12 +235,10 @@ class Pan(GingaPlugin.GlobalPlugin):
         return True
 
     def redraw_cb(self, fitsimage, channel, paninfo):
-        #paninfo.panimage.redraw(whence=whence)
         self.panset(channel.fitsimage, channel, paninfo)
         return True
 
     def settings_cb(self, setting, value, fitsimage, channel, paninfo, whence):
-        #paninfo.panimage.redraw(whence=whence)
         self.panset(channel.fitsimage, channel, paninfo)
         return True
 
@@ -236,39 +256,53 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     def set_image(self, channel, paninfo, image):
         if (image is None) or not isinstance(image, BaseImage):
-            # TODO: clear not yet working
-            #paninfo.panimage.clear()
+            self.logger.debug("no main image--clearing Pan viewer")
+            paninfo.panimage.clear()
             return
 
         if not self.use_shared_canvas:
+            self.logger.debug("setting Pan viewer image")
             paninfo.panimage.set_image(image)
         else:
             paninfo.panimage.zoom_fit()
 
         p_canvas = paninfo.panimage.get_private_canvas()
-        # remove old compass
+        # remove old compasses
         try:
-            p_canvas.delete_object_by_tag(paninfo.pancompass)
+            p_canvas.delete_object_by_tag(paninfo.compass_wcs)
         except Exception:
             pass
+        try:
+            p_canvas.delete_object_by_tag(paninfo.compass_xy)
+        except Exception:
+            pass
+
+        width, height = image.get_size()
+        x, y = width / 2.0, height / 2.0
+        # radius we want the arms to be (approx 1/4 or 1/5 the
+        #   largest dimension)
+        radius = float(max(width, height)) / 5.0
+
+        paninfo.compass_xy = p_canvas.add(self.dc.Compass(
+            x, y, radius,
+            color=self.settings.get('xy_compass_color', 'yellow'),
+            fontsize=14, ctype='pixel'))
 
         # create compass
         if image.has_valid_wcs() and hasattr(image, 'calc_compass_radius'):
             try:
-                width, height = image.get_size()
-                x, y = width / 2.0, height / 2.0
-                # radius we want the arms to be (approx 1/4 the largest dimension)
-                radius = float(max(width, height)) / 4.0
-
                 # HACK: force a wcs error here if one is going to happen
                 image.add_offset_xy(x, y, 1.0, 1.0)
 
-                paninfo.pancompass = p_canvas.add(self.dc.Compass(
-                    x, y, radius, color=self.settings.get('compass_color', 'skyblue'),
-                    fontsize=14))
+                radius = float(max(width, height)) / 3.0
+                paninfo.compass_wcs = p_canvas.add(self.dc.Compass(
+                    x, y, radius,
+                    color=self.settings.get('compass_color', 'skyblue'),
+                    fontsize=14, ctype='wcs'))
 
             except Exception as e:
-                self.logger.warning("Can't calculate compass: %s" % (
+                paninfo.compass_wcs = None
+                self.logger.warning("Can't calculate wcs compass: %s" % (
                     str(e)))
                 try:
                     # log traceback, if possible
@@ -284,27 +318,24 @@ class Pan(GingaPlugin.GlobalPlugin):
     def panset(self, fitsimage, channel, paninfo):
         image = fitsimage.get_image()
         if (image is None) or not isinstance(image, BaseImage):
-            # TODO: clear not yet working
-            #paninfo.panimage.clear()
+            paninfo.panimage.clear()
             return
 
         x, y = fitsimage.get_pan()
         points = fitsimage.get_pan_rect()
 
         # calculate pan position point radius
-        p_image = paninfo.panimage.get_image()
+        p_image = paninfo.panimage.get_image()  # noqa
         try:
             obj = paninfo.panimage.canvas.get_object_by_tag('__image')
         except KeyError:
             obj = None
-        #print(('panset', image, p_image, obj, obj.image, paninfo.panimage._imgobj))
 
         width, height = image.get_size()
         edgew = math.sqrt(width**2 + height**2)
         radius = int(0.015 * edgew)
 
         # Mark pan rectangle and pan position
-        #p_canvas = paninfo.panimage.get_canvas()
         p_canvas = paninfo.panimage.get_private_canvas()
         try:
             obj = p_canvas.get_object_by_tag(paninfo.panrect)
@@ -319,12 +350,13 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         except KeyError:
             paninfo.panrect = p_canvas.add(self.dc.CompoundObject(
-                self.dc.Point(x, y, radius=radius, style='plus',
-                              color=self.settings.get('pan_position_color', 'yellow')),
-                self.dc.Polygon(points,
-                                color=self.settings.get('pan_rectangle_color', 'red'))))
+                self.dc.Point(
+                    x, y, radius=radius, style='plus',
+                    color=self.settings.get('pan_position_color', 'yellow')),
+                self.dc.Polygon(
+                    points,
+                    color=self.settings.get('pan_rectangle_color', 'red'))))
 
-        #p_canvas.update_canvas(whence=0)
         paninfo.panimage.zoom_fit()
         return True
 
@@ -346,14 +378,35 @@ class Pan(GingaPlugin.GlobalPlugin):
         return True
 
     def zoom_cb(self, fitsimage, event):
-        """Zoom event in the small fits window.  Just zoom the large fits
-        window.
+        """Zoom event in the pan window.  Just zoom the channel viewer.
         """
         chviewer = self.fv.getfocus_viewer()
         bd = chviewer.get_bindings()
 
         if hasattr(bd, 'sc_zoom'):
             return bd.sc_zoom(chviewer, event)
+
+        return False
+
+    def zoom_pinch_cb(self, fitsimage, event):
+        """Pinch event in the pan window.  Just zoom the channel viewer.
+        """
+        chviewer = self.fv.getfocus_viewer()
+        bd = chviewer.get_bindings()
+
+        if hasattr(bd, 'pi_zoom'):
+            return bd.pi_zoom(chviewer, event)
+
+        return False
+
+    def pan_pan_cb(self, fitsimage, event):
+        """Pan event in the pan window.  Just pan the channel viewer.
+        """
+        chviewer = self.fv.getfocus_viewer()
+        bd = chviewer.get_bindings()
+
+        if hasattr(bd, 'pa_pan'):
+            return bd.pa_pan(chviewer, event)
 
         return False
 
@@ -382,7 +435,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.logger.debug("wd_scale=%f ht_scale=%f scale=%f" % (
                 wd_scale, ht_scale, scale))
             if scale < 1.0:
-                zoomlevel = - max(2, int(math.ceil(1.0/scale)))
+                zoomlevel = - max(2, int(math.ceil(1.0 / scale)))
             else:
                 zoomlevel = max(1, int(math.floor(scale)))
             self.logger.debug("zoomlevel=%d" % (zoomlevel))
@@ -391,8 +444,13 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         return True
 
-
     def __str__(self):
         return 'pan'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Pan', package='ginga')
+
+# END

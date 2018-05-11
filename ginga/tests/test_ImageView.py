@@ -1,16 +1,14 @@
-import unittest
 import logging
+
 import numpy
 
 from ginga import AstroImage
 from ginga.mockw.ImageViewCanvasMock import ImageViewCanvas
 
-class TestError(Exception):
-    pass
 
-class TestImageView(unittest.TestCase):
+class TestImageView(object):
 
-    def setUp(self):
+    def setup_class(self):
         self.logger = logging.getLogger("TestImageView")
         self.viewer = ImageViewCanvas(logger=self.logger)
         self.data = numpy.identity(2000)
@@ -25,9 +23,7 @@ class TestImageView(unittest.TestCase):
         scale_x = scale_y = 1.0 / abs(zoom)
         viewer.scale_to(scale_x, scale_y)
         zoomlevel = viewer.get_zoom()
-        assert zoomlevel == zoom, \
-               TestError("Zoom level has unexpected value (%f != %f)" % (
-            zoomlevel, zoom))
+        assert zoomlevel == zoom
 
     def test_pan(self):
         viewer = self.viewer
@@ -36,9 +32,7 @@ class TestImageView(unittest.TestCase):
         ctr_x, ctr_y = viewer.get_center()
         viewer.set_pan(ctr_x, ctr_y)
         pan_x, pan_y = viewer.get_pan()
-        assert ((pan_x == ctr_x) and (pan_y == ctr_y)), \
-               TestError("Pan position is not at center (%f,%f != %f,%f)" % (
-            pan_x, pan_y, ctr_x, ctr_y))
+        assert (pan_x == ctr_x) and (pan_y == ctr_y)
 
         ## off_x, off_y = viewer.window_to_offset(200, 200)
         ## print "200,200 absolute window_to_offset ->", off_x, off_y
@@ -55,13 +49,5 @@ class TestImageView(unittest.TestCase):
         ## dst_x, dst_y = viewer.get_canvas_xy(x1, y2)
         ## print (x1, y2)
         ## print (dst_x, dst_y)
-        
-        
-    def tearDown(self):
-        pass
 
-
-if __name__ == '__main__':
-    unittest.main()
-
-#END
+# END

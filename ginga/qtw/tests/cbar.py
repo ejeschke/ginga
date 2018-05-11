@@ -1,5 +1,4 @@
-import sys
-from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw.QtHelp import QtGui
 
 from ginga.qtw import ColorBar
 from ginga import cmap, imap

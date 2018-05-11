@@ -78,7 +78,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -161,6 +161,10 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
         return (text_x, text_y, text_h)
 
     def draw(self, viewer):
+        image = viewer.get_image()
+        if image is None:
+            return
+
         points = self.get_points()
         x1, y1 = points[0]
         x2, y2 = points[1]
@@ -258,9 +262,12 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='radius', type=float, default=1.0,  argpos=2,
+            Param(name='radius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="Radius of object"),
+            Param(name='ctype', type=str, default='wcs',
+                  valid=['pixel', 'wcs'],
+                  description="Type of compass (wcs (N/E), or pixel (X/Y))"),
             Param(name='linewidth', type=int, default=1,
                   min=1, max=20, widget='spinbutton', incr=1,
                   description="Width of outline"),
@@ -281,19 +288,19 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
             Param(name='showcap', type=_bool,
                   default=False, valid=[False, True],
                   description="Show caps for this object"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
         radius = max(abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y))
         return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
 
-    def __init__(self, x, y, radius, color='skyblue',
+    def __init__(self, x, y, radius, ctype='wcs', color='skyblue',
                  linewidth=1, fontsize=None, font='Sans Serif',
                  alpha=1.0, linestyle='solid', showcap=True, **kwdargs):
         self.kind = 'compass'
         points = np.asarray([(x, y)], dtype=np.float)
-        CanvasObjectBase.__init__(self, color=color, alpha=alpha,
+        CanvasObjectBase.__init__(self, ctype=ctype, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
                                   points=points, radius=radius,
@@ -305,10 +312,15 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         # TODO: this attribute will be deprecated--fix!
         viewer = self.viewer
 
-        image = viewer.get_image()
-        x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
-                                                         self.y,
-                                                         self.radius)
+        if self.ctype == 'wcs':
+            image = viewer.get_image()
+            x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
+                                                             self.y,
+                                                             self.radius)
+        elif self.ctype == 'pixel':
+            x, y = self.x, self.y
+            xn, yn, xe, ye = x, y + self.radius, x + self.radius, y
+
         return [(x, y), (xn, yn), (xe, ye)]
 
     def get_edit_points(self, viewer):
@@ -329,12 +341,16 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         return self.within_radius(viewer, pt, p0, self.cap_radius)
 
     def draw(self, viewer):
+        image = viewer.get_image()
+        if image is None:
+            return
+
         cr = viewer.renderer.setup_cr(self)
         cr.set_font_from_shape(self)
 
         try:
             (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints(viewer)
-        except ValueError:
+        except Exception as e:
             cr.draw_text(self.x, self.y, 'BAD WCS')
             return
 
@@ -346,11 +362,15 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         cr.draw_line(cx1, cy1, cx3, cy3)
         self.draw_arrowhead(cr, cx1, cy1, cx3, cy3)
 
-        # draw "N" & "E"
-        cx, cy = self.get_textpos(cr, 'N', cx1, cy1, cx2, cy2)
-        cr.draw_text(cx, cy, 'N')
-        cx, cy = self.get_textpos(cr, 'E', cx1, cy1, cx3, cy3)
-        cr.draw_text(cx, cy, 'E')
+        # draw "N" & "E" or "X" and "Y"
+        if self.ctype == 'pixel':
+            te, tn = 'X', 'Y'
+        else:
+            te, tn = 'E', 'N'
+        cx, cy = self.get_textpos(cr, tn, cx1, cy1, cx2, cy2)
+        cr.draw_text(cx, cy, tn)
+        cx, cy = self.get_textpos(cr, te, cx1, cy1, cx3, cy3)
+        cr.draw_text(cx, cy, te)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
@@ -435,7 +455,7 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
             Param(name='format', type=str, default='xy',
                   valid=['xy', 'value', 'coords'],
                   description="Format for text annotation (default: xy)"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -475,6 +495,8 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
 
             else:
                 image = viewer.get_image()
+                if image is None:
+                    return
                 # NOTE: x, y are assumed to be in data coordinates
                 info = image.info_xy(self.x, self.y, viewer.get_settings())
                 if self.format == 'coords':
@@ -496,7 +518,7 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
 
         txtwd, txtht = cr.text_extents(text)
         cr.set_line(self.textcolor, alpha=self.alpha)
-        cr.draw_text(cx+10, cy+4+txtht, text)
+        cr.draw_text(cx + 10, cy + 4 + txtht, text)
 
 
 class AnnulusMixin(object):
@@ -545,7 +567,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
                   description="X coordinate of center of object"),
             Param(name='y', type=float, default=0.0, argpos=1,
                   description="Y coordinate of center of object"),
-            Param(name='radius', type=float, default=1.0,  argpos=2,
+            Param(name='radius', type=float, default=1.0, argpos=2,
                   min=0.0,
                   description="Inner radius of annulus"),
             Param(name='width', type=float, default=None,
@@ -566,7 +588,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
             Param(name='alpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of outline"),
-            ]
+        ]
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -701,7 +723,7 @@ class WCSAxes(CompoundObject):
             Param(name='fontsize', type=int, default=8,
                   min=8, max=72,
                   description="Font size of text (default: 8)"),
-            ]
+        ]
 
     def __init__(self, color='cyan',
                  linewidth=1, linestyle='dash', alpha=1.0,

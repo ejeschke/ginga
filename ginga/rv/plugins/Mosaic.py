@@ -1,39 +1,50 @@
-#
-# Mosaic.py -- Mosaic plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+Plugin to create image mosaic.
+
+**Plugin Type: Local**
+
+``Mosaic`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+.. warning:: This can be very memory intensive.
+
+This plugin is used to automatically create a mosaic in the channel using
+images provided by the user (e.g., using ``FBrowser``).
+The position of an image on the mosaic is determined by its WCS without
+distortion correction. This is meant as a quick-look tool, not a
+replacement for image drizzling that takes account of image distortion, etc.
+The mosaic only exists in memory but you can save it out to a
+FITS file using ``SaveImage``.
+
+When a mosaic falls out of memory, it is no longer accessible in Ginga.
+To avoid this, you must configure your session such that your Ginga data cache
+is sufficiently large (see "Customizing Ginga" in the manual).
+
+To create a new mosaic, set the FOV and drag files onto the display window.
+
+"""
 import math
 import time
-import numpy
-import os.path
+from datetime import datetime
 import threading
 
+import numpy as np
+
 from ginga.AstroImage import AstroImage
-from ginga.util import mosaic
 from ginga.util import wcs, iqcalc, dp
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
-try:
-    import astropy.io.fits as pyfits
-    have_pyfits = True
-except ImportError:
-    have_pyfits = False
+
+__all__ = ['Mosaic']
+
 
 class Mosaic(GingaPlugin.LocalPlugin):
-    """
-    Mosaic
-    ======
 
-    Plugin Type: Local
-    ------------------
-    Mosaic is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Set the FOV and drag files onto the window.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Mosaic, self).__init__(fv, fitsimage)
@@ -84,8 +95,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # hook to allow special processing before inlining
         self.preprocess = lambda x: x
 
-        self.gui_up = False
+        self.fv.add_callback('remove-image', self._remove_image_cb)
 
+        self.gui_up = False
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -108,7 +120,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
             ("Merge data", 'checkbutton', "Drop new",
              'checkbutton'),
             ("Mosaic HDUs", 'checkbutton'),
-            ]
+        ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
@@ -125,7 +137,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         b.new_mosaic.add_callback('activated', lambda w: self.new_mosaic_cb())
         labelem = self.settings.get('annotate_images', False)
         b.label_images.set_state(labelem)
-        b.label_images.set_tooltip("Label tiles with their names (only if allow_expand=False)")
+        b.label_images.set_tooltip(
+            "Label tiles with their names (only if allow_expand=False)")
         b.label_images.add_callback('activated', self.annotate_cb)
 
         trim_px = self.settings.get('trim_px', 0)
@@ -212,12 +225,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
         container.add_widget(top, stretch=1)
         self.gui_up = True
 
-
     def set_preprocess(self, fn):
         if fn is None:
-            fn = lambda x: x
+            fn = lambda x: x  # noqa
         self.preprocess = fn
-
 
     def prepare_mosaic(self, image, fov_deg, name=None):
         """Prepare a new (blank) mosaic image based on the pointing of
@@ -234,14 +245,14 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # TODO: handle skew (differing rotation for each axis)?
 
         skew_limit = self.settings.get('skew_limit', 0.1)
-        (rot_deg, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header,
-                                                               skew_threshold=skew_limit)
+        (rot_deg, cdelt1, cdelt2) = wcs.get_rotation_and_scale(
+            header, skew_threshold=skew_limit)
         self.logger.debug("image0 rot=%f cdelt1=%f cdelt2=%f" % (
             rot_deg, cdelt1, cdelt2))
 
         # TODO: handle differing pixel scale for each axis?
         px_scale = math.fabs(cdelt1)
-        cdbase = [numpy.sign(cdelt1), numpy.sign(cdelt2)]
+        cdbase = [np.sign(cdelt1), np.sign(cdelt2)]
 
         reuse_image = self.settings.get('reuse_image', False)
         if (not reuse_image) or (self.img_mosaic is None):
@@ -282,7 +293,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
         else:
             # <-- reuse image (faster)
             self.logger.debug("Reusing previous mosaic image")
-            self.fv.gui_do(self._prepare_mosaic1, "Reusing previous mosaic image...")
+            self.fv.gui_do(
+                self._prepare_mosaic1, "Reusing previous mosaic image...")
 
             img_mosaic = dp.recycle_image(self.img_mosaic,
                                           ra_deg, dec_deg,
@@ -293,8 +305,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                           pfx='mosaic')
 
         header = img_mosaic.get_header()
-        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header,
-                                                           skew_threshold=skew_limit)
+        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(
+            header, skew_threshold=skew_limit)
         self.logger.debug("mosaic rot=%f cdelt1=%f cdelt2=%f" % (
             rot, cdelt1, cdelt2))
 
@@ -320,18 +332,19 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         time_intr1 = time.time()
 
-        # Add description for ChangeHistory
-        iminfo = self.channel.get_image_info(self.img_mosaic.get('name'))
-        iminfo.reason_modified = 'Added {0}'.format(
-            ','.join([im.get('name') for im in images]))
-
         loc = self.img_mosaic.mosaic_inline(images,
                                             bg_ref=bg_ref,
                                             trim_px=trim_px,
                                             merge=merge,
                                             allow_expand=allow_expand,
                                             expand_pad_deg=expand_pad_deg,
-                                            suppress_callback=False)
+                                            suppress_callback=True)
+
+        # Add description for ChangeHistory
+        info = dict(time_modified=datetime.utcnow(),
+                    reason_modified='Added {0}'.format(
+            ','.join([im.get('name') for im in images])))
+        self.fv.update_image_info(self.img_mosaic, info)
 
         # annotate ingested image with its name?
         if annotate and (not allow_expand):
@@ -343,7 +356,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                 else:
                     imname = image.get('name', 'noname')
 
-                x, y = (xlo+xhi) / 2., (ylo+yhi) / 2.
+                x, y = (xlo + xhi) / 2., (ylo + yhi) / 2.
                 self.canvas.add(self.dc.Text(x, y, imname, color='red'),
                                 redraw=False)
 
@@ -360,7 +373,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # insert layer if it is not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add canvas layer
@@ -373,7 +386,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         # dereference potentially large mosaic image
         self.img_mosaic = None
@@ -421,34 +434,29 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         try:
             for url in paths:
-                if self.ev_intr.isSet():
+                if self.ev_intr.is_set():
                     break
                 mosaic_hdus = self.settings.get('mosaic_hdus', False)
                 if mosaic_hdus:
                     self.logger.debug("loading hdus")
+                    opener = self.fv.fits_opener.get_factory()
                     # User wants us to mosaic HDUs
                     # TODO: do this in a different thread?
-                    with pyfits.open(url, 'readonly') as in_f:
-                        i = 0
-                        for hdu in in_f:
-                            i += 1
-                            # TODO: I think we need a little more rigorous test
-                            # than just whether the data section is empty
-                            if hdu.data is None:
-                                continue
+                    opener.open_file(url, memmap=False)
+                    try:
+                        for i in range(len(opener)):
                             self.logger.debug("ingesting hdu #%d" % (i))
-                            image = None
                             try:
-                                image = self.fv.fits_opener.load_hdu(hdu)
+                                image = opener.get_hdu(i)
 
                             except Exception as e:
-                                self.logger.error("Failed to open HDU #%d: %s" % (
-                                    i, str(e)))
+                                self.logger.error(
+                                    "Failed to open HDU #%d: %s" % (i, str(e)))
                                 continue
 
                             if not isinstance(image, AstroImage):
-                                self.logger.debug("HDU #%d is not an image; skipping..." % (
-                                    i))
+                                self.logger.debug(
+                                    "HDU #%d is not an image; skipping..." % (i))
                                 continue
 
                             image.set(name='hdu%d' % (i))
@@ -461,6 +469,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                     self.total_files += 1
 
                             self.ingest_one(image)
+                    finally:
+                        opener.close()
+                        opener = None
 
                 else:
                     image = image_loader(url)
@@ -474,14 +485,12 @@ class Mosaic(GingaPlugin.LocalPlugin):
                 if self.num_groups <= 0:
                     self.fv.nongui_do(self.finish_mosaic)
 
-
     def finish_mosaic(self):
         # NOTE: this runs in a nongui thread
         self.fv.assert_nongui_thread()
 
         self.update_status("mosaicing images...")
         images, self.images = self.images, []
-        #self.fv.gui_do(self._inline, images)
         self._inline(images)
 
         self.end_progress()
@@ -491,7 +500,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
             total_elapsed, self.process_elapsed)
         self.update_status(msg)
 
-        self.fv.gui_do(self.fitsimage.redraw, whence=0)
+        self.fv.gui_do(self.img_mosaic.make_callback, 'modified')
 
     def mosaic(self, paths, new_mosaic=False, name=None, image_loader=None):
         if image_loader is None:
@@ -584,6 +593,13 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.w.num_threads.set_text(str(num_threads))
         self.settings.set(num_threads=num_threads)
 
+    def _remove_image_cb(self, fv, chname, imname, impath):
+        # clear our handle to the mosaic image if it has been
+        # deleted from the channel
+        if self.img_mosaic is not None:
+            if imname == self.img_mosaic.get('name', None):
+                self.img_mosaic = None
+
     def update_status(self, text):
         if self.gui_up:
             self.fv.gui_do(self.w.eval_status.set_text, text)
@@ -610,10 +626,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         return 'mosaic'
 
 
-# Replace module docstring with config doc for auto insert by Sphinx.
-# In the future, if we need the real docstring, we can append instead of
-# overwrite.
-from ginga.util.toolbox import generate_cfg_example
-__doc__ = generate_cfg_example('plugin_Mosaic', package='ginga')
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Mosaic', package='ginga')
 
-#END
+# END

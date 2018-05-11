@@ -4,10 +4,15 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+
 import os
 import glob
 import hashlib
+
+from ginga.misc import Bunch
+
+from . import paths
 
 # How about color management (ICC profile) support?
 try:
@@ -23,15 +28,15 @@ try:
 except ImportError:
     pass
 
-from ginga.util import paths
-
-
 basedir = paths.ginga_home
 
 # Holds profiles
 profile = {}
 rendering_intent = 'perceptual'
 intents = dict(perceptual=0)
+
+# The working profile, if there is one
+working_profile = None
 
 # Holds transforms
 icc_transform = {}
@@ -52,15 +57,21 @@ class ColorManager(object):
         # If we have a working color profile then handle any embedded
         # profile or color space information, if possible
         if not have_cms:
-            self.logger.debug("No CMS is installed; leaving image unprofiled.")
+            self.logger.warning(
+                "No CMS is installed; leaving image unprofiled.")
             return image
 
-        if not have_profile('working'):
-            self.logger.debug("No working profile defined; leaving image unprofiled.")
+        if not have_profile(working_profile):
+            self.logger.warning(
+                "No working profile defined; leaving image unprofiled.")
             return image
 
-        if not os.path.exists(profile['working']):
-            self.logger.debug("Working profile %s not found; leaving image unprofiled." % (profile['working']))
+        out_profile = profile[working_profile].name
+
+        if not os.path.exists(profile[out_profile].path):
+            self.logger.warning(
+                "Working profile '%s' (%s) not found; leaving image "
+                "unprofiled." % (out_profile, profile[out_profile].path))
             return image
 
         if intent is None:
@@ -75,8 +86,8 @@ class ColorManager(object):
 
                 # Write out embedded profile (if needed)
                 prof_md5 = hashlib.md5(buf_profile).hexdigest()
-                in_profile = "/tmp/_image_%d_%s.icc" % (
-                    os.getpid(), prof_md5)
+                in_profile = os.path.join("/tmp", "_image_%d_%s.icc" % (
+                    os.getpid(), prof_md5))
                 if not os.path.exists(in_profile):
                     with open(in_profile, 'wb') as icc_f:
                         icc_f.write(buf_profile)
@@ -84,7 +95,7 @@ class ColorManager(object):
             # see if there is any EXIF tag about the colorspace
             elif 'ColorSpace' in kwds:
                 csp = kwds['ColorSpace']
-                iop = kwds.get('InteroperabilityIndex', None)
+                #iop = kwds.get('InteroperabilityIndex', None)
                 if (csp == 0x2) or (csp == 0xffff):
                     # NOTE: 0xffff is really "undefined" and should be
                     # combined with a test of EXIF tag 0x0001
@@ -101,22 +112,23 @@ class ColorManager(object):
                     self.logger.debug("no color space metadata, assuming this is an sRGB image")
 
             # if we have a valid profile, try the conversion
-            tr_key = (in_profile, 'working', intent)
+            tr_key = get_transform_key(in_profile, out_profile, intent,
+                                       None, None, 0)
             if tr_key in icc_transform:
-                # We have am in-core transform already for this (faster)
+                # We have an in-core transform already for this (faster)
                 image = convert_profile_pil_transform(image,
                                                       icc_transform[tr_key],
                                                       inPlace=True)
             else:
                 # Convert using profiles on disk (slower)
                 if in_profile in profile:
-                    in_profile = profile[in_profile]
+                    in_profile = profile[in_profile].path
                 image = convert_profile_pil(image, in_profile,
-                                            profile['working'],
+                                            profile[out_profile].path,
                                             intent)
 
             self.logger.info("converted from profile (%s) to profile (%s)" % (
-                in_profile, profile['working']))
+                in_profile, profile[out_profile].name))
 
         except Exception as e:
             self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
@@ -141,6 +153,7 @@ def convert_profile_pil(image_pil, inprof_path, outprof_path, intent_name,
         return image_pil
     return image_out
 
+
 def convert_profile_pil_transform(image_pil, transform, inPlace=False):
     if not have_cms:
         return image_pil
@@ -149,6 +162,7 @@ def convert_profile_pil_transform(image_pil, transform, inPlace=False):
     if inPlace:
         return image_pil
     return image_out
+
 
 def convert_profile_numpy(image_np, inprof_path, outprof_path, intent_name):
     if (not have_pilutil) or (not have_cms):
@@ -160,6 +174,7 @@ def convert_profile_numpy(image_np, inprof_path, outprof_path, intent_name):
     image_out = fromimage(out_image_pil)
     return image_out
 
+
 def convert_profile_numpy_transform(image_np, transform):
     if (not have_pilutil) or (not have_cms):
         return image_np
@@ -169,21 +184,29 @@ def convert_profile_numpy_transform(image_np, transform):
     image_out = fromimage(in_image_pil)
     return image_out
 
+
 def get_transform_key(from_name, to_name, to_intent, proof_name,
                       proof_intent, flags):
-    return (from_name, to_name, to_intent, proof_name, proof_intent,
-            flags)
+    return (from_name, to_name, to_intent, proof_name, proof_intent, flags)
+
 
 def get_transform(from_name, to_name, to_intent='perceptual',
-                    proof_name=None, proof_intent=None,
-                    use_black_pt=False):
+                  proof_name=None, proof_intent=None,
+                  use_black_pt=False):
     global icc_transform
 
     flags = 0
-    if not (proof_name is None):
-        flags |= ImageCms.SOFTPROOFING
+    if proof_name is not None:
+        if hasattr(ImageCms, 'FLAGS'):
+            # supporting multiple versions of lcms...sigh..
+            flags |= ImageCms.FLAGS['SOFTPROOFING']
+        else:
+            flags |= ImageCms.SOFTPROOFING
     if use_black_pt:
-        flags |= ImageCms.BLACKPOINTCOMPENSATION
+        if hasattr(ImageCms, 'FLAGS'):
+            flags |= ImageCms.FLAGS['BLACKPOINTCOMPENSATION']
+        else:
+            flags |= ImageCms.BLACKPOINTCOMPENSATION
 
     key = get_transform_key(from_name, to_name, to_intent, proof_name,
                             proof_intent, flags)
@@ -196,17 +219,17 @@ def get_transform(from_name, to_name, to_intent='perceptual',
         try:
             if not (proof_name is None):
                 output_transform = ImageCms.buildProofTransform(
-                    profile[from_name],
-                    profile[to_name],
-                    profile[proof_name],
+                    profile[from_name].path,
+                    profile[to_name].path,
+                    profile[proof_name].path,
                     'RGB', 'RGB',
                     renderingIntent=intents[to_intent],
                     proofRenderingIntent=intents[proof_intent],
                     flags=flags)
             else:
                 output_transform = ImageCms.buildTransform(
-                    profile[from_name],
-                    profile[to_name],
+                    profile[from_name].path,
+                    profile[to_name].path,
                     'RGB', 'RGB',
                     renderingIntent=intents[to_intent],
                     flags=flags)
@@ -218,10 +241,11 @@ def get_transform(from_name, to_name, to_intent='perceptual',
 
     return output_transform
 
+
 def convert_profile_fromto(image_np, from_name, to_name,
                            to_intent='perceptual',
                            proof_name=None, proof_intent=None,
-                           use_black_pt=False):
+                           use_black_pt=False, logger=None):
 
     try:
         output_transform = get_transform(from_name, to_name,
@@ -234,8 +258,10 @@ def convert_profile_fromto(image_np, from_name, to_name,
         return out_np
 
     except Exception as e:
-        print("Error converting profile from '%s' to '%s': %s" % (
-            from_name, to_name, str(e)))
+        if logger is not None:
+            logger.warn("Error converting profile from '%s' to '%s': %s" % (
+                from_name, to_name, str(e)))
+            logger.warn("Leaving image unprofiled")
         return image_np
 
 
@@ -258,14 +284,9 @@ glob_pat = os.path.join(basedir, "profiles", "*.icc")
 for path in glob.glob(glob_pat):
     dirname, filename = os.path.split(path)
     profname, ext = os.path.splitext(filename)
-    profile[profname] = os.path.abspath(path)
+    profile[profname] = Bunch.Bunch(name=profname,
+                                    path=os.path.abspath(path))
 
-# These are ones we are particularly interested in
-for filename in ('working.icc', 'monitor.icc', 'sRGB.icc', 'AdobeRGB.icc'):
-    profname, ext = os.path.splitext(filename)
-    profile[profname] = os.path.join(basedir, "profiles", filename)
-
-# Build transforms for profile conversions for which we have profiles
 if have_cms:
     d = dict(absolute_colorimetric=ImageCms.INTENT_ABSOLUTE_COLORIMETRIC,
              perceptual=ImageCms.INTENT_PERCEPTUAL,
@@ -273,16 +294,27 @@ if have_cms:
              saturation=ImageCms.INTENT_SATURATION)
     intents.update(d)
 
+    # Build transforms for profile conversions for which we have profiles
+
 
 def have_profile(name):
     return name in profile.keys()
+
 
 def get_profiles():
     names = list(profile.keys())
     names.sort()
     return names
 
+
 def get_intents():
     names = list(intents.keys())
     names.sort()
     return names
+
+
+def set_profile_alias(alias, profname):
+    global profile
+    profile[alias] = profile[profname]
+
+# END

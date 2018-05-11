@@ -1,23 +1,15 @@
-#
-# Unit Tests for the cmap.py functions
-#
-# Rajul Srivastava  (rajul09@gmail.com)
-#
-import unittest
-import logging
+"""Unit Tests for the cmap.py functions"""
+
 import numpy as np
+import pytest
 
 import ginga.cmap
 from ginga.cmap import ColorMap
 
 
-class TestError(Exception):
-    pass
+class TestCmap(object):
 
-
-class TestCmap(unittest.TestCase):
-
-    def setUp(self):
+    def setup_class(self):
         pass
 
     def test_ColorMap_init(self):
@@ -42,7 +34,8 @@ class TestCmap(unittest.TestCase):
         assert np.allclose(expected, actual)
 
     def test_ColorMap_init_exception(self):
-        self.assertRaises(TypeError, ColorMap, 'test-name')
+        with pytest.raises(TypeError):
+            ColorMap('test-name')
 
     def test_cmaps(self):
         count = 0
@@ -51,8 +44,8 @@ class TestCmap(unittest.TestCase):
                 count = count + 1
 
         expected = count
-        actual = len(ginga.cmap.cmaps)
-        assert expected == actual
+        actual = len(ginga.cmap.cmaps)  # Can include matplotlib colormaps
+        assert expected <= actual
 
     def test_add_cmap(self):
         test_clst = tuple([(x, x, x)
@@ -69,8 +62,8 @@ class TestCmap(unittest.TestCase):
 
     def test_add_cmap_exception(self):
         test_clst = ((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
-        self.assertRaises(
-            AssertionError, ginga.cmap.add_cmap, 'test-name', test_clst)
+        with pytest.raises(AssertionError):
+            ginga.cmap.add_cmap('test-name', test_clst)
 
     def test_get_cmap(self):
         test_clst = tuple([(x, x, x)
@@ -86,7 +79,8 @@ class TestCmap(unittest.TestCase):
         del ginga.cmap.cmaps['test-name']
 
     def test_get_cmap_exception(self):
-        self.assertRaises(KeyError, ginga.cmap.get_cmap, 'non-existent-name')
+        with pytest.raises(KeyError):
+            ginga.cmap.get_cmap('non-existent-name')
 
     def test_get_names(self):
         names = []
@@ -94,16 +88,10 @@ class TestCmap(unittest.TestCase):
             if attribute_name.startswith('cmap_'):
                 names.append(attribute_name[5:])
 
-        expected = sorted(names, key=lambda s: s.lower())
-        actual = ginga.cmap.get_names()
-        assert expected == actual
+        expected = set(names)
+        actual = set(ginga.cmap.get_names())  # Can include matplotlib names
+        assert expected <= actual
 
     # TODO: Add tests for matplotlib functions
-
-    def tearDown(self):
-        pass
-
-if __name__ == '__main__':
-    unittest.main()
 
 # END

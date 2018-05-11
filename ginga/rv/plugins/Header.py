@@ -1,27 +1,36 @@
-#
-# Header.py -- Image header plugin for Ginga viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+The ``Header`` plugin provides a listing of the metadata associated with the
+image.
+
+**Plugin Type: Global**
+
+``Header`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+The ``Header`` plugin shows the FITS keyword metadata from the image.
+Initially only the Primary HDU metadata is shown.  However, in
+conjunction with the ``MultiDim`` plugin, the metadata for other HDUs will be
+shown.  See ``MultiDim`` for details.
+
+If the "Sortable" checkbox has been checked in the lower left of the UI,
+then clicking on a column header will sort the table by values in that
+column, which may be useful for quickly locating a particular keyword.
+
+"""
 from collections import OrderedDict
 
 from ginga import GingaPlugin
 from ginga.misc import Bunch
 from ginga.gw import Widgets
 
+__all__ = ['Header']
+
 
 class Header(GingaPlugin.GlobalPlugin):
-    """
-    Header
-    ======
-    The Header plugin provides a listing of the metadata associated with the
-    image.
 
-    Plugin Type: Global
-    -------------------
-    Header is a global plugin.  Only one instance can be opened.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Header, self).__init__(fv)
@@ -41,14 +50,46 @@ class Header(GingaPlugin.GlobalPlugin):
                                    max_rows_for_col_resize=5000)
         self.settings.load(onError='silent')
 
+        self.flg_sort = self.settings.get('sortable', False)
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
         fv.add_callback('channel-change', self.focus_cb)
 
+        self.gui_up = False
+
     def build_gui(self, container):
+        vbox = Widgets.VBox()
+        vbox.set_border_width(1)
+        vbox.set_spacing(1)
+
         nb = Widgets.StackWidget()
+        vbox.add_widget(nb, stretch=1)
         self.nb = nb
-        container.add_widget(nb, stretch=1)
+
+        # create sort toggle
+        hbox = Widgets.HBox()
+        cb = Widgets.CheckBox("Sortable")
+        cb.set_state(self.flg_sort)
+        cb.add_callback('activated', lambda w, tf: self.set_sortable_cb(tf))
+        hbox.add_widget(cb, stretch=0)
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(hbox, stretch=0)
+
+        btns = Widgets.HBox()
+        btns.set_border_width(4)
+        btns.set_spacing(4)
+
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        vbox.add_widget(btns, stretch=0)
+
+        container.add_widget(vbox, stretch=1)
+        self.gui_up = True
 
     def _create_header_window(self, info):
         vbox = Widgets.VBox()
@@ -62,19 +103,7 @@ class Header(GingaPlugin.GlobalPlugin):
 
         vbox.add_widget(table, stretch=1)
 
-        # create sort toggle
-        cb = Widgets.CheckBox("Sortable")
-        cb.add_callback('activated', lambda w, tf: self.set_sortable_cb(info))
-        hbox = Widgets.HBox()
-        hbox.add_widget(cb, stretch=0)
-        hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(hbox, stretch=0)
-
-        # toggle sort
-        if self.settings.get('sortable', False):
-            cb.set_state(True)
-
-        info.setvals(widget=vbox, table=table, sortw=cb)
+        info.setvals(widget=vbox, table=table)
         return vbox
 
     def set_header(self, info, image):
@@ -85,7 +114,7 @@ class Header(GingaPlugin.GlobalPlugin):
         header = image.get_header()
         table = info.table
 
-        is_sorted = info.sortw.get_state()
+        is_sorted = self.flg_sort
         tree_dict = OrderedDict()
 
         keys = list(header.keys())
@@ -93,10 +122,6 @@ class Header(GingaPlugin.GlobalPlugin):
             keys.sort()
         for key in keys:
             card = header.get_card(key)
-            # tree_dict[key] = Bunch.Bunch(key=card.key,
-            #                              value=str(card.value),
-            #                              comment=card.comment,
-            #                              __terminal__=True)
             tree_dict[key] = card
 
         table.set_tree(tree_dict)
@@ -111,16 +136,19 @@ class Header(GingaPlugin.GlobalPlugin):
         self._image = image
 
     def add_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
         chname = channel.name
         info = Bunch.Bunch(chname=chname)
         sw = self._create_header_window(info)
 
         self.nb.add_widget(sw)
-        # index = self.nb.index_of(sw)
         info.setvals(widget=sw)
         channel.extdata._header_info = info
 
     def delete_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
         chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
         info = channel.extdata._header_info
@@ -130,10 +158,12 @@ class Header(GingaPlugin.GlobalPlugin):
         self.info = None
 
     def focus_cb(self, viewer, channel):
+        if not self.gui_up:
+            return
         chname = channel.name
 
         if self.active != chname:
-            if not channel.extdata.has_key('_header_info'):
+            if '_header_info' not in channel.extdata:
                 self.add_channel(viewer, channel)
             info = channel.extdata._header_info
             widget = info.widget
@@ -153,21 +183,56 @@ class Header(GingaPlugin.GlobalPlugin):
             channel = self.fv.get_channel(name)
             self.add_channel(self.fv, channel)
 
+        channel = self.fv.get_channel_info()
+        if channel is not None:
+            viewer = channel.fitsimage
+
+            image = viewer.get_image()
+            if image is not None:
+                self.redo(channel, image)
+
+            self.focus_cb(viewer, channel)
+
+    def stop(self):
+        self.gui_up = False
+        self.nb = None
+        self.active = None
+        self.info = None
+        return True
+
     def redo(self, channel, image):
-        """This is called when buffer is modified."""
+        """This is called when image changes."""
         self._image = None  # Skip cache checking in set_header()
-        chname = channel.name
         info = channel.extdata._header_info
 
         self.set_header(info, image)
 
-    def set_sortable_cb(self, info):
+    def blank(self, channel):
+        """This is called when image is cleared."""
         self._image = None
-        channel = self.fv.get_channel(info.chname)
-        image = channel.get_current_image()
-        self.set_header(info, image)
+        info = channel.extdata._header_info
+        info.table.clear()
+
+    def set_sortable_cb(self, tf):
+        self.flg_sort = tf
+        self._image = None
+        if self.info is not None:
+            info = self.info
+            channel = self.fv.get_channel(info.chname)
+            image = channel.get_current_image()
+            self.set_header(info, image)
+
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
 
     def __str__(self):
         return 'header'
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Header', package='ginga')
 
 # END

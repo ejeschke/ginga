@@ -8,7 +8,6 @@ import numpy
 from io import BytesIO
 
 import aggdraw as agg
-from . import AggHelp
 
 from ginga import ImageView
 from ginga.aggw.CanvasRenderAgg import CanvasRenderer
@@ -22,6 +21,7 @@ except ImportError:
 
 class ImageViewAggError(ImageView.ImageViewError):
     pass
+
 
 class ImageViewAgg(ImageView.ImageViewBase):
 
@@ -56,7 +56,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
     def configure_surface(self, width, height):
         # create agg surface the size of the window
-        self.surface = agg.Draw("RGBA", (width, height), 'black')
+        self.surface = agg.Draw(self.rgb_order, (width, height), 'black')
 
         # inform the base class about the actual window size
         self.configure(width, height)
@@ -72,7 +72,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
         # Get agg surface as a numpy array
         surface = self.get_surface()
         arr8 = numpy.fromstring(surface.tobytes(), dtype=numpy.uint8)
-        arr8 = arr8.reshape((ht, wd, 4))
+        arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
         return arr8
 
     def get_image_as_buffer(self, output=None):
@@ -105,7 +105,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
         image = PILimage.fromarray(arr8)
 
         image.save(obuf, format=format, quality=quality)
-        if not (output is None):
+        if output is not None:
             return None
         return obuf
 
@@ -121,7 +121,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         with open(filepath, 'w') as out_f:
             self.get_rgb_image_as_buffer(output=out_f, format=format,
-                                          quality=quality)
+                                         quality=quality)
         self.logger.debug("wrote %s file '%s'" % (format, filepath))
 
     def update_image(self):
@@ -141,4 +141,31 @@ class ImageViewAgg(ImageView.ImageViewBase):
         self.delayed_redraw()
 
 
-#END
+class CanvasView(ImageViewAgg):
+    """This class is defined to provide a non-event handling invisible
+    viewer.
+    """
+
+    def __init__(self, logger=None, settings=None, rgbmap=None,
+                 bindmap=None, bindings=None):
+        # NOTE: bindmap, bindings are ignored
+        ImageViewAgg.__init__(self, logger=logger, settings=settings,
+                              rgbmap=rgbmap)
+        self.defer_redraw = False
+
+        # Needed for UIMixin to propagate events correctly
+        self.objects = [self.private_canvas]
+
+    def set_canvas(self, canvas, private_canvas=None):
+        super(CanvasView, self).set_canvas(canvas,
+                                           private_canvas=private_canvas)
+
+        self.objects[0] = self.private_canvas
+
+    def update_image(self):
+        pass
+
+    def configure_window(self, width, height):
+        return super(CanvasView, self).configure_surface(width, height)
+
+# END

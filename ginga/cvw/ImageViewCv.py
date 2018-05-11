@@ -7,8 +7,7 @@
 import numpy
 from io import BytesIO
 
-import cv2
-from . import CvHelp
+import cv2  # noqa
 
 from ginga import ImageView
 from ginga.cvw.CanvasRenderCv import CanvasRenderer
@@ -22,6 +21,7 @@ except ImportError:
 
 class ImageViewCvError(ImageView.ImageViewError):
     pass
+
 
 class ImageViewCv(ImageView.ImageViewBase):
 
@@ -41,7 +41,6 @@ class ImageViewCv(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-
     def get_surface(self):
         return self.surface
 
@@ -57,7 +56,7 @@ class ImageViewCv(ImageView.ImageViewBase):
         # get window contents as an array and store it into the CV surface
         rgb_arr = self.getwin_array(order=self.rgb_order)
         # TODO: is there a faster way to copy this array in?
-        canvas[:,:,:] = rgb_arr
+        canvas[:, :, :] = rgb_arr
 
         # for debugging
         #self.save_rgb_image_as_file('/tmp/temp.png', format='png')
@@ -95,6 +94,10 @@ class ImageViewCv(ImageView.ImageViewBase):
         image.save(obuf, format=format, quality=quality)
         return obuf
 
+    def get_rgb_image_as_bytes(self, format='png', quality=90):
+        buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
+        return buf.getvalue()
+
     def update_image(self):
         # subclass implements this method to actually update a widget
         # from the cv surface
@@ -111,5 +114,32 @@ class ImageViewCv(ImageView.ImageViewBase):
         # time_sec
         self.delayed_redraw()
 
+
+class CanvasView(ImageViewCv):
+    """This class is defined to provide a non-event handling invisible
+    viewer.
+    """
+
+    def __init__(self, logger=None, settings=None, rgbmap=None,
+                 bindmap=None, bindings=None):
+        ImageViewCv.__init__(self, logger=logger, settings=settings,
+                             rgbmap=rgbmap)
+        self.defer_redraw = False
+
+        # Needed for UIMixin to propagate events correctly
+        self.objects = [self.private_canvas]
+
+    def set_canvas(self, canvas, private_canvas=None):
+        super(CanvasView, self).set_canvas(canvas,
+                                           private_canvas=private_canvas)
+
+        self.objects[0] = self.private_canvas
+
+    def update_image(self):
+        # no widget to update
+        pass
+
+    def configure_window(self, width, height):
+        return super(CanvasView, self).configure_surface(width, height)
 
 #END

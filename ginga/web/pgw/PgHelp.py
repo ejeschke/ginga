@@ -4,27 +4,31 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import tornado.web
-import tornado.websocket
-import tornado.template
-from tornado.ioloop import IOLoop
-
+import re
 import random
 import json
-import os, time
+import time
 import datetime
 import binascii
 from collections import namedtuple
 from io import BytesIO
 
+import tornado.web
+import tornado.websocket
+import tornado.template
+from tornado.ioloop import IOLoop
+
 from ginga.misc import Bunch, Callback
 from ginga.util import io_rgb
+from ginga.fonts import font_asst
+
+font_regex = re.compile(r'^(.+)\s+(\d+)$')
 
 default_interval = 10
 
 ConfigEvent = namedtuple("ConfigEvent", ["type", "id", "width", "height"])
 InputEvent = namedtuple("InputEvent", ["type", "id", "x", "y", "button",
-                                       "delta", "alt_key", "ctrl_key",
+                                       "delta", "dx", "dy", "alt_key", "ctrl_key",
                                        "meta_key", "shift_key", "key_code",
                                        "key_name"])
 GestureEvent = namedtuple("GestureEvent", ["type", "id", "x", "y", "dx", "dy",
@@ -34,6 +38,7 @@ GestureEvent = namedtuple("GestureEvent", ["type", "id", "x", "y", "dx", "dy",
                                            "isfinal"])
 WidgetEvent = namedtuple("WidgetEvent", ["type", "id", "value"])
 TimerEvent = namedtuple("TimerEvent", ["type", "id", "value"])
+
 
 class ApplicationHandler(tornado.websocket.WebSocketHandler):
 
@@ -75,7 +80,7 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
             "panend": GestureEvent,
             "tap": GestureEvent,
             "swipe": GestureEvent,
-            }
+        }
 
         #self.interval = 10
         interval = self.settings.get("timer_interval", default_interval)
@@ -106,9 +111,8 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
             event_class = self.event_callbacks[event_type]
 
         except KeyError:
-            print("I don't know how to process '%s' events!" % (
-                event_type))
-            return
+            # Attempt to turn this into a widget event
+            event_class = WidgetEvent
 
         event = event_class(**message)
         self.app.widget_event(event)
@@ -123,8 +127,9 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
         # TODO: should exceptions thrown from this be caught and ignored
         self.app.widget_event(event)
 
-        delta = datetime.timedelta(milliseconds = self.interval)
+        delta = datetime.timedelta(milliseconds=self.interval)
         self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+
 
 class WindowHandler(tornado.web.RequestHandler):
 
@@ -214,7 +219,7 @@ class Timer(Callback.Callbacks):
     def stop(self):
         try:
             self._timer.stop()
-        except:
+        except Exception:
             pass
 
     def cancel(self):
@@ -226,11 +231,15 @@ class Timer(Callback.Callbacks):
 
     clear = cancel
 
+
 def get_image_src_from_buffer(img_buf, imgtype='png'):
+    if not isinstance(img_buf, bytes):
+        img_buf = img_buf.encode('latin1')
     img_string = binascii.b2a_base64(img_buf)
     if isinstance(img_string, bytes):
         img_string = img_string.decode("utf-8")
     return ('data:image/%s;base64,' % imgtype) + img_string
+
 
 def get_icon(iconpath, size=None, format='png'):
     image = io_rgb.PILimage.open(iconpath)
@@ -246,8 +255,38 @@ def get_icon(iconpath, size=None, format='png'):
     icon = get_image_src_from_buffer(img_buf.getvalue(), imgtype=format)
     return icon
 
-def get_font(font_family, point_size):
-    font = '%s %d' % (font_family, point_size)
-    return font
 
-#END
+def font_info(font_str):
+    """Extract font information from a font string, such as supplied to the
+    'font' argument to a widget.
+    """
+    vals = font_str.split(';')
+    point_size, style, weight = 8, 'normal', 'normal'
+    family = vals[0]
+    if len(vals) > 1:
+        style = vals[1]
+    if len(vals) > 2:
+        weight = vals[2]
+
+    match = font_regex.match(family)
+    if match:
+        family, point_size = match.groups()
+        point_size = int(point_size)
+
+    return Bunch.Bunch(family=family, point_size=point_size,
+                       style=style, weight=weight)
+
+
+def get_font(font_family, point_size):
+    font_family = font_asst.resolve_alias(font_family, font_family)
+    font_str = '%s %d' % (font_family, point_size)
+    return font_info(font_str)
+
+
+def load_font(font_name, font_file):
+    # TODO!
+    ## raise ValueError("Loading fonts dynamically is an unimplemented"
+    ##                  " feature for pg back end")
+    return font_name
+
+# END

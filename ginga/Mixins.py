@@ -6,6 +6,7 @@
 
 from ginga.misc.Callback import Callbacks
 
+
 class UIMixin(object):
 
     def __init__(self):
@@ -14,8 +15,7 @@ class UIMixin(object):
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
-                     'cursor-changed',
-                    ):
+                     'cursor-changed'):
             self.enable_callback(name)
 
     def ui_is_active(self):
@@ -63,15 +63,13 @@ class UIMixin(object):
             while num >= 0:
                 obj = self.objects[num]
                 if isinstance(obj, Callbacks):
-                    res = obj.make_callback(name, *args, **kwdargs)
+                    obj.make_callback(name, *args, **kwdargs)
                 num -= 1
 
         return super(UIMixin, self).make_callback(name, *args, **kwdargs)
 
-
     ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
     ui_isActive = ui_is_active
     ui_setActive = ui_set_active
-
 
 # END

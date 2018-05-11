@@ -7,7 +7,6 @@
 #
 from ginga.canvas.CanvasObject import (CanvasObjectBase,
                                        register_canvas_types)
-from ginga.misc.ParamSet import Param
 from ginga import Mixins
 from ginga.misc.log import get_logger
 
@@ -37,7 +36,7 @@ class CompoundObject(CompoundMixin, CanvasObjectBase):
             ## Param(name='coord', type=str, default='data',
             ##       valid=['data', 'wcs'],
             ##       description="Set type of coordinates"),
-            ]
+        ]
 
     def __init__(self, *objects, **kwdargs):
         CanvasObjectBase.__init__(self, **kwdargs)
@@ -57,7 +56,7 @@ class Canvas(CanvasMixin, CompoundObject):
             ## Param(name='coord', type=str, default='data',
             ##       valid=['data', 'wcs'],
             ##       description="Set type of coordinates"),
-            ]
+        ]
 
     def __init__(self, *objects, **kwdargs):
         CompoundObject.__init__(self, *objects, **kwdargs)
@@ -78,10 +77,8 @@ class DrawingCanvas(Mixins.UIMixin, DrawingMixin, Canvas):
         self.editable = False
 
 
-
 catalog = dict(compoundobject=CompoundObject, canvas=Canvas,
                drawingcanvas=DrawingCanvas)
 register_canvas_types(catalog)
 
-
-#END
+# END

@@ -1,33 +1,32 @@
-#
-# Crosshair.py -- Crosshair plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+``Crosshair`` is a simple plugin to draw crosshairs labeled with the
+position of the cross in pixels coordinates, WCS coordinates, or
+data value at the cross position.
+
+**Plugin Type: Local**
+
+``Crosshair`` is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
+**Usage**
+
+Select the appropriate type of output in the "Format" drop-down
+box in the UI: "xy" for pixel coordinates, "coords" for the WCS
+coordinates, and "value" for the value at the crosshair position.
+
+Then, click and drag to position the crosshair.
+
+"""
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
+__all__ = ['Crosshair']
+
+
 class Crosshair(GingaPlugin.LocalPlugin):
-    """
-    Crosshair
-    =========
-    Crosshair is a simple plugin to draw crosshairs labeled with the
-    position of the cross in pixels coordinates, WCS coordinates or
-    data value at the cross position.
 
-    Plugin Type: Local
-    ------------------
-    Crosshair is a local plugin, which means it is associated with a channel.
-    An instance can be opened for each channel.
-
-    Usage
-    -----
-    Select the appropriate type of output in the "Format" drop-down
-    box in the UI: "xy" for pixel coordinates, "coords" for the WCS
-    coordinates and "value" for the value at the crosshair position.
-
-    Then click and drag to position the crosshair.
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Crosshair, self).__init__(fv, fitsimage)
@@ -133,7 +132,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
         self.canvas.ui_set_active(False)
         self.fv.show_status("")
@@ -155,4 +154,4 @@ class Crosshair(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'crosshair'
 
-#END
+# END

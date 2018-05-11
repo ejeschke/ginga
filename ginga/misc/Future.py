@@ -1,9 +1,10 @@
 #
-# Eric Jeschke (eric@naoj.org)
+# Future.py -- implementation of a computation placeholder object
 #
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
+# TODO: python finally has something like this.  Use it instead?
 #
 import threading
 from . import Callback
@@ -55,7 +56,7 @@ class Future(Callback.Callbacks):
         return res
 
     def has_value(self):
-        return self.evt.isSet()
+        return self.evt.is_set()
 
     def resolve(self, value):
         self.res = value

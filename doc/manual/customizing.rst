@@ -8,7 +8,7 @@ provide convenient ways to build custom viewers.  The reference viewer
 embodies this concept through the use of a flexible layout engine and
 the use of plugins to implement all the major user interface features.
 By modifying or replacing the layout and adding, subclassing or removing
-plugins you can completely change the look, feel and operation of the 
+plugins you can completely change the look, feel and operation of the
 reference viewer.
 
 This chapter explains how you can customize the Ginga reference viewer
@@ -22,15 +22,15 @@ Ginga examines a configuration directory on startup to check for any
 configuration files or customization of the default behavior.
 
 .. note:: The configuration area is determined first by examining the
-          environment variable `GINGA_HOME`.  If that is not set, then 
-          `$HOME/.ginga` (Mac OS X, Linux) or
-          `$HOMEDRIVE:$HOMEPATH\\.ginga` (Windows) will be used.
+          environment variable ``GINGA_HOME``.  If that is not set, then
+          ``$HOME/.ginga`` (Mac OS X, Linux) or
+          ``$HOMEDRIVE:$HOMEPATH\\.ginga`` (Windows) will be used.
 
 Examples of the types of configuration files with comments describing the
-effects of the parameters can be found in `.../ginga/examples/configs`.
+effects of the parameters can be found in ``.../ginga/examples/configs``.
 Many of the plugins have their own configuration file, with preferences
 that are only changed via that file.  You can copy an example
-configuration file to your Ginga settings area and change the settings  
+configuration file to your Ginga settings area and change the settings
 to your liking.
 
 Usually it is sufficient to simply close the plugin and open it again to
@@ -45,9 +45,27 @@ to configure it.  If not, the settings for the generic startup channel
 "Image" are used to configure the new channel.  The "Preferences" plugin
 can be used to set many of the channel settings.  If you set these for
 the "Image" channel and use the "Save" button, other channels will
-inherit them.  You can also manually copy the example file from 
-`.../ginga/examples/configs/channel_Image.cfg` to your configuration
+inherit them.  You can also manually copy the example file from
+``.../ginga/examples/configs/channel_Image.cfg`` to your configuration
 area and edit it if you prefer.
+
+============================================
+Saving the workspace layout between sessions
+============================================
+
+By default, Ginga will will write its window size, position and some layout
+information to a "layout" file in the configuration directory when the
+program is closed.  Upon a subsequent startup Ginga will attempt to
+restore the window to the saved configuration.  If this behavior is not
+desired you can add the option ``save_layout = False`` to your
+``general.cfg`` file in the Ginga configuration directory.
+
+There is a sample ``general.cfg`` file in ``.../ginga/examples/configs``.
+
+Invoking the program with the ``--norestore`` option also prevents it from
+reading the saved layout file.  This may be needed in some cases when
+the layout changes in an incompatible way between when the program was
+last stopped and when it was started again.
 
 .. _sec-bindings:
 
@@ -57,12 +75,12 @@ Rebinding Controls
 
 One configuration file that many users will be interested in is the one
 controlling how keyboard and mouse/touch bindings are assigned.  This is
-handled by the configuration file `bindings.cfg`.  Several examples 
-are stored in `.../ginga/examples/bindings`, including an example for
+handled by the configuration file ``bindings.cfg``.  Several examples
+are stored in ``.../ginga/examples/bindings``, including an example for
 users familiar with the ds9 mouse controls, and an example for users
 using a touchpad without a mouse (pinch zoom and scroll panning).
 Simply copy the appropriate file to your Ginga settings area as
-`bindings.cfg`. 
+``bindings.cfg``.
 
 .. _sec-workspaceconfig:
 
@@ -71,13 +89,13 @@ Customizing the Reference Viewer During Initialization
 ======================================================
 
 The reference viewer can be customized during viewer initialization
-using a module called `ginga_config`, which can be anywhere in the
+using a module called ``ginga_config``, which can be anywhere in the
 user's Python import path, including in the Ginga configuration folder
-described above (e.g. `$HOME/.ginga/ginga_config.py`).
+described above (e.g. ``$HOME/.ginga/ginga_config.py``).
 
 Specifically, this file will be imported and two methods will be run if
-defined: `pre_gui_config(ginga_shell)` and
-`post_gui_config(ginga_shell)`.
+defined: ``pre_gui_config(ginga_shell)`` and
+``post_gui_config(ginga_shell)``.
 The parameter to each function is the main viewer shell.  These functions
 can be used to define a different viewer layout, add or remove plugins,
 add menu entries, add custom image or star catalogs, etc.  We will refer
@@ -89,11 +107,11 @@ Workspace configuration
 
 Ginga has a flexible table-driven layout scheme for dynamically creating
 workspaces and mapping the available plugins to workspaces.  By changing
-a couple of tables via `ginga_config.pre_gui_config()` you can change
+a couple of tables via ``ginga_config.pre_gui_config()`` you can change
 the way Ginga looks and presents its content.
 
 If you examine the module `ginga.rv.main` you will find a layout table
-called `default_layout`::
+called ``default_layout``::
 
     default_layout = ['seq', {},
                        ['vbox', dict(name='top', width=1400, height=700),
@@ -143,7 +161,7 @@ characteristics, how they are organized, and their names.
 
 The key point in this section is that you can modify this table or
 replace it entirely with one of your own design and set it in the
-`pre_gui_config()` method described above::
+``pre_gui_config()`` method described above::
 
     my_layout = [
                   ...
@@ -154,7 +172,7 @@ replace it entirely with one of your own design and set it in the
 
         ginga_shell.set_layout(my_layout)
 
-If done in the `pre_gui_config()` method (as shown) the new layout will
+If done in the ``pre_gui_config()`` method (as shown) the new layout will
 be the one that is used when the GUI is constructed.
 
 Format of the Layout Table
@@ -164,23 +182,23 @@ The table consists of a nested list of sublists, tuples and/or dictionaries.
 The first item in a sublist indicates the type of the container to be
 constructed.  The following types are available:
 
-* `seq`: defines a sequence of top-level windows to be created
+* ``seq``: defines a sequence of top-level windows to be created
 
-* `hpanel`: a horizontal panel of containers, with handles to size them
+* ``hpanel``: a horizontal panel of containers, with handles to size them
 
-* `vpanel`: a vertical panel of containers, with handles to size them
+* ``vpanel``: a vertical panel of containers, with handles to size them
 
-* `hbox`: a horizontal panel of containers of fixed size
+* ``hbox``: a horizontal panel of containers of fixed size
 
-* `vbox`: a vertical panel of containers of fixed size
+* ``vbox``: a vertical panel of containers of fixed size
 
-* `ws`: a workspace that allows a plugin or a channel viewer to be
+* ``ws``: a workspace that allows a plugin or a channel viewer to be
   loaded into it. A workspace can be configured in four ways: as a
-  tabbed notebook (`wstype="tabs"`), as a stack (`wstype="stack"`), as
-  an MDI (Multiple Document Interface, `wstype="mdi"`) or a grid
-  (`wstype="grid"`).
+  tabbed notebook (``wstype="tabs"``), as a stack (``wstype="stack"``), as
+  an MDI (Multiple Document Interface, ``wstype="mdi"``) or a grid
+  (``wstype="grid"``).
 
-* `widget`: a preconstructed widget passed in.
+* ``widget``: a preconstructed widget passed in.
 
 In every case the second item in the sublist is a dictionary that
 provides some optional parameters that modify the characteristics of the
@@ -222,41 +240,49 @@ These two names should at least be defined somewhere in default_layout.
 Adding or Removing Plugins
 ==========================
 
-A plugin can be added to the reference viewer in `pre_gui_config()`
-using one of two methods.  The first method is using the
-`add_local_plugin()` or `add_global_plugin()` methods, 
-depending on whether it is a local or global plugin, respectively::
+A plugin can be added to the reference viewer in ``pre_gui_config()``
+using the ``add_plugin()`` method with a specification ("spec") for
+the plugin::
+
+    from ginga.misc.Bunch import Bunch
 
     def pre_gui_config(ginga_shell):
         ...
 
-        ginga_shell.add_local_plugin('DQCheck', "dialogs")
+        spec = Bunch(module='DQCheck', klass='DQCheck', workspace='dialogs',
+                     category='Utils', ptype='local')
+        ginga_shell.add_plugin(spec)
 
 The above call would try to load a local plugin called "DQCheck" from a
 module called "DQCheck".  When invoked from the Operations menu it would
 occupy a spot in the "dialogs" workspace (see layout discussion above).
 
-.. note:: It is a convention in Ginga plugins that the module name and
-          plugin name (a class name) are the same.
+Other keywords that can be used in a spec:
 
-Global plugins are similar, except that some of them are considered
-critical to the viewers basic operation and so should be started when
-the program starts::
+* Global plugins use `ptype='global'`.
 
-    def pre_gui_config(ginga_shell):
-        ...
+* If a plugin should be hidden from the menus (e.g. it is started under
+  program control, not by the user), specify `hidden=True`.
 
-        ginga_shell.add_global_plugin('SpecScope', "left",
-                                      tab_name="Spec Scope", start_plugin=True)
+* If the plugin should be started when the program starts, specify
+  `start=True`.
 
+* To use a different name in the menu for starting the plugin, specify
+  `menu="Custom Name"`.
+
+* To use a different name in the tab that is showing the plugin GUI,
+  specify `tab="Tab Name"`.
+
+* To prevent a control icon from appearing in the Operations plugin
+  manager tray specify `optray=False`.
 
 ==============================
 Making a Custom Startup Script
 ==============================
 
 You can make a custom startup script to make the same reference viewer
-configuration available without relying on the `ginga_config` module in
-a personal settings area.  To do this we make use of the `main` module::
+configuration available without relying on the ``ginga_config`` module in
+a personal settings area.  To do this we make use of the `~ginga.rv.main` module::
 
     import sys
     from ginga.rv.main import ReferenceViewer
@@ -264,15 +290,13 @@ a personal settings area.  To do this we make use of the `main` module::
 
     my_layout = [ ... ]
 
+    plugins = [ ... ]
+
     if __name__ == "__main__":
         viewer = ReferenceViewer(layout=my_layout)
-        # add global plugins
-        viewer.add_global_plugin(...)
-        viewer.add_global_plugin(...)
-
-        # add local plugins
-        viewer.add_local_plugin(...)
-        viewer.add_local_plugin(...)
+        # add plugins
+        for spec in plugins:
+            viewer.add_plugin(spec)
 
         # Parse command line options with optparse module
         usage = "usage: %prog [options] cmd [args]"
@@ -282,4 +306,3 @@ a personal settings area.  To do this we make use of the `main` module::
         (options, args) = optprs.parse_args(sys_argv[1:])
 
         viewer.main(options, args)
-

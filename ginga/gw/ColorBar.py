@@ -10,8 +10,10 @@ from ginga import RGBMap
 from ginga.gw import Viewers
 from ginga.canvas.types import utils
 
+
 class ColorBarError(Exception):
     pass
+
 
 class ColorBar(Callback.Callbacks):
 
@@ -55,6 +57,7 @@ class ColorBar(Callback.Callbacks):
         cbar.add_callback('draw-up', self.draw_release_cb)
         cbar.add_callback('none-move', self.none_move_cb)
         cbar.add_callback('zoom-scroll', self.scroll_cb)
+        cbar.add_callback('zoom-pinch', self.pinch_cb)
 
         #cbar.configure(width, height)
         iw = Viewers.GingaViewerWidget(viewer=cbar)
@@ -172,5 +175,10 @@ class ColorBar(Callback.Callbacks):
         self.stretch_colormap(scale_factor)
 
         self.make_callback('scroll', event)
+
+    def pinch_cb(self, viewer, event):
+        scale_factor = event.scale
+        self.stretch_colormap(scale_factor)
+
 
 #END

@@ -5,8 +5,10 @@
 # Please see the file LICENSE.txt for details.
 #
 # force registration of all canvas types
-import ginga.canvas.types.all
+import ginga.canvas.types.all  # noqa
 from ginga import trcalc
+from ginga.fonts import font_asst
+
 
 class RenderContext(object):
 
@@ -33,12 +35,12 @@ class RenderContext(object):
         pass
 
     def initialize_from_shape(self, shape, line=True, fill=True, font=True):
+        if font:
+            self.set_font_from_shape(shape)
         if line:
             self.set_line_from_shape(shape)
         if fill:
             self.set_fill_from_shape(shape)
-        if font:
-            self.set_font_from_shape(shape)
 
     def set_line(self, color, alpha=1.0, linewidth=1, style='solid'):
         pass
@@ -47,6 +49,7 @@ class RenderContext(object):
         pass
 
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
+        fontname = font_asst.resolve_alias(fontname, fontname)
         pass
 
     def text_extents(self, text):
@@ -82,11 +85,12 @@ class RenderContext(object):
         cpoints = trcalc.strip_z(cpoints)
         for i in range(len(cpoints) - 1):
             cx1, cy1 = cpoints[i]
-            cx2, cy2 = cpoints[i+1]
+            cx2, cy2 = cpoints[i + 1]
             #self.cr.draw_line(cx1, cy1, cx2, cy2)
 
     def draw_bezier_curve(self, cp):
         pass
+
 
 class CanvasRenderer(object):
 

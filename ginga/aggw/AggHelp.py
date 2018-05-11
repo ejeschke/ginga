@@ -4,16 +4,35 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import os.path
-
 import aggdraw as agg
 
 from ginga import colors
-import ginga.fonts
+from ginga.fonts import font_asst
 
-# Set up known fonts
-fontdir, xx = os.path.split(ginga.fonts.__file__)
-known_font = os.path.join(fontdir, 'Roboto', 'Roboto-Regular.ttf')
+
+def get_cached_font(fontname, fontsize, color, alpha):
+    key = (fontname, fontsize, color, alpha)
+    try:
+        return font_asst.get_cache(key)
+
+    except KeyError:
+        # see if we can build the font
+        info = font_asst.get_font_info(fontname, subst_ok=True)
+
+        font = agg.Font(color, info.font_path, size=fontsize, opacity=alpha)
+        font_asst.add_cache(key, font)
+
+        return font
+
+
+def load_font(font_name, font_file):
+    # try to load it as a sanity check
+    #agg.Font('black', font_file, size=10, opacity=255)
+
+    if not font_asst.have_font(font_name):
+        font_asst.add_font(font_file, font_name=font_name)
+    return font_name
+
 
 class AggContext(object):
 
@@ -33,7 +52,7 @@ class AggContext(object):
         else:
             r, g, b = 1.0, 1.0, 1.0
 
-        return (int(r*255), int(g*255), int(b*255))
+        return (int(r * 255), int(g * 255), int(b * 255))
 
     def get_pen(self, color, linewidth=1, alpha=1.0):
         # if hasattr(self, 'linestyle'):
@@ -54,14 +73,12 @@ class AggContext(object):
         color = self.get_color(color)
         op = int(alpha * 255)
 
-        # TODO: try to lookup font before overriding
-        filepath = known_font
-
-        f = agg.Font(color, filepath, size=size, opacity=op)
-        return f
+        name = font_asst.resolve_alias(name, name)
+        font = get_cached_font(name, size, color, op)
+        return font
 
     def text_extents(self, text, font):
         wd, ht = self.canvas.textsize(text, font)
         return wd, ht
 
-#END
+# END

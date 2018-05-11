@@ -1,57 +1,60 @@
-#
-# Zoom.py -- Zoom plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
+"""
+The ``Zoom`` plugin shows an enlarged image of a cutout region centered
+under the cursor position in the associated channel image.  As the
+cursor is moved around the image, the zoom image updates to allow close
+inspection of the pixels or precise control in conjunction with other
+plugin operations.
+
+**Plugin Type: Global**
+
+``Zoom`` is a global plugin.  Only one instance can be opened.
+
+**Usage**
+
+The size of the cutout radius can be adjusted by the slider below the
+zoom image labeled "Zoom Radius". The default radius is 30 pixels,
+making a 61x61 zoom image.  The magnification can be changed by
+adjusting the "Zoom Amount" slider.
+
+Two modes of operation are possible -- absolute and relative zoom:
+
+* In absolute mode, the zoom amount controls exactly the zoom level
+  shown in the cutout; For example, the channel image may be zoomed into
+  10X, but the zoom image will only show a 3X image if the zoom amount
+  is set to 3X.
+
+* In relative mode, the zoom amount setting is interpreted as relative
+  to the zoom setting of the channel image.  If the zoom amount is set
+  to 3X and the channel image is zoomed to 10X then the zoom image shown
+  will be 13X (10X + 3X).  Note that the zoom amount setting can be < 1,
+  so a setting of 1/3X with a 3X zoom in the channel image will produce
+  a 1X zoom image.
+
+The "Refresh Interval" setting controls how quickly the ``Zoom`` plugin
+responds to the movement of the cursor in updating the zoom image.  The
+value is specified in milliseconds.
+
+.. tip:: Usually setting a small refresh interval *improves* the overall
+         responsiveness of the zoom image, and the default value of 20 is
+         a reasonable one.  You can experiment with the value if the zoom
+         image seems too jerky or out of sync with the mouse movement in
+         the channel image window.
+
+The "Defaults" button restores the default settings of the controls.
+
+"""
 import time
 
 from ginga.gw import Widgets, Viewers
-from ginga.misc import Bunch
 from ginga import GingaPlugin
+
+__all__ = ['Zoom']
 
 
 class Zoom(GingaPlugin.GlobalPlugin):
-    """
-    The Zoom plugin shows an enlarged image of a cutout region centered
-    under the cursor position in the associated channel image.  As the
-    cursor is moved around the image the zoom image updates to allow close
-    inspection of the pixels or precise control in conjunction with other
-    plugin operations.
 
-    Usage
-    -----
-    The size of the cutout radius can be adjusted by the slider below the
-    zoom image labeled "Zoom Radius". The default radius is 30 pixels,
-    making a 61x61 zoom image.  The magnification can be changed by
-    adjusting the "Zoom Amount" slider.
-
-    Two modes of operation are possible: absolute and relative zoom:
-
-    * In absolute mode, the zoom amount controls exactly the zoom level
-      shown in the cutout: for example, the channel image may be zoomed into
-      10X, but the zoom image will only show a 3X image if the zoom amount
-      is set to 3X.
-
-    * In relative mode, the zoom amount setting is interpreted as relative
-      to the zoom setting of the channel image.  If the zoom amount is set
-      to 3X and the channel image is zoomed to 10X then the zoom image shown
-      will be 10+3=13X.  Note that the zoom amount setting can be < 1,
-      so a setting of 1/3X with a 3X zoom in the channel image will produce
-      a 1X zoom image.
-
-    The `Refresh Interval` setting controls how quickly the Zoom plugin
-    responds to the movement of the cursor in updating the zoom image.  The
-    value is specified in milliseconds.
-
-    TIP: Usually setting a small refresh interval *improves* the overall
-	 responsiveness of the Zoom image, and the default value of 20 is
-	 a reasonable one.  You can experiment with the value if the zoom
-	 image seems too jerky or out of sync with the mouse movement in
-         the channel image window.
-
-    The "Defaults" button restores the default settings of the controls.
-    """
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
         super(Zoom, self).__init__(fv)
@@ -71,11 +74,11 @@ class Zoom(GingaPlugin.GlobalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Zoom')
         self.settings.add_defaults(zoom_radius=self.default_radius,
-                                  zoom_amount=self.default_zoom,
-                                  zoom_cmap_name=None,
-                                  zoom_imap_name=None,
-                                  refresh_interval=0.02,
-                                  rotate_zoom_image=True)
+                                   zoom_amount=self.default_zoom,
+                                   zoom_cmap_name=None,
+                                   zoom_imap_name=None,
+                                   refresh_interval=0.02,
+                                   rotate_zoom_image=True)
         self.settings.load(onError='silent')
 
         self.zoom_radius = self.settings.get('zoom_radius', self.default_radius)
@@ -84,23 +87,23 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoom_rotate = self.settings.get('rotate_zoom_image', False)
         self.copy_attrs = ['transforms', 'cutlevels', 'rotation']
         if (self.settings.get('zoom_cmap_name', None) is None and
-            self.settings.get('zoom_imap_name', None) is None):
+                self.settings.get('zoom_imap_name', None) is None):
             self.copy_attrs.append('rgbmap')
 
-        self._wd = 200
-        self._ht = 200
+        self._wd = 300
+        self._ht = 300
 
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('channel-change', self.focus_cb)
 
+        self.gui_up = False
+
     def build_gui(self, container):
 
-        vbox, sw, orientation = Widgets.get_oriented_box(container,
-                                                         fill=True,
-                                                         scrolled=False)
-        vbox.set_border_width(4)
-        vbox.set_spacing(2)
+        vtop = Widgets.VBox()
+        vtop.set_border_width(4)
 
+        box, sw, orientation = Widgets.get_oriented_box(container)
         # Uncomment to debug; passing parent logger generates too
         # much noise in the main logger
         #zi = Viewers.CanvasView(logger=self.logger)
@@ -108,11 +111,10 @@ class Zoom(GingaPlugin.GlobalPlugin):
         zi.set_desired_size(self._wd, self._ht)
         zi.enable_autozoom('off')
         zi.enable_autocuts('off')
-        #zi.set_scale_limits(0.001, 1000.0)
         zi.zoom_to(self.default_zoom)
         settings = zi.get_settings()
-        settings.get_setting('zoomlevel').add_callback('set',
-                                 self.zoomset, zi)
+        settings.get_setting('zoomlevel').add_callback(
+            'set', self.zoomset, zi)
         zi.set_bg(0.4, 0.4, 0.4)
         zi.show_pan_mark(True)
         cmname = self.settings.get('zoom_cmap_name', None)
@@ -132,8 +134,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         iw = Viewers.GingaViewerWidget(zi)
         iw.resize(self._wd, self._ht)
-        vpaned = Widgets.Splitter(orientation=orientation)
-        vpaned.add_widget(iw)
+        paned = Widgets.Splitter(orientation=orientation)
+        paned.add_widget(iw)
 
         vbox2 = Widgets.VBox()
         captions = (("Zoom Radius:", 'label', 'Zoom Radius', 'hscale'),
@@ -179,37 +181,64 @@ class Zoom(GingaPlugin.GlobalPlugin):
         spacer = Widgets.Label('')
         vbox2.add_widget(spacer, stretch=1)
 
-        vpaned.add_widget(vbox2)
-        #vpaned.add_widget(Widgets.Label(''))
+        box.add_widget(vbox2, stretch=1)
 
-        vbox.add_widget(vpaned, stretch=1)
+        paned.add_widget(sw)
+        # hack to set a reasonable starting position for the splitter
+        _sz = max(self._wd, self._ht)
+        paned.set_sizes([_sz, _sz])
 
-        #vbox.add_widget(Widgets.Label(''), stretch=1)
+        vtop.add_widget(paned, stretch=5)
 
-        container.add_widget(sw, stretch=1)
+        btns = Widgets.HBox()
+        btns.set_border_width(4)
+        btns.set_spacing(4)
+
+        btn = Widgets.Button("Close")
+        btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn)
+        btn = Widgets.Button("Help")
+        btn.add_callback('activated', lambda w: self.help())
+        btns.add_widget(btn, stretch=0)
+        btns.add_widget(Widgets.Label(''), stretch=1)
+        vtop.add_widget(btns, stretch=0)
+
+        container.add_widget(vtop, stretch=5)
+        self.gui_up = True
 
     def prepare(self, fitsimage):
         fitssettings = fitsimage.get_settings()
         zoomsettings = self.zoomimage.get_settings()
-        # TODO: should we add our own canvas instead?
-        fitsimage.add_callback('motion', self.motion_cb)
+        fitsimage.add_callback('cursor-changed', self.motion_cb)
         for name in ['cuts']:
-            fitssettings.get_setting(name).add_callback('set',
-                               self.cutset_cb, fitsimage)
+            fitssettings.get_setting(name).add_callback(
+                'set', self.cutset_cb, fitsimage)
         fitsimage.add_callback('transform', self.transform_cb)
         fitssettings.copy_settings(zoomsettings, ['rot_deg'])
-        fitssettings.get_setting('rot_deg').add_callback('set', self.rotate_cb, fitsimage)
-        fitssettings.get_setting('zoomlevel').add_callback('set',
-                               self.zoomset_cb, fitsimage)
+        fitssettings.get_setting('rot_deg').add_callback(
+            'set', self.rotate_cb, fitsimage)
+        fitssettings.get_setting('zoomlevel').add_callback(
+            'set', self.zoomset_cb, fitsimage)
 
     def add_channel(self, viewer, chinfo):
+        if not self.gui_up:
+            return
         self.prepare(chinfo.fitsimage)
 
     def start(self):
         names = self.fv.get_channel_names()
         for name in names:
-            chinfo = self.fv.get_channel(name)
-            self.add_channel(self.fv, chinfo)
+            channel = self.fv.get_channel(name)
+            self.add_channel(self.fv, channel)
+
+        # set up for currently focused channel
+        channel = self.fv.get_channel_info()
+        if channel is not None:
+            self.focus_cb(self.fv, channel)
+
+    def stop(self):
+        self.gui_up = False
+        return True
 
     # CALLBACKS
 
@@ -220,6 +249,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fitsimage.copy_attributes(self.zoomimage, self.copy_attrs)
 
     def redo(self, channel, image):
+        if not self.gui_up:
+            return
         fitsimage = channel.fitsimage
         if fitsimage != self.fv.getfocus_viewer():
             return True
@@ -227,10 +258,14 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.update_zoomviewer(channel)
 
     def focus_cb(self, viewer, channel):
+        if not self.gui_up:
+            return
         self.update_zoomviewer(channel)
 
     # Match cut-levels to the ones in the "main" image
     def cutset_cb(self, setting, value, fitsimage):
+        if not self.gui_up:
+            return
         if fitsimage != self.fitsimage_focus:
             return True
 
@@ -239,6 +274,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         return True
 
     def transform_cb(self, fitsimage):
+        if not self.gui_up:
+            return
         if fitsimage != self.fitsimage_focus:
             return True
         flip_x, flip_y, swap_xy = fitsimage.get_transforms()
@@ -246,6 +283,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         return True
 
     def rotate_cb(self, setting, deg, fitsimage):
+        if not self.gui_up:
+            return
         if fitsimage != self.fitsimage_focus:
             return True
         if not self.zoom_rotate:
@@ -267,12 +306,14 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.logger.debug("zoomlevel=%d myzoom=%d" % (
             zoomlevel, myzoomlevel))
         self.zoomimage.zoom_to(myzoomlevel)
-        text = self.fv.scale2text(self.zoomimage.get_scale())
+        text = self.fv.scale2text(self.zoomimage.get_scale())  # noqa
         return True
 
     def zoomset_cb(self, setting, zoomlevel, fitsimage):
         """This method is called when a main FITS widget changes zoom level.
         """
+        if not self.gui_up:
+            return
         fac_x, fac_y = fitsimage.get_scale_base_xy()
         fac_x_me, fac_y_me = self.zoomimage.get_scale_base_xy()
         if (fac_x != fac_x_me) or (fac_y != fac_y_me):
@@ -329,11 +370,15 @@ class Zoom(GingaPlugin.GlobalPlugin):
         return True
 
     def motion_cb(self, fitsimage, button, data_x, data_y):
+        if not self.gui_up:
+            return
         # TODO: pass _canvas_ and cut from that
         self.showxy(fitsimage, data_x, data_y)
         return False
 
     def showzoom_timer_cb(self, timer):
+        if not self.gui_up:
+            return
         data = timer.data
         self.showzoom(data.image, data.data_x, data.data_y)
 
@@ -375,7 +420,17 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.logger.debug("Setting refresh time to %.4f sec" % (
             self.refresh_interval))
 
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
+
     def __str__(self):
         return 'zoom'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Zoom', package='ginga')
+
+# END

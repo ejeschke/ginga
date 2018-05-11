@@ -42,7 +42,7 @@ class AstroImage(BaseImage):
         cls.ioClass = klass
 
     def __init__(self, data_np=None, metadata=None, logger=None,
-                 name=None, wcsclass=wcsClass, ioclass=ioClass,
+                 name=None, wcsclass=None, ioclass=None,
                  inherit_primary_header=False):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
@@ -50,12 +50,19 @@ class AstroImage(BaseImage):
 
         # wcsclass specifies a pluggable WCS module
         if wcsclass is None:
-            wcsclass = wcsmod.WCS
+            if self.wcsClass is None:
+                wcsclass = wcsmod.WCS
+            else:
+                wcsclass = self.wcsClass
         self.wcs = wcsclass(self.logger)
 
         # ioclass specifies a pluggable IO module
         if ioclass is None:
-            ioclass = io_fits.fitsLoaderClass
+            if self.ioClass is None:
+                ioclass = io_fits.fitsLoaderClass
+            else:
+                ioclass = self.ioClass
+
         self.io = ioclass(self.logger)
         self.io.register_type('image', self.__class__)
 
@@ -103,7 +110,6 @@ class AstroImage(BaseImage):
 
         self.set_naxispath(naxispath)
 
-
     def load_hdu(self, hdu, fobj=None, naxispath=None,
                  inherit_primary_header=None):
 
@@ -129,10 +135,11 @@ class AstroImage(BaseImage):
 
             self.io.fromHDU(fobj[0], self._primary_hdr)
 
-        self.setup_data(hdu.data)
+        self.setup_data(hdu.data, naxispath=naxispath)
 
         # Try to make a wcs object on the header
-        self.wcs.load_header(hdu.header, fobj=fobj)
+        if hasattr(self, 'wcs') and self.wcs is not None:
+            self.wcs.load_header(hdu.header, fobj=fobj)
 
     def load_file(self, filespec, **kwargs):
 
@@ -249,7 +256,7 @@ class AstroImage(BaseImage):
             hdr[kwd.upper()] = val
 
         # Try to make a wcs object on the header
-        if hasattr(self, 'wcs'):
+        if hasattr(self, 'wcs') and self.wcs is not None:
             self.wcs.load_header(hdr)
 
     def set_keywords(self, **kwds):
@@ -267,7 +274,7 @@ class AstroImage(BaseImage):
             self.metadata[key] = val
 
         # refresh the WCS
-        if hasattr(self, 'wcs'):
+        if hasattr(self, 'wcs') and self.wcs is not None:
             header = self.get_header()
             self.wcs.load_header(header)
 
@@ -343,7 +350,7 @@ class AstroImage(BaseImage):
 
         # Calculate the length of this segment--it is pixels/deg
         x2, y2 = self.radectopix(ra2_deg, dec2_deg)
-        px_per_deg_e = math.sqrt(math.fabs(x2-x)**2 + math.fabs(y2-y)**2)
+        px_per_deg_e = math.sqrt(math.fabs(x2 - x)**2 + math.fabs(y2 - y)**2)
 
         # calculate radius based on desired radius_deg
         radius_px = px_per_deg_e * radius_deg
@@ -450,6 +457,9 @@ class AstroImage(BaseImage):
             count += 1
 
             data_np = image._get_data()
+            if 0 in data_np.shape:
+                self.logger.info("Skipping image with zero length axis")
+                continue
 
             # Calculate sky position at the center of the piece
             ctr_x, ctr_y = trcalc.get_center(data_np)
@@ -494,7 +504,7 @@ class AstroImage(BaseImage):
                 self.logger.debug("scaling piece by x(%f), y(%f)" % (
                     nscale_x, nscale_y))
                 data_np, (ascale_x, ascale_y) = trcalc.get_scaled_cutout_basic(
-                    data_np, 0, 0, wd-1, ht-1, nscale_x, nscale_y,
+                    data_np, 0, 0, wd - 1, ht - 1, nscale_x, nscale_y,
                     logger=self.logger)
 
             # Rotate piece into our orientation, according to wcs
@@ -597,12 +607,12 @@ class AstroImage(BaseImage):
                         (expand_pct > max_expand_pct)):
                     raise Exception("New area exceeds current one by %.2f %%;"
                                     "increase max_expand_pct (%.2f) to allow" %
-                                    (expand_pct*100, max_expand_pct))
+                                    (expand_pct * 100, max_expand_pct))
 
                 # go for it!
                 new_data = numpy.zeros((new_ht, new_wd))
                 # place current data into new data
-                new_data[ny1_off:ny1_off+myht, nx1_off:nx1_off+mywd] = \
+                new_data[ny1_off:ny1_off + myht, nx1_off:nx1_off + mywd] = \
                     mydata
                 self._data = new_data
                 mydata = new_data
@@ -645,7 +655,7 @@ class AstroImage(BaseImage):
         try:
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = self.get_data_xy(int(data_x+0.5), int(data_y+0.5))
+            value = self.get_data_xy(int(data_x + 0.5), int(data_y + 0.5))
 
         except Exception as e:
             value = None
@@ -702,8 +712,8 @@ class AstroImage(BaseImage):
                 elif system == 'ecliptic':
                     ra_lbl, dec_lbl = six.unichr(0x03BB), six.unichr(0x03B2)
                 elif system == 'helioprojective':
-                    ra_txt = "%+5.3f" % (lon_deg*3600)
-                    dec_txt = "%+5.3f" % (lat_deg*3600)
+                    ra_txt = "%+5.3f" % (lon_deg * 3600)
+                    dec_txt = "%+5.3f" % (lat_deg * 3600)
                     ra_lbl, dec_lbl = "x-Solar", "y-Solar"
 
         except Exception as e:

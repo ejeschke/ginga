@@ -32,27 +32,33 @@ btn_right = 0x4
 mod_shift = ['shift_l', 'shift_r']
 # same setting ends up as "Ctrl" on a pc and "Command" on a mac:
 mod_ctrl = ['control_l', 'control_r']
-# "Control" key on a mac:
-mod_meta = ['meta_right']
+# "Control" key on a mac, "Windows" key on a pc keyboard:
+mod_win = ['meta_right']
 
 # Define up our custom modifiers.
 # These are typically "normal" keys.  The modifier is defined by a triplet:
 # [ keyname, modtype, msg ], where
 # keyname is a key whose press initiates the modifier,
-# modtype is either None or a type in {'held', 'oneshot', 'locked'}
+# modtype is either None or a type in {'held', 'oneshot', 'locked', 'softlock'}
 # msg is a string to be shown in the display or None for no indicator
-dmod_draw = ['space', None, None]
-dmod_edit = ['b', None, None]
-dmod_cmap = ['y', None, None]
-dmod_cuts = ['s', None, None]
-dmod_dist = ['d', None, None]
-dmod_contrast = ['t', None, None]
-dmod_rotate = ['r', None, None]
-dmod_pan = ['q', None, None]
-dmod_freepan = ['w', None, None]
-dmod_naxis = [None, None, None]
+# Mode 'meta' is special: it is an intermediate mode that
+# is used primarily to launch other modes
+# If the mode initiation character is preceeded by a double
+# underscore, then the mode must be initiated from the "meta"
+# mode.
+dmod_meta = ['space', None, None]
+dmod_draw = ['__b', None, None]
+dmod_cmap = ['__y', None, None]
+dmod_cuts = ['__s', None, None]
+dmod_dist = ['__d', None, None]
+dmod_contrast = ['__t', None, None]
+dmod_rotate = ['__r', None, None]
+dmod_pan = ['__q', None, 'pan']
+dmod_freepan = ['__w', None, 'pan']
+dmod_camera = ['__c', None, 'pan']
+dmod_naxis = ['__n', None, None]
 
-default_mode_type = 'oneshot'
+default_mode_type = 'locked'
 default_lock_mode_type = 'softlock'
 
 # KEYPRESS commands
@@ -73,6 +79,10 @@ kp_pan_left = ['pan+*+left', 'freepan+*+left']
 kp_pan_right = ['pan+*+right', 'freepan+*+right']
 kp_pan_up = ['pan+*+up', 'freepan+*+up']
 kp_pan_down = ['pan+*+down', 'freepan+*+down']
+kp_pan_home = ['pan+*+home', 'freepan+*+home']
+kp_pan_end = ['pan+*+end', 'freepan+*+end']
+kp_pan_page_up = ['pan+*+page_up', 'freepan+*+page_up']
+kp_pan_page_down = ['pan+*+page_down', 'freepan+*+page_down']
 kp_pan_px_xminus = ['shift+left']
 kp_pan_px_xplus = ['shift+right']
 kp_pan_px_yminus = ['shift+down']
@@ -108,8 +118,11 @@ kp_poly_add = ['v', 'draw+v']
 kp_poly_del = ['z', 'draw+z']
 kp_edit_del = ['draw+x']
 kp_reset = ['escape']
-kp_lock = ['L']
-kp_softlock = ['l']
+kp_lock = ['L', 'meta+L']
+kp_softlock = ['l', 'meta+l']
+kp_camera_save = ['camera+s']
+kp_camera_reset = ['camera+r']
+kp_camera_toggle3d = ['camera+3']
 
 # pct of a window of data to move with pan key commands
 key_pan_pct = 0.666667
@@ -120,16 +133,17 @@ key_pan_px_delta = 1.0
 sc_pan = ['ctrl+scroll']
 sc_pan_fine = ['pan+shift+scroll']
 sc_pan_coarse = ['pan+ctrl+scroll']
-sc_zoom = ['scroll']
+sc_zoom = ['scroll', 'freepan+scroll']
 sc_zoom_fine = []
 sc_zoom_coarse = []
-sc_zoom_origin = ['shift+scroll', 'freepan+scroll']
+sc_zoom_origin = ['shift+scroll', 'freepan+shift+scroll']
 sc_cuts_fine = ['cuts+ctrl+scroll']
 sc_cuts_coarse = ['cuts+scroll']
 sc_cuts_alg = []
 sc_dist = ['dist+scroll']
 sc_cmap = ['cmap+scroll']
 sc_imap = ['cmap+ctrl+scroll']
+sc_camera_track = ['camera+scroll']
 sc_naxis = ['naxis+scroll']
 
 # This controls how fast panning occurs with the sc_pan* functions.
@@ -149,7 +163,7 @@ scroll_zoom_direct_scale = False
 ms_none = ['nobtn']
 ms_cursor = ['left']
 ms_wheel = []
-ms_draw = ['draw+left', 'meta+left', 'right']
+ms_draw = ['draw+left', 'win+left', 'right']
 ms_edit = ['edit+left']
 
 # mouse commands initiated by a preceeding keystroke (see above)
@@ -169,24 +183,29 @@ ms_cut_auto = ['cuts+right']
 ms_panset = ['pan+middle', 'shift+left', 'middle']
 ms_cmap_rotate = ['cmap+left']
 ms_cmap_restore = ['cmap+right']
+ms_camera_orbit = ['camera+left']
+ms_camera_pan_delta = ['camera+right']
 ms_naxis = ['naxis+left']
 
 mouse_zoom_acceleration = 1.085
 mouse_rotate_acceleration = 0.75
 
-# GESTURES (Qt version only)
-# Uncomment to enable pinch gesture on touchpads.
-# NOTE: if you enable this, it is *highly* recommended to disable any
+# GESTURES (some back ends only)
+# NOTE: if using Qt4 back end, it is *highly* recommended to disable any
 # "scroll zoom" (sc_zoom*) features above because the two kinds don't play
-# well together.  A good combination for trackpads is enabling pinch with
-# zoom and the sc_pan functions.
-#gs_pinch = ['pinch']
+# well together.
+pi_zoom = ['pinch']
+pi_zoom_origin = ['shift+pinch']
+pa_pan = ['pan']
+pa_zoom = ['freepan+pan']
+pa_zoom_origin = ['freepan+shift+pan']
 
 # This controls what operations the pinch gesture controls.  Possibilities are
 # (empty list or) some combination of 'zoom' and 'rotate'.
-pinch_actions = []
-pinch_zoom_acceleration = 1.4
+pinch_actions = ['zoom']
+pinch_zoom_acceleration = 1.0
 pinch_rotate_acceleration = 1.0
+pan_pan_acceleration = 1.0
 
 # Use opposite sense of panning direction
 pan_reverse = False

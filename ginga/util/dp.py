@@ -7,7 +7,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy
+import numpy as np
 
 from collections import OrderedDict
 
@@ -23,7 +23,7 @@ def get_image_name(image, pfx='dp'):
     global prefixes
     name = image.get('name', None)
     if name is None:
-        if not pfx in prefixes:
+        if pfx not in prefixes:
             prefixes[pfx] = 0
         name = '{0}{1:d}'.format(pfx, prefixes[pfx])
         prefixes[pfx] += 1
@@ -64,13 +64,13 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     width = height = imagesize
 
     if dtype is None:
-        dtype = numpy.float32
+        dtype = np.float32
     if mmap_path is None:
-        data = numpy.zeros((height, width), dtype=dtype)
+        data = np.zeros((height, width), dtype=dtype)
 
     else:
-        data = numpy.memmap(mmap_path, dtype=dtype, mode=mmap_mode,
-                            shape=(height, width))
+        data = np.memmap(mmap_path, dtype=dtype, mode=mmap_mode,
+                         shape=(height, width))
 
     crpix = float(imagesize // 2)
     header = OrderedDict((('SIMPLE', True),
@@ -98,6 +98,7 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     get_image_name(image, pfx=pfx)
 
     return image
+
 
 def recycle_image(image, ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
                   cdbase=[1, 1], logger=None, pfx='dp'):
@@ -138,15 +139,15 @@ def recycle_image(image, ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
 
 def make_flat(imglist, bias=None):
 
-    flats = [ image.get_data() for image in imglist ]
-    flatarr = numpy.array(flats)
+    flats = [image.get_data() for image in imglist]
+    flatarr = np.array(flats)
     # Take the median of the individual frames
-    flat = numpy.median(flatarr, axis=0)
+    flat = np.median(flatarr, axis=0)
 
     # Normalize flat
     # mean or median?
-    #norm = numpy.mean(flat.flat)
-    norm = numpy.median(flat.flat)
+    #norm = np.mean(flat.flat)
+    norm = np.median(flat.flat)
     flat = flat / norm
     # no zero divisors
     flat[flat == 0.0] = 1.0
@@ -154,12 +155,13 @@ def make_flat(imglist, bias=None):
     img_flat = make_image(flat, imglist[0], {}, pfx='flat')
     return img_flat
 
+
 def make_bias(imglist):
 
-    biases = [ image.get_data() for image in imglist ]
-    biasarr = numpy.array(biases)
+    biases = [image.get_data() for image in imglist]
+    biasarr = np.array(biases)
     # Take the median of the individual frames
-    bias = numpy.median(biasarr, axis=0)
+    bias = np.median(biasarr, axis=0)
 
     img_bias = make_image(bias, imglist[0], {}, pfx='bias')
     return img_bias
@@ -218,14 +220,14 @@ def masktorgb(mask, color='lightgreen', alpha=1.0):
         Invalid mask dimension.
 
     """
-    mask = numpy.asarray(mask)
+    mask = np.asarray(mask)
 
     if mask.ndim != 2:
         raise ValueError('ndim={0} is not supported'.format(mask.ndim))
 
     ht, wd = mask.shape
     r, g, b = colors.lookup_color(color)
-    rgbobj = RGBImage(data_np = numpy.zeros((ht, wd, 4), dtype=numpy.uint8))
+    rgbobj = RGBImage(data_np=np.zeros((ht, wd, 4), dtype=np.uint8))
 
     rc = rgbobj.get_slice('R')
     gc = rgbobj.get_slice('G')
@@ -243,10 +245,11 @@ def masktorgb(mask, color='lightgreen', alpha=1.0):
 
     return rgbobj
 
+
 def split_n(lst, sz):
     n = len(lst)
     k, m = n // sz, n % sz
-    return [ lst[i * k + min(i, m):(i + 1) * k + min(i + 1, m)]
-             for i in range(sz) ]
+    return [lst[i * k + min(i, m):(i + 1) * k + min(i + 1, m)]
+            for i in range(sz)]
 
 # END

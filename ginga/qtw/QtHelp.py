@@ -11,6 +11,7 @@ import math
 import ginga.toolkit
 from ginga.util import iohelper
 from ginga.misc import Callback, Bunch
+from ginga.fonts import font_asst
 
 configured = False
 
@@ -33,13 +34,11 @@ have_pyside = False
 try:
     from qtpy import QtCore
     from qtpy import QtWidgets as QtGui
-    from qtpy.QtGui import QImage, QColor, QFont, QPixmap, QIcon, \
-         QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, \
-         QDrag, QPainterPath, QBrush
-    from qtpy.QtCore import QItemSelectionModel
-    from qtpy.QtWidgets import QApplication
+    from qtpy.QtGui import QImage, QColor, QFont, QPixmap, QIcon, QCursor, QPainter, QPen, QPolygonF, QPolygon, QTextCursor, QDrag, QPainterPath, QBrush, QFontDatabase  # noqa
+    from qtpy.QtCore import QItemSelectionModel  # noqa
+    from qtpy.QtWidgets import QApplication  # noqa
     try:
-        from qtpy.QtWebEngineWidgets import QWebEngineView as QWebView
+        from qtpy.QtWebEngineWidgets import QWebEngineView as QWebView  # noqa
     except ImportError as e:
         pass
 
@@ -267,7 +266,7 @@ class Timer(Callback.Callbacks):
     def stop(self):
         try:
             self.timer.stop()
-        except:
+        except Exception:
             pass
 
     def cancel(self):
@@ -279,12 +278,15 @@ class Timer(Callback.Callbacks):
 
     clear = cancel
 
+
 def cmap2pixmap(cmap, steps=50):
     """Convert a Ginga colormap into a QPixmap
     """
-    inds = numpy.linspace(0, 1, steps)
+    import numpy as np
+
+    inds = np.linspace(0, 1, steps)
     n = len(cmap.clst) - 1
-    tups = [ cmap.clst[int(x*n)] for x in inds ]
+    tups = [cmap.clst[int(x * n)] for x in inds]
     rgbas = [QColor(int(r * 255), int(g * 255),
                     int(b * 255), 255).rgba() for r, g, b in tups]
     im = QImage(steps, 1, QImage.Format_Indexed8)
@@ -304,7 +306,7 @@ def get_scroll_info(event):
     # 15 deg is standard 1-click turn for a wheel mouse
     # delta() usually returns 120
     if have_pyqt5:
-        # TODO: use pixelDelta() for better handling on hi-res devices
+        # TODO: use pixelDelta() for better handling on hi-res devices?
         point = event.angleDelta()
         dx, dy = point.x(), point.y()
         delta = math.sqrt(dx ** 2 + dy ** 2)
@@ -347,7 +349,26 @@ def get_icon(iconpath, size=None):
 
 
 def get_font(font_family, point_size):
+    font_family = font_asst.resolve_alias(font_family, font_family)
     font = QFont(font_family, point_size)
     return font
 
-#END
+
+def load_font(font_name, font_file):
+    # NOTE: you need to have created a QApplication() first (see
+    # qtw.Widgets.Application) for this to work correctly, or you will get
+    # a crash!
+    font_id = QFontDatabase.addApplicationFont(font_file)
+    if font_id < 0:
+        raise ValueError("Unspecified Qt problem loading font from '%s'" % (
+            font_file))
+
+    font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+
+    if font_name != font_family:
+        # If Qt knows this under a different name, add an alias
+        font_asst.add_alias(font_name, font_family)
+
+    return font_name
+
+# END

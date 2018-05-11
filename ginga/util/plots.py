@@ -4,8 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy
-from astropy.utils.introspection import minversion
+import numpy as np
 
 import matplotlib as mpl
 from matplotlib.figure import Figure
@@ -16,7 +15,7 @@ from ginga.misc import Callback
 # fix issue of negative numbers rendering incorrectly with default font
 mpl.rcParams['axes.unicode_minus'] = False
 
-MPL_GE_2_0 = minversion(mpl, '2.0')
+MPL_GE_2_0 = mpl.__version__[0] not in ('0', '1')
 
 
 class Plot(Callback.Callbacks):
@@ -29,7 +28,7 @@ class Plot(Callback.Callbacks):
             dpi = figure.get_dpi()
             if dpi is None or dpi < 0.1:
                 dpi = 100
-            wd_in, ht_in = float(width)/dpi, float(height)/dpi
+            wd_in, ht_in = float(width) / dpi, float(height) / dpi
             figure.set_size_inches(wd_in, ht_in)
         self.fig = figure
         if hasattr(self.fig, 'set_tight_layout'):
@@ -130,17 +129,17 @@ class HistogramPlot(Plot):
 
     def histogram(self, data, numbins=2048,
                   xtitle=None, ytitle=None, title=None, rtitle=None):
-        minval = numpy.nanmin(data)
-        maxval = numpy.nanmax(data)
+        minval = np.nanmin(data)
+        maxval = np.nanmax(data)
 
-        substval = (minval + maxval)/2.0
-        data[numpy.isnan(data)] = substval
+        substval = (minval + maxval) / 2.0
+        data[np.isnan(data)] = substval
 
-        dist, bins = numpy.histogram(data, bins=numbins, density=False)
+        dist, bins = np.histogram(data, bins=numbins, density=False)
 
         # used with 'steps-post' drawstyle, this gives correct histogram-steps
         x = bins
-        y = numpy.append(dist, dist[-1])
+        y = np.append(dist, dist[-1])
 
         self.clear()
         self.plot(x, y, alpha=1.0, linewidth=1.0, linestyle='-',
@@ -156,7 +155,7 @@ class CutsPlot(Plot):
         """data: pixel values along a line.
         """
         y = data
-        x = numpy.arange(len(data))
+        x = np.arange(len(data))
 
         self.plot(x, y, color=color, drawstyle='steps-mid',
                   xtitle=xtitle, ytitle=ytitle, title=title, rtitle=rtitle,
@@ -226,8 +225,8 @@ class ContourPlot(Plot):
                                 origin='lower', cmap=self.cmap)
 
             # Create a contour plot
-            self.xdata = numpy.arange(x1, x2, 1)
-            self.ydata = numpy.arange(y1, y2, 1)
+            self.xdata = np.arange(x1, x2, 1)
+            self.ydata = np.arange(y1, y2, 1)
             colors = ['black'] * num_contours
             self.ax.contour(self.xdata, self.ydata, data, num_contours,
                             colors=colors)  # cmap=self.cmap
@@ -274,35 +273,40 @@ class ContourPlot(Plot):
         x = int(self.plot_panx * wd)
         y = int(self.plot_pany * ht)
 
-        if self.plot_zoomlevel >= 1.0:
-            scalefactor = 1.0 / self.plot_zoomlevel
-        elif self.plot_zoomlevel < -1.0:
-            scalefactor = - self.plot_zoomlevel
+        zval = self.plot_zoomlevel
+        if zval >= 0.0:
+            zval += 1
+
+        if zval >= 1.0:
+            scalefactor = 1.0 / zval
+        elif zval < -1.0:
+            scalefactor = - zval
         else:
             # wierd condition?--reset to 1:1
             scalefactor = 1.0
-            self.plot_zoomlevel = 1.0
+            zval = self.plot_zoomlevel = 1.0
 
-        xdelta = int(scalefactor * (wd/2.0))
-        ydelta = int(scalefactor * (ht/2.0))
-        xlo, xhi = x-xdelta, x+xdelta
+        xdelta = int(scalefactor * (wd / 2.0))
+        ydelta = int(scalefactor * (ht / 2.0))
+
+        xlo, xhi = x - xdelta, x + xdelta
         # distribute remaining x space from plot
         if xlo < 0:
             xsh = abs(xlo)
-            xlo, xhi = 0, min(wd-1, xhi+xsh)
+            xlo, xhi = 0, min(wd - 1, xhi + xsh)
         elif xhi >= wd:
             xsh = xhi - wd
-            xlo, xhi = max(0, xlo-xsh), wd-1
+            xlo, xhi = max(0, xlo - xsh), wd - 1
         self.ax.set_xlim(xlo, xhi)
 
-        ylo, yhi = y-ydelta, y+ydelta
+        ylo, yhi = y - ydelta, y + ydelta
         # distribute remaining y space from plot
         if ylo < 0:
             ysh = abs(ylo)
-            ylo, yhi = 0, min(ht-1, yhi+ysh)
+            ylo, yhi = 0, min(ht - 1, yhi + ysh)
         elif yhi >= ht:
             ysh = yhi - ht
-            ylo, yhi = max(0, ylo-ysh), ht-1
+            ylo, yhi = max(0, ylo - ysh), ht - 1
         self.ax.set_ylim(ylo, yhi)
 
         self.draw()
@@ -347,8 +351,8 @@ class ContourPlot(Plot):
         x1, x2 = self.ax.get_xlim()
         y1, y2 = self.ax.get_ylim()
 
-        self.ax.set_xlim(x1+xdelta, x2+xdelta)
-        self.ax.set_ylim(y1+ydelta, y2+ydelta)
+        self.ax.set_xlim(x1 + xdelta, x2 + xdelta)
+        self.ax.set_ylim(y1 + ydelta, y2 + ydelta)
 
         self.draw()
 
@@ -357,6 +361,7 @@ class RadialPlot(Plot):
 
     def plot_radial(self, x, y, radius, image):
 
+        x, y, radius = int(round(x)), int(round(y)), int(round(radius))
         img_data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
 
         self.ax.cla()
@@ -371,29 +376,29 @@ class RadialPlot(Plot):
         try:
             ht, wd = img_data.shape
             off_x, off_y = x1, y1
-            #maxval = numpy.nanmax(img_data)
+            #maxval = np.nanmax(img_data)
 
             # create arrays of radius and value
             r = []
             v = []
             for i in range(0, wd):
                 for j in range(0, ht):
-                    r.append(numpy.sqrt((off_x + i - x) ** 2 +
-                                        (off_y + j - y) ** 2))
+                    r.append(np.sqrt((off_x + i - x) ** 2 +
+                                     (off_y + j - y) ** 2))
                     v.append(img_data[j, i])
-            r, v = numpy.array(r), numpy.array(v)
+            r, v = np.array(r), np.array(v)
 
             # compute and plot radial fitting
             # note: you might wanna change `deg` here.
-            coefficients = numpy.polyfit(x=r, y=v, deg=10)
-            polynomial = numpy.poly1d(coefficients)
+            coefficients = np.polyfit(x=r, y=v, deg=9)
+            polynomial = np.poly1d(coefficients)
 
-            x_curve = numpy.linspace(numpy.min(r), numpy.max(r), len(r))
+            x_curve = np.linspace(np.min(r), np.max(r), len(r))
             y_curve = polynomial(x_curve)
 
             yerror = 0   # for now, no error bars
-            self.ax.errorbar(r, v, yerr=yerror, marker='x', ls='none',
-                             color='blue')
+            self.ax.errorbar(r, v, yerr=yerror, marker='s', ls='none',
+                             mfc='none', mec='blue')
             self.ax.plot(x_curve, y_curve, '-', color='green', lw=2)
 
             #self.fig.tight_layout()
@@ -415,7 +420,7 @@ class FWHMPlot(Plot):
     def _plot_fwhm_axis(self, arr, iqcalc, skybg, color1, color2, color3,
                         fwhm_method='gaussian'):
         N = len(arr)
-        X = numpy.array(list(range(N)))
+        X = np.array(list(range(N)))
         Y = arr
         # subtract sky background
         Y = Y - skybg
@@ -430,9 +435,8 @@ class FWHMPlot(Plot):
 
         # Make a little smoother fitted curve by plotting intermediate
         # points
-        XN = numpy.linspace(0.0, float(N), N * 10)
-        Z = numpy.array([res.fit_fn(x, res.fit_args)
-                         for x in XN])
+        XN = np.linspace(0.0, float(N), N * 10)
+        Z = np.array([res.fit_fn(x, res.fit_args) for x in XN])
         self.ax.plot(XN, Z, color=color1, linestyle=':')
         self.ax.axvspan(mu - fwhm / 2.0, mu + fwhm / 2.0,
                         facecolor=color3, alpha=0.25)
@@ -441,6 +445,7 @@ class FWHMPlot(Plot):
     def plot_fwhm(self, x, y, radius, image, cutout_data=None,
                   iqcalc=None, fwhm_method='gaussian'):
 
+        x, y, radius = int(round(x)), int(round(y)), int(round(radius))
         x0, y0, xarr, yarr = image.cutout_cross(x, y, radius)
 
         if iqcalc is None:
@@ -459,7 +464,7 @@ class FWHMPlot(Plot):
             if cutout_data is None:
                 cutout_data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
 
-            skybg = numpy.median(cutout_data)
+            skybg = np.median(cutout_data)
             self.logger.debug("cutting x=%d y=%d r=%d med=%f" % (
                 x, y, radius, skybg))
 
@@ -503,9 +508,9 @@ class SurfacePlot(Plot):
     def plot_surface(self, x, y, radius, image, cutout_data=None):
 
         Z, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
-        X = numpy.arange(x1, x2, 1)
-        Y = numpy.arange(y1, y2, 1)
-        X, Y = numpy.meshgrid(X, Y)
+        X = np.arange(x1, x2, 1)
+        Y = np.arange(y1, y2, 1)
+        X, Y = np.meshgrid(X, Y)
 
         try:
             from mpl_toolkits.mplot3d import Axes3D  # noqa
@@ -524,8 +529,8 @@ class SurfacePlot(Plot):
                             title='Surface Plot')
             self.ax.grid(True)
 
-            zmin = numpy.min(Z) if self.floor is None else self.floor
-            zmax = numpy.max(Z) if self.ceiling is None else self.ceiling
+            zmin = np.min(Z) if self.floor is None else self.floor
+            zmax = np.max(Z) if self.ceiling is None else self.ceiling
 
             sfc = self.ax.plot_surface(X, Y, Z, rstride=self.stride,
                                        cstride=self.stride,
@@ -538,9 +543,9 @@ class SurfacePlot(Plot):
             self.ax.zaxis.set_major_formatter(FormatStrFormatter('%.0f'))
             self.ax.set_zlim(zmin, zmax)
 
-            self.ax.xaxis.set_ticks(numpy.arange(x1, x2, 10))
+            self.ax.xaxis.set_ticks(np.arange(x1, x2, 10))
             self.ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-            self.ax.yaxis.set_ticks(numpy.arange(y1, y2, 10))
+            self.ax.yaxis.set_ticks(np.arange(y1, y2, 10))
             self.ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
 
             self.ax.view_init(elev=20.0, azim=30.0)

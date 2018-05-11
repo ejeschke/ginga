@@ -1,17 +1,15 @@
 #
 # LayerImage.py -- Abstraction of an generic layered image.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy
+import numpy as np
 import time
 
 from ginga import BaseImage
 from ginga.misc import Bunch
+
 
 class LayerImage(object):
     """Mixin class for BaseImage subclasses.  Adds layers and alpha/rgb
@@ -34,14 +32,14 @@ class LayerImage(object):
         self._layer.insert(idx, bnch)
 
     def insert_layer(self, idx, image, alpha=None, name=None,
-                    compose=True):
+                     compose=True):
         self._insert_layer(idx, image, alpha=alpha, name=name)
 
         if compose:
             self.compose_layers()
 
     def set_layer(self, idx, image, alpha=None, name=None,
-                    compose=True):
+                  compose=True):
         self.delete_layer(idx, compose=False)
         self._insert_layer(idx, image, alpha=alpha, name=name)
 
@@ -71,7 +69,7 @@ class LayerImage(object):
                 # If alpha is an image, get the array
                 if isinstance(item, BaseImage.BaseImage):
                     item = layer.alpha.get_data()
-                shape = numpy.shape(item)
+                shape = np.shape(item)
             else:
                 raise BaseImage.ImageError("entity '%s' not in (image, alpha)" % (
                     entity))
@@ -85,7 +83,7 @@ class LayerImage(object):
     ##     return (src * alpha) + (dst * (1.0 - alpha))
 
     def mono2color(self, data):
-        return numpy.dstack((data, data, data))
+        return np.dstack((data, data, data))
 
     def alpha_multiply(self, alpha, data, shape=None):
         """(alpha) can be a scalar or an array.
@@ -102,8 +100,7 @@ class LayerImage(object):
                 return res
 
             # note: in timing tests, dstack was not as efficient here...
-            #data = numpy.dstack((res, res, res))
-            data = numpy.empty(shape)
+            data = np.empty(shape)
             data[:, :, 0] = res[:, :]
             data[:, :, 1] = res[:, :]
             data[:, :, 2] = res[:, :]
@@ -111,70 +108,38 @@ class LayerImage(object):
 
         else:
             # note: in timing tests, dstack was not as efficient here...
-            #res = numpy.dstack((data[:, :, 0] * alpha,
-            #                    data[:, :, 1] * alpha,
-            #                    data[:, :, 2] * alpha))
-            res = numpy.empty(shape)
+            res = np.empty(shape)
             res[:, :, 0] = data[:, :, 0] * alpha
             res[:, :, 1] = data[:, :, 1] * alpha
             res[:, :, 2] = data[:, :, 2] * alpha
             return res
 
-
     def alpha_compose(self):
         start_time = time.time()
         shape = self.get_max_shape()
-        ## ht, wd = shape[:2]
-        ## # alpha can be a scalar or an array, prepare for the appropriate kind
-        ## ashape = self.get_max_shape(entity='alpha')
-        ## if len(ashape) == 0:
-        ##     alpha_used = 0.0
-        ## else:
-        ##     alpha_used = numpy.zeros((ht, wd))
 
         # result holds the result of the composition
-        result = numpy.zeros(shape)
+        result = np.zeros(shape)
 
         cnt = 0
         for layer in self._layer:
             alpha = layer.alpha
             if isinstance(alpha, BaseImage.BaseImage):
                 alpha = alpha.get_data()
-            #alpha = numpy.clip((1.0 - alpha_used) * alpha, 0.0, 1.0)
-            #mina = numpy.min(alpha)
-            #print "cnt=%d mina=%f" % (cnt, mina)
             data = layer.image.get_data()
             result += self.alpha_multiply(alpha, data, shape=shape)
-            ## alpha_used += layer.alpha
-            #numpy.clip(alpha_used, 0.0, 1.0)
             cnt += 1
 
         self.set_data(result)
         end_time = time.time()
         self.logger.debug("alpha compose=%.4f sec" % (end_time - start_time))
 
-    # def rgb_compose(self):
-    #     slices = []
-    #     start_time = time.time()
-    #     for i in range(len(self._layer)):
-    #         layer = self.get_layer(i)
-    #         data = self.alpha_multiply(layer.alpha, layer.image.get_data())
-    #         slices.append(data)
-    #     split_time = time.time()
-    #     result = numpy.dstack(slices)
-    #     end_time = time.time()
-
-    #     self.set_data(result)
-    #     print "rgb_compose alpha multiply=%.4f sec  dstack=%.4f sec  sec total=%.4f sec" % (
-    #         split_time - start_time, end_time - split_time,
-    #         end_time - start_time)
-
     def rgb_compose(self):
         #num = self.num_layers()
         num = 3
         layer = self.get_layer(0)
         wd, ht = layer.image.get_size()
-        result = numpy.empty((ht, wd, num))
+        result = np.empty((ht, wd, num), dtype=np.uint8)
 
         start_time = time.time()
         for i in range(len(self._layer)):
@@ -203,7 +168,6 @@ class LayerImage(object):
 
             for i in range(shape[2]):
                 imgslice = data[:, :, i]
-                #img = BaseImage.BaseImage(data_np=imgslice, logger=self.logger)
                 # Create the same type of image as we are decomposing
                 img = image.__class__(data_np=imgslice, logger=self.logger)
                 if i < 3:
@@ -218,8 +182,8 @@ class LayerImage(object):
 
     def set_compose_type(self, ctype):
         assert ctype in self.compose_types, \
-               BaseImage.ImageError("Bad compose type '%s': must be one of %s" % (
-            ctype, str(self.compose_types)))
+            BaseImage.ImageError("Bad compose type '%s': must be one of %s" % (
+                ctype, str(self.compose_types)))
         self.compose = ctype
 
         self.compose_layers()

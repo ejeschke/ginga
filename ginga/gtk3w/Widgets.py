@@ -18,16 +18,18 @@ from gi.repository import Gdk
 from gi.repository import GObject
 from gi.repository import GdkPixbuf
 
+import gi
 has_webkit = False
+
 try:
     # this is necessary to prevent a warning message on import
-    import gi
-    gi.require_version('WebKit', '3.0')
+    gi.require_version('WebKit2', '4.0')
 
-    from gi.repository import WebKit  # noqa
+    from gi.repository import WebKit2 as WebKit  # noqa
     has_webkit = True
-except ImportError:
-    pass
+except Exception:
+    gi.require_version('WebKit', '3.0')
+    from gi.repository import WebKit  # noqa
 
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox',
@@ -45,6 +47,7 @@ __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
 class WidgetError(Exception):
     """For errors thrown in this module."""
     pass
+
 
 # (see TabWidget)
 _widget_move_event = None
@@ -67,6 +70,9 @@ class WidgetBase(Callback.Callbacks):
 
     def set_tooltip(self, text):
         self.widget.set_tooltip_text(text)
+
+    def get_enabled(self):
+        self.widget.get_sensitive()
 
     def set_enabled(self, tf):
         self.widget.set_sensitive(tf)
@@ -111,7 +117,9 @@ class WidgetBase(Callback.Callbacks):
 
     def resize(self, width, height):
         self.widget.set_size_request(width, height)
+
         # hackish way to allow the widget to be resized down again later
+        # NOTE: this causes some problems for sizing certain widgets
         # GObject.idle_add(self.widget.set_size_request, -1, -1)
 
     def get_font(self, font_family, point_size):
@@ -173,7 +181,9 @@ class TextEntry(WidgetBase):
     def set_editable(self, tf):
         self.widget.set_editable(tf)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.widget.modify_font(font)
 
     def set_length(self, numchars):
@@ -214,7 +224,9 @@ class TextEntrySet(WidgetBase):
     def set_editable(self, tf):
         self.entry.set_editable(tf)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.widget.modify_font(font)
 
     def set_length(self, numchars):
@@ -297,7 +309,9 @@ class TextArea(WidgetBase):
     def set_editable(self, tf):
         self.tw.set_editable(tf)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.tw.modify_font(font)
 
     def set_wrap(self, tf):
@@ -316,7 +330,6 @@ class Label(WidgetBase):
         evbox.set_border_width(0)
         evbox.props.visible_window = False
         evbox.add(label)
-        evbox.connect("button_press_event", self._cb_redirect)
 
         if halign == 'left':
             label.set_justify(Gtk.Justification.LEFT)
@@ -327,6 +340,8 @@ class Label(WidgetBase):
 
         evbox.connect("button_press_event", self._cb_redirect)
         self.enable_callback('activated')
+        evbox.connect("button_release_event", self._cb_redirect2)
+        self.enable_callback('released')
 
         self.label = label
         self.menu = menu
@@ -348,8 +363,16 @@ class Label(WidgetBase):
 
         elif event.button == 3 and self.menu is not None:
             menu_w = self.menu.get_widget()
-            return menu_w.popup(None, None, None, None,
-                                event.button, event.time)
+            if menu_w.get_sensitive():
+                return menu_w.popup(None, None, None, None,
+                                    event.button, event.time)
+        return False
+
+    def _cb_redirect2(self, widget, event):
+        if event.button == 1:
+            self.make_callback('released')
+            return True
+
         return False
 
     def get_text(self):
@@ -358,7 +381,9 @@ class Label(WidgetBase):
     def set_text(self, text):
         self.label.set_text(text)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if isinstance(font, six.string_types):
+            font = self.get_font(font, size)
         self.label.modify_font(font)
 
     def set_color(self, fg=None, bg=None):
@@ -413,7 +438,7 @@ class ComboBox(WidgetBase):
             if model[i][0] > text:
                 model.insert(j, tup)
                 return
-        model.insert(j+1, tup)
+        model.insert(j + 1, tup)
 
     def append_text(self, text):
         model = self.widget.get_model()
@@ -485,8 +510,10 @@ class SpinBox(WidgetBase):
 
 
 class Slider(WidgetBase):
-    def __init__(self, orientation='horizontal', track=False):
+    def __init__(self, orientation='horizontal', dtype=int, track=False):
         super(Slider, self).__init__()
+
+        # NOTE: parameter dtype is ignored for now for gtk3
 
         if orientation == 'horizontal':
             w = GtkHelp.HScale()
@@ -636,8 +663,9 @@ class Image(WidgetBase):
 
             elif event.button == 3 and self.menu is not None:
                 menu_w = self.menu.get_widget()
-                return menu_w.popup(None, None, None, None,
-                                    event.button, event.time)
+                if menu_w.get_sensitive():
+                    return menu_w.popup(None, None, None, None,
+                                        event.button, event.time)
 
     def _cb_redirect2(self, widget, event):
         if event.type == Gdk.EventType.BUTTON_RELEASE:
@@ -647,6 +675,11 @@ class Image(WidgetBase):
 
     def _set_image(self, native_image):
         self.image.set_from_pixbuf(native_image.get_pixbuf())
+
+    def load_file(self, img_path, format=None):
+        # format ignored at present
+        pixbuf = GtkHelp.pixbuf_new_from_file(img_path)
+        self.image.set_from_pixbuf(pixbuf)
 
 
 class ProgressBar(WidgetBase):
@@ -681,7 +714,7 @@ class StatusBar(WidgetBase):
     def set_message(self, msg_str, duration=10.0):
         try:
             self.widget.remove_all(self.ctx_id)
-        except:
+        except Exception:
             pass
         self.ctx_id = self.widget.get_context_id('status')
         self.widget.push(self.ctx_id, msg_str)
@@ -852,7 +885,7 @@ class TreeView(WidgetBase):
 
             # recurse for non-leaf interior node
             for key in node:
-                self._add_subtree(level+1, d, model, item, key, node[key])
+                self._add_subtree(level + 1, d, model, item, key, node[key])
 
     def _selection_cb(self, treeview):
         path, column = treeview.get_cursor()
@@ -923,10 +956,13 @@ class TreeView(WidgetBase):
         treeselection = self.tv.get_selection()
         treeselection.unselect_all()
 
-    def select_path(self, path):
+    def select_path(self, path, state=True):
         treeselection = self.tv.get_selection()
         item = self._path_to_item(path)
-        treeselection.select_iter(item)
+        if state:
+            treeselection.select_iter(item)
+        else:
+            treeselection.unselect_iter(item)
 
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)  # noqa
@@ -974,16 +1010,22 @@ class TreeView(WidgetBase):
             model, iter1, iter2 = args[:3]
             bnch1 = model.get_value(iter1, 0)
             bnch2 = model.get_value(iter2, 0)
-            if isinstance(bnch1, str):
-                if isinstance(bnch2, str):
-                    return bnch1.lower() == bnch2.lower()  # was using cmp
+            if isinstance(bnch1, six.string_types):
+                if isinstance(bnch2, six.string_types):
+                    s1, s2 = bnch1.lower(), bnch2.lower()
+                    if s1 < s2:
+                        return -1
+                    if s1 > s2:
+                        return 1
                 return 0
             val1, val2 = bnch1[idx], bnch2[idx]
-            if isinstance(val1, str):
-                val1 = val1.lower()
-                val2 = val2.lower()
-            res = val1 == val2  # was using nonexistent cmp
-            return res
+            if isinstance(val1, six.string_types):
+                val1, val2 = val1.lower(), val2.lower()
+                if val1 < val2:
+                    return -1
+                if val1 > val2:
+                    return 1
+            return 0
         return fn
 
     def _mkcolfn0(self, idx):
@@ -1056,6 +1098,9 @@ class ContainerBase(WidgetBase):
         super(ContainerBase, self).__init__()
         self.children = []
 
+        for name in ['widget-added', 'widget-removed']:
+            self.enable_callback(name)
+
     def add_ref(self, ref):
         # TODO: should this be a weakref?
         self.children.append(ref)
@@ -1065,16 +1110,17 @@ class ContainerBase(WidgetBase):
         if delete:
             childw.destroy()
 
-    def remove(self, w, delete=False):
-        if w not in self.children:
+    def remove(self, child, delete=False):
+        if child not in self.children:
             raise KeyError("Widget is not a child of this container")
-        self.children.remove(w)
+        self.children.remove(child)
 
-        self._remove(w.get_widget(), delete=delete)
+        self._remove(child.get_widget(), delete=delete)
+        self.make_callback('widget-removed', child)
 
     def remove_all(self, delete=False):
-        for w in list(self.children):
-            self.remove(w, delete=delete)
+        for child in list(self.children):
+            self.remove(child, delete=delete)
 
     def get_children(self):
         return self.children
@@ -1120,6 +1166,7 @@ class Box(ContainerBase):
         expand = (float(stretch) > 0.0)
         self.widget.pack_start(child_w, expand, True, 0)
         self.widget.show_all()
+        self.make_callback('widget-added', child)
 
 
 class VBox(Box):
@@ -1180,8 +1227,10 @@ class TabWidget(ContainerBase):
             nb.connect("create-window", self._tab_detach_cb)
         nb.connect("page-added", self._tab_insert_cb)
         nb.connect("page-removed", self._tab_remove_cb)
-        nb.sconnect("switch-page", self._cb_redirect)
-        # nb.connect("switch-page", self._cb_redirect)
+        # contrary to some other widgets, we want the "tab changed" event
+        # when the index is switched programmatically as well as by user
+        ## nb.sconnect("switch-page", self._cb_redirect)
+        nb.connect("switch-page", self._cb_redirect)
         self.widget = nb
         self.set_tab_position(tabpos)
 
@@ -1225,8 +1274,12 @@ class TabWidget(ContainerBase):
 
     def _tab_remove_cb(self, nbw, nchild_w, page_num):
         global _widget_move_event
-        child = self._native_to_child(nchild_w)
-        _widget_move_event = WidgetMoveEvent(self, child)
+        try:
+            child = self._native_to_child(nchild_w)
+            _widget_move_event = WidgetMoveEvent(self, child)
+        except ValueError:
+            # we were triggered by a removal that is not a move
+            pass
 
     def _cb_redirect(self, nbw, gptr, index):
         child = self.index_to_widget(index)
@@ -1252,6 +1305,7 @@ class TabWidget(ContainerBase):
         self.widget.show_all()
         # attach title to child
         child.extdata.tab_title = title
+        self.make_callback('widget-added', child)
 
     def get_index(self):
         return self.widget.get_current_page()
@@ -1301,14 +1355,21 @@ class MDIWidget(ContainerBase):
         self.widget = sw
         w = GtkHelp.MDIWidget()
         self.mdi_w = w
+        # Monkey patching the internal callbacks so that we can make
+        # the correct callbacks
         w._move_page = w.move_page
         w.move_page = self._window_moved
         w._resize_page = w.resize_page
         w.resize_page = self._window_resized
+        w._set_current_page = w.set_current_page
+        w.set_current_page = self._set_current_page
 
         sw.set_hadjustment(self.mdi_w.get_hadjustment())
         sw.set_vadjustment(self.mdi_w.get_vadjustment())
         sw.add(self.mdi_w)
+
+        for name in ('page-switch', 'page-close'):
+            self.enable_callback(name)
 
     def get_mode(self):
         return self.mode
@@ -1337,14 +1398,13 @@ class MDIWidget(ContainerBase):
             x, y = pos
             self.mdi_w.move_page(subwin, x, y)
 
+        subwin.add_callback('close', self._window_close, child)
+        self.make_callback('widget-added', child)
+
     def _remove(self, childw, delete=False):
         self.mdi_w.remove(childw)
         if delete:
             childw.destroy()
-
-    def _cb_redirect(self, nbw, gptr, index):
-        child = self.index_to_widget(index)
-        self.make_callback('page-switch', child)
 
     def _window_resized(self, subwin, wd, ht):
         self.mdi_w._resize_page(subwin, wd, ht)
@@ -1363,6 +1423,16 @@ class MDIWidget(ContainerBase):
         child = self._native_to_child(nchild)
         child.extdata.mdi_pos = (x, y)
         return True
+
+    def _window_close(self, subwin, child):
+        return self.make_callback('page-close', child)
+
+    def _set_current_page(self, idx):
+        _idx = self.mdi_w.get_current_page()
+        self.mdi_w._set_current_page(idx)
+        if _idx != idx:
+            child = self.index_to_widget(idx)
+            self.make_callback('page-switch', child)
 
     def get_index(self):
         return self.mdi_w.get_current_page()
@@ -1443,8 +1513,14 @@ class Splitter(ContainerBase):
     def add_widget(self, child):
         self.add_ref(child)
         child_w = child.get_widget()
+
+        # without a Frame it is difficult to see the divider
+        frame_w = Gtk.Frame()
+        frame_w.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+        frame_w.add(child_w)
+
         if len(self.children) == 1:
-            self.widget.pack1(child_w)
+            self.widget.pack1(frame_w)
 
         else:
             last = self.widget
@@ -1454,10 +1530,11 @@ class Splitter(ContainerBase):
             w = self._get_pane()
             self.panes.append(w)
 
-            w.pack1(child_w)
+            w.pack1(frame_w)
             last.pack2(w)
 
         self.widget.show_all()
+        self.make_callback('widget-added', child)
 
     def _get_sizes(self, pane):
         rect = pane.get_allocation()
@@ -1523,15 +1600,18 @@ class GridBox(ContainerBase):
         self.add_ref(child)
         w = child.get_widget()
         if stretch > 0:
-            xoptions = Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL
-            yoptions = Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL
+            xoptions = (Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.SHRINK |
+                        Gtk.AttachOptions.FILL)
+            yoptions = (Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.SHRINK |
+                        Gtk.AttachOptions.FILL)
         else:
-            xoptions = Gtk.AttachOptions.FILL
-            yoptions = Gtk.AttachOptions.FILL
-        self.widget.attach(w, col, col+1, row, row+1,
+            xoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
+            yoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
+        self.widget.attach(w, col, col + 1, row, row + 1,
                            xoptions=xoptions, yoptions=yoptions,
                            xpadding=0, ypadding=0)
         self.widget.show_all()
+        self.make_callback('widget-added', child)
 
 
 class Toolbar(ContainerBase):
@@ -1569,16 +1649,26 @@ class Toolbar(ContainerBase):
         tool_w = Gtk.ToolItem.new()
         w = child.get_widget()
         tool_w.add(w)
+        w.show()
         tool = ContainerBase()
+        tool.widget = tool_w
+        tool_w.show()
         tool.add_ref(child)
         self.add_ref(tool)
         self.widget.insert(tool_w, -1)
+        self.make_callback('widget-added', child)
         return tool
 
-    def add_menu(self, text, menu=None):
+    def add_menu(self, text, menu=None, mtype='tool'):
         if menu is None:
             menu = Menu()
-        child = self.add_action(text)
+        if mtype == 'tool':
+            child = self.add_action(text)
+        else:
+            child = Label(text, style='clickable', menu=menu)
+            self.add_widget(child)
+            child.add_callback('released', lambda w: menu.hide())
+
         child.add_callback('activated', lambda w: menu.popup())
         return menu
 
@@ -1635,6 +1725,7 @@ class Menu(ContainerBase):
         self.widget.append(menuitem_w)
         self.add_ref(child)
         # self.widget.show_all()
+        self.make_callback('widget-added', child)
 
     def add_name(self, name, checkable=False):
         child = MenuAction(text=name, checkable=checkable)
@@ -1666,7 +1757,8 @@ class Menu(ContainerBase):
             now = long(0)  # noqa
         else:
             now = int(0)
-        menu.popup(None, None, None, None, 0, now)
+        if menu.get_sensitive():
+            menu.popup(None, None, None, None, 0, now)
 
 
 class Menubar(ContainerBase):
@@ -1676,11 +1768,16 @@ class Menubar(ContainerBase):
         self.widget = Gtk.MenuBar()
         self.menus = Bunch.Bunch(caseless=True)
 
-    def add_widget(self, child):
-        menu_w = child.get_widget()
-        self.widget.addMenu(menu_w)
+    def add_widget(self, child, name):
+        if not isinstance(child, Menu):
+            raise ValueError("child widget needs to be a Menu object")
+        item_w = Gtk.MenuItem(label=name)
+        item_w.set_submenu(child.get_widget())
         self.add_ref(child)
-        menu_w.show()
+        self.widget.append(item_w)
+        self.menus[name] = child
+        item_w.show()
+        self.make_callback('widget-added', child)
         return child
 
     def add_name(self, name):
@@ -1880,7 +1977,7 @@ class Application(Callback.Callbacks):
             screen = Gdk.screen_get_default()
             self.screen_ht = screen.get_height()
             self.screen_wd = screen.get_width()
-        except:
+        except Exception:
             self.screen_wd = 1600
             self.screen_ht = 1200
         # self.logger.debug("screen dimensions %dx%d" % (
@@ -2145,13 +2242,13 @@ def build_info(captions, orientation='vertical'):
         while col < numcols:
             idx = col * 2
             if idx < len(tup):
-                title, wtype = tup[idx:idx+2]
+                title, wtype = tup[idx:idx + 2]
                 if not title.endswith(':'):
                     name = name_mangle(title)
                 else:
-                    name = name_mangle('lbl_'+title[:-1])
+                    name = name_mangle('lbl_' + title[:-1])
                 w = make_widget(title, wtype)
-                table.attach(w.get_widget(), col, col+1, row, row+1,
+                table.attach(w.get_widget(), col, col + 1, row, row + 1,
                              xoptions=Gtk.AttachOptions.FILL,
                              yoptions=Gtk.AttachOptions.FILL,
                              xpadding=1, ypadding=1)

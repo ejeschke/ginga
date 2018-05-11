@@ -1,43 +1,40 @@
-#
-# Overlays.py -- Overlays plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
-import numpy
+"""
+A plugin for generating color overlays representing under- and
+over-exposure in the loaded image.
+
+**Plugin Type: Local**
+
+``Overlays`` is a local plugin, which means it is associated with a channel.
+An instance can be opened for each channel.
+
+**Usage**
+
+Choose colors from the drop-down menus for the low-limit and/or
+high-limit ("Lo color" and "Hi color", respectively).  Specify the limits
+for low and high values in the limit boxes ("Lo limit" and "Hi limit",
+respectively).  Set the opacity of the overlays with a value between
+0 and 1 in the "Opacity" box.  Finally, press the "Redo" button.
+
+The color overlay should show areas below the low limit with a low color
+and the areas above the high limit in the high color.
+If you omit a limit (leave the box blank), that color won't be shown in
+the overlay.
+
+If a new image is selected for the channel, the overlays image will be
+recalculated based on the current parameters with the new data.
+
+"""
+import numpy as np
 
 from ginga import GingaPlugin, RGBImage, colors
 from ginga.gw import Widgets
 
+__all__ = ['Overlays']
+
+
 class Overlays(GingaPlugin.LocalPlugin):
-    """
-    Overlays
-    ========
-    A plugin for generating color overlays representing under- and
-    overexposure in the loaded image.
-
-    Plugin Type: Local
-    ------------------
-    Overlays is a local plugin, which means it is associated with a channel.
-    An instance can be opened for each channel.
-
-    Usage
-    -----
-    Choose colors from the drop-down menus for the low limit and/or
-    high-limit ("Lo color" and "Hi color").  Specify the limits for low and
-    high values in the limit boxes ("Lo limit" and "Hi limit").  Set the
-    opacity of the overlays with a value between 0 and 1 in the "Opacity"
-    box.  Finally, press the "Redo" button.
-
-    The color overlay should show areas below the low limit with a low color
-    and the areas above the high limit in the high color.
-
-    If you omit a limit (leave the box blank), that color won't be shown in
-    the overlay.
-
-    If a new image is selected for the channel the overlays image will be
-    recalculated based on the current parameters with the new data.
-    """
 
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
@@ -60,7 +57,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         self.lo_value = None
         self.opacity = 0.5
         self.arrsize = None
-        self.rgbarr = numpy.zeros((1, 1, 4), dtype=numpy.uint8)
+        self.rgbarr = np.zeros((1, 1, 4), dtype=np.uint8)
         self.rgbobj = RGBImage.RGBImage(self.rgbarr, logger=self.logger)
         self.canvas_img = None
 
@@ -144,7 +141,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         # start ruler drawing operation
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add ruler layer
@@ -169,8 +166,9 @@ class Overlays(GingaPlugin.LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         try:
             p_canvas.delete_object_by_tag(self.layertag)
-        except:
+        except Exception:
             pass
+        self.canvas.update_canvas(whence=0)  # Force redraw
         #self.canvas.ui_set_active(False)
         self.fv.show_status("")
 
@@ -211,7 +209,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         self.logger.debug("preparing RGB image")
         wd, ht = image.get_size()
         if (wd, ht) != self.arrsize:
-            rgbarr = numpy.zeros((ht, wd, 4), dtype=numpy.uint8)
+            rgbarr = np.zeros((ht, wd, 4), dtype=np.uint8)
             self.arrsize = (wd, ht)
             self.rgbobj.set_data(rgbarr)
 
@@ -265,4 +263,4 @@ class Overlays(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'overlays'
 
-#END
+# END

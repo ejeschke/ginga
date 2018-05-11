@@ -4,10 +4,12 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys, traceback
+import sys
+import traceback
+
 import numpy as np
 
-from ginga.util.six.moves import map, zip, reduce, filter
+from ginga.util.six.moves import map, reduce, filter
 from ginga.canvas import coordmap
 
 __all__ = ['CompoundMixin']
@@ -167,7 +169,7 @@ class CompoundMixin(object):
         num = len(self.objects)
         if num >= 2:
             l = self.objects
-            self.objects = l[:num-2] + [l[num-1], l[num-2]]
+            self.objects = l[:num - 2] + [l[num - 1], l[num - 2]]
 
     def set_attr_all(self, **kwdargs):
         for obj in self.objects:
@@ -195,7 +197,7 @@ class CompoundMixin(object):
             index = self.objects.index(aboveThis)
             self.objects.remove(obj)
             index = self.objects.index(aboveThis)
-            self.objects.insert(index+1, obj)
+            self.objects.insert(index + 1, obj)
 
     def lower_object(self, obj, belowThis=None):
         if belowThis is None:
@@ -224,11 +226,13 @@ class CompoundMixin(object):
     def get_reference_pt(self):
         # Reference point for a compound object is the average of all
         # it's contituents reference points
-        points = np.asarray([ obj.get_reference_pt()
-                              for obj in self.objects ])
+        points = np.asarray([obj.get_reference_pt()
+                             for obj in self.objects])
         t_ = points.T
         x, y = np.average(t_[0]), np.average(t_[1])
         return (x, y)
+
+    get_center_pt = get_reference_pt
 
     def reorder_layers(self):
         self.objects.sort(key=lambda obj: getattr(obj, '_zorder', 0))
@@ -242,7 +246,6 @@ class CompoundMixin(object):
             res.extend(list(obj.get_points()))
         return res
 
-
     ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
 
     getItemsAt = get_items_at
@@ -255,4 +258,4 @@ class CompoundMixin(object):
     raiseObject = raise_object
     lowerObject = lower_object
 
-#END
+# END

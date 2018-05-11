@@ -1,5 +1,6 @@
 numpy
+pillow
 matplotlib
 Cython
-astropy-helpers
+scipy>=0.18
 astropy

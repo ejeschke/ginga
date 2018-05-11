@@ -1,14 +1,105 @@
-#
-# Cuts.py -- Cuts plugin for Ginga reference viewer
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-#
-import numpy
+"""
+A plugin for generating a plot of the values along a line or path.
+
+**Plugin Type: Local**
+
+``Cuts`` is a local plugin, which means it is associated with a
+channel.  An instance can be opened for each channel.
+
+**Usage**
+
+``Cuts`` plots a simple graph of pixel values vs. index for a line drawn
+through the image. Multiple cuts can be plotted.
+
+There are four kinds of cuts available: line, path, freepath and
+beziercurve:
+
+* The "line" cut is a straight line between two points.
+* The "path" cut is drawn like an open polygon, with straight segments
+  in-between.
+* The "freepath" cut is like a path cut, but drawn using a free-form
+  stroke following the cursor movement.
+* The "beziercurve" path is a cubic Bezier curve.
+
+If a new image is added to the channel while the plugin is active, it
+will update with the new calculated cuts on the new image.
+
+If the "enable slit" setting is enabled, this plugin will also allow
+slit image functionality (for multidimensional images) via a "Slit" tab.
+In the tab UI, select one axis from the "Axes" list and draw a line.
+This will create a 2D image that assumes the first two axes are
+spatial and index the data along the selected axis.
+Much like ``Cuts``, you can view the other slit images using the cut
+selection drop down box.
+
+**Drawing Cuts**
+
+The "New Cut Type" menu let you choose what kind of cut you are going to draw.
+
+Choose "New Cut" from the "Cut" dropdown menu if you want to draw a
+new cut. Otherwise, if a particular named cut is selected then that
+will be replaced by any newly drawn cut.
+
+While drawing a path or beziercurve cut, press 'v' to add a vertex,
+or 'z' to remove the last vertex added.
+
+**Keyboard Shortcuts**
+
+While hovering the cursor, press 'h' for a full horizontal cut and
+'j' for a full vertical cut.
+
+**Deleting Cuts**
+
+To delete a cut, select its name from the "Cut" dropdown and click the
+"Delete" button.  To delete all cuts, press "Delete All".
+
+**Editing Cuts**
+
+Using the edit canvas function, it is possible to add new vertices to
+an existing path and to move vertices around.   Click the "Edit"
+radio button to put the canvas in edit mode.  If a cut is not
+automatically selected, you can now select the line, path, or curve by
+clicking on it, which should enable the control points at the ends or
+vertices -- you can drag these around.  To add a new vertex to a path,
+hover the cursor carefully on the line where you want the new vertex
+and press 'v'.  To get rid of a vertex, hover the cursor over it and
+press 'z'.
+
+You will notice one extra control point for most objects, which has
+a center of a different color -- this is a movement control point for
+moving the entire object around the image when in edit mode.
+
+You can also select "Move" to just move a cut unchanged.
+
+**Changing Width of Cuts**
+
+The width of 'line' cuts can be changed using the "Width Type" menu:
+
+* "none" indicates a cut of zero radius; i.e., only showing the pixel
+  values along the line
+* "x" will plot the sum of values along the X axis orthogonal to the cut.
+* "y" will plot the sum of values along the Y axis orthogonal to the cut.
+* "perpendicular" will plot the sum of values along an axis perpendicular
+  to the cut.
+
+The "Width radius" controls the width of the orthogonal summation by
+an amount on either side of the cut -- 1 would be 3 pixels, 2 would be 5
+pixels, etc.
+
+**Saving Cuts**
+
+Use the "Save" button to save the ``Cuts`` plot as as image and
+data as a Numpy compressed archive.
+
+**User Configuration**
+
+"""
+import numpy as np
 
 from ginga.gw import Widgets
 from ginga import GingaPlugin, colors
-from ginga.util.six.moves import map, zip
 from ginga.canvas.coordmap import OffsetMapper
 
 try:
@@ -18,91 +109,15 @@ try:
 except ImportError:
     have_mpl = False
 
+__all__ = ['Cuts']
+
 # default cut colors
 cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
               'burlywood2', 'yellow3', 'turquoise', 'coral1', 'mediumpurple2']
 
 
 class Cuts(GingaPlugin.LocalPlugin):
-    """
-    Cuts
-    ====
-    A plugin for generating a plot of the values along a line or path.
 
-    Plugin Type: Local
-    ------------------
-    Cuts is a local plugin, which means it is associated with a
-    channel.  An instance can be opened for each channel.
-
-    Usage
-    -----
-    There are four kinds of cuts available: line, path, freepath and
-    beziercurve:
-
-    - The "line" cut is a straight line between two points.
-    - The "path" cut is drawn like an open polygon, with straight segments
-      in-between.
-    - The "freepath" cut is like a path cut, but drawn using a free-form
-      stroke following the cursor movement.
-    - The "beziercurve" path is a cubic Bezier curve.
-
-    Multiple cuts can be plotted.
-
-    Drawing Cuts
-    ------------
-    The New Cut Type menu chooses what kind of cut you are going to draw.
-
-    Choose "New Cut" from the Cut dropdown menu if you want to draw a
-    new cut. Otherwise, if a particular named cut is selected then that
-    will be replaced by any newly drawn cut.
-
-    While drawing a path or beziercurve cut, press 'v' to add a vertex,
-    or 'z' to remove the last vertex added.
-
-    Keyboard Shortcuts
-    ------------------
-    While hovering the cursor, press 'h' for a full horizontal cut and
-    'j' for a full vertical cut.
-
-    Deleting Cuts
-    -------------
-    To delete a cut select its name from the Cut dropdown and click the
-    Delete button.  To delete all cuts press "Delete All".
-
-    Editing Cuts
-    ------------
-    Using the edit canvas function it is possible to add new vertexes to
-    an existing path, and to move vertexes around.   Click the "Edit"
-    radio button to put the canvas in edit mode.  If a cut is not
-    automatically selected you can now select the line, path or curve by
-    clicking on it, which should enable the control points at the ends or
-    vertices--you can drag these around.  To add a new vertex to a path,
-    hover the cursor carefully on the line where you want the new vertex
-    and press 'v'.  To get rid of a vertex, hover the cursor over it and
-    press 'z'.
-
-    You will notice one extra control point for most objects, which has
-    a center of a different color--this is a movement control point for
-    moving the entire object around the image when in edit mode.
-
-    Changing Width of Cuts
-    ----------------------
-    The width of 'line' cuts can be changed using the "Width Type" menu:
-
-    - "none" indicates a cut of zero radius; i.e. only showing the pixel
-      values along the line
-    - "x" will plot the sum of values along the X axis orthogonal to the
-      cut.
-    - "y" will plot the sum of values along the Y axis orthogonal to the
-      cut.
-    - "perpendicular" will plot the sum of values along an axis perpendicular
-      to the cut.
-
-    The "Width radius" controls the width of the orthogonal summation by
-    an amount on either side of the cut--1 would be 3 pixels, 2 would be 5
-    pixels, etc.
-
-    """
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Cuts, self).__init__(fv, fitsimage)
@@ -148,7 +163,6 @@ class Cuts(GingaPlugin.LocalPlugin):
                              key=self.keydown)
         canvas.set_draw_mode('draw')
         canvas.register_for_cursor_drawing(self.fitsimage)
-        #canvas.set_callback('key-press', self.keydown)
         canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
@@ -378,7 +392,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         if image is not None:
             # Add Checkbox widgets
             # `image.naxispath` returns only mdim axes
-            for i in range(1, len(image.naxispath)+3):
+            for i in range(1, len(image.naxispath) + 3):
                 chkbox = Widgets.CheckBox('NAXIS%d' % i)
                 self.hbox_axes.add_widget(chkbox)
 
@@ -433,7 +447,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         tag = self.cutstag
         if tag == self._new_cut:
             return
-        index = self.tags.index(tag)
+        index = self.tags.index(tag)  # noqa
         self.canvas.delete_object_by_tag(tag)
         self.w.cuts.delete_alpha(tag)
         self.tags.remove(tag)
@@ -461,7 +475,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.replot_all()
 
     def add_cuts_tag(self, tag):
-        if not tag in self.tags:
+        if tag not in self.tags:
             self.tags.append(tag)
             self.w.cuts.append_text(tag)
 
@@ -487,7 +501,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
         try:
-            obj = p_canvas.get_object_by_tag(self.layertag)
+            p_canvas.get_object_by_tag(self.layertag)
 
         except KeyError:
             # Add ruler layer
@@ -530,7 +544,7 @@ class Cuts(GingaPlugin.LocalPlugin):
     def _get_perpendicular_points(self, obj, x, y, r):
         dx = float(obj.x1 - obj.x2)
         dy = float(obj.y1 - obj.y2)
-        dist = numpy.sqrt(dx*dx + dy*dy)
+        dist = np.sqrt(dx * dx + dy * dy)
         dx /= dist
         dy /= dist
         x3 = x + r * dy
@@ -556,7 +570,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         x1, y1, x2, y2 = self.get_orthogonal_points(obj, x, y, r)
         values = image.get_pixels_on_line(int(x1), int(y1),
                                           int(x2), int(y2))
-        return numpy.array(values)
+        return np.array(values)
 
     def _plotpoints(self, obj, color):
 
@@ -576,7 +590,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                 for x, y in coords:
                     arr = self.get_orthogonal_array(image, obj, x, y,
                                                     self.width_radius)
-                    val = numpy.nansum(arr)
+                    val = np.nansum(arr)
                     points.append(val)
 
         elif obj.kind in ('path', 'freepath'):
@@ -592,7 +606,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         elif obj.kind == 'beziercurve':
             points = obj.get_pixels_on_curve(image)
 
-        points = numpy.array(points)
+        points = np.array(points)
 
         rgb = colors.lookup_color(color)
         self.cuts_plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
@@ -635,7 +649,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         elif obj.kind == 'beziercurve':
             coords = obj.get_pixels_on_curve(image, getvalues=False)
             # Exclude NaNs
-            coords = [c for c in coords if not numpy.any(numpy.isnan(c))]
+            coords = [c for c in coords if not np.any(np.isnan(c))]
 
         shape = image.shape
         # Exclude points outside boundaries
@@ -645,7 +659,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             self.redraw_slit('clear')
             return
 
-        return numpy.array(coords)
+        return np.array(coords)
 
     def get_slit_data(self, coords):
         image = self.fitsimage.get_image()
@@ -655,7 +669,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         # Small correction
         selected_axis = abs(self.selected_axis - naxes)
 
-        spatial_axes = [naxes-1, naxes-2]
+        spatial_axes = [naxes - 1, naxes - 2]
 
         # Build N-dim slice
         axes_slice = image.revnaxis + [0, 0]
@@ -713,7 +727,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             n = len(lines)
             count = obj.get_data('count', self.count)
             idx = (count + n) % len(self.colors)
-            colors = self.colors[idx:idx+n]
+            colors = self.colors[idx:idx + n]
             # text should take same color as first line in line set
             text = obj.objects[1]
             if text.kind == 'text':
@@ -734,7 +748,8 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cuts_plot.draw()
 
         self.canvas.redraw(whence=3)
-        self.fv.show_status("Click or drag left mouse button to reposition cuts")
+        self.fv.show_status(
+            "Click or drag left mouse button to reposition cuts")
         return True
 
     def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
@@ -746,6 +761,8 @@ class Cuts(GingaPlugin.LocalPlugin):
         text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
                                 ref_obj=line_obj)
         obj = self.dc.CompoundObject(line_obj, text_obj)
+        # this is necessary for drawing cuts with width feature
+        obj.initialize(self.canvas, self.fitsimage, self.logger)
         obj.set_data(cuts=True)
         return obj
 
@@ -768,7 +785,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                                           getvalues=False)
         crdmap = OffsetMapper(self.fitsimage, line)
         num_ticks = max(len(coords) // self.tine_spacing_px, 3)
-        interval = len(coords) // num_ticks
+        interval = max(1, len(coords) // num_ticks)
         for i in range(0, len(coords), interval):
             x, y = coords[i]
             x1, y1, x2, y2 = self.get_orthogonal_points(line, x, y,
@@ -815,7 +832,7 @@ class Cuts(GingaPlugin.LocalPlugin):
     def _getlines(self, obj):
         if obj.kind == 'compound':
             #return self._append_lists(list(map(self._getlines, obj.objects)))
-            return [ obj.objects[0] ]
+            return [obj.objects[0]]
         elif obj.kind in self.cuttypes:
             return [obj]
         else:
@@ -903,9 +920,9 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         coords = []
         if cuttype == 'horizontal':
-            coords.append((0, data_y, wd - 1, data_y))
+            coords.append((0, data_y, wd, data_y))
         elif cuttype == 'vertical':
-            coords.append((data_x, 0, data_x, ht-1))
+            coords.append((data_x, 0, data_x, ht))
 
         count = self._get_cut_index()
         tag = "cuts%d" % (count)
@@ -940,7 +957,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         obj = canvas.get_object_by_tag(tag)
         canvas.delete_object_by_tag(tag)
 
-        if not obj.kind in self.cuttypes:
+        if obj.kind not in self.cuttypes:
             return True
 
         count = self._get_cut_index()
@@ -1039,14 +1056,14 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         dataname = filename + '.npz'
         self.logger.info("saving data as: %s" % (dataname))
-        numpy.savez_compressed(dataname, x=xarr, y=yarr)
+        np.savez_compressed(dataname, x=xarr, y=yarr)
 
     def axis_toggle_cb(self, w, tf, pos):
         children = self.hbox_axes.get_children()
 
         # Deactivate previously selected axis
         if self.selected_axis is not None:
-            children[self.selected_axis-1].set_state(False)
+            children[self.selected_axis - 1].set_state(False)
 
         # Check if the old axis is clicked
         if pos == self.selected_axis:
@@ -1056,7 +1073,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             self.redraw_slit('clear')
         else:
             self.selected_axis = pos
-            children[pos-1].set_state(tf)
+            children[pos - 1].set_state(tf)
             if self.gui_up:
                 if self.cutstag != self._new_cut:
                     self.save_slit.set_enabled(True)
@@ -1100,4 +1117,10 @@ class Cuts(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'cuts'
 
-#END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Cuts', package='ginga')
+
+# END

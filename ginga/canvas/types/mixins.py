@@ -8,10 +8,9 @@ import math
 import numpy as np
 from copy import deepcopy
 
-from ginga.canvas.CanvasObject import (CanvasObjectBase, Point,
-                                       MovePoint, ScalePoint, RotatePoint)
+from ginga.canvas.CanvasObject import Point, MovePoint, ScalePoint
 from ginga import trcalc
-from ginga.util.six.moves import map
+
 
 #
 #   ==== MIXIN CLASSES FOR BASE OBJECTS ====
@@ -55,7 +54,7 @@ class OnePointMixin(object):
 
     def get_llur(self):
         x, y = self.crdmap.to_data((self.x, self.y))
-        return (x-0.5, y-0.5, x+0.5, y+0.5)
+        return (x - 0.5, y - 0.5, x + 0.5, y + 0.5)
 
     def rotate_by_deg(self, thetas):
         pass
@@ -106,14 +105,14 @@ class TwoPointMixin(object):
     def get_center_pt(self):
         points = self.get_data_points(points=[
             ((self.x1 + self.x2) / 2., (self.y1 + self.y2) / 2.),
-            ])
+        ])
         return points[0]
 
     def set_edit_point(self, i, pt, detail):
         if i == 0:
             self.move_to_pt(pt)
         elif i in (1, 2):
-            self.set_point_by_index(i-1, pt)
+            self.set_point_by_index(i - 1, pt)
         elif i == 3:
             scalef = self.calc_scale_from_pt(pt, detail)
             self.rescale_by_factors((scalef, scalef), detail)
@@ -165,7 +164,7 @@ class OnePointOneRadiusMixin(OnePointMixin):
         move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
         points = self.get_data_points(points=(
             self.crdmap.offset_pt((self.x, self.y), (self.radius, 0)),
-            ))
+        ))
         return [move_pt,
                 ScalePoint(*points[0]),
                 rotate_pt,
@@ -315,7 +314,8 @@ class PolygonMixin(object):
     def contains_pts(self, pts):
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
-        x_arr, y_arr = np.asarray(pts, dtype=np.float).T
+        x_arr, y_arr = np.asarray(pts).T
+        x_arr, y_arr = x_arr.astype(np.float), y_arr.astype(np.float)
         xa, ya = x_arr, y_arr
 
         # promote input arrays dimension cardinality, if necessary
@@ -337,7 +337,7 @@ class PolygonMixin(object):
             xi, yi = point
             tf = np.logical_and(
                 np.logical_or(np.logical_and(yi < ya, yj >= ya),
-                                 np.logical_and(yj < ya, yi >= ya)),
+                              np.logical_and(yj < ya, yi >= ya)),
                 np.logical_or(xi <= xa, xj <= xa))
             # NOTE: get a divide by zero here for some elements whose tf=False
             # Need to figure out a way to conditionally do those w/tf=True
@@ -348,9 +348,10 @@ class PolygonMixin(object):
             # to fail silently sometimes where it previously worked with a
             # warning--commenting out the warning manager for now
             cross = ((xi + (ya - yi).astype(np.float) /
-                          (yj - yi) * (xj - xi)) < xa)
+                      (yj - yi) * (xj - xi)) < xa)
 
-            result[tf == True] ^= cross[tf == True]
+            idx = np.nonzero(tf)
+            result[idx] ^= cross[idx]
             xj, yj = xi, yi
 
         if promoted:
@@ -363,8 +364,8 @@ class PolygonMixin(object):
         num_points = len(self.points)
         if i == 0:
             self.move_to_pt(pt)
-        elif i-1 < num_points:
-            self.set_point_by_index(i-1, pt)
+        elif i - 1 < num_points:
+            self.set_point_by_index(i - 1, pt)
         elif i == num_points + 1:
             scalef = self.calc_scale_from_pt(pt, detail)
             self.rescale_by(scalef, scalef, detail)
@@ -384,4 +385,4 @@ class PolygonMixin(object):
         detail.points = deepcopy(self.get_data_points())
 
 
-#END
+# END

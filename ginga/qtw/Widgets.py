@@ -8,7 +8,7 @@ import os.path
 from functools import reduce
 
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
-                              QImage, QCursor, have_pyqt4)
+                              QImage, QCursor, QFont, have_pyqt4)
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch, LineHistory
@@ -41,6 +41,7 @@ class WidgetError(Exception):
     """For errors thrown in this module."""
     pass
 
+
 _app = None
 
 
@@ -61,6 +62,9 @@ class WidgetBase(Callback.Callbacks):
 
     def set_tooltip(self, text):
         self.widget.setToolTip(text)
+
+    def get_enabled(self):
+        self.widget.isEnabled()
 
     def set_enabled(self, tf):
         self.widget.setEnabled(tf)
@@ -148,7 +152,9 @@ class TextEntry(WidgetBase):
     def set_editable(self, tf):
         self.widget.setReadOnly(not tf)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
         self.widget.setFont(font)
 
     def set_length(self, numchars):
@@ -187,7 +193,9 @@ class TextEntrySet(WidgetBase):
     def set_editable(self, tf):
         self.entry.setReadOnly(not tf)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
         self.widget.setFont(font)
 
     def set_length(self, numchars):
@@ -259,7 +267,9 @@ class TextArea(WidgetBase):
         # self.widget.setMaximumBlockCount(numlines)
         pass
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
         self.widget.setCurrentFont(font)
 
     def set_wrap(self, tf):
@@ -283,6 +293,7 @@ class Label(WidgetBase):
 
         self.widget = lbl
         lbl.mousePressEvent = self._cb_redirect
+        lbl.mouseReleaseEvent = self._cb_redirect2
 
         if style == 'clickable':
             lbl.setSizePolicy(QtGui.QSizePolicy.Minimum,
@@ -302,11 +313,17 @@ class Label(WidgetBase):
         # lbl.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
         self.enable_callback('activated')
+        self.enable_callback('released')
 
     def _cb_redirect(self, event):
         buttons = event.buttons()
         if buttons & QtCore.Qt.LeftButton:
             self.make_callback('activated')
+
+    def _cb_redirect2(self, event):
+        buttons = event.buttons()
+        if buttons & QtCore.Qt.LeftButton:
+            self.make_callback('released')
 
     def get_text(self):
         return self.widget.text()
@@ -314,7 +331,9 @@ class Label(WidgetBase):
     def set_text(self, text):
         self.widget.setText(text)
 
-    def set_font(self, font):
+    def set_font(self, font, size=10):
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
         self.widget.setFont(font)
 
     def set_color(self, fg=None, bg=None):
@@ -424,8 +443,10 @@ class SpinBox(WidgetBase):
 
 
 class Slider(WidgetBase):
-    def __init__(self, orientation='horizontal', track=False):
+    def __init__(self, orientation='horizontal', dtype=int, track=False):
         super(Slider, self).__init__()
+
+        # NOTE: parameter dtype is ignored for now for Qt
 
         if orientation == 'horizontal':
             w = QtGui.QSlider(QtCore.Qt.Horizontal)
@@ -588,6 +609,11 @@ class Image(WidgetBase):
         pixmap = QPixmap.fromImage(native_image)
         self.widget.setPixmap(pixmap)
 
+    def load_file(self, img_path, format=None):
+        pixmap = QPixmap()
+        pixmap.load(img_path, format=format)
+        self.widget.setPixmap(pixmap)
+
 
 class ProgressBar(WidgetBase):
     def __init__(self):
@@ -746,7 +772,7 @@ class TreeView(WidgetBase):
 
             # recurse for non-leaf interior node
             for key in node:
-                self._add_subtree(level+1, d, item, key, node[key])
+                self._add_subtree(level + 1, d, item, key, node[key])
 
     def _selection_cb(self):
         res_dict = self.get_selected()
@@ -782,7 +808,10 @@ class TreeView(WidgetBase):
             s = s[name].node
 
         dst_key = path[-1]
-        d[dst_key] = s[dst_key].node
+        try:
+            d[dst_key] = s[dst_key].node
+        except KeyError:
+            d[dst_key] = None
 
     def get_selected(self):
         items = list(self.widget.selectedItems())
@@ -808,9 +837,9 @@ class TreeView(WidgetBase):
         item = s[path[-1]].item
         return item
 
-    def select_path(self, path):
+    def select_path(self, path, state=True):
         item = self._path_to_item(path)
-        item.setSelected(True)
+        item.setSelected(state)
 
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)
@@ -892,6 +921,9 @@ class ContainerBase(WidgetBase):
         super(ContainerBase, self).__init__()
         self.children = []
 
+        for name in ['widget-added', 'widget-removed']:
+            self.enable_callback(name)
+
     def add_ref(self, ref):
         # TODO: should this be a weakref?
         self.children.append(ref)
@@ -905,11 +937,13 @@ class ContainerBase(WidgetBase):
         if delete:
             childw.deleteLater()
 
-    def remove(self, w, delete=False):
-        if w not in self.children:
+    def remove(self, child, delete=False):
+        if child not in self.children:
             raise ValueError("Widget is not a child of this container")
-        self.children.remove(w)
-        self._remove(w.get_widget(), delete=delete)
+        self.children.remove(child)
+
+        self._remove(child.get_widget(), delete=delete)
+        self.make_callback('widget-removed', child)
 
     def remove_all(self, delete=False):
         for w in list(self.children):
@@ -965,6 +999,7 @@ class Box(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         self.layout.addWidget(child_w, stretch=stretch)
+        self.make_callback('widget-added', child)
 
     def set_spacing(self, val):
         self.layout.setSpacing(val)
@@ -1115,6 +1150,7 @@ class TabWidget(ContainerBase):
         self.widget.addTab(child_w, title)
         # attach title to child
         child.extdata.tab_title = title
+        self.make_callback('widget-added', child)
 
     def _remove(self, nchild, delete=False):
         idx = self.widget.indexOf(nchild)
@@ -1157,9 +1193,8 @@ class StackWidget(ContainerBase):
 
         self.widget = QtGui.QStackedWidget()
 
-        # TODO: currently only provided for compatibility with other
-        # like widgets
-        self.enable_callback('page-switch')
+        for name in ['page-switch']:
+            self.enable_callback(name)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
@@ -1167,13 +1202,18 @@ class StackWidget(ContainerBase):
         self.widget.addWidget(child_w)
         # attach title to child
         child.extdata.tab_title = title
+        self.make_callback('widget-added', child)
 
     def get_index(self):
         return self.widget.currentIndex()
 
     def set_index(self, idx):
+        _idx = self.widget.currentIndex()
         self.widget.setCurrentIndex(idx)
-        # child = self.index_to_widget(idx)
+
+        child = self.index_to_widget(idx)
+        if _idx != idx:
+            self.make_callback('page-switch', child)
         # child.focus()
 
     def index_of(self, child):
@@ -1288,6 +1328,8 @@ class MDIWidget(ContainerBase):
             x, y = pos
             w.move(x, y)
 
+        # Monkey-patching the widget to take control of resize and move
+        # events
         w._resizeEvent = w.resizeEvent
         w.resizeEvent = lambda event: self._window_resized(event, w, child)
         w._moveEvent = w.moveEvent
@@ -1295,6 +1337,7 @@ class MDIWidget(ContainerBase):
         w.setWindowTitle(title)
         child_w.show()
         w.show()
+        self.make_callback('widget-added', child)
 
     def _remove(self, nchild, delete=False):
         subwins = list(self.widget.subWindowList())
@@ -1405,6 +1448,7 @@ class Splitter(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         self.widget.addWidget(child_w)
+        self.make_callback('widget-added', child)
 
     def get_sizes(self):
         return list(self.widget.sizes())
@@ -1439,6 +1483,7 @@ class GridBox(ContainerBase):
         self.add_ref(child)
         w = child.get_widget()
         self.widget.layout().addWidget(w, row, col)
+        self.make_callback('widget-added', child)
 
 
 class ToolbarAction(WidgetBase):
@@ -1472,6 +1517,7 @@ class Toolbar(ContainerBase):
         else:
             w.setOrientation(QtCore.Qt.Vertical)
         self.widget = w
+        self._menu = None
         self.widget.setStyleSheet(
             """
             QToolBar { padding: 0; spacing: 0; }\n
@@ -1502,11 +1548,18 @@ class Toolbar(ContainerBase):
         self.add_ref(child)
         w = child.get_widget()
         self.widget.addWidget(w)
+        self.make_callback('widget-added', child)
 
-    def add_menu(self, text, menu=None):
+    def add_menu(self, text, menu=None, mtype='tool'):
         if menu is None:
             menu = Menu()
-        child = self.add_action(text)
+        if mtype == 'tool':
+            child = self.add_action(text)
+        else:
+            child = Label(text, style='clickable', menu=menu)
+            self.add_widget(child)
+            child.add_callback('released', lambda w: menu.hide())
+
         child.add_callback('activated', lambda w: menu.popup())
         return menu
 
@@ -1553,6 +1606,7 @@ class Menu(ContainerBase):
             w.setCheckable(True)
         child.widget = w
         self.add_ref(child)
+        self.make_callback('widget-added', child)
 
     def add_name(self, name, checkable=False):
         child = MenuAction(text=name, checkable=checkable)
@@ -1573,10 +1627,12 @@ class Menu(ContainerBase):
     def popup(self, widget=None):
         if widget is not None:
             w = widget.get_widget()
-            # self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
-            self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
+            if w.isEnabled():
+                # self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
+                self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
         else:
-            self.widget.exec_(QCursor.pos())
+            if self.widget.isEnabled():
+                self.widget.exec_(QCursor.pos())
 
     def get_menu(self, name):
         return self.menus[name]
@@ -1589,10 +1645,15 @@ class Menubar(ContainerBase):
         self.widget = QtGui.QMenuBar()
         self.menus = Bunch.Bunch(caseless=True)
 
-    def add_widget(self, child):
-        menu_w = child.get_widget()
-        self.widget.addMenu(menu_w)
+    def add_widget(self, child, name):
+        if not isinstance(child, Menu):
+            raise ValueError("child widget needs to be a Menu object")
+        menu_w = self.widget.addMenu(name)
+        child.widget = menu_w
         self.add_ref(child)
+        self.menus[name] = child
+        self.make_callback('widget-added', child)
+        return child
 
     def add_name(self, name):
         menu_w = self.widget.addMenu(name)
@@ -1759,6 +1820,9 @@ class Application(Callback.Callbacks):
 
     def mainloop(self):
         self._qtapp.exec_()
+
+    def quit(self):
+        self._qtapp.quit()
 
 
 class Dialog(TopLevelMixin, WidgetBase):
@@ -1942,11 +2006,11 @@ def build_info(captions, orientation='vertical'):
         while col < numcols:
             idx = col * 2
             if idx < len(tup):
-                title, wtype = tup[idx:idx+2]
+                title, wtype = tup[idx:idx + 2]
                 if not title.endswith(':'):
                     name = name_mangle(title)
                 else:
-                    name = name_mangle('lbl_'+title[:-1])
+                    name = name_mangle('lbl_' + title[:-1])
                 w = make_widget(title, wtype)
                 table.addWidget(w.widget, row, col)
                 wb[name] = w
