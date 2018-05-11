@@ -16,6 +16,9 @@ Ver 2.7.1.dev
 - Made Gtk backend default to 'gtk3'
   - "-t gtk" now invokes gtk3 instead of gtk2
   - choose "-t gtk2" if you want the gtk2 back end
+- Fixed a bug with opening wildcard-type filespec from the command line
+- Fixed an issue in Thumbs plugin with opening FITS tables from the
+  command line
 
 Ver 2.7.0 (2018-02-02)
 ======================
