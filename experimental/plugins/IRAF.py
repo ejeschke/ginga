@@ -48,6 +48,9 @@ IRAF deals with images in enumerated "frames", whereas Ginga uses
 named channels.  The bottom of the ``IRAF`` plugin GUI will show the mapping
 from Ginga channels to IRAF frames.
 
+NOTE: this plugin requires the IIS_DataListener module, which should
+be in the same place that you found this plugin.
+
 """
 import os
 import threading

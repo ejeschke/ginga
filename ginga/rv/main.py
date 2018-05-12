@@ -119,8 +119,6 @@ plugins = [
           menu="Logger Info [G]", category='Debug', ptype='global'),
     Bunch(module='MultiDim', workspace='lleft', category='Navigation',
           ptype='local'),
-    Bunch(module='IRAF', tab='IRAF', workspace='right', start=False,
-          menu="IRAF Interface [G]", category='Remote', ptype='global'),
     Bunch(module='RC', tab='RC', workspace='right', start=False,
           menu="Remote Control [G]", category='Remote', ptype='global'),
     Bunch(module='SAMP', tab='SAMP', workspace='right', start=False,
