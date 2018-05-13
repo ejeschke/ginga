@@ -21,6 +21,7 @@ Ver 2.7.1.dev
   command line
 - Fixes for some keyboard focus (Gtk) and unintentional channel changes
   (Qt) when viewer is in MDI mode
+- IRAF plugin moved to experimental folder
 
 Ver 2.7.0 (2018-02-02)
 ======================

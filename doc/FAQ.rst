@@ -68,10 +68,6 @@ See Section :ref:`ginga-quick-reference`.
 Miscellaneous
 -------------
 
-Does Ginga work with IRAF (a la DS9)?
--------------------------------------
-Yes. See Section :ref:`sec-plugins-IRAF`.
-
 Does Ginga work with SAMP?
 --------------------------
 Yes. See Section :ref:`sec-plugins-SAMP`.
