@@ -500,7 +500,7 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
                 # NOTE: x, y are assumed to be in data coordinates
                 info = image.info_xy(self.x, self.y, viewer.get_settings())
                 if self.format == 'coords':
-                    if not 'ra_lbl' in info:
+                    if 'ra_lbl' not in info:
                         text = 'No WCS'
                     else:
                         text = "%s:%s, %s:%s" % (info.ra_lbl, info.ra_txt,

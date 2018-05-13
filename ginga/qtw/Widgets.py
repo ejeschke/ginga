@@ -1315,9 +1315,11 @@ class MDIWidget(ContainerBase):
         # the widget accepts focus when the mouse enters the window,
         # whereas this approach one actually has to click in the window
         # or title bar.
+
         def _focus_cb(event):
             if event.gotFocus():
                 self._cb_redirect(subwin)
+
         subwin.focusInEvent = _focus_cb
         subwin.setWidget(child_w)
         # attach title to child
