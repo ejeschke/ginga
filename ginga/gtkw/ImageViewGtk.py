@@ -218,6 +218,9 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         if delay is not None:
             self.msgtask.start(delay)
 
+    def take_focus(self):
+        self.imgwin.grab_focus()
+
 
 class ImageViewEvent(ImageViewGtk):
 

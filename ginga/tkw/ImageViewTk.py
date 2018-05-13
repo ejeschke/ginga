@@ -148,6 +148,9 @@ class ImageViewTk(ImageView):
         if delay is not None:
             self.msgtask.start(delay)
 
+    def take_focus(self):
+        self.tkcanvas.focus_set()
+
 
 class ImageViewEvent(ImageViewTk):
 

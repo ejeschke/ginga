@@ -313,6 +313,9 @@ class ImageViewQt(ImageView.ImageViewBase):
         if delay is not None:
             self.msgtimer.start(delay)
 
+    def take_focus(self):
+        self.imgwin.setFocus()
+
 
 class RenderMixin(object):
 
@@ -395,8 +398,7 @@ class QtEventMixin(object):
         imgwin.setFocusPolicy(QtCore.Qt.FocusPolicy(
                               QtCore.Qt.TabFocus |
                               QtCore.Qt.ClickFocus |
-                              QtCore.Qt.StrongFocus |
-                              QtCore.Qt.WheelFocus))
+                              QtCore.Qt.StrongFocus))
         imgwin.setMouseTracking(True)
         imgwin.setAcceptDrops(True)
         # enable gesture handling

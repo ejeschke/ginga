@@ -343,9 +343,6 @@ class MDIWidget(Gtk.Layout):
         self.minimized_width = 50
         self.delta_px = 50
 
-        self.connect("motion_notify_event", self.motion_notify_event)
-        self.connect("button_press_event", self.button_press_event)
-        self.connect("button_release_event", self.button_release_event)
         mask = self.get_events()
         self.set_events(mask |
                         Gdk.EventMask.ENTER_NOTIFY_MASK |
@@ -359,6 +356,10 @@ class MDIWidget(Gtk.Layout):
                         Gdk.EventMask.POINTER_MOTION_MASK |
                         Gdk.EventMask.POINTER_MOTION_HINT_MASK |
                         Gdk.EventMask.SCROLL_MASK)
+
+        self.connect("motion_notify_event", self.motion_notify_event)
+        self.connect("button_press_event", self.button_press_event)
+        self.connect("button_release_event", self.button_release_event)
 
         self.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray50"))
 

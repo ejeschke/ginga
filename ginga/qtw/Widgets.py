@@ -1231,7 +1231,8 @@ class MDIWidget(ContainerBase):
         w = QtGui.QMdiArea()
         w.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         w.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        w.subWindowActivated.connect(self._cb_redirect)
+        # See note below in add_widget()
+        #w.subWindowActivated.connect(self._cb_redirect)
 
         # w.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
         #                                   QtGui.QSizePolicy.Expanding))
@@ -1308,6 +1309,16 @@ class MDIWidget(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         subwin = QtGui.QMdiSubWindow(self.widget)
+        # NOTE: we fire the page-switch callback by intercepting the
+        # focus event on the subwindow, rather than off of the
+        # subWindowActivated signal because the latter fires if
+        # the widget accepts focus when the mouse enters the window,
+        # whereas this approach one actually has to click in the window
+        # or title bar.
+        def _focus_cb(event):
+            if event.gotFocus():
+                self._cb_redirect(subwin)
+        subwin.focusInEvent = _focus_cb
         subwin.setWidget(child_w)
         # attach title to child
         child.extdata.tab_title = title

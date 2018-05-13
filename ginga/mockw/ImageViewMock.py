@@ -204,6 +204,10 @@ class ImageViewMock(ImageView.ImageViewBase):
             # `delay` sec
             pass
 
+    def take_focus(self):
+        # have the widget grab the keyboard focus
+        pass
+
 
 class ImageViewEvent(ImageViewMock):
 

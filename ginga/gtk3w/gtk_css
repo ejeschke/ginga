@@ -16,3 +16,9 @@ GtkToggleButton {
 GtkToolbar GtkToggleButton:checked {
     background-color: shade (@theme_bg_color, 0.9);
 }
+
+GtkScrollbar {
+   -GtkScrollbar-has-backward-stepper: 1;
+   -GtkScrollbar-has-forward-stepper: 1;
+   -GtkRange-slider-width: 20;
+}

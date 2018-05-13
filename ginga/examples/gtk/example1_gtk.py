@@ -52,6 +52,7 @@ class FitsViewer(object):
 
         # add scrollbar interface around this viewer
         si = ScrolledView(fi)
+        si.scroll_bars(horizontal='on', vertical='on')
 
         vbox.pack_start(si, fill=True, expand=True)
 

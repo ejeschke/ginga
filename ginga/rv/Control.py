@@ -128,11 +128,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # Create general preferences
         self.settings = self.prefs.create_category('general')
-        self.settings.load(onError='silent')
-        # Load bindings preferences
-        bindprefs = self.prefs.create_category('bindings')
-        bindprefs.load(onError='silent')
-
         self.settings.add_defaults(fixedFont=None,
                                    serifFont=None,
                                    sansFont=None,
@@ -146,6 +141,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                    inherit_primary_header=False,
                                    cursor_interval=0.050,
                                    save_layout=False)
+        self.settings.load(onError='silent')
+        # Load bindings preferences
+        bindprefs = self.prefs.create_category('bindings')
+        bindprefs.load(onError='silent')
 
         # Should channel change as mouse moves between windows
         self.channel_follows_focus = self.settings['channel_follows_focus']
@@ -1703,11 +1702,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         canvas.enable_draw(False)
         fi.set_canvas(canvas)
 
-        enter_focus = self.settings.get('enter_focus', False)
-        fi.set_enter_focus(settings.get('enter_focus', enter_focus))
+        # check general settings for default value of enter_focus
+        enter_focus = settings.get('enter_focus', False)
+        fi.set_enter_focus(self.settings.get('enter_focus', enter_focus))
         # check general settings for default value of focus indicator
-        focus_ind = self.settings.get('focus_indicator', False)
-        fi.show_focus_indicator(self.settings.get('focus_indicator', focus_ind))
+        focus_ind = settings.get('show_focus_indicator', False)
+        fi.show_focus_indicator(self.settings.get('show_focus_indicator',
+                                                  focus_ind))
         fi.enable_auto_orient(True)
 
         fi.add_callback('cursor-changed', self.motion_cb)
@@ -2476,7 +2477,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def force_focus_cb(self, viewer, event, data_x, data_y):
         chname = self.get_channel_name(viewer)
-        self.change_channel(chname, raisew=True)
+        channel = self.get_channel(chname)
+        v = channel.viewer
+        if hasattr(v, 'take_focus'):
+            v.take_focus()
+
+        if not self.channel_follows_focus:
+            self.change_channel(chname, raisew=True)
         return True
 
     def focus_cb(self, viewer, tf, name):

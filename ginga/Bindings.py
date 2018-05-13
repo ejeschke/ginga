@@ -2593,7 +2593,7 @@ class BindingMapper(Callback.Callbacks):
         self._kbdmode = None
         self._kbdmode_type = 'held'
         self._delayed_reset = False
-        self.logger.info("set keyboard mode reset")
+        self.logger.debug("set keyboard mode reset")
         # clear onscreen message, if any
         if (bnch is not None) and (bnch.msg is not None):
             viewer.onscreen_message(None)
@@ -2719,13 +2719,13 @@ class BindingMapper(Callback.Callbacks):
             # fixes a problem with not receiving key release events when the
             # window loses focus
             self._modifiers = frozenset([])
-        return True
+        return False
 
     def window_enter(self, viewer):
-        return True
+        return False
 
     def window_leave(self, viewer):
-        return True
+        return False
 
     def window_key_press(self, viewer, keyname):
         self.logger.debug("keyname=%s" % (keyname))

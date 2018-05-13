@@ -3439,6 +3439,14 @@ class ImageViewBase(Callback.Callbacks):
         """
         raise ImageViewError("Subclass should override this abstract method!")
 
+    def take_focus(self):
+        """Have the widget associated with this viewer take the keyboard
+        focus.
+        This should be implemented by subclasses, if they have a widget that
+        can take focus.
+        """
+        pass
+
     def set_onscreen_message(self, text, redraw=True):
         """Called by a subclass to update the onscreen message.
 
