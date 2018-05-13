@@ -19,6 +19,8 @@ Ver 2.7.1.dev
 - Fixed a bug with opening wildcard-type filespec from the command line
 - Fixed an issue in Thumbs plugin with opening FITS tables from the
   command line
+- Fixes for some keyboard focus (Gtk) and unintentional channel changes
+  (Qt) when viewer is in MDI mode
 
 Ver 2.7.0 (2018-02-02)
 ======================

@@ -340,7 +340,7 @@ class MDIWidget(Gtk.Layout):
         self.selected_child = None
         self.kbdmouse_mask = 0
         self.cascade_offset = 50
-        self.minimized_width = 50
+        self.minimized_width = 150
         self.delta_px = 50
 
         mask = self.get_events()
@@ -378,6 +378,7 @@ class MDIWidget(Gtk.Layout):
         self.update_subwin_position(subwin)
         self.update_subwin_size(subwin)
 
+        self._update_area_size()
         return subwin
 
     def set_tab_reorderable(self, w, tf):
@@ -429,6 +430,7 @@ class MDIWidget(Gtk.Layout):
             frame = subwin.frame
             super(MDIWidget, self).remove(frame)
             widget.unparent()
+        self._update_area_size()
 
     def get_widget_position(self, widget):
         rect = widget.get_allocation()
@@ -532,6 +534,18 @@ class MDIWidget(Gtk.Layout):
             button |= 0x1 << (event.button - 1)
         return True
 
+    def _update_area_size(self):
+        rect = self.get_allocation()
+        mx_wd, mx_ht = rect.width, rect.height
+
+        for subwin in self.children:
+            rect = subwin.frame.get_allocation()
+            x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+
+            mx_wd, mx_ht = max(mx_wd, x + wd), max(mx_ht, y + ht)
+
+        self.set_size(mx_wd, mx_ht)
+
     def _resize(self, bnch, x_root, y_root):
         subwin = bnch.subwin
         updates = bnch.updates
@@ -569,6 +583,8 @@ class MDIWidget(Gtk.Layout):
             # this works better if it is not self.resize_page()
             subwin.frame.set_size_request(wd, ht)
 
+        self._update_area_size()
+
     def button_release_event(self, widget, event):
         x_root, y_root = event.x_root, event.y_root
         button = self.kbdmouse_mask
@@ -595,6 +611,8 @@ class MDIWidget(Gtk.Layout):
                 self.resize_page(subwin, subwin.width, subwin.height)
 
             self.selected_child = None
+
+        self._update_area_size()
         return True
 
     def motion_notify_event(self, widget, event):
@@ -620,6 +638,7 @@ class MDIWidget(Gtk.Layout):
             elif bnch.action == 'resize':
                 self._resize(bnch, x_root, y_root)
 
+        self._update_area_size()
         return True
 
     def tile_pages(self):
@@ -650,6 +669,8 @@ class MDIWidget(Gtk.Layout):
 
                     self.raise_widget(subwin)
 
+        self._update_area_size()
+
     def cascade_pages(self):
         x, y = 0, 0
         for subwin in self.children:
@@ -657,6 +678,8 @@ class MDIWidget(Gtk.Layout):
             self.raise_widget(subwin)
             x += self.cascade_offset
             y += self.cascade_offset
+
+        self._update_area_size()
 
     def use_tabs(self, tf):
         pass
@@ -677,6 +700,8 @@ class MDIWidget(Gtk.Layout):
         self.resize_page(subwin, wd, ht)
         self.move_page(subwin, 0, 0)
 
+        self._update_area_size()
+
     def minimize_page(self, subwin):
         rect = self.get_allocation()
         height = rect.height
@@ -691,8 +716,10 @@ class MDIWidget(Gtk.Layout):
         self.move_page(subwin, x, height - ht)
         #self.lower_widget(subwin)
 
+        self._update_area_size()
+
     def close_page(self, subwin):
-        pass
+        self._update_area_size()
 
 
 class FileSelection(object):
