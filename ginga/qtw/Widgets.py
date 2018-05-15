@@ -1277,7 +1277,10 @@ class MDIWidget(ContainerBase):
         if subwin is not None:
             nchild = subwin.widget()
             child = self._native_to_child(nchild)
-            self.cur_index = self.children.index(child)
+            try:
+                self.cur_index = self.children.index(child)
+            except Exception:
+                self.cur_index = -1
             self.make_callback('page-switch', child)
 
     def _window_resized(self, event, subwin, widget):

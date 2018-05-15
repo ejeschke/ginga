@@ -475,7 +475,7 @@ class ModeIndicator(CanvasObjectBase):
 class FocusIndicator(CanvasObjectBase):
     """
     Shows an indicator that the canvas has the keyboard/mouse focus.
-    This is shown by a dotted rectangle around the perimeter of the window.
+    This is shown by a rectangle around the perimeter of the window.
 
     NOTE: to get this to work properly, you need to add a callback to your
     viewer like so:

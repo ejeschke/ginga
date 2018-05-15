@@ -146,9 +146,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         bindprefs = self.prefs.create_category('bindings')
         bindprefs.load(onError='silent')
 
-        # Should channel change as mouse moves between windows
-        self.channel_follows_focus = self.settings['channel_follows_focus']
-
         self.plugins = []
         self._plugin_sort_method = self.get_plugin_menuname
 
@@ -1355,7 +1352,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.remove_image_by_name(channel.name, imname, impath=impath)
 
     def follow_focus(self, tf):
-        self.channel_follows_focus = tf
+        self.settings['channel_follows_focus'] = tf
 
     def show_status(self, text):
         """Write a message to the status bar.
@@ -1703,12 +1700,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi.set_canvas(canvas)
 
         # check general settings for default value of enter_focus
-        enter_focus = settings.get('enter_focus', False)
-        fi.set_enter_focus(self.settings.get('enter_focus', enter_focus))
+        enter_focus = settings.get('enter_focus', None)
+        if enter_focus is None:
+            enter_focus = self.settings.get('enter_focus', True)
+        fi.set_enter_focus(enter_focus)
         # check general settings for default value of focus indicator
-        focus_ind = settings.get('show_focus_indicator', False)
-        fi.show_focus_indicator(self.settings.get('show_focus_indicator',
-                                                  focus_ind))
+        focus_ind = settings.get('show_focus_indicator', None)
+        if focus_ind is None:
+            focus_ind = self.settings.get('show_focus_indicator', False)
+        fi.show_focus_indicator(focus_ind)
         fi.enable_auto_orient(True)
 
         fi.add_callback('cursor-changed', self.motion_cb)
@@ -1741,10 +1741,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi = self.build_viewpane(settings, size=size)
 
         # add scrollbar support
-        # general settings as backup value if not overridden in channel
-        scr_onoff = self.settings.get('scrollbars', 'off')
-        scr_val = settings.setdefault('scrollbars', scr_onoff)
+        scr_val = settings.setdefault('scrollbars', None)
         scr_set = settings.get_setting('scrollbars')
+        if scr_val is None:
+            # general settings as backup value if not overridden in channel
+            scr_val = self.settings.get('scrollbars', 'off')
         si = Viewers.ScrolledView(fi)
         si.scroll_bars(horizontal=scr_val, vertical=scr_val)
         scr_set.add_callback('set', self._toggle_scrollbars, si)
@@ -2482,7 +2483,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if hasattr(v, 'take_focus'):
             v.take_focus()
 
-        if not self.channel_follows_focus:
+        if not self.settings.get('channel_follows_focus', False):
             self.change_channel(chname, raisew=True)
         return True
 
@@ -2490,7 +2491,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Called when ``viewer`` gets ``(tf==True)`` or loses
         ``(tf==False)`` the focus.
         """
-        if not self.channel_follows_focus:
+        if not self.settings.get('channel_follows_focus', False):
             return True
 
         self.logger.debug("focus %s=%s" % (name, tf))

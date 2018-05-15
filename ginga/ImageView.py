@@ -178,11 +178,11 @@ class ImageViewBase(Callback.Callbacks):
                              defer_redraw=True, defer_lagtime=0.025,
                              show_pan_position=False,
                              show_mode_indicator=True,
-                             show_focus_indicator=False,
+                             show_focus_indicator=None,
                              onscreen_font='Sans Serif',
                              onscreen_font_size=24,
                              color_fg="#D0F0E0", color_bg="#404040",
-                             limits=None, enter_focus=True)
+                             limits=None, enter_focus=None)
         self.t_.get_setting('limits').add_callback('set', self._set_limits_cb)
 
         # embedded image "profiles"
