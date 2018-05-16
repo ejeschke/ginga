@@ -43,7 +43,7 @@ class AstroImage(BaseImage):
 
     def __init__(self, data_np=None, metadata=None, logger=None,
                  name=None, wcsclass=None, ioclass=None,
-                 inherit_primary_header=False):
+                 inherit_primary_header=False, save_primary_header=True):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger, name=name)
@@ -67,8 +67,9 @@ class AstroImage(BaseImage):
         self.io.register_type('image', self.__class__)
 
         self.inherit_primary_header = inherit_primary_header
-        if self.inherit_primary_header:
-            # User wants to inherit from primary header--this will hold it
+        self.save_primary_header = inherit_primary_header or save_primary_header
+        if self.save_primary_header:
+            # User wants to save/inherit from primary header--this will hold it
             self._primary_hdr = AstroHeader()
         else:
             self._primary_hdr = None
@@ -129,7 +130,9 @@ class AstroImage(BaseImage):
         else:  # This ensures get_header() is consistent
             self.inherit_primary_header = inherit_primary_header
 
-        if inherit_primary_header and (fobj is not None):
+        save_primary_header = (self.save_primary_header or
+                               inherit_primary_header)
+        if save_primary_header and (fobj is not None):
             if self._primary_hdr is None:
                 self._primary_hdr = AstroHeader()
 
@@ -197,13 +200,16 @@ class AstroImage(BaseImage):
     def get_data_size(self):
         return self.get_size()
 
-    def get_header(self, create=True):
+    def get_header(self, create=True, include_primary_header=None):
         try:
             # By convention, the fits header is stored in a dictionary
             # under the metadata keyword 'header'
             hdr = self.metadata['header']
 
-            if self.inherit_primary_header and self._primary_hdr is not None:
+            if include_primary_header is None:
+                include_primary_header = self.inherit_primary_header
+
+            if include_primary_header and self._primary_hdr is not None:
                 # Inherit PRIMARY header for display but keep metadata intact
                 displayhdr = AstroHeader()
                 for key in hdr.keyorder:
@@ -277,6 +283,9 @@ class AstroImage(BaseImage):
         if hasattr(self, 'wcs') and self.wcs is not None:
             header = self.get_header()
             self.wcs.load_header(header)
+
+    def has_primary_header(self):
+        return self._primary_hdr is not None
 
     def clear_all(self):
         # clear metadata and data
