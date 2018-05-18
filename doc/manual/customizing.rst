@@ -236,9 +236,26 @@ workspace for creating channels, and the "dialogs" workspace is where
 most local plugins are instantiated (when activated), by default.
 These two names should at least be defined somewhere in default_layout.
 
-==========================
-Adding or Removing Plugins
-==========================
+==================
+Auto-Start Plugins
+==================
+
+Not all plugins provided by Ginga are automatically started up by default.
+A plugin can be started automatically in ``post_gui_config()`` using the
+``start_global_plugin()`` or ``start_local_plugin()`` methods, as appropriate::
+
+    def post_gui_config(ginga_shell):
+        # Auto start global plugins
+        ginga_shell.start_global_plugin('Zoom')
+        ginga_shell.start_global_plugin('Header')
+
+        # Auto start local plugin
+        ginga_shell.add_channel('Image')
+        ginga_shell.start_local_plugin('Image', 'Histogram', None)
+
+==============
+Adding Plugins
+==============
 
 A plugin can be added to the reference viewer in ``pre_gui_config()``
 using the ``add_plugin()`` method with a specification ("spec") for
