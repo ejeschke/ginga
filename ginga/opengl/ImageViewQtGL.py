@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 from io import BytesIO
+import numpy as np
 
 import ginga.util.six as six
 from ginga.qtw.QtHelp import QtCore
@@ -78,8 +79,8 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         in the pixel space.
         """
         pos = (0, 0)
-        arr = self.getwin_array(order=self.rgb_order, alpha=1.0)
-        #arr = rgbobj.get_array(self.rgb_order)
+        arr = self.getwin_array(order=self.rgb_order, alpha=1.0,
+                                dtype=np.uint8)
         #pos = (dst_x, dst_y)
         #print('dst', pos)
         #pos = self.tform['window_to_native'].to_(pos)

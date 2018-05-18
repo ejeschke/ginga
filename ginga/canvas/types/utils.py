@@ -96,9 +96,13 @@ class ColorBar(CanvasObjectBase):
 
         pxwd, pxht = width, max(self.height, scale_ht)
 
+        maxc = max(rgbmap.maxc, 256)
+        maxv = rgbmap.maxv
+        maxf = float(maxv)
+
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
-        spacing = 256 // nums
+        spacing = maxc // nums
         start = spacing // 2
         _interval = {start + i * spacing: True for i in range(0, nums - 1)}
         ## self.logger.debug("nums=%d spacing=%d intervals=%s" % (
@@ -110,10 +114,10 @@ class ColorBar(CanvasObjectBase):
         y_top = y_base + self.height
 
         x2 = pxwd
-        clr_wd = pxwd // 256
-        rem_px = x2 - (clr_wd * 256)
+        clr_wd = pxwd // maxc
+        rem_px = x2 - (clr_wd * maxc)
         if rem_px > 0:
-            ival = 256 // rem_px
+            ival = maxc // rem_px
         else:
             ival = 0
         clr_ht = pxht - scale_ht
@@ -123,7 +127,7 @@ class ColorBar(CanvasObjectBase):
         j = ival
         off = 0
         range_pts = []
-        for i in range(256):
+        for i in range(maxc):
 
             wd = clr_wd
             if rem_px > 0:
@@ -135,7 +139,7 @@ class ColorBar(CanvasObjectBase):
             x = off
 
             (r, g, b) = rgbmap.get_rgbval(i)
-            color = (r / 255., g / 255., b / 255.)
+            color = (r / maxf, g / maxf, b / maxf)
 
             cr.set_line(color, linewidth=0)
             cr.set_fill(color, alpha=self.fillalpha)
@@ -284,19 +288,23 @@ class DrawableColorBar(Rectangle):
         pxwd, pxht = width, max(height, scale_ht)
         pxwd, pxht = max(pxwd, 1), max(pxht, 1)
 
+        maxc = max(rgbmap.maxc + 1, 256)
+        maxv = rgbmap.maxv
+        maxf = float(maxv)
+
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
-        spacing = 256 // nums
+        spacing = maxc // nums
         start = spacing // 2
         _interval = {start + i * spacing: True for i in range(0, nums - 1)}
 
         x_base, y_base, x_top, y_top = cx1, cy1, cx2, cy2
 
         x2 = pxwd
-        clr_wd = pxwd // 256
-        rem_px = x2 - (clr_wd * 256)
+        clr_wd = pxwd // maxc
+        rem_px = x2 - (clr_wd * maxc)
         if rem_px > 0:
-            ival = 256 // rem_px
+            ival = maxc // rem_px
         else:
             ival = 0
         clr_ht = pxht - scale_ht
@@ -306,7 +314,7 @@ class DrawableColorBar(Rectangle):
         j = ival
         off = cx1
         range_pts = []
-        for i in range(256):
+        for i in range(maxc):
 
             wd = clr_wd
             if rem_px > 0:
@@ -318,7 +326,7 @@ class DrawableColorBar(Rectangle):
             x = off
 
             (r, g, b) = rgbmap.get_rgbval(i)
-            color = (r / 255., g / 255., b / 255.)
+            color = (r / maxf, g / maxf, b / maxf)
 
             cr.set_line(color, linewidth=0)
             cr.set_fill(color, alpha=self.fillalpha)

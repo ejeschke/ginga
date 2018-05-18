@@ -180,7 +180,7 @@ class ImageViewBase(Callback.Callbacks):
                              show_mode_indicator=True,
                              show_focus_indicator=None,
                              onscreen_font='Sans Serif',
-                             onscreen_font_size=24,
+                             onscreen_font_size=None,
                              color_fg="#D0F0E0", color_bg="#404040",
                              limits=None, enter_focus=None)
         self.t_.get_setting('limits').add_callback('set', self._set_limits_cb)
@@ -1331,7 +1331,7 @@ class ImageViewBase(Callback.Callbacks):
 
         return data_x, data_y
 
-    def getwin_array(self, order='RGB', alpha=1.0):
+    def getwin_array(self, order='RGB', alpha=1.0, dtype=None):
         """Get Numpy data array for display window.
 
         Parameters
@@ -1342,6 +1342,9 @@ class ImageViewBase(Callback.Callbacks):
         alpha : float
             Opacity.
 
+        dtype : numpy dtype
+            Numpy data type desired; defaults to rgb mapper setting.
+
         Returns
         -------
         outarr : ndarray
@@ -1351,8 +1354,11 @@ class ImageViewBase(Callback.Callbacks):
         order = order.upper()
         depth = len(order)
 
+        if dtype is None:
+            dtype = self.rgbmap.dtype
+
         # Prepare data array for rendering
-        data = self._rgbobj.get_array(order)
+        data = self._rgbobj.get_array(order, dtype=dtype)
 
         # NOTE [A]
         height, width, depth = data.shape
@@ -1360,12 +1366,13 @@ class ImageViewBase(Callback.Callbacks):
         imgwin_wd, imgwin_ht = self.get_window_size()
 
         # create RGBA array for output
-        outarr = np.zeros((imgwin_ht, imgwin_wd, depth), dtype='uint8')
+        outarr = np.zeros((imgwin_ht, imgwin_wd, depth), dtype=dtype)
 
         # fill image array with the background color
         r, g, b = self.img_bg
-        bgval = dict(A=int(255 * alpha), R=int(255 * r), G=int(255 * g),
-                     B=int(255 * b))
+        maxv = np.iinfo(dtype).max
+        bgval = dict(A=int(maxv * alpha), R=int(maxv * r), G=int(maxv * g),
+                     B=int(maxv * b))
 
         for i in range(len(order)):
             outarr[:, :, i] = bgval[order[i]]
@@ -1376,12 +1383,12 @@ class ImageViewBase(Callback.Callbacks):
 
         return outarr
 
-    def getwin_buffer(self, order='RGB'):
+    def getwin_buffer(self, order='RGB', alpha=1.0, dtype=None):
         """Same as :meth:`getwin_array`, but with the output array converted
         to C-order Python bytes.
 
         """
-        outarr = self.getwin_array(order=order)
+        outarr = self.getwin_array(order=order, alpha=alpha, dtype=dtype)
 
         if not hasattr(outarr, 'tobytes'):
             # older versions of numpy
@@ -1497,7 +1504,7 @@ class ImageViewBase(Callback.Callbacks):
 
             # create backing image
             depth = len(order)
-            rgba = np.zeros((ht, wd, depth), dtype=np.uint8)
+            rgba = np.zeros((ht, wd, depth), dtype=self.rgbmap.dtype)
             self._rgbarr = rgba
 
         if (whence <= 2.0) or (self._rgbarr2 is None):
@@ -1681,15 +1688,15 @@ class ImageViewBase(Callback.Callbacks):
         return data
 
     def overlay_images(self, canvas, data, whence=0.0):
-        """Overlay data on all the canvas objects.
+        """Overlay data from any canvas image objects.
 
         Parameters
         ----------
         canvas : `~ginga.canvas.types.layer.DrawingCanvas`
-            Canvas to overlay.
+            Canvas containing possible images to overlay.
 
         data : ndarray
-            Data to overlay.
+            Output array on which to overlay image data.
 
         whence
              See :meth:`get_rgb_object`.
@@ -3456,16 +3463,19 @@ class ImageViewBase(Callback.Callbacks):
             The text to show in the display.
 
         """
+        width, height = self.get_window_size()
+
         font = self.t_.get('onscreen_font', 'sans serif')
-        font_size = self.t_.get('onscreen_font_size', 24)
+        font_size = self.t_.get('onscreen_font_size', None)
+        if font_size is None:
+            font_size = self._calc_font_size(width)
 
         # TODO: need some way to accurately estimate text extents
         # without actually putting text on the canvas
         ht, wd = font_size, font_size
         if text is not None:
-            wd = len(text) * font_size * 0.5
+            wd = len(text) * font_size * 1.1
 
-        width, height = self.get_window_size()
         x = (width // 2) - (wd // 2)
         y = ((height // 3) * 2) - (ht // 2)
 
@@ -3475,22 +3485,61 @@ class ImageViewBase(Callback.Callbacks):
         try:
             message = canvas.get_object_by_tag(tag)
             if text is None:
-                canvas.delete_object_by_tag(tag)
+                message.text = ''
             else:
                 message.x = x
                 message.y = y
                 message.text = text
+                message.fontsize = font_size
 
         except KeyError:
-            if text is not None:
-                Text = canvas.get_draw_class('text')
-                canvas.add(Text(x, y, text=text,
-                                font=font, fontsize=font_size,
-                                color=self.img_fg, coord='window'),
-                           tag=tag, redraw=False)
+            if text is None:
+                text = ''
+            Text = canvas.get_draw_class('text')
+            canvas.add(Text(x, y, text=text,
+                            font=font, fontsize=font_size,
+                            color=self.img_fg, coord='window'),
+                       tag=tag, redraw=False)
 
         if redraw:
             canvas.update_canvas(whence=3)
+
+    def _calc_font_size(self, win_wd):
+        """Heuristic to calculate an appropriate font size based on the
+        width of the viewer window.
+
+        Parameters
+        ----------
+        win_wd : int
+            The width of the viewer window.
+
+        Returns
+        -------
+        font_size : int
+            Approximately appropriate font size in points
+
+        """
+        font_size = 4
+        if win_wd >= 1600:
+            font_size = 24
+        elif win_wd >= 1000:
+            font_size = 18
+        elif win_wd >= 800:
+            font_size = 16
+        elif win_wd >= 600:
+            font_size = 14
+        elif win_wd >= 500:
+            font_size = 12
+        elif win_wd >= 400:
+            font_size = 11
+        elif win_wd >= 300:
+            font_size = 10
+        elif win_wd >= 250:
+            font_size = 8
+        elif win_wd >= 200:
+            font_size = 6
+
+        return font_size
 
     def show_pan_mark(self, tf, color='red'):
         # TO BE DEPRECATED--please use addons.show_pan_mark

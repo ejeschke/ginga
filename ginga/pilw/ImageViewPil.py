@@ -44,7 +44,8 @@ class ImageViewPil(ImageView.ImageViewBase):
         self.logger.debug("redraw surface")
 
         # get window contents as a buffer and paste it into the PIL surface
-        rgb_arr = self.getwin_array(order=self.rgb_order)
+        # TODO: allow greater bit depths when support is better in PIL
+        rgb_arr = self.getwin_array(order=self.rgb_order, dtype=np.uint8)
         p_image = Image.fromarray(rgb_arr)
 
         if p_image.size != canvas.size:

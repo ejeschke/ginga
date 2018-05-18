@@ -701,7 +701,8 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def contains_pts(self, pts):
         x_arr, y_arr = np.asarray(pts).T
-        x_arr, y_arr = x_arr.astype(np.float), y_arr.astype(np.float)
+        x_arr, y_arr = (x_arr.astype(np.float, copy=False),
+                        y_arr.astype(np.float, copy=False))
 
         points = self.get_points()
         # rotate point back to cartesian alignment for test
@@ -890,7 +891,8 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def contains_pts(self, pts):
         x_arr, y_arr = np.asarray(pts).T
-        x_arr, y_arr = x_arr.astype(np.float), y_arr.astype(np.float)
+        x_arr, y_arr = (x_arr.astype(np.float, copy=False),
+                        y_arr.astype(np.float, copy=False))
         # is this the same as self.x, self.y ?
         xd, yd = self.get_center_pt()
         # rotate point back to cartesian alignment for test
@@ -991,7 +993,8 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
 
     def contains_pts(self, pts):
         x_arr, y_arr = np.asarray(pts).T
-        x_arr, y_arr = x_arr.astype(np.float), y_arr.astype(np.float)
+        x_arr, y_arr = (x_arr.astype(np.float, copy=False),
+                        y_arr.astype(np.float, copy=False))
 
         xd, yd = self.crdmap.to_data((self.x, self.y))
 
@@ -1451,7 +1454,8 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
 
     def contains_pts(self, pts):
         x_arr, y_arr = np.asarray(pts).T
-        x_arr, y_arr = x_arr.astype(np.float), y_arr.astype(np.float)
+        x_arr, y_arr = (x_arr.astype(np.float, copy=False),
+                        y_arr.astype(np.float, copy=False))
         points = self.get_points()
         x1, y1 = points[0]
         x2, y2 = points[1]

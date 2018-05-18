@@ -86,7 +86,8 @@ class ImageViewCairo(ImageView.ImageViewBase):
             return
 
         # Prepare array for Cairo rendering
-        arr = rgbobj.get_array(self.rgb_order)
+        # TODO: is there some high-bit depth option for Cairo?
+        arr = rgbobj.get_array(self.rgb_order, dtype=np.uint8)
 
         (height, width) = arr.shape[:2]
         return self._render_offscreen(self.surface, arr, dst_x, dst_y,

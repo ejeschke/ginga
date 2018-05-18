@@ -74,7 +74,7 @@ class LinearDist(ColorDistBase):
         base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint)
+        self.hash = l.astype(numpy.uint, copy=False)
 
         self.check_hash()
 
@@ -102,7 +102,7 @@ class LogDist(ColorDistBase):
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint)
+        self.hash = l.astype(numpy.uint, copy=False)
 
         self.check_hash()
 
@@ -131,7 +131,7 @@ class PowerDist(ColorDistBase):
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint)
+        self.hash = l.astype(numpy.uint, copy=False)
 
         self.check_hash()
 
@@ -159,7 +159,7 @@ class SqrtDist(ColorDistBase):
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint)
+        self.hash = l.astype(numpy.uint, copy=False)
 
         self.check_hash()
 
@@ -186,7 +186,7 @@ class SquaredDist(ColorDistBase):
         base = (base ** 2.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint)
+        self.hash = l.astype(numpy.uint, copy=False)
 
         self.check_hash()
 
@@ -217,7 +217,7 @@ class AsinhDist(ColorDistBase):
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint)
+        self.hash = l.astype(numpy.uint, copy=False)
 
         self.check_hash()
 
@@ -249,7 +249,7 @@ class SinhDist(ColorDistBase):
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint)
+        self.hash = l.astype(numpy.uint, copy=False)
 
         self.check_hash()
 
@@ -295,7 +295,7 @@ class HistogramEqualizationDist(ColorDistBase):
         # normalize to color range
         l = (cdf - cdf.min()) * (self.colorlen - 1) / (
             cdf.max() - cdf.min())
-        self.hash = l.astype(numpy.uint)
+        self.hash = l.astype(numpy.uint, copy=False)
         self.check_hash()
 
         arr = self.hash[idx]

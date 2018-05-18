@@ -35,7 +35,7 @@ class RGBPlanes(object):
         cs = cs.upper()
         return [self.order.index(c) for c in cs]
 
-    def get_array(self, order):
+    def get_array(self, order, dtype=None):
         """Get Numpy array that represents the RGB layers.
 
         Parameters
@@ -48,13 +48,21 @@ class RGBPlanes(object):
         arr : ndarray
             Numpy array that represents the RGB layers.
 
+        dtype : numpy array dtype (optional)
+            Type of the numpy array desired.
+
         """
+        if dtype is None:
+            dtype = self.rgbarr.dtype
         order = order.upper()
         if order == self.order:
-            return self.rgbarr
+            return self.rgbarr.astype(dtype, copy=False)
+
         l = [self.get_slice(c) for c in order]
-        return np.concatenate([arr[..., np.newaxis]
-                               for arr in l], axis=-1)
+        res = np.concatenate([arr[..., np.newaxis].astype(dtype, copy=False,
+                                                          casting='unsafe')
+                              for arr in l], axis=-1)
+        return res
 
     def get_size(self):
         """Returns (height, width) tuple of slice size."""
@@ -71,7 +79,7 @@ class RGBMapper(Callback.Callbacks):
     # result
     #
 
-    def __init__(self, logger, dist=None):
+    def __init__(self, logger, dist=None, bpp=None):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
@@ -84,9 +92,18 @@ class RGBMapper(Callback.Callbacks):
         self.carr = None
         self.sarr = None
         self.scale_pct = 1.0
-        self.bpp = 8
+        # length of the color map
+        self.maxc = 255
+
+        # targeted bit depth per-pixel band of the output RGB array
+        # (can be less than the data size of the output array)
+        if bpp is None:
+            bpp = 8
+        self.bpp = bpp
+        # maximum value that we can generate in this range
         self.maxv = 2 ** self.bpp - 1
-        self.nptype = np.uint8
+        # data size per pixel band in the output RGB array
+        self._set_dtype()
 
         # For scaling algorithms
         hashsize = 65536
@@ -99,6 +116,26 @@ class RGBMapper(Callback.Callbacks):
         # For callbacks
         for name in ('changed', ):
             self.enable_callback(name)
+
+    def _set_dtype(self):
+        if self.bpp <= 8:
+            self.dtype = np.uint8
+        elif self.bpp <= 16:
+            self.dtype = np.uint16
+        else:
+            self.dtype = np.uint32
+
+    def set_bpp(self, bpp):
+        """
+        Set the bit depth (per band) for the output.
+        A typical "32-bit RGBA" image would be 8; a 48-bit image would
+        be 16, etc.
+        """
+        self.bpp = bpp
+        self.maxv = 2 ** self.bpp - 1
+        self._set_dtype()
+        self.calc_cmap()
+        self.recalc(callback=False)
 
     def set_cmap(self, cmap, callback=True):
         """
@@ -120,7 +157,9 @@ class RGBMapper(Callback.Callbacks):
     def calc_cmap(self):
         clst = self.cmap.clst
         arr = np.array(clst).transpose() * float(self.maxv)
-        self.carr = np.round(arr).astype(self.nptype)
+        # does this really need to be the same type as rgbmap output type?
+        self.carr = np.round(arr).astype(self.dtype, copy=False)
+        self.maxc = len(clst) - 1
 
     def invert_cmap(self, callback=True):
         self.carr = np.fliplr(self.carr)
@@ -137,7 +176,7 @@ class RGBMapper(Callback.Callbacks):
 
     def get_rgb(self, index):
         """
-        Return a tuple of (R, G, B) values in the 0-maxv range associated
+        Return a tuple of (R, G, B) values in the 0-maxc range associated
         mapped by the value of `index`.
         """
         return tuple(self.arr[index])
@@ -147,9 +186,9 @@ class RGBMapper(Callback.Callbacks):
         Return a tuple of (R, G, B) values in the 0-maxv range associated
         mapped by the value of `index`.
         """
-        assert (index >= 0) and (index <= self.maxv), \
-            RGBMapError("Index must be in range 0-%d !" % (self.maxv))
-        index = self.sarr[index].clip(0, self.maxv)
+        assert (index >= 0) and (index <= self.maxc), \
+            RGBMapError("Index must be in range 0-%d !" % (self.maxc))
+        index = self.sarr[index].clip(0, self.maxc)
         return (self.arr[0][index],
                 self.arr[1][index],
                 self.arr[2][index])
@@ -172,21 +211,21 @@ class RGBMapper(Callback.Callbacks):
         return self.imap
 
     def calc_imap(self):
-        arr = np.array(self.imap.ilst) * float(self.maxv)
-        self.iarr = np.round(arr).astype(np.uint)
+        arr = np.array(self.imap.ilst) * float(self.maxc)
+        self.iarr = np.round(arr).astype(np.uint, copy=False)
 
     def reset_sarr(self, callback=True):
-        maxlen = self.maxv + 1
+        maxlen = self.maxc + 1
         self.sarr = np.arange(maxlen)
         self.scale_pct = 1.0
         if callback:
             self.make_callback('changed')
 
     def set_sarr(self, sarr, callback=True):
-        maxlen = self.maxv + 1
+        maxlen = self.maxc + 1
         assert len(sarr) == maxlen, \
             RGBMapError("shift map length %d != %d" % (len(sarr), maxlen))
-        self.sarr = sarr.astype(np.uint)
+        self.sarr = sarr.astype(np.uint, copy=False)
         self.scale_pct = 1.0
 
         if callback:
@@ -253,14 +292,14 @@ class RGBMapper(Callback.Callbacks):
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
-        # idx = idx.clip(0, self.maxv)
-        idx.clip(0, self.maxv, out=idx)
+        # idx = idx.clip(0, self.maxc)
+        idx.clip(0, self.maxc, out=idx)
 
         # run it through the shift array and clip the result
         # See NOTE [A]
-        # idx = self.sarr[idx].clip(0, self.maxv)
+        # idx = self.sarr[idx].clip(0, self.maxc)
         idx = self.sarr[idx]
-        idx.clip(0, self.maxv, out=idx)
+        idx.clip(0, self.maxc, out=idx)
 
         ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
         out = rgbobj.rgbarr
@@ -304,7 +343,7 @@ class RGBMapper(Callback.Callbacks):
             res_shape = shape + (depth, )
 
         if out is None:
-            out = np.empty(res_shape, dtype=self.nptype, order='C')
+            out = np.empty(res_shape, dtype=self.dtype, order='C')
         else:
             # TODO: assertion check on shape of out
             assert res_shape == out.shape, \
@@ -346,14 +385,14 @@ class RGBMapper(Callback.Callbacks):
         xi = np.mgrid[0:new_wd]
         iscale_x = float(old_wd) / float(new_wd)
 
-        xi = (xi * iscale_x).astype('int')
+        xi = (xi * iscale_x).astype('int', copy=False)
         xi = xi.clip(0, old_wd - 1)
         newdata = sarr[xi]
         return newdata
 
     def shift(self, pct, rotate=False, callback=True):
         work = self._shift(self.sarr, pct, rotate=rotate)
-        maxlen = self.maxv + 1
+        maxlen = self.maxc + 1
         assert len(work) == maxlen, \
             RGBMapError("shifted shift map is != %d" % maxlen)
         self.sarr = work
@@ -363,10 +402,9 @@ class RGBMapper(Callback.Callbacks):
     def scale_and_shift(self, scale_pct, shift_pct, callback=True):
         """Stretch and/or shrink the color map via altering the shift map.
         """
-        maxlen = self.maxv + 1
+        maxlen = self.maxc + 1
         self.sarr = np.arange(maxlen)
 
-        #print "amount=%.2f location=%.2f" % (scale_pct, shift_pct)
         # limit shrinkage to 5% of original size
         scale = max(scale_pct, 0.050)
         self.scale_pct = scale
@@ -377,7 +415,7 @@ class RGBMapper(Callback.Callbacks):
             # pad on the lowest and highest values of the shift map
             m = (maxlen - n) // 2 + 1
             barr = np.array([0] * m)
-            tarr = np.array([self.maxv] * m)
+            tarr = np.array([self.maxc] * m)
             work = np.concatenate([barr, work, tarr])
             work = work[:maxlen]
 
@@ -386,7 +424,7 @@ class RGBMapper(Callback.Callbacks):
         # BEFORE shifting
         n = len(work) // 2
         halflen = maxlen // 2
-        work = work[n - halflen:n + halflen].astype(np.uint)
+        work = work[n - halflen:n + halflen].astype(np.uint, copy=False)
         assert len(work) == maxlen, \
             RGBMapError("scaled shift map is != %d" % maxlen)
 
@@ -425,8 +463,8 @@ class NonColorMapper(RGBMapper):
     This mapper allows changing of color distribution and contrast
     adjustment, but does no coloring.
     """
-    def __init__(self, logger, dist=None):
-        super(NonColorMapper, self).__init__(logger)
+    def __init__(self, logger, dist=None, bpp=None):
+        super(NonColorMapper, self).__init__(logger, dist=dist, bpp=bpp)
 
         maxlen = self.maxv + 1
         self.dist.set_hash_size(maxlen)
@@ -437,12 +475,12 @@ class NonColorMapper(RGBMapper):
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
-        idx.clip(0, self.maxv, out=idx)
+        idx.clip(0, self.maxc, out=idx)
 
         # run it through the shift array and clip the result
         # See NOTE [A]
         idx = self.sarr[idx]
-        idx.clip(0, self.maxv, out=idx)
+        idx.clip(0, self.maxc, out=idx)
 
         ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
         rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
@@ -461,8 +499,8 @@ class PassThruRGBMapper(RGBMapper):
     coloring.  It is thus the most efficient one to use for maximum
     speed rendering of "finished" RGB data.
     """
-    def __init__(self, logger, dist=None):
-        super(PassThruRGBMapper, self).__init__(logger)
+    def __init__(self, logger, dist=None, bpp=None):
+        super(PassThruRGBMapper, self).__init__(logger, bpp=bpp)
 
         # ignore passed in distribution
         maxlen = self.maxv + 1
@@ -478,7 +516,7 @@ class PassThruRGBMapper(RGBMapper):
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
-        idx.clip(0, self.maxv, out=idx)
+        idx.clip(0, self.maxc, out=idx)
 
         # bypass the shift array and skip color mapping,
         # index is the final data
@@ -490,23 +528,5 @@ class PassThruRGBMapper(RGBMapper):
         out[..., gi] = idx[..., gj]
         out[..., bi] = idx[..., bj]
 
-
-class HiBppMapper(NonColorMapper):
-    """
-    A kind of color mapper for data that is already in RGB form.
-
-    This mapper is based off of NonColorMapper, but supports high bit depth
-    images.
-    """
-    def __init__(self, logger, dist=None, bpp=16):
-        super(HiBppMapper, self).__init__(logger)
-
-        self.bpp = bpp
-        self.maxv = 2 ** bpp - 1
-        self.nptype = np.uint16
-
-        maxlen = self.maxv + 1
-        self.dist.set_hash_size(maxlen)
-        self.reset_sarr(callback=False)
 
 #END

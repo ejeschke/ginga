@@ -172,7 +172,7 @@ class CartesianWindowTransform(BaseTransform):
 
         # round to pixel units, if asked
         if self.as_int:
-            win_pts = np.rint(win_pts).astype(np.int)
+            win_pts = np.rint(win_pts).astype(np.int, copy=False)
 
         return win_pts
 
@@ -235,7 +235,7 @@ class CartesianNativeTransform(BaseTransform):
         # round to pixel units, if asked
         # round to pixel units, if asked
         if self.as_int:
-            win_pts = np.rint(win_pts).astype(np.int)
+            win_pts = np.rint(win_pts).astype(np.int, copy=False)
 
         return win_pts
 

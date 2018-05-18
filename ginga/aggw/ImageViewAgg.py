@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import numpy
+import numpy as np
 from io import BytesIO
 
 import aggdraw as agg
@@ -48,7 +48,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
         self.logger.debug("redraw surface")
 
         # get window contents as a buffer and load it into the AGG surface
-        rgb_buf = self.getwin_buffer(order=self.rgb_order)
+        rgb_buf = self.getwin_buffer(order=self.rgb_order, dtype=np.uint8)
         canvas.frombytes(rgb_buf)
 
         # for debugging
@@ -71,7 +71,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         # Get agg surface as a numpy array
         surface = self.get_surface()
-        arr8 = numpy.fromstring(surface.tobytes(), dtype=numpy.uint8)
+        arr8 = np.fromstring(surface.tobytes(), dtype=np.uint8)
         arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
         return arr8
 

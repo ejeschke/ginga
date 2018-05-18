@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 
 import os
+import numpy as np
 
 import gtk
 import cairo
@@ -52,7 +53,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         return self.imgwin
 
     def get_plain_image_as_pixbuf(self):
-        arr = self.getwin_array(order='RGB')
+        arr = self.getwin_array(order='RGB', dtype=np.uint8)
 
         try:
             pixbuf = GtkHelp.pixbuf_new_from_array(

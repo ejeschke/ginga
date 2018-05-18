@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 
 import os
+import numpy as np
 
 from ginga.gtk3w import GtkHelp
 from ginga import Mixins, Bindings
@@ -55,7 +56,7 @@ class ImageViewGtk(ImageView):
         return self.imgwin
 
     def get_plain_image_as_pixbuf(self):
-        arr = self.getwin_array(order='RGB')
+        arr = self.getwin_array(order='RGB', dtype=np.uint8)
         pixbuf = GtkHelp.pixbuf_new_from_array(arr,
                                                GdkPixbuf.Colorspace.RGB,
                                                8)

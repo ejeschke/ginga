@@ -170,7 +170,7 @@ class BaseImage(ViewerObjectBase):
         """Use this method to SHARE (not copy) the incoming array.
         """
         if astype:
-            data = data_np.astype(astype)
+            data = data_np.astype(astype, copy=False)
         else:
             data = data_np
         self._data = data
@@ -220,17 +220,19 @@ class BaseImage(ViewerObjectBase):
         return [self.order.index(c) for c in cs]
 
     def _calc_order(self, order):
+        """Called to set the order of a multi-channel image.
+        The order should be determined by the loader, but this will
+        make a best guess if passed `order` is `None`.
+        """
         if order is not None and order != '':
             self.order = order.upper()
         else:
             shape = self.shape
             if len(shape) <= 2:
                 self.order = 'M'
-            elif self.dtype != np.uint8:
-                self.order = 'M'
             else:
                 depth = shape[-1]
-                # TODO; need something better here than a guess!
+                # TODO: need something better here than a guess!
                 if depth == 1:
                     self.order = 'M'
                 elif depth == 2:
@@ -294,7 +296,7 @@ class BaseImage(ViewerObjectBase):
         view = np.s_[y1:y2:ystep, x1:x2:xstep]
         data = self._slice(view)
         if astype:
-            data = data.astype(astype)
+            data = data.astype(astype, copy=False)
         return data
 
     def cutout_adjust(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):

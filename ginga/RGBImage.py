@@ -9,7 +9,7 @@ from ginga.util import io_rgb
 from ginga.misc import Bunch
 from ginga.BaseImage import BaseImage, Header
 
-import numpy
+import numpy as np
 
 
 class RGBImage(BaseImage):
@@ -26,7 +26,7 @@ class RGBImage(BaseImage):
 
     def set_color(self, r, g, b):
         # TODO: handle other sizes
-        ch_max = 255
+        ch_max = np.iinfo(self._data.dtype).max
         red = self.get_slice('R')
         red[:] = int(ch_max * r)
         grn = self.get_slice('G')
@@ -73,10 +73,10 @@ class RGBImage(BaseImage):
             order = list(self.order)
             l = [self.get_slice(c) for c in order]
             wd, ht = self.get_size()
-            a = numpy.zeros((ht, wd), dtype=numpy.uint8)
+            a = np.zeros((ht, wd), dtype=self._data.dtype)
             a.fill(alpha)
             l.insert(pos, a)
-            self._data = numpy.dstack(l)
+            self._data = np.dstack(l)
             order.insert(pos, 'A')
             self.order = ''.join(order)
 

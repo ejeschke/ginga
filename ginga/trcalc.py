@@ -195,10 +195,10 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         #bp = np.rint(bp).astype('int').clip(0, ht-1)
         # Optomizations to reuse existing intermediate arrays
         np.rint(ap, out=ap)
-        ap = ap.astype('int')
+        ap = ap.astype(np.int, copy=False)
         ap.clip(0, wd - 1, out=ap)
         np.rint(bp, out=bp)
-        bp = bp.astype('int')
+        bp = bp.astype(np.int, copy=False)
         bp.clip(0, ht - 1, out=bp)
 
         if out is not None:
@@ -282,8 +282,8 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
         iscale_x = float(old_wd) / float(new_wd)
         iscale_y = float(old_ht) / float(new_ht)
 
-        xi = (x1 + xi * iscale_x).clip(0, max_x).astype('int')
-        yi = (y1 + yi * iscale_y).clip(0, max_y).astype('int')
+        xi = (x1 + xi * iscale_x).clip(0, max_x).astype(np.int, copy=False)
+        yi = (y1 + yi * iscale_y).clip(0, max_y).astype(np.int, copy=False)
         wd, ht = xi.shape[1], yi.shape[0]
 
         # bounds check against shape (to protect future data access)
@@ -335,9 +335,9 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
         iscale_y = float(old_ht) / float(new_ht)
         iscale_z = float(old_dp) / float(new_dp)
 
-        xi = (x1 + xi * iscale_x).clip(0, max_x).astype('int')
-        yi = (y1 + yi * iscale_y).clip(0, max_y).astype('int')
-        zi = (z1 + zi * iscale_z).clip(0, max_z).astype('int')
+        xi = (x1 + xi * iscale_x).clip(0, max_x).astype(np.int, copy=False)
+        yi = (y1 + yi * iscale_y).clip(0, max_y).astype(np.int, copy=False)
+        zi = (z1 + zi * iscale_z).clip(0, max_z).astype(np.int, copy=False)
         wd, ht, dp = xi.shape[1], yi.shape[0], zi.shape[2]
 
         # bounds check against shape (to protect future data access)
@@ -593,7 +593,11 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
                      alpha=1.0, copy=False, fill=True, flipy=False):
 
     dst_ht, dst_wd, dst_ch = dstarr.shape
+    dst_type = dstarr.dtype
+    dst_max_val = np.iinfo(dst_type).max
     src_ht, src_wd, src_ch = srcarr.shape
+    src_type = srcarr.dtype
+    src_max_val = np.iinfo(src_type).max
     dst_x, dst_y = int(round(pos[0])), int(round(pos[1]))
 
     if flipy:
@@ -645,13 +649,13 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
     # fill alpha channel in destination in the area we will be dropping
     # the image
     if fill and (da_idx >= 0):
-        dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, da_idx] = 255
+        dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, da_idx] = dst_max_val
 
     if (src_ch > 3) and ('A' in src_order):
         sa_idx = src_order.index('A')
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter
-        alpha = srcarr[0:src_ht, 0:src_wd, sa_idx] / 255.0
+        alpha = srcarr[0:src_ht, 0:src_wd, sa_idx] / float(src_max_val)
         alpha = np.dstack((alpha, alpha, alpha))
 
     # reorder srcarr if necessary to match dstarr for alpha merge
@@ -663,10 +667,10 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
-    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(np.uint8)
+    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(dst_type, copy=False)
     b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y + src_ht,
                                     dst_x:dst_x + src_wd,
-                                    slc]).astype(np.uint8)
+                                    slc]).astype(dst_type, copy=False)
 
     # Place our srcarr into this dstarr at dst offsets
     #dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, slc] += addarr[0:src_ht, 0:src_wd, slc]
@@ -681,7 +685,11 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
 
     dst_x, dst_y, dst_z = pos
     dst_ht, dst_wd, dst_dp, dst_ch = dstarr.shape
+    dst_type = dstarr.dtype
+    dst_max_val = np.iinfo(dst_type).max
     src_ht, src_wd, src_dp, src_ch = srcarr.shape
+    src_type = srcarr.dtype
+    src_max_val = np.iinfo(src_type).max
 
     if flipy:
         srcarr = np.flipud(srcarr)
@@ -747,13 +755,13 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     # the image
     if fill and (da_idx >= 0):
         dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
-               dst_z:dst_z + src_dp, da_idx] = 255
+               dst_z:dst_z + src_dp, da_idx] = dst_max_val
 
     if (src_ch > 3) and ('A' in src_order):
         sa_idx = src_order.index('A')
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter
-        alpha = srcarr[0:src_ht, 0:src_wd, 0:src_dp, sa_idx] / 255.0
+        alpha = srcarr[0:src_ht, 0:src_wd, 0:src_dp, sa_idx] / float(src_max_val)
         #alpha = np.dstack((alpha, alpha, alpha))
         alpha = np.concatenate([alpha[..., np.newaxis],
                                 alpha[..., np.newaxis],
@@ -770,11 +778,11 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
     a_arr = (alpha * srcarr[0:src_ht, 0:src_wd,
-                            0:src_dp, slc]).astype(np.uint8)
+                            0:src_dp, slc]).astype(dst_type, copy=False)
     b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y + src_ht,
                                     dst_x:dst_x + src_wd,
                                     dst_z:dst_z + src_dp,
-                                    slc]).astype(np.uint8)
+                                    slc]).astype(dst_type, copy=False)
 
     # Place our srcarr into this dstarr at dst offsets
     dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,

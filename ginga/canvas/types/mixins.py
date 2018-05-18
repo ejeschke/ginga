@@ -315,7 +315,8 @@ class PolygonMixin(object):
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
         x_arr, y_arr = np.asarray(pts).T
-        x_arr, y_arr = x_arr.astype(np.float), y_arr.astype(np.float)
+        x_arr, y_arr = (x_arr.astype(np.float, copy=False),
+                        y_arr.astype(np.float, copy=False))
         xa, ya = x_arr, y_arr
 
         # promote input arrays dimension cardinality, if necessary
@@ -347,7 +348,7 @@ class PolygonMixin(object):
             # NOTE postscript: warnings context manager causes this computation
             # to fail silently sometimes where it previously worked with a
             # warning--commenting out the warning manager for now
-            cross = ((xi + (ya - yi).astype(np.float) /
+            cross = ((xi + (ya - yi).astype(np.float, copy=False) /
                       (yj - yi) * (xj - xi)) < xa)
 
             idx = np.nonzero(tf)

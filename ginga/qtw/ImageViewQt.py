@@ -9,6 +9,8 @@ from __future__ import absolute_import
 import os
 from io import BytesIO
 
+import numpy as np
+
 import ginga.util.six as six
 from ginga.util.six.moves import map
 from ginga import ImageView, Mixins, Bindings
@@ -177,7 +179,8 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.logger.debug("drawing to pixmap")
 
         # Prepare array for rendering
-        arr = rgbobj.get_array(self.rgb_order)
+        # TODO: what are options for high bit depth under Qt?
+        arr = rgbobj.get_array(self.rgb_order, dtype=np.uint8)
         (height, width) = arr.shape[:2]
 
         return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,

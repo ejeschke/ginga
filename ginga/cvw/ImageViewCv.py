@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import numpy
+import numpy as np
 from io import BytesIO
 
 import cv2  # noqa
@@ -54,7 +54,7 @@ class ImageViewCv(ImageView.ImageViewBase):
         self.logger.debug("redraw surface")
 
         # get window contents as an array and store it into the CV surface
-        rgb_arr = self.getwin_array(order=self.rgb_order)
+        rgb_arr = self.getwin_array(order=self.rgb_order, dtype=np.uint8)
         # TODO: is there a faster way to copy this array in?
         canvas[:, :, :] = rgb_arr
 
@@ -65,7 +65,7 @@ class ImageViewCv(ImageView.ImageViewBase):
         # create cv surface the size of the window
         # (cv just uses numpy arrays!)
         depth = len(self.rgb_order)
-        self.surface = numpy.zeros((height, width, depth), numpy.uint8)
+        self.surface = np.zeros((height, width, depth), np.uint8)
 
         # inform the base class about the actual window size
         self.configure(width, height)
@@ -75,7 +75,7 @@ class ImageViewCv(ImageView.ImageViewBase):
             raise ImageViewCvError("No OpenCv surface defined")
 
         arr8 = self.get_surface()
-        return numpy.copy(arr8)
+        return np.copy(arr8)
 
     def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
         if not have_PIL:
