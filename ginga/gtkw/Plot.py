@@ -7,12 +7,11 @@
 import matplotlib
 # GTKCairo backend is slow to redraw compared to GTKAgg!
 ## matplotlib.use('GTKCairo')
-## from matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo \
-##      as FigureCanvas  # noqa
+## from matplotlib.backends.backend_gtkcairo import (FigureCanvasGTKCairo
+##                                                   as FigureCanvas)  # noqa
 matplotlib.use('GTKAgg')
-from  matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg \
-     as FigureCanvas
-
+from matplotlib.backends.backend_gtkagg import (FigureCanvasGTKAgg
+                                                 as FigureCanvas)  # noqa
 from ginga.gtkw import Widgets  # noqa
 
 
