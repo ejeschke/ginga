@@ -178,6 +178,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         iw = Viewers.GingaScrolledViewerWidget(c_v)
         iw.resize(self._wd, self._ht)
+        iw.scroll_bars(horizontal='auto', vertical='auto')
 
         vbox.add_widget(iw, stretch=1)
 
