@@ -5,8 +5,13 @@
 # Please see the file LICENSE.txt for details.
 #
 import matplotlib
-matplotlib.use('GTKCairo')
-from matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo as FigureCanvas  # noqa
+# GTKCairo backend is slow to redraw compared to GTKAgg!
+## matplotlib.use('GTKCairo')
+## from matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo \
+##      as FigureCanvas  # noqa
+matplotlib.use('GTKAgg')
+from  matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg \
+     as FigureCanvas
 
 from ginga.gtkw import Widgets  # noqa
 
