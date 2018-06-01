@@ -138,6 +138,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         return data_np
 
     ht, wd = data_np.shape[:2]
+    dtype = data_np.dtype
 
     if rotctr_x is None:
         rotctr_x = wd // 2
@@ -149,17 +150,23 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             logger.debug("rotating with OpenCv")
         # opencv is fastest
         M = cv2.getRotationMatrix2D((rotctr_y, rotctr_x), theta_deg, 1)
+
+        if data_np.dtype == np.dtype('>f8'):
+            # special hack for OpenCv warpAffine bug on numpy arrays of
+            # dtype '>f8'-- it corrupts them
+            data_np = data_np.astype(np.float64)
+
+        newdata = cv2.warpAffine(data_np, M, (wd, ht))
+        new_ht, new_wd = newdata.shape[:2]
+        assert (wd == new_wd) and (ht == new_ht), \
+               Exception("rotated cutout is %dx%d original=%dx%d" % (
+            new_wd, new_ht, wd, ht))
+
+        newdata = newdata.astype(dtype, copy=False)
+
         if out is not None:
-            out[:, :, ...] = cv2.warpAffine(data_np, M, (wd, ht))
+            out[:, :, ...] = newdata
             newdata = out
-
-        else:
-            newdata = cv2.warpAffine(data_np, M, (wd, ht))
-            new_ht, new_wd = newdata.shape[:2]
-
-            assert (wd == new_wd) and (ht == new_ht), \
-                Exception("rotated cutout is %dx%d original=%dx%d" % (
-                    new_wd, new_ht, wd, ht))
 
     elif have_opencl and use_opencl:
         if logger is not None:
@@ -364,13 +371,16 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
 
 
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
-                           interpolation='basic', logger=None):
+                           interpolation='basic', logger=None,
+                           dtype=None):
 
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
     new_wd, new_ht = int(new_wd), int(new_ht)
 
     rdim = data_np.shape[2:]
     open_cl_ok = (len(rdim) == 0 or (len(rdim) == 1 and rdim[0] == 4))
+    if dtype is None:
+        dtype = data_np.dtype
 
     if have_opencv:
         if logger is not None:
@@ -379,7 +389,14 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = cv2_resize[interpolation]
-        newdata = cv2.resize(data_np[y1:y2 + 1, x1:x2 + 1], (new_wd, new_ht),
+
+        cutout = data_np[y1:y2 + 1, x1:x2 + 1]
+        if cutout.dtype == np.dtype('>f8'):
+            # special hack for OpenCv resize bug on numpy arrays of
+            # dtype '>f8'-- it corrupts them
+            cutout = cutout.astype(np.float64)
+
+        newdata = cv2.resize(cutout, (new_wd, new_ht),
                              interpolation=method)
 
         old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
@@ -410,6 +427,8 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
                                                                x1, y1, x2, y2,
                                                                new_wd, new_ht)
         newdata = data_np[view]
+
+    newdata = newdata.astype(dtype, copy=False)
 
     return newdata, (scale_x, scale_y)
 
@@ -450,12 +469,15 @@ def get_scaled_cutout_basic_view(shp, p1, p2, scales):
 
 
 def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
-                            interpolation='basic', logger=None):
+                            interpolation='basic', logger=None,
+                            dtype=None):
 
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
     rdim = data_np.shape[2:]
     open_cl_ok = (len(rdim) == 0 or (len(rdim) == 1 and rdim[0] == 4))
+    if dtype is None:
+        dtype = data_np.dtype
 
     if have_opencv:
         if logger is not None:
@@ -464,10 +486,18 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = cv2_resize[interpolation]
+
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-        newdata = cv2.resize(data_np[y1:y2 + 1, x1:x2 + 1], None,
+        cutout = data_np[y1:y2 + 1, x1:x2 + 1]
+
+        if cutout.dtype == np.dtype('>f8'):
+            # special hack for OpenCl resize bug on numpy arrays of
+            # dtype '>f8'-- it corrupts them
+            cutout = cutout.astype(np.float64)
+        newdata = cv2.resize(cutout, None,
                              fx=scale_x, fy=scale_y,
                              interpolation=method)
+
         old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
@@ -491,6 +521,8 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
                                                     (scale_x, scale_y))
         scale_x, scale_y = scales
         newdata = data_np[view]
+
+    newdata = newdata.astype(dtype, copy=False)
 
     return newdata, (scale_x, scale_y)
 

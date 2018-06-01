@@ -23,7 +23,8 @@ Ver 2.7.1.dev
   (Qt) when viewer is in MDI mode
 - IRAF plugin moved to experimental folder
 - Allow setting of initial channel list, local, global and disabled
-    plugins from general configuration file
+  plugins from general configuration file
+- Fix for a bug when using OpenCv acceleration on dtype('>f8') arrays
 
 Ver 2.7.0 (2018-02-02)
 ======================
