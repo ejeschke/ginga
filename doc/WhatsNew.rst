@@ -22,6 +22,8 @@ Ver 2.7.1.dev
 - Fixes for some keyboard focus (Gtk) and unintentional channel changes
   (Qt) when viewer is in MDI mode
 - IRAF plugin moved to experimental folder
+- Allow setting of initial channel list, local, global and disabled
+    plugins from general configuration file
 
 Ver 2.7.0 (2018-02-02)
 ======================

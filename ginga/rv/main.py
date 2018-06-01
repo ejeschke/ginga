@@ -222,7 +222,7 @@ class ReferenceViewer(object):
         optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
                           type="int", default=10,
                           help="Buffer length to NUM")
-        optprs.add_option('-c', "--channels", dest="channels", default="Image",
+        optprs.add_option('-c', "--channels", dest="channels",
                           help="Specify list of channels to create")
         optprs.add_option("--debug", dest="debug", default=False,
                           action="store_true",
@@ -300,13 +300,14 @@ class ReferenceViewer(object):
         # Set up preferences
         prefs = Settings.Preferences(basefolder=basedir, logger=logger)
         settings = prefs.create_category('general')
-        settings.load(onError='silent')
         settings.set_defaults(useMatplotlibColormaps=False,
                               widgetSet='choose',
                               WCSpkg='choose', FITSpkg='choose',
                               recursion_limit=2000,
                               icc_working_profile=None,
-                              save_layout=True)
+                              save_layout=True,
+                              channel_prefix="Image")
+        settings.load(onError='silent')
 
         # default of 1000 is a little too small
         sys.setrecursionlimit(settings.get('recursion_limit'))
@@ -470,9 +471,12 @@ class ReferenceViewer(object):
             ginga_shell.set_geometry(options.geometry)
 
         # make the list of disabled plugins
-        disabled_plugins = []
-        if not (options.disable_plugins is None):
+        if options.disable_plugins is not None:
             disabled_plugins = options.disable_plugins.lower().split(',')
+        else:
+            disabled_plugins = settings.get('disable_plugins', [])
+            if not isinstance(disabled_plugins, list):
+                disabled_plugins = disabled_plugins.lower().split(',')
 
         # Add GUI log handler (for "Log" global plugin)
         guiHdlr = GuiLogHandler(ginga_shell)
@@ -482,38 +486,48 @@ class ReferenceViewer(object):
         logger.addHandler(guiHdlr)
 
         # Load any custom modules
-        if options.modules:
+        if options.modules is not None:
             modules = options.modules.split(',')
-            for long_plugin_name in modules:
-                if '.' in long_plugin_name:
-                    tmpstr = long_plugin_name.split('.')
-                    plugin_name = tmpstr[-1]
-                    pfx = '.'.join(tmpstr[:-1])
-                else:
-                    plugin_name = long_plugin_name
-                    pfx = None
-                menu_name = "%s [G]" % (plugin_name)
-                spec = Bunch(name=plugin_name, module=plugin_name,
-                             ptype='global', tab=plugin_name,
-                             menu=menu_name, category="Custom",
-                             workspace='right', pfx=pfx)
-                self.add_plugin_spec(spec)
+        else:
+            modules = settings.get('global_plugins', [])
+            if not isinstance(modules, list):
+                modules = modules.split(',')
+
+        for long_plugin_name in modules:
+            if '.' in long_plugin_name:
+                tmpstr = long_plugin_name.split('.')
+                plugin_name = tmpstr[-1]
+                pfx = '.'.join(tmpstr[:-1])
+            else:
+                plugin_name = long_plugin_name
+                pfx = None
+            menu_name = "%s [G]" % (plugin_name)
+            spec = Bunch(name=plugin_name, module=plugin_name,
+                         ptype='global', tab=plugin_name,
+                         menu=menu_name, category="Custom",
+                         workspace='right', pfx=pfx)
+            self.add_plugin_spec(spec)
 
         # Load any custom local plugins
-        if options.plugins:
+        if options.plugins is not None:
             plugins = options.plugins.split(',')
-            for long_plugin_name in plugins:
-                if '.' in long_plugin_name:
-                    tmpstr = long_plugin_name.split('.')
-                    plugin_name = tmpstr[-1]
-                    pfx = '.'.join(tmpstr[:-1])
-                else:
-                    plugin_name = long_plugin_name
-                    pfx = None
-                spec = Bunch(module=plugin_name, workspace='dialogs',
-                             ptype='local', category="Custom",
-                             hidden=False, pfx=pfx)
-                self.add_plugin_spec(spec)
+        else:
+            plugins = settings.get('local_plugins', [])
+            if not isinstance(plugins, list):
+                plugins = plugins.split(',')
+
+        for long_plugin_name in plugins:
+            if '.' in long_plugin_name:
+                tmpstr = long_plugin_name.split('.')
+                plugin_name = tmpstr[-1]
+                pfx = '.'.join(tmpstr[:-1])
+            else:
+                plugin_name = long_plugin_name
+                pfx = None
+            spec = Bunch(module=plugin_name, workspace='dialogs',
+                         ptype='local', category="Custom",
+                         hidden=False, pfx=pfx)
+            self.add_plugin_spec(spec)
 
         # Add non-disabled plugins
         enabled_plugins = [spec for spec in self.plugins
@@ -535,7 +549,17 @@ class ReferenceViewer(object):
             ginga_shell.ds.raise_tab('Thumbs')
 
         # Add custom channels
-        channels = options.channels.split(',')
+        if options.channels is not None:
+            channels = options.channels.split(',')
+        else:
+            channels = settings.get('channels', [])
+            if not isinstance(channels, list):
+                channels = channels.split(',')
+
+        if len(channels) == 0:
+            # should provide at least one default channel?
+            channels = [settings.get('channel_prefix', "Image")]
+
         for chname in channels:
             ginga_shell.add_channel(chname)
         ginga_shell.change_channel(channels[0])

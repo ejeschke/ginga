@@ -140,7 +140,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                    # inherit from primary header
                                    inherit_primary_header=False,
                                    cursor_interval=0.050,
-                                   save_layout=False)
+                                   save_layout=False,
+                                   channel_prefix="Image")
         self.settings.load(onError='silent')
         # Load bindings preferences
         bindprefs = self.prefs.create_category('bindings')
@@ -873,7 +874,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.next_channel_ws(ws)
 
     def add_channel_auto_ws(self, ws):
-        chpfx = "Image"
+        chpfx = self.settings.get('channel_prefix', "Image")
         chpfx = ws.extdata.get('chpfx', chpfx)
 
         chname = self.make_channel_name(chpfx)
@@ -1772,7 +1773,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         widget.scroll_bars(horizontal=value, vertical=value)
 
     def gui_add_channel(self, chname=None):
-        chpfx = "Image"
+        chpfx = self.settings.get('channel_prefix', "Image")
         ws = self.get_current_workspace()
         if ws is not None:
             chpfx = ws.extdata.get('chpfx', chpfx)
@@ -1810,8 +1811,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.ds.show_dialog(dialog)
 
     def gui_add_channels(self):
-
-        chpfx = "Image"
+        chpfx = self.settings.get('channel_prefix', "Image")
         ws = self.get_current_workspace()
         if ws is not None:
             chpfx = ws.extdata.get('chpfx', chpfx)
@@ -1898,8 +1898,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.gui_delete_window(chname)
 
     def gui_add_ws(self):
-
-        chpfx = "Image"
+        chpfx = self.settings.get('channel_prefix', "Image")
         ws = self.get_current_workspace()
         if ws is not None:
             chpfx = ws.extdata.get('chpfx', chpfx)
