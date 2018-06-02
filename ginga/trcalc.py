@@ -159,8 +159,8 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         newdata = cv2.warpAffine(data_np, M, (wd, ht))
         new_ht, new_wd = newdata.shape[:2]
         assert (wd == new_wd) and (ht == new_ht), \
-               Exception("rotated cutout is %dx%d original=%dx%d" % (
-            new_wd, new_ht, wd, ht))
+            Exception("rotated cutout is %dx%d original=%dx%d" % (
+                new_wd, new_ht, wd, ht))
 
         newdata = newdata.astype(dtype, copy=False)
 
