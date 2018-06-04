@@ -73,7 +73,7 @@ will not work without the following packages:
 
 To save a movie:
 
-* mencoder (equired by: Cuts)
+* mencoder (required by: Cuts)
 
 Helpful, but not necessary (may optimize or speed up certain operations):
 
