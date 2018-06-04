@@ -1,7 +1,7 @@
 #
 # wcs.py -- calculations based on world coordinate system.
 #
-# Eric Jeschke (eric@naoj.org)
+# Eric Jeschke
 # Takeshi Inagaki
 # Bruce Bon
 #
@@ -407,7 +407,7 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
         DEC (in deg) for the reference point
 
     px_scale_deg_px
-        Pixel scale (deg/pixel)
+        Pixel scale (deg/pixel); can be a tuple for different x,y scales
 
     rot_deg
         Rotation angle of the field (in deg)
@@ -426,7 +426,7 @@ def simple_wcs(px_x, px_y, ra_deg, dec_deg, px_scale_deg_px, rot_deg,
     crval = (ra_deg, dec_deg)  # RA, Dec (degrees)
 
     # image scale in deg/pix
-    cdelt = np.array(cdbase) * px_scale_deg_px
+    cdelt = np.array(cdbase) * np.array(px_scale_deg_px)
 
     # Create rotation matrix for position angle of north (radians E of N)
     rot_rad = np.radians(rot_deg)

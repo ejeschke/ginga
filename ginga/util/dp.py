@@ -53,15 +53,24 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
     dec_txt = wcs.decDegToString(dec_deg, format='%s%02d:%02d:%05.2f')
 
+    if np.isscalar(px_scale):
+        px_wd_scale, px_ht_scale = (px_scale, px_scale)
+    else:
+        px_wd_scale, px_ht_scale = px_scale
+
     # Create an empty image
-    imagesize = int(round(fov_deg / px_scale))
+    if np.isscalar(fov_deg):
+        fov_wd_deg, fov_ht_deg = (fov_deg, fov_deg)
+    else:
+        fov_wd_deg, fov_ht_deg = fov_deg
+
+    width = int(round(fov_wd_deg / px_wd_scale))
+    height = int(round(fov_ht_deg / px_ht_scale))
     # round to an even size
-    if imagesize % 2 != 0:
-        imagesize += 1
-    ## # round to an odd size
-    ## if imagesize % 2 == 0:
-    ##     imagesize += 1
-    width = height = imagesize
+    if width % 2 != 0:
+        width += 1
+    if height % 2 != 0:
+        height += 1
 
     if dtype is None:
         dtype = np.float32
@@ -72,13 +81,14 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
         data = np.memmap(mmap_path, dtype=dtype, mode=mmap_mode,
                          shape=(height, width))
 
-    crpix = float(imagesize // 2)
+    crpix1 = float(width // 2)
+    crpix2 = float(height // 2)
     header = OrderedDict((('SIMPLE', True),
                           ('BITPIX', -32),
                           ('EXTEND', True),
                           ('NAXIS', 2),
-                          ('NAXIS1', imagesize),
-                          ('NAXIS2', imagesize),
+                          ('NAXIS1', width),
+                          ('NAXIS2', height),
                           ('RA', ra_txt),
                           ('DEC', dec_txt),
                           ('EQUINOX', 2000.0),
@@ -87,7 +97,8 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
                           ))
 
     # Add basic WCS keywords
-    wcshdr = wcs.simple_wcs(crpix, crpix, ra_deg, dec_deg, px_scale,
+    wcshdr = wcs.simple_wcs(crpix1, crpix2, ra_deg, dec_deg,
+                            (px_wd_scale, px_ht_scale),
                             rot_deg, cdbase=cdbase)
     header.update(wcshdr)
 
