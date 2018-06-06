@@ -78,6 +78,14 @@ class Plot(Callback.Callbacks):
                      ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(self.fontsize)
 
+    def set_bg(self, color, ax=None):
+        if ax is None:
+            ax = self.ax
+        if MPL_GE_2_0:
+            ax.set_facecolor(color)
+        else:
+            ax.set_axis_bgcolor(color)
+
     def clear(self):
         self.logger.debug('clearing canvas...')
         self.ax.cla()
