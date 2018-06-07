@@ -12,6 +12,7 @@ recursive-include doc *
 recursive-include licenses *
 recursive-include cextern *
 recursive-include scripts *
+recursive-include experimental *
 
 prune build
 prune doc/_build
