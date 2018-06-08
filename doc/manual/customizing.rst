@@ -253,6 +253,12 @@ A plugin can be started automatically in ``post_gui_config()`` using the
         ginga_shell.add_channel('Image')
         ginga_shell.start_local_plugin('Image', 'Histogram', None)
 
+Alternately, you can also start plugins via the command line interface using
+``--plugins`` and ``-modules`` for local and global plugins, respectively.
+To load multiple plugins at once, use a comma-separated list. For example::
+
+    ginga --plugins=MyLocalPlugin,Imexam --modules=MyGlobalPlugin
+
 ==============
 Adding Plugins
 ==============
@@ -292,6 +298,20 @@ Other keywords that can be used in a spec:
 
 * To prevent a control icon from appearing in the Operations plugin
   manager tray specify `optray=False`.
+
+=================
+Disabling Plugins
+=================
+
+Both local and global plugins can be disabled (thus, not shown in the
+reference viewer) using the ``--disable-plugins`` option in the
+command line interface. To remove multiple plugins at once,
+use a comma-separated list. For example::
+
+    ginga --disable-plugins=Zoom,Compose
+
+Some essential plugins, like ``Info``, cannot be disabled (i.e., attempt to
+disable them would have no effect).
 
 ==============================
 Making a Custom Startup Script
