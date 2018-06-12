@@ -310,6 +310,11 @@ use a comma-separated list. For example::
 
     ginga --disable-plugins=Zoom,Compose
 
+Alternately, plugins can also be disabled via ``general.cfg`` configuration
+file. For example::
+
+    disable_plugins = "Zoom,Compose"
+
 Some essential plugins, like ``Info``, cannot be disabled (i.e., attempt to
 disable them would have no effect).
 
