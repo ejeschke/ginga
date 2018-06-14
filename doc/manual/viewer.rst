@@ -8,10 +8,10 @@ Using the Basic Ginga Viewer Object in Python Programs
 
 *The* core design principle of the Ginga project is to make it possible to
 easily build powerful image viewers in Python with many possible GUI
-toolkits. 
+toolkits.
 
 This chapter is for developers who want to use only the Ginga rendering
-class in a program of their own design (not customizing the reference 
+class in a program of their own design (not customizing the reference
 viewer).
 
 ===============================================
@@ -20,13 +20,13 @@ Using the basic rendering class in new programs
 
 Ginga basically follows the Model-View-Controller (MVC) design pattern,
 that is described in more detail in the chapter on internals
-(see :ref:`ch-programming-internals`). 
+(see :ref:`ch-programming-internals`).
 The "view" classes are rooted in the base class ``ImageView``.
 Ginga supports backends for different widget sets through various
-subclasses of this class.   
+subclasses of this class.
 
 Typically, a developer picks a GUI toolkit that has a supported backend
-(Gtk 2, Qt 4/5, Tk, matplotlib, HTML5 canvas) and writes a GUI program
+(Gtk 2/3, Qt 4/5, Tk, matplotlib, HTML5 canvas) and writes a GUI program
 using that widget set with the typical Python toolkit bindings and API.
 Where they want a image view pane they instantiate the appropriate
 subclass of ``ImageView``, and using the  ``get_widget()`` call extract
@@ -50,7 +50,7 @@ built in controls.
    :scale: 100%
    :figclass: h
 
-   A simple, "bare bones" FITS viewer written in Qt.  
+   A simple, "bare bones" FITS viewer written in Qt.
 
 Listing 1 shows a code listing for a simple graphical FITS
 viewer built using the subclass ``ImageViewCanvas`` from the module
@@ -58,7 +58,7 @@ viewer built using the subclass ``ImageViewCanvas`` from the module
 around 100 or so lines of Python.  It creates a window containing an
 image view and two buttons.  This example will open FITS files dragged
 and dropped on the image window or via a dialog popped up when clicking
-the "Open File" button.   
+the "Open File" button.
 
 .. code-block:: python
 
@@ -180,20 +180,20 @@ the window.  We extract the user-interface bindings with
 controls for all the possible key and mouse operations.
 We then extract the platform-specific widget (Qt-based, in this case) using
 ``get_widget()`` and pack it into a Qt container along with a couple of
-buttons to complete the viewer. 
+buttons to complete the viewer.
 
 Scanning down the code a bit, we can see that whether by dragging and
 dropping or via the click to open, we ultimately call the ``load_file()``
-method to get the data into the viewer.  As shown, load_file creates 
+method to get the data into the viewer.  As shown, load_file creates
 an ``AstroImage`` object (the "model" part of our MVC design).  It then
-passes this object to the viewer via the set_image() method.  
+passes this object to the viewer via the set_image() method.
 ``AstroImage`` objects have methods for ingesting data via a file path, an
-``Astropy``/``pyfits`` HDU or a bare ``Numpy`` data array. 
+``astropy.io.fits`` HDU or a bare ``Numpy`` data array.
 
 Many of these sorts of examples for all supported backends are contained
-in the ``examples`` directory in the source distribution.  
+in the ``examples`` directory in the source distribution.
 
-For a list of many methods provided by the viewer object, click on the 
+For a list of many methods provided by the viewer object, click on the
 module index link at the top of this chapter and then click on the link
 for ``ImageViewBase``.
 
@@ -207,13 +207,13 @@ Graphics plotting with Ginga
    :scale: 100%
    :figclass: h
 
-   An example of a ``ImageViewCanvas`` widget with graphical overlay. 
+   An example of a ``ImageViewCanvas`` widget with graphical overlay.
 
 An ``ImageViewCanvas`` actually combines a view with a canvas object (in
 particular a ``DrawingCanvas`` object).  You can get more detail about
 canvases and the objects they support (see :ref:`ch-canvas_graphics`).
 A variety of graphical shapes are available, and plotted objects scale,
-transform and rotate seamlessly with the viewer. 
+transform and rotate seamlessly with the viewer.
 
 Rendering into Matplotlib Figures
 ---------------------------------
@@ -221,7 +221,7 @@ Rendering into Matplotlib Figures
 Ginga can also render directly into a Matplotlib Figure, which opens up
 possibilities for overplotting beyond the limited capabilities of the
 Ginga canvas items.  See the examples under "examples/matplotlib"
-for ideas, particularly "example4_mpl.py". 
+for ideas, particularly "example4_mpl.py".
 
 Rendering into HTML5 canvases
 -----------------------------
@@ -236,7 +236,7 @@ Writing widget toolkit independent code
 You can write code that allows the widget set to be abstracted by
 Ginga's widget wrappers.  This is the same technique used to allow the
 reference viewer to switch between supported toolkits using the "-t"
-command line option.  Currently only Qt (4/5), Gtk (2) and HTML5 (to a
+command line option.  Currently only Qt (4/5), Gtk (2/3), and HTML5 (to a
 more limited degree) are supported, and there are some limitations
 compared to developing using a native toolkit directly.  Nevertheless,
 the ability to target different platforms just by changing a command
