@@ -315,8 +315,8 @@ file. For example::
 
     disable_plugins = "Zoom,Compose"
 
-Some essential plugins, like ``Info``, cannot be disabled (i.e., attempt to
-disable them would have no effect).
+Some plugins, like ``Operations``, when disabled, may result in
+inconvenient GUI experience.
 
 ==============================
 Making a Custom Startup Script
