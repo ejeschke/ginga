@@ -87,12 +87,15 @@ class ColorBar(CanvasObjectBase):
         # Calculate reasonable spacing for range numbers
         cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)
-        text = "%.4g" % (hival)
-        txt_wd, txt_ht = cr.text_extents(text)
+        hitxt = "%.4g" % (hival)
+        lotxt = "%.4g" % (loval)
+        txt_wdh, txt_hth = cr.text_extents(hitxt)
+        txt_wdl, txt_htl = cr.text_extents(lotxt)
+        txt_wd = max(txt_wdh, txt_wdl)
         avg_pixels_per_range_num = self.t_spacing + txt_wd
         scale_ht = 0
         if self.showrange:
-            scale_ht = txt_ht + self.tick_ht + 2
+            scale_ht = txt_hth + self.tick_ht + 2
 
         pxwd, pxht = width, max(self.height, scale_ht)
 
@@ -278,12 +281,16 @@ class DrawableColorBar(Rectangle):
         # Calculate reasonable spacing for range numbers
         cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)
-        text = "%.4g" % (hival)
+        hitxt = "%.4g" % (hival)
+        lotxt = "%.4g" % (loval)
+        txt_wdh, txt_hth = cr.text_extents(hitxt)
+        txt_wdl, txt_htl = cr.text_extents(lotxt)
+        txt_wd = max(txt_wdh, txt_wdl)
         txt_wd, txt_ht = cr.text_extents(text)
         avg_pixels_per_range_num = self.t_spacing + txt_wd
         scale_ht = 0
         if self.showrange:
-            scale_ht = txt_ht + self.tick_ht + 2
+            scale_ht = txt_hth + self.tick_ht + 2
 
         pxwd, pxht = width, max(height, scale_ht)
         pxwd, pxht = max(pxwd, 1), max(pxht, 1)

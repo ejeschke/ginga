@@ -25,6 +25,8 @@ Ver 2.7.1.dev
 - Allow setting of initial channel list, local, global and disabled
   plugins from general configuration file
 - Fix for a bug when using OpenCv acceleration on dtype('>f8') arrays
+- Fixed a bug where colormap scale markers were sometimes not spaced
+  wide enough
 
 Ver 2.7.0 (2018-02-02)
 ======================
