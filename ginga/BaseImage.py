@@ -277,7 +277,8 @@ class BaseImage(ViewerObjectBase):
         else:
             return (self.minval_noinf, self.maxval_noinf)
 
-    def get_header(self):
+    # kwargs is needed so subclasses can interoperate with optional keywords.
+    def get_header(self, **kwargs):
         return self.get('header', Header())
 
     def transfer(self, other, astype=None):
