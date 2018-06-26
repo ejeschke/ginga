@@ -506,12 +506,12 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
                         text = "%s:%s, %s:%s" % (info.ra_lbl, info.ra_txt,
                                                  info.dec_lbl, info.dec_txt)
                 else:
-                    if len(info.value) > 1:
+                    if np.isscalar(info.value) or len(info.value) <= 1:
+                        text = "V: %f" % (info.value)
+                    else:
                         values = ', '.join(["%d" % info.value[i]
                                            for i in range(len(info.value))])
                         text = "V: [%s]" % (str(values))
-                    else:
-                        text = "V: %f" % (info.value)
         else:
             text = self.text
 
