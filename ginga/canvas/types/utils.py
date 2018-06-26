@@ -286,7 +286,6 @@ class DrawableColorBar(Rectangle):
         txt_wdh, txt_hth = cr.text_extents(hitxt)
         txt_wdl, txt_htl = cr.text_extents(lotxt)
         txt_wd = max(txt_wdh, txt_wdl)
-        txt_wd, txt_ht = cr.text_extents(text)
         avg_pixels_per_range_num = self.t_spacing + txt_wd
         scale_ht = 0
         if self.showrange:
