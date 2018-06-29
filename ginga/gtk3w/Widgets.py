@@ -2046,6 +2046,9 @@ class Application(Callback.Callbacks):
     def mainloop(self):
         Gtk.main()
 
+    def quit(self):
+        Gtk.main_quit()
+
 
 class Dialog(TopLevelMixin, WidgetBase):
 

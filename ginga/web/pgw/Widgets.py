@@ -702,10 +702,10 @@ class ScrollBar(WidgetBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
         if self.orientation == 'vertical':
-            d['vert'] = 'true'
+            d['vert'] = 'false'
             d['width'], d['height'] = self.thickness, "'100%'"
         else:
-            d['vert'] = 'false'
+            d['vert'] = 'true'
             d['width'], d['height'] = "'100%'", self.thickness
 
         return self.html_template % d
@@ -2070,7 +2070,6 @@ class Menu(ContainerBase):
 
         if self.widget is not None:
             return self.html_template1 % d
-
         return self.html_template2 % d
 
 
@@ -2509,6 +2508,9 @@ class Application(Callback.Callbacks):
 
     def mainloop(self, no_ioloop=False):
         self.start(no_ioloop=no_ioloop)
+
+    def quit(self):
+        self.stop()
 
 
 class Dialog(ContainerBase):
