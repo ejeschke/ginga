@@ -3407,7 +3407,7 @@ class ImageViewBase(Callback.Callbacks):
             See :meth:`get_rgb_image_as_buffer`.
 
         """
-        with open(filepath, 'w') as out_f:
+        with open(filepath, 'wb') as out_f:
             self.get_rgb_image_as_buffer(output=out_f, format=format,
                                          quality=quality)
         self.logger.debug("wrote %s file '%s'" % (format, filepath))
