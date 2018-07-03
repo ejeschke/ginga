@@ -62,6 +62,25 @@ the mixin class ``TwoPointMixin``.
           appear *underneath* image objects.  For most uses of the
           viewer this is not a big limitation.
 
+Ellipse
+=======
+
+Shape-specific attributes:
+
+* ``x``: center of ellipse along x-axis, ``600`` in Figure :ref:`fig1`
+* ``y``: center of ellipse along y-axis, ``750`` in Figure :ref:`fig1`
+* ``xradius``: width of ellipse, ``50.0`` in Figure :ref:`fig1`
+* ``yradius``: height of ellipse, ``250.0`` in Figure :ref:`fig1`
+
+The ellipse shown below uses these attributes.
+
+.. _fig1:
+.. figure:: figures/ellipse.png
+   :scale: 100%
+   :figclass: h
+
+   FITS image of planetary nebula NGC6302 - the Bug Nebula, with ellipse.
+
 Viewers
 =======
 All Ginga viewers are subclasses of ``ImageViewBase``.  These objects
