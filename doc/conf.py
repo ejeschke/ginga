@@ -141,6 +141,17 @@ htmlhelp_basename = project + 'doc'
 latex_documents = [('index', project + '.tex', project + u' Documentation',
                     author, 'manual')]
 
+# this is for working around a bug in the RTD doc generation for PDF
+latex_elements = {
+    # Additional stuff for the LaTeX preamble.
+    'preamble': "".join((
+        '\DeclareUnicodeCharacter{9280}{N}',
+        '\DeclareUnicodeCharacter{6CB3}{N}',
+        '\DeclareUnicodeCharacter{304E}{N}',
+        '\DeclareUnicodeCharacter{3093}{N}',
+        '\DeclareUnicodeCharacter{304C}{N}',
+    )),
+}
 
 # -- Options for manual page output --------------------------------------------
 
