@@ -2,8 +2,8 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.7.1.dev
-=============
+Ver 2.7.1 (2018-07-09)
+======================
 - Fix for image rendering bug which shows last row and column of image
   being drawn twice
 - Added option to "Compass" draw type to be in pixels (X/Y) or wcs (N/E)
@@ -27,6 +27,7 @@ Ver 2.7.1.dev
 - Fix for a bug when using OpenCv acceleration on dtype('>f8') arrays
 - Fixed a bug where colormap scale markers were sometimes not spaced
   wide enough
+- Workaround for failed PDF build in RTD documentation
 
 Ver 2.7.0 (2018-02-02)
 ======================
