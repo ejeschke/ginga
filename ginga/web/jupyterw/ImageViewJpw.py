@@ -270,7 +270,7 @@ class ImageViewEvent(ImageViewJpw):
         return self.make_ui_callback('key-release', keyname)
 
     def button_press_event(self, event):
-        x, y = event['arrayX'], event['arrayY']
+        x, y = event['dataX'], event['dataY']
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -283,7 +283,7 @@ class ImageViewEvent(ImageViewJpw):
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
-        x, y = event['arrayX'], event['arrayY']
+        x, y = event['dataX'], event['dataY']
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -297,7 +297,7 @@ class ImageViewEvent(ImageViewJpw):
 
     def motion_notify_event(self, event):
         button = self._button
-        x, y = event['arrayX'], event['arrayY']
+        x, y = event['dataX'], event['dataY']
         self.last_win_x, self.last_win_y = x, y
 
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
@@ -307,7 +307,7 @@ class ImageViewEvent(ImageViewJpw):
         return self.make_ui_callback('motion', button, data_x, data_y)
 
     def scroll_event(self, event):
-        x, y = event['arrayX'], event['arrayY']
+        x, y = event['dataX'], event['dataY']
         self.last_win_x, self.last_win_y = x, y
         dx, dy = event['deltaX'], event['deltaY']
 
