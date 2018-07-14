@@ -10,7 +10,7 @@ channel.  An instance can be opened for each channel.
 
 **Usage**
 
-Start the ``Compose`` plugin from the "Plugics" menu -- the tab should
+Start the ``Compose`` plugin from the "Plugins" menu -- the tab should
 show up under "RGB".
 
 1. Select the kind of composition you want to make from the "Compose Type"
