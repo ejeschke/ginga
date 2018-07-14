@@ -10,8 +10,8 @@ channel.  An instance can be opened for each channel.
 
 **Usage**
 
-Start the ``Compose`` plugin from the "Operations" menu -- the tab should
-show up under "Dialogs".
+Start the ``Compose`` plugin from the "Plugics" menu -- the tab should
+show up under "RGB".
 
 1. Select the kind of composition you want to make from the "Compose Type"
    drop down: "RGB" for composing three monochrome images into a color
@@ -42,9 +42,10 @@ set.
 2. Play with the alpha levels of each layer using the sliders in the
    ``Compose`` plugin; as you adjust a slider the preview image should
    update.
-3. When you see something you like, you can save it to a file using the
-   "Save As" button (use "jpeg" or "png" as the file extension), or insert
-   it into the channel using the "Save to Channel" button.
+3. When you see something you like, you can save it to a file by filling in
+   a filename next to the "Save As" button (use "jpeg" or "png" as the file
+   extension) then clicking that button, or insert it into the channel
+   using the "Save to Channel" button.
 
 ***For Alpha composition***
 
