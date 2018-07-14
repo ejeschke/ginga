@@ -10,8 +10,8 @@ channel.  An instance can be opened for each channel.
 
 **Usage**
 
-Start the ``Compose`` plugin from the "Plugins" menu -- the tab should
-show up under "RGB".
+Start the ``Compose`` plugin from the "Operation" menu (below) or
+the "Plugins" menu (above) -- the tab should show up under "RGB".
 
 1. Select the kind of composition you want to make from the "Compose Type"
    drop down: "RGB" for composing three monochrome images into a color
