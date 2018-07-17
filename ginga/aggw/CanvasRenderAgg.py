@@ -28,9 +28,11 @@ class RenderContext(object):
         self.font = None
 
     def set_line_from_shape(self, shape):
-        # TODO: support line width and style
+        # TODO: support style
         alpha = getattr(shape, 'alpha', 1.0)
-        self.pen = self.cr.get_pen(shape.color, alpha=alpha)
+        linewidth = getattr(shape, 'linewidth', 1.0)
+        self.pen = self.cr.get_pen(shape.color, linewidth=linewidth,
+                                   alpha=alpha)
 
     def set_fill_from_shape(self, shape):
         fill = getattr(shape, 'fill', False)

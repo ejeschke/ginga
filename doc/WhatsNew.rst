@@ -2,6 +2,10 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
+Ver 2.7.2.dev
+=============
+- Fix for linewidth attribute in shapes for AGG backend
+
 Ver 2.7.1 (2018-07-09)
 ======================
 - Fix for image rendering bug which shows last row and column of image
