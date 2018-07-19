@@ -10,6 +10,7 @@ import cv2
 from ginga import colors
 from ginga.fonts import font_asst
 
+
 def get_cached_font(fontname, fontsize):
     key = (fontname, fontsize)
     try:
@@ -24,6 +25,7 @@ def get_cached_font(fontname, fontsize):
         font_asst.add_cache(key, font)
 
         return font
+
 
 def load_font(font_name, font_file):
     if not font_asst.have_font(font_name):
