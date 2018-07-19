@@ -5,6 +5,8 @@ What's New in Ginga?
 Ver 2.7.2.dev
 =============
 - Fix for linewidth attribute in shapes for AGG backend
+- Fix for ellipse rotation in OpenCv backend
+- Better text rendering for OpenCv backend (loadable fonts)
 
 Ver 2.7.1 (2018-07-09)
 ======================

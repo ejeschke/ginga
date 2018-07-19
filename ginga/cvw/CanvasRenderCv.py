@@ -91,10 +91,6 @@ class RenderContext(object):
     def draw_circle(self, cx, cy, cradius):
         self.cr.circle((cx, cy), cradius, self.pen, self.brush)
 
-    def draw_ellipse(self, cx, cy, cxradius, cyradius, theta):
-        self.cr.ellipse((cx, cy), cxradius, cyradius, theta,
-                        self.pen, self.brush)
-
     def draw_line(self, cx1, cy1, cx2, cy2):
         self.cr.line((cx1, cy1), (cx2, cy2), self.pen)
 
