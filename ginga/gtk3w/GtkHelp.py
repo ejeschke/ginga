@@ -956,11 +956,15 @@ def set_default_style():
     with open(gtk_css, 'rb') as css_f:
         css_data = css_f.read()
 
-    style_provider.load_from_data(css_data)
+    try:
+        style_provider.load_from_data(css_data)
 
-    Gtk.StyleContext.add_provider_for_screen(
-        Gdk.Screen.get_default(), style_provider,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-    )
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(), style_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+    except Exception:
+        pass
 
 # END
