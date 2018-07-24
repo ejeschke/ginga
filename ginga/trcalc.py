@@ -233,39 +233,43 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
     # calculate dimensions of NON-scaled cutout
-    old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
-
-    if new_wd == 0:
-        iscale_x = 0.0
-    else:
-        iscale_x = float(old_wd) / float(new_wd)
-
-    if new_ht == 0:
-        iscale_y = 0.0
-    else:
-        iscale_y = float(old_ht) / float(new_ht)
-
+    old_wd = x2 - x1 + 1
+    old_ht = y2 - y1 + 1
     max_x, max_y = shp[1] - 1, shp[0] - 1
 
-    # Make indexes and scale them
-    # Is there a more efficient way to do this?
-    xi = np.clip(x1 + np.arange(0, new_wd) * iscale_x,
-                 0, max_x).astype(int, copy=False)
-    yi = np.clip(y1 + np.arange(0, new_ht) * iscale_y,
-                 0, max_y).astype(int, copy=False)
-    wd, ht = xi.size, yi.size
+    if (new_wd != old_wd) or (new_ht != old_ht):
+        # Make indexes and scale them
+        if new_wd == 0:
+            iscale_x = 0.0
+        else:
+            iscale_x = float(old_wd) / float(new_wd)
+        if new_ht == 0:
+            iscale_y = 0.0
+        else:
+            iscale_y = float(old_ht) / float(new_ht)
 
-    # bounds check against shape (to protect future data access)
-    if new_wd > 0:
-        xi_max = xi[-1]
-        if xi_max > max_x:
-            raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
-    if new_ht > 0:
-        yi_max = yi[-1]
-        if yi_max > max_y:
-            raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
+        xi = np.clip(x1 + np.arange(0, new_wd) * iscale_x,
+                     0, max_x).astype(int, copy=False)
+        yi = np.clip(y1 + np.arange(0, new_ht) * iscale_y,
+                     0, max_y).astype(int, copy=False)
+        wd, ht = xi.size, yi.size
 
-    view = np.ix_(yi, xi)
+        # bounds check against shape (to protect future data access)
+        if new_wd > 0:
+            xi_max = xi[-1]
+            if xi_max > max_x:
+                raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
+        if new_ht > 0:
+            yi_max = yi[-1]
+            if yi_max > max_y:
+                raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
+
+    else:
+        # simple stepped view will do, because new view is same as old
+        wd, ht = old_wd, old_ht
+        xi, yi = np.arange(x1, x2 + 1), np.arange(y1, y2 + 1)
+
+    view = (yi, xi)
 
     # Calculate actual scale used (vs. desired)
     scale_x = float(wd) / old_wd
@@ -293,48 +297,50 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
     old_dp = max(z2 - z1 + 1, 1)
     max_x, max_y, max_z = shp[1] - 1, shp[0] - 1, shp[2] - 1
 
-    # Make indexes and scale them
-    # Is there a more efficient way to do this?
-    if new_wd == 0:
-        iscale_x = 0.0
+    if (new_wd != old_wd) or (new_ht != old_ht) or (new_dp != old_dp):
+        # Make indexes and scale them
+        if new_wd == 0:
+            iscale_x = 0.0
+        else:
+            iscale_x = float(old_wd) / float(new_wd)
+        if new_ht == 0:
+            iscale_y = 0.0
+        else:
+            iscale_y = float(old_ht) / float(new_ht)
+        if new_dp == 0:
+            iscale_z = 0.0
+        else:
+            iscale_z = float(old_dp) / float(new_dp)
+
+        xi = np.clip(x1 + np.arange(0, new_wd) * iscale_x,
+                     0, max_x).astype(np.int, copy=False)
+        yi = np.clip(y1 + np.arange(0, new_ht) * iscale_y,
+                     0, max_y).astype(np.int, copy=False)
+        zi = np.clip(z1 + np.arange(0, new_dp) * iscale_z,
+                     0, max_z).astype(np.int, copy=False)
+        wd, ht, dp = xi.size, yi.size, zi.size
+
+        # bounds check against shape (to protect future data access)
+        if new_wd > 0:
+            xi_max = xi[-1]
+            if xi_max > max_x:
+                raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
+        if new_ht > 0:
+            yi_max = yi[-1]
+            if yi_max > max_y:
+                raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
+        if new_dp > 0:
+            zi_max = zi[-1]
+            if zi_max > max_z:
+                raise ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
+
     else:
-        iscale_x = float(old_wd) / float(new_wd)
+        # simple stepped view will do, because new view is same as old
+        wd, ht, dp = old_wd, old_ht, old_dp
+        xi, yi, zi = (np.arange(x1, x2 + 1), np.arange(y1, y2 + 1),
+                      np.arange(z1, z2 + 1))
 
-    if new_ht == 0:
-        iscale_y = 0.0
-    else:
-        iscale_y = float(old_ht) / float(new_ht)
-
-    if new_dp == 0:
-        iscale_z = 0.0
-    else:
-        iscale_z = float(old_dp) / float(new_dp)
-
-    xi = np.clip(x1 + np.arange(0, new_wd) * iscale_x,
-                 0, max_x).astype(int, copy=False)
-    yi = np.clip(y1 + np.arange(0, new_ht) * iscale_y,
-                 0, max_y).astype(int, copy=False)
-    zi = np.clip(z1 + np.arange(0, new_dp) * iscale_z,
-                 0, max_z).astype(int, copy=False)
-    wd, ht, dp = xi.size, yi.size, zi.size
-
-    # bounds check against shape (to protect future data access)
-    if new_wd > 0:
-        xi_max = xi[-1]
-        if xi_max > max_x:
-            raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
-
-    if new_ht > 0:
-        yi_max = yi[-1]
-        if yi_max > max_y:
-            raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
-
-    if new_dp > 0:
-        zi_max = zi[-1]
-        if zi_max > max_z:
-            raise ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
-
-    view = np.ix_(yi, xi, zi)
+    view = (yi, xi, zi)
 
     # Calculate actual scale used (vs. desired)
     scale_x = float(wd) / old_wd
@@ -405,11 +411,11 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
 
     else:
         if logger is not None:
-            logger.debug('resizing by slicing')
+            logger.debug('resizing by fancy indexing')
         view, (scale_x, scale_y) = get_scaled_cutout_wdht_view(data_np.shape,
                                                                x1, y1, x2, y2,
                                                                new_wd, new_ht)
-        newdata = data_np[view]
+        newdata = np.asarray(fancy_index(data_np, view))
 
     newdata = newdata.astype(dtype, copy=False)
 
@@ -418,10 +424,10 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
 
 def get_scaled_cutout_wdhtdp(data_np, p1, p2, new_dims, logger=None):
     if logger is not None:
-        logger.debug('resizing by slicing')
+        logger.debug('resizing by fancy indexing')
     view, scales = get_scaled_cutout_wdhtdp_view(data_np.shape,
                                                  p1, p2, new_dims)
-    newdata = data_np[view]
+    newdata = np.asarray(fancy_index(data_np, view))
 
     return newdata, scales
 
@@ -507,7 +513,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
                                                     (x1, y1), (x2, y2),
                                                     (scale_x, scale_y))
         scale_x, scale_y = scales
-        newdata = data_np[view]
+        newdata = np.asarray(fancy_index(data_np, view))
 
     newdata = newdata.astype(dtype, copy=False)
 
@@ -529,9 +535,9 @@ def get_scaled_cutout_basic2(data_np, p1, p2, scales,
 
     if logger is not None:
         logger.debug('resizing by slicing')
-    view, oscales = get_scaled_cutout_basic_view(data_np.shape,
-                                                 p1, p2, scales)
-    newdata = data_np[view]
+    view, scales = get_scaled_cutout_basic_view(data_np.shape,
+                                                p1, p2, scales)
+    newdata = np.asarray(fancy_index(data_np, view))
 
     return newdata, oscales
 
@@ -687,6 +693,7 @@ def overlay_image_2d_np(dstarr, pos, srcarr, dst_order='RGBA',
     if copy:
         dstarr = np.copy(dstarr, order='C')
 
+    # Figure out the position of the alpha channel, if one is present
     da_idx = -1
     slc = slice(0, 3)
     if 'A' in dst_order:
@@ -1177,3 +1184,61 @@ def calc_aspect_str(wd, ht):
     _wd, _ht = int(wd / gcd), int(ht / gcd)
     _as = str(_wd) + ':' + str(_ht)
     return _as
+
+
+def fancy_index(d_obj, view):
+    """Return a slice from a data object according to a view.
+
+    Parameters
+    ----------
+    d_obj : numpy ndarray, dask array or zarr array
+        2D or 3D data array
+
+    view : tuple of slice or int array
+        View into the array
+
+    Returns
+    -------
+    arr : ndarray
+        The result of the fancy index as a numpy array
+
+    d_obj can define a 2D or 3D array which can be a numpy, dask or zarr
+    array.  We always return a numpy array.
+    """
+    if not isinstance(view[0], slice):
+        # <-- indicates fancy indexing being used instead of slices
+
+        if isinstance(d_obj, np.ndarray):
+            # <-- numpy array
+            view = np.ix_(*view)
+
+        # duck-typing test for zarr object
+        elif hasattr(d_obj, 'get_coordinate_selection'):
+            # <-- zarr object
+            # zarr does not support numpy-style fancy indexing for 2D
+            # and higher arrays, so we need to use the
+            # get_coordinate_selection() method to fetch all the values
+            shape = [len(idxs) for idxs in view]
+            _m = np.meshgrid(*tuple(reversed(view)))
+            iarrs = [_m[i].reshape(-1) for i in range(len(_m))]
+            arr = d_obj.get_coordinate_selection(tuple(reversed(iarrs)))
+            arr = arr.reshape(shape)
+            return arr
+
+        else:
+            # <-- dask array
+            # dask does not support fancy indexing for 2D or higher arrays
+            # so we need to index in stages.
+            n = len(view)
+            if n == 2:
+                arr = d_obj[view[0]][:, view[1]]
+                return arr
+            elif n == 3:
+                arr = d_obj[view[0]][:, view[1]][:, :, view[2]]
+                return arr
+            raise ValueError("Array must be 2D or 3D for this indexing")
+
+    # <-- regular slicing, supported by all array types
+    return d_obj[view]
+
+# END
