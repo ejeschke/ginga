@@ -184,8 +184,9 @@ class BaseImage(ViewerObjectBase):
         assert (x >= 0) and (y >= 0), \
             ImageError("Indexes out of range: (x=%d, y=%d)" % (
                 x, y))
-        view = np.s_[y, x]
-        res = self._slice(view)
+        view = np.s_[[y], [x]]
+        data = self._slice(view)
+        res = data[0][0]
         if isinstance(res, np.ndarray) and self.get('ignore_alpha', False):
             # <-- this image has a "hidden" alpha array
             # NOTE: assumes that data is at index 0
@@ -218,9 +219,9 @@ class BaseImage(ViewerObjectBase):
         self._data = np.zeros((0, 0))
 
     def _slice(self, view):
-        if not isinstance(view, tuple):
-            view = tuple(view)
-        return self._get_data()[view]
+        d_obj = self._get_data()
+        arr = trcalc.fancy_index(d_obj, view)
+        return np.asarray(arr)
 
     def get_slice(self, c):
         view = [slice(None)] * self.ndim
@@ -388,11 +389,11 @@ class BaseImage(ViewerObjectBase):
         x0, x1 = max(0, x - n), min(wd - 1, x + n)
         y0, y1 = max(0, y - n), min(ht - 1, y + n)
 
-        xview = np.s_[y, x0:x1 + 1]
-        yview = np.s_[y0:y1 + 1, x]
+        xview = np.s_[y:y + 1, x0:x1 + 1]
+        yview = np.s_[y0:y1 + 1, x:x + 1]
 
-        xarr = self._slice(xview)
-        yarr = self._slice(yview)
+        xarr = self._slice(xview).ravel()
+        yarr = self._slice(yview).ravel()
 
         return (x0, y0, xarr, yarr)
 

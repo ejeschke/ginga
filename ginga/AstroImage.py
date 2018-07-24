@@ -73,8 +73,6 @@ class AstroImage(BaseImage):
         # initialize data attribute to something reasonable
         if data is None:
             data = np.zeros((0, 0))
-        elif not isinstance(data, np.ndarray):
-            data = np.zeros((0, 0))
         elif 0 in data.shape:
             data = np.zeros((0, 0))
 
