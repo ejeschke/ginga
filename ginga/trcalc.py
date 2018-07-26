@@ -696,7 +696,6 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
         get_order = dst_order.replace('A', '')
     if get_order != src_order:
         srcarr = reorder_image(get_order, srcarr, src_order)
-    ## srcarr = reorder_image(dst_order, srcarr, src_order)
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
@@ -795,7 +794,6 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter
         alpha = srcarr[0:src_ht, 0:src_wd, 0:src_dp, sa_idx] / float(src_max_val)
-        #alpha = np.dstack((alpha, alpha, alpha))
         alpha = np.concatenate([alpha[..., np.newaxis],
                                 alpha[..., np.newaxis],
                                 alpha[..., np.newaxis]],
@@ -807,7 +805,6 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         get_order = dst_order.replace('A', '')
     if get_order != src_order:
         srcarr = reorder_image(get_order, srcarr, src_order)
-    #srcarr = reorder_image(dst_order, srcarr, src_order)
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
@@ -836,14 +833,22 @@ def overlay_image(dstarr, pos, srcarr, **kwargs):
 
 
 def reorder_image(dst_order, src_arr, src_order):
+    """Reorder src_arr, with order of color planes in src_order, as
+    dst_order.
+    """
     bands = []
-    if 'A' not in dst_order:
-        indexes = [src_order.index(c) for c in dst_order]
-        bands = [src_arr[..., idx, np.newaxis] for idx in indexes]
+    if dst_order == src_order:
+        return src_arr
+
+    elif 'A' not in dst_order or 'A' in src_order:
+        # <-- we don't have to add an alpha plane, just create a new view
+        idx = np.array([src_order.index(c) for c in dst_order])
+        return src_arr[..., idx]
+
     else:
+        # <-- dst order requires missing alpha channel
         indexes = [src_order.index(c) for c in dst_order.replace('A', '')]
         bands = [src_arr[..., idx, np.newaxis] for idx in indexes]
-        # dst requires missing alpha channel
         ht, wd = src_arr.shape[:2]
         dst_type = src_arr.dtype
         dst_max_val = np.iinfo(dst_type).max

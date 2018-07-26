@@ -129,6 +129,10 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
                                                               dawd, daht, stride)
 
     def update_image(self):
+        if self.surface is None:
+            # window is not mapped/configured yet
+            return
+
         self._renderer_to_surface()
 
         win = self.imgwin.get_window()
