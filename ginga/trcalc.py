@@ -696,18 +696,19 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
         get_order = dst_order.replace('A', '')
     if get_order != src_order:
         srcarr = reorder_image(get_order, srcarr, src_order)
+    ## srcarr = reorder_image(dst_order, srcarr, src_order)
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
-    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(dst_type, copy=False)
+    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(dst_type,
+                                                             copy=False)
     b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y + src_ht,
                                     dst_x:dst_x + src_wd,
                                     slc]).astype(dst_type, copy=False)
 
     # Place our srcarr into this dstarr at dst offsets
-    #dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, slc] += addarr[0:src_ht, 0:src_wd, slc]
-    dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, slc] = \
-        a_arr[0:src_ht, 0:src_wd, slc] + b_arr[0:src_ht, 0:src_wd, slc]
+    dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, slc] = (
+        a_arr[0:src_ht, 0:src_wd, slc] + b_arr[0:src_ht, 0:src_wd, slc])
 
     return dstarr
 
@@ -806,6 +807,7 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         get_order = dst_order.replace('A', '')
     if get_order != src_order:
         srcarr = reorder_image(get_order, srcarr, src_order)
+    #srcarr = reorder_image(dst_order, srcarr, src_order)
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
@@ -818,9 +820,9 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
 
     # Place our srcarr into this dstarr at dst offsets
     dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
-           dst_z:dst_z + src_dp, slc] = \
-        a_arr[0:src_ht, 0:src_wd, 0:src_dp, slc] + \
-        b_arr[0:src_ht, 0:src_wd, 0:src_dp, slc]
+           dst_z:dst_z + src_dp, slc] = (
+        a_arr[0:src_ht, 0:src_wd, 0:src_dp, slc] +
+        b_arr[0:src_ht, 0:src_wd, 0:src_dp, slc])
 
     return dstarr
 
@@ -834,10 +836,21 @@ def overlay_image(dstarr, pos, srcarr, **kwargs):
 
 
 def reorder_image(dst_order, src_arr, src_order):
-    indexes = [src_order.index(c) for c in dst_order]
-    #return np.dstack([ src_arr[..., idx] for idx in indexes ])
-    return np.concatenate([src_arr[..., idx, np.newaxis]
-                           for idx in indexes], axis=-1)
+    bands = []
+    if 'A' not in dst_order:
+        indexes = [src_order.index(c) for c in dst_order]
+        bands = [src_arr[..., idx, np.newaxis] for idx in indexes]
+    else:
+        indexes = [src_order.index(c) for c in dst_order.replace('A', '')]
+        bands = [src_arr[..., idx, np.newaxis] for idx in indexes]
+        # dst requires missing alpha channel
+        ht, wd = src_arr.shape[:2]
+        dst_type = src_arr.dtype
+        dst_max_val = np.iinfo(dst_type).max
+        alpha = np.full((ht, wd, 1), dst_max_val, dtype=dst_type)
+        bands.insert(dst_order.index('A'), alpha)
+
+    return np.concatenate(bands, axis=-1)
 
 
 def strip_z(pts):
@@ -867,5 +880,20 @@ def get_bounds(pts):
     return np.asarray(([np.min(_pts) for _pts in pts_t],
                        [np.max(_pts) for _pts in pts_t]))
 
+
+def fill_array(arr, order, r, g, b, a):
+    """Fill array arr with a color value. order defines the color planes
+    in the array.  (r, g, b, a) are expected to be in the range 0..1 and
+    are scaled to the appropriate values.
+
+    arr can be a 2D or 3D array.
+    """
+    # TODO: can we make this more efficient?
+    dtype = arr.dtype
+    maxv = np.iinfo(dtype).max
+    bgval = dict(A=int(maxv * a), R=int(maxv * r), G=int(maxv * g),
+                 B=int(maxv * b))
+    bgtup = tuple([bgval[order[i]] for i in range(len(order))])
+    arr[..., :] = bgtup
 
 # END

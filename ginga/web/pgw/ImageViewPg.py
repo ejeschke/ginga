@@ -82,7 +82,9 @@ class ImageViewPg(ImageView):
         try:
             self.logger.debug("getting image as buffer...")
             format = self.t_.get('html5_canvas_format', default_html_fmt)
-            buf = self.get_rgb_image_as_bytes(format=format, quality=90)
+
+            buf = self.renderer.get_surface_as_rgb_format_bytes(
+                format=format, quality=90)
             self.logger.debug("got '%s' RGB image buffer, len=%d" % (
                 format, len(buf)))
 
@@ -101,7 +103,7 @@ class ImageViewPg(ImageView):
         """Used for generating thumbnails.  Does not include overlaid
         graphics.
         """
-        image_buf = self.get_rgb_image_as_buffer()
+        image_buf = self.renderer.get_surface_as_rgb_format_buffer()
         return image_buf.getvalue()
 
     def save_plain_image_as_file(self, filepath, format='png', quality=90):

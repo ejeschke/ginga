@@ -4,21 +4,23 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import numpy as np
+
 from ginga.qtw.QtHelp import (QtCore, QPainter, QPen, QPolygon, QColor,
-                              QPainterPath, get_font)
+                              QPainterPath, QImage, QPixmap, get_font)
 
 from ginga import colors
+from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 
 
 class RenderContext(object):
 
-    def __init__(self, viewer):
+    def __init__(self, viewer, surface):
         self.viewer = viewer
 
-        # TODO: encapsulate this drawable
-        self.cr = QPainter(self.viewer.pixmap)
+        self.cr = QPainter(surface)
         self.cr.setRenderHint(QPainter.Antialiasing)
 
     def __get_color(self, color, alpha):
@@ -161,13 +163,107 @@ class RenderContext(object):
         self.cr.drawLines(pts)
 
 
-class CanvasRenderer(object):
+class CanvasRenderer(render.RendererBase):
 
-    def __init__(self, viewer):
-        self.viewer = viewer
+    def __init__(self, viewer, surface_type='qimage'):
+        render.RendererBase.__init__(self, viewer)
+
+        self.kind = 'qt'
+        # Qt needs this to be in BGRA
+        self.rgb_order = 'BGRA'
+        self.qimg_fmt = QImage.Format_ARGB32
+        self.surface_type = surface_type
+        # the offscreen drawing surface
+        self.surface = None
+
+    def resize(self, dims):
+        """Resize our drawing area to encompass a space defined by the
+        given dimensions.
+        """
+        width, height = dims[:2]
+        self.logger.debug("renderer reconfigured to %dx%d" % (
+            width, height))
+        if self.surface_type == 'qpixmap':
+            self.surface = QPixmap(width, height)
+        else:
+            self.surface = QImage(width, height, self.qimg_fmt)
+
+    def _get_qimage(self, rgb_data):
+        ht, wd, channels = rgb_data.shape
+
+        result = QImage(rgb_data.data, wd, ht, self.qimg_fmt)
+        # Need to hang on to a reference to the array
+        result.ndarray = rgb_data
+        return result
+
+    def _get_color(self, r, g, b):
+        # TODO: combine with the method from the RenderContext?
+        n = 255.0
+        clr = QColor(int(r * n), int(g * n), int(b * n))
+        return clr
+
+    def render_image(self, rgbobj, dst_x, dst_y):
+        """Render the image represented by (rgbobj) at dst_x, dst_y
+        in the pixel space.
+        *** internal method-- do not use ***
+        """
+        self.logger.debug("redraw surface=%s" % (self.surface))
+        if self.surface is None:
+            return
+        self.logger.debug("drawing to surface")
+
+        # Prepare array for rendering
+        # TODO: what are options for high bit depth under Qt?
+        data = rgbobj.get_array(self.rgb_order, dtype=np.uint8)
+        (height, width) = data.shape[:2]
+
+        daht, dawd, depth = data.shape
+        self.logger.debug("data shape is %dx%dx%d" % (dawd, daht, depth))
+
+        # Get qimage for copying pixel data
+        qimage = self._get_qimage(data)
+        drawable = self.surface
+
+        painter = QPainter(drawable)
+        #painter.setWorldMatrixEnabled(True)
+
+        # fill surface with background color
+        #imgwin_wd, imgwin_ht = self.viewer.get_window_size()
+        size = drawable.size()
+        sf_wd, sf_ht = size.width(), size.height()
+        bg = self.viewer.img_bg
+        bgclr = self._get_color(*bg)
+        painter.fillRect(QtCore.QRect(0, 0, sf_wd, sf_ht), bgclr)
+
+        # draw image data from buffer to offscreen pixmap
+        painter.drawImage(QtCore.QRect(dst_x, dst_y, width, height),
+                          qimage,
+                          QtCore.QRect(0, 0, width, height))
+
+    def get_surface_as_array(self, order=None):
+        if self.surface_type == 'qpixmap':
+            qimg = self.surface.toImage()
+        else:
+            qimg = self.surface
+        #qimg = qimg.convertToFormat(QImage.Format_RGBA32)
+
+        width, height = qimg.width(), qimg.height()
+
+        if hasattr(qimg, 'bits'):
+            # PyQt
+            ptr = qimg.bits()
+            ptr.setsize(qimg.byteCount())
+        else:
+            # PySide
+            ptr = qimg.constBits()
+
+        arr = np.array(ptr).reshape(height, width, 4)
+
+        # adjust according to viewer's needed order
+        return self.reorder(arr, order)
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer)
+        cr = RenderContext(self.viewer, self.surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

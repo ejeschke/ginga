@@ -101,8 +101,8 @@ class ImageViewJpw(ImageView):
 
     def update_image(self):
         fmt = self.jp_img.format
-        web_img = self.get_rgb_image_as_bytes(format=fmt)
-
+        web_img = self.renderer.get_surface_as_rgb_format_bytes(
+            format=fmt)
         # this updates the model, and then the Jupyter image(s)
         self.jp_img.value = web_img
 

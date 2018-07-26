@@ -4,23 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import numpy as np
-from io import BytesIO
-
-import aggdraw as agg
-
 from ginga import ImageView
 from ginga.aggw.CanvasRenderAgg import CanvasRenderer
-
-try:
-    import PIL.Image as PILimage
-    have_PIL = True
-except ImportError:
-    have_PIL = False
-
-
-class ImageViewAggError(ImageView.ImageViewError):
-    pass
 
 
 class ImageViewAgg(ImageView.ImageViewBase):
@@ -38,91 +23,37 @@ class ImageViewAgg(ImageView.ImageViewBase):
     def get_surface(self):
         return self.surface
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
-        in the pixel space.
-        """
-        if self.surface is None:
-            return
-        canvas = self.surface
-        self.logger.debug("redraw surface")
-
-        # get window contents as a buffer and load it into the AGG surface
-        rgb_buf = self.getwin_buffer(order=self.rgb_order, dtype=np.uint8)
-        canvas.frombytes(rgb_buf)
-
-        # for debugging
-        #self.save_rgb_image_as_file('/tmp/temp.png', format='png')
-
     def configure_surface(self, width, height):
-        # create agg surface the size of the window
-        self.surface = agg.Draw(self.rgb_order, (width, height), 'black')
+        # tell renderer about our new size
+        self.renderer.resize((width, height))
 
         # inform the base class about the actual window size
         self.configure(width, height)
 
     def get_image_as_array(self):
-        if self.surface is None:
-            raise ImageViewAggError("No AGG surface defined")
-
-        # TODO: could these have changed between the time that self.surface
-        # was last updated?
-        wd, ht = self.get_window_size()
-
-        # Get agg surface as a numpy array
-        surface = self.get_surface()
-        arr8 = np.fromstring(surface.tobytes(), dtype=np.uint8)
-        arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
-        return arr8
+        # TO BE DEPRECATED: DO NOT USE
+        return self.renderer.get_surface_as_array()
 
     def get_image_as_buffer(self, output=None):
-        if self.surface is None:
-            raise ImageViewAggError("No AGG surface defined")
-
-        obuf = output
-        if obuf is None:
-            obuf = BytesIO()
-
-        surface = self.get_surface()
-        obuf.write(surface.tobytes())
-        return obuf
+        # TO BE DEPRECATED: DO NOT USE
+        return self.renderer.get_surface_as_buffer()
 
     def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
-        if not have_PIL:
-            raise ImageViewAggError("Please install PIL to use this method")
-
-        if self.surface is None:
-            raise ImageViewAggError("No AGG surface defined")
-
-        obuf = output
-        if obuf is None:
-            obuf = BytesIO()
-
-        # Get current surface as an array
-        arr8 = self.get_image_as_array()
-
-        # make a PIL image
-        image = PILimage.fromarray(arr8)
-
-        image.save(obuf, format=format, quality=quality)
-        if output is not None:
-            return None
-        return obuf
+        # TO BE DEPRECATED: DO NOT USE
+        return self.renderer.get_surface_as_rgb_format_buffer(output=output,
+                                                              format=format,
+                                                              quality=quality)
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
-        buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return buf.getvalue()
+        # TO BE DEPRECATED: DO NOT USE
+        return self.get_surface_as_rgb_format_bytes(format=format,
+                                                    quality=quality)
 
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
-        if not have_PIL:
-            raise ImageViewAggError("Please install PIL to use this method")
-        if self.surface is None:
-            raise ImageViewAggError("No AGG surface defined")
-
-        with open(filepath, 'w') as out_f:
-            self.get_rgb_image_as_buffer(output=out_f, format=format,
-                                         quality=quality)
-        self.logger.debug("wrote %s file '%s'" % (format, filepath))
+        # TO BE DEPRECATED: DO NOT USE
+        return self.renderer.save_surface_as_rgb_format_file(filepath,
+                                                             format=format,
+                                                             quality=quality)
 
     def update_image(self):
         # subclass implements this method to actually update a widget

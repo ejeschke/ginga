@@ -5,7 +5,11 @@
 # Please see the file LICENSE.txt for details.
 
 import math
+import numpy as np
 
+from PIL import Image
+
+from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga import trcalc
@@ -15,11 +19,11 @@ from . import PilHelp
 
 class RenderContext(object):
 
-    def __init__(self, viewer):
+    def __init__(self, viewer, surface):
         self.viewer = viewer
 
         # TODO: encapsulate this drawable
-        self.cr = PilHelp.PilContext(self.viewer.get_surface())
+        self.cr = PilHelp.PilContext(surface)
 
         self.pen = None
         self.brush = None
@@ -117,13 +121,71 @@ class RenderContext(object):
         self.cr.path(cpoints, self.pen)
 
 
-class CanvasRenderer(object):
+class CanvasRenderer(render.RendererBase):
 
     def __init__(self, viewer):
-        self.viewer = viewer
+        render.RendererBase.__init__(self, viewer)
+
+        self.kind = 'pil'
+        self.rgb_order = 'RGBA'
+        self.surface = None
+        self.dims = ()
+
+    def resize(self, dims):
+        """Resize our drawing area to encompass a space defined by the
+        given dimensions.
+        """
+        width, height = dims[:2]
+        self.dims = (width, height)
+        self.logger.debug("renderer reconfigured to %dx%d" % (
+            width, height))
+
+        # create PIL surface the size of the window
+        # NOTE: pillow needs an RGB surface in order to draw with alpha
+        # blending, not RGBA
+        self.surface = Image.new('RGB', (width, height), color=0)
+
+    def render_image(self, rgbobj, dst_x, dst_y):
+        """Render the image represented by (rgbobj) at dst_x, dst_y
+        in the pixel space.
+        *** internal method-- do not use ***
+        """
+        if self.surface is None:
+            return
+        self.logger.debug("redraw surface")
+
+        # get window contents as a buffer and paste it into the PIL surface
+        # TODO: allow greater bit depths when support is better in PIL
+        rgb_arr = self.viewer.getwin_array(order=self.rgb_order, dtype=np.uint8)
+        p_image = Image.fromarray(rgb_arr)
+
+        if self.surface is None or p_image.size != self.surface.size:
+            # window size must have changed out from underneath us!
+            width, height = self.viewer.get_window_size()
+            self.resize((width, height))
+            if p_image.size != self.surface.size:
+                raise render.RenderError("Rendered image does not match window size")
+
+        self.surface.paste(p_image)
+
+    def get_surface_as_array(self, order=None):
+        if self.surface is None:
+            raise render.RenderError("No PIL surface defined")
+
+        # TODO: could these have changed between the time that self.surface
+        # was last updated?
+        wd, ht = self.dims
+
+        # Get agg surface as a numpy array
+        arr8 = np.fromstring(self.surface.tobytes(), dtype=np.uint8)
+        #arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
+        arr8 = arr8.reshape((ht, wd, 3))
+
+        # adjust according to viewer's needed order
+        return self.reorder(arr8, order)
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer)
+        cr = RenderContext(self.viewer, self.surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

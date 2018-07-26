@@ -4,21 +4,25 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
+import sys
 import math
+
+import numpy as np
 import cairo
 
 from ginga import colors
 from ginga.fonts import font_asst
+from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 
 
 class RenderContext(object):
 
-    def __init__(self, viewer):
+    def __init__(self, viewer, surface):
         self.viewer = viewer
 
-        self.cr = viewer.get_offscreen_context()
+        self.cr = cairo.Context(surface)
 
         self.fill = False
         self.fill_color = None
@@ -180,13 +184,87 @@ class RenderContext(object):
         self.cr.new_path()
 
 
-class CanvasRenderer(object):
+class CanvasRenderer(render.RendererBase):
 
     def __init__(self, viewer):
-        self.viewer = viewer
+        render.RendererBase.__init__(self, viewer)
+
+        self.kind = 'cairo'
+        if sys.byteorder == 'little':
+            self.rgb_order = 'BGRA'
+        else:
+            self.rgb_order = 'ARGB'
+        self.surface = None
+        self.surface_arr = None
+
+    def resize(self, dims):
+        """Resize our drawing area to encompass a space defined by the
+        given dimensions.
+        """
+        width, height = dims[:2]
+        self.dims = (width, height)
+        self.logger.debug("renderer reconfigured to %dx%d" % (
+            width, height))
+
+        # create cairo surface the size of the window
+        #surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        depth = len(self.rgb_order)
+        self.surface_arr = np.zeros((height, width, depth), dtype=np.uint8)
+
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
+                                                            width)
+        surface = cairo.ImageSurface.create_for_data(self.surface_arr,
+                                                     cairo.FORMAT_ARGB32,
+                                                     width, height, stride)
+        self.surface = surface
+
+    def render_image(self, rgbobj, dst_x, dst_y):
+        """Render the image represented by (rgbobj) at dst_x, dst_y
+        in the pixel space.
+        """
+        self.logger.debug("redraw surface")
+        if self.surface is None:
+            return
+
+        # Prepare array for Cairo rendering
+        # TODO: is there some high-bit depth option for Cairo?
+        arr = rgbobj.get_array(self.rgb_order, dtype=np.uint8)
+
+        daht, dawd, depth = arr.shape
+        self.logger.debug("arr shape is %dx%dx%d" % (dawd, daht, depth))
+
+        cr = cairo.Context(self.surface)
+        # TODO: is it really necessary to hang on to this context?
+        self.cr = cr
+
+        # fill surface with background color
+        imgwin_wd, imgwin_ht = self.viewer.get_window_size()
+        cr.rectangle(0, 0, imgwin_wd, imgwin_ht)
+        r, g, b = self.viewer.get_bg()
+        cr.set_source_rgba(r, g, b)
+        cr.fill()
+
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
+                                                            dawd)
+        img_surface = cairo.ImageSurface.create_for_data(arr,
+                                                         cairo.FORMAT_ARGB32,
+                                                         dawd, daht, stride)
+
+        cr.set_source_surface(img_surface, dst_x, dst_y)
+        cr.set_operator(cairo.OPERATOR_SOURCE)
+
+        cr.mask_surface(img_surface, dst_x, dst_y)
+        cr.fill()
+
+    def get_surface_as_array(self, order=None):
+        if self.surface_arr is None:
+            raise render.RenderError("No cairo surface defined")
+
+        # adjust according to viewer's needed order
+        return self.reorder(self.surface_arr, order)
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer)
+        cr = RenderContext(self.viewer, self.surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

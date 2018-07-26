@@ -62,7 +62,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
             self.logger.warning("Error making pixbuf: %s" % (str(e)))
             # pygtk might have been compiled without numpy support
             daht, dawd, depth = arr.shape
-            rgb_buf = self._get_rgbbuf(arr)
+            rgb_buf = arr.tobytes(order='C')
             pixbuf = GtkHelp.pixbuf_new_from_data(
                 rgb_buf, gtk.gdk.COLORSPACE_RGB,
                 False, 8, dawd, daht, dawd * 3)
@@ -90,9 +90,9 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         pixbuf.save(filepath, format, options)
 
     def get_rgb_image_as_pixbuf(self):
-        dawd = self.surface.get_width()
-        daht = self.surface.get_height()
-        rgb_buf = bytes(self.surface.get_data())
+        arr8 = self.renderer.get_surface_as_array(order='RGB')
+        daht, dawd = arr8.shape[:2]
+        rgb_buf = arr8.tobytes(order='C')
         pixbuf = GtkHelp.pixbuf_new_from_data(rgb_buf, gtk.gdk.COLORSPACE_RGB,
                                               False, 8, dawd, daht, dawd * 3)
 
@@ -109,9 +109,27 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         self._defer_task.stop()
         self._defer_task.start(time_sec)
 
+    def _renderer_to_surface(self):
+
+        if isinstance(self.renderer.surface, cairo.ImageSurface):
+            # optimization when renderer is cairo:
+            # the render already contains a surface we can copy from
+            self.surface = self.renderer.surface
+
+        else:
+            # create a new surface from rendered array
+            arr = self.renderer.get_surface_as_array(order=self.rgb_order)
+            daht, dawd, depth = arr.shape
+            self.logger.debug("arr shape is %dx%dx%d" % (dawd, daht, depth))
+
+            stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
+                                                                dawd)
+            self.surface = cairo.ImageSurface.create_for_data(arr,
+                                                              cairo.FORMAT_ARGB32,
+                                                              dawd, daht, stride)
+
     def update_image(self):
-        if not self.surface:
-            return
+        self._renderer_to_surface()
 
         win = self.imgwin.get_window()
         if win is not None and self.surface is not None:
@@ -208,10 +226,6 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
 
     def make_timer(self):
         return GtkHelp.Timer()
-
-    def _get_rgbbuf(self, data):
-        buf = data.tostring(order='C')
-        return buf
 
     def onscreen_message(self, text, delay=None, redraw=True):
         self.msgtask.stop()

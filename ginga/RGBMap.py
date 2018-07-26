@@ -7,7 +7,7 @@
 import numpy as np
 
 from ginga.misc import Callback
-from ginga import ColorDist
+from ginga import ColorDist, trcalc
 
 
 class RGBMapError(Exception):
@@ -58,10 +58,8 @@ class RGBPlanes(object):
         if order == self.order:
             return self.rgbarr.astype(dtype, copy=False)
 
-        l = [self.get_slice(c) for c in order]
-        res = np.concatenate([arr[..., np.newaxis].astype(dtype, copy=False,
-                                                          casting='unsafe')
-                              for arr in l], axis=-1)
+        res = trcalc.reorder_image(order, self.rgbarr, self.order)
+        res = res.astype(dtype, copy=False, casting='unsafe')
         return res
 
     def get_size(self):
