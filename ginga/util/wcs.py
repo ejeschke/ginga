@@ -665,4 +665,49 @@ def lat_to_deg(lat):
         lat_deg = float(lat)
     return lat_deg
 
+
+def get_ruler_distances(image, p1, p2):
+    """Get the distance calculated between two points.  A Bunch of
+    results is returned, containing pixel values and distance values
+    if the image contains a valid WCS.
+    """
+    x1, y1 = p1[:2]
+    x2, y2 = p2[:2]
+
+    dx, dy = x2 - x1, y2 - y1
+    res = Bunch.Bunch(x1=x1, y1=y1, x2=x2, y2=y2,
+                      theta=np.arctan2(y2 - y1, x2 - x1),
+                      dx_pix=dx, dy_pix=dy,
+                      dh_pix=np.sqrt(dx**2 + dy**2),
+                      ra_org=None, dec_org=None,
+                      ra_dst=None, dec_dst=None,
+                      ra_heel=None, dec_heel=None,
+                      dx_deg=None, dy_deg=None, dh_deg=None)
+
+    if image.wcs is not None:
+        # Calculate RA and DEC for the three points
+        try:
+            # origination point
+            ra_org, dec_org = image.pixtoradec(x1, y1)
+            res.ra_org, res.dec_org = ra_org, dec_org
+
+            # destination point
+            ra_dst, dec_dst = image.pixtoradec(x2, y2)
+            res.ra_dst, res.dec_dst = ra_dst, dec_dst
+
+            # "heel" point making a right triangle
+            ra_heel, dec_heel = image.pixtoradec(x2, y1)
+            res.ra_heel, res.dec_heel = ra_heel, dec_heel
+
+            res.dh_deg = deltaStarsRaDecDeg(ra_org, dec_org,
+                                            ra_dst, dec_dst)
+            res.dx_deg = deltaStarsRaDecDeg(ra_org, dec_org,
+                                            ra_heel, dec_heel)
+            res.dy_deg = deltaStarsRaDecDeg(ra_heel, dec_heel,
+                                            ra_dst, dec_dst)
+        except Exception as e:
+            pass
+
+    return res
+
 # END
