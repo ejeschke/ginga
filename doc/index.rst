@@ -17,7 +17,7 @@ About Ginga
 Ginga is a toolkit designed for building viewers for scientific image
 data in Python, visualizing 2D pixel data in NumPy_ arrays.
 It can view astronomical data such as contained in files based on the
-`FITS (Flexible Image Transport System) <https://en.wikipedia.org/wiki/FITS>`_ file format.  
+`FITS (Flexible Image Transport System) <https://en.wikipedia.org/wiki/FITS>`_ file format.
 It is written and is maintained by software engineers at the Subaru Telescope, National
 Astronomical Observatory of Japan.
 
@@ -49,7 +49,7 @@ has the required Python modules and has a supported widget set.
 The basic Ginga display class supports the Qt_ (4 and 5), PySide_, Gtk_ (2
 and 3), Tk_ widget sets natively as well as any Matplotlib Figure, and
 HTML5 canvases in a web browser. The full reference viewer supports Qt
-and Gtk variants. Ginga can also be used in `Jupyter notebooks <http://jupyter-notebook-beginner-guide.readthedocs.io/en/latest/what_is_jupyter.html>`_. 
+and Gtk variants. Ginga can also be used in `Jupyter notebooks <http://jupyter-notebook-beginner-guide.readthedocs.io/en/latest/what_is_jupyter.html>`_.
 
 ==================
 Getting the Source
@@ -91,11 +91,12 @@ Documentation
    quickref
    FAQ
    manual/index
+   dev_manual/index
    optimizing
    ref_api
 
 Some training videos are available in the
-`downloads <https://github.com/ejeschke/ginga/downloads>`_ page on 
+`downloads <https://github.com/ejeschke/ginga/downloads>`_ page on
 Github.
 
 Be sure to also check out the

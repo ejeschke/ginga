@@ -384,7 +384,7 @@ rulers on the image.  For reference, you may want to refer to the ruler
 shown in :ref:`fig6`.
 
 .. _fig6:
-.. figure:: plugins_local/figures/ruler_plugin.png
+.. figure:: ../manual/plugins_local/figures/ruler_plugin.png
    :scale: 100%
    :figclass: thb
 
@@ -844,6 +844,3 @@ You can include as many plugins in your package as you want.
 You write your plugins in exactly the same way as described above, and
 they can be either global or local.  For details, clone the repo at the
 link above and follow the directions in the README.
-
-
-
