@@ -341,7 +341,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
                 axes_slice[i_y] = int(round(ycen))
                 axes_slice[i_sel] = slice(None, None, None)
                 try:
-                    plot_y_axis_data = mddata[axes_slice]
+                    plot_y_axis_data = mddata[tuple(axes_slice)]
                 except IndexError:
                     continue
 
@@ -352,7 +352,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
                 if naxes > 3:
                     for j in (i_x, i_y, i_sel):
                         axes_slice[j] = slice(None, None, None)
-                    data = mddata[axes_slice]  # z, y, x
+                    data = mddata[tuple(axes_slice)]  # z, y, x
                 else:
                     data = mddata
                 # Mask is 2D only (True = enclosed)

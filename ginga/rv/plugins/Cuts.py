@@ -679,7 +679,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             axes_slice[sa] = coords[:, i]
         axes_slice[selected_axis] = slice(None, None, None)
 
-        self.slit_data = data[axes_slice]
+        self.slit_data = data[tuple(axes_slice)]
 
     def _plot_slit(self):
         if not self.selected_axis:
