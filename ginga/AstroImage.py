@@ -179,7 +179,7 @@ class AstroImage(BaseImage):
         revnaxis.reverse()
 
         # construct slice view and extract it
-        view = revnaxis + [slice(None), slice(None)]
+        view = tuple(revnaxis + [slice(None), slice(None)])
         data = self.get_mddata()[view]
 
         if len(data.shape) != 2:
