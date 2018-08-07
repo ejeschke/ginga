@@ -58,7 +58,7 @@ ruler from the image.
 **Tips**
 Open the "Zoom" plugin to precisely see detail of the cursor area (the
 graphics of the ruler are not shown there, however).
-The "Pick" plugin can also be used in conjuntion with Ruler to identify
+The "Pick" plugin can also be used in conjunction with Ruler to identify
 the central point of an object, when aligning either end of the ruler.
 
 """
