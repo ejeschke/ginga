@@ -16,6 +16,7 @@ from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        register_canvas_types, get_canvas_type,
                                        colors_plus_none, coord_names)
 from ginga.misc.ParamSet import Param
+from ginga.misc import Bunch
 from ginga.util import wcs
 from ginga.util.wcs import raDegToString, decDegToString
 
@@ -61,6 +62,9 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
             Param(name='showplumb', type=_bool,
                   default=True, valid=[False, True],
                   description="Show plumb lines for the ruler"),
+            Param(name='showends', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Show begin and end values for the ruler"),
             Param(name='color2',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Second color of outline"),
@@ -84,15 +88,15 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
     def idraw(cls, canvas, cxt):
         return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
 
-    def __init__(self, x1, y1, x2, y2, color='green', color2='yellow',
+    def __init__(self, x1, y1, x2, y2, color='green', color2='skyblue',
                  alpha=1.0, linewidth=1, linestyle='solid',
-                 showcap=True, showplumb=True, units='arcmin',
+                 showcap=True, showplumb=True, showends=False, units='arcmin',
                  font='Sans Serif', fontsize=None, **kwdargs):
         self.kind = 'ruler'
         points = np.asarray([(x1, y1), (x2, y2)], dtype=np.float)
         CanvasObjectBase.__init__(self, color=color, color2=color2,
                                   alpha=alpha, units=units,
-                                  showplumb=showplumb,
+                                  showplumb=showplumb, showends=showends,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle, points=points,
                                   font=font, fontsize=fontsize,
@@ -109,56 +113,55 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
         return self.within_line(viewer, pt, points[0], points[1],
                                 self.cap_radius)
 
+    def get_arcmin(self, sep):
+        sgn, deg, mn, sec = wcs.degToDms(sep)
+        if deg != 0:
+            txt = '%02d:%02d:%06.3f' % (deg, mn, sec)
+        else:
+            txt = '%02d:%06.3f' % (mn, sec)
+        return txt
+
     def get_ruler_distances(self, viewer):
         mode = self.units.lower()
-        points = self.get_points()
+        points = self.get_data_points()
         x1, y1 = points[0]
         x2, y2 = points[1]
 
+        text = Bunch.Bunch(dict().fromkeys(['x', 'y', 'h', 'b', 'e'],
+                                           'BAD WCS'))
         try:
             image = viewer.get_image()
-            if mode in ('arcmin', 'degrees'):
-                # Calculate RA and DEC for the three points
-                # origination point
-                ra_org, dec_org = image.pixtoradec(x1, y1)
+            res = wcs.get_ruler_distances(image, points[0], points[1])
+            text.res = res
 
-                # destination point
-                ra_dst, dec_dst = image.pixtoradec(x2, y2)
+            if mode == 'arcmin':
+                text.h = self.get_arcmin(res.dh_deg)
+                text.x = self.get_arcmin(res.dx_deg)
+                text.y = self.get_arcmin(res.dy_deg)
+                text.b = ("%s, %s" % (wcs.raDegToString(res.ra_org),
+                                      wcs.decDegToString(res.dec_org)))
+                text.e = ("%s, %s" % (wcs.raDegToString(res.ra_dst),
+                                      wcs.decDegToString(res.dec_dst)))
 
-                # "heel" point making a right triangle
-                ra_heel, dec_heel = image.pixtoradec(x2, y1)
+            elif mode == 'degrees':
+                text.h = ("%.8f" % res.dh_deg)
+                text.x = ("%.8f" % res.dx_deg)
+                text.y = ("%.8f" % res.dy_deg)
+                text.b = ("%.3f, %.3f" % (res.ra_org, res.dec_org))
+                text.e = ("%.3f, %.3f" % (res.ra_dst, res.dec_dst))
 
-                if mode == 'arcmin':
-                    text_h = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
-                                                      ra_dst, dec_dst)
-                    text_x = wcs.get_starsep_RaDecDeg(ra_org, dec_org,
-                                                      ra_heel, dec_heel)
-                    text_y = wcs.get_starsep_RaDecDeg(ra_heel, dec_heel,
-                                                      ra_dst, dec_dst)
-                else:
-                    sep_h = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
-                                                   ra_dst, dec_dst)
-                    text_h = ("%.8f" % sep_h)
-                    sep_x = wcs.deltaStarsRaDecDeg(ra_org, dec_org,
-                                                   ra_heel, dec_heel)
-                    text_x = ("%.8f" % sep_x)
-                    sep_y = wcs.deltaStarsRaDecDeg(ra_heel, dec_heel,
-                                                   ra_dst, dec_dst)
-                    text_y = ("%.8f" % sep_y)
             else:
-                dx = abs(x2 - x1)
-                dy = abs(y2 - y1)
-                dh = np.sqrt(dx**2 + dy**2)
-                text_x = ("%.3f" % dx)
-                text_y = ("%.3f" % dy)
-                text_h = ("%.3f" % dh)
+                text.x = ("%.3f" % abs(res.dx_pix))
+                text.y = ("%.3f" % abs(res.dy_pix))
+                text.h = ("%.3f" % res.dh_pix)
+                text.b = ("%.3f, %.3f" % (res.x1, res.y1))
+                text.e = ("%.3f, %.3f" % (res.x2, res.y2))
 
         except Exception as e:
-            text_h = 'BAD WCS'
-            text_x = 'BAD WCS'
-            text_y = 'BAD WCS'
+            print(str(e))
+            pass
 
-        return (text_x, text_y, text_h)
+        return text
 
     def draw(self, viewer):
         image = viewer.get_image()
@@ -171,7 +174,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
         cx1, cy1 = viewer.get_canvas_xy(x1, y1)
         cx2, cy2 = viewer.get_canvas_xy(x2, y2)
 
-        text_x, text_y, text_h = self.get_ruler_distances(viewer)
+        text = self.get_ruler_distances(viewer)
 
         cr = viewer.renderer.setup_cr(self)
         cr.set_font_from_shape(self)
@@ -182,9 +185,9 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
 
         # calculate offsets and positions for drawing labels
         # try not to cover anything up
-        xtwd, xtht = cr.text_extents(text_x)
-        ytwd, ytht = cr.text_extents(text_y)
-        htwd, htht = cr.text_extents(text_h)
+        xtwd, xtht = cr.text_extents(text.x)
+        ytwd, ytht = cr.text_extents(text.y)
+        htwd, htht = cr.text_extents(text.h)
 
         diag_xoffset = 0
         diag_yoffset = 0
@@ -219,7 +222,11 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
 
         xd = xh + diag_xoffset
         yd = yh + diag_yoffset
-        cr.draw_text(xd, yd, text_h)
+        cr.draw_text(xd, yd, text.h)
+
+        if self.showends:
+            cr.draw_text(cx1 + 4, cy1 + xtht + 4, text.b)
+            cr.draw_text(cx2 + 4, cy2 + xtht + 4, text.e)
 
         if self.showplumb:
             if self.color2:
@@ -234,12 +241,13 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
 
             # draw X plum line label
             xh -= xtwd // 2
-            cr.draw_text(xh, y, text_x)
+            cr.draw_text(xh, y, text.x)
 
             # draw Y plum line label
-            cr.draw_text(x, yh, text_y)
+            cr.draw_text(x, yh, text.y)
 
-        if self.showcap:
+        if self.showcap and self.showplumb:
+            # only cap is at intersection of plumb lines
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 
