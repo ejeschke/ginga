@@ -31,71 +31,18 @@ class ImageViewCairo(ImageView.ImageViewBase):
 
         if sys.byteorder == 'little':
             self.rgb_order = 'BGRA'
-            self._alpha_idx = 3
         else:
             self.rgb_order = 'ARGB'
-            self._alpha_idx = 0
 
         self.renderer = CanvasRenderer(self)
-
         self.cr = None
 
-    def _render_offscreen(self, surface, data, dst_x, dst_y,
-                          width, height):
-        daht, dawd, depth = data.shape
-        self.logger.debug("data shape is %dx%dx%d" % (dawd, daht, depth))
-
-        cr = cairo.Context(surface)
-        self.cr = cr
-
-        # fill surface with background color
-        imgwin_wd, imgwin_ht = self.get_window_size()
-        cr.rectangle(0, 0, imgwin_wd, imgwin_ht)
-        r, g, b = self.get_bg()
-        cr.set_source_rgba(r, g, b)
-        cr.fill()
-
-        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
-                                                            width)
-
-        img_surface = cairo.ImageSurface.create_for_data(data,
-                                                         cairo.FORMAT_ARGB32,
-                                                         dawd, daht, stride)
-
-        cr.set_source_surface(img_surface, dst_x, dst_y)
-        cr.set_operator(cairo.OPERATOR_SOURCE)
-
-        cr.mask_surface(img_surface, dst_x, dst_y)
-        cr.fill()
-
-    def get_offscreen_context(self):
-        if self.surface is None:
-            raise ImageViewCairoError("No offscreen surface defined")
-        cr = cairo.Context(self.surface)
-        return cr
-
-    def get_offscreen_surface(self):
-        return self.surface
-
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
-        in the pixel space.
-        """
-        self.logger.debug("redraw surface")
-        if self.surface is None:
-            return
-
-        # Prepare array for Cairo rendering
-        # TODO: is there some high-bit depth option for Cairo?
-        arr = rgbobj.get_array(self.rgb_order, dtype=np.uint8)
-
-        (height, width) = arr.shape[:2]
-        return self._render_offscreen(self.surface, arr, dst_x, dst_y,
-                                      width, height)
-
     def configure_surface(self, width, height):
+        self.renderer.resize((width, height))
+
         #surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
-        arr8 = np.zeros(height * width * 4, dtype=np.uint8)
+        depth = len(self.rgb_order)
+        arr8 = np.zeros((height, width, depth), dtype=np.uint8)
 
         stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
                                                             width)

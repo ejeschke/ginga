@@ -88,6 +88,9 @@ class ImageViewBase(Callback.Callbacks):
             rgbmap = RGBMap.RGBMapper(self.logger)
             self.rgbmap = rgbmap
 
+        # Renderer
+        self.renderer = None
+
         # for debugging
         self.name = str(self)
 
@@ -469,6 +472,14 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         return self.logger
+
+    def set_renderer(self, renderer):
+        """Set and initialize the renderer used by this instance.
+        """
+        self.renderer = renderer
+        width, height = self.get_window_size()
+        if width > 0 and height > 0:
+            renderer.resize((width, height))
 
     def get_canvas(self):
         """Get the canvas object used by this instance.
@@ -1298,7 +1309,7 @@ class ImageViewBase(Callback.Callbacks):
 
         if not self._self_scaling:
             rgbobj = self.get_rgb_object(whence=whence)
-            self.render_image(rgbobj, self._dst_x, self._dst_y)
+            self.renderer.render_image(rgbobj, self._dst_x, self._dst_y)
 
         self.private_canvas.draw(self)
 
@@ -1366,20 +1377,16 @@ class ImageViewBase(Callback.Callbacks):
         imgwin_wd, imgwin_ht = self.get_window_size()
 
         # create RGBA array for output
-        outarr = np.zeros((imgwin_ht, imgwin_wd, depth), dtype=dtype)
+        outarr = np.zeros((imgwin_ht, imgwin_wd, len(order)), dtype=dtype)
 
         # fill image array with the background color
-        r, g, b = self.img_bg
-        maxv = np.iinfo(dtype).max
-        bgval = dict(A=int(maxv * alpha), R=int(maxv * r), G=int(maxv * g),
-                     B=int(maxv * b))
-
-        for i in range(len(order)):
-            outarr[:, :, i] = bgval[order[i]]
+        ## r, g, b = self.img_bg
+        ## trcalc.fill_array(outarr, order, r, g, b, alpha)
 
         # overlay our data
         trcalc.overlay_image(outarr, (self._dst_x, self._dst_y),
-                             data, flipy=False, fill=False, copy=False)
+                             data, dst_order=order, src_order=order,
+                             flipy=False, fill=False, copy=False)
 
         return outarr
 
@@ -1505,6 +1512,11 @@ class ImageViewBase(Callback.Callbacks):
             # create backing image
             depth = len(order)
             rgba = np.zeros((ht, wd, depth), dtype=self.rgbmap.dtype)
+
+            # fill backing image with the background color
+            r, g, b = self.img_bg
+            trcalc.fill_array(rgba, order, r, g, b, 1.0)
+
             self._rgbarr = rgba
 
         if (whence <= 2.0) or (self._rgbarr2 is None):

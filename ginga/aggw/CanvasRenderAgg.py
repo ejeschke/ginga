@@ -6,10 +6,12 @@
 
 import math
 from itertools import chain
+import numpy as np
 
 import aggdraw as agg
 
 from . import AggHelp
+from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga import trcalc
@@ -17,11 +19,11 @@ from ginga import trcalc
 
 class RenderContext(object):
 
-    def __init__(self, viewer):
+    def __init__(self, viewer, surface):
         self.viewer = viewer
 
         # TODO: encapsulate this drawable
-        self.cr = AggHelp.AggContext(self.viewer.get_surface())
+        self.cr = AggHelp.AggContext(surface)
 
         self.pen = None
         self.brush = None
@@ -155,13 +157,61 @@ class RenderContext(object):
         self.cr.canvas.path(path, self.pen, self.brush)
 
 
-class CanvasRenderer(object):
+class CanvasRenderer(render.RendererBase):
 
     def __init__(self, viewer):
-        self.viewer = viewer
+        render.RendererBase.__init__(self, viewer)
+
+        self.kind = 'agg'
+        self.rgb_order = 'RGBA'
+        self.surface = None
+        self.dims = ()
+
+    def resize(self, dims):
+        """Resize our drawing area to encompass a space defined by the
+        given dimensions.
+        """
+        width, height = dims[:2]
+        self.dims = (width, height)
+        self.logger.debug("renderer reconfigured to %dx%d" % (
+            width, height))
+        # create agg surface the size of the window
+        self.surface = agg.Draw(self.rgb_order, self.dims, 'black')
+
+    def render_image(self, rgbobj, dst_x, dst_y):
+        """Render the image represented by (rgbobj) at dst_x, dst_y
+        in the pixel space.
+        *** internal method-- do not use ***
+        """
+        if self.surface is None:
+            return
+        self.logger.debug("redraw surface")
+
+        # get window contents as a buffer and load it into the AGG surface
+        rgb_buf = self.viewer.getwin_buffer(order=self.rgb_order,
+                                            dtype=np.uint8)
+        self.surface.frombytes(rgb_buf)
+
+        # for debugging
+        #self.save_rgb_image_as_file('/tmp/temp.png', format='png')
+
+    def get_surface_as_array(self, order=None):
+        if self.surface is None:
+            raise render.RenderError("No AGG surface defined")
+
+        # TODO: could these have changed between the time that self.surface
+        # was last updated?
+        wd, ht = self.dims
+
+        # Get agg surface as a numpy array
+        arr8 = np.fromstring(self.surface.tobytes(), dtype=np.uint8)
+        arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
+
+        # adjust according to viewer's needed order
+        return self.reorder(order, arr8)
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer)
+        cr = RenderContext(self.viewer, self.surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

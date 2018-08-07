@@ -232,7 +232,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
             #self.ax_img.relim()
 
     def render_image(self, rgbobj, dst_x, dst_y):
-
         # Ugly, ugly hack copied from matplotlib.lines to cause line
         # objects to recompute their cached transformed_path
         # Other mpl artists don't seem to have this affliction
@@ -268,6 +267,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
         ##     ax.set_ylim(y0, y1)
 
     def configure_window(self, width, height):
+        #self.renderer.resize((width, height))
+
         self.configure(width, height)
 
     def _resize_cb(self, event):

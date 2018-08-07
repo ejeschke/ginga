@@ -11,6 +11,7 @@ import numpy as np
 from OpenGL import GLU as glu
 from OpenGL import GL as gl
 
+from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga.canvas.transform import BaseTransform
@@ -22,12 +23,12 @@ from . import GlHelp
 
 class RenderContext(object):
 
-    def __init__(self, viewer):
+    def __init__(self, viewer, surface):
         self.viewer = viewer
         self.renderer = viewer.renderer
 
         # TODO: encapsulate this drawable
-        self.cr = GlHelp.GlContext(viewer.get_widget())
+        self.cr = GlHelp.GlContext(surface)
 
         self.pen = None
         self.brush = None
@@ -158,10 +159,13 @@ class RenderContext(object):
         self._draw_pts(gl.GL_LINE_STRIP, cpoints)
 
 
-class CanvasRenderer(object):
+class CanvasRenderer(render.RendererBase):
 
     def __init__(self, viewer):
-        self.viewer = viewer
+        render.RendererBase.__init__(self, viewer)
+
+        self.kind = 'gl'
+        self.rgb_order = 'RGBA'
 
         # size of our GL viewport
         # these will change when the resize() is called
@@ -184,8 +188,32 @@ class CanvasRenderer(object):
         self.mn_y, self.mx_y = -self.lim_y, self.lim_y
         self.mn_z, self.mx_z = -self.lim_z, self.lim_z
 
+    def resize(self, dims):
+        """Resize our drawing area to encompass a space defined by the
+        given dimensions.
+        """
+        # this is taken care of by gl_resize()
+        pass
+
+    def render_image(self, rgbobj, dst_x, dst_y):
+        """Render the image represented by (rgbobj) at dst_x, dst_y
+        in the pixel space.
+        """
+        pos = (0, 0)
+        arr = self.viewer.getwin_array(order=self.rgb_order, alpha=1.0,
+                                       dtype=np.uint8)
+        #pos = (dst_x, dst_y)
+        #print('dst', pos)
+        #pos = self.tform['window_to_native'].to_(pos)
+        #print('dst(c)', pos)
+        self.gl_set_image(arr, pos)
+
+    def get_surface_as_array(self, order=None):
+        raise render.RenderError("This renderer can only be used with an opengl viewer")
+
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer)
+        surface = self.viewer.get_widget()
+        cr = RenderContext(self.viewer, surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

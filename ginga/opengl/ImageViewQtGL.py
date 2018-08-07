@@ -7,7 +7,6 @@
 from __future__ import absolute_import
 
 from io import BytesIO
-import numpy as np
 
 import ginga.util.six as six
 from ginga.qtw.QtHelp import QtCore
@@ -74,22 +73,11 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         self.trcat['CartesianNativeTransform'] = transform.PassThruTransform
         self.recalc_transforms()
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
-        in the pixel space.
-        """
-        pos = (0, 0)
-        arr = self.getwin_array(order=self.rgb_order, alpha=1.0,
-                                dtype=np.uint8)
-        #pos = (dst_x, dst_y)
-        #print('dst', pos)
-        #pos = self.tform['window_to_native'].to_(pos)
-        #print('dst(c)', pos)
-        self.renderer.gl_set_image(arr, pos)
-
     def configure_window(self, width, height):
         self.logger.debug("window size reconfigured to %dx%d" % (
             width, height))
+        self.renderer.resize((width, height))
+
         self.configure(width, height)
 
     def get_rgb_image_as_widget(self):
