@@ -174,15 +174,15 @@ class CanvasRenderer(render.RendererBase):
 
         # TODO: could these have changed between the time that self.surface
         # was last updated?
-        wd, ht = self.dims
+        wd, ht = self.dims[:2]
 
         # Get agg surface as a numpy array
         arr8 = np.fromstring(self.surface.tobytes(), dtype=np.uint8)
-        #arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
         arr8 = arr8.reshape((ht, wd, 3))
 
         # adjust according to viewer's needed order
-        return self.reorder(arr8, order)
+        arr8 = self.reorder(order, arr8, 'RGB')
+        return arr8
 
     def setup_cr(self, shape):
         cr = RenderContext(self.viewer, self.surface)

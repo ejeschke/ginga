@@ -149,7 +149,7 @@ class CanvasRenderer(render.RendererBase):
             raise render.RenderError("No OpenCv surface defined")
 
         # adjust according to viewer's needed order
-        return self.reorder(self.surface, order)
+        return self.reorder(order, self.surface)
 
     def setup_cr(self, shape):
         cr = RenderContext(self.viewer, self.surface)

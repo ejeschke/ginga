@@ -113,6 +113,8 @@ class ImageViewGtk(ImageView):
         else:
             # create a new surface from rendered array
             arr = self.renderer.get_surface_as_array(order=self.rgb_order)
+            arr = np.ascontiguousarray(arr)
+
             daht, dawd, depth = arr.shape
             self.logger.debug("arr shape is %dx%dx%d" % (dawd, daht, depth))
 

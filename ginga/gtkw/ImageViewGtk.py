@@ -58,6 +58,7 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         try:
             pixbuf = GtkHelp.pixbuf_new_from_array(
                 arr, gtk.gdk.COLORSPACE_RGB, 8)
+
         except Exception as e:
             self.logger.warning("Error making pixbuf: %s" % (str(e)))
             # pygtk might have been compiled without numpy support
@@ -119,6 +120,8 @@ class ImageViewGtk(ImageViewCairo.ImageViewCairo):
         else:
             # create a new surface from rendered array
             arr = self.renderer.get_surface_as_array(order=self.rgb_order)
+            arr = np.ascontiguousarray(arr)
+
             daht, dawd, depth = arr.shape
             self.logger.debug("arr shape is %dx%dx%d" % (dawd, daht, depth))
 

@@ -90,11 +90,43 @@ class RendererBase(object):
                                                   quality=quality)
         self.logger.debug("wrote %s file '%s'" % (format, filepath))
 
-    def reorder(self, arr, order):
+    def reorder(self, dst_order, arr, src_order=None):
         """Reorder the output array to match that needed by the viewer."""
-        if order is None:
-            order = self.viewer.rgb_order
-        if self.rgb_order != order:
-            arr = trcalc.reorder_image(order, arr, self.rgb_order)
+        if dst_order is None:
+            dst_order = self.viewer.rgb_order
+        if src_order is None:
+            src_order = self.rgb_order
+        if src_order != dst_order:
+            arr = trcalc.reorder_image(dst_order, arr, src_order)
 
         return arr
+
+
+def get_render_class(rtype):
+
+    rtype = rtype.lower()
+    if rtype == 'pil':
+        from ginga.pilw import CanvasRenderPil
+        return CanvasRenderPil.CanvasRenderer
+
+    if rtype == 'agg':
+        from ginga.aggw import CanvasRenderAgg
+        return CanvasRenderAgg.CanvasRenderer
+
+    if rtype == 'opencv':
+        from ginga.cvw import CanvasRenderCv
+        return CanvasRenderCv.CanvasRenderer
+
+    if rtype == 'cairo':
+        from ginga.cairow import CanvasRenderCairo
+        return CanvasRenderCairo.CanvasRenderer
+
+    if rtype == 'opengl':
+        from ginga.opengl import CanvasRenderGL
+        return CanvasRenderGL.CanvasRenderer
+
+    if rtype == 'qt':
+        from ginga.qtw import CanvasRenderQt
+        return CanvasRenderQt.CanvasRenderer
+
+    raise ValueError("Don't know about '%s' renderer type" % (rtype))

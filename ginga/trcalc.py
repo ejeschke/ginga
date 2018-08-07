@@ -836,14 +836,19 @@ def reorder_image(dst_order, src_arr, src_order):
     """Reorder src_arr, with order of color planes in src_order, as
     dst_order.
     """
+    depth = src_arr.shape[2]
+    if depth != len(src_order):
+        raise ValueError("src_order (%s) does not match array depth (%d)" % (
+            src_order, depth))
+
     bands = []
     if dst_order == src_order:
-        return src_arr
+        return np.ascontiguousarray(src_arr)
 
     elif 'A' not in dst_order or 'A' in src_order:
         # <-- we don't have to add an alpha plane, just create a new view
         idx = np.array([src_order.index(c) for c in dst_order])
-        return src_arr[..., idx]
+        return np.ascontiguousarray(src_arr[..., idx])
 
     else:
         # <-- dst order requires missing alpha channel

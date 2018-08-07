@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import os
 from io import BytesIO
+import numpy as np
 
 import ginga.util.six as six
 from ginga.util.six.moves import map
@@ -207,7 +208,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         graphics.
         """
         arr = self.getwin_array(order=self.rgb_order)
-        image = self._get_qimage(arr)
+        image = self._get_qimage(arr, self.qimg_fmt)
         return image
 
     def save_plain_image_as_file(self, filepath, format='png', quality=90):
@@ -242,8 +243,8 @@ class ImageViewQt(ImageView.ImageViewBase):
                 # otherwise, get the render surface as an array and
                 # convert to a QImage
                 try:
-                    arr = self.renderer.get_surface_as_array()
-                    qimage = self._get_qimage(arr)
+                    arr = self.renderer.get_surface_as_array(order='BGRA')
+                    qimage = self._get_qimage(arr, QImage.Format_RGB32)
 
                 except Exception as e:
                     self.logger.error("Error from renderer: %s" % (str(e)))
@@ -270,10 +271,11 @@ class ImageViewQt(ImageView.ImageViewBase):
         else:
             self.imgwin.update()
 
-    def _get_qimage(self, rgb_data):
+    def _get_qimage(self, rgb_data, format):
+        rgb_data = np.ascontiguousarray(rgb_data)
         ht, wd, channels = rgb_data.shape
 
-        result = QImage(rgb_data.data, wd, ht, self.qimg_fmt)
+        result = QImage(rgb_data.data, wd, ht, format)
         # Need to hang on to a reference to the array
         result.ndarray = rgb_data
         return result

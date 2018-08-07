@@ -208,7 +208,7 @@ class CanvasRenderer(render.RendererBase):
         arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
 
         # adjust according to viewer's needed order
-        return self.reorder(arr8, order)
+        return self.reorder(order, arr8)
 
     def setup_cr(self, shape):
         cr = RenderContext(self.viewer, self.surface)

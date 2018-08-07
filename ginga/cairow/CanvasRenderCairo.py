@@ -261,7 +261,7 @@ class CanvasRenderer(render.RendererBase):
             raise render.RenderError("No cairo surface defined")
 
         # adjust according to viewer's needed order
-        return self.reorder(self.surface_arr, order)
+        return self.reorder(order, self.surface_arr)
 
     def setup_cr(self, shape):
         cr = RenderContext(self.viewer, self.surface)
