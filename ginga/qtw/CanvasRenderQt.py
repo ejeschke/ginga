@@ -260,7 +260,7 @@ class CanvasRenderer(render.RendererBase):
         arr = np.array(ptr).reshape(height, width, 4)
 
         # adjust according to viewer's needed order
-        return self.reorder(arr, order)
+        return self.reorder(order, arr)
 
     def setup_cr(self, shape):
         cr = RenderContext(self.viewer, self.surface)
