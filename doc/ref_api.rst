@@ -30,6 +30,7 @@ Reference/API
 .. automodapi:: ginga.util.wcsmod
    :skip: use
    :skip: get_wcs_wrappers
+   :skip: my_import
 
 .. automodapi:: ginga.util.wcs
    :no-inheritance-diagram:
