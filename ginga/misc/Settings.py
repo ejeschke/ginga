@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
+import re
 import ast
 
 import numpy as np
@@ -13,6 +14,8 @@ from . import Callback
 from . import Bunch
 
 unset_value = "^^UNSET^^"
+regex_array = re.compile(r'^array\((\[.*\]),\s*dtype=(.+)\)$',
+                         flags=re.DOTALL)
 
 
 class SettingError(Exception):
@@ -26,7 +29,7 @@ class Setting(Callback.Callbacks):
         Callback.Callbacks.__init__(self)
 
         self.value = value
-        self._unset = (value == unset_value)
+        self._unset = np.isscalar(value) and value == unset_value
         self.name = name
         self.logger = logger
         if check_fn is None:
@@ -225,7 +228,15 @@ class SettingGroup(object):
                     try:
                         i = line.index('=')
                         key = line[:i].strip()
-                        val = ast.literal_eval(line[i + 1:].strip())
+                        val_s = line[i + 1:].strip()
+                        match = regex_array.match(val_s)
+                        if match:
+                            data, dtype = match.groups()
+                            # special case for parsing numpy arrays
+                            val = np.asarray(ast.literal_eval(data),
+                                             dtype=dtype)
+                        else:
+                            val = ast.literal_eval(val_s)
                         d[key] = val
                     except Exception as e:
                         if self.logger is not None:
@@ -259,6 +270,15 @@ class SettingGroup(object):
             pass
         return d
 
+    def _save(self, out_f, keys, d):
+        for key in keys:
+            val_s = repr(d[key])
+            match = regex_array.match(val_s)
+            if match:
+                # special processing for numpy arrays
+                val_s = val_s.replace('\n', ' ')
+            out_f.write("%s = %s\n" % (key, val_s))
+
     def save(self, keylist=None, output=None):
         d = self.get_dict(keylist=keylist)
         # sanitize data -- hard to parse NaN or Inf
@@ -272,12 +292,9 @@ class SettingGroup(object):
                 output = self.preffile
             if isinstance(output, str):
                 with open(output, 'w') as out_f:
-                    for key in keys:
-                        out_f.write("%s = %s\n" % (key, repr(d[key])))
+                    self._save(out_f, keys, d)
             else:
-                out_f = output
-                for key in keys:
-                    out_f.write("%s = %s\n" % (key, repr(d[key])))
+                self._save(output, keys, d)
 
         except Exception as e:
             errmsg = "Error writing settings output: %s" % (str(e))

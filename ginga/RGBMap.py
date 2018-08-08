@@ -139,8 +139,6 @@ class RGBMapper(Callback.Callbacks):
             dist = color_dist_class(hashsize)
         self.dist = dist
 
-        self.reset_sarr(callback=False)
-
         # For callbacks
         for name in ('changed', ):
             self.enable_callback(name)
@@ -150,6 +148,20 @@ class RGBMapper(Callback.Callbacks):
 
         im_name = self.t_.get('intensity_map', 'ramp')
         self.set_intensity_map(im_name)
+
+        # Initialize color array
+        carr = self.t_.get('color_array', None)
+        if carr is not None:
+            self.set_carr(carr)
+        else:
+            self.calc_cmap()
+
+        # Initialize shift array
+        sarr = self.t_.get('shift_array', None)
+        if sarr is not None:
+            self.set_sarr(sarr)
+        else:
+            self.reset_sarr(callback=False)
 
     def _set_dtype(self):
         if self.bpp <= 8:
