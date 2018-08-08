@@ -167,7 +167,8 @@ class Ruler(GingaPlugin.LocalPlugin):
                     ("X2:", 'label', 'x2', 'entry',
                      "Y2:", 'label', 'y2', 'entry'),
                     ("dx:", 'label', 'dx', 'entry',
-                     "dy:", 'label', 'dy', 'entry'),
+                     "dy:", 'label', 'dy', 'entry',
+                     "dh:", 'label', 'dh', 'entry'),
                     ("sp1", 'spacer', "degrad", 'combobox',
                      u"\u03B8:", 'label', "theta", 'entry'),
                     )
@@ -308,6 +309,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.w.y1.set_text('')
         self.w.x2.set_text('')
         self.w.y2.set_text('')
+        self.w.dh.set_text('')
         self.w.dx.set_text('')
         self.w.dy.set_text('')
         self.w.theta.set_text('')
@@ -356,6 +358,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         x2, y2 = text.e.split(',')
         self.w.x2.set_text(x2.strip())
         self.w.y2.set_text(y2.strip())
+        self.w.dh.set_text(text.h)
         self.w.dx.set_text(text.x)
         self.w.dy.set_text(text.y)
 
