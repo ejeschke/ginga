@@ -1563,6 +1563,10 @@ class Toolbar(ContainerBase):
     def add_widget(self, child):
         self.add_ref(child)
         w = child.get_widget()
+        # in toolbars, generally don't want widgets to take up any more
+        # space than necessary
+        w.setSizePolicy(QtGui.QSizePolicy.Fixed,
+                        QtGui.QSizePolicy.Fixed)
         self.widget.addWidget(w)
         self.make_callback('widget-added', child)
 

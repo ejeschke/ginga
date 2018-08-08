@@ -874,10 +874,24 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.next_channel_ws(ws)
 
     def add_channel_auto_ws(self, ws):
-        chpfx = self.settings.get('channel_prefix', "Image")
-        chpfx = ws.extdata.get('chpfx', chpfx)
+        chname = ws.extdata.w_chname.get_text().strip()
+        if len(chname) == 0:
+            # make up a channel name
+            chpfx = self.settings.get('channel_prefix', "Image")
+            chpfx = ws.extdata.get('chpfx', chpfx)
+            chname = self.make_channel_name(chpfx)
 
-        chname = self.make_channel_name(chpfx)
+        try:
+            self.get_channel(chname)
+            # <-- channel name already in use
+            self.show_error(
+                "Channel name '%s' cannot be used, sorry." % (chname),
+                raisetab=True)
+            return
+
+        except KeyError:
+            pass
+
         return self.add_channel(chname, workspace=ws.name)
 
     def add_channel_auto(self):
@@ -1919,8 +1933,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         #b.share_settings.set_length(60)
 
         cbox = b.workspace_type
-        cbox.append_text("Grid")
         cbox.append_text("Tabs")
+        cbox.append_text("Grid")
         cbox.append_text("MDI")
         cbox.append_text("Stack")
         cbox.set_index(0)
@@ -1939,7 +1953,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         b.channel_prefix.set_text(chpfx)
         spnbtn = b.num_channels
         spnbtn.set_limits(0, 36, incr_value=1)
-        spnbtn.set_value(4)
+        spnbtn.set_value(0)
 
         dialog = Widgets.Dialog(title="Add Workspace",
                                 flags=0,
@@ -2140,6 +2154,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             tb.add_separator()
 
+            entry = Widgets.TextEntry()
+            entry.set_length(8)
+            entry.set_tooltip("Name for a new channel")
+            ws.extdata.w_chname = entry
+            btn = tb.add_widget(entry)
+
             # add toolbar buttons adding and deleting channels
             iconpath = os.path.join(self.iconpath, "inbox_plus_48.png")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 23))
@@ -2166,7 +2186,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             try:
                 nb = self.ds.get_nb(wsname)  # noqa
                 self.show_error(
-                    "Workspace name '%s' cannot be used, sorry." % (wsname))
+                    "Workspace name '%s' cannot be used, sorry." % (wsname),
+                    raisetab=True)
                 self.ds.remove_dialog(w)
                 return
 

@@ -7,6 +7,7 @@
 import sys
 import os.path
 import math
+import random
 
 from ginga.misc import Bunch, Callback
 from ginga.fonts import font_asst
@@ -373,10 +374,20 @@ class MDIWidget(Gtk.Layout):
         subwin.add_callback('maximize', lambda *args: self.maximize_page(subwin))
         subwin.add_callback('minimize', lambda *args: self.minimize_page(subwin))
 
-        self.put(subwin.frame, self.cascade_offset, self.cascade_offset)
+        # pick a random spot to place the window initially
+        rect = self.get_allocation()
+        wd, ht = rect.width, rect.height
+        x = random.randint(self.cascade_offset, wd // 2)
+        y = random.randint(self.cascade_offset, ht // 2)
 
-        self.update_subwin_position(subwin)
-        self.update_subwin_size(subwin)
+        self.put(subwin.frame, x, y)
+
+        # note: seem to need a slight delay to let the widget be mapped
+        # in order to accurately determine its position and size
+        #self.update_subwin_position(subwin)
+        #self.update_subwin_size(subwin)
+        GObject.timeout_add(1000, self.update_subwin_position, subwin)
+        GObject.timeout_add(1500, self.update_subwin_size, subwin)
 
         self._update_area_size()
         return subwin
