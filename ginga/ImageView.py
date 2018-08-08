@@ -20,7 +20,7 @@ import numpy as np
 from ginga.misc import Callback, Settings
 from ginga import BaseImage, AstroImage
 from ginga import RGBMap, AutoCuts, ColorDist
-from ginga import cmap, imap, colors, trcalc
+from ginga import colors, trcalc
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util import rgb_cms, addons
@@ -923,7 +923,7 @@ class ImageViewBase(Callback.Callbacks):
         if self.use_image_profile:
             # ? and key in self.profile_keylist
             kwargs = {key: value}
-            profile = self.save_profile(**kwargs)
+            self.save_profile(**kwargs)
 
     def _image_modified_cb(self, image):
 

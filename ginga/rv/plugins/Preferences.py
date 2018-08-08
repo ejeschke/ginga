@@ -304,7 +304,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.pancoord_options = ('data', 'wcs')
         self.sort_options = ('loadtime', 'alpha')
 
-        for key in ['color_map','intensity_map',
+        for key in ['color_map', 'intensity_map',
                     'color_algorithm', 'color_hashsize']:
             self.t_.get_setting(key).add_callback(
                 'set', self.rgbmap_changed_ext_cb)
@@ -1123,7 +1123,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         params = self.t_['autocut_params']
         # NOTE: use gui_do?
         # TODO: set the params from this tuple
-        params_d = dict(params)
+        params_d = dict(params)   # noqa
         #self.ac_params.params.update(params_d)
         #self.ac_params.params_to_widgets()
 

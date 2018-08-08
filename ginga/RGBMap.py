@@ -89,7 +89,7 @@ class RGBMapper(Callback.Callbacks):
             settings = Settings.SettingGroup(logger=self.logger)
         self.settings = settings
         self.t_ = settings
-        self.settings_keys = ['color_map','intensity_map',
+        self.settings_keys = ['color_map', 'intensity_map',
                               'color_array', 'shift_array',
                               'color_algorithm', 'color_hashsize',
                               ]

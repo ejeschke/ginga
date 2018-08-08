@@ -941,7 +941,6 @@ class ImageViewBindings(object):
     def _reset_cmap(self, viewer, msg):
         if self.cancmap:
             msg = self.settings.get('msg_cmap', msg)
-            rgbmap = viewer.get_rgbmap()
             # default
             cmapname = 'gray'
             viewer.set_color_map(cmapname)
@@ -981,7 +980,6 @@ class ImageViewBindings(object):
     def _reset_imap(self, viewer, msg):
         if self.cancmap:
             msg = self.settings.get('msg_imap', msg)
-            rgbmap = viewer.get_rgbmap()
             # default
             imapname = 'ramp'
             viewer.set_intensity_map(imapname)

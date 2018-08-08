@@ -22,7 +22,7 @@ from collections import deque
 from ginga import cmap, imap
 from ginga import AstroImage, RGBImage, BaseImage
 from ginga.table import AstroTable
-from ginga.misc import Bunch, Timer, Future, Settings
+from ginga.misc import Bunch, Timer, Future
 from ginga.util import catalog, iohelper, io_fits, toolbox
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
