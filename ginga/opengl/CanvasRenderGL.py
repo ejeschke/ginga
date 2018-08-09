@@ -193,8 +193,8 @@ class CanvasRenderer(render.RendererBase):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
-        # this is taken care of by gl_resize()
-        pass
+        width, height = dims[:2]
+        self.gl_resize(width, height)
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
@@ -323,6 +323,7 @@ class CanvasRenderer(render.RendererBase):
             gl.glDisable(gl.GL_TEXTURE_2D)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
 
+            # TODO: alpha blend is currently broken
             gl.glEnable(gl.GL_BLEND)
             gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 

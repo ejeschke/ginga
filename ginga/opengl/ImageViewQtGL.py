@@ -35,13 +35,12 @@ class RenderGLWidget(QOpenGLWidget):
         QOpenGLWidget.__init__(self, *args, **kwdargs)
 
         self.viewer = None
-        self._drawing = False
 
     def initializeGL(self):
         self.viewer.renderer.gl_initialize()
 
     def resizeGL(self, width, height):
-        self.viewer.renderer.gl_resize(width, height)
+        self.viewer.configure_window(width, height)
 
     def paintGL(self):
         self.viewer.renderer.gl_paint()
@@ -143,7 +142,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 rgbmap=rgbmap)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_setActive(True)
+        self.ui_set_active(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)

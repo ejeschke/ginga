@@ -1380,8 +1380,8 @@ class ImageViewBase(Callback.Callbacks):
         outarr = np.zeros((imgwin_ht, imgwin_wd, len(order)), dtype=dtype)
 
         # fill image array with the background color
-        ## r, g, b = self.img_bg
-        ## trcalc.fill_array(outarr, order, r, g, b, alpha)
+        r, g, b = self.img_bg
+        trcalc.fill_array(outarr, order, r, g, b, alpha)
 
         # overlay our data
         trcalc.overlay_image(outarr, (self._dst_x, self._dst_y),
