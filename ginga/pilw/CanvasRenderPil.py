@@ -17,10 +17,10 @@ from ginga import trcalc
 from . import PilHelp
 
 
-class RenderContext(object):
+class RenderContext(render.RenderContextBase):
 
-    def __init__(self, viewer, surface):
-        self.viewer = viewer
+    def __init__(self, renderer, viewer, surface):
+        render.RenderContextBase.__init__(self, renderer, viewer)
 
         # TODO: encapsulate this drawable
         self.cr = PilHelp.PilContext(surface)
@@ -54,6 +54,7 @@ class RenderContext(object):
             else:
                 fontsize = shape.scale_font(self.viewer)
             alpha = getattr(shape, 'alpha', 1.0)
+            fontsize = self.scale_fontsize(fontsize)
             self.font = self.cr.get_font(shape.font, fontsize, shape.color,
                                          alpha=alpha)
         else:
@@ -78,6 +79,7 @@ class RenderContext(object):
             self.brush = self.cr.get_brush(color, alpha=alpha)
 
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
+        fontsize = self.scale_fontsize(fontsize)
         self.font = self.cr.get_font(fontname, fontsize, color,
                                      alpha=alpha)
 
@@ -185,7 +187,7 @@ class CanvasRenderer(render.RendererBase):
         return arr8
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer, self.surface)
+        cr = RenderContext(self, self.viewer, self.surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

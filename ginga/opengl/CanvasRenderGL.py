@@ -21,11 +21,10 @@ from .Camera import Camera
 from . import GlHelp
 
 
-class RenderContext(object):
+class RenderContext(render.RenderContextBase):
 
-    def __init__(self, viewer, surface):
-        self.viewer = viewer
-        self.renderer = viewer.renderer
+    def __init__(self, renderer, viewer, surface):
+        render.RenderContextBase.__init__(self, renderer, viewer)
 
         # TODO: encapsulate this drawable
         self.cr = GlHelp.GlContext(surface)
@@ -60,6 +59,7 @@ class RenderContext(object):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
+            fontsize = self.scale_fontsize(fontsize)
             alpha = getattr(shape, 'alpha', 1.0)
             self.font = self.cr.get_font(shape.font, fontsize, shape.color,
                                          alpha=alpha)
@@ -85,6 +85,7 @@ class RenderContext(object):
             self.brush = self.cr.get_brush(color, alpha=alpha)
 
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
+        fontsize = self.scale_fontsize(fontsize)
         self.font = self.cr.get_font(fontname, fontsize, color,
                                      alpha=alpha)
 
@@ -213,7 +214,7 @@ class CanvasRenderer(render.RendererBase):
 
     def setup_cr(self, shape):
         surface = self.viewer.get_widget()
-        cr = RenderContext(self.viewer, surface)
+        cr = RenderContext(self, self.viewer, surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

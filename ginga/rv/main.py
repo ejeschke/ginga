@@ -305,6 +305,7 @@ class ReferenceViewer(object):
                               WCSpkg='choose', FITSpkg='choose',
                               recursion_limit=2000,
                               icc_working_profile=None,
+                              font_scaling_factor=None,
                               save_layout=True,
                               channel_prefix="Image")
         settings.load(onError='silent')
@@ -374,6 +375,12 @@ class ReferenceViewer(object):
             except Exception as e:
                 logger.warning(
                     "failed to load matplotlib colormaps: %s" % (str(e)))
+
+        # user wants to set font scaling
+        font_scaling = settings.get('font_scaling_factor', None)
+        if font_scaling is not None:
+            from ginga.fonts import font_asst
+            font_asst.default_scaling_factor = font_scaling
 
         # Set a working RGB ICC profile if user has one
         working_profile = settings.get('icc_working_profile', None)

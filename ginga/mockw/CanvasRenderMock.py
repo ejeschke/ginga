@@ -4,19 +4,20 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+from ginga.canvas import render
+from ginga.fonts import font_asst
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga import trcalc
-from ginga.fonts import font_asst
 
 
-class RenderContext(object):
+class RenderContext(render.RenderContextBase):
 
-    def __init__(self, viewer):
-        self.viewer = viewer
+    def __init__(self, renderer, viewer, surface):
+        render.RenderContextBase.__init__(self, renderer, viewer)
 
         # TODO: encapsulate this drawable
-        #self.cr = GraphicsContext(self.viewer.pixmap)
+        #self.cr = GraphicsContext(surface)
         self.cr = None
 
     def __get_color(self, color, alpha):
@@ -50,7 +51,7 @@ class RenderContext(object):
 
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
         fontname = font_asst.resolve_alias(fontname, fontname)
-        pass
+        fontsize = self.scale_fontsize(fontsize)
 
     def text_extents(self, text):
         # TODO: how to mock this?
@@ -92,13 +93,16 @@ class RenderContext(object):
         pass
 
 
-class CanvasRenderer(object):
+class CanvasRenderer(render.RendererBase):
 
     def __init__(self, viewer):
-        self.viewer = viewer
+        render.RendererBase.__init__(self, viewer)
+
+        self.rgb_order = 'BGRA'
+        self.surface = None
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer)
+        cr = RenderContext(self, self.viewer, self.surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

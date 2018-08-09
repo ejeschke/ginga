@@ -14,6 +14,7 @@ except ImportError:
     have_PIL = False
 
 from ginga import trcalc
+from ginga.fonts import font_asst
 
 
 class RenderError(Exception):
@@ -21,7 +22,20 @@ class RenderError(Exception):
     pass
 
 
+class RenderContextBase(object):
+    """Base class from which all RenderContext classes are derived."""
+
+    def __init__(self, renderer, viewer):
+        self.renderer = renderer
+        self.viewer = viewer
+        self.renderkey = renderer.kind
+
+    def scale_fontsize(self, fontsize):
+        return font_asst.scale_fontsize(self.renderkey, fontsize)
+
+
 class RendererBase(object):
+    """Base class from which all Renderer classes are derived."""
 
     def __init__(self, viewer):
         self.viewer = viewer

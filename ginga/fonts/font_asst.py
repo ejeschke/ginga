@@ -16,6 +16,10 @@ font_dir = Bunch.Bunch(caseless=True)
 # Set up font alias mapping
 aliases = Bunch.Bunch(caseless=True)
 
+# font scaling factors
+default_scaling_factor = 1.0
+scaling_factor = Bunch.Bunch(caseless=True)
+
 
 def add_alias(alias_name, font_name):
     """Add an alias for a font family name.
@@ -112,6 +116,18 @@ def remove_font(font_name):
         del font_dir[font_name]
     except KeyError:
         pass
+
+
+def scale_fontsize(key, fontsize):
+    factor = scaling_factor.get(key, default_scaling_factor)
+    return int(round(fontsize * factor))
+
+
+def set_scale_factor(key, factor):
+    """Set the scale factor for a renderer `key` to `factor`.
+    """
+    global scaling_factor
+    scaling_factor[key] = factor
 
 
 # --- Set up bundled fonts ---

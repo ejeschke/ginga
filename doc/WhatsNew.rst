@@ -7,6 +7,9 @@ Ver 2.7.2.dev
 - Fix for linewidth attribute in shapes for AGG backend
 - Fix for ellipse rotation in OpenCv backend
 - Better text rendering for OpenCv backend (loadable fonts)
+- enhancements to the Ruler plugin for reference viewer
+- supports quick loading from astropy NDData (or subclassed) objects
+- Support for scaling fonts on high-dpi displays
 
 Ver 2.7.1 (2018-07-09)
 ======================

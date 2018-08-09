@@ -17,10 +17,10 @@ from ginga.canvas import render
 import ginga.canvas.types.all  # noqa
 
 
-class RenderContext(object):
+class RenderContext(render.RenderContextBase):
 
-    def __init__(self, viewer, surface):
-        self.viewer = viewer
+    def __init__(self, renderer, viewer, surface):
+        render.RenderContextBase.__init__(self, renderer, viewer)
 
         self.cr = cairo.Context(surface)
 
@@ -81,6 +81,7 @@ class RenderContext(object):
                 fontsize = shape.scale_font(self.viewer)
             fontname = font_asst.resolve_alias(shape.font, shape.font)
             self.cr.select_font_face(fontname)
+            fontsize = self.scale_fontsize(fontsize)
             self.cr.set_font_size(fontsize)
 
     def initialize_from_shape(self, shape, line=True, fill=True, font=True):
@@ -110,6 +111,7 @@ class RenderContext(object):
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
         fontname = font_asst.resolve_alias(fontname, fontname)
         self.cr.select_font_face(fontname)
+        fontsize = self.scale_fontsize(fontsize)
         self.cr.set_font_size(fontsize)
         self._set_color(color, alpha=alpha)
 
@@ -264,7 +266,7 @@ class CanvasRenderer(render.RendererBase):
         return self.reorder(order, self.surface_arr)
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer, self.surface)
+        cr = RenderContext(self, self.viewer, self.surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

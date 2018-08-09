@@ -15,10 +15,10 @@ import ginga.canvas.types.all  # noqa
 from ginga import trcalc
 
 
-class RenderContext(object):
+class RenderContext(render.RenderContextBase):
 
-    def __init__(self, viewer, surface):
-        self.viewer = viewer
+    def __init__(self, renderer, viewer, surface):
+        render.RenderContextBase.__init__(self, renderer, viewer)
 
         # TODO: encapsulate this drawable
         self.cr = CvHelp.CvContext(surface)
@@ -51,6 +51,7 @@ class RenderContext(object):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
+            fontsize = self.scale_fontsize(fontsize)
             alpha = getattr(shape, 'alpha', 1.0)
             self.font = self.cr.get_font(shape.font, fontsize, shape.color,
                                          alpha=alpha)
@@ -76,6 +77,7 @@ class RenderContext(object):
             self.brush = self.cr.get_brush(color, alpha=alpha)
 
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
+        fontsize = self.scale_fontsize(fontsize)
         self.font = self.cr.get_font(fontname, fontsize, color,
                                      alpha=alpha)
 
@@ -152,7 +154,7 @@ class CanvasRenderer(render.RendererBase):
         return self.reorder(order, self.surface)
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer, self.surface)
+        cr = RenderContext(self, self.viewer, self.surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

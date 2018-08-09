@@ -15,10 +15,10 @@ from ginga.canvas import render
 import ginga.canvas.types.all  # noqa
 
 
-class RenderContext(object):
+class RenderContext(render.RenderContextBase):
 
-    def __init__(self, viewer, surface):
-        self.viewer = viewer
+    def __init__(self, renderer, viewer, surface):
+        render.RenderContextBase.__init__(self, renderer, viewer)
 
         self.cr = QPainter(surface)
         self.cr.setRenderHint(QPainter.Antialiasing)
@@ -70,6 +70,7 @@ class RenderContext(object):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
+            fontsize = self.scale_fontsize(fontsize)
             font = get_font(shape.font, fontsize)
             self.cr.setFont(font)
 
@@ -100,6 +101,7 @@ class RenderContext(object):
 
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
         self.set_line(color, alpha=alpha)
+        fontsize = self.scale_fontsize(fontsize)
         font = get_font(fontname, fontsize)
         self.cr.setFont(font)
 
@@ -263,7 +265,7 @@ class CanvasRenderer(render.RendererBase):
         return self.reorder(order, arr)
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer, self.surface)
+        cr = RenderContext(self, self.viewer, self.surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 
