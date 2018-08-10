@@ -27,7 +27,7 @@ There is no associated configuration GUI.
 """
 import platform
 
-import numpy
+import numpy as np
 
 from ginga import GingaPlugin, toolkit
 from ginga.gw import Readout
@@ -137,6 +137,8 @@ class Cursor(GingaPlugin.GlobalPlugin):
     def redo(self, channel, image):
         readout = channel.extdata.readout
         self.readout_config(channel.fitsimage, image, readout)
+        self._set_readout_text(
+            readout, channel.get_image_info(image.get('name', 'none')))
 
     def change_readout(self, channel, fitsimage):
         if (self.share_readout) and (self.readout is not None):
@@ -171,11 +173,18 @@ class Cursor(GingaPlugin.GlobalPlugin):
                 return
             readout = self.readout
 
+        self._set_readout_text(readout, info)
+
+    @staticmethod
+    def _set_readout_text(readout, info):
+        if 'value' not in info:
+            return  # no-op
+
         # If this is a multiband image, then average the values
         # for the readout
         value = info.value
-        if isinstance(value, numpy.ndarray):
-            avg = numpy.average(value)
+        if isinstance(value, np.ndarray):
+            avg = np.average(value)
             value = avg
 
         # Update the readout
