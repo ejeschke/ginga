@@ -134,9 +134,18 @@ class Cursor(GingaPlugin.GlobalPlugin):
         readout.maxv = max(len(str(minval)), len(str(maxval)))
         return True
 
+    def force_update(self, channel):
+        viewer = channel.fitsimage
+        data_x, data_y = viewer.get_last_data_xy()
+        self.fv.showxy(viewer, data_x, data_y)
+
     def redo(self, channel, image):
         readout = channel.extdata.readout
         self.readout_config(channel.fitsimage, image, readout)
+
+        # force an update on an image change, because the WCS
+        # may be different, even if the data coords are the same
+        self.force_update(channel)
 
     def change_readout(self, channel, fitsimage):
         if (self.share_readout) and (self.readout is not None):
@@ -156,6 +165,10 @@ class Cursor(GingaPlugin.GlobalPlugin):
     def focus_cb(self, viewer, channel):
         if channel is not None:
             self.change_readout(channel, channel.fitsimage)
+
+            # force an update on a channel change, because the WCS
+            # may be different, even if the data coords are the same
+            self.force_update(channel)
 
     def field_info_cb(self, viewer, channel, info):
         readout = self.readout
