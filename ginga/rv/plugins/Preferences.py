@@ -268,6 +268,40 @@ thumbnail for images loaded into that channel.  In cases where many
 images are being loaded into a channel frequently (e.g., a low frequency
 video feed), it may be undesirable to create thumbnails for all of them.
 
+**General Preferences**
+
+The "Num Images" setting specifies how many images can be retained in
+buffers in this channel before being ejected.  A value of zero (0) means
+unlimited--images will never be ejected.  If an image was loaded from
+some accessible storage and it is ejected, it will automatically be
+reloaded if the image is revisited by navigating the channel.  A setting
+of 1 to 4 is typical.
+
+The "Sort Order" setting determines whether images are sorted in the
+channel alphabetically by name or by the time when they were loaded.
+This principally effects the order in which images are cycled when using
+the up/down "arrow" keys or buttons, and not necessarily how they are
+displayed in plugins like "Contents" or "Thumbs" (which generally have
+their own setting preference for ordering).
+
+The "Use scrollbars" check box controls whether the channel viewer will
+show scroll bars around the edge of the viewer frame.
+
+**Remember Preferences**
+
+When an image is loaded, a profile is created and attached to the image
+metadata in the channel.  These profiles are continuously updated with
+viewer state as the image is manipulated.  The "Remember" preferences
+control which parts of these profiles are restored to the viewer state
+when the image is navigated to in the channel:
+* "Restore Scale" will restore the zoom (scale) level
+* "Restore Pan" will restore the pan position
+* "Restore Transform" will restore any flip or swap axes transforms
+* "Restore Rotation" will restore any rotation of the image
+* "Restore Cuts" will restore any cut levels for the image
+* "Restore Scale" will restore any coloring adjustments made (including
+  color map, color distribution, contrast/stretch, etc.)
+
 """
 import math
 
@@ -786,7 +820,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.sort_order.set_tooltip("Sort order for images in channel")
 
         scrollbars = self.t_.get('scrollbars', 'off')
-        self.w.use_scrollbars.set_state(scrollbars != 'off')
+        self.w.use_scrollbars.set_state(scrollbars in ['on', 'auto'])
         self.w.use_scrollbars.add_callback('activated', self.set_scrollbars_cb)
         b.use_scrollbars.set_tooltip("Use scrollbars around viewer")
 
@@ -803,37 +837,37 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         exp = Widgets.Expander("Remember")
 
-        captions = (('Save Scale', 'checkbutton',
-                     'Save Pan', 'checkbutton'),
-                    ('Save Transform', 'checkbutton',
-                    'Save Rotation', 'checkbutton'),
-                    ('Save Cuts', 'checkbutton',
-                     'Save Color Map', 'checkbutton'),
+        captions = (('Restore Scale', 'checkbutton',
+                     'Restore Pan', 'checkbutton'),
+                    ('Restore Transform', 'checkbutton',
+                    'Restore Rotation', 'checkbutton'),
+                    ('Restore Cuts', 'checkbutton',
+                     'Restore Color Map', 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        self.w.save_scale.set_state(self.t_.get('profile_use_scale', False))
-        self.w.save_scale.add_callback('activated', self.set_profile_cb)
-        self.w.save_scale.set_tooltip("Remember scale with image")
-        self.w.save_pan.set_state(self.t_.get('profile_use_pan', False))
-        self.w.save_pan.add_callback('activated', self.set_profile_cb)
-        self.w.save_pan.set_tooltip("Remember pan position with image")
-        self.w.save_transform.set_state(
+        self.w.restore_scale.set_state(self.t_.get('profile_use_scale', False))
+        self.w.restore_scale.add_callback('activated', self.set_profile_cb)
+        self.w.restore_scale.set_tooltip("Remember scale with image")
+        self.w.restore_pan.set_state(self.t_.get('profile_use_pan', False))
+        self.w.restore_pan.add_callback('activated', self.set_profile_cb)
+        self.w.restore_pan.set_tooltip("Remember pan position with image")
+        self.w.restore_transform.set_state(
             self.t_.get('profile_use_transform', False))
-        self.w.save_transform.add_callback('activated', self.set_profile_cb)
-        self.w.save_transform.set_tooltip("Remember transform with image")
-        self.w.save_rotation.set_state(
+        self.w.restore_transform.add_callback('activated', self.set_profile_cb)
+        self.w.restore_transform.set_tooltip("Remember transform with image")
+        self.w.restore_rotation.set_state(
             self.t_.get('profile_use_rotation', False))
-        self.w.save_rotation.add_callback('activated', self.set_profile_cb)
-        self.w.save_rotation.set_tooltip("Remember rotation with image")
-        self.w.save_cuts.set_state(self.t_.get('profile_use_cuts', False))
-        self.w.save_cuts.add_callback('activated', self.set_profile_cb)
-        self.w.save_cuts.set_tooltip("Remember cut levels with image")
-        self.w.save_color_map.set_state(
+        self.w.restore_rotation.add_callback('activated', self.set_profile_cb)
+        self.w.restore_rotation.set_tooltip("Remember rotation with image")
+        self.w.restore_cuts.set_state(self.t_.get('profile_use_cuts', False))
+        self.w.restore_cuts.add_callback('activated', self.set_profile_cb)
+        self.w.restore_cuts.set_tooltip("Remember cut levels with image")
+        self.w.restore_color_map.set_state(
             self.t_.get('profile_use_color_map', False))
-        self.w.save_color_map.add_callback('activated', self.set_profile_cb)
-        self.w.save_color_map.set_tooltip("Remember color map with image")
+        self.w.restore_color_map.add_callback('activated', self.set_profile_cb)
+        self.w.restore_color_map.set_tooltip("Remember color map with image")
 
         fr = Widgets.Frame()
         fr.set_widget(w)
@@ -1340,17 +1374,17 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.w.create_thumbnail.set_state(self.t_['genthumb'])
 
     def set_profile_cb(self, *args):
-        save_scale = (self.w.save_scale.get_state() != 0)
-        save_pan = (self.w.save_pan.get_state() != 0)
-        save_cuts = (self.w.save_cuts.get_state() != 0)
-        save_transform = (self.w.save_transform.get_state() != 0)
-        save_rotation = (self.w.save_rotation.get_state() != 0)
-        save_color_map = (self.w.save_color_map.get_state() != 0)
-        self.t_.set(profile_use_scale=save_scale, profile_use_pan=save_pan,
-                    profile_use_cuts=save_cuts,
-                    profile_use_transform=save_transform,
-                    profile_use_rotation=save_rotation,
-                    profile_use_color_map=save_color_map)
+        restore_scale = (self.w.restore_scale.get_state() != 0)
+        restore_pan = (self.w.restore_pan.get_state() != 0)
+        restore_cuts = (self.w.restore_cuts.get_state() != 0)
+        restore_transform = (self.w.restore_transform.get_state() != 0)
+        restore_rotation = (self.w.restore_rotation.get_state() != 0)
+        restore_color_map = (self.w.restore_color_map.get_state() != 0)
+        self.t_.set(profile_use_scale=restore_scale, profile_use_pan=restore_pan,
+                    profile_use_cuts=restore_cuts,
+                    profile_use_transform=restore_transform,
+                    profile_use_rotation=restore_rotation,
+                    profile_use_color_map=restore_color_map)
 
     def set_buffer_cb(self, *args):
         num_images = int(self.w.num_images.get_text())
@@ -1483,17 +1517,17 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         # profile settings
         prefs.setdefault('profile_use_scale', False)
-        self.w.save_scale.set_state(prefs['profile_use_scale'])
+        self.w.restore_scale.set_state(prefs['profile_use_scale'])
         prefs.setdefault('profile_use_pan', False)
-        self.w.save_pan.set_state(prefs['profile_use_pan'])
+        self.w.restore_pan.set_state(prefs['profile_use_pan'])
         prefs.setdefault('profile_use_cuts', False)
-        self.w.save_cuts.set_state(prefs['profile_use_cuts'])
+        self.w.restore_cuts.set_state(prefs['profile_use_cuts'])
         prefs.setdefault('profile_use_transform', False)
-        self.w.save_transform.set_state(prefs['profile_use_transform'])
+        self.w.restore_transform.set_state(prefs['profile_use_transform'])
         prefs.setdefault('profile_use_rotation', False)
-        self.w.save_rotation.set_state(prefs['profile_use_rotation'])
+        self.w.restore_rotation.set_state(prefs['profile_use_rotation'])
         prefs.setdefault('profile_use_color_map', False)
-        self.w.save_color_map.set_state(prefs['profile_use_color_map'])
+        self.w.restore_color_map.set_state(prefs['profile_use_color_map'])
 
     def save_preferences(self):
         self.t_.save()
