@@ -1329,7 +1329,7 @@ class ImageViewBase(Callback.Callbacks):
         data_x, data_y = self.get_data_xy(self.last_win_x,
                                           self.last_win_y)
         if (data_x != self.last_data_x or
-                data_y != self.last_data_y):
+            data_y != self.last_data_y):
             self.last_data_x, self.last_data_y = data_x, data_y
             self.logger.debug("cursor location changed %.4f,%.4f => %.4f,%.4f" % (
                 self.last_data_x, self.last_data_y, data_x, data_y))

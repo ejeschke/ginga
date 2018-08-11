@@ -393,6 +393,9 @@ class ImageViewEvent(ImageViewGtk):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, widget, event):
+        self.last_win_x, self.last_win_y = event.x, event.y
+        self.check_cursor_location()
+
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             widget.grab_focus()
@@ -406,7 +409,6 @@ class ImageViewEvent(ImageViewGtk):
         # without this we do not get key release events if the focus
         # changes to another window
         #gtk.gdk.keyboard_grab(widget.get_window(), False)
-
         keyname = gtk.gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
         self.logger.debug("key press event, key=%s" % (keyname))
@@ -414,7 +416,6 @@ class ImageViewEvent(ImageViewGtk):
 
     def key_release_event(self, widget, event):
         #gtk.gdk.keyboard_ungrab()
-
         keyname = gtk.gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
         self.logger.debug("key release event, key=%s" % (keyname))
