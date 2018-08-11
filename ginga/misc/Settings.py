@@ -14,7 +14,7 @@ from . import Callback
 from . import Bunch
 
 unset_value = "^^UNSET^^"
-regex_array = re.compile(r'^array\((\[.*\]),\s*dtype=(.+)\)$',
+regex_array = re.compile(r'^\s*array\((\[.*\])\s*(,\s*dtype=(.+)\s*)?\)\s*$',
                          flags=re.DOTALL)
 
 
@@ -231,7 +231,7 @@ class SettingGroup(object):
                         val_s = line[i + 1:].strip()
                         match = regex_array.match(val_s)
                         if match:
-                            data, dtype = match.groups()
+                            data, _x, dtype = match.groups()
                             # special case for parsing numpy arrays
                             val = np.asarray(ast.literal_eval(data),
                                              dtype=dtype)

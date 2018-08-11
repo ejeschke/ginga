@@ -274,12 +274,11 @@ The "Num Images" setting specifies how many images can be retained in
 buffers in this channel before being ejected.  A value of zero (0) means
 unlimited--images will never be ejected.  If an image was loaded from
 some accessible storage and it is ejected, it will automatically be
-reloaded if the image is revisited by navigating the channel.  A setting
-of 1 to 4 is typical.
+reloaded if the image is revisited by navigating the channel.
 
 The "Sort Order" setting determines whether images are sorted in the
 channel alphabetically by name or by the time when they were loaded.
-This principally effects the order in which images are cycled when using
+This principally affects the order in which images are cycled when using
 the up/down "arrow" keys or buttons, and not necessarily how they are
 displayed in plugins like "Contents" or "Thumbs" (which generally have
 their own setting preference for ordering).
