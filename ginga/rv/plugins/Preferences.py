@@ -294,6 +294,7 @@ metadata in the channel.  These profiles are continuously updated with
 viewer state as the image is manipulated.  The "Remember" preferences
 control which parts of these profiles are restored to the viewer state
 when the image is navigated to in the channel:
+
 * "Restore Scale" will restore the zoom (scale) level
 * "Restore Pan" will restore the pan position
 * "Restore Transform" will restore any flip or swap axes transforms
