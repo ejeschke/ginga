@@ -6,7 +6,7 @@
 #
 import time
 
-from ginga.misc import Bunch, Datasrc, Callback, Future
+from ginga.misc import Bunch, Datasrc, Callback, Future, Settings
 
 
 class ChannelError(Exception):
@@ -170,6 +170,10 @@ class Channel(Callback.Callbacks):
                                     idx=idx)
             image.set(image_info=info)
 
+        # add an image profile if one is missing
+        profile = self.get_image_profile(image)
+        info.profile = profile
+
         if not silent:
             self.add_image_update(image, info,
                                   update_viewer=not bulk_add)
@@ -312,7 +316,8 @@ class Channel(Callback.Callbacks):
                                image_loader=image_loader,
                                image_future=image_future,
                                time_added=time.time(),
-                               time_modified=None)
+                               time_modified=None,
+                               profile=None)
             self._add_info(info)
 
         else:
@@ -439,8 +444,13 @@ class Channel(Callback.Callbacks):
                     self.logger.error(errmsg)
                     raise image
 
-                # perpetuate the image_future
-                image.set(image_future=image_future, name=imname, path=path)
+                profile = info.get('profile', None)
+                if profile is None:
+                    profile = self.get_image_profile(image)
+                    info.profile = profile
+                # perpetuate some of the image metadata
+                image.set(image_future=image_future, name=imname, path=path,
+                          image_info=info, profile=profile)
 
                 self.fv.gui_do(_switch, image)
 
@@ -470,6 +480,13 @@ class Channel(Callback.Callbacks):
         self._configure_sort()
 
         self.history.sort(key=self.hist_sort)
+
+    def get_image_profile(self, image):
+        profile = image.get('profile', None)
+        if profile is None:
+            profile = Settings.SettingGroup()
+            image.set(profile=profile)
+        return profile
 
     def __len__(self):
         return len(self.history)
