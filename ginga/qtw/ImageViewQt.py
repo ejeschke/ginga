@@ -514,8 +514,10 @@ class QtEventMixin(object):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, widget, event):
-        self.last_win_x, self.last_win_y = event.x(), event.y()
-        self.check_cursor_location()
+        if hasattr(event, 'x'):
+            # only Qt5 apparently?
+            self.last_win_x, self.last_win_y = event.x(), event.y()
+            self.check_cursor_location()
 
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
