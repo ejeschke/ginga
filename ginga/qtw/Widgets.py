@@ -434,7 +434,9 @@ class SpinBox(WidgetBase):
         self.widget.setValue(val)
 
     def set_decimals(self, num):
-        self.widget.setDecimals(num)
+        if hasattr(self.widget, 'setDecimals'):
+            # only for QDoubleSpinBox
+            self.widget.setDecimals(num)
 
     def set_limits(self, minval, maxval, incr_value=1):
         adj = self.widget

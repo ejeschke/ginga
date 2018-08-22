@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.canvas.CompoundMixin import CompoundMixin
-from ginga.util.six.moves import filter
 
 __all__ = ['CanvasMixin']
 
@@ -101,11 +100,10 @@ class CanvasMixin(object):
         return None
 
     def get_tags_by_tag_pfx(self, tagpfx):
-        keys = filter(lambda k: k.startswith(tagpfx), self.tags.keys())
-        return keys
+        return [key for key in self.tags if key.startswith(tagpfx)]
 
     def get_tags(self):
-        return self.tags.keys()
+        return list(self.tags.keys())
 
     def has_tag(self, tag):
         return tag in self.tags
