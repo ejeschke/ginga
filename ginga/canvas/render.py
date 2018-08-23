@@ -99,7 +99,7 @@ class RendererBase(object):
         if self.surface is None:
             raise RenderError("No surface defined")
 
-        with open(filepath, 'w') as out_f:
+        with open(filepath, 'wb') as out_f:
             self.get_surface_as_rgb_format_buffer(output=out_f, format=format,
                                                   quality=quality)
         self.logger.debug("wrote %s file '%s'" % (format, filepath))
