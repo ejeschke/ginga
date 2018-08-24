@@ -83,6 +83,8 @@ In "Move" mode the following keys are active:
 - "n" will place a new mark at the site of the cursor
 - "m" will move the current mark (if any) to the site of the cursor
 - "d" will delete the current mark (if any)
+- "j" will select the previous mark (if any)
+- "k" will select the next mark (if any)
 
 **User Configuration**
 
@@ -372,6 +374,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.w.marks.append_text('None')
         self.w.marks.set_index(0)
         self.mark_selected = None
+        self.mark_index = 0
 
     def set_font_size_cb(self, w, index):
         self.fontsize = self.fontsizes[index]
@@ -607,6 +610,37 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.redo()
         return True
 
+    def prev_mark(self):
+        if len(self.marks) <= 1 or self.mark_selected is None:
+            # no previous
+            return
+
+        idx = self.marks.index(self.mark_selected)
+        idx = idx - 1
+        if idx < 0:
+            return
+        tag = self.marks[idx]
+        if tag == 'None':
+            tag = None
+        self.select_mark(tag)
+
+    def next_mark(self):
+        if len(self.marks) <= 1:
+            # no next
+            return
+
+        if self.mark_selected is None:
+            idx = 0
+        else:
+            idx = self.marks.index(self.mark_selected)
+        idx = idx + 1
+        if idx >= len(self.marks):
+            return
+        tag = self.marks[idx]
+        if tag == 'None':
+            tag = None
+        self.select_mark(tag)
+
     def keydown_cb(self, canvas, event, data_x, data_y, viewer):
         if event.key == 'n':
             caption = self.w.caption.get_text().strip()
@@ -620,6 +654,12 @@ class PixTable(GingaPlugin.LocalPlugin):
             return True
         elif event.key == 'd':
             self.clear_mark_cb()
+            return True
+        elif event.key == 'j':
+            self.prev_mark()
+            return True
+        elif event.key == 'k':
+            self.next_mark()
             return True
         return False
 
