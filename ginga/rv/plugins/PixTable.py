@@ -223,12 +223,16 @@ class PixTable(GingaPlugin.LocalPlugin):
         btn1 = Widgets.Button("Delete")
         btn1.add_callback('activated', lambda w: self.clear_mark_cb())
         btn1.set_tooltip("Delete selected mark")
+        btn1.set_enabled(len(self.marks) > 1)
+        self.w.btn_delete = btn1
         btns.add_widget(btn1, stretch=0)
 
         btn2 = Widgets.Button("Delete All")
         btn2.add_callback('activated', lambda w: self.clear_all())
         btn2.set_tooltip("Clear all marks")
         btns.add_widget(btn2, stretch=0)
+        btn2.set_enabled(len(self.marks) > 1)
+        self.w.btn_delete_all = btn2
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         vbox2 = Widgets.VBox()
@@ -365,6 +369,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.marks.remove(tag)
         self.w.marks.set_index(0)
         self.mark_selected = None
+        self.w.btn_delete.set_enabled(len(self.marks) > 1)
+        self.w.btn_delete_all.set_enabled(len(self.marks) > 1)
 
     def clear_all(self):
         self.canvas.delete_all_objects()
@@ -375,6 +381,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.w.marks.set_index(0)
         self.mark_selected = None
         self.mark_index = 0
+        self.w.btn_delete.set_enabled(False)
+        self.w.btn_delete_all.set_enabled(False)
 
     def set_font_size_cb(self, w, index):
         self.fontsize = self.fontsizes[index]
@@ -569,6 +577,8 @@ class PixTable(GingaPlugin.LocalPlugin):
                               tag=tag)
         self.marks.append(tag)
         self.w.marks.append_text(tag)
+        self.w.btn_delete.set_enabled(True)
+        self.w.btn_delete_all.set_enabled(True)
         self.select_mark(tag, pan=False)
 
     def _mark_update(self, data_x, data_y):
