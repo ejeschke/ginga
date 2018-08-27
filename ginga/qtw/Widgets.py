@@ -652,9 +652,11 @@ class TreeWidgetItem(QtGui.QTreeWidgetItem):
     def __lt__(self, otherItem):
         column = self.treeWidget().sortColumn()
         try:
-            return float( self.text(column) ) < float( otherItem.text(column) )
+            return float(self.text(column)) < float(otherItem.text(column))
+
         except ValueError:
             return self.text(column) < otherItem.text(column)
+
 
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False,
