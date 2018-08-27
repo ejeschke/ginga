@@ -82,7 +82,7 @@ class AstroTable(ViewerObjectBase):
     def _get_data(self):
         return self._data
 
-    def get_header(self, create=True):
+    def get_header(self, create=True, **kwargs):
         try:
             # By convention, the fits header is stored in a dictionary
             # under the metadata keyword 'header'
