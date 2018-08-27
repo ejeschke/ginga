@@ -642,6 +642,22 @@ class StatusBar(WidgetBase):
         self.widget.showMessage(msg_str, int(duration * 1000))
 
 
+class TreeWidgetItem(QtGui.QTreeWidgetItem):
+    """A hack to subclass QTreeWidgetItem to enable sorting by numbers
+    in a field.
+    """
+    def __init__(self, *args, **kwargs):
+        QtGui.QTreeWidgetItem.__init__(self, *args, **kwargs)
+
+    def __lt__(self, otherItem):
+        column = self.treeWidget().sortColumn()
+        try:
+            return float(self.text(column)) < float(otherItem.text(column))
+
+        except ValueError:
+            return self.text(column) < otherItem.text(column)
+
+
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False,
                  selection='single', use_alt_row_color=False,
@@ -738,7 +754,7 @@ class TreeView(WidgetBase):
 
             except KeyError:
                 # new item
-                item = QtGui.QTreeWidgetItem(parent_item, values)
+                item = TreeWidgetItem(parent_item, values)
                 if level == 1:
                     parent_item.addTopLevelItem(item)
                 else:
@@ -764,7 +780,7 @@ class TreeView(WidgetBase):
 
             except KeyError:
                 # new node
-                item = QtGui.QTreeWidgetItem(parent_item, [str(key)])
+                item = TreeWidgetItem(parent_item, [str(key)])
                 if level == 1:
                     parent_item.addTopLevelItem(item)
                 else:
