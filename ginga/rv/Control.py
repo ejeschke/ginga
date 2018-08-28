@@ -281,6 +281,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         opmon = channel.opmon
         opmon.deactivate(opname)
 
+    def call_local_plugin_method(self, chname, plugin_name, args, kwargs):
+        channel = self.get_channel(chname)
+        opmon = channel.opmon
+        p_obj = opmon.get_plugin(plugin_name)
+        method = getattr(p_obj, plugin_name)
+        return self.gui_call(method, *args, **kwargs)
+
     def start_global_plugin(self, plugin_name, raise_tab=False):
         self.gpmon.start_plugin_future(None, plugin_name, None)
         if raise_tab:
@@ -289,6 +296,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def stop_global_plugin(self, plugin_name):
         self.gpmon.deactivate(plugin_name)
+
+    def call_global_plugin_method(self, plugin_name, args, kwargs):
+        p_obj = self.gpmon.get_plugin(plugin_name)
+        method = getattr(p_obj, plugin_name)
+        return self.gui_call(method, *args, **kwargs)
 
     def start_plugin(self, plugin_name, spec):
         ptype = spec.get('ptype', 'local')
