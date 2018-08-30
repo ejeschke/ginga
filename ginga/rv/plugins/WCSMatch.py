@@ -170,6 +170,11 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
     def set_reference_channel_cb(self, w, idx):
         chname = self.chnames[idx]
         if chname == 'None':
+            chname = None
+        self.set_reference_channel(chname)
+
+    def set_reference_channel(self, chname):
+        if chname is None:
             self.ref_image = None
             self.ref_channel = None
             self.logger.info("turning off channel synchronization")
