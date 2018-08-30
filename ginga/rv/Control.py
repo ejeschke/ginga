@@ -281,6 +281,36 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         opmon = channel.opmon
         opmon.deactivate(opname)
 
+    def call_local_plugin_method(self, chname, plugin_name, method_name,
+                                 args, kwargs):
+        """
+        Parameters
+        ----------
+        chname : str
+            The name of the channel containing the plugin.
+
+        plugin_name : str
+            The name of the local plugin containing the method to call.
+
+        method_name : str
+            The name of the method to call.
+
+        args : list or tuple
+            The positional arguments to the method
+
+        kwargs : dict
+            The keyword arguments to the method
+
+        Returns
+        -------
+        result : return value from calling the method
+        """
+        channel = self.get_channel(chname)
+        opmon = channel.opmon
+        p_obj = opmon.get_plugin(plugin_name)
+        method = getattr(p_obj, method_name)
+        return self.gui_call(method, *args, **kwargs)
+
     def start_global_plugin(self, plugin_name, raise_tab=False):
         self.gpmon.start_plugin_future(None, plugin_name, None)
         if raise_tab:
@@ -289,6 +319,31 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def stop_global_plugin(self, plugin_name):
         self.gpmon.deactivate(plugin_name)
+
+    def call_global_plugin_method(self, plugin_name, method_name,
+                                  args, kwargs):
+        """
+        Parameters
+        ----------
+        plugin_name : str
+            The name of the global plugin containing the method to call.
+
+        method_name : str
+            The name of the method to call.
+
+        args : list or tuple
+            The positional arguments to the method
+
+        kwargs : dict
+            The keyword arguments to the method
+
+        Returns
+        -------
+        result : return value from calling the method
+        """
+        p_obj = self.gpmon.get_plugin(plugin_name)
+        method = getattr(p_obj, method_name)
+        return self.gui_call(method, *args, **kwargs)
 
     def start_plugin(self, plugin_name, spec):
         ptype = spec.get('ptype', 'local')
