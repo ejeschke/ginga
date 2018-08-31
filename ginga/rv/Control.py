@@ -974,6 +974,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def add_workspace(self, wsname, wstype, inSpace='channels'):
 
+        if wsname in self.ds.get_tabnames(None):
+            raise ValueError("Tab name already in use: '%s'" % (wsname))
+
         ws = self.ds.make_ws(name=wsname, group=1, wstype=wstype,
                              use_toolbar=True)
         if inSpace != 'top level':
@@ -1240,6 +1243,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         with self.lock:
             if self.has_channel(chname):
                 return self.get_channel(chname)
+
+            if chname in self.ds.get_tabnames(None):
+                raise ValueError("Tab name already in use: '%s'" % (chname))
 
             name = chname
             if settings is None:
@@ -2146,7 +2152,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.show_error("Channel name already in use: '%s'" % (chname))
             return True
 
-        self.add_channel(chname, workspace=wsname)
+        self.error_wrap(self.add_channel, chname, workspace=wsname)
         return True
 
     def add_channels_cb(self, w, rsp, b, names):
@@ -2160,7 +2166,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         for i in range(num):
             chname = self.make_channel_name(chpfx)
-            self.add_channel(chname, workspace=wsname)
+            self.error_wrap(self.add_channel, chname, workspace=wsname)
         return True
 
     def delete_channel_cb(self, w, rsp, chname):
