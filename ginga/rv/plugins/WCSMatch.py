@@ -1,5 +1,7 @@
+#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
 """
 ``WCSMatch`` is a global plugin for the Ginga image viewer that allows
 you to roughly align images with different scales and orientations
@@ -74,7 +76,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w = b
 
-        b.ref_channel.add_callback('activated', self.set_reference_channel_cb)
+        b.ref_channel.add_callback('activated', self._set_reference_channel_cb)
         self.w.match_pan.set_state(self._match['pan'])
         self.w.match_pan.set_tooltip("Match pan position of reference image")
         self.w.match_pan.add_callback('activated',
@@ -165,9 +167,10 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         self.xfmset(chviewer, chinfo)
         self.panset(chviewer, chinfo)
 
-    def set_reference_channel_cb(self, w, idx):
-        chname = self.chnames[idx]
+    def _set_reference_channel(self, chname):
         if chname == 'None':
+            chname = None
+        if chname is None:
             self.ref_image = None
             self.ref_channel = None
             self.logger.info("turning off channel synchronization")
@@ -185,6 +188,21 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         self._update_all()
 
         self.logger.info("set reference channel to '%s'" % (chname))
+
+    def _set_reference_channel_cb(self, w, idx):
+        """This is the GUI callback for the control that sets the reference
+        channel.
+        """
+        chname = self.chnames[idx]
+        self._set_reference_channel(chname)
+
+    def set_reference_channel(self, chname):
+        """This is the API call to set the reference channel.
+        """
+        # change the GUI control to match
+        idx = self.chnames.index(str(chname))
+        self.w.ref_channel.set_index(idx)
+        return self._set_reference_channel(chname)
 
     def set_match_cb(self, w, tf, key):
         # remember, in case we are closed and reopened

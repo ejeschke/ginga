@@ -4,19 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import numpy
-from io import BytesIO
-
-import cv2  # noqa
-
 from ginga import ImageView
 from ginga.cvw.CanvasRenderCv import CanvasRenderer
-
-try:
-    import PIL.Image as PILimage
-    have_PIL = True
-except ImportError:
-    have_PIL = False
 
 
 class ImageViewCvError(ImageView.ImageViewError):
@@ -42,61 +31,25 @@ class ImageViewCv(ImageView.ImageViewBase):
         self.renderer = CanvasRenderer(self)
 
     def get_surface(self):
-        return self.surface
-
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
-        in the pixel space.
-        """
-        if self.surface is None:
-            return
-        canvas = self.surface
-        self.logger.debug("redraw surface")
-
-        # get window contents as an array and store it into the CV surface
-        rgb_arr = self.getwin_array(order=self.rgb_order)
-        # TODO: is there a faster way to copy this array in?
-        canvas[:, :, :] = rgb_arr
-
-        # for debugging
-        #self.save_rgb_image_as_file('/tmp/temp.png', format='png')
+        return self.renderer.surface
 
     def configure_surface(self, width, height):
-        # create cv surface the size of the window
-        # (cv just uses numpy arrays!)
-        depth = len(self.rgb_order)
-        self.surface = numpy.zeros((height, width, depth), numpy.uint8)
+        # inform renderer
+        self.renderer.resize((width, height))
 
         # inform the base class about the actual window size
         self.configure(width, height)
 
     def get_image_as_array(self):
-        if self.surface is None:
-            raise ImageViewCvError("No OpenCv surface defined")
-
-        arr8 = self.get_surface()
-        return numpy.copy(arr8)
+        return self.renderer.get_surface_as_array(order=self.rgb_order)
 
     def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
-        if not have_PIL:
-            raise ImageViewCvError("Please install PIL to use this method")
-
-        if self.surface is None:
-            raise ImageViewCvError("No CV surface defined")
-
-        obuf = output
-        if obuf is None:
-            obuf = BytesIO()
-
-        # make a PIL image
-        image = PILimage.fromarray(self.surface)
-
-        image.save(obuf, format=format, quality=quality)
-        return obuf
+        return self.renderer.get_surface_as_rgb_format_buffer(
+            output=output, format=format, quality=quality)
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
-        buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
-        return buf.getvalue()
+        return self.renderer.get_surface_as_rgb_format_bytes(
+            format=format, quality=quality)
 
     def update_image(self):
         # subclass implements this method to actually update a widget

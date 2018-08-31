@@ -10,19 +10,20 @@ from matplotlib.path import Path as MplPath
 
 from . import MplHelp
 from ginga.canvas.mixins import *  # noqa
+from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga import trcalc
 
 
-class RenderContext(object):
+class RenderContext(render.RenderContextBase):
 
-    def __init__(self, viewer):
-        self.viewer = viewer
+    def __init__(self, renderer, viewer, surface):
+        render.RenderContextBase.__init__(self, renderer, viewer)
         self.shape = None
 
         # TODO: encapsulate this drawable
-        self.cr = MplHelp.MplContext(self.viewer.ax_util)
+        self.cr = MplHelp.MplContext(surface)
 
         self.pen = None
         self.brush = None
@@ -55,6 +56,7 @@ class RenderContext(object):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
+            fontsize = self.scale_fontsize(fontsize)
             alpha = getattr(shape, 'alpha', 1.0)
             self.font = self.cr.get_font(shape.font, fontsize, shape.color,
                                          alpha=alpha)
@@ -81,6 +83,7 @@ class RenderContext(object):
             self.brush = self.cr.get_brush(color, alpha=alpha)
 
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
+        fontsize = self.scale_fontsize(fontsize)
         self.font = self.cr.get_font(fontname, fontsize, color,
                                      alpha=alpha)
 
@@ -161,13 +164,30 @@ class RenderContext(object):
         self.cr.axes.add_patch(p)
 
 
-class CanvasRenderer(object):
+class CanvasRenderer(render.RendererBase):
 
     def __init__(self, viewer):
-        self.viewer = viewer
+        render.RendererBase.__init__(self, viewer)
+
+        self.kind = 'mpl'
+        self.rgb_order = viewer.rgb_order
+        self.surface = None
+
+    def resize(self, dims):
+        """Resize our drawing area to encompass a space defined by the
+        given dimensions.
+        """
+        pass
+
+    def render_image(self, rgbobj, dst_x, dst_y):
+        # for compatibility with the other renderers
+        return self.viewer.render_image(rgbobj, dst_x, dst_y)
+
+    def get_surface_as_array(self, order=None):
+        raise render.RenderError("This renderer can only be used with a matplotlib viewer")
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer)
+        cr = RenderContext(self, self.viewer, self.viewer.ax_util)
         cr.initialize_from_shape(shape)
         return cr
 

@@ -236,9 +236,32 @@ workspace for creating channels, and the "dialogs" workspace is where
 most local plugins are instantiated (when activated), by default.
 These two names should at least be defined somewhere in default_layout.
 
-==========================
-Adding or Removing Plugins
-==========================
+==================
+Auto-Start Plugins
+==================
+
+Not all plugins provided by Ginga are automatically started up by default.
+A plugin can be started automatically in ``post_gui_config()`` using the
+``start_global_plugin()`` or ``start_local_plugin()`` methods, as appropriate::
+
+    def post_gui_config(ginga_shell):
+        # Auto start global plugins
+        ginga_shell.start_global_plugin('Zoom')
+        ginga_shell.start_global_plugin('Header')
+
+        # Auto start local plugin
+        ginga_shell.add_channel('Image')
+        ginga_shell.start_local_plugin('Image', 'Histogram', None)
+
+Alternately, you can also start plugins via the command line interface using
+``--plugins`` and ``-modules`` for local and global plugins, respectively.
+To load multiple plugins at once, use a comma-separated list. For example::
+
+    ginga --plugins=MyLocalPlugin,Imexam --modules=MyGlobalPlugin
+
+==============
+Adding Plugins
+==============
 
 A plugin can be added to the reference viewer in ``pre_gui_config()``
 using the ``add_plugin()`` method with a specification ("spec") for
@@ -275,6 +298,25 @@ Other keywords that can be used in a spec:
 
 * To prevent a control icon from appearing in the Operations plugin
   manager tray specify `optray=False`.
+
+=================
+Disabling Plugins
+=================
+
+Both local and global plugins can be disabled (thus, not shown in the
+reference viewer) using the ``--disable-plugins`` option in the
+command line interface. To remove multiple plugins at once,
+use a comma-separated list. For example::
+
+    ginga --disable-plugins=Zoom,Compose
+
+Alternately, plugins can also be disabled via ``general.cfg`` configuration
+file. For example::
+
+    disable_plugins = "Zoom,Compose"
+
+Some plugins, like ``Operations``, when disabled, may result in
+inconvenient GUI experience.
 
 ==============================
 Making a Custom Startup Script

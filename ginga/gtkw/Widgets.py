@@ -1970,6 +1970,9 @@ class Application(Callback.Callbacks):
     def mainloop(self):
         gtk.main()
 
+    def quit(self):
+        gtk.main_quit()
+
 
 class Dialog(TopLevelMixin, WidgetBase):
 

@@ -87,18 +87,24 @@ class ColorBar(CanvasObjectBase):
         # Calculate reasonable spacing for range numbers
         cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)
-        text = "%.4g" % (hival)
-        txt_wd, txt_ht = cr.text_extents(text)
+        hitxt = "%.4g" % (hival)
+        lotxt = "%.4g" % (loval)
+        txt_wdh, txt_hth = cr.text_extents(hitxt)
+        txt_wdl, txt_htl = cr.text_extents(lotxt)
+        txt_wd = max(txt_wdh, txt_wdl)
         avg_pixels_per_range_num = self.t_spacing + txt_wd
         scale_ht = 0
         if self.showrange:
-            scale_ht = txt_ht + self.tick_ht + 2
+            scale_ht = txt_hth + self.tick_ht + 2
 
         pxwd, pxht = width, max(self.height, scale_ht)
 
+        maxc = max(rgbmap.maxc + 1, 256)
+        maxf = float(maxc)
+
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
-        spacing = 256 // nums
+        spacing = maxc // nums
         start = spacing // 2
         _interval = {start + i * spacing: True for i in range(0, nums - 1)}
         ## self.logger.debug("nums=%d spacing=%d intervals=%s" % (
@@ -110,10 +116,10 @@ class ColorBar(CanvasObjectBase):
         y_top = y_base + self.height
 
         x2 = pxwd
-        clr_wd = pxwd // 256
-        rem_px = x2 - (clr_wd * 256)
+        clr_wd = pxwd // maxc
+        rem_px = x2 - (clr_wd * maxc)
         if rem_px > 0:
-            ival = 256 // rem_px
+            ival = maxc // rem_px
         else:
             ival = 0
         clr_ht = pxht - scale_ht
@@ -123,7 +129,7 @@ class ColorBar(CanvasObjectBase):
         j = ival
         off = 0
         range_pts = []
-        for i in range(256):
+        for i in range(maxc):
 
             wd = clr_wd
             if rem_px > 0:
@@ -135,7 +141,7 @@ class ColorBar(CanvasObjectBase):
             x = off
 
             (r, g, b) = rgbmap.get_rgbval(i)
-            color = (r / 255., g / 255., b / 255.)
+            color = (r / maxf, g / maxf, b / maxf)
 
             cr.set_line(color, linewidth=0)
             cr.set_fill(color, alpha=self.fillalpha)
@@ -274,29 +280,35 @@ class DrawableColorBar(Rectangle):
         # Calculate reasonable spacing for range numbers
         cr.set_font(self.font, self.fontsize, color=self.color,
                     alpha=self.alpha)
-        text = "%.4g" % (hival)
-        txt_wd, txt_ht = cr.text_extents(text)
+        hitxt = "%.4g" % (hival)
+        lotxt = "%.4g" % (loval)
+        txt_wdh, txt_hth = cr.text_extents(hitxt)
+        txt_wdl, txt_htl = cr.text_extents(lotxt)
+        txt_wd = max(txt_wdh, txt_wdl)
         avg_pixels_per_range_num = self.t_spacing + txt_wd
         scale_ht = 0
         if self.showrange:
-            scale_ht = txt_ht + self.tick_ht + 2
+            scale_ht = txt_hth + self.tick_ht + 2
 
         pxwd, pxht = width, max(height, scale_ht)
         pxwd, pxht = max(pxwd, 1), max(pxht, 1)
 
+        maxc = max(rgbmap.maxc + 1, 256)
+        maxf = float(maxc)
+
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
-        spacing = 256 // nums
+        spacing = maxc // nums
         start = spacing // 2
         _interval = {start + i * spacing: True for i in range(0, nums - 1)}
 
         x_base, y_base, x_top, y_top = cx1, cy1, cx2, cy2
 
         x2 = pxwd
-        clr_wd = pxwd // 256
-        rem_px = x2 - (clr_wd * 256)
+        clr_wd = pxwd // maxc
+        rem_px = x2 - (clr_wd * maxc)
         if rem_px > 0:
-            ival = 256 // rem_px
+            ival = maxc // rem_px
         else:
             ival = 0
         clr_ht = pxht - scale_ht
@@ -306,7 +318,7 @@ class DrawableColorBar(Rectangle):
         j = ival
         off = cx1
         range_pts = []
-        for i in range(256):
+        for i in range(maxc):
 
             wd = clr_wd
             if rem_px > 0:
@@ -318,7 +330,7 @@ class DrawableColorBar(Rectangle):
             x = off
 
             (r, g, b) = rgbmap.get_rgbval(i)
-            color = (r / 255., g / 255., b / 255.)
+            color = (r / maxf, g / maxf, b / maxf)
 
             cr.set_line(color, linewidth=0)
             cr.set_fill(color, alpha=self.fillalpha)
@@ -475,7 +487,7 @@ class ModeIndicator(CanvasObjectBase):
 class FocusIndicator(CanvasObjectBase):
     """
     Shows an indicator that the canvas has the keyboard/mouse focus.
-    This is shown by a dotted rectangle around the perimeter of the window.
+    This is shown by a rectangle around the perimeter of the window.
 
     NOTE: to get this to work properly, you need to add a callback to your
     viewer like so:

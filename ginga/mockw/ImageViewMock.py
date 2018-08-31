@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
+import numpy as np
 
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.io_rgb import RGBFileHandler
@@ -81,7 +82,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         self.logger.debug("drawing to pixmap")
 
         # Prepare array for rendering
-        arr = rgbobj.get_array(self.rgb_order)
+        arr = rgbobj.get_array(self.rgb_order, dtype=np.uint8)
         (height, width) = arr.shape[:2]
 
         return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,
@@ -105,12 +106,12 @@ class ImageViewMock(ImageView.ImageViewBase):
         self.configure(width, height)
 
     def get_image_as_array(self):
-        return self.getwin_array(order=self.rgb_order)
+        return self.getwin_array(order=self.rgb_order, dtype=np.uint8)
 
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
         # copy pixmap to buffer
-        data_np = self.getwin_array(order=self.rgb_order)
+        data_np = self.getwin_array(order=self.rgb_order, dtype=np.uint8)
         header = {}
         fmt_buf = self.rgb_fh.get_buffer(data_np, header, format,
                                          output=output)
@@ -203,6 +204,10 @@ class ImageViewMock(ImageView.ImageViewBase):
             # schedule a call to onscreen_message_off after
             # `delay` sec
             pass
+
+    def take_focus(self):
+        # have the widget grab the keyboard focus
+        pass
 
 
 class ImageViewEvent(ImageViewMock):

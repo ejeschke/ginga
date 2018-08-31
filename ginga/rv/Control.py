@@ -128,11 +128,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # Create general preferences
         self.settings = self.prefs.create_category('general')
-        self.settings.load(onError='silent')
-        # Load bindings preferences
-        bindprefs = self.prefs.create_category('bindings')
-        bindprefs.load(onError='silent')
-
         self.settings.add_defaults(fixedFont=None,
                                    serifFont=None,
                                    sansFont=None,
@@ -145,10 +140,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                    # inherit from primary header
                                    inherit_primary_header=False,
                                    cursor_interval=0.050,
-                                   save_layout=False)
-
-        # Should channel change as mouse moves between windows
-        self.channel_follows_focus = self.settings['channel_follows_focus']
+                                   save_layout=False,
+                                   channel_prefix="Image")
+        self.settings.load(onError='silent')
+        # Load bindings preferences
+        bindprefs = self.prefs.create_category('bindings')
+        bindprefs.load(onError='silent')
 
         self.plugins = []
         self._plugin_sort_method = self.get_plugin_menuname
@@ -284,6 +281,36 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         opmon = channel.opmon
         opmon.deactivate(opname)
 
+    def call_local_plugin_method(self, chname, plugin_name, method_name,
+                                 args, kwargs):
+        """
+        Parameters
+        ----------
+        chname : str
+            The name of the channel containing the plugin.
+
+        plugin_name : str
+            The name of the local plugin containing the method to call.
+
+        method_name : str
+            The name of the method to call.
+
+        args : list or tuple
+            The positional arguments to the method
+
+        kwargs : dict
+            The keyword arguments to the method
+
+        Returns
+        -------
+        result : return value from calling the method
+        """
+        channel = self.get_channel(chname)
+        opmon = channel.opmon
+        p_obj = opmon.get_plugin(plugin_name)
+        method = getattr(p_obj, method_name)
+        return self.gui_call(method, *args, **kwargs)
+
     def start_global_plugin(self, plugin_name, raise_tab=False):
         self.gpmon.start_plugin_future(None, plugin_name, None)
         if raise_tab:
@@ -292,6 +319,31 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def stop_global_plugin(self, plugin_name):
         self.gpmon.deactivate(plugin_name)
+
+    def call_global_plugin_method(self, plugin_name, method_name,
+                                  args, kwargs):
+        """
+        Parameters
+        ----------
+        plugin_name : str
+            The name of the global plugin containing the method to call.
+
+        method_name : str
+            The name of the method to call.
+
+        args : list or tuple
+            The positional arguments to the method
+
+        kwargs : dict
+            The keyword arguments to the method
+
+        Returns
+        -------
+        result : return value from calling the method
+        """
+        p_obj = self.gpmon.get_plugin(plugin_name)
+        method = getattr(p_obj, method_name)
+        return self.gui_call(method, *args, **kwargs)
 
     def start_plugin(self, plugin_name, spec):
         ptype = spec.get('ptype', 'local')
@@ -877,10 +929,24 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.next_channel_ws(ws)
 
     def add_channel_auto_ws(self, ws):
-        chpfx = "Image"
-        chpfx = ws.extdata.get('chpfx', chpfx)
+        chname = ws.extdata.w_chname.get_text().strip()
+        if len(chname) == 0:
+            # make up a channel name
+            chpfx = self.settings.get('channel_prefix', "Image")
+            chpfx = ws.extdata.get('chpfx', chpfx)
+            chname = self.make_channel_name(chpfx)
 
-        chname = self.make_channel_name(chpfx)
+        try:
+            self.get_channel(chname)
+            # <-- channel name already in use
+            self.show_error(
+                "Channel name '%s' cannot be used, sorry." % (chname),
+                raisetab=True)
+            return
+
+        except KeyError:
+            pass
+
         return self.add_channel(chname, workspace=ws.name)
 
     def add_channel_auto(self):
@@ -907,6 +973,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         ws.cycle_wstype()
 
     def add_workspace(self, wsname, wstype, inSpace='channels'):
+
+        if wsname in self.ds.get_tabnames(None):
+            raise ValueError("Tab name already in use: '%s'" % (wsname))
 
         ws = self.ds.make_ws(name=wsname, group=1, wstype=wstype,
                              use_toolbar=True)
@@ -1175,6 +1244,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if self.has_channel(chname):
                 return self.get_channel(chname)
 
+            if chname in self.ds.get_tabnames(None):
+                raise ValueError("Tab name already in use: '%s'" % (chname))
+
             name = chname
             if settings is None:
                 settings = self.prefs.create_category('channel_' + name)
@@ -1356,7 +1428,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.remove_image_by_name(channel.name, imname, impath=impath)
 
     def follow_focus(self, tf):
-        self.channel_follows_focus = tf
+        self.settings['channel_follows_focus'] = tf
 
     def show_status(self, text):
         """Write a message to the status bar.
@@ -1703,12 +1775,18 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         canvas.enable_draw(False)
         fi.set_canvas(canvas)
 
-        enter_focus = self.settings.get('enter_focus', False)
-        fi.set_enter_focus(settings.get('enter_focus', enter_focus))
+        # check general settings for default value of enter_focus
+        enter_focus = settings.get('enter_focus', None)
+        if enter_focus is None:
+            enter_focus = self.settings.get('enter_focus', True)
+        fi.set_enter_focus(enter_focus)
         # check general settings for default value of focus indicator
-        focus_ind = self.settings.get('focus_indicator', False)
-        fi.show_focus_indicator(self.settings.get('focus_indicator', focus_ind))
+        focus_ind = settings.get('show_focus_indicator', None)
+        if focus_ind is None:
+            focus_ind = self.settings.get('show_focus_indicator', False)
+        fi.show_focus_indicator(focus_ind)
         fi.enable_auto_orient(True)
+        fi.use_image_profile = True
 
         fi.add_callback('cursor-changed', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
@@ -1740,10 +1818,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi = self.build_viewpane(settings, size=size)
 
         # add scrollbar support
-        # general settings as backup value if not overridden in channel
-        scr_onoff = self.settings.get('scrollbars', 'off')
-        scr_val = settings.setdefault('scrollbars', scr_onoff)
+        scr_val = settings.setdefault('scrollbars', None)
         scr_set = settings.get_setting('scrollbars')
+        if scr_val is None:
+            # general settings as backup value if not overridden in channel
+            scr_val = self.settings.get('scrollbars', 'off')
         si = Viewers.ScrolledView(fi)
         si.scroll_bars(horizontal=scr_val, vertical=scr_val)
         scr_set.add_callback('set', self._toggle_scrollbars, si)
@@ -1770,7 +1849,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         widget.scroll_bars(horizontal=value, vertical=value)
 
     def gui_add_channel(self, chname=None):
-        chpfx = "Image"
+        chpfx = self.settings.get('channel_prefix', "Image")
         ws = self.get_current_workspace()
         if ws is not None:
             chpfx = ws.extdata.get('chpfx', chpfx)
@@ -1808,8 +1887,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.ds.show_dialog(dialog)
 
     def gui_add_channels(self):
-
-        chpfx = "Image"
+        chpfx = self.settings.get('channel_prefix', "Image")
         ws = self.get_current_workspace()
         if ws is not None:
             chpfx = ws.extdata.get('chpfx', chpfx)
@@ -1896,8 +1974,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.gui_delete_window(chname)
 
     def gui_add_ws(self):
-
-        chpfx = "Image"
+        chpfx = self.settings.get('channel_prefix', "Image")
         ws = self.get_current_workspace()
         if ws is not None:
             chpfx = ws.extdata.get('chpfx', chpfx)
@@ -1918,8 +1995,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         #b.share_settings.set_length(60)
 
         cbox = b.workspace_type
-        cbox.append_text("Grid")
         cbox.append_text("Tabs")
+        cbox.append_text("Grid")
         cbox.append_text("MDI")
         cbox.append_text("Stack")
         cbox.set_index(0)
@@ -1938,7 +2015,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         b.channel_prefix.set_text(chpfx)
         spnbtn = b.num_channels
         spnbtn.set_limits(0, 36, incr_value=1)
-        spnbtn.set_value(4)
+        spnbtn.set_value(0)
 
         dialog = Widgets.Dialog(title="Add Workspace",
                                 flags=0,
@@ -2075,7 +2152,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.show_error("Channel name already in use: '%s'" % (chname))
             return True
 
-        self.add_channel(chname, workspace=wsname)
+        self.error_wrap(self.add_channel, chname, workspace=wsname)
         return True
 
     def add_channels_cb(self, w, rsp, b, names):
@@ -2089,7 +2166,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         for i in range(num):
             chname = self.make_channel_name(chpfx)
-            self.add_channel(chname, workspace=wsname)
+            self.error_wrap(self.add_channel, chname, workspace=wsname)
         return True
 
     def delete_channel_cb(self, w, rsp, chname):
@@ -2139,6 +2216,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             tb.add_separator()
 
+            entry = Widgets.TextEntry()
+            entry.set_length(8)
+            entry.set_tooltip("Name for a new channel")
+            ws.extdata.w_chname = entry
+            btn = tb.add_widget(entry)
+
             # add toolbar buttons adding and deleting channels
             iconpath = os.path.join(self.iconpath, "inbox_plus_48.png")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 23))
@@ -2165,7 +2248,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             try:
                 nb = self.ds.get_nb(wsname)  # noqa
                 self.show_error(
-                    "Workspace name '%s' cannot be used, sorry." % (wsname))
+                    "Workspace name '%s' cannot be used, sorry." % (wsname),
+                    raisetab=True)
                 self.ds.remove_dialog(w)
                 return
 
@@ -2476,14 +2560,20 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def force_focus_cb(self, viewer, event, data_x, data_y):
         chname = self.get_channel_name(viewer)
-        self.change_channel(chname, raisew=True)
+        channel = self.get_channel(chname)
+        v = channel.viewer
+        if hasattr(v, 'take_focus'):
+            v.take_focus()
+
+        if not self.settings.get('channel_follows_focus', False):
+            self.change_channel(chname, raisew=True)
         return True
 
     def focus_cb(self, viewer, tf, name):
         """Called when ``viewer`` gets ``(tf==True)`` or loses
         ``(tf==False)`` the focus.
         """
-        if not self.channel_follows_focus:
+        if not self.settings.get('channel_follows_focus', False):
             return True
 
         self.logger.debug("focus %s=%s" % (name, tf))

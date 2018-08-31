@@ -106,4 +106,11 @@ if not wcs_configured:
 def get_wcs_wrappers():
     return list(common.custom_wcs.keys())
 
+
+def get_wcs_class(name):
+    """Get a WCS class corresponding to the registered name.
+    Will raise a KeyError if a class of the given name does not exist.
+    """
+    return common.custom_wcs[name]
+
 # END

@@ -113,25 +113,11 @@ class ImageViewBokeh(ImageViewSS):
         wd, ht = self.get_window_size()
 
         # Get surface as a numpy array
-        surface = self.get_surface()
-        if isinstance(surface, np.ndarray):
-            arr8 = surface
-        else:
-            arr8 = np.fromstring(surface.tobytes(), dtype=np.uint8)
-            # extend array with alpha channel if missing
-            if len(arr8) < ht * wd * 4:
-                arr8 = arr8.reshape((ht, wd, 3))
-            else:
-                arr8 = arr8.reshape((ht, wd, 4))
-
-        if arr8.shape[2] == 3:
-            # extend array with alpha channel if missing
-            alpha = np.full((ht, wd, 1), 255, dtype=np.uint8)
-            arr8 = np.concatenate((arr8, alpha), axis=2)
+        data = self.renderer.get_surface_as_array(order='RGBA')
 
         # Casting as a 32-bit uint array type hopefully to get more
         # efficient JSON encoding en route to the browser
-        data = arr8.view(dtype=np.uint32).reshape((ht, wd))
+        data = data.view(dtype=np.uint32).reshape((ht, wd))
 
         data = np.flipud(data)
 

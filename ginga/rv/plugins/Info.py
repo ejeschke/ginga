@@ -123,8 +123,10 @@ class Info(GingaPlugin.GlobalPlugin):
         b.cut_levels.set_tooltip("Set cut levels manually")
         b.auto_levels.set_tooltip("Set cut levels by algorithm")
         b.cut_low.set_tooltip("Set low cut level (press Enter)")
+        b.cut_low.set_length(9)
         b.cut_low_value.set_text('')
         b.cut_high.set_tooltip("Set high cut level (press Enter)")
+        b.cut_high.set_length(9)
         b.cut_high_value.set_text('')
 
         combobox = b.cut_new

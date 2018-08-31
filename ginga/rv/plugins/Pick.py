@@ -496,6 +496,7 @@ class Pick(GingaPlugin.LocalPlugin):
         di.set_bg(0.4, 0.4, 0.4)
         # for debugging
         di.set_name('pickimage')
+        di.show_mode_indicator(True)
         self.pickimage = di
 
         bd = di.get_bindings()
@@ -552,6 +553,7 @@ class Pick(GingaPlugin.LocalPlugin):
             bd.enable_cmap(True)
 
             ci.set_desired_size(width, height)
+            ci.show_mode_indicator(True)
 
             ciw = Viewers.GingaViewerWidget(viewer=ci)
             ciw.resize(width, height)

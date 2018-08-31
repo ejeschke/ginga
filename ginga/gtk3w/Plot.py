@@ -5,12 +5,13 @@
 # Please see the file LICENSE.txt for details.
 #
 import matplotlib
-matplotlib.use('GTK3Cairo')
-from matplotlib.backends.backend_gtk3cairo import FigureCanvasGTK3Cairo as FigureCanvas  # noqa
-## matplotlib.use('GTK3Agg')
-## from  matplotlib.backends.backend_gtk3agg import FigureCanvasGTK3Agg \
-##      as FigureCanvas
-
+# GTK3Cairo backend is slow to redraw compared to GTK3Agg!
+# matplotlib.use('GTK3Cairo')
+# from matplotlib.backends.backend_gtk3cairo import (FigureCanvasGTK3Cairo
+#                                                    as FigureCanvas)  # noqa
+matplotlib.use('GTK3Agg')
+from matplotlib.backends.backend_gtk3agg import (FigureCanvasGTK3Agg
+                                                 as FigureCanvas)  # noqa
 from ginga.gtk3w import Widgets  # noqa
 
 

@@ -209,6 +209,11 @@ class RC(GingaPlugin.GlobalPlugin):
         # If blank, listens on all interfaces
         self.host = 'localhost'
 
+        # this will hold the remote object
+        self.robj = None
+        # this will hold the remote object server
+        self.server = None
+
         self.ev_quit = fv.ev_quit
 
     def build_gui(self, container):
@@ -472,7 +477,9 @@ class GingaWrapper(object):
             newargs = args[1:]
             obj = klass(*newargs, **kwargs)
             return self.fv.gui_call(canvas.add, obj)
-        elif command == 'clear':  # Clear only drawn objects, not the image
+
+        elif command == 'clear':
+            # Clear only drawn objects, not the image
             nobj = len(canvas.objects)
             if nobj == 0:
                 return
@@ -480,8 +487,10 @@ class GingaWrapper(object):
                 return
             else:
                 canvas.objects = canvas.objects[0:1]
+
         elif command == 'nobj':
             return len(canvas.objects)
+
         else:
             print("Canvas RC command not recognized")
             return

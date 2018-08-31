@@ -7,6 +7,7 @@
 import sys
 import math
 import traceback
+from collections import OrderedDict
 
 import numpy
 
@@ -43,7 +44,7 @@ class AstroImage(BaseImage):
 
     def __init__(self, data_np=None, metadata=None, logger=None,
                  name=None, wcsclass=None, ioclass=None,
-                 inherit_primary_header=False):
+                 inherit_primary_header=False, save_primary_header=True):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger, name=name)
@@ -67,8 +68,9 @@ class AstroImage(BaseImage):
         self.io.register_type('image', self.__class__)
 
         self.inherit_primary_header = inherit_primary_header
-        if self.inherit_primary_header:
-            # User wants to inherit from primary header--this will hold it
+        self.save_primary_header = inherit_primary_header or save_primary_header
+        if self.save_primary_header:
+            # User wants to save/inherit from primary header--this will hold it
             self._primary_hdr = AstroHeader()
         else:
             self._primary_hdr = None
@@ -129,7 +131,9 @@ class AstroImage(BaseImage):
         else:  # This ensures get_header() is consistent
             self.inherit_primary_header = inherit_primary_header
 
-        if inherit_primary_header and (fobj is not None):
+        save_primary_header = (self.save_primary_header or
+                               inherit_primary_header)
+        if save_primary_header and (fobj is not None):
             if self._primary_hdr is None:
                 self._primary_hdr = AstroHeader()
 
@@ -140,6 +144,28 @@ class AstroImage(BaseImage):
         # Try to make a wcs object on the header
         if hasattr(self, 'wcs') and self.wcs is not None:
             self.wcs.load_header(hdu.header, fobj=fobj)
+
+    def load_nddata(self, ndd, naxispath=None):
+        """Load from an astropy.nddata.NDData object.
+        """
+        self.clear_metadata()
+
+        # Make a header based on any NDData metadata
+        ahdr = self.get_header()
+        ahdr.update(ndd.meta)
+
+        self.setup_data(ndd.data, naxispath=naxispath)
+
+        if ndd.wcs is None:
+            # no wcs in ndd obj--let's try to make one from the header
+            self.wcs = wcsmod.WCS(logger=self.logger)
+            self.wcs.load_header(ahdr)
+        else:
+            # already have a valid wcs in the ndd object
+            # we assume it needs an astropy compatible wcs
+            wcsinfo = wcsmod.get_wcs_class('astropy')
+            self.wcs = wcsinfo.wrapper_class(logger=self.logger)
+            self.wcs.load_nddata(ndd)
 
     def load_file(self, filespec, **kwargs):
 
@@ -176,7 +202,7 @@ class AstroImage(BaseImage):
         revnaxis.reverse()
 
         # construct slice view and extract it
-        view = revnaxis + [slice(None), slice(None)]
+        view = tuple(revnaxis + [slice(None), slice(None)])
         data = self.get_mddata()[view]
 
         if len(data.shape) != 2:
@@ -197,13 +223,16 @@ class AstroImage(BaseImage):
     def get_data_size(self):
         return self.get_size()
 
-    def get_header(self, create=True):
+    def get_header(self, create=True, include_primary_header=None):
         try:
             # By convention, the fits header is stored in a dictionary
             # under the metadata keyword 'header'
             hdr = self.metadata['header']
 
-            if self.inherit_primary_header and self._primary_hdr is not None:
+            if include_primary_header is None:
+                include_primary_header = self.inherit_primary_header
+
+            if include_primary_header and self._primary_hdr is not None:
                 # Inherit PRIMARY header for display but keep metadata intact
                 displayhdr = AstroHeader()
                 for key in hdr.keyorder:
@@ -278,6 +307,9 @@ class AstroImage(BaseImage):
             header = self.get_header()
             self.wcs.load_header(header)
 
+    def has_primary_header(self):
+        return self._primary_hdr is not None
+
     def clear_all(self):
         # clear metadata and data
         super(AstroImage, self).clear_all()
@@ -295,6 +327,48 @@ class AstroImage(BaseImage):
         other = AstroImage(data, logger=self.logger)
         self.transfer(other, astype=astype)
         return other
+
+    def as_nddata(self, nddata_class=None):
+        "Return a version of ourself as an astropy.nddata.NDData object"
+        if nddata_class is None:
+            from astropy.nddata import NDData
+            nddata_class = NDData
+
+        # transfer header, preserving ordering
+        ahdr = self.get_header()
+        header = OrderedDict(ahdr.items())
+        data = self.get_mddata()
+
+        wcs = None
+        if hasattr(self, 'wcs') and self.wcs is not None:
+            # for now, assume self.wcs wraps an astropy wcs object
+            wcs = self.wcs.wcs
+
+        ndd = nddata_class(data, wcs=wcs, meta=header)
+        return ndd
+
+    def as_hdu(self):
+        "Return a version of ourself as an astropy.io.fits.PrimaryHDU object"
+        from astropy.io import fits
+
+        # transfer header, preserving ordering
+        ahdr = self.get_header()
+        header = fits.Header(ahdr.items())
+        data = self.get_mddata()
+
+        hdu = fits.PrimaryHDU(data=data, header=header)
+        return hdu
+
+    def astype(self, type_name):
+        """Convert AstroImage object to some other kind of object.
+        """
+        if type_name == 'nddata':
+            return self.as_nddata()
+
+        if type_name == 'hdu':
+            return self.as_hdu()
+
+        raise ValueError("Unrecognized conversion type '%s'" % (type_name))
 
     def save_as_file(self, filepath, **kwdargs):
         data = self._get_data()

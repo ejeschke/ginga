@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 
 import os
+import numpy as np
 
 from ginga.gtk3w import GtkHelp
 from ginga import Mixins, Bindings
@@ -55,7 +56,7 @@ class ImageViewGtk(ImageView):
         return self.imgwin
 
     def get_plain_image_as_pixbuf(self):
-        arr = self.getwin_array(order='RGB')
+        arr = self.getwin_array(order='RGB', dtype=np.uint8)
         pixbuf = GtkHelp.pixbuf_new_from_array(arr,
                                                GdkPixbuf.Colorspace.RGB,
                                                8)
@@ -83,9 +84,9 @@ class ImageViewGtk(ImageView):
         pixbuf.savev(filepath, format, options, values)
 
     def get_rgb_image_as_pixbuf(self):
-        dawd = self.surface.get_width()
-        daht = self.surface.get_height()
-        rgb_buf = bytes(self.surface.get_data())
+        arr8 = self.renderer.get_surface_as_array(order='RGB')
+        daht, dawd = arr8.shape[:2]
+        rgb_buf = arr8.tobytes(order='C')
         pixbuf = GtkHelp.pixbuf_new_from_data(rgb_buf, GdkPixbuf.Colorspace.RGB,
                                               False, 8, dawd, daht, dawd * 3)
 
@@ -102,9 +103,33 @@ class ImageViewGtk(ImageView):
         self._defer_task.stop()
         self._defer_task.start(time_sec)
 
+    def _renderer_to_surface(self):
+
+        if isinstance(self.renderer.surface, cairo.ImageSurface):
+            # optimization when renderer is cairo:
+            # the render already contains a surface we can copy from
+            self.surface = self.renderer.surface
+
+        else:
+            # create a new surface from rendered array
+            arr = self.renderer.get_surface_as_array(order=self.rgb_order)
+            arr = np.ascontiguousarray(arr)
+
+            daht, dawd, depth = arr.shape
+            self.logger.debug("arr shape is %dx%dx%d" % (dawd, daht, depth))
+
+            stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
+                                                                dawd)
+            self.surface = cairo.ImageSurface.create_for_data(arr,
+                                                              cairo.FORMAT_ARGB32,
+                                                              dawd, daht, stride)
+
     def update_image(self):
-        if not self.surface:
+        if self.surface is None:
+            # window is not mapped/configured yet
             return
+
+        self._renderer_to_surface()
 
         win = self.imgwin.get_window()
         if win is not None and self.surface is not None:
@@ -183,15 +208,14 @@ class ImageViewGtk(ImageView):
     def make_timer(self):
         return GtkHelp.Timer()
 
-    def _get_rgbbuf(self, data):
-        buf = data.tostring(order='C')
-        return buf
-
     def onscreen_message(self, text, delay=None, redraw=True):
         self.msgtask.stop()
         self.set_onscreen_message(text, redraw=redraw)
         if delay is not None:
             self.msgtask.start(delay)
+
+    def take_focus(self):
+        self.imgwin.grab_focus()
 
 
 class ImageViewEvent(ImageViewGtk):
@@ -338,6 +362,9 @@ class ImageViewEvent(ImageViewGtk):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, widget, event):
+        self.last_win_x, self.last_win_y = event.x, event.y
+        self.check_cursor_location()
+
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             widget.grab_focus()
@@ -352,7 +379,6 @@ class ImageViewEvent(ImageViewGtk):
         # changes to another window
         #Gdk.keyboard_grab(widget.get_window(), False, event.time)
         #widget.grab_add()
-
         keyname = Gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
         self.logger.debug("key press event, key=%s" % (keyname))
@@ -361,7 +387,6 @@ class ImageViewEvent(ImageViewGtk):
     def key_release_event(self, widget, event):
         #Gdk.keyboard_ungrab(event.time)
         #widget.grab_remove()
-
         keyname = Gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
         self.logger.debug("key release event, key=%s" % (keyname))

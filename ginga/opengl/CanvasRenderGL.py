@@ -11,6 +11,7 @@ import numpy as np
 from OpenGL import GLU as glu
 from OpenGL import GL as gl
 
+from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga.canvas.transform import BaseTransform
@@ -20,14 +21,13 @@ from .Camera import Camera
 from . import GlHelp
 
 
-class RenderContext(object):
+class RenderContext(render.RenderContextBase):
 
-    def __init__(self, viewer):
-        self.viewer = viewer
-        self.renderer = viewer.renderer
+    def __init__(self, renderer, viewer, surface):
+        render.RenderContextBase.__init__(self, renderer, viewer)
 
         # TODO: encapsulate this drawable
-        self.cr = GlHelp.GlContext(viewer.get_widget())
+        self.cr = GlHelp.GlContext(surface)
 
         self.pen = None
         self.brush = None
@@ -59,6 +59,7 @@ class RenderContext(object):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
+            fontsize = self.scale_fontsize(fontsize)
             alpha = getattr(shape, 'alpha', 1.0)
             self.font = self.cr.get_font(shape.font, fontsize, shape.color,
                                          alpha=alpha)
@@ -84,6 +85,7 @@ class RenderContext(object):
             self.brush = self.cr.get_brush(color, alpha=alpha)
 
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
+        fontsize = self.scale_fontsize(fontsize)
         self.font = self.cr.get_font(fontname, fontsize, color,
                                      alpha=alpha)
 
@@ -158,10 +160,13 @@ class RenderContext(object):
         self._draw_pts(gl.GL_LINE_STRIP, cpoints)
 
 
-class CanvasRenderer(object):
+class CanvasRenderer(render.RendererBase):
 
     def __init__(self, viewer):
-        self.viewer = viewer
+        render.RendererBase.__init__(self, viewer)
+
+        self.kind = 'gl'
+        self.rgb_order = 'RGBA'
 
         # size of our GL viewport
         # these will change when the resize() is called
@@ -184,8 +189,32 @@ class CanvasRenderer(object):
         self.mn_y, self.mx_y = -self.lim_y, self.lim_y
         self.mn_z, self.mx_z = -self.lim_z, self.lim_z
 
+    def resize(self, dims):
+        """Resize our drawing area to encompass a space defined by the
+        given dimensions.
+        """
+        width, height = dims[:2]
+        self.gl_resize(width, height)
+
+    def render_image(self, rgbobj, dst_x, dst_y):
+        """Render the image represented by (rgbobj) at dst_x, dst_y
+        in the pixel space.
+        """
+        pos = (0, 0)
+        arr = self.viewer.getwin_array(order=self.rgb_order, alpha=1.0,
+                                       dtype=np.uint8)
+        #pos = (dst_x, dst_y)
+        #print('dst', pos)
+        #pos = self.tform['window_to_native'].to_(pos)
+        #print('dst(c)', pos)
+        self.gl_set_image(arr, pos)
+
+    def get_surface_as_array(self, order=None):
+        raise render.RenderError("This renderer can only be used with an opengl viewer")
+
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer)
+        surface = self.viewer.get_widget()
+        cr = RenderContext(self, self.viewer, surface)
         cr.initialize_from_shape(shape, font=False)
         return cr
 

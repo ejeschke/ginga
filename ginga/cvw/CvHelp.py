@@ -11,6 +11,28 @@ from ginga import colors
 from ginga.fonts import font_asst
 
 
+def get_cached_font(fontname, fontsize):
+    key = (fontname, fontsize)
+    try:
+        return font_asst.get_cache(key)
+
+    except KeyError:
+        # see if we can build the font
+        info = font_asst.get_font_info(fontname, subst_ok=True)
+
+        font = cv2.freetype.createFreeType2()
+        font.loadFontData(info.font_path, id=0)
+        font_asst.add_cache(key, font)
+
+        return font
+
+
+def load_font(font_name, font_file):
+    if not font_asst.have_font(font_name):
+        font_asst.add_font(font_file, font_name=font_name)
+    return font_name
+
+
 class Pen(object):
     def __init__(self, color='black', linewidth=1, alpha=1.0):
         self.color = color
@@ -32,20 +54,15 @@ class Font(object):
         self.fontname = fontname
         self.fontsize = fontsize
         self.color = color
-        self.linewidth = linewidth
-        # scale relative to a 12pt font
-        self.scale = fontsize / 12.0
+        # text is not filled unless linewidth value is negative
+        self.linewidth = -linewidth
+        # fonts are scaled by specifying a height--this should be
+        # related to the fontsize more accurately here
+        self.scale = int(round(fontsize * 1.5))
         self.alpha = alpha
-        # TODO: currently there is only support for some simple built-in
-        # fonts.  What kind of fonts/lookup can we use for this?
-        self.font = cv2.FONT_HERSHEY_SIMPLEX
-
-
-def load_font(font_name, font_file):
-    # TODO!
-    ## raise ValueError("Loading fonts dynamically is an unimplemented"
-    ##                  " feature for cv back end")
-    return font_name
+        # note: opencv scales the fonts dynamically, so always
+        # specify a 0 for caching
+        self.font = get_cached_font(self.fontname, 0)
 
 
 class CvContext(object):
@@ -73,10 +90,10 @@ class CvContext(object):
         return (int(r * 255), int(g * 255), int(b * 255), int(alpha * 255))
 
     def get_pen(self, color, linewidth=1, alpha=1.0):
+        # TODO: support line styles
         # if hasattr(self, 'linestyle'):
         #     if self.linestyle == 'dash':
         #         cr.set_dash([ 3.0, 4.0, 6.0, 4.0], 5.0)
-        #op = int(alpha * 255)
         color = self.get_color(color, alpha=alpha)
         return Pen(color=color, linewidth=linewidth, alpha=alpha)
 
@@ -90,20 +107,16 @@ class CvContext(object):
                     linewidth=linewidth, alpha=alpha)
 
     def text_extents(self, text, font):
-        ## retval, baseline = cv2.getTextSize(text, font.font, font.fontsize,
-        ##                                    font.linewidth)
-        retval, baseline = cv2.getTextSize(text, font.font, font.scale,
-                                           font.linewidth)
+        retval, baseline = font.font.getTextSize(text, font.scale,
+                                                 font.linewidth)
         wd, ht = retval
         return wd, ht
 
     def text(self, pt, text, font):
         x, y = pt
-        ## cv2.putText(self.canvas, text, (x, y), font.font, font.scale,
-        ##             font.color, thickness=font.linewidth,
-        ##             lineType=cv2.CV_AA)
-        cv2.putText(self.canvas, text, (x, y), font.font, font.scale,
-                    font.color, thickness=font.linewidth)
+        font.font.putText(self.canvas, text, (x, y), font.scale,
+                          font.color, thickness=font.linewidth,
+                          line_type=cv2.LINE_AA, bottomLeftOrigin=True)
 
     def line(self, pt1, pt2, pen):
         x1, y1 = int(round(pt1[0])), int(round(pt1[1]))
@@ -116,19 +129,6 @@ class CvContext(object):
         if (brush is not None) and brush.fill:
             cv2.circle(self.canvas, (x, y), radius, brush.color, -1)
         cv2.circle(self.canvas, (x, y), radius, pen.color, pen.linewidth)
-
-    def rectangle(self, pt1, pt2, pen, brush):
-        x1, y1 = pt1
-        x2, y2 = pt2
-        cv2.rectangle(self.canvas, (x1, y1), (x2, y2), pen.color, pen.linewidth)
-
-    def ellipse(self, pt, xr, yr, theta, pen, brush):
-        x, y = pt
-        if (brush is not None) and brush.fill:
-            cv2.ellipse(self.canvas, (x, y), (xr, yr), theta, 0.0, 360.0,
-                        brush.color, -1)
-        cv2.ellipse(self.canvas, (x, y), (xr, yr), theta, 0.0, 360.0,
-                    pen.color, pen.linewidth)
 
     def polygon(self, points, pen, brush):
         pts = np.array(points, np.int32)

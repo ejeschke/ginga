@@ -461,6 +461,8 @@ class NormImage(Image):
         dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
         get_order = dst_order
+        # note: is this still needed?  I think overlay_image will handle
+        # a mismatch of alpha channel now
         if ('A' in dst_order) and not ('A' in image_order):
             get_order = dst_order.replace('A', '')
 

@@ -28,11 +28,12 @@ also enlarge the plugin workspace to see more of the table.
 
 **Using Marks**
 
-If you click in the channel viewer, it will set a mark.  There can
-be any number of marks, and they are each noted with an "X"
-annotated with a number.  When that mark is selected, it will only
-show the values around the mark.  Simply change the mark control to
-select a different mark to see the values around it.
+When you set and select a mark, the pixel values will be shown
+surrounding the mark instead of the cursor.  There can be any number
+of marks, and they are each noted with a numbered "X".  Simply change the
+mark drop down control to select a different mark and see the values
+around it.  The currently selected mark is shown with a different color
+than the others.
 
 The marks will stay in position even if a new image is loaded and
 they will show the values for the new image.  In this way you can
@@ -41,16 +42,49 @@ monitor the area around a spot if the image is updating frequently.
 If the "Pan to mark" checkbox is selected, then when you select a
 different mark from the mark control, the channel viewer will pan to
 that mark.  This can be useful to inspect the same spots in several
-different images.
+different images, especially when zoomed in tight to the image.
 
 .. note:: If you change the mark control back to "None", then the pixel
           table will again update as you move the cursor around the viewer.
+
+The "Caption" box can be used to set a text annotation that will be
+appended to the mark label when the next mark is created.  This can be
+used to label a feature in the image, for example.
 
 **Deleting Marks**
 
 To delete a mark, select it in the mark control and then press the
 button marked "Delete".  To delete all the marks, press the button
 marked "Delete All".
+
+**Moving Marks**
+
+When the "Move" radio button is checked, and a mark is selected, then
+clicking or dragging anywhere in the image will move the mark to that
+location and update the pixel table.   If no mark is currently selected
+then a new one will be created and moved.
+
+**Drawing Marks**
+
+When the "Draw" radio button is checked, then clicking and dragging creates
+a new mark. The longer the draw, the bigger radius of the "X".
+
+**Editing Marks**
+
+When the "Edit" radio button is checked after a mark has been selected then
+you can drag the control points of the mark to increase the radius of the
+arms of the X or you can drag the bounding box to move the mark. If the
+editing control points are not shown, simply click on the center of a mark
+to enable them.
+
+**Special Keys**
+
+In "Move" mode the following keys are active:
+- "n" will place a new mark at the site of the cursor
+- "m" will move the current mark (if any) to the site of the cursor
+- "d" will delete the current mark (if any)
+- "j" will select the previous mark (if any)
+- "k" will select the next mark (if any)
 
 **User Configuration**
 
@@ -75,13 +109,27 @@ class PixTable(GingaPlugin.LocalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_PixTable')
         self.settings.add_defaults(fontsize=12,
-                                   font='fixed')
+                                   font='fixed',
+                                   mark_radius=10,
+                                   mark_style='cross',
+                                   mark_color='lightgreen',
+                                   select_color='cyan',
+                                   drag_update=True)
         self.settings.load(onError='silent')
 
         self.dc = self.fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
-        canvas.set_callback('cursor-down', self.btndown_cb)
         canvas.set_callback('cursor-changed', self.cursor_cb)
+        canvas.enable_draw(True)
+        canvas.set_drawtype('point', color='cyan', linestyle='dash')
+        canvas.set_callback('draw-event', self.draw_cb)
+        canvas.enable_edit(True)
+        canvas.set_callback('edit-event', self.edit_cb)
+        canvas.add_draw_mode('move', down=self.btndown_cb,
+                             move=self.motion_cb, up=self.btnup_cb,
+                             key=self.keydown_cb)
+        canvas.set_draw_mode('move')
+        canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
@@ -102,13 +150,14 @@ class PixTable(GingaPlugin.LocalPlugin):
         self._ht = 300
 
         # For "marks" feature
-        self.mark_radius = 10
-        self.mark_style = 'cross'
-        self.mark_color = 'purple'
-        self.select_color = 'cyan'
+        self.mark_radius = self.settings.get('mark_radius', 10)
+        self.mark_style = self.settings.get('mark_style', 'cross')
+        self.mark_color = self.settings.get('mark_color', 'lightgreen')
+        self.select_color = self.settings.get('select_color', 'cyan')
         self.marks = ['None']
         self.mark_index = 0
         self.mark_selected = None
+        self.drag_update = self.settings.get('drag_update', True)
 
     def build_gui(self, container):
         top = Widgets.VBox()
@@ -174,12 +223,16 @@ class PixTable(GingaPlugin.LocalPlugin):
         btn1 = Widgets.Button("Delete")
         btn1.add_callback('activated', lambda w: self.clear_mark_cb())
         btn1.set_tooltip("Delete selected mark")
+        btn1.set_enabled(len(self.marks) > 1)
+        self.w.btn_delete = btn1
         btns.add_widget(btn1, stretch=0)
 
         btn2 = Widgets.Button("Delete All")
         btn2.add_callback('activated', lambda w: self.clear_all())
         btn2.set_tooltip("Clear all marks")
         btns.add_widget(btn2, stretch=0)
+        btn2.set_enabled(len(self.marks) > 1)
+        self.w.btn_delete_all = btn2
         btns.add_widget(Widgets.Label(''), stretch=1)
 
         vbox2 = Widgets.VBox()
@@ -199,7 +252,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         vbox2.add_widget(btns, stretch=0)
 
         captions = [
-            ('Font size:', 'label', 'Font size', 'combobox'),
+            ('Font size:', 'label', 'Font size', 'combobox',
+             'Caption:', 'label', 'Caption', 'entry'),
         ]
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -210,6 +264,8 @@ class PixTable(GingaPlugin.LocalPlugin):
             b.font_size.append_text(str(size))
         b.font_size.show_text(str(self.fontsize))
         b.font_size.add_callback('activated', self.set_font_size_cb)
+
+        b.caption.set_tooltip("Text to append to the marker")
 
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         box.add_widget(vbox2, stretch=1)
@@ -223,6 +279,35 @@ class PixTable(GingaPlugin.LocalPlugin):
         paned.set_sizes([_sz, _sz])
 
         top.add_widget(paned, stretch=1)
+
+        mode = self.canvas.get_draw_mode()
+        hbox = Widgets.HBox()
+        btn1 = Widgets.RadioButton("Move")
+        btn1.set_state(mode == 'move')
+        btn1.add_callback('activated',
+                          lambda w, val: self.set_mode_cb('move', val))
+        btn1.set_tooltip("Choose this to add or move a mark")
+        self.w.btn_move = btn1
+        hbox.add_widget(btn1)
+
+        btn2 = Widgets.RadioButton("Draw", group=btn1)
+        btn2.set_state(mode == 'draw')
+        btn2.add_callback('activated',
+                          lambda w, val: self.set_mode_cb('draw', val))
+        btn2.set_tooltip("Choose this to draw a new or replacement mark")
+        self.w.btn_draw = btn2
+        hbox.add_widget(btn2)
+
+        btn3 = Widgets.RadioButton("Edit", group=btn1)
+        btn3.set_state(mode == 'edit')
+        btn3.add_callback('activated',
+                          lambda w, val: self.set_mode_cb('edit', val))
+        btn3.set_tooltip("Choose this to edit a mark")
+        self.w.btn_edit = btn3
+        hbox.add_widget(btn3)
+
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+        top.add_widget(hbox, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -284,6 +369,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.marks.remove(tag)
         self.w.marks.set_index(0)
         self.mark_selected = None
+        self.w.btn_delete.set_enabled(len(self.marks) > 1)
+        self.w.btn_delete_all.set_enabled(len(self.marks) > 1)
 
     def clear_all(self):
         self.canvas.delete_all_objects()
@@ -293,6 +380,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.w.marks.append_text('None')
         self.w.marks.set_index(0)
         self.mark_selected = None
+        self.mark_index = 0
+        self.w.btn_delete.set_enabled(False)
+        self.w.btn_delete_all.set_enabled(False)
 
     def set_font_size_cb(self, w, index):
         self.fontsize = self.fontsizes[index]
@@ -311,21 +401,25 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         maxval = np.nanmax(data)
         minval = np.nanmin(data)
-        avgval = np.average(data)
+        avgval = np.mean(data)
+        rmsval = np.sqrt(np.mean(np.square(data)))
         fmt_cell = self.fmt_cell
 
         # can we do this with a np.vectorize() fn call and
         # speed things up?
         for i in range(width):
             for j in range(height):
-                self.txt_arr[i][j].text = fmt_cell.format(data[i][j])
+                val = data[i][j]
+                if not np.isscalar(val):
+                    val = np.average(val)
+                self.txt_arr[i][j].text = fmt_cell.format(val)
 
         ctr_txt = self.txt_arr[width // 2][height // 2]
 
         # append statistics line
-        fmt_stat = "  Min: %s  Max: %s  Avg: %s" % (fmt_cell, fmt_cell,
-                                                    fmt_cell)
-        self.sum_arr[0].text = fmt_stat.format(minval, maxval, avgval)
+        fmt_stat = "  Min: %s  Max: %s  Avg: %s  Rms: %s" % (
+            fmt_cell, fmt_cell, fmt_cell, fmt_cell)
+        self.sum_arr[0].text = fmt_stat.format(minval, maxval, avgval, rmsval)
 
         # update the pixtable
         self.pixview.panset_xy(ctr_txt.x, ctr_txt.y)
@@ -456,11 +550,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.redo()
         return False
 
-    def btndown_cb(self, canvas, event, data_x, data_y):
-        self.add_mark(data_x, data_y)
-        return True
-
-    def add_mark(self, data_x, data_y, radius=None, color=None, style=None):
+    def add_mark(self, data_x, data_y, radius=None, color=None, style=None,
+                 text=None):
         if not radius:
             radius = self.mark_radius
         if not color:
@@ -471,16 +562,159 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.logger.debug("Setting mark at %d,%d" % (data_x, data_y))
         self.mark_index += 1
         tag = 'mark%d' % (self.mark_index)
-        tag = self.canvas.add(self.dc.CompoundObject(
-            self.dc.Point(data_x, data_y, self.mark_radius,
-                          style=style, color=color,
-                          linestyle='solid'),
-            self.dc.Text(data_x + 10, data_y, "%d" % (self.mark_index),
-                         color=color)),
-            tag=tag)
+        caption = "%d" % (self.mark_index)
+        if text is not None:
+            caption = caption + ': ' + text
+        if radius is None:
+            radius = self.mark_radius
+        pt_obj = self.dc.Point(data_x, data_y, radius,
+                               style=style, color=color,
+                               linestyle='solid')
+        txt_obj = self.dc.Text(10, 0, caption,
+                               color=color, ref_obj=pt_obj, coord='offset')
+        txt_obj.editable = False
+        tag = self.canvas.add(self.dc.CompoundObject(pt_obj, txt_obj),
+                              tag=tag)
         self.marks.append(tag)
         self.w.marks.append_text(tag)
+        self.w.btn_delete.set_enabled(True)
+        self.w.btn_delete_all.set_enabled(True)
         self.select_mark(tag, pan=False)
+
+    def _mark_update(self, data_x, data_y):
+        if self.mark_selected is None:
+            return False
+
+        m_obj = self.canvas.get_object_by_tag(self.mark_selected)
+        p_obj = m_obj.objects[0]
+        p_obj.move_to(data_x, data_y)
+        self.lastx, self.lasty = data_x, data_y
+        self.canvas.update_canvas()
+        return True
+
+    def btndown_cb(self, canvas, event, data_x, data_y, viewer):
+        if self._mark_update(data_x, data_y):
+            if self.drag_update:
+                self.redo()
+            return True
+
+        # no selected mark, make a new one
+        caption = self.w.caption.get_text().strip()
+        if len(caption) == 0:
+            caption = None
+        self.add_mark(data_x, data_y, text=caption)
+        return True
+
+    def motion_cb(self, canvas, event, data_x, data_y, viewer):
+        if not self._mark_update(data_x, data_y):
+            return False
+
+        if self.drag_update:
+            self.redo()
+        return True
+
+    def btnup_cb(self, canvas, event, data_x, data_y, viewer):
+        if not self._mark_update(data_x, data_y):
+            return False
+
+        self.redo()
+        return True
+
+    def prev_mark(self):
+        if len(self.marks) <= 1 or self.mark_selected is None:
+            # no previous
+            return
+
+        idx = self.marks.index(self.mark_selected)
+        idx = idx - 1
+        if idx < 0:
+            return
+        tag = self.marks[idx]
+        if tag == 'None':
+            tag = None
+        self.select_mark(tag)
+
+    def next_mark(self):
+        if len(self.marks) <= 1:
+            # no next
+            return
+
+        if self.mark_selected is None:
+            idx = 0
+        else:
+            idx = self.marks.index(self.mark_selected)
+        idx = idx + 1
+        if idx >= len(self.marks):
+            return
+        tag = self.marks[idx]
+        if tag == 'None':
+            tag = None
+        self.select_mark(tag)
+
+    def keydown_cb(self, canvas, event, data_x, data_y, viewer):
+        if event.key == 'n':
+            caption = self.w.caption.get_text().strip()
+            if len(caption) == 0:
+                caption = None
+            self.add_mark(data_x, data_y, text=caption)
+            return True
+        elif event.key == 'm':
+            if self._mark_update(data_x, data_y):
+                self.redo()
+            return True
+        elif event.key == 'd':
+            self.clear_mark_cb()
+            return True
+        elif event.key == 'j':
+            self.prev_mark()
+            return True
+        elif event.key == 'k':
+            self.next_mark()
+            return True
+        return False
+
+    def draw_cb(self, canvas, tag):
+        obj = canvas.get_object_by_tag(tag)
+        canvas.delete_object_by_tag(tag)
+
+        caption = self.w.caption.get_text().strip()
+        if len(caption) == 0:
+            caption = None
+        self.add_mark(obj.x, obj.y, text=caption, radius=obj.radius)
+
+    def edit_cb(self, canvas, obj):
+        if self.mark_selected is not None:
+            m_obj = self.canvas.get_object_by_tag(self.mark_selected)
+            if m_obj is not None and m_obj.objects[0] is obj:
+                # edited mark was the selected mark
+                self.lastx, self.lasty = obj.x, obj.y
+                self.redo()
+        return True
+
+    def edit_select_mark(self):
+        if self.mark_selected is not None:
+            obj = self.canvas.get_object_by_tag(self.mark_selected)
+            # drill down to reference shape
+            if hasattr(obj, 'objects'):
+                obj = obj.objects[0]
+            self.canvas.edit_select(obj)
+        else:
+            self.canvas.clear_selected()
+        self.canvas.update_canvas()
+
+    def set_mode_cb(self, mode, tf):
+        """Called when one of the Move/Draw/Edit radio buttons is selected."""
+        if tf:
+            self.canvas.set_draw_mode(mode)
+            if mode == 'edit':
+                self.edit_select_mark()
+        return True
+
+    def set_mode(self, mode):
+        self.canvas.set_draw_mode(mode)
+        self.w.btn_move.set_state(mode == 'move')
+        self.w.btn_draw.set_state(mode == 'draw')
+        self.w.btn_edit.set_state(mode == 'edit')
 
     def __str__(self):
         return 'pixtable'

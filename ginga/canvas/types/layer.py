@@ -77,8 +77,61 @@ class DrawingCanvas(Mixins.UIMixin, DrawingMixin, Canvas):
         self.editable = False
 
 
+class ConstructedCanvas(DrawingMixin, Canvas):
+    """Constructed canvas from a list of specifications.
+
+    Parameters are specifications of child objects, where each specification
+    is a map specifying 'type' and (optionally) 'args' and 'kwargs'.
+    If present, 'args' is a sequence of arguments and 'kwargs' is a map
+    of keyword arguments to provide to the constructor of the child.
+
+    Example:
+
+    .. code-block: Python
+
+        ConstructedCanvas([dict(type='point', args=(x, y, radius),
+                                kwargs=dict(color='red')),
+                           dict(type='circle', args=(x, y, radius),
+                                kwargs=dict(color='yellow'))])
+
+    This makes a point inside a circle.
+    """
+    def __init__(self, spec_list, **kwdargs):
+        Canvas.__init__(self, **kwdargs)
+        DrawingMixin.__init__(self)
+        self.objects = self.build_objects(spec_list)
+
+        self.kind = 'constructed'
+        self.editable = False
+
+    def build_objects(self, spec_list):
+        return [self.build_object(spec) for spec in spec_list]
+
+    def build_object(self, spec):
+        ctype = spec.get('type', None)
+        if ctype is None:
+            raise ValueError("Item specification needs a 'type' designator: %s" % (
+                str(spec)))
+
+        # TODO: we need to be a subclass of DrawingMixin in order to get
+        # access to the get_draw_class() method.  Otherwise we could just
+        # be a subclass of CompoundObject. See if this can be fixed.
+        draw_class = self.get_draw_class(ctype)
+
+        args = spec.get('args', [])
+        kwargs = spec.get('kwargs', {})
+
+        if isinstance(draw_class, CompoundObject):
+            # special case for compound objects: need to have actual objects
+            # in constructor args, not specifications
+            args = self.build_objects(args)
+
+        return draw_class(*args, **kwargs)
+
+
 catalog = dict(compoundobject=CompoundObject, canvas=Canvas,
-               drawingcanvas=DrawingCanvas)
+               drawingcanvas=DrawingCanvas,
+               constructedcanvas=ConstructedCanvas)
 register_canvas_types(catalog)
 
 # END

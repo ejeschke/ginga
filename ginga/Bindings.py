@@ -147,6 +147,7 @@ class ImageViewBindings(object):
             kp_flip_y=[']', '}', 'rotate+]', 'rotate+}'],
             kp_swap_xy=['backslash', '|', 'rotate+backslash', 'rotate+|'],
             kp_rotate_reset=['R', 'rotate+R'],
+            kp_save_profile=['S'],
             kp_rotate_inc90=['.', 'rotate+.'],
             kp_rotate_dec90=[',', 'rotate+,'],
             kp_orient_lh=['o', 'rotate+o'],
@@ -932,7 +933,7 @@ class ImageViewBindings(object):
                 if idx < 0:
                     idx = len(cmapnames) - 1
             cmapname = cmapnames[idx]
-            rgbmap.set_cmap(cmap.get_cmap(cmapname))
+            viewer.set_color_map(cmapname)
             if msg:
                 viewer.onscreen_message("Color map: %s" % (cmapname),
                                         delay=1.0)
@@ -940,10 +941,9 @@ class ImageViewBindings(object):
     def _reset_cmap(self, viewer, msg):
         if self.cancmap:
             msg = self.settings.get('msg_cmap', msg)
-            rgbmap = viewer.get_rgbmap()
             # default
             cmapname = 'gray'
-            rgbmap.set_cmap(cmap.get_cmap(cmapname))
+            viewer.set_color_map(cmapname)
             if msg:
                 viewer.onscreen_message("Color map: %s" % (cmapname),
                                         delay=1.0)
@@ -972,7 +972,7 @@ class ImageViewBindings(object):
                 if idx < 0:
                     idx = len(imapnames) - 1
             imapname = imapnames[idx]
-            rgbmap.set_imap(imap.get_imap(imapname))
+            viewer.set_intensity_map(imapname)
             if msg:
                 viewer.onscreen_message("Intensity map: %s" % (imapname),
                                         delay=1.0)
@@ -980,10 +980,9 @@ class ImageViewBindings(object):
     def _reset_imap(self, viewer, msg):
         if self.cancmap:
             msg = self.settings.get('msg_imap', msg)
-            rgbmap = viewer.get_rgbmap()
             # default
             imapname = 'ramp'
-            rgbmap.set_imap(imap.get_imap(imapname))
+            viewer.set_intensity_map(imapname)
             if msg:
                 viewer.onscreen_message("Intensity map: %s" % (imapname),
                                         delay=1.0)
@@ -1523,6 +1522,12 @@ class ImageViewBindings(object):
 
     def kp_softlock(self, viewer, event, data_x, data_y):
         self._toggle_lock(viewer, 'softlock')
+        return True
+
+    def kp_save_profile(self, viewer, event, data_x, data_y, msg=True):
+        viewer.checkpoint_profile()
+        if msg:
+            viewer.onscreen_message("Profile saved", delay=0.5)
         return True
 
     #####  MOUSE ACTION CALLBACKS #####
@@ -2593,7 +2598,7 @@ class BindingMapper(Callback.Callbacks):
         self._kbdmode = None
         self._kbdmode_type = 'held'
         self._delayed_reset = False
-        self.logger.info("set keyboard mode reset")
+        self.logger.debug("set keyboard mode reset")
         # clear onscreen message, if any
         if (bnch is not None) and (bnch.msg is not None):
             viewer.onscreen_message(None)
@@ -2719,13 +2724,13 @@ class BindingMapper(Callback.Callbacks):
             # fixes a problem with not receiving key release events when the
             # window loses focus
             self._modifiers = frozenset([])
-        return True
+        return False
 
     def window_enter(self, viewer):
-        return True
+        return False
 
     def window_leave(self, viewer):
-        return True
+        return False
 
     def window_key_press(self, viewer, keyname):
         self.logger.debug("keyname=%s" % (keyname))

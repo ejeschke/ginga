@@ -10,6 +10,7 @@ from io import BytesIO
 # Matplotlib imports
 import matplotlib
 #from matplotlib.path import Path
+import numpy as np
 
 from ginga import ImageView
 from ginga import Mixins, Bindings
@@ -166,7 +167,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
-        data = self.getwin_array(order=self.rgb_order)
+        data = self.getwin_array(order=self.rgb_order, dtype=np.uint8)
 
         dst_x = dst_y = 0
 
@@ -201,7 +202,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
-        arr = self.getwin_array(order=self.rgb_order)
+        arr = self.getwin_array(order=self.rgb_order, dtype=np.uint8)
 
         # Get the data extents
         x0, y0 = 0, 0
@@ -231,7 +232,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
             #self.ax_img.relim()
 
     def render_image(self, rgbobj, dst_x, dst_y):
-
         # Ugly, ugly hack copied from matplotlib.lines to cause line
         # objects to recompute their cached transformed_path
         # Other mpl artists don't seem to have this affliction
@@ -267,6 +267,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
         ##     ax.set_ylim(y0, y1)
 
     def configure_window(self, width, height):
+        #self.renderer.resize((width, height))
+
         self.configure(width, height)
 
     def _resize_cb(self, event):

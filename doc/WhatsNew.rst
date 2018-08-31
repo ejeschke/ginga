@@ -2,8 +2,17 @@
 What's New in Ginga?
 ++++++++++++++++++++
 
-Ver 2.7.1.dev
+Ver 2.7.2.dev
 =============
+- Fix for linewidth attribute in shapes for AGG backend
+- Fix for ellipse rotation in OpenCv backend
+- Better text rendering for OpenCv backend (loadable fonts)
+- enhancements to the Ruler plugin for reference viewer
+- supports quick loading from astropy NDData (or subclassed) objects
+- Support for scaling fonts on high-dpi displays
+
+Ver 2.7.1 (2018-07-09)
+======================
 - Fix for image rendering bug which shows last row and column of image
   being drawn twice
 - Added option to "Compass" draw type to be in pixels (X/Y) or wcs (N/E)
@@ -16,6 +25,18 @@ Ver 2.7.1.dev
 - Made Gtk backend default to 'gtk3'
   - "-t gtk" now invokes gtk3 instead of gtk2
   - choose "-t gtk2" if you want the gtk2 back end
+- Fixed a bug with opening wildcard-type filespec from the command line
+- Fixed an issue in Thumbs plugin with opening FITS tables from the
+  command line
+- Fixes for some keyboard focus (Gtk) and unintentional channel changes
+  (Qt) when viewer is in MDI mode
+- IRAF plugin moved to experimental folder
+- Allow setting of initial channel list, local, global and disabled
+  plugins from general configuration file
+- Fix for a bug when using OpenCv acceleration on dtype('>f8') arrays
+- Fixed a bug where colormap scale markers were sometimes not spaced
+  wide enough
+- Workaround for failed PDF build in RTD documentation
 
 Ver 2.7.0 (2018-02-02)
 ======================

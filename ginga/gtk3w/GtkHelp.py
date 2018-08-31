@@ -7,6 +7,7 @@
 import sys
 import os.path
 import math
+import random
 
 from ginga.misc import Bunch, Callback
 from ginga.fonts import font_asst
@@ -340,12 +341,9 @@ class MDIWidget(Gtk.Layout):
         self.selected_child = None
         self.kbdmouse_mask = 0
         self.cascade_offset = 50
-        self.minimized_width = 50
+        self.minimized_width = 150
         self.delta_px = 50
 
-        self.connect("motion_notify_event", self.motion_notify_event)
-        self.connect("button_press_event", self.button_press_event)
-        self.connect("button_release_event", self.button_release_event)
         mask = self.get_events()
         self.set_events(mask |
                         Gdk.EventMask.ENTER_NOTIFY_MASK |
@@ -360,6 +358,10 @@ class MDIWidget(Gtk.Layout):
                         Gdk.EventMask.POINTER_MOTION_HINT_MASK |
                         Gdk.EventMask.SCROLL_MASK)
 
+        self.connect("motion_notify_event", self.motion_notify_event)
+        self.connect("button_press_event", self.button_press_event)
+        self.connect("button_release_event", self.button_release_event)
+
         self.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray50"))
 
     def append_page(self, widget, label):
@@ -372,11 +374,22 @@ class MDIWidget(Gtk.Layout):
         subwin.add_callback('maximize', lambda *args: self.maximize_page(subwin))
         subwin.add_callback('minimize', lambda *args: self.minimize_page(subwin))
 
-        self.put(subwin.frame, self.cascade_offset, self.cascade_offset)
+        # pick a random spot to place the window initially
+        rect = self.get_allocation()
+        wd, ht = rect.width, rect.height
+        x = random.randint(self.cascade_offset, wd // 2)
+        y = random.randint(self.cascade_offset, ht // 2)
 
-        self.update_subwin_position(subwin)
-        self.update_subwin_size(subwin)
+        self.put(subwin.frame, x, y)
 
+        # note: seem to need a slight delay to let the widget be mapped
+        # in order to accurately determine its position and size
+        #self.update_subwin_position(subwin)
+        #self.update_subwin_size(subwin)
+        GObject.timeout_add(1000, self.update_subwin_position, subwin)
+        GObject.timeout_add(1500, self.update_subwin_size, subwin)
+
+        self._update_area_size()
         return subwin
 
     def set_tab_reorderable(self, w, tf):
@@ -428,6 +441,7 @@ class MDIWidget(Gtk.Layout):
             frame = subwin.frame
             super(MDIWidget, self).remove(frame)
             widget.unparent()
+        self._update_area_size()
 
     def get_widget_position(self, widget):
         rect = widget.get_allocation()
@@ -531,6 +545,18 @@ class MDIWidget(Gtk.Layout):
             button |= 0x1 << (event.button - 1)
         return True
 
+    def _update_area_size(self):
+        rect = self.get_allocation()
+        mx_wd, mx_ht = rect.width, rect.height
+
+        for subwin in self.children:
+            rect = subwin.frame.get_allocation()
+            x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+
+            mx_wd, mx_ht = max(mx_wd, x + wd), max(mx_ht, y + ht)
+
+        self.set_size(mx_wd, mx_ht)
+
     def _resize(self, bnch, x_root, y_root):
         subwin = bnch.subwin
         updates = bnch.updates
@@ -568,6 +594,8 @@ class MDIWidget(Gtk.Layout):
             # this works better if it is not self.resize_page()
             subwin.frame.set_size_request(wd, ht)
 
+        self._update_area_size()
+
     def button_release_event(self, widget, event):
         x_root, y_root = event.x_root, event.y_root
         button = self.kbdmouse_mask
@@ -594,6 +622,8 @@ class MDIWidget(Gtk.Layout):
                 self.resize_page(subwin, subwin.width, subwin.height)
 
             self.selected_child = None
+
+        self._update_area_size()
         return True
 
     def motion_notify_event(self, widget, event):
@@ -619,6 +649,7 @@ class MDIWidget(Gtk.Layout):
             elif bnch.action == 'resize':
                 self._resize(bnch, x_root, y_root)
 
+        self._update_area_size()
         return True
 
     def tile_pages(self):
@@ -649,6 +680,8 @@ class MDIWidget(Gtk.Layout):
 
                     self.raise_widget(subwin)
 
+        self._update_area_size()
+
     def cascade_pages(self):
         x, y = 0, 0
         for subwin in self.children:
@@ -656,6 +689,8 @@ class MDIWidget(Gtk.Layout):
             self.raise_widget(subwin)
             x += self.cascade_offset
             y += self.cascade_offset
+
+        self._update_area_size()
 
     def use_tabs(self, tf):
         pass
@@ -676,6 +711,8 @@ class MDIWidget(Gtk.Layout):
         self.resize_page(subwin, wd, ht)
         self.move_page(subwin, 0, 0)
 
+        self._update_area_size()
+
     def minimize_page(self, subwin):
         rect = self.get_allocation()
         height = rect.height
@@ -690,8 +727,10 @@ class MDIWidget(Gtk.Layout):
         self.move_page(subwin, x, height - ht)
         #self.lower_widget(subwin)
 
+        self._update_area_size()
+
     def close_page(self, subwin):
-        pass
+        self._update_area_size()
 
 
 class FileSelection(object):
@@ -928,11 +967,15 @@ def set_default_style():
     with open(gtk_css, 'rb') as css_f:
         css_data = css_f.read()
 
-    style_provider.load_from_data(css_data)
+    try:
+        style_provider.load_from_data(css_data)
 
-    Gtk.StyleContext.add_provider_for_screen(
-        Gdk.Screen.get_default(), style_provider,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-    )
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(), style_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+    except Exception:
+        pass
 
 # END

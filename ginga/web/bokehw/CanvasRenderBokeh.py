@@ -11,6 +11,7 @@ import numpy as np
 
 #from ginga.canvas.mixins import *
 
+from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga import trcalc
@@ -18,10 +19,10 @@ from ginga import trcalc
 from . import BokehHelp
 
 
-class RenderContext(object):
+class RenderContext(render.RenderContextBase):
 
-    def __init__(self, viewer):
-        self.viewer = viewer
+    def __init__(self, renderer, viewer, surface):
+        render.RenderContextBase.__init__(self, renderer, viewer)
         self.shape = None
 
         # TODO: encapsulate this drawable
@@ -55,6 +56,7 @@ class RenderContext(object):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
+            fontsize = self.scale_fontsize(fontsize)
             alpha = getattr(shape, 'alpha', 1.0)
             self.font = self.cr.get_font(shape.font, fontsize, shape.color,
                                          alpha=alpha)
@@ -81,6 +83,7 @@ class RenderContext(object):
             self.brush = self.cr.get_brush(color, alpha=alpha)
 
     def set_font(self, fontname, fontsize):
+        fontsize = self.scale_fontsize(fontsize)
         self.font = self.cr.get_font(fontname, fontsize, 'black',
                                      alpha=1.0)
 
@@ -146,13 +149,17 @@ class RenderContext(object):
         self.cr.plot.line(x=xy.T[0], y=xy.T[1], **self.cr.kwdargs)
 
 
-class CanvasRenderer(object):
+class CanvasRenderer(render.RendererBase):
 
     def __init__(self, viewer):
-        self.viewer = viewer
+        render.RendererBase.__init__(self, viewer)
+
+        self.kind = 'bokeh'
+        self.rgb_order = 'RGBA'
+        self.surface = None
 
     def setup_cr(self, shape):
-        cr = RenderContext(self.viewer)
+        cr = RenderContext(self, self.viewer, self.surface)
         cr.initialize_from_shape(shape)
         return cr
 

@@ -1,6 +1,7 @@
 include README.txt
 include CHANGES.rst
 include LICENSE.*
+include ROADMAP.rst
 include ginga.desktop
 
 include ez_setup.py
@@ -12,6 +13,7 @@ recursive-include doc *
 recursive-include licenses *
 recursive-include cextern *
 recursive-include scripts *
+recursive-include experimental *
 
 prune build
 prune doc/_build

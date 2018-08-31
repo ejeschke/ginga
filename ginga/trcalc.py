@@ -138,6 +138,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         return data_np
 
     ht, wd = data_np.shape[:2]
+    dtype = data_np.dtype
 
     if rotctr_x is None:
         rotctr_x = wd // 2
@@ -149,17 +150,23 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             logger.debug("rotating with OpenCv")
         # opencv is fastest
         M = cv2.getRotationMatrix2D((rotctr_y, rotctr_x), theta_deg, 1)
+
+        if data_np.dtype == np.dtype('>f8'):
+            # special hack for OpenCv warpAffine bug on numpy arrays of
+            # dtype '>f8'-- it corrupts them
+            data_np = data_np.astype(np.float64)
+
+        newdata = cv2.warpAffine(data_np, M, (wd, ht))
+        new_ht, new_wd = newdata.shape[:2]
+        assert (wd == new_wd) and (ht == new_ht), \
+            Exception("rotated cutout is %dx%d original=%dx%d" % (
+                new_wd, new_ht, wd, ht))
+
+        newdata = newdata.astype(dtype, copy=False)
+
         if out is not None:
-            out[:, :, ...] = cv2.warpAffine(data_np, M, (wd, ht))
+            out[:, :, ...] = newdata
             newdata = out
-
-        else:
-            newdata = cv2.warpAffine(data_np, M, (wd, ht))
-            new_ht, new_wd = newdata.shape[:2]
-
-            assert (wd == new_wd) and (ht == new_ht), \
-                Exception("rotated cutout is %dx%d original=%dx%d" % (
-                    new_wd, new_ht, wd, ht))
 
     elif have_opencl and use_opencl:
         if logger is not None:
@@ -195,10 +202,10 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         #bp = np.rint(bp).astype('int').clip(0, ht-1)
         # Optomizations to reuse existing intermediate arrays
         np.rint(ap, out=ap)
-        ap = ap.astype('int')
+        ap = ap.astype(np.int, copy=False)
         ap.clip(0, wd - 1, out=ap)
         np.rint(bp, out=bp)
-        bp = bp.astype('int')
+        bp = bp.astype(np.int, copy=False)
         bp.clip(0, ht - 1, out=bp)
 
         if out is not None:
@@ -282,8 +289,8 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
         iscale_x = float(old_wd) / float(new_wd)
         iscale_y = float(old_ht) / float(new_ht)
 
-        xi = (x1 + xi * iscale_x).clip(0, max_x).astype('int')
-        yi = (y1 + yi * iscale_y).clip(0, max_y).astype('int')
+        xi = (x1 + xi * iscale_x).clip(0, max_x).astype(np.int, copy=False)
+        yi = (y1 + yi * iscale_y).clip(0, max_y).astype(np.int, copy=False)
         wd, ht = xi.shape[1], yi.shape[0]
 
         # bounds check against shape (to protect future data access)
@@ -335,9 +342,9 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
         iscale_y = float(old_ht) / float(new_ht)
         iscale_z = float(old_dp) / float(new_dp)
 
-        xi = (x1 + xi * iscale_x).clip(0, max_x).astype('int')
-        yi = (y1 + yi * iscale_y).clip(0, max_y).astype('int')
-        zi = (z1 + zi * iscale_z).clip(0, max_z).astype('int')
+        xi = (x1 + xi * iscale_x).clip(0, max_x).astype(np.int, copy=False)
+        yi = (y1 + yi * iscale_y).clip(0, max_y).astype(np.int, copy=False)
+        zi = (z1 + zi * iscale_z).clip(0, max_z).astype(np.int, copy=False)
         wd, ht, dp = xi.shape[1], yi.shape[0], zi.shape[2]
 
         # bounds check against shape (to protect future data access)
@@ -364,13 +371,16 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
 
 
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
-                           interpolation='basic', logger=None):
+                           interpolation='basic', logger=None,
+                           dtype=None):
 
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
     new_wd, new_ht = int(new_wd), int(new_ht)
 
     rdim = data_np.shape[2:]
     open_cl_ok = (len(rdim) == 0 or (len(rdim) == 1 and rdim[0] == 4))
+    if dtype is None:
+        dtype = data_np.dtype
 
     if have_opencv:
         if logger is not None:
@@ -379,7 +389,14 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = cv2_resize[interpolation]
-        newdata = cv2.resize(data_np[y1:y2 + 1, x1:x2 + 1], (new_wd, new_ht),
+
+        cutout = data_np[y1:y2 + 1, x1:x2 + 1]
+        if cutout.dtype == np.dtype('>f8'):
+            # special hack for OpenCv resize bug on numpy arrays of
+            # dtype '>f8'-- it corrupts them
+            cutout = cutout.astype(np.float64)
+
+        newdata = cv2.resize(cutout, (new_wd, new_ht),
                              interpolation=method)
 
         old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
@@ -410,6 +427,8 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
                                                                x1, y1, x2, y2,
                                                                new_wd, new_ht)
         newdata = data_np[view]
+
+    newdata = newdata.astype(dtype, copy=False)
 
     return newdata, (scale_x, scale_y)
 
@@ -450,12 +469,15 @@ def get_scaled_cutout_basic_view(shp, p1, p2, scales):
 
 
 def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
-                            interpolation='basic', logger=None):
+                            interpolation='basic', logger=None,
+                            dtype=None):
 
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
     rdim = data_np.shape[2:]
     open_cl_ok = (len(rdim) == 0 or (len(rdim) == 1 and rdim[0] == 4))
+    if dtype is None:
+        dtype = data_np.dtype
 
     if have_opencv:
         if logger is not None:
@@ -464,10 +486,18 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = cv2_resize[interpolation]
+
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-        newdata = cv2.resize(data_np[y1:y2 + 1, x1:x2 + 1], None,
+        cutout = data_np[y1:y2 + 1, x1:x2 + 1]
+
+        if cutout.dtype == np.dtype('>f8'):
+            # special hack for OpenCl resize bug on numpy arrays of
+            # dtype '>f8'-- it corrupts them
+            cutout = cutout.astype(np.float64)
+        newdata = cv2.resize(cutout, None,
                              fx=scale_x, fy=scale_y,
                              interpolation=method)
+
         old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
@@ -491,6 +521,8 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
                                                     (scale_x, scale_y))
         scale_x, scale_y = scales
         newdata = data_np[view]
+
+    newdata = newdata.astype(dtype, copy=False)
 
     return newdata, (scale_x, scale_y)
 
@@ -593,7 +625,11 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
                      alpha=1.0, copy=False, fill=True, flipy=False):
 
     dst_ht, dst_wd, dst_ch = dstarr.shape
+    dst_type = dstarr.dtype
+    dst_max_val = np.iinfo(dst_type).max
     src_ht, src_wd, src_ch = srcarr.shape
+    src_type = srcarr.dtype
+    src_max_val = np.iinfo(src_type).max
     dst_x, dst_y = int(round(pos[0])), int(round(pos[1]))
 
     if flipy:
@@ -645,13 +681,13 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
     # fill alpha channel in destination in the area we will be dropping
     # the image
     if fill and (da_idx >= 0):
-        dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, da_idx] = 255
+        dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, da_idx] = dst_max_val
 
     if (src_ch > 3) and ('A' in src_order):
         sa_idx = src_order.index('A')
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter
-        alpha = srcarr[0:src_ht, 0:src_wd, sa_idx] / 255.0
+        alpha = srcarr[0:src_ht, 0:src_wd, sa_idx] / float(src_max_val)
         alpha = np.dstack((alpha, alpha, alpha))
 
     # reorder srcarr if necessary to match dstarr for alpha merge
@@ -663,15 +699,15 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
 
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
-    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(np.uint8)
+    a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(dst_type,
+                                                             copy=False)
     b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y + src_ht,
                                     dst_x:dst_x + src_wd,
-                                    slc]).astype(np.uint8)
+                                    slc]).astype(dst_type, copy=False)
 
     # Place our srcarr into this dstarr at dst offsets
-    #dstarr[dst_y:dst_y+src_ht, dst_x:dst_x+src_wd, slc] += addarr[0:src_ht, 0:src_wd, slc]
-    dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, slc] = \
-        a_arr[0:src_ht, 0:src_wd, slc] + b_arr[0:src_ht, 0:src_wd, slc]
+    dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, slc] = (
+        a_arr[0:src_ht, 0:src_wd, slc] + b_arr[0:src_ht, 0:src_wd, slc])
 
     return dstarr
 
@@ -681,7 +717,11 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
 
     dst_x, dst_y, dst_z = pos
     dst_ht, dst_wd, dst_dp, dst_ch = dstarr.shape
+    dst_type = dstarr.dtype
+    dst_max_val = np.iinfo(dst_type).max
     src_ht, src_wd, src_dp, src_ch = srcarr.shape
+    src_type = srcarr.dtype
+    src_max_val = np.iinfo(src_type).max
 
     if flipy:
         srcarr = np.flipud(srcarr)
@@ -747,14 +787,13 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     # the image
     if fill and (da_idx >= 0):
         dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
-               dst_z:dst_z + src_dp, da_idx] = 255
+               dst_z:dst_z + src_dp, da_idx] = dst_max_val
 
     if (src_ch > 3) and ('A' in src_order):
         sa_idx = src_order.index('A')
         # if overlay source contains an alpha channel, extract it
         # and use it, otherwise use scalar keyword parameter
-        alpha = srcarr[0:src_ht, 0:src_wd, 0:src_dp, sa_idx] / 255.0
-        #alpha = np.dstack((alpha, alpha, alpha))
+        alpha = srcarr[0:src_ht, 0:src_wd, 0:src_dp, sa_idx] / float(src_max_val)
         alpha = np.concatenate([alpha[..., np.newaxis],
                                 alpha[..., np.newaxis],
                                 alpha[..., np.newaxis]],
@@ -770,17 +809,17 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     # calculate alpha blending
     #   Co = CaAa + CbAb(1 - Aa)
     a_arr = (alpha * srcarr[0:src_ht, 0:src_wd,
-                            0:src_dp, slc]).astype(np.uint8)
+                            0:src_dp, slc]).astype(dst_type, copy=False)
     b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y + src_ht,
                                     dst_x:dst_x + src_wd,
                                     dst_z:dst_z + src_dp,
-                                    slc]).astype(np.uint8)
+                                    slc]).astype(dst_type, copy=False)
 
     # Place our srcarr into this dstarr at dst offsets
     dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
-           dst_z:dst_z + src_dp, slc] = \
-        a_arr[0:src_ht, 0:src_wd, 0:src_dp, slc] + \
-        b_arr[0:src_ht, 0:src_wd, 0:src_dp, slc]
+           dst_z:dst_z + src_dp, slc] = (
+        a_arr[0:src_ht, 0:src_wd, 0:src_dp, slc] +
+        b_arr[0:src_ht, 0:src_wd, 0:src_dp, slc])
 
     return dstarr
 
@@ -794,10 +833,34 @@ def overlay_image(dstarr, pos, srcarr, **kwargs):
 
 
 def reorder_image(dst_order, src_arr, src_order):
-    indexes = [src_order.index(c) for c in dst_order]
-    #return np.dstack([ src_arr[..., idx] for idx in indexes ])
-    return np.concatenate([src_arr[..., idx, np.newaxis]
-                           for idx in indexes], axis=-1)
+    """Reorder src_arr, with order of color planes in src_order, as
+    dst_order.
+    """
+    depth = src_arr.shape[2]
+    if depth != len(src_order):
+        raise ValueError("src_order (%s) does not match array depth (%d)" % (
+            src_order, depth))
+
+    bands = []
+    if dst_order == src_order:
+        return np.ascontiguousarray(src_arr)
+
+    elif 'A' not in dst_order or 'A' in src_order:
+        # <-- we don't have to add an alpha plane, just create a new view
+        idx = np.array([src_order.index(c) for c in dst_order])
+        return np.ascontiguousarray(src_arr[..., idx])
+
+    else:
+        # <-- dst order requires missing alpha channel
+        indexes = [src_order.index(c) for c in dst_order.replace('A', '')]
+        bands = [src_arr[..., idx, np.newaxis] for idx in indexes]
+        ht, wd = src_arr.shape[:2]
+        dst_type = src_arr.dtype
+        dst_max_val = np.iinfo(dst_type).max
+        alpha = np.full((ht, wd, 1), dst_max_val, dtype=dst_type)
+        bands.insert(dst_order.index('A'), alpha)
+
+    return np.concatenate(bands, axis=-1)
 
 
 def strip_z(pts):
@@ -827,5 +890,20 @@ def get_bounds(pts):
     return np.asarray(([np.min(_pts) for _pts in pts_t],
                        [np.max(_pts) for _pts in pts_t]))
 
+
+def fill_array(arr, order, r, g, b, a):
+    """Fill array arr with a color value. order defines the color planes
+    in the array.  (r, g, b, a) are expected to be in the range 0..1 and
+    are scaled to the appropriate values.
+
+    arr can be a 2D or 3D array.
+    """
+    # TODO: can we make this more efficient?
+    dtype = arr.dtype
+    maxv = np.iinfo(dtype).max
+    bgval = dict(A=int(maxv * a), R=int(maxv * r), G=int(maxv * g),
+                 B=int(maxv * b))
+    bgtup = tuple([bgval[order[i]] for i in range(len(order))])
+    arr[..., :] = bgtup
 
 # END

@@ -37,7 +37,7 @@ def use(name):
             name = 'gtk3'
             family = 'gtk3'
         elif name in ('gtk2',):
-            family = 'gtk2'
+            family = 'gtk'
         assert name in ('gtk2', 'gtk3'), \
             ToolKitError("ToolKit '%s' not supported!" % (name))
 
@@ -75,8 +75,11 @@ def choose():
         from ginga.qtw import QtHelp  # noqa
     except ImportError:
         try:
-            from ginga.gtkw import GtkHelp  # noqa
+            from ginga.gtkw3 import GtkHelp  # noqa
         except ImportError:
-            raise ImportError("qt or gtk variants not found")
+            try:
+                from ginga.gtkw import GtkHelp  # noqa
+            except ImportError:
+                raise ImportError("qt or gtk variants not found")
 
 # END

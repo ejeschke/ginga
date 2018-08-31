@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
+import re
 import ast
 
 import numpy as np
@@ -12,7 +13,9 @@ import numpy as np
 from . import Callback
 from . import Bunch
 
-unset_value = ("^^UNSET^^")
+unset_value = "^^UNSET^^"
+regex_array = re.compile(r'^\s*array\((\[.*\])\s*(,\s*dtype=(.+)\s*)?\)\s*$',
+                         flags=re.DOTALL)
 
 
 class SettingError(Exception):
@@ -26,7 +29,7 @@ class Setting(Callback.Callbacks):
         Callback.Callbacks.__init__(self)
 
         self.value = value
-        self._unset = (value == unset_value)
+        self._unset = np.isscalar(value) and value == unset_value
         self.name = name
         self.logger = logger
         if check_fn is None:
@@ -71,30 +74,80 @@ class SettingGroup(object):
         self.logger = logger
         self.preffile = preffile
 
+        # TODO: add group change callback?
         self.group = Bunch.Bunch()
+        self._group_b = Bunch.Bunch()
 
     def add_settings(self, **kwdargs):
         for key, value in kwdargs.items():
-            self.group[key] = Setting(value=value, name=key,
-                                      logger=self.logger)
-            # TODO: add group change callback?
+            if key not in self.group:
+                setting = Setting(value=value, name=key,
+                                  logger=self.logger)
+                self._mk_add_callback(key, setting)
+                self.group[key] = setting
+            # add to backup group
+            if key not in self._group_b:
+                self._group_b[key] = setting
 
     def get_setting(self, key):
         return self.group[key]
 
-    def share_settings(self, other, keylist=None):
-        if keylist is None:
-            keylist = self.group.keys()
-        for key in keylist:
-            other.group[key] = self.group[key]
+    def keys(self):
+        return self.group.keys()
 
-    def copy_settings(self, other, keylist=None):
+    def _mk_add_callback(self, key, setting):
+        setting._add_callback = setting.add_callback
+
+        def _add_callback(*args, **kwargs):
+            self.group[key]._add_callback(*args, **kwargs)
+            self._group_b[key]._add_callback(*args, **kwargs)
+
+        setting.add_callback = _add_callback
+
+    def share_settings(self, other, keylist=None, include_callbacks=True,
+                       callback=True):
+        """Sharing settings with `other`
+        """
         if keylist is None:
             keylist = self.group.keys()
-        d = {}
+        if include_callbacks:
+            for key in keylist:
+                oset, mset = other.group[key], self.group[key]
+                other.group[key] = mset
+                oset.merge_callbacks_to(mset)
+        if callback:
+            # make callbacks only after all items are set in the group
+            # TODO: only make callbacks for values that changed?
+            for key in keylist:
+                other.group[key].make_callback('set', other.group[key].value)
+
+    def unshare_settings(self, keylist=None, callback=True):
+        if keylist is None:
+            keylist = self._group_b.keys()
         for key in keylist:
-            d[key] = self.get(key)
-        other.setDict(d)
+            # copy value from current setting, while restoring old setting
+            if self.group[key] is not self._group_b[key]:
+                value = self.group[key].value
+                self.group[key] = self._group_b[key]
+                self.group[key].set(value, callback=False)
+        if callback:
+            # make callbacks only after all items are set in the group
+            # TODO: only make callbacks for values that changed?
+            for key in keylist:
+                self.group[key].make_callback('set', self.group[key].value)
+
+    def copy_settings(self, other, keylist=None, include_callbacks=False,
+                      callback=True):
+        if keylist is None:
+            keylist = self.group.keys()
+        d = {key: self.get(key) for key in keylist}
+
+        if include_callbacks:
+            for key in keylist:
+                oset, mset = other.group[key], self.group[key]
+                mset.merge_callbacks_to(oset)
+
+        other.set_dict(d, callback=callback)
 
     def setdefault(self, key, value):
         if key in self.group:
@@ -118,9 +171,11 @@ class SettingGroup(object):
         if len(args) == 2:
             return self.setdefault(key, args[1])
 
-    def get_dict(self):
+    def get_dict(self, keylist=None):
+        if keylist is None:
+            keylist = self.group.keys()
         return dict([[name, self.group[name].value]
-                     for name in self.group.keys()])
+                     for name in keylist])
 
     def set_dict(self, d, callback=True):
         for key, value in d.items():
@@ -150,6 +205,13 @@ class SettingGroup(object):
     def __contains__(self, key):
         return key in self.group
 
+    def clear_callbacks(self, keylist=None):
+        if keylist is None:
+            keylist = self.group.keys()
+
+        for key in keylist:
+            self.group[key].clear_callback('set')
+
     def load(self, onError='raise', buf=None):
         try:
             d = {}
@@ -166,7 +228,15 @@ class SettingGroup(object):
                     try:
                         i = line.index('=')
                         key = line[:i].strip()
-                        val = ast.literal_eval(line[i + 1:].strip())
+                        val_s = line[i + 1:].strip()
+                        match = regex_array.match(val_s)
+                        if match:
+                            data, _x, dtype = match.groups()
+                            # special case for parsing numpy arrays
+                            val = np.asarray(ast.literal_eval(data),
+                                             dtype=dtype)
+                        else:
+                            val = ast.literal_eval(val_s)
                         d[key] = val
                     except Exception as e:
                         if self.logger is not None:
@@ -200,21 +270,34 @@ class SettingGroup(object):
             pass
         return d
 
-    def save(self):
-        d = self.get_dict()
+    def _save(self, out_f, keys, d):
+        for key in keys:
+            val_s = repr(d[key])
+            match = regex_array.match(val_s)
+            if match:
+                # special processing for numpy arrays
+                val_s = val_s.replace('\n', ' ')
+            out_f.write("%s = %s\n" % (key, val_s))
+
+    def save(self, keylist=None, output=None):
+        d = self.get_dict(keylist=keylist)
         # sanitize data -- hard to parse NaN or Inf
         self._check(d)
         try:
             # sort keys for easy reading/editing
             keys = list(d.keys())
             keys.sort()
-            with open(self.preffile, 'w') as out_f:
-                for key in keys:
-                    out_f.write("%s = %s\n" % (key, repr(d[key])))
+
+            if output is None:
+                output = self.preffile
+            if isinstance(output, str):
+                with open(output, 'w') as out_f:
+                    self._save(out_f, keys, d)
+            else:
+                self._save(output, keys, d)
 
         except Exception as e:
-            errmsg = "Error opening settings file (%s): %s" % (
-                self.preffile, str(e))
+            errmsg = "Error writing settings output: %s" % (str(e))
             self.logger.error(errmsg)
 
     ########################################################

@@ -107,14 +107,13 @@ class ImageViewTk(ImageView):
 
         if have_pil_imagetk:
             # Get surface as a numpy array
-            arr8 = self.get_image_as_array()
+            arr8 = self.renderer.get_surface_as_array(order='RGB')
             image = PILimage.fromarray(arr8)
             photo = PhotoImage(image)
 
         else:
             # fallback to a little slower method--make a PNG image
-            buf = self.get_rgb_image_as_buffer(format='png')
-            image = buf.getvalue()
+            image = self.get_surface_as_rgb_format_bytes(format='png')
             photo = PhotoImage(data=image)
 
         # hang on to a reference otherwise it gets gc'd
@@ -147,6 +146,9 @@ class ImageViewTk(ImageView):
         self.set_onscreen_message(text, redraw=redraw)
         if delay is not None:
             self.msgtask.start(delay)
+
+    def take_focus(self):
+        self.tkcanvas.focus_set()
 
 
 class ImageViewEvent(ImageViewTk):

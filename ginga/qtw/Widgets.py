@@ -434,7 +434,9 @@ class SpinBox(WidgetBase):
         self.widget.setValue(val)
 
     def set_decimals(self, num):
-        self.widget.setDecimals(num)
+        if hasattr(self.widget, 'setDecimals'):
+            # only for QDoubleSpinBox
+            self.widget.setDecimals(num)
 
     def set_limits(self, minval, maxval, incr_value=1):
         adj = self.widget
@@ -640,6 +642,22 @@ class StatusBar(WidgetBase):
         self.widget.showMessage(msg_str, int(duration * 1000))
 
 
+class TreeWidgetItem(QtGui.QTreeWidgetItem):
+    """A hack to subclass QTreeWidgetItem to enable sorting by numbers
+    in a field.
+    """
+    def __init__(self, *args, **kwargs):
+        QtGui.QTreeWidgetItem.__init__(self, *args, **kwargs)
+
+    def __lt__(self, otherItem):
+        column = self.treeWidget().sortColumn()
+        try:
+            return float(self.text(column)) < float(otherItem.text(column))
+
+        except ValueError:
+            return self.text(column) < otherItem.text(column)
+
+
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False,
                  selection='single', use_alt_row_color=False,
@@ -736,7 +754,7 @@ class TreeView(WidgetBase):
 
             except KeyError:
                 # new item
-                item = QtGui.QTreeWidgetItem(parent_item, values)
+                item = TreeWidgetItem(parent_item, values)
                 if level == 1:
                     parent_item.addTopLevelItem(item)
                 else:
@@ -762,7 +780,7 @@ class TreeView(WidgetBase):
 
             except KeyError:
                 # new node
-                item = QtGui.QTreeWidgetItem(parent_item, [str(key)])
+                item = TreeWidgetItem(parent_item, [str(key)])
                 if level == 1:
                     parent_item.addTopLevelItem(item)
                 else:
@@ -1231,7 +1249,8 @@ class MDIWidget(ContainerBase):
         w = QtGui.QMdiArea()
         w.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         w.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        w.subWindowActivated.connect(self._cb_redirect)
+        # See note below in add_widget()
+        #w.subWindowActivated.connect(self._cb_redirect)
 
         # w.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
         #                                   QtGui.QSizePolicy.Expanding))
@@ -1276,7 +1295,10 @@ class MDIWidget(ContainerBase):
         if subwin is not None:
             nchild = subwin.widget()
             child = self._native_to_child(nchild)
-            self.cur_index = self.children.index(child)
+            try:
+                self.cur_index = self.children.index(child)
+            except Exception:
+                self.cur_index = -1
             self.make_callback('page-switch', child)
 
     def _window_resized(self, event, subwin, widget):
@@ -1308,6 +1330,18 @@ class MDIWidget(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         subwin = QtGui.QMdiSubWindow(self.widget)
+        # NOTE: we fire the page-switch callback by intercepting the
+        # focus event on the subwindow, rather than off of the
+        # subWindowActivated signal because the latter fires if
+        # the widget accepts focus when the mouse enters the window,
+        # whereas this approach one actually has to click in the window
+        # or title bar.
+
+        def _focus_cb(event):
+            if event.gotFocus():
+                self._cb_redirect(subwin)
+
+        subwin.focusInEvent = _focus_cb
         subwin.setWidget(child_w)
         # attach title to child
         child.extdata.tab_title = title
@@ -1547,6 +1581,10 @@ class Toolbar(ContainerBase):
     def add_widget(self, child):
         self.add_ref(child)
         w = child.get_widget()
+        # in toolbars, generally don't want widgets to take up any more
+        # space than necessary
+        w.setSizePolicy(QtGui.QSizePolicy.Fixed,
+                        QtGui.QSizePolicy.Fixed)
         self.widget.addWidget(w)
         self.make_callback('widget-added', child)
 

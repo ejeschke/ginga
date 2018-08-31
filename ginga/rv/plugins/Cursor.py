@@ -51,6 +51,7 @@ class Cursor(GingaPlugin.GlobalPlugin):
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
         fv.add_callback('field-info', self.field_info_cb)
+        fv.set_callback('channel-change', self.focus_cb)
 
         # TODO: let this become OUR setting
         self.share_readout = self.fv.settings.get('share_readout', True)
@@ -83,12 +84,10 @@ class Cursor(GingaPlugin.GlobalPlugin):
 
             channel = self.fv.get_channel_info()
             if channel is not None:
-                self.focus_cb(channel.fitsimage, True)
+                self.focus_cb(self.fv, channel)
 
     def add_channel_cb(self, viewer, channel):
         fi = channel.fitsimage
-
-        fi.add_callback('focus', self.focus_cb)
 
         if not self.share_readout:
             readout = self._build_readout()
@@ -135,9 +134,18 @@ class Cursor(GingaPlugin.GlobalPlugin):
         readout.maxv = max(len(str(minval)), len(str(maxval)))
         return True
 
+    def force_update(self, channel):
+        viewer = channel.fitsimage
+        data_x, data_y = viewer.get_last_data_xy()
+        self.fv.showxy(viewer, data_x, data_y)
+
     def redo(self, channel, image):
         readout = channel.extdata.readout
         self.readout_config(channel.fitsimage, image, readout)
+
+        # force an update on an image change, because the WCS
+        # may be different, even if the data coords are the same
+        self.force_update(channel)
 
     def change_readout(self, channel, fitsimage):
         if (self.share_readout) and (self.readout is not None):
@@ -154,15 +162,13 @@ class Cursor(GingaPlugin.GlobalPlugin):
             # Get this channel's readout (if any)
             self.readout = channel.extdata.get('readout', None)
 
-    def focus_cb(self, fitsimage, tf):
+    def focus_cb(self, viewer, channel):
+        if channel is not None:
+            self.change_readout(channel, channel.fitsimage)
 
-        if (not tf) or fitsimage is None:
-            return
-
-        chname = self.fv.get_channel_name(fitsimage)
-        channel = self.fv.get_channel(chname)
-
-        self.change_readout(channel, fitsimage)
+            # force an update on a channel change, because the WCS
+            # may be different, even if the data coords are the same
+            self.force_update(channel)
 
     def field_info_cb(self, viewer, channel, info):
         readout = self.readout

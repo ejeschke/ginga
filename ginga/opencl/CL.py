@@ -91,7 +91,7 @@ class CL(object):
         cl.enqueue_read_buffer(self.queue, dst_buf, out_np).wait()
         #cl.enqueue_copy(self.queue, out_np, dst_buf).wait()
 
-        res = out_np.astype(dtype)
+        res = out_np.astype(dtype, copy=False)
         if out is not None:
             out[...] = res
         else:
@@ -139,7 +139,7 @@ class CL(object):
         cl.enqueue_read_buffer(self.queue, dst_buf, out_np).wait()
         #cl.enqueue_copy(self.queue, out_np, dst_buf).wait()
 
-        res = out_np.astype(dtype)
+        res = out_np.astype(dtype, copy=False)
         if out is not None:
             out[...] = res
         else:
@@ -318,7 +318,7 @@ class CL(object):
 
         cl.enqueue_read_buffer(self.queue, dst_buf, out_np).wait()
 
-        res = out_np.astype(dtype)
+        res = out_np.astype(dtype, copy=False)
         if out is not None:
             out[...] = res
         else:
