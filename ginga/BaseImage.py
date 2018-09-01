@@ -192,6 +192,7 @@ class BaseImage(ViewerObjectBase):
         self._data = np.zeros((1, 1))
 
     def _slice(self, view):
+        view = tuple(view)
         return self._get_data()[view]
 
     def get_slice(self, c):

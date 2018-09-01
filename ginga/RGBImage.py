@@ -42,6 +42,10 @@ class RGBImage(BaseImage):
         # in result by io_rgb
         data_np = self.io.load_file(filepath, kwds)
 
+        self.load_data(data_np, metadata=metadata)
+
+    def load_data(self, data_np, metadata=None):
+        self.clear_metadata()
         self.set_data(data_np, metadata=metadata)
 
         if not (self.name is None):
