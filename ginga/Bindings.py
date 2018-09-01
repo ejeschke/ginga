@@ -1243,7 +1243,7 @@ class ImageViewBindings(object):
             msg = self.settings.get('msg_zoom', msg)
             keylist = self.settings.get('kp_zoom')
             try:
-                zoomval = (keylist.index(event.key) + 1)
+                zoomval = (keylist.index(event.key))
             except IndexError:
                 return False
             viewer.zoom_to(zoomval)
@@ -1257,7 +1257,7 @@ class ImageViewBindings(object):
             msg = self.settings.get('msg_zoom', msg)
             keylist = self.settings.get('kp_zoom_inv')
             try:
-                zoomval = - (keylist.index(event.key) + 1)
+                zoomval = - (keylist.index(event.key))
             except IndexError:
                 return False
             viewer.zoom_to(zoomval)

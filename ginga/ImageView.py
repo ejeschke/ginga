@@ -19,7 +19,7 @@ import numpy as np
 
 from ginga.misc import Callback, Settings
 from ginga import BaseImage, AstroImage
-from ginga import RGBMap, AutoCuts, ColorDist
+from ginga import RGBMap, AutoCuts, ColorDist, zoom
 from ginga import colors, trcalc
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
@@ -129,7 +129,9 @@ class ImageViewBase(Callback.Callbacks):
                              zoom_rate=math.sqrt(2.0))
         for name in ('zoom_rate', 'zoom_algorithm',
                      'scale_x_base', 'scale_y_base'):
-            self.t_.get_setting(name).add_callback('set', self.zoomalg_change_cb)
+            self.t_.get_setting(name).add_callback('set', self.zoomsetting_change_cb)
+        self.zoom = zoom.get_zoom_alg(self.t_['zoom_algorithm'])(self)
+
         self.t_.get_setting('interpolation').add_callback(
             'set', self.interpolation_change_cb)
 
@@ -2041,21 +2043,7 @@ class ImageViewBase(Callback.Callbacks):
 
     def scale_cb(self, setting, value):
         """Handle callback related to image scaling."""
-        scale_x, scale_y = value
-
-        if self.t_['zoom_algorithm'] == 'rate':
-            zoom_x = math.log(scale_x / self.t_['scale_x_base'],
-                              self.t_['zoom_rate'])
-            zoom_y = math.log(scale_y / self.t_['scale_y_base'],
-                              self.t_['zoom_rate'])
-            # TODO: avg, max?
-            zoomlevel = min(zoom_x, zoom_y)
-        else:
-            maxscale = max(scale_x, scale_y)
-            zoomlevel = maxscale
-            if zoomlevel < 1.0:
-                zoomlevel = - (1.0 / zoomlevel)
-
+        zoomlevel = self.zoom.calc_level(value)
         self.t_.set(zoomlevel=zoomlevel)
 
         self.redraw(whence=0)
@@ -2162,20 +2150,7 @@ class ImageViewBase(Callback.Callbacks):
             Do not reset ``autozoom`` setting.
 
         """
-        if self.t_['zoom_algorithm'] == 'rate':
-            scale_x = self.t_['scale_x_base'] * (
-                self.t_['zoom_rate'] ** zoomlevel)
-            scale_y = self.t_['scale_y_base'] * (
-                self.t_['zoom_rate'] ** zoomlevel)
-        else:
-            if zoomlevel >= 1.0:
-                scalefactor = zoomlevel
-            elif zoomlevel < -1.0:
-                scalefactor = 1.0 / float(abs(zoomlevel))
-            else:
-                scalefactor = 1.0
-            scale_x = scale_y = scalefactor
-
+        scale_x, scale_y = self.zoom.calc_scale(zoomlevel)
         ## self.logger.debug("scale_x=%f scale_y=%f zoom=%f" % (
         ##                     scale_x, scale_y, zoomlevel))
         self._scale_to(scale_x, scale_y, no_reset=no_reset)
@@ -2185,30 +2160,16 @@ class ImageViewBase(Callback.Callbacks):
         Also see :meth:`zoom_to`.
 
         """
-        if self.t_['zoom_algorithm'] == 'rate':
-            self.zoom_to(self.t_['zoomlevel'] + 1)
-        else:
-            zl = int(self.t_['zoomlevel'])
-            if (zl >= 1) or (zl <= -3):
-                self.zoom_to(zl + 1)
-            else:
-                self.zoom_to(1)
+        level = self.zoom.calc_level(self.t_['scale'])
+        self.zoom_to(level + 1)
 
     def zoom_out(self):
         """Zoom out a level.
         Also see :meth:`zoom_to`.
 
         """
-        if self.t_['zoom_algorithm'] == 'rate':
-            self.zoom_to(self.t_['zoomlevel'] - 1)
-        else:
-            zl = int(self.t_['zoomlevel'])
-            if zl == 1:
-                self.zoom_to(-2)
-            elif (zl >= 2) or (zl <= -2):
-                self.zoom_to(zl - 1)
-            else:
-                self.zoom_to(1)
+        level = self.zoom.calc_level(self.t_['scale'])
+        self.zoom_to(level - 1)
 
     def zoom_fit(self, no_reset=False):
         """Zoom to fit display window.
@@ -2253,22 +2214,15 @@ class ImageViewBase(Callback.Callbacks):
                 return
 
             # Calculate optimum zoom level to still fit the window size
-            if self.t_['zoom_algorithm'] == 'rate':
-                scale_x = (float(wwidth) /
-                           (float(width) * self.t_['scale_x_base']))
-                scale_y = (float(wheight) /
-                           (float(height) * self.t_['scale_y_base']))
+            scale_x = (float(wwidth) /
+                       (float(width) * self.t_['scale_x_base']))
+            scale_y = (float(wheight) /
+                       (float(height) * self.t_['scale_y_base']))
 
-                scalefactor = min(scale_x, scale_y)
-                # account for t_[scale_x/y_base]
-                scale_x = scalefactor * self.t_['scale_x_base']
-                scale_y = scalefactor * self.t_['scale_y_base']
-            else:
-                scale_x = float(wwidth) / float(width)
-                scale_y = float(wheight) / float(height)
-
-                scalefactor = min(scale_x, scale_y)
-                scale_x = scale_y = scalefactor
+            scalefactor = min(scale_x, scale_y)
+            # account for t_[scale_x/y_base]
+            scale_x = scalefactor * self.t_['scale_x_base']
+            scale_y = scalefactor * self.t_['scale_y_base']
 
             self._scale_to(scale_x, scale_y, no_reset=no_reset)
 
@@ -2284,7 +2238,7 @@ class ImageViewBase(Callback.Callbacks):
             Zoom level.
 
         """
-        return self.t_['zoomlevel']
+        return self.zoom.calc_level(self.t_['scale'])
 
     def get_zoomrate(self):
         """Get zoom rate.
@@ -2313,29 +2267,34 @@ class ImageViewBase(Callback.Callbacks):
 
         Returns
         -------
-        name : {'rate', 'step'}
-            Zoom algorithm.
+        name : str
+            Name of the zoom algorithm in use.
 
         """
-        return self.t_['zoom_algorithm']
+        return str(self.zoom)
 
     def set_zoom_algorithm(self, name):
         """Set zoom algorithm.
 
         Parameters
         ----------
-        name : {'rate', 'step'}
-            Zoom algorithm.
+        name : str
+            Name of a zoom algorithm to use.
 
         """
         name = name.lower()
-        assert name in ('step', 'rate'), \
-            ImageViewError("Alg '%s' must be one of: step, rate" % name)
+        alg_names = list(zoom.get_zoom_alg_names())
+        if name not in alg_names:
+            raise ImageViewError("Alg '%s' must be one of: %s" % (
+                name, ', '.join(alg_names)))
         self.t_.set(zoom_algorithm=name)
 
-    def zoomalg_change_cb(self, setting, value):
+    def zoomsetting_change_cb(self, setting, value):
         """Handle callback related to changes in zoom."""
-        self.zoom_to(self.t_['zoomlevel'])
+        alg_name = self.t_['zoom_algorithm']
+        self.zoom = zoom.get_zoom_alg(alg_name)(self)
+
+        self.zoom_to(self.get_zoom())
 
     def interpolation_change_cb(self, setting, value):
         """Handle callback related to changes in interpolation."""
