@@ -164,7 +164,6 @@ ms_none = ['nobtn']
 ms_cursor = ['left']
 ms_wheel = []
 ms_draw = ['draw+left', 'win+left', 'right']
-ms_edit = ['edit+left']
 
 # mouse commands initiated by a preceeding keystroke (see above)
 ms_rotate = ['rotate+left']

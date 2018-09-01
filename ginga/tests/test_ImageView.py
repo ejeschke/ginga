@@ -1,6 +1,6 @@
 import logging
 
-import numpy
+import numpy as np
 
 from ginga import AstroImage
 from ginga.mockw.ImageViewCanvasMock import ImageViewCanvas
@@ -11,7 +11,7 @@ class TestImageView(object):
     def setup_class(self):
         self.logger = logging.getLogger("TestImageView")
         self.viewer = ImageViewCanvas(logger=self.logger)
-        self.data = numpy.identity(2000)
+        self.data = np.identity(2000)
         self.image = AstroImage.AstroImage(logger=self.logger)
         self.image.set_data(self.data)
 
@@ -19,8 +19,8 @@ class TestImageView(object):
         viewer = self.viewer
         viewer.set_window_size(900, 1100)
         viewer.set_image(self.image)
-        zoom = 1.0
-        scale_x = scale_y = 1.0 / abs(zoom)
+        zoom = 0.0
+        scale_x = scale_y = 1.0
         viewer.scale_to(scale_x, scale_y)
         zoomlevel = viewer.get_zoom()
         assert zoomlevel == zoom
