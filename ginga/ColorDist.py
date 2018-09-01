@@ -11,7 +11,7 @@ These algorithms are modeled after the ones described for ds9 here:
 
 """
 import math
-import numpy
+import numpy as np
 
 
 class ColorDistError(Exception):
@@ -71,10 +71,10 @@ class LinearDist(ColorDistBase):
         super(LinearDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
-        base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint, copy=False)
+        self.hash = l.astype(np.uint, copy=False)
 
         self.check_hash()
 
@@ -97,12 +97,12 @@ class LogDist(ColorDistBase):
         super(LogDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
-        base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        base = numpy.log(self.exp * base + 1.0) / numpy.log(self.exp)
+        base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        base = np.log(self.exp * base + 1.0) / np.log(self.exp)
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint, copy=False)
+        self.hash = l.astype(np.uint, copy=False)
 
         self.check_hash()
 
@@ -126,12 +126,12 @@ class PowerDist(ColorDistBase):
         super(PowerDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
-        base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         base = (self.exp ** base - 1.0) / self.exp
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint, copy=False)
+        self.hash = l.astype(np.uint, copy=False)
 
         self.check_hash()
 
@@ -154,12 +154,12 @@ class SqrtDist(ColorDistBase):
         super(SqrtDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
-        base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        base = numpy.sqrt(base)
+        base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        base = np.sqrt(base)
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint, copy=False)
+        self.hash = l.astype(np.uint, copy=False)
 
         self.check_hash()
 
@@ -182,11 +182,11 @@ class SquaredDist(ColorDistBase):
         super(SquaredDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
-        base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         base = (base ** 2.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint, copy=False)
+        self.hash = l.astype(np.uint, copy=False)
 
         self.check_hash()
 
@@ -212,12 +212,12 @@ class AsinhDist(ColorDistBase):
         super(AsinhDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
-        base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        base = numpy.arcsinh(self.factor * base) / self.nonlinearity
+        base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        base = np.arcsinh(self.factor * base) / self.nonlinearity
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint, copy=False)
+        self.hash = l.astype(np.uint, copy=False)
 
         self.check_hash()
 
@@ -244,12 +244,12 @@ class SinhDist(ColorDistBase):
         super(SinhDist, self).__init__(hashsize, colorlen=colorlen)
 
     def calc_hash(self):
-        base = numpy.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        base = numpy.sinh(self.factor * base) / self.nonlinearity
+        base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        base = np.sinh(self.factor * base) / self.nonlinearity
         base = base.clip(0.0, 1.0)
         # normalize to color range
         l = base * (self.colorlen - 1)
-        self.hash = l.astype(numpy.uint, copy=False)
+        self.hash = l.astype(np.uint, copy=False)
 
         self.check_hash()
 
@@ -288,14 +288,14 @@ class HistogramEqualizationDist(ColorDistBase):
         idx = idx.clip(0, self.hashsize - 1)
 
         #get image histogram
-        hist, bins = numpy.histogram(idx.flatten(),
-                                     self.hashsize, density=False)
+        hist, bins = np.histogram(idx.flatten(),
+                                  self.hashsize, density=False)
         cdf = hist.cumsum()
 
         # normalize to color range
         l = (cdf - cdf.min()) * (self.colorlen - 1) / (
             cdf.max() - cdf.min())
-        self.hash = l.astype(numpy.uint, copy=False)
+        self.hash = l.astype(np.uint, copy=False)
         self.check_hash()
 
         arr = self.hash[idx]
