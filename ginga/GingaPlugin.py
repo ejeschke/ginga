@@ -24,6 +24,15 @@ class BasePlugin(object):
         # Holds GUI widgets
         self.w = Bunch.Bunch()
 
+    # def build_gui(self, container):
+    #     """
+    #     If a plugin defines this method, it will be called with a
+    #     container object in which to build its GUI. It should finish
+    #     by packing into this container.  This will be called every
+    #     time the plugin is activated.
+    #     """
+    #     pass
+
     def start(self):
         """
         This method is called to start the plugin.
@@ -66,14 +75,6 @@ class GlobalPlugin(BasePlugin):
     def __init__(self, fv):
         super(GlobalPlugin, self).__init__(fv)
 
-    def initialize(self, container):
-        """
-        This method will be called with a container widget if the global
-        plugin was requested to be loaded into a workspace.  The plugin should
-        construct its GUI and pack it into the container.
-        """
-        pass
-
     def redo(self, channel, image):
         """This method is called when an image is set in a channel."""
         pass
@@ -96,21 +97,10 @@ class LocalPlugin(BasePlugin):
             # TO BE DEPRECATED
             self.chinfo = self.channel
 
-            self.fv.add_callback('delete-channel', self._delete_channel_cb)
-
     def modes_off(self):
         """Turn off any mode user may be in."""
         bm = self.fitsimage.get_bindmap()
         bm.reset_mode(self.fitsimage)
-
-    # def build_gui(self, container):
-    #     """
-    #     If a plugin defines this method, it will be called with a
-    #     container object in which to build its GUI. It should finish
-    #     by packing into this container.  This will be called every
-    #     time the local plugin is activated.
-    #     """
-    #     pass
 
     def pause(self):
         """
@@ -141,10 +131,5 @@ class LocalPlugin(BasePlugin):
         it is doing.
         """
         pass
-
-    def _delete_channel_cb(self, fv, channel):
-        # stop ourself if our channel is deleted
-        if channel is self.channel:
-            self.stop()
 
 # END

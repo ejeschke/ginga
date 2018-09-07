@@ -1094,7 +1094,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         for key in opmon.get_active():
             obj = opmon.get_plugin(key)
             try:
-                self.gui_do(obj.close)
+                self.gui_call(obj.close)
 
             except Exception as e:
                 self.logger.error(

@@ -14,6 +14,8 @@ Ver 2.7.2.dev
   crash the Qt backend
 - Fixed a bug that caused windows to disappear when changing workspace
   to MDI mode under Gtk3 backend
+- Fixed a bug where local plugins were not properly closed when a
+  channel is deleted
 
 Ver 2.7.1 (2018-07-09)
 ======================
