@@ -13,4 +13,5 @@ Ginga as a visualization solution for their own software.
    canvas
    developers
    viewer
+   jupnotebooks
    internals
