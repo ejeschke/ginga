@@ -89,10 +89,10 @@ Documentation
 
    WhatsNew
    quickref
-   FAQ
    manual/index
    dev_manual/index
    optimizing
+   FAQ
    ref_api
 
 Some training videos are available in the
