@@ -95,10 +95,10 @@ When zoomed in, panning is enabled. Panning takes two forms:
    as dragging the image canvas in the direction you want to move it
    under the window portal. To utilize a proportional pan, Ctrl-drag the
    canvas, or press Space followed by "q" to go into pan mode, and then
-   drag the canvas. 
+   drag the canvas.
 
-2) *Free panning* allows scrolling around the entire image by mapping 
-the entire image boundaries to the window boundaries.  For example, 
+2) *Free panning* allows scrolling around the entire image by mapping
+the entire image boundaries to the window boundaries.  For example,
 moving the mouse to the upper right-hand corner of the window will pan to
 the upper right hand corner of the image, etc.  You can think of this
 mode as moving the window portal around over the canvas.
@@ -173,6 +173,9 @@ There are several ways to manually set the cut levels:
   new value in the corresponding box and press Enter or click the "Cut
   Levels" button below. Cut values can also be set from the "Histogram"
   plugin.
+
+
+.. _autoset_cut_levels:
 
 Automatically setting cut levels
 --------------------------------
@@ -273,7 +276,7 @@ Color Maps
 To change color maps from the keyboard shortcuts, press Space followed
 by "y" to go into "cmap" mode. While in "cmap" mode you can change color
 maps by scrolling the mouse, pressing the up/down keys, or the "b" and
-"n" keys. 
+"n" keys.
 
 While in "cmap" mode, pressing "I" (uppercase) will invert the current
 color map.  Press Esc to exit cmap mode.
@@ -303,7 +306,7 @@ The image can also be rotated in arbitrary amounts.
 An interactive rotate operation can be initiated by pressing Space
 follwed by "r" in the image and then dragging the mouse horizontally
 left or right to set the angle.  Press "R" (Shift+R) to restore the
-angle to 0 (unrotated). 
+angle to 0 (unrotated).
 
 .. note::
 
