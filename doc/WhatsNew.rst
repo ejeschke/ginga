@@ -10,6 +10,8 @@ Ver 2.7.2.dev
 - enhancements to the Ruler plugin for reference viewer
 - supports quick loading from astropy NDData (or subclassed) objects
 - Support for scaling fonts on high-dpi displays
+- Fixed a bug where adjusting autocuts parameters in Preferences would
+  crash the Qt backend
 
 Ver 2.7.1 (2018-07-09)
 ======================

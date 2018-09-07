@@ -373,8 +373,12 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.t_.get_setting(name).add_callback(
                 'set', self.set_transform_ext_cb)
 
-        for name in ('autocut_method', 'autocut_params'):
-            self.t_.get_setting(name).add_callback('set', self.set_autocut_method_ext_cb)
+        # TODO: assigning a callback for "autocut_method" results in a bad
+        # feedback loop, at least under Qt
+        ## self.t_.get_setting('autocut_method').add_callback('set',
+        ##                                                    self.set_autocut_method_ext_cb)
+        self.t_.get_setting('autocut_params').add_callback('set',
+                                                           self.set_autocut_params_ext_cb)
 
         self.t_.setdefault('wcs_coords', 'icrs')
         self.t_.setdefault('wcs_display', 'sexagesimal')
@@ -598,8 +602,8 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Stretch Factor:', 'label', 'Stretch Factor', 'spinfloat'),
                     ('Scale X:', 'label', 'Scale X', 'entryset'),
                     ('Scale Y:', 'label', 'Scale Y', 'entryset'),
-                    ('Scale Min:', 'label', 'Scale Min', 'spinfloat'),
-                    ('Scale Max:', 'label', 'Scale Max', 'spinfloat'),
+                    ('Scale Min:', 'label', 'Scale Min', 'entryset'),
+                    ('Scale Max:', 'label', 'Scale Max', 'entryset'),
                     ('Interpolation:', 'label', 'Interpolation', 'combobox'),
                     ('Zoom Defaults', 'button'))
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -652,16 +656,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.scale_y.add_callback('activated', self.set_scale_cb)
 
         scale_min, scale_max = self.t_['scale_min'], self.t_['scale_max']
-        b.scale_min.set_limits(0.00001, 1.0, incr_value=1.0)
-        b.scale_min.set_value(scale_min)
-        b.scale_min.set_decimals(8)
-        b.scale_min.add_callback('value-changed', self.set_scale_limit_cb)
+        b.scale_min.set_text(str(scale_min))
+        b.scale_min.add_callback('activated', self.set_scale_limit_cb)
         b.scale_min.set_tooltip("Set the minimum allowed scale in any axis")
 
-        b.scale_max.set_limits(1.0, 10000.0, incr_value=1.0)
-        b.scale_max.set_value(scale_max)
-        b.scale_max.set_decimals(8)
-        b.scale_max.add_callback('value-changed', self.set_scale_limit_cb)
+        b.scale_max.set_text(str(scale_max))
+        b.scale_max.add_callback('activated', self.set_scale_limit_cb)
         b.scale_min.set_tooltip("Set the maximum allowed scale in any axis")
 
         index = 0
@@ -1088,7 +1088,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.autocenter_options.index(option)
         self.w.center_new.set_index(index)
 
-    def set_scale_cb(self, w):
+    def set_scale_cb(self, w, val):
         scale_x = float(self.w.scale_x.get_text())
         scale_y = float(self.w.scale_y.get_text())
         self.fitsimage.scale_to(scale_x, scale_y)
@@ -1100,9 +1100,17 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.scale_x.set_text(str(scale_x))
         self.w.scale_y.set_text(str(scale_y))
 
-    def set_scale_limit_cb(self, w, val):
-        scale_min = float(self.w.scale_min.get_value())
-        scale_max = float(self.w.scale_max.get_value())
+    def set_scale_limit_cb(self, *args):
+        scale_min = self.w.scale_min.get_text().lower()
+        if scale_min == 'none':
+            scale_min = None
+        else:
+            scale_min = float(scale_min)
+        scale_max = self.w.scale_max.get_text().lower()
+        if scale_max == 'none':
+            scale_max = None
+        else:
+            scale_max = float(scale_max)
         self.t_.set(scale_min=scale_min, scale_max=scale_max)
 
     def set_autozoom_cb(self, w, idx):
@@ -1151,15 +1159,16 @@ class Preferences(GingaPlugin.LocalPlugin):
             return
 
         autocut_method = self.t_['autocut_method']
-        # NOTE: use gui_do?
-        self.config_autocut_params(autocut_method)
+        self.fv.gui_do(self.config_autocut_params, autocut_method)
+
+    def set_autocut_params_ext_cb(self, setting, value):
+        if not self.gui_up:
+            return
 
         params = self.t_['autocut_params']
-        # NOTE: use gui_do?
-        # TODO: set the params from this tuple
         params_d = dict(params)   # noqa
-        #self.ac_params.params.update(params_d)
-        #self.ac_params.params_to_widgets()
+        self.ac_params.update_params(params_d)
+        #self.fv.gui_do(self.ac_params.params_to_widgets)
 
     def set_autocut_method_cb(self, w, idx):
         method = self.autocut_methods[idx]
@@ -1452,10 +1461,10 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.scale_x.set_text(str(scale_x))
         self.w.scale_y.set_text(str(scale_y))
 
-        scale_min = prefs.get('scale_min', 0.00001)
-        self.w.scale_min.set_value(scale_min)
-        scale_max = prefs.get('scale_max', 10000.0)
-        self.w.scale_max.set_value(scale_max)
+        scale_min = prefs.get('scale_min', None)
+        self.w.scale_min.set_text(str(scale_min))
+        scale_max = prefs.get('scale_max', None)
+        self.w.scale_max.set_text(str(scale_max))
 
         # panning settings
         self._update_pan_coords()

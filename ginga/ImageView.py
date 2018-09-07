@@ -136,7 +136,7 @@ class ImageViewBase(Callback.Callbacks):
             'set', self.interpolation_change_cb)
 
         # max/min scaling
-        self.t_.add_defaults(scale_max=10000.0, scale_min=0.00001)
+        self.t_.add_defaults(scale_max=None, scale_min=None)
 
         # autozoom options
         self.autozoom_options = ('on', 'override', 'once', 'off')
@@ -604,56 +604,64 @@ class ImageViewBase(Callback.Callbacks):
         See :meth:`ginga.RGBMap.RGBMapper.set_cmap`.
 
         """
-        self.rgbmap.set_cmap(cm)
+        rgbmap = self.get_rgbmap()
+        rgbmap.set_cmap(cm)
 
     def invert_cmap(self):
         """Invert the color map.
         See :meth:`ginga.RGBMap.RGBMapper.invert_cmap`.
 
         """
-        self.rgbmap.invert_cmap()
+        rgbmap = self.get_rgbmap()
+        rgbmap.invert_cmap()
 
     def set_imap(self, im):
         """Set intensity map.
         See :meth:`ginga.RGBMap.RGBMapper.set_imap`.
 
         """
-        self.rgbmap.set_imap(im)
+        rgbmap = self.get_rgbmap()
+        rgbmap.set_imap(im)
 
     def set_calg(self, dist):
         """Set color distribution algorithm.
         See :meth:`ginga.RGBMap.RGBMapper.set_dist`.
 
         """
-        self.rgbmap.set_dist(dist)
+        rgbmap = self.get_rgbmap()
+        rgbmap.set_dist(dist)
 
     def shift_cmap(self, pct):
         """Shift color map.
         See :meth:`ginga.RGBMap.RGBMapper.shift`.
 
         """
-        self.rgbmap.shift(pct)
+        rgbmap = self.get_rgbmap()
+        rgbmap.shift(pct)
 
     def scale_and_shift_cmap(self, scale_pct, shift_pct):
         """Stretch and/or shrink the color map.
         See :meth:`ginga.RGBMap.RGBMapper.scale_and_shift`.
 
         """
-        self.rgbmap.scale_and_shift(scale_pct, shift_pct)
+        rgbmap = self.get_rgbmap()
+        rgbmap.scale_and_shift(scale_pct, shift_pct)
 
     def restore_contrast(self):
         """Restores the color map from any stretch and/or shrinkage.
         See :meth:`ginga.RGBMap.RGBMapper.reset_sarr`.
 
         """
-        self.rgbmap.reset_sarr()
+        rgbmap = self.get_rgbmap()
+        rgbmap.reset_sarr()
 
     def restore_cmap(self):
         """Restores the color map from any rotation, stretch and/or shrinkage.
         See :meth:`ginga.RGBMap.RGBMapper.restore_cmap`.
 
         """
-        self.rgbmap.restore_cmap()
+        rgbmap = self.get_rgbmap()
+        rgbmap.restore_cmap()
 
     def rgbmap_cb(self, rgbmap):
         """Handle callback for when RGB map has changed."""
@@ -1349,7 +1357,8 @@ class ImageViewBase(Callback.Callbacks):
         depth = len(order)
 
         if dtype is None:
-            dtype = self.rgbmap.dtype
+            rgbmap = self.get_rgbmap()
+            dtype = rgbmap.dtype
 
         # Prepare data array for rendering
         data = self._rgbobj.get_array(order, dtype=dtype)
@@ -1494,7 +1503,8 @@ class ImageViewBase(Callback.Callbacks):
 
             # create backing image
             depth = len(order)
-            rgba = np.zeros((ht, wd, depth), dtype=self.rgbmap.dtype)
+            rgbmap = self.get_rgbmap()
+            rgba = np.zeros((ht, wd, depth), dtype=rgbmap.dtype)
 
             # fill backing image with the background color
             r, g, b = self.img_bg
@@ -1974,10 +1984,25 @@ class ImageViewBase(Callback.Callbacks):
                 "resulting scale (%f, %f) would result in pixel size "
                 "approaching window size" % (scale_x, scale_y))
 
+    def set_scale(self, scale, no_reset=False):
+        """Scale the image in a channel.
+        Also see :meth:`zoom_to`.
+
+        Parameters
+        ----------
+        scale : tuple of float
+            Scaling factors for the image in the X and Y axes.
+
+        no_reset : bool
+            Do not reset ``autozoom`` setting.
+
+        """
+        return self.scale_to(*scale[:2], no_reset=no_reset)
+
     def scale_to(self, scale_x, scale_y, no_reset=False):
         """Scale the image in a channel.
-        This only changes the relevant settings; The image is not modified.
-        Also see :meth:`zoom_to`.
+        This only changes the viewer settings; the image is not modified
+        in any way.  Also see :meth:`zoom_to`.
 
         Parameters
         ----------
@@ -2123,10 +2148,8 @@ class ImageViewBase(Callback.Callbacks):
         """
         scalefactor = self.get_scale_max()
         if scalefactor >= 1.0:
-            #text = '%dx' % (int(scalefactor))
             text = '%.2fx' % (scalefactor)
         else:
-            #text = '1/%dx' % (int(1.0/scalefactor))
             text = '1/%.2fx' % (1.0 / scalefactor)
         return text
 
@@ -2151,25 +2174,33 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         scale_x, scale_y = self.zoom.calc_scale(zoomlevel)
-        ## self.logger.debug("scale_x=%f scale_y=%f zoom=%f" % (
-        ##                     scale_x, scale_y, zoomlevel))
         self._scale_to(scale_x, scale_y, no_reset=no_reset)
 
-    def zoom_in(self):
+    def zoom_in(self, incr=1.0):
         """Zoom in a level.
         Also see :meth:`zoom_to`.
 
+        Parameters
+        ----------
+        incr : float (optional, defaults to 1)
+            The value to increase the zoom level
+
         """
         level = self.zoom.calc_level(self.t_['scale'])
-        self.zoom_to(level + 1)
+        self.zoom_to(level + incr)
 
-    def zoom_out(self):
+    def zoom_out(self, decr=1.0):
         """Zoom out a level.
         Also see :meth:`zoom_to`.
 
+        Parameters
+        ----------
+        decr : float (optional, defaults to 1)
+            The value to decrease the zoom level
+
         """
         level = self.zoom.calc_level(self.t_['scale'])
-        self.zoom_to(level - 1)
+        self.zoom_to(level - decr)
 
     def zoom_fit(self, no_reset=False):
         """Zoom to fit display window.
@@ -2362,13 +2393,13 @@ class ImageViewBase(Callback.Callbacks):
         """
         return self.autozoom_options
 
-    def set_pan(self, pan_x, pan_y, coord='data', no_reset=False):
-        """Set pan behavior.
+    def set_pan(self, *args, coord='data', no_reset=False):
+        """Set pan position.
 
         Parameters
         ----------
-        pan_x, pan_y : float
-            Pan positions.
+        pan_pos : tuple
+            Pan positions in X and Y, in that order.
 
         coord : {'data', 'wcs'}
             Indicates whether the given pan positions are in data or WCS space.
@@ -2377,8 +2408,15 @@ class ImageViewBase(Callback.Callbacks):
             Do not reset ``autocenter`` setting.
 
         """
+        if len(args) == 1:
+            # user specified a tuple
+            pan_pos = args[0]
+        else:
+            # for backward compatibility
+            pan_pos = tuple(args)
+
         with self.suppress_redraw:
-            self.t_.set(pan=(pan_x, pan_y), pan_coord=coord)
+            self.t_.set(pan=pan_pos, pan_coord=coord)
             self._reset_bbox()
 
         # If user specified "override" or "once" for auto center, then turn off
@@ -2388,7 +2426,7 @@ class ImageViewBase(Callback.Callbacks):
 
     def pan_cb(self, setting, value):
         """Handle callback related to changes in pan."""
-        pan_x, pan_y = value
+        pan_x, pan_y = value[:2]
 
         self.logger.debug("pan set to %.2f,%.2f" % (pan_x, pan_y))
         self.redraw(whence=0)
@@ -2408,7 +2446,7 @@ class ImageViewBase(Callback.Callbacks):
             X and Y positions, in that order.
 
         """
-        pan_x, pan_y = self.t_['pan']
+        pan_x, pan_y = self.t_['pan'][:2]
         if coord == 'wcs':
             if self.t_['pan_coord'] == 'data':
                 image = self.get_image()
@@ -2883,7 +2921,6 @@ class ImageViewBase(Callback.Callbacks):
                 except Exception as e:
                     # problems figuring out orientation--let it be
                     self.logger.error("orientation error: %s" % str(e))
-                    pass
 
         if invert_y:
             flip_x, flip_y, swap_xy = self.get_transforms()
@@ -2964,7 +3001,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.img_bg = (r, g, b)
-        self.redraw(whence=3)
+        self.redraw(whence=0)
 
     def get_bg(self):
         """Get the background color.
@@ -3066,7 +3103,7 @@ class ImageViewBase(Callback.Callbacks):
         return self.onscreen_message(None)
 
     def set_enter_focus(self, tf):
-        """Determine whether the viewer widget should take focus the
+        """Determine whether the viewer widget should take focus when the
         cursor enters the window.
 
         Parameters

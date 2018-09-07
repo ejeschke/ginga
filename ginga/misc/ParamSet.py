@@ -128,6 +128,15 @@ class ParamSet(Callback.Callbacks):
                 kwdargs[param.name] = value
         return args, kwdargs
 
+    def update_params(self, param_d):
+        """Update the attributes in self.obj that match the keys in
+        `param_d`.
+        """
+        for param in self.paramlst:
+            if param.name in param_d:
+                value = param_d[param.name]
+                setattr(self.obj, param.name, value)
+
     def get_params(self):
         return self._get_params()
 
