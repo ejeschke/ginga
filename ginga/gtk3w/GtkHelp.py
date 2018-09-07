@@ -377,8 +377,10 @@ class MDIWidget(Gtk.Layout):
         # pick a random spot to place the window initially
         rect = self.get_allocation()
         wd, ht = rect.width, rect.height
-        x = random.randint(self.cascade_offset, wd // 2)
-        y = random.randint(self.cascade_offset, ht // 2)
+        x = random.randint(self.cascade_offset,
+                           max(self.cascade_offset + 10, wd // 2))
+        y = random.randint(self.cascade_offset,
+                           max(self.cascade_offset + 10, ht // 2))
 
         self.put(subwin.frame, x, y)
 

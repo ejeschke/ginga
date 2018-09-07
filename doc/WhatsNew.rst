@@ -12,6 +12,8 @@ Ver 2.7.2.dev
 - Support for scaling fonts on high-dpi displays
 - Fixed a bug where adjusting autocuts parameters in Preferences would
   crash the Qt backend
+- Fixed a bug that caused windows to disappear when changing workspace
+  to MDI mode under Gtk3 backend
 
 Ver 2.7.1 (2018-07-09)
 ======================

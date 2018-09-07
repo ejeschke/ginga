@@ -2393,13 +2393,13 @@ class ImageViewBase(Callback.Callbacks):
         """
         return self.autozoom_options
 
-    def set_pan(self, *args, coord='data', no_reset=False):
+    def set_pan(self, pan_x, pan_y, coord='data', no_reset=False):
         """Set pan position.
 
         Parameters
         ----------
-        pan_pos : tuple
-            Pan positions in X and Y, in that order.
+        pan_x, pan_y : float
+            Pan positions in X and Y.
 
         coord : {'data', 'wcs'}
             Indicates whether the given pan positions are in data or WCS space.
@@ -2408,12 +2408,7 @@ class ImageViewBase(Callback.Callbacks):
             Do not reset ``autocenter`` setting.
 
         """
-        if len(args) == 1:
-            # user specified a tuple
-            pan_pos = args[0]
-        else:
-            # for backward compatibility
-            pan_pos = tuple(args)
+        pan_pos = (pan_x, pan_y)
 
         with self.suppress_redraw:
             self.t_.set(pan=pan_pos, pan_coord=coord)
