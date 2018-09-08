@@ -57,23 +57,26 @@ Getting the Source
 
 Clone from Github::
 
-    $ git clone https://github.com/ejeschke/ginga.git
+    git clone https://github.com/ejeschke/ginga.git
 
-To get a zip or tar ball instead, see the links on `About Ginga <http://ejeschke.github.io/ginga/>`_.
+To get a ZIP file or tarball instead, see the links on
+`About Ginga <http://ejeschke.github.io/ginga/>`_.
 
 =========================
 Building and Installation
 =========================
 
-Download and install from `pip`::
+Download and install from ``pip``::
 
-    $ pip install ginga
+    pip install ginga
 
-Or, if you have downloaded the source, go into the top-level directory and run the following::
+Or ``conda``::
 
-    $ python setup.py install
+    conda install ginga -c conda-forge
 
-The reference viewer can then be run using the command `ginga`.
+The reference viewer can then be run using the command ``ginga``.
+
+For detailed instructions, see:
 
 .. toctree::
    :maxdepth: 1
@@ -113,7 +116,7 @@ on Github.
 Ginga has a logging facility, and it would be most helpful if you can
 invoke Ginga with the logging options to capture any logged errors::
 
-    $ ginga --loglevel=20 --log=ginga.log
+    ginga --loglevel=20 --log=ginga.log
 
 If the difficulty is with non-display or non-working `World Coordinate System (WCS)`__ for a
 particular image file please be ready to supply the file for our aid in
@@ -123,12 +126,14 @@ debugging.
 Developer Info
 ==============
 
-In the source code `examples/*` directories, see `example{1,2}_gtk.py` (Gtk_),
-`example{1,2}_qt.py` (Qt_), `example{1,2}_tk.py` (Tk_) or
-`example{1,2,3,4,5}_mpl.py` (Matplotlib_).
-There is more information for developers in the :ref:`manual`.
+In the source code ``examples/*`` directories, see
+``example{1,2}_gtk.py`` (Gtk_),
+``example{1,2}_qt.py`` (Qt_), ``example{1,2}_tk.py`` (Tk_), or
+``example{1,2,3,4,5}_mpl.py`` (Matplotlib_).
+There is more information for developers in the :ref:`dev_manual`.
 
-See also the `Module Index <py-modindex.html>`_ for a complete list of the available modules.
+See also the :ref:`api` or `Module Index <py-modindex.html>`_ for a list
+of the available modules.
 
 =========
 Etymology
@@ -138,7 +143,7 @@ Etymology
 ぎんが), meaning "galaxy" (in general) and, more familiarly, the Milky
 Way. This viewer was written by software engineers at
 `Subaru Telescope <http://subarutelescope.org/>`_,
-National Astronomical Observatory of Japan---thus the connection.
+National Astronomical Observatory of Japan, thus the connection.
 
 =============
 Pronunciation

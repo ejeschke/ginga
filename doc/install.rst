@@ -1,8 +1,8 @@
 .. _ch-install:
 
-++++++++++++++++++++++++++++++++++++++++++++
-Detailed Installation Instructions for Ginga
-++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++
+Installation
+++++++++++++
 
 ============
 Dependencies

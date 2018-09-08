@@ -1,8 +1,11 @@
 .. _ginga-faq:
 
-+++++++++++++
-The Ginga FAQ
-+++++++++++++
+++++
+FAQs
+++++
+
+This section contains some frequently asked questions (FAQs) regarding
+Ginga usage.
 
 ---------
 Platforms
@@ -10,9 +13,9 @@ Platforms
 
 Does Ginga run on Mac/Windows/Linux/XYZ?
 ----------------------------------------
-Ginga is written entirely in the Python programming language, and uses only 
-supporting Python packages.  As long as a platform supports Python 
-and the necessary packages, it can run some version of Ginga.  On recent 
+Ginga is written entirely in the Python programming language, and uses only
+supporting Python packages.  As long as a platform supports Python
+and the necessary packages, it can run some version of Ginga.  On recent
 Linux, Mac and Windows versions, all of these packages are available.
 
 Does Ginga work with Python 3?
@@ -42,7 +45,7 @@ Yes.
 Can Ginga work with Gtk3?
 -------------------------
 Yes, although the performance is not on par with Gtk2 yet. Cairo for
-Python 3 still lacks the important ImageSurface.create_for_data()
+Python 3 still lacks the important ``ImageSurface.create_for_data()``
 API call, so we have to use a workaround. Detailed instructions can be found in Section :ref:`ch-install`.
 
 ----------------
@@ -53,7 +56,7 @@ Can I get DS9-like user interface mappings?
 -------------------------------------------
 Save the file called `bindings.cfg.ds9
 <https://raw.github.com/ejeschke/ginga/master/examples/bindings/bindings.cfg.ds9>`_
-and drop it in your $HOME/.ginga folder as "bindings.cfg".
+and drop it in your ``$HOME/.ginga`` folder as "bindings.cfg".
 Then restart Ginga.
 
 Can I customize the user interface mappings?
@@ -80,8 +83,8 @@ When are you going to add the XYZ feature that DS9 has?
 -------------------------------------------------------
 Maybe never.  The Ginga package design goal was never to replace DS9,
 but to provide a full featured Python FITS widget that we could use to
-build directly in Python.  This is clearly seen if you look at the 
-example programs in examples/*/example*.py.  The idea was to make it 
+build directly in Python.  This is clearly seen if you look at the
+example programs in ``examples/*/example*.py``.  The idea was to make it
 easy for someone to build any kind of custom viewer by having a
 full-featured widget to build on.
 
@@ -98,10 +101,11 @@ Please send a pull request!
 
 Can I get Ginga reference viewer to save its size and position?
 ---------------------------------------------------------------
-Yes.  Add the line "save_layout = True" to your ~/.ginga/general.cfg
+Yes.  Add the line ``"save_layout = True"`` to your ``~/.ginga/general.cfg``
+file.
 
 If the file does not exist, create it, or copy the one from
-ginga/examples/configs/general.cfg.
+``ginga/examples/configs/general.cfg``.
 
 -----------------------
 World Coordinate System
@@ -113,22 +117,22 @@ We are lucky to have several possible choices for a Python WCS package
 compatible with Ginga:
 `AstLib <http://astlib.sourceforge.net/>`_,
 `Kapteyn <http://www.astro.rug.nl/software/kapteyn/>`_,
-`Starlink <https://github.com/timj/starlink-pyast>`_ and
+`Starlink <https://github.com/timj/starlink-pyast>`_, and
 :ref:`Astropy WCS <astropy:astropy-wcs>`.
 
-Kapteyn and Astropy wrap Mark Calabretta's "WCSLIB", astLib wraps
+Kapteyn and Astropy wrap Mark Calabretta's "WCSLIB", AstLib wraps
 Jessica Mink's "wcstools", and I'm not sure what Starlink uses.
-Note that Astlib and starlink require pyfits (or Astropy) to be
+Note that AstLib and Starlink require Astropy to be
 installed in order to create a WCS object from a FITS header.
 
 To force the use of a particular one add this to your "general.cfg"
-in $HOME/.ginga:
+in ``$HOME/.ginga``::
 
-WCSpkg = 'package'
+  WCSpkg = 'package'
 
-Replace 'package' with one of {'Astropy', 'Kapteyn', 'Starlink' or
-'astlib', 'choose'}.  If you pick 'choose' Ginga will try to pick one
-for you.
+Replace ``'package'`` with one of ``'Astropy'``, ``'Kapteyn'``, ``'Starlink'``,
+``'astlib'``, or ``'choose'``.  If you pick ``'choose'``, Ginga will try to
+pick one for you.
 
 How easy is it for Ginga to support a custom WCS?
 -------------------------------------------------
@@ -146,16 +150,16 @@ compatible with Ginga:
 :ref:`Astropy FITS <astropy:astropy-io-fits>` and
 `fitsio <https://github.com/esheldon/fitsio>`_.
 Both are originally based on the CFITSIO library (although Astropy's
-version uses very little of it any more, while fitsio is still
+version uses very little of it any more, while ``fitsio`` is still
 tracking the current version).
 
 To force the use of a particular one add this to your "general.cfg"
-in $HOME/.ginga:
+in ``$HOME/.ginga``:
 
-FITSpkg = 'package'
+  FITSpkg = 'package'
 
-Replace 'package' with one of {'Astropy', 'fitsio', 'choose'}.
-If you pick 'choose', Ginga will try to pick one for you.
+Replace ``'package'`` with one of ``'Astropy'``, ``'fitsio'``, or ``'choose'``.
+If you pick ``'choose'``, Ginga will try to pick one for you.
 
 How easy is it for Ginga to support a new file formats besides FITS?
 --------------------------------------------------------------------
@@ -189,12 +193,11 @@ channel that I'm viewing.
           If that setting is "Off" then you have elected not to have
 	  Ginga apply Auto Levels when an image is loaded in that
 	  channel.  Press 'a' in the image window to force an auto cut
-	  levels--it will use the new settings.
+	  levels and it will use the new settings.
 
 No image shows in the display, and I get an error in the terminal about
 histogram and keyword "density".
 
-.. note:: You need a slightly newer version of NumPy.
+.. note:: You need a newer version of NumPy.
 
-          I recommend getting at least NumPy>1.9.
-
+          I recommend getting NumPy v1.9 or later.

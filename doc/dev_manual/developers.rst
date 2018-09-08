@@ -138,9 +138,9 @@ A little more fleshed out example: MyLocalPlugin
 This is a skeleton for a local plugin.  It is also good example of
 something that actually runs and can be copied as a template for a local
 plugin.  This plugin is distributed with the Ginga package and can be
-loaded and invoked from a terminal:
+loaded and invoked from a terminal::
 
-    $ ginga --plugins=MyLocalPlugin --loglevel=20 --log=/tmp/ginga.log
+    ginga --plugins=MyLocalPlugin --loglevel=20 --log=/tmp/ginga.log
 
 The plugin will be accessible via the "Operation" button in the Plugin
 Manager bar.
@@ -321,20 +321,20 @@ similar to writing any other Python program.
 Launching and Debugging Your Plugin
 -----------------------------------
 The easiest way to start out is to create a plugins directory under your
-ginga configuration area.  In a terminal:
+ginga configuration area.  In a terminal::
 
-    $ mkdir $HOME/.ginga/plugins
+    mkdir $HOME/.ginga/plugins
 
 Put your plugin in there (a good one to start with is to modify the
-MyLocalPlugin example that comes with Ginga):
+MyLocalPlugin example that comes with Ginga)::
 
-    $ cd .../ginga/examples/reference-viewer
-    $ cp MyLocalPlugin.py $HOME/.ginga/plugins/MyPlugin.py
+    cd .../ginga/examples/reference-viewer
+    cp MyLocalPlugin.py $HOME/.ginga/plugins/MyPlugin.py
 
 To load it when the reference viewer starts (and add some logging to stderr
-as well as to a file):
+as well as to a file)::
 
-    $ ginga --plugins=MyPlugin --loglevel=20 --stderr --log=/tmp/ginga.log
+    ginga --plugins=MyPlugin --loglevel=20 --stderr --log=/tmp/ginga.log
 
 To start the plugin from within the reference viewer, use the Plugin
 Manager bar just below the color and readout bars.  Use the "Operation"
@@ -636,9 +636,9 @@ A template: MyGlobalPlugin
 This is a skeleton for a global plugin, and serves as a decent example of
 something that can be copied as a template for a global plugin.
 This plugin is distributed with the Ginga package and can be loaded and
-invoked from a terminal:
+invoked from a terminal::
 
-    $ ginga --modules=MyGlobalPlugin --loglevel=20 --log=/tmp/ginga.log
+    ginga --modules=MyGlobalPlugin --loglevel=20 --log=/tmp/ginga.log
 
 The plugin will be started at program startup and can be seen in the
 "MyGlobalPlugin" tab in the right panel.  Watch the status message as
