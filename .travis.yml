@@ -1,7 +1,7 @@
 language: python
 
 python:
-    - 3.6
+    - 3.7
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
@@ -55,29 +55,29 @@ matrix:
 
         # Do a coverage test in Python 3.
         # *** TODO: `python setup.py test --coverage` doesn't work yet for `ginga` ... skipping for now
-        # - python: 3.6
+        # - python: 3.7
         #  env: SETUP_CMD='test --coverage'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
-        - python: 3.6
+        - python: 3.7
           env: SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_rtd_theme pillow'
 
         # Try older Numpy versions
         # TODO: Pin Python 2.7 to ASTROPY_VERSION=lts after Astropy v3 release
         - python: 2.7
           env: NUMPY_VERSION=1.10
-        - python: 3.5
-          env: NUMPY_VERSION=1.11
         - python: 3.6
           env: NUMPY_VERSION=1.12
+        - python: 3.7
+          env: NUMPY_VERSION=1.15
 
         # Try Numpy pre-release and Astropy dev, with matplotlib installed
-        - python: 3.6
+        - python: 3.7
           env: NUMPY_VERSION=prerelease ASTROPY_VERSION=development CONDA_DEPENDENCIES='pyqt matplotlib'
 
         # Do a PEP8 test with flake8 (white-list in setup.cfg)
-        - python: 3.6
+        - python: 3.7
           env: MAIN_CMD='flake8 ginga --count' SETUP_CMD=''
 
 before_install:
