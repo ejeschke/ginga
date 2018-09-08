@@ -1,7 +1,7 @@
 language: python
 
 python:
-    - 3.7
+    - 3.6
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
@@ -55,13 +55,13 @@ matrix:
 
         # Do a coverage test in Python 3.
         # *** TODO: `python setup.py test --coverage` doesn't work yet for `ginga` ... skipping for now
-        # - python: 3.7
-        #  env: SETUP_CMD='test --coverage'
+        # - os: linux
+        #  env: PYTHON_VERSION=3.7 SETUP_CMD='test --coverage'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
-        - python: 3.7
-          env: SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_rtd_theme pillow'
+        - os: linux
+          env: PYTHON_VERSION=3.7 SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_rtd_theme pillow'
 
         # Try older Numpy versions
         # TODO: Pin Python 2.7 to ASTROPY_VERSION=lts after Astropy v3 release
