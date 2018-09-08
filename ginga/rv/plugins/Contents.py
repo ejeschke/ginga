@@ -12,6 +12,10 @@ metadata from the image.
 
 **Usage**
 
+This plugin is automatically loaded in the reference viewer by default
+and appears next to the "Dialogs" tab in the viewer to the right.
+There is no option to start or close it under "Operation" nor "Plugins" menu.
+
 Click on a column heading to sort the table by that column;
 Click again to sort the other way.
 

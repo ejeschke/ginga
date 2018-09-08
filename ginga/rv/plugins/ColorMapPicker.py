@@ -10,7 +10,19 @@ colormap for a channel image viewer.
 
 **Usage**
 
-Operation of the plugin is very simple: the colormaps are displayed in
+Start the plugin from the "Operation->RGB" (below) or "Plugins->RGB" (above)
+menu, as per default layout, and select "Set Color Map [G]" option.
+A tab named "ColorMapPicker" should show up at the same level
+as "Dialogs" tab in the viewer to the right.
+
+.. note:: When the plugin starts for the first time, it will generate
+          a bitmap RGB image of colorbars and labels corresponding to
+          all the available colormaps.  This can take a few seconds
+          depending on the number of colormaps installed.
+
+          Colormaps are shown with the "ramp" intensity map applied.
+
+The colormaps are displayed in
 the form of colorbars and labels in the main view pane of the plugin.
 Click on any one of the bars to set the colormap of the currently
 active channel in the viewer.
@@ -19,13 +31,6 @@ Change the channel to set the colormap on a different channel.
 
 You can scroll vertically or use the scroll bars to move through the
 colorbar samples.
-
-.. note:: When the plugin starts for the first time, it will generate
-          a bitmap RGB image of colorbars and labels corresponding to
-          all the available colormaps.  This can take a few seconds
-          depending on the number of colormaps installed.
-
-          Colormaps are shown with the "ramp" intensity map applied.
 
 """
 from ginga.pilw.ImageViewPil import CanvasView
