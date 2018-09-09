@@ -46,8 +46,8 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         # TO BE DEPRECATED: DO NOT USE
-        return self.get_surface_as_rgb_format_bytes(format=format,
-                                                    quality=quality)
+        return self.renderer.get_surface_as_rgb_format_bytes(format=format,
+                                                             quality=quality)
 
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         # TO BE DEPRECATED: DO NOT USE
