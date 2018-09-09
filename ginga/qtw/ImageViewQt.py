@@ -126,10 +126,10 @@ class ImageViewQt(ImageView.ImageViewBase):
             raise ImageViewQtError("Undefined render type: '%s'" % (render))
         self.imgwin.viewer = self
         self.pixmap = None
-        self.qimg_fmt = QImage.Format_ARGB32
+        self.qimg_fmt = QImage.Format_RGB32
         # find out optimum format for backing store
         #self.qimg_fmt = QPixmap(1, 1).toImage().format()
-        # Qt needs this to be in BGRA
+        # Qt needs this to be in BGR(A)
         self.rgb_order = 'BGRA'
 
         # default renderer is Qt one

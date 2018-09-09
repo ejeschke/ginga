@@ -173,7 +173,7 @@ class CanvasRenderer(render.RendererBase):
         self.kind = 'qt'
         # Qt needs this to be in BGRA
         self.rgb_order = 'BGRA'
-        self.qimg_fmt = QImage.Format_ARGB32
+        self.qimg_fmt = QImage.Format_RGB32
         self.surface_type = surface_type
         # the offscreen drawing surface
         self.surface = None

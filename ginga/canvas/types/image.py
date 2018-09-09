@@ -216,7 +216,7 @@ class Image(OnePointMixin, CanvasObjectBase):
         # calculated position
         trcalc.overlay_image(dstarr, cache.cvs_pos, cache.cutout,
                              dst_order=dst_order, src_order=image_order,
-                             alpha=self.alpha, flipy=False)
+                             alpha=self.alpha, fill=True, flipy=False)
 
     def _reset_cache(self, cache):
         cache.setvals(cutout=None, drawn=False, cvs_pos=(0, 0))
@@ -476,7 +476,7 @@ class NormImage(Image):
         # calculated position
         trcalc.overlay_image(dstarr, cache.cvs_pos, cache.rgbarr,
                              dst_order=dst_order, src_order=get_order,
-                             alpha=self.alpha, flipy=False)
+                             alpha=self.alpha, fill=True, flipy=False)
 
     def apply_visuals(self, viewer, data, vmin, vmax):
         if self.autocuts is not None:

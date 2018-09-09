@@ -342,8 +342,9 @@ class ImageViewBase(Callback.Callbacks):
         self.rf_late_warn_interval = 10.0
         self.rf_late_total = 0.0
         self.rf_late_count = 0
-        self.rf_early_count = 0
         self.rf_early_total = 0.0
+        self.rf_early_count = 0
+        self.rf_skip_total = 0.0
         if self.rf_timer is not None:
             self.rf_timer.add_callback('expired', self.refresh_timer_cb,
                                        self.rf_flags)
@@ -1157,6 +1158,7 @@ class ImageViewBase(Callback.Callbacks):
         self.rf_early_count = 0
         self.rf_early_total = 0.0
         self.rf_delta_total = 0.0
+        self.rf_skip_total = 0.0
         self.rf_start_time = time.time()
         self.rf_deadline = self.rf_start_time
         self.refresh_timer_cb(self.rf_timer, self.rf_flags)
@@ -1191,9 +1193,12 @@ class ImageViewBase(Callback.Callbacks):
         early_avg = self.rf_early_total / max(1, self.rf_early_count)
         early_pct = self.rf_early_count / max(1.0, float(self.rf_timer_count)) * 100
 
+        balance = self.rf_late_total - self.rf_early_total
+
         stats = dict(fps=fps, jitter=jitter,
                      early_avg=early_avg, early_pct=early_pct,
-                     late_avg=late_avg, late_pct=late_pct)
+                     late_avg=late_avg, late_pct=late_pct,
+                     balance=balance)
         return stats
 
     def refresh_timer_cb(self, timer, flags):
@@ -1228,16 +1233,24 @@ class ImageViewBase(Callback.Callbacks):
             self.rf_late_total += delta
             self.rf_late_count += 1
             late_avg = self.rf_late_total / self.rf_late_count
-            # skip a redraw and attempt to catch up
             adjust = - (late_avg / 2.0)
-
+            self.rf_skip_total += delta
+            if self.rf_skip_total < self.rf_rate:
+                self.rf_draw_count += 1
+                # TODO: can we optimize whence?
+                self.redraw_now(whence=0)
+            else:
+                # <-- we are behind by amount of time equal to one frame.
+                # skip a redraw and attempt to catch up some time
+                self.rf_skip_total = 0
         else:
             if start_time < deadline:
                 # we are early
                 self.rf_early_total += delta
                 self.rf_early_count += 1
+                self.rf_skip_total = max(0.0, self.rf_skip_total - delta)
                 early_avg = self.rf_early_total / self.rf_early_count
-                adjust = early_avg / 2.0
+                adjust = early_avg / 4.0
 
             self.rf_draw_count += 1
             # TODO: can we optimize whence?
@@ -1368,12 +1381,10 @@ class ImageViewBase(Callback.Callbacks):
 
         imgwin_wd, imgwin_ht = self.get_window_size()
 
-        # create RGBA array for output
-        outarr = np.zeros((imgwin_ht, imgwin_wd, len(order)), dtype=dtype)
-
-        # fill image array with the background color
+        # create RGBA image array with the background color for output
         r, g, b = self.img_bg
-        trcalc.fill_array(outarr, order, r, g, b, alpha)
+        outarr = trcalc.make_filled_array((imgwin_ht, imgwin_wd, len(order)),
+                                          dtype, order, r, g, b, alpha)
 
         # overlay our data
         trcalc.overlay_image(outarr, (self._dst_x, self._dst_y),
@@ -1489,7 +1500,7 @@ class ImageViewBase(Callback.Callbacks):
             RGB object.
 
         """
-        time_start = time.time()
+        time_start = t2 = t3 = time.time()
         win_wd, win_ht = self.get_window_size()
         order = self.get_rgb_order()
 
@@ -1504,17 +1515,18 @@ class ImageViewBase(Callback.Callbacks):
             # create backing image
             depth = len(order)
             rgbmap = self.get_rgbmap()
-            rgba = np.zeros((ht, wd, depth), dtype=rgbmap.dtype)
-
-            # fill backing image with the background color
+            # make backing image with the background color
             r, g, b = self.img_bg
-            trcalc.fill_array(rgba, order, r, g, b, 1.0)
+            rgba = trcalc.make_filled_array((ht, wd, depth), rgbmap.dtype,
+                                            order, r, g, b, 1.0)
 
             self._rgbarr = rgba
+            t2 = time.time()
 
         if (whence <= 2.0) or (self._rgbarr2 is None):
             # Apply any RGB image overlays
-            self._rgbarr2 = np.copy(self._rgbarr)
+            #self._rgbarr2 = np.copy(self._rgbarr)
+            self._rgbarr2 = self._rgbarr
             self.overlay_images(self.private_canvas, self._rgbarr2,
                                 whence=whence)
 
@@ -1524,6 +1536,7 @@ class ImageViewBase(Callback.Callbacks):
             if (working_profile is not None) and (output_profile is not None):
                 self.convert_via_profile(self._rgbarr2, order,
                                          working_profile, output_profile)
+            t3 = time.time()
 
         if (whence <= 2.5) or (self._rgbobj is None):
             rotimg = self._rgbarr2
@@ -1537,8 +1550,12 @@ class ImageViewBase(Callback.Callbacks):
             self._rgbobj = RGBMap.RGBPlanes(rotimg, order)
 
         time_end = time.time()
-        self.logger.debug("times: total=%.4f" % (
+        ## self.logger.debug("times: total=%.4f" % (
+        ##     (time_end - time_start)))
+        self.logger.debug("times: t1=%.4f t2=%.4f t3=%.4f total=%.4f" % (
+            t2 - time_start, t3 - t2, time_end - t3,
             (time_end - time_start)))
+
         return self._rgbobj
 
     def _calc_bg_dimensions(self, scale_x, scale_y,

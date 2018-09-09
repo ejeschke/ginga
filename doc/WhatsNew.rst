@@ -16,6 +16,10 @@ Ver 2.7.2.dev
   to MDI mode under Gtk3 backend
 - Fixed a bug where local plugins were not properly closed when a
   channel is deleted
+- Fixed a bug in which the ColorMapPlugin canvas was not scaled to the
+  correct size
+- Improvements to synchronous refresh feature to reduce jitter and
+  increase frame rate
 
 Ver 2.7.1 (2018-07-09)
 ======================
