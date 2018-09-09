@@ -1,7 +1,12 @@
-language: python
+# We set the language to c because python isn't supported on the MacOS X nodes
+# on Travis. However, the language ends up being irrelevant anyway, since we
+# install Python ourselves using conda.
+language: c
 
-python:
-    - 3.6
+compiler: gcc
+
+os:
+    - linux
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
@@ -23,6 +28,7 @@ env:
         # The following versions are the 'default' for tests, unless
         # overidden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
+        - PYTHON_VERSION=3.7
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - SETUP_CMD='test'
@@ -50,34 +56,40 @@ matrix:
     include:
 
         # Test egg_info in Python 2
-        - python: 2.7
-          env: ASTROPY_VERSION=lts SETUP_CMD='egg_info'
+        # TODO: Change to ASTROPY_VERSION=lts when this job starts to fail.
+        - os: linux
+          env: PYTHON_VERSION=2.7 SETUP_CMD='egg_info'
 
         # Do a coverage test in Python 3.
         # *** TODO: `python setup.py test --coverage` doesn't work yet for `ginga` ... skipping for now
-        # - python: 3.6
+        # - os: linux
         #  env: SETUP_CMD='test --coverage'
 
+        # TODO: Build doc with Python 3.7 when conda no longer conflicts.
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
-        - python: 3.6
-          env: SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_rtd_theme pillow'
+        - os: linux
+          env: PYTHON_VERSION=3.6 SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_rtd_theme pillow'
 
         # Try older Numpy versions
-        # TODO: Pin Python 2.7 to ASTROPY_VERSION=lts after Astropy v3 release
-        - python: 2.7
-          env: NUMPY_VERSION=1.10
-        - python: 3.5
-          env: NUMPY_VERSION=1.11
-        - python: 3.6
-          env: NUMPY_VERSION=1.12
+        # TODO: Change to ASTROPY_VERSION=lts when PY2 job starts to fail.
+        - os: linux
+          env: PYTHON_VERSION=2.7 NUMPY_VERSION=1.10
+        - os: linux
+          env: PYTHON_VERSION=3.6 NUMPY_VERSION=1.12
+        - os: linux
+          env: NUMPY_VERSION=1.14
 
-        # Try Numpy pre-release and Astropy dev, with matplotlib installed
-        - python: 3.6
-          env: NUMPY_VERSION=prerelease ASTROPY_VERSION=development CONDA_DEPENDENCIES='pyqt matplotlib'
+        # Try with Astropy dev and matplotlib installed
+        - os: linux
+          env: ASTROPY_VERSION=development CONDA_DEPENDENCIES='pyqt matplotlib'
+
+        # Try with Numpy pre-release (this is skipped unless pre-release is available)
+        - os: linux
+          env: NUMPY_VERSION=prerelease CONDA_DEPENDENCIES='pyqt matplotlib'
 
         # Do a PEP8 test with flake8 (white-list in setup.cfg)
-        - python: 3.6
+        - os: linux
           env: MAIN_CMD='flake8 ginga --count' SETUP_CMD=''
 
 before_install:
