@@ -66,7 +66,7 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         p_v.enable_autocuts('off')
         p_v.set_scale_limits(1.0, 1.0)
         p_v.set_pan(0, 0)
-        p_v.zoom_to(1)
+        p_v.scale_to(1, 1)
         p_v.cut_levels(0, 255)
         p_v.set_bg(0.4, 0.4, 0.4)
 
@@ -89,7 +89,7 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         c_v.enable_autozoom('off')
         c_v.enable_autocuts('off')
         c_v.set_pan(0, 0)
-        c_v.zoom_to(1)
+        c_v.scale_to(1, 1)
         c_v.transform(False, True, False)
         c_v.cut_levels(0, 255)
         c_v.set_bg(0.4, 0.4, 0.4)
