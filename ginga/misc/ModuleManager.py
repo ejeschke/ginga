@@ -61,8 +61,13 @@ class ModuleManager(object):
     def load_module(self, module_name, pfx=None, path=None):
         """Load/reload module from the given name."""
         try:
-            if module_name in sys.modules:
-                module = sys.modules[module_name]
+            if pfx:
+                name = pfx + '.' + module_name
+            else:
+                name = module_name
+
+            if name in sys.modules:
+                module = sys.modules[name]
                 self.logger.info("Reloading module '%s'..." % module_name)
                 if hasattr(importlib, 'reload'):
                     # python 3.4+
@@ -73,11 +78,6 @@ class ModuleManager(object):
                     module = imp.reload(module)
 
             else:
-                if pfx:
-                    name = pfx + '.' + module_name
-                else:
-                    name = module_name
-
                 self.logger.info("Loading module '%s'..." % module_name)
                 module = my_import(name, path=path)
 
