@@ -136,6 +136,13 @@ class ColorManager(object):
 
         return image
 
+    def profile_to_working_numpy(self, image_np, kwds, intent=None):
+
+        image_in = toimage(image_np)
+        image_out = self.profile_to_working_pil(image_in, kwds,
+                                                intent=intent)
+        return fromimage(image_out)
+
 
 # --- Color Management conversion functions ---
 

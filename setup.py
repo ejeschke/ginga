@@ -115,7 +115,8 @@ install_requires = ['numpy>=1.9', 'qtpy>=1.1', 'setuptools>=1.0',
 # nice to have, but not required, depending on the application
 extras_require = {
     'recommended': ['pillow>=3.2.0', 'scipy>=0.18.1', 'matplotlib>=1.5.1',
-                    'opencv-python>=3.4.1', 'beautifulsoup4>=4.3.2'],
+                    'opencv-python>=3.4.1', 'piexif>=1.0.13',
+                    'beautifulsoup4>=4.3.2'],
 }
 
 setup(name=PACKAGENAME,

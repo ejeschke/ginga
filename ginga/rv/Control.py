@@ -1785,14 +1785,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if focus_ind is None:
             focus_ind = self.settings.get('show_focus_indicator', False)
         fi.show_focus_indicator(focus_ind)
-        fi.enable_auto_orient(True)
         fi.use_image_profile = True
 
         fi.add_callback('cursor-changed', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
         fi.add_callback('key-down-none', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
 
         bd = fi.get_bindings()
         bd.enable_all(True)

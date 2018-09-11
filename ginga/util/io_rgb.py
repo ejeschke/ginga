@@ -17,6 +17,13 @@ from . import iohelper, rgb_cms
 from .six.moves import map
 
 try:
+    # do we have opencv available?
+    import cv2
+    have_opencv = True
+except ImportError:
+    have_opencv = False
+
+try:
     # do we have Python Imaging Library available?
     import PIL.Image as PILimage
     from PIL.ExifTags import TAGS
@@ -31,9 +38,9 @@ try:
 except ImportError:
     pass
 
-# EXIF library for getting metadata, in the case that we don't have PIL
+# piexif library for getting metadata, in the case that we don't have PIL
 try:
-    import EXIF
+    import piexif
     have_exif = True
 except ImportError:
     have_exif = False
@@ -81,11 +88,32 @@ class RGBFileHandler(object):
         typ, subtyp = typ.split('/')
         self.logger.debug("MIME type is %s/%s" % (typ, subtyp))
 
-        if (typ == 'image') and (subtyp in ('x-portable-pixmap',
-                                            'x-portable-greymap')):
-            # Special opener for PPM files, preserves high bit depth
-            means = 'built-in'
-            data_np = open_ppm(filepath)
+        if have_opencv:
+            # First choice is OpenCv, because it supports high-bit depth
+            # multiband images
+            means = 'opencv'
+            # funky indexing at the end is because opencv returns BGR
+            # images, whereas PIL and others return RGB
+            data_np = cv2.imread(filepath,
+                                 cv2.IMREAD_ANYDEPTH +
+                                 cv2.IMREAD_ANYCOLOR)[..., :: -1]
+
+            # OpenCv doesn't "do" image metadata, so we punt to piexif
+            # library (if installed)
+            self.piexif_getexif(filepath, kwds)
+
+            # OpenCv added a feature to do auto-orientation when loading
+            # (see https://github.com/opencv/opencv/issues/4344)
+            # So reset these values to prevent auto-orientation from
+            # happening later
+            if 'Orientation' in kwds:
+                kwds['Orientation'] = 1
+            if 'Image Orientation' in kwds:
+                kwds['Image Orientation'] = 1
+
+            # convert to working color profile, if can
+            if self.clr_mgr.can_profile():
+                data_np = self.clr_mgr.profile_to_working_numpy(data_np, kwds)
 
         elif have_pil:
             means = 'PIL'
@@ -99,6 +127,12 @@ class RGBFileHandler(object):
                             kwd = TAGS.get(tag, tag)
                             kwds[kwd] = value
 
+                elif have_exif:
+                    self.piexif_getexif(image.info["exif"], kwds)
+
+                else:
+                    self.logger.warning("Please install 'piexif' module to get image metadata")
+
             except Exception as e:
                 self.logger.warning("Failed to get image metadata: %s" % (str(e)))
 
@@ -108,6 +142,12 @@ class RGBFileHandler(object):
 
             # convert from PIL to numpy
             data_np = np.array(image)
+
+        elif (typ == 'image') and (subtyp in ('x-portable-pixmap',
+                                              'x-portable-greymap')):
+            # Special opener for PPM files, preserves high bit depth
+            means = 'built-in'
+            data_np = open_ppm(filepath)
 
         else:
             from ginga.BaseImage import ImageError
@@ -126,22 +166,37 @@ class RGBFileHandler(object):
         if not have_pil:
             raise Exception("Install PIL to use this method")
         if not have_exif:
-            raise Exception("Install EXIF to use this method")
+            raise Exception("Install piexif to use this method")
 
-        with open(filepath, 'rb') as in_f:
-            try:
-                d = EXIF.process_file(in_f)
-            except Exception as e:
-                return None
-        if 'JPEGThumbnail' in d:
-            buf = d['JPEGThumbnail']
-        # TODO: other possible encodings?
-        else:
+        try:
+            info = piexif.load(filepath)
+            buf = info['thumbnail']
+
+        except Exception as e:
             return None
 
-        image = PILimage.open(BytesIO.BytesIO(buf))
+        image = PILimage.open(BytesIO(buf))
         data_np = np.array(image)
         return data_np
+
+    def piexif_getexif(self, filepath, kwds):
+        if have_exif:
+            try:
+                info = piexif.load(filepath)
+                if info is not None:
+                    # TODO: is there a more efficient way to do this than
+                    # iterating in python?
+                    for ifd in ["0th", "Exif", "GPS", "Interop", "1st"]:
+                        if ifd in info:
+                            for tag, value in info[ifd].items():
+                                kwd = piexif.TAGS[ifd][tag].get('name', tag)
+                                kwds[kwd] = value
+
+            except Exception as e:
+                self.logger.warning("Failed to get image metadata: %s" % (str(e)))
+
+        else:
+            self.logger.warning("Please install 'piexif' module to get image metadata")
 
     def get_buffer(self, data_np, header, format, output=None):
         """Get image as a buffer in (format).

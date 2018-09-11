@@ -270,7 +270,7 @@ class ImageViewBase(Callback.Callbacks):
         self.last_data_x = 0
         self.last_data_y = 0
 
-        self.orientMap = {
+        self.orient_map = {
             # tag: (flip_x, flip_y, swap_xy)
             1: (False, True, False),
             2: (True, True, False),
@@ -2917,15 +2917,15 @@ class ImageViewBase(Callback.Callbacks):
         if header:
             # Auto-orientation
             orient = header.get('Orientation', None)
-            if not orient:
+            if orient is None:
                 orient = header.get('Image Orientation', None)
+            if orient is not None:
                 self.logger.debug("orientation [%s]" % orient)
-            if orient:
                 try:
                     orient = int(str(orient))
                     self.logger.info(
                         "setting orientation from metadata [%d]" % (orient))
-                    flip_x, flip_y, swap_xy = self.orientMap[orient]
+                    flip_x, flip_y, swap_xy = self.orient_map[orient]
 
                     self.transform(flip_x, flip_y, swap_xy)
                     invert_y = False
