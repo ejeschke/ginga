@@ -1467,7 +1467,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         if limits is not None:
             if len(limits) != 2:
-                raise ValueError("limits takes a 2 tuple")
+                raise ValueError("limits takes a 2 tuple, or None")
 
             # convert to data coordinates
             crdmap = self.get_coordmap(coord)

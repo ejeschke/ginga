@@ -20,6 +20,7 @@ Ver 2.7.2.dev
   correct size
 - Improvements to synchronous refresh feature to reduce jitter and
   increase frame rate
+- Fix for navigating certain data cubes with MutltiDim plugin
 
 Ver 2.7.1 (2018-07-09)
 ======================

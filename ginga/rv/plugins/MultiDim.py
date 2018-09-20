@@ -615,10 +615,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
             name = match.group(1)
         self.name_pfx = name
 
+        htype = None
         if idx is not None:
             # set the HDU in the drop down if known
             info = self.file_obj.hdu_db.get(idx, None)
             if info is not None:
+                htype = info.htype.lower()
                 index = info.index
                 self.w.hdu.set_index(index)
 
@@ -633,10 +635,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 # <- empty data part to this HDU
                 self.logger.warning("Empty data part in HDU #%d" % (idx))
 
-            elif info.htype.lower() in ('bintablehdu', 'tablehdu',):
+            elif htype in ('bintablehdu', 'tablehdu',):
                 pass
 
-            elif info.htype.lower() not in ('imagehdu', 'primaryhdu'):
+            elif htype not in ('imagehdu', 'primaryhdu'):
                 self.logger.warning("HDU #%d is not an image" % (idx))
 
             else:
