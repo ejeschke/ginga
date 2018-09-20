@@ -26,6 +26,7 @@ from ginga.misc import Bunch, Timer, Future
 from ginga.util import catalog, iohelper, io_fits, toolbox
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
+from ginga.canvas import render
 from ginga.util.six.moves import map
 
 # GUI imports
@@ -1770,6 +1771,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                      settings=settings,
                                      bindings=bd)
         fi.set_desired_size(size[0], size[1])
+
+        # Custom renderer set in channel settings?
+        r_name = settings.get('renderer', None)
+        if r_name is not None:
+            render_class = render.get_render_class(r_name)
+            fi.set_renderer(render_class(fi))
 
         canvas = DrawingCanvas()
         canvas.enable_draw(False)

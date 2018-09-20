@@ -1436,7 +1436,9 @@ class ImageViewBase(Callback.Callbacks):
             image = self.get_image()
             if image is not None:
                 wd, ht = image.get_size()
-                limits = ((0.0, 0.0), (float(wd), float(ht)))
+                limits = ((self.data_off, self.data_off),
+                          (float(wd - 1 + self.data_off),
+                           float(ht - 1 + self.data_off)))
 
             else:
                 # Calculate limits based on plotted points, if any
@@ -1898,7 +1900,7 @@ class ImageViewBase(Callback.Callbacks):
 
     def get_data_pct(self, xpct, ypct):
         """Calculate new data size for the given axis ratios.
-        See :meth:`get_data_size`.
+        See :meth:`get_limits`.
 
         Parameters
         ----------
@@ -1911,9 +1913,11 @@ class ImageViewBase(Callback.Callbacks):
             Scaled dimensions.
 
         """
-        width, height = self.get_data_size()
-        x = int(float(xpct) * (width - 1))
-        y = int(float(ypct) * (height - 1))
+        xy_mn, xy_mx = self.get_limits()
+        width = abs(xy_mx[0] - xy_mn[0])
+        height = abs(xy_mx[1] - xy_mn[1])
+
+        x, y = int(float(xpct) * width), int(float(ypct) * height)
         return (x, y)
 
     def get_pan_rect(self):
@@ -2229,9 +2233,9 @@ class ImageViewBase(Callback.Callbacks):
             Do not reset ``autozoom`` setting.
 
         """
-        # calculate actual width of the image, considering rotation
+        # calculate actual width of the limits/image, considering rotation
         try:
-            width, height = self.get_data_size()
+            xy_mn, xy_mx = self.get_limits()
 
         except ImageViewNoDataError:
             return
@@ -2250,12 +2254,14 @@ class ImageViewBase(Callback.Callbacks):
             self.center_image(no_reset=no_reset)
 
             ctr_x, ctr_y, rot_deg = self.get_rotation_info()
-            min_x, min_y, max_x, max_y = 0, 0, 0, 0
-            for x, y in ((0, 0), (width - 1, 0), (width - 1, height - 1),
-                         (0, height - 1)):
-                x0, y0 = trcalc.rotate_pt(x, y, rot_deg, xoff=ctr_x, yoff=ctr_y)
-                min_x, min_y = min(min_x, x0), min(min_y, y0)
-                max_x, max_y = max(max_x, x0), max(max_y, y0)
+
+            # Find min/max extents of limits as shown by viewer
+            xs = np.array((xy_mn[0], xy_mx[0], xy_mx[0], xy_mn[0]))
+            ys = np.array((xy_mn[1], xy_mn[1], xy_mx[1], xy_mx[1]))
+            x0, y0 = trcalc.rotate_pt(xs, ys, rot_deg, xoff=ctr_x, yoff=ctr_y)
+
+            min_x, min_y = np.min(x0), np.min(y0)
+            max_x, max_y = np.max(x0), np.max(y0)
 
             width, height = max_x - min_x, max_y - min_y
             if min(width, height) <= 0:
@@ -2505,20 +2511,15 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         try:
-            width, height = self.get_data_size()
+            xy_mn, xy_mx = self.get_limits()
 
-        except ImageViewNoDataError:
-            # No data, so try to get limits
-            try:
-                xy_mn, xy_mx = self.get_limits()
-                width = abs(xy_mx[0] - xy_mn[0])
-                height = abs(xy_mx[1] - xy_mn[1])
+        except Exception as e:
+            self.logger.error("Can't compute limits: %s" % (str(e)))
+            return
 
-            except Exception as e:
-                self.logger.error("Can't compute limits: %s" % (str(e)))
-                return
+        data_x = (xy_mn[0] + xy_mx[0]) * pct_x
+        data_y = (xy_mn[1] + xy_mx[1]) * pct_y
 
-        data_x, data_y = width * pct_x, height * pct_y
         self.panset_xy(data_x, data_y)
 
     def center_image(self, no_reset=True):
@@ -2531,8 +2532,9 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         try:
-            width, height = self.get_data_size()
-            data_x, data_y = float(width) / 2.0, float(height) / 2.0
+            xy_mn, xy_mx = self.get_limits()
+            data_x = float(xy_mn[0] + xy_mx[0]) / 2.0
+            data_y = float(xy_mn[1] + xy_mx[1]) / 2.0
 
         except ImageViewNoDataError:
             # No data, so try to get center of any plotted objects

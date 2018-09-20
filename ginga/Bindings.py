@@ -491,7 +491,7 @@ class ImageViewBindings(object):
         if ptype == 1:
             # This is a "free pan", similar to dragging the "lens"
             # over the canvas.
-            dat_wd, dat_ht = viewer.get_data_size()
+            xy_mn, xy_mx = viewer.get_limits()
             win_wd, win_ht = viewer.get_window_size()
 
             if (win_x >= win_wd):
@@ -513,7 +513,8 @@ class ImageViewBindings(object):
                 panx = 1.0 - panx
                 pany = 1.0 - pany
 
-            data_x, data_y = panx * dat_wd, pany * dat_ht
+            data_x = (xy_mn[0] + xy_mx[0]) * panx
+            data_y = (xy_mn[1] + xy_mx[1]) * pany
             return data_x, data_y
 
         elif ptype == 2:
