@@ -89,7 +89,6 @@ class _channel_proxy(object):
         * The "RC" plugin needs to be started in the viewer for this to work.
         """
         # future: handle imtype
-
         load_buffer = self._client.lookup_attr('load_buffer')
 
         return load_buffer(imname, self._chname,
