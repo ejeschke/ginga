@@ -1571,6 +1571,8 @@ class Toolbar(ContainerBase):
             iconw = QIcon(pixmap)
             action = self.widget.addAction(iconw, text,
                                            child._cb_redirect)
+            if text is not None and len(text) > 0:
+                self.widget.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         else:
             action = self.widget.addAction(text, child._cb_redirect)
         action.setCheckable(toggle)
@@ -1681,6 +1683,8 @@ class Menubar(ContainerBase):
         super(Menubar, self).__init__()
 
         self.widget = QtGui.QMenuBar()
+        if hasattr(self.widget, 'setNativeMenuBar'):
+            self.widget.setNativeMenuBar(False)
         self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child, name):
