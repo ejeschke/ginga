@@ -314,7 +314,9 @@ class RGBMapper(Callback.Callbacks):
             if _len != maxlen:
                 raise RGBMapError("shift map length %d != %d" % (_len, maxlen))
             self.sarr = sarr.astype(np.uint, copy=False)
-            self.scale_pct = 1.0
+            # NOTE: can't reset scale_pct here because it results in a
+            # loop with e.g. scale_and_shift()
+            #self.scale_pct = 1.0
             self.make_callback('changed')
         else:
             self.reset_sarr(callback=True)
