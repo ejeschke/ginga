@@ -6,7 +6,7 @@
 #
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        register_canvas_types,
-                                       colors_plus_none)
+                                       colors_plus_none, coord_names)
 from .basic import Rectangle
 from ginga.misc.ParamSet import Param
 
@@ -178,7 +178,6 @@ class ColorBar(CanvasObjectBase):
             cr.draw_polygon(cp)
 
             cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
-            #cr.draw_line(cx1, cy1, cx2, cy1)
             cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
 
             cr.set_font(self.font, self.fontsize, color=self.color,
@@ -186,10 +185,8 @@ class ColorBar(CanvasObjectBase):
             for (cx, cy, cyy, text) in range_pts:
                 cp = tr.to_(((cx, cy), (cx, cy + self.tick_ht), (cx, cyy - 2)))
                 # tick
-                #cr.draw_line(cx, cy, cx, cy+self.tick_ht)
                 cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
                 # number
-                #cr.draw_text(cx, cyy-2, text)
                 cr.draw_text(cp[2][0], cp[2][1], text)
 
         # draw optional border
@@ -205,6 +202,9 @@ class DrawableColorBar(Rectangle):
     @classmethod
     def get_params_metadata(cls):
         return [
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
             Param(name='y1', type=float, default=0.0, argpos=1,
@@ -366,7 +366,6 @@ class DrawableColorBar(Rectangle):
             cr.draw_polygon(cp)
 
             cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
-            #cr.draw_line(cx1, cy1, cx2, cy1)
             cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
 
             cr.set_font(self.font, self.fontsize, color=self.color,
@@ -374,10 +373,8 @@ class DrawableColorBar(Rectangle):
             for (cx, cy, cyy, text) in range_pts:
                 cp = tr.to_(((cx, cy), (cx, cy + self.tick_ht), (cx, cyy - 2)))
                 # tick
-                #cr.draw_line(cx, cy, cx, cy+self.tick_ht)
                 cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
                 # number
-                #cr.draw_text(cx, cyy-2, text)
                 cr.draw_text(cp[2][0], cp[2][1], text)
 
         # draw optional border

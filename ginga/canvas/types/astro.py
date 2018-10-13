@@ -164,10 +164,6 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
         return text
 
     def draw(self, viewer):
-        image = viewer.get_image()
-        if image is None:
-            return
-
         points = self.get_points()
         x1, y1 = points[0]
         x2, y2 = points[1]
@@ -317,10 +313,9 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         OnePointOneRadiusMixin.__init__(self)
 
     def get_points(self):
-        # TODO: this attribute will be deprecated--fix!
-        viewer = self.viewer
-
         if self.ctype == 'wcs':
+            # TODO: shouldn't count on this--fix!
+            viewer = self.crdmap.viewer
             image = viewer.get_image()
             x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
                                                              self.y,
@@ -350,7 +345,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
 
     def draw(self, viewer):
         image = viewer.get_image()
-        if image is None:
+        if image is None and self.ctype == 'wcs':
             return
 
         cr = viewer.renderer.setup_cr(self)

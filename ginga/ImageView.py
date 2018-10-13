@@ -506,7 +506,7 @@ class ImageViewBase(Callback.Callbacks):
         self._imgobj = None
 
         # private canvas set?
-        if not (private_canvas is None):
+        if private_canvas is not None:
             self.private_canvas = private_canvas
 
             if private_canvas != canvas:
