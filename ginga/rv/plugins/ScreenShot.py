@@ -129,8 +129,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
              'Width:', 'label', 'width', 'entry',
              'Height:', 'label', 'height', 'entry'),
             ('Lock aspect', 'checkbutton',
-             'Aspect:', 'label', 'aspect', 'entry'),
-            )
+             'Aspect:', 'label', 'aspect', 'entry'))
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w = b
 
@@ -172,8 +171,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
             ('Type:', 'label', 'grtype', 'combobox',
              'Snap', 'button'),
             ('Clear', 'button', 'Center', 'button', 'Fit', 'button',
-             'Full', 'button'),
-            )
+             'Full', 'button'))
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
 
@@ -505,7 +503,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
     def calc_size_aspect(self, wd, ht, aspect):
         # adjust height or width to match the aspect ratio
         if aspect > 1.0:
-            ht = int(round(wd * 1.0/aspect))
+            ht = int(round(wd * 1.0 / aspect))
         elif aspect < 1.0:
             wd = int(round(ht * aspect))
         else:
