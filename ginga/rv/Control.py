@@ -1371,10 +1371,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def scale2text(self, scalefactor):
         if scalefactor >= 1.0:
-            #text = '%dx' % (int(scalefactor))
             text = '%.2fx' % (scalefactor)
         else:
-            #text = '1/%dx' % (int(1.0/scalefactor))
             text = '1/%.2fx' % (1.0 / scalefactor)
         return text
 
@@ -1385,11 +1383,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         channel = self.get_channel(chname)
         viewer = channel.viewer
         viewer.enable_autocuts('off')
-        viewer.enable_autozoom('on')
+        viewer.enable_autozoom('off')
+        viewer.enable_autocenter('on')
         viewer.cut_levels(0, 255)
 
-        #self.nongui_do(self.load_file, bannerFile, chname=chname)
         image = self.load_file(banner_file, chname=chname, wait=False)
+        viewer.scale_to(1, 1)
 
         # Insert Ginga version info
         header = image.get_header()
@@ -1397,7 +1396,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         if raiseTab:
             self.change_channel(chname)
-            viewer.zoom_fit()
 
     def remove_image_by_name(self, chname, imname, impath=None):
         channel = self.get_channel(chname)
