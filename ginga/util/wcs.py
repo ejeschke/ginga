@@ -684,7 +684,7 @@ def get_ruler_distances(image, p1, p2):
                       ra_heel=None, dec_heel=None,
                       dx_deg=None, dy_deg=None, dh_deg=None)
 
-    if image is not None and image.wcs is not None:
+    if image is not None and hasattr(image, 'wcs') and image.wcs is not None:
         # Calculate RA and DEC for the three points
         try:
             # origination point
