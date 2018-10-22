@@ -9,7 +9,7 @@ import math
 import traceback
 from collections import OrderedDict
 
-import numpy
+import numpy as np
 
 from ginga.util import wcsmod, io_fits
 from ginga.util import wcs, iqcalc
@@ -87,11 +87,11 @@ class AstroImage(BaseImage):
     def setup_data(self, data, naxispath=None):
         # initialize data attribute to something reasonable
         if data is None:
-            data = numpy.zeros((0, 0))
-        elif not isinstance(data, numpy.ndarray):
-            data = numpy.zeros((0, 0))
+            data = np.zeros((0, 0))
+        elif not isinstance(data, np.ndarray):
+            data = np.zeros((0, 0))
         elif 0 in data.shape:
-            data = numpy.zeros((0, 0))
+            data = np.zeros((0, 0))
         elif len(data.shape) < 2:
             # Expand 1D arrays into 1xN array
             data = data.reshape((1, data.shape[0]))
@@ -101,7 +101,7 @@ class AstroImage(BaseImage):
 
         # this will get reset in set_naxispath() if array is
         # multidimensional
-        self._data = data
+        self._data = self._md_data
 
         if naxispath is None:
             naxispath = []
@@ -185,7 +185,7 @@ class AstroImage(BaseImage):
 
     def load_buffer(self, buf, dims, dtype, byteswap=False,
                     naxispath=None, metadata=None):
-        data = numpy.fromstring(buf, dtype=dtype)
+        data = np.fromstring(buf, dtype=dtype)
         if byteswap:
             data.byteswap(True)
         data = data.reshape(dims)
@@ -557,8 +557,8 @@ class AstroImage(BaseImage):
 
             # Determine max/min to update our values
             if update_minmax:
-                maxval = numpy.nanmax(data_np)
-                minval = numpy.nanmin(data_np)
+                maxval = np.nanmax(data_np)
+                minval = np.nanmin(data_np)
                 self.maxval = max(self.maxval, maxval)
                 self.minval = min(self.minval, minval)
 
@@ -571,8 +571,8 @@ class AstroImage(BaseImage):
 
             # scale if necessary
             # TODO: combine with rotation?
-            if (not numpy.isclose(math.fabs(cdelt1), scale_x) or
-                    not numpy.isclose(math.fabs(cdelt2), scale_y)):
+            if (not np.isclose(math.fabs(cdelt1), scale_x) or
+                not np.isclose(math.fabs(cdelt2), scale_y)):
                 nscale_x = math.fabs(cdelt1) / scale_x
                 nscale_y = math.fabs(cdelt2) / scale_y
                 self.logger.debug("scaling piece by x(%f), y(%f)" % (
@@ -588,8 +588,8 @@ class AstroImage(BaseImage):
             flip_y = False
 
             # Optomization for 180 rotations
-            if (numpy.isclose(math.fabs(rot_dx), 180.0) or
-                    numpy.isclose(math.fabs(rot_dy), 180.0)):
+            if (np.isclose(math.fabs(rot_dx), 180.0) or
+                np.isclose(math.fabs(rot_dy), 180.0)):
                 rotdata = trcalc.transform(data_np,
                                            flip_x=True, flip_y=True)
                 rot_dx = 0.0
@@ -598,7 +598,7 @@ class AstroImage(BaseImage):
                 rotdata = data_np
 
             # Finish with any necessary rotation of piece
-            if not numpy.isclose(rot_dy, 0.0):
+            if not np.isclose(rot_dy, 0.0):
                 rot_deg = rot_dy
                 self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
                 rotdata = trcalc.rotate(rotdata, rot_deg,
@@ -606,11 +606,11 @@ class AstroImage(BaseImage):
                                         logger=self.logger)
 
             # Flip X due to negative CDELT1
-            if numpy.sign(cdelt1) != numpy.sign(cdelt1_ref):
+            if np.sign(cdelt1) != np.sign(cdelt1_ref):
                 flip_x = True
 
             # Flip Y due to negative CDELT2
-            if numpy.sign(cdelt2) != numpy.sign(cdelt2_ref):
+            if np.sign(cdelt2) != np.sign(cdelt2_ref):
                 flip_y = True
 
             if flip_x or flip_y:
@@ -684,7 +684,7 @@ class AstroImage(BaseImage):
                                     (expand_pct * 100, max_expand_pct))
 
                 # go for it!
-                new_data = numpy.zeros((new_ht, new_wd))
+                new_data = np.zeros((new_ht, new_wd))
                 # place current data into new data
                 new_data[ny1_off:ny1_off + myht, nx1_off:nx1_off + mywd] = \
                     mydata

@@ -237,6 +237,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def add_image_info_cb(self, viewer, channel, info):
 
+        genthumb = channel.settings.get('genthumb', True)
+        if not genthumb:
+            return False
         save_thumb = self.settings.get('cache_thumbs', False)
 
         # Do we already have this thumb loaded?
@@ -543,7 +546,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def redo_thumbnail_image(self, channel, image, info, save_thumb=None):
         # image is flagged not to make a thumbnail?
-        nothumb = image.get('nothumb', False)
+        nothumb = (image.get('nothumb', False) or
+                   not channel.settings.get('genthumb', True))
         if nothumb:
             return
 
