@@ -1,9 +1,9 @@
-++++++++++++++++++++
-What's New in Ginga?
-++++++++++++++++++++
+++++++++++
+What's New
+++++++++++
 
-Ver 2.7.2.dev
-=============
+Ver 2.7.2 (unreleased)
+======================
 - Fix for linewidth attribute in shapes for AGG backend
 - Fix for ellipse rotation in OpenCv backend
 - Better text rendering for OpenCv backend (loadable fonts)
@@ -87,13 +87,13 @@ Ver 2.6.6 (2017-11-02)
     method called cairo.ImageSurface.create_for_data()
 
 - Addition of a "Quick Mode" to the Pick plugin--see documentation
-- More consistent font handing between widgets and Ginga canvases 
+- More consistent font handing between widgets and Ginga canvases
 - Bug fix for importing some types of matplotlib color maps
 - Add antialiasing for Qt back end
 - Bug fixes and enhancements for Qt gestures
   - holding shift with pinch now keeps position under cursor
 - New Jupyter notebooks back end based on ipywidgets
-  - requirements: $ pip install ipyevents      
+  - requirements: $ pip install ipyevents
   - see examples/jupyter-notebook/
 - Fixes to various reference viewer plugins
 

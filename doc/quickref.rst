@@ -1,8 +1,8 @@
 .. _ginga-quick-reference:
 
-+++++++++++++++++++++
-Ginga Quick Reference
-+++++++++++++++++++++
++++++++++++++++
+Quick Reference
++++++++++++++++
 
 =================
 Main image window
