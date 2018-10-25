@@ -19,8 +19,9 @@ to compile anything, but as always, your mileage may vary.
 REQUIRED
 ========
 
-* python (either v. 2.7 **OR** v. 3.4 or higher)
+* python (either v. 2.7 **OR** v. 3.5 or higher)
 * numpy  (v. 1.7 or higher)
+* astropy
 
 Highly recommended, because some features will not be available without it:
 
@@ -51,7 +52,7 @@ do), you will need at least one of the following:
 
 * python-qt4
 * python-qt5
-* python-pyside (qt4 alternative)
+* python-pyside (qt4/qt5 alternative)
 * python-gtk (gtk2) **AND** python-cairo
 * python gtk3 (gi) **AND** python-cairo
 * python-Tkinter
@@ -99,8 +100,8 @@ Qt/PySide
 =========
 
 Ginga can use either PyQt or PySide, version 4 or 5.  It will auto-detect
-which one is installed.  There is support for both the basic widget and
-the full reference viewer.
+which one is installed, using the ``qtpy`` compatibility package.
+There is support for both the basic widget and the full reference viewer.
 
 .. note:: If you have both installed and you want to use a specific one
 	  then set the environment variable QT_API to either "pyqt" or
@@ -181,49 +182,25 @@ Platform Specific Instructions
 Linux
 =====
 
-#. Install the necessary dependences.  If you are on a relatively recent
-   version of Ubuntu (e.g., v14.04 or later), something like the following
-   will work::
+If you are on a relatively recent version of Debian or Ubuntu,
+something like the following will work::
 
-     apt-get install python-numpy python-scipy python-matplotlib \
-     python-astropy python-qt4 python-webkit python-magic git pip
+     apt install python3-ginga
 
-   Or::
-
-     apt-get install python-numpy python-scipy python-matplotlib \
-     python-astropy python-gtk python-cairo python-webkit \
-     python-magic git pip
-
-   (if you want to use the Gtk version)
-
-#. Follow instructions for :ref:`install_generic`.
+If you are using another distribution of Linux, we recommend to install
+via Anaconda or Miniconda as described below.
 
 Mac/Windows
 ===========
-
-.. note:: Ginga can be installed and run fine using a working Macports or
-          Homebrew installation.  Follow the package advice given
-	  above under :ref:`linux_install_instructions`.
 
 Anaconda
 --------
 
 For Mac/Windows users, we recommend installing the
-`Anaconda distribution <http://continuum.io/downloads>`.
+`Anaconda distribution <http://continuum.io/downloads>` (or Miniconda).
 This distribution already includes all of the necessary packages to run
 Ginga.
 
 After installing Anaconda, open the Anaconda Prompt and follow instructions
 under :ref:`install_generic`.
 
-Enthought Canopy
-----------------
-
-As an alternative, you also have the choice of Enthought Canopy.
-
-#. Install the `free version <https://www.enthought.com/canopy-express/>`_.
-#. Open the Canopy package manager.
-#. Search for and install "astropy".
-#. Search for and install "pyside" (free version of Qt bindings).
-#. Start the Canopy command prompt.
-#. Follow instructions under :ref:`install_generic`.

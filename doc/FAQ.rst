@@ -35,18 +35,9 @@ programs currently support Qt, GTK, Tk, matplotlib and web browser via
 HTML5 canvas.  Some other toolkits are being worked on and may be
 partially supported.
 
-The full reference viewer currently supports Qt and Gtk.  The difference
-is explained here, in Section :ref:`ch-programming-ginga`.
-
-Can Ginga work with PyQt5?
---------------------------
-Yes.
-
-Can Ginga work with Gtk3?
--------------------------
-Yes, although the performance is not on par with Gtk2 yet. Cairo for
-Python 3 still lacks the important ``ImageSurface.create_for_data()``
-API call, so we have to use a workaround. Detailed instructions can be found in Section :ref:`ch-install`.
+The full reference viewer currently supports Qt (4, 5 and PySide) and
+Gtk (2 and 3).  The difference is explained here, in Section
+:ref:`ch-programming-ginga`.
 
 ----------------
 Control Bindings
