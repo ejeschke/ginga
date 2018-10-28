@@ -17,7 +17,7 @@ __all__ = ['CanvasObjectBase', 'get_canvas_type', 'get_canvas_types',
 
 colors_plus_none = [None] + colors.get_colors()
 
-coord_names = ['data', 'wcs', 'cartesian', 'window']
+coord_names = ['data', 'wcs', 'cartesian', 'percentage', 'window']
 
 Point = namedtuple('Point', ['x', 'y'])
 

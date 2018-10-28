@@ -973,8 +973,8 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        radius = np.sqrt(abs(cxt.start_x - cxt.x)**2 +
-                         abs(cxt.start_y - cxt.y)**2)
+        radius = np.sqrt(abs(cxt.start_x - cxt.x) ** 2 +
+                         abs(cxt.start_y - cxt.y) ** 2)
         return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
 
     def __init__(self, x, y, radius, color='yellow',

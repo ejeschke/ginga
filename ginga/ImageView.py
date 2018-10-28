@@ -304,6 +304,7 @@ class ImageViewBase(Callback.Callbacks):
         self.coordmap = {
             'native': coordmap.NativeMapper(self),
             'window': coordmap.WindowMapper(self),
+            'percentage': coordmap.PercentageMapper(self),
             'cartesian': coordmap.CartesianMapper(self),
             'data': coordmap.DataMapper(self),
             None: coordmap.DataMapper(self),
@@ -2993,6 +2994,11 @@ class ImageViewBase(Callback.Callbacks):
                                trcat.ScaleTransform(self) +
                                trcat.RotationTransform(self) +
                                trcat.CartesianWindowTransform(self)),
+            'data_to_percentage': (trcat.DataCartesianTransform(self) +
+                                   trcat.ScaleTransform(self) +
+                                   trcat.RotationTransform(self) +
+                                   trcat.CartesianWindowTransform(self) +
+                                   trcat.WindowPercentageTransform(self)),
             'data_to_native': (trcat.DataCartesianTransform(self) +
                                trcat.ScaleTransform(self) +
                                trcat.RotationTransform(self) +

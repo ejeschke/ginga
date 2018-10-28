@@ -21,6 +21,9 @@ Ver 2.7.2 (unreleased)
 - Improvements to synchronous refresh feature to reduce jitter and
   increase frame rate
 - Fix for navigating certain data cubes with MutltiDim plugin
+- Added new percentage transform and coordinate mapper type (allow
+  placement of objects as a percentage of the window size)
+- Updates to Compass canvas type and Pan plugin
 
 Ver 2.7.1 (2018-07-09)
 ======================

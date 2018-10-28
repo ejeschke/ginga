@@ -251,8 +251,8 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
     """
     Draws a WCS compass on a DrawingCanvas.
     Parameters are:
-    x, y: 0-based coordinates of the center in the data space
-    radius: radius of the compass arms, in data units
+    x, y: 0-based coordinates of the center in the coordinate space
+    radius: radius of the compass arms, in coordinate units
     Optional parameters for linesize, color, etc.
     """
 
@@ -296,7 +296,8 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        radius = max(abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y))
+        radius = np.sqrt(abs(cxt.start_x - cxt.x) ** 2 +
+                         abs(cxt.start_y - cxt.y) ** 2)
         return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
 
     def __init__(self, x, y, radius, ctype='wcs', color='skyblue',
@@ -312,51 +313,75 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
                                   **kwdargs)
         OnePointOneRadiusMixin.__init__(self)
 
-    def get_points(self):
-        if self.ctype == 'wcs':
-            # TODO: shouldn't count on this--fix!
-            viewer = self.crdmap.viewer
-            image = viewer.get_image()
-            x, y, xn, yn, xe, ye = image.calc_compass_radius(self.x,
-                                                             self.y,
-                                                             self.radius)
-        elif self.ctype == 'pixel':
-            x, y = self.x, self.y
-            xn, yn, xe, ye = x, y + self.radius, x + self.radius, y
-
-        return [(x, y), (xn, yn), (xe, ye)]
-
     def get_edit_points(self, viewer):
-        c_pt, n_pt, e_pt = self.get_points()
-        return [MovePoint(*c_pt), ScalePoint(*n_pt), ScalePoint(*e_pt)]
+        points = self.get_data_points(points=(
+            (self.x, self.y),
+            self.crdmap.offset_pt((self.x, self.y),
+                                  (self.radius, self.radius)), ))
+        x, y = points[0]
+        x1, y1 = points[1]
+        radius = math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2)
 
-    def set_edit_point(self, i, pt, detail):
-        if i == 0:
-            self.move_to_pt(pt)
-        elif i in (1, 2):
-            x, y = pt
-            self.radius = max(abs(x - self.x), abs(y - self.y))
-        else:
-            raise ValueError("No point corresponding to index %d" % (i))
+        return [MovePoint(x, y),
+                ScalePoint(x + radius, y + radius),
+                ]
+
+    def get_llur(self):
+        points = self.get_data_points(points=(
+            (self.x, self.y),
+            self.crdmap.offset_pt((self.x, self.y),
+                                  (self.radius, self.radius)), ))
+        x, y = points[0]
+        x1, y1 = points[1]
+        radius = math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2)
+
+        x1, y1, x2, y2 = x - radius, y - radius, x + radius, y + radius
+        return self.swapxy(x1, y1, x2, y2)
 
     def select_contains_pt(self, viewer, pt):
         p0 = self.crdmap.to_data((self.x, self.y))
         return self.within_radius(viewer, pt, p0, self.cap_radius)
 
     def draw(self, viewer):
-        image = viewer.get_image()
-        if image is None and self.ctype == 'wcs':
-            return
+
+        points = self.get_data_points(points=(
+            (self.x, self.y),
+            self.crdmap.offset_pt((self.x, self.y),
+                                  (self.radius, self.radius)), ))
+        x, y = points[0]
+        x1, y1 = points[1]
+        radius = math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2)
+
+        bad_arms = False
+
+        if self.ctype == 'wcs':
+            image = viewer.get_image()
+            if image is None:
+                return
+
+            try:
+                x, y, xn, yn, xe, ye = wcs.calc_compass_radius(image,
+                                                               x, y,
+                                                               radius)
+            except Exception as e:
+                bad_arms = True
+
+        elif self.ctype == 'pixel':
+            xn, yn, xe, ye = x, y + radius, x + radius, y
 
         cr = viewer.renderer.setup_cr(self)
         cr.set_font_from_shape(self)
 
-        try:
-            (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints(viewer)
-        except Exception as e:
-            cr.draw_text(self.x, self.y, 'BAD WCS')
+        if bad_arms:
+            points = self.get_cpoints(viewer, points=[(x, y)])
+            cx, cy = points[0]
+            cr.draw_text(cx, cy, 'BAD WCS')
             return
 
+        points = np.asarray([(x, y), (xn, yn), (xe, ye)])
+
+        (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints(viewer,
+                                                              points=points)
         # draw North line and arrowhead
         cr.draw_line(cx1, cy1, cx2, cy2)
         self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)

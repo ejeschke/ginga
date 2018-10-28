@@ -38,6 +38,7 @@ import math
 from ginga.BaseImage import BaseImage
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
+from ginga.util import wcs
 from ginga import GingaPlugin
 
 __all__ = ['Pan']
@@ -230,6 +231,7 @@ class Pan(GingaPlugin.GlobalPlugin):
     def reconfigure(self, panimage, width, height):
         self.logger.debug("new pan image dimensions are %dx%d" % (
             width, height))
+
         panimage.zoom_fit()
         panimage.redraw(whence=0)
         return True
@@ -277,28 +279,25 @@ class Pan(GingaPlugin.GlobalPlugin):
         except Exception:
             pass
 
-        width, height = image.get_size()
-        x, y = width / 2.0, height / 2.0
-        # radius we want the arms to be (approx 1/4 or 1/5 the
-        #   largest dimension)
-        radius = float(max(width, height)) / 5.0
+        x, y = 0.5, 0.5
+        radius = 0.1
 
         paninfo.compass_xy = p_canvas.add(self.dc.Compass(
             x, y, radius,
             color=self.settings.get('xy_compass_color', 'yellow'),
-            fontsize=14, ctype='pixel'))
+            fontsize=14, ctype='pixel', coord='percentage'))
 
         # create compass
-        if image.has_valid_wcs() and hasattr(image, 'calc_compass_radius'):
+        if image.has_valid_wcs():
             try:
                 # HACK: force a wcs error here if one is going to happen
-                image.add_offset_xy(x, y, 1.0, 1.0)
+                wcs.add_offset_xy(image, x, y, 1.0, 1.0)
 
-                radius = float(max(width, height)) / 3.0
+                radius = 0.2
                 paninfo.compass_wcs = p_canvas.add(self.dc.Compass(
                     x, y, radius,
                     color=self.settings.get('compass_color', 'skyblue'),
-                    fontsize=14, ctype='wcs'))
+                    fontsize=14, ctype='wcs', coord='percentage'))
 
             except Exception as e:
                 paninfo.compass_wcs = None

@@ -9,8 +9,8 @@ import numpy as np
 from ginga import trcalc
 from ginga.util import wcs
 
-__all__ = ['NativeMapper', 'WindowMapper', 'CartesianMapper',
-           'DataMapper', 'OffsetMapper', 'WCSMapper']
+__all__ = ['NativeMapper', 'WindowMapper', 'PercentageMapper',
+           'CartesianMapper', 'DataMapper', 'OffsetMapper', 'WCSMapper']
 
 
 class CoordMapError(Exception):
@@ -97,6 +97,35 @@ class WindowMapper(BaseMapper):
 
         data_arr = np.asarray(data_pts)
         return viewer.tform['data_to_window'].to_(data_arr)
+
+    def offset_pt(self, pts, offset):
+        return np.add(pts, offset)
+
+    def rotate_pt(self, pts, theta, offset):
+        # TODO?  Not sure if it is needed with this mapper type
+        return pts
+
+
+class PercentageMapper(BaseMapper):
+    """A coordinate mapper that maps to the viewer in 'percentage' coordinates.
+    """
+    def __init__(self, viewer):
+        super(PercentageMapper, self).__init__()
+        self.viewer = viewer
+
+    def to_data(self, pct_pts, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+
+        pct_arr = np.asarray(pct_pts)
+        return viewer.tform['data_to_percentage'].from_(pct_arr)
+
+    def data_to(self, data_pts, viewer=None):
+        if viewer is None:
+            viewer = self.viewer
+
+        data_arr = np.asarray(data_pts)
+        return viewer.tform['data_to_percentage'].to_(data_arr)
 
     def offset_pt(self, pts, offset):
         return np.add(pts, offset)

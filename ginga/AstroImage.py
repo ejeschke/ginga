@@ -399,7 +399,8 @@ class AstroImage(BaseImage):
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords,
                                    naxispath=self.revnaxis)
 
-    # -----> TODO: merge into wcs.py ?
+    # -----> TODO:
+    #   This section has been merged into util.wcs.  Deprecate it here.
     #
     def get_starsep_XY(self, x1, y1, x2, y2):
         # source point
@@ -491,7 +492,7 @@ class AstroImage(BaseImage):
 
         return self.calc_compass_radius(x, y, radius_px)
     #
-    # <----- TODO: merge this into wcs.py ?
+    # <----- TODO: deprecate
 
     def get_wcs_rotation_deg(self):
         header = self.get_header()
