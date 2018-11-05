@@ -10,6 +10,8 @@ Ginga as a visualization solution for their own software.
 .. toctree::
    :maxdepth: 3
 
+   image_wrappers
+   image_viewer
    canvas
    developers
    viewer
