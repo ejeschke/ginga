@@ -314,7 +314,7 @@ of these objects.
 
 The "fitsimage" object is the ginga image viewer object associated with
 the channel.  You can get a good idea of how to programmatically
-manipulate this viewer here :ref:`_ch-image-viewer-operations`
+manipulate this viewer here :ref:`ch-image-viewer-operations`
 and by browsing the source of the many plugins distributed with Ginga.
 Most of them are not very long or complex.  Also, a plugin can include
 any Python packages or modules that it wants and programming one is

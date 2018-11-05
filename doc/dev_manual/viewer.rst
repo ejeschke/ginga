@@ -33,7 +33,7 @@ subclass of ``ImageView`` (usually a ``CanvasView``), and using the
 ``get_widget()`` call extract the native widget and insert it into the
 GUI layout.  A reference should also be kept to the view object, as this
 is typically what you will be calling methods on to control the viewer
-(see :ref:`_ch-image-viewer-operations`).
+(see :ref:`ch-image-viewer-operations`).
 
 Ginga does not create any additional GUI components beyond the image
 pane itself, however it does provide a standard set of keyboard and
@@ -202,7 +202,7 @@ Many of these sorts of examples for all supported backends are contained
 in the ``examples`` directory in the source distribution.
 
 For a list of many methods provided by the viewer object see
-this reference:ref:`_ch-image-viewer-operations`.  You can also click on the
+this reference:ref:`ch-image-viewer-operations`.  You can also click on the
 module index link at the top of this chapter and then click on the link
 for ``ImageViewBase``.
 

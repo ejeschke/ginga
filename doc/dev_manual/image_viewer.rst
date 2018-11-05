@@ -1,3 +1,4 @@
+
 .. _ch-image-viewer-operations:
 
 *****************************
@@ -5,13 +6,23 @@ Ginga Image Viewer Operations
 *****************************
 
 This chapter describes the operations supported by the basic Ginga image
-viewer and how to access them programatically.  For all of these
-API examples we assume the viewer object is contained in variable ``v``.
+viewer and how to access them programatically.
 
-Manipulating the view, programatically
-======================================
+
+Manipulating the view programatically
+=====================================
 
 The sections below describe how to manipulate the view programatically.
+For all of these API examples we assume the viewer object is contained
+in variable ``v``.  One way to create one::
+
+  >>> from ginga import toolkit
+  >>> toolkit.use('qt5')
+  >>> from ginga.gw import Viewers
+  >>> from ginga.misc import log
+  >>> logger = log.get_logger("viewer1", log_stderr=True, level=40)
+  >>> v = Viewers.CanvasView(logger=logger)
+  
 Many of the API calls simply set a value in the viewer's settings
 object; if so, we note the associated keyword for that setting.
 
@@ -22,7 +33,7 @@ Loading the Viewer
 The image viewer can load data in a number of formats, but all formats
 are wrapped with a class that corresponds to the *model* part of the
 model-view-controller design used by Ginga.
-For more information on creating the wrapper object,
+For more information on creating an image wrapper object,
 see :ref:`ch-image-data-wrappers`.
 
 Once you have successfully loaded an image wrapper, you can set it into
