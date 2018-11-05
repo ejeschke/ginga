@@ -7,8 +7,7 @@ import sys
 from ginga import AstroImage
 from ginga.misc import log
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
-from ginga.qtw.ImageViewQt import ScrolledView
+from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -18,14 +17,13 @@ class FitsViewer(QtGui.QMainWindow):
         self.logger = logger
 
         # create the ginga viewer and configure it
-        fi = ImageViewCanvas(self.logger, render='widget')
+        fi = CanvasView(self.logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
-        fi.enable_draw(False)
+        fi.ui_set_active(True)
         self.fitsimage = fi
 
         # enable some user interaction

@@ -1,8 +1,8 @@
 .. _ch-image-data-wrappers:
 
-+++++++++++++++++++
+*******************
 Image Data Wrappers
-+++++++++++++++++++
+*******************
 
 The image viewer can load data in a number of formats, but all formats
 are wrapped with a class that corresponds to the *model* part of the

@@ -1,12 +1,20 @@
 .. _ch-image-viewer-operations:
 
-+++++++++++++++++++++++++++++
+*****************************
 Ginga Image Viewer Operations
-+++++++++++++++++++++++++++++
+*****************************
 
 This chapter describes the operations supported by the basic Ginga image
 viewer and how to access them programatically.  For all of these
 API examples we assume the viewer object is contained in variable ``v``.
+
+Manipulating the view, programatically
+======================================
+
+The sections below describe how to manipulate the view programatically.
+Many of the API calls simply set a value in the viewer's settings
+object; if so, we note the associated keyword for that setting.
+
 
 Loading the Viewer
 ==================
@@ -21,15 +29,6 @@ Once you have successfully loaded an image wrapper, you can set it into
 the image viewer::
 
   >>> v.set_image(img)
-
-
-======================================
-Manipulating the view, programatically
-======================================
-
-The sections below describe how to manipulate the view programatically.
-Many of the API calls simply set a value in the viewer's settings
-object; if so, we note the associated keyword for that setting.
 
 
 Scaling
@@ -83,7 +82,7 @@ means that no artificial limit will be imposed.
 
 
 Zooming
--------
+=======
 
 Although Ginga uses scale factors to accomplish image scaling, it also
 supports the concept of zooming via *levels*.  It does this by mapping a

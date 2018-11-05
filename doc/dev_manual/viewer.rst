@@ -23,16 +23,17 @@ that is described in more detail in the chapter on internals
 (see :ref:`ch-programming-internals`).
 The "view" classes are rooted in the base class ``ImageView``.
 Ginga supports backends for different widget sets through various
-subclasses of this class.
+subclasses of this class. 
 
 Typically, a developer picks a GUI toolkit that has a supported backend
 (Gtk 2/3, Qt 4/5, Tk, matplotlib, HTML5 canvas) and writes a GUI program
 using that widget set with the typical Python toolkit bindings and API.
 Where they want a image view pane they instantiate the appropriate
-subclass of ``ImageView``, and using the  ``get_widget()`` call extract
-the native widget and insert it into the GUI layout.  A reference should
-also be kept to the view object, as this is typically what you will be
-calling methods on to control the viewer.
+subclass of ``ImageView`` (usually a ``CanvasView``), and using the
+``get_widget()`` call extract the native widget and insert it into the
+GUI layout.  A reference should also be kept to the view object, as this
+is typically what you will be calling methods on to control the viewer
+(see :ref:`_ch-image-viewer-operations`).
 
 Ginga does not create any additional GUI components beyond the image
 pane itself, however it does provide a standard set of keyboard and
@@ -53,8 +54,8 @@ built in controls.
    A simple, "bare bones" FITS viewer written in Qt.
 
 Listing 1 shows a code listing for a simple graphical FITS
-viewer built using the subclass ``ImageViewCanvas`` from the module
-``ImageViewCanvasQt`` (screenshot in Figure :ref:`fig1`) written in
+viewer built using the subclass ``CanvasView`` from the module
+``ImageViewQt`` (screenshot in Figure :ref:`fig1`) written in
 around 100 or so lines of Python.  It creates a window containing an
 image view and two buttons.  This example will open FITS files dragged
 and dropped on the image window or via a dialog popped up when clicking
@@ -62,16 +63,17 @@ the "Open File" button.
 
 .. code-block:: python
 
+    #! /usr/bin/env python
     #
-    # example1_qt.py -- Simple FITS viewer using the Ginga toolkit and Qt widgets.
+    # example1_qt.py -- Simple FITS viewer using the Ginga toolkit
+    #                       and Qt widgets.
     #
-    import sys, os
-    import logging
+    import sys
 
     from ginga import AstroImage
     from ginga.misc import log
     from ginga.qtw.QtHelp import QtGui, QtCore
-    from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
+    from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
 
 
     class FitsViewer(QtGui.QMainWindow):
@@ -80,26 +82,30 @@ the "Open File" button.
             super(FitsViewer, self).__init__()
             self.logger = logger
 
-            fi = ImageViewCanvas(self.logger, render='widget')
+            # create the ginga viewer and configure it
+            fi = CanvasView(self.logger, render='widget')
             fi.enable_autocuts('on')
             fi.set_autocut_params('zscale')
             fi.enable_autozoom('on')
             fi.set_callback('drag-drop', self.drop_file)
             fi.set_bg(0.2, 0.2, 0.2)
-            fi.ui_setActive(True)
-            fi.enable_draw(False)
+            fi.ui_set_active(True)
             self.fitsimage = fi
 
+            # enable some user interaction
             bd = fi.get_bindings()
             bd.enable_all(True)
 
             w = fi.get_widget()
             w.resize(512, 512)
 
+            # add scrollbar interface around this viewer
+            si = ScrolledView(fi)
+
             vbox = QtGui.QVBoxLayout()
             vbox.setContentsMargins(QtCore.QMargins(2, 2, 2, 2))
             vbox.setSpacing(1)
-            vbox.addWidget(w, stretch=1)
+            vbox.addWidget(si, stretch=1)
 
             hbox = QtGui.QHBoxLayout()
             hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
@@ -153,7 +159,7 @@ the "Open File" button.
         # ginga needs a logger.
         # If you don't want to log anything you can create a null logger by
         # using null=True in this call instead of log_stderr=True
-        logger = log.get_logger("example1", log_stderr=True)
+        logger = log.get_logger("example1", log_stderr=True, level=40)
 
         w = FitsViewer(logger)
         w.resize(524, 540)
@@ -167,12 +173,13 @@ the "Open File" button.
 
         app.exec_()
 
+
     if __name__ == '__main__':
         main(None, sys.argv[1:])
 
-
+    
 Looking at the constructor for this particular viewer, you can see where
-we create a ``ImageViewCanvas`` object.  On this object we enable automatic
+we create a ``CanvasView`` object.  On this object we enable automatic
 cut levels (using the 'zscale' algorithm), configure it to auto zoom the
 image to fit the window and set a callback function for files dropped on
 the window.  We extract the user-interface bindings with
@@ -188,12 +195,14 @@ method to get the data into the viewer.  As shown, load_file creates
 an ``AstroImage`` object (the "model" part of our MVC design).  It then
 passes this object to the viewer via the set_image() method.
 ``AstroImage`` objects have methods for ingesting data via a file path, an
-``astropy.io.fits`` HDU or a bare ``Numpy`` data array.
+``astropy.io.fits`` HDU or a bare ``Numpy`` data array.  For a reference
+on the model, see here:ref:`_ch-image-data-wrappers`.
 
 Many of these sorts of examples for all supported backends are contained
 in the ``examples`` directory in the source distribution.
 
-For a list of many methods provided by the viewer object, click on the
+For a list of many methods provided by the viewer object see
+this reference:ref:`_ch-image-viewer-operations`.  You can also click on the
 module index link at the top of this chapter and then click on the link
 for ``ImageViewBase``.
 
@@ -207,9 +216,9 @@ Graphics plotting with Ginga
    :scale: 100%
    :figclass: h
 
-   An example of a ``ImageViewCanvas`` widget with graphical overlay.
+   An example of a ``CanvasView`` widget with graphical overlay.
 
-An ``ImageViewCanvas`` actually combines a view with a canvas object (in
+A ``CanvasView`` actually pairs a view with a canvas object (in
 particular a ``DrawingCanvas`` object).  You can get more detail about
 canvases and the objects they support (see :ref:`ch-canvas_graphics`).
 A variety of graphical shapes are available, and plotted objects scale,
