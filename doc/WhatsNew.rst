@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 2.7.2 (unreleased)
+Ver 2.7.2 (2018-11-05)
 ======================
 - Fix for linewidth attribute in shapes for AGG backend
 - Fix for ellipse rotation in OpenCv backend
@@ -24,6 +24,7 @@ Ver 2.7.2 (unreleased)
 - Added new percentage transform and coordinate mapper type (allow
   placement of objects as a percentage of the window size)
 - Updates to Compass canvas type and Pan plugin
+- Documentation improvements for writing plugins
 
 Ver 2.7.1 (2018-07-09)
 ======================
