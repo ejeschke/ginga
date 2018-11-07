@@ -23,13 +23,32 @@ from ginga.misc import Bunch
 
 
 def get_mean(data_np):
-    mdata = np.ma.masked_array(data_np, np.isnan(data_np))
-    return np.mean(mdata)
+    """Calculate mean for valid values.
+
+    Parameters
+    ----------
+    data_np : ndarray
+        Input array.
+
+    Returns
+    -------
+    result : float
+        Mean of array values that are finite.
+        If array contains no finite values, returns NaN.
+
+    """
+    i = np.isfinite(data_np)
+    if not np.any(i):
+        return np.nan
+    return np.mean(data_np[i])
 
 
 def get_median(data_np):
-    mdata = np.ma.masked_array(data_np, np.isnan(data_np))
-    return np.median(mdata)
+    """Like :func:`get_mean` but for median."""
+    i = np.isfinite(data_np)
+    if not np.any(i):
+        return np.nan
+    return np.median(data_np[i])
 
 
 class IQCalcError(Exception):
