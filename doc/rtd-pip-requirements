@@ -1,7 +1,0 @@
-numpy>=1.13
-pillow
-matplotlib
-Cython
-scipy>=0.18
-astropy
-sphinx-astropy

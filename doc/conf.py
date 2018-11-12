@@ -30,7 +30,7 @@ import os
 import sys
 
 try:
-    import astropy_helpers
+    import astropy_helpers  # noqa
 except ImportError:
     # Building from inside the docs/ directory?
     if os.path.basename(os.getcwd()) == 'doc':
@@ -39,13 +39,10 @@ except ImportError:
             sys.path.insert(1, a_h_path)
 
 # Load all of the global Astropy configuration
-from astropy_helpers.sphinx.conf import *
+from astropy_helpers.sphinx.conf import *  # noqa
 
 # Get configuration information from setup.cfg
-try:
-    from ConfigParser import ConfigParser
-except ImportError:
-    from configparser import ConfigParser
+from configparser import ConfigParser
 conf = ConfigParser()
 conf.read([os.path.join(os.path.dirname(__file__), '..', 'setup.cfg')])
 setup_cfg = dict(conf.items('metadata'))
@@ -61,7 +58,7 @@ setup_cfg = dict(conf.items('metadata'))
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns.append('_templates')
+exclude_patterns.append('_templates')  # noqa
 
 # This is added to the end of RST files - a good place to put substitutions to
 # be used globally.
@@ -74,17 +71,16 @@ modindex_common_prefix = ['ginga.']
 # -- Project information ------------------------------------------------------
 
 # This does not *have* to match the package name, but typically does
-project = setup_cfg['package_name']
+project = setup_cfg['name']
 author = setup_cfg['author']
-copyright = '{0}, {1}'.format(
-    datetime.datetime.now().year, setup_cfg['author'])
+copyright = '{0}, {1}'.format(datetime.datetime.now().year, author)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-__import__(setup_cfg['package_name'])
-package = sys.modules[setup_cfg['package_name']]
+__import__(project)
+package = sys.modules[project]
 
 # The short X.Y version.
 version = package.__version__.split('-', 1)[0]
@@ -145,11 +141,11 @@ latex_documents = [('index', project + '.tex', project + u' Documentation',
 latex_elements = {
     # Additional stuff for the LaTeX preamble.
     'preamble': "".join((
-        '\DeclareUnicodeCharacter{9280}{N}',
-        '\DeclareUnicodeCharacter{6CB3}{N}',
-        '\DeclareUnicodeCharacter{304E}{N}',
-        '\DeclareUnicodeCharacter{3093}{N}',
-        '\DeclareUnicodeCharacter{304C}{N}',
+        r'\DeclareUnicodeCharacter{9280}{N}',
+        r'\DeclareUnicodeCharacter{6CB3}{N}',
+        r'\DeclareUnicodeCharacter{304E}{N}',
+        r'\DeclareUnicodeCharacter{3093}{N}',
+        r'\DeclareUnicodeCharacter{304C}{N}',
     )),
 }
 
@@ -163,15 +159,15 @@ man_pages = [('index', project.lower(), project + u' Documentation',
 
 ## -- Options for the edit_on_github extension ----------------------------------------
 
-if eval(setup_cfg.get('edit_on_github')):
-    extensions += ['astropy_helpers.sphinx.ext.edit_on_github']
-
-    versionmod = __import__(setup_cfg['package_name'] + '.version')
-    edit_on_github_project = setup_cfg['github_project']
-    if versionmod.version.release:
-        edit_on_github_branch = "v" + versionmod.version.version
-    else:
-        edit_on_github_branch = "master"
-
-    edit_on_github_source_root = ""
-    edit_on_github_doc_root = "docs"
+#if eval(setup_cfg.get('edit_on_github')):
+#    extensions += ['astropy_helpers.sphinx.ext.edit_on_github']  # noqa
+#
+#    versionmod = __import__(project + '.version')
+#    edit_on_github_project = setup_cfg['github_project']
+#    if versionmod.version.release:
+#        edit_on_github_branch = "v" + versionmod.version.version
+#    else:
+#        edit_on_github_branch = "master"
+#
+#    edit_on_github_source_root = ""
+#    edit_on_github_doc_root = "doc"

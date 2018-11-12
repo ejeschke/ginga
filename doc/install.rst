@@ -20,14 +20,18 @@ REQUIRED
 ========
 
 * python (v. 3.5 or higher)
-* numpy  (v. 1.7 or higher)
+* setuptools
+* numpy  (v. 1.13 or higher)
 * astropy
 
 Highly recommended, because some features will not be available without it:
 
 * scipy
-* pillow
-* opencv
+* Pillow
+* opencv-python (also distributed as opencv or python-opencv,
+  depending on where you get it from)
+* piexif
+* beautifulsoup4
 
 For opening `FITS <https://fits.gsfc.nasa.gov/>`_ files you will
 need one of the following packages:
@@ -50,39 +54,39 @@ Ginga can draw its output to a number of different back ends.
 Depending on which GUI toolkit you prefer (and what you want to
 do), you will need at least one of the following:
 
-* python-qt4
-* python-qt5
-* python-pyside (qt4/qt5 alternative)
-* python-gtk (gtk2) **AND** python-cairo
-* python gtk3 (gi) **AND** python-cairo
-* python-Tkinter
+.. TODO: This can be broken down in a clearer way.
+
+* QtPy (PyQt4 or PyQt5)
+* PySide (Qt4/Qt5 alternative)
+* PyGTK (gtk) **AND** `pycairo <https://github.com/pygobject/pycairo>`_ (GTK 2)
+* pygobject (gi) **AND** pycairo (GTK 3)
+* `tkinter <https://docs.python.org/3/library/tk.html>`_
 * matplotlib
 * tornado
-* aggdraw
-* PIL (pillow)
-* OpenCv
+* `aggdraw <https://github.com/pytroll/aggdraw>`_
+* Pillow (PIL fork)
 
 RECOMMENDED
 ===========
+
 Certain plugins in the reference viewer (or features of those plugins)
 will not work without the following packages:
 
 * matplotlib (required by: Pick, Cuts, Histogram, LineProfile)
-* webkit (required by: WBrowser (used for online help))
 * scipy (required by: Pick, some built-in
   :ref:`auto cuts algorithms <autoset_cut_levels>` used when you load an image)
 
 To save a movie:
 
-* mencoder (required by: Cuts)
+* mencoder (command line tool required by: Cuts)
 
 Helpful, but not necessary (may optimize or speed up certain operations):
 
-* python-opencv (speeds up rotation, mosaicing and some transformations)
-* python-pyopencl (speeds up rotation, mosaicing and some transformations)
-* python-numexpr (speeds up rotation a little)
-* python-filemagic (aids in identifying files when opening them)
-* python-PIL or pillow (useful for various RGB file manipulations)
+* opencv-python (speeds up rotation, mosaicing and some transformations)
+* pyopencl (speeds up rotation, mosaicing and some transformations)
+* numexpr (speeds up rotation a little)
+* filemagic (aids in identifying files when opening them)
+* Pillow (useful for various RGB file manipulations)
 
 ==============================
 Notes on Supported Widget Sets
@@ -94,7 +98,7 @@ full reference viewer, which includes many plugins (``ginga``).
 
 .. note:: For the full reference viewer, Mac and Windows users
 	  should probably install the Qt version, unless you are
-	  the tinkering sort.  Linux can use either Qt or Gtk fine.
+	  the tinkering sort.  Linux can use either Qt or GTK fine.
 
 Qt/PySide
 =========
@@ -107,14 +111,12 @@ There is support for both the basic widget and the full reference viewer.
 	  then set the environment variable QT_API to either "pyqt" or
 	  "pyside".  This is the same procedure as for Matplotlib.
 
-
-Gtk
+GTK
 ===
 
-Ginga can use either Gtk 2 (with pygtk) or Gtk 3 (with gi).  (If you have
-an older version of pycairo package, you may need to install a newer version
-from `pycairo repository <https://github.com/pygobject/pycairo>`_).
-
+Ginga can use either GTK 2 (with PyGTK) or GTK 3 (with ``gi``).  (If you have
+an older version of ``pycairo`` package, you may need to install a newer version
+from ``pycairo``).
 
 Tk
 ==
@@ -122,10 +124,9 @@ Tk
 Ginga's Tk support is limited to the viewing widget itself.  For
 overplotting (graphics) support, you will also need:
 
-* ``pillow``/PIL package
-* ``OpenCv`` module
-* ``aggdraw`` module (which you can find at
-  `aggdraw repository <https://github.com/pytroll/aggdraw>`_)
+* Pillow
+* opencv-python
+* aggdraw
 
 Matplotlib
 ==========
@@ -148,9 +149,16 @@ Tested browsers include Chromium (Chrome), Firefox, and Safari.
 Basic Installation
 ==================
 
-You can download and install via ``pip``::
+You can download and install via ``pip`` by choosing the command that best
+suits your needs (full selection is defined in
+`setup configuration file <https://github.com/ejeschke/ginga/blob/master/setup.cfg>`_
+)::
 
-   pip install ginga
+   pip install ginga  # The most basic installation
+
+   pip install ginga[recommended,qt5]  # Qt5
+
+   pip install ginga[recommended,gtk3]  # GTK 3
 
 Or via ``conda``::
 
@@ -179,8 +187,8 @@ Platform Specific Instructions
 
 .. _linux_install_instructions:
 
-Linux
-=====
+Linux (Debian/Ubuntu)
+=====================
 
 If you are on a relatively recent version of Debian or Ubuntu,
 something like the following will work::
@@ -190,17 +198,16 @@ something like the following will work::
 If you are using another distribution of Linux, we recommend to install
 via Anaconda or Miniconda as described below.
 
-Mac/Windows
-===========
+Mac/Windows/Linux (others)
+==========================
 
 Anaconda
 --------
 
-For Mac/Windows users, we recommend installing the
-`Anaconda distribution <http://continuum.io/downloads>` (or Miniconda).
+For Mac/Windows or other Linux users, we recommend installing the
+`Anaconda distribution <http://continuum.io/downloads>`_ (or Miniconda).
 This distribution already includes all of the necessary packages to run
 Ginga.
 
 After installing Anaconda, open the Anaconda Prompt and follow instructions
-under :ref:`install_generic`.
-
+under :ref:`install_generic` via ``conda``.

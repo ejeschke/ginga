@@ -26,7 +26,7 @@ class UnsupportedPythonError(Exception):
     pass
 
 
-# This is the same check as the one at the top of setup.py
+# This is the same check as the one in setup.cfg
 if sys.version_info < tuple((int(val) for val in __minimum_python_version__.split('.'))):
     raise UnsupportedPythonError("Ginga does not support Python < {}".format(__minimum_python_version__))
 

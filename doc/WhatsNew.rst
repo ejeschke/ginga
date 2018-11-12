@@ -17,6 +17,7 @@ Ver 3.0.0 (unreleased)
 - Improved smoothness and updates of Zoom plugin image
 - Improved smoothness and updates when rotating or shifting color map
 - Fixed broken banner
+- Improved ``pip`` installation commands for different backends.
 
 Ver 2.7.2 (2018-11-05)
 ======================
