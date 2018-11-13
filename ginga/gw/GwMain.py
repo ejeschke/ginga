@@ -9,7 +9,6 @@ import traceback
 import threading
 import logging
 import time
-import filter
 
 from ginga.misc import Task, Future, Callback
 from collections import deque
