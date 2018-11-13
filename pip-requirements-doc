@@ -1,0 +1,10 @@
+# This is for doc build only
+numpy
+pillow
+matplotlib
+Cython
+scipy>=0.18
+astropy
+sphinx
+sphinx_rtd_theme
+sphinx-automodapi

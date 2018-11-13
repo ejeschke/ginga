@@ -1,2 +1,4 @@
+# GTK 3 (recommended over GTK 2)
+-r pip-requirements
 pycairo
 pygobject

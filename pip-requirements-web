@@ -1,2 +1,4 @@
+# Web backend
+-r pip-requirements
 tornado
 aggdraw

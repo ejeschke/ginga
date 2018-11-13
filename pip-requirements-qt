@@ -1,2 +1,4 @@
+# Qt5 (recommended over Qt4)
+-r pip-requirements
 PyQt5
 QtPy>=1.1
