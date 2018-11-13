@@ -4,9 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import absolute_import, print_function
-from .util import six
-
 import warnings
 
 import numpy as np
@@ -13317,7 +13314,7 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
         return
 
     for name in _cm.cmap_d:
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             continue
         try:
             # Do not load deprecated colormaps

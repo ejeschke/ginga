@@ -70,9 +70,6 @@ Used together with ``TVMask``, you can overlay both point sources and masked
 regions in Ginga.
 
 """
-from __future__ import absolute_import, division, print_function
-from ginga.util.six import iteritems, itervalues
-from ginga.util.six.moves import map, zip
 
 # STDLIB
 import re
@@ -318,7 +315,7 @@ class TVMark(LocalPlugin):
         max_x = image.width - 1
         max_y = image.height - 1
 
-        for key, coords in iteritems(self.coords_dict):
+        for key, coords in self.coords_dict.items():
             if len(coords) == 0:
                 continue
 
@@ -546,7 +543,7 @@ class TVMark(LocalPlugin):
         self.treeview.set_tree(self.tree_dict)
         n = 0
 
-        for sub_dict in itervalues(self.tree_dict):
+        for sub_dict in self.tree_dict.values():
             n += len(sub_dict)
 
         self.w.nshown.set_text(str(n))
@@ -566,13 +563,13 @@ class TVMark(LocalPlugin):
         # Display highlighted entries only in second table
         self.treeviewsel.set_tree(res_dict)
 
-        for kstr, sub_dict in iteritems(res_dict):
+        for kstr, sub_dict in res_dict.items():
             s = kstr.split(',')
             marktype = s[0]
             marksize = float(s[1])
             markcolor = s[2]
 
-            for bnch in itervalues(sub_dict):
+            for bnch in sub_dict.values():
                 obj = self._get_markobj(bnch.X - self.pixelstart,
                                         bnch.Y - self.pixelstart,
                                         marktype, marksize, markcolor, width)

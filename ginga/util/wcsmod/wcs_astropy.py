@@ -8,8 +8,6 @@ import astropy.wcs as pywcs
 from astropy.io import fits as pyfits
 from astropy import coordinates, units
 
-# Note: Relative import breaks test in PY2
-from ginga.util.six.moves import map
 from ginga.util.wcsmod import common
 
 if hasattr(coordinates, 'SkyCoord'):

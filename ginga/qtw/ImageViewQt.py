@@ -4,14 +4,11 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import absolute_import
-
 import os
 from io import BytesIO
+
 import numpy as np
 
-import ginga.util.six as six
-from ginga.util.six.moves import map
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
 from ginga.qtw.QtHelp import (QtGui, QtCore, QImage, QPixmap, QCursor,
@@ -724,10 +721,7 @@ class QtEventMixin(object):
         self.logger.debug("available formats of dropped data are %s" % (
             formats))
         if "text/thumb" in formats:
-            if six.PY2:
-                thumbstr = str(dropdata.data("text/thumb"))
-            else:
-                thumbstr = str(dropdata.data("text/thumb"), encoding='ascii')
+            thumbstr = str(dropdata.data("text/thumb"), encoding='ascii')
             data = [thumbstr]
             self.logger.debug("dropped thumb(s): %s" % (str(data)))
         elif dropdata.hasUrls():

@@ -5,21 +5,14 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
-
 import sys
 
 from ginga import AstroImage
 from ginga.tkw.ImageViewTk import ImageViewCanvas
 from ginga.misc import log
-from ginga.util import six
 
-if six.PY2:
-    import Tkinter
-    from tkFileDialog import askopenfilename
-else:
-    import tkinter as Tkinter
-    from tkinter.filedialog import askopenfilename
+import tkinter as Tkinter
+from tkinter.filedialog import askopenfilename
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 

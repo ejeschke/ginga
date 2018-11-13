@@ -8,9 +8,9 @@ import os
 import re
 import hashlib
 import mimetypes
+import urllib.parse
 
 from ginga.misc import Bunch
-from ginga.util.six.moves import urllib_parse
 
 magic_tester = None
 try:
@@ -98,7 +98,7 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     # Does this look like a URL?
     match = re.match(r"^(\w+)://(.+)$", filespec)
     if match:
-        urlinfo = urllib_parse.urlparse(filespec)
+        urlinfo = urllib.parse.urlparse(filespec)
         if urlinfo.scheme == 'file':
             # local file
             filepath = urlinfo.path

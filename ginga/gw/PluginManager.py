@@ -10,7 +10,6 @@ import traceback
 
 from ginga.gw import Widgets
 from ginga.misc import Bunch, Callback
-from ginga.util.six.moves import filter
 
 
 class PluginManagerError(Exception):

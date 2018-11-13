@@ -8,7 +8,6 @@ import time
 
 from ginga import trcalc
 from ginga.misc.Bunch import Bunch
-from ginga.util.six.moves import filter
 
 from .CanvasMixin import CanvasMixin
 

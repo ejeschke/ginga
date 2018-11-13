@@ -54,7 +54,6 @@ from ginga.misc import Bunch
 from ginga import GingaPlugin
 from ginga import cmap, imap
 from ginga.util import wcs
-from ginga.util.six.moves import map
 from ginga.gw import ColorBar, Widgets
 
 __all__ = ['Catalogs']

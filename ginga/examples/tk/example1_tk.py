@@ -11,16 +11,11 @@
 import sys
 import logging
 
-import ginga.util.six as six
 from ginga.tkw.ImageViewTk import ImageViewCanvas
 from ginga import AstroImage
 
-if six.PY2:
-    import Tkinter
-    from tkFileDialog import askopenfilename
-else:
-    import tkinter as Tkinter
-    from tkinter.filedialog import askopenfilename
+import tkinter as Tkinter
+from tkinter.filedialog import askopenfilename
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 

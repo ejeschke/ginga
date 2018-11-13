@@ -2,13 +2,9 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import absolute_import
-
 import numpy as np
 from kapteyn import wcs as kapwcs
 
-# Note: Relative import breaks test in PY2
-from ginga.util.six.moves import map
 from ginga.util.wcsmod import common
 
 coord_types = ['icrs', 'fk5', 'fk4', 'galactic', 'ecliptic']

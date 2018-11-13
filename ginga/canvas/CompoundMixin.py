@@ -6,10 +6,10 @@
 #
 import sys
 import traceback
+from functools import reduce
 
 import numpy as np
 
-from ginga.util.six.moves import map, reduce, filter
 from ginga.canvas import coordmap
 
 __all__ = ['CompoundMixin']

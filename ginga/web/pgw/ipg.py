@@ -18,7 +18,6 @@ See example usage with an ipython notebook at:
 You will need a reasonably modern web browser with HTML5 canvas support.
 Tested with Chromium 41.0.2272.76, Firefox 37.0.2, Safari 7.1.6
 """
-from __future__ import print_function
 
 import sys
 import os

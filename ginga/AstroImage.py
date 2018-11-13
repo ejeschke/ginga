@@ -16,8 +16,6 @@ from ginga.util import wcs, iqcalc
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
 from ginga import trcalc
-import ginga.util.six as six
-from ginga.util.six.moves import map
 
 
 class AstroHeader(Header):
@@ -737,7 +735,7 @@ class AstroImage(BaseImage):
 
         system = settings.get('wcs_coords', None)
         format = settings.get('wcs_display', 'sexagesimal')
-        ra_lbl, dec_lbl = six.unichr(945), six.unichr(948)
+        ra_lbl, dec_lbl = chr(945), chr(948)
 
         # Calculate WCS coords, if available
         try:
@@ -785,7 +783,7 @@ class AstroImage(BaseImage):
                 if system == 'galactic':
                     ra_lbl, dec_lbl = "l", "b"
                 elif system == 'ecliptic':
-                    ra_lbl, dec_lbl = six.unichr(0x03BB), six.unichr(0x03B2)
+                    ra_lbl, dec_lbl = chr(0x03BB), chr(0x03B2)
                 elif system == 'helioprojective':
                     ra_txt = "%+5.3f" % (lon_deg * 3600)
                     dec_txt = "%+5.3f" % (lat_deg * 3600)

@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 """This module handles the main reference viewer."""
-from __future__ import print_function
 
 # stdlib imports
 import glob

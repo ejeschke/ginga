@@ -20,7 +20,6 @@ message will tell you which mode you are in.
 While in 'capture mode' you can draw points with the right mouse button.
 Press 'c' to clear the canvas of drawn points.
 """
-from __future__ import print_function
 
 import sys
 import os

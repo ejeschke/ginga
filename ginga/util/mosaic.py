@@ -12,7 +12,6 @@
 Usage:
    $ ./mosaic.py -o output.fits input1.fits input2.fits ... inputN.fits
 """
-from __future__ import print_function
 
 import sys
 import os

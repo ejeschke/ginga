@@ -14,7 +14,6 @@ As long as image as a valid WCS, WCS axes will be displayed.
 Use plugin GUI or configuration file to customize axes display.
 
 """
-from __future__ import division
 
 import numpy as np
 

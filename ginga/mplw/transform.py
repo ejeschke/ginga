@@ -9,7 +9,6 @@
 # script developed by matplotlib developers
 # See http://matplotlib.org/examples/api/custom_projection_example.html
 #
-from __future__ import print_function
 
 import matplotlib
 from matplotlib.axes import Axes

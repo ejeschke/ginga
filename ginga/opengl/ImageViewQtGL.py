@@ -4,11 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import absolute_import
-
 from io import BytesIO
 
-import ginga.util.six as six
 from ginga.qtw.QtHelp import QtCore
 from ginga.qtw import ImageViewQt
 from ginga import Mixins, Bindings
@@ -19,10 +16,7 @@ from .CanvasRenderGL import CanvasRenderer
 
 # GL imports
 # TODO: find how to import this from qtpy
-if six.PY2:
-    from PyQt4.QtOpenGL import QGLWidget as QOpenGLWidget
-else:
-    from PyQt5.QtOpenGL import QGLWidget as QOpenGLWidget
+from PyQt5.QtOpenGL import QGLWidget as QOpenGLWidget
 
 
 class ImageViewQtGLError(ImageViewQt.ImageViewQtError):

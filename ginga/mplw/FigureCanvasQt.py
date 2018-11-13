@@ -4,7 +4,6 @@
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-from __future__ import print_function
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.toolkit import toolkit

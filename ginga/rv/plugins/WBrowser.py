@@ -19,7 +19,6 @@ If not successful or deliberately disabled in "plugin_WBrowser.cfg",
 Ginga will render the plugin's docstring locally.
 
 """
-from __future__ import absolute_import, division, print_function
 
 import os
 

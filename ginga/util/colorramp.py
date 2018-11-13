@@ -1,7 +1,6 @@
 #
 # colorramp.py -- utility functions for making ginga colormaps
 #
-from __future__ import print_function
 
 
 def hue_sat_to_cmap(hue, sat):

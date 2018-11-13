@@ -288,7 +288,6 @@ from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga.util import iqcalc, wcs, contour
 from ginga import GingaPlugin, colors, cmap, trcalc
-from ginga.util.six.moves import map
 
 try:
     from ginga.gw import Plot

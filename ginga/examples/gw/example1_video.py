@@ -33,7 +33,6 @@ read frames from the file.  This allows the viewer to remain fairly
 responsive to user actions.
 
 """
-from __future__ import print_function
 
 import sys
 import time

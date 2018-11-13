@@ -4,8 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import absolute_import, print_function
-
 import sys
 import time
 import mimetypes
@@ -14,7 +12,6 @@ from io import BytesIO
 import numpy as np
 
 from . import iohelper, rgb_cms
-from .six.moves import map
 
 try:
     # do we have opencv available?

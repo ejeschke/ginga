@@ -46,16 +46,12 @@ info_plist_template = u"""<?xml version="1.0" encoding="UTF-8"?>
 """
 
 from ginga import __version__
-import ginga.util.six as six
 
 d = dict(version=__version__, build=__version__.replace('.', ''))
 plist = info_plist_template % d
 
 with open('Info.plist', 'w') as out_f:
-    if six.PY2:
-        out_f.write(plist.encode('utf-8'))
-    else:
-        out_f.write(plist)
+    out_f.write(plist)
 
 
 APP = ['Ginga.py']
@@ -79,19 +75,19 @@ if sys.platform == 'darwin':
     extra_options = dict(
         setup_requires=['py2app'],
         options={'py2app': OPTIONS},
-        )
+    )
 
 elif sys.platform == 'win32':
-     extra_options = dict(
-         setup_requires=['py2exe'],
-         options={'py2exe': OPTIONS},
-         )
+    extra_options = dict(
+        setup_requires=['py2exe'],
+        options={'py2exe': OPTIONS},
+    )
 else:
     extra_options = dict(
         # Normally unix-like platforms will use "setup.py install"
         # and install the main script as such
         scripts=["ginga"],
-     )
+    )
 
     setup_requires=['py2app'],
 

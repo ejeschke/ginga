@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 3.0 (unreleased)
+====================
+- Dropped Python 2 support. Ginga now requires Python 3.5 or later.
+
 Ver 2.7.2 (2018-11-05)
 ======================
 - Fix for linewidth attribute in shapes for AGG backend

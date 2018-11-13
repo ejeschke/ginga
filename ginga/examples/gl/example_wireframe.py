@@ -11,7 +11,6 @@ Run with no parameters.  Scroll to zoom in/out, click and drag to orbit.
 
 Requirements: Qt5, OpenGL, numpy
 """
-from __future__ import print_function
 
 import sys
 

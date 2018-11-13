@@ -7,16 +7,10 @@
 import threading
 from io import BytesIO
 
-import ginga.util.six as six
-from ginga.util.six.moves import map, zip
 from ginga.misc import Task, log
 
-if six.PY2:
-    import xmlrpclib
-    import SimpleXMLRPCServer
-else:
-    import xmlrpc.client as xmlrpclib
-    import xmlrpc.server as SimpleXMLRPCServer
+import xmlrpc.client as xmlrpclib
+import xmlrpc.server as SimpleXMLRPCServer
 
 # undefined passed value--for a data type that cannot be converted
 undefined = '#UNDEFINED'
@@ -269,6 +263,7 @@ base_types = [str, int, float, bool]
 compound_types = [list, tuple, dict]
 
 
+# TODO: Do we still need this now that we do not support Python 2?
 class Blob(object):
     """A class used to wrap objects like buffers and so on in a way that
     can be recognized in both python 2 and 3 during marshalling and

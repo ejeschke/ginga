@@ -10,7 +10,6 @@
 Usage:
    example1_mpl.py [fits file]
 """
-from __future__ import print_function
 
 import sys
 

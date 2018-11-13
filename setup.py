@@ -1,18 +1,25 @@
 #!/usr/bin/env python
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import glob
-import os
 import sys
 
-import ah_bootstrap
+# NOTE: This is for older setuptools that does not understand
+#       python_requires
+# This is the same check as ginga/__init__.py but this one has to
+# happen before importing ah_bootstrap
+__minimum_python_version__ = '3.5'
+if sys.version_info < tuple((int(val) for val in __minimum_python_version__.split('.'))):
+    sys.stderr.write("ERROR: Ginga requires Python {} or later\n".format(
+        __minimum_python_version__))
+    sys.exit(1)
+
+import glob
+import os
+
+import ah_bootstrap  # noqa
 from setuptools import setup
 
-# A dirty hack to get around some early import/configurations ambiguities
-if sys.version_info[0] >= 3:
-    import builtins
-else:
-    import __builtin__ as builtins
+import builtins
 builtins._ASTROPY_SETUP_ = True
 
 from astropy_helpers.setup_helpers import (register_commands, get_debug_option,
@@ -21,10 +28,7 @@ from astropy_helpers.git_helpers import get_git_devstr
 from astropy_helpers.version_helpers import generate_version_py
 
 # Get some values from the setup.cfg
-try:
-    from ConfigParser import ConfigParser
-except ImportError:
-    from configparser import ConfigParser
+from configparser import ConfigParser
 
 conf = ConfigParser()
 
@@ -109,8 +113,8 @@ package_info['package_data'][PACKAGENAME].extend(c_files)
 setup_requires = ['numpy>=1.9']
 
 # pretty much needed
-install_requires = ['numpy>=1.9', 'qtpy>=1.1', 'setuptools>=1.0',
-                    'astropy>=1.0']
+install_requires = ['numpy>=1.13', 'qtpy>=1.1', 'setuptools>=1.0',
+                    'astropy>=3']
 
 # nice to have, but not required, depending on the application
 extras_require = {
@@ -133,17 +137,16 @@ setup(name=PACKAGENAME,
           "Operating System :: Microsoft :: Windows",
           "Operating System :: POSIX",
           "Programming Language :: C",
-          "Programming Language :: Python :: 2.7",
           "Programming Language :: Python :: 3.7",
           "Programming Language :: Python :: 3",
           "Topic :: Scientific/Engineering :: Astronomy",
           "Topic :: Scientific/Engineering :: Physics",
-          ],
+      ],
       scripts=scripts,
       setup_requires=setup_requires,
       install_requires=install_requires,
       extras_require=extras_require,
-      python_requires='>=2.7',
+      python_requires='>={}'.format(__minimum_python_version__),
       author=AUTHOR,
       author_email=AUTHOR_EMAIL,
       license=LICENSE,
@@ -151,7 +154,5 @@ setup(name=PACKAGENAME,
       long_description=LONG_DESCRIPTION,
       cmdclass=cmdclassd,
       zip_safe=False,
-      use_2to3=False,
       entry_points=entry_points,
-      **package_info
-)
+      **package_info)

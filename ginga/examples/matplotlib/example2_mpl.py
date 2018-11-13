@@ -12,7 +12,6 @@ Usage:
 
 You need Qt4 with python bindings (or pyside) installed to run this example.
 """
-from __future__ import print_function
 import sys
 
 from matplotlib.figure import Figure

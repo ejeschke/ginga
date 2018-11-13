@@ -12,7 +12,6 @@ Visit the URL with a browser to interact with the GUI.  Enter a valid
 FITS file path into the box labeled "File:" and press Enter.  Use the
 slider to zoom the image.
 """
-from __future__ import print_function
 
 import sys
 

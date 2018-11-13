@@ -2,7 +2,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import absolute_import
 
 import numpy as np
 
@@ -12,7 +11,6 @@ import astropy.wcs as pywcs
 import astropy.units as u  # noqa
 from astropy.io import fits as pyfits
 
-# Note: Relative import breaks test in PY2
 from ginga.util.wcsmod import common
 
 try:

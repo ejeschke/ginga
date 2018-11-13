@@ -8,7 +8,6 @@
 # import time
 
 from ginga.gtk3w import GtkHelp
-import ginga.util.six as six
 
 from ginga.misc import Callback, Bunch, LineHistory
 from functools import reduce
@@ -182,7 +181,7 @@ class TextEntry(WidgetBase):
         self.widget.set_editable(tf)
 
     def set_font(self, font, size=10):
-        if isinstance(font, six.string_types):
+        if isinstance(font, str):
             font = self.get_font(font, size)
         self.widget.modify_font(font)
 
@@ -225,7 +224,7 @@ class TextEntrySet(WidgetBase):
         self.entry.set_editable(tf)
 
     def set_font(self, font, size=10):
-        if isinstance(font, six.string_types):
+        if isinstance(font, str):
             font = self.get_font(font, size)
         self.widget.modify_font(font)
 
@@ -310,7 +309,7 @@ class TextArea(WidgetBase):
         self.tw.set_editable(tf)
 
     def set_font(self, font, size=10):
-        if isinstance(font, six.string_types):
+        if isinstance(font, str):
             font = self.get_font(font, size)
         self.tw.modify_font(font)
 
@@ -382,7 +381,7 @@ class Label(WidgetBase):
         self.label.set_text(text)
 
     def set_font(self, font, size=10):
-        if isinstance(font, six.string_types):
+        if isinstance(font, str):
             font = self.get_font(font, size)
         self.label.modify_font(font)
 
@@ -1010,8 +1009,8 @@ class TreeView(WidgetBase):
             model, iter1, iter2 = args[:3]
             bnch1 = model.get_value(iter1, 0)
             bnch2 = model.get_value(iter2, 0)
-            if isinstance(bnch1, six.string_types):
-                if isinstance(bnch2, six.string_types):
+            if isinstance(bnch1, str):
+                if isinstance(bnch2, str):
                     s1, s2 = bnch1.lower(), bnch2.lower()
                     if s1 < s2:
                         return -1
@@ -1019,7 +1018,7 @@ class TreeView(WidgetBase):
                         return 1
                 return 0
             val1, val2 = bnch1[idx], bnch2[idx]
-            if isinstance(val1, six.string_types):
+            if isinstance(val1, str):
                 val1, val2 = val1.lower(), val2.lower()
                 if val1 < val2:
                     return -1
@@ -1753,10 +1752,7 @@ class Menu(ContainerBase):
     def popup(self, widget=None):
         menu = self.widget
         menu.show_all()
-        if six.PY2:
-            now = long(0)  # noqa
-        else:
-            now = int(0)
+        now = int(0)
         if menu.get_sensitive():
             menu.popup(None, None, None, None, 0, now)
 

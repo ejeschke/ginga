@@ -18,6 +18,9 @@ import atexit
 import shutil
 from collections import deque
 
+import _thread as thread  # noqa
+import queue as Queue  # noqa
+
 # Local application imports
 from ginga import cmap, imap
 from ginga import AstroImage, RGBImage, BaseImage
@@ -27,7 +30,6 @@ from ginga.util import catalog, iohelper, io_fits, toolbox
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.canvas import render
-from ginga.util.six.moves import map
 
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager
@@ -40,15 +42,6 @@ from ginga import __version__
 
 # Reference viewer
 from ginga.rv.Channel import Channel
-
-# Conditional imports
-import ginga.util.six as six
-if six.PY2:
-    import thread
-    import Queue
-else:
-    import _thread as thread  # noqa
-    import queue as Queue  # noqa
 
 have_docutils = False
 try:

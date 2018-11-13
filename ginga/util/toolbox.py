@@ -4,8 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
 
 # STDLIB
 import io

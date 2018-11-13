@@ -25,7 +25,6 @@ example4 produces a simple matplotlib fits view with a couple of overplots.
 This shows how you can use the functionality with straight python/matplotlib
 sessions.  Run this by supplying a single FITS file on the command line.
 """
-from __future__ import print_function
 
 import sys
 import os

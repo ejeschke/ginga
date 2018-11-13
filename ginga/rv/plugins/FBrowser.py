@@ -35,7 +35,6 @@ import time
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 from ginga.util import paths, iohelper
-from ginga.util.six.moves import map
 from ginga.gw import Widgets
 
 try:
