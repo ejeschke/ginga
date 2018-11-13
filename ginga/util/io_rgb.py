@@ -106,10 +106,9 @@ class RGBFileHandler(object):
             # (see https://github.com/opencv/opencv/issues/4344)
             # So reset these values to prevent auto-orientation from
             # happening later
-            if 'Orientation' in kwds:
-                kwds['Orientation'] = 1
-            if 'Image Orientation' in kwds:
-                kwds['Image Orientation'] = 1
+            data_np = np.flipud(data_np)
+            kwds['Orientation'] = 1
+            kwds['Image Orientation'] = 1
 
             # convert to working color profile, if can
             if self.clr_mgr.can_profile():
