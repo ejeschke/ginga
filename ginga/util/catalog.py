@@ -77,6 +77,10 @@ class Star(object):
 class AstroPyCatalogServer(object):
 
     def __init__(self, logger, full_name, key, url, description):
+        if not have_astroquery:
+            raise ImportError('astroquery or astropy.vo (deprecated) not found, '
+                              'please install astroquery')
+
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
@@ -207,6 +211,9 @@ class AstroPyCatalogServer(object):
 class AstroQueryImageServer(object):
 
     def __init__(self, logger, full_name, key, querymod, description):
+        if not have_astroquery:
+            raise ImportError('astroquery not found, please install astroquery')
+
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
@@ -278,6 +285,9 @@ class AstroQueryImageServer(object):
 class PyVOCatalogServer(object):
 
     def __init__(self, logger, full_name, key, url, description):
+        if not have_pyvo:
+            raise ImportError('pyvo not found, please install pyvo')
+
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
@@ -407,6 +417,9 @@ class PyVOCatalogServer(object):
 class PyVOImageServer(object):
 
     def __init__(self, logger, full_name, key, url, description):
+        if not have_pyvo:
+            raise ImportError('pyvo not found, please install pyvo')
+
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
