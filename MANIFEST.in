@@ -2,6 +2,7 @@ include README.txt
 include CHANGES.rst
 include LICENSE.*
 include ROADMAP.rst
+include CITATION
 include ginga.desktop
 
 include ez_setup.py
