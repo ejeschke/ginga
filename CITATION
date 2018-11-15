@@ -1,0 +1,43 @@
+To reference Ginga in publications, please cite:
+
+@inproceedings{Jeschke15A,
+        author = {{Jeschke}, E. and {Inagaki}, T. and {Kackley}, R.},
+        title  = "Enhancements to {Ginga}: a {Python} Package for Building Astronomical Data Viewers",
+        booktitle = "Astronomical Data Analysis Software and Systems XXIV",
+        year   = 2015,
+        editor = {{Taylor}, A.~R. and {Rosolowsky}, E.},
+        publisher = "ASP",
+        note   = "Vol. 495" }
+
+
+Other Related Publications
+==========================
+
+ASCL ID: 1303.020
+
+Zenodo: https://zenodo.org/badge/latestdoi/4758330
+
+@inproceedings{Jeschke13B,
+        author = "E. Jeschke",
+        title  = "Ginga: an open-source astronomical image viewer and toolkit",
+        booktitle = "Proceedings of the 12th Python in Science Conference",
+        year   = "2013",
+        editor = "van der Walt, S. and Millman, J. and Huff, K.",
+        publisher = "SciPy" }
+
+@inproceedings{Jeschke13A,
+        author = "E. Jeschke",
+        title  = "Introducing the Ginga FITS Viewer and Toolkit",
+        booktitle = "ADASS XXII, ASP Conference Series",
+        year   = "2013",
+        publisher = "ASP" }
+
+@inproceedings{Jeschke12,
+        author = "E. Jeschke and T. Inagaki and R. Kackley",
+        title  = "A next-generation open-source toolkit for FITS file image viewing",
+        booktitle = "Software and Cyberinfrastructure for Astronomy II",
+
+        year   = "2012",
+        editor = "N. Radziwill and G. Chiozzi",
+        publisher = "SPIE",
+        note   = "Vol. 8451" }
