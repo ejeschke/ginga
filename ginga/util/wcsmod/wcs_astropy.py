@@ -219,10 +219,13 @@ class AstropyWCS(common.BaseWCS):
             return (x, y)
 
         c = self.pixtocoords(idxs, system=system, coords=coords)
-
-        r = c.data
-        return tuple(map(self._deg, [getattr(r, component)
-                                     for component in r.components[:2]]))
+        if not self.new_coords:
+            # older astropy
+            return (self._deg(c.lonangle), self._deg(c.latangle))
+        else:
+            r = c.data
+            return tuple(map(self._deg, [getattr(r, component)
+                                         for component in r.components[:2]]))
 
     def datapt_to_wcspt(self, datapt, coords='data', naxispath=None):
 
