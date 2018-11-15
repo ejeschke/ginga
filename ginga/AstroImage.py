@@ -165,6 +165,31 @@ class AstroImage(BaseImage):
             self.wcs = wcsinfo.wrapper_class(logger=self.logger)
             self.wcs.load_nddata(ndd)
 
+    def load_asdf(self, asdf_obj, data_key='sci', wcs_key='wcs'):
+        """Load from an asdf object.
+        """
+        self.clear_metadata()
+
+        wcs = None
+        try:
+            wcs = asdf_obj[wcs_key]
+        except KeyError:
+            pass
+
+        ahdr = self.get_header()
+
+        data = None
+        try:
+            data = asdf_obj[data_key]
+        except KeyError:
+            pass
+
+        self.setup_data(data, naxispath=[])
+
+        wcsinfo = wcsmod.get_wcs_class('astropy_ape14')
+        self.wcs = wcsinfo.wrapper_class(logger=self.logger)
+        self.wcs.wcs = wcs
+
     def load_file(self, filespec, **kwargs):
 
         if self.io is None:
