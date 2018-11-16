@@ -1,7 +1,7 @@
 # Install requires
 setuptools>=1.0
-numpy>=1.9
-astropy>=1.0
+numpy>=1.13
+astropy>=3
 
 # Recommended in general
 Pillow>=3.2.0
