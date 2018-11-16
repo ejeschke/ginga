@@ -21,7 +21,7 @@ REQUIRED
 
 * python (v. 3.5 or higher)
 * setuptools
-* numpy  (v. 1.9 or higher)
+* numpy  (v. 1.13 or higher)
 * astropy
 
 Highly recommended, because some features will not be available without it:

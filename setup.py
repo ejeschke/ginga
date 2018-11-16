@@ -110,7 +110,7 @@ package_info['package_data'][PACKAGENAME].extend(c_files)
 # ``setup``, since these are now deprecated. See this link for more details:
 # https://groups.google.com/forum/#!topic/astropy-dev/urYO8ckB2uM
 
-setup_requires = ['numpy>=1.9']
+setup_requires = ['numpy>=1.13']
 
 # pretty much needed
 install_requires = ['numpy>=1.13', 'qtpy>=1.1', 'setuptools>=1.0',
