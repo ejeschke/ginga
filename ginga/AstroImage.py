@@ -180,11 +180,11 @@ class AstroImage(BaseImage):
 
         data = None
         try:
-            data = asdf_obj[data_key]
+            data = np.asarray(asdf_obj[data_key])
         except KeyError:
             pass
 
-        self.setup_data(data, naxispath=[])
+        self.setup_data(data, naxispath=None)
 
         wcsinfo = wcsmod.get_wcs_class('astropy_ape14')
         self.wcs = wcsinfo.wrapper_class(logger=self.logger)
