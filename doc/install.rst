@@ -54,6 +54,7 @@ Depending on which GUI toolkit you prefer (and what you want to
 do), you will need at least one of the following:
 
 .. TODO: This can be broken down in a clearer way.
+
 * QtPy (PyQt4 or PyQt5)
 * PySide (Qt4/Qt5 alternative)
 * PyGTK (gtk) **AND** `pycairo <https://github.com/pygobject/pycairo>`_ (GTK 2)
