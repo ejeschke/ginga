@@ -44,10 +44,7 @@ have_opencv = False
 try:
     # optional opencv package speeds up certain operations, especially
     # rotation
-    # TEMP: opencv broken on older anaconda mac (importing causes segv)
-    # --> temporarily disable, can enable using use() function above
-    #use('opencv')
-    pass
+    use('opencv')
 
 except ImportError:
     pass
