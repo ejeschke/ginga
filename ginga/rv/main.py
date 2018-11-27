@@ -601,7 +601,8 @@ class ReferenceViewer(object):
         except KeyError:
             # disable for subsequent runs
             settings.set(showBanner=False)
-            settings.save()
+            if not os.path.exists(settings.preffile):
+                settings.save()
 
         if (not options.nosplash) and (len(args) == 0) and showBanner:
             ginga_shell.banner(raiseTab=True)
