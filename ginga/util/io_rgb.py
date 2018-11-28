@@ -47,6 +47,7 @@ except ImportError:
 #have_pil = False
 #have_cms = False
 #have_exif = False
+#have_opencv = False
 
 
 class RGBFileHandler(object):
@@ -103,7 +104,6 @@ class RGBFileHandler(object):
             # (see https://github.com/opencv/opencv/issues/4344)
             # So reset these values to prevent auto-orientation from
             # happening later
-            data_np = np.flipud(data_np)
             kwds['Orientation'] = 1
             kwds['Image Orientation'] = 1
 
