@@ -49,6 +49,7 @@ except ImportError:
 #have_exif = False
 #have_opencv = False
 
+
 class RGBFileHandler(object):
 
     def __init__(self, logger):
