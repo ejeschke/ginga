@@ -50,7 +50,7 @@ except ImportError:
 #have_pil = False
 #have_cms = False
 #have_exif = False
-
+#have_opencv = False
 
 class RGBFileHandler(object):
 
