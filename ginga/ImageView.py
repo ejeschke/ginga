@@ -157,7 +157,7 @@ class ImageViewBase(Callback.Callbacks):
             'set', self.rotation_change_cb)
 
         # misc
-        self.t_.add_defaults(auto_orient=False,
+        self.t_.add_defaults(auto_orient=True,
                              defer_redraw=True, defer_lagtime=0.025,
                              show_pan_position=False,
                              show_mode_indicator=True,
