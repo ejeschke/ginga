@@ -2,9 +2,11 @@
 What's New
 ++++++++++
 
-Ver 3.0 (unreleased)
-====================
+Ver 3.0.0 (unreleased)
+======================
 - Dropped Python 2 support. Ginga now requires Python 3.5 or later.
+- Fixed an issue with some RGB images being viewed flipped
+- Improved accuracy of Qt-based timers
 
 Ver 2.7.2 (2018-11-05)
 ======================
