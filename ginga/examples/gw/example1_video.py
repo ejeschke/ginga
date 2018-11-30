@@ -52,6 +52,7 @@ except ImportError:
     sys.exit(1)
 
 from ginga import trcalc
+# this should be the default if OpenCv is installed anyway
 trcalc.use('opencv')
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
@@ -90,17 +91,14 @@ class GingaVision(object):
 
         fi = Viewers.CanvasView(logger=logger)
         fi.set_autocut_params('histogram')
-        fi.enable_autozoom('once')
+        fi.enable_autozoom('off')
         fi.enable_autocenter('once')
         fi.enable_autocuts('off')
         fi.cut_levels(0, 255)
+        fi.scale_to(1, 1)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
         self.viewer = fi
-
-        # these options are needed for correct panning with this type of image
-        fi._invert_y = False
-        fi.origin_upper = False
 
         if options.optimize:
             # Some optimizations to smooth playback at decent FPS

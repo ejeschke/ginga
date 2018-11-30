@@ -220,6 +220,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
     def reset_all_transforms_cb(self, w):
         view, bd = self._get_view()
         bd.kp_rotate_reset(view, 'x', 0.0, 0.0)
+        bd.kp_transform_reset(view, 'x', 0.0, 0.0)
         return True
 
     def start_plugin_cb(self, name):

@@ -1414,6 +1414,11 @@ class ImageViewBindings(object):
                 viewer.onscreen_message("Swap XY=%s" % swapxy, delay=1.0)
         return True
 
+    def kp_transform_reset(self, viewer, event, data_x, data_y):
+        if self.canflip:
+            viewer.transform(False, False, False)
+        return True
+
     def kp_dist(self, viewer, event, data_x, data_y, msg=True):
         self._cycle_dist(viewer, msg)
         return True
@@ -1473,8 +1478,6 @@ class ImageViewBindings(object):
     def kp_rotate_reset(self, viewer, event, data_x, data_y):
         if self.canrotate:
             viewer.rotate(0.0)
-            # also reset all transforms
-            viewer.transform(False, False, False)
         return True
 
     def kp_rotate_inc90(self, viewer, event, data_x, data_y, msg=True):
