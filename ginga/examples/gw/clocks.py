@@ -28,7 +28,6 @@ from ginga import colors
 from ginga.misc import log
 from ginga.misc.Bunch import Bunch
 from ginga.misc.Settings import SettingGroup
-from ginga.util.six.moves import map
 from ginga.util.paths import ginga_home
 
 width, height = 300, 230
@@ -275,12 +274,12 @@ class ClockApp(object):
 
         if dim is not None:
             # user specified dimensions
-            dim = list(map(int, dim.split('x')))
+            dim = [int(i) for i in dim.split('x')]
             self.top.resize(*dim)
 
         if len(coords) > 0:
             # user specified position
-            coords = list(map(int, coords))
+            coords = [int(i) for i in coords]
             self.top.move(*coords)
 
     def closed(self, w):
