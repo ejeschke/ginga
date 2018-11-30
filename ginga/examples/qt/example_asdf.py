@@ -190,8 +190,9 @@ class FitsViewer(QtGui.QMainWindow):
         self.setWindowTitle(filepath)
 
     def open_file(self):
-        res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
-                                                ".", "FITS files (*.fits)")
+        res = QtGui.QFileDialog.getOpenFileName(
+            self, "Open FITS or ASDF file",
+            ".", "FITS/ASDF files (*.fits *.asdf)")
         if isinstance(res, tuple):
             fileName = res[0]
         else:
