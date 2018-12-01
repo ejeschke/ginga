@@ -11,7 +11,7 @@ import logging
 from ginga.gtkw.ImageViewCanvasGtk import ImageViewCanvas
 from ginga.gtkw.ImageViewGtk import ScrolledView
 from ginga.gtkw import GtkHelp
-from ginga import AstroImage
+from ginga.util.loader import load_data
 
 import gtk
 
@@ -74,8 +74,7 @@ class FitsViewer(object):
         return self.root
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
+        image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
         self.root.set_title(filepath)
 

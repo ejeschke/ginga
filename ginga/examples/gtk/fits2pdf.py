@@ -19,7 +19,7 @@ from optparse import OptionParser
 import cairo
 
 from ginga.cairow.ImageViewCairo import ImageViewCairo
-from ginga.AstroImage import AstroImage
+from ginga.util.loader import load_data
 
 try:
     from ginga.version import version
@@ -46,8 +46,7 @@ def convert(filepath, outfilepath):
     fi.configure(500, 1000)
 
     # Load fits file
-    image = AstroImage(logger=logger)
-    image.load_file(filepath)
+    image = load_data(filepath, logger=logger)
 
     # Make any adjustments to the image that we want
     fi.set_bg(1.0, 1.0, 1.0)

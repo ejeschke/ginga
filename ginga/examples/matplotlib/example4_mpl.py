@@ -49,8 +49,8 @@ import matplotlib.patches as patches
 
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.misc import log
-from ginga.AstroImage import AstroImage
 from ginga import cmap
+from ginga.util.loader import load_data
 
 # add matplotlib colormaps to ginga's own set
 cmap.add_matplotlib_cmaps()
@@ -78,8 +78,7 @@ if len(sys.argv) < 2:
     print("Please provide a FITS file on the command line")
     sys.exit(1)
 
-image = AstroImage(logger=logger)
-image.load_file(sys.argv[1])
+image = load_data(sys.argv[1], logger=logger)
 fi.set_image(image)
 #fi.rotate(45)
 
