@@ -12,7 +12,7 @@ from ginga.util import iohelper, io_fits, io_rgb
 def load_data(filespec, idx=None, logger=None, **kwargs):
     """Load data from a file.
 
-    This call is used to determine the type
+    This call is used to load a data item from a filespec (path or URL)
 
     Parameters
     ----------
