@@ -140,6 +140,19 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                               pyfits.BinTableHDU)):
             # <-- data is a table
 
+            # Handle ASDF embedded in FITS.
+            # TODO: Populate EXTNAME, EXTVER, NAXISn in ASDF meta from HDU?
+            # TODO: How to read from all the different ASDF layouts?
+            # TODO: Cache the ASDF object?
+            from ginga.util import io_asdf
+            if io_asdf.have_asdf and hdu.name == 'ASDF':
+                from asdf.fits_embed import AsdfInFits
+                from ginga import AstroImage
+                dstobj = AstroImage.AstroImage()
+                with AsdfInFits.open(self.fits_f) as asdf_f:
+                    dstobj.load_asdf(asdf_f)
+                return dstobj
+
             if dstobj is None:
                 # get model class for this type of object
                 obj_class = self.factory_dict.get('table', None)
@@ -219,12 +232,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             # lookups by numerical index or (NAME, EXTVER)
             d = Bunch.Bunch(index=idx, name=name, extver=extver)
             if len(tup) > 5:
-                import astropy
-                from astropy.utils.introspection import minversion
-                if minversion(astropy, '2.0'):
-                    d.setvals(htype=tup[3], dtype=tup[6])
-                else:
-                    d.setvals(htype=tup[2], dtype=tup[5])
+                d.setvals(htype=tup[3], dtype=tup[6])
             self.hdu_info.append(d)
             # different ways of accessing this HDU:
             # by numerical index
