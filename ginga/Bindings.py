@@ -65,6 +65,8 @@ class ImageViewBindings(object):
             btn_left=0x1,
             btn_middle=0x2,
             btn_right=0x4,
+            btn_back=0x8,
+            btn_forward=0x10,
 
             # define our cursors
             ## cur_pick = 'thinCrossCursor',
@@ -2620,6 +2622,9 @@ class BindingMapper(Callback.Callbacks):
     def get_buttons(self):
         return set([alias for keyname, alias in self.btnmap.items()])
 
+    def get_button(self, btncode):
+        return self.btnmap.get(btncode, None)
+
     def clear_event_map(self):
         self.eventmap = {}
 
@@ -2827,7 +2832,10 @@ class BindingMapper(Callback.Callbacks):
         self.logger.debug("x,y=%d,%d btncode=%s" % (data_x, data_y,
                                                     hex(btncode)))
         self._button |= btncode
-        button = self.btnmap[btncode]
+        button = self.get_button(btncode)
+        if button is None:
+            self.logger.error("unrecognized button code (%x)" % (btncode))
+            return False
         trigger = 'ms_' + button
         try:
             idx = (self._kbdmode, self._modifiers, trigger)
@@ -2856,7 +2864,10 @@ class BindingMapper(Callback.Callbacks):
 
     def window_motion(self, viewer, btncode, data_x, data_y):
 
-        button = self.btnmap[btncode]
+        button = self.get_button(btncode)
+        if button is None:
+            self.logger.error("unrecognized button code (%x)" % (btncode))
+            return False
         trigger = 'ms_' + button
         try:
             idx = (self._kbdmode, self._modifiers, trigger)
@@ -2886,7 +2897,10 @@ class BindingMapper(Callback.Callbacks):
         self.logger.debug("x,y=%d,%d button=%s" % (data_x, data_y,
                                                    hex(btncode)))
         self._button &= ~btncode
-        button = self.btnmap[btncode]
+        button = self.get_button(btncode)
+        if button is None:
+            self.logger.error("unrecognized button code (%x)" % (btncode))
+            return False
         trigger = 'ms_' + button
         try:
             idx = (self._kbdmode, self._modifiers, trigger)
@@ -2937,7 +2951,10 @@ class BindingMapper(Callback.Callbacks):
 
     def window_pinch(self, viewer, state, rot_deg, scale):
         btncode = 0
-        button = self.btnmap[btncode]
+        button = self.get_button(btncode)
+        if button is None:
+            self.logger.error("unrecognized button code (%x)" % (btncode))
+            return False
         trigger = 'pi_pinch'
         try:
             idx = (self._kbdmode, self._modifiers, trigger)
@@ -2967,7 +2984,10 @@ class BindingMapper(Callback.Callbacks):
 
     def window_pan(self, viewer, state, delta_x, delta_y):
         btncode = 0
-        button = self.btnmap[btncode]
+        button = self.get_button(btncode)
+        if button is None:
+            self.logger.error("unrecognized button code (%x)" % (btncode))
+            return False
         trigger = 'pa_pan'
         try:
             idx = (self._kbdmode, self._modifiers, trigger)

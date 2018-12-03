@@ -551,6 +551,10 @@ class QtEventMixin(object):
             button |= 0x2
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
+        if buttons & QtCore.Qt.BackButton:
+            button |= 0x8
+        if buttons & QtCore.Qt.ForwardButton:
+            button |= 0x10
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.check_cursor_location()
@@ -570,6 +574,10 @@ class QtEventMixin(object):
             button |= 0x2
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
+        if buttons & QtCore.Qt.BackButton:
+            button |= 0x8
+        if buttons & QtCore.Qt.ForwardButton:
+            button |= 0x10
 
         data_x, data_y = self.check_cursor_location()
 

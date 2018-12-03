@@ -41,7 +41,9 @@ class FitsViewer(object):
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
+        # tk seems to not take focus with a click
+        fi.set_enter_focus(True)
         fi.show_pan_mark(True)
         self.fitsimage = fi
 
