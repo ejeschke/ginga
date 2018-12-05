@@ -38,7 +38,7 @@ class FitsViewer(object):
         fi.enable_autozoom('on')
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
         self.fitsimage = fi
 
         # enable some user interaction

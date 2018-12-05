@@ -45,7 +45,7 @@ class FitsViewer(object):
         v1.set_callback('drag-drop', self.drop_file)
         v1.set_callback('none-move', self.motion)
         v1.set_bg(0.2, 0.2, 0.2)
-        v1.ui_setActive(True)
+        v1.ui_set_active(True)
         v1.set_name('tweedledee')
         self.viewer1 = v1
         self._mi1 = ModeIndicator(v1)
@@ -73,7 +73,7 @@ class FitsViewer(object):
         v2.set_callback('drag-drop', self.drop_file)
         v2.set_callback('none-move', self.motion)
         v2.set_bg(0.2, 0.2, 0.2)
-        v2.ui_setActive(True)
+        v2.ui_set_active(True)
         v1.set_name('tweedledum')
         self.viewer2 = v2
         self._mi2 = ModeIndicator(v2)
@@ -97,8 +97,8 @@ class FitsViewer(object):
         canvas.set_drawtype('rectangle', color='lightblue')
         self.canvas = canvas
         shcanvas.add(self.canvas)
-        shcanvas.ui_setActive(True)
-        canvas.ui_setActive(True)
+        shcanvas.ui_set_active(True)
+        canvas.ui_set_active(True)
         canvas.set_surface(v1)
 
         self.drawtypes = canvas.get_drawtypes()

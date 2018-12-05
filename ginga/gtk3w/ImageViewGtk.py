@@ -351,7 +351,7 @@ class ImageViewEvent(ImageViewGtk):
         except KeyError:
             return keyname
 
-    def get_keyTable(self):
+    def get_key_table(self):
         return self._keytbl
 
     def map_event(self, widget, event):
@@ -534,7 +534,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_setActive(True)
+        self.ui_set_active(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)

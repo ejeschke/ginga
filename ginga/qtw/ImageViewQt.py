@@ -495,7 +495,7 @@ class QtEventMixin(object):
         except KeyError:
             return keyname
 
-    def get_keyTable(self):
+    def get_key_table(self):
         return self._keytbl
 
     def map_event(self, widget, event):

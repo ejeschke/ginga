@@ -92,7 +92,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
                              move=self.motion_cb, up=self.buttonup_cb)
         canvas.set_draw_mode('draw')
         canvas.register_for_cursor_drawing(self.fitsimage)
-        canvas.setSurface(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
         self.gui_up = False

@@ -38,7 +38,7 @@ class FitsViewer(QtGui.QMainWindow):
         #fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
         fi.set_figure(fig)
         self.fitsimage = fi
 

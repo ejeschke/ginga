@@ -1,10 +1,6 @@
 #
 # wcs.py -- calculations based on world coordinate system.
 #
-# Eric Jeschke
-# Takeshi Inagaki
-# Bruce Bon
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #

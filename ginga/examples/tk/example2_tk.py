@@ -62,7 +62,7 @@ class FitsViewer(object):
         canvas.enable_draw(True)
         #canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='blue')
-        canvas.setSurface(fi)
+        canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         fi.add(canvas)

@@ -242,7 +242,7 @@ class ImageViewEvent(ImageViewJpw):
             res = self._keytbl2.get(keyname, keyname)
         return res
 
-    def get_keyTable(self):
+    def get_key_table(self):
         return self._keytbl
 
     def focus_event(self, event, has_focus):

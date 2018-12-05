@@ -57,7 +57,7 @@ class FitsViewer(object):
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='lightblue')
-        canvas.setSurface(fi)
+        canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         private_canvas = fi.get_canvas()
