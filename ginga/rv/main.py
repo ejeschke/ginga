@@ -407,7 +407,7 @@ class ReferenceViewer(object):
 
         try:
             from ginga.util import io_fits
-            if wcspkg != 'choose':
+            if fitspkg != 'choose':
                 assert io_fits.use(fitspkg) is True
         except Exception as e:
             logger.warning(
