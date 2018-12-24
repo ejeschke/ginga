@@ -148,12 +148,15 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             if io_asdf.have_asdf and hdu.name == 'ASDF':
                 from asdf.fits_embed import AsdfInFits
                 from ginga import AstroImage
+                self.logger.debug('Attempting to load {} extension from '
+                                  'FITS'.format(hdu.name))
                 dstobj = AstroImage.AstroImage()
                 with AsdfInFits.open(self.fits_f) as asdf_f:
                     dstobj.load_asdf(asdf_f)
                 return dstobj
 
             if dstobj is None:
+                self.logger.debug('Attempting to load table from FITS')
                 # get model class for this type of object
                 obj_class = self.factory_dict.get('table', None)
                 if obj_class is None:
