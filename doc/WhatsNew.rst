@@ -9,6 +9,7 @@ Ver 3.0.0 (unreleased)
 - Improved accuracy of Qt-based timers
 - Pick plugin enhanced with option to center on found object; also
   default shape changed to a box rather than a rectangle
+- Added support for ASDF and GWCS.
 
 Ver 2.7.2 (2018-11-05)
 ======================
