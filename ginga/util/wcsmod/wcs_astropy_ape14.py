@@ -118,10 +118,9 @@ class AstropyWCS(common.BaseWCS):
         args = [ra_deg, dec_deg]
         if naxispath:
             args += [0] * len(naxispath)
-        skycrd = np.array([args], np.float_)
 
         try:
-            xy = np.squeeze(self.wcs.world_to_pixel_values(skycrd))[:2]
+            xy = self.wcs.world_to_pixel_values(*args)[:2]
         except Exception as e:
             self.logger.error(
                 "Error calculating radectopix: {}".format(str(e)))
