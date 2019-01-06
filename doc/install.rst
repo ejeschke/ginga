@@ -28,7 +28,8 @@ Highly recommended, because some features will not be available without it:
 
 * scipy
 * Pillow
-* opencv-python
+* opencv-python (also distributed as opencv or python-opencv,
+  depending on where you get it from)
 * piexif
 * beautifulsoup4
 
