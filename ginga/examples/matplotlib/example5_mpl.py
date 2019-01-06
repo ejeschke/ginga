@@ -41,8 +41,8 @@ import matplotlib.pyplot as plt
 
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.mplw.ImageViewCanvasTypesMpl import DrawingCanvas
-from ginga.AstroImage import AstroImage
 from ginga.misc import log
+from ginga.util.loader import load_data
 
 # Set to True to get diagnostic logging output
 use_logger = False
@@ -75,8 +75,7 @@ class MyGingaFigure(object):
 
     def load(self, fitspath):
         # load an image
-        image = AstroImage(logger=self.logger)
-        image.load_file(fitspath)
+        image = load_data(fitspath, logger=self.logger)
         self.fitsimage.set_image(image)
 
     def capture(self):

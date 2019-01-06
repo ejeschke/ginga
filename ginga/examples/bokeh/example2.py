@@ -8,7 +8,7 @@ from bokeh.models.widgets import TextInput
 
 from ginga.web.bokehw import ImageViewBokeh as ib
 from ginga.misc import log
-from ginga.AstroImage import AstroImage
+from ginga.util.loader import load_data
 
 
 def main(options, args):
@@ -23,8 +23,7 @@ def main(options, args):
     viewer.set_figure(fig)
 
     def load_file(path):
-        image = AstroImage(logger)
-        image.load_file(path)
+        image = load_data(path, logger=logger)
         viewer.set_image(image)
 
     def load_file_cb(attr_name, old_val, new_val):

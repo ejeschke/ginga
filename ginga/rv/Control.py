@@ -23,10 +23,10 @@ import queue as Queue  # noqa
 
 # Local application imports
 from ginga import cmap, imap
-from ginga import AstroImage, RGBImage, BaseImage
+from ginga import AstroImage, BaseImage
 from ginga.table import AstroTable
 from ginga.misc import Bunch, Timer, Future
-from ginga.util import catalog, iohelper, io_fits, toolbox
+from ginga.util import catalog, iohelper, loader, io_fits, toolbox
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.canvas import render
@@ -163,6 +163,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.cursor_interval = self.settings.get('cursor_interval', 0.050)
 
         # for loading FITS files
+        # WARNING: TO BE DEPRECATED!! DON'T USE fits_opener IN PLUGINS!!
         fo = io_fits.fitsLoaderClass(self.logger)
         fo.register_type('image', AstroImage.AstroImage)
         fo.register_type('table', AstroTable.AstroTable)
@@ -559,45 +560,18 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     # BASIC IMAGE OPERATIONS
 
     def load_image(self, filepath, idx=None, show_error=True):
+        """
+        A wrapper around ginga.util.loader.load_data()
 
-        info = iohelper.get_fileinfo(filepath, cache_dir=self.tmpdir)
-        filepfx = info.filepath
+        This actually can load other data types, like
 
-        # Create an image.  Assume type to be an AstroImage unless
-        # the MIME association says it is something different.
+        """
+        inherit_prihdr = self.settings.get('inherit_primary_header',
+                                           False)
         try:
-            typ, subtyp = iohelper.guess_filetype(filepfx)
-
-        except Exception as e:
-            self.logger.warning("error determining file type: %s; "
-                                "assuming 'image/fits'" % (str(e)))
-            # Can't determine file type: assume and attempt FITS
-            typ, subtyp = 'image', 'fits'
-
-        kwargs = {}
-
-        self.logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
-        try:
-            # RGB
-            if (typ == 'image') and (subtyp not in ('fits', 'x-fits')):
-                image = RGBImage.RGBImage(logger=self.logger)
-                filepath = filepfx
-                image.load_file(filepath, **kwargs)
-
-            # FITS
-            else:
-                if idx is None:
-                    idx = info.numhdu
-
-                inherit_prihdr = self.settings.get(
-                    'inherit_primary_header', False)
-                kwargs.update(
-                    dict(numhdu=idx, inherit_primary_header=inherit_prihdr))
-
-                self.logger.info("Loading object from %s kwargs=%s" % (
-                    filepath, str(kwargs)))
-                image = self.fits_opener.load_file(filepath, **kwargs)
-
+            image = loader.load_data(filepath, logger=self.logger,
+                                     idx=idx,
+                                     inherit_primary_header=inherit_prihdr)
         except Exception as e:
             errmsg = "Failed to load file '%s': %s" % (
                 filepath, str(e))

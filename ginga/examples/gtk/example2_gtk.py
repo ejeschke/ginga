@@ -8,12 +8,12 @@
 
 import sys
 
-from ginga import AstroImage
 from ginga.gtkw import GtkHelp
 from ginga.gtkw.ImageViewGtk import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga import colors
 from ginga.misc import log
+from ginga.util.loader import load_data
 
 import gtk
 
@@ -158,9 +158,7 @@ class FitsViewer(object):
         self.canvas.delete_all_objects()
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
-
+        image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
         self.root.set_title(filepath)
 

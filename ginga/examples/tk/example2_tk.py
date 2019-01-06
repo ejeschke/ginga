@@ -7,9 +7,9 @@
 #
 import sys
 
-from ginga import AstroImage
 from ginga.tkw.ImageViewTk import ImageViewCanvas
 from ginga.misc import log
+from ginga.util.loader import load_data
 
 import tkinter as Tkinter
 from tkinter.filedialog import askopenfilename
@@ -138,9 +138,7 @@ class FitsViewer(object):
         self.canvas.deleteAllObjects()
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
-
+        image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
         self.root.title(filepath)
 

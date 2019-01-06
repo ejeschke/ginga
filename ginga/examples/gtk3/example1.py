@@ -10,7 +10,7 @@ import logging
 
 from ginga.gtk3w.ImageViewGtk import CanvasView, ScrolledView
 from ginga.gtk3w import GtkHelp
-from ginga import AstroImage
+from ginga.util.loader import load_data
 
 from gi.repository import Gtk
 
@@ -39,6 +39,7 @@ class FitsViewer(object):
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
+        fi.enable_auto_orient(True)
         self.fitsimage = fi
 
         # enable some user interaction
@@ -72,8 +73,7 @@ class FitsViewer(object):
         return self.root
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
+        image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
         self.root.set_title(filepath)
 

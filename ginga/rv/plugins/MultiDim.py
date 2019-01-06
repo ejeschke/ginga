@@ -1,5 +1,7 @@
+#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
 """
 A plugin to navigate HDUs in a FITS file or planes in a 3D cube or
 higher dimension dataset.
@@ -49,6 +51,7 @@ from ginga.misc import Future
 from ginga import GingaPlugin
 from ginga.util.iohelper import get_hdu_suffix
 from ginga.util.videosink import VideoSink
+from ginga.util import io_fits
 
 import numpy as np
 
@@ -595,7 +598,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 except Exception:
                     pass
 
-            self.file_obj = self.fv.fits_opener.get_factory()
+            self.file_obj = io_fits.get_fitsloader(logger=self.logger)
+
             # TODO: specify 'readonly' somehow?
             self.file_obj.open_file(path)
 

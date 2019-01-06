@@ -36,7 +36,7 @@ import threading
 import numpy as np
 
 from ginga.AstroImage import AstroImage
-from ginga.util import wcs, iqcalc, dp
+from ginga.util import wcs, iqcalc, dp, io_fits
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
@@ -445,9 +445,8 @@ class Mosaic(GingaPlugin.LocalPlugin):
                 mosaic_hdus = self.settings.get('mosaic_hdus', False)
                 if mosaic_hdus:
                     self.logger.debug("loading hdus")
-                    opener = self.fv.fits_opener.get_factory()
+                    opener = io_fits.get_fitsloader(logger=self.logger)
                     # User wants us to mosaic HDUs
-                    # TODO: do this in a different thread?
                     opener.open_file(url, memmap=False)
                     try:
                         for i in range(len(opener)):
