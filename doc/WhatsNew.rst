@@ -7,6 +7,8 @@ Ver 3.0.0 (unreleased)
 - Dropped Python 2 support. Ginga now requires Python 3.5 or later.
 - Fixed an issue with some RGB images being viewed flipped
 - Improved accuracy of Qt-based timers
+- Pick plugin enhanced with option to center on found object; also
+  default shape changed to a box rather than a rectangle
 
 Ver 2.7.2 (2018-11-05)
 ======================
