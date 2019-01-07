@@ -11,7 +11,7 @@ An instance can be opened for each channel.
 **Usage**
 
 The ``Pick`` plugin is used to perform quick astronomical data quality analysis
-on stellar objects.  It locates stellar candidates within a drawn rectangle
+on stellar objects.  It locates stellar candidates within a drawn box
 and picks the most likely candidate based on a set of search settings.
 The Full Width Half Max (FWHM) is reported on the candidate object, as
 well as its size based on the plate scale of the detector.  Rough
@@ -19,7 +19,7 @@ measurement of background, sky level and brightness is also done.
 
 **Defining the pick area**
 
-The default pick area is defined as a rectangle of approximately 30x30
+The default pick area is defined as a box of approximately 30x30
 pixels that encloses the search area.
 
 The move/draw/edit selector at the bottom of the plugin is used to
@@ -37,7 +37,7 @@ determine what operation is being done to the pick area:
   If there is no existing area, a default one will be created.
 * If "draw" is selected, then you can draw a shape with the cursor
   to enclose and define a new pick area.  The default shape is a
-  rectangle, but other shapes can be selected in the "Settings" tab.
+  box, but other shapes can be selected in the "Settings" tab.
 * If "edit" is selected, then you can edit the pick area by dragging its
   control points, or moving it by dragging in the bounding box.
 
