@@ -11,7 +11,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-from ginga.util import wcsmod, io_fits
+from ginga.util import wcsmod, io_fits, io_asdf
 from ginga.util import wcs, iqcalc
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
@@ -164,6 +164,24 @@ class AstroImage(BaseImage):
             wcsinfo = wcsmod.get_wcs_class('astropy')
             self.wcs = wcsinfo.wrapper_class(logger=self.logger)
             self.wcs.load_nddata(ndd)
+
+    def load_asdf(self, asdf_obj, **kwargs):
+        """
+        Load from an ASDF object.
+        See :func:`ginga.util.io_asdf.load_asdf` for more info.
+        """
+        self.clear_metadata()
+
+        data, wcs, ahdr = io_asdf.load_asdf(asdf_obj, **kwargs)
+
+        self.setup_data(data, naxispath=None)
+
+        wcsinfo = wcsmod.get_wcs_class('astropy_ape14')
+        self.wcs = wcsinfo.wrapper_class(logger=self.logger)
+        self.wcs.wcs = wcs
+
+        if wcs is not None:
+            self.wcs.coordsys = wcs.output_frame.name
 
     def load_file(self, filespec, **kwargs):
 

@@ -400,6 +400,9 @@ class ZScale(AutoCutsBase):
 
         # calculate num_points parameter, if omitted
         total_points = wd * ht
+        if total_points == 0:
+            self.logger.debug('total_points is 0, setting cut levels to 0')
+            return 0, 0
         num_points = self.num_points
         if num_points is None:
             num_points = max(int(total_points * 0.0002), 1000)

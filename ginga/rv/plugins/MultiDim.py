@@ -234,12 +234,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
     def build_naxis(self, dims, image):
         self.naxispath = list(image.naxispath)
+        ndims = len(dims)
 
         # build a vbox of NAXIS controls
         captions = [("NAXIS1:", 'label', 'NAXIS1', 'llabel'),
                     ("NAXIS2:", 'label', 'NAXIS2', 'llabel')]
 
-        for n in range(2, len(dims)):
+        for n in range(2, ndims):
             key = 'naxis%d' % (n + 1)
             title = key.upper()
             maxn = int(dims[n])
@@ -257,9 +258,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         hbox = Widgets.HBox()
 
-        if len(dims) > 3:  # only add radiobuttons if we have more than 3 dim
+        if ndims > 3:  # only add radiobuttons if we have more than 3 dim
             group = None
-            for i in range(2, len(dims)):
+            for i in range(2, ndims):
                 title = 'AXIS%d' % (i + 1)
                 btn = Widgets.RadioButton(title, group=group)
                 if group is None:
@@ -274,7 +275,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         vbox.add_widget(w)
         vbox.add_widget(hbox)
 
-        for n in range(0, len(dims)):
+        for n in range(0, ndims):
             key = 'naxis%d' % (n + 1)
             lbl = b[key]
             maxn = int(dims[n])
@@ -306,10 +307,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         # for storing play_idx for each dim of image. used for going back to
         # the idx where you left off.
-        self.play_indices = ([0 for i in range(len(dims) - 2)] if len(dims) > 3
+        self.play_indices = ([0 for i in range(ndims - 2)] if ndims > 3
                              else None)
 
-        if len(dims) > 3:
+        if ndims > 3:
 
             # dims only exists in here, hence this function exists here
             def play_axis_change_func_creator(n):
@@ -321,7 +322,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                     self.play_axis = n
                     self.logger.debug("play_axis changed to %d" % n)
 
-                    if self.play_axis < len(dims):
+                    if self.play_axis < ndims:
                         self.play_max = dims[self.play_axis] - 1
 
                     self.play_idx = self.play_indices[n - 2]
@@ -335,16 +336,16 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
                 return check_if_we_need_change
 
-            for n in range(2, len(dims)):
+            for n in range(2, ndims):
                 key = 'axis%d' % (n + 1)
                 self.w[key].add_callback(
                     'activated', play_axis_change_func_creator(n))
                 if n == 2:
                     self.w[key].set_state(True)
 
-        is_dc = len(dims) > 2
+        is_dc = ndims > 2
         self.play_axis = 2
-        if self.play_axis < len(dims):
+        if self.play_axis < ndims:
             self.play_max = dims[self.play_axis] - 1
         if is_dc:
             self.play_idx = self.naxispath[self.play_axis - 2]
@@ -510,7 +511,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         deadline = time_start + self.play_int_sec
 
         # calculate fps
-        fps = 1.0 / (time_start - self.play_last_time)
+        dt = abs(time_start - self.play_last_time)
+        fps = 1.0 / dt if not np.isclose(dt, 0) else 1.0
         self.play_last_time = time_start
         if int(fps) != int(self.play_fps):
             self.play_fps = fps
@@ -586,6 +588,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
             self.fv.show_error(
                 "Cannot open image: no value for metadata key 'path'")
             return
+
+        # TODO: How to properly reset GUI components?
+        #       They are still showing info from prev FITS.
+        # No-op for ASDF
+        if path.endswith('asdf'):
+            return True
 
         if path != self.img_path:
             # <-- New file is being looked at

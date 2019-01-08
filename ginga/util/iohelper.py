@@ -46,6 +46,14 @@ def guess_filetype(filepath):
         except Exception as e:
             pass
 
+    # Some specific checks for file suffixes
+    _fn = filepath.lower()
+    if _fn.endswith('.fits'):
+        typ = 'image/fits'
+
+    elif _fn.endswith('.asdf'):
+        typ = 'image/asdf'
+
     if typ is None:
         # if no magic, or magic fails, fall back to mimetypes
         try:

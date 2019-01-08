@@ -564,7 +564,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         A wrapper around ginga.util.loader.load_data()
 
         This actually can load other data types, like
-
         """
         inherit_prihdr = self.settings.get('inherit_primary_header',
                                            False)

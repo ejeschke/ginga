@@ -850,6 +850,9 @@ class WCSAxes(CompoundObject):
                 (pts[:, 1] >= 0) & (pts[:, 1] < image.height))
         pts = pts[mask]
 
+        if len(pts) == 0:
+            return []
+
         path_obj = Path(
             points=pts, coords='data', linewidth=self.linewidth,
             linestyle=self.linestyle, color=self.color,

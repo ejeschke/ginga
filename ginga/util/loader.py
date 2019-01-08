@@ -68,6 +68,8 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
     return data_obj
 
 
+# NOTE: for loader functions, kwargs can include 'idx', 'logger' and
+#    loader-specific parameters like
 def load_rgb(filepath, logger=None, **kwargs):
     loader = io_rgb.get_rgbloader(logger=logger)
     image = loader.load_file(filepath, **kwargs)
@@ -79,6 +81,12 @@ def load_fits(filepath, logger=None, **kwargs):
     numhdu = kwargs.pop('idx', None)
     image = loader.load_file(filepath, numhdu=numhdu, **kwargs)
     return image
+
+
+def load_asdf(filepath, logger=None, **kwargs):
+    from ginga.util import io_asdf
+    data_obj = io_asdf.loader(filepath, logger, **kwargs)
+    return data_obj
 
 
 # This contains a registry of upper-level loaders with their secondary
@@ -105,6 +113,9 @@ lc.register_type('table', AstroTable)
 
 for mimetype in ['image/fits', 'image/x-fits']:
     add_loader(mimetype, load_fits)
+
+for mimetype in ['image/asdf']:
+    add_loader(mimetype, load_asdf)
 
 # ### RGB ###
 for mimetype in ['image/jpeg', 'image/png', 'image/tiff', 'image/gif']:
