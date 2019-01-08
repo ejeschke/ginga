@@ -103,14 +103,20 @@ class AstropyWCS(common.BaseWCS):
         # NOTE: origin is always 0, coords unused.
         try:
             c = self.wcs.pixel_to_world(*idxs)
-            if isinstance(c, list):  # naxis > 2
+            if (isinstance(c, list) and
+                    isinstance(c[0], coordinates.SkyCoord)):  # naxis > 2
                 c = c[0]
         except Exception as e:
             self.logger.error(
                 "Error calculating pixtoradec: {}".format(str(e)))
             raise common.WCSError(e)
 
-        return c.ra.deg, c.dec.deg
+        if isinstance(c, coordinates.SkyCoord):
+            radec = (c.ra.deg, c.dec.deg)
+        else:  # list of Quantity (e.g., from primary header)
+            radec = (c[0].value, c[1].value)
+
+        return radec
 
     def radectopix(self, ra_deg, dec_deg, coords='data', naxispath=None):
         # NOTE: origin is always 0, coords unused.
