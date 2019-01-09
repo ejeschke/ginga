@@ -8,6 +8,7 @@ import os
 import re
 import hashlib
 import mimetypes
+import pathlib
 import urllib.parse
 
 from ginga.misc import Bunch
@@ -125,7 +126,7 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     else:
         # Not a URL
         filepath = filespec
-        url = "file://" + filepath
+        url = pathlib.Path(os.path.abspath(filepath)).as_uri()
 
     ondisk = os.path.exists(filepath)
 
