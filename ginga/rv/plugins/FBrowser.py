@@ -31,6 +31,7 @@ directory if closed and then restarted.
 import glob
 import os
 import time
+from pathlib import Path
 
 from ginga.misc import Bunch
 from ginga import GingaPlugin
@@ -219,7 +220,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         self.open_file(path)
 
     def item_drag_cb(self, widget, drag_pkg, res_dict):
-        urls = ["file://" + info.path for key, info in res_dict.items()]
+        urls = [Path(info.path).as_uri() for key, info in res_dict.items()]
         self.logger.info("urls: %s" % (urls))
         drag_pkg.set_urls(urls)
 
@@ -282,8 +283,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         elif os.path.exists(path):
             #self.fv.load_file(path)
-            uri = "file://%s" % (path)
-            self.load_paths([uri])
+            self.load_paths([Path(path).as_uri()])
 
         else:
             self.browse(path)

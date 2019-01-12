@@ -10,6 +10,7 @@ Ver 3.0.0 (unreleased)
 - Pick plugin enhanced with option to center on found object; also
   default shape changed to a box rather than a rectangle
 - Added support for ASDF and GWCS.
+- Fixed drag-and-drop functionality in FBrowser plugin on Windows.
 
 Ver 2.7.2 (2018-11-05)
 ======================
