@@ -191,7 +191,7 @@ class AstropyWCS(common.BaseWCS):
         try:
             args = [wcspt[:, i] for i in range(wcspt.shape[1])]
             # NOTE: Ignores system transformation.
-            datapt = np.asarray(self.wcs.world_to_pixel_values(*args))[:, :2].T
+            datapt = np.asarray(self.wcs.world_to_pixel_values(*args))[:2, :].T
         except Exception as e:
             self.logger.error(
                 "Error calculating wcspt_to_datapt: {}".format(str(e)))

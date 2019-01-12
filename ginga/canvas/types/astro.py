@@ -794,6 +794,13 @@ class WCSAxes(CompoundObject):
         self._cur_swap = swapxy
 
         if not isinstance(image, AstroImage) or not image.has_valid_wcs():
+            self.logger.debug(
+                'WCSAxes can only be displayed for AstroImage with valid WCS')
+            return []
+
+        min_imsize = min(image.width, image.height)
+        if min_imsize <= 0:
+            self.logger.debug('Cannot draw WCSAxes on image with 0 dim')
             return []
 
         # Approximate bounding box in RA/DEC space
@@ -803,7 +810,8 @@ class WCSAxes(CompoundObject):
             radec = image.wcs.datapt_to_system(
                 [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]],
                 naxispath=image.naxispath)
-        except Exception:
+        except Exception as e:
+            self.logger.warning('WCSAxes failed: {}'.format(str(e)))
             return []
         ra_min, dec_min = radec.ra.min().deg, radec.dec.min().deg
         ra_max, dec_max = radec.ra.max().deg, radec.dec.max().deg
@@ -817,7 +825,6 @@ class WCSAxes(CompoundObject):
         dec_arr = np.arange(dec_min + d_dec, dec_max - d_ra * 0.5, d_dec)
 
         # RA/DEC step size for each vector
-        min_imsize = min(image.width, image.height)
         d_ra_step = ra_size * self._pix_res / min_imsize
         d_dec_step = dec_size * self._pix_res / min_imsize
 
@@ -842,7 +849,8 @@ class WCSAxes(CompoundObject):
 
         try:
             pts = image.wcs.wcspt_to_datapt(crds, naxispath=image.naxispath)
-        except Exception:
+        except Exception as e:
+            self.logger.warning('WCSAxes failed: {}'.format(str(e)))
             return []
 
         # Don't draw outside image area
@@ -851,6 +859,9 @@ class WCSAxes(CompoundObject):
         pts = pts[mask]
 
         if len(pts) == 0:
+            self.logger.debug(
+                'All WCSAxes coords ({}) out of bound in {}x{} '
+                'image'.format(crds, image.width, image.height))
             return []
 
         path_obj = Path(
