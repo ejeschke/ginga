@@ -11,6 +11,7 @@ Ver 3.0.0 (unreleased)
   default shape changed to a box rather than a rectangle
 - Added support for ASDF and GWCS.
 - Fixed drag-and-drop functionality in FBrowser plugin on Windows.
+- Enabled HDU sorting via config file in MultiDim.
 
 Ver 2.7.2 (2018-11-05)
 ======================

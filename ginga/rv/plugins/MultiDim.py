@@ -67,6 +67,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(MultiDim, self).__init__(fv, fitsimage)
+        self._toc_fmt = "%(index)4d %(name)-12.12s (%(extver)3d) %(htype)-12.12s %(dtype)-8.8s"
 
         self.curhdu = 0
         self.naxispath = []
@@ -91,6 +92,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # Load plugin preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_MultiDim')
+        self.settings.add_defaults(sort_keys=['index'],
+                                   sort_reverse=False)
         self.settings.load(onError='silent')
 
         self.gui_up = False
@@ -217,14 +220,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.gui_up = True
 
     def set_hdu_cb(self, w, val):
-        # idx = int(val)
-        idx = w.get_index()
-        idx = max(0, idx)
+        # Get actual HDU index, which might be different from combobox order.
+        toc_ent = w.get_alpha(val)
+        idx = max(0, int(toc_ent[:4]))
         try:
             self.set_hdu(idx)
-
         except Exception as e:
-            self.logger.error("Error loading HDU #%d: %s" % (
+            self.logger.error("Error loading HDU #{}: {}".format(
                 idx + 1, str(e)))
 
     def set_naxis_cb(self, widget, idx, n):
@@ -565,15 +567,22 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # clear old TOC
         w.clear()
 
-        for idx, d in enumerate(hdu_info):
-            toc_ent = "%(index)4d %(name)-12.12s (%(extver)3d) %(htype)-12.12s %(dtype)-8.8s" % d  # noqa
+        # User sort settings
+        sort_keys = self.settings.get('sort_keys', ['index'])
+        sort_reverse = self.settings.get('sort_reverse', False)
+        sorted_hdu_info = sorted(hdu_info,
+                                 key=lambda x: [x[key] for key in sort_keys],
+                                 reverse=sort_reverse)
+
+        for idx, d in enumerate(sorted_hdu_info):
+            toc_ent = self._toc_fmt % d
             w.append_text(toc_ent)
 
-        idx = w.get_index()
-        if idx < 0:
-            idx = 0
-        if idx >= len(hdu_info):
-            idx = len(hdu_info) - 1
+        # idx = w.get_index()
+        # if idx < 0:
+        #     idx = 0
+        # if idx >= len(hdu_info):
+        #     idx = len(hdu_info) - 1
         # w.set_index(idx)
 
     def redo(self):
@@ -632,8 +641,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             info = self.file_obj.hdu_db.get(idx, None)
             if info is not None:
                 htype = info.htype.lower()
-                index = info.index
-                self.w.hdu.set_index(index)
+                toc_ent = self._toc_fmt % info
+                self.w.hdu.show_text(toc_ent)
 
         # rebuild the NAXIS controls, if necessary
         # No two images in the same channel can have the same name.
