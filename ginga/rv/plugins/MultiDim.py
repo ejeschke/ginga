@@ -91,7 +91,6 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # Load plugin preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_MultiDim')
-        self.settings.set_defaults(auto_start_naxis=False)
         self.settings.load(onError='silent')
 
         self.gui_up = False
