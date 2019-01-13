@@ -60,6 +60,8 @@ class RGBFileHandler(object):
 
     def load_file(self, filespec, dstobj=None, **kwargs):
         info = iohelper.get_fileinfo(filespec)
+        if isinstance(info, list):
+            raise NotImplementedError('Wildcard in extension not supported')
         if not info.ondisk:
             raise ValueError("File does not appear to be on disk: %s" % (
                 info.url))

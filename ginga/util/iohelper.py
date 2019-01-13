@@ -87,10 +87,35 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
         idx = match.group(2)
         if ',' in idx:
             hduname, extver = idx.split(',')
-            hduname = hduname.strip()
-            extver = int(extver)
-            idx = (hduname, extver)
-            name_ext = "[%s,%d]" % idx
+            hduname = hduname.strip().upper()
+
+            # User trying to match extver with wildcard!
+            # NOTE: Only use Astropy FITS; Only works on local file.
+            if extver == '*':
+                if '*' in filespec:
+                    raise NotImplementedError('Wildcards in both filename and'
+                                              'extension not supported')
+                from astropy.io import fits
+                idx = []
+                name_ext = []
+                with fits.open(filespec) as pf:
+                    for pf_ext in pf:
+                        if pf_ext.name.upper() == hduname:
+                            cur_idx = (hduname, int(pf_ext.ver))
+                            idx.append(cur_idx)
+                            name_ext.append("[%s,%d]" % cur_idx)
+                if len(name_ext) == 0:
+                    idx = hduname
+                    name_ext = "[%s]" % idx
+                elif len(name_ext) == 1:
+                    idx = idx[0]
+                    name_ext = name_ext[0]
+
+            # Single extver
+            else:
+                extver = int(extver)
+                idx = (hduname, extver)
+                name_ext = "[%s,%d]" % idx
         else:
             if re.match(r'^\d+$', idx):
                 idx = int(idx)
@@ -132,10 +157,21 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
 
     dirname, fname = os.path.split(filepath)
     fname_pfx, fname_sfx = os.path.splitext(fname)
-    name = fname_pfx + name_ext
 
-    res = Bunch.Bunch(filepath=filepath, url=url, numhdu=idx,
-                      name=name, ondisk=ondisk)
+    # For [name, *] case
+    if isinstance(name_ext, list):
+        res = []
+        for cur_idx, cur_name_ext in zip(idx, name_ext):
+            name = fname_pfx + cur_name_ext
+            res.append(Bunch.Bunch(filepath=filepath, url=url, numhdu=cur_idx,
+                                   name=name, ondisk=ondisk))
+
+    # Normal case
+    else:
+        name = fname_pfx + name_ext
+        res = Bunch.Bunch(filepath=filepath, url=url, numhdu=idx,
+                          name=name, ondisk=ondisk)
+
     return res
 
 
@@ -180,6 +216,8 @@ def shorten_name(name, char_limit, side='right'):
     # TODO: A more elegant way to do this?
     if char_limit is not None and len(name) > char_limit:
         info = get_fileinfo(name)
+        if isinstance(info, list):
+            raise NotImplementedError('Wildcard in extension name not supported')
         if info.numhdu is not None:
             i = name.rindex('[')
             s = (name[:i], name[i:])

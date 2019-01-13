@@ -608,6 +608,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Get information about this file/URL
         info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
 
+        if isinstance(info, list):
+            for res in info:
+                if ((not res.ondisk) and (res.url is not None) and
+                        (not res.url.startswith('file:'))):
+                    raise NotImplementedError(
+                        'Cannot download data when wildcard given in extension')
+            return info
+
         if ((not info.ondisk) and (info.url is not None) and
                 (not info.url.startswith('file:'))):
 
@@ -662,6 +670,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         -------
         image
             The image object that was loaded.
+            If multiple were loaded, the last one was returned.
 
         """
         if not chname:
@@ -676,47 +685,52 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if image_loader is None:
             image_loader = self.load_image
 
-        info = self.get_fileinfo(filepath)
-        filepath = info.filepath
+        res = self.get_fileinfo(filepath)
 
-        kwargs = {}
-        idx = None
-        if info.numhdu is not None:
-            kwargs['idx'] = info.numhdu
+        if not isinstance(res, list):
+            res = [res]
 
-        try:
-            image = image_loader(filepath, **kwargs)
+        for info in res:
+            filepath = info.filepath
 
-        except Exception as e:
-            errmsg = "Failed to load '%s': %s" % (filepath, str(e))
-            self.gui_do(self.show_error, errmsg)
-            return
+            kwargs = {}
+            idx = None
+            if info.numhdu is not None:
+                kwargs['idx'] = info.numhdu
 
-        future = Future.Future()
-        future.freeze(image_loader, filepath, **kwargs)
+            try:
+                image = image_loader(filepath, **kwargs)
 
-        # Save a future for this image to reload it later if we
-        # have to remove it from memory
-        image.set(loader=image_loader, image_future=future)
+            except Exception as e:
+                errmsg = "Failed to load '%s': %s" % (filepath, str(e))
+                self.gui_do(self.show_error, errmsg)
+                return
 
-        if image.get('path', None) is None:
-            image.set(path=filepath)
+            future = Future.Future()
+            future.freeze(image_loader, filepath, **kwargs)
 
-        # Assign a name to the image if the loader did not.
-        name = image.get('name', None)
-        if name is None:
-            name = self.name_image_from_path(filepath, idx=idx)
-            image.set(name=name)
+            # Save a future for this image to reload it later if we
+            # have to remove it from memory
+            image.set(loader=image_loader, image_future=future)
 
-        if display_image:
-            # Display image.  If the wait parameter is False then don't wait
-            # for the image to load into the viewer
-            if wait:
-                self.gui_call(self.add_image, name, image, chname=chname)
+            if image.get('path', None) is None:
+                image.set(path=filepath)
+
+            # Assign a name to the image if the loader did not.
+            name = image.get('name', None)
+            if name is None:
+                name = self.name_image_from_path(filepath, idx=idx)
+                image.set(name=name)
+
+            if display_image:
+                # Display image. If the wait parameter is False then don't wait
+                # for the image to load into the viewer
+                if wait:
+                    self.gui_call(self.add_image, name, image, chname=chname)
+                else:
+                    self.gui_do(self.add_image, name, image, chname=chname)
             else:
-                self.gui_do(self.add_image, name, image, chname=chname)
-        else:
-            self.gui_do(self.bulk_add_image, name, image, chname)
+                self.gui_do(self.bulk_add_image, name, image, chname)
 
         # Return the image
         return image
@@ -2282,6 +2296,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # TODO: If load all the matches, might get (Qt) QPainter errors
         else:
             info = iohelper.get_fileinfo(filename)
+            if isinstance(info, list):
+                raise NotImplementedError('Wildcard in extension not supported')
             ext = iohelper.get_hdu_suffix(info.numhdu)
             paths = ['{0}{1}'.format(fname, ext)
                      for fname in glob.iglob(info.filepath)]

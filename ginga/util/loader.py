@@ -36,6 +36,8 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
     global viewer_registry
 
     info = iohelper.get_fileinfo(filespec, cache_dir='/tmp')
+    if isinstance(info, list):
+        raise NotImplementedError('Wildcard in extension not supported')
     filepath = info.filepath
 
     if idx is None:

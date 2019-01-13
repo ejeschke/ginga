@@ -262,10 +262,14 @@ class FBrowser(GingaPlugin.LocalPlugin):
             return False
 
         self.logger.debug('Opening files matched by {0}'.format(path))
-        info = iohelper.get_fileinfo(path)
-        ext = iohelper.get_hdu_suffix(info.numhdu)
-        files = glob.glob(info.filepath)  # Expand wildcard
-        paths = ['{0}{1}'.format(f, ext) for f in files]
+        res = iohelper.get_fileinfo(path)
+        if not isinstance(res, list):
+            res = [res]
+        paths = []
+        for info in res:
+            ext = iohelper.get_hdu_suffix(info.numhdu)
+            files = glob.glob(info.filepath)  # Expand wildcard
+            paths += ['{0}{1}'.format(f, ext) for f in files]
 
         self.load_paths(paths)
         return True

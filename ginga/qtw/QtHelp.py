@@ -182,10 +182,14 @@ class FileSelection(object):
             # Special handling for wildcard or extension.
             # This is similar to open_files() in FBrowser plugin.
             if '*' in filename or '[' in filename:
-                info = iohelper.get_fileinfo(filename)
-                ext = iohelper.get_hdu_suffix(info.numhdu)
-                files = glob.glob(info.filepath)  # Expand wildcard
-                paths = ['{0}{1}'.format(f, ext) for f in files]
+                paths = []
+                res = iohelper.get_fileinfo(filename)
+                if not isinstance(res, list):
+                    res = [res]
+                for info in res:
+                    ext = iohelper.get_hdu_suffix(info.numhdu)
+                    files = glob.glob(info.filepath)  # Expand wildcard
+                    paths += ['{0}{1}'.format(f, ext) for f in files]
 
                 # NOTE: Using drag-drop callback here might give QPainter
                 # warnings.
