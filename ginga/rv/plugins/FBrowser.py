@@ -108,6 +108,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
                                  dragable=True)
         table.add_callback('activated', self.item_dblclicked_cb)
         table.add_callback('drag-start', self.item_drag_cb)
+        table.add_callback('selected', self.item_selected_cb)
 
         # set header
         col = 0
@@ -211,18 +212,24 @@ class FBrowser(GingaPlugin.LocalPlugin):
             self.logger.debug("Resized columns for {0} row(s)".format(n_rows))
 
     def get_path_from_item(self, res_dict):
-        paths = [info.path for key, info in res_dict.items()]
-        path = paths[0]
-        return path
+        paths = [info.path for info in res_dict.values()]
+        if len(paths) == 0:
+            return
+        return paths[0]
 
     def item_dblclicked_cb(self, widget, res_dict):
         path = self.get_path_from_item(res_dict)
         self.open_file(path)
 
     def item_drag_cb(self, widget, drag_pkg, res_dict):
-        urls = [Path(info.path).as_uri() for key, info in res_dict.items()]
+        urls = [Path(info.path).as_uri() for info in res_dict.values()]
         self.logger.info("urls: %s" % (urls))
         drag_pkg.set_urls(urls)
+
+    def item_selected_cb(self, widget, res_dict):
+        path = self.get_path_from_item(res_dict)
+        if path is not None:
+            self.entry.set_text(path)
 
     def browse_cb(self, widget):
         path = str(widget.get_text()).strip()
