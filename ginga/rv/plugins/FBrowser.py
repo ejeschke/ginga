@@ -31,6 +31,7 @@ directory if closed and then restarted.
 """
 import glob
 import os
+import re
 import time
 from pathlib import Path
 
@@ -46,6 +47,7 @@ except ImportError:
     have_astropy = False
 
 __all__ = ['FBrowser']
+_patt = re.compile(r'"([^ "]+)"')
 
 
 class FBrowser(GingaPlugin.LocalPlugin):
@@ -212,15 +214,13 @@ class FBrowser(GingaPlugin.LocalPlugin):
             self.treeview.set_optimal_column_widths()
             self.logger.debug("Resized columns for {0} row(s)".format(n_rows))
 
-    def get_path_from_item(self, res_dict):
-        paths = [info.path for info in res_dict.values()]
-        if len(paths) == 0:
-            return
-        return paths[0]
+    def get_paths_from_item(self, res_dict):
+        return [info.path for info in res_dict.values()]
 
     def item_dblclicked_cb(self, widget, res_dict):
-        path = self.get_path_from_item(res_dict)
-        self.open_file(path)
+        paths = self.get_paths_from_item(res_dict)
+        if len(paths) > 0:
+            self.open_file(paths[0])
 
     def item_drag_cb(self, widget, drag_pkg, res_dict):
         urls = [Path(info.path).as_uri() for info in res_dict.values()]
@@ -228,9 +228,14 @@ class FBrowser(GingaPlugin.LocalPlugin):
         drag_pkg.set_urls(urls)
 
     def item_selected_cb(self, widget, res_dict):
-        path = self.get_path_from_item(res_dict)
-        if path is not None:
-            self.entry.set_text(path)
+        paths = self.get_paths_from_item(res_dict)
+        if len(paths) <= 0:
+            return
+        elif len(paths) == 1:
+            txt = paths[0]
+        else:
+            txt = ' '.join(['"{}"'.format(s) for s in paths])
+        self.entry.set_text(txt)
 
     def browse_cb(self, widget):
         path = str(widget.get_text()).strip()
@@ -258,29 +263,40 @@ class FBrowser(GingaPlugin.LocalPlugin):
             pb = self.filepb
         return pb
 
-    def open_files(self, path):
-        """Load file(s) -- image*.fits, image*.fits[ext].
+    def open_files(self, input_path):
+        """Load file(s) -- image*.fits, image*.fits[ext], image.fits[ext, *].
         Returns success code (True or False).
         """
-        # Strips trailing wildcard
-        if path.endswith('*'):
-            path = path[:-1]
-
-        if os.path.isdir(path):
-            return False
-
-        self.logger.debug('Opening files matched by {0}'.format(path))
-        res = iohelper.get_fileinfo(path)
-        if not isinstance(res, list):
-            res = [res]
         paths = []
-        for info in res:
-            ext = iohelper.get_hdu_suffix(info.numhdu)
-            files = glob.glob(info.filepath)  # Expand wildcard
-            paths += ['{0}{1}'.format(f, ext) for f in files]
+        input_list = _patt.findall(input_path)
 
-        self.load_paths(paths)
-        return True
+        if not input_list:
+            input_list = [input_path]
+
+        for path in input_list:
+            # Strips trailing wildcard
+            if path.endswith('*'):
+                path = path[:-1]
+
+            if os.path.isdir(path):
+                continue
+
+            self.logger.debug('Opening files matched by {0}'.format(path))
+            res = iohelper.get_fileinfo(path)
+            if not isinstance(res, list):
+                res = [res]
+            for info in res:
+                ext = iohelper.get_hdu_suffix(info.numhdu)
+                files = glob.glob(info.filepath)  # Expand wildcard
+                paths += ['{0}{1}'.format(f, ext) for f in files]
+
+        if paths:
+            self.load_paths(paths)
+            status = True
+        else:
+            status = False
+
+        return status
 
     def open_file(self, path):
         self.logger.debug("path: %s" % (path))
