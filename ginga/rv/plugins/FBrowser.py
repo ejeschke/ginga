@@ -20,9 +20,10 @@ load it into any channel viewer.
 Multiple files can be selected by holding down ``Ctrl`` (``Command`` on Mac),
 or ``Shift``-clicking to select a contiguous range of files.
 
-You may also enter full path to the desired image(s) in the text box as
+You may also enter full path to the desired image(s) in the text box such as
 ``/my/path/to/image.fits``, ``/my/path/to/image.fits[ext]``,
-``/my/path/to/image*.fits``, or ``/my/path/to/image*.fits[ext]``.
+``/my/path/to/image*.fits``, ``/my/path/to/image*.fits[ext]``, or
+``/my/path/to/image.fits[extname,*]``.
 
 Because it is a local plugin, ``FBrowser`` will remember its last
 directory if closed and then restarted.

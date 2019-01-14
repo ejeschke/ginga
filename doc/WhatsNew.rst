@@ -12,6 +12,10 @@ Ver 3.0.0 (unreleased)
 - Added support for ASDF and GWCS.
 - Fixed drag-and-drop functionality in FBrowser plugin on Windows.
 - Enabled HDU sorting via config file in MultiDim.
+- Selecting item in FBrowser now populates its text box properly.
+- Support opening all extensions of given extension name from
+  a FITS file (e.g., ``filename.fits[SCI,*]``) from Ginga command
+  line or FBrowser.
 
 Ver 2.7.2 (2018-11-05)
 ======================
