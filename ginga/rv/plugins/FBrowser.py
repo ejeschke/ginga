@@ -232,9 +232,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
     def item_selected_cb(self, widget, res_dict):
         paths = self.get_paths_from_item(res_dict)
-        if len(paths) <= 0:
+        n_paths = len(paths)
+        if n_paths <= 0:
             return
-        elif len(paths) == 1:
+        elif n_paths == 1:
             txt = paths[0]
         else:
             txt = ' '.join(['"{}"'.format(s) for s in paths])
