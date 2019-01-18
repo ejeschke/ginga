@@ -10,7 +10,7 @@ IS_WINDOWS = sys.platform.startswith('win')
 
 def test_get_fileinfo_real_file():
     """Test behavior on real file."""
-    bnch = iohelper.get_fileinfo(iohelper.__file__)
+    bnch = iohelper.get_fileinfo(iohelper.__file__)[0]
     assert bnch['ondisk']
     assert bnch['name'] == 'iohelper'
     assert bnch['numhdu'] is None
@@ -31,7 +31,7 @@ def test_get_fileinfo_dummy_file():
         filepath = '/mypath/dummyfile.fits'
         url = 'file:///mypath/dummyfile.fits'
 
-    bnch = iohelper.get_fileinfo(filename)
+    bnch = iohelper.get_fileinfo(filename)[0]
     assert not bnch['ondisk']
     assert bnch['name'] == 'dummyfile[1]'
     assert bnch['numhdu'] == 1

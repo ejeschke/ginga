@@ -587,6 +587,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.logger.debug("Successfully loaded file into object.")
         return image
 
+    def _dl_indicator(self, count, blksize, totalsize):
+        """Show download status."""
+        pct = float(count * blksize) / float(totalsize)
+        msg = "Downloading: {:.2%} complete".format(pct)
+        self.gui_do(self.show_status, msg)
+
     def get_fileinfo(self, filespec, dldir=None):
         """Break down a file specification into its components.
 
@@ -599,43 +605,32 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         Returns
         -------
-        res : `~ginga.misc.Bunch.Bunch`
+        res : list
+            A list of `~ginga.misc.Bunch.Bunch`.
 
         """
         if dldir is None:
             dldir = self.tmpdir
 
         # Get information about this file/URL
-        info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
+        res = iohelper.get_fileinfo(filespec, cache_dir=dldir)
 
-        if isinstance(info, list):
-            for res in info:
-                if ((not res.ondisk) and (res.url is not None) and
-                        (not res.url.startswith('file:'))):
-                    raise NotImplementedError(
-                        'Cannot download data when wildcard given in extension')
-            return info
+        # Download the file if a URL was passed
+        for info in res:
+            if ((not info.ondisk) and (info.url is not None) and
+                    (not info.url.startswith('file:'))):
 
-        if ((not info.ondisk) and (info.url is not None) and
-                (not info.url.startswith('file:'))):
+                # Try to download the URL.  We press our generic URL server
+                # into use as a generic file downloader.
+                try:
+                    dl = catalog.URLServer(self.logger, "downloader", "dl",
+                                           info.url, "")
+                    filepath = dl.retrieve(info.url, filepath=info.filepath,
+                                           cb_fn=self._dl_indicator)
+                finally:
+                    self.gui_do(self.show_status, "")
 
-            # Download the file if a URL was passed
-            def _dl_indicator(count, blksize, totalsize):
-                pct = float(count * blksize) / float(totalsize)
-                msg = "Downloading: %%%.2f complete" % (pct * 100.0)
-                self.gui_do(self.show_status, msg)
-
-            # Try to download the URL.  We press our generic URL server
-            # into use as a generic file downloader.
-            try:
-                dl = catalog.URLServer(self.logger, "downloader", "dl",
-                                       info.url, "")
-                filepath = dl.retrieve(info.url, filepath=info.filepath,  # noqa
-                                       cb_fn=_dl_indicator)
-            finally:
-                self.gui_do(self.show_status, "")
-
-        return info
+        return res
 
     def name_image_from_path(self, path, idx=None):
         return iohelper.name_image_from_path(path, idx=idx)
@@ -686,9 +681,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             image_loader = self.load_image
 
         res = self.get_fileinfo(filepath)
-
-        if not isinstance(res, list):
-            res = [res]
 
         for info in res:
             filepath = info.filepath
@@ -2295,9 +2287,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Fancy load (first file only)
         # TODO: If load all the matches, might get (Qt) QPainter errors
         else:
-            info = iohelper.get_fileinfo(filename)
-            if isinstance(info, list):
+            res = iohelper.get_fileinfo(filename)
+            if len(res) != 1:
                 raise NotImplementedError('Wildcard in extension not supported')
+            info = res[0]
             ext = iohelper.get_hdu_suffix(info.numhdu)
             paths = ['{0}{1}'.format(fname, ext)
                      for fname in glob.iglob(info.filepath)]

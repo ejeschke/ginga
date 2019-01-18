@@ -184,8 +184,6 @@ class FileSelection(object):
             if '*' in filename or '[' in filename:
                 paths = []
                 res = iohelper.get_fileinfo(filename)
-                if not isinstance(res, list):
-                    res = [res]
                 for info in res:
                     ext = iohelper.get_hdu_suffix(info.numhdu)
                     files = glob.glob(info.filepath)  # Expand wildcard

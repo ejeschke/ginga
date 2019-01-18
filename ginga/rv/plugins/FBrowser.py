@@ -219,8 +219,11 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
     def item_dblclicked_cb(self, widget, res_dict):
         paths = self.get_paths_from_item(res_dict)
-        if len(paths) > 0:
-            self.open_file(paths[0])
+        n_paths = len(paths)
+        if n_paths != 1:
+            self.logger.error('Double-click to open {} file(s) '
+                              'is not supported'.format(n_paths))
+        self.open_file(paths[0])
 
     def item_drag_cb(self, widget, drag_pkg, res_dict):
         urls = [Path(info.path).as_uri() for info in res_dict.values()]
@@ -283,8 +286,6 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
             self.logger.debug('Opening files matched by {0}'.format(path))
             res = iohelper.get_fileinfo(path)
-            if not isinstance(res, list):
-                res = [res]
             for info in res:
                 ext = iohelper.get_hdu_suffix(info.numhdu)
                 files = glob.glob(info.filepath)  # Expand wildcard

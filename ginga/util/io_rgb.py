@@ -59,9 +59,10 @@ class RGBFileHandler(object):
         self.clr_mgr = rgb_cms.ColorManager(self.logger)
 
     def load_file(self, filespec, dstobj=None, **kwargs):
-        info = iohelper.get_fileinfo(filespec)
-        if isinstance(info, list):
+        res = iohelper.get_fileinfo(filespec)
+        if len(res) != 1:
             raise NotImplementedError('Wildcard in extension not supported')
+        info = res[0]
         if not info.ondisk:
             raise ValueError("File does not appear to be on disk: %s" % (
                 info.url))

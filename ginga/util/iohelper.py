@@ -74,6 +74,12 @@ def guess_filetype(filepath):
 def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     """
     Parse a file specification and return information about it.
+
+    Returns
+    -------
+    res : list
+        A list of `~ginga.misc.Bunch.Bunch` objects.
+
     """
     # Loads first science extension by default.
     # This prevents [None] to be loaded instead.
@@ -157,10 +163,10 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
 
     dirname, fname = os.path.split(filepath)
     fname_pfx, fname_sfx = os.path.splitext(fname)
+    res = []
 
     # For [name, *] case
     if isinstance(name_ext, list):
-        res = []
         for cur_idx, cur_name_ext in zip(idx, name_ext):
             name = fname_pfx + cur_name_ext
             res.append(Bunch.Bunch(filepath=filepath, url=url, numhdu=cur_idx,
@@ -169,8 +175,8 @@ def get_fileinfo(filespec, cache_dir='/tmp', download=False):
     # Normal case
     else:
         name = fname_pfx + name_ext
-        res = Bunch.Bunch(filepath=filepath, url=url, numhdu=idx,
-                          name=name, ondisk=ondisk)
+        res.append(Bunch.Bunch(filepath=filepath, url=url, numhdu=idx,
+                               name=name, ondisk=ondisk))
 
     return res
 
@@ -215,9 +221,10 @@ def shorten_name(name, char_limit, side='right'):
     """
     # TODO: A more elegant way to do this?
     if char_limit is not None and len(name) > char_limit:
-        info = get_fileinfo(name)
-        if isinstance(info, list):
+        res = get_fileinfo(name)
+        if len(res) != 1:
             raise NotImplementedError('Wildcard in extension name not supported')
+        info = res[0]
         if info.numhdu is not None:
             i = name.rindex('[')
             s = (name[:i], name[i:])
