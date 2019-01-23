@@ -54,8 +54,8 @@ class Setting(Callback.Callbacks):
                 raise KeyError("setting['%s'] value is not set!" % (
                     self.name))
             else:
-                assert len(args) == 1, \
-                    SettingError("Illegal parameter use to get(): %s" % (
+                if len(args) != 1:
+                    raise SettingError("Illegal parameter use to get(): %s" % (
                         str(args)))
                 return args[0]
         return self.value
@@ -168,8 +168,13 @@ class SettingGroup(object):
         key = args[0]
         if len(args) == 1:
             return self.group[key].get()
-        if len(args) == 2:
-            return self.setdefault(key, args[1])
+        else:
+            if key in self.group:
+                return self.group[key].get(*args[1:])
+            if len(args) > 2:
+                raise SettingError("Illegal parameter use to get(): %s" % (
+                    str(args)))
+            return args[1]
 
     def get_dict(self, keylist=None):
         if keylist is None:
