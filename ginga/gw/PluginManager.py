@@ -361,6 +361,7 @@ class PluginManager(Callback.Callbacks):
             self.activate(p_info)
             self.set_focus(p_info.name)
         else:
+            self.activate(p_info)
             # If this is a local plugin, raise the channel associated with the
             # plug in
             if p_info.chinfo is not None:

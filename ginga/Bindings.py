@@ -59,7 +59,7 @@ class ImageViewBindings(object):
         self.cursor_map = {}
 
     def initialize_settings(self, settings):
-        settings.addSettings(
+        settings.add_settings(
             # You should rarely have to change these.
             btn_nobtn=0x0,
             btn_left=0x1,
