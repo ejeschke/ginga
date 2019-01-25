@@ -1528,8 +1528,7 @@ class ImageViewBase(Callback.Callbacks):
 
         if (whence <= 2.0) or (self._rgbarr2 is None):
             # Apply any RGB image overlays
-            #self._rgbarr2 = np.copy(self._rgbarr)
-            self._rgbarr2 = self._rgbarr
+            self._rgbarr2 = np.copy(self._rgbarr)
             self.overlay_images(self.private_canvas, self._rgbarr2,
                                 whence=whence)
 
