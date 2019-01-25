@@ -240,13 +240,19 @@ class RGBMapper(Callback.Callbacks):
         self.t_.set(color_array=carr)
 
     def restore_cmap(self, callback=True):
+        """This restores the color map *and* shift array.
+        """
         with self.suppress_changed:
             self.reset_sarr(callback=False)
             # TEMP: ignore passed callback parameter
             self.calc_cmap()
 
     def reset_cmap(self):
-        self.recalc()
+        """This resets the color map without changing the shift array.
+        This will undo a rotated or inverted colormap, without changing
+        contrast, which is controlled by the shift array.
+        """
+        self.calc_cmap()
 
     def get_rgb(self, index):
         """
