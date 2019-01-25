@@ -12,6 +12,8 @@ Ver 3.0.0 (unreleased)
 - Added support for ASDF and GWCS.
 - Fixed drag-and-drop functionality in FBrowser plugin on Windows.
 - Enabled HDU sorting via config file in MultiDim.
+- Fixed a bug where display would get corrupted when adjusting
+  interactive cuts or contrast on rotated image
 
 Ver 2.7.2 (2018-11-05)
 ======================
