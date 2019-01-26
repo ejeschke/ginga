@@ -474,11 +474,11 @@ class AstroImage(BaseImage):
 
         # Get east and north coordinates
         xe, ye = self.add_offset_xy(x, y, len_deg_e, 0.0)
-        xe = int(round(xe))
-        ye = int(round(ye))
+        xe = int(np.round(xe))
+        ye = int(np.round(ye))
         xn, yn = self.add_offset_xy(x, y, 0.0, len_deg_n)
-        xn = int(round(xn))
-        yn = int(round(yn))
+        xn = int(np.round(xn))
+        yn = int(np.round(yn))
 
         return (x, y, xn, yn, xe, ye)
 
@@ -644,7 +644,7 @@ class AstroImage(BaseImage):
             # Merge piece as closely as possible into our array
             # Unfortunately we lose a little precision rounding to the
             # nearest pixel--can't be helped with this approach
-            x0, y0 = int(round(x0)), int(round(y0))
+            x0, y0 = int(np.round(x0)), int(np.round(y0))
             self.logger.debug("Fitting image '%s' into mosaic at %d,%d" % (
                 name, x0, y0))
 

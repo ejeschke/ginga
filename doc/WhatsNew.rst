@@ -15,6 +15,7 @@ Ver 3.0.0 (unreleased)
 - Fixed a bug where display would get corrupted when adjusting
   interactive cuts or contrast on rotated image
 - Improved smoothness and updates of Zoom plugin image
+- Improved smoothness and updates when rotating or shifting color map
 
 Ver 2.7.2 (2018-11-05)
 ======================

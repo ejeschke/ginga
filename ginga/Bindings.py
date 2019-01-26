@@ -759,8 +759,9 @@ class ImageViewBindings(object):
         self.logger.debug("rotating color map by %d steps" % (num))
 
         rgbmap = viewer.get_rgbmap()
-        rgbmap.restore_cmap(callback=False)
-        rgbmap.rotate_cmap(num)
+        with rgbmap.suppress_changed:
+            rgbmap.restore_cmap(callback=False)
+            rgbmap.rotate_cmap(num)
 
     def _cutlow_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
