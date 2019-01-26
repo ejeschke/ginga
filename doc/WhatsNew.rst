@@ -14,6 +14,7 @@ Ver 3.0.0 (unreleased)
 - Enabled HDU sorting via config file in MultiDim.
 - Fixed a bug where display would get corrupted when adjusting
   interactive cuts or contrast on rotated image
+- Improved smoothness and updates of Zoom plugin image
 
 Ver 2.7.2 (2018-11-05)
 ======================

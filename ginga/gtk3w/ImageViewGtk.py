@@ -614,18 +614,18 @@ class ScrolledView(Gtk.Table):
 
         self.viewer.add_callback('redraw', self._calc_scrollbars)
         self.viewer.add_callback('limits-set',
-                                 lambda v, l: self._calc_scrollbars(v))
+                                 lambda v, l: self._calc_scrollbars(v, 0))
 
-        self._calc_scrollbars(self.viewer)
+        self._calc_scrollbars(self.viewer, 0)
 
     def get_widget(self):
         return self
 
-    def _calc_scrollbars(self, viewer):
+    def _calc_scrollbars(self, viewer, whence):
         """Calculate and set the scrollbar handles from the pan and
         zoom positions.
         """
-        if self._scrolling:
+        if self._scrolling or whence > 0:
             return
 
         # flag that suppresses a cyclical callback

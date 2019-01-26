@@ -1318,9 +1318,7 @@ class ImageViewBase(Callback.Callbacks):
 
         self.private_canvas.draw(self)
 
-        # TODO: see if we can deprecate this fake callback
-        if whence <= 0:
-            self.make_callback('redraw')
+        self.make_callback('redraw', whence)
 
         if whence < 2:
             self.check_cursor_location()

@@ -236,8 +236,9 @@ class Pan(GingaPlugin.GlobalPlugin):
         panimage.redraw(whence=0)
         return True
 
-    def redraw_cb(self, fitsimage, channel, paninfo):
-        self.panset(channel.fitsimage, channel, paninfo)
+    def redraw_cb(self, fitsimage, whence, channel, paninfo):
+        if whence == 0:
+            self.panset(channel.fitsimage, channel, paninfo)
         return True
 
     def settings_cb(self, setting, value, fitsimage, channel, paninfo, whence):
