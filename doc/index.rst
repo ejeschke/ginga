@@ -18,8 +18,9 @@ Ginga is a toolkit designed for building viewers for scientific image
 data in Python, visualizing 2D pixel data in NumPy_ arrays.
 It can view astronomical data such as contained in files based on the
 `FITS (Flexible Image Transport System) <https://en.wikipedia.org/wiki/FITS>`_ file format.
-It is written and is maintained by software engineers at the Subaru Telescope, National
-Astronomical Observatory of Japan.
+It is written and is maintained by software engineers at the National
+Astronomical Observatory of Japan, the Space Telescope Science Institute,
+and other contributing entities.
 
 The Ginga toolkit centers around an image display class which supports
 zooming and panning, color and intensity mapping, a choice of several
@@ -35,7 +36,7 @@ star catalog access, cuts, star pick/FWHM_, thumbnails, etc.
 Copyright and License
 =====================
 
-Copyright (c) 2011-2018 Eric R. Jeschke. All rights reserved.
+Copyright (c) 2011-2019 Ginga Maintainers. All rights reserved.
 
 Ginga is distributed under an open-source BSD licence. Please see the
 file `LICENSE.txt` in the top-level directory for details.

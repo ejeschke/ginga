@@ -2,9 +2,6 @@
 #
 # gris -- Ginga Remote Image Server
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -12,7 +9,7 @@
 Usage:
    $ gris [options]
    $ gris --help
-   
+
 gris is a remote image server that let's you load RemoteImage instances into a
 ginga client that make minimal use of bandwidth to the server.  This works on the
 principle that ginga extracts only the minimum amount of data from an image
@@ -44,7 +41,7 @@ class GRIS(object):
     def _get_cache(self, filepath):
         image = self.cache[filepath]
         return image
-        
+
     def load_file(self, filepath, numhdu=None, naxispath=None):
         image = AstroImage.AstroImage(logger=self.logger)
         image.load_file(filepath, numhdu=numhdu, naxispath=naxispath)
@@ -87,7 +84,7 @@ class GRIS(object):
         image = self._get_cache(filepath)
         return image.get_pixels_on_line(x1, y1, x2, y2)
 
-        
+
 def main(options, args):
 
     # create a logger
@@ -108,10 +105,10 @@ def main(options, args):
 
 
 if __name__ == "__main__":
-   
+
     usage = "usage: %prog [options] cmd [arg] ..."
     optprs = OptionParser(usage=usage, version=('%%prog'))
-    
+
     optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
                       type="int", default=10,
                       help="Buffer length to NUM")

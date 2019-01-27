@@ -118,5 +118,6 @@ for mimetype in ['image/asdf']:
     add_loader(mimetype, load_asdf)
 
 # ### RGB ###
-for mimetype in ['image/jpeg', 'image/png', 'image/tiff', 'image/gif']:
+for mimetype in ['image/jpeg', 'image/png', 'image/tiff', 'image/gif',
+                 'image/ppm', 'image/pnm', 'image/pbm', 'image/pnm']:
     add_loader(mimetype, load_rgb)

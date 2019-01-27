@@ -28,11 +28,32 @@ except (ImportError, Exception):
     have_magic = False
 
 
+known_types = {
+    '.fits': 'image/fits',
+    '.asdf': 'image/asdf',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.tiff': 'image/tiff',
+    '.gif': 'image/gif',
+    '.png': 'image/png',
+    '.ppm': 'image/ppm',
+    '.pnm': 'image/pnm',
+    '.pbm': 'image/pbm',
+}
+
+
 def guess_filetype(filepath):
     """Guess the type of a file."""
     # If we have python-magic, use it to determine file type
     typ = None
-    if have_magic:
+
+    # Some specific checks for known file suffixes
+    _fn = filepath.lower()
+    _name, _ext = os.path.splitext(_fn)
+    if _ext in known_types:
+        typ = known_types[_ext]
+
+    if typ is None and have_magic:
         try:
             # it seems there are conflicting versions of a 'magic'
             # module for python floating around...*sigh*
@@ -46,14 +67,6 @@ def guess_filetype(filepath):
 
         except Exception as e:
             pass
-
-    # Some specific checks for file suffixes
-    _fn = filepath.lower()
-    if _fn.endswith('.fits'):
-        typ = 'image/fits'
-
-    elif _fn.endswith('.asdf'):
-        typ = 'image/asdf'
 
     if typ is None:
         # if no magic, or magic fails, fall back to mimetypes
