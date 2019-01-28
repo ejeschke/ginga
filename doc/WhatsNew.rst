@@ -16,6 +16,7 @@ Ver 3.0.0 (unreleased)
   interactive cuts or contrast on rotated image
 - Improved smoothness and updates of Zoom plugin image
 - Improved smoothness and updates when rotating or shifting color map
+- Fixed broken banner
 
 Ver 2.7.2 (2018-11-05)
 ======================
