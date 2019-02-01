@@ -1,6 +1,0 @@
-numpy
-pillow
-matplotlib
-Cython
-scipy>=0.18
-astropy

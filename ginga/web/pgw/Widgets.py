@@ -12,8 +12,6 @@ from functools import reduce
 
 from ginga.misc import Callback, Bunch, LineHistory
 from ginga.web.pgw import PgHelp
-from ginga.util import six
-from ginga.util.six.moves import filter
 
 # For future support of WebView widget
 has_webkit = False
@@ -221,7 +219,7 @@ class TextEntry(WidgetBase):
         self.editable = tf
 
     def set_font(self, font, size=10):
-        if isinstance(font, six.string_types):
+        if isinstance(font, str):
             font = self.get_font(font, size)
         self.font = font
 
@@ -280,7 +278,7 @@ class TextEntrySet(WidgetBase):
         app.do_operation('update_value', id=self.id, value=text)
 
     def set_font(self, font, size=10):
-        if isinstance(font, six.string_types):
+        if isinstance(font, str):
             font = self.get_font(font, size)
         self.font = font
 
@@ -356,7 +354,7 @@ class TextArea(WidgetBase):
         self.editable = tf
 
     def set_font(self, font, size=10):
-        if isinstance(font, six.string_types):
+        if isinstance(font, str):
             font = self.get_font(font, size)
         self.font = font
 
@@ -404,7 +402,7 @@ class Label(WidgetBase):
         app.do_operation('update_label', id=self.id, value=text)
 
     def set_font(self, font, size=10):
-        if isinstance(font, six.string_types):
+        if isinstance(font, str):
             font = self.get_font(font, size)
         self.font = font
         self.add_css_styles([('font-family', font.family),

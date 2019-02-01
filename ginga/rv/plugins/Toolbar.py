@@ -126,9 +126,12 @@ class Toolbar(GingaPlugin.GlobalPlugin):
              lambda w: self.start_plugin_cb('Preferences')),
             ("FBrowser", 'button', 'open_48', "Open file",
              lambda w: self.start_plugin_cb('FBrowser')),
-            ## ("Histogram", 'button', 'open_48', "Histogram and cut levels",
-            ##  lambda w: self.start_plugin_cb('Histogram')),
-            #("Quit", 'button', 'exit_48', "Quit the program"),
+            ("MultiDim", 'button', 'layers_48', "Select HDUs or cube slices",
+             lambda w: self.start_plugin_cb('MultiDim')),
+            ("Header", 'button', 'tags_48', "View image metadata",
+             lambda w: self.start_global_plugin_cb('Header')),
+            ("Zoom", 'button', 'microscope_48', "Magnify detail",
+             lambda w: self.start_global_plugin_cb('Zoom')),
             ):  # noqa
 
             name = tup[0]
@@ -220,10 +223,15 @@ class Toolbar(GingaPlugin.GlobalPlugin):
     def reset_all_transforms_cb(self, w):
         view, bd = self._get_view()
         bd.kp_rotate_reset(view, 'x', 0.0, 0.0)
+        bd.kp_transform_reset(view, 'x', 0.0, 0.0)
         return True
 
     def start_plugin_cb(self, name):
         self.fv.start_operation(name)
+        return True
+
+    def start_global_plugin_cb(self, name):
+        self.fv.start_global_plugin(name, raise_tab=True)
         return True
 
     def flipx_cb(self, w, tf):

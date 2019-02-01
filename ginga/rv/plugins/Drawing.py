@@ -32,6 +32,7 @@ from ginga import colors
 from ginga.gw import Widgets
 from ginga.misc import ParamSet, Bunch
 from ginga.util import dp
+from ginga.canvas.CanvasObject import coord_names
 
 __all__ = ['Drawing']
 
@@ -67,7 +68,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         self.drawtypes = list(canvas.get_drawtypes())
         self.drawcolors = draw_colors
         self.linestyles = ['solid', 'dash']
-        self.coordtypes = ['data', 'wcs', 'cartesian', 'window']
+        self.coordtypes = coord_names
         # contains all parameters to be passed to the constructor
         self.draw_args = []
         self.draw_kwdargs = {}

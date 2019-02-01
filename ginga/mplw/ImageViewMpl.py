@@ -3,7 +3,6 @@
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-from __future__ import absolute_import
 
 from io import BytesIO
 
@@ -428,7 +427,7 @@ class ImageViewEvent(ImageViewMpl):
         except KeyError:
             return keyname
 
-    def get_keyTable(self):
+    def get_key_table(self):
         return self._keytbl
 
     def focus_event(self, event, hasFocus):
@@ -544,7 +543,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_setActive(True)
+        self.ui_set_active(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)

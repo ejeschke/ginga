@@ -2,25 +2,17 @@
 #
 # example1_tk.py -- Simple, configurable FITS viewer.
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import sys
 import logging
 
-import ginga.util.six as six
 from ginga.tkw.ImageViewTk import ImageViewCanvas
-from ginga import AstroImage
+from ginga.util.loader import load_data
 
-if six.PY2:
-    import Tkinter
-    from tkFileDialog import askopenfilename
-else:
-    import tkinter as Tkinter
-    from tkinter.filedialog import askopenfilename
+import tkinter as Tkinter
+from tkinter.filedialog import askopenfilename
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -45,8 +37,11 @@ class FitsViewer(object):
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
+        fi.enable_auto_orient(True)
         fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_setActive(True)
+        fi.ui_set_active(True)
+        # tk seems to not take focus with a click
+        fi.set_enter_focus(True)
         fi.show_pan_mark(True)
         self.fitsimage = fi
 
@@ -74,8 +69,7 @@ class FitsViewer(object):
         return self.root
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
+        image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
         self.root.title(filepath)
 

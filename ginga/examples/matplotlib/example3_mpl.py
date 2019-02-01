@@ -22,8 +22,6 @@ ginga pane.
 
 You need Qt4 with python bindings (or pyside) installed to run this example.
 """
-from __future__ import print_function
-
 import sys
 
 import matplotlib
@@ -31,10 +29,9 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga import AstroImage
 from ginga import cmap, imap
 from ginga.misc import log
-from ginga.util.six.moves import map
+from ginga.util.loader import load_data
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -197,9 +194,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.fitsimage.delete_all_objects()
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
-
+        image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
         self.setWindowTitle(filepath)
 

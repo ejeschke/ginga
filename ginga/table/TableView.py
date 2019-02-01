@@ -4,9 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.util.six import itervalues
-from ginga.util.six.moves import zip
-
 import logging
 from collections import OrderedDict
 
@@ -137,7 +134,7 @@ class TableViewGw(TableViewBase):
 
         # Table header with units
         columns = [('Row', '_DISPLAY_ROW')]
-        for c in itervalues(a_tab.columns):
+        for c in a_tab.columns.values():
             col_str = '{0:^s}\n{1:^s}'.format(c.name, str(c.unit))
             columns.append((col_str, c.name))
 

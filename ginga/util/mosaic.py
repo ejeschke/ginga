@@ -2,9 +2,6 @@
 #
 # mosaic.py -- Example of quick and dirty mosaicing of FITS images
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -12,7 +9,6 @@
 Usage:
    $ ./mosaic.py -o output.fits input1.fits input2.fits ... inputN.fits
 """
-from __future__ import print_function
 
 import sys
 import os

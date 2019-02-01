@@ -12,18 +12,17 @@ Usage:
 
 You need Qt4 with python bindings (or pyside) installed to run this example.
 """
-from __future__ import print_function
 import sys
 
 from matplotlib.figure import Figure
 
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga import AstroImage
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
 from ginga import colors
 from ginga.canvas.CanvasObject import get_canvas_types
+from ginga.util.loader import load_data
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -175,9 +174,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.canvas.delete_all_objects()
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
-
+        image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
         self.setWindowTitle(filepath)
 

@@ -88,41 +88,42 @@ class ColorBar(Callback.Callbacks):
         # TODO: figure out if we can get rid of this link option
         if self.link_rgbmap:
             rgbmap.add_callback('changed', self.rgbmap_cb)
-        self.redraw()
+        self.redraw(whence=2)
 
     def set_cmap(self, cm):
         self.rgbmap.set_cmap(cm)
-        self.redraw()
+        self.redraw(whence=2)
 
     def set_imap(self, im, reset=False):
         self.rgbmap.set_imap(im)
-        self.redraw()
+        self.redraw(whence=2)
 
     def set_range(self, loval, hival):
         self.cbar_view.cut_levels(loval, hival)
-        self.redraw()
+        self.redraw(whence=2)
 
     def resize_cb(self, viewer, width, height):
         self.logger.info("colorbar resized to %dx%d" % (width, height))
         self.cbar.height = height
         self.cbar_view.redraw(whence=0)
 
-    def redraw(self):
-        self.cbar_view.redraw()
+    def redraw(self, whence=0):
+        self.cbar_view.redraw(whence=whence)
 
     def shift_colormap(self, pct):
         if self._sarr is None:
             return
-        self.rgbmap.set_sarr(self._sarr, callback=False)
-        self.rgbmap.shift(pct)
-        self.redraw()
+        with self.rgbmap.suppress_changed:
+            self.rgbmap.set_sarr(self._sarr, callback=False)
+            self.rgbmap.shift(pct)
+        self.redraw(whence=2)
 
     def stretch_colormap(self, pct):
         self.rgbmap.stretch(pct)
-        self.redraw()
+        self.redraw(whence=2)
 
     def rgbmap_cb(self, rgbmap):
-        self.redraw()
+        self.redraw(whence=2)
 
     def cursor_press_cb(self, canvas, event, data_x, data_y):
         x, y = event.viewer.get_last_win_xy()

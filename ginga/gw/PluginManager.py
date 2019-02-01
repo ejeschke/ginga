@@ -10,7 +10,6 @@ import traceback
 
 from ginga.gw import Widgets
 from ginga.misc import Bunch, Callback
-from ginga.util.six.moves import filter
 
 
 class PluginManagerError(Exception):
@@ -267,6 +266,7 @@ class PluginManager(Callback.Callbacks):
             self.fv.show_error("No plugin information for plugin '%s'" % (
                 opname))
             return
+
         if chname is not None:
             # local plugin
             plname = chname.upper() + ': ' + p_info.spec.get('tab', p_info.name)
@@ -275,17 +275,20 @@ class PluginManager(Callback.Callbacks):
             # global plugin
             plname = p_info.name
             p_info.tabname = p_info.spec.get('tab', plname)
+
         lname = p_info.name.lower()
+
         if lname in self.active:
+            # <-- plugin is supposedly already active
             if alreadyOpenOk:
                 self.set_focus(p_info.name)
                 return
+
             raise PluginManagerError("Plugin %s is already active." % (
                 plname))
 
-        # Raise tab with GUI
+        # Build GUI phase
         vbox = None
-        had_error = False
         try:
             if hasattr(p_info.obj, 'build_gui'):
                 vbox = Widgets.VBox()
@@ -324,32 +327,33 @@ class PluginManager(Callback.Callbacks):
                 tb_str = "Traceback information unavailable."
                 self.logger.error(tb_str)
 
-            self.plugin_build_error(vbox, errstr + '\n' + tb_str)
+            self.fv.show_error(errstr + '\n' + tb_str)
             #raise PluginManagerError(e)
+            return
 
-        if not had_error:
+        # start phase
+        try:
+            if future:
+                p_info.obj.start(future=future)
+            else:
+                p_info.obj.start()
+
+        except Exception as e:
+            errstr = "Plugin failed to start correctly: %s" % (
+                str(e))
+            self.logger.error(errstr)
             try:
-                if future:
-                    p_info.obj.start(future=future)
-                else:
-                    p_info.obj.start()
+                (type, value, tb) = sys.exc_info()
+                tb_str = "".join(traceback.format_tb(tb))
+                self.logger.error("Traceback:\n%s" % (tb_str))
 
             except Exception as e:
-                had_error = True
-                errstr = "Plugin failed to start correctly: %s" % (
-                    str(e))
-                self.logger.error(errstr)
-                try:
-                    (type, value, tb) = sys.exc_info()
-                    tb_str = "".join(traceback.format_tb(tb))
-                    self.logger.error("Traceback:\n%s" % (tb_str))
+                tb_str = "Traceback information unavailable."
+                self.logger.error(tb_str)
 
-                except Exception as e:
-                    tb_str = "Traceback information unavailable."
-                    self.logger.error(tb_str)
-
-                self.plugin_build_error(vbox, errstr + '\n' + tb_str)
-                #raise PluginManagerError(e)
+            self.fv.show_error(errstr + '\n' + tb_str)
+            #raise PluginManagerError(e)
+            return
 
         if vbox is not None:
             self.finish_gui(p_info, vbox)
@@ -357,6 +361,7 @@ class PluginManager(Callback.Callbacks):
             self.activate(p_info)
             self.set_focus(p_info.name)
         else:
+            self.activate(p_info)
             # If this is a local plugin, raise the channel associated with the
             # plug in
             if p_info.chinfo is not None:

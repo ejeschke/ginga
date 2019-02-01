@@ -30,10 +30,6 @@ the history of its ``PRIMARY`` header.
           ``general.cfg`` configuration file.
 
 """
-from __future__ import absolute_import, division, print_function
-
-from ginga.util.six import itervalues
-from ginga.util.six.moves import map
 
 # STDLIB
 import os
@@ -362,7 +358,7 @@ Output image will have the filename of <inputname>_<suffix>.fits.""")
         for key in file_dict:
             if not key.startswith(pfx):
                 continue
-            for bnch in itervalues(file_dict[key]):
+            for bnch in file_dict[key].values():
                 chistory.append('{0} {1}'.format(bnch.MODIFIED, bnch.DESCRIP))
 
         # Add each HISTORY prettily into header, sorted by timestamp

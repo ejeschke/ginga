@@ -143,6 +143,11 @@ class RGBMapper(Callback.Callbacks):
         for name in ('changed', ):
             self.enable_callback(name)
 
+        self.suppress_changed = self.suppress_callback('changed', 'last')
+
+        carr = self.t_.get('color_array', None)
+        sarr = self.t_.get('shift_array', None)
+
         cm_name = self.t_.get('color_map', 'gray')
         self.set_color_map(cm_name)
 
@@ -150,14 +155,12 @@ class RGBMapper(Callback.Callbacks):
         self.set_intensity_map(im_name)
 
         # Initialize color array
-        carr = self.t_.get('color_array', None)
         if carr is not None:
             self.set_carr(carr)
         else:
             self.calc_cmap()
 
         # Initialize shift array
-        sarr = self.t_.get('shift_array', None)
         if sarr is not None:
             self.set_sarr(sarr)
         else:
@@ -201,11 +204,12 @@ class RGBMapper(Callback.Callbacks):
         any callbacks associated with this change will be invoked.
         """
         self.cmap = cmap
-        self.calc_cmap()
-        # TEMP: ignore passed callback parameter
-        # callback=False in the following because we don't want to
-        # recursively invoke set_cmap()
-        self.t_.set(color_map=cmap.name, callback=False)
+        with self.suppress_changed:
+            self.calc_cmap()
+            # TEMP: ignore passed callback parameter
+            # callback=False in the following because we don't want to
+            # recursively invoke set_cmap()
+            self.t_.set(color_map=cmap.name, callback=False)
 
     def get_cmap(self):
         """
@@ -232,9 +236,10 @@ class RGBMapper(Callback.Callbacks):
         self.t_.set(color_array=carr)
 
     def restore_cmap(self, callback=True):
-        self.reset_sarr(callback=False)
-        # TEMP: ignore passed callback parameter
-        self.calc_cmap()
+        with self.suppress_changed:
+            self.reset_sarr(callback=False)
+            # TEMP: ignore passed callback parameter
+            self.calc_cmap()
 
     def reset_cmap(self):
         self.recalc()
@@ -274,11 +279,12 @@ class RGBMapper(Callback.Callbacks):
         """
         self.imap = imap
         self.calc_imap()
-        # TEMP: ignore passed callback parameter
-        self.recalc()
-        # callback=False in the following because we don't want to
-        # recursively invoke set_imap()
-        self.t_.set(intensity_map=imap.name, callback=False)
+        with self.suppress_changed:
+            # TEMP: ignore passed callback parameter
+            self.recalc()
+            # callback=False in the following because we don't want to
+            # recursively invoke set_imap()
+            self.t_.set(intensity_map=imap.name, callback=False)
 
     def get_imap(self):
         """
@@ -314,7 +320,9 @@ class RGBMapper(Callback.Callbacks):
             if _len != maxlen:
                 raise RGBMapError("shift map length %d != %d" % (_len, maxlen))
             self.sarr = sarr.astype(np.uint, copy=False)
-            self.scale_pct = 1.0
+            # NOTE: can't reset scale_pct here because it results in a
+            # loop with e.g. scale_and_shift()
+            #self.scale_pct = 1.0
             self.make_callback('changed')
         else:
             self.reset_sarr(callback=True)

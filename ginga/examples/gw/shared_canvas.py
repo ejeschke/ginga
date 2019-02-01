@@ -3,15 +3,15 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
 import sys
 import logging
 
-from ginga import AstroImage, colors
+from ginga import colors
 import ginga.toolkit as ginga_toolkit
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.util.toolbox import ModeIndicator
 from ginga.misc import log
+from ginga.util.loader import load_data
 
 
 class FitsViewer(object):
@@ -46,7 +46,7 @@ class FitsViewer(object):
         v1.set_callback('drag-drop', self.drop_file)
         v1.set_callback('none-move', self.motion)
         v1.set_bg(0.2, 0.2, 0.2)
-        v1.ui_setActive(True)
+        v1.ui_set_active(True)
         v1.set_name('tweedledee')
         self.viewer1 = v1
         self._mi1 = ModeIndicator(v1)
@@ -74,7 +74,7 @@ class FitsViewer(object):
         v2.set_callback('drag-drop', self.drop_file)
         v2.set_callback('none-move', self.motion)
         v2.set_bg(0.2, 0.2, 0.2)
-        v2.ui_setActive(True)
+        v2.ui_set_active(True)
         v1.set_name('tweedledum')
         self.viewer2 = v2
         self._mi2 = ModeIndicator(v2)
@@ -98,8 +98,8 @@ class FitsViewer(object):
         canvas.set_drawtype('rectangle', color='lightblue')
         self.canvas = canvas
         shcanvas.add(self.canvas)
-        shcanvas.ui_setActive(True)
-        canvas.ui_setActive(True)
+        shcanvas.ui_set_active(True)
+        canvas.ui_set_active(True)
         canvas.set_surface(v1)
 
         self.drawtypes = canvas.get_drawtypes()
@@ -200,9 +200,7 @@ class FitsViewer(object):
         self.canvas.delete_all_objects()
 
     def load_file(self, viewer, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
-
+        image = load_data(filepath, logger=self.logger)
         viewer.set_image(image)
         self.top.set_title(filepath)
 

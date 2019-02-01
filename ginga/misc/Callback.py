@@ -25,7 +25,7 @@ class Callbacks(object):
             self.cb[name][:] = []
         except KeyError:
             self.cb[name] = []
-        self._cb_block[name] = []
+        self._cb_block[name] = dict(count=0, defer_list=[], defer_type=None)
 
     # TODO: Should this call clear_callback()? Should create empty list here
     # only
@@ -53,13 +53,13 @@ class Callbacks(object):
                 name))
 
     def block_callback(self, name):
-        self._cb_block[name].append(True)
+        self._cb_block[name]['count'] += 1
 
     def unblock_callback(self, name):
-        self._cb_block[name].pop()
+        self._cb_block[name]['count'] -= 1
 
-    def suppress_callback(self, name):
-        return SuppressCallback(self, name)
+    def suppress_callback(self, name, defer_type=None):
+        return SuppressCallback(self, name, defer_type=defer_type)
 
     # TODO: Add a argument validation function for a callback
     # Pointers:
@@ -67,24 +67,24 @@ class Callbacks(object):
     #      * Check that fn is a function
     #      * Check fn accepts at least one argument, the calling object
     #      * Check fn takes:
-    #           - at least len(args) + len(kwdargs) number of args
+    #           - at least len(args) + len(kwargs) number of args
     #           - variable number of args or keyword args
     #      * Does and what value the callback function return
     #
-    def add_callback(self, name, fn, *args, **kwdargs):
+    def add_callback(self, name, fn, *args, **kwargs):
         try:
-            tup = (fn, args, kwdargs)
+            tup = (fn, args, kwargs)
             if tup not in self.cb[name]:
                 self.cb[name].append(tup)
         except KeyError:
             raise CallbackError("No callback category of '%s'" % (
                 name))
 
-    def remove_callback(self, name, fn, *args, **kwdargs):
+    def remove_callback(self, name, fn, *args, **kwargs):
         """Remove a specific callback that was added.
         """
         try:
-            tup = (fn, args, kwdargs)
+            tup = (fn, args, kwargs)
             if tup in self.cb[name]:
                 self.cb[name].remove(tup)
         except KeyError:
@@ -98,14 +98,14 @@ class Callbacks(object):
                     other.cb[name].append(tup)
 
     # TODO: to be deprecated ?
-    def set_callback(self, name, fn, *args, **kwdargs):
+    def set_callback(self, name, fn, *args, **kwargs):
         if not self.has_callback(name):
             self.enable_callback(name)
-        return self.add_callback(name, fn, *args, **kwdargs)
+        return self.add_callback(name, fn, *args, **kwargs)
 
     # TODO: Returns True even if any one of the callback succeeds...Is that
     # desired?
-    def make_callback(self, name, *args, **kwdargs):
+    def make_callback(self, name, *args, **kwargs):
         if not self.has_callback(name):
             return None
             # raise CallbackError("No callback category of '%s'" % (
@@ -115,10 +115,32 @@ class Callbacks(object):
         if len(self.cb[name]) == 0:
             return False
 
-        if (name in self._cb_block) and (len(self._cb_block[name]) > 0):
+        if self._cb_block[name]['count'] > 0:
             # callback temporarily blocked
+            d = self._cb_block[name]
+            defer_list = d['defer_list']
+            defer_type = d['defer_type']
+            if defer_type == 'all':
+                # defer every suppressed call
+                defer_list.append((name, args, kwargs))
+            elif defer_type == 'last':
+                # suppress all calls except last
+                defer_list[:] = [(name, args, kwargs)]
             return False
 
+        return self._do_callbacks(name, args, kwargs)
+
+    def do_suppressed_callbacks(self, name):
+        if self._cb_block[name]['count'] == 0:
+            d = self._cb_block[name]
+            defer_list = d['defer_list']
+            d['defer_list'] = []
+            d['defer_type'] = None
+
+            for tup in defer_list:
+                self._do_callbacks(*tup)
+
+    def _do_callbacks(self, name, args, kwargs):
         result = False
         for tup in self.cb[name]:
             method = tup[0]
@@ -126,12 +148,12 @@ class Callbacks(object):
             cb_args = [self]
             cb_args.extend(args)
             cb_args.extend(tup[1])
-            cb_kwdargs = kwdargs.copy()
-            cb_kwdargs.update(tup[2])
+            cb_kwargs = kwargs.copy()
+            cb_kwargs.update(tup[2])
 
             try:
-                # print "calling %s(%s, %s)" % (method, cb_args, cb_kwdargs)
-                res = method(*cb_args, **cb_kwdargs)
+                # print("calling %s(%s, %s)" % (method, cb_args, cb_kwargs))
+                res = method(*cb_args, **cb_kwargs)
                 if res:
                     result = True
 
@@ -161,16 +183,28 @@ class Callbacks(object):
 
 
 class SuppressCallback(object):
-    def __init__(self, cb_obj, cb_name):
+    def __init__(self, cb_obj, cb_name, defer_type=None):
         self.cb_obj = cb_obj
         self.cb_name = cb_name
+        self.defer_type = defer_type
 
     def __enter__(self):
-        self.cb_obj._cb_block[self.cb_name].append(True)
+        try:
+            d = self.cb_obj._cb_block[self.cb_name]
+            d['count'] += 1
+            d['defer_type'] = self.defer_type
+        except KeyError:
+            pass
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.cb_obj._cb_block[self.cb_name].pop()
+        try:
+            d = self.cb_obj._cb_block[self.cb_name]
+            d['count'] -= 1
+
+            self.cb_obj.do_suppressed_callbacks(self.cb_name)
+        except KeyError:
+            pass
         return False
 
 

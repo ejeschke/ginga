@@ -5,21 +5,14 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
-
 import sys
 
-from ginga import AstroImage
 from ginga.tkw.ImageViewTk import ImageViewCanvas
 from ginga.misc import log
-from ginga.util import six
+from ginga.util.loader import load_data
 
-if six.PY2:
-    import Tkinter
-    from tkFileDialog import askopenfilename
-else:
-    import tkinter as Tkinter
-    from tkinter.filedialog import askopenfilename
+import tkinter as Tkinter
+from tkinter.filedialog import askopenfilename
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -52,6 +45,8 @@ class FitsViewer(object):
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.enable_draw(False)
+        # tk seems to not take focus with a click
+        fi.set_enter_focus(True)
         fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
@@ -67,7 +62,7 @@ class FitsViewer(object):
         canvas.enable_draw(True)
         #canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='blue')
-        canvas.setSurface(fi)
+        canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         fi.add(canvas)
@@ -143,9 +138,7 @@ class FitsViewer(object):
         self.canvas.deleteAllObjects()
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
-
+        image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
         self.root.title(filepath)
 

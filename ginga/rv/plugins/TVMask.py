@@ -54,9 +54,6 @@ Used together with ``TVMark``, you can overlay both point sources and
 masked regions in Ginga.
 
 """
-from __future__ import absolute_import, division, print_function
-from ginga.util.six import itervalues
-
 # STDLIB
 import re
 import os
@@ -322,7 +319,7 @@ class TVMask(LocalPlugin):
             except Exception:
                 pass
 
-        for sub_dict in itervalues(res_dict):
+        for sub_dict in res_dict.values():
             for seqno in sub_dict:
                 mobj = self._maskobjs[int(seqno) - 1]
                 dat = self._rgbtomask(mobj)

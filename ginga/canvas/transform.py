@@ -141,6 +141,46 @@ class WindowNativeTransform(BaseTransform):
         return self.to_(ntv_pts)
 
 
+class WindowPercentageTransform(BaseTransform):
+    """
+    A transform from standard window coordinates of a viewer
+    to percentage coordinates.
+    """
+
+    def __init__(self, viewer, as_int=True):
+        super(WindowPercentageTransform, self).__init__()
+        self.viewer = viewer
+        self.as_int = as_int
+
+    def to_(self, win_pts):
+        win_pts = np.asarray(win_pts, dtype=np.float)
+        has_z = (win_pts.shape[-1] > 2)
+
+        max_pt = list(self.viewer.get_window_size())
+        if has_z:
+            max_pt.append(0.0)
+
+        pct_pts = np.divide(win_pts, max_pt)
+        return pct_pts
+
+    def from_(self, pct_pts):
+        """Reverse of :meth:`to_`."""
+        pct_pts = np.asarray(pct_pts, dtype=np.float)
+        has_z = (pct_pts.shape[-1] > 2)
+
+        max_pt = list(self.viewer.get_window_size())
+        if has_z:
+            max_pt.append(0.0)
+
+        win_pts = np.multiply(pct_pts, max_pt)
+
+        # round to pixel units, if asked
+        if self.as_int:
+            win_pts = np.rint(win_pts).astype(np.int, copy=False)
+
+        return win_pts
+
+
 class CartesianWindowTransform(BaseTransform):
     """
     A transform from cartesian coordinates to standard window coordinates

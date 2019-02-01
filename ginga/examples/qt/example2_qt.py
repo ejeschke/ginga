@@ -5,15 +5,15 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
 
 import sys
 
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga import AstroImage, colors
+from ginga import colors
 from ginga.qtw.ImageViewQt import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
+from ginga.util.loader import load_data
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -179,8 +179,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.canvas.delete_all_objects()
 
     def load_file(self, filepath):
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
+        image = load_data(filepath, logger=self.logger)
 
         self.fitsimage.set_image(image)
         self.setWindowTitle(filepath)

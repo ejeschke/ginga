@@ -239,6 +239,7 @@ class Timer(Callback.Callbacks):
 
         self.timer = QtCore.QTimer()
         self.timer.setSingleShot(True)
+        self.timer.setTimerType(QtCore.Qt.PreciseTimer)
         self.timer.timeout.connect(self._expired_cb)
 
         for name in ('expired', 'canceled'):

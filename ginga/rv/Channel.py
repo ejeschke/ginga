@@ -246,9 +246,9 @@ class Channel(Callback.Callbacks):
 
         info = self.history[self.cursor]
         if info.name in self.datasrc:
-            # image still in memory
-            image = self.datasrc[info.name]
-            self.switch_image(image)
+            # object still in memory
+            data_obj = self.datasrc[info.name]
+            self.switch_image(data_obj)
 
         else:
             self.switch_name(info.name)
@@ -355,6 +355,7 @@ class Channel(Callback.Callbacks):
         self.logger.debug("available viewers are: %s" % (str(vnames)))
 
         # for now, pick first available viewer that can view this type
+        # TODO: pop-up a dialog and ask the user?
         vname = vnames[0]
 
         # if we don't have this viewer type then install one in the channel

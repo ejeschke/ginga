@@ -4,25 +4,17 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import division, print_function
-
 import os.path
 import tempfile
 import re
 import urllib
 import time
 import warnings
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 
-import ginga.util.six as six
 from ginga.misc import Bunch
 from ginga.util import wcs
-
-if six.PY2:
-    from urllib2 import Request, urlopen, URLError, HTTPError
-else:
-    # python3
-    from urllib.request import Request, urlopen
-    from urllib.error import URLError, HTTPError
 
 # star_attrs = ('name', 'ra', 'dec', 'ra_deg', 'dec_deg', 'mag', 'preference',
 #               'priority', 'flag', 'b_r', 'dst', 'description')
@@ -77,6 +69,10 @@ class Star(object):
 class AstroPyCatalogServer(object):
 
     def __init__(self, logger, full_name, key, url, description):
+        if not have_astroquery:
+            raise ImportError('astroquery or astropy.vo (deprecated) not found, '
+                              'please install astroquery')
+
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
@@ -207,6 +203,9 @@ class AstroPyCatalogServer(object):
 class AstroQueryImageServer(object):
 
     def __init__(self, logger, full_name, key, querymod, description):
+        if not have_astroquery:
+            raise ImportError('astroquery not found, please install astroquery')
+
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
@@ -278,6 +277,9 @@ class AstroQueryImageServer(object):
 class PyVOCatalogServer(object):
 
     def __init__(self, logger, full_name, key, url, description):
+        if not have_pyvo:
+            raise ImportError('pyvo not found, please install pyvo')
+
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
@@ -407,6 +409,9 @@ class PyVOCatalogServer(object):
 class PyVOImageServer(object):
 
     def __init__(self, logger, full_name, key, url, description):
+        if not have_pyvo:
+            raise ImportError('pyvo not found, please install pyvo')
+
         self.logger = logger
         self.full_name = full_name
         self.short_name = key

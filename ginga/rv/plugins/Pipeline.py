@@ -14,7 +14,6 @@ An instance can be opened for each channel.
 **Usage**
 
 """
-from __future__ import print_function
 
 from ginga.util import dp
 from ginga import GingaPlugin

@@ -17,9 +17,10 @@ About Ginga
 Ginga is a toolkit designed for building viewers for scientific image
 data in Python, visualizing 2D pixel data in NumPy_ arrays.
 It can view astronomical data such as contained in files based on the
-`FITS (Flexible Image Transport System) <https://en.wikipedia.org/wiki/FITS>`_ file format.  
-It is written and is maintained by software engineers at the Subaru Telescope, National
-Astronomical Observatory of Japan.
+`FITS (Flexible Image Transport System) <https://en.wikipedia.org/wiki/FITS>`_ file format.
+It is written and is maintained by software engineers at the National
+Astronomical Observatory of Japan, the Space Telescope Science Institute,
+and other contributing entities.
 
 The Ginga toolkit centers around an image display class which supports
 zooming and panning, color and intensity mapping, a choice of several
@@ -35,7 +36,7 @@ star catalog access, cuts, star pick/FWHM_, thumbnails, etc.
 Copyright and License
 =====================
 
-Copyright (c) 2011-2018 Eric R. Jeschke. All rights reserved.
+Copyright (c) 2011-2019 Ginga Maintainers. All rights reserved.
 
 Ginga is distributed under an open-source BSD licence. Please see the
 file `LICENSE.txt` in the top-level directory for details.
@@ -49,7 +50,7 @@ has the required Python modules and has a supported widget set.
 The basic Ginga display class supports the Qt_ (4 and 5), PySide_, Gtk_ (2
 and 3), Tk_ widget sets natively as well as any Matplotlib Figure, and
 HTML5 canvases in a web browser. The full reference viewer supports Qt
-and Gtk variants. Ginga can also be used in `Jupyter notebooks <http://jupyter-notebook-beginner-guide.readthedocs.io/en/latest/what_is_jupyter.html>`_. 
+and Gtk variants. Ginga can also be used in `Jupyter notebooks <http://jupyter-notebook-beginner-guide.readthedocs.io/en/latest/what_is_jupyter.html>`_.
 
 ==================
 Getting the Source
@@ -57,23 +58,26 @@ Getting the Source
 
 Clone from Github::
 
-    $ git clone https://github.com/ejeschke/ginga.git
+    git clone https://github.com/ejeschke/ginga.git
 
-To get a zip or tar ball instead, see the links on `About Ginga <http://ejeschke.github.io/ginga/>`_.
+To get a ZIP file or tarball instead, see the links on
+`About Ginga <http://ejeschke.github.io/ginga/>`_.
 
 =========================
 Building and Installation
 =========================
 
-Download and install from `pip`::
+Download and install from ``pip``::
 
-    $ pip install ginga
+    pip install ginga
 
-Or, if you have downloaded the source, go into the top-level directory and run the following::
+Or ``conda``::
 
-    $ python setup.py install
+    conda install ginga -c conda-forge
 
-The reference viewer can then be run using the command `ginga`.
+The reference viewer can then be run using the command ``ginga``.
+
+For detailed instructions, see:
 
 .. toctree::
    :maxdepth: 1
@@ -89,13 +93,14 @@ Documentation
 
    WhatsNew
    quickref
-   FAQ
    manual/index
+   dev_manual/index
    optimizing
+   FAQ
    ref_api
 
 Some training videos are available in the
-`downloads <https://github.com/ejeschke/ginga/downloads>`_ page on 
+`downloads <https://github.com/ejeschke/ginga/downloads>`_ page on
 Github.
 
 Be sure to also check out the
@@ -112,7 +117,7 @@ on Github.
 Ginga has a logging facility, and it would be most helpful if you can
 invoke Ginga with the logging options to capture any logged errors::
 
-    $ ginga --loglevel=20 --log=ginga.log
+    ginga --loglevel=20 --log=ginga.log
 
 If the difficulty is with non-display or non-working `World Coordinate System (WCS)`__ for a
 particular image file please be ready to supply the file for our aid in
@@ -122,12 +127,14 @@ debugging.
 Developer Info
 ==============
 
-In the source code `examples/*` directories, see `example{1,2}_gtk.py` (Gtk_),
-`example{1,2}_qt.py` (Qt_), `example{1,2}_tk.py` (Tk_) or
-`example{1,2,3,4,5}_mpl.py` (Matplotlib_).
-There is more information for developers in the :ref:`manual`.
+In the source code ``examples/*`` directories, see
+``example{1,2}_gtk.py`` (Gtk_),
+``example{1,2}_qt.py`` (Qt_), ``example{1,2}_tk.py`` (Tk_), or
+``example{1,2,3,4,5}_mpl.py`` (Matplotlib_).
+There is more information for developers in the :ref:`dev_manual`.
 
-See also the `Module Index <py-modindex.html>`_ for a complete list of the available modules.
+See also the :ref:`api` or `Module Index <py-modindex.html>`_ for a list
+of the available modules.
 
 =========
 Etymology
@@ -137,7 +144,7 @@ Etymology
 ぎんが), meaning "galaxy" (in general) and, more familiarly, the Milky
 Way. This viewer was written by software engineers at
 `Subaru Telescope <http://subarutelescope.org/>`_,
-National Astronomical Observatory of Japan---thus the connection.
+National Astronomical Observatory of Japan, thus the connection.
 
 =============
 Pronunciation

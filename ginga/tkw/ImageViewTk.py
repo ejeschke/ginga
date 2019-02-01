@@ -4,10 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import absolute_import
-
-from ginga.util import six
-
 import PIL.Image as PILimage
 
 have_pil_imagetk = False
@@ -16,10 +12,7 @@ try:
     from PIL.ImageTk import PhotoImage
     have_pil_imagetk = True
 except ImportError:
-    if six.PY2:
-        from Tkinter import PhotoImage
-    else:
-        from tkinter import PhotoImage
+    from tkinter import PhotoImage
 
 from ginga import Mixins, Bindings  # noqa
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin  # noqa
@@ -270,7 +263,7 @@ class ImageViewEvent(ImageViewTk):
         except KeyError:
             return keyname
 
-    def get_keyTable(self):
+    def get_key_table(self):
         return self._keytbl
 
     def focus_event(self, event, hasFocus):
@@ -404,7 +397,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_setActive(True)
+        self.ui_set_active(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)

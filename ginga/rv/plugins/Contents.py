@@ -36,8 +36,6 @@ modification history will be retained as well. Removing an image from
 a channel destroys any unsaved changes.
 
 """
-from ginga.util.six.moves import map
-
 from ginga import GingaPlugin
 from ginga.misc import Bunch
 

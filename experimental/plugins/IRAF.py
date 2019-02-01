@@ -57,10 +57,10 @@ import threading
 import time
 import socket
 import array
+import queue as Queue
 
-import numpy
+import numpy as np
 
-import ginga.util.six as six
 from ginga import GingaPlugin, AstroImage
 from ginga import cmap, imap
 from ginga.gw import Widgets
@@ -71,11 +71,6 @@ try:
     import IIS_DataListener as iis
 except ImportError:  # Need this for Sphinx build
     pass
-
-if six.PY2:
-    import Queue
-else:
-    import queue as Queue
 
 __all__ = ['IRAF']
 
@@ -450,16 +445,16 @@ class IRAF(GingaPlugin.GlobalPlugin):
             data = fb.buffer
             byteswap = False  # noqa
             dims = (fb.height, fb.width)
-            dtype = numpy.uint8
+            dtype = np.uint8
             metadata = {}
 
             image = IRAF_AstroImage(logger=self.logger)
             #image.load_buffer(fb.buffer, dims, dtype, byteswap=byteswap,
             #                  metadata=metadata)
-            data = numpy.fromstring(fb.buffer, dtype=dtype)
+            data = np.fromstring(fb.buffer, dtype=dtype)
             data = data.reshape(dims)
             # Image comes in from IRAF flipped for screen display
-            data = numpy.flipud(data)
+            data = np.flipud(data)
             image.set_data(data, metadata=metadata)
             # Save coordinate transform info
             image.set(ct=fb.ct)
@@ -709,7 +704,7 @@ class IRAF_AstroImage(AstroImage.AstroImage):
 
         # Note: FITS coordinates are 1-based, whereas numpy FITS arrays
         # are 0-based
-        ra_lbl, dec_lbl = six.unichr(945), six.unichr(948)
+        ra_lbl, dec_lbl = chr(945), chr(948)
         fits_x, fits_y = data_x + 1, data_y + 1
 
         info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,

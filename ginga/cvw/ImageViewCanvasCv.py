@@ -1,9 +1,6 @@
 #
 # ImageViewCanvasCv.py -- A FITS image widget with canvas drawing in OpenCv
 #
-# Eric Jeschke (eric@naoj.org)
-#
-# Copyright (c) Eric R. Jeschke.  All rights reserved.
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -48,8 +45,8 @@ class ImageViewCanvas(ImageViewCv.ImageViewCv,
         canvas = DrawingCanvas()
         # enable drawing on the canvas
         canvas.enable_draw(True)
-        canvas.ui_setActive(True)
-        canvas.setSurface(self)
+        canvas.ui_set_active(True)
+        canvas.set_surface(self)
         # add the canvas to the view.
         self.add(canvas, tag=tag)
         return canvas

@@ -1,40 +1,45 @@
 .. _ch-install:
 
-++++++++++++++++++++++++++++++++++++++++++++
-Detailed Installation Instructions for Ginga
-++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++
+Installation
+++++++++++++
 
-===========
-Dependences
-===========
+============
+Dependencies
+============
 
 Ginga is written entirely in Python, and only uses supporting Python
 packages.  There is nothing to compile (unless you need to compile one
 of the supporting packages).
 
-On recent Linux, Mac and Windows versions, all of the packages are
-available in binary (installable) form.  It should not be necessary 
+In recent Linux, Mac, and Windows versions, all of the packages are
+available in binary (installable) form.  It should not be necessary
 to compile anything, but as always, your mileage may vary.
 
 REQUIRED
 ========
 
-* python (either v. 2.7 **OR** v. 3.4 or higher)
-* numpy  (v. 1.7 or higher)
+* python (v. 3.5 or higher)
+* setuptools
+* numpy  (v. 1.13 or higher)
+* astropy
 
 Highly recommended, because some features will not be available without it:
 
 * scipy
-* pillow
-* opencv
+* Pillow
+* opencv-python (also distributed as opencv or python-opencv,
+  depending on where you get it from)
+* piexif
+* beautifulsoup4
 
-For opening `FITS <https://fits.gsfc.nasa.gov/>`_ files you will 
+For opening `FITS <https://fits.gsfc.nasa.gov/>`_ files you will
 need one of the following packages:
 
 * astropy
 * fitsio
 
-For `WCS <https://fits.gsfc.nasa.gov/fits_wcs.html>`_ resolution 
+For `WCS <https://fits.gsfc.nasa.gov/fits_wcs.html>`_ resolution
 you will need one of the following packages:
 
 * astropy
@@ -44,88 +49,84 @@ you will need one of the following packages:
 
 BACKENDS (one or more)
 ======================
+
 Ginga can draw its output to a number of different back ends.
 Depending on which GUI toolkit you prefer (and what you want to
 do), you will need at least one of the following:
 
-* python-qt4
-* python-qt5
-* python-pyside (qt4 alternative)
-* python-gtk (gtk2) **AND** python-cairo
-* python gtk3 (gi) **AND** python-cairo
-* python-Tkinter
+.. TODO: This can be broken down in a clearer way.
+
+* QtPy (PyQt4 or PyQt5)
+* PySide (Qt4/Qt5 alternative)
+* PyGTK (gtk) **AND** `pycairo <https://github.com/pygobject/pycairo>`_ (GTK 2)
+* pygobject (gi) **AND** pycairo (GTK 3)
+* `tkinter <https://docs.python.org/3/library/tk.html>`_
 * matplotlib
 * tornado
-* aggdraw
-* PIL (pillow)
-* OpenCv
+* `aggdraw <https://github.com/pytroll/aggdraw>`_
+* Pillow (PIL fork)
 
 RECOMMENDED
 ===========
+
 Certain plugins in the reference viewer (or features of those plugins)
 will not work without the following packages:
 
 * matplotlib (required by: Pick, Cuts, Histogram, LineProfile)
-* webkit (required by: WBrowser (used for online help))
-* scipy (required by: Pick, some built-in `auto cuts algorithms <http://ginga.readthedocs.io/en/latest/manual/operation.html#automatically-setting-cut-levels>`_ 
-  used when you load an image)
-* astropy (required by: SAMP)
+* scipy (required by: Pick, some built-in
+  :ref:`auto cuts algorithms <autoset_cut_levels>` used when you load an image)
 
 To save a movie:
 
-* mencoder (required by: Cuts)
+* mencoder (command line tool required by: Cuts)
 
 Helpful, but not necessary (may optimize or speed up certain operations):
 
-* python-opencv (speeds up rotation, mosaicing and some transformations)
-* python-pyopencl (speeds up rotation, mosaicing and some transformations)
-* python-numexpr (speeds up rotation a little)
-* python-filemagic (aids in identifying files when opening them)
-* python-PIL or pillow (useful for various RGB file manipulations)
+* opencv-python (speeds up rotation, mosaicing and some transformations)
+* pyopencl (speeds up rotation, mosaicing and some transformations)
+* numexpr (speeds up rotation a little)
+* filemagic (aids in identifying files when opening them)
+* Pillow (useful for various RGB file manipulations)
 
 ==============================
 Notes on Supported Widget Sets
 ==============================
 
 In the discussion below, we differentiate between the Ginga viewing
-widget, such as used in the ``examples/\*/example\*.py`` programs and the 
-full reference viewer, which includes many plugins (``scripts/ginga``).
+widget, such as used in the ``examples/\*/example\*.py`` programs and the
+full reference viewer, which includes many plugins (``ginga``).
 
 .. note:: For the full reference viewer, Mac and Windows users
 	  should probably install the Qt version, unless you are
-	  the tinkering sort.  Linux can use either Qt or Gtk fine.
+	  the tinkering sort.  Linux can use either Qt or GTK fine.
 
 Qt/PySide
 =========
 
 Ginga can use either PyQt or PySide, version 4 or 5.  It will auto-detect
-which one is installed.  There is support for both the basic widget and
-the full reference viewer.
+which one is installed, using the ``qtpy`` compatibility package.
+There is support for both the basic widget and the full reference viewer.
 
 .. note:: If you have both installed and you want to use a specific one
 	  then set the environment variable QT_API to either "pyqt" or
 	  "pyside".  This is the same procedure as for Matplotlib.
 
-
-Gtk
+GTK
 ===
 
-Ginga can use either Gtk 2 (with pygtk) or gtk 3 (with gi).  (If you have
-an older version of pycairo package you may need to install a newer version
-from github.com/pygobject/pycairo).
-
+Ginga can use either GTK 2 (with PyGTK) or GTK 3 (with ``gi``).  (If you have
+an older version of ``pycairo`` package, you may need to install a newer version
+from ``pycairo``).
 
 Tk
-===
+==
 
 Ginga's Tk support is limited to the viewing widget itself.  For
 overplotting (graphics) support, you will also need:
 
-* "pillow"/PIL package
-* "OpenCv" module
-* "aggdraw" module (which you can find 
-  `here <https://github.com/ejeschke/aggdraw>`_ ; supports Python 2 
-  only).
+* Pillow
+* opencv-python
+* aggdraw
 
 Matplotlib
 ==========
@@ -139,110 +140,74 @@ HTML5 web browser
 =================
 
 Ginga can render into an HTML5 canvas via a web server.  Support is limited
-to the viewing widget itself.  See the notes in ``example/pg/example1_pg.py``.
-Tested browsers include Chromium (Chrome), Firefox,  and Safari.
+to the viewing widget itself.  See the notes in ``examples/pg/example2_pg.py``.
+Tested browsers include Chromium (Chrome), Firefox, and Safari.
+
+.. _install_generic:
+
+==================
+Basic Installation
+==================
+
+You can download and install via ``pip`` by choosing the command that best
+suits your needs (full selection is defined in
+`setup configuration file <https://github.com/ejeschke/ginga/blob/master/setup.cfg>`_
+)::
+
+   pip install ginga  # The most basic installation
+
+   pip install ginga[recommended,qt5]  # Qt5
+
+   pip install ginga[recommended,gtk3]  # GTK 3
+
+Or via ``conda``::
+
+   conda install ginga -c conda-forge
+
+The reference viewer can then be run using the command ``ginga``.
 
 ========================
 Installation from Source
 ========================
 
-#. Clone from github::
+#. Clone from Github::
 
-    $ git clone https://github.com/ejeschke/ginga.git
+     git clone https://github.com/ejeschke/ginga.git
 
    Or see links on `this page <http://ejeschke.github.io/ginga/>`_
-   to get a zip or tar ball.
+   to get a ZIP file or tarball.
 
 #. Unpack, go into the top level directory, and run::
 
-    $ python setup.py install
-
-   The reference viewer can then be run using the command ``ginga``.
-
-Alternatively you can download and install via `pip`::
-
-    $ pip install ginga
+     python setup.py install
 
 ==============================
 Platform Specific Instructions
 ==============================
 
-Linux
-=====
+.. _linux_install_instructions:
 
-#. Install the necessary dependences.  If you are on a relatively recent
-   version of Ubuntu (e.g. v14.04 or later), something like the following
-   will work::
+Linux (Debian/Ubuntu)
+=====================
 
-     $ apt-get install python-numpy python-scipy python-matplotlib \
-       python-astropy python-qt4 python-webkit python-magic git pip
+If you are on a relatively recent version of Debian or Ubuntu,
+something like the following will work::
 
-   Or::
+     apt install python3-ginga
 
-     $ apt-get install python-numpy python-scipy python-matplotlib \
-       python-astropy python-gtk python-cairo python-webkit \
-       python-magic git pip
+If you are using another distribution of Linux, we recommend to install
+via Anaconda or Miniconda as described below.
 
-   (if you want to use the Gtk version)
-
-#. Install ginga with pip::
-
-     $ pip install ginga
-
-   or by obtaining the source and installing as described above.
-
-
-Mac
-===
-
-#. For Mac users, we recommend installing the
-   `Anaconda distribution <http://continuum.io/downloads>`_.
-   This distribution already includes all of the necessary packages to run
-   Ginga.
-
-   As an alternative, you also have the choice of Enthought Canopy.  The
-   `free version <https://www.enthought.com/canopy-express/>`_ works fine.
-   After installing this, open the Canopy package manager, search for
-   "astropy" and install it.  Also search for and install "pyside"
-   (free version of Qt bindings).
-
-#. After installing one of these distributions, open a Terminal and
-   install Ginga via "pip install ginga".  You can then run the reference
-   viewer via the command "ginga".
-
-.. note:: Ginga can be installed and run fine using a working Macports or 
-          Homebrew installation.  Simply follow the package advice given 
-	  above under the Linux instructions.
-
-Windows
-=======
+Mac/Windows/Linux (others)
+==========================
 
 Anaconda
-````````
+--------
 
-For Windows users, we recommend installing the
-`Anaconda distribution <http://continuum.io/downloads>`.
+For Mac/Windows or other Linux users, we recommend installing the
+`Anaconda distribution <http://continuum.io/downloads>`_ (or Miniconda).
 This distribution already includes all of the necessary packages to run
 Ginga.
-  
-After installing Anaconda, you can find the reference viewer script as::
 
-   Start -> All Programs -> Anaconda -> Anaconda Command Prompt
-   pythonw Scripts\ginga
-
-Enthought Canopy
-````````````````
-
-As an alternative, you also have the choice of Enthought Canopy.
-
-#. Install the `free version <https://www.enthought.com/canopy-express/>`_.
-#. Open the Canopy package manager.
-#. Search for and install "astropy".
-#. Search for and install "pyside" (free version of Qt bindings).
-
-   Start -> All Programs -> Enthought Canopy -> Canopy command prompt
-   pip install ginga
-   pythonw AppData\Local\Enthought\Canopy\User\Scripts\ginga
-
-
-
+After installing Anaconda, open the Anaconda Prompt and follow instructions
+under :ref:`install_generic` via ``conda``.

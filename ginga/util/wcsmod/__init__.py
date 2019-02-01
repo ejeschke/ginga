@@ -54,7 +54,7 @@ display_types = ['sexagesimal', 'degrees']
 
 # try to load them in this order until we find one that works.
 # If none can be loaded, we default to the BareBones dummy WCS
-wcs_try_order = ('astropy', 'astropy2', 'kapteyn', 'starlink', 'astlib',
+wcs_try_order = ('astropy', 'astropy_ape14', 'kapteyn', 'starlink', 'astlib',
                  'barebones')
 
 wcs_home = os.path.split(sys.modules[__name__].__file__)[0]

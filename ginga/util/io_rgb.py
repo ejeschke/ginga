@@ -4,8 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import absolute_import, print_function
-
 import sys
 import time
 import mimetypes
@@ -13,8 +11,8 @@ from io import BytesIO
 
 import numpy as np
 
-from . import iohelper, rgb_cms
-from .six.moves import map
+from ginga.BaseImage import Header, ImageError
+from ginga.util import iohelper, rgb_cms
 
 try:
     # do we have opencv available?
@@ -33,7 +31,7 @@ except ImportError:
 
 have_pilutil = False
 try:
-    from scipy.misc import imresize, imsave, toimage, fromimage  # noqa
+    from scipy.misc import imresize, imsave
     have_pilutil = True
 except ImportError:
     pass
@@ -50,6 +48,7 @@ except ImportError:
 #have_pil = False
 #have_cms = False
 #have_exif = False
+#have_opencv = False
 
 
 class RGBFileHandler(object):
@@ -59,18 +58,32 @@ class RGBFileHandler(object):
 
         self.clr_mgr = rgb_cms.ColorManager(self.logger)
 
-    def load_file(self, filespec, header):
+    def load_file(self, filespec, dstobj=None, **kwargs):
         info = iohelper.get_fileinfo(filespec)
         if not info.ondisk:
             raise ValueError("File does not appear to be on disk: %s" % (
                 info.url))
 
         filepath = info.filepath
-        return self._imload(filepath, header)
+        if dstobj is None:
+            # Put here to avoid circular import
+            from ginga.RGBImage import RGBImage
+            dstobj = RGBImage(logger=self.logger)
+
+        header = Header()
+        metadata = {'header': header, 'path': filepath}
+
+        data_np = self._imload(filepath, header)
+
+        # TODO: set up the channel order correctly
+        dstobj.set_data(data_np, metadata=metadata)
+
+        if dstobj.name is not None:
+            dstobj.set(name=dstobj.name)
+        return dstobj
 
     def save_file_as(self, filepath, data_np, header):
         if not have_pil:
-            from ginga.BaseImage import ImageError
             raise ImageError("Install PIL to be able to save images")
 
         # TODO: save keyword metadata!
@@ -106,10 +119,8 @@ class RGBFileHandler(object):
             # (see https://github.com/opencv/opencv/issues/4344)
             # So reset these values to prevent auto-orientation from
             # happening later
-            if 'Orientation' in kwds:
-                kwds['Orientation'] = 1
-            if 'Image Orientation' in kwds:
-                kwds['Image Orientation'] = 1
+            kwds['Orientation'] = 1
+            kwds['Image Orientation'] = 1
 
             # convert to working color profile, if can
             if self.clr_mgr.can_profile():
@@ -150,7 +161,6 @@ class RGBFileHandler(object):
             data_np = open_ppm(filepath)
 
         else:
-            from ginga.BaseImage import ImageError
             raise ImageError("No way to load image format '%s/%s'" % (
                 typ, subtyp))
 
@@ -231,7 +241,6 @@ class RGBFileHandler(object):
             newdata = imresize(data, zoom, interp=method)
 
         else:
-            from ginga.BaseImage import ImageError
             raise ImageError("No way to scale image smoothly")
 
         end_time = time.time()
@@ -260,7 +269,7 @@ def open_ppm(filepath):
         header = infile.readline().strip()
 
     #print(header)
-    width, height = tuple(map(int, header.split()))
+    width, height = [int(x) for x in header.split()]
     header = infile.readline()
 
     # Get unit size
@@ -280,5 +289,9 @@ def open_ppm(filepath):
     if sys.byteorder == 'little':
         arr = arr.byteswap()
     return arr
+
+
+def get_rgbloader(kind=None, logger=None):
+    return RGBFileHandler(logger)
 
 # END

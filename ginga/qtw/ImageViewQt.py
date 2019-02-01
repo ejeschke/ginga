@@ -4,14 +4,11 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import absolute_import
-
 import os
 from io import BytesIO
+
 import numpy as np
 
-import ginga.util.six as six
-from ginga.util.six.moves import map
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
 from ginga.qtw.QtHelp import (QtGui, QtCore, QImage, QPixmap, QCursor,
@@ -498,7 +495,7 @@ class QtEventMixin(object):
         except KeyError:
             return keyname
 
-    def get_keyTable(self):
+    def get_key_table(self):
         return self._keytbl
 
     def map_event(self, widget, event):
@@ -554,6 +551,10 @@ class QtEventMixin(object):
             button |= 0x2
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
+        if buttons & QtCore.Qt.BackButton:
+            button |= 0x8
+        if buttons & QtCore.Qt.ForwardButton:
+            button |= 0x10
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.check_cursor_location()
@@ -573,6 +574,10 @@ class QtEventMixin(object):
             button |= 0x2
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
+        if buttons & QtCore.Qt.BackButton:
+            button |= 0x8
+        if buttons & QtCore.Qt.ForwardButton:
+            button |= 0x10
 
         data_x, data_y = self.check_cursor_location()
 
@@ -724,10 +729,7 @@ class QtEventMixin(object):
         self.logger.debug("available formats of dropped data are %s" % (
             formats))
         if "text/thumb" in formats:
-            if six.PY2:
-                thumbstr = str(dropdata.data("text/thumb"))
-            else:
-                thumbstr = str(dropdata.data("text/thumb"), encoding='ascii')
+            thumbstr = str(dropdata.data("text/thumb"), encoding='ascii')
             data = [thumbstr]
             self.logger.debug("dropped thumb(s): %s" % (str(data)))
         elif dropdata.hasUrls():
@@ -869,7 +871,7 @@ class ScrolledView(QtGui.QAbstractScrollArea):
 
         self.viewer.add_callback('redraw', self._calc_scrollbars)
         self.viewer.add_callback('limits-set',
-                                 lambda v, l: self._calc_scrollbars(v))
+                                 lambda v, l: self._calc_scrollbars(v, 0))
 
     def get_widget(self):
         return self
@@ -885,11 +887,11 @@ class ScrolledView(QtGui.QAbstractScrollArea):
 
         self.v_w.resize(width, height)
 
-    def _calc_scrollbars(self, viewer):
+    def _calc_scrollbars(self, viewer, whence):
         """Calculate and set the scrollbar handles from the pan and
         zoom positions.
         """
-        if self._scrolling:
+        if self._scrolling or whence > 0:
             return
 
         # flag that suppresses a cyclical callback

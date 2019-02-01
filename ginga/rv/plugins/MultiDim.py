@@ -1,5 +1,7 @@
+#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+#
 """
 A plugin to navigate HDUs in a FITS file or planes in a 3D cube or
 higher dimension dataset.
@@ -49,6 +51,7 @@ from ginga.misc import Future
 from ginga import GingaPlugin
 from ginga.util.iohelper import get_hdu_suffix
 from ginga.util.videosink import VideoSink
+from ginga.util import io_fits
 
 import numpy as np
 
@@ -64,6 +67,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(MultiDim, self).__init__(fv, fitsimage)
+        self._toc_fmt = "%(index)4d %(name)-12.12s (%(extver)3d) %(htype)-12.12s %(dtype)-8.8s"
 
         self.curhdu = 0
         self.naxispath = []
@@ -88,7 +92,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # Load plugin preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_MultiDim')
-        self.settings.set_defaults(auto_start_naxis=False)
+        self.settings.add_defaults(sort_keys=['index'],
+                                   sort_reverse=False)
         self.settings.load(onError='silent')
 
         self.gui_up = False
@@ -215,14 +220,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.gui_up = True
 
     def set_hdu_cb(self, w, val):
-        # idx = int(val)
-        idx = w.get_index()
-        idx = max(0, idx)
+        # Get actual HDU index, which might be different from combobox order.
+        toc_ent = w.get_alpha(val)
+        idx = max(0, int(toc_ent[:4]))
         try:
             self.set_hdu(idx)
-
         except Exception as e:
-            self.logger.error("Error loading HDU #%d: %s" % (
+            self.logger.error("Error loading HDU #{}: {}".format(
                 idx + 1, str(e)))
 
     def set_naxis_cb(self, widget, idx, n):
@@ -231,12 +235,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
     def build_naxis(self, dims, image):
         self.naxispath = list(image.naxispath)
+        ndims = len(dims)
 
         # build a vbox of NAXIS controls
         captions = [("NAXIS1:", 'label', 'NAXIS1', 'llabel'),
                     ("NAXIS2:", 'label', 'NAXIS2', 'llabel')]
 
-        for n in range(2, len(dims)):
+        for n in range(2, ndims):
             key = 'naxis%d' % (n + 1)
             title = key.upper()
             maxn = int(dims[n])
@@ -254,9 +259,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         hbox = Widgets.HBox()
 
-        if len(dims) > 3:  # only add radiobuttons if we have more than 3 dim
+        if ndims > 3:  # only add radiobuttons if we have more than 3 dim
             group = None
-            for i in range(2, len(dims)):
+            for i in range(2, ndims):
                 title = 'AXIS%d' % (i + 1)
                 btn = Widgets.RadioButton(title, group=group)
                 if group is None:
@@ -271,7 +276,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         vbox.add_widget(w)
         vbox.add_widget(hbox)
 
-        for n in range(0, len(dims)):
+        for n in range(0, ndims):
             key = 'naxis%d' % (n + 1)
             lbl = b[key]
             maxn = int(dims[n])
@@ -303,10 +308,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         # for storing play_idx for each dim of image. used for going back to
         # the idx where you left off.
-        self.play_indices = ([0 for i in range(len(dims) - 2)] if len(dims) > 3
+        self.play_indices = ([0 for i in range(ndims - 2)] if ndims > 3
                              else None)
 
-        if len(dims) > 3:
+        if ndims > 3:
 
             # dims only exists in here, hence this function exists here
             def play_axis_change_func_creator(n):
@@ -318,7 +323,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                     self.play_axis = n
                     self.logger.debug("play_axis changed to %d" % n)
 
-                    if self.play_axis < len(dims):
+                    if self.play_axis < ndims:
                         self.play_max = dims[self.play_axis] - 1
 
                     self.play_idx = self.play_indices[n - 2]
@@ -332,16 +337,16 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
                 return check_if_we_need_change
 
-            for n in range(2, len(dims)):
+            for n in range(2, ndims):
                 key = 'axis%d' % (n + 1)
                 self.w[key].add_callback(
                     'activated', play_axis_change_func_creator(n))
                 if n == 2:
                     self.w[key].set_state(True)
 
-        is_dc = len(dims) > 2
+        is_dc = ndims > 2
         self.play_axis = 2
-        if self.play_axis < len(dims):
+        if self.play_axis < ndims:
             self.play_max = dims[self.play_axis] - 1
         if is_dc:
             self.play_idx = self.naxispath[self.play_axis - 2]
@@ -507,7 +512,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
         deadline = time_start + self.play_int_sec
 
         # calculate fps
-        fps = 1.0 / (time_start - self.play_last_time)
+        dt = abs(time_start - self.play_last_time)
+        fps = 1.0 / dt if not np.isclose(dt, 0) else 1.0
         self.play_last_time = time_start
         if int(fps) != int(self.play_fps):
             self.play_fps = fps
@@ -561,15 +567,22 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # clear old TOC
         w.clear()
 
-        for idx, d in enumerate(hdu_info):
-            toc_ent = "%(index)4d %(name)-12.12s (%(extver)3d) %(htype)-12.12s %(dtype)-8.8s" % d  # noqa
+        # User sort settings
+        sort_keys = self.settings.get('sort_keys', ['index'])
+        sort_reverse = self.settings.get('sort_reverse', False)
+        sorted_hdu_info = sorted(hdu_info,
+                                 key=lambda x: [x[key] for key in sort_keys],
+                                 reverse=sort_reverse)
+
+        for idx, d in enumerate(sorted_hdu_info):
+            toc_ent = self._toc_fmt % d
             w.append_text(toc_ent)
 
-        idx = w.get_index()
-        if idx < 0:
-            idx = 0
-        if idx >= len(hdu_info):
-            idx = len(hdu_info) - 1
+        # idx = w.get_index()
+        # if idx < 0:
+        #     idx = 0
+        # if idx >= len(hdu_info):
+        #     idx = len(hdu_info) - 1
         # w.set_index(idx)
 
     def redo(self):
@@ -584,6 +597,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 "Cannot open image: no value for metadata key 'path'")
             return
 
+        # TODO: How to properly reset GUI components?
+        #       They are still showing info from prev FITS.
+        # No-op for ASDF
+        if path.endswith('asdf'):
+            return True
+
         if path != self.img_path:
             # <-- New file is being looked at
             self.img_path = path
@@ -595,7 +614,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 except Exception:
                     pass
 
-            self.file_obj = self.fv.fits_opener.get_factory()
+            self.file_obj = io_fits.get_fitsloader(logger=self.logger)
+
             # TODO: specify 'readonly' somehow?
             self.file_obj.open_file(path)
 
@@ -621,8 +641,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
             info = self.file_obj.hdu_db.get(idx, None)
             if info is not None:
                 htype = info.htype.lower()
-                index = info.index
-                self.w.hdu.set_index(index)
+                toc_ent = self._toc_fmt % info
+                self.w.hdu.show_text(toc_ent)
 
         # rebuild the NAXIS controls, if necessary
         # No two images in the same channel can have the same name.

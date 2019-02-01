@@ -138,9 +138,9 @@ A little more fleshed out example: MyLocalPlugin
 This is a skeleton for a local plugin.  It is also good example of
 something that actually runs and can be copied as a template for a local
 plugin.  This plugin is distributed with the Ginga package and can be
-loaded and invoked from a terminal:
+loaded and invoked from a terminal::
 
-    $ ginga --plugins=MyLocalPlugin --loglevel=20 --log=/tmp/ginga.log
+    ginga --plugins=MyLocalPlugin --loglevel=20 --log=/tmp/ginga.log
 
 The plugin will be accessible via the "Operation" button in the Plugin
 Manager bar.
@@ -158,7 +158,7 @@ Manager bar.
             """
             This method is called when the plugin is loaded for the  first
             time.  ``fv`` is a reference to the Ginga (reference viewer) shell
-            and ``fitsimage`` is a reference to the specific ImageViewCanvas
+            and ``fitsimage`` is a reference to the specific viewer
             object associated with the channel on which the plugin is being
             invoked.
             You need to call the superclass initializer and then do any local
@@ -312,29 +312,33 @@ reference viewer "shell" and the ginga display object respectively.
 To interact with the viewer you will be calling methods on one or both
 of these objects.
 
-The best way to get a feel for these APIs is to look at the source of
-one of the many plugins distributed with Ginga.  Most of them are not
-very long or complex.  Also, a plugin can include any Python
-packages or modules that it wants and programming one is essentially
-similar to writing any other Python program.
+The "fitsimage" object is the ginga image viewer object associated with
+the channel.  You can get a good idea of how to programmatically
+manipulate this viewer here :ref:`ch-image-viewer-operations`
+and by browsing the source of the many plugins distributed with Ginga.
+Most of them are not very long or complex.  Also, a plugin can include
+any Python packages or modules that it wants and programming one is
+essentially similar to writing any other Python program.  We suggest
+picking a plugin that looks or does something similar to what you are
+interested in, copying it, and modifying it to fit your needs.
 
 Launching and Debugging Your Plugin
 -----------------------------------
 The easiest way to start out is to create a plugins directory under your
-ginga configuration area.  In a terminal:
+ginga configuration area.  In a terminal::
 
-    $ mkdir $HOME/.ginga/plugins
+    mkdir $HOME/.ginga/plugins
 
 Put your plugin in there (a good one to start with is to modify the
-MyLocalPlugin example that comes with Ginga):
+MyLocalPlugin example that comes with Ginga)::
 
-    $ cd .../ginga/examples/reference-viewer
-    $ cp MyLocalPlugin.py $HOME/.ginga/plugins/MyPlugin.py
+    cd .../ginga/examples/reference-viewer
+    cp MyLocalPlugin.py $HOME/.ginga/plugins/MyPlugin.py
 
 To load it when the reference viewer starts (and add some logging to stderr
-as well as to a file):
+as well as to a file)::
 
-    $ ginga --plugins=MyPlugin --loglevel=20 --stderr --log=/tmp/ginga.log
+    ginga --plugins=MyPlugin --loglevel=20 --stderr --log=/tmp/ginga.log
 
 To start the plugin from within the reference viewer, use the Plugin
 Manager bar just below the color and readout bars.  Use the "Operation"
@@ -360,12 +364,13 @@ the GUI or possibly under the Errors tab.
 
 .. note:: Ginga has a feature for quickly reloading plugins to
           facilitate rapid debugging cycles.  If it is not already
-          running, start the "Command" plugin
-          from the "Plugins" menu in the menu bar.  If your plugin
+          running, start the "Command Line" plugin
+          from the "Plugins->Debug" menu in the menu bar.  If your plugin
           launched (but has some error), make sure you have closed your
           plugin by right clicking (or Control + click on Mac touchpad)
           on the small box representing your plugin in the Plugin
-          Manager bar and selecting "Stop".  In the Command plugin, use
+          Manager bar and selecting "Stop".  In the Command Line plugin,
+          there is a small box labeled "Type command here:".  Use
           the command "reload_local <plugin_name>"--this will reload the
           python module representing your plugin and you should be able
           to immediately restart it using the Plugin Manager bar as
@@ -384,7 +389,7 @@ rulers on the image.  For reference, you may want to refer to the ruler
 shown in :ref:`fig6`.
 
 .. _fig6:
-.. figure:: plugins_local/figures/ruler_plugin.png
+.. figure:: ../manual/plugins_local/figures/ruler_plugin.png
    :scale: 100%
    :figclass: thb
 
@@ -599,7 +604,7 @@ shown in :ref:`fig6`.
 
 This plugin shows a standard design pattern typical to local plugins.
 Often one is wanting to draw or plot something on top of the image
-below.  The ``ImageViewCanvas`` widget used by Ginga allows this to be
+below.  The ``CanvasView`` widget used by Ginga allows this to be
 done very cleanly and conveniently by adding a ``DrawingCanvas``
 object to the image and drawing on that.  Canvases can be layered on top
 of each other in a manner analogous to "layers" in an image editing
@@ -614,7 +619,7 @@ widget (but does not destroy the canvas).  ``pause()`` disables user
 interaction on the canvas and ``resume()`` reenables that interaction.
 ``redo()`` simply redraws the ruler with new measurements taken from any new
 image that may have been loaded.  In the ``__init__()`` method you will
-notice a ``setSurface()`` call that associates this canvas with a
+notice a ``set_surface()`` call that associates this canvas with a
 ``ImageView``-based widget--this is the key for the canvas to utilize WCS
 information for correct plotting.
 All the other methods shown are support methods for doing the ruler
@@ -636,9 +641,9 @@ A template: MyGlobalPlugin
 This is a skeleton for a global plugin, and serves as a decent example of
 something that can be copied as a template for a global plugin.
 This plugin is distributed with the Ginga package and can be loaded and
-invoked from a terminal:
+invoked from a terminal::
 
-    $ ginga --modules=MyGlobalPlugin --loglevel=20 --log=/tmp/ginga.log
+    ginga --modules=MyGlobalPlugin --loglevel=20 --log=/tmp/ginga.log
 
 The plugin will be started at program startup and can be seen in the
 "MyGlobalPlugin" tab in the right panel.  Watch the status message as
@@ -844,6 +849,3 @@ You can include as many plugins in your package as you want.
 You write your plugins in exactly the same way as described above, and
 they can be either global or local.  For details, clone the repo at the
 link above and follow the directions in the README.
-
-
-

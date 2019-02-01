@@ -1,18 +1,15 @@
 #!/usr/bin/env python
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import glob
-import os
 import sys
 
-import ah_bootstrap
+import glob
+import os
+
+import ah_bootstrap  # noqa
 from setuptools import setup
 
-# A dirty hack to get around some early import/configurations ambiguities
-if sys.version_info[0] >= 3:
-    import builtins
-else:
-    import __builtin__ as builtins
+import builtins
 builtins._ASTROPY_SETUP_ = True
 
 from astropy_helpers.setup_helpers import (register_commands, get_debug_option,
@@ -21,22 +18,14 @@ from astropy_helpers.git_helpers import get_git_devstr
 from astropy_helpers.version_helpers import generate_version_py
 
 # Get some values from the setup.cfg
-try:
-    from ConfigParser import ConfigParser
-except ImportError:
-    from configparser import ConfigParser
+from configparser import ConfigParser
 
 conf = ConfigParser()
 
 conf.read(['setup.cfg'])
 metadata = dict(conf.items('metadata'))
 
-PACKAGENAME = metadata.get('package_name', 'packagename')
-DESCRIPTION = metadata.get('description', 'Astropy affiliated package')
-AUTHOR = metadata.get('author', '')
-AUTHOR_EMAIL = metadata.get('author_email', '')
-LICENSE = metadata.get('license', 'unknown')
-URL = metadata.get('url', 'http://astropy.org')
+PACKAGENAME = metadata.get('name', 'ginga')
 
 # Get the long description from the package's docstring
 __import__(PACKAGENAME)
@@ -102,56 +91,9 @@ for root, dirs, files in os.walk(PACKAGENAME):
                     os.path.relpath(root, PACKAGENAME), filename))
 package_info['package_data'][PACKAGENAME].extend(c_files)
 
-# Note that requires and provides should not be included in the call to
-# ``setup``, since these are now deprecated. See this link for more details:
-# https://groups.google.com/forum/#!topic/astropy-dev/urYO8ckB2uM
-
-setup_requires = ['numpy>=1.9']
-
-# pretty much needed
-install_requires = ['numpy>=1.9', 'qtpy>=1.1', 'setuptools>=1.0',
-                    'astropy>=1.0']
-
-# nice to have, but not required, depending on the application
-extras_require = {
-    'recommended': ['pillow>=3.2.0', 'scipy>=0.18.1', 'matplotlib>=1.5.1',
-                    'opencv-python>=3.4.1', 'piexif>=1.0.13',
-                    'beautifulsoup4>=4.3.2'],
-}
-
-setup(name=PACKAGENAME,
-      version=VERSION,
-      description=DESCRIPTION,
-      requires=['numpy'],  # scipy not required, but strongly recommended
-      provides=[PACKAGENAME],
-      keywords=['scientific', 'image', 'viewer', 'numpy', 'toolkit',
-                'astronomy', 'FITS'],
-      classifiers=[
-          "Intended Audience :: Science/Research",
-          "License :: OSI Approved :: BSD License",
-          "Operating System :: MacOS :: MacOS X",
-          "Operating System :: Microsoft :: Windows",
-          "Operating System :: POSIX",
-          "Programming Language :: C",
-          "Programming Language :: Python :: 2.7",
-          "Programming Language :: Python :: 3.7",
-          "Programming Language :: Python :: 3",
-          "Topic :: Scientific/Engineering :: Astronomy",
-          "Topic :: Scientific/Engineering :: Physics",
-          ],
+setup(version=VERSION,
       scripts=scripts,
-      setup_requires=setup_requires,
-      install_requires=install_requires,
-      extras_require=extras_require,
-      python_requires='>=2.7',
-      author=AUTHOR,
-      author_email=AUTHOR_EMAIL,
-      license=LICENSE,
-      url=URL,
       long_description=LONG_DESCRIPTION,
       cmdclass=cmdclassd,
-      zip_safe=False,
-      use_2to3=False,
       entry_points=entry_points,
-      **package_info
-)
+      **package_info)

@@ -1,8 +1,4 @@
 """Unit Tests for the Task class"""
-
-from __future__ import absolute_import
-from ...util import six
-
 import time
 import random
 import logging
@@ -104,7 +100,7 @@ class stepTask(Task.Task):
 
     def step(self):
         # Call generator for next step
-        return six.advance_iterator(self.gen)
+        return next(self.gen)
 
     def execute(self):
         res = 0

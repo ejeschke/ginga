@@ -1,9 +1,26 @@
-++++++++++++++++++++
-What's New in Ginga?
-++++++++++++++++++++
+++++++++++
+What's New
+++++++++++
 
-Ver 2.7.2.dev
-=============
+Ver 3.0.0 (unreleased)
+======================
+- Dropped Python 2 support. Ginga now requires Python 3.5 or later.
+- Fixed an issue with some RGB images being viewed flipped
+- Improved accuracy of Qt-based timers
+- Pick plugin enhanced with option to center on found object; also
+  default shape changed to a box rather than a rectangle
+- Added support for ASDF and GWCS.
+- Fixed drag-and-drop functionality in FBrowser plugin on Windows.
+- Enabled HDU sorting via config file in MultiDim.
+- Fixed a bug where display would get corrupted when adjusting
+  interactive cuts or contrast on rotated image
+- Improved smoothness and updates of Zoom plugin image
+- Improved smoothness and updates when rotating or shifting color map
+- Fixed broken banner
+- Improved ``pip`` installation commands for different backends.
+
+Ver 2.7.2 (2018-11-05)
+======================
 - Fix for linewidth attribute in shapes for AGG backend
 - Fix for ellipse rotation in OpenCv backend
 - Better text rendering for OpenCv backend (loadable fonts)
@@ -21,6 +38,10 @@ Ver 2.7.2.dev
 - Improvements to synchronous refresh feature to reduce jitter and
   increase frame rate
 - Fix for navigating certain data cubes with MutltiDim plugin
+- Added new percentage transform and coordinate mapper type (allow
+  placement of objects as a percentage of the window size)
+- Updates to Compass canvas type and Pan plugin
+- Documentation improvements for writing plugins
 
 Ver 2.7.1 (2018-07-09)
 ======================
@@ -87,13 +108,13 @@ Ver 2.6.6 (2017-11-02)
     method called cairo.ImageSurface.create_for_data()
 
 - Addition of a "Quick Mode" to the Pick plugin--see documentation
-- More consistent font handing between widgets and Ginga canvases 
+- More consistent font handing between widgets and Ginga canvases
 - Bug fix for importing some types of matplotlib color maps
 - Add antialiasing for Qt back end
 - Bug fixes and enhancements for Qt gestures
   - holding shift with pinch now keeps position under cursor
 - New Jupyter notebooks back end based on ipywidgets
-  - requirements: $ pip install ipyevents      
+  - requirements: $ pip install ipyevents
   - see examples/jupyter-notebook/
 - Fixes to various reference viewer plugins
 

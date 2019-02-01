@@ -14,7 +14,7 @@ Short-Term Goals
 
 Things that might happen in the next release or two:
 
-* Python 3.7 support.
+* Python 3.7 support. (Done)
 * Last major release that is compatible with Python 2 (time frame: late
   2018). Beginning with v3.x.y, Ginga will be Python 3 compatible only.
 
@@ -23,7 +23,7 @@ Mid-Term Goals
 
 Things that might happen in 1-1.5 years:
 
-* Convert ``master`` to be Python 3.6-compatible (and above) only
+* Convert ``master`` to be Python 3.5-compatible (and above) only
   (time frame: early 2019).
 * Dropping Python 2 support (bug fixes to 2.x.y branches until end of 2019).
 * Improve vector types support (e.g., efficient rendering of many

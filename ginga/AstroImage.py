@@ -9,15 +9,13 @@ import math
 import traceback
 from collections import OrderedDict
 
-import numpy
+import numpy as np
 
-from ginga.util import wcsmod, io_fits
+from ginga.util import wcsmod, io_fits, io_asdf
 from ginga.util import wcs, iqcalc
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
 from ginga import trcalc
-import ginga.util.six as six
-from ginga.util.six.moves import map
 
 
 class AstroHeader(Header):
@@ -87,11 +85,11 @@ class AstroImage(BaseImage):
     def setup_data(self, data, naxispath=None):
         # initialize data attribute to something reasonable
         if data is None:
-            data = numpy.zeros((0, 0))
-        elif not isinstance(data, numpy.ndarray):
-            data = numpy.zeros((0, 0))
+            data = np.zeros((0, 0))
+        elif not isinstance(data, np.ndarray):
+            data = np.zeros((0, 0))
         elif 0 in data.shape:
-            data = numpy.zeros((0, 0))
+            data = np.zeros((0, 0))
         elif len(data.shape) < 2:
             # Expand 1D arrays into 1xN array
             data = data.reshape((1, data.shape[0]))
@@ -101,7 +99,7 @@ class AstroImage(BaseImage):
 
         # this will get reset in set_naxispath() if array is
         # multidimensional
-        self._data = data
+        self._data = self._md_data
 
         if naxispath is None:
             naxispath = []
@@ -167,6 +165,24 @@ class AstroImage(BaseImage):
             self.wcs = wcsinfo.wrapper_class(logger=self.logger)
             self.wcs.load_nddata(ndd)
 
+    def load_asdf(self, asdf_obj, **kwargs):
+        """
+        Load from an ASDF object.
+        See :func:`ginga.util.io_asdf.load_asdf` for more info.
+        """
+        self.clear_metadata()
+
+        data, wcs, ahdr = io_asdf.load_asdf(asdf_obj, **kwargs)
+
+        self.setup_data(data, naxispath=None)
+
+        wcsinfo = wcsmod.get_wcs_class('astropy_ape14')
+        self.wcs = wcsinfo.wrapper_class(logger=self.logger)
+        self.wcs.wcs = wcs
+
+        if wcs is not None:
+            self.wcs.coordsys = wcs.output_frame.name
+
     def load_file(self, filespec, **kwargs):
 
         if self.io is None:
@@ -185,7 +201,7 @@ class AstroImage(BaseImage):
 
     def load_buffer(self, buf, dims, dtype, byteswap=False,
                     naxispath=None, metadata=None):
-        data = numpy.fromstring(buf, dtype=dtype)
+        data = np.fromstring(buf, dtype=dtype)
         if byteswap:
             data.byteswap(True)
         data = data.reshape(dims)
@@ -399,7 +415,8 @@ class AstroImage(BaseImage):
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords,
                                    naxispath=self.revnaxis)
 
-    # -----> TODO: merge into wcs.py ?
+    # -----> TODO:
+    #   This section has been merged into util.wcs.  Deprecate it here.
     #
     def get_starsep_XY(self, x1, y1, x2, y2):
         # source point
@@ -457,11 +474,11 @@ class AstroImage(BaseImage):
 
         # Get east and north coordinates
         xe, ye = self.add_offset_xy(x, y, len_deg_e, 0.0)
-        xe = int(round(xe))
-        ye = int(round(ye))
+        xe = int(np.round(xe))
+        ye = int(np.round(ye))
         xn, yn = self.add_offset_xy(x, y, 0.0, len_deg_n)
-        xn = int(round(xn))
-        yn = int(round(yn))
+        xn = int(np.round(xn))
+        yn = int(np.round(yn))
 
         return (x, y, xn, yn, xe, ye)
 
@@ -491,7 +508,7 @@ class AstroImage(BaseImage):
 
         return self.calc_compass_radius(x, y, radius_px)
     #
-    # <----- TODO: merge this into wcs.py ?
+    # <----- TODO: deprecate
 
     def get_wcs_rotation_deg(self):
         header = self.get_header()
@@ -557,8 +574,8 @@ class AstroImage(BaseImage):
 
             # Determine max/min to update our values
             if update_minmax:
-                maxval = numpy.nanmax(data_np)
-                minval = numpy.nanmin(data_np)
+                maxval = np.nanmax(data_np)
+                minval = np.nanmin(data_np)
                 self.maxval = max(self.maxval, maxval)
                 self.minval = min(self.minval, minval)
 
@@ -571,8 +588,8 @@ class AstroImage(BaseImage):
 
             # scale if necessary
             # TODO: combine with rotation?
-            if (not numpy.isclose(math.fabs(cdelt1), scale_x) or
-                    not numpy.isclose(math.fabs(cdelt2), scale_y)):
+            if (not np.isclose(math.fabs(cdelt1), scale_x) or
+                not np.isclose(math.fabs(cdelt2), scale_y)):
                 nscale_x = math.fabs(cdelt1) / scale_x
                 nscale_y = math.fabs(cdelt2) / scale_y
                 self.logger.debug("scaling piece by x(%f), y(%f)" % (
@@ -588,8 +605,8 @@ class AstroImage(BaseImage):
             flip_y = False
 
             # Optomization for 180 rotations
-            if (numpy.isclose(math.fabs(rot_dx), 180.0) or
-                    numpy.isclose(math.fabs(rot_dy), 180.0)):
+            if (np.isclose(math.fabs(rot_dx), 180.0) or
+                np.isclose(math.fabs(rot_dy), 180.0)):
                 rotdata = trcalc.transform(data_np,
                                            flip_x=True, flip_y=True)
                 rot_dx = 0.0
@@ -598,7 +615,7 @@ class AstroImage(BaseImage):
                 rotdata = data_np
 
             # Finish with any necessary rotation of piece
-            if not numpy.isclose(rot_dy, 0.0):
+            if not np.isclose(rot_dy, 0.0):
                 rot_deg = rot_dy
                 self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
                 rotdata = trcalc.rotate(rotdata, rot_deg,
@@ -606,11 +623,11 @@ class AstroImage(BaseImage):
                                         logger=self.logger)
 
             # Flip X due to negative CDELT1
-            if numpy.sign(cdelt1) != numpy.sign(cdelt1_ref):
+            if np.sign(cdelt1) != np.sign(cdelt1_ref):
                 flip_x = True
 
             # Flip Y due to negative CDELT2
-            if numpy.sign(cdelt2) != numpy.sign(cdelt2_ref):
+            if np.sign(cdelt2) != np.sign(cdelt2_ref):
                 flip_y = True
 
             if flip_x or flip_y:
@@ -627,7 +644,7 @@ class AstroImage(BaseImage):
             # Merge piece as closely as possible into our array
             # Unfortunately we lose a little precision rounding to the
             # nearest pixel--can't be helped with this approach
-            x0, y0 = int(round(x0)), int(round(y0))
+            x0, y0 = int(np.round(x0)), int(np.round(y0))
             self.logger.debug("Fitting image '%s' into mosaic at %d,%d" % (
                 name, x0, y0))
 
@@ -684,7 +701,7 @@ class AstroImage(BaseImage):
                                     (expand_pct * 100, max_expand_pct))
 
                 # go for it!
-                new_data = numpy.zeros((new_ht, new_wd))
+                new_data = np.zeros((new_ht, new_wd))
                 # place current data into new data
                 new_data[ny1_off:ny1_off + myht, nx1_off:nx1_off + mywd] = \
                     mydata
@@ -736,7 +753,7 @@ class AstroImage(BaseImage):
 
         system = settings.get('wcs_coords', None)
         format = settings.get('wcs_display', 'sexagesimal')
-        ra_lbl, dec_lbl = six.unichr(945), six.unichr(948)
+        ra_lbl, dec_lbl = chr(945), chr(948)
 
         # Calculate WCS coords, if available
         try:
@@ -784,7 +801,7 @@ class AstroImage(BaseImage):
                 if system == 'galactic':
                     ra_lbl, dec_lbl = "l", "b"
                 elif system == 'ecliptic':
-                    ra_lbl, dec_lbl = six.unichr(0x03BB), six.unichr(0x03B2)
+                    ra_lbl, dec_lbl = chr(0x03BB), chr(0x03B2)
                 elif system == 'helioprojective':
                     ra_txt = "%+5.3f" % (lon_deg * 3600)
                     dec_txt = "%+5.3f" % (lat_deg * 3600)

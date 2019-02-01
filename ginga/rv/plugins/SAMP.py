@@ -35,16 +35,11 @@ plugin will attempt to start a SAMP hub if one is not found running.
 """
 import os
 
-# astropy.vo.samp moved to astropy.samp in astropy v2.0.
 try:
     from astropy import samp
     have_samp = True
 except ImportError:
-    try:
-        from astropy.vo import samp
-        have_samp = True
-    except ImportError:
-        have_samp = False
+    have_samp = False
 
 from ginga import GingaPlugin
 from ginga.util import catalog

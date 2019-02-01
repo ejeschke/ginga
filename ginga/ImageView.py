@@ -157,7 +157,7 @@ class ImageViewBase(Callback.Callbacks):
             'set', self.rotation_change_cb)
 
         # misc
-        self.t_.add_defaults(auto_orient=False,
+        self.t_.add_defaults(auto_orient=True,
                              defer_redraw=True, defer_lagtime=0.025,
                              show_pan_position=False,
                              show_mode_indicator=True,
@@ -304,6 +304,7 @@ class ImageViewBase(Callback.Callbacks):
         self.coordmap = {
             'native': coordmap.NativeMapper(self),
             'window': coordmap.WindowMapper(self),
+            'percentage': coordmap.PercentageMapper(self),
             'cartesian': coordmap.CartesianMapper(self),
             'data': coordmap.DataMapper(self),
             None: coordmap.DataMapper(self),
@@ -506,7 +507,7 @@ class ImageViewBase(Callback.Callbacks):
         self._imgobj = None
 
         # private canvas set?
-        if not (private_canvas is None):
+        if private_canvas is not None:
             self.private_canvas = private_canvas
 
             if private_canvas != canvas:
@@ -1317,9 +1318,7 @@ class ImageViewBase(Callback.Callbacks):
 
         self.private_canvas.draw(self)
 
-        # TODO: see if we can deprecate this fake callback
-        if whence <= 0:
-            self.make_callback('redraw')
+        self.make_callback('redraw', whence)
 
         if whence < 2:
             self.check_cursor_location()
@@ -1527,8 +1526,7 @@ class ImageViewBase(Callback.Callbacks):
 
         if (whence <= 2.0) or (self._rgbarr2 is None):
             # Apply any RGB image overlays
-            #self._rgbarr2 = np.copy(self._rgbarr)
-            self._rgbarr2 = self._rgbarr
+            self._rgbarr2 = np.copy(self._rgbarr)
             self.overlay_images(self.private_canvas, self._rgbarr2,
                                 whence=whence)
 
@@ -2993,6 +2991,11 @@ class ImageViewBase(Callback.Callbacks):
                                trcat.ScaleTransform(self) +
                                trcat.RotationTransform(self) +
                                trcat.CartesianWindowTransform(self)),
+            'data_to_percentage': (trcat.DataCartesianTransform(self) +
+                                   trcat.ScaleTransform(self) +
+                                   trcat.RotationTransform(self) +
+                                   trcat.CartesianWindowTransform(self) +
+                                   trcat.WindowPercentageTransform(self)),
             'data_to_native': (trcat.DataCartesianTransform(self) +
                                trcat.ScaleTransform(self) +
                                trcat.RotationTransform(self) +

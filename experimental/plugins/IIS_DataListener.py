@@ -8,7 +8,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
 import sys
 import os
 import socket
@@ -19,13 +18,9 @@ import struct
 import array
 import re
 import string
+import socketserver as SocketServer
 
 from ginga.misc import Bunch
-import ginga.util.six as six
-if six.PY2:
-    import SocketServer
-else:
-    import socketserver as SocketServer
 
 # internal globals
 MEMORY            = 0o1             # frame buffer i/o  # noqa

@@ -10,7 +10,6 @@ Examples:
   $ python widgets.py gtk3 label
   $ python widgets.py pg button
 """
-from __future__ import print_function
 import sys
 import os
 

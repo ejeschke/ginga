@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 """This module handles the main reference viewer."""
-from __future__ import print_function
 
 # stdlib imports
 import glob
@@ -408,7 +407,7 @@ class ReferenceViewer(object):
 
         try:
             from ginga.util import io_fits
-            if wcspkg != 'choose':
+            if fitspkg != 'choose':
                 assert io_fits.use(fitspkg) is True
         except Exception as e:
             logger.warning(
@@ -601,7 +600,8 @@ class ReferenceViewer(object):
         except KeyError:
             # disable for subsequent runs
             settings.set(showBanner=False)
-            settings.save()
+            if not os.path.exists(settings.preffile):
+                settings.save()
 
         if (not options.nosplash) and (len(args) == 0) and showBanner:
             ginga_shell.banner(raiseTab=True)

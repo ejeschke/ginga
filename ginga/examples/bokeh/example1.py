@@ -12,7 +12,6 @@ Visit the URL with a browser to interact with the GUI.  Enter a valid
 FITS file path into the box labeled "File:" and press Enter.  Use the
 slider to zoom the image.
 """
-from __future__ import print_function
 
 import sys
 
@@ -24,7 +23,7 @@ from bokeh.models import TextInput, Slider
 
 from ginga.web.bokehw import ImageViewBokeh as ib
 from ginga.misc import log
-from ginga.AstroImage import AstroImage
+from ginga.util.loader import load_data
 
 
 def main(options, args):
@@ -55,8 +54,7 @@ def main(options, args):
     #curdoc().add_periodic_callback(update, 50)
 
     def load_file(path):
-        image = AstroImage(logger=logger)
-        image.load_file(path)
+        image = load_data(path, logger=logger)
         viewer.set_image(image)
 
     def load_file_cb(attr_name, old_val, new_val):

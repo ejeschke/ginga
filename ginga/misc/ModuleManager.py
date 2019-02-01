@@ -9,9 +9,6 @@ Dynamically manage module imports.
 
 The ModuleManager class
 """
-
-from __future__ import absolute_import
-
 import sys
 import os
 import importlib
@@ -31,8 +28,7 @@ def my_import(name, path=None):
     if path is not None:
         directory, src_file = os.path.split(path)
 
-        # it would be better to use the importlib.util machinery
-        # but it is not supported on python 3 versions < 3.5
+        # TODO: use the importlib.util machinery
         sys.path.insert(0, directory)
         try:
             mod = importlib.import_module(name)
@@ -69,13 +65,7 @@ class ModuleManager(object):
             if name in sys.modules:
                 module = sys.modules[name]
                 self.logger.info("Reloading module '%s'..." % module_name)
-                if hasattr(importlib, 'reload'):
-                    # python 3.4+
-                    module = importlib.reload(module)
-
-                else:
-                    import imp
-                    module = imp.reload(module)
+                module = importlib.reload(module)
 
             else:
                 self.logger.info("Loading module '%s'..." % module_name)

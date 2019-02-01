@@ -359,8 +359,6 @@ class Desktop(Callback.Callbacks):
             else:
                 pack(widget)
 
-            # process_common_params(kind, widget, params)
-
             res = []
             if (kind in ('ws', 'mdi', 'grid', 'stack')) and (len(args) > 0):
                 # <-- Workspace specified a sub-layout.  We expect a list
@@ -394,9 +392,9 @@ class Desktop(Callback.Callbacks):
                     res.append(c)
 
                     # collect widths to set width of panes
-                    params = col[1]
-                    if 'width' in params:
-                        sizes.append(params['width'])
+                    s_params = col[1]
+                    if 'width' in s_params:
+                        sizes.append(s_params['width'])
 
                 sizes = params.get('sizes', sizes)
                 if len(sizes) == len(cols):
@@ -428,9 +426,9 @@ class Desktop(Callback.Callbacks):
                     res.append(r)
 
                     # collect heights to set height of panes
-                    params = row[1]
-                    if 'height' in params:
-                        sizes.append(params['height'])
+                    s_params = row[1]
+                    if 'height' in s_params:
+                        sizes.append(s_params['height'])
 
                 sizes = params.get('sizes', sizes)
                 if len(sizes) == len(rows):

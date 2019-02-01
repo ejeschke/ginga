@@ -5,7 +5,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from __future__ import print_function
 
 from ginga import Mixins, Bindings
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
@@ -376,7 +375,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("key name in ginga '%s'" % (key))
         return key
 
-    def get_keyTable(self):
+    def get_key_table(self):
         return self._keytbl
 
     def focus_event(self, event, hasFocus):
@@ -580,7 +579,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_setActive(True)
+        self.ui_set_active(True)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
