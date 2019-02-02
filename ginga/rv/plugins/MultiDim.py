@@ -653,13 +653,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
             data = image.get_data()
             if data is None:
                 # <- empty data part to this HDU
-                self.logger.warning("Empty data part in HDU #%d" % (idx))
+                self.logger.warning("Empty data part in HDU %s" % (str(idx)))
 
             elif htype in ('bintablehdu', 'tablehdu',):
                 pass
 
-            elif htype not in ('imagehdu', 'primaryhdu'):
-                self.logger.warning("HDU #%d is not an image" % (idx))
+            elif htype not in ('imagehdu', 'primaryhdu', 'compimagehdu'):
+                self.logger.warning("HDU %s is not an image (%s)" % (
+                    str(idx), htype))
 
             else:
                 mddata = image.get_mddata()

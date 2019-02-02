@@ -305,20 +305,21 @@ class PyFitsFileHandler(BaseFitsFileHandler):
                 else:
                     numhdu = _numhdu
 
-        elif isinstance(numhdu, (int, str)):
+        elif numhdu in self.hdu_db:
+            d = self.hdu_db[numhdu]
+            hdu = self.fits_f[d.index]
+            # normalize the index
+            numhdu = (d.name, d.extver)
+
+        else:
             hdu = self.fits_f[numhdu]
+            # normalize the hdu index, if possible
             name = hdu.name
             extver = hdu.ver
             _numhdu = (name, extver)
-            if (len(name) > 0) and (_numhdu in self.fits_f):
+            if ((len(name) > 0) and (_numhdu in self.fits_f) and
+                hdu is self.fits_f[_numhdu]):
                 numhdu = _numhdu
-
-        self.logger.debug("HDU index looks like: %s" % str(numhdu))
-        if numhdu not in self.fits_f:
-            info = self.hdu_db[numhdu]
-            hdu = self.fits_f[info.index]
-        else:
-            hdu = self.fits_f[numhdu]
 
         dstobj = self.load_hdu(hdu, dstobj=dstobj, fobj=self.fits_f,
                                **kwargs)
@@ -446,7 +447,10 @@ class FitsioFileHandler(BaseFitsFileHandler):
             hdu = fits_f[idx]
             hduinfo = hdu.get_info()
             name = hduinfo['extname']
-            extver = hduinfo['extver']
+            # figure out the EXTVER for this HDU
+            #extver = hduinfo['extver']
+            extver = extver_db.setdefault(name, 0)
+            extver += 1
             extver_db[name] = extver
 
             # prepare a record of pertinent info about the HDU for
@@ -519,16 +523,22 @@ class FitsioFileHandler(BaseFitsFileHandler):
                 else:
                     numhdu = (name, extver)
 
-        elif isinstance(numhdu, (int, str)):
+        elif numhdu in self.hdu_db:
+            d = self.hdu_db[numhdu]
+            hdu = self.fits_f[d.index]
+            # normalize the index
+            numhdu = (d.name, d.extver)
+
+        else:
             hdu = self.fits_f[numhdu]
+            # normalize the hdu index, if possible
             hduinfo = hdu.get_info()
             name = hduinfo['extname']
             extver = hduinfo['extver']
-            if len(name) > 0:
-                numhdu = (name, extver)
-
-        self.logger.debug("HDU index looks like: %s" % str(numhdu))
-        hdu = self.fits_f[numhdu]
+            _numhdu = (name, extver)
+            if ((len(name) > 0) and (_numhdu in self.fits_f) and
+                hdu is self.fits_f[_numhdu]):
+                numhdu = _numhdu
 
         dstobj = self.load_hdu(hdu, dstobj=dstobj, fobj=self.fits_f,
                                **kwargs)

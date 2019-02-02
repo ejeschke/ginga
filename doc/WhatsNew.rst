@@ -18,6 +18,8 @@ Ver 3.0.0 (unreleased)
 - Improved smoothness and updates when rotating or shifting color map
 - Fixed broken banner
 - Improved ``pip`` installation commands for different backends.
+- Fixed a bug where identically named HDUs could not be loaded by MultiDim
+- Fixed a bug where compressed HDUs could not be loaded by MultiDim
 
 Ver 2.7.2 (2018-11-05)
 ======================
