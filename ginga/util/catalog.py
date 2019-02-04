@@ -10,7 +10,7 @@ import re
 import urllib
 import time
 import warnings
-from urllib.request import Request, urlopen
+from urllib.request import Request, urlopen, urlretrieve
 from urllib.error import URLError, HTTPError
 
 from ginga.misc import Bunch
@@ -571,13 +571,10 @@ class URLServer(object):
             self.logger.info("Opening url=%s" % (url))
 
             if cb_fn is not None:
-                localpath, info = urllib.urlretrieve(url, filepath, cb_fn)
+                localpath, info = urlretrieve(url, filepath, cb_fn)
             else:
-                localpath, info = urllib.urlretrieve(url, filepath)
+                localpath, info = urlretrieve(url, filepath)
 
-        except urllib.ContentTooShortError as e:
-            self.logger.error("Content doesn't match length")
-            raise e
         except Exception as e:
             self.logger.error("URL fetch failure: %s" % (str(e)))
             raise e
