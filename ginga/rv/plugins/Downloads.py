@@ -21,7 +21,7 @@ Currently, it is not possible to cancel a download in progress.
 
 **Settings**
 
-The `auto_remove_download` option, if set to `True`, will cause a download
+The ``auto_remove_download`` option, if set to `True`, will cause a download
 entry to be automatically deleted from the pane when the download completes.
 
 """
