@@ -49,7 +49,7 @@ from contextlib import contextmanager
 from ginga.gw import Widgets
 from ginga.misc import Future
 from ginga import GingaPlugin
-from ginga.util.iohelper import get_hdu_suffix
+from ginga.util import iohelper
 from ginga.util.videosink import VideoSink
 from ginga.util import io_fits
 
@@ -406,7 +406,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         aidx = (info.name, info.extver)
         if aidx not in self.file_obj.hdu_db:
             aidx = idx
-        sfx = get_hdu_suffix(aidx)
+        sfx = iohelper.get_hdu_suffix(aidx)
 
         # See if this HDU is still in the channel's datasrc
         imname = self.name_pfx + sfx
@@ -627,7 +627,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
             self.w.hdu.set_enabled(len(self.file_obj) > 0)
 
-        name = image.get('name', self.fv.name_image_from_path(path))
+        name = image.get('name', iohelper.name_image_from_path(path))
         idx = image.get('idx', None)
         # remove index designation from root of name, if any
         match = re.match(r'^(.+)\[(.+)\]$', name)

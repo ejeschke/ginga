@@ -714,8 +714,11 @@ class MDIWidget(gtk.Layout):
 class FileSelection(object):
 
     def __init__(self, parent_w, action=gtk.FILE_CHOOSER_ACTION_OPEN,
-                 title="Select a file"):
+                 title="Select a file", all_at_once=False):
+        # TODO: deprecate the functionality when all_at_once == False
+        # and make the default to be True
         self.parent = parent_w
+        self.all_at_once = all_at_once
         # Create a new file selection widget
         self.filew = gtk.FileChooserDialog(title=title, action=action)
         self.filew.connect("destroy", self.close)
@@ -749,6 +752,8 @@ class FileSelection(object):
             return
 
         filepath = self.filew.get_filename()
+        if self.all_at_once:
+            filepath = [filepath]
         self.cb(filepath)
 
     def close(self, widget):

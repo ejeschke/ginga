@@ -738,8 +738,11 @@ class MDIWidget(Gtk.Layout):
 class FileSelection(object):
 
     def __init__(self, parent_w, action=Gtk.FileChooserAction.OPEN,
-                 title="Select a file"):
+                 title="Select a file", all_at_once=False):
+        # TODO: deprecate the functionality when all_at_once == False
+        # and make the default to be True
         self.parent = parent_w
+        self.all_at_once = all_at_once
         # Create a new file selection widget
         self.filew = Gtk.FileChooserDialog(title=title, action=action)
         self.filew.connect("destroy", self.close)
@@ -748,6 +751,7 @@ class FileSelection(object):
         else:
             self.filew.add_buttons(Gtk.STOCK_OPEN, 1, Gtk.STOCK_CANCEL, 0)
         self.filew.set_default_response(1)
+        self.filew.set_select_multiple(True)
         self.filew.connect("response", self.file_ok_sel)
 
         # Connect the cancel_button to destroy the widget
@@ -765,6 +769,8 @@ class FileSelection(object):
             self.filew.set_current_name(filename)
 
         self.filew.show()
+        # default size can be enormous
+        self.filew.resize(800, 600)
 
     # Get the selected filename
     def file_ok_sel(self, w, rsp):
@@ -772,8 +778,12 @@ class FileSelection(object):
         if rsp == 0:
             return
 
-        filepath = self.filew.get_filename()
-        self.cb(filepath)
+        paths = self.filew.get_filenames()
+        if self.all_at_once:
+            self.cb(paths)
+        else:
+            for path in paths:
+                self.cb(path)
 
     def close(self, widget):
         self.filew.hide()

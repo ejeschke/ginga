@@ -332,7 +332,8 @@ class GingaWrapper(object):
         """Load (fitspath) into channel (chname).  If (dowait) is True
         then wait for the file to be loaded before returning (synchronous).
         """
-        self.fv.load_file(fitspath, chname=chname, wait=dowait)
+        # TEMP: dowait ignored
+        self.fv.gui_do(self.fv.open_uris, [fitspath], chname=chname)
         return 0
 
 

@@ -89,6 +89,8 @@ plugins = [
           hidden=True, category='System', menu="Cursor [G]", ptype='global'),
     Bunch(module='Errors', tab='Errors', workspace='right', start=True,
           hidden=True, category='System', menu="Errors [G]", ptype='global'),
+    Bunch(module='Downloads', tab='Downloads', workspace='right', start=False,
+          menu="Downloads [G]", category='Utils', ptype='global'),
 
     # optional, user-started plugins
     Bunch(module='Blink', tab='Blink Channels', workspace='right', start=False,
@@ -623,15 +625,21 @@ class ReferenceViewer(object):
                 expanded_args.append(imgfile)
 
         # Assume remaining arguments are fits files and load them.
-        chname = None
-        for imgfile in expanded_args:
-            if options.separate_channels and (chname is not None):
-                channel = ginga_shell.add_channel_auto()
-            else:
-                channel = ginga_shell.get_channel_info()
-            chname = channel.name
-            ginga_shell.nongui_do(ginga_shell.load_file, imgfile,
-                                  chname=chname)
+        if not options.separate_channels:
+            chname = channels[0]
+            ginga_shell.gui_do(ginga_shell.open_uris, expanded_args,
+                               chname=chname)
+        else:
+            i = 0
+            for imgfile in expanded_args:
+                if i < len(channels):
+                    chname = channels[i]
+                    i = i + 1
+                else:
+                    channel = ginga_shell.add_channel_auto()
+                    chname = channel.name
+                ginga_shell.gui_do(ginga_shell.open_uris, [imgfile],
+                                   chname=chname)
 
         try:
             try:
