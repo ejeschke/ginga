@@ -9,6 +9,8 @@ Downloads GUI for the Ginga reference viewer.
 
 **Usage**
 
+Open this plugin to monitor the progress of URI downloads.
+
 """
 import time
 import os.path
@@ -30,21 +32,30 @@ class Downloads(GingaPlugin.GlobalPlugin):
         # get Downloads preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Downloads')
-        self.settings.add_defaults(size_check_limit=None)
+        self.settings.add_defaults(auto_remove_download=False)
         self.settings.load(onError='silent')
 
         self.dlbox = None
-        self.dnlds = []
+        self.w_track = dict()
+        self.downloads = []
         self.gui_up = False
 
     def build_gui(self, container):
 
+        self.w = Bunch.Bunch()
+        self.w_track = dict()
         vbox = Widgets.VBox()
 
-        if self.dlbox is None:
-            self.dlbox = Widgets.VBox()
-        vbox.add_widget(Widgets.Label("Downloads:"))
-        vbox.add_widget(self.dlbox, stretch=1)
+        sc = Widgets.ScrollArea()
+        vbox2 = Widgets.VBox()
+        fr = Widgets.Frame("Downloads")
+        self.dlbox = Widgets.VBox()
+        fr.set_widget(self.dlbox)
+        vbox2.add_widget(fr, stretch=0)
+        vbox2.add_widget(Widgets.Label(''), stretch=1)
+        sc.set_widget(vbox2)
+        vbox.add_widget(sc, stretch=1)
+        self.w_scroll = sc
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
@@ -53,9 +64,9 @@ class Downloads(GingaPlugin.GlobalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        ## btn = Widgets.Button("Help")
-        ## btn.add_callback('activated', lambda w: self.help())
-        ## btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Remove All")
+        btn.add_callback('activated', lambda w: self.gui_remove_all())
+        btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(btns, stretch=0)
 
@@ -63,29 +74,58 @@ class Downloads(GingaPlugin.GlobalPlugin):
 
         self.gui_up = True
 
-    def add_download(self, info, future):
-        add_time = time.time()
+    def gui_add_track(self, track):
         vbox = Widgets.VBox()
         fname = Widgets.TextEntry()
-        fname.set_text(info.url)
+        fname.set_text(track.info.url)
         vbox.add_widget(fname, stretch=0)
         hbox = Widgets.HBox()
-        time_lbl = Widgets.Label('00:00:00')
-        prog_lbl = Widgets.Label('0%')
+        hbox.set_spacing(2)
+        time_lbl = Widgets.Label(track.elapsed)
+        prog_bar = Widgets.ProgressBar()
+        prog_bar.set_value(track.progress)
         hbox.add_widget(time_lbl)
-        hbox.add_widget(prog_lbl)
+        hbox.add_widget(prog_bar)
+        rmv = Widgets.Button('Remove')
+        def _remove_download(w):
+            self.gui_rm_track(track)
+        rmv.add_callback('activated', _remove_download)
+        hbox.add_widget(rmv)
         vbox.add_widget(hbox, stretch=0)
+        self.dlbox.add_widget(vbox)
+        w_track = Bunch.Bunch(container=vbox, time_lbl=time_lbl,
+                              prog_bar=prog_bar, track=track)
+        self.w_track[track.key] = w_track
+        self.w_scroll.scroll_to_end(vertical=True)
+
+    def gui_rm_track(self, track):
+        if track in self.downloads:
+            self.downloads.remove(track)
+
+        if self.gui_up:
+            w_track = self.w_track.get(track.key, None)
+            if w_track is not None:
+                del self.w_track[track.key]
+            self.dlbox.remove(w_track.container)
+
+    def gui_remove_all(self):
+        for track in list(self.downloads):
+            self.gui_rm_track(track)
+
+    def add_download(self, info, future):
+        add_time = time.time()
+        key = str(add_time)
 
         # create tracker for this download
-        track = Bunch.Bunch(info=info, widget=vbox, time_start=add_time,
-                            time_lbl=time_lbl, prog_lbl=prog_lbl,
+        track = Bunch.Bunch(key=key, info=info, time_start=add_time,
+                            elapsed='00:00:00', progress=0.0,
                             future=future)
-        self.dnlds.append(track)
-        if self.gui_up:
-            self.dlbox.add_widget(vbox)
+        self.downloads.append(track)
 
-        tmpfile = os.path.join(self.fv.tmpdir, "foo.fits")
-        self.fv.nongui_do(self.download, info.url, tmpfile, track)
+        if self.gui_up:
+            self.gui_add_track(track)
+
+        self.fv.nongui_do(self.download, info.url, info.filepath, track)
 
     def download(self, url, localpath, track):
         def _dl_indicator(count, blksize, totalsize):
@@ -95,16 +135,21 @@ class Downloads(GingaPlugin.GlobalPlugin):
             hrs = int(elapsed / 3600)
             mins = int((elapsed % 3600) / 60)
             secs = int((elapsed % 3600) % 60)
-            msg_elapsed = "%02d:%02d:%02d" % (hrs, mins, secs)
-            self.fv.gui_do(track.time_lbl.set_text, msg_elapsed)
+            track.elapsed = "%02d:%02d:%02d" % (hrs, mins, secs)
 
             nbytes = int(count * blksize)
-            if nbytes == totalsize:
-                msg_progress = "Done"
+            track.progress = min(1.0, float(nbytes) / float(totalsize))
+
+            if (self.settings.get('auto_remove_download', False) and
+                track.progress >= 1.0):
+                self.fv.gui_do(self.gui_rm_track, track)
             else:
-                pct = float(nbytes) / float(totalsize)
-                msg_progress = "%%%.2f" % (pct * 100.0)
-            self.fv.gui_do(track.prog_lbl.set_text, msg_progress)
+                w_track = self.w_track.get(track.key, None)
+                if w_track is None:
+                    return
+                self.fv.gui_do(w_track.time_lbl.set_text, track.elapsed)
+                self.fv.gui_do(w_track.prog_bar.set_value, track.progress)
+            return
 
         try:
             # Try to download the URL.  We press our generic URL server
@@ -115,6 +160,7 @@ class Downloads(GingaPlugin.GlobalPlugin):
                                    cb_fn=_dl_indicator)
 
             # call the future
+            self.logger.info("download of '%s' finished" % (filepath))
             track.future.resolve(filepath)
 
         except Exception as e:
@@ -123,14 +169,21 @@ class Downloads(GingaPlugin.GlobalPlugin):
             return
 
     def stop(self):
+        self.dlbox = None
+        self.w_track = dict()
         self.gui_up = False
+
+    def start(self):
+        if self.gui_up:
+            for track in self.downloads:
+                self.gui_add_track(track)
 
     def close(self):
         self.fv.stop_global_plugin(str(self))
         return True
 
     def __str__(self):
-        return 'download'
+        return 'downloads'
 
 
 # END

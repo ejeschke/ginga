@@ -84,6 +84,20 @@ def guess_filetype(filepath):
     raise ValueError("Can't determine file type of '%s'" % (filepath))
 
 
+def get_download_path(uri, filename, cache_dir):
+
+    # TODO: cache file by uri and timestamp
+    filepath = os.path.join(cache_dir, filename)
+
+    # find a free local copy of the file
+    count, tmpfile = 1, filepath
+    while os.path.exists(tmpfile):
+        pfx, sfx = os.path.splitext(filepath)
+        tmpfile = pfx + '_' + str(count) + sfx
+        count += 1
+    return tmpfile
+
+
 def get_fileinfo(filespec, cache_dir='/tmp'):
     """
     Parse a file specification and return information about it.
@@ -131,7 +145,7 @@ def get_fileinfo(filespec, cache_dir='/tmp'):
 
         else:
             path, filename = os.path.split(urlinfo.path)
-            filepath = os.path.join(cache_dir, filename)
+            filepath = get_download_path(url, filename, cache_dir)
 
     else:
         # Not a URL
