@@ -13,7 +13,6 @@ Open this plugin to monitor the progress of URI downloads.
 
 """
 import time
-import os.path
 
 from ginga.gw import Widgets
 from ginga import GingaPlugin
@@ -87,8 +86,10 @@ class Downloads(GingaPlugin.GlobalPlugin):
         hbox.add_widget(time_lbl)
         hbox.add_widget(prog_bar)
         rmv = Widgets.Button('Remove')
+
         def _remove_download(w):
             self.gui_rm_track(track)
+
         rmv.add_callback('activated', _remove_download)
         hbox.add_widget(rmv)
         vbox.add_widget(hbox, stretch=0)
