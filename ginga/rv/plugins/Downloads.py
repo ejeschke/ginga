@@ -9,7 +9,20 @@ Downloads GUI for the Ginga reference viewer.
 
 **Usage**
 
-Open this plugin to monitor the progress of URI downloads.
+Open this plugin to monitor the progress of URI downloads.  Start it
+using the "Plugins" or "Operations" menu, and selecting the "Downloads"
+plugin from under the "Util" category.
+
+You can remove the information about a download at any time by clicking
+the "Remove" button for its entry. You can remove entries for all downloads
+by clicking the "Remove All" button at the bottom.
+
+Currently, it is not possible to cancel a download in progress.
+
+**Settings**
+
+The `auto_remove_download` option, if set to `True`, will cause a download
+entry to be automatically deleted from the pane when the download completes.
 
 """
 import time
