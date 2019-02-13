@@ -117,6 +117,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.channel = {}
         self.channel_names = []
         self.cur_channel = None
+        self.main_wsname = 'channels'
         self.wscount = 0
         self.statustask = None
         self.preload_lock = threading.RLock()
@@ -129,7 +130,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                    sansFont=None,
                                    channel_follows_focus=False,
                                    scrollbars='off',
-                                   share_readout=True,
                                    numImages=10,
                                    # Offset to add to numpy-based coords
                                    pixel_coords_offset=1.0,
@@ -201,7 +201,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # GUI initialization
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
-        self._lastwsname = 'channels'
+        self._lastwsname = self.main_wsname
         self.layout = None
         self.layout_file = None
         self._lsize = None
@@ -898,7 +898,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.next_channel_ws(ws)
 
     def add_channel_auto_ws(self, ws):
-        chname = ws.extdata.w_chname.get_text().strip()
+        if ws.toolbar is not None:
+            chname = ws.extdata.w_chname.get_text().strip()
+        else:
+            chname = ''
         if len(chname) == 0:
             # make up a channel name
             chpfx = self.settings.get('channel_prefix', "Image")
@@ -941,7 +944,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         ws = self.get_current_workspace()
         ws.cycle_wstype()
 
-    def add_workspace(self, wsname, wstype, inSpace='channels'):
+    def add_workspace(self, wsname, wstype, inSpace=None):
+        if inSpace is None:
+            inSpace = self.main_wsname
 
         if wsname in self.ds.get_tabnames(None):
             raise ValueError("Tab name already in use: '%s'" % (wsname))
@@ -1451,9 +1456,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         return imap.get_names()
 
-    def set_layout(self, layout, layout_file=None):
+    def set_layout(self, layout, layout_file=None, main_wsname=None):
         self.layout = layout
         self.layout_file = layout_file
+        if main_wsname is not None:
+            self.main_wsname = main_wsname
 
     def get_screen_dimensions(self):
         return (self.screen_wd, self.screen_ht)
@@ -1779,7 +1786,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         vbox.set_spacing(0)
 
         if not workspace:
-            workspace = 'channels'
+            workspace = self.main_wsname
         w = self.ds.get_nb(workspace)
 
         size = (700, 700)
@@ -1876,7 +1883,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         names = self.ds.get_wsnames()
         try:
-            idx = names.index('channels')
+            idx = names.index(self.main_wsname)
         except Exception:
             idx = 0
         for name in names:
@@ -1977,7 +1984,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         names = self.ds.get_wsnames()
         names.insert(0, 'top level')
         try:
-            idx = names.index('channels')
+            idx = names.index(self.main_wsname)
         except Exception:
             idx = 0
         for name in names:
@@ -2359,19 +2366,21 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.logger.debug("page added in %s: '%s'" % (ws.name, str(child)))
 
         num_pages = ws.num_pages()
-        if num_pages > 1:
-            ws.extdata.w_prev_tab.set_enabled(True)
-            ws.extdata.w_next_tab.set_enabled(True)
-        ws.extdata.w_del_channel.set_enabled(True)
+        if ws.toolbar is not None:
+            if num_pages > 1:
+                ws.extdata.w_prev_tab.set_enabled(True)
+                ws.extdata.w_next_tab.set_enabled(True)
+            ws.extdata.w_del_channel.set_enabled(True)
 
     def page_removed_cb(self, ws, child):
         self.logger.debug("page removed in %s: '%s'" % (ws.name, str(child)))
         num_pages = ws.num_pages()
         if num_pages <= 1:
-            ws.extdata.w_prev_tab.set_enabled(False)
-            ws.extdata.w_next_tab.set_enabled(False)
-            if num_pages <= 0:
-                ws.extdata.w_del_channel.set_enabled(False)
+            if ws.toolbar is not None:
+                ws.extdata.w_prev_tab.set_enabled(False)
+                ws.extdata.w_next_tab.set_enabled(False)
+                if num_pages <= 0:
+                    ws.extdata.w_del_channel.set_enabled(False)
 
     def page_close_cb(self, ws, child):
         # user is attempting to close the page

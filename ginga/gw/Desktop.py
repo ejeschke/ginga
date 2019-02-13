@@ -691,18 +691,20 @@ class Workspace(Widgets.WidgetBase):
         self.nb = None
         self.group = group
         self.detachable = detachable
-        self.toolbar = None
         self.mdi_menu = None
         self.wstypes_c = ['Tabs', 'Grid', 'MDI', 'Stack']
         self.wstypes_l = ['tabs', 'grid', 'mdi', 'stack']
-        self.extdata = Bunch.Bunch()
+        self.extdata = Bunch.Bunch(toolbar=None)
+        self.toolbar = None
 
         if use_toolbar:
-            self.toolbar = Widgets.Toolbar(orientation='horizontal')
-            self.toolbar.set_border_width(0)
-            self.vbox.add_widget(self.toolbar, stretch=0)
+            toolbar = Widgets.Toolbar(orientation='horizontal')
+            toolbar.set_border_width(0)
+            self.vbox.add_widget(toolbar, stretch=0)
+            self.toolbar = toolbar
+            self.extdata.toolbar = toolbar
 
-            ws_menu = self.toolbar.add_menu("Workspace")
+            ws_menu = toolbar.add_menu("Workspace")
             item = ws_menu.add_name("Close")
             item.add_callback('activated', self._close_menuitem_cb)
 
@@ -729,6 +731,7 @@ class Workspace(Widgets.WidgetBase):
             item.add_callback('activated',
                               lambda *args: self.cascade_panes_cb())
             self.mdi_menu = mdi_menu
+            self.extdata.mdi_menu = mdi_menu
             self._update_mdi_menu()
 
         for name in ('page-switch', 'page-detach', 'page-close',
