@@ -4,7 +4,7 @@ build:
 python:
   version: 3.6
   pip_install: true
-  extra_requirements: ['recommended', docs']
+  extra_requirements: ['docs', 'recommended']
 
 # Build PDF & ePub
 formats:
