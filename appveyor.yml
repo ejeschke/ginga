@@ -14,7 +14,7 @@ environment:
       # so Cython is required for testing. If your package does not include
       # Cython code, you can set CONDA_DEPENDENCIES=''
       #CONDA_DEPENDENCIES: "Cython"
-      CONDA_DEPENDENCIES: ""
+      CONDA_DEPENDENCIES: "pyqt"
 
   matrix:
 
