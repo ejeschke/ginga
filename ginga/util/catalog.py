@@ -7,7 +7,6 @@
 import os.path
 import tempfile
 import re
-import urllib
 import time
 import warnings
 from urllib.request import Request, urlopen, urlretrieve
