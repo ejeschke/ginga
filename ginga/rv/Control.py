@@ -60,8 +60,10 @@ package_home = os.path.split(sys.modules['ginga.version'].__file__)[0]
 tkname = toolkit.get_family()
 if tkname is not None:
     # TODO: this relies on a naming convention for widget directories!
+    # TODO: I think this can be removed, since the widget specific
+    # plugin directories have been deleted
     child_dir = os.path.join(package_home, tkname + 'w', 'plugins')
-sys.path.insert(0, child_dir)
+    sys.path.insert(0, child_dir)
 
 icon_path = os.path.abspath(os.path.join(package_home, 'icons'))
 

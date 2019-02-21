@@ -94,10 +94,11 @@ class ImageViewGtk(ImageView):
 
     def save_rgb_image_as_file(self, filepath, format='png', quality=90):
         pixbuf = self.get_rgb_image_as_pixbuf()
-        options = {}
+        options, values = [], []
         if format == 'jpeg':
-            options['quality'] = str(quality)
-        pixbuf.save(filepath, format, options)
+            options.append('quality')
+            values.append(str(quality))
+        pixbuf.savev(filepath, format, options, values)
 
     def reschedule_redraw(self, time_sec):
         self._defer_task.stop()
