@@ -96,7 +96,7 @@ class IQCalc(object):
         # Fitting works more reliably if we do the following
         # a. subtract sky background
         if medv is None:
-            medv = np.median(Y)
+            medv = get_median(Y)
         Y = Y - medv
         maxv = Y.max()
         # b. clamp to 0..max (of the sky subtracted field)
@@ -155,7 +155,7 @@ class IQCalc(object):
         # Fitting works more reliably if we do the following
         # a. subtract sky background
         if medv is None:
-            medv = np.median(Y)
+            medv = get_median(Y)
         Y = Y - medv
         maxv = Y.max()
         # b. clamp to 0..max (of the sky subtracted field)
@@ -211,7 +211,7 @@ class IQCalc(object):
         radius.
         """
         if medv is None:
-            medv = np.median(data)
+            medv = get_median(data)
 
         # Get two cuts of the data, one in X and one in Y
         x0, y0, xarr, yarr = self.cut_cross(x, y, radius, data)
@@ -253,7 +253,7 @@ class IQCalc(object):
         fdata = fdata[np.isfinite(fdata)]
 
         # find the median
-        median = np.median(fdata)
+        median = get_median(fdata)
 
         # NOTE: for this method a good default sigma is 5.0
         dist = np.fabs(fdata - median).mean()
@@ -355,7 +355,7 @@ class IQCalc(object):
         w4 = float(width) * 4.0
 
         # Find the median (sky/background) level
-        median = float(np.median(data))
+        median = float(get_median(data))
         #skylevel = median
         # Old SOSS qualsize() applied this calculation to skylevel
         skylevel = median * self.skylevel_magnification + self.skylevel_offset

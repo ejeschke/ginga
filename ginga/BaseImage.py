@@ -365,7 +365,7 @@ class BaseImage(ViewerObjectBase):
         If `avoid_oob` is True (default) then the bounding box is clipped
         to avoid coordinates outside of the actual data.
         """
-        x1, y1, x2, y2 = map(int, shape_obj.get_llur())
+        x1, y1, x2, y2 = [int(np.round(n)) for n in shape_obj.get_llur()]
 
         if avoid_oob:
             # avoid out of bounds indexes
