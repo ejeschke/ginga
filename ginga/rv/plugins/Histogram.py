@@ -74,6 +74,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.histtag = None
         # If True, limits X axis to lo/hi cut levels
         self.xlimbycuts = True
+        self._split_sizes = [400, 500]
 
         # get Histogram preferences
         prefs = self.fv.get_preferences()
@@ -122,6 +123,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         box.set_spacing(2)
 
         paned = Widgets.Splitter(orientation=orientation)
+        self.w.splitter = paned
 
         self.plot = plots.Plot(logger=self.logger,
                                width=400, height=400)
@@ -171,8 +173,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         fr.set_widget(w)
         box.add_widget(fr, stretch=0)
         paned.add_widget(sw)
-        # hack to set a reasonable starting position for the splitter
-        paned.set_sizes([400, 500])
+        paned.set_sizes(self._split_sizes)
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
@@ -256,6 +257,8 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.fv.show_status("Draw a rectangle with the right mouse button")
 
     def stop(self):
+        self.gui_up = False
+        self._split_sizes = self.w.splitter.get_sizes()
         # remove the rect from the canvas
         ## try:
         ##     self.canvas.delete_object_by_tag(self.histtag)
@@ -269,7 +272,6 @@ class Histogram(GingaPlugin.LocalPlugin):
             p_canvas.delete_object_by_tag(self.layertag)
         except Exception:
             pass
-        self.gui_up = False
         self.fv.show_status("")
 
     def full_image_cb(self):

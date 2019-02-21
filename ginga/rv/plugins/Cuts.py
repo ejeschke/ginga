@@ -134,6 +134,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.transpose_enabled = False
         self.selected_axis = None
         self.hbox_axes = None
+        self._split_sizes = [400, 500]
 
         # For collecting data orthogonal to the cut
         self.widthtypes = ['none', 'x', 'y', 'perpendicular']
@@ -184,6 +185,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         box.set_spacing(2)
 
         paned = Widgets.Splitter(orientation=orientation)
+        self.w.splitter = paned
 
         # Add Tab Widget
         nb = Widgets.TabWidget(tabpos='top')
@@ -282,8 +284,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         box.add_widget(exp, stretch=0)
         box.add_widget(Widgets.Label(''), stretch=1)
         paned.add_widget(sw)
-        # hack to set a reasonable starting position for the splitter
-        paned.set_sizes([400, 500])
+        paned.set_sizes(self._split_sizes)
 
         top.add_widget(paned, stretch=5)
 
@@ -489,7 +490,6 @@ class Cuts(GingaPlugin.LocalPlugin):
     def close(self):
         #self.set_mode('move')
         self.fv.stop_local_plugin(self.chname, str(self))
-        self.gui_up = False
         return True
 
     def start(self):
@@ -524,6 +524,8 @@ class Cuts(GingaPlugin.LocalPlugin):
             self.cuts_image = self.fitsimage.get_image()
 
     def stop(self):
+        self.gui_up = False
+        self._split_sizes = self.w.splitter.get_sizes()
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
         p_canvas.delete_object_by_tag(self.layertag)

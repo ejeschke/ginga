@@ -20,6 +20,7 @@ Ver 3.0.0 (unreleased)
 - Improved ``pip`` installation commands for different backends.
 - Fixed a bug where identically named HDUs could not be loaded by MultiDim
 - Fixed a bug where compressed HDUs could not be loaded by MultiDim
+- Plugins with splitter type panels now remember their sizes when closed
 
 Ver 2.7.2 (2018-11-05)
 ======================

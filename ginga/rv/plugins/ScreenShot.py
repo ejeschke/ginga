@@ -63,6 +63,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
 
         self._wd = 200
         self._ht = 200
+        self._split_sizes = [500, 400]
 
         # Build our screenshot generator
         sg = CanvasView(logger=self.logger)
@@ -201,8 +202,10 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         fr.set_widget(vbox1)
 
         vpaned = Widgets.Splitter(orientation='vertical')
+        self.w.splitter = vpaned
         vpaned.add_widget(fr)
         vpaned.add_widget(Widgets.Label(''))
+        vpaned.set_sizes(self._split_sizes)
 
         vbox2 = Widgets.VBox()
 
@@ -255,7 +258,6 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         return True
 
     def close(self):
-        self.gui_up = False
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
@@ -263,6 +265,8 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         pass
 
     def stop(self):
+        self.gui_up = False
+        self._split_sizes = self.w.splitter.get_sizes()
         self.saved_type = None
 
     def _snap_cb(self, w):

@@ -92,6 +92,9 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         self._wd = 300
         self._ht = 300
+        _sz = max(self._wd, self._ht)
+        # hack to set a reasonable starting position for the splitter
+        self._split_sizes = [_sz, _sz]
 
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('channel-change', self.focus_cb)
@@ -136,6 +139,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         iw.resize(self._wd, self._ht)
         paned = Widgets.Splitter(orientation=orientation)
         paned.add_widget(iw)
+        self.w.splitter = paned
 
         vbox2 = Widgets.VBox()
         captions = (("Zoom Radius:", 'label', 'Zoom Radius', 'hscale'),
@@ -184,9 +188,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         box.add_widget(vbox2, stretch=1)
 
         paned.add_widget(sw)
-        # hack to set a reasonable starting position for the splitter
-        _sz = max(self._wd, self._ht)
-        paned.set_sizes([_sz, _sz])
+        paned.set_sizes(self._split_sizes)
 
         vtop.add_widget(paned, stretch=5)
 
@@ -232,6 +234,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
     def stop(self):
         self.gui_up = False
+        self._split_sizes = self.w.splitter.get_sizes()
         return True
 
     # CALLBACKS
@@ -290,7 +293,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
     def set_radius(self, val):
         self.logger.debug("Setting radius to %d" % val)
-        self.zoom_radius = val
+        self.zoom_radius = int(val)
         fitsimage = self.fitsimage_focus
         if fitsimage is None:
             return True

@@ -148,6 +148,10 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.pixview = None
         self._wd = 400
         self._ht = 300
+        # hack to set a reasonable starting position for the splitter
+        _sz = max(self._wd, self._ht)
+        self._split_sizes = [_sz, _sz]
+        self.gui_up = False
 
         # For "marks" feature
         self.mark_radius = self.settings.get('mark_radius', 10)
@@ -185,6 +189,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.pix_w.resize(self._wd, self._ht)
 
         paned = Widgets.Splitter(orientation=orientation)
+        self.w.splitter = paned
         paned.add_widget(fr)
 
         self._rebuild_table()
@@ -274,9 +279,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         ## box.add_widget(spacer, stretch=1)
 
         paned.add_widget(sw)
-        # hack to set a reasonable starting position for the splitter
-        _sz = max(self._wd, self._ht)
-        paned.set_sizes([_sz, _sz])
+        paned.set_sizes(self._split_sizes)
 
         top.add_widget(paned, stretch=1)
 
@@ -323,6 +326,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         top.add_widget(btns, stretch=0)
         container.add_widget(top, stretch=1)
+        self.gui_up = True
 
     def select_mark(self, tag, pan=True):
         # deselect the current selected mark, if there is one
@@ -441,6 +445,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.resume()
 
     def stop(self):
+        self.gui_up = False
+        self._split_sizes = self.w.splitter.get_sizes()
         # remove the canvas from the image
         self.canvas.ui_set_active(False)
         p_canvas = self.fitsimage.get_canvas()
