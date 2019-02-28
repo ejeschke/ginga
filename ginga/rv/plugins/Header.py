@@ -27,6 +27,7 @@ was created with an option not to save the primary header.
 from collections import OrderedDict
 
 from ginga import GingaPlugin
+from ginga.misc import Bunch
 from ginga.gw import Widgets
 
 __all__ = ['Header']
@@ -40,7 +41,7 @@ class Header(GingaPlugin.GlobalPlugin):
 
         self._image = None
         self.active = None
-        self.table = None
+        self.info = None
         self.columns = [('Keyword', 'key'),
                         ('Value', 'value'),
                         ('Comment', 'comment'),
@@ -56,26 +57,20 @@ class Header(GingaPlugin.GlobalPlugin):
         self.flg_sort = self.settings.get('sortable', False)
         prihdr = self.fv.settings.get('inherit_primary_header', False)
         self.flg_prihdr = self.settings.get('include_primary_header', prihdr)
+        fv.add_callback('add-channel', self.add_channel)
+        fv.add_callback('delete-channel', self.delete_channel)
         fv.add_callback('channel-change', self.focus_cb)
 
         self.gui_up = False
 
     def build_gui(self, container):
-        top = Widgets.VBox()
-        top.set_border_width(1)
-        top.set_spacing(1)
-
         vbox = Widgets.VBox()
-        vbox.set_margins(2, 2, 2, 2)
+        vbox.set_border_width(1)
+        vbox.set_spacing(1)
 
-        color_alternate = self.settings.get('color_alternate_rows', True)
-        table = Widgets.TreeView(auto_expand=True,
-                                 use_alt_row_color=color_alternate)
-        self.table = table
-        table.setup_table(self.columns, 1, 'key')
-
-        vbox.add_widget(table, stretch=1)
-        top.add_widget(vbox, stretch=1)
+        nb = Widgets.StackWidget()
+        vbox.add_widget(nb, stretch=1)
+        self.nb = nb
 
         # create sort toggle
         hbox = Widgets.HBox()
@@ -89,7 +84,7 @@ class Header(GingaPlugin.GlobalPlugin):
         self.w.chk_prihdr = cb
         hbox.add_widget(cb, stretch=0)
         hbox.add_widget(Widgets.Label(''), stretch=1)
-        top.add_widget(hbox, stretch=0)
+        vbox.add_widget(hbox, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -102,23 +97,39 @@ class Header(GingaPlugin.GlobalPlugin):
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
-        top.add_widget(btns, stretch=0)
+        vbox.add_widget(btns, stretch=0)
 
-        container.add_widget(top, stretch=1)
+        container.add_widget(vbox, stretch=1)
         self.gui_up = True
 
-    def set_header(self, image):
-        if not self.gui_up or self._image == image:
+    def _create_header_window(self, info):
+        vbox = Widgets.VBox()
+        vbox.set_margins(2, 2, 2, 2)
+
+        color_alternate = self.settings.get('color_alternate_rows', True)
+        table = Widgets.TreeView(auto_expand=True,
+                                 use_alt_row_color=color_alternate)
+        self.table = table
+        table.setup_table(self.columns, 1, 'key')
+
+        vbox.add_widget(table, stretch=1)
+
+        info.setvals(widget=vbox, table=table)
+        return vbox
+
+    def set_header(self, info, image):
+        if self._image == image:
             # we've already handled this header
             return
         self.logger.debug("setting header")
 
-        has_prihdr = (hasattr(image, 'has_primary_header') and
-                      image.has_primary_header())
-        self.w.chk_prihdr.set_enabled(has_prihdr)
+        if self.gui_up:
+            has_prihdr = (hasattr(image, 'has_primary_header') and
+                          image.has_primary_header())
+            self.w.chk_prihdr.set_enabled(has_prihdr)
 
         header = image.get_header(include_primary_header=self.flg_prihdr)
-        table = self.table
+        table = info.table
 
         is_sorted = self.flg_sort
         tree_dict = OrderedDict()
@@ -141,54 +152,106 @@ class Header(GingaPlugin.GlobalPlugin):
         self.logger.debug("setting header done ({0})".format(is_sorted))
         self._image = image
 
+    def add_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
+        chname = channel.name
+        info = Bunch.Bunch(chname=chname)
+        sw = self._create_header_window(info)
+
+        self.nb.add_widget(sw)
+        info.setvals(widget=sw)
+        channel.extdata._header_info = info
+
+    def delete_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
+        chname = channel.name
+        self.logger.debug("deleting channel %s" % (chname))
+        info = channel.extdata._header_info
+        widget = info.widget
+        self.nb.remove(widget, delete=True)
+        self.active = None
+        self.info = None
+
     def focus_cb(self, viewer, channel):
         if not self.gui_up:
             return
+        chname = channel.name
 
-        if self.active != channel:
-            self.active = channel
+        if self.active != chname:
+            if '_header_info' not in channel.extdata:
+                self.add_channel(viewer, channel)
+            info = channel.extdata._header_info
+            widget = info.widget
+            index = self.nb.index_of(widget)
+            self.nb.set_index(index)
+            self.active = chname
+            self.info = info
 
-        if channel is not None:
-            image = channel.get_current_image()
-            if image is None:
-                return
-            self.set_header(image)
+        image = channel.get_current_image()
+        if image is None:
+            return
+        self.set_header(self.info, image)
 
     def start(self):
+        names = self.fv.get_channel_names()
+        for name in names:
+            channel = self.fv.get_channel(name)
+            self.add_channel(self.fv, channel)
+
         channel = self.fv.get_channel_info()
-        self.focus_cb(self.fv, channel)
+        if channel is not None:
+            viewer = channel.fitsimage
+
+            image = viewer.get_image()
+            if image is not None:
+                self.redo(channel, image)
+
+            self.focus_cb(viewer, channel)
 
     def stop(self):
+        names = self.fv.get_channel_names()
+        for name in names:
+            channel = self.fv.get_channel(name)
+            channel.extdata._header_info = None
+
         self.gui_up = False
-        self.table = None
-        self._image = None
+        self.nb = None
         self.active = None
+        self.info = None
         return True
 
     def redo(self, channel, image):
         """This is called when image changes."""
-        # Skip cache checking in set_header()
-        self._image = None
-        if not self.gui_up:
-            return
-        self.set_header(image)
+        self._image = None  # Skip cache checking in set_header()
+        info = channel.extdata._header_info
+
+        self.set_header(info, image)
 
     def blank(self, channel):
         """This is called when image is cleared."""
         self._image = None
-        if not self.gui_up:
-            return
-        self.table.clear()
+        info = channel.extdata._header_info
+        info.table.clear()
 
     def set_sortable_cb(self, tf):
         self.flg_sort = tf
         self._image = None
-        self.focus_cb(self.fv, self.active)
+        if self.info is not None:
+            info = self.info
+            channel = self.fv.get_channel(info.chname)
+            image = channel.get_current_image()
+            self.set_header(info, image)
 
     def set_prihdr_cb(self, tf):
         self.flg_prihdr = tf
         self._image = None
-        self.focus_cb(self.fv, self.active)
+        if self.info is not None:
+            info = self.info
+            channel = self.fv.get_channel(info.chname)
+            image = channel.get_current_image()
+            self.set_header(info, image)
 
     def close(self):
         self.fv.stop_global_plugin(str(self))
