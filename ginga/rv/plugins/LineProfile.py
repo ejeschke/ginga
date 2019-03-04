@@ -26,7 +26,7 @@ Displayed X-axis is constructed using ``CRVAL*``, ``CDELT*``, ``CRPIX*``,
 are unavailabled, the axis falls back to ``NAXIS*`` values instead.
 
 Displayed Y-axis is constructed using ``BTYPE`` and ``BUNIT``. If they are not
-available, it simply labels pixel values as "Flux".
+available, it simply labels pixel values as "Signal".
 
 To use this plugin:
 
@@ -431,7 +431,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
                 self.x_lbl += (' ({})'.format(units))
 
             # Get pixel value info from header
-            self.y_lbl = self.image.get_keyword('BTYPE', 'Flux')
+            self.y_lbl = self.image.get_keyword('BTYPE', 'Signal')
             bunit = self.image.get_keyword('BUNIT', None)
             if bunit is not None:
                 self.y_lbl += (' ({})'.format(bunit))

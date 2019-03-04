@@ -21,6 +21,8 @@ Ver 3.0.0 (unreleased)
 - Fixed a bug where identically named HDUs could not be loaded by MultiDim
 - Fixed a bug where compressed HDUs could not be loaded by MultiDim
 - Plugins with splitter type panels now remember their sizes when closed
+- LineProfile plugin's default Y-axis label is now "Signal", to be more
+  scientifically accurate.
 
 Ver 2.7.2 (2018-11-05)
 ======================
