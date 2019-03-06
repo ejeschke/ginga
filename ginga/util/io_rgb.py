@@ -101,32 +101,36 @@ class RGBFileHandler(object):
         typ, subtyp = typ.split('/')
         self.logger.debug("MIME type is %s/%s" % (typ, subtyp))
 
-        if have_opencv:
+        data_loaded = False
+        if have_opencv and subtyp not in ['gif']:
             # First choice is OpenCv, because it supports high-bit depth
             # multiband images
             means = 'opencv'
-            # funky indexing at the end is because opencv returns BGR
-            # images, whereas PIL and others return RGB
             data_np = cv2.imread(filepath,
-                                 cv2.IMREAD_ANYDEPTH +
-                                 cv2.IMREAD_ANYCOLOR)[..., :: -1]
+                                 cv2.IMREAD_ANYDEPTH + cv2.IMREAD_ANYCOLOR)
+            if data_np is not None:
+                data_loaded = True
+                # funky indexing because opencv returns BGR images,
+                # whereas PIL and others return RGB
+                if len(data_np.shape) >= 3 and data_np.shape[2] >= 3:
+                    data_np = data_np[..., :: -1]
 
-            # OpenCv doesn't "do" image metadata, so we punt to piexif
-            # library (if installed)
-            self.piexif_getexif(filepath, kwds)
+                # OpenCv doesn't "do" image metadata, so we punt to piexif
+                # library (if installed)
+                self.piexif_getexif(filepath, kwds)
 
-            # OpenCv added a feature to do auto-orientation when loading
-            # (see https://github.com/opencv/opencv/issues/4344)
-            # So reset these values to prevent auto-orientation from
-            # happening later
-            kwds['Orientation'] = 1
-            kwds['Image Orientation'] = 1
+                # OpenCv added a feature to do auto-orientation when loading
+                # (see https://github.com/opencv/opencv/issues/4344)
+                # So reset these values to prevent auto-orientation from
+                # happening later
+                kwds['Orientation'] = 1
+                kwds['Image Orientation'] = 1
 
-            # convert to working color profile, if can
-            if self.clr_mgr.can_profile():
-                data_np = self.clr_mgr.profile_to_working_numpy(data_np, kwds)
+                # convert to working color profile, if can
+                if self.clr_mgr.can_profile():
+                    data_np = self.clr_mgr.profile_to_working_numpy(data_np, kwds)
 
-        elif have_pil:
+        if not data_loaded and have_pil:
             means = 'PIL'
             image = PILimage.open(filepath)
 
@@ -153,14 +157,18 @@ class RGBFileHandler(object):
 
             # convert from PIL to numpy
             data_np = np.array(image)
+            if data_np is not None:
+                data_loaded = True
 
-        elif (typ == 'image') and (subtyp in ('x-portable-pixmap',
-                                              'x-portable-greymap')):
+        if (not data_loaded and (typ == 'image') and
+            (subtyp in ('x-portable-pixmap', 'x-portable-greymap'))):
             # Special opener for PPM files, preserves high bit depth
             means = 'built-in'
             data_np = open_ppm(filepath)
+            if data_np is not None:
+                data_loaded = True
 
-        else:
+        if not data_loaded:
             raise ImageError("No way to load image format '%s/%s'" % (
                 typ, subtyp))
 
