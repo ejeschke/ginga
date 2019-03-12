@@ -55,7 +55,7 @@ class Info(GingaPlugin.GlobalPlugin):
         super(Info, self).__init__(fv)
 
         self.active = None
-        self.info = None
+        self.winfo = None
         # truncate names after this size
         self.maxstr = 60
 
@@ -71,7 +71,6 @@ class Info(GingaPlugin.GlobalPlugin):
         self.autocenter_options = self.autozoom_options
 
         fv.add_callback('add-channel', self.add_channel)
-        fv.add_callback('delete-channel', self.delete_channel)
         fv.add_callback('field-info', self.field_info)
         fv.add_callback('channel-change', self.focus_cb)
         self.gui_up = False
@@ -81,9 +80,9 @@ class Info(GingaPlugin.GlobalPlugin):
         vbox.set_border_width(2)
         vbox.set_spacing(2)
 
-        nb = Widgets.StackWidget()
-        self.nb = nb
-        vbox.add_widget(nb, stretch=1)
+        sw, winfo = self._create_info_window()
+        self.winfo = winfo
+        vbox.add_widget(sw, stretch=1)
 
         if self.settings.get('closeable', False):
             btns = Widgets.HBox()
@@ -196,41 +195,21 @@ class Info(GingaPlugin.GlobalPlugin):
         row.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(row, stretch=0)
 
+        b.cut_low.add_callback('activated', self.cut_levels)
+        b.cut_high.add_callback('activated', self.cut_levels)
+        b.cut_levels.add_callback('activated', self.cut_levels)
+        b.auto_levels.add_callback('activated', self.auto_levels)
+        b.cut_new.add_callback('activated', self.set_autocuts_cb)
+        b.zoom_new.add_callback('activated', self.set_autozoom_cb)
+        b.center_new.add_callback('activated', self.set_autocenter_cb)
+        b.follow_new.add_callback('activated', self.set_follow_cb)
+        b.raise_new.add_callback('activated', self.set_raise_cb)
+
         return sw, b
 
     def add_channel(self, viewer, channel):
         if not self.gui_up:
             return
-        sw, winfo = self._create_info_window(channel)
-        chname = channel.name
-
-        self.nb.add_widget(sw, title=chname)
-        index = self.nb.index_of(sw)  # noqa
-        info = Bunch.Bunch(widget=sw, winfo=winfo,
-                           mode_w=None,
-                           chinfo=channel)
-        channel.extdata._info_info = info
-
-        winfo.channel.set_text(chname)
-        winfo.cut_low.add_callback('activated', self.cut_levels,
-                                   channel, info)
-        winfo.cut_high.add_callback('activated', self.cut_levels,
-                                    channel, info)
-        winfo.cut_levels.add_callback('activated', self.cut_levels,
-                                      channel, info)
-        winfo.auto_levels.add_callback('activated', self.auto_levels,
-                                       channel, info)
-        winfo.cut_new.add_callback('activated', self.set_autocuts_cb,
-                                   channel, info)
-        winfo.zoom_new.add_callback('activated', self.set_autozoom_cb,
-                                    channel, info)
-        winfo.center_new.add_callback('activated', self.set_autocenter_cb,
-                                      channel, info)
-        winfo.follow_new.add_callback('activated', self.set_follow_cb,
-                                      channel, info)
-        winfo.raise_new.add_callback('activated', self.set_raise_cb,
-                                     channel, info)
-
         fitsimage = channel.fitsimage
         fitssettings = fitsimage.get_settings()
         for name in ['cuts']:
@@ -250,84 +229,101 @@ class Info(GingaPlugin.GlobalPlugin):
         fitssettings.get_setting('raisenew').add_callback(
             'set', self.raise_cb, channel)
 
-        self.set_info(info, fitsimage)
-
-    def delete_channel(self, viewer, channel):
-        if not self.gui_up:
-            return
-        chname = channel.name
-        self.logger.debug("deleting channel %s" % (chname))
-        info = channel.extdata._info_info
-        channel.extdata._info_info = None
-        widget = info.widget
-        self.nb.remove(widget, delete=True)
-        self.active = None
-        self.info = None
-
     def start(self):
-        names = self.fv.get_channel_names()
-        for name in names:
-            channel = self.fv.get_channel(name)
-            self.add_channel(self.fv, channel)
-
         channel = self.fv.get_channel_info()
         if channel is not None:
-            viewer = channel.fitsimage
-
-            image = viewer.get_image()
-            if image is not None:
-                self.redo(channel, image)
-
-            self.focus_cb(viewer, channel)
+            self.focus_cb(self.fv, channel)
 
     def stop(self):
-        names = self.fv.get_channel_names()
-        for name in names:
-            channel = self.fv.get_channel(name)
-            channel.extdata._info_info = None
-
         self.active = None
-        self.nb = None
-        self.info = None
+        self.winfo = None
         self.gui_up = False
 
     def close(self):
         self.fv.stop_global_plugin(str(self))
         return True
 
-    def redo(self, channel, image):
-        if not self.gui_up:
+    def update_info(self, channel):
+        if channel is None:
+            # TODO: blank info?
             return
+        winfo = self.winfo
         fitsimage = channel.fitsimage
-        info = channel.extdata._info_info
 
-        self.set_info(info, fitsimage)
+        chname = channel.name
+        winfo.channel.set_text(chname)
+
+        # Show cut levels
+        loval, hival = fitsimage.get_cut_levels()
+        #winfo.cut_low.set_text('%.4g' % (loval))
+        winfo.cut_low_value.set_text('%.4g' % (loval))
+        #winfo.cut_high.set_text('%.4g' % (hival))
+        winfo.cut_high_value.set_text('%.4g' % (hival))
+
+        # update zoom indicator
+        scalefactor = fitsimage.get_scale()
+        text = self.fv.scale2text(scalefactor)
+        winfo.zoom.set_text(text)
+
+        # update cut new/zoom new indicators
+        t_ = fitsimage.get_settings()
+        index = self.autocut_options.index(t_['autocuts'])
+        winfo.cut_new.set_index(index)
+        index = self.autozoom_options.index(t_['autozoom'])
+        winfo.zoom_new.set_index(index)
+        option = t_['autocenter']
+        # Hack to convert old values that used to be T/F
+        if isinstance(option, bool):
+            choice = {True: 'on', False: 'off'}
+            option = choice[option]
+        index = self.autocenter_options.index(option)
+        winfo.center_new.set_index(index)
+        winfo.follow_new.set_state(t_['switchnew'])
+        winfo.raise_new.set_state(t_['raisenew'])
+
+        image = fitsimage.get_image()
+        if image is None:
+            return
+        header = image.get_header()
+
+        # Update info panel
+        name = self.trunc(image.get('name', 'Noname'))
+        winfo.name.set_text(name)
+        objtext = self.trunc(header.get('OBJECT', 'UNKNOWN'))
+        winfo.object.set_text(objtext)
+        equinox = header.get('EQUINOX', '')
+        winfo.equinox.set_text(str(equinox))
+
+        # Show min, max values
+        width, height = fitsimage.get_data_size()
+        minval, maxval = image.get_minmax(noinf=False)
+        winfo.max.set_text(str(maxval))
+        winfo.min.set_text(str(minval))
+
+        # Show dimensions
+        dim_txt = "%dx%d" % (width, height)
+        winfo.dimensions.set_text(dim_txt)
+
+    # CALLBACKS
+
+    def redo(self, channel, image):
+        if not self.gui_up or self.active != channel:
+            return
+        self.update_info(channel)
         return True
 
     def focus_cb(self, viewer, channel):
         if not self.gui_up:
             return
-        chname = channel.name
+        if self.active != channel:
+            self.active = channel
 
-        if self.active != chname:
-            if '_info_info' not in channel.extdata:
-                self.add_channel(viewer, channel)
-            info = channel.extdata._info_info
-            widget = info.widget
-            index = self.nb.index_of(widget)
-            self.nb.set_index(index)
-            self.active = chname
-            self.info = info
-
-        self.set_info(self.info, channel.fitsimage)
+        self.update_info(channel)
 
     def zoomset_cb(self, setting, value, channel):
         """This callback is called when the main window is zoomed.
         """
-        if not self.gui_up:
-            return
-        info = channel.extdata._info_info
-        if info is None:
+        if not self.gui_up or self.active != channel:
             return
         #scale_x, scale_y = fitsimage.get_scale_xy()
         scale_x, scale_y = value
@@ -339,95 +335,82 @@ class Info(GingaPlugin.GlobalPlugin):
             textx = self.fv.scale2text(scale_x)
             texty = self.fv.scale2text(scale_y)
             text = "X: %s  Y: %s" % (textx, texty)
-        info.winfo.zoom.set_text(text)
+        self.winfo.zoom.set_text(text)
 
     def cutset_cb(self, setting, value, channel):
-        if not self.gui_up:
-            return
-        info = channel.extdata._info_info
-        if info is None:
+        if not self.gui_up or self.active != channel:
             return
         loval, hival = value
-        #info.winfo.cut_low.set_text('%.4g' % (loval))
-        info.winfo.cut_low_value.set_text('%.4g' % (loval))
-        #info.winfo.cut_high.set_text('%.4g' % (hival))
-        info.winfo.cut_high_value.set_text('%.4g' % (hival))
+        #self.winfo.cut_low.set_text('%.4g' % (loval))
+        self.winfo.cut_low_value.set_text('%.4g' % (loval))
+        #self.winfo.cut_high.set_text('%.4g' % (hival))
+        self.winfo.cut_high_value.set_text('%.4g' % (hival))
 
     def autocuts_cb(self, setting, option, channel):
-        if not self.gui_up:
-            return
-        info = channel.extdata._info_info
-        if info is None:
+        if not self.gui_up or self.active != channel:
             return
         self.logger.debug("autocuts changed to %s" % option)
         index = self.autocut_options.index(option)
-        info.winfo.cut_new.set_index(index)
+        self.winfo.cut_new.set_index(index)
 
     def autozoom_cb(self, setting, option, channel):
-        if not self.gui_up:
-            return
-        info = channel.extdata._info_info
-        if info is None:
+        if not self.gui_up or self.active != channel:
             return
         index = self.autozoom_options.index(option)
-        info.winfo.zoom_new.set_index(index)
+        self.winfo.zoom_new.set_index(index)
 
     def autocenter_cb(self, setting, option, channel):
-        if not self.gui_up:
-            return
-        info = channel.extdata._info_info
-        if info is None:
+        if not self.gui_up or self.active != channel:
             return
         # Hack to convert old values that used to be T/F
         if isinstance(option, bool):
             choice = {True: 'on', False: 'off'}
             option = choice[option]
         index = self.autocenter_options.index(option)
-        info.winfo.center_new.set_index(index)
+        self.winfo.center_new.set_index(index)
 
     def follow_cb(self, setting, option, channel):
-        if not self.gui_up:
+        if not self.gui_up or self.active != channel:
             return
-        info = channel.extdata._info_info
-        if info is None:
-            return
-        info.winfo.follow_new.set_state(option)
+        self.winfo.follow_new.set_state(option)
 
     def raise_cb(self, setting, option, channel):
-        if not self.gui_up:
+        if not self.gui_up or self.active != channel:
             return
-        info = channel.extdata._info_info
-        if info is None:
-            return
-        info.winfo.raise_new.set_state(option)
+        self.winfo.raise_new.set_state(option)
 
-    def set_autocuts_cb(self, w, index, channel, info):
-        if not self.gui_up:
+    def set_autocuts_cb(self, w, index):
+        if not self.gui_up or self.active is None:
             return
         option = self.autocut_options[index]
-        channel.fitsimage.enable_autocuts(option)
+        fitsimage = self.active.fitsimage
+        fitsimage.enable_autocuts(option)
 
-    def set_autozoom_cb(self, w, index, channel, info):
-        if not self.gui_up:
+    def set_autozoom_cb(self, w, index):
+        if not self.gui_up or self.active is None:
             return
         option = self.autozoom_options[index]
-        channel.fitsimage.enable_autozoom(option)
+        fitsimage = self.active.fitsimage
+        fitsimage.enable_autozoom(option)
 
-    def set_autocenter_cb(self, w, index, channel, info):
-        if not self.gui_up:
+    def set_autocenter_cb(self, w, index):
+        if not self.gui_up or self.active is None:
             return
         option = self.autocenter_options[index]
-        channel.fitsimage.enable_autocenter(option)
+        fitsimage = self.active.fitsimage
+        fitsimage.enable_autocenter(option)
 
-    def set_follow_cb(self, w, tf, channel, info):
-        if not self.gui_up:
+    def set_follow_cb(self, w, tf):
+        if not self.gui_up or self.active is None:
             return
-        channel.fitsimage.get_settings().set(switchnew=tf)
+        fitsimage = self.active.fitsimage
+        fitsimage.get_settings().set(switchnew=tf)
 
-    def set_raise_cb(self, w, tf, channel, info):
-        if not self.gui_up:
+    def set_raise_cb(self, w, tf):
+        if not self.gui_up or self.active is None:
             return
-        channel.fitsimage.get_settings().set(raisenew=tf)
+        fitsimage = self.active.fitsimage
+        fitsimage.get_settings().set(raisenew=tf)
 
     # LOGIC
 
@@ -437,92 +420,41 @@ class Info(GingaPlugin.GlobalPlugin):
         else:
             return s
 
-    def set_info(self, info, fitsimage):
-        # Show cut levels
-        loval, hival = fitsimage.get_cut_levels()
-        #info.winfo.cut_low.set_text('%.4g' % (loval))
-        info.winfo.cut_low_value.set_text('%.4g' % (loval))
-        #info.winfo.cut_high.set_text('%.4g' % (hival))
-        info.winfo.cut_high_value.set_text('%.4g' % (hival))
-
-        # update zoom indicator
-        scalefactor = fitsimage.get_scale()
-        text = self.fv.scale2text(scalefactor)
-        info.winfo.zoom.set_text(text)
-
-        # update cut new/zoom new indicators
-        t_ = fitsimage.get_settings()
-        index = self.autocut_options.index(t_['autocuts'])
-        info.winfo.cut_new.set_index(index)
-        index = self.autozoom_options.index(t_['autozoom'])
-        info.winfo.zoom_new.set_index(index)
-        option = t_['autocenter']
-        # Hack to convert old values that used to be T/F
-        if isinstance(option, bool):
-            choice = {True: 'on', False: 'off'}
-            option = choice[option]
-        index = self.autocenter_options.index(option)
-        info.winfo.center_new.set_index(index)
-        info.winfo.follow_new.set_state(t_['switchnew'])
-        info.winfo.raise_new.set_state(t_['raisenew'])
-
-        image = fitsimage.get_image()
-        if image is None:
-            return
-        header = image.get_header()
-
-        # Update info panel
-        name = self.trunc(image.get('name', 'Noname'))
-        info.winfo.name.set_text(name)
-        objtext = self.trunc(header.get('OBJECT', 'UNKNOWN'))
-        info.winfo.object.set_text(objtext)
-        equinox = header.get('EQUINOX', '')
-        info.winfo.equinox.set_text(str(equinox))
-
-        # Show min, max values
-        width, height = fitsimage.get_data_size()
-        minval, maxval = image.get_minmax(noinf=False)
-        info.winfo.max.set_text(str(maxval))
-        info.winfo.min.set_text(str(minval))
-
-        # Show dimensions
-        dim_txt = "%dx%d" % (width, height)
-        info.winfo.dimensions.set_text(dim_txt)
-
     def field_info(self, viewer, channel, info):
-        if not self.gui_up or channel is None:
+        if not self.gui_up or self.active != channel:
             return
-        if '_info_info' not in channel.extdata:
-            return
-        obj = channel.extdata._info_info
+        winfo = self.winfo
 
-        obj.winfo.x.set_text("%.3f" % info.x)
-        obj.winfo.y.set_text("%.3f" % info.y)
+        winfo.x.set_text("%.3f" % info.x)
+        winfo.y.set_text("%.3f" % info.y)
         if 'image_x' in info:
-            obj.winfo.image_x.set_text("%.3f" % info.image_x)
+            winfo.image_x.set_text("%.3f" % info.image_x)
         else:
-            obj.winfo.image_x.set_text("")
+            winfo.image_x.set_text("")
         if 'image_y' in info:
-            obj.winfo.image_y.set_text("%.3f" % info.image_y)
+            winfo.image_y.set_text("%.3f" % info.image_y)
         else:
-            obj.winfo.image_y.set_text("")
-        obj.winfo.value.set_text(str(info.value))
+            winfo.image_y.set_text("")
+        winfo.value.set_text(str(info.value))
         if 'ra_txt' in info:
-            obj.winfo.ra.set_text(info.ra_txt)
-            obj.winfo.dec.set_text(info.dec_txt)
+            winfo.ra.set_text(info.ra_txt)
+            winfo.dec.set_text(info.dec_txt)
         if 'ra_lbl' in info:
-            obj.winfo.lbl_ra.set_text(info.ra_lbl + ':')
-            obj.winfo.lbl_dec.set_text(info.dec_lbl + ':')
+            winfo.lbl_ra.set_text(info.ra_lbl + ':')
+            winfo.lbl_dec.set_text(info.dec_lbl + ':')
 
-    def cut_levels(self, w, channel, info):
+    def cut_levels(self, w):
+        channel = self.active
+        if channel is None:
+            return
         fitsimage = channel.fitsimage
         loval, hival = fitsimage.get_cut_levels()
         try:
-            lostr = info.winfo.cut_low.get_text().strip()
+            lostr = self.winfo.cut_low.get_text().strip()
             if lostr != '':
                 loval = float(lostr)
 
-            histr = info.winfo.cut_high.get_text().strip()
+            histr = self.winfo.cut_high.get_text().strip()
             if histr != '':
                 hival = float(histr)
             self.logger.debug("locut=%f hicut=%f" % (loval, hival))
@@ -533,8 +465,12 @@ class Info(GingaPlugin.GlobalPlugin):
 
         return True
 
-    def auto_levels(self, w, channel, info):
-        channel.fitsimage.auto_levels()
+    def auto_levels(self, w):
+        channel = self.active
+        if channel is None:
+            return
+        fitsimage = channel.fitsimage
+        fitsimage.auto_levels()
 
     def __str__(self):
         return 'info'
