@@ -36,6 +36,10 @@ As a global plugin, ``Info`` responds to a change of focus to a new channel
 by displaying the metadata from the new channel.
 It typically appears under the "Synopsis" tab in the user interface.
 
+This plugin is not usually configured to be closeable, but the user can
+make it so by setting the "closeable" setting to True in the configuration
+file--then Close and Help buttons will be added to the bottom of the UI.
+
 """
 from ginga.gw import Widgets
 from ginga.misc import Bunch
@@ -55,9 +59,11 @@ class Info(GingaPlugin.GlobalPlugin):
         # truncate names after this size
         self.maxstr = 60
 
+        spec = self.fv.get_plugin_spec(str(self))
+
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Info')
-        self.settings.add_defaults(add_close_buttons=False)
+        self.settings.add_defaults(closeable=not spec.get('hidden', False))
         self.settings.load(onError='silent')
 
         self.autozoom_options = ['on', 'override', 'once', 'off']
@@ -79,7 +85,7 @@ class Info(GingaPlugin.GlobalPlugin):
         self.nb = nb
         vbox.add_widget(nb, stretch=1)
 
-        if self.settings.get('add_close_buttons', True):
+        if self.settings.get('closeable', False):
             btns = Widgets.HBox()
             btns.set_border_width(4)
             btns.set_spacing(4)

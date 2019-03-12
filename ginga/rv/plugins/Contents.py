@@ -35,6 +35,10 @@ If "Move" or "Copy" is done on an image that has been modified in Ginga
 modification history will be retained as well. Removing an image from
 a channel destroys any unsaved changes.
 
+This plugin is not usually configured to be closeable, but the user can
+make it so by setting the "closeable" setting to True in the configuration
+file--then Close and Help buttons will be added to the bottom of the UI.
+
 """
 from ginga import GingaPlugin
 from ginga.misc import Bunch
@@ -54,6 +58,8 @@ class Contents(GingaPlugin.GlobalPlugin):
                    ('Date', 'DATE-OBS'), ('Time UT', 'UT'),
                    ('Modified', 'MODIFIED')]
 
+        spec = self.fv.get_plugin_spec(str(self))
+
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Contents')
         self.settings.add_defaults(columns=columns,
@@ -61,7 +67,7 @@ class Contents(GingaPlugin.GlobalPlugin):
                                    highlight_tracks_keyboard_focus=True,
                                    color_alternate_rows=True,
                                    row_font_color='green',
-                                   add_close_buttons=False,
+                                   closeable=not spec.get('hidden', False),
                                    max_rows_for_col_resize=100)
         self.settings.load(onError='silent')
 
@@ -134,7 +140,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         vbox.add_widget(btns, stretch=0)
 
-        if self.settings.get('add_close_buttons', True):
+        if self.settings.get('closeable', False):
             btns = Widgets.HBox()
             btns.set_border_width(4)
             btns.set_spacing(4)

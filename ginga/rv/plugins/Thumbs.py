@@ -23,6 +23,10 @@ image.
 The "Auto Scroll" checkbox, if checked, will cause the ``Thumbs`` pan to
 scroll to the active image.
 
+This plugin is not usually configured to be closeable, but the user can
+make it so by setting the "closeable" setting to True in the configuration
+file--then Close and Help buttons will be added to the bottom of the UI.
+
 """
 import os
 import math
@@ -59,6 +63,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self._displayed_thumb_dict = {}
         tt_keywords = ['OBJECT', 'FRAMEID', 'UT', 'DATE-OBS']
 
+        spec = self.fv.get_plugin_spec(str(self))
+
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Thumbs')
         self.settings.add_defaults(cache_thumbs=False,
@@ -79,7 +85,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    label_bg_color='lightgreen',
                                    autoload_visible_thumbs=True,
                                    autoload_interval=1.0,
-                                   add_close_buttons=False,
+                                   closeable=not spec.get('hidden', False),
                                    transfer_attrs=['transforms',
                                                    'cutlevels', 'rgbmap'])
         self.settings.load(onError='silent')
@@ -196,7 +202,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         b.auto_scroll.set_state(auto_scroll)
         vbox.add_widget(w, stretch=0)
 
-        if self.settings.get('add_close_buttons', True):
+        if self.settings.get('closeable', False):
             btns = Widgets.HBox()
             btns.set_border_width(4)
             btns.set_spacing(4)

@@ -394,6 +394,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def get_plugins(self):
         return self.plugins
 
+    def get_plugin_spec(self, name):
+        """Get the specification attributes for plugin with name `name`."""
+        l_name = name.lower()
+        for spec in self.plugins:
+            name = spec.get('name', spec.get('klass', spec.module))
+            if name.lower() == l_name:
+                return spec
+        raise KeyError(name)
+
     def get_plugin_menuname(self, spec):
         category = spec.get('category', None)
         name = spec.setdefault('name', spec.get('klass', spec.module))

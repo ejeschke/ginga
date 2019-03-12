@@ -30,6 +30,10 @@ channel.
 The ``Pan`` plugin usually appears as a sub-pane under the "Info" tab, next
 to the ``Info`` plugin.
 
+This plugin is not usually configured to be closeable, but the user can
+make it so by setting the "closeable" setting to True in the configuration
+file--then Close and Help buttons will be added to the bottom of the UI.
+
 """
 import sys
 import traceback
@@ -59,10 +63,12 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         self.dc = fv.get_draw_classes()
 
+        spec = self.fv.get_plugin_spec(str(self))
+
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Pan')
         self.settings.add_defaults(use_shared_canvas=False,
-                                   add_close_buttons=False,
+                                   closeable=not spec.get('hidden', False),
                                    pan_position_color='yellow',
                                    pan_rectangle_color='red',
                                    compass_color='skyblue',
@@ -85,7 +91,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.nb = nb
         vbox.add_widget(self.nb, stretch=1)
 
-        if self.settings.get('add_close_buttons', True):
+        if self.settings.get('closeable', False):
             btns = Widgets.HBox()
             btns.set_border_width(4)
             btns.set_spacing(4)
