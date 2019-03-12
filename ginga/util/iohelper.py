@@ -10,6 +10,7 @@ import hashlib
 import mimetypes
 import pathlib
 import urllib.parse
+import tempfile
 
 from ginga.misc import Bunch
 
@@ -98,10 +99,13 @@ def get_download_path(uri, filename, cache_dir):
     return tmpfile
 
 
-def get_fileinfo(filespec, cache_dir='/tmp'):
+def get_fileinfo(filespec, cache_dir=None):
     """
     Parse a file specification and return information about it.
     """
+    if cache_dir is None:
+        cache_dir = tempfile.gettempdir()
+
     # Loads first science extension by default.
     # This prevents [None] to be loaded instead.
     idx = None

@@ -135,6 +135,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                    # inherit from primary header
                                    inherit_primary_header=False,
                                    cursor_interval=0.050,
+                                   download_folder=None,
                                    save_layout=False,
                                    channel_prefix="Image")
         self.settings.load(onError='silent')
@@ -654,7 +655,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if image_loader is None:
             image_loader = self.load_image
 
-        info = iohelper.get_fileinfo(filepath)
+        cache_dir = self.settings.get('download_folder', self.tmpdir)
+
+        info = iohelper.get_fileinfo(filepath, cache_dir=cache_dir)
 
         # check that file is locally accessible
         if not info.ondisk:

@@ -28,6 +28,11 @@ The ``auto_clear_download`` option, if set to `True`, will cause a download
 entry to be automatically deleted from the pane when the download completes.
 It does not remove any downloaded file(s).
 
+The download folder can be user-defined by assigning a value to the
+"download_folder" setting in ~/.ginga/general.cfg.  If unassigned, it
+defaults to a folder in the platform-specific default temp directory
+(as told by the Python 'tempfile' module).
+
 """
 import time
 
