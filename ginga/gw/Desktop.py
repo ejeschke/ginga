@@ -6,9 +6,11 @@
 #
 import time
 import math
+import os.path
 
 from ginga.misc import Bunch, Callback
 from ginga.gw import Widgets, Viewers
+from ginga.util import json
 
 
 class Desktop(Callback.Callbacks):
@@ -642,21 +644,30 @@ class Desktop(Callback.Callbacks):
         if layout is None:
             layout = self.layout
 
-        import pprint
         self.record_sizes()
 
+        _n, ext = os.path.splitext(lo_file)
         # write layout
         with open(lo_file, 'w') as out_f:
-            pprint.pprint(layout, out_f)
+            if ext.lower() == '.json':
+                out_f.write(json.dumps(layout, indent=2))
+            else:
+                # older, python format
+                import pprint
+                pprint.pprint(layout, out_f)
 
     def read_layout_conf(self, lo_file):
-        import ast
-
         # read layout
         with open(lo_file, 'r') as in_f:
             buf = in_f.read()
 
-        layout = ast.literal_eval(buf)
+        _n, ext = os.path.splitext(lo_file)
+        if ext.lower() == '.json':
+            layout = json.loads(buf)
+        else:
+            # older, python format
+            import ast
+            layout = ast.literal_eval(buf)
         return layout
 
     def build_desktop(self, layout, lo_file=None, widget_dict=None):

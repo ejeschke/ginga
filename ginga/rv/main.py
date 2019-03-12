@@ -20,7 +20,7 @@ from ginga.misc.Bunch import Bunch
 from ginga.misc import Task, ModuleManager, Settings, log
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
-from ginga.util import paths, rgb_cms
+from ginga.util import paths, rgb_cms, json
 
 # Catch warnings
 logging.captureWarnings(True)
@@ -169,11 +169,11 @@ class ReferenceViewer(object):
     This class exists solely to be able to customize the reference
     viewer startup.
     """
-
-    def __init__(self, layout=default_layout):
-        self.plugins = []
+    def __init__(self, layout=default_layout, plugins=plugins):
         self.layout = layout
         self.channels = ['Image']
+        self.default_plugins = plugins
+        self.plugins = []
 
     def add_plugin_spec(self, spec):
         self.plugins.append(spec)
@@ -186,8 +186,8 @@ class ReferenceViewer(object):
         Add the ginga-distributed default set of plugins to the
         reference viewer.
         """
-        # add default global plugins
-        for spec in plugins:
+        # add default plugins
+        for spec in self.default_plugins:
             ptype = spec.get('ptype', 'local')
             if ptype == 'global' and spec.module not in except_global:
                 self.add_plugin_spec(spec)
@@ -231,6 +231,8 @@ class ReferenceViewer(object):
             # newer ArgParse
             add_argument = argprs.add_argument
 
+        add_argument("--basedir", dest="basedir", metavar="NAME",
+                     help="Specify Ginga configuration area")
         add_argument("--bufsize", dest="bufsize", metavar="NUM",
                      type=int, default=10,
                      help="Buffer length to NUM")
@@ -301,6 +303,9 @@ class ReferenceViewer(object):
         # Create a logger
         logger = log.get_logger(name='ginga', options=options)
 
+        if options.basedir is not None:
+            paths.ginga_home = options.basedir
+
         # Get settings (preferences)
         basedir = paths.ginga_home
         if not os.path.exists(basedir):
@@ -323,6 +328,8 @@ class ReferenceViewer(object):
                               font_scaling_factor=None,
                               save_layout=True,
                               use_opengl=False,
+                              layout_file='layout.json',
+                              plugin_file=None,
                               channel_prefix="Image")
         settings.load(onError='silent')
 
@@ -466,8 +473,9 @@ class ReferenceViewer(object):
                                  ev_quit=ev_quit)
 
         layout_file = None
-        if not options.norestore and settings.get('save_layout', False):
-            layout_file = os.path.join(basedir, 'layout')
+        if settings.get('save_layout', False):
+            layout_file = os.path.join(basedir, settings.get('layout_file',
+                                                             'layout.json'))
 
         ginga_shell.set_layout(self.layout, layout_file=layout_file)
 
@@ -489,7 +497,21 @@ class ReferenceViewer(object):
                 logger.error("Traceback:\n%s" % (tb_str))
 
         # Build desired layout
-        ginga_shell.build_toplevel()
+        ginga_shell.build_toplevel(ignore_saved_layout=options.norestore)
+
+        # Does user have a customized plugin setup?  If so, override the
+        # default plugins to be that
+        plugin_file = settings.get('plugin_file', None)
+        if plugin_file is not None:
+            plugin_file = os.path.join(basedir, plugin_file)
+            if os.path.exists(plugin_file):
+                logger.info("Reading plugin file '%s'..." % (plugin_file))
+                try:
+                    with open(plugin_file, 'r') as in_f:
+                        buf = in_f.read()
+                        self.plugins = json.loads(buf)
+                except Exception as e:
+                    logger.error("Error reading plugin file: %s" % (str(e)))
 
         # Did user specify a particular geometry?
         if options.geometry:

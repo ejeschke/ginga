@@ -1662,7 +1662,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def get_screen_dimensions(self):
         return (self.screen_wd, self.screen_ht)
 
-    def build_toplevel(self):
+    def build_toplevel(self, ignore_saved_layout=False):
+        lo_file = self.layout_file
+        if ignore_saved_layout:
+            lo_file = None
 
         self.font = self.get_font('fixed', 12)
         self.font11 = self.get_font('fixed', 11)
@@ -1672,7 +1675,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.w.tooltips = None
 
         self.ds = Desktop.Desktop(self)
-        self.ds.build_desktop(self.layout, lo_file=self.layout_file,
+        self.ds.build_desktop(self.layout, lo_file=lo_file,
                               widget_dict=self.w)
         # TEMP: FIX ME!
         self.gpmon.ds = self.ds
