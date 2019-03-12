@@ -23,6 +23,9 @@ Ver 3.0.0 (unreleased)
 - Plugins with splitter type panels now remember their sizes when closed
 - LineProfile plugin's default Y-axis label is now "Signal", to be more
   scientifically accurate.
+- Simplified plugins Colorbar, Contents, Cursor, Errors, Header, Info,
+  Log, Pan, and Thumbs plugins.  Made all of these restartable.
+  Subclasses of these plugins may require refactoring in a couple of cases.
 
 Ver 2.7.2 (2018-11-05)
 ======================

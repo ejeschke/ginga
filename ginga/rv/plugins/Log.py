@@ -52,6 +52,7 @@ class Log(GingaPlugin.GlobalPlugin):
         self.autoscroll = True
         self.tw = None
         self._lines = deque([], self.histlimit)
+        self.gui_up = False
 
     def build_gui(self, container):
         vbox = Widgets.VBox()
@@ -61,8 +62,6 @@ class Log(GingaPlugin.GlobalPlugin):
         tw.set_font(self.msg_font)
         tw.set_limit(self.histlimit)
         self.tw = tw
-        tw.set_text('\n'.join(self._lines))
-        self._lines.clear()
 
         sw = Widgets.ScrollArea()
         sw.set_widget(self.tw)
@@ -112,6 +111,7 @@ class Log(GingaPlugin.GlobalPlugin):
         vbox.add_widget(btns, stretch=0)
 
         container.add_widget(vbox, stretch=1)
+        self.gui_up = True
 
     def set_history(self, histlimit):
         if histlimit > self.histmax:
@@ -137,20 +137,28 @@ class Log(GingaPlugin.GlobalPlugin):
         self.autoscroll = val
 
     def log(self, text):
-        if self.tw is not None:
+        if self.gui_up:
             self.tw.append_text(text + '\n',
                                 autoscroll=self.autoscroll)
         else:
             self._lines.append(text)
 
     def clear(self):
-        self.tw.clear()
+        if self.gui_up:
+            self.tw.clear()
         self._lines.clear()
         return True
 
+    def start(self):
+        self.tw.set_text('\n'.join(self._lines))
+        self._lines.clear()
+
+    def stop(self):
+        self.tw = None
+        self.gui_up = False
+
     def close(self):
         self.fv.stop_global_plugin(str(self))
-        self.tw = None
         return True
 
     def __str__(self):

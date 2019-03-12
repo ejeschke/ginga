@@ -211,6 +211,11 @@ class Header(GingaPlugin.GlobalPlugin):
             self.focus_cb(viewer, channel)
 
     def stop(self):
+        names = self.fv.get_channel_names()
+        for name in names:
+            channel = self.fv.get_channel(name)
+            channel.extdata._header_info = None
+
         self.gui_up = False
         self.nb = None
         self.active = None

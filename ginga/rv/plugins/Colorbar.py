@@ -43,7 +43,9 @@ class Colorbar(GingaPlugin.GlobalPlugin):
 
         fv.add_callback('add-channel', self.add_channel_cb)
         fv.add_callback('delete-channel', self.delete_channel_cb)
+        fv.add_callback('channel-change', self.change_cbar)
         self.colorbar = None
+        self.cursor_obj = None
         self.gui_up = False
 
     def build_gui(self, container):
@@ -55,8 +57,11 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         cbar_w.resize(-1, cbar_ht)
 
         self.colorbar = cbar
-        self.fv.add_callback('channel-change', self.change_cbar)
         cbar.add_callback('motion', self.cbar_value_cb)
+
+        # see cbar_val_cb()
+        if self.fv.gpmon.has_plugin('Cursor'):
+            self.cursor_obj = self.fv.gpmon.get_plugin('Cursor')
 
         container.add_widget(cbar_w, stretch=0)
         self.gui_up = True
@@ -93,20 +98,8 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         colorbar.set_rgbmap(rgbmap)
 
     def change_cbar(self, viewer, channel):
-        if self.gui_up and (self.colorbar is not None):
+        if self.gui_up and channel is not None:
             self._match_cmap(channel.fitsimage, self.colorbar)
-
-    # def focus_cb(self, viewer, channel):
-    #     chname = channel.name
-
-    #     if self.active != chname:
-    #         self.active = chname
-    #         self.info = channel.extdata._colorbar_info
-
-    #     image = channel.fitsimage.get_image()
-    #     if image is None:
-    #         return
-    #     # install rgbmap
 
     def change_range_cb(self, setting, value, fitsimage):
         """
@@ -127,34 +120,38 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         ColorBar.  It displays the value of the mouse position in the
         ColorBar in the Readout (if any).
         """
-        channel = self.fv.get_channel_info()
-        if channel is None:
-            return
-        readout = channel.extdata.get('readout', None)
-        if readout is not None:
-            maxv = readout.maxv
-            text = "Value: %-*.*s" % (maxv, maxv, value)
-            readout.set_text(text)
+        if self.cursor_obj is not None:
+            readout = self.cursor_obj.readout
+            if readout is not None:
+                maxv = readout.maxv
+                text = "Value: %-*.*s" % (maxv, maxv, value)
+                readout.set_text(text)
 
     def rgbmap_cb(self, rgbmap, channel):
         """
         This method is called when the RGBMap is changed.  We update
         the ColorBar to match.
         """
+        if not self.gui_up:
+            return
         fitsimage = channel.fitsimage
         if fitsimage != self.fv.getfocus_fitsimage():
             return False
         self.change_cbar(self.fv, channel)
 
     def start(self):
-        ## names = self.fv.get_channel_names()
-        ## for name in names:
-        ##     channel = self.fv.get_channel(name)
-        ##     self.add_channel_cb(self.fv, channel)
-        pass
+        channel = self.fv.get_channel_info()
+        self.change_cbar(self.fv, channel)
 
     def stop(self):
         self.gui_up = False
+        self.cursor_obj = None
+        self.colorbar = None
+        return True
+
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
 
     def __str__(self):
         return 'colorbar'
