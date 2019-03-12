@@ -13,15 +13,18 @@ Open this plugin to monitor the progress of URI downloads.  Start it
 using the "Plugins" or "Operations" menu, and selecting the "Downloads"
 plugin from under the "Util" category.
 
+If you want to initiate a download, simply drag a URI into a channel
+image viewer or the `Thumbs` pane.
+
 You can remove the information about a download at any time by clicking
-the "Remove" button for its entry. You can remove entries for all downloads
-by clicking the "Remove All" button at the bottom.
+the "Clear" button for its entry. You can clear entries for all downloads
+by clicking the "Clear All" button at the bottom.
 
 Currently, it is not possible to cancel a download in progress.
 
 **Settings**
 
-The ``auto_remove_download`` option, if set to `True`, will cause a download
+The ``auto_clear_download`` option, if set to `True`, will cause a download
 entry to be automatically deleted from the pane when the download completes.
 
 """
@@ -44,7 +47,7 @@ class Downloads(GingaPlugin.GlobalPlugin):
         # get Downloads preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Downloads')
-        self.settings.add_defaults(auto_remove_download=False)
+        self.settings.add_defaults(auto_clear_download=False)
         self.settings.load(onError='silent')
 
         self.dlbox = None
@@ -76,8 +79,8 @@ class Downloads(GingaPlugin.GlobalPlugin):
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Remove All")
-        btn.add_callback('activated', lambda w: self.gui_remove_all())
+        btn = Widgets.Button("Clear All")
+        btn.add_callback('activated', lambda w: self.gui_clear_all())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(btns, stretch=0)
@@ -98,12 +101,12 @@ class Downloads(GingaPlugin.GlobalPlugin):
         prog_bar.set_value(track.progress)
         hbox.add_widget(time_lbl)
         hbox.add_widget(prog_bar)
-        rmv = Widgets.Button('Remove')
+        rmv = Widgets.Button('Clear')
 
-        def _remove_download(w):
+        def _clear_download(w):
             self.gui_rm_track(track)
 
-        rmv.add_callback('activated', _remove_download)
+        rmv.add_callback('activated', _clear_download)
         hbox.add_widget(rmv)
         vbox.add_widget(hbox, stretch=0)
         self.dlbox.add_widget(vbox)
@@ -122,7 +125,7 @@ class Downloads(GingaPlugin.GlobalPlugin):
                 del self.w_track[track.key]
             self.dlbox.remove(w_track.container)
 
-    def gui_remove_all(self):
+    def gui_clear_all(self):
         for track in list(self.downloads):
             self.gui_rm_track(track)
 
@@ -154,7 +157,7 @@ class Downloads(GingaPlugin.GlobalPlugin):
             nbytes = int(count * blksize)
             track.progress = min(1.0, float(nbytes) / float(totalsize))
 
-            if (self.settings.get('auto_remove_download', False) and
+            if (self.settings.get('auto_clear_download', False) and
                 track.progress >= 1.0):
                 self.fv.gui_do(self.gui_rm_track, track)
             else:

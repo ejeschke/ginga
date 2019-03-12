@@ -631,8 +631,9 @@ class ReferenceViewer(object):
                                chname=chname)
         else:
             i = 0
+            num_channels = len(channels)
             for imgfile in expanded_args:
-                if i < len(channels):
+                if i < num_channels:
                     chname = channels[i]
                     i = i + 1
                 else:

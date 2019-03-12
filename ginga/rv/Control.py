@@ -731,6 +731,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def open_uri_cont(self, filespec, loader_cont_fn):
         """Download a URI (if necessary) and do some action on it.
 
+        If the file is already present (e.g. a file:// URI) then this
+        merely confirms that and invokes the continuation.
+
         Parameters
         ----------
         filespec : str
@@ -742,8 +745,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             The parameter is the local filepath after download, plus
             any "index" understood by the loader.
 
-        If the file is already present (e.g. a file:// URI) then this
-        merely confirms that and invokes the continuation.
         """
         info = iohelper.get_fileinfo(filespec)
 

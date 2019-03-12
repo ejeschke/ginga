@@ -160,7 +160,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         if self.fitsimage is not None:
             self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
         else:
-            channel = self.fv.get_channel()
+            channel = self.fv.get_channel_info()
             if channel is None:
                 chname = None
             else:

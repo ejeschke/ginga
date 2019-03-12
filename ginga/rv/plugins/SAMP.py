@@ -329,8 +329,9 @@ class GingaWrapper(object):
         self.logger = logger
 
     def display_fitsfile(self, chname, fitspath, dowait):
-        """Load (fitspath) into channel (chname).  If (dowait) is True
-        then wait for the file to be loaded before returning (synchronous).
+        """Load (`fitspath`) into channel (`chname`).
+
+        (The parameter `dowait` is currently ignored.)
         """
         # TEMP: dowait ignored
         self.fv.gui_do(self.fv.open_uris, [fitspath], chname=chname)

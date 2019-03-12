@@ -541,7 +541,7 @@ class TVMark(LocalPlugin):
     # TODO: Support more extensions?
     def load_coords_cb(self):
         """Activate file dialog to select coordinates file."""
-        self.cfilesel.popup('Load coordinates file', self.load_file,
+        self.cfilesel.popup('Load coordinates file', self.load_files,
                             initialdir='.',
                             filename='Table files (*.txt *.dat *.fits)')
 
