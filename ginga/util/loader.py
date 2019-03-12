@@ -6,7 +6,7 @@
 #
 
 from ginga.misc import Bunch
-from ginga.util import (iohelper, io_fits, io_rgb, io_asdf)
+from ginga.util import iohelper, io_fits, io_rgb, io_asdf
 
 
 def load_data(filespec, idx=None, logger=None, **kwargs):

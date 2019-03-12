@@ -199,5 +199,4 @@ class Downloads(GingaPlugin.GlobalPlugin):
     def __str__(self):
         return 'downloads'
 
-
 # END

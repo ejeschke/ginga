@@ -587,7 +587,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         Returns
         -------
-        data_obj: data object named by filespec
+        data_obj : data object named by filespec
         """
         inherit_prihdr = self.settings.get('inherit_primary_header',
                                            False)
@@ -725,11 +725,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             obj = self.gpmon.get_plugin('Downloads')
             self.gui_do(obj.add_download, info, future)
         else:
-            self.show_error("Please install the 'Downloads' plugin to"
+            self.show_error("Please activate the 'Downloads' plugin to"
                             " enable download functionality")
 
     def open_uri_cont(self, filespec, loader_cont_fn):
-        """Download a uri (if necessary) and do some action on it.
+        """Download a URI (if necessary) and do some action on it.
 
         Parameters
         ----------
@@ -749,7 +749,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # download file if necessary
         if ((not info.ondisk) and (info.url is not None) and
-            (not info.url.startswith('file:'))):
+                (not info.url.startswith('file:'))):
             # create up a future to do the download and set up a
             # callback to handle it when finished
             def _download_cb(future):
