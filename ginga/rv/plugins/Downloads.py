@@ -14,7 +14,7 @@ using the "Plugins" or "Operations" menu, and selecting the "Downloads"
 plugin from under the "Util" category.
 
 If you want to initiate a download, simply drag a URI into a channel
-image viewer or the `Thumbs` pane.
+image viewer or the ``Thumbs`` pane.
 
 You can remove the information about a download at any time by clicking
 the "Clear" button for its entry. You can clear entries for all downloads
@@ -26,6 +26,7 @@ Currently, it is not possible to cancel a download in progress.
 
 The ``auto_clear_download`` option, if set to `True`, will cause a download
 entry to be automatically deleted from the pane when the download completes.
+It does not remove any downloaded file(s).
 
 """
 import time
