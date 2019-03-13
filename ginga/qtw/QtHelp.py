@@ -145,8 +145,11 @@ class HBox(QtGui.QWidget):
 
 class FileSelection(object):
     """Handle Load Image file dialog from File menu."""
-    def __init__(self, parent_w):
+    # TODO: deprecate the functionality when all_at_once == False
+    # and make the default to be True
+    def __init__(self, parent_w, all_at_once=False):
         self.parent = parent_w
+        self.all_at_once = all_at_once
         self.cb = None
 
     def popup(self, title, callfn, initialdir=None, filename=None):
@@ -177,6 +180,7 @@ class FileSelection(object):
         if ginga.toolkit.get_toolkit() == 'qt5':
             filenames = filenames[0]
 
+        all_paths = []
         for filename in filenames:
 
             # Special handling for wildcard or extension.
@@ -186,15 +190,21 @@ class FileSelection(object):
                 ext = iohelper.get_hdu_suffix(info.numhdu)
                 files = glob.glob(info.filepath)  # Expand wildcard
                 paths = ['{0}{1}'.format(f, ext) for f in files]
+                if self.all_at_once:
+                    all_paths.extend(paths)
+                else:
+                    for path in paths:
+                        self.cb(path)
 
-                # NOTE: Using drag-drop callback here might give QPainter
-                # warnings.
-                for path in paths:
-                    self.cb(path)
-
-            # Normal load
             else:
-                self.cb(filename)
+                # Normal load
+                if self.all_at_once:
+                    all_paths.append(filename)
+                else:
+                    self.cb(filename)
+
+        if self.all_at_once and len(all_paths) > 0:
+            self.cb(all_paths)
 
 
 class DirectorySelection(object):

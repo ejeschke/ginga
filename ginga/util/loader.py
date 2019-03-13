@@ -6,7 +6,7 @@
 #
 
 from ginga.misc import Bunch
-from ginga.util import iohelper, io_fits, io_rgb
+from ginga.util import iohelper, io_fits, io_rgb, io_asdf
 
 
 def load_data(filespec, idx=None, logger=None, **kwargs):
@@ -33,7 +33,7 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
     data_obj : a data object for a ginga viewer
 
     """
-    global viewer_registry
+    global loader_registry
 
     info = iohelper.get_fileinfo(filespec, cache_dir='/tmp')
     filepath = info.filepath
@@ -41,8 +41,8 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
     if idx is None:
         idx = info.numhdu
 
-    # Create an image.  Assume type to be a FITS image unless
-    # the MIME association says it is something different.
+    # Assume type to be a FITS image unless the MIME association says
+    # it is something different.
     try:
         typ, subtyp = iohelper.guess_filetype(filepath)
 
@@ -56,7 +56,7 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
     if logger is not None:
         logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
     try:
-        loader_info = viewer_registry['%s/%s' % (typ, subtyp)]
+        loader_info = loader_registry['%s/%s' % (typ, subtyp)]
         data_loader = loader_info.loader
 
     except KeyError:
@@ -66,6 +66,28 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
     data_obj = data_loader(filepath, idx=idx, logger=logger,
                            **kwargs)
     return data_obj
+
+
+def get_fileinfo(self, filespec, dldir=None):
+    """Break down a file specification into its components.
+
+    Parameters
+    ----------
+    filespec : str
+        The path of the file to load (can be a URL).
+
+    dldir
+
+    Returns
+    -------
+    res : `~ginga.misc.Bunch.Bunch`
+
+    """
+    if dldir is None:
+        dldir = self.tmpdir
+
+    # Get information about this file/URL
+    info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
 
 
 # NOTE: for loader functions, kwargs can include 'idx', 'logger' and
@@ -92,15 +114,21 @@ def load_asdf(filepath, logger=None, **kwargs):
 # This contains a registry of upper-level loaders with their secondary
 # loading functions
 #
-viewer_registry = {}
+loader_registry = {}
 
 
-def add_loader(mimetype, loader):
-    global viewer_registry
+def add_loader(mimetype, loader, opener):
+    global loader_registry
     # TODO: can/should we store other preferences/customizations along
     # with the loader?
-    viewer_registry[mimetype] = Bunch.Bunch(loader=loader,
+    loader_registry[mimetype] = Bunch.Bunch(loader=loader,
+                                            opener=opener,
                                             mimetype=mimetype)
+
+
+def get_opener(mimetype):
+    bnch = loader_registry[mimetype]
+    return bnch.opener
 
 
 # built ins
@@ -112,12 +140,14 @@ from ginga.table.AstroTable import AstroTable
 lc.register_type('table', AstroTable)
 
 for mimetype in ['image/fits', 'image/x-fits']:
-    add_loader(mimetype, load_fits)
+    add_loader(mimetype, load_fits, lc)
 
+lc = io_asdf.ASDFFileHandler
 for mimetype in ['image/asdf']:
-    add_loader(mimetype, load_asdf)
+    add_loader(mimetype, load_asdf, lc)
 
 # ### RGB ###
+lc = io_rgb.RGBFileHandler
 for mimetype in ['image/jpeg', 'image/png', 'image/tiff', 'image/gif',
                  'image/ppm', 'image/pnm', 'image/pbm']:
-    add_loader(mimetype, load_rgb)
+    add_loader(mimetype, load_rgb, lc)

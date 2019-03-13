@@ -26,6 +26,11 @@ Ver 3.0.0 (unreleased)
 - Simplified plugins Colorbar, Contents, Cursor, Errors, Header, Info,
   Log, Pan, and Thumbs plugins.  Made all of these restartable.
   Subclasses of these plugins may require refactoring in a couple of cases.
+- Selecting item in FBrowser now populates its text box properly.
+- Support opening all extensions of given extension name from
+  a FITS file (e.g., ``filename.fits[SCI,*]``) from Ginga command
+  line or FBrowser.
+- New Downloads plugin for monitoring/managing URI downloads
 
 Ver 2.7.2 (2018-11-05)
 ======================

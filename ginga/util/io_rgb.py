@@ -55,6 +55,7 @@ class RGBFileHandler(object):
 
     def __init__(self, logger):
         self.logger = logger
+        self._path = None
 
         self.clr_mgr = rgb_cms.ColorManager(self.logger)
 
@@ -80,7 +81,39 @@ class RGBFileHandler(object):
 
         if dstobj.name is not None:
             dstobj.set(name=dstobj.name)
+        else:
+            name = iohelper.name_image_from_path(filepath, idx=None)
+            dstobj.set(name=name)
+
+        dstobj.set(path=filepath, idx=None, image_loader=self.load_file)
         return dstobj
+
+    def open_file(self, filespec, **kwargs):
+        self._path = filespec
+        return self
+
+    def close(self):
+        self._path = None
+
+    def __len__(self):
+        return 1
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
+    def load_idx_cont(self, idx_spec, loader_cont_fn, **kwargs):
+        if self._path is None:
+            raise ValueError("Please call open_file() first!")
+
+        # TODO: raise an error if idx_spec doesn't match a single image
+        data_obj = self.load_file(self._path, **kwargs)
+
+        # call continuation function
+        loader_cont_fn(data_obj)
 
     def save_file_as(self, filepath, data_np, header):
         if not have_pil:

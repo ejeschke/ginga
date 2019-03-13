@@ -289,10 +289,9 @@ class CommandInterpreter(object):
         ch = kwargs.get('ch', None)
 
         for item in args:
-            # TODO: check for URL syntax
+            # TODO: check for URI syntax
             files = glob.glob(item)
-            for path in files:
-                self.fv.nongui_do(self.fv.load_file, path, chname=ch, wait=True)
+            self.fv.gui_do(self.fv.open_uris, files, chname=ch)
 
     def cmd_cuts(self, lo=None, hi=None, ch=None):
         """cuts lo=val hi=val ch=chname

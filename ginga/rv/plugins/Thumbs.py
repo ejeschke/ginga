@@ -224,7 +224,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         """Punt drag-drops to the ginga shell.
         """
         channel = self.fv.get_current_channel()
-        self.fv.dragdrop(channel.viewer, urls)
+        if channel is None:
+            return
+        self.fv.open_uris(urls, chname=channel.name, bulk_add=True)
         return True
 
     def start(self):
@@ -552,7 +554,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         path = image.get('path', None)
         if path is not None:
             path = os.path.abspath(path)
-            name = self.fv.name_image_from_path(path, idx=idx)
+            name = iohelper.name_image_from_path(path, idx=idx)
         else:
             name = 'NoName'
 
