@@ -4,7 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-
 from ginga.misc import Bunch
 from ginga.util import iohelper, io_fits, io_rgb, io_asdf
 
@@ -35,7 +34,7 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
     """
     global loader_registry
 
-    info = iohelper.get_fileinfo(filespec, cache_dir='/tmp')
+    info = iohelper.get_fileinfo(filespec)
     filepath = info.filepath
 
     if idx is None:
