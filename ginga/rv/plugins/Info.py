@@ -42,7 +42,6 @@ file--then Close and Help buttons will be added to the bottom of the UI.
 
 """
 from ginga.gw import Widgets
-from ginga.misc import Bunch
 from ginga import GingaPlugin
 
 __all__ = ['Info']
