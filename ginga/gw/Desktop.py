@@ -24,6 +24,7 @@ class Desktop(Callback.Callbacks):
         self.tab = Bunch.caselessDict()
         self.tabcount = 0
         self.workspace = Bunch.caselessDict()
+        self.default_ws_name = None
 
         self.toplevels = []
         self.node = {}
@@ -76,6 +77,11 @@ class Desktop(Callback.Callbacks):
 
     def get_nb(self, name):
         return self.workspace[name].nb
+
+    def get_default_ws(self):
+        if self.default_ws_name is not None:
+            return self.get_ws(self.default_ws_name)
+        return None
 
     def get_size(self, widget):
         return widget.get_size()
@@ -351,6 +357,8 @@ class Desktop(Callback.Callbacks):
                                   use_toolbar=params.use_toolbar)
                 widget = ws.widget
                 # debug(widget)
+                if params.get('default', False):
+                    self.default_ws_name = params.name
 
             # If a title was passed as a parameter, then make a frame to
             # wrap the widget using the title.

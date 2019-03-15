@@ -46,6 +46,7 @@ def dumps(*args, **kwargs):
     d.update(kwargs)
     return json.dumps(*args, **d)
 
+
 def loads(*args, **kwargs):
     """Like for json.loads(), but also deserializes Ginga Bunch.Bunch type."""
     d = dict(object_hook=as_bunch)

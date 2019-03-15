@@ -133,7 +133,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.channel = {}
         self.channel_names = []
         self.cur_channel = None
-        self.main_wsname = 'channels'
         self.wscount = 0
         self.statustask = None
         self.preload_lock = threading.RLock()
@@ -194,7 +193,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # GUI initialization
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
-        self._lastwsname = self.main_wsname
+        self.main_wsname = None
+        self._lastwsname = None
+        self.ds = None
         self.layout = None
         self.layout_file = None
         self._lsize = None
@@ -1677,6 +1678,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.ds = Desktop.Desktop(self)
         self.ds.build_desktop(self.layout, lo_file=lo_file,
                               widget_dict=self.w)
+        if self.main_wsname is None:
+            ws = self.ds.get_default_ws()
+            if ws is not None:
+                self.main_wsname = ws.name
+            else:
+                # legacy value for layouts that don't define a default
+                # workspace
+                self.main_wsname = 'channels'
+        self._lastwsname = self.main_wsname
         # TEMP: FIX ME!
         self.gpmon.ds = self.ds
 
