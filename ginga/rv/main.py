@@ -330,7 +330,7 @@ class ReferenceViewer(object):
                               save_layout=True,
                               use_opengl=False,
                               layout_file='layout.json',
-                              plugin_file=None,
+                              plugin_file='plugins.json',
                               channel_prefix="Image")
         settings.load(onError='silent')
 
