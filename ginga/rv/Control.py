@@ -22,8 +22,7 @@ import queue as Queue  # noqa
 
 # Local application imports
 from ginga import cmap, imap
-from ginga import AstroImage, BaseImage
-from ginga.table import AstroTable
+from ginga import BaseImage
 from ginga.misc import Bunch, Timer, Future
 from ginga.util import catalog, iohelper, loader, io_fits, toolbox
 from ginga.canvas.CanvasObject import drawCatalog
@@ -163,13 +162,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self._cursor_task.set_callback('expired', self._cursor_timer_cb)
         self._cursor_last_update = time.time()
         self.cursor_interval = self.settings.get('cursor_interval', 0.050)
-
-        # for loading FITS files
-        # WARNING: TO BE DEPRECATED!! DON'T USE fits_opener IN PLUGINS!!
-        fo = io_fits.fitsLoaderClass(self.logger)
-        fo.register_type('image', AstroImage.AstroImage)
-        fo.register_type('table', AstroTable.AstroTable)
-        self.fits_opener = fo
 
         # Try to load some bundled truetype fonts we might like to use
         for font_name in font_asst.get_loadable_fonts():

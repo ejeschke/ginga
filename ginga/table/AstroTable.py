@@ -8,7 +8,7 @@ import numpy as np
 from astropy.table import Table
 
 from ginga.BaseImage import ViewerObjectBase, Header
-from ginga.util import wcsmod, io_fits
+from ginga.util import wcsmod
 
 
 class TableError(Exception):
@@ -53,9 +53,9 @@ class AstroTable(ViewerObjectBase):
 
         # ioclass specifies a pluggable IO module
         if ioclass is None:
+            from ginga.util import io_fits
             ioclass = io_fits.fitsLoaderClass
         self.io = ioclass(self.logger)
-        self.io.register_type('table', self.__class__)
 
         # TODO: How to handle table with WCS data? For example, spectrum
         #       table may store dispersion solution as WCS.

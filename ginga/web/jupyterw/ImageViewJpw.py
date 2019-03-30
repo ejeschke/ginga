@@ -49,6 +49,7 @@ from ipyevents import Event as EventListener
 from ginga import AstroImage
 from ginga import Mixins, Bindings
 from ginga.util.toolbox import ModeIndicator
+from ginga.util import loader
 
 try:
     # See if we have aggdraw module--best choice
@@ -441,16 +442,15 @@ class EnhancedCanvasView(CanvasView):
         return Image(data=bytes(self.get_rgb_image_as_bytes(format=fmt)),
                      format=fmt, embed=True)
 
-    def load_fits(self, filepath):
+    def load(self, filepath):
         """
-        Load a FITS file into the viewer.
+        Load a file into the viewer.
         """
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
+        image = loader.load_file(filepath, logger=self.logger)
 
         self.set_image(image)
 
-    load = load_fits
+    load_fits = load
 
     def load_hdu(self, hdu):
         """

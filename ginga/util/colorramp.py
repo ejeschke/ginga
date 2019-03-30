@@ -40,9 +40,8 @@ def rgbarr_to_colormap(rgb_data_np):
 
 def png_to_colormap(png_file):
 
-    from ginga.RGBImage import RGBImage
-    img = RGBImage()
-    img.load_file(png_file)
+    from ginga.util import io_rgb
+    img = io_rgb.load_file(png_file)
     data = img.get_data()
 
     return rgbarr_to_colormap(data)

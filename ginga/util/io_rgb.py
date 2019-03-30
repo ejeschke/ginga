@@ -42,6 +42,15 @@ except ImportError:
 #have_opencv = False
 
 
+def load_file(filepath, idx=None, logger=None, **kwargs):
+    """
+    Load an object from a RGB file.
+
+    """
+    opener = RGBFileHandler(logger)
+    return opener.load_file(filepath, **kwargs)
+
+
 class RGBFileHandler(object):
 
     def __init__(self, logger):
@@ -334,6 +343,7 @@ def open_ppm(filepath):
     return arr
 
 
+# TO BE DEPRECATED
 def get_rgbloader(kind=None, logger=None):
     return RGBFileHandler(logger)
 

@@ -11,13 +11,15 @@ import numpy as np
 
 try:
     import asdf  # noqa
+    from asdf.fits_embed import AsdfInFits
     have_asdf = True
 except ImportError:
     have_asdf = False
 
-from ginga.util import iohelper
+from ginga import AstroImage
+from ginga.util import iohelper, wcsmod
 
-__all__ = ['have_asdf', 'load_asdf', 'ASDFFileHandler']
+__all__ = ['have_asdf', 'load_file', 'load_asdf', 'ASDFFileHandler']
 
 
 def load_asdf(asdf_obj, data_key='data', wcs_key='wcs', header_key='meta'):
@@ -73,24 +75,21 @@ def load_asdf(asdf_obj, data_key='data', wcs_key='wcs', header_key='meta'):
     return data, wcs, ahdr
 
 
-def loader(filepath, logger=None, **kwargs):
+def load_file(filepath, idx=None, logger=None, **kwargs):
     """
     Load an object from an ASDF file.
     See :func:`ginga.util.loader` for more info.
 
-    TODO: kwargs may contain info about what part of the file to load
     """
     # see ginga.util.loader module
-    # TODO: return an AstroTable if loading a table, etc.
-    #   for now, assume always an image
-    from ginga import AstroImage
-    image = AstroImage.AstroImage(logger=logger)
+    opener = ASDFFileHandler(logger)
+    data_obj = opener.load_file(filepath, idx=idx, **kwargs)
 
-    with asdf.open(filepath) as asdf_f:
-        #image.load_asdf(asdf_f, **kwargs)
-        image.load_asdf(asdf_f)
+    return data_obj
 
-    return image
+
+# for backward compatibility... TO BE DEPRECATED... DON'T USE
+loader = load_file
 
 
 class ASDFFileHandler(object):
@@ -101,13 +100,60 @@ class ASDFFileHandler(object):
 
     def load_file(self, filepath, idx=None, **kwargs):
 
-        data_obj = loader(filepath, logger=self.logger, **kwargs)
+        # TODO: support other types, like AstroTable
+        data_obj = AstroImage.AstroImage(logger=self.logger)
+
+        # TODO: idx may contain info about what part of the file to load
+        with asdf.open(filepath) as asdf_f:
+
+            # NOTE: currently, kwargs is not compatible with load_asdf()
+            data, wcs, ahdr = load_asdf(asdf_f)
+
+            data_obj.setup_data(data, naxispath=None)
+
+            wcsinfo = wcsmod.get_wcs_class('astropy_ape14')
+            data_obj.wcs = wcsinfo.wrapper_class(logger=self.logger)
+            data_obj.wcs.wcs = wcs
+
+            if wcs is not None:
+                data_obj.wcs.coordsys = wcs.output_frame.name
 
         # set important metadata
         name = iohelper.name_image_from_path(filepath, idx=None)
         data_obj.set(path=filepath, name=name, idx=idx,
                      image_loader=self.load_file)
 
+        return data_obj
+
+    def load_asdf_hdu_in_fits(self, fits_f, hdu, **kwargs):
+        """*** This is a special method that should only be called from
+        WITHIN io_fits.py ***
+        """
+
+        # Handle ASDF embedded in FITS (see load_hdu() in io_fits.py)
+        # TODO: Populate EXTNAME, EXTVER, NAXISn in ASDF meta
+        #   from HDU?
+        # TODO: How to read from all the different ASDF layouts?
+        # TODO: Cache the ASDF object?
+
+        # TODO: support other types, like AstroTable?
+        data_obj = AstroImage.AstroImage(logger=self.logger)
+
+        # TODO: hdu is ignored for now, but presumably this loader might
+        # eventually want to check it
+        with AsdfInFits.open(fits_f) as asdf_f:
+            data, wcs, ahdr = load_asdf(asdf_f, **kwargs)
+
+            data_obj.setup_data(data, naxispath=None)
+
+            wcsinfo = wcsmod.get_wcs_class('astropy_ape14')
+            data_obj.wcs = wcsinfo.wrapper_class(logger=self.logger)
+            data_obj.wcs.wcs = wcs
+
+            if wcs is not None:
+                data_obj.wcs.coordsys = wcs.output_frame.name
+
+        # metadata will be set back in io_fits
         return data_obj
 
     def open_file(self, filepath, **kwargs):

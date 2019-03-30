@@ -67,47 +67,8 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
     return data_obj
 
 
-def get_fileinfo(self, filespec, dldir=None):
-    """Break down a file specification into its components.
-
-    Parameters
-    ----------
-    filespec : str
-        The path of the file to load (can be a URL).
-
-    dldir
-
-    Returns
-    -------
-    res : `~ginga.misc.Bunch.Bunch`
-
-    """
-    if dldir is None:
-        dldir = self.tmpdir
-
-    # Get information about this file/URL
-    info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
-
-
-# NOTE: for loader functions, kwargs can include 'idx', 'logger' and
-#    loader-specific parameters like
-def load_rgb(filepath, logger=None, **kwargs):
-    loader = io_rgb.get_rgbloader(logger=logger)
-    image = loader.load_file(filepath, **kwargs)
-    return image
-
-
-def load_fits(filepath, logger=None, **kwargs):
-    loader = io_fits.get_fitsloader(logger=logger)
-    numhdu = kwargs.pop('idx', None)
-    image = loader.load_file(filepath, numhdu=numhdu, **kwargs)
-    return image
-
-
-def load_asdf(filepath, logger=None, **kwargs):
-    from ginga.util import io_asdf
-    data_obj = io_asdf.loader(filepath, logger, **kwargs)
-    return data_obj
+# For consistency with specific format loader modules (io_fits, etc).
+load_file = load_data
 
 
 # This contains a registry of upper-level loaders with their secondary
@@ -131,22 +92,16 @@ def get_opener(mimetype):
 
 
 # built ins
+
 # ### FITS ###
-lc = io_fits.fitsLoaderClass
-from ginga.AstroImage import AstroImage
-lc.register_type('image', AstroImage)
-from ginga.table.AstroTable import AstroTable
-lc.register_type('table', AstroTable)
-
 for mimetype in ['image/fits', 'image/x-fits']:
-    add_loader(mimetype, load_fits, lc)
+    add_loader(mimetype, io_fits.load_file, io_fits.fitsLoaderClass)
 
-lc = io_asdf.ASDFFileHandler
+# ### ASDF ###
 for mimetype in ['image/asdf']:
-    add_loader(mimetype, load_asdf, lc)
+    add_loader(mimetype, io_asdf.load_file, io_asdf.ASDFFileHandler)
 
 # ### RGB ###
-lc = io_rgb.RGBFileHandler
 for mimetype in ['image/jpeg', 'image/png', 'image/tiff', 'image/gif',
                  'image/ppm', 'image/pnm', 'image/pbm']:
-    add_loader(mimetype, load_rgb, lc)
+    add_loader(mimetype, io_rgb.load_file, io_rgb.RGBFileHandler)

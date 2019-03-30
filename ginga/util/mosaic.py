@@ -17,7 +17,7 @@ import math
 import numpy as np
 
 from ginga import AstroImage
-from ginga.util import wcs, io_fits, dp
+from ginga.util import wcs, loader, dp
 from ginga.misc import log
 
 
@@ -38,8 +38,7 @@ def mosaic(logger, itemlist, fov_deg=None):
         # Assume it is a file and load it
         filepath = itemlist[0]
         logger.info("Reading file '%s' ..." % (filepath))
-        image0 = AstroImage.AstroImage(logger=logger)
-        image0.load_file(filepath)
+        image0 = loader.load_data(filepath, logger=logger)
         name = filepath
 
     ra_deg, dec_deg = image0.get_keywords_list('CRVAL1', 'CRVAL2')
@@ -72,13 +71,13 @@ def mosaic(logger, itemlist, fov_deg=None):
     for item in itemlist[1:]:
         if isinstance(item, AstroImage.AstroImage):
             image = item
-            name = image.get('name', 'image%d' % (count))
         else:
             # Create and load the image
             filepath = item
             logger.info("Reading file '%s' ..." % (filepath))
-            image = AstroImage.AstroImage(logger=logger)
-            image.load_file(filepath)
+            image = io_fits.load_file(filepath, logger=logger)
+
+        name = image.get('name', 'image%d' % (count))
 
         logger.debug("Inlining '%s' ..." % (name))
         tup = img_mosaic.mosaic_inline([image])
