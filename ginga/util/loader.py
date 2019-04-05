@@ -77,31 +77,52 @@ load_file = load_data
 loader_registry = {}
 
 
-def add_loader(mimetype, loader, opener):
+def add_loader(mimetype, loader, opener, priority=0, note=''):
     global loader_registry
-    # TODO: can/should we store other preferences/customizations along
-    # with the loader?
-    loader_registry[mimetype] = Bunch.Bunch(loader=loader,
-                                            opener=opener,
-                                            mimetype=mimetype)
+    bnchs = loader_registry.setdefault(mimetype, [])
+    bnchs.append(Bunch.Bunch(name=opener.name, loader=loader, opener=opener,
+                             mimetype=mimetype, priority=priority,
+                             note=note))
+    bnchs.sort(key=lambda bnch: bnch.priority)
 
+def get_openers(mimetype):
+    global loader_registry
+    bnchs = loader_registry.setdefault(mimetype, [])
+    if len(bnchs) <= 1:
+        return bnchs
 
-def get_opener(mimetype):
-    bnch = loader_registry[mimetype]
-    return bnch.opener
+    # if there is more than one possible opener, return the list of
+    # those that have the best (i.e. lowest) equal priority
+    priority = min([bnch.priority for bnch in bnchs])
+    return [bnch for bnch in bnchs if bnch.priority <= priority]
 
+def get_all_openers():
+    dct = dict()
+    for mimetype, lst in loader_registry.items():
+        for bnch in lst:
+            dct[bnch.name] = bnch
+    return dct.values()
 
 # built ins
 
 # ### FITS ###
 for mimetype in ['image/fits', 'image/x-fits']:
-    add_loader(mimetype, io_fits.load_file, io_fits.fitsLoaderClass)
+    if io_fits.have_astropy:
+        add_loader(mimetype, io_fits.load_file, io_fits.PyFitsFileHandler,
+                   note="For loading FITS (Flexible Image Transport System) "
+                   "data files")
+    if io_fits.have_fitsio:
+        add_loader(mimetype, io_fits.load_file, io_fits.FitsioFileHandler,
+                   note="For loading FITS (Flexible Image Transport System) "
+                   "data files")
 
 # ### ASDF ###
 for mimetype in ['image/asdf']:
-    add_loader(mimetype, io_asdf.load_file, io_asdf.ASDFFileHandler)
+    add_loader(mimetype, io_asdf.load_file, io_asdf.ASDFFileHandler,
+               note="For loading ASDF data files")
 
 # ### RGB ###
 for mimetype in ['image/jpeg', 'image/png', 'image/tiff', 'image/gif',
                  'image/ppm', 'image/pnm', 'image/pbm']:
-    add_loader(mimetype, io_rgb.load_file, io_rgb.RGBFileHandler)
+    add_loader(mimetype, io_rgb.load_file, io_rgb.RGBFileHandler,
+               note="For loading common image formats (e.g. JPEG, etc)")

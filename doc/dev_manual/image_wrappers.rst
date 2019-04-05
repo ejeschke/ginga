@@ -45,10 +45,6 @@ Once you have an object, you can load data directly contained in a
 
      >>> img.update_keywords(kw_dict)
 
-From a FITS file::
-
-  >>> img.load_file("/path/to/image.fits")
-
 From an ``astropy.io.fits.HDU``::
 
   >>> from astropy.io import fits
@@ -58,6 +54,17 @@ From an ``astropy.io.fits.HDU``::
 From an ``astropy.nddata.NDData`` (or subclass, like ``CCDData``)::
 
   >>> img.load_nddata(ndd_obj)
+
+Files are best loaded from the appropriate file format loader module.
+For a FITS file::
+
+  >>> from ginga.util import io_fits
+  >>> img = io_fits.load_file("/path/to/image.fits")
+
+Or, e.g. to choose a particular HDU::
+
+  >>> from ginga.util import io_fits
+  >>> img = io_fits.load_file("/path/to/image.fits[SCI]")
 
 .. todo:: add common API calls for AstroImage class
 
@@ -75,7 +82,7 @@ RGB images.
    parameter described above::
 
      >>> img = RGBImage(logger=logger)
-   
+
 
 RGB images support the ``load_data`` method (note the shape and type of
 the array):: 
@@ -83,10 +90,12 @@ the array)::
   >>> data = np.random.randint(0, 256, (1000, 1000, 3), dtype=np.uint8)
   >>> img.load_data(data)
 
-Files can also be loaded from standard RGB formats (PNG, JPEG, etc) using
-``load_file()``::
+Files can also be loaded from standard RGB formats (PNG, JPEG, etc)
+using the ``io_rgb`` module::
 
-  >>> img.load_file("/path/to/image.jpg")
+  >>> from ginga.util import io_rgb
+  >>> img = io_rgb.load_file("/path/to/image.jpg")
+
 
 .. todo:: add common API calls for RGBImage class
 

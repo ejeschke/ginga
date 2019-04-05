@@ -143,7 +143,7 @@ in the AstroImage class.  Your WCS should implement this abstract class:
             return self.header[key]
 
         def get_keywords(self, *args):
-            return map(lambda key: self.header[key], args)
+            return [self.header[key] for key in args]
 
         def load_header(self, header, fobj=None):
             pass
@@ -199,8 +199,17 @@ you expect the same functionality.
 I want to use my own file storage format, not FITS!
 ---------------------------------------------------
 
-No problem.  Ginga encapsulates the io behind a pluggable object used
-in the AstroImage class.  You should implement this abstract class:
+No problem.  An ``BaseImage`` subclassed object (such as ``AstroImage``
+or ``RGBImage``) can be loaded directly from 
+
+Ginga's general file loading facility breaks the loading down into two
+phases: first, the file is identified by its ``magic`` signature
+(requires the Python module ``python-magic`` be installed), MIME
+type or filename extension.  Once the general category of file is known,
+methods in the specific I/O module devoted to that type are called to
+load the file data.
+
+You should implement this abstract class:
 
 .. code-block:: python
 

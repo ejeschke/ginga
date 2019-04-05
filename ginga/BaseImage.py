@@ -21,10 +21,11 @@ class ViewerObjectBase(Callback.Callbacks):
 
         Callback.Callbacks.__init__(self)
 
-        if logger is not None:
-            self.logger = logger
-        else:
-            self.logger = logging.Logger('BaseImage')
+        if logger is None:
+            logger = logging.getLogger('BaseImage')
+            logger.addHandler(logging.NullHandler())
+
+        self.logger = logger
         self.metadata = {}
         if metadata:
             self.update_metadata(metadata)

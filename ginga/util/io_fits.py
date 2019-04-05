@@ -18,6 +18,7 @@ any images.  Otherwise Ginga will try to pick one for you.
 """
 import re
 import numpy as np
+import logging
 
 from ginga.AstroImage import AstroImage, AstroHeader
 from ginga.table.AstroTable import AstroTable
@@ -26,8 +27,18 @@ from ginga.util import iohelper
 
 fits_configured = False
 fitsLoaderClass = None
-have_astropy = False
-have_fitsio = False
+
+try:
+    from astropy.io import fits as pyfits
+    have_astropy = True
+except ImportError:
+    have_astropy = False
+
+try:
+    import fitsio
+    have_fitsio = True
+except ImportError as e:
+    have_fitsio = False
 
 
 class FITSError(Exception):
@@ -35,32 +46,30 @@ class FITSError(Exception):
 
 
 def use(fitspkg, raise_err=True):
-    global fits_configured, fitsLoaderClass, have_astropy, pyfits, \
-        have_fitsio, fitsio
+    global fits_configured, fitsLoaderClass
 
     if fitspkg == 'astropy':
-        try:
-            from astropy.io import fits as pyfits
-            have_astropy = True
+        if have_astropy:
             fitsLoaderClass = PyFitsFileHandler
+            fits_configured = True
             return True
 
-        except ImportError:
-            if raise_err:
-                raise
+        elif raise_err:
+            raise("Error importing 'astropy.io.fits'; "
+                  "please check installation")
 
         return False
 
     elif fitspkg == 'fitsio':
-        try:
-            import fitsio
-            have_fitsio = True
+        if have_fitsio:
             fitsLoaderClass = FitsioFileHandler
+            fits_configured = True
             return True
 
-        except ImportError as e:
-            if raise_err:
-                raise
+        elif raise_err:
+            raise("Error importing 'fitsio'; "
+                  "please check installation")
+
         return False
 
     return False
@@ -77,6 +86,9 @@ class BaseFitsFileHandler(object):
     def __init__(self, logger):
         super(BaseFitsFileHandler, self).__init__()
 
+        if logger is None:
+            logger = logging.getLogger('io_fits')
+            logger.addHandler(logging.NullHandler())
         self.logger = logger
         self.fileinfo = None
         self.fits_f = None
@@ -183,6 +195,8 @@ class BaseFitsFileHandler(object):
 
 
 class PyFitsFileHandler(BaseFitsFileHandler):
+
+    name = 'astropy.fits'
 
     def __init__(self, logger):
         if not have_astropy:
@@ -444,6 +458,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
 class FitsioFileHandler(BaseFitsFileHandler):
 
+    name = 'fitsio'
+
     def __init__(self, logger):
         if not have_fitsio:
             raise FITSError(
@@ -455,6 +471,8 @@ class FitsioFileHandler(BaseFitsFileHandler):
                          fitsio.BINARY_TBL: 'BinaryTBL',
                          fitsio.ASCII_TBL: 'AsciiTBL',
                          }
+        self.hdu_info = []
+        self.hdu_db = {}
 
     def fromHDU(self, hdu, ahdr):
         header = hdu.read_header()
@@ -557,7 +575,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         return self
 
     def close(self):
-        self.hdu_info = None
+        self.hdu_info = []
         self.hdu_db = {}
         self.extver_db = {}
         self.info = None
@@ -651,7 +669,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         if len(self) == 0:
             raise ValueError("Please open a file first!")
 
-        for i in len(self):
+        for i in range(len(self)):
             try:
                 dst_obj = self.get_hdu(i, **kwargs)
 
@@ -684,14 +702,12 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
 
 if not fits_configured:
-    # default
-    fitsLoaderClass = PyFitsFileHandler
+    if have_astropy:
+        # default
+        fitsLoaderClass = PyFitsFileHandler
 
-    # try to use them in this order
-    # astropy is faster
-    for name in ('astropy', 'fitsio'):
-        if use(name, raise_err=False):
-            break
+    elif have_fitsio:
+        fitsLoaderClass = FitsioFileHandler
 
 
 def get_fitsloader(kind=None, logger=None):

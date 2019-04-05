@@ -15,7 +15,7 @@ import logging
 import platform
 import atexit
 import shutil
-from collections import deque
+from collections import deque, OrderedDict
 
 import _thread as thread  # noqa
 import queue as Queue  # noqa
@@ -23,7 +23,7 @@ import queue as Queue  # noqa
 # Local application imports
 from ginga import cmap, imap
 from ginga import BaseImage
-from ginga.misc import Bunch, Timer, Future
+from ginga.misc import Bunch, Timer, Future, Task
 from ginga.util import catalog, iohelper, loader, io_fits, toolbox
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
@@ -201,6 +201,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         self.filesel = None
         self.menubar = None
+        self.gui_dialog_lock = threading.RLock()
+        self.gui_dialog_list = []
 
         # this holds registered viewers
         self.viewer_db = {}
@@ -775,6 +777,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             that does something with the data_obj created by the loader
 
         """
+        self.assert_nongui_thread()
+
         info = iohelper.get_fileinfo(pathspec)
 
         filepath = info.filepath
@@ -788,41 +792,75 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             typ, subtyp = iohelper.guess_filetype(filepath)
 
         except Exception as e:
-            self.logger.warning("error determining file type: %s; "
-                                "assuming 'image/fits'" % (str(e)))
-            # Can't determine file type: assume and attempt FITS
-            typ, subtyp = 'image', 'fits'
+            self.logger.warn("Couldn't determine file type of '{0:}': "
+                             "{1:}".format(filepath, str(e)))
+            typ = None
 
-        mimetype = "%s/%s" % (typ, subtyp)
-        try:
-            opener_class = loader.get_opener(mimetype)
+        def _open_file(opener_class):
+            # kwd args to pass to opener
+            kwargs = dict()
+            inherit_prihdr = self.settings.get('inherit_primary_header',
+                                               False)
+            kwargs['inherit_primary_header'] = inherit_prihdr
 
-        except KeyError:
-            # TODO: here pop up a dialog asking which loader to use
-            errmsg = "No registered opener for: '%s'" % (mimetype)
-            self.gui_do(self.show_error, errmsg)
-            return
-
-        # kwd args to pass to opener
-        kwargs = dict()
-        inherit_prihdr = self.settings.get('inherit_primary_header',
-                                           False)
-        kwargs['inherit_primary_header'] = inherit_prihdr
-
-        # open the file and load the items named by the index
-        opener = opener_class(self.logger)
-        try:
-            with opener.open_file(filepath) as io_f:
-                io_f.load_idx_cont(info.idx, loader_cont_fn, **kwargs)
-
-        except Exception as e:
-            errmsg = "Error opening '%s': %s" % (filepath, str(e))
+            # open the file and load the items named by the index
+            opener = opener_class(self.logger)
             try:
-                (type, value, tb) = sys.exc_info()
-                tb_str = "\n".join(traceback.format_tb(tb))
+                with opener.open_file(filepath) as io_f:
+                    io_f.load_idx_cont(info.idx, loader_cont_fn, **kwargs)
+
             except Exception as e:
-                tb_str = "Traceback information unavailable."
-            self.gui_do(self.show_error, errmsg + '\n' + tb_str)
+                errmsg = "Error opening '%s': %s" % (filepath, str(e))
+                try:
+                    (_type, value, tb) = sys.exc_info()
+                    tb_str = "\n".join(traceback.format_tb(tb))
+                except Exception as e:
+                    tb_str = "Traceback information unavailable."
+                self.gui_do(self.show_error, errmsg + '\n' + tb_str)
+
+
+        def _check_open():
+            if typ is None:
+                errmsg = ("Error determining file type: {0:}\n"
+                          "\nPlease choose an opener or cancel, for file:\n"
+                          "{1:}".format(str(e), filepath))
+                openers = loader.get_all_openers()
+                self.gui_do(self.gui_choose_file_opener, errmsg, openers,
+                            _open_file, None, filepath)
+
+            else:
+                mimetype = "{}/{}".format(typ, subtyp)
+                openers = loader.get_openers(mimetype)
+
+                num_openers = len(openers)
+                if num_openers == 1:
+                    opener_class = openers[0].opener
+                    self.nongui_do(_open_file, opener_class)
+                    self.__next_dialog()
+
+                elif num_openers == 0:
+                    errmsg = ("No registered opener for: '{0:}'\n"
+                              "\nPlease choose an opener or cancel, for file:\n"
+                              "{1:}".format(mimetype, filepath))
+                    openers = loader.get_all_openers()
+                    self.gui_do(self.gui_choose_file_opener, errmsg, openers,
+                                _open_file, mimetype, filepath)
+
+                else:
+                    errmsg = ("Multiple registered openers for: '{0:}'\n"
+                              "\nPlease choose an opener or cancel, for file:\n"
+                              "{1:}".format(mimetype, filepath))
+                    self.gui_do(self.gui_choose_file_opener, errmsg, openers,
+                                _open_file, '*', filepath)
+
+        future = Future.Future()
+        future.freeze(_check_open)
+
+        with self.gui_dialog_lock:
+            self.gui_dialog_list.append(future)
+            if len(self.gui_dialog_list) == 1:
+                self.nongui_do_future(future)
+
 
     def open_uris(self, uris, chname=None, bulk_add=False):
         """Open a set of URIs.
@@ -2165,6 +2203,51 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.filesel.popup("Load File", self.load_file_cb,
                            initialdir=initialdir)
 
+    def gui_choose_file_opener(self, msg, openers, open_cb, mimetype,
+                               filepath):
+
+        wgts = Bunch.Bunch()
+        wgts.table = Widgets.TreeView(auto_expand=True,
+                                      use_alt_row_color=True)
+        columns = [('Name', 'name'),
+                   ('Note', 'note'),
+                   ]
+        wgts.table.setup_table(columns, 1, 'name')
+
+        tree_dict = OrderedDict()
+        openers = list(openers)
+        for bnch in openers:
+            tree_dict[bnch.name] = bnch
+
+        wgts.table.set_tree(tree_dict)
+        # highlight first choice
+        path = [openers[0].name]
+        wgts.table.select_path(path)
+
+        dialog = Widgets.Dialog(title="Choose File Opener",
+                                flags=0,
+                                modal=False,
+                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                parent=self.w.root)
+        dialog.add_callback('activated',
+            lambda w, rsp: self.choose_opener_cb(w, rsp, wgts, openers,
+                                                 open_cb, mimetype))
+
+        box = dialog.get_content_area()
+        box.set_border_width(4)
+        box.add_widget(Widgets.Label(msg), stretch=0)
+        box.add_widget(wgts.table, stretch=1)
+
+        if mimetype is not None:
+            hbox = Widgets.HBox()
+            wgts.choice = Widgets.CheckBox("Remember choice for session")
+            hbox.add_widget(wgts.choice)
+            box.add_widget(hbox, stretch=0)
+        else:
+            wgts.choice = None
+
+        self.ds.show_dialog(dialog)
+
     def status_msg(self, format, *args):
         if not format:
             s = ''
@@ -2314,6 +2397,51 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if rsp != 1:
             return
         self.ds.remove_tab(tabname)
+        return True
+
+    def __next_dialog(self):
+        with self.gui_dialog_lock:
+            # this should be the just completed call for a dialog
+            # that gets popped off
+            self.gui_dialog_list.pop(0)
+
+            if len(self.gui_dialog_list) > 0:
+                # if there are any other dialogs waiting, start
+                # the next one
+                future = self.gui_dialog_list[0]
+                self.nongui_do_future(future)
+
+    def choose_opener_cb(self, w, rsp, wgts, openers, open_cb, mimetype):
+        sel_dct = wgts.table.get_selected()
+        if rsp != 1:
+            # cancel
+            self.ds.remove_dialog(w)
+            self.__next_dialog()
+            return
+
+        bnchs = list(sel_dct.values())
+        if len(bnchs) != 1:
+            # user didn't select an opener
+            self.show_error("Need to select one opener!", raisetab=True)
+            return
+
+        bnch = bnchs[0]
+        self.ds.remove_dialog(w)
+
+        if wgts.choice is not None and wgts.choice.get_state():
+            # user wants us to remember their choice
+            if mimetype != '*':
+                # loader is not registered for this mimetype, so go ahead
+                # and do it
+                loader.add_loader(mimetype, bnch.loader, bnch.opener,
+                                  priority=bnch.priority, note=bnch.note)
+            else:
+                # multiple loaders for the same mimetype--
+                # remember setting by prioritizing choice
+                bnch.priority = -1
+
+        self.nongui_do(open_cb, bnch.opener)
+        self.__next_dialog()
         return True
 
     def init_workspace(self, ws):

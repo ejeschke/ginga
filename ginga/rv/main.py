@@ -726,7 +726,8 @@ def reference_viewer(sys_argv):
         import profile
 
         print(("%s profile:" % sys_argv[0]))
-        profile.run('viewer.main(options, args)')
+        profile.runctx('viewer.main(options, args)',
+                       dict(options=options, args=args, viewer=viewer), {})
 
     else:
         viewer.main(options, args)

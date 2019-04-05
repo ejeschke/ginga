@@ -8,6 +8,7 @@ import sys
 import time
 import mimetypes
 from io import BytesIO
+import logging
 
 import numpy as np
 
@@ -53,7 +54,14 @@ def load_file(filepath, idx=None, logger=None, **kwargs):
 
 class RGBFileHandler(object):
 
+    name = 'RGB'
+
     def __init__(self, logger):
+
+        if logger is None:
+            logger = logging.getLogger('io_rgb')
+            logger.addHandler(logging.NullHandler())
+
         self.logger = logger
         self._path = None
 
@@ -342,9 +350,5 @@ def open_ppm(filepath):
         arr = arr.byteswap()
     return arr
 
-
-# TO BE DEPRECATED
-def get_rgbloader(kind=None, logger=None):
-    return RGBFileHandler(logger)
 
 # END

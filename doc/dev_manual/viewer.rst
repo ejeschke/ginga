@@ -70,10 +70,10 @@ the "Open File" button.
     #
     import sys
 
-    from ginga import AstroImage
     from ginga.misc import log
     from ginga.qtw.QtHelp import QtGui, QtCore
     from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
+    from ginga.util.loader import load_data
 
 
     class FitsViewer(QtGui.QMainWindow):
@@ -128,8 +128,7 @@ the "Open File" button.
             vw.setLayout(vbox)
 
         def load_file(self, filepath):
-            image = AstroImage.AstroImage(logger=self.logger)
-            image.load_file(filepath)
+            image = load_data(filepath, logger=self.logger)
             self.fitsimage.set_image(image)
             self.setWindowTitle(filepath)
 
@@ -191,9 +190,9 @@ buttons to complete the viewer.
 
 Scanning down the code a bit, we can see that whether by dragging and
 dropping or via the click to open, we ultimately call the ``load_file()``
-method to get the data into the viewer.  As shown, load_file creates
-an ``AstroImage`` object (the "model" part of our MVC design).  It then
-passes this object to the viewer via the set_image() method.
+method to get the data into the viewer.  load_file() creates
+an ``AstroImage`` object (the "model" part of our MVC design), which is
+then passed to the viewer via the set_image() method.
 ``AstroImage`` objects have methods for ingesting data via a file path, an
 ``astropy.io.fits`` HDU or a bare ``Numpy`` data array.  For a reference
 on the model, see here:ref:`_ch-image-data-wrappers`.
