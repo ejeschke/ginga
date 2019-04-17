@@ -130,7 +130,7 @@ class Plot(Callback.Callbacks):
         return lines
 
     def get_data(self):
-            return self.fig, self.xdata, self.ydata
+        return self.fig, self.xdata, self.ydata
 
 
 class HistogramPlot(Plot):

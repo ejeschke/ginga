@@ -56,9 +56,8 @@ matrix:
     include:
 
         # Test egg_info in Python 2
-        # TODO: Change to ASTROPY_VERSION=lts when this job starts to fail.
         - os: linux
-          env: PYTHON_VERSION=2.7 SETUP_CMD='egg_info'
+          env: PYTHON_VERSION=2.7  ASTROPY_VERSION=lts SETUP_CMD='egg_info'
 
         # Do a coverage test in Python 3.
         # *** TODO: `python setup.py test --coverage` doesn't work yet for `ginga` ... skipping for now
@@ -69,16 +68,15 @@ matrix:
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
         - os: linux
-          env: PYTHON_VERSION=3.6 SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_rtd_theme pillow'
+          env: PYTHON_VERSION=3.6 SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx-astropy pillow'
 
         # Try older Numpy versions
-        # TODO: Change to ASTROPY_VERSION=lts when PY2 job starts to fail.
         - os: linux
-          env: PYTHON_VERSION=2.7 NUMPY_VERSION=1.10
+          env: PYTHON_VERSION=2.7 NUMPY_VERSION=1.13 ASTROPY_VERSION=lts PYTEST_VERSION=3.3
         - os: linux
-          env: PYTHON_VERSION=3.6 NUMPY_VERSION=1.12
+          env: PYTHON_VERSION=3.6 NUMPY_VERSION=1.14
         - os: linux
-          env: NUMPY_VERSION=1.14
+          env: NUMPY_VERSION=1.15
 
         # Try with Astropy dev and matplotlib installed
         - os: linux
