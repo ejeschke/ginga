@@ -87,6 +87,9 @@ class IQCalc(object):
         a gaussian function on the data.  arr1d is a 1D array cut in either
         X or Y direction on the object.
         """
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
         if gauss_fn is None:
             gauss_fn = self.gaussian
 
@@ -146,6 +149,9 @@ class IQCalc(object):
         a Moffat function on the data.  arr1d is a 1D array cut in either
         X or Y direction on the object.
         """
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
         if moffat_fn is None:
             moffat_fn = self.moffat
 
@@ -237,6 +243,9 @@ class IQCalc(object):
         return fwhm
 
     def centroid(self, data, xc, yc, radius):
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
         xc, yc = int(xc), int(yc)
         x0, y0, arr = self.cut_region(xc, yc, int(radius), data)
         # See https://stackoverflow.com/questions/25369982/center-of-mass-for-roi-in-python
@@ -277,6 +286,9 @@ class IQCalc(object):
         The routine returns a list of candidate object coordinate tuples
         (x, y) in data.
         """
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
         if threshold is None:
             # set threshold to default if none provided
             threshold = self.get_threshold(data, sigma=sigma)

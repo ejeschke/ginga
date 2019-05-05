@@ -33,6 +33,7 @@ from ginga.misc import log, Task, Bunch
 from ginga.Bindings import ImageViewBindings
 from ginga.misc.Settings import SettingGroup
 from ginga.util.paths import ginga_home
+from ginga.util import loader
 
 from ginga.web.pgw import js, PgHelp, Widgets, Viewers
 
@@ -97,9 +98,7 @@ class BasicCanvasView(Viewers.CanvasView):
         """
         Load a FITS file into the viewer.
         """
-        image = AstroImage.AstroImage(logger=self.logger)
-        image.load_file(filepath)
-
+        image = loader.load_data(filepath, logger=self.logger)
         self.set_image(image)
 
     load = load_fits
