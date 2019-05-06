@@ -23,10 +23,12 @@ class ImgWCS(common.BaseWCS):
             print("READING THE HEADER")
             from astropy.io import fits as pyfits
             hdu = pyfits.open(self.header['WCS-XIMG'])
-            head0 = hdu[0].header
+            # NEW DATA MODEL
+            exten = 1  # Used to be 0
+            head0 = hdu[exten].header
             # Error check
             if (head0['NAXIS1'] == header['NAXIS1']) & (head0['NAXIS2'] == header['NAXIS2']):
-                self.wcs_ximage = hdu[0].data
+                self.wcs_ximage = hdu[exten].data
                 return
         # Set dummy image if we get here
         import numpy as np

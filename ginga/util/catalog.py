@@ -23,7 +23,7 @@ from ginga.util import wcs
 have_astroquery = False
 try:
     from astropy import coordinates, units
-    from astroquery.vo_conesearch import conesearch
+    #from astroquery.vo_conesearch import conesearch
     have_astroquery = True
 except ImportError:
     try:  # Backward-compatibility for astropy < 2.0
