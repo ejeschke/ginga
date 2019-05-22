@@ -5,6 +5,12 @@ from ginga.misc import log
 from ginga.util import iqcalc
 from ginga.util import mock_sky as ms
 
+try:
+    import scipy   # noqa
+    have_scipy = True
+except ImportError:
+    have_scipy = False
+
 
 @pytest.mark.parametrize(
     ('arr', 'ans'),
@@ -46,6 +52,7 @@ class Test_IQCalc(object):
         assert x0 == 25 and y0 == 45
         assert xarr.shape == (21,) and yarr.shape == (21,)
 
+    @pytest.mark.skipif(not have_scipy, reason="requires scipy package")
     def test_centroid(self):
         self.set_bg(self.arr, 2000)
         pos = (50, 50)
@@ -62,6 +69,7 @@ class Test_IQCalc(object):
         th = self.iqcalc.get_threshold(self.arr)
         assert np.isclose(th, 2001.25, atol=0.1)
 
+    @pytest.mark.skipif(not have_scipy, reason="requires scipy package")
     def test_get_fwhm(self):
         self.set_bg(self.arr, 2000.0)
         pos = (31, 64)
@@ -71,6 +79,7 @@ class Test_IQCalc(object):
         assert (np.isclose(res[0], 4.71, atol=0.1) and
                 np.isclose(res[1], 4.71, atol=0.1))
 
+    @pytest.mark.skipif(not have_scipy, reason="requires scipy package")
     def test_pick_field(self):
         self.set_bg(self.arr, 2000.0)
         pos = (31.0, 64.0)
