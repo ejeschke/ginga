@@ -29,13 +29,6 @@ try:
 except ImportError:
     have_pil = False
 
-have_pilutil = False
-try:
-    from scipy.misc import imresize, imsave
-    have_pilutil = True
-except ImportError:
-    pass
-
 # piexif library for getting metadata, in the case that we don't have PIL
 try:
     import piexif
@@ -44,9 +37,7 @@ except ImportError:
     have_exif = False
 
 # For testing...
-#have_pilutil = False
 #have_pil = False
-#have_cms = False
 #have_exif = False
 #have_opencv = False
 
@@ -116,11 +107,19 @@ class RGBFileHandler(object):
         loader_cont_fn(data_obj)
 
     def save_file_as(self, filepath, data_np, header):
-        if not have_pil:
-            raise ImageError("Install PIL to be able to save images")
-
         # TODO: save keyword metadata!
-        imsave(filepath, data_np)
+        if have_opencv:
+            # First choice is OpenCv, because it supports high-bit depth
+            # multiband images
+            cv2.imwrite(filepath, data_np)
+
+        elif have_pil:
+            img = PILimage.fromarray(data_np)
+            img.save(filepath)
+
+        else:
+            raise ImageError("Install 'pillow' or 'opencv' to be able "
+                             "to save images")
 
     def _imload(self, filepath, kwds):
         """Load an image file, guessing the format, and return a numpy
@@ -266,23 +265,26 @@ class RGBFileHandler(object):
         """Scale an image in numpy array _data_ to the specified width and
         height.  A smooth scaling is preferred.
         """
+        # TODO: take into account the method parameter
         old_ht, old_wd = data.shape[:2]
         start_time = time.time()
 
-        if have_pilutil:
-            means = 'PIL'
-            zoom_x = float(new_wd) / float(old_wd)
-            zoom_y = float(new_ht) / float(old_ht)
-            if (old_wd >= new_wd) or (old_ht >= new_ht):
-                # data size is bigger, skip pixels
-                zoom = max(zoom_x, zoom_y)
-            else:
-                zoom = min(zoom_x, zoom_y)
+        if have_opencv:
+            # First choice is OpenCv, because it supports high-bit depth
+            # multiband images
+            means = 'opencv'
+            newdata = cv2.resize(data, dsize=(new_wd, new_ht),
+                                 interpolation=cv2.INTER_CUBIC)
 
-            newdata = imresize(data, zoom, interp=method)
+        elif have_pil:
+            means = 'PIL'
+            img = PILimage.fromarray(data)
+            img = img.resize((new_wd, new_ht), PILimage.BICUBIC)
+            newdata = np.array(img)
 
         else:
-            raise ImageError("No way to scale image smoothly")
+            raise ImageError("Install 'pillow' or 'opencv' to be able "
+                             "to resize RGB images")
 
         end_time = time.time()
         self.logger.debug("scaling (%s) time %.4f sec" % (
