@@ -6,9 +6,7 @@
 #
 import numpy as np
 
-from ginga import trcalc
 from ginga.util import io_rgb
-from ginga.misc import Bunch
 from ginga.BaseImage import BaseImage, ImageError
 
 
@@ -79,24 +77,3 @@ class RGBImage(BaseImage):
             self._data = np.dstack(l)
             order.insert(pos, 'A')
             self.order = ''.join(order)
-
-    def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
-                               method='basic'):
-        newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_wdht(
-            self._get_data(), x1, y1, x2, y2, new_wd, new_ht,
-            interpolation=method, logger=self.logger)
-
-        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
-        return res
-
-    def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
-                          method='basic'):
-        newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_basic(
-            self._get_data(), x1, y1, x2, y2, scale_x, scale_y,
-            interpolation=method, logger=self.logger)
-
-        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
-        return res
-
-
-#END
