@@ -195,7 +195,7 @@ Set the pan position in world coordinates::
   
 Pan to 25% of the X axis and 75% of the Y axis::
 
-  >>> panset_pct(0.25, 0.75)
+  >>> v.panset_pct(0.25, 0.75)
 
 Center the image (i.e., pan to center)::
 
@@ -210,7 +210,10 @@ area shown in the display for the current zoom level and pan::
          [1386. , 2386.5],
          [1386. , 1886.5]])
 
-         
+The values are returned as corners lower-left, upper-left, upper-right,
+lower-right.
+
+
 Transforms
 ==========
 

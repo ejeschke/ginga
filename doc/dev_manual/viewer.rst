@@ -202,7 +202,7 @@ Many of these sorts of examples for all supported backends are contained
 in the ``examples`` directory in the source distribution.
 
 For a list of many methods provided by the viewer object see
-this reference:ref:`ch-image-viewer-operations`.  You can also click on the
+this reference :ref:`ch-image-viewer-operations`.  You can also click on the
 module index link at the top of this chapter and then click on the link
 for ``ImageViewBase``.
 
