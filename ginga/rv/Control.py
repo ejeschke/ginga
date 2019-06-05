@@ -10,7 +10,6 @@ import os
 import traceback
 import time
 import tempfile
-import glob
 import threading
 import logging
 import platform
@@ -60,8 +59,10 @@ package_home = os.path.split(sys.modules['ginga.version'].__file__)[0]
 tkname = toolkit.get_family()
 if tkname is not None:
     # TODO: this relies on a naming convention for widget directories!
+    # TODO: I think this can be removed, since the widget specific
+    # plugin directories have been deleted
     child_dir = os.path.join(package_home, tkname + 'w', 'plugins')
-sys.path.insert(0, child_dir)
+    sys.path.insert(0, child_dir)
 
 icon_path = os.path.abspath(os.path.join(package_home, 'icons'))
 
@@ -115,6 +116,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.channel = {}
         self.channel_names = []
         self.cur_channel = None
+        self.main_wsname = 'channels'
         self.wscount = 0
         self.statustask = None
         self.preload_lock = threading.RLock()
@@ -127,13 +129,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                    sansFont=None,
                                    channel_follows_focus=False,
                                    scrollbars='off',
-                                   share_readout=True,
                                    numImages=10,
                                    # Offset to add to numpy-based coords
                                    pixel_coords_offset=1.0,
                                    # inherit from primary header
                                    inherit_primary_header=False,
                                    cursor_interval=0.050,
+                                   download_folder=None,
                                    save_layout=False,
                                    channel_prefix="Image")
         self.settings.load(onError='silent')
@@ -199,7 +201,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # GUI initialization
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
-        self._lastwsname = 'channels'
+        self._lastwsname = self.main_wsname
         self.layout = None
         self.layout_file = None
         self._lsize = None
@@ -392,6 +394,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def get_plugins(self):
         return self.plugins
 
+    def get_plugin_spec(self, name):
+        """Get the specification attributes for plugin with name `name`."""
+        l_name = name.lower()
+        for spec in self.plugins:
+            name = spec.get('name', spec.get('klass', spec.module))
+            if name.lower() == l_name:
+                return spec
+        raise KeyError(name)
+
     def get_plugin_menuname(self, spec):
         category = spec.get('category', None)
         name = spec.setdefault('name', spec.get('klass', spec.module))
@@ -559,21 +570,35 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     # BASIC IMAGE OPERATIONS
 
-    def load_image(self, filepath, idx=None, show_error=True):
+    def load_image(self, filespec, idx=None, show_error=True):
         """
         A wrapper around ginga.util.loader.load_data()
 
-        This actually can load other data types, like
+        Parameters
+        ----------
+        filespec : str
+            The path of the file to load (must reference a single file).
+
+        idx : str, int or tuple; optional, defaults to None
+            The index of the image to open within the file.
+
+        show_error : bool, optional, defaults to True
+            If `True`, then display an error in the GUI if the file
+            loading process fails.
+
+        Returns
+        -------
+        data_obj : data object named by filespec
         """
         inherit_prihdr = self.settings.get('inherit_primary_header',
                                            False)
         try:
-            image = loader.load_data(filepath, logger=self.logger,
-                                     idx=idx,
-                                     inherit_primary_header=inherit_prihdr)
+            data_obj = loader.load_data(filespec, logger=self.logger,
+                                        idx=idx,
+                                        inherit_primary_header=inherit_prihdr)
         except Exception as e:
             errmsg = "Failed to load file '%s': %s" % (
-                filepath, str(e))
+                filespec, str(e))
             self.logger.error(errmsg)
             try:
                 (type, value, tb) = sys.exc_info()
@@ -585,62 +610,17 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             raise ControlError(errmsg)
 
         self.logger.debug("Successfully loaded file into object.")
-        return image
-
-    def get_fileinfo(self, filespec, dldir=None):
-        """Break down a file specification into its components.
-
-        Parameters
-        ----------
-        filespec : str
-            The path of the file to load (can be a URL).
-
-        dldir
-
-        Returns
-        -------
-        res : `~ginga.misc.Bunch.Bunch`
-
-        """
-        if dldir is None:
-            dldir = self.tmpdir
-
-        # Get information about this file/URL
-        info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
-
-        if ((not info.ondisk) and (info.url is not None) and
-                (not info.url.startswith('file:'))):
-
-            # Download the file if a URL was passed
-            def _dl_indicator(count, blksize, totalsize):
-                pct = float(count * blksize) / float(totalsize)
-                msg = "Downloading: %%%.2f complete" % (pct * 100.0)
-                self.gui_do(self.show_status, msg)
-
-            # Try to download the URL.  We press our generic URL server
-            # into use as a generic file downloader.
-            try:
-                dl = catalog.URLServer(self.logger, "downloader", "dl",
-                                       info.url, "")
-                filepath = dl.retrieve(info.url, filepath=info.filepath,  # noqa
-                                       cb_fn=_dl_indicator)
-            finally:
-                self.gui_do(self.show_status, "")
-
-        return info
-
-    def name_image_from_path(self, path, idx=None):
-        return iohelper.name_image_from_path(path, idx=idx)
+        return data_obj
 
     def load_file(self, filepath, chname=None, wait=True,
                   create_channel=True, display_image=True,
                   image_loader=None):
-        """Load a file from filesystem and display it.
+        """Load a file and display it.
 
         Parameters
         ----------
         filepath : str
-            The path of the file to load (can be a URL).
+            The path of the file to load (must reference a local file).
 
         chname : str, optional
             The name of the channel in which to display the image.
@@ -666,17 +646,25 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         if not chname:
             channel = self.get_current_channel()
-            chname = channel.name
         else:
             if not self.has_channel(chname) and create_channel:
                 self.gui_call(self.add_channel, chname)
             channel = self.get_channel(chname)
-            chname = channel.name
+        chname = channel.name
 
         if image_loader is None:
             image_loader = self.load_image
 
-        info = self.get_fileinfo(filepath)
+        cache_dir = self.settings.get('download_folder', self.tmpdir)
+
+        info = iohelper.get_fileinfo(filepath, cache_dir=cache_dir)
+
+        # check that file is locally accessible
+        if not info.ondisk:
+            errmsg = "File must be locally loadable: %s" % (filepath)
+            self.gui_do(self.show_error, errmsg)
+            return
+
         filepath = info.filepath
 
         kwargs = {}
@@ -705,7 +693,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Assign a name to the image if the loader did not.
         name = image.get('name', None)
         if name is None:
-            name = self.name_image_from_path(filepath, idx=idx)
+            name = iohelper.name_image_from_path(filepath, idx=idx)
             image.set(name=name)
 
         if display_image:
@@ -720,6 +708,182 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # Return the image
         return image
+
+    def add_download(self, info, future):
+        """
+        Hand off a download to the Downloads plugin, if it is present.
+
+        Parameters
+        ----------
+        info : `~ginga.misc.Bunch.Bunch`
+            A bunch of information about the URI as returned by
+            `ginga.util.iohelper.get_fileinfo()`
+
+        future : `~ginga.misc.Future.Future`
+            A future that represents the future computation to be performed
+            after downloading the file.  Resolving the future will trigger
+            the computation.
+        """
+        if self.gpmon.has_plugin('Downloads'):
+            obj = self.gpmon.get_plugin('Downloads')
+            self.gui_do(obj.add_download, info, future)
+        else:
+            self.show_error("Please activate the 'Downloads' plugin to"
+                            " enable download functionality")
+
+    def open_uri_cont(self, filespec, loader_cont_fn):
+        """Download a URI (if necessary) and do some action on it.
+
+        If the file is already present (e.g. a file:// URI) then this
+        merely confirms that and invokes the continuation.
+
+        Parameters
+        ----------
+        filespec : str
+            The path of the file to load (can be a non-local URI)
+
+        loader_cont_fn : func (str) -> None
+            A continuation consisting of a function of one argument
+            that does something with the file once it is downloaded
+            The parameter is the local filepath after download, plus
+            any "index" understood by the loader.
+
+        """
+        info = iohelper.get_fileinfo(filespec)
+
+        # download file if necessary
+        if ((not info.ondisk) and (info.url is not None) and
+                (not info.url.startswith('file:'))):
+            # create up a future to do the download and set up a
+            # callback to handle it when finished
+            def _download_cb(future):
+                filepath = future.get_value(block=False)
+                self.logger.debug("downloaded: %s" % (filepath))
+                self.gui_do(loader_cont_fn, filepath + info.idx)
+
+            future = Future.Future()
+            future.add_callback('resolved', _download_cb)
+            self.add_download(info, future)
+            return
+
+        # invoke the continuation
+        loader_cont_fn(info.filepath + info.idx)
+
+    def open_file_cont(self, pathspec, loader_cont_fn):
+        """Open a file and do some action on it.
+
+        Parameters
+        ----------
+        pathspec : str
+            The path of the file to load (can be a URI, but must reference
+            a local file).
+
+        loader_cont_fn : func (data_obj) -> None
+            A continuation consisting of a function of one argument
+            that does something with the data_obj created by the loader
+
+        """
+        info = iohelper.get_fileinfo(pathspec)
+
+        filepath = info.filepath
+
+        if not os.path.exists(filepath):
+            errmsg = "File does not appear to exist: '%s'" % (filepath)
+            self.gui_do(self.show_error, errmsg)
+            return
+
+        try:
+            typ, subtyp = iohelper.guess_filetype(filepath)
+
+        except Exception as e:
+            self.logger.warning("error determining file type: %s; "
+                                "assuming 'image/fits'" % (str(e)))
+            # Can't determine file type: assume and attempt FITS
+            typ, subtyp = 'image', 'fits'
+
+        mimetype = "%s/%s" % (typ, subtyp)
+        try:
+            opener_class = loader.get_opener(mimetype)
+
+        except KeyError:
+            # TODO: here pop up a dialog asking which loader to use
+            errmsg = "No registered opener for: '%s'" % (mimetype)
+            self.gui_do(self.show_error, errmsg)
+            return
+
+        # kwd args to pass to opener
+        kwargs = dict()
+        inherit_prihdr = self.settings.get('inherit_primary_header',
+                                           False)
+        kwargs['inherit_primary_header'] = inherit_prihdr
+
+        # open the file and load the items named by the index
+        opener = opener_class(self.logger)
+        try:
+            with opener.open_file(filepath) as io_f:
+                io_f.load_idx_cont(info.idx, loader_cont_fn, **kwargs)
+
+        except Exception as e:
+            errmsg = "Error opening '%s': %s" % (filepath, str(e))
+            try:
+                (type, value, tb) = sys.exc_info()
+                tb_str = "\n".join(traceback.format_tb(tb))
+            except Exception as e:
+                tb_str = "Traceback information unavailable."
+            self.gui_do(self.show_error, errmsg + '\n' + tb_str)
+
+    def open_uris(self, uris, chname=None, bulk_add=False):
+        """Open a set of URIs.
+
+        Parameters
+        ----------
+        uris : list of str
+            The URIs of the files to load
+
+        chname: str, optional (defaults to channel with focus)
+            The name of the channel in which to load the items
+
+        bulk_add : bool, optional (defaults to False)
+            If True, then all the data items are loaded into the
+            channel without disturbing the current item there.
+            If False, then the first item loaded will be displayed
+            and the rest of the items will be loaded as bulk.
+
+        """
+        if len(uris) == 0:
+            return
+
+        if chname is None:
+            channel = self.get_channel_info()
+            if channel is None:
+                # No active channel to load these into
+                return
+            chname = channel.name
+        channel = self.get_channel_on_demand(chname)
+
+        def show_dataobj_bulk(data_obj):
+            self.gui_do(channel.add_image, data_obj, bulk_add=True)
+
+        def load_file_bulk(filepath):
+            self.nongui_do(self.open_file_cont, filepath, show_dataobj_bulk)
+
+        def show_dataobj(data_obj):
+            self.gui_do(channel.add_image, data_obj, bulk_add=False)
+
+        def load_file(filepath):
+            self.nongui_do(self.open_file_cont, filepath, show_dataobj)
+
+        # determine whether first file is loaded as a bulk load
+        if bulk_add:
+            self.open_uri_cont(uris[0], load_file_bulk)
+        else:
+            self.open_uri_cont(uris[0], load_file)
+        self.update_pending()
+
+        for uri in uris[1:]:
+            # rest of files are all loaded using bulk load
+            self.open_uri_cont(uri, load_file_bulk)
+            self.update_pending()
 
     def add_preload(self, chname, image_info):
         bnch = Bunch.Bunch(chname=chname, info=image_info)
@@ -896,7 +1060,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.next_channel_ws(ws)
 
     def add_channel_auto_ws(self, ws):
-        chname = ws.extdata.w_chname.get_text().strip()
+        if ws.toolbar is not None:
+            chname = ws.extdata.w_chname.get_text().strip()
+        else:
+            chname = ''
         if len(chname) == 0:
             # make up a channel name
             chpfx = self.settings.get('channel_prefix', "Image")
@@ -939,7 +1106,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         ws = self.get_current_workspace()
         ws.cycle_wstype()
 
-    def add_workspace(self, wsname, wstype, inSpace='channels'):
+    def add_workspace(self, wsname, wstype, inSpace=None):
+        if inSpace is None:
+            inSpace = self.main_wsname
 
         if wsname in self.ds.get_tabnames(None):
             raise ValueError("Tab name already in use: '%s'" % (wsname))
@@ -1345,16 +1514,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def banner(self, raiseTab=False):
         banner_file = os.path.join(self.iconpath, 'ginga-splash.ppm')
         chname = 'Ginga'
-        self.add_channel(chname)
-        channel = self.get_channel(chname)
+        channel = self.get_channel_on_demand(chname)
         viewer = channel.viewer
         viewer.enable_autocuts('off')
         viewer.enable_autozoom('off')
         viewer.enable_autocenter('on')
         viewer.cut_levels(0, 255)
-
-        image = self.load_file(banner_file, chname=chname, wait=False)
         viewer.scale_to(1, 1)
+
+        image = self.load_file(banner_file, chname=chname, wait=True)
 
         # Insert Ginga version info
         header = image.get_header()
@@ -1449,9 +1617,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         return imap.get_names()
 
-    def set_layout(self, layout, layout_file=None):
+    def set_layout(self, layout, layout_file=None, main_wsname=None):
         self.layout = layout
         self.layout_file = layout_file
+        if main_wsname is not None:
+            self.main_wsname = main_wsname
 
     def get_screen_dimensions(self):
         return (self.screen_wd, self.screen_ht)
@@ -1595,7 +1765,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def add_dialogs(self):
         if hasattr(GwHelp, 'FileSelection'):
-            self.filesel = GwHelp.FileSelection(self.w.root.get_widget())
+            self.filesel = GwHelp.FileSelection(self.w.root.get_widget(),
+                                                all_at_once=True)
 
     def add_plugin_menu(self, name, spec):
         # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
@@ -1777,7 +1948,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         vbox.set_spacing(0)
 
         if not workspace:
-            workspace = 'channels'
+            workspace = self.main_wsname
         w = self.ds.get_nb(workspace)
 
         size = (700, 700)
@@ -1874,7 +2045,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         names = self.ds.get_wsnames()
         try:
-            idx = names.index('channels')
+            idx = names.index(self.main_wsname)
         except Exception:
             idx = 0
         for name in names:
@@ -1975,7 +2146,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         names = self.ds.get_wsnames()
         names.insert(0, 'top level')
         try:
-            idx = names.index('channels')
+            idx = names.index(self.main_wsname)
         except Exception:
             idx = 0
         for name in names:
@@ -1999,7 +2170,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def gui_load_file(self, initialdir=None):
         #self.start_operation('FBrowser')
-        self.filesel.popup("Load File", self.load_file,
+        self.filesel.popup("Load File", self.load_file_cb,
                            initialdir=initialdir)
 
     def status_msg(self, format, *args):
@@ -2266,28 +2437,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         return True
 
-    def load_file_cb(self, w, rsp):
-        w.hide()
-        if rsp == 0:
-            return
-
-        filename = w.selected_files()[0]
-
-        # Normal load
-        if os.path.isfile(filename):
-            self.logger.debug('Loading {0}'.format(filename))
-            self.load_file(filename)
-
-        # Fancy load (first file only)
-        # TODO: If load all the matches, might get (Qt) QPainter errors
-        else:
-            info = iohelper.get_fileinfo(filename)
-            ext = iohelper.get_hdu_suffix(info.numhdu)
-            paths = ['{0}{1}'.format(fname, ext)
-                     for fname in glob.iglob(info.filepath)]
-            self.logger.debug(
-                'Found {0} and only loading {1}'.format(paths, paths[0]))
-            self.load_file(paths[0])
+    def load_file_cb(self, paths):
+        # NOTE: this dialog callback is handled a little differently
+        # from some of the other pop-ups.  It only gets called if a
+        # file was selected and "Open" clicked.  This is due to the
+        # use of FileSelection rather than Dialog widget
+        self.open_uris(paths)
 
     def _get_channel_by_container(self, child):
         for chname in self.get_channel_names():
@@ -2357,19 +2512,21 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.logger.debug("page added in %s: '%s'" % (ws.name, str(child)))
 
         num_pages = ws.num_pages()
-        if num_pages > 1:
-            ws.extdata.w_prev_tab.set_enabled(True)
-            ws.extdata.w_next_tab.set_enabled(True)
-        ws.extdata.w_del_channel.set_enabled(True)
+        if ws.toolbar is not None:
+            if num_pages > 1:
+                ws.extdata.w_prev_tab.set_enabled(True)
+                ws.extdata.w_next_tab.set_enabled(True)
+            ws.extdata.w_del_channel.set_enabled(True)
 
     def page_removed_cb(self, ws, child):
         self.logger.debug("page removed in %s: '%s'" % (ws.name, str(child)))
         num_pages = ws.num_pages()
         if num_pages <= 1:
-            ws.extdata.w_prev_tab.set_enabled(False)
-            ws.extdata.w_next_tab.set_enabled(False)
-            if num_pages <= 0:
-                ws.extdata.w_del_channel.set_enabled(False)
+            if ws.toolbar is not None:
+                ws.extdata.w_prev_tab.set_enabled(False)
+                ws.extdata.w_next_tab.set_enabled(False)
+                if num_pages <= 0:
+                    ws.extdata.w_del_channel.set_enabled(False)
 
     def page_close_cb(self, ws, child):
         # user is attempting to close the page
@@ -2508,24 +2665,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.next_channel()
         return True
 
-    def dragdrop(self, chviewer, urls):
+    def dragdrop(self, chviewer, uris):
         """Called when a drop operation is performed on a channel viewer.
-        We are called back with a URL and we attempt to load it if it
+        We are called back with a URL and we attempt to (down)load it if it
         names a file.
         """
         # find out our channel
         chname = self.get_channel_name(chviewer)
-
-        # NOTE: this used to be a nongui_do(), but there is some
-        # subtle interaction inside the toolkit code with the
-        # loading that makes it unstable
-        self.gui_do(self.load_file, urls[-1], chname=chname, wait=True)
-        self.update_pending()
-
-        for url in urls[:-1]:
-            self.gui_do(self.load_file, url, chname=chname,
-                        display_image=False)
-
+        self.open_uris(uris, chname=chname)
         return True
 
     def force_focus_cb(self, viewer, event, data_x, data_y):
@@ -2564,6 +2711,18 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     ########################################################
     ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
+
+    def name_image_from_path(self, path, idx=None):
+        self.logger.warning("This function has moved to the"
+                            " 'ginga.util.iohelper' module,"
+                            " and will be deprecated soon.")
+        return iohelper.name_image_from_path(path, idx=idx)
+
+    def get_fileinfo(self, filespec, dldir=None):
+        self.logger.warning("This function has moved to the"
+                            " 'ginga.util.iohelper' module,"
+                            " and will be deprecated soon.")
+        return iohelper.get_fileinfo(filespec, cache_dir=dldir)
 
     getDrawClass = get_draw_class
     getDrawClasses = get_draw_classes

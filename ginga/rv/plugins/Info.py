@@ -36,6 +36,10 @@ As a global plugin, ``Info`` responds to a change of focus to a new channel
 by displaying the metadata from the new channel.
 It typically appears under the "Synopsis" tab in the user interface.
 
+This plugin is not usually configured to be closeable, but the user can
+make it so by setting the "closeable" setting to True in the configuration
+file--then Close and Help buttons will be added to the bottom of the UI.
+
 """
 from ginga.gw import Widgets
 from ginga.misc import Bunch
@@ -55,6 +59,13 @@ class Info(GingaPlugin.GlobalPlugin):
         # truncate names after this size
         self.maxstr = 60
 
+        spec = self.fv.get_plugin_spec(str(self))
+
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_Info')
+        self.settings.add_defaults(closeable=not spec.get('hidden', False))
+        self.settings.load(onError='silent')
+
         self.autozoom_options = ['on', 'override', 'once', 'off']
         self.autocut_options = self.autozoom_options
         self.autocenter_options = self.autozoom_options
@@ -66,9 +77,29 @@ class Info(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
+        vbox = Widgets.VBox()
+        vbox.set_border_width(2)
+        vbox.set_spacing(2)
+
         nb = Widgets.StackWidget()
         self.nb = nb
-        container.add_widget(self.nb, stretch=1)
+        vbox.add_widget(nb, stretch=1)
+
+        if self.settings.get('closeable', False):
+            btns = Widgets.HBox()
+            btns.set_border_width(4)
+            btns.set_spacing(4)
+
+            btn = Widgets.Button("Close")
+            btn.add_callback('activated', lambda w: self.close())
+            btns.add_widget(btn)
+            btn = Widgets.Button("Help")
+            btn.add_callback('activated', lambda w: self.help())
+            btns.add_widget(btn, stretch=0)
+            btns.add_widget(Widgets.Label(''), stretch=1)
+            vbox.add_widget(btns, stretch=0)
+
+        container.add_widget(vbox, stretch=1)
         self.gui_up = True
 
     def _create_info_window(self):
@@ -177,42 +208,42 @@ class Info(GingaPlugin.GlobalPlugin):
 
         winfo.channel.set_text(chname)
         winfo.cut_low.add_callback('activated', self.cut_levels,
-                                   channel.fitsimage, info)
+                                   channel, info)
         winfo.cut_high.add_callback('activated', self.cut_levels,
-                                    channel.fitsimage, info)
+                                    channel, info)
         winfo.cut_levels.add_callback('activated', self.cut_levels,
-                                      channel.fitsimage, info)
+                                      channel, info)
         winfo.auto_levels.add_callback('activated', self.auto_levels,
-                                       channel.fitsimage, info)
+                                       channel, info)
         winfo.cut_new.add_callback('activated', self.set_autocuts_cb,
-                                   channel.fitsimage, info)
+                                   channel, info)
         winfo.zoom_new.add_callback('activated', self.set_autozoom_cb,
-                                    channel.fitsimage, info)
+                                    channel, info)
         winfo.center_new.add_callback('activated', self.set_autocenter_cb,
-                                      channel.fitsimage, info)
+                                      channel, info)
         winfo.follow_new.add_callback('activated', self.set_follow_cb,
-                                      channel.fitsimage, info)
+                                      channel, info)
         winfo.raise_new.add_callback('activated', self.set_raise_cb,
-                                     channel.fitsimage, info)
+                                     channel, info)
 
         fitsimage = channel.fitsimage
         fitssettings = fitsimage.get_settings()
         for name in ['cuts']:
             fitssettings.get_setting(name).add_callback(
-                'set', self.cutset_cb, fitsimage, info)
+                'set', self.cutset_cb, channel)
         for name in ['scale']:
             fitssettings.get_setting(name).add_callback(
-                'set', self.zoomset_cb, fitsimage, info)
+                'set', self.zoomset_cb, channel)
         fitssettings.get_setting('autocuts').add_callback(
-            'set', self.autocuts_cb, fitsimage, info)
+            'set', self.autocuts_cb, channel)
         fitssettings.get_setting('autozoom').add_callback(
-            'set', self.autozoom_cb, fitsimage, info)
+            'set', self.autozoom_cb, channel)
         fitssettings.get_setting('autocenter').add_callback(
-            'set', self.autocenter_cb, fitsimage, info)
+            'set', self.autocenter_cb, channel)
         fitssettings.get_setting('switchnew').add_callback(
-            'set', self.follow_cb, fitsimage, info)
+            'set', self.follow_cb, channel)
         fitssettings.get_setting('raisenew').add_callback(
-            'set', self.raise_cb, fitsimage, info)
+            'set', self.raise_cb, channel)
 
         self.set_info(info, fitsimage)
 
@@ -222,12 +253,42 @@ class Info(GingaPlugin.GlobalPlugin):
         chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
         info = channel.extdata._info_info
+        channel.extdata._info_info = None
         widget = info.widget
         self.nb.remove(widget, delete=True)
         self.active = None
         self.info = None
 
-    # CALLBACKS
+    def start(self):
+        names = self.fv.get_channel_names()
+        for name in names:
+            channel = self.fv.get_channel(name)
+            self.add_channel(self.fv, channel)
+
+        channel = self.fv.get_channel_info()
+        if channel is not None:
+            viewer = channel.fitsimage
+
+            image = viewer.get_image()
+            if image is not None:
+                self.redo(channel, image)
+
+            self.focus_cb(viewer, channel)
+
+    def stop(self):
+        names = self.fv.get_channel_names()
+        for name in names:
+            channel = self.fv.get_channel(name)
+            channel.extdata._info_info = None
+
+        self.active = None
+        self.nb = None
+        self.info = None
+        self.gui_up = False
+
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
 
     def redo(self, channel, image):
         if not self.gui_up:
@@ -255,10 +316,13 @@ class Info(GingaPlugin.GlobalPlugin):
 
         self.set_info(self.info, channel.fitsimage)
 
-    def zoomset_cb(self, setting, value, fitsimage, info):
+    def zoomset_cb(self, setting, value, channel):
         """This callback is called when the main window is zoomed.
         """
         if not self.gui_up:
+            return
+        info = channel.extdata._info_info
+        if info is None:
             return
         #scale_x, scale_y = fitsimage.get_scale_xy()
         scale_x, scale_y = value
@@ -272,8 +336,11 @@ class Info(GingaPlugin.GlobalPlugin):
             text = "X: %s  Y: %s" % (textx, texty)
         info.winfo.zoom.set_text(text)
 
-    def cutset_cb(self, setting, value, fitsimage, info):
+    def cutset_cb(self, setting, value, channel):
         if not self.gui_up:
+            return
+        info = channel.extdata._info_info
+        if info is None:
             return
         loval, hival = value
         #info.winfo.cut_low.set_text('%.4g' % (loval))
@@ -281,21 +348,30 @@ class Info(GingaPlugin.GlobalPlugin):
         #info.winfo.cut_high.set_text('%.4g' % (hival))
         info.winfo.cut_high_value.set_text('%.4g' % (hival))
 
-    def autocuts_cb(self, setting, option, fitsimage, info):
+    def autocuts_cb(self, setting, option, channel):
         if not self.gui_up:
+            return
+        info = channel.extdata._info_info
+        if info is None:
             return
         self.logger.debug("autocuts changed to %s" % option)
         index = self.autocut_options.index(option)
         info.winfo.cut_new.set_index(index)
 
-    def autozoom_cb(self, setting, option, fitsimage, info):
+    def autozoom_cb(self, setting, option, channel):
         if not self.gui_up:
+            return
+        info = channel.extdata._info_info
+        if info is None:
             return
         index = self.autozoom_options.index(option)
         info.winfo.zoom_new.set_index(index)
 
-    def autocenter_cb(self, setting, option, fitsimage, info):
+    def autocenter_cb(self, setting, option, channel):
         if not self.gui_up:
+            return
+        info = channel.extdata._info_info
+        if info is None:
             return
         # Hack to convert old values that used to be T/F
         if isinstance(option, bool):
@@ -304,43 +380,49 @@ class Info(GingaPlugin.GlobalPlugin):
         index = self.autocenter_options.index(option)
         info.winfo.center_new.set_index(index)
 
-    def follow_cb(self, setting, option, fitsimage, info):
+    def follow_cb(self, setting, option, channel):
         if not self.gui_up:
+            return
+        info = channel.extdata._info_info
+        if info is None:
             return
         info.winfo.follow_new.set_state(option)
 
-    def raise_cb(self, setting, option, fitsimage, info):
+    def raise_cb(self, setting, option, channel):
         if not self.gui_up:
+            return
+        info = channel.extdata._info_info
+        if info is None:
             return
         info.winfo.raise_new.set_state(option)
 
-    def set_autocuts_cb(self, w, index, fitsimage, info):
+    def set_autocuts_cb(self, w, index, channel, info):
         if not self.gui_up:
             return
         option = self.autocut_options[index]
-        fitsimage.enable_autocuts(option)
+        channel.fitsimage.enable_autocuts(option)
 
-    def set_autozoom_cb(self, w, index, fitsimage, info):
+    def set_autozoom_cb(self, w, index, channel, info):
         if not self.gui_up:
             return
         option = self.autozoom_options[index]
-        fitsimage.enable_autozoom(option)
+        channel.fitsimage.enable_autozoom(option)
 
-    def set_autocenter_cb(self, w, index, fitsimage, info):
+    def set_autocenter_cb(self, w, index, channel, info):
         if not self.gui_up:
             return
         option = self.autocenter_options[index]
-        fitsimage.enable_autocenter(option)
+        channel.fitsimage.enable_autocenter(option)
 
-    def set_follow_cb(self, w, tf, fitsimage, info):
+    def set_follow_cb(self, w, tf, channel, info):
         if not self.gui_up:
             return
-        fitsimage.get_settings().set(switchnew=tf)
+        channel.fitsimage.get_settings().set(switchnew=tf)
 
-    def set_raise_cb(self, w, tf, fitsimage, info):
+    def set_raise_cb(self, w, tf, channel, info):
         if not self.gui_up:
             return
-        fitsimage.get_settings().set(raisenew=tf)
+        channel.fitsimage.get_settings().set(raisenew=tf)
 
     # LOGIC
 
@@ -403,6 +485,8 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.dimensions.set_text(dim_txt)
 
     def field_info(self, viewer, channel, info):
+        if not self.gui_up:
+            return
         if '_info_info' not in channel.extdata:
             return
         obj = channel.extdata._info_info
@@ -417,7 +501,8 @@ class Info(GingaPlugin.GlobalPlugin):
             obj.winfo.lbl_ra.set_text(info.ra_lbl + ':')
             obj.winfo.lbl_dec.set_text(info.dec_lbl + ':')
 
-    def cut_levels(self, w, fitsimage, info):
+    def cut_levels(self, w, channel, info):
+        fitsimage = channel.fitsimage
         loval, hival = fitsimage.get_cut_levels()
         try:
             lostr = info.winfo.cut_low.get_text().strip()
@@ -435,8 +520,8 @@ class Info(GingaPlugin.GlobalPlugin):
 
         return True
 
-    def auto_levels(self, w, fitsimage, info):
-        fitsimage.auto_levels()
+    def auto_levels(self, w, channel, info):
+        channel.fitsimage.auto_levels()
 
     def __str__(self):
         return 'info'

@@ -15,7 +15,9 @@ try:
 except ImportError:
     have_asdf = False
 
-__all__ = ['have_asdf', 'load_asdf']
+from ginga.util import iohelper
+
+__all__ = ['have_asdf', 'load_asdf', 'ASDFFileHandler']
 
 
 def load_asdf(asdf_obj, data_key='sci', wcs_key='wcs', header_key='meta'):
@@ -82,3 +84,51 @@ def loader(filepath, logger=None, **kwargs):
         image.load_asdf(asdf_f)
 
     return image
+
+
+class ASDFFileHandler(object):
+
+    def __init__(self, logger):
+        self.logger = logger
+        self._path = None
+
+    def load_file(self, filepath, idx=None, **kwargs):
+
+        data_obj = loader(filepath, logger=self.logger, **kwargs)
+
+        # set important metadata
+        name = iohelper.name_image_from_path(filepath, idx=None)
+        data_obj.set(path=filepath, name=name, idx=idx,
+                     image_loader=self.load_file)
+
+        return data_obj
+
+    def open_file(self, filepath, **kwargs):
+        # TODO: this should open the ASDF file and make a full inventory
+        # of what is available to load
+        self._path = filepath
+        return self
+
+    def close(self):
+        # TODO: this should close the ASDF file
+        self._path = None
+
+    def __len__(self):
+        return 1
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
+    def load_idx_cont(self, idx_spec, loader_cont_fn, **kwargs):
+        if self._path is None:
+            raise ValueError("Please call open_file() first!")
+
+        # TODO: idx_spec names some path to an ASDF object
+        data_obj = self.load_file(self._path, idx=None, **kwargs)
+
+        # call continuation function
+        loader_cont_fn(data_obj)

@@ -350,6 +350,8 @@ class Pick(GingaPlugin.LocalPlugin):
         self.ev_intr = threading.Event()
         self.tmr_quick = fv.get_timer()
         self.tmr_quick.set_callback('expired', self.quick_timer_cb)
+        self._wd, self._ht = 400, 300
+        self._split_sizes = [self._ht, self._ht]
 
         self.last_rpt = []
         self.rpt_dict = OrderedDict({})
@@ -396,6 +398,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.canvas.add(self.cross)
 
         self.have_mpl = have_mpl
+        self.gui_up = False
 
     def sync_preferences(self):
         # Load various preferences
@@ -466,6 +469,7 @@ class Pick(GingaPlugin.LocalPlugin):
         box.set_spacing(2)
 
         paned = Widgets.Splitter(orientation=orientation)
+        self.w.splitter = paned
 
         nb = Widgets.TabWidget(tabpos='bottom')
         self.w.nb1 = nb
@@ -474,7 +478,7 @@ class Pick(GingaPlugin.LocalPlugin):
         cm, im = self.fv.cm, self.fv.im
 
         di = Viewers.CanvasView(logger=self.logger)
-        width, height = 400, 300
+        width, height = self._wd, self._ht
         di.set_desired_size(width, height)
         di.enable_autozoom('off')
         di.enable_autocuts('off')
@@ -1059,8 +1063,8 @@ class Pick(GingaPlugin.LocalPlugin):
 
         box.add_widget(fr, stretch=5)
         paned.add_widget(sw)
-        # hack to set a reasonable starting position for the splitter
-        paned.set_sizes([height, height])
+        paned.set_sizes(self._split_sizes)
+
         vtop.add_widget(paned, stretch=5)
 
         mode = self.canvas.get_draw_mode()
@@ -1106,6 +1110,7 @@ class Pick(GingaPlugin.LocalPlugin):
         vtop.add_widget(btns, stretch=0)
 
         container.add_widget(vtop, stretch=5)
+        self.gui_up = True
 
     def record_cb(self, w, tf):
         self.do_record = tf
@@ -1274,6 +1279,8 @@ class Pick(GingaPlugin.LocalPlugin):
         self.fv.show_status("Draw a shape with the right mouse button")
 
     def stop(self):
+        self.gui_up = False
+        self._split_sizes = self.w.splitter.get_sizes()
         # Delete previous peak marks
         objs = self.canvas.get_objects_by_tag_pfx('peak')
         self.canvas.delete_objects(objs)

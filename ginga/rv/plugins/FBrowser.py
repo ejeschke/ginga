@@ -20,9 +20,9 @@ load it into any channel viewer.
 Multiple files can be selected by holding down ``Ctrl`` (``Command`` on Mac),
 or ``Shift``-clicking to select a contiguous range of files.
 
-You may also enter full path to the desired image(s) in the text box as
-``/my/path/to/image.fits``, ``/my/path/to/image.fits[ext]``,
-``/my/path/to/image*.fits``, or ``/my/path/to/image*.fits[ext]``.
+You may also enter full path to the desired image(s) in the text box such
+as ``/my/path/to/image.fits``, ``/my/path/to/image.fits[ext]``, or
+``/my/path/to/image*.fits[extname,*]``.
 
 Because it is a local plugin, ``FBrowser`` will remember its last
 directory if closed and then restarted.
@@ -30,6 +30,7 @@ directory if closed and then restarted.
 """
 import glob
 import os
+import re
 import time
 from pathlib import Path
 
@@ -45,6 +46,7 @@ except ImportError:
     have_astropy = False
 
 __all__ = ['FBrowser']
+_patt = re.compile(r'"([^ "]+)"')
 
 
 class FBrowser(GingaPlugin.LocalPlugin):
@@ -108,6 +110,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
                                  dragable=True)
         table.add_callback('activated', self.item_dblclicked_cb)
         table.add_callback('drag-start', self.item_drag_cb)
+        table.add_callback('selected', self.item_selected_cb)
 
         # set header
         col = 0
@@ -159,8 +162,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
         else:
             channel = self.fv.get_channel_info()
             if channel is None:
-                return
-            self.fv.gui_do(self.fv.dragdrop, channel.fitsimage, paths)
+                chname = None
+            else:
+                chname = channel.name
+            self.fv.gui_do(self.fv.open_uris, paths, chname=channel.name)
 
     def load_cb(self):
         # Load from text box
@@ -220,7 +225,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         self.open_file(path)
 
     def item_drag_cb(self, widget, drag_pkg, res_dict):
-        urls = [Path(info.path).as_uri() for key, info in res_dict.items()]
+        urls = [Path(info.path).as_uri() for info in res_dict.values()]
         self.logger.info("urls: %s" % (urls))
         drag_pkg.set_urls(urls)
 
@@ -233,6 +238,17 @@ class FBrowser(GingaPlugin.LocalPlugin):
         # Open directory
         if not retcode:
             self.browse(path)
+
+    def item_selected_cb(self, widget, res_dict):
+        paths = [info.path for info in res_dict.values()]
+        n_paths = len(paths)
+        if n_paths <= 0:
+            return
+        elif n_paths == 1:
+            txt = paths[0]
+        else:
+            txt = ' '.join(['"{}"'.format(s) for s in paths])
+        self.entry.set_text(txt)
 
     def close(self):
         if self.fitsimage is None:
@@ -254,21 +270,30 @@ class FBrowser(GingaPlugin.LocalPlugin):
         """Load file(s) -- image*.fits, image*.fits[ext].
         Returns success code (True or False).
         """
-        # Strips trailing wildcard
-        if path.endswith('*'):
-            path = path[:-1]
+        paths = []
+        input_list = _patt.findall(path)
+        if not input_list:
+            input_list = [path]
 
-        if os.path.isdir(path):
-            return False
+        for path in input_list:
+            # Strips trailing wildcard
+            if path.endswith('*'):
+                path = path[:-1]
 
-        self.logger.debug('Opening files matched by {0}'.format(path))
-        info = iohelper.get_fileinfo(path)
-        ext = iohelper.get_hdu_suffix(info.numhdu)
-        files = glob.glob(info.filepath)  # Expand wildcard
-        paths = ['{0}{1}'.format(f, ext) for f in files]
+            if os.path.isdir(path):
+                continue
 
-        self.load_paths(paths)
-        return True
+            self.logger.debug('Opening files matched by {0}'.format(path))
+            info = iohelper.get_fileinfo(path)
+            ext = iohelper.get_hdu_suffix(info.numhdu)
+            files = glob.glob(info.filepath)  # Expand wildcard
+            paths.extend(['{0}{1}'.format(f, ext) for f in files])
+
+        if len(paths) > 0:
+            self.load_paths(paths)
+            return True
+
+        return False
 
     def open_file(self, path):
         self.logger.debug("path: %s" % (path))
@@ -282,7 +307,6 @@ class FBrowser(GingaPlugin.LocalPlugin):
             self.browse(path)
 
         elif os.path.exists(path):
-            #self.fv.load_file(path)
             self.load_paths([Path(path).as_uri()])
 
         else:
@@ -401,7 +425,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
     def _add_info(self, channel, filelist):
         for path in filelist:
-            name = self.fv.name_image_from_path(path)
+            name = iohelper.name_image_from_path(path)
             info = Bunch.Bunch(name=name, path=path)
             self.fv.gui_call(channel.add_image_info, info)
 

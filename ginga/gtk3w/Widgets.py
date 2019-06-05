@@ -118,8 +118,9 @@ class WidgetBase(Callback.Callbacks):
         self.widget.set_size_request(width, height)
 
         # hackish way to allow the widget to be resized down again later
-        # NOTE: this causes some problems for sizing certain widgets
-        # GObject.idle_add(self.widget.set_size_request, -1, -1)
+        # NOTE: this may cause some problems for sizing certain widgets
+        if width > 0 and height > 0:
+            GObject.idle_add(self.widget.set_size_request, -1, -1)
 
     def get_font(self, font_family, point_size):
         font = GtkHelp.get_font(font_family, point_size)
@@ -1347,7 +1348,7 @@ class MDIWidget(ContainerBase):
         self.mode = 'mdi'
         self.true_mdi = True
 
-        # TODO: currently scrollbars are not working
+        # TODO: currently scrollbars are only partially working
         sw = Gtk.ScrolledWindow()
         sw.set_border_width(2)
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
@@ -2213,12 +2214,20 @@ def make_widget(title, wtype):
 
 
 def hadjust(w, orientation):
+    """Ostensibly, a function to reduce the vertical footprint of a widget
+    that is normally used in a vertical stack (usually a Splitter), when it
+    is instead used in a horizontal orientation.
+    """
     if orientation != 'horizontal':
         return w
-    vbox = VBox()
-    vbox.add_widget(w)
-    vbox.add_widget(Label(''), stretch=1)
-    return vbox
+    # This currently does not seem to be needed for most plugins that are
+    # coded to flow either vertically or horizontally and, in fact, reduces
+    # the visual asthetic somewhat.
+    ## spl = Splitter(orientation='vertical')
+    ## spl.add_widget(w)
+    ## spl.add_widget(Label(''))
+    ## return spl
+    return w
 
 
 def build_info(captions, orientation='vertical'):

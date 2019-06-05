@@ -18,6 +18,20 @@ Ver 3.0.0 (unreleased)
 - Improved smoothness and updates when rotating or shifting color map
 - Fixed broken banner
 - Improved ``pip`` installation commands for different backends.
+- Fixed a bug where identically named HDUs could not be loaded by MultiDim
+- Fixed a bug where compressed HDUs could not be loaded by MultiDim
+- Plugins with splitter type panels now remember their sizes when closed
+- LineProfile plugin's default Y-axis label is now "Signal", to be more
+  scientifically accurate.
+- Simplified plugins Colorbar, Contents, Cursor, Errors, Header, Info,
+  Log, Pan, and Thumbs plugins.  Made all of these restartable.
+  Subclasses of these plugins may require refactoring in a couple of cases.
+- Selecting item in FBrowser now populates its text box properly.
+- Support opening all extensions of given extension name from
+  a FITS file (e.g., ``filename.fits[SCI,*]``) from Ginga command
+  line or FBrowser.
+- New Downloads plugin for monitoring/managing URI downloads
+- Supports PySide2 (alternative Qt5 backend)
 
 Ver 2.7.2 (2018-11-05)
 ======================

@@ -118,6 +118,7 @@ class Compose(GingaPlugin.LocalPlugin):
         self._wd = 300
         self._ht = 200
         self.pct_reduce = 0.1
+        self._split_sizes = [600, 200, 200]
 
         self.layertag = 'compose-canvas'
 
@@ -132,7 +133,7 @@ class Compose(GingaPlugin.LocalPlugin):
         top = Widgets.VBox()
         top.set_border_width(4)
 
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        vbox = Widgets.VBox()
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
@@ -185,16 +186,18 @@ class Compose(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Preview")
         fr.set_widget(iw)
 
-        vpaned = Widgets.Splitter(orientation=orientation)
+        vpaned = Widgets.Splitter(orientation='vertical')
+        self.w.splitter = vpaned
         vpaned.add_widget(fr)
         # spacer
         vpaned.add_widget(Widgets.Label(''))
 
         fr = Widgets.Frame("Layers")
         self.w.scales = fr
-        #vpaned.add_widget(fr)
+        fr.set_widget(Widgets.VBox())
+        vpaned.add_widget(fr)
+        vpaned.set_sizes(self._split_sizes)
         vbox.add_widget(vpaned, stretch=1)
-        vbox.add_widget(fr, stretch=0)
 
         captions = (("Save Image As", 'button', "Save Path", 'entry'),
                     ("Save to Channel", 'button'),
@@ -204,8 +207,7 @@ class Compose(GingaPlugin.LocalPlugin):
         b.save_to_channel.add_callback('activated', lambda w: self.save_to_channel_cb())
         b.save_to_channel.set_tooltip("Save composite image to channel")
         b.save_image_as.add_callback('activated', lambda w: self.save_as_cb())
-        self.entry2 = b.save_path
-        self.entry2.add_callback('activated', lambda *args: self.save_as_cb())
+        b.save_path.add_callback('activated', lambda *args: self.save_as_cb())
         vbox.add_widget(w, stretch=0)
 
         top.add_widget(vbox, stretch=1)
@@ -404,7 +406,7 @@ class Compose(GingaPlugin.LocalPlugin):
             self.fv.show_error("Please create a composite image first.")
             return
 
-        path = str(self.entry2.get_text()).strip()
+        path = str(self.w.save_path.get_text()).strip()
         if not path.startswith('/'):
             path = os.path.join('.', path)
 
@@ -428,6 +430,7 @@ class Compose(GingaPlugin.LocalPlugin):
         pass
 
     def stop(self):
+        self._split_sizes = self.w.splitter.get_sizes()
         self.limage = None
         self.images = []
 

@@ -30,6 +30,10 @@ channel.
 The ``Pan`` plugin usually appears as a sub-pane under the "Info" tab, next
 to the ``Info`` plugin.
 
+This plugin is not usually configured to be closeable, but the user can
+make it so by setting the "closeable" setting to True in the configuration
+file--then Close and Help buttons will be added to the bottom of the UI.
+
 """
 import sys
 import traceback
@@ -59,9 +63,12 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         self.dc = fv.get_draw_classes()
 
+        spec = self.fv.get_plugin_spec(str(self))
+
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Pan')
         self.settings.add_defaults(use_shared_canvas=False,
+                                   closeable=not spec.get('hidden', False),
                                    pan_position_color='yellow',
                                    pan_rectangle_color='red',
                                    compass_color='skyblue',
@@ -72,12 +79,33 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         self._wd = 200
         self._ht = 200
+        self.copy_attrs = ['transforms', 'cutlevels', 'rotation', 'rgbmap']
         self.gui_up = False
 
     def build_gui(self, container):
+        vbox = Widgets.VBox()
+        vbox.set_border_width(2)
+        vbox.set_spacing(2)
+
         nb = Widgets.StackWidget()
         self.nb = nb
-        container.add_widget(self.nb, stretch=1)
+        vbox.add_widget(self.nb, stretch=1)
+
+        if self.settings.get('closeable', False):
+            btns = Widgets.HBox()
+            btns.set_border_width(4)
+            btns.set_spacing(4)
+
+            btn = Widgets.Button("Close")
+            btn.add_callback('activated', lambda w: self.close())
+            btns.add_widget(btn)
+            btn = Widgets.Button("Help")
+            btn.add_callback('activated', lambda w: self.help())
+            btns.add_widget(btn, stretch=0)
+            btns.add_widget(Widgets.Label(''), stretch=1)
+            vbox.add_widget(btns, stretch=0)
+
+        container.add_widget(vbox, stretch=1)
         self.gui_up = True
 
     def _create_pan_viewer(self, fitsimage):
@@ -129,37 +157,9 @@ class Pan(GingaPlugin.GlobalPlugin):
                               panrect=None)
         channel.extdata._pan_info = paninfo
 
-        # Extract RGBMap object from main image and attach it to this
-        # pan image
-        rgbmap = fitsimage.get_rgbmap()
-        panimage.set_rgbmap(rgbmap)
-        rgbmap.add_callback('changed', self.rgbmap_cb, panimage)
+        fitsimage.copy_attributes(panimage, self.copy_attrs)
 
-        fitsimage.copy_attributes(panimage, ['cutlevels'])
-
-        fitssettings = fitsimage.get_settings()
-        pansettings = panimage.get_settings()
-
-        xfrmsettings = ['flip_x', 'flip_y', 'swap_xy']
-        if self.settings.get('rotate_pan_image', False):
-            xfrmsettings.append('rot_deg')
-        fitssettings.share_settings(pansettings, xfrmsettings)
-        for key in xfrmsettings:
-            pansettings.get_setting(key).add_callback(
-                'set', self.settings_cb, fitsimage, channel, paninfo, 0)
-
-        fitssettings.share_settings(pansettings, ['cuts'])
-        pansettings.get_setting('cuts').add_callback(
-            'set', self.settings_cb, fitsimage, channel, paninfo, 1)
-
-        zoomsettings = ['zoom_algorithm', 'zoom_rate',
-                        'scale_x_base', 'scale_y_base']
-        fitssettings.share_settings(pansettings, zoomsettings)
-        for key in zoomsettings:
-            pansettings.get_setting(key).add_callback(
-                'set', self.zoom_ext_cb, fitsimage, channel, paninfo)
-
-        fitsimage.add_callback('redraw', self.redraw_cb, channel, paninfo)
+        fitsimage.add_callback('redraw', self.redraw_cb, channel)
 
         self.logger.debug("channel '%s' added." % (channel.name))
 
@@ -169,6 +169,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         chname = channel.name
         self.logger.debug("deleting channel %s" % (chname))
         widget = channel.extdata._pan_info.widget
+        channel.extdata._pan_info.widget = None
         self.nb.remove(widget, delete=True)
         self.active = None
         self.info = None
@@ -179,14 +180,32 @@ class Pan(GingaPlugin.GlobalPlugin):
             channel = self.fv.get_channel(name)
             self.add_channel(self.fv, channel)
 
+        channel = self.fv.get_channel_info()
+        if channel is not None:
+            viewer = channel.fitsimage
+
+            image = viewer.get_image()
+            if image is not None:
+                self.redo(channel, image)
+
+            self.focus_cb(viewer, channel)
+
     def stop(self):
+        names = self.fv.get_channel_names()
+        for name in names:
+            channel = self.fv.get_channel(name)
+            channel.extdata._pan_info = None
+
+        self.active = None
+        self.nb = None
+        self.info = None
         self.gui_up = False
 
-    # CALLBACKS
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
 
-    def rgbmap_cb(self, rgbmap, panimage):
-        # color mapping has changed in some way
-        panimage.redraw(whence=1)
+    # CALLBACKS
 
     def redo(self, channel, image):
         if not self.gui_up:
@@ -202,10 +221,14 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.set_image(channel, paninfo, image)
 
     def blank(self, channel):
+        if not self.gui_up:
+            return
         paninfo = channel.extdata._pan_info
         paninfo.panimage.clear()
 
     def focus_cb(self, viewer, channel):
+        if not self.gui_up:
+            return
         chname = channel.name
 
         # If the active widget has changed, then raise our Info widget
@@ -236,29 +259,24 @@ class Pan(GingaPlugin.GlobalPlugin):
         panimage.redraw(whence=0)
         return True
 
-    def redraw_cb(self, fitsimage, whence, channel, paninfo):
-        if whence == 0:
-            self.panset(channel.fitsimage, channel, paninfo)
+    def redraw_cb(self, fitsimage, whence, channel):
+        if not self.gui_up:
+            return
+        paninfo = channel.extdata._pan_info
+        if paninfo is not None:
+            fitsimage.copy_attributes(paninfo.panimage, self.copy_attrs)
+            if whence == 0:
+                self.panset(channel.fitsimage, channel, paninfo)
         return True
-
-    def settings_cb(self, setting, value, fitsimage, channel, paninfo, whence):
-        self.panset(channel.fitsimage, channel, paninfo)
-        return True
-
-    def zoom_ext_cb(self, setting, value, fitsimage, channel, paninfo):
-        # refit the pan image, because scale factors may have changed
-        paninfo.panimage.zoom_fit()
-        # redraw pan info
-        self.panset(fitsimage, channel, paninfo)
-        return False
 
     # LOGIC
 
     def clear(self):
-        self.info.panimage.clear()
+        if self.info is not None:
+            self.info.panimage.clear()
 
     def set_image(self, channel, paninfo, image):
-        if (image is None) or not isinstance(image, BaseImage):
+        if image is None or not isinstance(image, BaseImage):
             self.logger.debug("no main image--clearing Pan viewer")
             paninfo.panimage.clear()
             return

@@ -7,6 +7,7 @@
 # TODO: make these true subclasses of dict?
 #
 import threading
+import ast
 
 
 class caselessDict(object):
@@ -237,8 +238,8 @@ class Bunch(object):
     def __getstate__(self):
         return self.tbl.__repr__()
 
-    def __setstate__(self, pickled_state):
-        self.tbl = eval(pickled_state)
+    def __setstate__(self, state):
+        self.tbl = ast.literal_eval(state)
 
     def __iter__(self):
         return iter(self.tbl.keys())

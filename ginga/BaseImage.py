@@ -365,7 +365,7 @@ class BaseImage(ViewerObjectBase):
         If `avoid_oob` is True (default) then the bounding box is clipped
         to avoid coordinates outside of the actual data.
         """
-        x1, y1, x2, y2 = map(int, shape_obj.get_llur())
+        x1, y1, x2, y2 = [int(np.round(n)) for n in shape_obj.get_llur()]
 
         if avoid_oob:
             # avoid out of bounds indexes
@@ -439,21 +439,19 @@ class BaseImage(ViewerObjectBase):
         new_ht = int(round(scale_y * (y2 - y1 + 1)))
 
         return self.get_scaled_cutout_wdht(x1, y1, x2, y2, new_wd, new_ht,
-                                           # TODO:
-                                           # this causes a problem for the
-                                           # current Glue plugin--update that
-                                           #method=method
-                                           )
+                                           method=method)
 
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
                           method='basic', logger=None):
-        if method == 'basic':
+        if method in ('basic', 'view'):
             return self.get_scaled_cutout_basic(x1, y1, x2, y2,
-                                                scale_x, scale_y)
+                                                scale_x, scale_y,
+                                                method=method)
 
         data = self._get_data()
         newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_basic(
-            data, x1, y1, x2, y2, scale_x, scale_y, interpolation=method)
+            data, x1, y1, x2, y2, scale_x, scale_y, interpolation=method,
+            logger=logger)
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
@@ -461,7 +459,7 @@ class BaseImage(ViewerObjectBase):
     def get_scaled_cutout2(self, p1, p2, scales,
                            method='basic', logger=None):
 
-        if method not in ('basic',) and len(scales) == 2:
+        if method not in ('basic', 'view') and len(scales) == 2:
             # for 2D images with alternate interpolation requirements
             return self.get_scaled_cutout(p1[0], p1[1], p2[0], p2[1],
                                           scales[0], scales[1],

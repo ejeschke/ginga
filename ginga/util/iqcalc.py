@@ -87,6 +87,9 @@ class IQCalc(object):
         a gaussian function on the data.  arr1d is a 1D array cut in either
         X or Y direction on the object.
         """
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
         if gauss_fn is None:
             gauss_fn = self.gaussian
 
@@ -96,7 +99,7 @@ class IQCalc(object):
         # Fitting works more reliably if we do the following
         # a. subtract sky background
         if medv is None:
-            medv = np.median(Y)
+            medv = get_median(Y)
         Y = Y - medv
         maxv = Y.max()
         # b. clamp to 0..max (of the sky subtracted field)
@@ -146,6 +149,9 @@ class IQCalc(object):
         a Moffat function on the data.  arr1d is a 1D array cut in either
         X or Y direction on the object.
         """
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
         if moffat_fn is None:
             moffat_fn = self.moffat
 
@@ -155,7 +161,7 @@ class IQCalc(object):
         # Fitting works more reliably if we do the following
         # a. subtract sky background
         if medv is None:
-            medv = np.median(Y)
+            medv = get_median(Y)
         Y = Y - medv
         maxv = Y.max()
         # b. clamp to 0..max (of the sky subtracted field)
@@ -211,7 +217,7 @@ class IQCalc(object):
         radius.
         """
         if medv is None:
-            medv = np.median(data)
+            medv = get_median(data)
 
         # Get two cuts of the data, one in X and one in Y
         x0, y0, xarr, yarr = self.cut_cross(x, y, radius, data)
@@ -237,6 +243,9 @@ class IQCalc(object):
         return fwhm
 
     def centroid(self, data, xc, yc, radius):
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
         xc, yc = int(xc), int(yc)
         x0, y0, arr = self.cut_region(xc, yc, int(radius), data)
         # See https://stackoverflow.com/questions/25369982/center-of-mass-for-roi-in-python
@@ -253,7 +262,7 @@ class IQCalc(object):
         fdata = fdata[np.isfinite(fdata)]
 
         # find the median
-        median = np.median(fdata)
+        median = get_median(fdata)
 
         # NOTE: for this method a good default sigma is 5.0
         dist = np.fabs(fdata - median).mean()
@@ -277,6 +286,9 @@ class IQCalc(object):
         The routine returns a list of candidate object coordinate tuples
         (x, y) in data.
         """
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
         if threshold is None:
             # set threshold to default if none provided
             threshold = self.get_threshold(data, sigma=sigma)
@@ -355,7 +367,7 @@ class IQCalc(object):
         w4 = float(width) * 4.0
 
         # Find the median (sky/background) level
-        median = float(np.median(data))
+        median = float(get_median(data))
         #skylevel = median
         # Old SOSS qualsize() applied this calculation to skylevel
         skylevel = median * self.skylevel_magnification + self.skylevel_offset

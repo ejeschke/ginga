@@ -26,7 +26,7 @@ Displayed X-axis is constructed using ``CRVAL*``, ``CDELT*``, ``CRPIX*``,
 are unavailabled, the axis falls back to ``NAXIS*`` values instead.
 
 Displayed Y-axis is constructed using ``BTYPE`` and ``BUNIT``. If they are not
-available, it simply labels pixel values as "Flux".
+available, it simply labels pixel values as "Signal".
 
 To use this plugin:
 
@@ -79,6 +79,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.mark_index = 0
         self.y_lbl = ''
         self.x_lbl = ''
+        self._split_sizes = [400, 500]
 
         self.dc = self.fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
@@ -109,6 +110,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         box.set_spacing(2)
 
         paned = Widgets.Splitter(orientation=orientation)
+        self.w.splitter = paned
 
         self.plot = plots.Plot(logger=self.logger,
                                width=400, height=400)
@@ -207,8 +209,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         box.add_widget(Widgets.Label(''), stretch=1)
         paned.add_widget(sw)
-        # hack to set a reasonable starting position for the splitter
-        paned.set_sizes([400, 500])
+        paned.set_sizes(self._split_sizes)
 
         top.add_widget(paned, stretch=5)
 
@@ -430,7 +431,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
                 self.x_lbl += (' ({})'.format(units))
 
             # Get pixel value info from header
-            self.y_lbl = self.image.get_keyword('BTYPE', 'Flux')
+            self.y_lbl = self.image.get_keyword('BTYPE', 'Signal')
             bunit = self.image.get_keyword('BUNIT', None)
             if bunit is not None:
                 self.y_lbl += (' ({})'.format(bunit))
@@ -666,7 +667,6 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
-        self.gui_up = False
         return True
 
     def start(self):
@@ -693,6 +693,8 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.redo()
 
     def stop(self):
+        self.gui_up = False
+        self._split_sizes = self.w.splitter.get_sizes()
         # remove the canvas from the image
         p_canvas = self.fitsimage.get_canvas()
         try:

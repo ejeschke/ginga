@@ -443,7 +443,12 @@ class PluginManager(Callback.Callbacks):
                 self.ds.show_dialog(dialog)
 
             else:
-                self.ds.add_tab(in_ws, vbox, 2, p_info.tabname, p_info.tabname)
+                bnch = self.ds.add_tab(in_ws, vbox, 2, p_info.tabname,
+                                       p_info.tabname)
+                bnch.plugin_info = p_info
+
+                ws = self.ds.get_ws(in_ws)
+                ws.add_callback('page-close', self.tab_closed_cb)
 
                 ws_w = self.ds.get_nb(in_ws)
                 ws_w.add_callback('page-switch', self.tab_switched_cb)
@@ -483,6 +488,13 @@ class PluginManager(Callback.Callbacks):
                     # over to the new channel
                     #self.ds.raise_tab(chname)
                     self.fv.change_channel(chname)
+
+    def tab_closed_cb(self, ws, widget):
+        bnch = self.ds._find_tab(widget)
+        if bnch is not None:
+            p_info = bnch.get('plugin_info', None)
+            if p_info is not None:
+                self.deactivate(p_info.name)
 
     def dispose_gui(self, p_info):
         self.logger.debug("disposing of gui")

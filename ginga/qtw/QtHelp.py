@@ -24,12 +24,16 @@ if toolkit == 'qt5':
 elif toolkit == 'qt4':
     os.environ['QT_API'] = 'pyqt'
 
+elif toolkit == 'pyside2':
+    os.environ['QT_API'] = 'pyside2'
+
 elif toolkit == 'pyside':
     os.environ['QT_API'] = 'pyside'
 
 have_pyqt4 = False
 have_pyqt5 = False
 have_pyside = False
+have_pyside2 = False
 
 try:
     from qtpy import QtCore
@@ -43,10 +47,11 @@ try:
         pass
 
     # Let's see what qtpy configured for us...
-    from qtpy import PYQT4, PYQT5, PYSIDE
+    from qtpy import PYQT4, PYQT5, PYSIDE, PYSIDE2
     have_pyqt4 = PYQT4
     have_pyqt5 = PYQT5
     have_pyside = PYSIDE
+    have_pyside2 = PYSIDE2
 
     configured = True
 except ImportError as e:
@@ -58,11 +63,15 @@ if have_pyqt5:
 elif have_pyqt4:
     ginga.toolkit.use('qt4')
     os.environ['QT_API'] = 'pyqt'
+elif have_pyside2:
+    ginga.toolkit.use('pyside2')
+    os.environ['QT_API'] = 'pyside2'
 elif have_pyside:
     ginga.toolkit.use('pyside')
     os.environ['QT_API'] = 'pyside'
 else:
-    raise ImportError("Failed to configure qt4, qt5 or pyside. Is the 'qtpy' package installed?")
+    raise ImportError("Failed to configure qt4, qt5, pyside or pyside2. "
+                      "Is the 'qtpy' package installed?")
 
 
 tabwidget_style = """
@@ -145,8 +154,11 @@ class HBox(QtGui.QWidget):
 
 class FileSelection(object):
     """Handle Load Image file dialog from File menu."""
-    def __init__(self, parent_w):
+    # TODO: deprecate the functionality when all_at_once == False
+    # and make the default to be True
+    def __init__(self, parent_w, all_at_once=False):
         self.parent = parent_w
+        self.all_at_once = all_at_once
         self.cb = None
 
     def popup(self, title, callfn, initialdir=None, filename=None):
@@ -177,6 +189,7 @@ class FileSelection(object):
         if ginga.toolkit.get_toolkit() == 'qt5':
             filenames = filenames[0]
 
+        all_paths = []
         for filename in filenames:
 
             # Special handling for wildcard or extension.
@@ -186,15 +199,21 @@ class FileSelection(object):
                 ext = iohelper.get_hdu_suffix(info.numhdu)
                 files = glob.glob(info.filepath)  # Expand wildcard
                 paths = ['{0}{1}'.format(f, ext) for f in files]
+                if self.all_at_once:
+                    all_paths.extend(paths)
+                else:
+                    for path in paths:
+                        self.cb(path)
 
-                # NOTE: Using drag-drop callback here might give QPainter
-                # warnings.
-                for path in paths:
-                    self.cb(path)
-
-            # Normal load
             else:
-                self.cb(filename)
+                # Normal load
+                if self.all_at_once:
+                    all_paths.append(filename)
+                else:
+                    self.cb(filename)
+
+        if self.all_at_once and len(all_paths) > 0:
+            self.cb(all_paths)
 
 
 class DirectorySelection(object):

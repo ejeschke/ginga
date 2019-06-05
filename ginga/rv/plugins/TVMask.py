@@ -198,7 +198,8 @@ class TVMask(LocalPlugin):
         self.gui_up = True
 
         # Initialize mask file selection dialog
-        self.mfilesel = FileSelection(self.fv.w.root.get_widget())
+        self.mfilesel = FileSelection(self.fv.w.root.get_widget(),
+                                      all_at_once=True)
 
         # Populate table
         self.redo()
@@ -294,9 +295,19 @@ class TVMask(LocalPlugin):
 
         self.redo()
 
+    def load_files(self, filenames):
+        """Load mask images.
+
+        Results are appended to previously loaded masks.
+        This can be used to load mask per color.
+
+        """
+        for filename in filenames:
+            self.load_file(filename)
+
     def load_mask_cb(self):
         """Activate file dialog to select mask image."""
-        self.mfilesel.popup('Load mask image', self.load_file,
+        self.mfilesel.popup('Load mask image', self.load_files,
                             initialdir='.', filename='FITS files (*.fits)')
 
     def recreate_toc(self):

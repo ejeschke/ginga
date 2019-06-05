@@ -35,6 +35,10 @@ If "Move" or "Copy" is done on an image that has been modified in Ginga
 modification history will be retained as well. Removing an image from
 a channel destroys any unsaved changes.
 
+This plugin is not usually configured to be closeable, but the user can
+make it so by setting the "closeable" setting to True in the configuration
+file--then Close and Help buttons will be added to the bottom of the UI.
+
 """
 from ginga import GingaPlugin
 from ginga.misc import Bunch
@@ -54,6 +58,8 @@ class Contents(GingaPlugin.GlobalPlugin):
                    ('Date', 'DATE-OBS'), ('Time UT', 'UT'),
                    ('Modified', 'MODIFIED')]
 
+        spec = self.fv.get_plugin_spec(str(self))
+
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Contents')
         self.settings.add_defaults(columns=columns,
@@ -61,6 +67,7 @@ class Contents(GingaPlugin.GlobalPlugin):
                                    highlight_tracks_keyboard_focus=True,
                                    color_alternate_rows=True,
                                    row_font_color='green',
+                                   closeable=not spec.get('hidden', False),
                                    max_rows_for_col_resize=100)
         self.settings.load(onError='silent')
 
@@ -133,11 +140,22 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         vbox.add_widget(btns, stretch=0)
 
+        if self.settings.get('closeable', False):
+            btns = Widgets.HBox()
+            btns.set_border_width(4)
+            btns.set_spacing(4)
+
+            btn = Widgets.Button("Close")
+            btn.add_callback('activated', lambda w: self.close())
+            btns.add_widget(btn)
+            btn = Widgets.Button("Help")
+            btn.add_callback('activated', lambda w: self.help())
+            btns.add_widget(btn, stretch=0)
+            btns.add_widget(Widgets.Label(''), stretch=1)
+            vbox.add_widget(btns, stretch=0)
+
         container.add_widget(vbox, stretch=1)
         self.gui_up = True
-
-    def stop(self):
-        self.gui_up = False
 
     def get_selected(self):
         res = []
@@ -248,9 +266,6 @@ class Contents(GingaPlugin.GlobalPlugin):
         return True
 
     def add_image_cb(self, viewer, chname, image, image_info):
-        if not self.gui_up:
-            return False
-
         name = image_info.name
         self.logger.debug("name=%s" % (name))
 
@@ -277,12 +292,13 @@ class Contents(GingaPlugin.GlobalPlugin):
             # old image
             file_dict[name].update(bnch)
 
-        # TODO: either make add_tree() merge updates or make an
-        #    update_tree() method--shouldn't need to recreate entire
-        #    tree, just add new entry and possibly rehighlight
-        ## tree_dict = { chname: { name: bnch } }
-        ## self.treeview.add_tree(tree_dict)
-        self.recreate_toc()
+        if self.gui_up:
+            # TODO: either make add_tree() merge updates or make an
+            #    update_tree() method--shouldn't need to recreate entire
+            #    tree, just add new entry and possibly rehighlight
+            ## tree_dict = { chname: { name: bnch } }
+            ## self.treeview.add_tree(tree_dict)
+            self.recreate_toc()
 
         self.logger.debug("%s added to Contents" % (name))
 
@@ -323,7 +339,8 @@ class Contents(GingaPlugin.GlobalPlugin):
         self._hl_path.discard(key)
         channel.extdata.contents_old_highlight.discard(key)
 
-        self.recreate_toc()
+        if self.gui_up:
+            self.recreate_toc()
         self.logger.debug("%s removed from Contents" % (name))
 
     def remove_image_info_cb(self, viewer, channel, image_info):
@@ -335,7 +352,8 @@ class Contents(GingaPlugin.GlobalPlugin):
     def clear(self):
         self.name_dict = Bunch.caselessDict()
         self._hl_path = set([])
-        self.recreate_toc()
+        if self.gui_up:
+            self.recreate_toc()
 
     def add_channel_cb(self, viewer, channel):
         """Called when a channel is added from the main interface.
@@ -353,7 +371,8 @@ class Contents(GingaPlugin.GlobalPlugin):
             return False
 
         tree_dict = {chname: {}}
-        self.treeview.add_tree(tree_dict)
+        if self.gui_up:
+            self.treeview.add_tree(tree_dict)
 
         self._rebuild_channels()
 
@@ -370,9 +389,8 @@ class Contents(GingaPlugin.GlobalPlugin):
                 un_hilite_set.add(path)
         self._hl_path -= un_hilite_set
 
-        if not self.gui_up:
-            return False
-        self.recreate_toc()
+        if self.gui_up:
+            self.recreate_toc()
 
         self._rebuild_channels()
 
@@ -406,6 +424,9 @@ class Contents(GingaPlugin.GlobalPlugin):
         Both are sets of keys.
 
         """
+        if not self.gui_up:
+            return
+
         un_hilite_set = old_highlight_set - new_highlight_set
         re_hilite_set = new_highlight_set - old_highlight_set
 
@@ -452,6 +473,9 @@ class Contents(GingaPlugin.GlobalPlugin):
         return True
 
     def focus_cb(self, viewer, channel):
+        if not self.gui_up:
+            return False
+
         chname = channel.name
         image = channel.get_current_image()
 
@@ -533,6 +557,17 @@ class Contents(GingaPlugin.GlobalPlugin):
                 src_channel.move_image_to(info.imname, dst_channel)
             elif action == 'remove':
                 src_channel.remove_image(info.imname)
+
+    def start(self):
+        self.recreate_toc()
+
+    def stop(self):
+        self.treeview = None
+        self.gui_up = False
+
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
 
     def __str__(self):
         return 'contents'

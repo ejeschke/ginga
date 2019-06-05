@@ -282,7 +282,8 @@ class TVMark(LocalPlugin):
         self.gui_up = True
 
         # Initialize coordinates file selection dialog
-        self.cfilesel = FileSelection(self.fv.w.root.get_widget())
+        self.cfilesel = FileSelection(self.fv.w.root.get_widget(),
+                                      all_at_once=True)
 
         # Populate table
         self.redo()
@@ -512,6 +513,16 @@ class TVMark(LocalPlugin):
 
         self.redo()
 
+    def load_files(self, filenames):
+        """Load coordinates files.
+
+        Results are appended to previously loaded coordinates.
+        This can be used to load one file per color.
+
+        """
+        for filename in filenames:
+            self.load_file(filename)
+
     def _convert_radec(self, val):
         """Convert RA or DEC table column to degrees and extract data.
         Assume already in degrees if cannot convert.
@@ -530,7 +541,7 @@ class TVMark(LocalPlugin):
     # TODO: Support more extensions?
     def load_coords_cb(self):
         """Activate file dialog to select coordinates file."""
-        self.cfilesel.popup('Load coordinates file', self.load_file,
+        self.cfilesel.popup('Load coordinates file', self.load_files,
                             initialdir='.',
                             filename='Table files (*.txt *.dat *.fits)')
 

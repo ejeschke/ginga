@@ -71,23 +71,26 @@ default_layout = ['seq', {},
 plugins = [
     # hidden plugins, started at program initialization
     Bunch(module='Operations', workspace='operations', start=True,
-          hidden=True, category='System', ptype='global'),
+          hidden=True, category='System', menu="Operations [G]",
+          ptype='global'),
     Bunch(module='Toolbar', workspace='toolbar', start=True,
-          hidden=True, category='System', ptype='global'),
+          hidden=True, category='System', menu="Toolbar [G]", ptype='global'),
     Bunch(module='Pan', workspace='uleft', start=True,
-          hidden=True, category='System', ptype='global'),
+          hidden=True, category='System', menu="Pan [G]", ptype='global'),
     Bunch(module='Info', tab='Synopsis', workspace='lleft', start=True,
-          hidden=True, category='System', ptype='global'),
+          hidden=True, category='System', menu="Info [G]", ptype='global'),
     Bunch(module='Thumbs', tab='Thumbs', workspace='right', start=True,
-          hidden=True, category='System', ptype='global'),
+          hidden=True, category='System', menu="Thumbs [G]", ptype='global'),
     Bunch(module='Contents', tab='Contents', workspace='right', start=True,
-          hidden=True, category='System', ptype='global'),
+          hidden=True, category='System', menu="Contents [G]", ptype='global'),
     Bunch(module='Colorbar', workspace='cbar', start=True,
-          hidden=True, category='System', ptype='global'),
+          hidden=True, category='System', menu="Colorbar [G]", ptype='global'),
     Bunch(module='Cursor', workspace='readout', start=True,
-          hidden=True, category='System', ptype='global'),
+          hidden=True, category='System', menu="Cursor [G]", ptype='global'),
     Bunch(module='Errors', tab='Errors', workspace='right', start=True,
-          hidden=True, category='System', ptype='global'),
+          hidden=True, category='System', menu="Errors [G]", ptype='global'),
+    Bunch(module='Downloads', tab='Downloads', workspace='right', start=False,
+          menu="Downloads [G]", category='Utils', ptype='global'),
 
     # optional, user-started plugins
     Bunch(module='Blink', tab='Blink Channels', workspace='right', start=False,
@@ -622,15 +625,22 @@ class ReferenceViewer(object):
                 expanded_args.append(imgfile)
 
         # Assume remaining arguments are fits files and load them.
-        chname = None
-        for imgfile in expanded_args:
-            if options.separate_channels and (chname is not None):
-                channel = ginga_shell.add_channel_auto()
-            else:
-                channel = ginga_shell.get_channel_info()
-            chname = channel.name
-            ginga_shell.nongui_do(ginga_shell.load_file, imgfile,
-                                  chname=chname)
+        if not options.separate_channels:
+            chname = channels[0]
+            ginga_shell.gui_do(ginga_shell.open_uris, expanded_args,
+                               chname=chname)
+        else:
+            i = 0
+            num_channels = len(channels)
+            for imgfile in expanded_args:
+                if i < num_channels:
+                    chname = channels[i]
+                    i = i + 1
+                else:
+                    channel = ginga_shell.add_channel_auto()
+                    chname = channel.name
+                ginga_shell.gui_do(ginga_shell.open_uris, [imgfile],
+                                   chname=chname)
 
         try:
             try:

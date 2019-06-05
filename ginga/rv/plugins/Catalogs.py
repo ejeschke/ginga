@@ -385,6 +385,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
                 ht = y2 - y1
                 dh = ht // 2
                 ctr_x, ctr_y = x1 + dw, y1 + dh
+                ra_ctr_deg, dec_ctr_deg = image.pixtoradec(ctr_x, ctr_y)
                 ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y, format='str')
 
                 # Calculate RA and DEC for the three points
@@ -408,6 +409,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
                 # enclosed by the circle
                 ctr_x, ctr_y = obj.crdmap.to_data((obj.x, obj.y))
                 ra_ctr, dec_ctr = image.pixtoradec(ctr_x, ctr_y)
+                ra_ctr_deg, dec_ctr_deg = ra_ctr, dec_ctr
                 dst_x, dst_y = obj.crdmap.to_data((obj.x + obj.radius, obj.y))
                 ra_dst, dec_dst = image.pixtoradec(dst_x, dst_y)
                 radius_deg = wcs.deltaStarsRaDecDeg(ra_ctr, dec_ctr,
@@ -445,6 +447,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         # Copy the image parameters out to the widget
         d = {'ra': ra_ctr, 'dec': dec_ctr, 'width': str(wd),
+             'ra_deg': ra_ctr_deg, 'dec_deg': dec_ctr_deg,
              'height': ht, 'r': radius, 'r2': radius,
              'r1': 0.0}
         self._update_widgets(d)
