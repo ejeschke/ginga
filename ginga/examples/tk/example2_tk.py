@@ -202,21 +202,21 @@ def main(options, args):
 
 if __name__ == "__main__":
 
-    # Parse command line options with nifty optparse module
-    from optparse import OptionParser
+    # Parse command line options
+    from argparse import ArgumentParser
 
-    usage = "usage: %prog [options] cmd [args]"
-    optprs = OptionParser(usage=usage, version=('%%prog'))
+    usage = "usage: %prog [options] [args]"
+    argprs = ArgumentParser(usage=usage)
 
-    optprs.add_option("--debug", dest="debug", default=False,
-                      action="store_true",
-                      help="Enter the pdb debugger on main()")
-    optprs.add_option("--profile", dest="profile", action="store_true",
-                      default=False,
-                      help="Run the profiler on main()")
-    log.addlogopts(optprs)
+    argprs.add_argument("--debug", dest="debug", default=False,
+                        action="store_true",
+                        help="Enter the pdb debugger on main()")
+    argprs.add_argument("--profile", dest="profile", action="store_true",
+                        default=False,
+                        help="Run the profiler on main()")
+    log.addlogopts(argprs)
 
-    (options, args) = optprs.parse_args(sys.argv[1:])
+    (options, args) = argprs.parse_known_args(sys.argv[1:])
 
     # Are we debugging this?
     if options.debug:

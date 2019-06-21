@@ -511,42 +511,42 @@ def main(options, args):
 
 if __name__ == "__main__":
 
-    # Parse command line options with nifty optparse module
-    from optparse import OptionParser
+    # Parse command line options
+    from argparse import ArgumentParser
 
-    usage = "usage: %prog [options] cmd [args]"
-    optprs = OptionParser(usage=usage, version=('%%prog'))
+    usage = "usage: %prog [options] [args]"
+    argprs = ArgumentParser(usage=usage)
 
-    optprs.add_option("-d", "--basedir", dest="basedir", metavar="DIR",
-                      default=".",
-                      help="Directory which is at the base of file open requests")
-    optprs.add_option("--debug", dest="debug", default=False, action="store_true",
-                      help="Enter the pdb debugger on main()")
-    optprs.add_option("--host", dest="host", metavar="HOST",
-                      default="localhost",
-                      help="HOST used to decide which interfaces to listen on")
-    optprs.add_option("--log", dest="logfile", metavar="FILE",
-                      help="Write logging output to FILE")
-    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=logging.INFO,
-                      help="Set logging level to LEVEL")
-    optprs.add_option("--numthreads", dest="numthreads", type="int",
-                      default=5, metavar="NUM",
-                      help="Start NUM threads in thread pool")
-    optprs.add_option("--stderr", dest="logstderr", default=False,
-                      action="store_true",
-                      help="Copy logging also to stderr")
-    optprs.add_option("--opencv", dest="use_opencv", default=False,
-                      action="store_true",
-                      help="Use OpenCv acceleration")
-    optprs.add_option("-p", "--port", dest="port",
-                      type='int', default=9909, metavar="PORT",
-                      help="Default PORT to use for the web socket")
-    optprs.add_option("--profile", dest="profile", action="store_true",
-                      default=False,
-                      help="Run the profiler on main()")
+    argprs.add_argument("-d", "--basedir", dest="basedir", metavar="DIR",
+                        default=".",
+                        help="Directory which is at the base of file open requests")
+    argprs.add_argument("--debug", dest="debug", default=False, action="store_true",
+                        help="Enter the pdb debugger on main()")
+    argprs.add_argument("--host", dest="host", metavar="HOST",
+                        default="localhost",
+                        help="HOST used to decide which interfaces to listen on")
+    argprs.add_argument("--log", dest="logfile", metavar="FILE",
+                        help="Write logging output to FILE")
+    argprs.add_argument("--loglevel", dest="loglevel", metavar="LEVEL",
+                        type=int, default=logging.INFO,
+                        help="Set logging level to LEVEL")
+    argprs.add_argument("--numthreads", dest="numthreads", type=int,
+                        default=5, metavar="NUM",
+                        help="Start NUM threads in thread pool")
+    argprs.add_argument("--stderr", dest="logstderr", default=False,
+                        action="store_true",
+                        help="Copy logging also to stderr")
+    argprs.add_argument("--opencv", dest="use_opencv", default=False,
+                        action="store_true",
+                        help="Use OpenCv acceleration")
+    argprs.add_argument("-p", "--port", dest="port",
+                        type=int, default=9909, metavar="PORT",
+                        help="Default PORT to use for the web socket")
+    argprs.add_argument("--profile", dest="profile", action="store_true",
+                        default=False,
+                        help="Run the profiler on main()")
 
-    (options, args) = optprs.parse_args(sys.argv[1:])
+    (options, args) = argprs.parse_known_args(sys.argv[1:])
 
     # Are we debugging this?
     if options.debug:
