@@ -4,7 +4,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import sys
-import logging
 
 from ginga import colors
 import ginga.toolkit as ginga_toolkit
@@ -320,18 +319,9 @@ if __name__ == "__main__":
     argprs.add_argument("-t", "--toolkit", dest="toolkit", metavar="NAME",
                         default='qt',
                         help="Choose GUI toolkit (gtk|qt)")
-    argprs.add_argument("--opencv", dest="use_opencv", default=False,
-                        action="store_true",
-                        help="Use OpenCv acceleration")
-    argprs.add_argument("--opencl", dest="use_opencl", default=False,
-                        action="store_true",
-                        help="Use OpenCL acceleration")
     argprs.add_argument("--profile", dest="profile", action="store_true",
                         default=False,
                         help="Run the profiler on main()")
-    argprs.add_argument("-r", "--renderer", dest="renderer", metavar="NAME",
-                        default=None,
-                        help="Choose renderer (pil|agg|opencv|cairo|qt)")
     log.addlogopts(argprs)
 
     (options, args) = argprs.parse_known_args(sys.argv[1:])
