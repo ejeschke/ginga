@@ -64,7 +64,7 @@ matrix:
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
         - os: linux
-          env: PYTHON_VERSION=3.6 SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_rtd_theme pillow'
+          env: PYTHON_VERSION=3.6 SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_astropy pillow'
 
         # Try older Numpy versions
         # TODO: Change to ASTROPY_VERSION=lts when PY2 job starts to fail.
