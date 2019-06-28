@@ -46,6 +46,7 @@ class PlotTable(LocalPlugin):
         self.tab = None
         self.cols = []
         self._idx = []
+        self._split_sizes = [400, 500]
 
         # To store selected columns names of active table
         self.x_col = ''
@@ -76,14 +77,17 @@ class PlotTable(LocalPlugin):
         top = Widgets.VBox()
         top.set_border_width(4)
 
-        # Make the cuts plot
+        # Make the plot
         vbox, sw, orientation = Widgets.get_oriented_box(container)
         vbox.set_margins(4, 4, 4, 4)
         vbox.set_spacing(2)
 
+        paned = Widgets.Splitter(orientation=orientation)
+        self.w.splitter = paned
+
         # Add Tab Widget
         nb = Widgets.TabWidget(tabpos='top')
-        vbox.add_widget(nb, stretch=1)
+        paned.add_widget(Widgets.hadjust(nb, orientation))
 
         self.tab_plot = plots.Plot(logger=self.logger,
                                    width=400, height=400)
@@ -155,7 +159,10 @@ class PlotTable(LocalPlugin):
         vbox2.add_widget(w, stretch=0)
         vbox.add_widget(vbox2, stretch=0)
 
-        top.add_widget(sw, stretch=1)
+        paned.add_widget(sw)
+        paned.set_sizes(self._split_sizes)
+
+        top.add_widget(paned, stretch=5)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -459,6 +466,9 @@ class PlotTable(LocalPlugin):
 
     def start(self):
         self.resume()
+
+    def stop(self):
+        self._split_sizes = self.w.splitter.get_sizes()
 
     def resume(self):
         # turn off any mode user may be in
