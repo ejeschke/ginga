@@ -45,8 +45,8 @@ class TableViewBase(Callback.Callbacks):
         # for debugging
         self.name = str(self)
 
-        self.settings.addDefaults(color_alternate_rows=True,
-                                  max_rows_for_col_resize=5000)
+        self.settings.add_defaults(color_alternate_rows=True,
+                                   max_rows_for_col_resize=5000)
 
         # For callbacks
         for name in ('table-set', 'configure', ):

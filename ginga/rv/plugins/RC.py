@@ -186,7 +186,7 @@ import sys
 import bz2
 from io import BytesIO
 
-import numpy
+import numpy as np
 
 from ginga import GingaPlugin
 from ginga import AstroImage
@@ -381,7 +381,7 @@ class GingaWrapper(object):
 
             # dtype string works for most instances
             if dtype == '':
-                dtype = numpy.float32
+                dtype = np.float
 
             byteswap = metadata.get('byteswap', False)
 
