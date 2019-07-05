@@ -34,6 +34,7 @@ have_pyqt4 = False
 have_pyqt5 = False
 have_pyside = False
 have_pyside2 = False
+qtpy_import_error = ""
 
 try:
     from qtpy import QtCore
@@ -55,7 +56,9 @@ try:
 
     configured = True
 except ImportError as e:
-    pass
+    qtpy_import_error = "Error importing 'qtpy': {}".format(e)
+    # for debugging purposes, uncomment this to get full traceback
+    #raise e
 
 if have_pyqt5:
     ginga.toolkit.use('qt5')
@@ -71,7 +74,8 @@ elif have_pyside:
     os.environ['QT_API'] = 'pyside'
 else:
     raise ImportError("Failed to configure qt4, qt5, pyside or pyside2. "
-                      "Is the 'qtpy' package installed?")
+                      "Is the 'qtpy' package installed? (%s)" % (
+        qtpy_import_error))
 
 
 tabwidget_style = """
