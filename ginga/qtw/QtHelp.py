@@ -75,7 +75,7 @@ elif have_pyside:
 else:
     raise ImportError("Failed to configure qt4, qt5, pyside or pyside2. "
                       "Is the 'qtpy' package installed? (%s)" % (
-        qtpy_import_error))
+                          qtpy_import_error))
 
 
 tabwidget_style = """
