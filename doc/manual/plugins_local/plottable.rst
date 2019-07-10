@@ -5,7 +5,7 @@ PlotTable
 
 .. image:: figures/plottable-plugin.png
    :align: center
-   :width: 400px
+   :width: 800px
    :alt: PlotTable display
 
 .. automodapi:: ginga.rv.plugins.PlotTable
