@@ -273,30 +273,31 @@ def main(options, args):
 
 
 if __name__ == '__main__':
-    # Parse command line options with nifty optparse module
-    from optparse import OptionParser
 
-    usage = "usage: %prog [options] cmd [args]"
-    optprs = OptionParser(usage=usage, version=('%%prog'))
+    # Parse command line options
+    from argparse import ArgumentParser
 
-    optprs.add_option("--debug", dest="debug", default=False,
-                      action="store_true",
-                      help="Enter the pdb debugger on main()")
-    optprs.add_option("--fps", dest="fps", metavar="FPS",
-                      type='float', default=None,
-                      help="Force a FPS (frames/sec)")
-    optprs.add_option("--optimize", dest="optimize", default=False,
-                      action="store_true",
-                      help="Perform some optimizations to improve FPS")
-    optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
-                      default='qt',
-                      help="Choose GUI toolkit (gtk|qt)")
-    optprs.add_option("--profile", dest="profile", action="store_true",
-                      default=False,
-                      help="Run the profiler on main()")
-    log.addlogopts(optprs)
+    usage = "usage: %prog [options] [args]"
+    argprs = ArgumentParser(usage=usage)
 
-    (options, args) = optprs.parse_args(sys.argv[1:])
+    argprs.add_argument("--debug", dest="debug", default=False,
+                        action="store_true",
+                        help="Enter the pdb debugger on main()")
+    argprs.add_argument("--fps", dest="fps", metavar="FPS",
+                        type=float, default=None,
+                        help="Force a FPS (frames/sec)")
+    argprs.add_argument("--optimize", dest="optimize", default=False,
+                        action="store_true",
+                        help="Perform some optimizations to improve FPS")
+    argprs.add_argument("-t", "--toolkit", dest="toolkit", metavar="NAME",
+                        default='qt',
+                        help="Choose GUI toolkit (gtk|qt)")
+    argprs.add_argument("--profile", dest="profile", action="store_true",
+                        default=False,
+                        help="Run the profiler on main()")
+    log.addlogopts(argprs)
+
+    (options, args) = argprs.parse_known_args(sys.argv[1:])
 
     # Are we debugging this?
     if options.debug:

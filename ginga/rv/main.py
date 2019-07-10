@@ -216,62 +216,69 @@ class ReferenceViewer(object):
                 print("Error trying to instantiate external plugin using %s: %s" % (
                     str(method), str(e)))
 
-    def add_default_options(self, optprs):
+    def add_default_options(self, argprs):
         """
         Adds the default reference viewer startup options to an
-        OptionParser instance `optprs`.
+        ArgumentParser instance `argprs`.
         """
-        optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
-                          type="int", default=10,
-                          help="Buffer length to NUM")
-        optprs.add_option('-c', "--channels", dest="channels",
-                          help="Specify list of channels to create")
-        optprs.add_option("--debug", dest="debug", default=False,
-                          action="store_true",
-                          help="Enter the pdb debugger on main()")
-        optprs.add_option("--disable-plugins", dest="disable_plugins",
-                          metavar="NAMES",
-                          help="Specify plugins that should be disabled")
-        optprs.add_option("--display", dest="display", metavar="HOST:N",
-                          help="Use X display on HOST:N")
-        optprs.add_option("--fitspkg", dest="fitspkg", metavar="NAME",
-                          default=None,
-                          help="Prefer FITS I/O module NAME")
-        optprs.add_option("-g", "--geometry", dest="geometry",
-                          default=None, metavar="GEOM",
-                          help="X geometry for initial size and placement")
-        optprs.add_option("--modules", dest="modules", metavar="NAMES",
-                          help="Specify additional modules to load")
-        optprs.add_option("--norestore", dest="norestore", default=False,
-                          action="store_true",
-                          help="Don't restore the GUI from a saved layout")
-        optprs.add_option("--nosplash", dest="nosplash", default=False,
-                          action="store_true",
-                          help="Don't display the splash screen")
-        optprs.add_option("--numthreads", dest="numthreads", type="int",
-                          default=30, metavar="NUM",
-                          help="Start NUM threads in thread pool")
-        optprs.add_option("--opencv", dest="opencv", default=False,
-                          action="store_true",
-                          help="Use OpenCv acceleration")
-        optprs.add_option("--opencl", dest="opencl", default=False,
-                          action="store_true",
-                          help="Use OpenCL acceleration")
-        optprs.add_option("--plugins", dest="plugins", metavar="NAMES",
-                          help="Specify additional plugins to load")
-        optprs.add_option("--profile", dest="profile", action="store_true",
-                          default=False,
-                          help="Run the profiler on main()")
-        optprs.add_option("--sep", dest="separate_channels", default=False,
-                          action="store_true",
-                          help="Load files in separate channels")
-        optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
-                          default=None,
-                          help="Prefer GUI toolkit (gtk|qt)")
-        optprs.add_option("--wcspkg", dest="wcspkg", metavar="NAME",
-                          default=None,
-                          help="Prefer WCS module NAME")
-        log.addlogopts(optprs)
+        if hasattr(argprs, 'add_option'):
+            # older OptParse
+            add_argument = argprs.add_option
+        else:
+            # newer ArgParse
+            add_argument = argprs.add_argument
+
+        add_argument("--bufsize", dest="bufsize", metavar="NUM",
+                     type=int, default=10,
+                     help="Buffer length to NUM")
+        add_argument('-c', "--channels", dest="channels",
+                     help="Specify list of channels to create")
+        add_argument("--debug", dest="debug", default=False,
+                     action="store_true",
+                     help="Enter the pdb debugger on main()")
+        add_argument("--disable-plugins", dest="disable_plugins",
+                     metavar="NAMES",
+                     help="Specify plugins that should be disabled")
+        add_argument("--display", dest="display", metavar="HOST:N",
+                     help="Use X display on HOST:N")
+        add_argument("--fitspkg", dest="fitspkg", metavar="NAME",
+                     default=None,
+                     help="Prefer FITS I/O module NAME")
+        add_argument("-g", "--geometry", dest="geometry",
+                     default=None, metavar="GEOM",
+                     help="X geometry for initial size and placement")
+        add_argument("--modules", dest="modules", metavar="NAMES",
+                     help="Specify additional modules to load")
+        add_argument("--norestore", dest="norestore", default=False,
+                     action="store_true",
+                     help="Don't restore the GUI from a saved layout")
+        add_argument("--nosplash", dest="nosplash", default=False,
+                     action="store_true",
+                     help="Don't display the splash screen")
+        add_argument("--numthreads", dest="numthreads", type=int,
+                     default=30, metavar="NUM",
+                     help="Start NUM threads in thread pool")
+        add_argument("--opencv", dest="opencv", default=False,
+                     action="store_true",
+                     help="Use OpenCv acceleration")
+        add_argument("--opencl", dest="opencl", default=False,
+                     action="store_true",
+                     help="Use OpenCL acceleration")
+        add_argument("--plugins", dest="plugins", metavar="NAMES",
+                     help="Specify additional plugins to load")
+        add_argument("--profile", dest="profile", action="store_true",
+                     default=False,
+                     help="Run the profiler on main()")
+        add_argument("--sep", dest="separate_channels", default=False,
+                     action="store_true",
+                     help="Load files in separate channels")
+        add_argument("-t", "--toolkit", dest="toolkit", metavar="NAME",
+                     default=None,
+                     help="Prefer GUI toolkit (gtk|qt)")
+        add_argument("--wcspkg", dest="wcspkg", metavar="NAME",
+                     default=None,
+                     help="Prefer WCS module NAME")
+        log.addlogopts(argprs)
 
     def main(self, options, args):
         """
@@ -695,15 +702,15 @@ def reference_viewer(sys_argv):
     viewer.add_default_plugins()
     viewer.add_separately_distributed_plugins()
 
-    # Parse command line options with optparse module
-    from optparse import OptionParser
+    # Parse command line options with argparse module
+    from argparse import ArgumentParser
 
     usage = "usage: %prog [options] cmd [args]"
-    optprs = OptionParser(usage=usage,
-                          version=('%%prog %s' % version.version))
-    viewer.add_default_options(optprs)
-
-    (options, args) = optprs.parse_args(sys_argv[1:])
+    argprs = ArgumentParser(usage=usage)
+    viewer.add_default_options(argprs)
+    argprs.add_argument('-V', '--version', action='version',
+                        version='%(prog)s {}'.format(version.version))
+    (options, args) = argprs.parse_known_args(sys_argv[1:])
 
     if options.display:
         os.environ['DISPLAY'] = options.display
