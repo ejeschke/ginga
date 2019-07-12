@@ -32,6 +32,7 @@ Ver 3.0.0 (unreleased)
   line or FBrowser.
 - New Downloads plugin for monitoring/managing URI downloads
 - Supports PySide2 (alternative Qt5 backend)
+- Added statistics line to Histogram plugin
 
 Ver 2.7.2 (2018-11-05)
 ======================
