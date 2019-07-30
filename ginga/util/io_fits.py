@@ -6,9 +6,9 @@
 #
 """
 There are two possible choices for a python FITS file reading package
-compatible with Ginga: astropy (nee "pyfits") and fitsio.
+compatible with Ginga: astropy and fitsio.
 
-To force the use of one, do:
+To force the use of one programmatically, do:
 
     from ginga.util import io_fits
     io_fits.use('package')
@@ -18,12 +18,13 @@ any images.  Otherwise Ginga will try to pick one for you.
 """
 import re
 import numpy as np
-import logging
 
 from ginga.AstroImage import AstroImage, AstroHeader
 from ginga.table.AstroTable import AstroTable
+
 from ginga.misc import Bunch
 from ginga.util import iohelper
+from ginga.util.io import io_base
 
 fits_configured = False
 fitsLoaderClass = None
@@ -75,7 +76,7 @@ def use(fitspkg, raise_err=True):
     return False
 
 
-class BaseFitsFileHandler(object):
+class BaseFitsFileHandler(io_base.BaseIOHandler):
 
     # TODO: remove in a future version
     @classmethod
@@ -84,12 +85,8 @@ class BaseFitsFileHandler(object):
                         "you don't need to call it anymore.")
 
     def __init__(self, logger):
-        super(BaseFitsFileHandler, self).__init__()
+        super(BaseFitsFileHandler, self).__init__(logger)
 
-        if logger is None:
-            logger = logging.getLogger('io_fits')
-            logger.addHandler(logging.NullHandler())
-        self.logger = logger
         self.fileinfo = None
         self.fits_f = None
         self.hdu_info = []
@@ -110,6 +107,12 @@ class BaseFitsFileHandler(object):
         self.close()
         return False
 
+    def load_idx(self, idx, **kwargs):
+        if len(self) == 0:
+            raise ValueError("Please call open_file() first!")
+
+        return self.get_hdu(idx, **kwargs)
+
     def load_idx_cont(self, idx_spec, loader_cont_fn, **kwargs):
         """
         Parameters
@@ -129,18 +132,19 @@ class BaseFitsFileHandler(object):
         if len(self) == 0:
             raise ValueError("Please call open_file() first!")
 
-        idx_lst = self.get_matching_indexes(idx_spec)
-        if len(self) == 0:
-            raise ValueError("Please call open_file() first!")
+        idx_lst = list(self.get_matching_indexes(idx_spec))
+        if len(idx_lst) == 0:
+            raise ValueError("Spec {} matches no data objects in file".format(idx_spec))
 
         for idx in idx_lst:
             try:
-                dst_obj = self.get_hdu(idx, **kwargs)
+                dst_obj = self.load_idx(idx, **kwargs)
 
                 loader_cont_fn(dst_obj)
 
             except Exception as e:
-                self.logger.error("Error loading index '%s': %s" % (idx, str(e)))
+                self.logger.error("Error loading index '%s': %s" % (idx, str(e)),
+                                  exc_info=True)
 
     def get_matching_indexes(self, idx_spec):
         """
@@ -161,6 +165,9 @@ class BaseFitsFileHandler(object):
         if idx_spec is None or idx_spec == '':
             idx, hdu = self.find_first_good_hdu()
             return [idx]
+
+        if isinstance(idx_spec, int):
+            return [idx_spec]
 
         match = re.match(r'^\[(.+)\]$', idx_spec)
         if not match:
@@ -192,6 +199,12 @@ class BaseFitsFileHandler(object):
                     idx_lst.append(info.index)
 
         return idx_lst
+
+    def get_directory(self):
+        return self.hdu_db
+
+    def get_info_idx(self, idx):
+        return self.hdu_db[idx]
 
 
 class PyFitsFileHandler(BaseFitsFileHandler):
@@ -240,9 +253,11 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
             if dstobj is None:
                 dstobj = AstroImage(logger=self.logger)
+                dstobj.load_hdu(hdu, **kwargs)
 
-            # TODO: migrate code from AstroImage to here
-            dstobj.load_hdu(hdu, **kwargs)
+            else:
+                # TODO: migrate code from AstroImage to here
+                dstobj.load_hdu(hdu, **kwargs)
 
         elif typ == 'table':
             # <-- data may be a table
@@ -253,7 +268,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
                 self.logger.debug('Attempting to load {} extension from '
                                   'FITS'.format(hdu.name))
-                from ginga.util import io_asdf
+                from ginga.util.io import io_asdf
                 opener = io_asdf.ASDFFileHandler(self.logger)
                 return opener.load_asdf_hdu_in_fits(self.fits_f, hdu, **kwargs)
 
@@ -267,6 +282,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         else:
             raise FITSError("I don't know how to read this HDU")
+
+        dstobj.io = self
 
         return dstobj
 
@@ -506,13 +523,17 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
             if dstobj is None:
                 dstobj = AstroImage(logger=self.logger)
+                dstobj.load_data(data, metadata=metadata)
 
-            dstobj.load_data(data, metadata=metadata)
+            else:
+                dstobj.load_data(data, metadata=metadata)
 
         elif typ == 'table':
             # <-- data is a table
             raise FITSError(
                 "FITS tables are not yet readable using ginga/fitsio")
+
+        dstobj.io = self
 
         return dstobj
 
@@ -665,19 +686,6 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         return dstobj
 
-    def load_idx_cont(self, idx, loader_cont_fn, **kwargs):
-        if len(self) == 0:
-            raise ValueError("Please open a file first!")
-
-        for i in range(len(self)):
-            try:
-                dst_obj = self.get_hdu(i, **kwargs)
-
-                loader_cont_fn(dst_obj)
-
-            except Exception as e:
-                self.logger.error("Error loading index '%s': %s" % (i, str(e)))
-
     def create_fits(self, data, header):
         fits_f = pyfits.HDUList()
         hdu = pyfits.PrimaryHDU()
@@ -711,6 +719,12 @@ if not fits_configured:
 
 
 def get_fitsloader(kind=None, logger=None):
+    if kind is not None:
+        if kind == 'fitsio':
+            return FitsioFileHandler(logger)
+        else:
+            return PyFitsFileHandler(logger)
+
     return fitsLoaderClass(logger)
 
 

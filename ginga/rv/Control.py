@@ -15,6 +15,7 @@ import logging
 import platform
 import atexit
 import shutil
+import inspect
 from collections import deque, OrderedDict
 
 import _thread as thread  # noqa
@@ -23,8 +24,9 @@ import queue as Queue  # noqa
 # Local application imports
 from ginga import cmap, imap
 from ginga import BaseImage
-from ginga.misc import Bunch, Timer, Future, Task
-from ginga.util import catalog, iohelper, loader, io_fits, toolbox
+from ginga.misc import Bunch, Timer, Future
+from ginga.util import catalog, iohelper, loader, toolbox
+from ginga.util import viewer as gviewer
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.canvas import render
@@ -204,11 +206,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.gui_dialog_lock = threading.RLock()
         self.gui_dialog_list = []
 
-        # this holds registered viewers
-        self.viewer_db = {}
-
-        self.register_viewer(Viewers.CanvasView)
-        self.register_viewer(Viewers.TableViewGw)
+        gviewer.register_viewer(Viewers.CanvasView)
+        gviewer.register_viewer(Viewers.TableViewGw)
+        gviewer.register_viewer(Viewers.PlotViewGw)
 
     def get_server_bank(self):
         return self.imgsrv
@@ -788,12 +788,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.gui_do(self.show_error, errmsg)
             return
 
+        warnmsg = ""
         try:
             typ, subtyp = iohelper.guess_filetype(filepath)
 
         except Exception as e:
-            self.logger.warn("Couldn't determine file type of '{0:}': "
-                             "{1:}".format(filepath, str(e)))
+            warnmsg = "Couldn't determine file type of '{0:}': " \
+                      "{1:}".format(filepath, str(e))
+            self.logger.warning(warnmsg)
             typ = None
 
         def _open_file(opener_class):
@@ -818,12 +820,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                     tb_str = "Traceback information unavailable."
                 self.gui_do(self.show_error, errmsg + '\n' + tb_str)
 
-
-        def _check_open():
+        def _check_open(errmsg):
             if typ is None:
                 errmsg = ("Error determining file type: {0:}\n"
                           "\nPlease choose an opener or cancel, for file:\n"
-                          "{1:}".format(str(e), filepath))
+                          "{1:}".format(errmsg, filepath))
                 openers = loader.get_all_openers()
                 self.gui_do(self.gui_choose_file_opener, errmsg, openers,
                             _open_file, None, filepath)
@@ -854,13 +855,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                 _open_file, '*', filepath)
 
         future = Future.Future()
-        future.freeze(_check_open)
+        future.freeze(_check_open, warnmsg)
 
         with self.gui_dialog_lock:
             self.gui_dialog_list.append(future)
             if len(self.gui_dialog_list) == 1:
                 self.nongui_do_future(future)
-
 
     def open_uris(self, uris, chname=None, bulk_add=False):
         """Open a set of URIs.
@@ -1204,7 +1204,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def switch_name(self, chname, imname, path=None,
                     image_future=None):
-
         try:
             # create channel if it doesn't exist already
             channel = self.get_channel_on_demand(chname)
@@ -1212,8 +1211,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             self.change_channel(channel.name)
         except Exception as e:
-            self.logger.error("Couldn't switch to image '%s': %s" % (
-                str(imname), str(e)))
+            self.show_error("Couldn't switch to image '%s': %s" % (
+                str(imname), str(e)), raisetab=True)
 
     def redo_plugins(self, image, channel):
         if image is not None:
@@ -1320,8 +1319,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             ##     title += ": %s" % (name)
             self.set_titlebar(title)
 
-        if image:
-            channel.switch_image(image)
+        if image is not None:
+            try:
+                channel.switch_image(image)
+
+            except Exception as e:
+                self.show_error("Error viewing data object: {}".format(e),
+                                raisetab=True)
 
         self.make_gui_callback('channel-change', channel)
 
@@ -1875,39 +1879,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         root.fullscreen()
         self.w.fscreen = root
 
-    def register_viewer(self, vclass):
-        """Register a channel viewer with the reference viewer.
-        `vclass` is the class of the viewer.
+    def make_viewer(self, vinfo, channel):
+        """Make a viewer whose salient info is in `vinfo` and add it to
+        `channel`.
         """
-        self.viewer_db[vclass.vname] = Bunch.Bunch(vname=vclass.vname,
-                                                   vclass=vclass,
-                                                   vtypes=vclass.vtypes)
-
-    def get_viewer_names(self, dataobj):
-        """Returns a list of viewer names that are registered that
-        can view `dataobj`.
-        """
-        res = []
-        for bnch in self.viewer_db.values():
-            for vtype in bnch.vtypes:
-                if isinstance(dataobj, vtype):
-                    res.append(bnch.vname)
-        return res
-
-    def make_viewer(self, vname, channel):
-        """Make a viewer whose type name is `vname` and add it to `channel`.
-        """
-        if vname not in self.viewer_db:
-            raise ValueError("I don't know how to build a '%s' viewer" % (
-                vname))
-
         stk_w = channel.widget
 
-        bnch = self.viewer_db[vname]
-
-        viewer = bnch.vclass(logger=self.logger,
-                             settings=channel.settings)
-        stk_w.add_widget(viewer.get_widget(), title=vname)
+        viewer = vinfo.vclass(logger=self.logger,
+                              settings=channel.settings)
+        stk_w.add_widget(viewer.get_widget(), title=vinfo.name)
 
         # let the GUI respond to this widget addition
         self.update_pending()
@@ -2230,8 +2210,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                 buttons=[['Cancel', 0], ['Ok', 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
-            lambda w, rsp: self.choose_opener_cb(w, rsp, wgts, openers,
-                                                 open_cb, mimetype))
+                            lambda w, rsp: self.choose_opener_cb(w, rsp, wgts,
+                                                                 openers,
+                                                                 open_cb,
+                                                                 mimetype))
 
         box = dialog.get_content_area()
         box.set_border_width(4)
@@ -2247,6 +2229,65 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             wgts.choice = None
 
         self.ds.show_dialog(dialog)
+
+    def gui_choose_viewer(self, msg, viewers, open_cb, dataobj):
+
+        wgts = Bunch.Bunch()
+        wgts.table = Widgets.TreeView(auto_expand=True,
+                                      use_alt_row_color=True)
+        columns = [('Name', 'name'),
+                   #('Note', 'note'),
+                   ]
+        wgts.table.setup_table(columns, 1, 'name')
+
+        tree_dict = OrderedDict()
+        openers = list(viewers)
+        for bnch in viewers:
+            tree_dict[bnch.name] = bnch
+
+        # set up widget to show viewer description when they click on it
+        wgts.descr = Widgets.TextArea(wrap=True, editable=False)
+
+        def _select_viewer_cb(w, dct):
+            vclass = list(dct.values())[0].vclass
+            text = inspect.getdoc(vclass)
+            if text is None:
+                text = "(No description available)"
+            wgts.descr.set_text(text)
+
+        wgts.table.add_callback('selected', _select_viewer_cb)
+        wgts.table.set_tree(tree_dict)
+        # highlight first choice
+        path = [openers[0].name]
+        wgts.table.select_path(path)
+
+        dialog = Widgets.Dialog(title="Choose viewer",
+                                flags=0,
+                                modal=False,
+                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                parent=self.w.root)
+        dialog.add_callback('activated',
+                            lambda w, rsp: self.choose_viewer_cb(w, rsp, wgts,
+                                                                 viewers,
+                                                                 open_cb,
+                                                                 dataobj))
+
+        box = dialog.get_content_area()
+        box.set_border_width(4)
+        box.add_widget(Widgets.Label(msg), stretch=0)
+        box.add_widget(wgts.table, stretch=0)
+        box.add_widget(wgts.descr, stretch=1)
+
+        ## if mimetype is not None:
+        ##     hbox = Widgets.HBox()
+        ##     wgts.choice = Widgets.CheckBox("Remember choice for session")
+        ##     hbox.add_widget(wgts.choice)
+        ##     box.add_widget(hbox, stretch=0)
+        ## else:
+        ##     wgts.choice = None
+
+        self.ds.show_dialog(dialog)
+        dialog.resize(600, 600)
 
     def status_msg(self, format, *args):
         if not format:
@@ -2433,7 +2474,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if mimetype != '*':
                 # loader is not registered for this mimetype, so go ahead
                 # and do it
-                loader.add_loader(mimetype, bnch.loader, bnch.opener,
+                loader.add_opener(mimetype, bnch.opener,
                                   priority=bnch.priority, note=bnch.note)
             else:
                 # multiple loaders for the same mimetype--
@@ -2442,6 +2483,25 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         self.nongui_do(open_cb, bnch.opener)
         self.__next_dialog()
+        return True
+
+    def choose_viewer_cb(self, w, rsp, wgts, viewers, open_cb, dataobj):
+        sel_dct = wgts.table.get_selected()
+        if rsp != 1:
+            # cancel
+            self.ds.remove_dialog(w)
+            return
+
+        bnchs = list(sel_dct.values())
+        if len(bnchs) != 1:
+            # user didn't select an opener
+            self.show_error("Need to select one viewer!", raisetab=True)
+            return
+
+        bnch = bnchs[0]
+        self.ds.remove_dialog(w)
+
+        open_cb(bnch, dataobj)
         return True
 
     def init_workspace(self, ws):
@@ -2699,9 +2759,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         self._cursor_last_update = time.time()
         try:
-            image = viewer.get_image()
+            image = viewer.get_dataobj()
             if (image is None) or not isinstance(image, BaseImage.BaseImage):
                 # No compatible image loaded for this channel
+                return
+
+            if image.ndim < 2:
                 return
 
             settings = viewer.get_settings()

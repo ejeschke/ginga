@@ -27,6 +27,7 @@ class ViewerObjectBase(Callback.Callbacks):
 
         self.logger = logger
         self.metadata = {}
+
         if metadata:
             self.update_metadata(metadata)
         # make sure an object has these attributes
@@ -91,6 +92,10 @@ class BaseImage(ViewerObjectBase):
         self.order = ''
         self.name = name
 
+        # For navigating multidimensional data
+        self.naxispath = []
+        self.revnaxis = []
+
         self._set_minmax()
         self._calc_order(order)
 
@@ -103,6 +108,8 @@ class BaseImage(ViewerObjectBase):
     @property
     def width(self):
         # NOTE: numpy stores data in column-major layout
+        if self.ndim < 2:
+            return 0
         return self.shape[1]
 
     @property
@@ -195,7 +202,7 @@ class BaseImage(ViewerObjectBase):
         return self._get_data()[view]
 
     def get_slice(self, c):
-        view = [slice(None)] * self.ndim
+        view = tuple([slice(None)] * self.ndim)
         view[-1] = self.order.index(c.upper())
         return self._slice(view)
 

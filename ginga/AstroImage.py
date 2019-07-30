@@ -90,9 +90,6 @@ class AstroImage(BaseImage):
             data = np.zeros((0, 0))
         elif 0 in data.shape:
             data = np.zeros((0, 0))
-        elif len(data.shape) < 2:
-            # Expand 1D arrays into 1xN array
-            data = data.reshape((1, data.shape[0]))
 
         # this is a handle to the full data array
         self._md_data = data
@@ -196,12 +193,13 @@ class AstroImage(BaseImage):
         revnaxis.reverse()
 
         # construct slice view and extract it
-        view = tuple(revnaxis + [slice(None), slice(None)])
+        ndim = min(self.ndim, 2)
+        view = tuple(revnaxis + [slice(None)] * ndim)
         data = self.get_mddata()[view]
 
-        if len(data.shape) != 2:
+        if len(data.shape) not in (1, 2):
             raise ImageError(
-                "naxispath does not lead to a 2D slice: {}".format(naxispath))
+                "naxispath does not lead to a 1D or 2D slice: {}".format(naxispath))
 
         self.naxispath = naxispath
         self.revnaxis = revnaxis

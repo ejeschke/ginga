@@ -66,6 +66,16 @@ class ImageViewBase(Callback.Callbacks):
     vname = 'Ginga Image'
     vtypes = [BaseImage.BaseImage]
 
+    @classmethod
+    def viewable(cls, dataobj):
+        """Test whether `dataobj` is viewable by this viewer."""
+        if not isinstance(dataobj, BaseImage.BaseImage):
+            return False
+        shp = list(dataobj.shape)
+        if len(shp) < 2:
+            return False
+        return True
+
     def __init__(self, logger=None, rgbmap=None, settings=None):
         Callback.Callbacks.__init__(self)
 
@@ -713,6 +723,9 @@ class ImageViewBase(Callback.Callbacks):
         canvas_img = self.get_canvas_image()
         return canvas_img.get_image()
 
+    # for compatibility with other viewers
+    get_dataobj = get_image
+
     def get_canvas_image(self):
         """Get canvas image object.
 
@@ -757,13 +770,13 @@ class ImageViewBase(Callback.Callbacks):
         Parameters
         ----------
         image : `~ginga.AstroImage.AstroImage` or `~ginga.RGBImage.RGBImage`
-            Image object.
+            2D Image object.
 
         add_to_canvas : bool
             Add image to canvas.
 
         """
-        if not isinstance(image, BaseImage.BaseImage):
+        if not self.viewable(image):
             raise ValueError("Wrong type of object to load: %s" % (
                 str(type(image))))
 
@@ -789,6 +802,9 @@ class ImageViewBase(Callback.Callbacks):
                 self.canvas.lower_object(canvas_img)
 
             #self.canvas.update_canvas(whence=0)
+
+    # for compatibility with other viewers
+    set_dataobj = set_image
 
     def _image_set_cb(self, canvas_img, image):
         try:

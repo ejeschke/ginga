@@ -51,7 +51,6 @@ from ginga.misc import Future
 from ginga import GingaPlugin
 from ginga.util import iohelper
 from ginga.util.videosink import VideoSink
-from ginga.util import io_fits
 
 import numpy as np
 
@@ -399,12 +398,14 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.fv.show_status("")
 
     def set_hdu(self, idx):
-        self.logger.debug("Loading fits hdu #%d" % (idx))
+        self.logger.debug("Loading index #%d" % (idx))
 
         # determine canonical index of this HDU
-        info = self.file_obj.hdu_info[idx]
+        info_dct = self.file_obj.get_directory()
+        info = self.file_obj.get_info_idx(idx)
+
         aidx = (info.name, info.extver)
-        if aidx not in self.file_obj.hdu_db:
+        if aidx not in info_dct:
             aidx = idx
         sfx = iohelper.get_hdu_suffix(aidx)
 
@@ -419,27 +420,27 @@ class MultiDim(GingaPlugin.LocalPlugin):
             return
 
         # Nope, we'll have to load it
-        self.logger.debug("HDU %d not in memory; refreshing from file" % (idx))
-        try:
-            self.curhdu = idx
-            info = self.file_obj.hdu_info[idx]
-            image = self.file_obj.get_hdu(idx)
+        self.logger.debug("Index %d not in memory; refreshing from file" % (idx))
 
-            # create a future for reconstituting this HDU
-            future = Future.Future()
-            future.freeze(self.fv.load_image, self.img_path, idx=aidx)
-            image.set(path=self.img_path, idx=aidx, name=imname,
-                      image_future=future)
+        def _load_idx(image):
+            try:
+                # create a future for reconstituting this HDU
+                future = Future.Future()
+                future.freeze(self.fv.load_image, self.img_path, idx=aidx)
+                image.set(path=self.img_path, idx=aidx, name=imname,
+                          image_future=future)
 
-            self.fv.add_image(imname, image, chname=chname)
+                self.fv.add_image(imname, image, chname=chname)
+                self.curhdu = idx
+                self.logger.debug("HDU #%d loaded." % (idx))
 
-            self.logger.debug("HDU #%d loaded." % (idx))
+            except Exception as e:
+                errmsg = "Error loading FITS HDU #%d: %s" % (
+                    idx, str(e))
+                self.logger.error(errmsg)
+                self.fv.show_error(errmsg, raisetab=True)
 
-        except Exception as e:
-            errmsg = "Error loading FITS HDU #%d: %s" % (
-                idx, str(e))
-            self.logger.error(errmsg)
-            self.fv.show_error(errmsg, raisetab=True)
+        self.file_obj.load_idx_cont(idx, _load_idx)
 
     def set_naxis(self, idx, n):
         """Change the slice shown in the channel viewer.
@@ -600,7 +601,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         # TODO: How to properly reset GUI components?
         #       They are still showing info from prev FITS.
         # No-op for ASDF
-        if path.endswith('asdf'):
+        if path.endswith('.asdf'):
             return True
 
         if path != self.img_path:
@@ -614,18 +615,23 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 except Exception:
                     pass
 
-            self.file_obj = io_fits.get_fitsloader(logger=self.logger)
+            self.file_obj = image.io
 
             # TODO: specify 'readonly' somehow?
             self.file_obj.open_file(path)
+            hdu_dct = self.file_obj.get_directory()
 
             upper = len(self.file_obj) - 1
-            self.prep_hdu_menu(self.w.hdu, self.file_obj.hdu_info)
+            # NOTE: make a set of values, because some values will be in
+            # multiple times if known by several indexes
+            self.prep_hdu_menu(self.w.hdu, list(set(hdu_dct.values())))
             self.num_hdu = upper
             self.logger.debug("there are %d hdus" % (upper + 1))
             self.w.numhdu.set_text("%d" % (upper + 1))
 
             self.w.hdu.set_enabled(len(self.file_obj) > 0)
+        else:
+            hdu_dct = self.file_obj.get_directory()
 
         name = image.get('name', iohelper.name_image_from_path(path))
         idx = image.get('idx', None)
@@ -638,7 +644,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         htype = None
         if idx is not None:
             # set the HDU in the drop down if known
-            info = self.file_obj.hdu_db.get(idx, None)
+            info = hdu_dct.get(idx, None)
             if info is not None:
                 htype = info.htype.lower()
                 toc_ent = self._toc_fmt % info

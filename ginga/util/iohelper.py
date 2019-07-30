@@ -29,8 +29,14 @@ except (ImportError, Exception):
     have_magic = False
 
 
+# NOTE: this is a shortcut list of extensions in which we trust the
+# extension over the mimetype that might be returned by the Python
+# 'mimetypes' module.  You can add an extension here if the loaders
+# can reliably load it and it is not recognized properly by 'mimetypes'
 known_types = {
     '.fits': 'image/fits',
+    '.fits.gz': 'image/fits',
+    '.fits.fz': 'image/fits',
     '.asdf': 'image/asdf',
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
@@ -50,9 +56,10 @@ def guess_filetype(filepath):
 
     # Some specific checks for known file suffixes
     _fn = filepath.lower()
-    _name, _ext = os.path.splitext(_fn)
-    if _ext in known_types:
-        typ = known_types[_ext]
+    for key, mimetype in known_types.items():
+        if _fn.endswith(key):
+            typ = mimetype
+            break
 
     if typ is None and have_magic:
         try:

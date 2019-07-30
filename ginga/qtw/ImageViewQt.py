@@ -814,6 +814,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
 
 class CanvasView(ImageViewZoom):
+    """A Ginga viewer for viewing 2D slices of image data."""
 
     def __init__(self, logger=None, settings=None, rgbmap=None,
                  render='widget',

@@ -288,7 +288,7 @@ class MDISubWindow(Callback.Callbacks):
 
         evbox = Gtk.EventBox()
         evbox.add(label)
-        evbox.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray90"))
+        modify_bg(evbox, "gray90")
         self.label = evbox
         self.evbox = evbox
         hbox.pack_start(evbox, True, True, 2)
@@ -308,7 +308,7 @@ class MDISubWindow(Callback.Callbacks):
         frame.set_size_request(self.width, self.height)
         frame.props.visible_window = True
         frame.set_border_width(0)
-        frame.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray70"))
+        modify_bg(frame, "gray70")
         self.frame = frame
 
         frame.add(vbox)
@@ -357,7 +357,7 @@ class MDIWidget(Gtk.Layout):
         self.connect("button_press_event", self.button_press_event)
         self.connect("button_release_event", self.button_release_event)
 
-        self.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray50"))
+        modify_bg(self, "gray50")
 
     def append_page(self, widget, label):
 
@@ -964,6 +964,14 @@ def make_cursor(widget, iconpath, x, y):
     screen = widget.get_screen()
     display = screen.get_display()
     return Gdk.Cursor(display, pixbuf, x, y)
+
+
+def modify_bg(widget, color):
+    css_data = "* { background-image: none; background-color: %s; }" % (color)
+    css_provider = Gtk.CssProvider()
+    css_provider.load_from_data(css_data.encode())
+    widget.get_style_context().add_provider(css_provider,
+                                            Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
 
 def set_default_style():

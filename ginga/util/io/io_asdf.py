@@ -18,6 +18,7 @@ except ImportError:
 
 from ginga import AstroImage
 from ginga.util import iohelper, wcsmod
+from ginga.util.io import io_base
 
 __all__ = ['have_asdf', 'load_file', 'load_asdf', 'load_from_asdf',
            'ASDFFileHandler']
@@ -138,12 +139,13 @@ def load_file(filepath, idx=None, logger=None, **kwargs):
     return data_obj
 
 
-class ASDFFileHandler(object):
+class ASDFFileHandler(io_base.BaseIOHandler):
 
     name = 'asdf'
 
     def __init__(self, logger):
-        self.logger = logger
+        super(ASDFFileHandler, self).__init__(logger)
+
         self._path = None
 
     def load_asdf(self, asdf_f, idx=None, **kwargs):
@@ -153,6 +155,7 @@ class ASDFFileHandler(object):
         # set important metadata
         # TODO: is it possible to set the name without a filename?
         data_obj.set(idx=idx)
+        data_obj.io = self
 
         return data_obj
 
@@ -184,6 +187,7 @@ class ASDFFileHandler(object):
         name = iohelper.name_image_from_path(filepath, idx=None)
         data_obj.set(path=filepath, name=name, idx=idx,
                      image_loader=load_file)
+        data_obj.io = self
 
         return data_obj
 
@@ -207,12 +211,15 @@ class ASDFFileHandler(object):
         self.close()
         return False
 
-    def load_idx_cont(self, idx_spec, loader_cont_fn, **kwargs):
+    def load_idx(self, idx, **kwargs):
         if self._path is None:
             raise ValueError("Please call open_file() first!")
 
-        # TODO: idx_spec names some path to an ASDF object
-        data_obj = self.load_file(self._path, idx=None, **kwargs)
+        return self.load_file(self._path, idx=idx, **kwargs)
+
+    def load_idx_cont(self, idx_spec, loader_cont_fn, **kwargs):
+
+        data_obj = self.load_idx(None, **kwargs)
 
         # call continuation function
         loader_cont_fn(data_obj)

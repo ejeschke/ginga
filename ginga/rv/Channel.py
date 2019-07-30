@@ -7,6 +7,7 @@
 import time
 
 from ginga.misc import Bunch, Datasrc, Callback, Future, Settings
+from ginga.util import viewer as gviewer
 
 
 class ChannelError(Exception):
@@ -111,7 +112,7 @@ class Channel(Callback.Callbacks):
             self.datasrc.remove(imname)
 
             # update viewer if we are removing the currently displayed image
-            cur_image = self.viewer.get_image()
+            cur_image = self.viewer.get_dataobj()
             if cur_image == image:
                 self.refresh_cursor_image()
 
@@ -317,6 +318,7 @@ class Channel(Callback.Callbacks):
                                image_future=image_future,
                                time_added=time.time(),
                                time_modified=None,
+                               last_viewer_info=None,
                                profile=None)
             self._add_info(info)
 
@@ -343,68 +345,88 @@ class Channel(Callback.Callbacks):
             self.fv.make_async_gui_callback('remove-image-info', self, info)
 
     def get_current_image(self):
-        return self.viewer.get_image()
+        return self.viewer.get_dataobj()
 
     def view_object(self, dataobj):
 
-        # find available viewers that can view this kind of object
-        vnames = self.fv.get_viewer_names(dataobj)
-        if len(vnames) == 0:
-            raise ValueError("I don't know how to view objects of type '%s'" % (
-                str(type(dataobj))))
-        self.logger.debug("available viewers are: %s" % (str(vnames)))
+        # see if a viewer has been used on this object before
+        vinfo = None
+        obj_name = dataobj.get('name')
+        if obj_name in self.image_index:
+            info = self.image_index[obj_name]
+            vinfo = info.last_viewer_info
 
-        # for now, pick first available viewer that can view this type
-        # TODO: pop-up a dialog and ask the user?
-        vname = vnames[0]
+        if vinfo is not None:
+            # use the viewer we used before
+            viewers = [vinfo]
+        else:
+            # find available viewers that can view this kind of object
+            viewers = gviewer.get_priority_viewers(dataobj)
+            if len(viewers) == 0:
+                raise ValueError("No viewers for this data object!")
+            self.logger.debug("{} available viewers for this model".format(len(viewers)))
 
+        # if there is only one viewer available, use it otherwise
+        # pop-up a dialog and ask the user
+        if len(viewers) == 1:
+            self._open_with_viewer(viewers[0], dataobj)
+            return
+
+        msg = ("Multiple viewers are available for this data object. "
+               "Please select one.")
+        self.fv.gui_choose_viewer(msg, viewers, self._open_with_viewer,
+                                  dataobj)
+
+    def _open_with_viewer(self, vinfo, dataobj):
         # if we don't have this viewer type then install one in the channel
-        if vname not in self.viewer_dict:
-            self.fv.make_viewer(vname, self)
+        if vinfo.name not in self.viewer_dict:
+            self.fv.make_viewer(vinfo, self)
 
-        self.viewer = self.viewer_dict[vname]
+        self.viewer = self.viewer_dict[vinfo.name]
         # find this viewer and raise it
         idx = self.viewers.index(self.viewer)
         self.widget.set_index(idx)
 
         # and load the data
-        self.viewer.set_image(dataobj)
+        self.viewer.set_dataobj(dataobj)
+
+        obj_name = dataobj.get('name')
+        if obj_name in self.image_index:
+            info = self.image_index[obj_name]
+            # record viewer last used to view this object
+            info.last_viewer_info = vinfo
+            if info in self.history:
+                # update cursor to match dataobj
+                self.cursor = self.history.index(info)
+
+        self.fv.channel_image_updated(self, dataobj)
+
+        # Check for preloading any dataobjs into memory
+        preload = self.settings.get('preload_images', False)
+        if not preload:
+            return
+
+        # queue next and previous files for preloading
+        index = self.cursor
+        if index < len(self.history) - 1:
+            info = self.history[index + 1]
+            if info.path is not None:
+                self.fv.add_preload(self.name, info)
+
+        if index > 0:
+            info = self.history[index - 1]
+            if info.path is not None:
+                self.fv.add_preload(self.name, info)
 
     def switch_image(self, image):
 
         curimage = self.get_current_image()
-        if curimage != image:
-            self.logger.debug("updating viewer...")
-            self.view_object(image)
-
-            # update cursor to match image
-            imname = image.get('name')
-            if imname in self.image_index:
-                info = self.image_index[imname]
-                if info in self.history:
-                    self.cursor = self.history.index(info)
-
-            self.fv.channel_image_updated(self, image)
-
-            # Check for preloading any images into memory
-            preload = self.settings.get('preload_images', False)
-            if not preload:
-                return
-
-            # queue next and previous files for preloading
-            index = self.cursor
-            if index < len(self.history) - 1:
-                info = self.history[index + 1]
-                if info.path is not None:
-                    self.fv.add_preload(self.name, info)
-
-            if index > 0:
-                info = self.history[index - 1]
-                if info.path is not None:
-                    self.fv.add_preload(self.name, info)
-
-        else:
+        if curimage == image:
             self.logger.debug("Apparently no need to set channel viewer.")
+            return
+
+        self.logger.debug("updating viewer...")
+        self.view_object(image)
 
     def switch_name(self, imname):
 

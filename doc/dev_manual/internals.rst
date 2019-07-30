@@ -199,8 +199,9 @@ you expect the same functionality.
 I want to use my own file storage format, not FITS!
 ---------------------------------------------------
 
-No problem.  An ``BaseImage`` subclassed object (such as ``AstroImage``
-or ``RGBImage``) can be loaded directly from 
+First of all, you can always create an ``AstroImage`` and assign its
+components for wcs and data.  However, assuming that you want to add a new
+type of loader into Ginga's file loading 
 
 Ginga's general file loading facility breaks the loading down into two
 phases: first, the file is identified by its ``magic`` signature
@@ -209,81 +210,19 @@ type or filename extension.  Once the general category of file is known,
 methods in the specific I/O module devoted to that type are called to
 load the file data.
 
-You should implement this abstract class:
+The `ginga.util.loader` module is used to register file openers. An
+opener is a class that understand how to load data objects from a
+particular kind of file format.  You'll want to start by examining this
+module and especially looking at the examples at the bottom of that file
+for how openers are registered. 
 
-.. code-block:: python
-
-    class MyIOHandler(object):
-        def __init__(self, logger):
-            self.logger = logger
-
-        def register_type(self, name, klass):
-            self.factory_dict[name.lower()] = klass
-
-        def load_file(self, filespec, numhdu=None, dstobj=None, **kwdargs):
-            # create object of the appropriate type, usually
-            # an AstroImage or AstroTable, by looking up the correct
-            # class in self.factory_dict, under the keys 'image' or
-            # 'table'
-            return dstobj
-
-        def save_as_file(self, path, data, header, **kwdargs):
-            pass
-
-The ``save_as_file`` method is optional if you will never need to save
-a modified file from Ginga.
-To use your io handler with Ginga create your images like this:
-
-.. code-block:: python
-
-    from ginga.AstroImage import AstroImage
-    AstroImage.set_ioClass(MyIOHandler)
-    ...
-
-    image = AstroImage()
-    image.load_file(path)
-    ...
-    view.set_image(image)
-
-or you can override the io handler on a case-by-case basis:
-
-.. code-block:: python
-
-    from ginga.AstroImage import AstroImage
-    ...
-
-    image = AstroImage(ioclass=MyIOHandler)
-    image.load_file(path)
-    ...
-    view.set_image(image)
-
-You could also subclass AstroImage or BaseImage and implement your own
-I/O handling.
-
-.. note:: Both `naxispath` and `numhdu` are valid keyword arguments to
-          the load_file() method.
-
-          You probably want to treat `numhdu` as a kind of index into
-          your file, similarly to the meaning within a FITS file
-          (although you are free also to ignore it!).
-
-          If the user passes a valid numhdu (whatever that means to
-          your load_file method) you simply return that value that they
-          passed as the middle element of the return tuple. If they
-          passed None (default), then you return the index you used
-          to access the data area that you loaded.
-
-          You probably want to treat `naxispath` as any kind of path
-          that you would need to take to navigate through your kind of
-          data area selected by numhdu (above).  This is usually used to
-          describe the path through a data cube of N-dimensionality to
-          reach a 2D slice.
-
-          If the user passes a valid naxispath (whatever that means to
-          your load_file method) you simply return that value that they
-          passed. If they passed None (default), then you return
-          whatever path you used to access the data slice that you
-          returned.
+For implementing your own special opener, take a look at the
+``BaseIOHandler`` class in `ginga.util.io.io_base`. This is the base
+class for all I/O openers for Ginga.  Subclass this class, and implement
+all of the methods that raise ``NotImplementedError`` and optionally
+implement any other methods marked with the comment "subclass should
+override as needed".  You can study the `io_fits` and `io_rgb` modules
+to see how these methods are implemented for specific formats.
 
 
 Porting Ginga to a New Widget Set

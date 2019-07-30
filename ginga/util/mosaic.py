@@ -18,6 +18,7 @@ import numpy as np
 
 from ginga import AstroImage
 from ginga.util import wcs, loader, dp
+from ginga.util import io_fits
 from ginga.misc import log
 
 

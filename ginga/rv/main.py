@@ -416,9 +416,14 @@ class ReferenceViewer(object):
             fitspkg = settings.get('FITSpkg', 'choose')
 
         try:
-            from ginga.util import io_fits
+            from ginga.util import io_fits, loader
             if fitspkg != 'choose':
                 assert io_fits.use(fitspkg) is True
+                # opener name is not necessarily the same
+                opener = loader.get_opener(io_fits.fitsLoaderClass.name)
+                # set this opener as the priority one
+                opener.priority = -99
+
         except Exception as e:
             logger.warning(
                 "failed to set FITS package preference: %s" % (str(e)))
