@@ -77,6 +77,10 @@ matrix:
         - os: linux
           env: ASTROPY_VERSION=development CONDA_DEPENDENCIES='pyqt matplotlib'
 
+        # Try on Windows
+        - os: windows
+          env: SETUP_CMD='test'
+
         # Try with Numpy pre-release (this is skipped unless pre-release is available)
         - os: linux
           env: NUMPY_VERSION=prerelease CONDA_DEPENDENCIES='pyqt matplotlib'
