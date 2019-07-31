@@ -33,6 +33,7 @@ Ver 3.0.0 (unreleased)
 - New Downloads plugin for monitoring/managing URI downloads
 - Supports PySide2 (alternative Qt5 backend)
 - Added statistics line to Histogram plugin
+- Removed support for gtk2, since it is not supported for Python 3
 
 Ver 2.7.2 (2018-11-05)
 ======================

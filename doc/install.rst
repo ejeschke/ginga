@@ -58,7 +58,6 @@ do), you will need at least one of the following:
 
 * QtPy (PyQt4 or PyQt5)
 * PySide (Qt4/Qt5 alternative)
-* PyGTK (gtk) **AND** `pycairo <https://github.com/pygobject/pycairo>`_ (GTK 2)
 * pygobject (gi) **AND** pycairo (GTK 3)
 * `tkinter <https://docs.python.org/3/library/tk.html>`_
 * matplotlib
@@ -114,9 +113,9 @@ There is support for both the basic widget and the full reference viewer.
 GTK
 ===
 
-Ginga can use either GTK 2 (with PyGTK) or GTK 3 (with ``gi``).  (If you have
-an older version of ``pycairo`` package, you may need to install a newer version
-from ``pycairo``).
+Ginga can use GTK 3 (with ``gi``).  (If you have an older version of
+``pycairo`` package, you may need to install a newer version from
+``pycairo``). 
 
 Tk
 ==
