@@ -79,6 +79,7 @@ matrix:
 
         # Try on Windows
         - os: windows
+          env: SETUP_CMD='test'
 
         # Try with Numpy pre-release (this is skipped unless pre-release is available)
         - os: linux
