@@ -20,7 +20,7 @@ from ginga.util import iohelper
 __all__ = ['have_asdf', 'load_asdf', 'ASDFFileHandler']
 
 
-def load_asdf(asdf_obj, data_key='sci', wcs_key='wcs', header_key='meta'):
+def load_asdf(asdf_obj, data_key='data', wcs_key='wcs', header_key='meta'):
     """
     Load from an ASDF object.
 
@@ -49,6 +49,8 @@ def load_asdf(asdf_obj, data_key='sci', wcs_key='wcs', header_key='meta'):
 
     if wcs_key in asdf_keys:
         wcs = asdf_obj[wcs_key]
+    elif wcs_key in asdf_obj[header_key]:
+        wcs = asdf_obj[header_key][wcs_key]
     else:
         wcs = None
 
@@ -60,6 +62,11 @@ def load_asdf(asdf_obj, data_key='sci', wcs_key='wcs', header_key='meta'):
     # TODO: What about non-image ASDF data, such as table?
     if data_key in asdf_keys:
         data = np.asarray(asdf_obj[data_key])
+    # TODO: This hack is so earlier test files would still
+    # load, but we need to make customization easier so
+    # we can remove this hack.
+    elif 'sci' in asdf_keys:
+        data = np.asarray(asdf_obj['sci'])
     else:
         data = None
 

@@ -226,6 +226,10 @@ class AstropyWCS(common.BaseWCS):
         """
         if self.coordsys == 'raw':
             raise common.WCSError("No usable WCS")
+        elif self.coordsys == 'world':
+            coordsys = 'icrs'
+        else:
+            coordsys = self.coordsys
 
         if system is None:
             system = 'icrs'
@@ -233,8 +237,7 @@ class AstropyWCS(common.BaseWCS):
         # Get a coordinates object based on ra/dec wcs transform
         wcspt = self.datapt_to_wcspt(datapt, coords=coords,
                                      naxispath=naxispath)
-        frame_class = coordinates.frame_transform_graph.lookup_name(
-            self.coordsys)
+        frame_class = coordinates.frame_transform_graph.lookup_name(coordsys)
         ra_deg = wcspt[:, 0]
         dec_deg = wcspt[:, 1]
         coord = frame_class(ra_deg * u.degree, dec_deg * u.degree)
