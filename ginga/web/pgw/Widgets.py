@@ -507,9 +507,16 @@ class ComboBox(WidgetBase):
     def clear(self):
         self.choices = []
 
-    def show_text(self, text):
+    def set_text(self, text):
         index = self.choices.index(text)
         self.set_index(index)
+
+    # to be deprecated someday
+    show_text = set_text
+
+    def get_text(self):
+        idx = self.get_index()
+        return self.choices[idx]
 
     def append_text(self, text):
         self.choices.append(text)

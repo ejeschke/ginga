@@ -162,7 +162,10 @@ class VScale(WidgetMask, Gtk.VScale):
         super(VScale, self).set_value(newval)
 
 
-class ComboBoxMixin(object):
+class ComboBox(WidgetMask, Gtk.ComboBox):
+    def __init__(self, *args, **kwdargs):
+        WidgetMask.__init__(self)
+        Gtk.ComboBox.__init__(self, *args, **kwdargs)
 
     def set_active(self, newval):
         oldval = self.get_active()
@@ -170,52 +173,6 @@ class ComboBoxMixin(object):
             self.change()
 
         super(ComboBox, self).set_active(newval)
-
-    def insert_alpha(self, text):
-        model = self.get_model()
-        tup = (text, )
-        j = 0
-        for i in range(len(model)):
-            j = i
-            if model[i][0] > text:
-                model.insert(j, tup)
-                return
-        model.insert(j + 1, tup)
-
-    def insert_text(self, idx, text):
-        model = self.get_model()
-        tup = (text, )
-        model.insert(idx, tup)
-
-    def delete_alpha(self, text):
-        model = self.get_model()
-        for i in range(len(model)):
-            if model[i][0] == text:
-                del model[i]
-                return
-
-    def clear(self):
-        model = self.get_model()
-        model.clear()
-
-    def show_text(self, text):
-        model = self.get_model()
-        for i in range(len(model)):
-            if model[i][0] == text:
-                self.set_active(i)
-                return
-
-
-class ComboBox(WidgetMask, Gtk.ComboBox, ComboBoxMixin):
-    def __init__(self, *args, **kwdargs):
-        WidgetMask.__init__(self)
-        Gtk.ComboBox.__init__(self, *args, **kwdargs)
-
-
-## class ComboBoxEntry(WidgetMask, Gtk.ComboBoxEntry, ComboBoxMixin):
-##     def __init__(self, *args, **kwdargs):
-##         WidgetMask.__init__(self)
-##         Gtk.ComboBoxEntry.__init__(self, *args, **kwdargs)
 
 
 class Notebook(WidgetMask, Gtk.Notebook):

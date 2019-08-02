@@ -391,9 +391,19 @@ class ComboBox(WidgetBase):
     def clear(self):
         self.widget.clear()
 
-    def show_text(self, text):
+    def set_text(self, text):
         index = self.widget.findText(text)
-        self.set_index(index)
+        if index >= 0:
+            self.set_index(index)
+        else:
+            self.widget.setEditText(text)
+
+    # to be deprecated someday
+    show_text = set_text
+
+    def get_text(self):
+        idx = self.get_index()
+        return self.get_alpha(idx)
 
     def append_text(self, text):
         self.widget.addItem(text)
