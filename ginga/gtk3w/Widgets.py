@@ -411,15 +411,14 @@ class ComboBox(WidgetBase):
     def __init__(self, editable=False):
         super(ComboBox, self).__init__()
 
-        if editable:
-            cb = GtkHelp.ComboBoxEntry()
-        else:
-            cb = GtkHelp.ComboBox()
+        cb = GtkHelp.ComboBox(has_entry=editable)
         liststore = Gtk.ListStore(GObject.TYPE_STRING)
         cb.set_model(liststore)
         cell = Gtk.CellRendererText()
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
+        if editable:
+            cb.set_entry_text_column(0)
         self.widget = cb
         self.widget.sconnect('changed', self._cb_redirect)
 
@@ -466,19 +465,37 @@ class ComboBox(WidgetBase):
     def clear(self):
         model = self.widget.get_model()
         model.clear()
+        if self.widget.get_has_entry():
+            entry = self.widget.get_entry()
+            entry.set_text('')
 
-    def show_text(self, text):
+    def set_text(self, text):
         model = self.widget.get_model()
         for i in range(len(model)):
             if model[i][0] == text:
                 self.widget.set_active(i)
                 return
 
+        if self.widget.get_has_entry():
+            entry = self.widget.get_child()
+            entry.set_text(text)
+
+    # to be deprecated someday
+    show_text = set_text
+
     def set_index(self, index):
         self.widget.set_active(index)
 
     def get_index(self):
         return self.widget.get_active()
+
+    def get_text(self):
+        if self.widget.get_has_entry():
+            entry = self.widget.get_child()
+            return entry.get_text()
+
+        idx = self.get_index()
+        return self.get_alpha(idx)
 
 
 class SpinBox(WidgetBase):
