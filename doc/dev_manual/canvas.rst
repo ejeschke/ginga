@@ -34,7 +34,8 @@ objects includes:
 * ``Compass`` -- a compass defined by a point and a radius.
 * ``Ruler`` -- a ruler defined by two points.
 * ``Crosshair`` -- a crosshair defined by one point.
-* ``Annulus`` -- an annulus defined by one point and two radii.
+* ``Annulus`` -- an annulus defined by one point, a radius and a width.
+* ``Annulus2R`` -- an annulus defined by one point, two radii and two widths.
 * ``Image`` -- a raster image anchored by a point.
 * ``NormImage`` -- a subclass of ``Image``, with rendering done with the
   aid of a colormap, a color distribution algorithm (linear, log, etc),

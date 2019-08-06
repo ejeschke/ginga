@@ -82,6 +82,22 @@ def astropy_region_to_ginga_canvas_object(r):
         obj = dc.Annulus(r.center.x, r.center.y, rin, width=wd,
                          atype='circle')
 
+    elif isinstance(r, (regions.EllipseAnnulusPixelRegion,)):
+        xwd = r.outer_width - r.inner_width
+        ywd = r.outer_height - r.inner_height
+        obj = dc.Annulus2R(r.center.x, r.center.y,
+                           r.inner_width / 2.0, r.inner_height / 2.0,
+                           xwidth=wd, ywidth=ywd,
+                           atype='ellipse')
+
+    elif isinstance(r, (regions.RectangleAnnulusPixelRegion,)):
+        xwd = r.outer_width - r.inner_width
+        ywd = r.outer_height - r.inner_height
+        obj = dc.Annulus2R(r.center.x, r.center.y,
+                           r.inner_width / 2.0, r.inner_height / 2.0,
+                           xwidth=wd, ywidth=ywd,
+                           atype='box')
+
     else:
         raise ValueError("Don't know how to convert this object")
 
@@ -202,6 +218,24 @@ def ginga_canvas_object_to_astropy_region(obj):
                                                                      y=obj.y),
                                              inner_radius=rin,
                                              outer_radius=rout)
+
+    elif isinstance(obj, (dc.Annulus2R,)) and obj.atype == 'ellipse':
+        r = regions.EllipseAnnulusPixelRegion(center=regions.PixCoord(x=obj.x,
+                                                                      y=obj.y),
+                                              inner_width=obj.xradius * 2,
+                                              inner_height=obj.yradius * 2,
+                                              outer_width=obj.xradius * 2 + obj.xwidth * 2,
+                                              outer_height=obj.yradius * 2 + obj.ywidth * 2,
+                                              angle=obj.rot_deg * u.deg)
+
+    elif isinstance(obj, (dc.Annulus2R,)) and obj.atype == 'box':
+        r = regions.RectangleAnnulusPixelRegion(center=regions.PixCoord(x=obj.x,
+                                                                        y=obj.y),
+                                                inner_width=obj.xradius * 2,
+                                                inner_height=obj.yradius * 2,
+                                                outer_width=obj.xradius * 2 + obj.xwidth * 2,
+                                                outer_height=obj.yradius * 2 + obj.ywidth * 2,
+                                                angle=obj.rot_deg * u.deg)
 
     else:
         raise ValueError("Don't know how to convert this object")
