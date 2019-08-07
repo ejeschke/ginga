@@ -679,6 +679,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
 
         self.editable = True
         self.opaque = True
+        self.atype = atype
         self.kind = 'annulus'
 
     def get_edit_points(self, viewer):
@@ -844,6 +845,7 @@ class Annulus2R(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
 
         self.editable = True
         self.opaque = True
+        self.atype = atype
         self.kind = 'annulus2r'
 
     def get_edit_points(self, viewer):

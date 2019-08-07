@@ -38,7 +38,7 @@ def astropy_region_to_ginga_canvas_object(r):
 
     elif isinstance(r, (regions.EllipsePixelRegion,)):
         obj = dc.Ellipse(r.center.x, r.center.y, r.width / 2, r.height / 2.,
-                         rot_deg=r.angle)
+                         rot_deg=r.angle.to(u.deg).value)
 
     # NOTE: need to check for Text before Point, because Text seems to be
     # a subclass of Point in regions
@@ -69,7 +69,7 @@ def astropy_region_to_ginga_canvas_object(r):
 
     elif isinstance(r, (regions.RectanglePixelRegion,)):
         obj = dc.Box(r.center.x, r.center.y, r.width / 2, r.height / 2.,
-                     rot_deg=r.angle)
+                     rot_deg=r.angle.to(u.deg).value)
 
     elif isinstance(r, (regions.PolygonPixelRegion,)):
         points = np.array(r.vertices.xy).T
@@ -83,20 +83,22 @@ def astropy_region_to_ginga_canvas_object(r):
                          atype='circle')
 
     elif isinstance(r, (regions.EllipseAnnulusPixelRegion,)):
-        xwd = r.outer_width - r.inner_width
-        ywd = r.outer_height - r.inner_height
+        xwd = (r.outer_width - r.inner_width) / 2.0
+        ywd = (r.outer_height - r.inner_height) / 2.0
         obj = dc.Annulus2R(r.center.x, r.center.y,
                            r.inner_width / 2.0, r.inner_height / 2.0,
-                           xwidth=wd, ywidth=ywd,
-                           atype='ellipse')
+                           xwidth=xwd, ywidth=ywd,
+                           atype='ellipse',
+                           rot_deg=r.angle.to(u.deg).value)
 
     elif isinstance(r, (regions.RectangleAnnulusPixelRegion,)):
-        xwd = r.outer_width - r.inner_width
-        ywd = r.outer_height - r.inner_height
+        xwd = (r.outer_width - r.inner_width) / 2.0
+        ywd = (r.outer_height - r.inner_height) / 2.0
         obj = dc.Annulus2R(r.center.x, r.center.y,
                            r.inner_width / 2.0, r.inner_height / 2.0,
-                           xwidth=wd, ywidth=ywd,
-                           atype='box')
+                           xwidth=xwd, ywidth=ywd,
+                           atype='box',
+                           rot_deg=r.angle.to(u.deg).value)
 
     else:
         raise ValueError("Don't know how to convert this object")
@@ -179,7 +181,7 @@ def ginga_canvas_object_to_astropy_region(obj):
     elif isinstance(obj, (dc.Text,)):
         r = regions.TextPixelRegion(center=regions.PixCoord(x=obj.x, y=obj.y),
                                     text=obj.text)
-        r.visual['textangle'] = str(r.rot_deg)
+        r.visual['textangle'] = str(obj.rot_deg)
 
     elif isinstance(obj, (dc.Point,)):
         r = regions.PointPixelRegion(center=regions.PixCoord(x=obj.x, y=obj.y))
