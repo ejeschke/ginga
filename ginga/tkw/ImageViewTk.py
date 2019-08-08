@@ -14,51 +14,43 @@ try:
 except ImportError:
     from tkinter import PhotoImage
 
-from ginga import Mixins, Bindings  # noqa
+from ginga import ImageView, Mixins, Bindings  # noqa
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin  # noqa
+from ginga.canvas import render
 from ginga.util.toolbox import ModeIndicator  # noqa
 
 from . import TkHelp  # noqa
 
-try:
-    # See if we have aggdraw module--best choice
-    from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView, \
-        ImageViewAggError as ImageViewError
 
-except ImportError:
-    try:
-        # No dice. How about the PIL module?
-        from ginga.pilw.ImageViewPil import ImageViewPil as ImageView, \
-            ImageViewPilError as ImageViewError
-
-    except ImportError:
-        try:
-            # No, hmm..ok, see if we have opencv module...
-            from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
-                ImageViewCvError as ImageViewError
-
-        except ImportError:
-            # Fall back to mock--there will be no graphic overlays
-            from ginga.mockw.ImageViewMock import ImageViewMock as ImageView, \
-                ImageViewMockError as ImageViewError
-
-
-class ImageViewTkError(ImageViewError):
+class ImageViewTkError(ImageView.ImageViewError):
     pass
 
 
-class ImageViewTk(ImageView):
+class ImageViewTk(ImageView.ImageViewBase):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageView.__init__(self, logger=logger,
-                           rgbmap=rgbmap,
-                           settings=settings)
+        ImageView.ImageViewBase.__init__(self, logger=logger,
+                                         rgbmap=rgbmap,
+                                         settings=settings)
 
         self.tkcanvas = None
         self.tkphoto = None
 
+        self.t_.set_defaults(renderer='cairo')
+
         self._defer_task = None
         self.msgtask = None
+
+        self.rgb_order = 'RGBA'
+
+        self.renderer = None
+        # Pick a renderer that can work with us
+        renderers = ['cairo', 'agg', 'pil', 'opencv']
+        preferred = self.t_['renderer']
+        if preferred in renderers:
+            renderers.remove(preferred)
+        self.possible_renderers = [preferred] + renderers
+        self.choose_best_renderer()
 
     def set_widget(self, canvas):
         """Call this method with the Tkinter canvas that will be used
@@ -82,6 +74,26 @@ class ImageViewTk(ImageView):
 
     def get_widget(self):
         return self.tkcanvas
+
+    def choose_renderer(self, name):
+        klass = render.get_render_class(name)
+        self.renderer = klass(self)
+
+        if self.tkcanvas is not None:
+            wd = self.tkcanvas.winfo_width()
+            ht = self.tkcanvas.winfo_height()
+            self.configure_window(wd, ht)
+
+    def choose_best_renderer(self):
+        for name in self.possible_renderers:
+            try:
+                self.choose_renderer(name)
+                self.logger.info("best renderer available is '{}'".format(name))
+                return
+            except Exception as e:
+                continue
+
+        raise ImageViewPgError("No valid renderers available: {}".format(str(possible_renderers)))
 
     def update_image(self):
         if self.tkcanvas is None:

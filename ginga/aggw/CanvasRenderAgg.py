@@ -1,5 +1,5 @@
 #
-# CanvasRenderAgg.py -- for rendering into a ImageViewAgg widget
+# CanvasRenderAgg.py -- for rendering into Ginga widget with aggdraw
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.

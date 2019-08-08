@@ -46,35 +46,42 @@ v1.embed()
 """
 from ipyevents import Event as EventListener
 
-from ginga import AstroImage
+from ginga import ImageView, AstroImage
 from ginga import Mixins, Bindings
+from ginga.canvas import render
 from ginga.util.toolbox import ModeIndicator
-
-try:
-    # See if we have aggdraw module--best choice
-    from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView
-
-except ImportError:
-    # fall back to pillow if aggdraw not available
-    from ginga.pilw.ImageViewPil import ImageViewPil as ImageView
 
 from ginga.web.jupyterw import JpHelp
 
 
-class ImageViewJpw(ImageView):
+class ImageViewJpwError(ImageView.ImageViewError):
+    pass
+
+
+class ImageViewJpw(ImageView.ImageViewBase):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageView.__init__(self, logger=logger,
-                           rgbmap=rgbmap,
-                           settings=settings)
+        ImageView.ImageViewBase.__init__(self, logger=logger,
+                                         rgbmap=rgbmap,
+                                         settings=settings)
 
+        self.t_.set_defaults(renderer='pil')
+
+        self.rgb_order = 'RGBA'
         self.jp_img = None
         self.jp_evt = None
-        # Format 'png' is ok with 'RGBA', but 'jpeg' only works with 'RGB'
-        self.rgb_order = 'RGB'
 
         self._defer_task = None
         self.msgtask = None
+
+        self.renderer = None
+        # Pick a renderer that can work with us
+        renderers = ['cairo', 'agg', 'pil', 'opencv']
+        preferred = self.t_['renderer']
+        if preferred in renderers:
+            renderers.remove(preferred)
+        self.possible_renderers = [preferred] + renderers
+        self.choose_best_renderer()
 
     def set_widget(self, jp_img):
         """Call this method with the Jupyter image widget (image_w)
@@ -94,10 +101,29 @@ class ImageViewJpw(ImageView):
 
         # for some reason these are stored as strings!
         wd, ht = int(jp_img.width), int(jp_img.height)
-        self.configure_surface(wd, ht)
+        self.configure_window(wd, ht)
 
     def get_widget(self):
         return self.jp_img
+
+    def choose_renderer(self, name):
+        klass = render.get_render_class(name)
+        self.renderer = klass(self)
+
+        if self.jp_img is not None:
+            wd, ht = int(self.jp_img.width), int(self.jp_img.height)
+            self.configure_window(wd, ht)
+
+    def choose_best_renderer(self):
+        for name in self.possible_renderers:
+            try:
+                self.choose_renderer(name)
+                self.logger.info("best renderer available is '{}'".format(name))
+                return
+            except Exception as e:
+                continue
+
+        raise ImageViewJpwError("No valid renderers available: {}".format(str(possible_renderers)))
 
     def update_image(self):
         fmt = self.jp_img.format

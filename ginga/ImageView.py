@@ -3155,7 +3155,8 @@ class ImageViewBase(Callback.Callbacks):
 
     def reschedule_redraw(self, time_sec):
         """Reschedule redraw event.
-        This must be implemented by subclasses.
+
+        This should be implemented by subclasses.
 
         Parameters
         ----------
@@ -3163,7 +3164,9 @@ class ImageViewBase(Callback.Callbacks):
             Time, in seconds, to wait.
 
         """
-        self.logger.warning("Subclass should override this abstract method!")
+        # subclass implements this method to call delayed_redraw() after
+        # time_sec
+        self.delayed_redraw()
 
     def set_cursor(self, cursor):
         """Set the cursor in the viewer widget.
@@ -3270,14 +3273,24 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.set_cursor(self.cursor[cname])
 
+    def configure_surface(self, width, height):
+        """Reconfigure the renderer for a new size, then reconfigure
+        our viewer for the same.
+
+        This can be overridden by subclasses.
+        """
+        self.renderer.resize((width, height))
+
+        self.configure(width, height)
+
     def get_image_as_array(self):
         """Get the current image shown in the viewer, with any overlaid
         graphics, in a numpy array with channels as needed and ordered
         by the back end widget.
 
-        This should be implemented by subclasses.
+        This can be overridden by subclasses.
         """
-        raise ImageViewError("Subclass should override this abstract method!")
+        return self.renderer.get_surface_as_array(order=self.rgb_order)
 
     def get_image_as_buffer(self, output=None):
         """Get the current image shown in the viewer, with any overlaid
@@ -3318,7 +3331,8 @@ class ImageViewBase(Callback.Callbacks):
         """Get the current image shown in the viewer, with any overlaid
         graphics, in a file IO-like object encoded as a bitmap graphics
         file.
-        This should be implemented by subclasses.
+
+        This can be overridden by subclasses.
 
         Parameters
         ----------
@@ -3339,7 +3353,8 @@ class ImageViewBase(Callback.Callbacks):
             in which case a BytesIO obejct is returned
 
         """
-        raise ImageViewError("Subclass should override this abstract method!")
+        return self.renderer.get_surface_as_rgb_format_buffer(
+            output=output, format=format, quality=quality)
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         """Get the current image shown in the viewer, with any overlaid
