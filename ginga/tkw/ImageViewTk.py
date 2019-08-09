@@ -93,7 +93,7 @@ class ImageViewTk(ImageView.ImageViewBase):
             except Exception as e:
                 continue
 
-        raise ImageViewPgError("No valid renderers available: {}".format(str(possible_renderers)))
+        raise ImageViewTkError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
     def update_image(self):
         if self.tkcanvas is None:

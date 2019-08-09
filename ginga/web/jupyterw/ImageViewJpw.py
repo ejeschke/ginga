@@ -65,7 +65,7 @@ class ImageViewJpw(ImageView.ImageViewBase):
                                          rgbmap=rgbmap,
                                          settings=settings)
 
-        self.t_.set_defaults(renderer='pil')
+        self.t_.set_defaults(renderer='cairo')
 
         self.rgb_order = 'RGBA'
         self.jp_img = None
@@ -123,7 +123,7 @@ class ImageViewJpw(ImageView.ImageViewBase):
             except Exception as e:
                 continue
 
-        raise ImageViewJpwError("No valid renderers available: {}".format(str(possible_renderers)))
+        raise ImageViewJpwError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
     def update_image(self):
         fmt = self.jp_img.format

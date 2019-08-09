@@ -89,7 +89,7 @@ class ImageViewPg(ImageView.ImageViewBase):
             except Exception as e:
                 continue
 
-        raise ImageViewPgError("No valid renderers available: {}".format(str(possible_renderers)))
+        raise ImageViewPgError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
     def update_image(self):
         self.logger.debug("update_image pgcanvas=%s" % self.pgcanvas)

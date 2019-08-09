@@ -4,15 +4,14 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
+import sys
 import os
 import numpy as np
 
 from ginga.gtk3w import GtkHelp
-from ginga import Mixins, Bindings
+from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
-
-from ginga.cairow.ImageViewCairo import (ImageViewCairo as ImageView,
-                                         ImageViewCairoError as ImageViewError)
+from ginga.canvas import render
 
 from gi.repository import Gtk
 from gi.repository import Gdk
@@ -20,16 +19,16 @@ from gi.repository import GdkPixbuf
 import cairo
 
 
-class ImageViewGtkError(ImageViewError):
+class ImageViewGtkError(ImageView.ImageViewError):
     pass
 
 
-class ImageViewGtk(ImageView):
+class ImageViewGtk(ImageView.ImageViewBase):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageView.__init__(self, logger=logger,
-                           rgbmap=rgbmap,
-                           settings=settings)
+        ImageView.ImageViewBase.__init__(self, logger=logger,
+                                         rgbmap=rgbmap,
+                                         settings=settings)
 
         imgwin = Gtk.DrawingArea()
         imgwin.connect("draw", self.draw_event)
@@ -44,6 +43,23 @@ class ImageViewGtk(ImageView):
         self.imgwin = imgwin
         self.imgwin.show_all()
 
+        self.t_.set_defaults(renderer='cairo')
+
+        # create our default double-buffered surface area that we copy
+        # to the widget
+        rect = self.imgwin.get_allocation()
+        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        arr = np.zeros((ht, wd, 4), dtype=np.uint8)
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
+                                                            wd)
+        self.surface = cairo.ImageSurface.create_for_data(arr,
+                                                          cairo.FORMAT_ARGB32,
+                                                          wd, ht, stride)
+        if sys.byteorder == 'little':
+            self.rgb_order = 'BGRA'
+        else:
+            self.rgb_order = 'ARGB'
+
         # see reschedule_redraw() method
         self._defer_task = GtkHelp.Timer()
         self._defer_task.add_callback('expired',
@@ -52,8 +68,37 @@ class ImageViewGtk(ImageView):
         self.msgtask.add_callback('expired',
                                   lambda timer: self.onscreen_message(None))
 
+        self.renderer = None
+        # Pick a renderer that can work with us
+        renderers = ['cairo', 'agg', 'pil', 'opencv']
+        preferred = self.t_['renderer']
+        if preferred in renderers:
+            renderers.remove(preferred)
+        self.possible_renderers = [preferred] + renderers
+        self.choose_best_renderer()
+
     def get_widget(self):
         return self.imgwin
+
+    def choose_renderer(self, name):
+        klass = render.get_render_class(name)
+        self.renderer = klass(self)
+
+        rect = self.imgwin.get_allocation()
+        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+        self.configure_window(wd, ht)
+
+    def choose_best_renderer(self):
+        for name in self.possible_renderers:
+            try:
+                self.choose_renderer(name)
+                self.logger.info("best renderer available is '{}'".format(name))
+                return
+            except Exception as e:
+                self.logger.error("Error choosing renderer '{}': {}".format(name, e))
+                continue
+
+        raise ImageViewGtkError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
     def get_plain_image_as_pixbuf(self):
         arr = self.getwin_array(order='RGB', dtype=np.uint8)
