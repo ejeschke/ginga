@@ -58,9 +58,9 @@ class FitsViewer(object):
         hbox = Gtk.HButtonBox()
         hbox.set_layout(Gtk.ButtonBoxStyle.END)
 
-        wopen = Gtk.Button("Open File")
+        wopen = Gtk.Button(label="Open File")
         wopen.connect('clicked', self.open_file)
-        wquit = Gtk.Button("Quit")
+        wquit = Gtk.Button(label="Quit")
         wquit.connect('clicked', self.quit)
 
         for w in (wopen, wquit):

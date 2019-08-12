@@ -769,9 +769,10 @@ class TreeView(WidgetBase):
         if self.dragable:
             tv = GtkHelp.MultiDragDropTreeView()
             # enable drag from this widget
-            toImage = [("text/plain", 0, 0)]
+            targets = [("text/plain", 0, GtkHelp.DND_TARGET_TYPE_TEXT),
+                       ("text/uri-list", 0, GtkHelp.DND_TARGET_TYPE_URIS)]
             tv.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK,
-                                        toImage, Gdk.DragAction.COPY)
+                                        targets, Gdk.DragAction.COPY)
             tv.connect("drag-data-get", self._start_drag)
         else:
             tv = Gtk.TreeView()
@@ -2150,7 +2151,9 @@ class DragPackage(object):
 
     def set_urls(self, urls):
         self._selection.set_uris(urls)
-        self._selection.set("text/plain", 0, '\n'.join(urls))
+
+    def set_text(self, text):
+        self._selection.set_text(text, len(text))
 
     def start_drag(self):
         pass

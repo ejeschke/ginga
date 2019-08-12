@@ -24,6 +24,10 @@ from gi.repository import Pango  # noqa
 ginga.toolkit.use('gtk3')
 
 
+DND_TARGET_TYPE_TEXT = 0
+DND_TARGET_TYPE_URIS = 1
+
+
 class WidgetMask(object):
     def __init__(self, *args):
         self.cb_fn = None
@@ -173,6 +177,40 @@ class ComboBox(WidgetMask, Gtk.ComboBox):
             self.change()
 
         super(ComboBox, self).set_active(newval)
+
+    def insert_alpha(self, text):
+        model = self.get_model()
+        tup = (text, )
+        j = 0
+        for i in range(len(model)):
+            j = i
+            if model[i][0] > text:
+                model.insert(j, tup)
+                return
+        model.insert(j + 1, tup)
+
+    def insert_text(self, idx, text):
+        model = self.get_model()
+        tup = (text, )
+        model.insert(idx, tup)
+
+    def delete_alpha(self, text):
+        model = self.get_model()
+        for i in range(len(model)):
+            if model[i][0] == text:
+                del model[i]
+                return
+
+    def clear(self):
+        model = self.get_model()
+        model.clear()
+
+    def show_text(self, text):
+        model = self.get_model()
+        for i in range(len(model)):
+            if model[i][0] == text:
+                self.set_active(i)
+                return
 
 
 class Notebook(WidgetMask, Gtk.Notebook):

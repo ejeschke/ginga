@@ -79,7 +79,7 @@ class FitsViewer(object):
 
         vbox.pack_start(w, True, True, 1)
 
-        self.readout = Gtk.Label("")
+        self.readout = Gtk.Label(label="")
         vbox.pack_start(self.readout, False, False, 0)
 
         hbox = Gtk.HBox(spacing=5)
@@ -104,7 +104,7 @@ class FitsViewer(object):
         wdrawcolor.connect('changed', self.set_drawparams)
         self.wdrawcolor = wdrawcolor
 
-        wfill = GtkHelp.CheckButton("Fill")
+        wfill = GtkHelp.CheckButton(label="Fill")
         wfill.sconnect('toggled', self.set_drawparams)
         self.wfill = wfill
 
@@ -116,15 +116,15 @@ class FitsViewer(object):
         walpha.sconnect('value-changed', self.set_drawparams)
         self.walpha = walpha
 
-        wclear = Gtk.Button("Clear Canvas")
+        wclear = Gtk.Button(label="Clear Canvas")
         wclear.connect('clicked', self.clear_canvas)
 
-        wopen = Gtk.Button("Open File")
+        wopen = Gtk.Button(label="Open File")
         wopen.connect('clicked', self.open_file)
-        wquit = Gtk.Button("Quit")
+        wquit = Gtk.Button(label="Quit")
         wquit.connect('clicked', quit)
 
-        for w in (wquit, wclear, walpha, Gtk.Label("Alpha:"),
+        for w in (wquit, wclear, walpha, Gtk.Label(label="Alpha:"),
                   wfill, wdrawcolor, wdrawtype, wopen):
             hbox.pack_end(w, False, False, 0)
 

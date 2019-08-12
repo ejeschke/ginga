@@ -253,13 +253,16 @@ class ImageViewEvent(ImageViewGtk):
                           Gdk.EventMask.SCROLL_MASK)
 
         # Set up widget as a drag and drop destination
+        targets = Gtk.TargetList.new([])
+        targets.add_text_targets(GtkHelp.DND_TARGET_TYPE_TEXT)
+        targets.add_uri_targets(GtkHelp.DND_TARGET_TYPE_URIS)
+        imgwin.drag_dest_set(Gtk.DestDefaults.ALL, [],
+                             Gdk.DragAction.COPY)
+        imgwin.drag_dest_set_target_list(targets)
+
         imgwin.connect("drag-data-received", self.drop_event_cb)
         imgwin.connect("drag-motion", self.drag_motion_cb)
         imgwin.connect("drag-drop", self.drag_drop_cb)
-        self.TARGET_TYPE_TEXT = 0
-        imgwin.drag_dest_set(Gtk.DestDefaults.ALL, [],
-                             Gdk.DragAction.COPY)
-        imgwin.drag_dest_add_text_targets()
 
         # @$%&^(_)*&^ gnome!!
         self._keytbl = {
@@ -469,9 +472,9 @@ class ImageViewEvent(ImageViewGtk):
                                      data_x, data_y)
 
     def drag_drop_cb(self, widget, context, x, y, time):
-        self.logger.debug('drag_drop_cb')
+        self.logger.debug("drag_drop_cb initiated")
         # initiates a drop
-        success = delete = False  # noqa
+        success = False
         targets = context.list_targets()
         for mimetype in targets:
             if str(mimetype) in ("text/thumb", "text/plain", "text/uri-list"):
@@ -484,7 +487,7 @@ class ImageViewEvent(ImageViewGtk):
         return True
 
     def drag_motion_cb(self, widget, context, x, y, time):
-        self.logger.debug('drag_motion_cb')
+        self.logger.debug("drag_motion_cb initiated")
         # checks whether a drop is possible
         targets = context.list_targets()
         for mimetype in targets:
@@ -493,25 +496,36 @@ class ImageViewEvent(ImageViewGtk):
                 return True
 
         Gdk.drag_status(context, 0, time)
-        self.logger.debug('drag_motion_cb done')
+        self.logger.debug("drag_motion_cb done")
         return False
 
     def drop_event_cb(self, widget, context, x, y, selection, info, time):
-        self.logger.debug('drop_event')
-        if info != self.TARGET_TYPE_TEXT:
-            Gtk.drag_finish(context, False, False, time)
-            return False
+        self.logger.debug("drop event initiated")
 
-        buf = selection.get_text().strip()
-        if '\r\n' in buf:
-            paths = buf.split('\r\n')
+        if selection is None or selection.get_length() == 0:
+            return
+
+        paths = []
+        if info == GtkHelp.DND_TARGET_TYPE_TEXT:
+            # selection contains text
+            buf = selection.get_text().strip()
+            if '\r\n' in buf:
+                # windows
+                paths = buf.split('\r\n')
+            else:
+                paths = buf.split('\n')
+        elif info == GtkHelp.DND_TARGET_TYPE_URIS:
+            # selection contains URIs
+            paths = selection.get_uris()
         else:
-            paths = buf.split('\n')
+            self.logger.error("Dropped selection type ({}) is not recognized!".format(info))
+            return
+
         self.logger.debug("dropped filename(s): %s" % (str(paths)))
 
-        self.make_ui_callback('drag-drop', paths)
+        if len(paths) > 0:
+            self.make_ui_callback('drag-drop', paths)
 
-        Gtk.drag_finish(context, True, False, time)
         return True
 
 

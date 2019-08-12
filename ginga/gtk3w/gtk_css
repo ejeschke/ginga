@@ -24,5 +24,4 @@ GtkToolbar {
 GtkScrollbar {
    -GtkScrollbar-has-backward-stepper: 1;
    -GtkScrollbar-has-forward-stepper: 1;
-   -GtkRange-slider-width: 14;
 }
