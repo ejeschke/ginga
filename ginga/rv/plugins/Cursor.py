@@ -68,7 +68,7 @@ class Cursor(GingaPlugin.GlobalPlugin):
                 font_size = 16
             elif toolkit.get_family().startswith('gtk'):
                 # Gtk
-                font_size = 14
+                font_size = 11
             else:
                 font_size = 11
 

@@ -1651,9 +1651,12 @@ class Toolbar(ContainerBase):
             child = Button(text)
 
         if iconpath is not None:
-            wd, ht = 24, 24
             if iconsize is not None:
                 wd, ht = iconsize
+            else:
+                scale_f = _app.screen_res / 96.0
+                px = int(scale_f * 24)
+                wd, ht = px, px
             pixbuf = GtkHelp.pixbuf_new_from_file_at_size(iconpath, wd, ht)
             if pixbuf is not None:
                 image = Gtk.Image.new_from_pixbuf(pixbuf)
@@ -1989,12 +1992,25 @@ class Application(Callback.Callbacks):
         self.wincnt = 0
 
         try:
-            screen = Gdk.screen_get_default()
-            self.screen_ht = screen.get_height()
-            self.screen_wd = screen.get_width()
-        except Exception:
+            display = Gdk.Display.get_default()
+            screen = display.get_default_screen()
+            window = screen.get_active_window()
+            monitor = screen.get_monitor_at_window(window)
+
+            g = screen.get_monitor_geometry(monitor)
+            self.screen_ht = g.height
+            self.screen_wd = g.width
+
+            self.screen_res = screen.get_resolution()
+
+            # hack for Gtk--scale fonts on HiDPI displays
+            scale = self.screen_res / 72.0
+            from ginga.fonts import font_asst
+            font_asst.default_scaling_factor = scale
+        except Exception as e:
             self.screen_wd = 1600
             self.screen_ht = 1200
+            self.screen_res = 96
         # self.logger.debug("screen dimensions %dx%d" % (
         #     self.screen_wd, self.screen_ht))
 
