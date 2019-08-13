@@ -375,7 +375,7 @@ class DrawingMixin(object):
 
         self._edit_tmp = self._edit_obj
         self._edit_status = False
-        self._edit_detail = Bunch()
+        self._edit_detail = Bunch(viewer=viewer)
         self._cp_index = None
         #shift_held = 'shift' in event.modifiers
         shift_held = False

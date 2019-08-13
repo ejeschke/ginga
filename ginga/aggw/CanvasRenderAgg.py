@@ -51,7 +51,8 @@ class RenderContext(render.RenderContextBase):
 
     def set_font_from_shape(self, shape):
         if hasattr(shape, 'font'):
-            if hasattr(shape, 'fontsize') and shape.fontsize is not None:
+            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
+                not getattr(shape, 'fontscale', False)):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
@@ -108,11 +109,10 @@ class RenderContext(render.RenderContextBase):
 
         wd, ht = self.cr.text_extents(text, self.font)
 
-        _cx, _cy = cx, cy - ht
-        affine = self.get_affine_transform(_cx, _cy, rot_deg)
+        affine = self.get_affine_transform(cx, cy, rot_deg)
         self.cr.canvas.settransform(affine)
         try:
-            self.cr.canvas.text((_cx, _cy), text, self.font)
+            self.cr.canvas.text((cx, cy - ht), text, self.font)
         finally:
             # reset default transform
             self.cr.canvas.settransform()
