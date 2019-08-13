@@ -1828,11 +1828,15 @@ class Application(Callback.Callbacks):
 
         # Get screen size
         desktop = self._qtapp.desktop()
-        # rect = desktop.screenGeometry()
         rect = desktop.availableGeometry()
         size = rect.size()
         self.screen_wd = size.width()
         self.screen_ht = size.height()
+
+        # Get screen resolution
+        xdpi = desktop.physicalDpiX()
+        ydpi = desktop.physicalDpiY()
+        self.screen_res = max(xdpi, ydpi)
 
         for name in ('shutdown', ):
             self.enable_callback(name)

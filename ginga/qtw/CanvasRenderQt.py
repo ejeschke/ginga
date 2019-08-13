@@ -22,6 +22,7 @@ class RenderContext(render.RenderContextBase):
 
         self.cr = QPainter(surface)
         self.cr.setRenderHint(QPainter.Antialiasing)
+        self.cr.setRenderHint(QPainter.TextAntialiasing)
 
     def __get_color(self, color, alpha):
         clr = QColor()
