@@ -1070,7 +1070,8 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
                   min=0.0,
                   description="Radius of object"),
             Param(name='style', type=str, default='cross',
-                  valid=['cross', 'plus'],
+                  valid=['cross', 'plus', 'circle', 'square', 'diamond',
+                         'hexagon', 'downtriangle', 'uptriangle'],
                   description="Style of point (default 'cross')"),
             Param(name='linewidth', type=int, default=1,
                   min=1, max=20, widget='spinbutton', incr=1,
@@ -1114,8 +1115,9 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
         return contains
 
     def select_contains_pt(self, viewer, pt):
-        p0 = self.crdmap.to_data((self.x, self.y))
-        return self.within_radius(viewer, pt, p0, self.cap_radius)
+        p0 = self.get_data_points()[0]
+        scale = viewer.get_scale_max()
+        return self.within_radius(viewer, pt, p0, self.radius * scale)
 
     def get_edit_points(self, viewer):
         points = self.get_data_points(points=[(self.x, self.y)])
@@ -1130,17 +1132,47 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
         cpoints = self.get_cpoints(viewer, points=points)
         cx, cy, cradius = self.calc_radius(viewer,
                                            cpoints[0], cpoints[1])
-        cx1, cy1 = cx - cradius, cy - cradius
-        cx2, cy2 = cx + cradius, cy + cradius
 
         cr = viewer.renderer.setup_cr(self)
+
+        cx1, cy1 = cx - cradius, cy - cradius
+        cx2, cy2 = cx + cradius, cy + cradius
 
         if self.style == 'cross':
             cr.draw_line(cx1, cy1, cx2, cy2)
             cr.draw_line(cx1, cy2, cx2, cy1)
-        else:
+
+        elif self.style == 'plus':
             cr.draw_line(cx1, cy, cx2, cy)
             cr.draw_line(cx, cy1, cx, cy2)
+
+        elif self.style == 'circle':
+            cr.draw_circle(cx, cy, cradius)
+
+        elif self.style == 'square':
+            cpts = [(cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)]
+            cr.draw_polygon(cpts)
+
+        elif self.style == 'diamond':
+            cpts = [(cx, cy1), ((cx + cx2) / 2.0, cy),
+                    (cx, cy2), ((cx1 + cx) / 2.0, cy)]
+            cr.draw_polygon(cpts)
+
+        elif self.style == 'hexagon':
+            cpts = [(cx1, cy), ((cx1 + cx) / 2.0, cy2), ((cx + cx2) / 2.0, cy2),
+                    (cx2, cy), ((cx + cx2) / 2.0, cy1), ((cx1 + cx) / 2.0, cy1)]
+            cr.draw_polygon(cpts)
+
+        elif self.style == 'downtriangle':
+            cpts = [(cx1, cy1), (cx2, cy1), (cx, cy2)]
+            cr.draw_polygon(cpts)
+
+        elif self.style == 'uptriangle':
+            cpts = [(cx1, cy2), (cx2, cy2), (cx, cy1)]
+            cr.draw_polygon(cpts)
+
+        else:
+            raise ValueError("Don't understand draw style '{}' of point".format(self.style))
 
         if self.showcap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
