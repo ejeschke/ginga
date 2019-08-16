@@ -34,7 +34,7 @@ class RenderContext(render.RenderContextBase):
         elif isinstance(color, tuple):
             # color is assumed to be a 3-tuple of RGB values as floats
             # between 0 and 1
-            r, g, b = color
+            r, g, b = color[:3]
         else:
             r, g, b = 1.0, 1.0, 1.0
         return (r, g, b, alpha)
@@ -136,7 +136,6 @@ class RenderContext(render.RenderContextBase):
         for cpt in cpoints:
             cx, cy = cpt[:2]
             self.cr.line_to(cx, cy)
-            #cr.move_to(cx, cy)
         self.cr.close_path()
         self.cr.stroke_preserve()
 

@@ -62,7 +62,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawtypes.sort()
 
         # add little mode indicator that shows keyboard modal states
-        #fi.show_mode_indicator(True, corner='ur')
+        fi.show_mode_indicator(True, corner='ur')
 
         w = fi.get_widget()
         w.resize(512, 512)
