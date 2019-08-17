@@ -1956,12 +1956,15 @@ class DragPackage(object):
     def __init__(self, src_widget):
         self.src_widget = src_widget
         self._drag = QtHelp.QDrag(self.src_widget)
+        self._data = QtCore.QMimeData()
+        self._drag.setMimeData(self._data)
 
     def set_urls(self, urls):
-        mimeData = QtCore.QMimeData()
         _urls = [QtCore.QUrl(url) for url in urls]
-        mimeData.setUrls(_urls)
-        self._drag.setMimeData(mimeData)
+        self._data.setUrls(_urls)
+
+    def set_text(self, text):
+        self._data.setText(text)
 
     def start_drag(self):
         if QtHelp.have_pyqt5:
