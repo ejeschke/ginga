@@ -245,12 +245,9 @@ class ImageViewGtk(ImageView.ImageViewBase):
         self.imgwin.grab_focus()
 
 
-class ImageViewEvent(ImageViewGtk):
+class GtkEventMixin(object):
 
-    def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageViewGtk.__init__(self, logger=logger, rgbmap=rgbmap,
-                              settings=settings)
-
+    def __init__(self):
         imgwin = self.imgwin
         imgwin.set_can_focus(True)
         imgwin.connect("map_event", self.map_event)
@@ -385,7 +382,8 @@ class ImageViewEvent(ImageViewGtk):
         return self._keytbl
 
     def map_event(self, widget, event):
-        super(ImageViewZoom, self).configure_event(widget, event)
+        #super(GtkEventMixin, self).configure_event(widget, event)
+        self.configure_event(widget, event)
         return self.make_callback('map')
 
     def focus_event(self, widget, event, hasFocus):
@@ -553,6 +551,15 @@ class ImageViewEvent(ImageViewGtk):
             self.make_ui_callback('drag-drop', paths)
 
         return True
+
+
+class ImageViewEvent(GtkEventMixin, ImageViewGtk):
+
+    def __init__(self, logger=None, rgbmap=None, settings=None):
+        ImageViewGtk.__init__(self, logger=logger, rgbmap=rgbmap,
+                              settings=settings)
+
+        GtkEventMixin.__init__(self)
 
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):

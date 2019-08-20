@@ -1,67 +1,57 @@
 #
-# ImageViewQtGL.py -- a backend for Ginga using Qt's QGLWidget
+# ImageViewGtkGL.py -- a backend for Ginga using Gtk's GLArea widget
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 from io import BytesIO
 
-from ginga.qtw.QtHelp import QtCore
-from ginga.qtw import ImageViewQt
-from ginga.qtw.QtHelp import (QtGui, QtCore, QColor, QOpenGLWidget,
-                              QPainter, QPen, get_painter, get_font)
+#from ginga.gtk3w import GtkHelp
+from ginga.gtk3w import ImageViewGtk
 from ginga import Mixins, Bindings
-from ginga.canvas import transform
+
+from gi.repository import Gtk
 
 # Local imports
 from .CanvasRenderGL import CanvasRenderer
 from .GlHelp import get_transforms
 
-class ImageViewQtGLError(ImageViewQt.ImageViewQtError):
+
+class ImageViewGtkGLError(ImageViewGtk.ImageViewGtkError):
     pass
 
 
-class RenderGLWidget(QOpenGLWidget):
-
-    def __init__(self, *args, **kwdargs):
-        QOpenGLWidget.__init__(self, *args, **kwdargs)
-
-        self.viewer = None
-
-    def initializeGL(self):
-        self.viewer.renderer.gl_initialize()
-
-    def resizeGL(self, width, height):
-        self.viewer.configure_window(width, height)
-
-    def paintGL(self):
-        self.viewer.renderer.gl_paint()
-
-    def sizeHint(self):
-        width, height = 300, 300
-        if self.viewer is not None:
-            width, height = self.viewer.get_desired_size()
-        return QtCore.QSize(width, height)
-
-
-class ImageViewQtGL(ImageViewQt.ImageViewQt):
+class ImageViewGtkGL(ImageViewGtk.ImageViewGtk):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageViewQt.ImageViewQt.__init__(self, logger=logger,
-                                         rgbmap=rgbmap, settings=settings)
+        ImageViewGtk.ImageViewGtk.__init__(self, logger=logger,
+                                           rgbmap=rgbmap, settings=settings)
 
-        self.imgwin = RenderGLWidget()
-        self.imgwin.viewer = self
-        # Qt expects 32bit BGRA data for color images
+        self.imgwin = Gtk.GLArea()
+        self.imgwin.connect('realize', self.on_realize_cb)
+        self.imgwin.connect('render', self.on_render_cb)
+        self.imgwin.set_has_depth_buffer(False)
+        self.imgwin.set_has_stencil_buffer(False)
+        self.imgwin.set_auto_render(False)
+
+        # Gtk expects 32bit RGBA data for color images
         self.rgb_order = 'RGBA'
-
-        self.renderer = CanvasRenderer(self)
 
         # we replace some transforms in the catalog for OpenGL rendering
         self.tform = get_transforms(self)
 
+        self.choose_best_renderer()
+
+    def choose_renderer(self, name):
+        if name != 'gtkgl':
+            raise ImageViewGtkGLError("Only the 'gtkgl' renderer can be used with this viewer")
+        self.renderer = CanvasRenderer(self)
+
+    def choose_best_renderer(self):
+        self.choose_renderer('gtkgl')
+
     def configure_window(self, width, height):
-        self.logger.debug("window size reconfigured to %dx%d" % (
+        self.logger.info("window size reconfigured to %dx%d" % (
             width, height))
         self.renderer.resize((width, height))
 
@@ -81,11 +71,12 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         return ibuf
 
     def prepare_image(self, image_id, cp, rgb_arr, whence):
+        # NOTE: parameters `cp` and `whence` unused for now; possible future use
         if whence >= 2.5:
             return
 
         #<-- image has changed, need to update texture
-        self.imgwin.makeCurrent()
+        self.imgwin.make_current()
 
         self.renderer.gl_set_image(image_id, rgb_arr)
 
@@ -94,29 +85,37 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
             return
 
         self.logger.debug("updating window")
-        self.imgwin.update()
+        self.imgwin.queue_render()
+
+    def on_realize_cb(self, area):
+        ctx = self.imgwin.get_context()
+        ctx.make_current()
+
+        #wd = area.get_allocated_width()
+        #ht = area.get_allocated_height()
+        #self.renderer.gl_resize(wd, ht)
+        ## gl.glViewport(0, 0, wd, ht)
+
+        self.renderer.gl_initialize()
+        print("realized", ctx)
+
+    def on_render_cb(self, area, ctx):
+        ctx.make_current()
+
+        self.renderer.gl_paint()
 
     def gl_update(self):
-        self.imgwin.update()
+        self.imgwin.queue_render()
+        print('gl_update!')
 
 
-class RenderGLWidgetZoom(ImageViewQt.RenderMixin, RenderGLWidget):
-    pass
-
-
-class ImageViewEvent(ImageViewQtGL, ImageViewQt.QtEventMixin):
+class ImageViewEvent(ImageViewGtkGL, ImageViewGtk.GtkEventMixin):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageViewQtGL.__init__(self, logger=logger, rgbmap=rgbmap,
-                               settings=settings)
+        ImageViewGtkGL.__init__(self, logger=logger, rgbmap=rgbmap,
+                                settings=settings)
 
-        # replace the widget our parent provided
-        imgwin = RenderGLWidgetZoom()
-
-        imgwin.viewer = self
-        self.imgwin = imgwin
-
-        ImageViewQt.QtEventMixin.__init__(self)
+        ImageViewGtk.GtkEventMixin.__init__(self)
 
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):

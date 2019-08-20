@@ -2294,13 +2294,18 @@ class ImageViewBindings(object):
             # this viewer doesn't have a camera
             return
 
-        delta = event.amount * 6
+        zoom_accel = self.settings.get('scroll_zoom_acceleration', 6.0)
+        delta = event.amount * zoom_accel
+
         direction = self.get_direction(event.direction)
         if direction == 'down':
             delta = - delta
 
         camera.track(delta)
 
+        scales = camera.get_scale_2d()
+        # TODO: need to set scale in viewer settings, without triggering a
+        # scale operation on this viewer
         viewer.gl_update()
         return True
 
@@ -2350,6 +2355,9 @@ class ImageViewBindings(object):
         ## else:
         ##     viewer.onscreen_message(None)
 
+        # TODO: need to get the updated pan position and set it in
+        # viewer's settings without triggering a callback to the viewer
+        # itself
         viewer.gl_update()
         return True
 

@@ -8,6 +8,7 @@ import os.path
 
 from ginga import colors
 import ginga.fonts
+from ginga.canvas import transform
 
 # Set up known fonts
 fontdir, xx = os.path.split(ginga.fonts.__file__)
@@ -98,5 +99,55 @@ class GlContext(object):
         wd = len(text) * font.fontsize
         ht = font.fontsize
         return wd, ht
+
+
+def get_transforms(v):
+    tform = {
+        # CHANGED
+        'window_to_native': (transform.CartesianWindowTransform(v).invert() +
+                             transform.RotationTransform(v).invert() +
+                             #transform.FlipSwapTransform(v).invert() +
+                             transform.ScaleTransform(v).invert()
+                             #transform.ScaleTransform(v)
+                             ),
+        'cartesian_to_window': (transform.FlipSwapTransform(v) +
+                                transform.CartesianWindowTransform(v)),
+        # CHANGED
+        'cartesian_to_native': (transform.RotationTransform(v) +
+                                transform.FlipSwapTransform(v) +
+                                transform.CartesianNativeTransform(v)),
+        'data_to_cartesian': (transform.DataCartesianTransform(v) +
+                              transform.ScaleTransform(v)),
+        'data_to_scrollbar': (transform.DataCartesianTransform(v) +
+                              transform.FlipSwapTransform(v) +
+                              transform.RotationTransform(v)),
+        ## 'window_to_data': (transform.CartesianWindowTransform(v).invert() +
+        ##                    transform.FlipSwapTransform(v) +
+        ##                    transform.RotationTransform(v).invert()
+        ##                    ),
+        'data_to_window': (transform.DataCartesianTransform(v) +
+                           transform.ScaleTransform(v) +
+                           transform.FlipSwapTransform(v) +
+                           transform.RotationTransform(v) +
+                           transform.CartesianWindowTransform(v)
+                           ),
+        'data_to_percentage': (transform.DataCartesianTransform(v) +
+                               transform.ScaleTransform(v) +
+                               transform.FlipSwapTransform(v) +
+                               transform.RotationTransform(v) +
+                               transform.CartesianWindowTransform(v) +
+                               transform.WindowPercentageTransform(v)),
+        # CHANGED
+        'data_to_native': (transform.DataCartesianTransform(v) +
+                           transform.FlipSwapTransform(v)
+                           ),
+        'wcs_to_data': transform.WCSDataTransform(v),
+        # CHANGED
+        'wcs_to_native': (transform.WCSDataTransform(v) +
+                          transform.DataCartesianTransform(v) +
+                          transform.FlipSwapTransform(v)),
+    }
+    return tform
+
 
 #END

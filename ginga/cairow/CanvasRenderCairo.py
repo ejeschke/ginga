@@ -29,12 +29,8 @@ class RenderContext(render.RenderContextBase):
         self.fill_alpha = 1.0
 
     def __get_color(self, color, alpha):
-        if isinstance(color, str) or isinstance(color, type(u"")):
-            r, g, b = colors.lookup_color(color)
-        elif isinstance(color, tuple):
-            # color is assumed to be a 3-tuple of RGB values as floats
-            # between 0 and 1
-            r, g, b = color[:3]
+        if color is not None:
+            r, g, b = colors.resolve_color(color)
         else:
             r, g, b = 1.0, 1.0, 1.0
         return (r, g, b, alpha)
@@ -124,7 +120,39 @@ class RenderContext(render.RenderContextBase):
         ht *= 1.2
         return wd, ht
 
+    def setup_pen_brush(self, pen, brush):
+        if pen is not None:
+            self.set_line(pen.color, alpha=pen.alpha, linewidth=pen.linewidth,
+                          style=pen.linestyle)
+
+        if brush is None:
+            self.fill = False
+        else:
+            self.set_fill(brush.color, alpha=brush.alpha)
+
     ##### DRAWING OPERATIONS #####
+
+    def draw_image(self, cx, cy, data, order='RGB'):
+        # reorder data as needed for this renderer
+        need_order = self.renderer.rgb_order
+        data = self.renderer.reorder(need_order, data, order)
+        data = data.astype(np.uint8, copy=False, casting='unsafe')
+
+        # Prepare array for Cairo rendering
+        daht, dawd, depth = data.shape
+
+        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
+                                                            dawd)
+        img_surface = cairo.ImageSurface.create_for_data(data,
+                                                         cairo.FORMAT_ARGB32,
+                                                         dawd, daht, stride)
+
+        self.cr.set_source_surface(img_surface, cx, cy)
+        self.cr.set_operator(cairo.OPERATOR_SOURCE)
+
+        self.cr.mask_surface(img_surface, cx, cy)
+        self.cr.fill()
+        self.cr.new_path()
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         self.cr.save()
@@ -190,10 +218,10 @@ class RenderContext(render.RenderContextBase):
         self.cr.new_path()
 
 
-class CanvasRenderer(render.RendererBase):
+class CanvasRenderer(render.StandardPixelRenderer):
 
     def __init__(self, viewer):
-        render.RendererBase.__init__(self, viewer)
+        render.StandardPixelRenderer.__init__(self, viewer)
 
         self.kind = 'cairo'
         if sys.byteorder == 'little':
@@ -207,8 +235,9 @@ class CanvasRenderer(render.RendererBase):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
+        super(CanvasRenderer, self).resize(dims)
+
         width, height = dims[:2]
-        self.dims = (width, height)
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
 
@@ -223,6 +252,26 @@ class CanvasRenderer(render.RendererBase):
                                                      cairo.FORMAT_ARGB32,
                                                      width, height, stride)
         self.surface = surface
+
+        # fill surface with background color;
+        # this reduces unwanted garbage in the resizing window
+        cr = cairo.Context(self.surface)
+
+        # fill surface with background color
+        cr.rectangle(0, 0, width, height)
+        r, g, b = self.viewer.get_bg()
+        cr.set_source_rgba(r, g, b)
+        cr.fill()
+
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)
+
+    ## def finalize(self):
+    ##     cr = RenderContext(self, self.viewer, self.surface)
+    ##     self.draw_vector(cr)
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
@@ -278,6 +327,5 @@ class CanvasRenderer(render.RendererBase):
         cr = self.setup_cr(shape)
         cr.set_font_from_shape(shape)
         return cr.text_extents(shape.text)
-
 
 # END

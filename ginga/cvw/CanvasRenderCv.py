@@ -85,7 +85,26 @@ class RenderContext(render.RenderContextBase):
     def text_extents(self, text):
         return self.cr.text_extents(text, self.font)
 
+    def setup_pen_brush(self, pen, brush):
+        if pen is not None:
+            self.set_line(pen.color, alpha=pen.alpha, linewidth=pen.linewidth,
+                          style=pen.linestyle)
+
+        if brush is None:
+            self.brush = None
+        else:
+            self.set_fill(brush.color, alpha=brush.alpha)
+
     ##### DRAWING OPERATIONS #####
+
+    def draw_image(self, cx, cy, rgb_arr, order='RGB'):
+        # get window contents as a buffer and paste it into the surface
+        # TODO: allow greater bit depths
+        rgb_arr = self.viewer.getwin_array(order=self.rgb_order,
+                                           dtype=np.uint8)
+        cx, cy = 0, 0
+
+        self.cr.image((cx, cy), rgb_arr)
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         self.cr.text((cx, cy), text, self.font)
@@ -105,10 +124,10 @@ class RenderContext(render.RenderContextBase):
         self.cr.path(cpoints, self.pen)
 
 
-class CanvasRenderer(render.RendererBase):
+class CanvasRenderer(render.StandardPixelRenderer):
 
     def __init__(self, viewer):
-        render.RendererBase.__init__(self, viewer)
+        render.StandardPixelRenderer.__init__(self, viewer)
 
         self.kind = 'opencv'
         # According to OpenCV documentation:
@@ -116,6 +135,8 @@ class CanvasRenderer(render.RendererBase):
         # you can use any channel ordering. The drawing functions process
         # each channel independently and do not depend on the channel
         # order or even on the used color space."
+        # NOTE: OpenCv does not seem to be happy using anti-aliasing on
+        # transparent arrays
         self.rgb_order = 'RGB'
         self.surface = None
         self.dims = ()
@@ -124,8 +145,9 @@ class CanvasRenderer(render.RendererBase):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
+        super(CanvasRenderer, self).resize(dims)
+
         width, height = dims[:2]
-        self.dims = (width, height)
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
 
@@ -133,6 +155,17 @@ class CanvasRenderer(render.RendererBase):
         # (cv just uses numpy arrays!)
         depth = len(self.rgb_order)
         self.surface = np.zeros((height, width, depth), dtype=np.uint8)
+        print('OPENCV RESIZE', width, height)
+
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)
+
+    ## def finalize(self):
+    ##     cr = RenderContext(self, self.viewer, self.surface)
+    ##     self.draw_vector(cr)
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
@@ -143,9 +176,10 @@ class CanvasRenderer(render.RendererBase):
         self.logger.debug("redraw surface")
 
         # get window contents as an array and store it into the CV surface
-        rgb_arr = self.viewer.getwin_array(order=self.rgb_order, dtype=np.uint8)
+        rgb_arr = self.getwin_array(order='RGBA', dtype=np.uint8)
+        print('opencv rgbarr render image', rgb_arr.shape)
         # TODO: is there a faster way to copy this array in?
-        self.surface[:, :, :] = rgb_arr
+        self.surface[:, :, :] = rgb_arr[:, :, 0:3]
 
     def get_surface_as_array(self, order=None):
         if self.surface is None:

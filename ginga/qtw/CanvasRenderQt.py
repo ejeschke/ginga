@@ -6,11 +6,12 @@
 #
 import numpy as np
 
-from ginga.qtw.QtHelp import (QtCore, QPen, QPolygon, QColor,
+from ginga.qtw.QtHelp import (QtCore, QPen, QPolygon, QColor, QFontMetrics,
                               QPainterPath, QImage, QPixmap, get_font,
                               get_painter)
 
 from ginga import colors
+from ginga.vec import CanvasRenderVec
 from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
@@ -108,11 +109,40 @@ class RenderContext(render.RenderContextBase):
 
     def text_extents(self, text):
         fm = self.cr.fontMetrics()
-        width = fm.width(text)
+        if hasattr(fm, 'horizontalAdvance'):
+            width = fm.horizontalAdvance(text)
+        else:
+            width = fm.width(text)
         height = fm.height()
         return width, height
 
+    def setup_pen_brush(self, pen, brush):
+        if pen is not None:
+            self.set_line(pen.color, alpha=pen.alpha, linewidth=pen.linewidth,
+                          style=pen.linestyle)
+
+        self.cr.setBrush(QtCore.Qt.NoBrush)
+        if brush is not None:
+            self.set_fill(brush.color, alpha=brush.alpha)
+
     ##### DRAWING OPERATIONS #####
+
+    def draw_image(self, cx, cy, data, order='RGB'):
+        # reorder data as needed for this renderer
+        ## need_order = self.renderer.rgb_order
+        ## data = self.renderer.reorder(need_order, data, order)
+        ## data = data.astype(np.uint8, copy=False, casting='unsafe')
+
+        (height, width) = data.shape[:2]
+        #print(data.shape, np.mean(data))
+
+        # Get qimage for copying pixel data
+        qimage = self.renderer._get_qimage(data)
+
+        # draw image data to renderer surface
+        self.cr.drawImage(QtCore.QRect(cx, cy, width, height),
+                          qimage,
+                          QtCore.QRect(0, 0, width, height))
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         self.cr.save()
@@ -124,6 +154,7 @@ class RenderContext(render.RenderContextBase):
         self.cr.restore()
 
     def draw_polygon(self, cpoints):
+        ## cpoints = trcalc.strip_z(cpoints)
         qpoints = [QtCore.QPoint(p[0], p[1]) for p in cpoints]
         p = cpoints[0]
         qpoints.append(QtCore.QPoint(p[0], p[1]))
@@ -159,6 +190,7 @@ class RenderContext(render.RenderContextBase):
         self.cr.drawLine(cx1, cy1, cx2, cy2)
 
     def draw_path(self, cp):
+        ## cp = trcalc.strip_z(cp)
         self.cr.pen().setCapStyle(QtCore.Qt.RoundCap)
         pts = [QtCore.QLineF(QtCore.QPointF(cp[i][0], cp[i][1]),
                              QtCore.QPointF(cp[i + 1][0], cp[i + 1][1]))
@@ -166,10 +198,12 @@ class RenderContext(render.RenderContextBase):
         self.cr.drawLines(pts)
 
 
-class CanvasRenderer(render.RendererBase):
+#class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
+class CanvasRenderer(render.StandardPixelRenderer):
 
     def __init__(self, viewer, surface_type='qimage'):
-        render.RendererBase.__init__(self, viewer)
+        #CanvasRenderVec.CanvasRenderer.__init__(self, viewer)
+        render.StandardPixelRenderer.__init__(self, viewer)
 
         self.kind = 'qt'
         # Qt needs this to be in BGRA
@@ -183,11 +217,17 @@ class CanvasRenderer(render.RendererBase):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
+        super(CanvasRenderer, self).resize(dims)
+
         width, height = dims[:2]
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
+        new_wd, new_ht = width * 2, height * 2
+
         if self.surface_type == 'qpixmap':
-            self.surface = QPixmap(width, height)
+            if ((self.surface is None) or (self.surface.width() < width) or
+                (self.surface.height() < height)):
+                self.surface = QPixmap(new_wd, new_ht)
         else:
             self.surface = QImage(width, height, self.qimg_fmt)
 
@@ -199,6 +239,16 @@ class CanvasRenderer(render.RendererBase):
         bg = self.viewer.img_bg
         bgclr = self._get_color(*bg)
         painter.fillRect(QtCore.QRect(0, 0, sf_wd, sf_ht), bgclr)
+
+    def text_extents(self, text, font):
+        qfont = get_font(font.fontname, font.fontsize)
+        fm = QFontMetrics(qfont)
+        if hasattr(fm, 'horizontalAdvance'):
+            width = fm.horizontalAdvance(text)
+        else:
+            width = fm.width(text)
+        height = fm.height()
+        return width, height
 
     def _get_qimage(self, rgb_data):
         ht, wd, channels = rgb_data.shape
@@ -214,8 +264,39 @@ class CanvasRenderer(render.RendererBase):
         clr = QColor(int(r * n), int(g * n), int(b * n))
         return clr
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
+    def get_surface_as_array(self, order=None):
+
+        if self.surface_type == 'qpixmap':
+            qimg = self.surface.toImage()
+        else:
+            qimg = self.surface
+        #qimg = qimg.convertToFormat(QImage.Format_RGBA32)
+
+        width, height = qimg.width(), qimg.height()
+
+        if hasattr(qimg, 'bits'):
+            # PyQt
+            ptr = qimg.bits()
+            ptr.setsize(qimg.byteCount())
+        else:
+            # PySide
+            ptr = qimg.constBits()
+
+        arr = np.array(ptr).reshape(height, width, 4)
+
+        # adjust according to viewer's needed order
+        return self.reorder(order, arr)
+
+    # THESE ARE NEEDED FOR VECTOR RENDERER
+
+    ## def finalize(self):
+    ##     cr = RenderContext(self, self.viewer, self.surface)
+    ##     self.draw_vector(cr)
+
+    # THESE ARE NEEDED FOR NON-VECTOR RENDERER
+
+    def render_image(self, rgbobj, win_x, win_y):
+        """Render the image represented by (rgbobj) at win_x, win_y
         in the pixel space.
         *** internal method-- do not use ***
         """
@@ -237,7 +318,6 @@ class CanvasRenderer(render.RendererBase):
         drawable = self.surface
 
         painter = get_painter(drawable)
-        #painter.setWorldMatrixEnabled(True)
 
         # fill surface with background color
         size = drawable.size()
@@ -247,31 +327,9 @@ class CanvasRenderer(render.RendererBase):
         painter.fillRect(QtCore.QRect(0, 0, sf_wd, sf_ht), bgclr)
 
         # draw image data from buffer to offscreen pixmap
-        painter.drawImage(QtCore.QRect(dst_x, dst_y, width, height),
+        painter.drawImage(QtCore.QRect(win_x, win_y, width, height),
                           qimage,
                           QtCore.QRect(0, 0, width, height))
-
-    def get_surface_as_array(self, order=None):
-        if self.surface_type == 'qpixmap':
-            qimg = self.surface.toImage()
-        else:
-            qimg = self.surface
-        #qimg = qimg.convertToFormat(QImage.Format_RGBA32)
-
-        width, height = qimg.width(), qimg.height()
-
-        if hasattr(qimg, 'bits'):
-            # PyQt
-            ptr = qimg.bits()
-            ptr.setsize(qimg.byteCount())
-        else:
-            # PySide
-            ptr = qimg.constBits()
-
-        arr = np.array(ptr).reshape(height, width, 4)
-
-        # adjust according to viewer's needed order
-        return self.reorder(order, arr)
 
     def setup_cr(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)

@@ -32,7 +32,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.enable_autozoom('on')
         fi.set_zoom_algorithm('rate')
         fi.set_zoomrate(1.4)
-        #fi.show_pan_mark(True)
+        fi.show_pan_mark(True)
         #fi.enable_draw(False)
         fi.add_callback('drag-drop', self.drop_file_cb)
         fi.add_callback('cursor-changed', self.cursor_cb)

@@ -6,20 +6,26 @@
 #
 import numpy as np
 
-# NOTE: we need GLU, but even if we didn't we should import it to
-#   workaround for a bug: http://bugs.python.org/issue26245
+# NOTE: we don't need GLU but we import it to workaround a
+#   potential bug: http://bugs.python.org/issue26245
 from OpenGL import GLU as glu
 from OpenGL import GL as gl
 
-from ginga.canvas import render
+from ginga.vec import CanvasRenderVec
+from ginga.canvas import render, transform
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga.canvas.transform import BaseTransform
+from ginga.canvas.types.image_ss import NormImage
 from ginga.cairow import CairoHelp
+from ginga import trcalc
 
 # Local imports
 from .Camera import Camera
 from . import GlHelp
+
+opengl_version = float("{}.{}".format(gl.glGetIntegerv(gl.GL_MAJOR_VERSION),
+                                      gl.glGetIntegerv(gl.GL_MINOR_VERSION)))
 
 
 class RenderContext(render.RenderContextBase):
@@ -86,6 +92,15 @@ class RenderContext(render.RenderContextBase):
         else:
             self.brush = self.cr.get_brush(color, alpha=alpha)
 
+    def setup_pen_brush(self, pen, brush):
+        # pen, brush are from ginga.vec
+        self.pen = self.cr.get_pen(pen.color, alpha=pen.alpha,
+                                   linewidth=pen.linewidth)
+        if brush is None:
+            self.brush = None
+        else:
+            self.brush = self.cr.get_brush(brush.color, alpha=brush.alpha)
+
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
         fontsize = self.scale_fontsize(fontsize)
         self.font = self.cr.get_font(fontname, fontsize, color,
@@ -96,14 +111,64 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
+    def draw_image(self, image_id, cp, rgb_arr, whence, order='RGB'):
+        """Render the image represented by (rgb_arr) at (cx, cy)
+        in the pixel space.
+        """
+        cp = np.asarray(cp, dtype=np.float)
+
+        # This bit is necessary because OpenGL assumes that pixels are
+        # centered at 0.5 offsets from the start of the pixel.  Need to
+        # follow the flip/swap transform of the viewer to make sure we
+        # are applying the correct corner offset to each image corner
+        # TODO: see if there is something we can set in OpenGL so that
+        # we don't have to do this hack
+        off = 0.5
+        off = np.array(((-off, -off), (off, -off), (off, off), (-off, off)))
+        tr = transform.FlipSwapTransform(self.viewer)
+        cp += tr.to_(off)
+
+        if whence < 2.5:
+            self.viewer.prepare_image(image_id, cp, rgb_arr, whence)
+
+        gl.glColor4f(1, 1, 1, 1.0)
+        gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+        gl.glBegin(gl.GL_QUADS)
+        try:
+            gl.glTexCoord(0, 0)
+            gl.glVertex(cp[0][0], cp[0][1])
+            gl.glTexCoord(1, 0)
+            gl.glVertex(cp[1][0], cp[1][1])
+            gl.glTexCoord(1, 1)
+            gl.glVertex(cp[2][0], cp[2][1])
+            gl.glTexCoord(0, 1)
+            gl.glVertex(cp[3][0], cp[3][1])
+        finally:
+            gl.glEnd()
+
+        gl.glDisable(gl.GL_TEXTURE_2D)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         # TODO: this draws text as polygons, since there is no native
         # text support in OpenGL.  It uses cairo to convert the text to
         # paths.  Currently the paths are drawn, but not filled correctly.
         paths = CairoHelp.text_to_paths(text, self.font, flip_y=True,
                                         cx=cx, cy=cy, rot_deg=rot_deg)
+        scale = self.viewer.get_scale()
+        base = np.array((cx, cy))
 
         for pts in paths:
+            # we have to rotate and scale the polygons to account for the
+            # odd transform we use for OpenGL
+            rot_deg = -self.viewer.get_rotation()
+            if rot_deg != 0.0:
+                pts = trcalc.rotate_coord(pts, [rot_deg], (cx, cy))
+            pts = (pts - base) * (1 / scale) + base
             self.set_line(self.font.color, alpha=self.font.alpha)
             self.set_fill(None)
             self.draw_polygon(pts)
@@ -170,13 +235,14 @@ class RenderContext(render.RenderContextBase):
         self._draw_pts(gl.GL_LINE_STRIP, cpoints)
 
 
-class CanvasRenderer(render.RendererBase):
+class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
 
     def __init__(self, viewer):
-        render.RendererBase.__init__(self, viewer)
+        CanvasRenderVec.CanvasRenderer.__init__(self, viewer)
 
         self.kind = 'gl'
         self.rgb_order = 'RGBA'
+        self.surface = self.viewer.get_widget()
 
         # size of our GL viewport
         # these will change when the resize() is called
@@ -184,54 +250,108 @@ class CanvasRenderer(render.RendererBase):
 
         self.camera = Camera()
         self.camera.set_scene_radius(2)
-        self.camera.set_camera_home_position((0, 0, -1000))
+        self.camera.set_camera_home_position((0, 0, 1000))
         self.camera.reset()
 
         self.draw_wrapper = False
+        self.mode3d = True
         self.draw_spines = True
-        self.mode3d = False
         self._drawing = False
-        self._img_pos = None
 
         # initial values, will be recalculated at window map/resize
-        self.lim_x, self.lim_y, self.lim_z = 10, 10, 10
+        self.lim_x, self.lim_y, self.lim_z = 1.0, 1.0, 1.0
         self.mn_x, self.mx_x = -self.lim_x, self.lim_x
         self.mn_y, self.mx_y = -self.lim_y, self.lim_y
         self.mn_z, self.mx_z = -self.lim_z, self.lim_z
+
+    def _get_image_klass(self):
+        return NormImage
+
+    def set_3dmode(self, tf):
+        self.mode3d = tf
+        self.gl_resize(self.wd, self.ht)
+        scales = self.viewer.get_scale_xy()
+        self.scale(scales)
 
     def resize(self, dims):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
+        super(CanvasRenderer, self).resize(dims)
+
         width, height = dims[:2]
         self.gl_resize(width, height)
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
-        in the pixel space.
-        """
-        pos = (0, 0)
-        arr = self.viewer.getwin_array(order=self.rgb_order, alpha=1.0,
-                                       dtype=np.uint8)
-        #pos = (dst_x, dst_y)
-        #print('dst', pos)
-        #pos = self.tform['window_to_native'].to_(pos)
-        #print('dst(c)', pos)
-        self.gl_set_image(arr, pos)
+        self.viewer.redraw(whence=2.5)
+
+    def reset_ortho_projection(self):
+        pts = np.asarray(self.viewer.get_pan_rect())
+        x, y = self.viewer.tform['data_to_native'].to_(pts).T
+
+        self.mn_x, self.mx_x = x.min(), x.max()
+        self.mn_y, self.mx_y = y.min(), y.max()
+        self.mn_z, self.mx_z = 0.0, 1.0
+
+    def scale(self, scales):
+        if not self.mode3d:
+            self.reset_ortho_projection()
+            self.viewer.gl_update()
+        else:
+            self.camera.scale_2d(scales[:2])
+            #self.viewer.gl_update()
+
+        self.viewer.redraw(whence=2.5)
+        # this is necessary to get other widgets
+        #self.viewer.make_callback('redraw', whence=0.0)
+
+    def pan(self, pos):
+        self.viewer.redraw(whence=2.5)
+        #self.viewer.make_callback('redraw', whence=0.0)
+
+    def rotate_2d(self, ang_deg):
+        if self.mode3d:
+            self.camera.rotate_2d(ang_deg)
+            #self.viewer.gl_update()
+
+        self.viewer.redraw(whence=2.6)
+
+    def transform_2d(self, state):
+        self.viewer.redraw(whence=2.5)
+
+    ## def initialize(self):
+    ##     self.rl = []
+
+    def finalize(self):
+        # a no-op for this renderer
+        pass
 
     def get_surface_as_array(self, order=None):
-        raise render.RenderError("This renderer can only be used with an opengl viewer")
+        win_wd, win_ht = self.viewer.get_window_size()
+        image_buffer = gl.glReadPixels(0, 0, width, height, gl.GL_RGB,
+                                       gl.GL_UNSIGNED_BYTE)
+        image = np.frombuffer(image_buffer, dtype=np.uint8).reshape(width,
+                                                                    height, 3)
+        return image
 
-    def setup_cr(self, shape):
-        surface = self.viewer.get_widget()
-        cr = RenderContext(self, self.viewer, surface)
-        cr.initialize_from_shape(shape, font=False)
-        return cr
+    def render_whence(self, whence):
+        # a no-op for this renderer
+        pass
 
-    def get_dimensions(self, shape):
-        cr = self.setup_cr(shape)
-        cr.set_font_from_shape(shape)
-        return cr.text_extents(shape.text)
+    ## def setup_cr(self, shape):
+    ##     cr = CanvasRenderVec.RenderContext(self, self.viewer, self.surface)
+    ##     cr.initialize_from_shape(shape, font=False)
+    ##     return cr
+
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)
+
+    ## def get_dimensions(self, shape):
+    ##     cr = self.setup_cr(shape)
+    ##     cr.set_font_from_shape(shape)
+    ##     return cr.text_extents(shape.text)
 
     def get_camera(self):
         return self.camera
@@ -249,26 +369,44 @@ class CanvasRenderer(render.RendererBase):
             gl.glDisable(gl.GL_DEPTH_TEST)
             gl.glOrtho(self.mn_x, self.mx_x, self.mn_y, self.mx_y,
                        self.mn_z, self.mx_z)
+            #gl.glRotatef(45.0, 0.0, 0.0, 0.0)
 
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
 
+    def getOpenGLInfo(self):
+        info = dict(vendor=gl.glGetString(gl.GL_VENDOR).decode(),
+                    renderer=gl.glGetString(gl.GL_RENDERER).decode(),
+                    opengl_version=gl.glGetString(gl.GL_VERSION).decode(),
+                    shader_version=gl.glGetString(gl.GL_SHADING_LANGUAGE_VERSION).decode())
+        return info
+
     def gl_initialize(self):
+        d = self.getOpenGLInfo()
+        self.logger.info("OpenGL info--Vendor: '%(vendor)s'  "
+                         "Renderer: '%(renderer)s'  "
+                         "Version: '%(opengl_version)s'  "
+                         "Shader: '%(shader_version)s'" % d)
+
         r, g, b = self.viewer.img_bg
         gl.glClearColor(r, g, b, 1.0)
         gl.glClearDepth(1.0)
 
         gl.glDisable(gl.GL_CULL_FACE)
         gl.glFrontFace(gl.GL_CCW)
-        gl.glDisable(gl.GL_LIGHTING)
-        gl.glShadeModel(gl.GL_FLAT)
-        #gl.glShadeModel(gl.GL_SMOOTH)
-
-        self.setup_3D(self.mode3d)
+        if opengl_version < 4:
+            gl.glDisable(gl.GL_LIGHTING)
+            gl.glShadeModel(gl.GL_FLAT)
+            #gl.glShadeModel(gl.GL_SMOOTH)
 
         gl.glEnable(gl.GL_TEXTURE_2D)
         gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
         self.tex_id = gl.glGenTextures(1)
+
+    def gl_set_image(self, image_id, rgb_arr):
+        """NOTE: this is a slow operation--downloading a texture."""
+        ht, wd = rgb_arr.shape[:2]
+
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.tex_id)
         ## gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S,
         ##                    gl.GL_CLAMP)
@@ -279,27 +417,31 @@ class CanvasRenderer(render.RendererBase):
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER,
                            gl.GL_NEAREST)
 
-    def gl_set_image(self, img_np, pos):
-        dst_x, dst_y = pos[:2]
-        # TODO: can we avoid this transformation?
-        data = np.flipud(img_np[0:self.ht, 0:self.wd])
-        ht, wd = data.shape[:2]
-        self._img_pos = ((dst_x, dst_y), (dst_x + wd, dst_y + ht))
-
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
-                        gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, data)
+                        gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, rgb_arr)
+
+    ## def gl_set_image_interpolation(self, interp):
+    ##     gl.glBindTexture(gl.GL_TEXTURE_2D, self.tex_id)
+    ##     if interp in ['nearest', 'basic']:
+    ##         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER,
+    ##                            gl.GL_NEAREST)
+    ##         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER,
+    ##                            gl.GL_NEAREST)
+    ##     elif interp in ['bilinear']:
+    ##         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER,
+    ##                            gl.GL_LINEAR)
+    ##         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER,
+    ##                            gl.GL_LINEAR)
 
     def gl_resize(self, width, height):
         self.wd, self.ht = width, height
 
-        self.lim_x, self.lim_y = width / 2.0, height / 2.0
-        self.lim_z = (self.lim_x + self.lim_y) / 2.0
+        if not self.mode3d:
+            self.reset_ortho_projection()
 
-        self.mn_x, self.mx_x = -self.lim_x, self.lim_x
-        self.mn_y, self.mx_y = -self.lim_y, self.lim_y
-        self.mn_z, self.mx_z = -self.lim_z, self.lim_z
+        else:
+            self.camera.set_viewport_dimensions(width, height)
 
-        self.camera.set_viewport_dimensions(width, height)
         gl.glViewport(0, 0, width, height)
 
     def gl_paint(self):
@@ -309,112 +451,36 @@ class CanvasRenderer(render.RendererBase):
 
             r, g, b = self.viewer.img_bg
             gl.glClearColor(r, g, b, 1.0)
+            gl.glClearDepth(1.0)
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
-            image = self.viewer.get_image()
-            if (image is not None) and (self._img_pos is not None):
-                # Draw the image portion of the plot
-                gl.glColor4f(1, 1, 1, 1.0)
-                gl.glEnable(gl.GL_TEXTURE_2D)
-                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-                gl.glBegin(gl.GL_QUADS)
-                try:
-                    gl.glTexCoord(0, 0)
-                    gl.glVertex(self.mn_x, self.mn_y)
-                    gl.glTexCoord(1, 0)
-                    gl.glVertex(self.mx_x, self.mn_y)
-                    gl.glTexCoord(1, 1)
-                    gl.glVertex(self.mx_x, self.mx_y)
-                    gl.glTexCoord(0, 1)
-                    gl.glVertex(self.mn_x, self.mx_y)
-                finally:
-                    gl.glEnd()
-
-            gl.glDisable(gl.GL_TEXTURE_2D)
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-
-            gl.glEnable(gl.GL_BLEND)
-            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+            cr = RenderContext(self, self.viewer, self.surface)
+            self.draw_vector(cr)
 
             if self.mode3d and self.draw_spines:
-                # draw orienting spines radiating in x, y and z
-                gl.glColor(1.0, 0.0, 0.0)
-                gl.glBegin(gl.GL_LINES)
-                gl.glVertex(self.mn_x, 0, 0)
-                gl.glVertex(self.mx_x, 0, 0)
-                gl.glEnd()
-                gl.glColor(0.0, 1.0, 0.0)
-                gl.glBegin(gl.GL_LINES)
-                gl.glVertex(0, self.mn_y, 0)
-                gl.glVertex(0, self.mx_y, 0)
-                gl.glEnd()
-                gl.glColor(0.0, 0.0, 1.0)
-                gl.glBegin(gl.GL_LINES)
-                gl.glVertex(0, 0, self.mn_z)
-                gl.glVertex(0, 0, self.mx_z)
-                gl.glEnd()
-
-            # Draw the overlays
-            p_canvas = self.viewer.get_private_canvas()
-            p_canvas.draw(self.viewer)
+                # for debugging
+                self._draw_spines()
 
         finally:
             self._drawing = False
             gl.glFlush()
 
-
-class WindowGLTransform(BaseTransform):
-    """
-    A transform from window coordinates to OpenGL coordinates of a viewer.
-    """
-
-    def __init__(self, viewer):
-        super(WindowGLTransform, self).__init__()
-        self.viewer = viewer
-
-    def pix2canvas(self, pt):
-        """Takes a 2-tuple of (x, y) in window coordinates and gives
-        the (cx, cy, cz) coordinates on the canvas.
-        """
-        x, y = pt[:2]
-        #print('p2c in', x, y)
-        mm = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
-        pm = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
-        vp = gl.glGetIntegerv(gl.GL_VIEWPORT)
-
-        win_x, win_y = float(x), float(vp[3] - y)
-        win_z = gl.glReadPixels(int(win_x), int(win_y), 1, 1,
-                                gl.GL_DEPTH_COMPONENT, gl.GL_FLOAT)
-        pos = glu.gluUnProject(win_x, win_y, win_z, mm, pm, vp)
-        #print('out', pos)
-        return pos
-
-    def canvas2pix(self, pos):
-        """Takes a 3-tuple of (cx, cy, cz) in canvas coordinates and gives
-        the (x, y, z) pixel coordinates in the window.
-        """
-        x, y, z = pos
-        #print('c2p in', x, y, z)
-        mm = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
-        pm = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
-        vp = gl.glGetIntegerv(gl.GL_VIEWPORT)
-
-        pt = glu.gluProject(x, y, z, mm, pm, vp)
-        #print('c2p out', pt)
-        return pt
-
-    def get_bbox(self, wd, ht):
-        return (self.pix2canvas((0, 0)),
-                self.pix2canvas((wd, 0)),
-                self.pix2canvas((wd, ht)),
-                self.pix2canvas((0, ht))
-                )
-
-    def to_(self, pts):
-        return np.asarray([self.pix2canvas(pt) for pt in pts])
-
-    def from_(self, cvs_pts):
-        return np.asarray([self.canvas2pix(pt) for pt in cvs_pts])
-
+    def _draw_spines(self):
+        # draw orienting spines radiating in x, y and z
+        gl.glColor(1.0, 0.0, 0.0)
+        gl.glBegin(gl.GL_LINES)
+        gl.glVertex(self.mn_x, 0, 0)
+        gl.glVertex(self.mx_x, 0, 0)
+        gl.glEnd()
+        gl.glColor(0.0, 1.0, 0.0)
+        gl.glBegin(gl.GL_LINES)
+        gl.glVertex(0, self.mn_y, 0)
+        gl.glVertex(0, self.mx_y, 0)
+        gl.glEnd()
+        gl.glColor(0.0, 0.0, 1.0)
+        gl.glBegin(gl.GL_LINES)
+        gl.glVertex(0, 0, self.mn_z)
+        gl.glVertex(0, 0, self.mx_z)
+        gl.glEnd()
 
 # END

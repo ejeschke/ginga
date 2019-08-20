@@ -5,6 +5,11 @@
 # Please see the file LICENSE.txt for details.
 
 from io import BytesIO
+import math
+import time
+
+import numpy as np
+
 
 try:
     import PIL.Image as PILimage
@@ -13,8 +18,9 @@ try:
 except ImportError:
     have_PIL = False
 
-from ginga import trcalc
+from ginga import trcalc, RGBMap
 from ginga.fonts import font_asst
+from ginga.util import rgb_cms
 
 
 class RenderError(Exception):
@@ -41,6 +47,14 @@ class RendererBase(object):
         self.viewer = viewer
         self.logger = viewer.get_logger()
         self.surface = None
+
+    def initialize(self):
+        #raise RenderError("subclass should override this method!")
+        pass
+
+    def finalize(self):
+        #raise RenderError("subclass should override this method!")
+        pass
 
     def get_surface_as_array(self, order=None):
         raise RenderError("subclass should override this method!")
@@ -115,6 +129,489 @@ class RendererBase(object):
 
         return arr
 
+    def scale(self, scales):
+        self.viewer.redraw(whence=0)
+
+    def pan(self, pos):
+        self.viewer.redraw(whence=0)
+
+    def rotate_2d(self, rot_deg):
+        self.viewer.redraw(whence=2.6)
+
+    def transform_2d(self, state):
+        self.viewer.redraw(whence=2.5)
+
+
+class StandardPixelRenderer(RendererBase):
+    """Base class from which all Renderer classes are derived."""
+
+    def __init__(self, viewer):
+        super(StandardPixelRenderer, self).__init__(viewer)
+
+        # center (and reference) pixel in the screen image (in pixel coords)
+        self._ctr_x = 1
+        self._ctr_y = 1
+
+        # data indexes at the reference pixel (in data coords)
+        self._org_x = 0
+        self._org_y = 0
+        self._org_z = 0
+
+        # offset from pan position (at center) in this array
+        self._org_xoff = 0
+        self._org_yoff = 0
+
+        # actual scale factors produced from desired ones
+        self._org_scale_x = 1.0
+        self._org_scale_y = 1.0
+        self._org_scale_z = 1.0
+
+        # see _apply_transforms() and _apply_rotation()
+        self._xoff = 0
+        self._yoff = 0
+
+        # offsets in the screen image for drawing (in screen coords)
+        self._dst_x = 0
+        self._dst_y = 0
+
+        # last known dimensions of rendering window
+        self.dims = (0, 0)
+
+        # order of RGBA channels that renderer needs to work in
+        self.rgb_order = 'RGBA'
+
+        self.invalidate()
+
+    def get_rgb_order(self):
+        return self.rgb_order
+
+    def _get_image_klass(self):
+        from ginga.canvas.types.image import NormImage
+        return NormImage
+
+    def invalidate(self):
+        # handles to various intermediate arrays
+        self._rgbarr = None
+        self._rgbarr2 = None
+        self._rgbarr3 = None
+        self._rgbarr4 = None
+        self._rgbobj = None
+
+    def create_bg_array(self, width, height, order):
+        # calculate dimensions of window RGB backing image
+        wd, ht = self._calc_bg_dimensions(width, height)
+
+        # create backing image
+        depth = len(order)
+        rgbmap = self.viewer.get_rgbmap()
+
+        # make backing image with the background color
+        r, g, b = self.viewer.get_bg()
+        rgba = trcalc.make_filled_array((ht, wd, depth), rgbmap.dtype,
+                                        order, r, g, b, 1.0)
+
+        self._rgbarr = rgba
+
+        #self.viewer.redraw(whence=0)
+
+    def get_rgb_object(self, whence=0):
+        """Create and return RGB slices representing the data
+        that should be rendered at the current zoom level and pan settings.
+
+        Parameters
+        ----------
+        whence : {0, 1, 2, 3}
+            Optimization flag that reduces the time to create
+            the RGB object by only recalculating what is necessary:
+
+                0: New image, pan/scale has changed
+                1: Cut levels or similar has changed
+                2: Color mapping has changed
+                2.3: ICC profile has changed
+                2.5: Transforms have changed
+                2.6: Rotation has changed
+                3: Graphical overlays have changed
+
+        Returns
+        -------
+        rgbobj : `~ginga.RGBMap.RGBPlanes`
+            RGB object.
+
+        """
+        win_wd, win_ht = self.viewer.get_window_size()
+        order = self.get_rgb_order()
+        # NOTE: need to have an alpha channel in place to do overlay_image()
+        if 'A' not in order:
+            order = order + 'A'
+
+        if whence <= 0.0:
+            # confirm and record pan and scale
+            pan_x, pan_y = self.viewer.get_pan(coord='data')[:2]
+            scale_x, scale_y = self.viewer.get_scale_xy()
+            self._confirm_pan_and_scale(scale_x, scale_y,
+                                        pan_x, pan_y,
+                                        win_wd, win_ht)
+
+        if self._rgbarr is None:
+            self.create_bg_array(win_wd, win_ht, order)
+
+        t1 = t2 = t3 = time.time()
+
+        if (whence <= 2.0) or (self._rgbarr2 is None):
+            # Apply any RGB image overlays
+            self._rgbarr2 = np.copy(self._rgbarr)
+            p_canvas = self.viewer.get_private_canvas()
+            self.overlay_images(p_canvas, self._rgbarr2, whence=whence)
+
+            t2 = time.time()
+
+        output_profile = self.viewer.t_.get('icc_output_profile', None)
+        if output_profile is None:
+            self._rgbarr3 = self._rgbarr2
+            t3 = t2
+
+        elif (whence <= 2.3) or (self._rgbarr3 is None):
+            self._rgbarr3 = np.copy(self._rgbarr2)
+
+            # convert to output ICC profile, if one is specified
+            working_profile = rgb_cms.working_profile
+            if (working_profile is not None) and (output_profile is not None):
+                self.convert_via_profile(self._rgbarr3, order,
+                                         working_profile, output_profile)
+
+            t3 = time.time()
+
+        if (whence <= 2.5) or (self._rgbarr4 is None):
+            data = np.copy(self._rgbarr3)
+
+            # Apply any viewing transformations
+            self._rgbarr4 = self._apply_transforms(data)
+
+        if (whence <= 2.6) or (self._rgbobj is None):
+            rotimg = np.copy(self._rgbarr4)
+
+            # Apply any viewing rotations
+            rot_deg = self.viewer.get_rotation()
+            rotimg = self._apply_rotation(rotimg, rot_deg)
+            rotimg = np.ascontiguousarray(rotimg)
+
+            self._rgbobj = RGBMap.RGBPlanes(rotimg, order)
+
+        t4 = time.time()
+        self.logger.debug("times: t2=%.4f t3=%.4f t4=%.4f total=%.4f" % (
+            t2 - t1, t3 - t2, t4 - t3, t4 - t1))
+
+        return self._rgbobj
+
+    def render_whence(self, whence):
+        rgbobj = self.get_rgb_object(whence=whence)
+        self.render_image(rgbobj, self._dst_x, self._dst_y)
+
+    def _calc_bg_dimensions(self, win_wd, win_ht):
+        """Calculate background image size necessary for rendering.
+
+        This is an internal method, called during viewer window size
+        configuration.
+
+        Parameters
+        ----------
+        win_wd, win_ht : int
+            window dimensions in pixels
+        """
+        # calc minimum size of pixel image we will generate
+        # necessary to fit the window in the desired size
+
+        # Make a square from the scaled cutout, with room to rotate
+        slop = 20
+        side = int(math.sqrt(win_wd**2 + win_ht**2) + slop)
+        wd = ht = side
+
+        # Find center of new array
+        ncx, ncy = wd // 2, ht // 2
+        self._org_xoff, self._org_yoff = ncx, ncy
+
+        return (wd, ht)
+
+    def _confirm_pan_and_scale(self, scale_x, scale_y,
+                               pan_x, pan_y, win_wd, win_ht):
+        """Check and record the desired pan and scale factors.
+
+        This is an internal method, called during viewer rendering.
+
+        Parameters
+        ----------
+        scale_x, scale_y : float
+            desired scale of viewer in each axis.
+
+        pan_x, pan_y : float
+            pan position in data coordinates.
+
+        win_wd, win_ht : int
+            window dimensions in pixels
+        """
+        data_off = self.viewer.data_off
+
+        # Sanity check on the scale
+        sx = float(win_wd) / scale_x
+        sy = float(win_ht) / scale_y
+        if (sx < 1.0) or (sy < 1.0):
+            #self.logger.warning("new scale would exceed max/min; scale unchanged")
+            raise RenderError("new scale would exceed pixel max; scale unchanged")
+
+        # record location of pan position pixel
+        self._org_x, self._org_y = pan_x - data_off, pan_y - data_off
+        self._org_scale_x, self._org_scale_y = scale_x, scale_y
+        self._org_scale_z = (scale_x + scale_y) / 2.0
+
+    def _apply_transforms(self, data):
+        """Apply transformations to the given data.
+        These include flipping on axis and swapping X/Y axes.
+
+        This is an internal method, called during viewer rendering.
+
+        Parameters
+        ----------
+        data : ndarray
+            Data to be transformed.
+
+        Returns
+        -------
+        data : ndarray
+            Transformed data.
+
+        """
+        ht, wd = data.shape[:2]
+        xoff, yoff = self._org_xoff, self._org_yoff
+
+        # Do transforms as necessary
+        flip_x, flip_y, swap_xy = self.viewer.get_transforms()
+
+        data = trcalc.transform(data, flip_x=flip_x, flip_y=flip_y,
+                                swap_xy=swap_xy)
+        if flip_y:
+            yoff = ht - yoff
+        if flip_x:
+            xoff = wd - xoff
+        if swap_xy:
+            xoff, yoff = yoff, xoff
+
+        self._xoff, self._yoff = xoff, yoff
+
+        return data
+
+    def _apply_rotation(self, data, rot_deg):
+        """Apply transformations to the given data.
+        These include rotation and invert Y.
+
+        This is an internal method, called during viewer rendering.
+
+        Parameters
+        ----------
+        data : ndarray
+            Data to be rotated.
+
+        rot_deg : float
+            Rotate the data by the given degrees.
+
+        Returns
+        -------
+        data : ndarray
+            Rotated data.
+
+        """
+        xoff, yoff = self._xoff, self._yoff
+
+        # Rotate the image as necessary
+        if rot_deg != 0:
+            # This is the slowest part of the rendering--
+            # install the OpenCv or Pillow packages to speed it up
+            data = np.ascontiguousarray(data)
+            pre_y, pre_x = data.shape[:2]
+            data = trcalc.rotate_clip(data, -rot_deg, out=data,
+                                      logger=self.logger)
+
+        # apply other transforms
+        if self.viewer._invert_y:
+            # Flip Y for natural Y-axis inversion between FITS coords
+            # and screen coords
+            data = np.flipud(data)
+
+        # dimensions may have changed in transformations
+        ht, wd = data.shape[:2]
+
+        ctr_x, ctr_y = self._ctr_x, self._ctr_y
+        dst_x, dst_y = ctr_x - xoff, ctr_y - (ht - yoff)
+        self._dst_x, self._dst_y = dst_x, dst_y
+        self.logger.debug("ctr=%d,%d off=%d,%d dst=%d,%d cutout=%dx%d" % (
+            ctr_x, ctr_y, xoff, yoff, dst_x, dst_y, wd, ht))
+
+        win_wd, win_ht = self.viewer.get_window_size()
+        self.logger.debug("win=%d,%d coverage=%d,%d" % (
+            win_wd, win_ht, dst_x + wd, dst_y + ht))
+
+        return data
+
+    def overlay_images(self, canvas, data, whence=0.0):
+        """Overlay data from any canvas image objects.
+
+        Parameters
+        ----------
+        canvas : `~ginga.canvas.types.layer.DrawingCanvas`
+            Canvas containing possible images to overlay.
+
+        data : ndarray
+            Output array on which to overlay image data.
+
+        whence
+             See :meth:`get_rgb_object`.
+
+        """
+        #if not canvas.is_compound():
+        if not hasattr(canvas, 'objects'):
+            return
+
+        for obj in canvas.get_objects():
+            if hasattr(obj, 'draw_image'):
+                obj.draw_image(self.viewer, data, whence=whence)
+            elif obj.is_compound() and (obj != canvas):
+                self.overlay_images(obj, data, whence=whence)
+
+    def convert_via_profile(self, data_np, order, inprof_name, outprof_name):
+        """Convert the given RGB data from the working ICC profile
+        to the output profile in-place.
+
+        Parameters
+        ----------
+        data_np : ndarray
+            RGB image data to be displayed.
+
+        order : str
+            Order of channels in the data (e.g. "BGRA").
+
+        inprof_name, outprof_name : str
+            ICC profile names (see :func:`ginga.util.rgb_cms.get_profiles`).
+
+        """
+        t_ = self.viewer.get_settings()
+        # get rest of necessary conversion parameters
+        to_intent = t_.get('icc_output_intent', 'perceptual')
+        proofprof_name = t_.get('icc_proof_profile', None)
+        proof_intent = t_.get('icc_proof_intent', 'perceptual')
+        use_black_pt = t_.get('icc_black_point_compensation', False)
+
+        try:
+            rgbobj = RGBMap.RGBPlanes(data_np, order)
+            arr_np = rgbobj.get_array('RGB')
+
+            arr = rgb_cms.convert_profile_fromto(arr_np, inprof_name, outprof_name,
+                                                 to_intent=to_intent,
+                                                 proof_name=proofprof_name,
+                                                 proof_intent=proof_intent,
+                                                 use_black_pt=use_black_pt,
+                                                 logger=self.logger)
+            ri, gi, bi = rgbobj.get_order_indexes('RGB')
+
+            out = data_np
+            out[..., ri] = arr[..., 0]
+            out[..., gi] = arr[..., 1]
+            out[..., bi] = arr[..., 2]
+
+            self.logger.debug("Converted from '%s' to '%s' profile" % (
+                inprof_name, outprof_name))
+
+        except Exception as e:
+            self.logger.warning("Error converting output from working profile: %s" % (str(e)))
+            # TODO: maybe should have a traceback here
+            self.logger.info("Output left unprofiled")
+
+    def getwin_array(self, order='RGBA', alpha=1.0, dtype=None):
+        """Get Numpy data array for display window.
+
+        Parameters
+        ----------
+        order : str
+            The desired order of RGB color layers.
+
+        alpha : float
+            Opacity.
+
+        dtype : numpy dtype
+            Numpy data type desired; defaults to rgb mapper setting.
+
+        Returns
+        -------
+        outarr : ndarray
+            Numpy data array for display window.
+
+        """
+        dst_order = order.upper()
+        src_order = self.get_rgb_order()
+        # NOTE: need to have an alpha channel in place to do overlay_image()
+        if 'A' not in src_order:
+            src_order = src_order + 'A'
+
+        if dtype is None:
+            rgbmap = self.viewer.get_rgbmap()
+            dtype = rgbmap.dtype
+
+        # Prepare data array for rendering
+        data = self._rgbobj.get_array(src_order, dtype=dtype)
+
+        # NOTE [A]
+        height, width, depth = data.shape
+
+        win_wd, win_ht = self.viewer.get_window_size()
+
+        # create RGBA image array with the background color for output
+        r, g, b = self.viewer.get_bg()
+        outarr = trcalc.make_filled_array((win_ht, win_wd, depth),
+                                          dtype, src_order, r, g, b, alpha)
+
+        # overlay our data
+        trcalc.overlay_image(outarr, (self._dst_x, self._dst_y),
+                             data, dst_order=src_order, src_order=src_order,
+                             flipy=False, fill=False, copy=False)
+
+        outarr = self.reorder(dst_order, outarr, src_order=src_order)
+        return outarr
+
+    def render_image(self, rgbobj, win_x, win_y):
+        """Render image.
+        This must be implemented by subclasses.
+
+        Parameters
+        ----------
+        rgbobj : `~ginga.RGBMap.RGBPlanes`
+            RGB object.
+
+        win_x, win_y : float
+            Offsets in screen coordinates.
+
+        """
+        self.logger.warning("Subclass should override this abstract method!")
+
+    def get_scale(self):
+        return (self._org_scale_x, self._org_scale_y, self._org_scale_z)
+
+    def get_origin(self):
+        return (self._org_x, self._org_y, self._org_z)
+
+    def get_window_center(self):
+        return (self._ctr_x, self._ctr_y)
+
+    def get_window_size(self):
+        return self.dims[:2]
+
+    def resize(self, dims):
+        self.dims = dims
+        width, height = dims[:2]
+
+        self._ctr_x = width // 2
+        self._ctr_y = height // 2
+
+    def get_center(self):
+        return (self._ctr_x, self._ctr_y)
+
 
 def get_render_class(rtype):
 
@@ -142,5 +639,13 @@ def get_render_class(rtype):
     if rtype == 'qt':
         from ginga.qtw import CanvasRenderQt
         return CanvasRenderQt.CanvasRenderer
+
+    if rtype == 'vec':
+        from ginga.vec import CanvasRenderVec
+        return CanvasRenderVec.CanvasRenderer
+
+    if rtype == 'vqt':
+        from ginga.qtw import CanvasRenderQt
+        return CanvasRenderQt.VectorCanvasRenderer
 
     raise ValueError("Don't know about '%s' renderer type" % (rtype))

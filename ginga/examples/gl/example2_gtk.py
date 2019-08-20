@@ -1,33 +1,40 @@
 #! /usr/bin/env python
 #
-# example2_qt.py -- Simple, configurable 3D viewer.
+# example2_gtk.py -- Simple, configurable 3D viewer.
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 
 import sys
-import numpy as np
 
 from ginga import colors
-from ginga.opengl.ImageViewQtGL import CanvasView
-from ginga.qtw.ImageViewQt import ScrolledView
+from ginga.gtk3w import GtkHelp
+from ginga.opengl.ImageViewGtkGL import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
-from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.util.loader import load_data
-from ginga.canvas import transform as trcat
+
+from gi.repository import Gtk
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 
-class FitsViewer(QtGui.QMainWindow):
+class FitsViewer(object):
 
     def __init__(self, logger):
-        super(FitsViewer, self).__init__()
+
         self.logger = logger
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
+
+        root = Gtk.Window(title="Gtk3 OpenGL Example")
+        root.set_border_width(2)
+        root.connect("delete_event", lambda w, e: quit(w))
+        self.root = root
+        self.select = GtkHelp.FileSelection(root)
+
+        vbox = Gtk.VBox(spacing=2)
 
         fi = CanvasView(logger)
         fi.enable_autocuts('on')
@@ -40,13 +47,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_callback('drag-drop', self.drop_file_cb)
         fi.set_callback('none-move', self.cursor_cb)
         fi.ui_set_active(True)
-        #fi.origin_upper = False
         self.fitsimage = fi
-
-        fi.renderer.draw_spines = True
-
-        # add little mode indicator that shows keyboard modal states
-        fi.show_mode_indicator(True, corner='ur')
 
         # quick hack to get 'u' to invoke hidden camera mode
         bm = fi.get_bindmap()
@@ -71,86 +72,80 @@ class FitsViewer(QtGui.QMainWindow):
         self.drawtypes.sort()
 
         # add little mode indicator that shows keyboard modal states
-        #fi.show_mode_indicator(True, corner='ur')
+        fi.show_mode_indicator(True, corner='ur')
 
-        #w = fi.get_widget()
-        w = ScrolledView(fi)
-        w.resize(512, 512)
+        w = fi.get_widget()
+        w.set_size_request(512, 512)
 
-        vbox = QtGui.QVBoxLayout()
-        vbox.setContentsMargins(QtCore.QMargins(2, 2, 2, 2))
-        vbox.setSpacing(1)
-        vbox.addWidget(w, stretch=1)
+        vbox.pack_start(w, True, True, 1)
 
-        self.readout = QtGui.QLabel("")
-        vbox.addWidget(self.readout, stretch=0,
-                       alignment=QtCore.Qt.AlignCenter)
+        self.readout = Gtk.Label(label="")
+        vbox.pack_start(self.readout, False, False, 0)
 
-        hbox = QtGui.QHBoxLayout()
-        hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
+        hbox = Gtk.HBox(spacing=5)
 
-        wdrawtype = QtGui.QComboBox()
+        wdrawtype = GtkHelp.combo_box_new_text()
+        index = 0
         for name in self.drawtypes:
-            wdrawtype.addItem(name)
+            wdrawtype.insert_text(index, name)
+            index += 1
         index = self.drawtypes.index('rectangle')
-        wdrawtype.setCurrentIndex(index)
-        wdrawtype.activated.connect(self.set_drawparams)
+        wdrawtype.set_active(index)
+        wdrawtype.connect('changed', self.set_drawparams)
         self.wdrawtype = wdrawtype
 
-        wdrawcolor = QtGui.QComboBox()
+        wdrawcolor = GtkHelp.combo_box_new_text()
+        index = 0
         for name in self.drawcolors:
-            wdrawcolor.addItem(name)
+            wdrawcolor.insert_text(index, name)
+            index += 1
         index = self.drawcolors.index('lightblue')
-        wdrawcolor.setCurrentIndex(index)
-        wdrawcolor.activated.connect(self.set_drawparams)
+        wdrawcolor.set_active(index)
+        wdrawcolor.connect('changed', self.set_drawparams)
         self.wdrawcolor = wdrawcolor
 
-        wfill = QtGui.QCheckBox("Fill")
-        wfill.stateChanged.connect(self.set_drawparams)
+        wfill = GtkHelp.CheckButton(label="Fill")
+        wfill.sconnect('toggled', self.set_drawparams)
         self.wfill = wfill
 
-        walpha = QtGui.QDoubleSpinBox()
-        walpha.setRange(0.0, 1.0)
-        walpha.setSingleStep(0.1)
-        walpha.setValue(1.0)
-        walpha.valueChanged.connect(self.set_drawparams)
+        walpha = GtkHelp.SpinButton()
+        adj = walpha.get_adjustment()
+        adj.configure(0.0, 0.0, 1.0, 0.1, 0.1, 0)
+        walpha.set_value(1.0)
+        walpha.set_digits(1)
+        walpha.sconnect('value-changed', self.set_drawparams)
         self.walpha = walpha
 
-        wclear = QtGui.QPushButton("Clear Canvas")
-        wclear.clicked.connect(self.clear_canvas)
-        d3mode = QtGui.QCheckBox("3D Mode")
-        d3mode.setChecked(self.fitsimage.renderer.mode3d)
-        d3mode.stateChanged.connect(self.set_3dmode)
-        self.d3mode = d3mode
-        wquit = QtGui.QPushButton("Quit")
-        wquit.clicked.connect(self.quit)
+        wclear = Gtk.Button(label="Clear Canvas")
+        wclear.connect('clicked', self.clear_canvas)
 
-        hbox.addStretch(1)
-        for w in (wdrawtype, wdrawcolor, wfill,
-                  QtGui.QLabel('Alpha:'), walpha, wclear, d3mode, wquit):
-            hbox.addWidget(w, stretch=0)
+        wopen = Gtk.Button(label="Open File")
+        wopen.connect('clicked', self.open_file)
+        wquit = Gtk.Button(label="Quit")
+        wquit.connect('clicked', quit)
 
-        hw = QtGui.QWidget()
-        hw.setLayout(hbox)
-        vbox.addWidget(hw, stretch=0)
+        for w in (wquit, wclear, walpha, Gtk.Label(label="Alpha:"),
+                  wfill, wdrawcolor, wdrawtype, wopen):
+            hbox.pack_end(w, False, False, 0)
 
-        vw = QtGui.QWidget()
-        self.setCentralWidget(vw)
-        vw.setLayout(vbox)
+        vbox.pack_start(hbox, False, False, 0)
 
-    def set_3dmode(self, d3mode):
-        self.fitsimage.renderer.set_3dmode(self.d3mode.checkState())
-        #self.fitsimage.redraw(whence=0)
+        root.add(vbox)
 
-    def set_drawparams(self, kind):
-        index = self.wdrawtype.currentIndex()
+    def get_widget(self):
+        return self.root
+
+    def set_drawparams(self, w):
+        index = self.wdrawtype.get_active()
         kind = self.drawtypes[index]
-        index = self.wdrawcolor.currentIndex()
-        fill = (self.wfill.checkState() != 0)
-        alpha = self.walpha.value()
+        index = self.wdrawcolor.get_active()
+        fill = self.wfill.get_active()
+        alpha = self.walpha.get_value()
 
         params = {'color': self.drawcolors[index],
-                  'alpha': alpha}
+                  'alpha': alpha,
+                  #'cap': 'ball',
+                  }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
             params['fill'] = fill
@@ -158,27 +153,20 @@ class FitsViewer(QtGui.QMainWindow):
 
         self.canvas.set_drawtype(kind, **params)
 
-    def clear_canvas(self):
-        self.canvas.delete_all_objects()
+    def clear_canvas(self, w):
+        self.canvas.deleteAllObjects()
 
     def load_file(self, filepath):
         image = load_data(filepath, logger=self.logger)
         self.fitsimage.set_image(image)
-        self.setWindowTitle(filepath)
+        self.root.set_title(filepath)
 
-    def open_file(self):
-        res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
-                                                ".", "FITS files (*.fits)")
-        if isinstance(res, tuple):
-            fileName = res[0]
-        else:
-            fileName = str(res)
-        if len(fileName) != 0:
-            self.load_file(fileName)
+    def open_file(self, w):
+        self.select.popup("Open FITS file", self.load_file)
 
-    def drop_file_cb(self, viewer, paths):
-        filename = paths[0]
-        self.load_file(filename)
+    def drop_file_cb(self, fitsimage, paths):
+        fileName = paths[0]
+        self.load_file(fileName)
 
     def cursor_cb(self, viewer, button, data_x, data_y):
         """This gets called when the data position relative to the cursor
@@ -188,10 +176,8 @@ class FitsViewer(QtGui.QMainWindow):
         try:
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            _off = viewer.data_off
-            _d_x, _d_y = (int(np.floor(data_x + _off)),
-                          int(np.floor(data_y + _off)))
-            value = viewer.get_data(_d_x, _d_y)
+            value = viewer.get_data(int(data_x + viewer.data_off),
+                                    int(data_y + viewer.data_off))
 
         except Exception:
             value = None
@@ -214,18 +200,15 @@ class FitsViewer(QtGui.QMainWindow):
             dec_txt = 'BAD WCS'
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
-            ra_txt, dec_txt, data_x, data_y, value)
-        self.readout.setText(text)
+            ra_txt, dec_txt, fits_x, fits_y, value)
+        self.readout.set_text(text)
 
-    def quit(self, *args):
-        self.logger.info("Attempting to shut down the application...")
-        self.deleteLater()
+    def quit(self, w):
+        Gtk.main_quit()
+        return True
 
 
 def main(options, args):
-
-    #QtGui.QApplication.setGraphicsSystem('raster')
-    app = QtGui.QApplication(args)
 
     logger = log.get_logger("example2", options=options)
 
@@ -245,17 +228,14 @@ def main(options, args):
         except Exception as e:
             logger.warning("failed to set OpenCL preference: %s" % (str(e)))
 
-    w = FitsViewer(logger)
-    w.resize(524, 1000)
-    w.show()
-    app.setActiveWindow(w)
-    w.raise_()
-    w.activateWindow()
+    fv = FitsViewer(logger)
+    root = fv.get_widget()
+    root.show_all()
 
     if len(args) > 0:
-        w.load_file(args[0])
+        fv.load_file(args[0])
 
-    app.exec_()
+    Gtk.main()
 
 
 if __name__ == "__main__":

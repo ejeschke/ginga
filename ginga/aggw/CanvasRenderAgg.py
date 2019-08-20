@@ -159,10 +159,10 @@ class RenderContext(render.RenderContextBase):
         self.cr.canvas.path(path, self.pen, self.brush)
 
 
-class CanvasRenderer(render.RendererBase):
+class CanvasRenderer(render.StandardPixelRenderer):
 
     def __init__(self, viewer):
-        render.RendererBase.__init__(self, viewer)
+        render.StandardPixelRenderer.__init__(self, viewer)
 
         self.kind = 'agg'
         self.rgb_order = 'RGBA'
@@ -173,8 +173,9 @@ class CanvasRenderer(render.RendererBase):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
+        super(CanvasRenderer, self).resize(dims)
+
         width, height = dims[:2]
-        self.dims = (width, height)
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
         # create agg surface the size of the window

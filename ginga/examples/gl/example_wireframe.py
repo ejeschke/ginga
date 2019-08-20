@@ -22,8 +22,36 @@ toolkit.use('qt5')
 from ginga.gw import Widgets  # noqa
 from ginga.opengl.ImageViewQtGL import CanvasView  # noqa
 from ginga.canvas.CanvasObject import get_canvas_types  # noqa
+from ginga.canvas import transform  # noqa
 from ginga.misc import log  # noqa
 
+
+def get_transform(v):
+    tform = {
+        ## 'window_to_native': trcat.WindowNativeTransform(self),
+        ## 'cartesian_to_window': trcat.CartesianWindowTransform(self),
+        ## 'cartesian_to_native': (trcat.RotationTransform(self) +
+        ##                         trcat.CartesianNativeTransform(self)),
+        ## 'data_to_cartesian': (trcat.DataCartesianTransform(self) +
+        ##                       trcat.ScaleTransform(self)),
+        ## 'data_to_scrollbar': (trcat.DataCartesianTransform(self) +
+        ##                       trcat.RotationTransform(self)),
+        ## 'data_to_window': (trcat.DataCartesianTransform(self) +
+        ##                    trcat.ScaleTransform(self) +
+        ##                    trcat.RotationTransform(self) +
+        ##                    trcat.CartesianWindowTransform(self)),
+        ## 'data_to_percentage': (trcat.DataCartesianTransform(self) +
+        ##                        trcat.ScaleTransform(self) +
+        ##                        trcat.RotationTransform(self) +
+        ##                        trcat.CartesianWindowTransform(self) +
+        ##                        trcat.WindowPercentageTransform(self)),
+        'data_to_native': transform.PassThruTransform(v),
+        'data_to_window': transform.PassThruTransform(v),
+        'wcs_to_data': transform.WCSDataTransform(v),
+        'wcs_to_native': (transform.WCSDataTransform(v) +
+                          transform.PassThruTransform(v)),
+    }
+    return tform
 
 class Viewer(object):
 
@@ -35,6 +63,8 @@ class Viewer(object):
         self.top = app.make_window(title="Simple Ginga 3D Viewer")
 
         vw = CanvasView(self.logger)
+        vw.tform = get_transform(vw)
+        vw._self_scaling = True
         vw.ui_set_active(True)
         self.vw = vw
 

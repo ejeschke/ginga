@@ -79,6 +79,15 @@ class RenderContext(render.RenderContextBase):
         else:
             self.brush = self.cr.get_brush(color, alpha=alpha)
 
+    def setup_pen_brush(self, pen, brush):
+        # pen, brush are from ginga.vec
+        self.pen = self.cr.get_pen(pen.color, alpha=pen.alpha,
+                                   linewidth=pen.linewidth)
+        if brush is None:
+            self.brush = None
+        else:
+            self.brush = self.cr.get_brush(brush.color, alpha=brush.alpha)
+
     def set_font(self, fontname, fontsize, color='black', alpha=1.0):
         fontsize = self.scale_fontsize(fontsize)
         self.font = self.cr.get_font(fontname, fontsize, color,
@@ -103,6 +112,22 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
+    def draw_image(self, cx, cy, data, order='RGB'):
+        # get window contents as a buffer and paste it into the PIL surface
+        # TODO: allow greater bit depths when support is better in PIL
+        rgb_arr = self.viewer.getwin_array(order=self.renderer.rgb_order,
+                                           dtype=np.uint8)
+
+        ## arr_size = rgb_arr.shape[:2]
+        ## if arr_size != self.cr.surface.size:
+        ##     # window size must have changed out from underneath us!
+        ##     width, height = self.viewer.get_window_size()
+        ##     self.renderer.resize((width, height))
+        ##     if p_image.size != self.cr.surface.size:
+        ##         raise render.RenderError("Rendered image does not match window size")
+
+        self.cr.image((0, 0), rgb_arr)
+
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         wd, ht = self.cr.text_extents(text, self.font)
 
@@ -124,10 +149,10 @@ class RenderContext(render.RenderContextBase):
         self.cr.path(cpoints, self.pen)
 
 
-class CanvasRenderer(render.RendererBase):
+class CanvasRenderer(render.StandardPixelRenderer):
 
     def __init__(self, viewer):
-        render.RendererBase.__init__(self, viewer)
+        render.StandardPixelRenderer.__init__(self, viewer)
 
         self.kind = 'pil'
         self.rgb_order = 'RGBA'
@@ -138,8 +163,13 @@ class CanvasRenderer(render.RendererBase):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
+    def resize(self, dims):
+        """Resize our drawing area to encompass a space defined by the
+        given dimensions.
+        """
+        super(CanvasRenderer, self).resize(dims)
+
         width, height = dims[:2]
-        self.dims = (width, height)
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
 
@@ -147,6 +177,16 @@ class CanvasRenderer(render.RendererBase):
         # NOTE: pillow needs an RGB surface in order to draw with alpha
         # blending, not RGBA
         self.surface = Image.new('RGB', (width, height), color=0)
+
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)
+
+    ## def finalize(self):
+    ##     cr = RenderContext(self, self.viewer, self.surface)
+    ##     self.draw_vector(cr)
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
@@ -179,7 +219,7 @@ class CanvasRenderer(render.RendererBase):
         # was last updated?
         wd, ht = self.dims[:2]
 
-        # Get agg surface as a numpy array
+        # Get PIL surface as a numpy array
         arr8 = np.fromstring(self.surface.tobytes(), dtype=np.uint8)
         arr8 = arr8.reshape((ht, wd, 3))
 
