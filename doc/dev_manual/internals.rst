@@ -200,13 +200,37 @@ I want to use my own file storage format, not FITS!
 ---------------------------------------------------
 
 First of all, you can always create an ``AstroImage`` and assign its
-components for wcs and data.  However, assuming that you want to add a new
-type of loader into Ginga's file loading 
+components for wcs and data explicitly.  Assuming you have your data
+loaded into an ``numpy`` array named ``data``:
+
+.. code-block:: python
+
+    from ginga import AstroImage
+    ...
+
+    image = AstroImage()
+    image.set_data(data)
+
+To create a valid WCS for this image, you can set the header in the
+image (this assumes ``header`` is a valid mapping of keywords to values):
+
+.. code-block:: python
+
+    image.update_keywords(header)
+
+An ``AstroImage`` can then be loaded into a viewer object with
+``set_dataobj()``.  If you need a custom WCS see the notes in Section
+:ref:`sec-custom-wcs`.
+If, however, you want to add a new type of custom loader into Ginga's
+file loading framework, you can do so using the following instructions.
+
+Adding a new kind of file opener
+--------------------------------
 
 Ginga's general file loading facility breaks the loading down into two
 phases: first, the file is identified by its ``magic`` signature
-(requires the Python module ``python-magic`` be installed), MIME
-type or filename extension.  Once the general category of file is known,
+(requires the optional Python module ``python-magic`` be installed), MIME
+type, or filename extension.  Once the general category of file is known,
 methods in the specific I/O module devoted to that type are called to
 load the file data.
 
@@ -224,6 +248,19 @@ implement any other methods marked with the comment "subclass should
 override as needed".  You can study the `io_fits` and `io_rgb` modules
 to see how these methods are implemented for specific formats.
 
+Once you have created your opener class (e.g. ``HDF5Opener``), you
+register it as follows:
+
+.. code-block:: python
+
+    from ginga.util import loader
+    loader.add_opener(HDF5Opener, ['application/x-hdf'])
+
+If you want to use this with the Ginga reference viewer, a good place to
+register the opener is in your ``ginga_config.py`` as discussed in
+Section :ref:`sec-workspaceconfig` of the Reference Viewer Manual.
+Once your loader is registered, you will be able to drag and drop files
+and use the reference viewers regular loading facilities to load your data.
 
 Porting Ginga to a New Widget Set
 ---------------------------------

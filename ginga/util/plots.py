@@ -171,12 +171,12 @@ class Plot(Callback.Callbacks):
 
         x1, x2 = self.ax.get_xlim()
         xrng = x2 - x1
-        xinc = (delta * xrng - xrng) / 2.0
+        xinc = (delta * xrng - xrng) * 0.5
         x1, x2 = x1 - xinc, x2 + xinc
 
         y1, y2 = self.ax.get_ylim()
         yrng = y2 - y1
-        yinc = (delta * yrng - yrng) / 2.0
+        yinc = (delta * yrng - yrng) * 0.5
         y1, y2 = y1 - yinc, y2 + yinc
 
         self.ax.set_xlim(x1, x2)
@@ -215,12 +215,12 @@ class Plot(Callback.Callbacks):
 
         x1, x2 = self.ax.get_xlim()
         xrng = x2 - x1
-        xinc = xrng / 2.0
+        xinc = xrng * 0.5
         x1, x2 = xnew - xinc, xnew + xinc
 
         y1, y2 = self.ax.get_ylim()
         yrng = y2 - y1
-        yinc = yrng / 2.0
+        yinc = yrng * 0.5
         y1, y2 = ynew - yinc, ynew + yinc
 
         self.ax.set_xlim(x1, x2)
@@ -237,7 +237,7 @@ class HistogramPlot(Plot):
         minval = np.nanmin(data)
         maxval = np.nanmax(data)
 
-        substval = (minval + maxval) / 2.0
+        substval = (minval + maxval) * 0.5
         data[np.isnan(data)] = substval
 
         dist, bins = np.histogram(data, bins=numbins, density=False)
@@ -444,7 +444,7 @@ class FWHMPlot(Plot):
         XN = np.linspace(0.0, float(N), N * 10)
         Z = np.array([res.fit_fn(x, res.fit_args) for x in XN])
         self.ax.plot(XN, Z, color=color1, linestyle=':')
-        self.ax.axvspan(mu - fwhm / 2.0, mu + fwhm / 2.0,
+        self.ax.axvspan(mu - fwhm * 0.5, mu + fwhm * 0.5,
                         facecolor=color3, alpha=0.25)
         return fwhm
 
