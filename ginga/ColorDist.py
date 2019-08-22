@@ -35,7 +35,7 @@ class ColorDistBase(object):
     def hash_array(self, idx):
         # NOTE: data could be assumed to be in the range 0..hashsize-1
         # at this point but clip as a precaution
-        idx = idx.clip(0, self.hashsize - 1)
+        idx = idx.clip(0, self.hashsize - 1).astype(np.uint, copy=False)
         arr = self.hash[idx]
         return arr
 
