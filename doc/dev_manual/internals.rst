@@ -247,18 +247,24 @@ all of the methods that raise ``NotImplementedError`` and optionally
 implement any other methods marked with the comment "subclass should
 override as needed".  You can study the `io_fits` and `io_rgb` modules
 to see how these methods are implemented for specific formats.
+Here is an example opener class for HDF5 standard image files:
 
-Once you have created your opener class (e.g. ``HDF5Opener``), you
+.. literalinclude:: code/io_hdf5.py
+
+Once you have created your opener class (e.g. ``HDF5FileHandler``), you
 register it as follows:
 
 .. code-block:: python
 
     from ginga.util import loader
-    loader.add_opener(HDF5Opener, ['application/x-hdf'])
+    import io_hdf5
+    loader.add_opener(io_hdf5.HDF5FileHandler, ['application/x-hdf'])
 
 If you want to use this with the Ginga reference viewer, a good place to
 register the opener is in your ``ginga_config.py`` as discussed in
 Section :ref:`sec-workspaceconfig` of the Reference Viewer Manual.
+The best place is probably by implementing ``pre_gui_config`` and
+registering it as shown above in that function.
 Once your loader is registered, you will be able to drag and drop files
 and use the reference viewers regular loading facilities to load your data.
 
