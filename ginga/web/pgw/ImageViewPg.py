@@ -378,9 +378,9 @@ class ImageViewEvent(ImageViewPg):
     def get_key_table(self):
         return self._keytbl
 
-    def focus_event(self, event, hasFocus):
-        self.logger.debug("focus event: focus=%s" % (hasFocus))
-        return self.make_callback('focus', hasFocus)
+    def focus_event(self, event, has_focus):
+        self.logger.debug("focus event: focus=%s" % (has_focus))
+        return self.make_callback('focus', has_focus)
 
     def enter_notify_event(self, event):
         self.logger.debug("entering widget...")

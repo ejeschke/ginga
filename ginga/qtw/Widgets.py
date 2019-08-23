@@ -1874,6 +1874,9 @@ class Application(Callback.Callbacks):
         self.add_window(w)
         return w
 
+    def make_timer(self):
+        return QtHelp.Timer()
+
     def mainloop(self):
         self._qtapp.exec_()
 

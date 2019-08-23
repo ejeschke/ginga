@@ -1333,7 +1333,6 @@ class Canvas(WidgetBase):
         self.width = width
         self.height = height
         self.name = ''
-        self.timers = {}
 
     def _cb_redirect(self, event):
         pass
@@ -1351,15 +1350,6 @@ class Canvas(WidgetBase):
         img_src = PgHelp.get_image_src_from_buffer(img_buf)
 
         self._draw("image", x=x, y=y, src=img_src, width=width, height=height)
-
-    def add_timer(self, name, cb_fn):
-        app = self.get_app()
-        timer = app.add_timer(cb_fn)
-        self.timers[name] = timer
-
-    def reset_timer(self, name, time_sec):
-        app = self.get_app()
-        app.reset_timer(self.timers[name], time_sec)
 
     def render(self):
         global tab_idx
@@ -2327,8 +2317,7 @@ class Application(Callback.Callbacks):
         widget_dict[0] = self
 
         self._timer_lock = threading.RLock()
-        self._timer_cnt = 0
-        self._timer = {}
+        self._timers = []
 
         self.host = host
         self.port = port
@@ -2413,41 +2402,34 @@ class Application(Callback.Callbacks):
                         self.ws_handlers.remove(handler)
 
     def on_timer_event(self, event):
+        """internal event handler for timer events"""
         # self.logger.debug("timer update")
-        funcs = []
         with self._timer_lock:
-            for key, bnch in self._timer.items():
-                if (bnch.timer is not None) and \
-                   (time.time() > bnch.timer):
-                    bnch.timer = None
-                    funcs.append(bnch.func)
+            expired = [timer for timer in self._timers
+                       if (timer.deadline is not None and
+                           time.time() > timer.deadline)]
 
-        for func in funcs:
-            try:
-                func()
-            except Exception as e:
-                pass
+        for timer in expired:
+            timer.expire()
             # self.logger.debug("update should have been called.")
 
-    def add_timer(self, func):
+    def add_timer(self, timer):
+        """internal method for timer management; see Timer class in PgHelp"""
         with self._timer_lock:
-            name = self._timer_cnt
-            self._timer_cnt += 1
-            timer = Bunch.Bunch(timer=None, func=func, name=name)
-            self._timer[name] = timer
-            return timer
+            if timer not in self._timers:
+                self._timers.append(timer)
 
     def remove_timer(self, timer):
+        """internal method for timer management; see Timer class in PgHelp"""
         with self._timer_lock:
-            name = timer.name
-            del self._timer[name]
+            if timer in self._timers:
+                self._timers.remove(timer)
 
-    def reset_timer(self, timer, time_sec):
-        with self._timer_lock:
-            # self.logger.debug("setting timer...")
-            timer.timer = time.time() + time_sec
+    def make_timer(self):
+        return PgHelp.Timer(app=self)
 
     def widget_event(self, event):
+        """internal method for event management"""
         if event.type == 'timer':
             self.on_timer_event(event)
             return
