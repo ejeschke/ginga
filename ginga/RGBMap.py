@@ -415,12 +415,12 @@ class RGBMapper(Callback.Callbacks):
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
-        # idx = idx.clip(0, self.maxc)
+        # idx = idx.clip(0, self.maxc).astype(np.uint, copy=False)
         idx.clip(0, self.maxc, out=idx)
 
         # run it through the shift array and clip the result
         # See NOTE [A]
-        # idx = self.sarr[idx].clip(0, self.maxc)
+        # idx = self.sarr[idx].clip(0, self.maxc).astype(np.uint, copy=False)
         idx = self.sarr[idx]
         idx.clip(0, self.maxc, out=idx)
 
@@ -509,7 +509,7 @@ class RGBMapper(Callback.Callbacks):
         iscale_x = float(old_wd) / float(new_wd)
 
         xi = (xi * iscale_x).astype(np.uint, copy=False)
-        xi = xi.clip(0, old_wd - 1)
+        xi = xi.clip(0, old_wd - 1).astype(np.uint, copy=False)
         newdata = sarr[xi]
         return newdata
 
