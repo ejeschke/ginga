@@ -63,15 +63,6 @@ class GingaViewerWidget(Widgets.Canvas):
             "swipe": viewer.swipe_event,
         }
 
-        # TODO: redo this so they exist inside viewer like for other backends?
-        app = self.get_app()
-        self.timer_redraw = app.make_timer()
-        self.timer_redraw.add_callback('expired',
-                                       lambda t: self.viewer.delayed_redraw())
-        self.timer_msg = app.make_timer()
-        self.timer_msg.add_callback('expired',
-                                    lambda t: self.viewer.clear_onscreen_message())
-
         self.viewer.set_widget(self)
 
     def get_viewer(self):

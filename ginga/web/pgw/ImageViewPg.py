@@ -60,12 +60,24 @@ class ImageViewPg(ImageView):
         # this should already be so, but just in case...
         self.defer_redraw = True
 
+        # these will be assigned in set_widget()
+        self.timer_redraw = None
+        self.timer_msg = None
+
     def set_widget(self, canvas_w):
         """Call this method with the widget that will be used
         for the display.
         """
         self.logger.debug("set widget canvas_w=%s" % canvas_w)
         self.pgcanvas = canvas_w
+
+        app = canvas_w.get_app()
+        self.timer_redraw = app.make_timer()
+        self.timer_redraw.add_callback('expired',
+                                       lambda t: self.delayed_redraw())
+        self.timer_msg = app.make_timer()
+        self.timer_msg.add_callback('expired',
+                                    lambda t: self.clear_onscreen_message())
 
         ## wd, ht = canvas_w.get_size()
         ## self.configure_window(wd, ht)
@@ -94,7 +106,8 @@ class ImageViewPg(ImageView):
 
     def reschedule_redraw(self, time_sec):
         if self.pgcanvas is not None:
-            self.pgcanvas.reset_timer('redraw', time_sec)
+            self.timer_redraw.stop()
+            self.timer_redraw.start(time_sec)
         else:
             self.delayed_redraw()
 
@@ -119,9 +132,10 @@ class ImageViewPg(ImageView):
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.pgcanvas is None:
             return
+        self.timer_msg.stop()
         self.set_onscreen_message(text, redraw=redraw)
-        if delay:
-            self.pgcanvas.reset_timer('msg', delay)
+        if delay is not None:
+            self.timer_msg.start(delay)
 
     def clear_onscreen_message(self):
         self.logger.debug("clearing message...")
