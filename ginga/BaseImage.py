@@ -202,7 +202,7 @@ class BaseImage(ViewerObjectBase):
         return self._get_data()[view]
 
     def get_slice(self, c):
-        view = tuple([slice(None)] * self.ndim)
+        view = [slice(None)] * self.ndim
         view[-1] = self.order.index(c.upper())
         return self._slice(view)
 
