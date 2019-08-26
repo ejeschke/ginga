@@ -23,14 +23,14 @@ ginga_make_application = function (ws_url, debug_flag) {
             }
             else if (message.operation == "draw_canvas") {
                 if (message.id in ginga_app.canvases) {
+                    // console.log("drawing on canvas");
                     ginga_app.canvases[message.id].drawShape(message["shape"]);
                 };
             }
             else {
                 elt = document.getElementById(message.id)
                 if (elt == null) {
-                    console.log("NULL document element--");
-                    console.log(message.id);
+                    console.log("NULL document element: "+message.id);
                     return;
                 }
                 else if (message.operation == "update_label") {
@@ -51,6 +51,17 @@ ginga_make_application = function (ws_url, debug_flag) {
                 else if (message.operation == "update_html") {
                     // update widget content
                     elt.innerHTML = message.value;
+                }
+                else if (message.operation == "append_child") {
+                    // update widget content
+                    // document.body.innerHTML += message.value;
+                    // elt.insertAdjacentHTML('beforeend', message.value)
+                    // $('body').append(message.value)
+                    $(elt).append(message.value)
+                }
+                else if (message.operation == "remove_child") {
+                    // update widget content
+                    elt.remove()
                 }
                 else if (message.operation == "update_imgsrc") {
                     // update image content
@@ -162,6 +173,7 @@ ginga_initialize_canvas = function (canvas, id, app) {
     var pg_canvas = {};
     var is_touch_device = 'ontouchstart' in document.documentElement;
 
+    console.log("initializing canvas "+id)
     pg_canvas.canvas_id = id
     pg_canvas.app = app
     app.canvases[id] = pg_canvas
@@ -448,7 +460,7 @@ ginga_initialize_canvas = function (canvas, id, app) {
             //ctx.drawImage(img, imgInfo.x, imgInfo.y,
             //              pg_canvas.width, pg_canvas.height);
             ctx.drawImage(img, imgInfo.x, imgInfo.y);
-            //console.log("drew image");
+            // console.log("drew image");
             })
     }
     
@@ -527,7 +539,9 @@ ginga_initialize_canvas = function (canvas, id, app) {
         pg_canvas.send_pkt(message);
     }
     pg_canvas.initialize_canvas = setup_canvas
-    
+
+    setup_canvas(0);
+    console.log("canvas "+id+" initialized")
     return pg_canvas;
 }
 
