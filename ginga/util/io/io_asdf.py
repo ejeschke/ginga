@@ -19,6 +19,8 @@ except ImportError:
 from ginga import AstroImage
 from ginga.util import iohelper, wcsmod
 from ginga.util.io import io_base
+# need this specific WCS for ASDF loads
+from ginga.util.wcsmod import wcs_astropy_ape14
 
 __all__ = ['have_asdf', 'load_file', 'load_asdf', 'load_from_asdf',
            'ASDFFileHandler']
