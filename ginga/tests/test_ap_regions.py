@@ -44,8 +44,7 @@ class Test_R2G(object):
         r = regions.PointPixelRegion(center=regions.PixCoord(x=42, y=43),
                                      visual=regions.RegionVisual(symbol='*'))
         o = r2g(r)
-        assert isinstance(o, dc.SquareBox)
-        assert np.all(np.isclose((o.x, o.y), (r.center.x, r.center.y)))
+        assert isinstance(o, dc.Point) and o.style == 'square'
 
     def test_text(self):
         r = regions.TextPixelRegion(center=regions.PixCoord(x=42, y=43),
@@ -146,6 +145,12 @@ class Test_G2R(object):
         r = g2r(o)
         assert isinstance(r, regions.PointPixelRegion)
         assert r.visual['symbol'] == '+'
+
+    def test_point3(self):
+        o = dc.Point(42, 43, radius=5, style='square')
+        r = g2r(o)
+        assert isinstance(r, regions.PointPixelRegion)
+        assert r.visual['symbol'] == '*'
 
     def test_text(self):
         o = dc.Text(42, 43, text='Foo', rot_deg=45.0)

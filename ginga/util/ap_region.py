@@ -15,6 +15,10 @@ from ginga.canvas.CanvasObject import get_canvas_types
 import regions
 from astropy import units as u
 
+# mappings of point styles
+pt_ginga = dict(square='*', cross='x', plus='+', diamond='D')
+pt_regions = {v: k for k, v in pt_ginga.items()}
+
 
 def astropy_region_to_ginga_canvas_object(r):
     """
@@ -53,14 +57,8 @@ def astropy_region_to_ginga_canvas_object(r):
         radius = 15
 
         style = r.visual.get('symbol', '*')
-        if style == '+':
-            obj = dc.Point(r.center.x, r.center.y, radius, style='plus')
-        elif style == 'x':
-            obj = dc.Point(r.center.x, r.center.y, radius, style='cross')
-        else:
-            obj = dc.SquareBox(r.center.x, r.center.y, radius)
-            # for round-tripping
-            obj.set_data(is_point=True)
+        style = pt_regions.get(style, 'square')
+        obj = dc.Point(r.center.x, r.center.y, radius, style=style)
 
     elif isinstance(r, (regions.LinePixelRegion,)):
         obj = dc.Line(r.start.x, r.start.y, r.end.x, r.end.y)
@@ -186,29 +184,19 @@ def ginga_canvas_object_to_astropy_region(obj):
 
     elif isinstance(obj, (dc.Point,)):
         r = regions.PointPixelRegion(center=regions.PixCoord(x=obj.x, y=obj.y))
-        if obj.style == 'plus':
-            r.visual['symbol'] = '+'
-        else:
-            r.visual['symbol'] = 'x'
+        style = pt_ginga.get(obj.style, '*')
+        r.visual['symbol'] = style
 
     elif isinstance(obj, (dc.Line,)):
         r = regions.LinePixelRegion(start=regions.PixCoord(x=obj.x1, y=obj.y1),
                                     end=regions.PixCoord(x=obj.x2, y=obj.y2))
 
     elif isinstance(obj, (dc.Box,)):
-        meta = obj.get_data()
-        if meta is not None and meta.get('is_point', False):
-            # round-tripped from a region originally
-            r = regions.PointPixelRegion(center=regions.PixCoord(x=obj.x,
-                                                                 y=obj.y))
-            r.visual['symbol'] = '*'
-
-        else:
-            r = regions.RectanglePixelRegion(center=regions.PixCoord(x=obj.x,
-                                                                     y=obj.y),
-                                             width=obj.xradius * 2,
-                                             height=obj.yradius * 2,
-                                             angle=obj.rot_deg * u.deg)
+        r = regions.RectanglePixelRegion(center=regions.PixCoord(x=obj.x,
+                                                                 y=obj.y),
+                                         width=obj.xradius * 2,
+                                         height=obj.yradius * 2,
+                                         angle=obj.rot_deg * u.deg)
 
     elif isinstance(obj, (dc.Polygon,)):
         x, y = np.asarray(obj.points).T
