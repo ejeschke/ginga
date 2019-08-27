@@ -131,7 +131,6 @@ class Test_R2G(object):
                                   r.angle.to(u.deg).value)))
 
 
-
 class Test_G2R(object):
     """Test conversions from Ginga canvas types to AstroPy regions."""
 

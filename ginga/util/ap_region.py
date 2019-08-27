@@ -148,6 +148,7 @@ def add_region(canvas, r, redraw=True):
     tag = obj.get_data('name')
     if obj is not None:
         canvas.add(obj, tag=tag, redraw=redraw)
+        return obj
 
 
 def ginga_canvas_object_to_astropy_region(obj):
