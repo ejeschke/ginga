@@ -175,7 +175,7 @@ class ASDFFileHandler(io_base.BaseIOHandler):
         # TODO: hdu is ignored for now, but presumably this loader might
         # eventually want to check it
         with AsdfInFits.open(fits_f) as asdf_f:
-            data_obj = load_asdf(asdf_f, logger=self.logger, **kwargs)
+            data_obj = self.load_asdf(asdf_f, logger=self.logger, **kwargs)
 
         # metadata will be hopefully be set back in io_fits
         return data_obj
