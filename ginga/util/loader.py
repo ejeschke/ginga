@@ -5,7 +5,9 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.misc import Bunch
-from ginga.util import iohelper, io_fits, io_rgb, io_asdf
+from ginga.util import iohelper, io_fits, io_rgb
+# new I/O handlers go in ginga.util.io
+from ginga.util.io import io_asdf
 
 
 def load_data(filespec, idx=None, logger=None, **kwargs):
@@ -54,99 +56,126 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
 
     if logger is not None:
         logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
-    try:
-        loader_info = loader_registry['%s/%s' % (typ, subtyp)]
-        data_loader = loader_info.loader
 
-    except KeyError:
+    mimetype = '%s/%s' % (typ, subtyp)
+    openers = get_openers(mimetype)
+    if len(openers) == 0:
+        if logger is not None:
+            logger.warning("no openers found for type '{}'; trying image/fits".format(mimetype))
         # for now, assume that this is an unrecognized FITS file
-        data_loader = load_fits
+        openers = get_openers('image/fits')
 
-    data_obj = data_loader(filepath, idx=idx, logger=logger,
-                           **kwargs)
+    opener = openers[0].opener(logger)
+    #data_obj = opener.load_file(filepath, idx=idx, **kwargs)
+    with opener.open_file(filepath) as opn_f:
+        data_obj = opener.load_idx(idx, **kwargs)
+
     return data_obj
 
 
-def get_fileinfo(self, filespec, dldir=None):
-    """Break down a file specification into its components.
-
-    Parameters
-    ----------
-    filespec : str
-        The path of the file to load (can be a URL).
-
-    dldir
-
-    Returns
-    -------
-    res : `~ginga.misc.Bunch.Bunch`
-
-    """
-    if dldir is None:
-        dldir = self.tmpdir
-
-    # Get information about this file/URL
-    info = iohelper.get_fileinfo(filespec, cache_dir=dldir)
+# For consistency with specific format loader modules (io_fits, etc).
+load_file = load_data
 
 
-# NOTE: for loader functions, kwargs can include 'idx', 'logger' and
-#    loader-specific parameters like
-def load_rgb(filepath, logger=None, **kwargs):
-    loader = io_rgb.get_rgbloader(logger=logger)
-    image = loader.load_file(filepath, **kwargs)
-    return image
-
-
-def load_fits(filepath, logger=None, **kwargs):
-    loader = io_fits.get_fitsloader(logger=logger)
-    numhdu = kwargs.pop('idx', None)
-    image = loader.load_file(filepath, numhdu=numhdu, **kwargs)
-    return image
-
-
-def load_asdf(filepath, logger=None, **kwargs):
-    from ginga.util import io_asdf
-    data_obj = io_asdf.loader(filepath, logger, **kwargs)
-    return data_obj
-
-
-# This contains a registry of upper-level loaders with their secondary
-# loading functions
-#
+# Holds all openers keyed by name
 loader_registry = {}
 
 
-def add_loader(mimetype, loader, opener):
+# Holds all openers keyed by MIME type
+loader_by_mimetype = {}
+
+
+def add_opener(opener, mimetypes, priority=0, note=''):
+    """Add an opener to the registry of file openers.
+
+    Parameters
+    ----------
+    opener : subclass of `~ginga.util.io.io_base.BaseIOHandler`
+        a class that implements an opener
+
+    mimetypes : list of str
+        a sequence of the MIME types this opener can handle
+
+    priority : int
+        a priority that ranks this opener compared to others registered
+        for the same MIME types.  The lower the number (negative ok) the
+        higher the priority.  Default: 0
+
+    note : str
+        a short note that will be displayed to describe the opener
+        in GUIs
+    """
+    global loader_by_mimetype, loader_registry
+    loader_rec = Bunch.Bunch(name=opener.name, opener=opener,
+                             mimetypes=mimetypes, priority=priority,
+                             note=note)
+    if opener.name not in loader_registry:
+        loader_registry[opener.name] = loader_rec
+
+    for mimetype in mimetypes:
+        bnchs = loader_by_mimetype.setdefault(mimetype, [])
+        bnchs.append(loader_rec)
+    bnchs.sort(key=lambda bnch: bnch.priority)
+
+
+def get_opener(name):
+    """Returns the opener named by `name`
+    """
     global loader_registry
-    # TODO: can/should we store other preferences/customizations along
-    # with the loader?
-    loader_registry[mimetype] = Bunch.Bunch(loader=loader,
-                                            opener=opener,
-                                            mimetype=mimetype)
+    return loader_registry[name]
 
 
-def get_opener(mimetype):
-    bnch = loader_registry[mimetype]
-    return bnch.opener
+def get_openers(mimetype):
+    """Returns a list of openers that are registered that can open `mimetype`
+    files, with all but the best (matching) priority removed.
+    """
+    global loader_by_mimetype
+    bnchs = loader_by_mimetype.setdefault(mimetype, [])
+    if len(bnchs) <= 1:
+        return bnchs
+
+    # if there is more than one possible opener, return the list of
+    # those that have the best (i.e. lowest) equal priority
+    priority = min([bnch.priority for bnch in bnchs])
+    return [bnch for bnch in bnchs if bnch.priority <= priority]
+
+
+def get_all_openers():
+    """Return a sequence of all known openers.
+    """
+    return loader_registry.values()
 
 
 # built ins
+
 # ### FITS ###
-lc = io_fits.fitsLoaderClass
-from ginga.AstroImage import AstroImage
-lc.register_type('image', AstroImage)
-from ginga.table.AstroTable import AstroTable
-lc.register_type('table', AstroTable)
+# NOTE: if astropy.io.fits is available, its loader has default higher
+# priority.  Override using setting for FITSpkg in general.cfg or using
+# command line --fitspkg option
+mimetypes = ['image/fits', 'image/x-fits']
+if io_fits.have_astropy:
+    add_opener(io_fits.PyFitsFileHandler, mimetypes, priority=0,
+               note="For loading FITS (Flexible Image Transport System) "
+               "data files")
+if io_fits.have_fitsio:
+    add_opener(io_fits.FitsioFileHandler, mimetypes, priority=1,
+               note="For loading FITS (Flexible Image Transport System) "
+               "data files")
 
-for mimetype in ['image/fits', 'image/x-fits']:
-    add_loader(mimetype, load_fits, lc)
-
-lc = io_asdf.ASDFFileHandler
-for mimetype in ['image/asdf']:
-    add_loader(mimetype, load_asdf, lc)
+# ### ASDF ###
+mimetypes = ['image/asdf']
+if io_asdf.have_asdf:
+    add_opener(io_asdf.ASDFFileHandler, mimetypes,
+               note="For loading ASDF data files")
 
 # ### RGB ###
-lc = io_rgb.RGBFileHandler
-for mimetype in ['image/jpeg', 'image/png', 'image/tiff', 'image/gif',
-                 'image/ppm', 'image/pnm', 'image/pbm']:
-    add_loader(mimetype, load_rgb, lc)
+# NOTE: if opencv is available, its loader has default higher priority,
+# because it supports higher bit depths.
+mimetypes = ['image/jpeg', 'image/png', 'image/tiff', 'image/gif',
+             'image/ppm', 'image/pnm', 'image/pbm']
+if io_rgb.have_opencv:
+    add_opener(io_rgb.OpenCvFileHandler, mimetypes, priority=0,
+               note="For loading common RGB image formats (e.g. JPEG, etc)")
+if io_rgb.have_pil:
+    add_opener(io_rgb.PillowFileHandler, mimetypes, priority=1,
+               note="For loading common RGB image formats (e.g. JPEG, etc)")

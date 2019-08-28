@@ -452,7 +452,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                         for i in range(len(opener)):
                             self.logger.debug("ingesting hdu #%d" % (i))
                             try:
-                                image = opener.get_hdu(i)
+                                image = opener.load_idx(i)
 
                             except Exception as e:
                                 self.logger.error(
@@ -462,6 +462,15 @@ class Mosaic(GingaPlugin.LocalPlugin):
                             if not isinstance(image, AstroImage):
                                 self.logger.debug(
                                     "HDU #%d is not an image; skipping..." % (i))
+                                continue
+
+                            data = image.get_data()
+                            if data is None:
+                                # skip blank data
+                                continue
+
+                            if image.ndim != 2:
+                                # skip images without 2 dimensions
                                 continue
 
                             image.set(name='hdu%d' % (i))

@@ -39,7 +39,6 @@ import sys
 import traceback
 import math
 
-from ginga.BaseImage import BaseImage
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga.util import wcs
@@ -213,7 +212,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.logger.debug("redo")
         paninfo = channel.extdata._pan_info
 
-        if (image is None) or not isinstance(image, BaseImage):
+        if (image is None) or not paninfo.panimage.viewable(image):
             self.logger.debug("no main image--clearing Pan viewer")
             paninfo.panimage.clear()
             return
@@ -276,7 +275,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             self.info.panimage.clear()
 
     def set_image(self, channel, paninfo, image):
-        if image is None or not isinstance(image, BaseImage):
+        if image is None or not paninfo.panimage.viewable(image):
             self.logger.debug("no main image--clearing Pan viewer")
             paninfo.panimage.clear()
             return
@@ -335,7 +334,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     def panset(self, fitsimage, channel, paninfo):
         image = fitsimage.get_image()
-        if (image is None) or not isinstance(image, BaseImage):
+        if image is None or not paninfo.panimage.viewable(image):
             paninfo.panimage.clear()
             return
 

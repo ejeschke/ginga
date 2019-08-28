@@ -11,7 +11,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-from ginga.util import wcsmod, io_fits, io_asdf
+from ginga.util import wcsmod
 from ginga.util import wcs, iqcalc
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
@@ -58,12 +58,12 @@ class AstroImage(BaseImage):
         # ioclass specifies a pluggable IO module
         if ioclass is None:
             if self.ioClass is None:
+                from ginga.util import io_fits
                 ioclass = io_fits.fitsLoaderClass
             else:
                 ioclass = self.ioClass
 
         self.io = ioclass(self.logger)
-        self.io.register_type('image', self.__class__)
 
         self.inherit_primary_header = inherit_primary_header
         self.save_primary_header = inherit_primary_header or save_primary_header
@@ -90,9 +90,6 @@ class AstroImage(BaseImage):
             data = np.zeros((0, 0))
         elif 0 in data.shape:
             data = np.zeros((0, 0))
-        elif len(data.shape) < 2:
-            # Expand 1D arrays into 1xN array
-            data = data.reshape((1, data.shape[0]))
 
         # this is a handle to the full data array
         self._md_data = data
@@ -113,15 +110,11 @@ class AstroImage(BaseImage):
     def load_hdu(self, hdu, fobj=None, naxispath=None,
                  inherit_primary_header=None):
 
-        if self.io is None:
-            # need image loader for the fromHDU() call below
-            raise ImageError("No IO loader defined")
-
         self.clear_metadata()
 
         # collect HDU header
         ahdr = self.get_header()
-        self.io.fromHDU(hdu, ahdr)
+        self._copy_hdu_header(hdu, ahdr)
 
         # Set PRIMARY header
         if inherit_primary_header is None:
@@ -135,7 +128,7 @@ class AstroImage(BaseImage):
             if self._primary_hdr is None:
                 self._primary_hdr = AstroHeader()
 
-            self.io.fromHDU(fobj[0], self._primary_hdr)
+            self._copy_hdu_header(fobj[0], self._primary_hdr)
 
         self.setup_data(hdu.data, naxispath=naxispath)
 
@@ -164,24 +157,6 @@ class AstroImage(BaseImage):
             wcsinfo = wcsmod.get_wcs_class('astropy')
             self.wcs = wcsinfo.wrapper_class(logger=self.logger)
             self.wcs.load_nddata(ndd)
-
-    def load_asdf(self, asdf_obj, **kwargs):
-        """
-        Load from an ASDF object.
-        See :func:`ginga.util.io_asdf.load_asdf` for more info.
-        """
-        self.clear_metadata()
-
-        data, wcs, ahdr = io_asdf.load_asdf(asdf_obj, **kwargs)
-
-        self.setup_data(data, naxispath=None)
-
-        wcsinfo = wcsmod.get_wcs_class('astropy_ape14')
-        self.wcs = wcsinfo.wrapper_class(logger=self.logger)
-        self.wcs.wcs = wcs
-
-        if wcs is not None:
-            self.wcs.coordsys = wcs.output_frame.name
 
     def load_file(self, filespec, **kwargs):
 
@@ -218,12 +193,13 @@ class AstroImage(BaseImage):
         revnaxis.reverse()
 
         # construct slice view and extract it
-        view = tuple(revnaxis + [slice(None), slice(None)])
+        ndim = min(self.ndim, 2)
+        view = tuple(revnaxis + [slice(None)] * ndim)
         data = self.get_mddata()[view]
 
-        if len(data.shape) != 2:
+        if len(data.shape) not in (1, 2):
             raise ImageError(
-                "naxispath does not lead to a 2D slice: {}".format(naxispath))
+                "naxispath does not lead to a 1D or 2D slice: {}".format(naxispath))
 
         self.naxispath = naxispath
         self.revnaxis = revnaxis
@@ -374,6 +350,16 @@ class AstroImage(BaseImage):
 
         hdu = fits.PrimaryHDU(data=data, header=header)
         return hdu
+
+    def _copy_hdu_header(self, hdu, ahdr):
+        """Copy a FITS header from an astropy.io.fits.PrimaryHDU object
+        into a ginga.AstroImage.AstroHeader object.
+        """
+        header = hdu.header
+        for card in header.cards:
+            if len(card.keyword) == 0:
+                continue
+            ahdr.set_card(card.keyword, card.value, comment=card.comment)
 
     def astype(self, type_name):
         """Convert AstroImage object to some other kind of object.

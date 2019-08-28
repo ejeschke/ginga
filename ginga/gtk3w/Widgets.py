@@ -388,7 +388,7 @@ class Label(WidgetBase):
 
     def set_color(self, fg=None, bg=None):
         if bg is not None:
-            self.evbox.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse(bg))
+            GtkHelp.modify_bg(self.evbox, bg)
         if fg is not None:
             self.label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(fg))
 
@@ -1343,9 +1343,9 @@ class TabWidget(ContainerBase):
         nchild = self.widget.get_nth_page(idx)
         evbox = self.widget.get_tab_label(nchild)
         if tf:
-            evbox.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse('palegreen'))
+            GtkHelp.modify_bg(evbox, 'palegreen')
         else:
-            evbox.modify_bg(Gtk.StateType.NORMAL, None)
+            GtkHelp.modify_bg(evbox, None)
 
 
 class StackWidget(TabWidget):

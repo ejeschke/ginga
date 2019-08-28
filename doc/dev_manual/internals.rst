@@ -143,7 +143,7 @@ in the AstroImage class.  Your WCS should implement this abstract class:
             return self.header[key]
 
         def get_keywords(self, *args):
-            return map(lambda key: self.header[key], args)
+            return [self.header[key] for key in args]
 
         def load_header(self, header, fobj=None):
             pass
@@ -199,83 +199,74 @@ you expect the same functionality.
 I want to use my own file storage format, not FITS!
 ---------------------------------------------------
 
-No problem.  Ginga encapsulates the io behind a pluggable object used
-in the AstroImage class.  You should implement this abstract class:
+First of all, you can always create an ``AstroImage`` and assign its
+components for wcs and data explicitly.  Assuming you have your data
+loaded into an ``numpy`` array named ``data``:
 
 .. code-block:: python
 
-    class MyIOHandler(object):
-        def __init__(self, logger):
-            self.logger = logger
-
-        def register_type(self, name, klass):
-            self.factory_dict[name.lower()] = klass
-
-        def load_file(self, filespec, numhdu=None, dstobj=None, **kwdargs):
-            # create object of the appropriate type, usually
-            # an AstroImage or AstroTable, by looking up the correct
-            # class in self.factory_dict, under the keys 'image' or
-            # 'table'
-            return dstobj
-
-        def save_as_file(self, path, data, header, **kwdargs):
-            pass
-
-The ``save_as_file`` method is optional if you will never need to save
-a modified file from Ginga.
-To use your io handler with Ginga create your images like this:
-
-.. code-block:: python
-
-    from ginga.AstroImage import AstroImage
-    AstroImage.set_ioClass(MyIOHandler)
+    from ginga import AstroImage
     ...
 
     image = AstroImage()
-    image.load_file(path)
-    ...
-    view.set_image(image)
+    image.set_data(data)
 
-or you can override the io handler on a case-by-case basis:
+To create a valid WCS for this image, you can set the header in the
+image (this assumes ``header`` is a valid mapping of keywords to values):
 
 .. code-block:: python
 
-    from ginga.AstroImage import AstroImage
-    ...
+    image.update_keywords(header)
 
-    image = AstroImage(ioclass=MyIOHandler)
-    image.load_file(path)
-    ...
-    view.set_image(image)
+An ``AstroImage`` can then be loaded into a viewer object with
+``set_dataobj()``.  If you need a custom WCS see the notes in Section
+:ref:`sec-custom-wcs`.
+If, however, you want to add a new type of custom loader into Ginga's
+file loading framework, you can do so using the following instructions.
 
-You could also subclass AstroImage or BaseImage and implement your own
-I/O handling.
+Adding a new kind of file opener
+--------------------------------
 
-.. note:: Both `naxispath` and `numhdu` are valid keyword arguments to
-          the load_file() method.
+Ginga's general file loading facility breaks the loading down into two
+phases: first, the file is identified by its ``magic`` signature
+(requires the optional Python module ``python-magic`` be installed), MIME
+type, or filename extension.  Once the general category of file is known,
+methods in the specific I/O module devoted to that type are called to
+load the file data.
 
-          You probably want to treat `numhdu` as a kind of index into
-          your file, similarly to the meaning within a FITS file
-          (although you are free also to ignore it!).
+The `ginga.util.loader` module is used to register file openers. An
+opener is a class that understand how to load data objects from a
+particular kind of file format.  You'll want to start by examining this
+module and especially looking at the examples at the bottom of that file
+for how openers are registered. 
 
-          If the user passes a valid numhdu (whatever that means to
-          your load_file method) you simply return that value that they
-          passed as the middle element of the return tuple. If they
-          passed None (default), then you return the index you used
-          to access the data area that you loaded.
+For implementing your own special opener, take a look at the
+``BaseIOHandler`` class in `ginga.util.io.io_base`. This is the base
+class for all I/O openers for Ginga.  Subclass this class, and implement
+all of the methods that raise ``NotImplementedError`` and optionally
+implement any other methods marked with the comment "subclass should
+override as needed".  You can study the `io_fits` and `io_rgb` modules
+to see how these methods are implemented for specific formats.
+Here is an example opener class for HDF5 standard image files:
 
-          You probably want to treat `naxispath` as any kind of path
-          that you would need to take to navigate through your kind of
-          data area selected by numhdu (above).  This is usually used to
-          describe the path through a data cube of N-dimensionality to
-          reach a 2D slice.
+.. literalinclude:: code/io_hdf5.py
 
-          If the user passes a valid naxispath (whatever that means to
-          your load_file method) you simply return that value that they
-          passed. If they passed None (default), then you return
-          whatever path you used to access the data slice that you
-          returned.
+Once you have created your opener class (e.g. ``HDF5FileHandler``), you
+register it as follows:
 
+.. code-block:: python
+
+    from ginga.util import loader
+    import io_hdf5
+    loader.add_opener(io_hdf5.HDF5FileHandler, ['application/x-hdf'])
+
+If you want to use this with the Ginga reference viewer, a good place to
+register the opener is in your ``ginga_config.py`` as discussed in
+Section :ref:`sec-workspaceconfig` of the Reference Viewer Manual.
+The best place is probably by implementing ``pre_gui_config`` and
+registering it as shown above in that function.
+Once your loader is registered, you will be able to drag and drop files
+and use the reference viewers regular loading facilities to load your data.
 
 Porting Ginga to a New Widget Set
 ---------------------------------

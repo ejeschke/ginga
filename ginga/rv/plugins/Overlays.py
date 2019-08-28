@@ -58,7 +58,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         self.opacity = 0.5
         self.arrsize = None
         self.rgbarr = np.zeros((1, 1, 4), dtype=np.uint8)
-        self.rgbobj = RGBImage.RGBImage(self.rgbarr, logger=self.logger)
+        self.rgbobj = RGBImage.RGBImage(logger=self.logger, data_np=self.rgbarr)
         self.canvas_img = None
 
     def build_gui(self, container):

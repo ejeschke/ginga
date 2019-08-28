@@ -27,7 +27,7 @@ Reference/API
 .. automodapi:: ginga.rv.main
    :no-inheritance-diagram:
 
-.. automodapi:: ginga.util.io_asdf
+.. automodapi:: ginga.util.io.io_asdf
 
 .. automodapi:: ginga.util.wcsmod
    :skip: use
