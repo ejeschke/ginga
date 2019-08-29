@@ -36,7 +36,7 @@ import threading
 import numpy as np
 
 from ginga.AstroImage import AstroImage
-from ginga.util import wcs, iqcalc, dp, io_fits
+from ginga.util import wcs, iqcalc, dp, io_fits, mosaic
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
@@ -338,13 +338,11 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         time_intr1 = time.time()
 
-        loc = self.img_mosaic.mosaic_inline(images,
-                                            bg_ref=bg_ref,
-                                            trim_px=trim_px,
-                                            merge=merge,
-                                            allow_expand=allow_expand,
-                                            expand_pad_deg=expand_pad_deg,
-                                            suppress_callback=True)
+        loc = mosaic.mosaic_inline(self.img_mosaic, images,
+                                   bg_ref=bg_ref, trim_px=trim_px,
+                                   merge=merge, allow_expand=allow_expand,
+                                   expand_pad_deg=expand_pad_deg,
+                                   suppress_callback=True)
 
         # Add description for ChangeHistory
         info = dict(time_modified=datetime.utcnow(),
