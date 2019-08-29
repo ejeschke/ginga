@@ -11,7 +11,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-from ginga.util import wcs, wcsmod, mosaic
+from ginga.util import wcs, wcsmod
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
 
@@ -468,6 +468,7 @@ class AstroImage(BaseImage):
         warnings.warn("This function has been deprecated--"
                       "use the version in ginga.util.mosaic",
                       PendingDeprecationWarning)
+        from ginga.util import mosaic
         return mosaic.mosaic_inline(self, imagelist, bg_ref=bg_ref,
                                     trim_px=trim_px, merge=merge,
                                     allow_expand=allow_expand,
