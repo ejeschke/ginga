@@ -1,5 +1,5 @@
 #
-# CanvasRenderPil.py -- for rendering into a PIL Image
+# CanvasRenderPil.py -- for rendering into a Ginga widget with pillow
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.

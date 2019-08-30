@@ -88,15 +88,5 @@ class ImageViewCairo(ImageView.ImageViewBase):
     def set_cursor(self, cursor):
         pass
 
-    ## def pix2canvas(self, pt):
-    ##     x, y = pt
-    ##     x, y = self.cr.device_to_user(x, y)
-    ##     return (x, y, 0)
-
-    ## def canvas2pix(self, pt):
-    ##     x, y, z = pt
-    ##     x, y = self.cr.user_to_device(x, y)
-    ##     return (x, y)
-
 
 # END
