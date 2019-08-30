@@ -3165,7 +3165,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         # subclass implements this method to call delayed_redraw() after
-        # time_sec
+        # time_sec.  If subclass does not override, redraw is immediate.
         self.delayed_redraw()
 
     def set_cursor(self, cursor):
