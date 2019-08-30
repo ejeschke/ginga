@@ -342,7 +342,8 @@ class ContourPlot(Plot):
                 lbl.set(rotation=45, horizontalalignment='right')
 
             # Set the pan and zoom position & redraw
-            self.plot_panzoom()
+            #self.plot_panzoom()
+            self.draw()
 
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (
@@ -528,8 +529,6 @@ class SurfacePlot(Plot):
                 kwargs = {'axisbg': '#808080'}
 
             self.ax = self.fig.gca(projection='3d', **kwargs)
-            self.ax.set_aspect('equal', adjustable='box')
-            #self.ax.cla()
 
             self.set_titles(ytitle='Y', xtitle='X',
                             title='Surface Plot')
