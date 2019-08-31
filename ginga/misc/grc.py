@@ -48,8 +48,7 @@ def main(options, args):
 
 def _main():
     """Run from command line."""
-    usage = "usage: %prog [options] [args]"
-    argprs = ArgumentParser(usage=usage)
+    argprs = ArgumentParser()
 
     argprs.add_argument("--debug", dest="debug", default=False,
                         action="store_true",

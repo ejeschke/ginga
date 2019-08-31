@@ -658,11 +658,12 @@ class ReferenceViewer(object):
             try:
                 # if there is a network component, start it
                 if hasattr(ginga_shell, 'start'):
+                    logger.info("starting network interface...")
                     task = Task.FuncTask2(ginga_shell.start)
                     thread_pool.addTask(task)
 
                 # Main loop to handle GUI events
-                logger.info("Entering mainloop...")
+                logger.info("entering mainloop...")
                 ginga_shell.mainloop(timeout=0.001)
 
             except KeyboardInterrupt:
@@ -710,8 +711,7 @@ def reference_viewer(sys_argv):
     # Parse command line options with argparse module
     from argparse import ArgumentParser
 
-    usage = "usage: %prog [options] cmd [args]"
-    argprs = ArgumentParser(usage=usage)
+    argprs = ArgumentParser(description="Run the Ginga reference viewer.")
     viewer.add_default_options(argprs)
     argprs.add_argument('-V', '--version', action='version',
                         version='%(prog)s {}'.format(version.version))

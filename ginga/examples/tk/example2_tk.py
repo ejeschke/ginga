@@ -205,8 +205,7 @@ if __name__ == "__main__":
     # Parse command line options
     from argparse import ArgumentParser
 
-    usage = "usage: %prog [options] [args]"
-    argprs = ArgumentParser(usage=usage)
+    argprs = ArgumentParser()
 
     argprs.add_argument("--debug", dest="debug", default=False,
                         action="store_true",
