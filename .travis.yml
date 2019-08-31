@@ -5,8 +5,6 @@ language: c
 
 compiler: gcc
 
-dist: xenial
-
 os:
     - linux
 
@@ -61,12 +59,6 @@ matrix:
         # *** TODO: `python setup.py test --coverage` doesn't work yet for `ginga` ... skipping for now
         # - os: linux
         #  env: SETUP_CMD='test --coverage'
-
-        # TODO: Build doc with Python 3.7 when conda no longer conflicts.
-        # Check for sphinx doc build warnings - we do this first because it
-        # may run for a long time
-        - os: linux
-          env: PYTHON_VERSION=3.6 SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_astropy sphinx_rtd_theme pillow'
 
         # Try older Numpy versions
         # TODO: Change to ASTROPY_VERSION=lts when PY2 job starts to fail.

@@ -39,7 +39,7 @@ except ImportError:
             sys.path.insert(1, a_h_path)
 
 # Load all of the global Astropy configuration
-from astropy_helpers.sphinx.conf import *  # noqa
+from sphinx_astropy.conf.v1 import *  # noqa
 
 # Get configuration information from setup.cfg
 from configparser import ConfigParser
