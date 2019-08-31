@@ -366,7 +366,6 @@ if __name__ == "__main__":
     # Parse command line options
     import argparse
 
-    usage = "usage: %prog [options]"
     argprs = argparse.ArgumentParser(description="Parse command line options to clock")
 
     argprs.add_argument("args", type=str, nargs='*',

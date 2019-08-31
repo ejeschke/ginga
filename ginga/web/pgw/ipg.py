@@ -514,8 +514,7 @@ if __name__ == "__main__":
     # Parse command line options
     from argparse import ArgumentParser
 
-    usage = "usage: %prog [options] [args]"
-    argprs = ArgumentParser(usage=usage)
+    argprs = ArgumentParser()
 
     argprs.add_argument("-d", "--basedir", dest="basedir", metavar="DIR",
                         default=".",
