@@ -760,7 +760,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             text = ''
         line_obj = self.dc.Line(x1, y1, x2, y2, color=color,
                                 showcap=False)
-        text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
+        text_obj = self.dc.Text(0, 0, text, color=color, coord='offset',
                                 ref_obj=line_obj)
         obj = self.dc.CompoundObject(line_obj, text_obj)
         # this is necessary for drawing cuts with width feature
@@ -807,7 +807,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         #cuts_obj.color = color
         color = cuts_obj.color
         args = [cuts_obj]
-        text_obj = self.dc.Text(4, 4, text, color=color, coord='offset',
+        text_obj = self.dc.Text(0, 0, text, color=color, coord='offset',
                                 ref_obj=cuts_obj)
         args.append(text_obj)
 

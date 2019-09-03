@@ -117,6 +117,10 @@ class RenderContext(render.RenderContextBase):
 
     def text_extents(self, text):
         a, b, wd, ht, i, j = self.cr.text_extents(text)
+        # NOTE: in cairo it seems we have to a apply a small
+        # "fudge factor" to computed text height to get reasonable
+        # height value
+        ht *= 1.2
         return wd, ht
 
     ##### DRAWING OPERATIONS #####

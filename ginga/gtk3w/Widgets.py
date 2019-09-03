@@ -1532,9 +1532,10 @@ class Splitter(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
 
-        # without a Frame it is difficult to see the divider
+        # without a Frame it can be difficult to see the divider
         frame_w = Gtk.Frame()
-        frame_w.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+        #frame_w.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+        frame_w.set_shadow_type(Gtk.ShadowType.NONE)
         frame_w.add(child_w)
 
         if len(self.children) == 1:
@@ -2005,6 +2006,7 @@ class Application(Callback.Callbacks):
 
             # hack for Gtk--scale fonts on HiDPI displays
             scale = self.screen_res / 72.0
+            self.logger.debug("setting default font_scaling_factor={}".format(scale))
             from ginga.fonts import font_asst
             font_asst.default_scaling_factor = scale
         except Exception as e:

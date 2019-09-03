@@ -385,12 +385,6 @@ class ReferenceViewer(object):
                 logger.warning(
                     "failed to load matplotlib colormaps: %s" % (str(e)))
 
-        # user wants to set font scaling
-        font_scaling = settings.get('font_scaling_factor', None)
-        if font_scaling is not None:
-            from ginga.fonts import font_asst
-            font_asst.default_scaling_factor = font_scaling
-
         # Set a working RGB ICC profile if user has one
         working_profile = settings.get('icc_working_profile', None)
         rgb_cms.working_profile = working_profile
@@ -460,6 +454,15 @@ class ReferenceViewer(object):
         # Create the Ginga main object
         ginga_shell = GingaShell(logger, thread_pool, mm, prefs,
                                  ev_quit=ev_quit)
+
+        # user wants to set font scaling.
+        # NOTE: this happens *after* creation of shell object, since
+        # Application object constructor will also set this
+        font_scaling = settings.get('font_scaling_factor', None)
+        if font_scaling is not None:
+            logger.debug("overriding font_scaling_factor to {}".format(font_scaling))
+            from ginga.fonts import font_asst
+            font_asst.default_scaling_factor = font_scaling
 
         layout_file = None
         if not options.norestore and settings.get('save_layout', False):

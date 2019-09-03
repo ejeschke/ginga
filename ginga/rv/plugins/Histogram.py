@@ -501,7 +501,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         tag = canvas.add(self.dc.CompoundObject(
             self.dc.Rectangle(x1, y1, x2, y2,
                               color=self.histcolor),
-            self.dc.Text(x1, y2 + 4, "Histogram",
+            self.dc.Text(x1, y2, "Histogram",
                          color=self.histcolor)))
         self.histtag = tag
 

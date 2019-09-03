@@ -1322,7 +1322,7 @@ class Pick(GingaPlugin.LocalPlugin):
         ctr_x, ctr_y = shape.get_center_pt()
         point.x, point.y = ctr_x, ctr_y
         x1, y1, x2, y2 = shape.get_llur()
-        text.x, text.y = x1, y2 + 4
+        text.x, text.y = x1, y2
 
         try:
             image = self.fitsimage.get_image()
@@ -1513,7 +1513,7 @@ class Pick(GingaPlugin.LocalPlugin):
             text = pickobj.objects[2]
             text.text = self._textlabel
             _x1, _y1, x2, y2 = shape_obj.get_llur()
-            text.x, text.y = x1, y2 + 4
+            text.x, text.y = x1, y2
 
             if msg is not None:
                 raise Exception(msg)
@@ -1541,7 +1541,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 shape_obj.move_to_pt((obj_x, obj_y))
                 # reposition label above moved shape
                 _x1, _y1, x2, y2 = shape_obj.get_llur()
-                text.x, text.y = _x1, y2 + 4
+                text.x, text.y = _x1, y2
 
             # Make report
             self.last_rpt = reports
@@ -1788,7 +1788,7 @@ class Pick(GingaPlugin.LocalPlugin):
         obj.color = self.pickcolor
         args = [obj,
                 self.dc.Point(x, y, 10, color='red'),
-                self.dc.Text(x1, y2 + 4, '{0}: calc'.format(self._textlabel),
+                self.dc.Text(x1, y2, '{0}: calc'.format(self._textlabel),
                              color=self.pickcolor)
                 ]
 
