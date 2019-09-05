@@ -299,7 +299,8 @@ class Image(OnePointMixin, CanvasObjectBase):
                 Point(x2, y2),               # both scale
                 ]
 
-    def scale_by(self, scale_x, scale_y):
+    def scale_by_factors(self, factors):
+        scale_x, scale_y = factors[:2]
         self.scale_x *= scale_x
         self.scale_y *= scale_y
         self.reset_optimize()

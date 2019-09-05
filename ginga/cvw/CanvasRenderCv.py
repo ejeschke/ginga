@@ -47,7 +47,8 @@ class RenderContext(render.RenderContextBase):
 
     def set_font_from_shape(self, shape):
         if hasattr(shape, 'font'):
-            if hasattr(shape, 'fontsize') and shape.fontsize is not None:
+            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
+                not getattr(shape, 'fontscale', False)):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)

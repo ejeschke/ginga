@@ -375,7 +375,7 @@ class DrawingMixin(object):
 
         self._edit_tmp = self._edit_obj
         self._edit_status = False
-        self._edit_detail = Bunch()
+        self._edit_detail = Bunch(viewer=viewer)
         self._cp_index = None
         #shift_held = 'shift' in event.modifiers
         shift_held = False
@@ -589,7 +589,7 @@ class DrawingMixin(object):
     def edit_scale(self, delta_x, delta_y, viewer):
         if self._edit_obj is None:
             return False
-        self._edit_obj.scale_by(delta_x, delta_y)
+        self._edit_obj.scale_by_factors((delta_x, delta_y))
         self.process_drawing()
         self.make_callback('edit-event', self._edit_obj)
         return True

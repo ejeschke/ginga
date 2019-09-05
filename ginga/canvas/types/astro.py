@@ -75,7 +75,7 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
                   description="Units for text distance (default: arcmin)"),
             Param(name='font', type=str, default='Sans Serif',
                   description="Font family for text"),
-            Param(name='fontsize', type=int, default=None,
+            Param(name='fontsize', type=float, default=None,
                   min=8, max=72,
                   description="Font size of text (default: vary by scale)"),
             Param(name='showcap', type=_bool,
@@ -285,7 +285,7 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
                   description="Opacity of outline"),
             Param(name='font', type=str, default='Sans Serif',
                   description="Font family for text"),
-            Param(name='fontsize', type=int, default=None,
+            Param(name='fontsize', type=float, default=None,
                   min=8, max=72,
                   description="Font size of text (default: vary by scale)"),
             Param(name='showcap', type=_bool,
@@ -476,9 +476,12 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
                   description="Color of text annotation"),
             Param(name='font', type=str, default='Sans Serif',
                   description="Font family for text"),
-            Param(name='fontsize', type=int, default=None,
+            Param(name='fontsize', type=float, default=None,
                   min=8, max=72,
                   description="Font size of text (default: vary by scale)"),
+            Param(name='fontscale', type=_bool,
+                  default=True, valid=[False, True],
+                  description="Scale font with scale of viewer"),
             Param(name='format', type=str, default='xy',
                   valid=['xy', 'value', 'coords'],
                   description="Format for text annotation (default: xy)"),
@@ -491,16 +494,20 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
     def __init__(self, x, y, color='green',
                  linewidth=1, alpha=1.0, linestyle='solid',
                  text=None, textcolor='yellow',
-                 fontsize=None, font='Sans Serif', format='xy',
-                 **kwdargs):
+                 fontsize=10.0, font='Sans Serif', fontscale=True,
+                 format='xy', **kwdargs):
         self.kind = 'crosshair'
         points = np.asarray([(x, y)], dtype=np.float)
         CanvasObjectBase.__init__(self, color=color, alpha=alpha,
                                   linewidth=linewidth, linestyle=linestyle,
                                   text=text, textcolor=textcolor,
                                   fontsize=fontsize, font=font,
+                                  fontscale=fontscale,
                                   points=points, format=format, **kwdargs)
         OnePointMixin.__init__(self)
+
+        self.fontsize_min = 8.0
+        self.fontsize_max = 14.0
 
     def select_contains_pt(self, viewer, pt):
         p0 = self.crdmap.to_data((self.x, self.y))
@@ -755,7 +762,7 @@ class WCSAxes(CompoundObject):
                   description="Opacity of grid and text"),
             Param(name='font', type=str, default='Sans Serif',
                   description="Font family for text"),
-            Param(name='fontsize', type=int, default=8,
+            Param(name='fontsize', type=float, default=8.0,
                   min=8, max=72,
                   description="Font size of text (default: 8)"),
         ]
