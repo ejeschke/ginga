@@ -589,7 +589,7 @@ class DrawingMixin(object):
     def edit_scale(self, delta_x, delta_y, viewer):
         if self._edit_obj is None:
             return False
-        self._edit_obj.scale_by(delta_x, delta_y)
+        self._edit_obj.scale_by_factors((delta_x, delta_y))
         self.process_drawing()
         self.make_callback('edit-event', self._edit_obj)
         return True
