@@ -1352,6 +1352,8 @@ class MDIWidget(ContainerBase):
                 self._cb_redirect(subwin)
 
         subwin.focusInEvent = _focus_cb
+        # remove Qt logo from subwindow
+        subwin.setWindowIcon(QIcon(QPixmap(1, 1)))
         subwin.setWidget(child_w)
         # attach title to child
         child.extdata.tab_title = title

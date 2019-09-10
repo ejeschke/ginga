@@ -7,6 +7,7 @@
 import glob
 import os
 import math
+import weakref
 
 import ginga.toolkit
 from ginga.util import iohelper
@@ -394,5 +395,21 @@ def load_font(font_name, font_file):
         font_asst.add_alias(font_name, font_family)
 
     return font_name
+
+
+# cache of QPainters for surfaces
+_painters = weakref.WeakKeyDictionary()
+
+
+def get_painter(surface):
+    if surface in _painters:
+        return _painters[surface]
+
+    painter = QPainter(surface)
+    painter.setRenderHint(QPainter.Antialiasing)
+    painter.setRenderHint(QPainter.TextAntialiasing)
+    _painters[surface] = painter
+    return painter
+
 
 # END
