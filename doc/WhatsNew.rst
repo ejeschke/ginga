@@ -39,8 +39,8 @@ Ver 3.0.0 (unreleased)
 - New file opener framework
 - Text objects can be resized and rotated in edit mode on the canvas
 - Added ellipse and box annulus types as Annulus2R canvas object
-- Supports plotting ds9 regions via 2-way conversion between Ginga canvas
-  types and AstroPy regions
+- Supports plotting DS9 regions via 2-way conversion between Ginga canvas
+  types and Astropy regions
 
 Ver 2.7.2 (2018-11-05)
 ======================

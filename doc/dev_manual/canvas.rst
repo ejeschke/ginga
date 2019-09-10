@@ -93,19 +93,19 @@ different widget set's "native" canvas using a ``CanvasRenderer``
 customized for that target. 
 
 
-Support for astropy regions
+Support for Astropy regions
 ===========================
-Ginga provides a module for plotting `astropy` `regions` shapes on
+Ginga provides a module for plotting Astropy ``regions`` shapes on
 canvases.  To use this, import the ``ginga.util.ap_regions`` module and
 use one of the three module functions
 ``astropy_region_to_ginga_canvas_object``, ``add_region``, or
 ``ginga_canvas_object_to_astropy_region``.
 
-``astropy_region_to_ginga_canvas_object`` takes a regions shape and
-returns a ginga canvas object that most closely implements the shape.
-The object returned can be used like any ginga canvas object: it can be
+``astropy_region_to_ginga_canvas_object`` takes a ``regions`` shape and
+returns a Ginga canvas object that most closely implements the shape.
+The object returned can be used like any Ginga canvas object: it can be
 used in a compound object, added to a canvas, etc.
-Assuming you have a viewer `v` and an astropy region `r`:
+Assuming you have a viewer ``v`` and an Astropy region ``r``:
 
 .. code-block:: python
 
@@ -119,11 +119,11 @@ adding it to a canvas.
 
 .. code-block:: python
 
-    ap_region.add_canvas(canvas, r)
+    ap_region.add_region(canvas, r)
 
 ``ginga_canvas_object_to_astropy_region`` provides the reverse
-transformation, taking a ginga canvas object and converting it to the
-closest representation as an astropy region.
+transformation, taking a Ginga canvas object and converting it to the
+closest representation as an Astropy region.
 
 .. code-block:: python
 
