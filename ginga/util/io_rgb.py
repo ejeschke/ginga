@@ -414,14 +414,20 @@ class PillowFileHandler(BaseRGBFileHandler):
                              "to save images")
 
         img = PILimage.fromarray(data_np)
+
+        # pillow is not happy saving images to JPG with an alpha channel
+        img = img.convert('RGB')
+
         img.save(filepath)
 
     def load_idx(self, idx, **kwargs):
         if self.rgb_f is None:
             raise ValueError("Please call open_file() first!")
 
-        self.rgb_f.seek(0)
-        self.rgb_f.seek(idx)
+        # "seek" functionality does not seem to be working for all the
+        # versions of Pillow we are encountering
+        #self.rgb_f.seek(0)
+        #self.rgb_f.seek(idx)
         image = self.rgb_f
 
         kwds = {}
