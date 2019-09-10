@@ -777,7 +777,7 @@ class Annulus2R(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
             Param(name='ywidth', type=float, default=None,
                   min=0.0,
                   description="Width in Y of annulus"),
-            Param(name='atype', type=str, default='circle',
+            Param(name='atype', type=str, default='ellipse',
                   valid=['ellipse', 'box'],
                   description="Type of annulus"),
             Param(name='linewidth', type=int, default=1,
@@ -803,7 +803,7 @@ class Annulus2R(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
         return cls(cxt.start_x, cxt.start_y, xradius, yradius, **cxt.drawparams)
 
     def __init__(self, x, y, xradius, yradius, xwidth=None,
-                 ywidth=None, atype='box', color='yellow',
+                 ywidth=None, atype='ellipse', color='yellow',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  rot_deg=0.0, **kwdargs):
 
