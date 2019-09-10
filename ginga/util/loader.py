@@ -48,25 +48,22 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
         typ, subtyp = iohelper.guess_filetype(filepath)
 
     except Exception as e:
+        msg = "error determining file type of '{}': {}".format(filepath, e)
         if logger is not None:
-            logger.warning("error determining file type: %s; "
-                           "assuming 'image/fits'" % (str(e)))
-        # Can't determine file type: assume and attempt FITS
-        typ, subtyp = 'image', 'fits'
-
-    if logger is not None:
-        logger.debug("assuming file type: %s/%s'" % (typ, subtyp))
+            logger.warning(msg)
+        raise ValueError(msg)
 
     mimetype = '%s/%s' % (typ, subtyp)
+    logger.debug("determined MIME type: {}'".format(mimetype))
+
     openers = get_openers(mimetype)
     if len(openers) == 0:
+        msg = "No openers found for type '{}'".format(mimetype)
         if logger is not None:
-            logger.warning("no openers found for type '{}'; trying image/fits".format(mimetype))
-        # for now, assume that this is an unrecognized FITS file
-        openers = get_openers('image/fits')
+            logger.warning(msg)
+        raise ValueError(msg)
 
     opener = openers[0].opener(logger)
-    #data_obj = opener.load_file(filepath, idx=idx, **kwargs)
     with opener.open_file(filepath) as opn_f:
         data_obj = opener.load_idx(idx, **kwargs)
 
