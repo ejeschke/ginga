@@ -86,8 +86,8 @@ pan position will be set to the found center.
 The "Contour" tab will show a contour plot.
 This is a contour plot of the area immediately surrounding the
 candidate, and not usually encompassing the entire region of the pick
-area.  You can use the vertical slider to the right of the plot to
-increase or decrease the area of the contour plot.
+area.  You can use the scroll wheel to zoom the plot and a click of the
+scroll wheel (mouse button 2) to set the pan position in the plot.
 
 .. figure:: figures/pick-fwhm.png
    :width: 400px
@@ -569,7 +569,6 @@ class Pick(GingaPlugin.LocalPlugin):
         if have_mpl:
             if not contour.have_skimage:
                 # Contour plot
-                hbox = Widgets.HBox()
                 self.contour_plot = plots.ContourPlot(
                     logger=self.logger, width=width, height=height)
                 if plots.MPL_GE_2_0:
@@ -577,33 +576,17 @@ class Pick(GingaPlugin.LocalPlugin):
                 else:
                     kwargs = {'axisbg': 'black'}
                 self.contour_plot.add_axis(**kwargs)
+                self.contour_plot.enable(pan=True, zoom=True)
                 pw = Plot.PlotWidget(self.contour_plot)
                 pw.resize(width, height)
-                hbox.add_widget(pw, stretch=1)
+                self.contour_plot.connect_ui()
 
                 self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
                 if self.contour_interpolation not in self.contour_interp_methods:
                     self.contour_interpolation = 'nearest'
                 self.contour_plot.interpolation = self.contour_interpolation
 
-                # calc contour zoom setting
-                max_z = 100
-                zv = int(np.sqrt(self.dx**2 + self.dy**2) * 0.15)
-                zv = max(1, min(zv, 100))
-                self.contour_plot.plot_zoomlevel = zv
-
-                zoom = Widgets.Slider(orientation='vertical', track=True)
-                zoom.set_limits(1, max_z, incr_value=1)
-                zoom.set_value(zv)
-                self.w.zoom_sldr = zoom
-
-                def zoom_contour_cb(w, val):
-                    zl = val / 10.0
-                    self.contour_plot.plot_zoom(zl)
-
-                zoom.add_callback('value-changed', zoom_contour_cb)
-                hbox.add_widget(zoom, stretch=0)
-                nb.add_widget(hbox, title="Contour")
+                nb.add_widget(pw, title="Contour")
 
             # FWHM gaussians plot
             self.fwhm_plot = plots.FWHMPlot(logger=self.logger,
@@ -1206,10 +1189,6 @@ class Pick(GingaPlugin.LocalPlugin):
             if self.contour_plot is not None:
                 self.contour_plot.plot_contours_data(
                     x, y, data, num_contours=self.num_contours)
-                # make zoom control match contour zoom
-                zl = self.contour_plot.plot_zoomlevel
-                zv = int(round(max(1, min(zl * 10, 100))))
-                self.w.zoom_sldr.set_value(zv)
 
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (

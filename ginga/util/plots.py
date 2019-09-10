@@ -127,8 +127,6 @@ class Plot(Callback.Callbacks):
         for lbl in lbls:
             lbl.set(rotation=45, horizontalalignment='right')
 
-        #self.fig.tight_layout()
-
         self.draw()
         return lines
 
@@ -162,12 +160,8 @@ class Plot(Callback.Callbacks):
         # positive for up and negative for down.
         if event.step > 0:
             delta = 0.9
-            # self.plot_zoomlevel += 1.0
         elif event.step < 0:
             delta = 1.1
-            # self.plot_zoomlevel -= 1.0
-
-        #self.plot_panzoom()
 
         x1, x2 = self.ax.get_xlim()
         xrng = x2 - x1
@@ -182,6 +176,7 @@ class Plot(Callback.Callbacks):
         self.ax.set_xlim(x1, x2)
         self.ax.set_ylim(y1, y2)
         self.make_callback('limits-set', dict(x_lim=(x1, x2), y_lim=(y1, y2)))
+
         self.draw()
         return True
 
@@ -194,7 +189,7 @@ class Plot(Callback.Callbacks):
 
     def plot_button_press(self, event):
         if event.button == 1:
-            self.plot_x, self.plot_y = event.x, event.y
+            self.plot_x, self.plot_y = event.xdata, event.ydata
 
         elif event.button == 2:
             if not self.can.pan:
@@ -205,11 +200,10 @@ class Plot(Callback.Callbacks):
 
     def plot_motion_notify(self, event):
         if event.button == 1:
-            #xdelta = event.x - self.plot_x
-            xdelta = self.plot_x - event.x
-            #ydelta = event.y - self.plot_y
-            ydelta = self.plot_y - event.y
-            self.pan_plot(xdelta, ydelta)
+            xdelta = self.plot_x - event.xdata
+            ydelta = self.plot_y - event.ydata
+            pan_x, pan_y = self.plot_x + xdelta, self.plot_y + ydelta
+            self.pan_plot(pan_x, pan_y)
 
     def pan_plot(self, xnew, ynew):
 
@@ -296,7 +290,6 @@ class ContourPlot(Plot):
 
         self.ax.set_aspect('equal', adjustable='box')
         self.set_titles(title='Contours')
-        #self.fig.tight_layout()
 
         # Set pan position in contour plot
         self.plot_panx = float(x) / wd
@@ -342,7 +335,6 @@ class ContourPlot(Plot):
                 lbl.set(rotation=45, horizontalalignment='right')
 
             # Set the pan and zoom position & redraw
-            #self.plot_panzoom()
             self.draw()
 
         except Exception as e:
@@ -407,8 +399,6 @@ class RadialPlot(Plot):
             self.ax.errorbar(r, v, yerr=yerror, marker='s', ls='none',
                              mfc='none', mec='blue')
             self.ax.plot(x_curve, y_curve, '-', color='green', lw=2)
-
-            #self.fig.tight_layout()
 
             self.draw()
 
@@ -490,8 +480,6 @@ class FWHMPlot(Plot):
                            loc='upper right', shadow=False, fancybox=False,
                            prop={'size': 8}, labelspacing=0.2)
             self.set_titles(title="FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
-
-            #self.fig.tight_layout()
 
             self.draw()
 
