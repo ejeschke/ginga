@@ -34,6 +34,10 @@ Ver 3.0.0 (unreleased)
 - Supports PySide2 (alternative Qt5 backend)
 - Added statistics line to Histogram plugin
 - Removed support for gtk2, since it is not supported for Python 3
+- new styles added for Point canvas type: circle, square, diamond,
+  hexagon, uptriangle, downtriangle
+- New file opener framework
+- Text objects can be resized and rotated in edit mode on the canvas
 
 Ver 2.7.2 (2018-11-05)
 ======================
