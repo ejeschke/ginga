@@ -75,10 +75,6 @@ matrix:
         - os: windows
           env: SETUP_CMD='test'
 
-        # Try with Numpy pre-release (this is skipped unless pre-release is available)
-        - os: linux
-          env: NUMPY_VERSION=prerelease CONDA_DEPENDENCIES='pyqt matplotlib'
-
         # Do a PEP8 test with flake8 (white-list in setup.cfg)
         - os: linux
           env: MAIN_CMD='flake8 ginga --count' SETUP_CMD=''
