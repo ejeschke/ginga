@@ -15,6 +15,11 @@ from ginga.canvas.CanvasObject import get_canvas_types
 import regions
 from astropy import units as u
 
+
+__all__ = ['astropy_region_to_ginga_canvas_object', 'add_region',
+           'ginga_canvas_object_to_astropy_region']
+
+
 # mappings of point styles
 pt_ginga = dict(square='*', cross='x', plus='+', diamond='D')
 pt_regions = {v: k for k, v in pt_ginga.items()}
