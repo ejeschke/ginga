@@ -3,16 +3,7 @@
 import numpy as np
 import pytest
 
-HAVE_REGIONS = False
-try:
-    import regions
-    HAVE_REGIONS = True
-except ImportError:
-    pass
-
-if not HAVE_REGIONS:
-    pytest.skip("skipping astropy regions tests; 'regions' not installed",
-                allow_module_level=True)
+regions = pytest.importorskip('regions')
 
 from astropy import units as u
 
