@@ -12,8 +12,14 @@ import numpy as np
 
 from ginga.canvas.CanvasObject import get_canvas_types
 
-import regions
 from astropy import units as u
+
+have_regions = False
+try:
+    import regions
+    have_regions = True
+except ImportError:
+    pass
 
 
 __all__ = ['astropy_region_to_ginga_canvas_object', 'add_region',
@@ -40,6 +46,9 @@ def astropy_region_to_ginga_canvas_object(r):
         The corresponding Ginga canvas object
 
     """
+    if not have_regions:
+        raise ValueError("Please install the Astropy 'regions' package to use this function")
+
     dc = get_canvas_types()
     obj = None
     if isinstance(r, (regions.CirclePixelRegion,)):
@@ -169,6 +178,9 @@ def ginga_canvas_object_to_astropy_region(obj):
         The corresponding AstroPy region object
 
     """
+    if not have_regions:
+        raise ValueError("Please install the Astropy 'regions' package to use this function")
+
     dc = get_canvas_types()
     r = None
 
