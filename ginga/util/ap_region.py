@@ -138,7 +138,7 @@ def astropy_region_to_ginga_canvas_object(r):
     return obj
 
 
-def add_region(canvas, r, redraw=True):
+def add_region(canvas, r, tag=None, redraw=True):
     """
     Convenience function to plot an Astropy regions object on a Ginga
     canvas.
@@ -151,13 +151,17 @@ def add_region(canvas, r, redraw=True):
     r : subclass of `~regions.PixelRegion`
         The region object to be plotted
 
+    tag : str or None (optional, default: None)
+        Caller can optionally pass a specific tag for the canvas object
+
     redraw : bool (optional, default: True)
         True if the viewers of the canvas should be updated immediately
 
     """
     obj = astropy_region_to_ginga_canvas_object(r)
 
-    tag = obj.get_data('name')
+    if tag is None:
+        tag = obj.get_data('name')
     if obj is not None:
         canvas.add(obj, tag=tag, redraw=redraw)
         return obj
