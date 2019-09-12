@@ -5,8 +5,8 @@
 # Please see the file LICENSE.txt for details.
 #
 """
-This module provides Ginga support for ds9 type region files and objects via
-the astropy regions module.
+This module provides Ginga support for DS9 type region files and objects via
+the Astropy ``regions`` module.
 """
 import numpy as np
 
@@ -33,7 +33,7 @@ pt_regions = {v: k for k, v in pt_ginga.items()}
 
 def astropy_region_to_ginga_canvas_object(r):
     """
-    Convert an AstroPy region object to a Ginga canvas object.
+    Convert an Astropy region object to a Ginga canvas object.
 
     Parameters
     ----------
@@ -140,7 +140,7 @@ def astropy_region_to_ginga_canvas_object(r):
 
 def add_region(canvas, r, redraw=True):
     """
-    Convenience function to plot an AstroPy regions object on a Ginga
+    Convenience function to plot an Astropy regions object on a Ginga
     canvas.
 
     Parameters

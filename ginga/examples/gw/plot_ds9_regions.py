@@ -1,7 +1,7 @@
 #
-# Plot ds9 regions in a Ginga viewer
+# Plot DS9 regions in a Ginga viewer
 #
-# NOTE: you need the astropy "regions" package for this to work
+# NOTE: You need the Astropy "regions" package for this to work.
 #
 from ginga import toolkit
 toolkit.use('qt5')

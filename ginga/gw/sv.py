@@ -39,7 +39,7 @@ class BasicCanvasView(Viewers.CanvasView):
     def build_gui(self, container):
         """
         This is responsible for building the viewer's UI.  It should
-        place the UI in `container`.  Override this to make a custom
+        place the UI in ``container``.  Override this to make a custom
         UI.
         """
         self.frame = Viewers.GingaScrolledViewerWidget(viewer=self)
@@ -101,7 +101,7 @@ class EnhancedCanvasView(BasicCanvasView):
     def build_gui(self, container):
         """
         This is responsible for building the viewer's UI.  It should
-        place the UI in `container`.
+        place the UI in ``container``.
         """
         vbox = Widgets.VBox()
         vbox.set_border_width(2)
@@ -163,7 +163,7 @@ class ViewerFactory(object):
     """
     This is a factory class that churns out viewers.
 
-    The most important method of interest is get_viewer().
+    The most important method of interest is :meth:`get_viewer`.
     """
 
     def __init__(self, logger=None, app=None):
