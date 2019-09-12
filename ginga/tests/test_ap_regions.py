@@ -3,14 +3,14 @@
 import numpy as np
 import pytest
 
-have_regions = False
+HAVE_REGIONS = False
 try:
     import regions
-    have_regions = True
+    HAVE_REGIONS = True
 except ImportError:
     pass
 
-if not have_regions:
+if not HAVE_REGIONS:
     pytest.skip("skipping astropy regions tests; 'regions' not installed",
                 allow_module_level=True)
 

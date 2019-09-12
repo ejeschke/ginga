@@ -14,10 +14,10 @@ from ginga.canvas.CanvasObject import get_canvas_types
 
 from astropy import units as u
 
-have_regions = False
+HAVE_REGIONS = False
 try:
     import regions
-    have_regions = True
+    HAVE_REGIONS = True
 except ImportError:
     pass
 
@@ -46,7 +46,7 @@ def astropy_region_to_ginga_canvas_object(r):
         The corresponding Ginga canvas object
 
     """
-    if not have_regions:
+    if not HAVE_REGIONS:
         raise ValueError("Please install the Astropy 'regions' package to use this function")
 
     dc = get_canvas_types()
@@ -182,7 +182,7 @@ def ginga_canvas_object_to_astropy_region(obj):
         The corresponding AstroPy region object
 
     """
-    if not have_regions:
+    if not HAVE_REGIONS:
         raise ValueError("Please install the Astropy 'regions' package to use this function")
 
     dc = get_canvas_types()
