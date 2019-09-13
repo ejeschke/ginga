@@ -171,6 +171,7 @@ class ReferenceViewer(object):
     def __init__(self, layout=default_layout):
         self.plugins = []
         self.layout = layout
+        self.channels = ['Image']
 
     def add_plugin_spec(self, spec):
         self.plugins.append(spec)
@@ -576,7 +577,7 @@ class ReferenceViewer(object):
         if options.channels is not None:
             channels = options.channels.split(',')
         else:
-            channels = settings.get('channels', [])
+            channels = settings.get('channels', self.channels)
             if not isinstance(channels, list):
                 channels = channels.split(',')
 
@@ -584,9 +585,15 @@ class ReferenceViewer(object):
             # should provide at least one default channel?
             channels = [settings.get('channel_prefix', "Image")]
 
-        for chname in channels:
-            ginga_shell.add_channel(chname)
-        ginga_shell.change_channel(channels[0])
+        # populate the initial channel lineup
+        for item in channels:
+            if isinstance(item, str):
+                chname, wsname = item, None
+            else:
+                chname, wsname = item
+            ginga_shell.add_channel(chname, workspace=wsname)
+
+        ginga_shell.change_channel(chname)
 
         # User configuration (custom star catalogs, etc.)
         if have_ginga_config:
@@ -611,9 +618,9 @@ class ReferenceViewer(object):
             logging.getLogger('py.warnings').addHandler(hdlr)
 
         # Display banner the first time run, unless suppressed
-        showBanner = True
+        show_banner = True
         try:
-            showBanner = settings.get('showBanner')
+            show_banner = settings.get('showBanner')
 
         except KeyError:
             # disable for subsequent runs
@@ -621,7 +628,7 @@ class ReferenceViewer(object):
             if not os.path.exists(settings.preffile):
                 settings.save()
 
-        if (not options.nosplash) and (len(args) == 0) and showBanner:
+        if (not options.nosplash) and (len(args) == 0) and show_banner:
             ginga_shell.banner(raiseTab=True)
 
         # Handle inputs like "*.fits[ext]" that sys cmd cannot auto expand.
