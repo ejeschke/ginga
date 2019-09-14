@@ -967,11 +967,15 @@ def make_cursor(widget, iconpath, x, y):
 
 
 def modify_bg(widget, color):
-    css_data = "* { background-image: none; background-color: %s; }" % (color)
-    css_provider = Gtk.CssProvider()
-    css_provider.load_from_data(css_data.encode())
-    widget.get_style_context().add_provider(css_provider,
-                                            Gtk.STYLE_PROVIDER_PRIORITY_USER)
+    context = widget.get_style_context()
+    if color is not None:
+        context.add_class("custom_bg")
+        css_data = "*.custom_bg { background-image: none; background-color: %s; }" % (color)
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(css_data.encode())
+        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+    else:
+        context.remove_class("custom_bg")
 
 
 def set_default_style():
