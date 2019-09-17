@@ -393,28 +393,20 @@ def main(options, args):
 
 if __name__ == "__main__":
 
-    # Parse command line options with nifty optparse module
-    from optparse import OptionParser
+    # Parse command line options
+    from argparse import ArgumentParser
 
-    usage = "usage: %prog [options] cmd [args]"
-    optprs = OptionParser(usage=usage, version=('%%prog'))
+    argprs = ArgumentParser()
 
-    optprs.add_option("--debug", dest="debug", default=False,
-                      action="store_true",
-                      help="Enter the pdb debugger on main()")
-    optprs.add_option("--log", dest="logfile", metavar="FILE",
-                      help="Write logging output to FILE")
-    optprs.add_option("--loglevel", dest="loglevel", metavar="LEVEL",
-                      type='int', default=None,
-                      help="Set logging level to LEVEL")
-    optprs.add_option("--stderr", dest="logstderr", default=False,
-                      action="store_true",
-                      help="Copy logging also to stderr")
-    optprs.add_option("--profile", dest="profile", action="store_true",
-                      default=False,
-                      help="Run the profiler on main()")
+    argprs.add_argument("--debug", dest="debug", default=False,
+                        action="store_true",
+                        help="Enter the pdb debugger on main()")
+    argprs.add_argument("--profile", dest="profile", action="store_true",
+                        default=False,
+                        help="Run the profiler on main()")
+    log.addlogopts(argprs)
 
-    (options, args) = optprs.parse_args(sys.argv[1:])
+    (options, args) = argprs.parse_known_args(sys.argv[1:])
 
     # Are we debugging this?
     if options.debug:

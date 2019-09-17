@@ -501,7 +501,7 @@ class IQCalc(object):
                  edgew=0.01):
 
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-        data = image.cutout_data(x1, y1, x2, y2, astype='float32')
+        data = image.cutout_data(x1, y1, x2, y2, astype=np.float)
 
         qs = self.pick_field(data, peak_radius=radius,
                              bright_radius=bright_radius,

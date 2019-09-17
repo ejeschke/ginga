@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import math
 import numpy as np
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
@@ -44,9 +45,18 @@ class Text(OnePointMixin, CanvasObjectBase):
                   description="Text to display"),
             Param(name='font', type=str, default='Sans Serif',
                   description="Font family for text"),
-            Param(name='fontsize', type=int, default=None,
-                  min=8, max=72,
+            Param(name='fontsize', type=float, default=None,
+                  min=2, max=144,
                   description="Font size of text (default: vary by scale)"),
+            Param(name='fontsize_min', type=float, default=6.0,
+                  min=2, max=144,
+                  description="Minimum font size of text (if not fixed)"),
+            Param(name='fontsize_max', type=float, default=None,
+                  min=2, max=144,
+                  description="Maximum font size of text (if not fixed)"),
+            Param(name='fontscale', type=_bool,
+                  default=False, valid=[False, True],
+                  description="Scale font with scale of viewer"),
             Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of text"),
@@ -66,20 +76,81 @@ class Text(OnePointMixin, CanvasObjectBase):
         return cls(cxt.start_x, cxt.start_y, **cxt.drawparams)
 
     def __init__(self, x, y, text='EDIT ME',
-                 font='Sans Serif', fontsize=None,
+                 font='Sans Serif', fontsize=None, fontscale=False,
+                 fontsize_min=6.0, fontsize_max=None,
                  color='yellow', alpha=1.0, rot_deg=0.0,
                  showcap=False, **kwdargs):
         self.kind = 'text'
         points = np.asarray([(x, y)], dtype=np.float)
         super(Text, self).__init__(points=points, color=color, alpha=alpha,
                                    font=font, fontsize=fontsize,
+                                   fontscale=fontscale,
+                                   fontsize_min=fontsize_min,
+                                   fontsize_max=fontsize_max,
                                    text=text, rot_deg=rot_deg,
                                    showcap=showcap, **kwdargs)
         OnePointMixin.__init__(self)
 
+    def set_edit_point(self, i, pt, detail):
+        if i == 0:
+            self.move_to_pt(pt)
+        elif i == 1:
+            scalef = self.calc_scale_from_pt(pt, detail)
+            self.fontsize = detail.fontsize * scalef
+        elif i == 2:
+            delta_deg = self.calc_rotation_from_pt(pt, detail)
+            self.rot_deg = math.fmod(self.rot_deg + delta_deg, 360.0)
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+    def scale_by_factors(self, factors):
+        fontsize = 10.0 if self.fontsize is None else self.fontsize
+        self.fontsize = fontsize * factors[0]
+
+    def rotate_by_deg(self, thetas):
+        self.rot_deg += thetas[0]
+
+    def setup_edit(self, detail):
+        detail.center_pos = self.get_center_pt()
+        fontsize = self.fontsize
+        if fontsize is None:
+            fontsize = 10.0
+        detail.fontsize = fontsize
+        detail.rot_deg = self.rot_deg
+
+    def get_edit_points(self, viewer):
+        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
+        return [move_pt,
+                scale_pt,
+                rotate_pt,
+                ]
+
     def select_contains_pt(self, viewer, pt):
-        p0 = self.get_data_points()[0]
-        return self.within_radius(viewer, pt, p0, self.cap_radius)
+        x1, y1, x2, y2 = self._get_unrotated_text_llur(viewer)
+        # rotate point back to non-rotated cartesian alignment for test
+        x, y = trcalc.rotate_pt(pt[0], pt[1], -self.rot_deg,
+                                xoff=x1, yoff=y1)
+
+        return (min(x1, x2) <= x and x <= max(x1, x2) and
+                min(y1, y2) <= y and y <= max(y1, y2))
+
+    def _get_unrotated_text_llur(self, viewer):
+        # convert coordinate to data point and then pixel pt
+        x1, y1 = self.get_data_points()[0]
+        cx1, cy1 = viewer.get_canvas_xy(x1, y1)
+        # width and height of text define bbox
+        wd_px, ht_px = viewer.renderer.get_dimensions(self)
+        cx2, cy2 = cx1 + wd_px, cy1 - ht_px
+        # convert back to data points and construct bbox
+        x2, y2 = viewer.get_data_xy(cx2, cy2)
+        x1, y1, x2, y2 = self.swapxy(x1, y1, x2, y2)
+        return (x1, y1, x2, y2)
+
+    def get_llur(self):
+        x, y = self.get_data_points()[0]
+        r = 20
+        (x1, y1), (x2, y2) = (x - r, y - r), (x + r, y + r)
+        return self.swapxy(x1, y1, x2, y2)
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
@@ -1070,7 +1141,8 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
                   min=0.0,
                   description="Radius of object"),
             Param(name='style', type=str, default='cross',
-                  valid=['cross', 'plus'],
+                  valid=['cross', 'plus', 'circle', 'square', 'diamond',
+                         'hexagon', 'downtriangle', 'uptriangle'],
                   description="Style of point (default 'cross')"),
             Param(name='linewidth', type=int, default=1,
                   min=1, max=20, widget='spinbutton', incr=1,
@@ -1114,8 +1186,9 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
         return contains
 
     def select_contains_pt(self, viewer, pt):
-        p0 = self.crdmap.to_data((self.x, self.y))
-        return self.within_radius(viewer, pt, p0, self.cap_radius)
+        p0 = self.get_data_points()[0]
+        scale = viewer.get_scale_max()
+        return self.within_radius(viewer, pt, p0, self.radius * scale)
 
     def get_edit_points(self, viewer):
         points = self.get_data_points(points=[(self.x, self.y)])
@@ -1130,17 +1203,47 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
         cpoints = self.get_cpoints(viewer, points=points)
         cx, cy, cradius = self.calc_radius(viewer,
                                            cpoints[0], cpoints[1])
-        cx1, cy1 = cx - cradius, cy - cradius
-        cx2, cy2 = cx + cradius, cy + cradius
 
         cr = viewer.renderer.setup_cr(self)
+
+        cx1, cy1 = cx - cradius, cy - cradius
+        cx2, cy2 = cx + cradius, cy + cradius
 
         if self.style == 'cross':
             cr.draw_line(cx1, cy1, cx2, cy2)
             cr.draw_line(cx1, cy2, cx2, cy1)
-        else:
+
+        elif self.style == 'plus':
             cr.draw_line(cx1, cy, cx2, cy)
             cr.draw_line(cx, cy1, cx, cy2)
+
+        elif self.style == 'circle':
+            cr.draw_circle(cx, cy, cradius)
+
+        elif self.style == 'square':
+            cpts = [(cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)]
+            cr.draw_polygon(cpts)
+
+        elif self.style == 'diamond':
+            cpts = [(cx, cy1), ((cx + cx2) / 2.0, cy),
+                    (cx, cy2), ((cx1 + cx) / 2.0, cy)]
+            cr.draw_polygon(cpts)
+
+        elif self.style == 'hexagon':
+            cpts = [(cx1, cy), ((cx1 + cx) / 2.0, cy2), ((cx + cx2) / 2.0, cy2),
+                    (cx2, cy), ((cx + cx2) / 2.0, cy1), ((cx1 + cx) / 2.0, cy1)]
+            cr.draw_polygon(cpts)
+
+        elif self.style == 'downtriangle':
+            cpts = [(cx1, cy1), (cx2, cy1), (cx, cy2)]
+            cr.draw_polygon(cpts)
+
+        elif self.style == 'uptriangle':
+            cpts = [(cx1, cy2), (cx2, cy2), (cx, cy1)]
+            cr.draw_polygon(cpts)
+
+        else:
+            raise ValueError("Don't understand draw style '{}' of point".format(self.style))
 
         if self.showcap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))

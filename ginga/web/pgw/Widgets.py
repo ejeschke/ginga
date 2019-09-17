@@ -67,7 +67,8 @@ class WidgetBase(Callback.Callbacks):
         widget_id += 1
         self.id = widget_id
         widget_dict[widget_id] = self
-        self.margins = (0, 0, 0, 0)   # T, R, B, L,
+        self.margins = (0, 0, 0, 0)   # T, R, B, L
+        self._rendered = False
 
     def get_url(self):
         app = self.get_app()
@@ -87,8 +88,9 @@ class WidgetBase(Callback.Callbacks):
 
     def set_enabled(self, tf):
         self.enabled = tf
-        app = self.get_app()
-        app.do_operation('disable', id=self.id, value=not tf)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('disable', id=self.id, value=not tf)
 
     def get_size(self):
         return self.width, self.height
@@ -167,14 +169,16 @@ class WidgetBase(Callback.Callbacks):
         self.extdata.inline_styles = styles
 
     def call_custom_method(self, future, method_name, **kwargs):
-        app = self.get_app()
-        c_id = app.get_caller_id()
-        app.callers[c_id] = future
-        app.do_operation(method_name, id=self.id, caller_id=c_id, **kwargs)
+        if self._rendered:
+            app = self.get_app()
+            c_id = app.get_caller_id()
+            app.callers[c_id] = future
+            app.do_operation(method_name, id=self.id, caller_id=c_id, **kwargs)
 
     def render(self):
         text = "'%s' NOT YET IMPLEMENTED" % (str(self.__class__))
         d = dict(id=self.id, text=text)
+        self._rendered = True
         return '''<div id=%(id)s>%(text)s</div>''' % d
 
 
@@ -212,8 +216,9 @@ class TextEntry(WidgetBase):
 
     def set_text(self, text):
         self.text = text
-        app = self.get_app()
-        app.do_operation('update_value', id=self.id, value=text)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_value', id=self.id, value=text)
 
     def set_editable(self, tf):
         self.editable = tf
@@ -234,6 +239,7 @@ class TextEntry(WidgetBase):
                  styles=self.get_css_styles(fmt='str'))
         if not self.enabled:
             d['disabled'] = 'disabled'
+        self._rendered = True
         return self.html_template % d  # noqa
 
 
@@ -274,8 +280,9 @@ class TextEntrySet(WidgetBase):
 
     def set_text(self, text):
         self.text = text
-        app = self.get_app()
-        app.do_operation('update_value', id=self.id, value=text)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_value', id=self.id, value=text)
 
     def set_font(self, font, size=10):
         if isinstance(font, str):
@@ -294,6 +301,7 @@ class TextEntrySet(WidgetBase):
         d = dict(id=self.id, text=self.text, disabled='', size=self.length,
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
+        self._rendered = True
         return self.html_template % d  # noqa
 
 
@@ -327,12 +335,14 @@ class TextArea(WidgetBase):
         #     text = text[:-1]
         self.text = self.text + text
 
-        app = self.get_app()
-        app.do_operation('update_value', id=self.id, value=self.text)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_value', id=self.id, value=self.text)
 
         if not autoscroll:
             return
-        app.do_operation('scroll_bottom', id=self.id)
+        if self._rendered:
+            app.do_operation('scroll_bottom', id=self.id)
 
     def get_text(self):
         return self.text
@@ -343,8 +353,9 @@ class TextArea(WidgetBase):
     def set_text(self, text):
         self.text = text
 
-        app = self.get_app()
-        app.do_operation('update_value', id=self.id, value=self.text)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_value', id=self.id, value=self.text)
 
     def set_limit(self, numlines):
         # for compatibility with the other supported widget sets
@@ -370,6 +381,7 @@ class TextArea(WidgetBase):
             d['disabled'] = 'disabled'
         if not self.editable:
             d['editable'] = 'readOnly'
+        self._rendered = True
         return self.html_template % d  # noqa
 
 
@@ -398,8 +410,9 @@ class Label(WidgetBase):
 
     def set_text(self, text):
         self.text = text
-        app = self.get_app()
-        app.do_operation('update_label', id=self.id, value=text)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_label', id=self.id, value=text)
 
     def set_font(self, font, size=10):
         if isinstance(font, str):
@@ -418,9 +431,10 @@ class Label(WidgetBase):
             self.bgcolor = bg
             self.add_css_styles([('background-color', bg)])
 
-        style = self.get_css_styles(fmt='str')
-        app = self.get_app()
-        app.do_operation('update_style', id=self.id, value=style)
+        if self._rendered:
+            style = self.get_css_styles(fmt='str')
+            app = self.get_app()
+            app.do_operation('update_style', id=self.id, value=style)
 
     def render(self):
         # TODO: render alignment, style, menu, clickable
@@ -428,6 +442,7 @@ class Label(WidgetBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -457,6 +472,7 @@ class Button(WidgetBase):
                  styles=self.get_css_styles(fmt='str'))
         if not self.enabled:
             d['disabled'] = 'disabled'
+        self._rendered = True
         return self.html_template % d  # noqa
 
 
@@ -507,17 +523,25 @@ class ComboBox(WidgetBase):
     def clear(self):
         self.choices = []
 
-    def show_text(self, text):
+    def set_text(self, text):
         index = self.choices.index(text)
         self.set_index(index)
+
+    # to be deprecated someday
+    show_text = set_text
+
+    def get_text(self):
+        idx = self.get_index()
+        return self.choices[idx]
 
     def append_text(self, text):
         self.choices.append(text)
 
     def set_index(self, index):
         self.index = index
-        app = self.get_app()
-        app.do_operation('update_index', id=self.id, value=self.index)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_index', id=self.id, value=self.index)
 
     def get_index(self):
         return self.index
@@ -540,6 +564,7 @@ class ComboBox(WidgetBase):
                 idx, selected, choice))
         d['options'] = '\n'.join(res)
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -595,6 +620,7 @@ class SpinBox(WidgetBase):
         if not self.enabled:
             d['disabled'] = 'disabled'
 
+        self._rendered = True
         return self.html_template % d  # noqa
 
 
@@ -659,6 +685,7 @@ class Slider(WidgetBase):
         if not self.enabled:
             d['disabled'] = 'disabled'
 
+        self._rendered = True
         return self.html_template % d  # noqa
 
 
@@ -706,6 +733,7 @@ class ScrollBar(WidgetBase):
             d['vert'] = 'true'
             d['width'], d['height'] = "'100%'", self.thickness
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -748,6 +776,7 @@ class CheckBox(WidgetBase):
         if not self.enabled:
             d['disabled'] = 'disabled'
 
+        self._rendered = True
         return self.html_template % d  # noqa
 
 
@@ -792,6 +821,7 @@ class ToggleButton(WidgetBase):
         if not self.enabled:
             d['disabled'] = 'disabled'
 
+        self._rendered = True
         return self.html_template % d  # noqa
 
 
@@ -850,6 +880,7 @@ class RadioButton(WidgetBase):
         if self.value:
             d['checked'] = 'checked'
 
+        self._rendered = True
         return self.html_template % d  # noqa
 
 
@@ -881,8 +912,9 @@ class Image(WidgetBase):
         self.image = native_image
         self.img_src = PgHelp.get_image_src_from_buffer(self.image)
 
-        app = self.get_app()
-        app.do_operation('update_imgsrc', id=self.id, value=self.img_src)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_imgsrc', id=self.id, value=self.img_src)
 
     def load_file(self, img_path, format=None):
         img = PgHelp.get_native_image(img_path, format=format)
@@ -895,6 +927,7 @@ class Image(WidgetBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -929,8 +962,9 @@ class ProgressBar(WidgetBase):
         # jqxProgressBar needs integer values in the range 0-100
         pct = int(self.value * 100.0)
 
-        app = self.get_app()
-        app.do_operation('set_progress', id=self.id, value=pct)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('set_progress', id=self.id, value=pct)
 
     def render(self):
         pct = int(self.value * 100.0)
@@ -943,6 +977,7 @@ class ProgressBar(WidgetBase):
         else:
             d['width'], d['height'] = "'100%'", self.thickness
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -1211,18 +1246,21 @@ class TreeView(WidgetBase):
         return res_dict
 
     def clear(self):
-        app = self.get_app()
-        app.do_operation('clear', id=self.id)
         self.rowid = -1
         self.rows = []
         self.localData = []
         self.shadow = {}
         self.selectedRows = []
 
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('clear', id=self.id)
+
     def clear_selection(self):
         self.selectedRows = []
-        app = self.get_app()
-        app.do_operation('clear_selection', id=self.id)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('clear_selection', id=self.id)
 
     def _path_to_item(self, path):
         s = self.shadow
@@ -1235,8 +1273,9 @@ class TreeView(WidgetBase):
         item = self._path_to_item(path)
         if self.selectedRows.count(item) < 1:
             self.selectedRows.append(item)
-        app = self.get_app()
-        app.do_operation('select_row', id=self.id, index=item['rowid'], state=state)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('select_row', id=self.id, index=item['rowid'], state=state)
 
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)  # noqa
@@ -1244,19 +1283,22 @@ class TreeView(WidgetBase):
 
     def scroll_to_path(self, path):
         item = self._path_to_item(path)
-        app = self.get_app()
-        app.do_operation('scroll_to_path', id=self.id, index=item['rowid'])
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('scroll_to_path', id=self.id, index=item['rowid'])
 
     def sort_on_column(self, i):
         colTitle, fieldName = self.columns[i]
-        app = self.get_app()
-        app.do_operation('sort_on_column', id=self.id, dataField=fieldName, sortOrder='asc')
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('sort_on_column', id=self.id, dataField=fieldName, sortOrder='asc')
 
     def set_column_width(self, i, width):
         self.columnWidths[i] = width
         colTitle, fieldName = self.columns[i]
-        app = self.get_app()
-        app.do_operation('set_column_property', id=self.id, dataField=fieldName, property='width', width=width)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('set_column_property', id=self.id, dataField=fieldName, property='width', width=width)
 
     def set_column_widths(self, lwidths):
         for i, width in enumerate(lwidths):
@@ -1302,6 +1344,7 @@ class TreeView(WidgetBase):
                  sortable=json.dumps(self.sortable),
                  width=self.width,
                  selectionMode=self.selection)
+        self._rendered = True
         return self.html_template % d
 
 
@@ -1326,15 +1369,16 @@ class Canvas(WidgetBase):
         self.width = width
         self.height = height
         self.name = ''
-        self.timers = {}
 
     def _cb_redirect(self, event):
         pass
 
     def _draw(self, shape_type, **kwargs):
         shape = dict(kwargs, type=shape_type)
-        app = self.get_app()
-        app.do_operation("draw_canvas", id=self.id, shape=shape)
+        # TODO: save shapes to be sent if canvas is not rendered?
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation("draw_canvas", id=self.id, shape=shape)
 
     def clear_rect(self, x, y, width, height):
         self._draw("clear", x=x, y=y, width=width, height=height)
@@ -1344,15 +1388,6 @@ class Canvas(WidgetBase):
         img_src = PgHelp.get_image_src_from_buffer(img_buf)
 
         self._draw("image", x=x, y=y, src=img_src, width=width, height=height)
-
-    def add_timer(self, name, cb_fn):
-        app = self.get_app()
-        timer = app.add_timer(cb_fn)
-        self.timers[name] = timer
-
-    def reset_timer(self, name, time_sec):
-        app = self.get_app()
-        app.reset_timer(self.timers[name], time_sec)
 
     def render(self):
         global tab_idx
@@ -1364,6 +1399,7 @@ class Canvas(WidgetBase):
                  tab_idx=tab_idx,
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
+        self._rendered = True
         return Canvas.canvas_template % d
 
 
@@ -1387,15 +1423,16 @@ class ContainerBase(WidgetBase):
             raise KeyError("Widget is not a child of this container")
         self.children.remove(child)
 
-        app = self.get_app()
-        app.do_operation('update_html', id=self.id, value=self.render())
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('remove_child', id=child.id)
+
         self.make_callback('widget-removed', child)
 
     def remove_all(self):
-        self.children[:] = []
-
-        app = self.get_app()
-        app.do_operation('update_html', id=self.id, value=self.render())
+        children = list(self.children)
+        for child in children:
+            self.remove(child)
 
     def get_children(self):
         return self.children
@@ -1404,6 +1441,7 @@ class ContainerBase(WidgetBase):
         return len(self.children)
 
     def render(self):
+        self._rendered = True
         return self.render_children()
 
     def render_children(self, ifx=' ', spacing=0, spacing_side='right'):
@@ -1452,8 +1490,9 @@ class Box(ContainerBase):
         # and their "shrink" conterparts
         child.add_css_styles([('flex-grow', flex), ('flex-shrink', 1)])
 
-        app = self.get_app()
-        app.do_operation('update_html', id=self.id, value=self.render())
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('append_child', id=self.id, value=child.render())
         self.make_callback('widget-added', child)
 
     def set_spacing(self, val):
@@ -1471,6 +1510,7 @@ class Box(ContainerBase):
             d['content'] = self.render_children(spacing=self.spacing,
                                                 spacing_side='bottom')
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -1511,6 +1551,7 @@ class Frame(ContainerBase):
         if self.label is not None:
             d['legend'] = "<legend>%s</legend>" % self.label
 
+        self._rendered = True
         self.html_template % d
 
 
@@ -1552,6 +1593,7 @@ class Expander(ContainerBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -1598,8 +1640,9 @@ class TabWidget(ContainerBase):
             self.enable_callback(name)
 
     def _update(self):
-        app = self.get_app()
-        app.do_operation('update_html', id=self.id, value=self.render())
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_html', id=self.id, value=self.render())
 
     def set_tab_position(self, tabpos):
         tabpos = tabpos.lower()
@@ -1619,11 +1662,12 @@ class TabWidget(ContainerBase):
         # attach title to child
         child.extdata.tab_title = title
 
-        app = self.get_app()  # noqa
-        # app.do_operation('update_html', id=self.id, value=self.render())
-        # this is a hack--we really don't want to reload the page, but just
-        # re-rendering the HTML does not seem to process the CSS right
-        #app.do_operation('reload_page', id=self.id)
+        if self._rendered:
+            app = self.get_app()  # noqa
+            app.do_operation('append_child', id=self.id, value=child.render())
+            # this is a hack--we really don't want to reload the page, but just
+            # re-rendering the HTML does not seem to process the CSS right
+            #app.do_operation('reload_page', id=self.id)
         self.make_callback('widget-added', child)
 
     def get_index(self):
@@ -1632,8 +1676,9 @@ class TabWidget(ContainerBase):
     def set_index(self, idx):
         self.index = idx
 
-        app = self.get_app()
-        app.do_operation('select_tab', id=self.id, index=self.index)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('select_tab', id=self.id, index=self.index)
 
     def index_of(self, child):
         try:
@@ -1664,6 +1709,7 @@ class TabWidget(ContainerBase):
                for child in self.get_children()]
         d['content'] = '\n'.join(res)
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -1736,6 +1782,7 @@ class ScrollArea(ContainerBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -1807,6 +1854,7 @@ class Splitter(ContainerBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -1848,9 +1896,10 @@ class GridBox(ContainerBase):
         self.num_cols = max(self.num_cols, col + 1)
         self.tbl[(row, col)] = child
 
-        app = self.get_app()
-        app.do_operation('update_html', id=self.id,
-                         value=self.render_body())
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_html', id=self.id,
+                             value=self.render_body())
         self.make_callback('widget-added', child)
 
     def render_body(self):
@@ -1874,6 +1923,7 @@ class GridBox(ContainerBase):
                  styles=self.get_css_styles(fmt='str'),
                  content=self.render_body())
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -1900,6 +1950,7 @@ class ToolbarAction(WidgetBase):
         return self.value
 
     def render(self):
+        self._rendered = True
         return self.widget.render()
 
 
@@ -1944,6 +1995,7 @@ class Toolbar(ContainerBase):
         pass
 
     def render(self):
+        self._rendered = True
         return self.widget.render()
 
 
@@ -1976,6 +2028,7 @@ class MenuAction(WidgetBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -2054,8 +2107,9 @@ class Menu(ContainerBase):
     def popup(self, widget=None):
         # TODO: handle offset from widget
         x, y = 0, 0
-        app = self.get_app()
-        app.do_operation('popup_menu', id=self.id, x=x, y=y)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('popup_menu', id=self.id, x=x, y=y)
 
     def render(self):
         content = ['''<li data-menuitem-id="%s"> %s </li>''' % (
@@ -2066,6 +2120,7 @@ class Menu(ContainerBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
 
+        self._rendered = True
         if self.widget is not None:
             return self.html_template1 % d
         return self.html_template2 % d
@@ -2127,6 +2182,7 @@ class Menubar(ContainerBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
 
+        self._rendered = True
         return self.html_template % d
 
 
@@ -2190,9 +2246,10 @@ class TopLevel(ContainerBase):
     def add_dialog(self, child):
         self.add_ref(child)
 
-        app = self.get_app()
-        app.do_operation('update_html', id=self.id,
-                         value=self.render_children())
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('append_child', id=self.id,
+                             value=child.render())
         self.make_callback('widget-added', child)
 
     def show(self):
@@ -2265,6 +2322,7 @@ class TopLevel(ContainerBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
 
+        self._rendered = True
         return self.html_template % d  # noqa
 
 
@@ -2320,8 +2378,7 @@ class Application(Callback.Callbacks):
         widget_dict[0] = self
 
         self._timer_lock = threading.RLock()
-        self._timer_cnt = 0
-        self._timer = {}
+        self._timers = []
 
         self.host = host
         self.port = port
@@ -2377,7 +2434,7 @@ class Application(Callback.Callbacks):
         return c_id
 
     def _cb_redirect(self, event):
-        #print("application got an event (%s)" % (str(event)))
+        #self.logger.debug("application got an event (%s)" % (str(event)))
         pass
 
     def add_ws_handler(self, handler):
@@ -2385,6 +2442,9 @@ class Application(Callback.Callbacks):
             self.ws_handlers.append(handler)
 
     def do_operation(self, operation, **kwdargs):
+        self.logger.debug('---- (%d) operation: %s' % (
+            kwdargs.get('id', 0), operation))
+
         with self._timer_lock:
             handlers = list(self.ws_handlers)
 
@@ -2406,47 +2466,41 @@ class Application(Callback.Callbacks):
                         self.ws_handlers.remove(handler)
 
     def on_timer_event(self, event):
+        """internal event handler for timer events"""
         # self.logger.debug("timer update")
-        funcs = []
         with self._timer_lock:
-            for key, bnch in self._timer.items():
-                if (bnch.timer is not None) and \
-                   (time.time() > bnch.timer):
-                    bnch.timer = None
-                    funcs.append(bnch.func)
+            expired = [timer for timer in self._timers
+                       if (timer.deadline is not None and
+                           time.time() > timer.deadline)]
 
-        for func in funcs:
-            try:
-                func()
-            except Exception as e:
-                pass
+        for timer in expired:
+            timer.expire()
             # self.logger.debug("update should have been called.")
 
-    def add_timer(self, func):
+    def add_timer(self, timer):
+        """internal method for timer management; see Timer class in PgHelp"""
         with self._timer_lock:
-            name = self._timer_cnt
-            self._timer_cnt += 1
-            timer = Bunch.Bunch(timer=None, func=func, name=name)
-            self._timer[name] = timer
-            return timer
+            if timer not in self._timers:
+                self._timers.append(timer)
 
     def remove_timer(self, timer):
+        """internal method for timer management; see Timer class in PgHelp"""
         with self._timer_lock:
-            name = timer.name
-            del self._timer[name]
+            if timer in self._timers:
+                self._timers.remove(timer)
 
-    def reset_timer(self, timer, time_sec):
-        with self._timer_lock:
-            # self.logger.debug("setting timer...")
-            timer.timer = time.time() + time_sec
+    def make_timer(self):
+        return PgHelp.Timer(app=self)
 
     def widget_event(self, event):
+        """internal method for event management"""
         if event.type == 'timer':
             self.on_timer_event(event)
             return
 
         # get the widget associated with this id
         w_id = event.id
+        self.logger.debug('----(%s) event: %s' % (w_id, event))
 
         if event.type == 'ecma_call_result':
             caller_id = event.value['caller_id']
@@ -2581,8 +2635,8 @@ class Dialog(ContainerBase):
 
         super(Dialog, self).__init__()
 
-        if parent is None:
-            raise ValueError("Top level 'parent' parameter required")
+        ## if parent is None:
+        ##     raise ValueError("Top level 'parent' parameter required")
 
         self.title = title
         self.parent = parent
@@ -2611,7 +2665,10 @@ class Dialog(ContainerBase):
         self.set_margins(0, 0, 0, 0)
         #self.add_css_classes([])
 
-        parent.add_dialog(self)
+        # NOTE: either use this or explicitly call add_dialog() on
+        # TopLevel widget!
+        ## if parent is not None:
+        ##     parent.add_dialog(self)
 
     def _cb_redirect(self, event):
         if event.type == 'dialog-resize':
@@ -2634,12 +2691,14 @@ class Dialog(ContainerBase):
         return self.content
 
     def show(self):
-        app = self.get_app()
-        app.do_operation('show_dialog', id=self.id)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('show_dialog', id=self.id)
 
     def hide(self):
-        app = self.get_app()
-        app.do_operation('hide_dialog', id=self.id)
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('hide_dialog', id=self.id)
 
     def raise_(self):
         self.show()
@@ -2656,6 +2715,7 @@ class Dialog(ContainerBase):
                  classes=self.get_css_classes(fmt='str'),
                  styles=self.get_css_styles(fmt='str'))
 
+        self._rendered = True
         return self.html_template % d
 
 # class SaveDialog(QtGui.QFileDialog):

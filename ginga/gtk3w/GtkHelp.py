@@ -24,6 +24,10 @@ from gi.repository import Pango  # noqa
 ginga.toolkit.use('gtk3')
 
 
+DND_TARGET_TYPE_TEXT = 0
+DND_TARGET_TYPE_URIS = 1
+
+
 class WidgetMask(object):
     def __init__(self, *args):
         self.cb_fn = None
@@ -162,7 +166,10 @@ class VScale(WidgetMask, Gtk.VScale):
         super(VScale, self).set_value(newval)
 
 
-class ComboBoxMixin(object):
+class ComboBox(WidgetMask, Gtk.ComboBox):
+    def __init__(self, *args, **kwdargs):
+        WidgetMask.__init__(self)
+        Gtk.ComboBox.__init__(self, *args, **kwdargs)
 
     def set_active(self, newval):
         oldval = self.get_active()
@@ -204,18 +211,6 @@ class ComboBoxMixin(object):
             if model[i][0] == text:
                 self.set_active(i)
                 return
-
-
-class ComboBox(WidgetMask, Gtk.ComboBox, ComboBoxMixin):
-    def __init__(self, *args, **kwdargs):
-        WidgetMask.__init__(self)
-        Gtk.ComboBox.__init__(self, *args, **kwdargs)
-
-
-## class ComboBoxEntry(WidgetMask, Gtk.ComboBoxEntry, ComboBoxMixin):
-##     def __init__(self, *args, **kwdargs):
-##         WidgetMask.__init__(self)
-##         Gtk.ComboBoxEntry.__init__(self, *args, **kwdargs)
 
 
 class Notebook(WidgetMask, Gtk.Notebook):
@@ -293,7 +288,7 @@ class MDISubWindow(Callback.Callbacks):
 
         evbox = Gtk.EventBox()
         evbox.add(label)
-        evbox.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray90"))
+        modify_bg(evbox, "gray90")
         self.label = evbox
         self.evbox = evbox
         hbox.pack_start(evbox, True, True, 2)
@@ -313,7 +308,7 @@ class MDISubWindow(Callback.Callbacks):
         frame.set_size_request(self.width, self.height)
         frame.props.visible_window = True
         frame.set_border_width(0)
-        frame.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray70"))
+        modify_bg(frame, "gray70")
         self.frame = frame
 
         frame.add(vbox)
@@ -362,7 +357,7 @@ class MDIWidget(Gtk.Layout):
         self.connect("button_press_event", self.button_press_event)
         self.connect("button_release_event", self.button_release_event)
 
-        self.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("gray50"))
+        modify_bg(self, "gray50")
 
     def append_page(self, widget, label):
 
@@ -969,6 +964,18 @@ def make_cursor(widget, iconpath, x, y):
     screen = widget.get_screen()
     display = screen.get_display()
     return Gdk.Cursor(display, pixbuf, x, y)
+
+
+def modify_bg(widget, color):
+    context = widget.get_style_context()
+    if color is not None:
+        context.add_class("custom_bg")
+        css_data = "*.custom_bg { background-image: none; background-color: %s; }" % (color)
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(css_data.encode())
+        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+    else:
+        context.remove_class("custom_bg")
 
 
 def set_default_style():

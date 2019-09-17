@@ -154,8 +154,6 @@ class Imexam(GingaPlugin.LocalPlugin):
         hbox.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(hbox, stretch=0)
 
-        top.add_widget(hbox, stretch=0)
-
         hbox = Widgets.HBox()
         lbl = Widgets.Label("Keys active:")
         hbox.add_widget(lbl)
@@ -237,7 +235,6 @@ class Imexam(GingaPlugin.LocalPlugin):
 
     def start(self):
         self.instructions()
-        # start ruler drawing operation
         p_canvas = self.fitsimage.get_canvas()
         if not p_canvas.has_object(self.canvas):
             p_canvas.add(self.canvas, tag=self.layertag)

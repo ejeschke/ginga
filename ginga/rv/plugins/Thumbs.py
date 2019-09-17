@@ -34,12 +34,13 @@ import time
 import threading
 
 from ginga import GingaPlugin
-from ginga import RGBImage, BaseImage
+from ginga import RGBImage
 from ginga.misc import Bunch
 from ginga.util import iohelper
 from ginga.gw import Widgets, Viewers
 from ginga.util.paths import icondir
 from ginga.pilw.ImageViewPil import CanvasView
+from ginga.util import io_rgb
 
 __all__ = ['Thumbs']
 
@@ -95,6 +96,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.thumb_hsep = self.settings.get('thumb_hsep', 15)
         self.thumb_vsep = self.settings.get('thumb_vsep', 15)
         self.transfer_attrs = self.settings.get('transfer_attrs', [])
+
+        # used to open thumbnails on disk
+        self.rgb_opener = io_rgb.RGBFileHandler(self.logger)
 
         # Build our thumb generator
         tg = CanvasView(logger=self.logger)
@@ -728,11 +732,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
     def _regen_thumb_image(self, image, viewer):
         self.logger.debug("generating new thumbnail")
 
-        if not isinstance(image, BaseImage.BaseImage):
+        if not self.thumb_generator.viewable(image):
             # this is not a regular image type
-            image = RGBImage.RGBImage()
             tmp_path = os.path.join(icondir, 'fits.png')
-            image.load_file(tmp_path)
+            image = self.rgb_opener.load_file(tmp_path)
 
         self.thumb_generator.set_image(image)
         if viewer is not None:
@@ -776,14 +779,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             except Exception as e:
                 self.logger.warning("Error generating thumbnail: %s" % (str(e)))
 
-        thmb_image = RGBImage.RGBImage()
-        thmb_image.set(name=info.name, placeholder=False)
-
         # Choice [C]: is there a cached thumbnail image on disk we can use?
         if (thumbpath is not None) and os.path.exists(thumbpath):
             try:
                 # try to load the thumbnail image
-                thmb_image.load_file(thumbpath)
+                thmb_image = self.rgb_opener.load_file(thumbpath)
+                thmb_image.set(name=info.name, placeholder=False)
                 thmb_image = self._regen_thumb_image(thmb_image, None)
                 thumb_extra.rgbimg = thmb_image
                 return thmb_image
@@ -793,8 +794,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # Choice [D]: load a placeholder image
         tmp_path = os.path.join(icondir, 'fits.png')
-        thmb_image.load_file(tmp_path)
-        thmb_image.set(path=None, placeholder=True)
+        thmb_image = self.rgb_opener.load_file(tmp_path)
+        thmb_image.set(name=info.name, path=None, placeholder=True)
 
         return thmb_image
 

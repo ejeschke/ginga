@@ -16,7 +16,7 @@ Show example usage (plugin must be started)::
 """
 
 import sys
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 from ..util import grc as _grc
 
@@ -48,22 +48,21 @@ def main(options, args):
 
 def _main():
     """Run from command line."""
-    usage = "usage: %prog [options] cmd [arg] ..."
-    optprs = OptionParser(usage=usage, version=version)
+    argprs = ArgumentParser()
 
-    optprs.add_option("--debug", dest="debug", default=False,
-                      action="store_true",
-                      help="Enter the pdb debugger on main()")
-    optprs.add_option("--host", dest="host", metavar="HOST",
-                      default="localhost", help="Connect to server at HOST")
-    optprs.add_option("--port", dest="port", type="int",
-                      default=9000, metavar="PORT",
-                      help="Connect to server at PORT")
-    optprs.add_option("--profile", dest="profile", action="store_true",
-                      default=False,
-                      help="Run the profiler on main()")
+    argprs.add_argument("--debug", dest="debug", default=False,
+                        action="store_true",
+                        help="Enter the pdb debugger on main()")
+    argprs.add_argument("--host", dest="host", metavar="HOST",
+                        default="localhost", help="Connect to server at HOST")
+    argprs.add_argument("--port", dest="port", type=int,
+                        default=9000, metavar="PORT",
+                        help="Connect to server at PORT")
+    argprs.add_argument("--profile", dest="profile", action="store_true",
+                        default=False,
+                        help="Run the profiler on main()")
 
-    (options, args) = optprs.parse_args(sys.argv[1:])
+    (options, args) = argprs.parse_known_args(sys.argv[1:])
 
     # Are we debugging this?
     if options.debug:

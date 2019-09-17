@@ -41,9 +41,9 @@ import tempfile
 import math
 
 from ginga import GingaPlugin
-from ginga.RGBImage import RGBImage
 from ginga.gw import Widgets, Viewers
 from ginga.pilw.ImageViewPil import CanvasView
+from ginga.util import io_rgb
 
 __all__ = ['ScreenShot']
 
@@ -325,8 +325,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
             self.shot_generator._imgobj = None
 
         self.saved_type = format
-        img = RGBImage(logger=self.logger)
-        img.load_file(self.tmpname)
+        img = io_rgb.load_file(self.tmpname, logger=self.logger)
 
         # load the snapped image into the screenshot viewer
         self.scrnimage.set_image(img)

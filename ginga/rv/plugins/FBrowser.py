@@ -227,7 +227,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
     def item_drag_cb(self, widget, drag_pkg, res_dict):
         urls = [Path(info.path).as_uri() for info in res_dict.values()]
         self.logger.info("urls: %s" % (urls))
+        # destination can collect selection in two ways
         drag_pkg.set_urls(urls)
+        drag_pkg.set_text('\n'.join(urls))
 
     def browse_cb(self, widget):
         path = str(widget.get_text()).strip()

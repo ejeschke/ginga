@@ -39,7 +39,7 @@ except ImportError:
             sys.path.insert(1, a_h_path)
 
 # Load all of the global Astropy configuration
-from astropy_helpers.sphinx.conf import *  # noqa
+from sphinx_astropy.conf.v1 import *  # noqa
 
 # Get configuration information from setup.cfg
 from configparser import ConfigParser
@@ -116,7 +116,7 @@ html_logo = '_static/ginga-128x128.png'
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#html_favicon = ''
+html_favicon = ''
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.

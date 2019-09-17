@@ -12,7 +12,7 @@ import numpy as np
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
 from ginga.qtw.QtHelp import (QtGui, QtCore, QImage, QPixmap, QCursor,
-                              QPainter, Timer, get_scroll_info)
+                              QPainter, Timer, get_scroll_info, get_painter)
 
 from .CanvasRenderQt import CanvasRenderer
 
@@ -248,7 +248,7 @@ class ImageViewQt(ImageView.ImageViewBase):
                     return
 
             # copy image from renderer to offscreen pixmap
-            painter = QPainter(self.pixmap)
+            painter = get_painter(self.pixmap)
             #painter.setWorldMatrixEnabled(True)
 
             # fill surface with background color
@@ -814,6 +814,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 
 
 class CanvasView(ImageViewZoom):
+    """A Ginga viewer for viewing 2D slices of image data."""
 
     def __init__(self, logger=None, settings=None, rgbmap=None,
                  render='widget',

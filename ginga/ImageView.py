@@ -66,6 +66,16 @@ class ImageViewBase(Callback.Callbacks):
     vname = 'Ginga Image'
     vtypes = [BaseImage.BaseImage]
 
+    @classmethod
+    def viewable(cls, dataobj):
+        """Test whether `dataobj` is viewable by this viewer."""
+        if not isinstance(dataobj, BaseImage.BaseImage):
+            return False
+        shp = list(dataobj.shape)
+        if len(shp) < 2:
+            return False
+        return True
+
     def __init__(self, logger=None, rgbmap=None, settings=None):
         Callback.Callbacks.__init__(self)
 
@@ -713,6 +723,9 @@ class ImageViewBase(Callback.Callbacks):
         canvas_img = self.get_canvas_image()
         return canvas_img.get_image()
 
+    # for compatibility with other viewers
+    get_dataobj = get_image
+
     def get_canvas_image(self):
         """Get canvas image object.
 
@@ -757,13 +770,13 @@ class ImageViewBase(Callback.Callbacks):
         Parameters
         ----------
         image : `~ginga.AstroImage.AstroImage` or `~ginga.RGBImage.RGBImage`
-            Image object.
+            2D Image object.
 
         add_to_canvas : bool
             Add image to canvas.
 
         """
-        if not isinstance(image, BaseImage.BaseImage):
+        if not self.viewable(image):
             raise ValueError("Wrong type of object to load: %s" % (
                 str(type(image))))
 
@@ -789,6 +802,9 @@ class ImageViewBase(Callback.Callbacks):
                 self.canvas.lower_object(canvas_img)
 
             #self.canvas.update_canvas(whence=0)
+
+    # for compatibility with other viewers
+    set_dataobj = set_image
 
     def _image_set_cb(self, canvas_img, image):
         try:
@@ -3155,7 +3171,8 @@ class ImageViewBase(Callback.Callbacks):
 
     def reschedule_redraw(self, time_sec):
         """Reschedule redraw event.
-        This must be implemented by subclasses.
+
+        This should be implemented by subclasses.
 
         Parameters
         ----------
@@ -3163,7 +3180,9 @@ class ImageViewBase(Callback.Callbacks):
             Time, in seconds, to wait.
 
         """
-        self.logger.warning("Subclass should override this abstract method!")
+        # subclass implements this method to call delayed_redraw() after
+        # time_sec.  If subclass does not override, redraw is immediate.
+        self.delayed_redraw()
 
     def set_cursor(self, cursor):
         """Set the cursor in the viewer widget.
@@ -3270,14 +3289,24 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.set_cursor(self.cursor[cname])
 
+    def configure_surface(self, width, height):
+        """Reconfigure the renderer for a new size, then reconfigure
+        our viewer for the same.
+
+        This can be overridden by subclasses.
+        """
+        self.renderer.resize((width, height))
+
+        self.configure(width, height)
+
     def get_image_as_array(self):
         """Get the current image shown in the viewer, with any overlaid
         graphics, in a numpy array with channels as needed and ordered
         by the back end widget.
 
-        This should be implemented by subclasses.
+        This can be overridden by subclasses.
         """
-        raise ImageViewError("Subclass should override this abstract method!")
+        return self.renderer.get_surface_as_array(order=self.rgb_order)
 
     def get_image_as_buffer(self, output=None):
         """Get the current image shown in the viewer, with any overlaid
@@ -3318,7 +3347,8 @@ class ImageViewBase(Callback.Callbacks):
         """Get the current image shown in the viewer, with any overlaid
         graphics, in a file IO-like object encoded as a bitmap graphics
         file.
-        This should be implemented by subclasses.
+
+        This can be overridden by subclasses.
 
         Parameters
         ----------
@@ -3339,7 +3369,8 @@ class ImageViewBase(Callback.Callbacks):
             in which case a BytesIO obejct is returned
 
         """
-        raise ImageViewError("Subclass should override this abstract method!")
+        return self.renderer.get_surface_as_rgb_format_buffer(
+            output=output, format=format, quality=quality)
 
     def get_rgb_image_as_bytes(self, format='png', quality=90):
         """Get the current image shown in the viewer, with any overlaid

@@ -29,6 +29,13 @@ class TableViewBase(Callback.Callbacks):
     vname = 'Ginga Table'
     vtypes = [AstroTable.AstroTable]
 
+    @classmethod
+    def viewable(cls, dataobj):
+        """Test whether `dataobj` is viewable by this viewer."""
+        if not isinstance(dataobj, AstroTable.AstroTable):
+            return False
+        return True
+
     def __init__(self, logger=None, settings=None):
         Callback.Callbacks.__init__(self)
 
@@ -86,9 +93,13 @@ class TableViewBase(Callback.Callbacks):
     def get_table(self):
         return self._table
 
-    # for compatibility with ImageView
+    # TO BE DEPRECATED
     get_image = get_table
     set_image = set_table
+
+    # for compatibility with other Ginga viewers
+    get_dataobj = get_table
+    set_dataobj = set_table
 
     def initialize_channel(self, fv, channel):
         """The reference viewer calls this method with itself and the channel
@@ -98,6 +109,8 @@ class TableViewBase(Callback.Callbacks):
 
 
 class TableViewGw(TableViewBase):
+    """A Ginga viewer for displaying tables of FITS data.
+    """
 
     def __init__(self, logger=None, settings=None):
         super(TableViewGw, self).__init__(logger=logger, settings=settings)

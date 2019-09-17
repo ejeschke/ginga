@@ -195,8 +195,8 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
             bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
 
-        #ap = np.rint(ap).astype('int').clip(0, wd-1)
-        #bp = np.rint(bp).astype('int').clip(0, ht-1)
+        #ap = np.rint(ap).clip(0, wd-1).astype(np.int)
+        #bp = np.rint(bp).clip(0, ht-1).astype(np.int)
         # Optomizations to reuse existing intermediate arrays
         np.rint(ap, out=ap)
         ap = ap.astype(np.int, copy=False)

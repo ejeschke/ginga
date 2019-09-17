@@ -10,7 +10,7 @@ import matplotlib as mpl
 from matplotlib.figure import Figure
 
 from ginga.util import iqcalc
-from ginga.misc import Callback
+from ginga.misc import Callback, Bunch
 
 # fix issue of negative numbers rendering incorrectly with default font
 mpl.rcParams['axes.unicode_minus'] = False
@@ -43,8 +43,11 @@ class Plot(Callback.Callbacks):
         self.xdata = []
         self.ydata = []
 
+        # for interactive features
+        self.can = Bunch.Bunch(zoom=False, pan=False)
+
         # For callbacks
-        for name in ('draw-canvas', ):
+        for name in ['draw-canvas', 'limits-set']:
             self.enable_callback(name)
 
     def get_figure(self):
@@ -124,13 +127,101 @@ class Plot(Callback.Callbacks):
         for lbl in lbls:
             lbl.set(rotation=45, horizontalalignment='right')
 
-        #self.fig.tight_layout()
-
         self.draw()
         return lines
 
     def get_data(self):
         return self.fig, self.xdata, self.ydata
+
+    def autoscale(self, axis):
+        self.ax.autoscale(enable=True, axis=axis)
+        self.draw()
+        self.ax.autoscale(enable=False, axis=axis)
+
+        x1, x2 = self.ax.get_xlim()
+        y1, y2 = self.ax.get_ylim()
+        self.make_callback('limits-set', dict(x_lim=(x1, x2), y_lim=(y1, y2)))
+
+    def connect_ui(self):
+        canvas = self.fig.canvas
+        connect = canvas.mpl_connect
+        # This one is not ready for prime time...
+        # connect("motion_notify_event", self.plot_motion_notify)
+        connect("button_press_event", self.plot_button_press)
+        connect("scroll_event", self.plot_scroll)
+
+    def enable(self, **kwargs):
+        self.can.update(kwargs)
+
+    def plot_scroll(self, event):
+        if not self.can.zoom:
+            return
+        # Matplotlib only gives us the number of steps of the scroll,
+        # positive for up and negative for down.
+        if event.step > 0:
+            delta = 0.9
+        elif event.step < 0:
+            delta = 1.1
+
+        x1, x2 = self.ax.get_xlim()
+        xrng = x2 - x1
+        xinc = (delta * xrng - xrng) * 0.5
+        x1, x2 = x1 - xinc, x2 + xinc
+
+        y1, y2 = self.ax.get_ylim()
+        yrng = y2 - y1
+        yinc = (delta * yrng - yrng) * 0.5
+        y1, y2 = y1 - yinc, y2 + yinc
+
+        self.ax.set_xlim(x1, x2)
+        self.ax.set_ylim(y1, y2)
+        self.make_callback('limits-set', dict(x_lim=(x1, x2), y_lim=(y1, y2)))
+
+        self.draw()
+        return True
+
+    def get_axes_size_in_px(self):
+        bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
+        width, height = bbox.width, bbox.height
+        width *= self.fig.dpi
+        height *= self.fig.dpi
+        return (width, height)
+
+    def plot_button_press(self, event):
+        if event.button == 1:
+            self.plot_x, self.plot_y = event.xdata, event.ydata
+
+        elif event.button == 2:
+            if not self.can.pan:
+                return
+            self.pan_plot(event.xdata, event.ydata)
+
+        return True
+
+    def plot_motion_notify(self, event):
+        if event.button == 1:
+            xdelta = self.plot_x - event.xdata
+            ydelta = self.plot_y - event.ydata
+            pan_x, pan_y = self.plot_x + xdelta, self.plot_y + ydelta
+            self.pan_plot(pan_x, pan_y)
+
+    def pan_plot(self, xnew, ynew):
+
+        x1, x2 = self.ax.get_xlim()
+        xrng = x2 - x1
+        xinc = xrng * 0.5
+        x1, x2 = xnew - xinc, xnew + xinc
+
+        y1, y2 = self.ax.get_ylim()
+        yrng = y2 - y1
+        yinc = yrng * 0.5
+        y1, y2 = ynew - yinc, ynew + yinc
+
+        self.ax.set_xlim(x1, x2)
+        self.ax.set_ylim(y1, y2)
+        self.make_callback('limits-set', dict(x_lim=(x1, x2), y_lim=(y1, y2)))
+
+        self.draw()
 
 
 class HistogramPlot(Plot):
@@ -140,7 +231,7 @@ class HistogramPlot(Plot):
         minval = np.nanmin(data)
         maxval = np.nanmax(data)
 
-        substval = (minval + maxval) / 2.0
+        substval = (minval + maxval) * 0.5
         data[np.isnan(data)] = substval
 
         dist, bins = np.histogram(data, bins=numbins, density=False)
@@ -176,21 +267,10 @@ class ContourPlot(Plot):
         super(ContourPlot, self).__init__(*args, **kwargs)
 
         self.num_contours = 8
-        self.plot_panx = 0
-        self.plot_pany = 0
-        self.plot_zoomlevel = 1.0
         self.cmap = "RdYlGn_r"
         # decent choices: { bicubic | bilinear | nearest }
         self.interpolation = "bilinear"
         self.cbar = None
-
-    def connect_zoom_callbacks(self):
-        canvas = self.fig.canvas
-        connect = canvas.mpl_connect
-        # These are not ready for prime time...
-        # connect("motion_notify_event", self.plot_motion_notify)
-        # connect("button_press_event", self.plot_button_press)
-        connect("scroll_event", self.plot_scroll)
 
     def _plot_contours(self, x, y, x1, y1, x2, y2, data,
                        num_contours=None):
@@ -210,7 +290,6 @@ class ContourPlot(Plot):
 
         self.ax.set_aspect('equal', adjustable='box')
         self.set_titles(title='Contours')
-        #self.fig.tight_layout()
 
         # Set pan position in contour plot
         self.plot_panx = float(x) / wd
@@ -256,7 +335,7 @@ class ContourPlot(Plot):
                 lbl.set(rotation=45, horizontalalignment='right')
 
             # Set the pan and zoom position & redraw
-            self.plot_panzoom()
+            self.draw()
 
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (
@@ -275,94 +354,6 @@ class ContourPlot(Plot):
         cx, cy = x - x1, y - y1
         self.plot_contours_data(cx, cy, img_data,
                                 num_contours=num_contours)
-
-    def plot_panzoom(self):
-        ht, wd = len(self.ydata), len(self.xdata)
-        x = int(self.plot_panx * wd)
-        y = int(self.plot_pany * ht)
-
-        zval = self.plot_zoomlevel
-        if zval >= 0.0:
-            zval += 1
-
-        if zval >= 1.0:
-            scalefactor = 1.0 / zval
-        elif zval < -1.0:
-            scalefactor = - zval
-        else:
-            # wierd condition?--reset to 1:1
-            scalefactor = 1.0
-            zval = self.plot_zoomlevel = 1.0
-
-        xdelta = int(scalefactor * (wd / 2.0))
-        ydelta = int(scalefactor * (ht / 2.0))
-
-        xlo, xhi = x - xdelta, x + xdelta
-        # distribute remaining x space from plot
-        if xlo < 0:
-            xsh = abs(xlo)
-            xlo, xhi = 0, min(wd - 1, xhi + xsh)
-        elif xhi >= wd:
-            xsh = xhi - wd
-            xlo, xhi = max(0, xlo - xsh), wd - 1
-        self.ax.set_xlim(xlo, xhi)
-
-        ylo, yhi = y - ydelta, y + ydelta
-        # distribute remaining y space from plot
-        if ylo < 0:
-            ysh = abs(ylo)
-            ylo, yhi = 0, min(ht - 1, yhi + ysh)
-        elif yhi >= ht:
-            ysh = yhi - ht
-            ylo, yhi = max(0, ylo - ysh), ht - 1
-        self.ax.set_ylim(ylo, yhi)
-
-        self.draw()
-
-    def plot_zoom(self, val):
-        self.plot_zoomlevel = val
-        self.plot_panzoom()
-
-    def plot_scroll(self, event):
-        # Matplotlib only gives us the number of steps of the scroll,
-        # positive for up and negative for down.
-        #direction = None
-        if event.step > 0:
-            #delta = 0.9
-            self.plot_zoomlevel += 1.0
-        elif event.step < 0:
-            #delta = 1.1
-            self.plot_zoomlevel -= 1.0
-
-        self.plot_panzoom()
-
-        # x1, x2 = self.ax.get_xlim()
-        # y1, y2 = self.ax.get_ylim()
-        # self.ax.set_xlim(x1*delta, x2*delta)
-        # self.ax.set_ylim(y1*delta, y2*delta)
-        # self.draw()
-        return True
-
-    def plot_button_press(self, event):
-        if event.button == 1:
-            self.plot_x, self.plot_y = event.x, event.y
-        return True
-
-    def plot_motion_notify(self, event):
-        if event.button == 1:
-            xdelta = event.x - self.plot_x
-            #ydelta = event.y - self.plot_y
-            ydelta = self.plot_y - event.y
-            self.pan_plot(xdelta, ydelta)
-
-    def pan_plot(self, xdelta, ydelta):
-        x1, x2 = self.ax.get_xlim()
-        y1, y2 = self.ax.get_ylim()
-
-        self.ax.set_xlim(x1 + xdelta, x2 + xdelta)
-        self.ax.set_ylim(y1 + ydelta, y2 + ydelta)
-
-        self.draw()
 
 
 class RadialPlot(Plot):
@@ -409,8 +400,6 @@ class RadialPlot(Plot):
                              mfc='none', mec='blue')
             self.ax.plot(x_curve, y_curve, '-', color='green', lw=2)
 
-            #self.fig.tight_layout()
-
             self.draw()
 
         except Exception as e:
@@ -446,7 +435,7 @@ class FWHMPlot(Plot):
         XN = np.linspace(0.0, float(N), N * 10)
         Z = np.array([res.fit_fn(x, res.fit_args) for x in XN])
         self.ax.plot(XN, Z, color=color1, linestyle=':')
-        self.ax.axvspan(mu - fwhm / 2.0, mu + fwhm / 2.0,
+        self.ax.axvspan(mu - fwhm * 0.5, mu + fwhm * 0.5,
                         facecolor=color3, alpha=0.25)
         return fwhm
 
@@ -492,8 +481,6 @@ class FWHMPlot(Plot):
                            prop={'size': 8}, labelspacing=0.2)
             self.set_titles(title="FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
 
-            #self.fig.tight_layout()
-
             self.draw()
 
         except Exception as e:
@@ -530,8 +517,6 @@ class SurfacePlot(Plot):
                 kwargs = {'axisbg': '#808080'}
 
             self.ax = self.fig.gca(projection='3d', **kwargs)
-            self.ax.set_aspect('equal', adjustable='box')
-            #self.ax.cla()
 
             self.set_titles(ytitle='Y', xtitle='X',
                             title='Surface Plot')

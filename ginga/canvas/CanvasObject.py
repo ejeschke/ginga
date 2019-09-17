@@ -213,15 +213,17 @@ class CanvasObjectBase(Callback.Callbacks):
         return (x1, y1, x2, y2)
 
     def scale_font(self, viewer):
-        zoomlevel = viewer.get_zoom()
-        if zoomlevel >= -4:
-            return 14
-        elif zoomlevel >= -6:
-            return 12
-        elif zoomlevel >= -8:
-            return 10
-        else:
-            return 8
+        scale = viewer.get_scale_max()
+        basesize = getattr(self, 'fontsize', 10.0)
+        if basesize is None:
+            basesize = 10.0
+        min_size = getattr(self, 'fontsize_min', 2.0)
+        n = 1.4
+        fontsize = max(min_size, basesize + np.log(scale) / np.log(n))
+        max_size = getattr(self, 'fontsize_max', None)
+        if max_size is not None:
+            fontsize = min(max_size, fontsize)
+        return fontsize
 
     def get_points(self):
         """Get the set of points that is used to draw the object.

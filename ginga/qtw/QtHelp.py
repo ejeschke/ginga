@@ -7,6 +7,7 @@
 import glob
 import os
 import math
+import weakref
 
 import ginga.toolkit
 from ginga.util import iohelper
@@ -34,6 +35,7 @@ have_pyqt4 = False
 have_pyqt5 = False
 have_pyside = False
 have_pyside2 = False
+qtpy_import_error = ""
 
 try:
     from qtpy import QtCore
@@ -55,7 +57,9 @@ try:
 
     configured = True
 except ImportError as e:
-    pass
+    qtpy_import_error = "Error importing 'qtpy': {}".format(e)
+    # for debugging purposes, uncomment this to get full traceback
+    #raise e
 
 if have_pyqt5:
     ginga.toolkit.use('qt5')
@@ -71,7 +75,8 @@ elif have_pyside:
     os.environ['QT_API'] = 'pyside'
 else:
     raise ImportError("Failed to configure qt4, qt5, pyside or pyside2. "
-                      "Is the 'qtpy' package installed?")
+                      "Is the 'qtpy' package installed? (%s)" % (
+                          qtpy_import_error))
 
 
 tabwidget_style = """
@@ -390,5 +395,21 @@ def load_font(font_name, font_file):
         font_asst.add_alias(font_name, font_family)
 
     return font_name
+
+
+# cache of QPainters for surfaces
+_painters = weakref.WeakKeyDictionary()
+
+
+def get_painter(surface):
+    if surface in _painters:
+        return _painters[surface]
+
+    painter = QPainter(surface)
+    painter.setRenderHint(QPainter.Antialiasing)
+    painter.setRenderHint(QPainter.TextAntialiasing)
+    _painters[surface] = painter
+    return painter
+
 
 # END

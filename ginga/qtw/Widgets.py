@@ -391,9 +391,19 @@ class ComboBox(WidgetBase):
     def clear(self):
         self.widget.clear()
 
-    def show_text(self, text):
+    def set_text(self, text):
         index = self.widget.findText(text)
-        self.set_index(index)
+        if index >= 0:
+            self.set_index(index)
+        else:
+            self.widget.setEditText(text)
+
+    # to be deprecated someday
+    show_text = set_text
+
+    def get_text(self):
+        idx = self.get_index()
+        return self.get_alpha(idx)
 
     def append_text(self, text):
         self.widget.addItem(text)
@@ -1342,6 +1352,8 @@ class MDIWidget(ContainerBase):
                 self._cb_redirect(subwin)
 
         subwin.focusInEvent = _focus_cb
+        # remove Qt logo from subwindow
+        subwin.setWindowIcon(QIcon(QPixmap(1, 1)))
         subwin.setWidget(child_w)
         # attach title to child
         child.extdata.tab_title = title
@@ -1818,11 +1830,15 @@ class Application(Callback.Callbacks):
 
         # Get screen size
         desktop = self._qtapp.desktop()
-        # rect = desktop.screenGeometry()
         rect = desktop.availableGeometry()
         size = rect.size()
         self.screen_wd = size.width()
         self.screen_ht = size.height()
+
+        # Get screen resolution
+        xdpi = desktop.physicalDpiX()
+        ydpi = desktop.physicalDpiY()
+        self.screen_res = max(xdpi, ydpi)
 
         for name in ('shutdown', ):
             self.enable_callback(name)
@@ -1859,6 +1875,9 @@ class Application(Callback.Callbacks):
         w = TopLevel(title=title)
         self.add_window(w)
         return w
+
+    def make_timer(self):
+        return QtHelp.Timer()
 
     def mainloop(self):
         self._qtapp.exec_()
@@ -1942,12 +1961,15 @@ class DragPackage(object):
     def __init__(self, src_widget):
         self.src_widget = src_widget
         self._drag = QtHelp.QDrag(self.src_widget)
+        self._data = QtCore.QMimeData()
+        self._drag.setMimeData(self._data)
 
     def set_urls(self, urls):
-        mimeData = QtCore.QMimeData()
         _urls = [QtCore.QUrl(url) for url in urls]
-        mimeData.setUrls(_urls)
-        self._drag.setMimeData(mimeData)
+        self._data.setUrls(_urls)
+
+    def set_text(self, text):
+        self._data.setText(text)
 
     def start_drag(self):
         if QtHelp.have_pyqt5:

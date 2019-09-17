@@ -171,6 +171,7 @@ class ReferenceViewer(object):
     def __init__(self, layout=default_layout):
         self.plugins = []
         self.layout = layout
+        self.channels = ['Image']
 
     def add_plugin_spec(self, spec):
         self.plugins.append(spec)
@@ -216,62 +217,69 @@ class ReferenceViewer(object):
                 print("Error trying to instantiate external plugin using %s: %s" % (
                     str(method), str(e)))
 
-    def add_default_options(self, optprs):
+    def add_default_options(self, argprs):
         """
         Adds the default reference viewer startup options to an
-        OptionParser instance `optprs`.
+        ArgumentParser instance `argprs`.
         """
-        optprs.add_option("--bufsize", dest="bufsize", metavar="NUM",
-                          type="int", default=10,
-                          help="Buffer length to NUM")
-        optprs.add_option('-c', "--channels", dest="channels",
-                          help="Specify list of channels to create")
-        optprs.add_option("--debug", dest="debug", default=False,
-                          action="store_true",
-                          help="Enter the pdb debugger on main()")
-        optprs.add_option("--disable-plugins", dest="disable_plugins",
-                          metavar="NAMES",
-                          help="Specify plugins that should be disabled")
-        optprs.add_option("--display", dest="display", metavar="HOST:N",
-                          help="Use X display on HOST:N")
-        optprs.add_option("--fitspkg", dest="fitspkg", metavar="NAME",
-                          default=None,
-                          help="Prefer FITS I/O module NAME")
-        optprs.add_option("-g", "--geometry", dest="geometry",
-                          default=None, metavar="GEOM",
-                          help="X geometry for initial size and placement")
-        optprs.add_option("--modules", dest="modules", metavar="NAMES",
-                          help="Specify additional modules to load")
-        optprs.add_option("--norestore", dest="norestore", default=False,
-                          action="store_true",
-                          help="Don't restore the GUI from a saved layout")
-        optprs.add_option("--nosplash", dest="nosplash", default=False,
-                          action="store_true",
-                          help="Don't display the splash screen")
-        optprs.add_option("--numthreads", dest="numthreads", type="int",
-                          default=30, metavar="NUM",
-                          help="Start NUM threads in thread pool")
-        optprs.add_option("--opencv", dest="opencv", default=False,
-                          action="store_true",
-                          help="Use OpenCv acceleration")
-        optprs.add_option("--opencl", dest="opencl", default=False,
-                          action="store_true",
-                          help="Use OpenCL acceleration")
-        optprs.add_option("--plugins", dest="plugins", metavar="NAMES",
-                          help="Specify additional plugins to load")
-        optprs.add_option("--profile", dest="profile", action="store_true",
-                          default=False,
-                          help="Run the profiler on main()")
-        optprs.add_option("--sep", dest="separate_channels", default=False,
-                          action="store_true",
-                          help="Load files in separate channels")
-        optprs.add_option("-t", "--toolkit", dest="toolkit", metavar="NAME",
-                          default=None,
-                          help="Prefer GUI toolkit (gtk|qt)")
-        optprs.add_option("--wcspkg", dest="wcspkg", metavar="NAME",
-                          default=None,
-                          help="Prefer WCS module NAME")
-        log.addlogopts(optprs)
+        if hasattr(argprs, 'add_option'):
+            # older OptParse
+            add_argument = argprs.add_option
+        else:
+            # newer ArgParse
+            add_argument = argprs.add_argument
+
+        add_argument("--bufsize", dest="bufsize", metavar="NUM",
+                     type=int, default=10,
+                     help="Buffer length to NUM")
+        add_argument('-c', "--channels", dest="channels",
+                     help="Specify list of channels to create")
+        add_argument("--debug", dest="debug", default=False,
+                     action="store_true",
+                     help="Enter the pdb debugger on main()")
+        add_argument("--disable-plugins", dest="disable_plugins",
+                     metavar="NAMES",
+                     help="Specify plugins that should be disabled")
+        add_argument("--display", dest="display", metavar="HOST:N",
+                     help="Use X display on HOST:N")
+        add_argument("--fitspkg", dest="fitspkg", metavar="NAME",
+                     default=None,
+                     help="Prefer FITS I/O module NAME")
+        add_argument("-g", "--geometry", dest="geometry",
+                     default=None, metavar="GEOM",
+                     help="X geometry for initial size and placement")
+        add_argument("--modules", dest="modules", metavar="NAMES",
+                     help="Specify additional modules to load")
+        add_argument("--norestore", dest="norestore", default=False,
+                     action="store_true",
+                     help="Don't restore the GUI from a saved layout")
+        add_argument("--nosplash", dest="nosplash", default=False,
+                     action="store_true",
+                     help="Don't display the splash screen")
+        add_argument("--numthreads", dest="numthreads", type=int,
+                     default=30, metavar="NUM",
+                     help="Start NUM threads in thread pool")
+        add_argument("--opencv", dest="opencv", default=False,
+                     action="store_true",
+                     help="Use OpenCv acceleration")
+        add_argument("--opencl", dest="opencl", default=False,
+                     action="store_true",
+                     help="Use OpenCL acceleration")
+        add_argument("--plugins", dest="plugins", metavar="NAMES",
+                     help="Specify additional plugins to load")
+        add_argument("--profile", dest="profile", action="store_true",
+                     default=False,
+                     help="Run the profiler on main()")
+        add_argument("--sep", dest="separate_channels", default=False,
+                     action="store_true",
+                     help="Load files in separate channels")
+        add_argument("-t", "--toolkit", dest="toolkit", metavar="NAME",
+                     default=None,
+                     help="Prefer GUI toolkit (gtk|qt)")
+        add_argument("--wcspkg", dest="wcspkg", metavar="NAME",
+                     default=None,
+                     help="Prefer WCS module NAME")
+        log.addlogopts(argprs)
 
     def main(self, options, args):
         """
@@ -378,12 +386,6 @@ class ReferenceViewer(object):
                 logger.warning(
                     "failed to load matplotlib colormaps: %s" % (str(e)))
 
-        # user wants to set font scaling
-        font_scaling = settings.get('font_scaling_factor', None)
-        if font_scaling is not None:
-            from ginga.fonts import font_asst
-            font_asst.default_scaling_factor = font_scaling
-
         # Set a working RGB ICC profile if user has one
         working_profile = settings.get('icc_working_profile', None)
         rgb_cms.working_profile = working_profile
@@ -409,9 +411,14 @@ class ReferenceViewer(object):
             fitspkg = settings.get('FITSpkg', 'choose')
 
         try:
-            from ginga.util import io_fits
+            from ginga.util import io_fits, loader
             if fitspkg != 'choose':
                 assert io_fits.use(fitspkg) is True
+                # opener name is not necessarily the same
+                opener = loader.get_opener(io_fits.fitsLoaderClass.name)
+                # set this opener as the priority one
+                opener.priority = -99
+
         except Exception as e:
             logger.warning(
                 "failed to set FITS package preference: %s" % (str(e)))
@@ -448,6 +455,15 @@ class ReferenceViewer(object):
         # Create the Ginga main object
         ginga_shell = GingaShell(logger, thread_pool, mm, prefs,
                                  ev_quit=ev_quit)
+
+        # user wants to set font scaling.
+        # NOTE: this happens *after* creation of shell object, since
+        # Application object constructor will also set this
+        font_scaling = settings.get('font_scaling_factor', None)
+        if font_scaling is not None:
+            logger.debug("overriding font_scaling_factor to {}".format(font_scaling))
+            from ginga.fonts import font_asst
+            font_asst.default_scaling_factor = font_scaling
 
         layout_file = None
         if not options.norestore and settings.get('save_layout', False):
@@ -561,7 +577,7 @@ class ReferenceViewer(object):
         if options.channels is not None:
             channels = options.channels.split(',')
         else:
-            channels = settings.get('channels', [])
+            channels = settings.get('channels', self.channels)
             if not isinstance(channels, list):
                 channels = channels.split(',')
 
@@ -569,9 +585,15 @@ class ReferenceViewer(object):
             # should provide at least one default channel?
             channels = [settings.get('channel_prefix', "Image")]
 
-        for chname in channels:
-            ginga_shell.add_channel(chname)
-        ginga_shell.change_channel(channels[0])
+        # populate the initial channel lineup
+        for item in channels:
+            if isinstance(item, str):
+                chname, wsname = item, None
+            else:
+                chname, wsname = item
+            ginga_shell.add_channel(chname, workspace=wsname)
+
+        ginga_shell.change_channel(chname)
 
         # User configuration (custom star catalogs, etc.)
         if have_ginga_config:
@@ -596,9 +618,9 @@ class ReferenceViewer(object):
             logging.getLogger('py.warnings').addHandler(hdlr)
 
         # Display banner the first time run, unless suppressed
-        showBanner = True
+        show_banner = True
         try:
-            showBanner = settings.get('showBanner')
+            show_banner = settings.get('showBanner')
 
         except KeyError:
             # disable for subsequent runs
@@ -606,7 +628,7 @@ class ReferenceViewer(object):
             if not os.path.exists(settings.preffile):
                 settings.save()
 
-        if (not options.nosplash) and (len(args) == 0) and showBanner:
+        if (not options.nosplash) and (len(args) == 0) and show_banner:
             ginga_shell.banner(raiseTab=True)
 
         # Handle inputs like "*.fits[ext]" that sys cmd cannot auto expand.
@@ -646,11 +668,12 @@ class ReferenceViewer(object):
             try:
                 # if there is a network component, start it
                 if hasattr(ginga_shell, 'start'):
+                    logger.info("starting network interface...")
                     task = Task.FuncTask2(ginga_shell.start)
                     thread_pool.addTask(task)
 
                 # Main loop to handle GUI events
-                logger.info("Entering mainloop...")
+                logger.info("entering mainloop...")
                 ginga_shell.mainloop(timeout=0.001)
 
             except KeyboardInterrupt:
@@ -695,15 +718,14 @@ def reference_viewer(sys_argv):
     viewer.add_default_plugins()
     viewer.add_separately_distributed_plugins()
 
-    # Parse command line options with optparse module
-    from optparse import OptionParser
+    # Parse command line options with argparse module
+    from argparse import ArgumentParser
 
-    usage = "usage: %prog [options] cmd [args]"
-    optprs = OptionParser(usage=usage,
-                          version=('%%prog %s' % version.version))
-    viewer.add_default_options(optprs)
-
-    (options, args) = optprs.parse_args(sys_argv[1:])
+    argprs = ArgumentParser(description="Run the Ginga reference viewer.")
+    viewer.add_default_options(argprs)
+    argprs.add_argument('-V', '--version', action='version',
+                        version='%(prog)s {}'.format(version.version))
+    (options, args) = argprs.parse_known_args(sys_argv[1:])
 
     if options.display:
         os.environ['DISPLAY'] = options.display
@@ -719,7 +741,8 @@ def reference_viewer(sys_argv):
         import profile
 
         print(("%s profile:" % sys_argv[0]))
-        profile.run('viewer.main(options, args)')
+        profile.runctx('viewer.main(options, args)',
+                       dict(options=options, args=args, viewer=viewer), {})
 
     else:
         viewer.main(options, args)

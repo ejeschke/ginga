@@ -5,17 +5,15 @@
 # Please see the file LICENSE.txt for details.
 #
 import sys
-import math
 import traceback
+import warnings
 from collections import OrderedDict
 
 import numpy as np
 
-from ginga.util import wcsmod, io_fits, io_asdf
-from ginga.util import wcs, iqcalc
+from ginga.util import wcs, wcsmod
 from ginga.BaseImage import BaseImage, ImageError, Header
 from ginga.misc import Bunch
-from ginga import trcalc
 
 
 class AstroHeader(Header):
@@ -58,12 +56,12 @@ class AstroImage(BaseImage):
         # ioclass specifies a pluggable IO module
         if ioclass is None:
             if self.ioClass is None:
+                from ginga.util import io_fits
                 ioclass = io_fits.fitsLoaderClass
             else:
                 ioclass = self.ioClass
 
         self.io = ioclass(self.logger)
-        self.io.register_type('image', self.__class__)
 
         self.inherit_primary_header = inherit_primary_header
         self.save_primary_header = inherit_primary_header or save_primary_header
@@ -90,9 +88,6 @@ class AstroImage(BaseImage):
             data = np.zeros((0, 0))
         elif 0 in data.shape:
             data = np.zeros((0, 0))
-        elif len(data.shape) < 2:
-            # Expand 1D arrays into 1xN array
-            data = data.reshape((1, data.shape[0]))
 
         # this is a handle to the full data array
         self._md_data = data
@@ -113,15 +108,11 @@ class AstroImage(BaseImage):
     def load_hdu(self, hdu, fobj=None, naxispath=None,
                  inherit_primary_header=None):
 
-        if self.io is None:
-            # need image loader for the fromHDU() call below
-            raise ImageError("No IO loader defined")
-
         self.clear_metadata()
 
         # collect HDU header
         ahdr = self.get_header()
-        self.io.fromHDU(hdu, ahdr)
+        self._copy_hdu_header(hdu, ahdr)
 
         # Set PRIMARY header
         if inherit_primary_header is None:
@@ -135,7 +126,7 @@ class AstroImage(BaseImage):
             if self._primary_hdr is None:
                 self._primary_hdr = AstroHeader()
 
-            self.io.fromHDU(fobj[0], self._primary_hdr)
+            self._copy_hdu_header(fobj[0], self._primary_hdr)
 
         self.setup_data(hdu.data, naxispath=naxispath)
 
@@ -164,24 +155,6 @@ class AstroImage(BaseImage):
             wcsinfo = wcsmod.get_wcs_class('astropy')
             self.wcs = wcsinfo.wrapper_class(logger=self.logger)
             self.wcs.load_nddata(ndd)
-
-    def load_asdf(self, asdf_obj, **kwargs):
-        """
-        Load from an ASDF object.
-        See :func:`ginga.util.io_asdf.load_asdf` for more info.
-        """
-        self.clear_metadata()
-
-        data, wcs, ahdr = io_asdf.load_asdf(asdf_obj, **kwargs)
-
-        self.setup_data(data, naxispath=None)
-
-        wcsinfo = wcsmod.get_wcs_class('astropy_ape14')
-        self.wcs = wcsinfo.wrapper_class(logger=self.logger)
-        self.wcs.wcs = wcs
-
-        if wcs is not None:
-            self.wcs.coordsys = wcs.output_frame.name
 
     def load_file(self, filespec, **kwargs):
 
@@ -218,12 +191,13 @@ class AstroImage(BaseImage):
         revnaxis.reverse()
 
         # construct slice view and extract it
-        view = tuple(revnaxis + [slice(None), slice(None)])
+        ndim = min(self.ndim, 2)
+        view = tuple(revnaxis + [slice(None)] * ndim)
         data = self.get_mddata()[view]
 
-        if len(data.shape) != 2:
+        if len(data.shape) not in (1, 2):
             raise ImageError(
-                "naxispath does not lead to a 2D slice: {}".format(naxispath))
+                "naxispath does not lead to a 1D or 2D slice: {}".format(naxispath))
 
         self.naxispath = naxispath
         self.revnaxis = revnaxis
@@ -375,6 +349,16 @@ class AstroImage(BaseImage):
         hdu = fits.PrimaryHDU(data=data, header=header)
         return hdu
 
+    def _copy_hdu_header(self, hdu, ahdr):
+        """Copy a FITS header from an astropy.io.fits.PrimaryHDU object
+        into a ginga.AstroImage.AstroHeader object.
+        """
+        header = hdu.header
+        for card in header.cards:
+            if len(card.keyword) == 0:
+                continue
+            ahdr.set_card(card.keyword, card.value, comment=card.comment)
+
     def astype(self, type_name):
         """Convert AstroImage object to some other kind of object.
         """
@@ -416,330 +400,84 @@ class AstroImage(BaseImage):
                                    naxispath=self.revnaxis)
 
     # -----> TODO:
-    #   This section has been merged into util.wcs.  Deprecate it here.
+    #   This section has been merged into ginga.util.wcs or
+    #   ginga.util.mosaic .  Deprecate it here.
     #
     def get_starsep_XY(self, x1, y1, x2, y2):
-        # source point
-        ra_org, dec_org = self.pixtoradec(x1, y1)
-
-        # destination point
-        ra_dst, dec_dst = self.pixtoradec(x2, y2)
-
-        return wcs.get_starsep_RaDecDeg(ra_org, dec_org, ra_dst, dec_dst)
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      PendingDeprecationWarning)
+        return wcs.get_starsep_XY(self, x1, y1, x2, y2)
 
     def calc_radius_xy(self, x, y, radius_deg):
-        """Calculate a radius (in pixels) from the point (x, y) to a circle
-        defined by radius in degrees.
-        """
-        # calculate ra/dec of x,y pixel
-        ra_deg, dec_deg = self.pixtoradec(x, y)
-
-        # Calculate position 1 degree from the given one
-        # NOTE: this needs to add in DEC, not RA
-        ra2_deg, dec2_deg = wcs.add_offset_radec(ra_deg, dec_deg,
-                                                 0.0, 1.0)
-
-        # Calculate the length of this segment--it is pixels/deg
-        x2, y2 = self.radectopix(ra2_deg, dec2_deg)
-        px_per_deg_e = math.sqrt(math.fabs(x2 - x)**2 + math.fabs(y2 - y)**2)
-
-        # calculate radius based on desired radius_deg
-        radius_px = px_per_deg_e * radius_deg
-        return radius_px
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      PendingDeprecationWarning)
+        return wcs.calc_radius_xy(self, x, y, radius_deg)
 
     def calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
                             equinox=None):
-        x, y = self.radectopix(ra_deg, dec_deg, equinox=equinox)
-        return self.calc_radius_xy(x, y, delta_deg)
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      PendingDeprecationWarning)
+        return wcs.calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
+                                       equinox=equinox)
 
     def add_offset_xy(self, x, y, delta_deg_x, delta_deg_y):
-        # calculate ra/dec of x,y pixel
-        ra_deg, dec_deg = self.pixtoradec(x, y)
-
-        # add offsets
-        ra2_deg, dec2_deg = wcs.add_offset_radec(ra_deg, dec_deg,
-                                                 delta_deg_x, delta_deg_y)
-
-        # then back to new pixel coords
-        x2, y2 = self.radectopix(ra2_deg, dec2_deg)
-
-        return (x2, y2)
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      PendingDeprecationWarning)
+        return wcs.add_offset_xy(self, x, y, delta_deg_x, delta_deg_y)
 
     def calc_radius_center(self, delta_deg):
-        return self.calc_radius_xy(float(self.width / 2.0),
-                                   float(self.height / 2.0),
-                                   delta_deg)
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      PendingDeprecationWarning)
+        return wcs.calc_radius_center(self, delta_deg)
 
     def calc_compass(self, x, y, len_deg_e, len_deg_n):
-
-        # Get east and north coordinates
-        xe, ye = self.add_offset_xy(x, y, len_deg_e, 0.0)
-        xe = int(np.round(xe))
-        ye = int(np.round(ye))
-        xn, yn = self.add_offset_xy(x, y, 0.0, len_deg_n)
-        xn = int(np.round(xn))
-        yn = int(np.round(yn))
-
-        return (x, y, xn, yn, xe, ye)
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      PendingDeprecationWarning)
+        return wcs.calc_compass(self, x, y, len_deg_e, len_deg_n)
 
     def calc_compass_radius(self, x, y, radius_px):
-        xe, ye = self.add_offset_xy(x, y, 1.0, 0.0)
-        xn, yn = self.add_offset_xy(x, y, 0.0, 1.0)
-
-        # now calculate the length in pixels of those arcs
-        # (planar geometry is good enough here)
-        px_per_deg_e = math.sqrt(math.fabs(ye - y)**2 + math.fabs(xe - x)**2)
-        px_per_deg_n = math.sqrt(math.fabs(yn - y)**2 + math.fabs(xn - x)**2)
-
-        # now calculate the arm length in degrees for each arm
-        # (this produces same-length arms)
-        len_deg_e = radius_px / px_per_deg_e
-        len_deg_n = radius_px / px_per_deg_n
-
-        return self.calc_compass(x, y, len_deg_e, len_deg_n)
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      PendingDeprecationWarning)
+        return wcs.calc_compass_radius(self, x, y, radius_px)
 
     def calc_compass_center(self):
-        # calculate center of data
-        x = float(self.width) / 2.0
-        y = float(self.height) / 2.0
-
-        # radius we want the arms to be (approx 1/4 the smallest dimension)
-        radius_px = float(min(self.width, self.height)) / 4.0
-
-        return self.calc_compass_radius(x, y, radius_px)
-    #
-    # <----- TODO: deprecate
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      PendingDeprecationWarning)
+        return wcs.calc_compass_center(self)
 
     def get_wcs_rotation_deg(self):
+        warnings.warn("This function has been deprecated--"
+                      "use get_rotation_and_scale in ginga.util.wcs",
+                      PendingDeprecationWarning)
         header = self.get_header()
         (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
         return rot
-
-    def rotate(self, deg, update_wcs=False):
-        #old_deg = self.get_wcs_rotation_deg()
-
-        super(AstroImage, self).rotate(deg)
-
-        # TODO: currently this is not working!
-        ## if update_wcs:
-        ##     self.wcs.rotate(deg)
 
     def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None,
                       merge=False, allow_expand=True, expand_pad_deg=0.01,
                       max_expand_pct=None,
                       update_minmax=True, suppress_callback=False):
-        """Drops new images into the current image (if there is room),
-        relocating them according the WCS between the two images.
-        """
-        # Get our own (mosaic) rotation and scale
-        header = self.get_header()
-        ((xrot_ref, yrot_ref),
-         (cdelt1_ref, cdelt2_ref)) = wcs.get_xy_rotation_and_scale(header)
-
-        scale_x, scale_y = math.fabs(cdelt1_ref), math.fabs(cdelt2_ref)
-
-        # drop each image in the right place in the new data array
-        mydata = self._get_data()
-
-        count = 1
-        res = []
-        for image in imagelist:
-            name = image.get('name', 'image%d' % (count))
-            count += 1
-
-            data_np = image._get_data()
-            if 0 in data_np.shape:
-                self.logger.info("Skipping image with zero length axis")
-                continue
-
-            # Calculate sky position at the center of the piece
-            ctr_x, ctr_y = trcalc.get_center(data_np)
-            ra, dec = image.pixtoradec(ctr_x, ctr_y)
-
-            # User specified a trim?  If so, trim edge pixels from each
-            # side of the array
-            ht, wd = data_np.shape[:2]
-            if trim_px:
-                xlo, xhi = trim_px, wd - trim_px
-                ylo, yhi = trim_px, ht - trim_px
-                data_np = data_np[ylo:yhi, xlo:xhi, ...]
-                ht, wd = data_np.shape[:2]
-
-            # If caller asked us to match background of pieces then
-            # get the median of this piece
-            if bg_ref is not None:
-                bg = iqcalc.get_median(data_np)
-                bg_inc = bg_ref - bg
-                data_np = data_np + bg_inc
-
-            # Determine max/min to update our values
-            if update_minmax:
-                maxval = np.nanmax(data_np)
-                minval = np.nanmin(data_np)
-                self.maxval = max(self.maxval, maxval)
-                self.minval = min(self.minval, minval)
-
-            # Get rotation and scale of piece
-            header = image.get_header()
-            ((xrot, yrot),
-             (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(header)
-            self.logger.debug("image(%s) xrot=%f yrot=%f cdelt1=%f "
-                              "cdelt2=%f" % (name, xrot, yrot, cdelt1, cdelt2))
-
-            # scale if necessary
-            # TODO: combine with rotation?
-            if (not np.isclose(math.fabs(cdelt1), scale_x) or
-                not np.isclose(math.fabs(cdelt2), scale_y)):
-                nscale_x = math.fabs(cdelt1) / scale_x
-                nscale_y = math.fabs(cdelt2) / scale_y
-                self.logger.debug("scaling piece by x(%f), y(%f)" % (
-                    nscale_x, nscale_y))
-                data_np, (ascale_x, ascale_y) = trcalc.get_scaled_cutout_basic(
-                    data_np, 0, 0, wd - 1, ht - 1, nscale_x, nscale_y,
-                    logger=self.logger)
-
-            # Rotate piece into our orientation, according to wcs
-            rot_dx, rot_dy = xrot - xrot_ref, yrot - yrot_ref
-
-            flip_x = False
-            flip_y = False
-
-            # Optomization for 180 rotations
-            if (np.isclose(math.fabs(rot_dx), 180.0) or
-                np.isclose(math.fabs(rot_dy), 180.0)):
-                rotdata = trcalc.transform(data_np,
-                                           flip_x=True, flip_y=True)
-                rot_dx = 0.0
-                rot_dy = 0.0
-            else:
-                rotdata = data_np
-
-            # Finish with any necessary rotation of piece
-            if not np.isclose(rot_dy, 0.0):
-                rot_deg = rot_dy
-                self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
-                rotdata = trcalc.rotate(rotdata, rot_deg,
-                                        #rotctr_x=ctr_x, rotctr_y=ctr_y
-                                        logger=self.logger)
-
-            # Flip X due to negative CDELT1
-            if np.sign(cdelt1) != np.sign(cdelt1_ref):
-                flip_x = True
-
-            # Flip Y due to negative CDELT2
-            if np.sign(cdelt2) != np.sign(cdelt2_ref):
-                flip_y = True
-
-            if flip_x or flip_y:
-                rotdata = trcalc.transform(rotdata,
-                                           flip_x=flip_x, flip_y=flip_y)
-
-            # Get size and data of new image
-            ht, wd = rotdata.shape[:2]
-            ctr_x, ctr_y = trcalc.get_center(rotdata)
-
-            # Find location of image piece (center) in our array
-            x0, y0 = self.radectopix(ra, dec)
-
-            # Merge piece as closely as possible into our array
-            # Unfortunately we lose a little precision rounding to the
-            # nearest pixel--can't be helped with this approach
-            x0, y0 = int(np.round(x0)), int(np.round(y0))
-            self.logger.debug("Fitting image '%s' into mosaic at %d,%d" % (
-                name, x0, y0))
-
-            # This is for useful debugging info only
-            my_ctr_x, my_ctr_y = trcalc.get_center(mydata)
-            off_x, off_y = x0 - my_ctr_x, y0 - my_ctr_y
-            self.logger.debug("centering offsets: %d,%d" % (off_x, off_y))
-
-            # Sanity check piece placement
-            xlo, xhi = x0 - ctr_x, x0 + wd - ctr_x
-            ylo, yhi = y0 - ctr_y, y0 + ht - ctr_y
-            assert (xhi - xlo == wd), \
-                Exception("Width differential %d != %d" % (xhi - xlo, wd))
-            assert (yhi - ylo == ht), \
-                Exception("Height differential %d != %d" % (yhi - ylo, ht))
-
-            mywd, myht = self.get_size()
-            if xlo < 0 or xhi > mywd or ylo < 0 or yhi > myht:
-                if not allow_expand:
-                    raise Exception("New piece doesn't fit on image and "
-                                    "allow_expand=False")
-
-                # <-- Resize our data array to allow the new image
-
-                # determine amount to pad expansion by
-                expand_x = max(int(expand_pad_deg / scale_x), 0)
-                expand_y = max(int(expand_pad_deg / scale_y), 0)
-
-                nx1_off, nx2_off = 0, 0
-                if xlo < 0:
-                    nx1_off = abs(xlo) + expand_x
-                if xhi > mywd:
-                    nx2_off = (xhi - mywd) + expand_x
-                xlo, xhi = xlo + nx1_off, xhi + nx1_off
-
-                ny1_off, ny2_off = 0, 0
-                if ylo < 0:
-                    ny1_off = abs(ylo) + expand_y
-                if yhi > myht:
-                    ny2_off = (yhi - myht) + expand_y
-                ylo, yhi = ylo + ny1_off, yhi + ny1_off
-
-                new_wd = mywd + nx1_off + nx2_off
-                new_ht = myht + ny1_off + ny2_off
-
-                # sanity check on new mosaic size
-                old_area = mywd * myht
-                new_area = new_wd * new_ht
-                expand_pct = new_area / old_area
-                if ((max_expand_pct is not None) and
-                        (expand_pct > max_expand_pct)):
-                    raise Exception("New area exceeds current one by %.2f %%;"
-                                    "increase max_expand_pct (%.2f) to allow" %
-                                    (expand_pct * 100, max_expand_pct))
-
-                # go for it!
-                new_data = np.zeros((new_ht, new_wd))
-                # place current data into new data
-                new_data[ny1_off:ny1_off + myht, nx1_off:nx1_off + mywd] = \
-                    mydata
-                self._data = new_data
-                mydata = new_data
-
-                if (nx1_off > 0) or (ny1_off > 0):
-                    # Adjust our WCS for relocation of the reference pixel
-                    crpix1, crpix2 = self.get_keywords_list('CRPIX1', 'CRPIX2')
-                    kwds = dict(CRPIX1=crpix1 + nx1_off,
-                                CRPIX2=crpix2 + ny1_off)
-                    self.update_keywords(kwds)
-
-            # fit image piece into our array
-            try:
-                if merge:
-                    mydata[ylo:yhi, xlo:xhi, ...] += rotdata[0:ht, 0:wd, ...]
-                else:
-                    idx = (mydata[ylo:yhi, xlo:xhi, ...] == 0.0)
-                    mydata[ylo:yhi, xlo:xhi, ...][idx] = \
-                        rotdata[0:ht, 0:wd, ...][idx]
-
-            except Exception as e:
-                self.logger.error("Error fitting tile: %s" % (str(e)))
-                raise
-
-            res.append((xlo, ylo, xhi, yhi))
-
-        # TODO: recalculate min and max values
-        # Can't use usual techniques because it adds too much time to the
-        # mosacing
-        #self._set_minmax()
-
-        # Notify watchers that our data has changed
-        if not suppress_callback:
-            self.make_callback('modified')
-
-        return res
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.mosaic",
+                      PendingDeprecationWarning)
+        from ginga.util import mosaic
+        return mosaic.mosaic_inline(self, imagelist, bg_ref=bg_ref,
+                                    trim_px=trim_px, merge=merge,
+                                    allow_expand=allow_expand,
+                                    expand_pad_deg=expand_pad_deg,
+                                    max_expand_pct=max_expand_pct,
+                                    update_minmax=update_minmax,
+                                    suppress_callback=suppress_callback)
+    #
+    # <----- TODO: deprecate
 
     def info_xy(self, data_x, data_y, settings):
         # Get the value under the data coordinates

@@ -60,12 +60,6 @@ matrix:
         # - os: linux
         #  env: SETUP_CMD='test --coverage'
 
-        # TODO: Build doc with Python 3.7 when conda no longer conflicts.
-        # Check for sphinx doc build warnings - we do this first because it
-        # may run for a long time
-        - os: linux
-          env: PYTHON_VERSION=3.6 SETUP_CMD='build_docs -w' PIP_DEPENDENCIES='sphinx_astropy sphinx_rtd_theme pillow'
-
         # Try older Numpy versions
         # TODO: Change to ASTROPY_VERSION=lts when PY2 job starts to fail.
         - os: linux
@@ -77,9 +71,9 @@ matrix:
         - os: linux
           env: ASTROPY_VERSION=development CONDA_DEPENDENCIES='pyqt matplotlib'
 
-        # Try with Numpy pre-release (this is skipped unless pre-release is available)
-        - os: linux
-          env: NUMPY_VERSION=prerelease CONDA_DEPENDENCIES='pyqt matplotlib'
+        # Try on Windows
+        - os: windows
+          env: SETUP_CMD='test'
 
         # Do a PEP8 test with flake8 (white-list in setup.cfg)
         - os: linux

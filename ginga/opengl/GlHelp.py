@@ -54,7 +54,7 @@ class Font(object):
     def __init__(self, fontname='ariel', fontsize=12.0, color='black',
                  linewidth=1, alpha=1.0):
         self.fontname = fontname
-        self.fontsize = int(fontsize)
+        self.fontsize = fontsize * 2.0
         self.color = color
         self.linewidth = linewidth
         # scale relative to a 12pt font
@@ -77,7 +77,7 @@ class GlContext(object):
         elif isinstance(color, tuple):
             # color is assumed to be a 3-tuple of RGB values as floats
             # between 0 and 1
-            r, g, b = color
+            r, g, b = color[:3]
         else:
             r, g, b = 1.0, 1.0, 1.0
 

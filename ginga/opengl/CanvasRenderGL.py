@@ -15,6 +15,7 @@ from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga.canvas.transform import BaseTransform
+from ginga.cairow import CairoHelp
 
 # Local imports
 from .Camera import Camera
@@ -55,7 +56,8 @@ class RenderContext(render.RenderContextBase):
 
     def set_font_from_shape(self, shape):
         if hasattr(shape, 'font'):
-            if hasattr(shape, 'fontsize') and shape.fontsize is not None:
+            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
+                not getattr(shape, 'fontscale', False)):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
@@ -95,8 +97,16 @@ class RenderContext(render.RenderContextBase):
     ##### DRAWING OPERATIONS #####
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
-        # TODO
-        pass
+        # TODO: this draws text as polygons, since there is no native
+        # text support in OpenGL.  It uses cairo to convert the text to
+        # paths.  Currently the paths are drawn, but not filled correctly.
+        paths = CairoHelp.text_to_paths(text, self.font, flip_y=True,
+                                        cx=cx, cy=cy, rot_deg=rot_deg)
+
+        for pts in paths:
+            self.set_line(self.font.color, alpha=self.font.alpha)
+            self.set_fill(None)
+            self.draw_polygon(pts)
 
     def _draw_pts(self, shape, cpoints):
 

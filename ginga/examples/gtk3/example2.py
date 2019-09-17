@@ -79,7 +79,7 @@ class FitsViewer(object):
 
         vbox.pack_start(w, True, True, 1)
 
-        self.readout = Gtk.Label("")
+        self.readout = Gtk.Label(label="")
         vbox.pack_start(self.readout, False, False, 0)
 
         hbox = Gtk.HBox(spacing=5)
@@ -104,7 +104,7 @@ class FitsViewer(object):
         wdrawcolor.connect('changed', self.set_drawparams)
         self.wdrawcolor = wdrawcolor
 
-        wfill = GtkHelp.CheckButton("Fill")
+        wfill = GtkHelp.CheckButton(label="Fill")
         wfill.sconnect('toggled', self.set_drawparams)
         self.wfill = wfill
 
@@ -116,15 +116,15 @@ class FitsViewer(object):
         walpha.sconnect('value-changed', self.set_drawparams)
         self.walpha = walpha
 
-        wclear = Gtk.Button("Clear Canvas")
+        wclear = Gtk.Button(label="Clear Canvas")
         wclear.connect('clicked', self.clear_canvas)
 
-        wopen = Gtk.Button("Open File")
+        wopen = Gtk.Button(label="Open File")
         wopen.connect('clicked', self.open_file)
-        wquit = Gtk.Button("Quit")
+        wquit = Gtk.Button(label="Quit")
         wquit.connect('clicked', quit)
 
-        for w in (wquit, wclear, walpha, Gtk.Label("Alpha:"),
+        for w in (wquit, wclear, walpha, Gtk.Label(label="Alpha:"),
                   wfill, wdrawcolor, wdrawtype, wopen):
             hbox.pack_end(w, False, False, 0)
 
@@ -240,27 +240,26 @@ def main(options, args):
 
 if __name__ == "__main__":
 
-    # Parse command line options with nifty optparse module
-    from optparse import OptionParser
+    # Parse command line options
+    from argparse import ArgumentParser
 
-    usage = "usage: %prog [options] cmd [args]"
-    optprs = OptionParser(usage=usage, version=('%%prog'))
+    argprs = ArgumentParser()
 
-    optprs.add_option("--debug", dest="debug", default=False,
-                      action="store_true",
-                      help="Enter the pdb debugger on main()")
-    optprs.add_option("--opencv", dest="opencv", default=False,
-                      action="store_true",
-                      help="Use OpenCv acceleration")
-    optprs.add_option("--opencl", dest="opencl", default=False,
-                      action="store_true",
-                      help="Use OpenCL acceleration")
-    optprs.add_option("--profile", dest="profile", action="store_true",
-                      default=False,
-                      help="Run the profiler on main()")
-    log.addlogopts(optprs)
+    argprs.add_argument("--debug", dest="debug", default=False,
+                        action="store_true",
+                        help="Enter the pdb debugger on main()")
+    argprs.add_argument("--opencv", dest="opencv", default=False,
+                        action="store_true",
+                        help="Use OpenCv acceleration")
+    argprs.add_argument("--opencl", dest="opencl", default=False,
+                        action="store_true",
+                        help="Use OpenCL acceleration")
+    argprs.add_argument("--profile", dest="profile", action="store_true",
+                        default=False,
+                        help="Run the profiler on main()")
+    log.addlogopts(argprs)
 
-    (options, args) = optprs.parse_args(sys.argv[1:])
+    (options, args) = argprs.parse_known_args(sys.argv[1:])
 
     # Are we debugging this?
     if options.debug:

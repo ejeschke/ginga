@@ -41,7 +41,7 @@ HTML5 canvas.  Some other toolkits are being worked on and may be
 partially supported.
 
 The full reference viewer currently supports Qt (4, 5 and PySide) and
-Gtk (2 and 3).  The difference is explained here, in Section
+Gtk (ver 3).  The difference is explained here, in Section
 :ref:`ch-programming-ginga`.
 
 ----------------
@@ -51,7 +51,7 @@ Control Bindings
 Can I get DS9-like user interface mappings?
 -------------------------------------------
 Save the file called `bindings.cfg.ds9
-<https://raw.github.com/ejeschke/ginga/master/examples/bindings/bindings.cfg.ds9>`_
+<https://raw.github.com/ejeschke/ginga/master/ginga/examples/bindings/bindings.cfg.ds9>`_
 and drop it in your ``$HOME/.ginga`` folder as "bindings.cfg".
 Then restart Ginga.
 

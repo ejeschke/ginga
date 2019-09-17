@@ -35,18 +35,23 @@ width, height = 300, 230
 
 class Clock(object):
 
-    def __init__(self, app, logger, timezone, color='lightgreen',
+    def __init__(self, app, logger, timezone_info, color='lightgreen',
                  font='Liberation Sans', show_seconds=False):
         """Constructor for a clock object using a ginga canvas.
         """
         self.logger = logger
 
-        if isinstance(timezone, Bunch):
-            self.timezone = timezone.location
-            self.tzinfo = tz.tzoffset(timezone.location, timezone.time_offset)
+        if isinstance(timezone_info, Bunch):
+            self.timezone_name = timezone_info.location
+            self.tzinfo = tz.tzoffset(self.timezone_name,
+                                      timezone_info.time_offset)
         else:
-            self.timezone = timezone
-            self.tzinfo = pytz.timezone(timezone)
+            # assume timezone_info is a str
+            self.timezone_name = timezone_info
+            #self.tzinfo = pytz.timezone(timezone)
+            # NOTE: wierd construction is necessary to get a dateutil
+            # timezone from the better names produced by pytz
+            self.tzinfo = tz.gettz(str(pytz.timezone(timezone_info)))
 
         self.color = color
         self.font = font
@@ -76,7 +81,7 @@ class Clock(object):
 
         self.clock_resized_cb(self.viewer, wd, ht)
 
-        dt = datetime.utcnow().replace(tzinfo=pytz.utc)
+        dt = datetime.utcnow().replace(tzinfo=tz.UTC)
         self.update_clock(dt)
 
     def clock_resized_cb(self, viewer, width, height):
@@ -116,7 +121,8 @@ class Clock(object):
 
         self.time_txt.text = dt.strftime(fmt)
 
-        suppl_text = "{0} {1}".format(dt.strftime("%Y-%m-%d"), self.timezone)
+        suppl_text = "{0} {1}".format(dt.strftime("%Y-%m-%d"),
+                                      self.timezone_name)
         self.suppl_txt.text = suppl_text
 
         self.viewer.redraw(whence=3)
@@ -149,25 +155,23 @@ class ClockApp(object):
         self.top = self.app.make_window("Clocks")
         self.top.add_callback('close', self.closed)
 
+        vbox = Widgets.VBox()
+
         menubar = Widgets.Menubar()
         clockmenu = menubar.add_name('Clock')
         item = clockmenu.add_name("Quit")
         item.add_callback('activated', lambda *args: self.quit())
+        vbox.add_widget(menubar, stretch=0)
 
-        self.top.set_widget(menubar)
-
-        vbox = Widgets.VBox()
         self.grid = Widgets.GridBox()
         self.grid.set_border_width(1)
         self.grid.set_spacing(2)
         vbox.add_widget(self.grid, stretch=1)
-        self.top.set_widget(vbox)
 
         hbox = Widgets.HBox()
 
         self.timezone_label = Widgets.Label('TimeZone')
-        self.county_timezone = Widgets.ComboBox()
-        self.county_timezone.widget.setEditable(True)
+        self.county_timezone = Widgets.ComboBox(editable=True)
 
         # make a giant list of time zones
         zones = [timezone for timezones in pytz.country_timezones.values()
@@ -189,8 +193,10 @@ class ClockApp(object):
         self.timezone_button = Widgets.Button('Add by Timezone')
         self.offset_button = Widgets.Button('Add by Offset')
 
-        self.timezone_button.widget.clicked.connect(self.more_clock_by_timezone)
-        self.offset_button.widget.clicked.connect(self.more_clock_by_offset)
+        self.timezone_button.add_callback('activated',
+                                          self.more_clock_by_timezone)
+        self.offset_button.add_callback('activated',
+                                        self.more_clock_by_offset)
 
         hbox.add_widget(self.timezone_label, stretch=0)
         hbox.add_widget(self.county_timezone, stretch=0)
@@ -205,14 +211,15 @@ class ClockApp(object):
         hbox.add_widget(self.offset_button, stretch=0)
         hbox.add_widget(Widgets.Label(''), stretch=1)
 
-        self.top.set_widget(hbox)
+        vbox.add_widget(hbox, stretch=0)
+        self.top.set_widget(vbox)
 
         self.clocks = {}
         self.timer = GwHelp.Timer(1.0)
         self.timer.add_callback('expired', self.timer_cb)
         self.timer.start(1.0)
 
-    def more_clock_by_offset(self):
+    def more_clock_by_offset(self, w):
         location = self.location.get_text()
         time_offset = self.time_offset.get_value()
         sec_hour = 3600
@@ -221,9 +228,8 @@ class ClockApp(object):
         self.color_index += 1
         self.add_clock(timezone=timezone, color=color)
 
-    def more_clock_by_timezone(self):
-        index = self.county_timezone.get_index()
-        timezone = self.county_timezone.get_alpha(index)
+    def more_clock_by_timezone(self, w):
+        timezone = self.county_timezone.get_text()
         color = self.colors[self.color_index % len(self.colors)]
         self.color_index += 1
 
@@ -250,7 +256,7 @@ class ClockApp(object):
 
     def timer_cb(self, timer):
         """Timer callback.  Update all our clocks."""
-        dt_now = datetime.utcnow().replace(tzinfo=pytz.utc)
+        dt_now = datetime.utcnow().replace(tzinfo=tz.UTC)
         self.logger.debug("timer fired. utc time is '%s'" % (str(dt_now)))
 
         for clock in self.clocks.values():
@@ -284,8 +290,9 @@ class ClockApp(object):
 
     def closed(self, w):
         self.logger.info("Top window closed.")
+        top = self.top
         self.top = None
-        sys.exit()
+        self.app.quit()
 
     def quit(self, *args):
         self.logger.info("Attempting to shut down the application...")
@@ -359,7 +366,6 @@ if __name__ == "__main__":
     # Parse command line options
     import argparse
 
-    usage = "usage: %prog [options]"
     argprs = argparse.ArgumentParser(description="Parse command line options to clock")
 
     argprs.add_argument("args", type=str, nargs='*',
@@ -394,7 +400,7 @@ if __name__ == "__main__":
                         default=False, action="store_true",
                         help="Show a list of valid time zones and exit")
     argprs.add_argument("-t", "--toolkit", dest="toolkit", metavar="NAME",
-                        default='qt',
+                        default='qt5',
                         help="Choose GUI toolkit (gtk|qt)")
     log.addlogopts(argprs)
 

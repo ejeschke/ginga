@@ -770,14 +770,14 @@ def calc_compass(image, x, y, len_deg_e, len_deg_n):
 
     # Get east and north coordinates
     xe, ye = add_offset_xy(image, x, y, len_deg_e, 0.0)
-    xn, yn = image.add_offset_xy(x, y, 0.0, len_deg_n)
+    xn, yn = add_offset_xy(image, x, y, 0.0, len_deg_n)
 
     return (x, y, xn, yn, xe, ye)
 
 
 def calc_compass_radius(image, x, y, radius_px):
-    xe, ye = image.add_offset_xy(x, y, 1.0, 0.0)
-    xn, yn = image.add_offset_xy(x, y, 0.0, 1.0)
+    xe, ye = add_offset_xy(image, x, y, 1.0, 0.0)
+    xn, yn = add_offset_xy(image, x, y, 0.0, 1.0)
 
     # now calculate the length in pixels of those arcs
     # (planar geometry is good enough here)

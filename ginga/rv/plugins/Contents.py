@@ -173,8 +173,15 @@ class Contents(GingaPlugin.GlobalPlugin):
 
     def dblclick_cb(self, widget, d):
         chname = list(d.keys())[0]
-        imname = list(d[chname].keys())[0]
+        names = list(d[chname].keys())
+        if len(names) == 0:
+            # empty channel
+            return
+        imname = names[0]
         bnch = d[chname][imname]
+        if 'node' in bnch.keys():
+            # double-clicked on header
+            return
         path = bnch.path
         self.logger.debug("chname=%s name=%s path=%s" % (
             chname, imname, path))

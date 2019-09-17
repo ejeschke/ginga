@@ -34,7 +34,7 @@ class RenderContext(render.RenderContextBase):
         elif isinstance(color, tuple):
             # color is assumed to be a 3-tuple of RGB values as floats
             # between 0 and 1
-            r, g, b = color
+            r, g, b = color[:3]
         else:
             r, g, b = 1.0, 1.0, 1.0
         return (r, g, b, alpha)
@@ -75,7 +75,8 @@ class RenderContext(render.RenderContextBase):
 
     def set_font_from_shape(self, shape):
         if hasattr(shape, 'font'):
-            if hasattr(shape, 'fontsize') and shape.fontsize is not None:
+            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
+                not getattr(shape, 'fontscale', False)):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
@@ -117,6 +118,10 @@ class RenderContext(render.RenderContextBase):
 
     def text_extents(self, text):
         a, b, wd, ht, i, j = self.cr.text_extents(text)
+        # NOTE: in cairo it seems we have to a apply a small
+        # "fudge factor" to computed text height to get reasonable
+        # height value
+        ht *= 1.2
         return wd, ht
 
     ##### DRAWING OPERATIONS #####
@@ -136,7 +141,6 @@ class RenderContext(render.RenderContextBase):
         for cpt in cpoints:
             cx, cy = cpt[:2]
             self.cr.line_to(cx, cy)
-            #cr.move_to(cx, cy)
         self.cr.close_path()
         self.cr.stroke_preserve()
 

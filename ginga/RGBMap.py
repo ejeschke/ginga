@@ -127,7 +127,7 @@ class RGBMapper(Callback.Callbacks):
             bpp = 8
         self.bpp = bpp
         # maximum value that we can generate in this range
-        self.maxc = 2 ** self.bpp - 1
+        self.maxc = int(2 ** self.bpp - 1)
         # data size per pixel band in the output RGB array
         self._set_dtype()
 
@@ -181,7 +181,7 @@ class RGBMapper(Callback.Callbacks):
         be 16, etc.
         """
         self.bpp = bpp
-        self.maxc = 2 ** self.bpp - 1
+        self.maxc = int(2 ** self.bpp - 1)
         self._set_dtype()
         self.calc_cmap()
         self.recalc(callback=False)
@@ -249,6 +249,7 @@ class RGBMapper(Callback.Callbacks):
         Return a tuple of (R, G, B) values in the 0-maxc range associated
         mapped by the value of `index`.
         """
+        index = int(index)
         return tuple(self.arr[index])
 
     def get_rgbval(self, index):
@@ -256,9 +257,10 @@ class RGBMapper(Callback.Callbacks):
         Return a tuple of (R, G, B) values in the 0-maxc range associated
         mapped by the value of `index`.
         """
+        index = int(index)
         assert (index >= 0) and (index <= self.maxc), \
             RGBMapError("Index must be in range 0-%d !" % (self.maxc))
-        index = self.sarr[index].clip(0, self.maxc)
+        index = int(self.sarr[index].clip(0, self.maxc))
         return (self.arr[0][index],
                 self.arr[1][index],
                 self.arr[2][index])
@@ -413,12 +415,12 @@ class RGBMapper(Callback.Callbacks):
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
-        # idx = idx.clip(0, self.maxc)
+        # idx = idx.clip(0, self.maxc).astype(np.uint, copy=False)
         idx.clip(0, self.maxc, out=idx)
 
         # run it through the shift array and clip the result
         # See NOTE [A]
-        # idx = self.sarr[idx].clip(0, self.maxc)
+        # idx = self.sarr[idx].clip(0, self.maxc).astype(np.uint, copy=False)
         idx = self.sarr[idx]
         idx.clip(0, self.maxc, out=idx)
 
@@ -507,7 +509,7 @@ class RGBMapper(Callback.Callbacks):
         iscale_x = float(old_wd) / float(new_wd)
 
         xi = (xi * iscale_x).astype(np.uint, copy=False)
-        xi = xi.clip(0, old_wd - 1)
+        xi = xi.clip(0, old_wd - 1).astype(np.uint, copy=False)
         newdata = sarr[xi]
         return newdata
 

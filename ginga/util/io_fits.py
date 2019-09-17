@@ -6,12 +6,9 @@
 #
 """
 There are two possible choices for a python FITS file reading package
-compatible with Ginga: astropy/pyfits and fitsio.  Both are based on
-the CFITSIO library, although it seems that astropy's version has
-changed quite a bit from the original, while fitsio is still tracking
-the current version.
+compatible with Ginga: astropy and fitsio.
 
-To force the use of one, do:
+To force the use of one programmatically, do:
 
     from ginga.util import io_fits
     io_fits.use('package')
@@ -22,13 +19,27 @@ any images.  Otherwise Ginga will try to pick one for you.
 import re
 import numpy as np
 
+from ginga.AstroImage import AstroImage, AstroHeader
+from ginga.table.AstroTable import AstroTable
+
 from ginga.misc import Bunch
 from ginga.util import iohelper
+from ginga.util.io import io_base
 
 fits_configured = False
 fitsLoaderClass = None
-have_astropy = False
-have_fitsio = False
+
+try:
+    from astropy.io import fits as pyfits
+    have_astropy = True
+except ImportError:
+    have_astropy = False
+
+try:
+    import fitsio
+    have_fitsio = True
+except ImportError as e:
+    have_fitsio = False
 
 
 class FITSError(Exception):
@@ -36,51 +47,46 @@ class FITSError(Exception):
 
 
 def use(fitspkg, raise_err=True):
-    global fits_configured, fitsLoaderClass, have_astropy, pyfits, \
-        have_fitsio, fitsio
+    global fits_configured, fitsLoaderClass
 
     if fitspkg == 'astropy':
-        try:
-            from astropy.io import fits as pyfits
-            have_astropy = True
+        if have_astropy:
             fitsLoaderClass = PyFitsFileHandler
+            fits_configured = True
             return True
 
-        except ImportError:
-            if raise_err:
-                raise
+        elif raise_err:
+            raise("Error importing 'astropy.io.fits'; "
+                  "please check installation")
 
         return False
 
     elif fitspkg == 'fitsio':
-        try:
-            import fitsio
-            have_fitsio = True
+        if have_fitsio:
             fitsLoaderClass = FitsioFileHandler
+            fits_configured = True
             return True
 
-        except ImportError as e:
-            if raise_err:
-                raise
+        elif raise_err:
+            raise("Error importing 'fitsio'; "
+                  "please check installation")
+
         return False
 
     return False
 
 
-class BaseFitsFileHandler(object):
+class BaseFitsFileHandler(io_base.BaseIOHandler):
 
-    # holds datatype/class objects for instantiating objects
-    # loaded from FITS files
-    factory_dict = {}
-
+    # TODO: remove in a future version
     @classmethod
     def register_type(cls, name, klass):
-        cls.factory_dict[name.lower()] = klass
+        raise Exception("This method has been deprecated;"
+                        "you don't need to call it anymore.")
 
     def __init__(self, logger):
-        super(BaseFitsFileHandler, self).__init__()
+        super(BaseFitsFileHandler, self).__init__(logger)
 
-        self.logger = logger
         self.fileinfo = None
         self.fits_f = None
         self.hdu_info = []
@@ -101,6 +107,12 @@ class BaseFitsFileHandler(object):
         self.close()
         return False
 
+    def load_idx(self, idx, **kwargs):
+        if len(self) == 0:
+            raise ValueError("Please call open_file() first!")
+
+        return self.get_hdu(idx, **kwargs)
+
     def load_idx_cont(self, idx_spec, loader_cont_fn, **kwargs):
         """
         Parameters
@@ -120,18 +132,19 @@ class BaseFitsFileHandler(object):
         if len(self) == 0:
             raise ValueError("Please call open_file() first!")
 
-        idx_lst = self.get_matching_indexes(idx_spec)
-        if len(self) == 0:
-            raise ValueError("Please call open_file() first!")
+        idx_lst = list(self.get_matching_indexes(idx_spec))
+        if len(idx_lst) == 0:
+            raise ValueError("Spec {} matches no data objects in file".format(idx_spec))
 
-        for i in idx_lst:
+        for idx in idx_lst:
             try:
-                dst_obj = self.get_hdu(i, **kwargs)
+                dst_obj = self.load_idx(idx, **kwargs)
 
                 loader_cont_fn(dst_obj)
 
             except Exception as e:
-                self.logger.error("Error loading index '%s': %s" % (i, str(e)))
+                self.logger.error("Error loading index '%s': %s" % (idx, str(e)),
+                                  exc_info=True)
 
     def get_matching_indexes(self, idx_spec):
         """
@@ -152,6 +165,9 @@ class BaseFitsFileHandler(object):
         if idx_spec is None or idx_spec == '':
             idx, hdu = self.find_first_good_hdu()
             return [idx]
+
+        if isinstance(idx_spec, int):
+            return [idx_spec]
 
         match = re.match(r'^\[(.+)\]$', idx_spec)
         if not match:
@@ -184,8 +200,16 @@ class BaseFitsFileHandler(object):
 
         return idx_lst
 
+    def get_directory(self):
+        return self.hdu_db
+
+    def get_info_idx(self, idx):
+        return self.hdu_db[idx]
+
 
 class PyFitsFileHandler(BaseFitsFileHandler):
+
+    name = 'astropy.fits'
 
     def __init__(self, logger):
         if not have_astropy:
@@ -228,52 +252,38 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         if typ == 'image':
 
             if dstobj is None:
-                # get model class for this type of object
-                obj_class = self.factory_dict.get('image', None)
-                if obj_class is None:
-                    raise FITSError(
-                        "I don't know how to load objects of kind 'image'")
+                dstobj = AstroImage(logger=self.logger)
+                dstobj.load_hdu(hdu, **kwargs)
 
-                dstobj = obj_class(logger=self.logger)
-
-            # For now, call back into the object to load it from pyfits-style
-            # HDU in future migrate to storage-neutral format
-            dstobj.load_hdu(hdu, **kwargs)
+            else:
+                # TODO: migrate code from AstroImage to here
+                dstobj.load_hdu(hdu, **kwargs)
 
         elif typ == 'table':
             # <-- data may be a table
 
-            # Handle ASDF embedded in FITS.
-            # TODO: Populate EXTNAME, EXTVER, NAXISn in ASDF meta from HDU?
-            # TODO: How to read from all the different ASDF layouts?
-            # TODO: Cache the ASDF object?
-            from ginga.util import io_asdf
-            if io_asdf.have_asdf and hdu.name == 'ASDF':
-                from asdf.fits_embed import AsdfInFits
-                from ginga import AstroImage
+            if hdu.name == 'ASDF':
+                if dstobj is not None:
+                    raise ValueError("It is not supported to load ASDF HDU with dstobj != None")
+
                 self.logger.debug('Attempting to load {} extension from '
                                   'FITS'.format(hdu.name))
-                dstobj = AstroImage.AstroImage()
-                with AsdfInFits.open(self.fits_f) as asdf_f:
-                    dstobj.load_asdf(asdf_f)
-                return dstobj
+                from ginga.util.io import io_asdf
+                opener = io_asdf.ASDFFileHandler(self.logger)
+                return opener.load_asdf_hdu_in_fits(self.fits_f, hdu, **kwargs)
 
             if dstobj is None:
-                self.logger.debug('Attempting to load table from FITS')
-                # get model class for this type of object
-                obj_class = self.factory_dict.get('table', None)
-                if obj_class is None:
-                    raise FITSError(
-                        "I don't know how to load objects of kind 'table'")
+                dstobj = AstroTable(logger=self.logger)
 
-                dstobj = obj_class(logger=self.logger)
+            self.logger.debug('Attempting to load table from FITS')
 
-            # For now, call back into the object to load it from pyfits-style
-            # HDU in future migrate to storage-neutral format
+            # TODO: migrate code from AstroTable to here
             dstobj.load_hdu(hdu, **kwargs)
 
         else:
             raise FITSError("I don't know how to read this HDU")
+
+        dstobj.io = self
 
         return dstobj
 
@@ -357,7 +367,9 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         self.hdu_db = {}
         self.extver_db = {}
         self.info = None
+        fits_f = self.fits_f
         self.fits_f = None
+        fits_f.close()
 
     def find_first_good_hdu(self):
 
@@ -463,6 +475,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
 class FitsioFileHandler(BaseFitsFileHandler):
 
+    name = 'fitsio'
+
     def __init__(self, logger):
         if not have_fitsio:
             raise FITSError(
@@ -474,6 +488,8 @@ class FitsioFileHandler(BaseFitsFileHandler):
                          fitsio.BINARY_TBL: 'BinaryTBL',
                          fitsio.ASCII_TBL: 'AsciiTBL',
                          }
+        self.hdu_info = []
+        self.hdu_db = {}
 
     def fromHDU(self, hdu, ahdr):
         header = hdu.read_header()
@@ -494,13 +510,11 @@ class FitsioFileHandler(BaseFitsFileHandler):
         return None
 
     def load_hdu(self, hdu, dstobj=None, **kwargs):
-        from ginga import AstroImage  # Put here to avoid circular import
-
         typ = self.get_hdu_type(hdu)
 
         if typ == 'image':
             # <-- data is an image
-            ahdr = AstroImage.AstroHeader()
+            ahdr = AstroHeader()
             self.fromHDU(hdu, ahdr)
 
             metadata = dict(header=ahdr)
@@ -508,20 +522,18 @@ class FitsioFileHandler(BaseFitsFileHandler):
             data = hdu.read()
 
             if dstobj is None:
-                # get model class for this type of object
-                obj_class = self.factory_dict.get('image', None)
-                if obj_class is None:
-                    raise FITSError(
-                        "I don't know how to load objects of kind 'image'")
+                dstobj = AstroImage(logger=self.logger)
+                dstobj.load_data(data, metadata=metadata)
 
-                dstobj = obj_class(logger=self.logger)
-
-            dstobj.load_data(data, metadata=metadata)
+            else:
+                dstobj.load_data(data, metadata=metadata)
 
         elif typ == 'table':
             # <-- data is a table
             raise FITSError(
                 "FITS tables are not yet readable using ginga/fitsio")
+
+        dstobj.io = self
 
         return dstobj
 
@@ -584,7 +596,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         return self
 
     def close(self):
-        self.hdu_info = None
+        self.hdu_info = []
         self.hdu_db = {}
         self.extver_db = {}
         self.info = None
@@ -674,19 +686,6 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         return dstobj
 
-    def load_idx_cont(self, idx, loader_cont_fn, **kwargs):
-        if len(self) == 0:
-            raise ValueError("Please open a file first!")
-
-        for i in len(self):
-            try:
-                dst_obj = self.get_hdu(i, **kwargs)
-
-                loader_cont_fn(dst_obj)
-
-            except Exception as e:
-                self.logger.error("Error loading index '%s': %s" % (i, str(e)))
-
     def create_fits(self, data, header):
         fits_f = pyfits.HDUList()
         hdu = pyfits.PrimaryHDU()
@@ -711,18 +710,31 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
 
 if not fits_configured:
-    # default
-    fitsLoaderClass = PyFitsFileHandler
+    if have_astropy:
+        # default
+        fitsLoaderClass = PyFitsFileHandler
 
-    # try to use them in this order
-    # astropy is faster
-    for name in ('astropy', 'fitsio'):
-        if use(name, raise_err=False):
-            break
+    elif have_fitsio:
+        fitsLoaderClass = FitsioFileHandler
 
 
 def get_fitsloader(kind=None, logger=None):
+    if kind is not None:
+        if kind == 'fitsio':
+            return FitsioFileHandler(logger)
+        else:
+            return PyFitsFileHandler(logger)
+
     return fitsLoaderClass(logger)
+
+
+def load_file(filepath, idx=None, logger=None, **kwargs):
+    """
+    Load an object from a FITS file.
+
+    """
+    opener = get_fitsloader(logger=logger)
+    return opener.load_file(filepath, numhdu=idx, **kwargs)
 
 
 # END

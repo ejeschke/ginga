@@ -6,59 +6,50 @@
 # Please see the file LICENSE.txt for details.
 #
 
-from ginga import Mixins, Bindings
+from ginga import ImageView, Mixins, Bindings
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
+from ginga.canvas import render
 from ginga.util.toolbox import ModeIndicator
-
-
-try:
-    # See if we have aggdraw module--best choice
-    from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageView, \
-        ImageViewAggError as ImageViewError
-
-except ImportError:
-    try:
-        # No, hmm..ok, see if we have PIL module...
-        from ginga.pilw.ImageViewPil import ImageViewPil as ImageView, \
-            ImageViewPilError as ImageViewError
-
-    except ImportError:
-        try:
-            # No dice. How about the OpenCv module?
-            from ginga.cvw.ImageViewCv import ImageViewCv as ImageView, \
-                ImageViewCvError as ImageViewError
-
-        except ImportError:
-            # Fall back to mock--there will be no graphic overlays
-            from ginga.mockw.ImageViewMock import ImageViewMock as ImageView, \
-                ImageViewMockError as ImageViewError
 
 
 default_html_fmt = 'jpeg'
 
 
-class ImageViewPgError(ImageViewError):
+class ImageViewPgError(ImageView.ImageViewError):
     pass
 
 
-class ImageViewPg(ImageView):
+class ImageViewPg(ImageView.ImageViewBase):
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageView.__init__(self, logger=logger,
-                           rgbmap=rgbmap,
-                           settings=settings)
+        ImageView.ImageViewBase.__init__(self, logger=logger,
+                                         rgbmap=rgbmap,
+                                         settings=settings)
 
         self.pgcanvas = None
 
         # format for rendering image on HTML5 canvas
         # NOTE: 'jpeg' has much better performance than 'png', but can show
         # some artifacts, especially noticeable with small text
-        self.t_.set_defaults(html5_canvas_format=default_html_fmt)
+        self.t_.set_defaults(html5_canvas_format=default_html_fmt,
+                             renderer='cairo')
 
-        # Format 'png' is ok with 'RGBA', but 'jpeg' only works with 'RGB'
-        self.rgb_order = 'RGB'
+        self.rgb_order = 'RGBA'
         # this should already be so, but just in case...
         self.defer_redraw = True
+
+        # these will be assigned in set_widget()
+        self.timer_redraw = None
+        self.timer_msg = None
+
+        self.renderer = None
+        # Pick a renderer that can work with us
+        renderers = ['cairo', 'agg', 'pil', 'opencv']
+        preferred = self.t_['renderer']
+        if preferred in renderers:
+            renderers.remove(preferred)
+        self.possible_renderers = [preferred] + renderers
+        self.choose_best_renderer()
 
     def set_widget(self, canvas_w):
         """Call this method with the widget that will be used
@@ -67,11 +58,38 @@ class ImageViewPg(ImageView):
         self.logger.debug("set widget canvas_w=%s" % canvas_w)
         self.pgcanvas = canvas_w
 
-        ## wd, ht = canvas_w.get_size()
-        ## self.configure_window(wd, ht)
+        app = canvas_w.get_app()
+        self.timer_redraw = app.make_timer()
+        self.timer_redraw.add_callback('expired',
+                                       lambda t: self.delayed_redraw())
+        self.timer_msg = app.make_timer()
+        self.timer_msg.add_callback('expired',
+                                    lambda t: self.clear_onscreen_message())
+
+        wd, ht = canvas_w.get_size()
+        self.configure_window(wd, ht)
 
     def get_widget(self):
         return self.pgcanvas
+
+    def choose_renderer(self, name):
+        klass = render.get_render_class(name)
+        self.renderer = klass(self)
+
+        if self.pgcanvas is not None:
+            wd, ht = self.pgcanvas_w.get_size()
+            self.configure_window(wd, ht)
+
+    def choose_best_renderer(self):
+        for name in self.possible_renderers:
+            try:
+                self.choose_renderer(name)
+                self.logger.info("best renderer available is '{}'".format(name))
+                return
+            except Exception as e:
+                continue
+
+        raise ImageViewPgError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
     def update_image(self):
         self.logger.debug("update_image pgcanvas=%s" % self.pgcanvas)
@@ -94,7 +112,8 @@ class ImageViewPg(ImageView):
 
     def reschedule_redraw(self, time_sec):
         if self.pgcanvas is not None:
-            self.pgcanvas.reset_timer('redraw', time_sec)
+            self.timer_redraw.stop()
+            self.timer_redraw.start(time_sec)
         else:
             self.delayed_redraw()
 
@@ -119,9 +138,10 @@ class ImageViewPg(ImageView):
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.pgcanvas is None:
             return
+        self.timer_msg.stop()
         self.set_onscreen_message(text, redraw=redraw)
-        if delay:
-            self.pgcanvas.reset_timer('msg', delay)
+        if delay is not None:
+            self.timer_msg.start(delay)
 
     def clear_onscreen_message(self):
         self.logger.debug("clearing message...")
@@ -378,9 +398,9 @@ class ImageViewEvent(ImageViewPg):
     def get_key_table(self):
         return self._keytbl
 
-    def focus_event(self, event, hasFocus):
-        self.logger.debug("focus event: focus=%s" % (hasFocus))
-        return self.make_callback('focus', hasFocus)
+    def focus_event(self, event, has_focus):
+        self.logger.debug("focus event: focus=%s" % (has_focus))
+        return self.make_callback('focus', has_focus)
 
     def enter_notify_event(self, event):
         self.logger.debug("entering widget...")

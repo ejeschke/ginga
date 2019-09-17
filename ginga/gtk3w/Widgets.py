@@ -388,7 +388,7 @@ class Label(WidgetBase):
 
     def set_color(self, fg=None, bg=None):
         if bg is not None:
-            self.evbox.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse(bg))
+            GtkHelp.modify_bg(self.evbox, bg)
         if fg is not None:
             self.label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(fg))
 
@@ -411,15 +411,14 @@ class ComboBox(WidgetBase):
     def __init__(self, editable=False):
         super(ComboBox, self).__init__()
 
-        if editable:
-            cb = GtkHelp.ComboBoxEntry()
-        else:
-            cb = GtkHelp.ComboBox()
+        cb = GtkHelp.ComboBox(has_entry=editable)
         liststore = Gtk.ListStore(GObject.TYPE_STRING)
         cb.set_model(liststore)
         cell = Gtk.CellRendererText()
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
+        if editable:
+            cb.set_entry_text_column(0)
         self.widget = cb
         self.widget.sconnect('changed', self._cb_redirect)
 
@@ -466,19 +465,37 @@ class ComboBox(WidgetBase):
     def clear(self):
         model = self.widget.get_model()
         model.clear()
+        if self.widget.get_has_entry():
+            entry = self.widget.get_entry()
+            entry.set_text('')
 
-    def show_text(self, text):
+    def set_text(self, text):
         model = self.widget.get_model()
         for i in range(len(model)):
             if model[i][0] == text:
                 self.widget.set_active(i)
                 return
 
+        if self.widget.get_has_entry():
+            entry = self.widget.get_child()
+            entry.set_text(text)
+
+    # to be deprecated someday
+    show_text = set_text
+
     def set_index(self, index):
         self.widget.set_active(index)
 
     def get_index(self):
         return self.widget.get_active()
+
+    def get_text(self):
+        if self.widget.get_has_entry():
+            entry = self.widget.get_child()
+            return entry.get_text()
+
+        idx = self.get_index()
+        return self.get_alpha(idx)
 
 
 class SpinBox(WidgetBase):
@@ -752,9 +769,10 @@ class TreeView(WidgetBase):
         if self.dragable:
             tv = GtkHelp.MultiDragDropTreeView()
             # enable drag from this widget
-            toImage = [("text/plain", 0, 0)]
+            targets = [("text/plain", 0, GtkHelp.DND_TARGET_TYPE_TEXT),
+                       ("text/uri-list", 0, GtkHelp.DND_TARGET_TYPE_URIS)]
             tv.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK,
-                                        toImage, Gdk.DragAction.COPY)
+                                        targets, Gdk.DragAction.COPY)
             tv.connect("drag-data-get", self._start_drag)
         else:
             tv = Gtk.TreeView()
@@ -1325,9 +1343,9 @@ class TabWidget(ContainerBase):
         nchild = self.widget.get_nth_page(idx)
         evbox = self.widget.get_tab_label(nchild)
         if tf:
-            evbox.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse('palegreen'))
+            GtkHelp.modify_bg(evbox, 'palegreen')
         else:
-            evbox.modify_bg(Gtk.StateType.NORMAL, None)
+            GtkHelp.modify_bg(evbox, None)
 
 
 class StackWidget(TabWidget):
@@ -1514,9 +1532,10 @@ class Splitter(ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
 
-        # without a Frame it is difficult to see the divider
+        # without a Frame it can be difficult to see the divider
         frame_w = Gtk.Frame()
-        frame_w.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+        #frame_w.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+        frame_w.set_shadow_type(Gtk.ShadowType.NONE)
         frame_w.add(child_w)
 
         if len(self.children) == 1:
@@ -1633,9 +1652,12 @@ class Toolbar(ContainerBase):
             child = Button(text)
 
         if iconpath is not None:
-            wd, ht = 24, 24
             if iconsize is not None:
                 wd, ht = iconsize
+            else:
+                scale_f = _app.screen_res / 96.0
+                px = int(scale_f * 24)
+                wd, ht = px, px
             pixbuf = GtkHelp.pixbuf_new_from_file_at_size(iconpath, wd, ht)
             if pixbuf is not None:
                 image = Gtk.Image.new_from_pixbuf(pixbuf)
@@ -1971,12 +1993,26 @@ class Application(Callback.Callbacks):
         self.wincnt = 0
 
         try:
-            screen = Gdk.screen_get_default()
-            self.screen_ht = screen.get_height()
-            self.screen_wd = screen.get_width()
-        except Exception:
+            display = Gdk.Display.get_default()
+            screen = display.get_default_screen()
+            window = screen.get_active_window()
+            monitor = screen.get_monitor_at_window(window)
+
+            g = screen.get_monitor_geometry(monitor)
+            self.screen_ht = g.height
+            self.screen_wd = g.width
+
+            self.screen_res = screen.get_resolution()
+
+            # hack for Gtk--scale fonts on HiDPI displays
+            scale = self.screen_res / 72.0
+            self.logger.debug("setting default font_scaling_factor={}".format(scale))
+            from ginga.fonts import font_asst
+            font_asst.default_scaling_factor = scale
+        except Exception as e:
             self.screen_wd = 1600
             self.screen_ht = 1200
+            self.screen_res = 96
         # self.logger.debug("screen dimensions %dx%d" % (
         #     self.screen_wd, self.screen_ht))
 
@@ -2039,6 +2075,9 @@ class Application(Callback.Callbacks):
         w = TopLevel(title=title)
         self.add_window(w)
         return w
+
+    def make_timer(self):
+        return GtkHelp.Timer()
 
     def mainloop(self):
         Gtk.main()
@@ -2133,7 +2172,9 @@ class DragPackage(object):
 
     def set_urls(self, urls):
         self._selection.set_uris(urls)
-        self._selection.set("text/plain", 0, '\n'.join(urls))
+
+    def set_text(self, text):
+        self._selection.set_text(text, len(text))
 
     def start_drag(self):
         pass

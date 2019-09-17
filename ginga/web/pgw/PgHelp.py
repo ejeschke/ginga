@@ -179,18 +179,18 @@ class WindowHandler(tornado.web.RequestHandler):
 class Timer(Callback.Callbacks):
     """Abstraction of a GUI-toolkit implemented timer."""
 
-    def __init__(self, duration=0.0, mplcanvas=None):
+    def __init__(self, duration=0.0, app=None):
         """Create a timer set to expire after `duration` sec.
         """
         super(Timer, self).__init__()
 
+        if app is None:
+            raise ValueError("please provide `app` argument")
+        self.app = app
         self.duration = duration
         # For storing aritrary data with timers
         self.data = Bunch.Bunch()
-
-        self._timer = mplcanvas.new_timer()
-        self._timer.single_shot = True
-        self._timer.add_callback(self._redirect_cb)
+        self.deadline = None
 
         for name in ('expired', 'canceled'):
             self.enable_callback(name)
@@ -205,22 +205,17 @@ class Timer(Callback.Callbacks):
         self.set(duration)
 
     def set(self, duration):
-
         self.stop()
+        self.deadline = time.time() + duration
+        self.app.add_timer(self)
 
-        # pg timer set in milliseconds
-        time_ms = int(duration * 1000.0)
-        self._timer.interval = time_ms
-        self._timer.start()
-
-    def _redirect_cb(self):
+    def expire(self):
+        self.stop()
         self.make_callback('expired')
 
     def stop(self):
-        try:
-            self._timer.stop()
-        except Exception:
-            pass
+        self.deadline = None
+        self.app.remove_timer(self)
 
     def cancel(self):
         """Cancel this timer.  If the timer is not running, there

@@ -6,8 +6,9 @@
 #
 import numpy as np
 
-from ginga.qtw.QtHelp import (QtCore, QPainter, QPen, QPolygon, QColor,
-                              QPainterPath, QImage, QPixmap, get_font)
+from ginga.qtw.QtHelp import (QtCore, QPen, QPolygon, QColor,
+                              QPainterPath, QImage, QPixmap, get_font,
+                              get_painter)
 
 from ginga import colors
 from ginga.canvas import render
@@ -20,8 +21,7 @@ class RenderContext(render.RenderContextBase):
     def __init__(self, renderer, viewer, surface):
         render.RenderContextBase.__init__(self, renderer, viewer)
 
-        self.cr = QPainter(surface)
-        self.cr.setRenderHint(QPainter.Antialiasing)
+        self.cr = get_painter(surface)
 
     def __get_color(self, color, alpha):
         clr = QColor()
@@ -66,7 +66,8 @@ class RenderContext(render.RenderContextBase):
 
     def set_font_from_shape(self, shape):
         if hasattr(shape, 'font'):
-            if hasattr(shape, 'fontsize') and shape.fontsize is not None:
+            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
+                not getattr(shape, 'fontscale', False)):
                 fontsize = shape.fontsize
             else:
                 fontsize = shape.scale_font(self.viewer)
@@ -192,7 +193,7 @@ class CanvasRenderer(render.RendererBase):
 
         # fill surface with background color;
         # this reduces unwanted garbage in the resizing window
-        painter = QPainter(self.surface)
+        painter = get_painter(self.surface)
         size = self.surface.size()
         sf_wd, sf_ht = size.width(), size.height()
         bg = self.viewer.img_bg
@@ -235,7 +236,7 @@ class CanvasRenderer(render.RendererBase):
         qimage = self._get_qimage(data)
         drawable = self.surface
 
-        painter = QPainter(drawable)
+        painter = get_painter(drawable)
         #painter.setWorldMatrixEnabled(True)
 
         # fill surface with background color
@@ -281,5 +282,6 @@ class CanvasRenderer(render.RendererBase):
         cr = self.setup_cr(shape)
         cr.set_font_from_shape(shape)
         return cr.text_extents(shape.text)
+
 
 #END
