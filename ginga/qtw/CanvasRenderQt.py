@@ -190,6 +190,15 @@ class CanvasRenderer(render.RendererBase):
         else:
             self.surface = QImage(width, height, self.qimg_fmt)
 
+        # fill surface with background color;
+        # this reduces unwanted garbage in the resizing window
+        painter = QPainter(self.surface)
+        size = self.surface.size()
+        sf_wd, sf_ht = size.width(), size.height()
+        bg = self.viewer.img_bg
+        bgclr = self._get_color(*bg)
+        painter.fillRect(QtCore.QRect(0, 0, sf_wd, sf_ht), bgclr)
+
     def _get_qimage(self, rgb_data):
         ht, wd, channels = rgb_data.shape
 
@@ -230,7 +239,6 @@ class CanvasRenderer(render.RendererBase):
         #painter.setWorldMatrixEnabled(True)
 
         # fill surface with background color
-        #imgwin_wd, imgwin_ht = self.viewer.get_window_size()
         size = drawable.size()
         sf_wd, sf_ht = size.width(), size.height()
         bg = self.viewer.img_bg
