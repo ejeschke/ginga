@@ -19,11 +19,12 @@ from ginga.misc import Bunch
 from ginga.util import wcs
 from ginga.util.wcs import raDegToString, decDegToString
 
-from .mixins import OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin
+from .mixins import (OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin,
+                     OnePointTwoRadiusMixin)
 from .layer import CompoundObject
 
 __all__ = ['Ruler', 'Compass', 'Crosshair', 'AnnulusMixin', 'Annulus',
-           'WCSAxes']
+           'Annulus2R', 'WCSAxes']
 
 
 class Ruler(TwoPointMixin, CanvasObjectBase):
@@ -678,6 +679,7 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
 
         self.editable = True
         self.opaque = True
+        self.atype = atype
         self.kind = 'annulus'
 
     def get_edit_points(self, viewer):
@@ -737,6 +739,211 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
 
     def move_to_pt(self, dst_pt):
         super(Annulus, self).move_to_pt(dst_pt)
+
+        self.set_data_points([dst_pt])
+
+
+class Annulus2R(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
+    """
+    Special compound object to handle annulus shape that
+    consists of two objects, (one center point, plus two radii).
+
+    Examples
+    --------
+    >>> tag = canvas.add(Annulus2R(100, 200, 10, 20, width=5, atype='box'))
+    >>> obj = canvas.get_object_by_tag(tag)
+    >>> arr_masked = image.cutout_shape(obj)
+
+    """
+    @classmethod
+    def get_params_metadata(cls):
+        return [
+            Param(name='coord', type=str, default='data',
+                  valid=coord_names,
+                  description="Set type of coordinates"),
+            Param(name='x', type=float, default=0.0, argpos=0,
+                  description="X coordinate of center of object"),
+            Param(name='y', type=float, default=0.0, argpos=1,
+                  description="Y coordinate of center of object"),
+            Param(name='xradius', type=float, default=1.0, argpos=2,
+                  min=0.0,
+                  description="Inner X radius of annulus"),
+            Param(name='yradius', type=float, default=1.0, argpos=2,
+                  min=0.0,
+                  description="Inner Y radius of annulus"),
+            Param(name='xwidth', type=float, default=None,
+                  min=0.0,
+                  description="Width in X of annulus"),
+            Param(name='ywidth', type=float, default=None,
+                  min=0.0,
+                  description="Width in Y of annulus"),
+            Param(name='atype', type=str, default='ellipse',
+                  valid=['ellipse', 'box'],
+                  description="Type of annulus"),
+            Param(name='linewidth', type=int, default=1,
+                  min=1, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
+            Param(name='linestyle', type=str, default='solid',
+                  valid=['solid', 'dash'],
+                  description="Style of outline (default solid)"),
+            Param(name='color',
+                  valid=colors_plus_none, type=_color, default='yellow',
+                  description="Color of outline"),
+            Param(name='alpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of outline"),
+            Param(name='rot_deg', type=float, default=0.0,
+                  min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
+                  description="Rotation about center of object"),
+        ]
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        xradius, yradius = abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y)
+        return cls(cxt.start_x, cxt.start_y, xradius, yradius, **cxt.drawparams)
+
+    def __init__(self, x, y, xradius, yradius, xwidth=None,
+                 ywidth=None, atype='ellipse', color='yellow',
+                 linewidth=1, linestyle='solid', alpha=1.0,
+                 rot_deg=0.0, **kwdargs):
+
+        if xwidth is None:
+            # default X width is 15% of X radius
+            xwidth = 0.15 * xradius
+        if ywidth is None:
+            # default Y width is X width
+            ywidth = xwidth
+        oxradius = xradius + xwidth
+        oyradius = yradius + ywidth
+
+        if oxradius < xradius or oyradius < yradius:
+            raise ValueError('Outer boundary < inner boundary')
+
+        coord = kwdargs.get('coord', None)
+
+        klass = get_canvas_type(atype)
+        obj1 = klass(x, y, xradius, yradius, color=color,
+                     linewidth=linewidth,
+                     linestyle=linestyle, alpha=alpha,
+                     coord=coord, rot_deg=rot_deg)
+        obj1.editable = False
+
+        obj2 = klass(x, y, oxradius, oyradius, color=color,
+                     linewidth=linewidth,
+                     linestyle=linestyle, alpha=alpha,
+                     coord=coord, rot_deg=rot_deg)
+        obj2.editable = False
+
+        points = np.asarray([(x, y)], dtype=np.float)
+
+        CompoundObject.__init__(self, obj1, obj2,
+                                points=points, xradius=xradius, yradius=yradius,
+                                xwidth=xwidth, ywidth=ywidth, color=color,
+                                linewidth=linewidth, linestyle=linestyle,
+                                alpha=alpha, rot_deg=rot_deg, **kwdargs)
+        OnePointTwoRadiusMixin.__init__(self)
+
+        self.editable = True
+        self.opaque = True
+        self.atype = atype
+        self.kind = 'annulus2r'
+
+    def get_edit_points(self, viewer):
+        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
+
+        points = (self.crdmap.offset_pt((self.x, self.y),
+                                        (self.xradius, 0)),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        (0, self.yradius)),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        (self.xradius + self.xwidth, 0)),
+                  self.crdmap.offset_pt((self.x, self.y),
+                                        (0, self.yradius + self.ywidth)),
+                  )
+        points = self.get_data_points(points=points)
+        return [move_pt,    # location
+                Point(*points[0]),  # adj inner X radius
+                Point(*points[1]),  # adj inner Y radius
+                Point(*points[2]),  # adj X width
+                Point(*points[3]),  # adj Y width
+                scale_pt,
+                rotate_pt,
+                ]
+
+    def setup_edit(self, detail):
+        detail.center_pos = self.get_center_pt()
+        detail.xradius = self.xradius
+        detail.yradius = self.yradius
+        detail.xwidth = self.xwidth
+        detail.ywidth = self.ywidth
+
+    def set_edit_point(self, i, pt, detail):
+        if i == 0:
+            self.move_to_pt(pt)
+        elif i == 1:
+            # Adjust inner X radius
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.xradius = detail.xradius * scale_x
+            #scalef = self.calc_scale_from_pt(pt, detail)
+            # inner obj radius control pt
+            #self.xradius = detail.xradius * scalef
+        elif i == 2:
+            # Adjust inner Y radius
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            self.yradius = detail.yradius * scale_y
+            #scalef = self.calc_scale_from_pt(pt, detail)
+            #self.yradius = detail.yradius * scalef
+        elif i == 3:
+            # Adjust X width
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            xwidth = detail.xwidth * scale_x
+            # outer obj radius control pt--calculate new width
+            assert xwidth > 0, ValueError("Must have a positive width")
+            self.xwidth = xwidth
+        elif i == 4:
+            # Adjust Y width
+            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            ywidth = detail.ywidth * scale_y
+            # outer obj radius control pt--calculate new width
+            assert ywidth > 0, ValueError("Must have a positive width")
+            self.ywidth = ywidth
+        elif i == 5:
+            # Adjust overall scale
+            scalef = self.calc_scale_from_pt(pt, detail)
+            self.xradius = detail.xradius * scalef
+            self.yradius = detail.yradius * scalef
+        elif i == 6:
+            # Adjust rotation
+            delta_deg = self.calc_rotation_from_pt(pt, detail)
+            self.rotate_by_deg([delta_deg])
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))
+
+        self.sync_state()
+
+    def sync_state(self):
+        """Called to synchronize state (e.g. when parameters have changed).
+        """
+        oxradius = self.xradius + self.xwidth
+        oyradius = self.yradius + self.ywidth
+        if oxradius < self.xradius or oyradius < self.yradius:
+            raise ValueError('Outer boundary < inner boundary')
+
+        d = dict(points=self.points, xradius=self.xradius,
+                 yradius=self.yradius, color=self.color,
+                 linewidth=self.linewidth, linestyle=self.linestyle,
+                 alpha=self.alpha, rot_deg=self.rot_deg)
+
+        # update inner object
+        self.objects[0].__dict__.update(d)
+
+        # update outer object
+        d['xradius'] = oxradius
+        d['yradius'] = oyradius
+        self.objects[1].__dict__.update(d)
+
+    def move_to_pt(self, dst_pt):
+        super(Annulus2R, self).move_to_pt(dst_pt)
 
         self.set_data_points([dst_pt])
 
@@ -987,6 +1194,6 @@ class WCSAxes(CompoundObject):
 
 register_canvas_types(dict(ruler=Ruler, compass=Compass,
                            crosshair=Crosshair, annulus=Annulus,
-                           wcsaxes=WCSAxes))
+                           annulus2r=Annulus2R, wcsaxes=WCSAxes))
 
 # END

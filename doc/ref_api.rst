@@ -36,3 +36,6 @@ Reference/API
 
 .. automodapi:: ginga.util.wcs
    :no-inheritance-diagram:
+
+.. automodapi:: ginga.util.ap_region
+   :no-inheritance-diagram:
