@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 3.0.0 (unreleased)
+Ver 3.0.0 (2019-09-20)
 ======================
 - Dropped Python 2 support. Ginga now requires Python 3.5 or later.
 - Fixed an issue with some RGB images being viewed flipped
