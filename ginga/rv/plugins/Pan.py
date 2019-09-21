@@ -154,7 +154,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             return
         self.logger.debug("redo")
 
-        if (image is None) or not paninfo.panimage.viewable(image):
+        if (image is None) or not self.panimage.viewable(image):
             self.logger.debug("no main image--clearing Pan viewer")
             self.panimage.clear()
             return
@@ -206,8 +206,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.panimage, self.copy_attrs)
 
-    def set_image(self, channel, paninfo, image):
-        if image is None or not paninfo.panimage.viewable(image):
+    def set_image(self, channel, image):
+        if image is None or not self.panimage.viewable(image):
             self.logger.debug("no main image--clearing Pan viewer")
             self.panimage.clear()
             return
@@ -269,7 +269,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return
         image = fitsimage.get_image()
-        if image is None or not paninfo.panimage.viewable(image):
+        if image is None or not self.panimage.viewable(image):
             self.panimage.clear()
             return
 
