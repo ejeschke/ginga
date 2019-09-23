@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 3.0.1 (2019-09-23)
+======================
+- Fixed "pip install" problem with v3.0.0
+
 Ver 3.0.0 (2019-09-20)
 ======================
 - Dropped Python 2 support. Ginga now requires Python 3.5 or later.
