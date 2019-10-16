@@ -54,7 +54,7 @@ Once you have an object, you can load data directly contained in a
 and ``zarr`` arrays::
 
   >>> import zarr
-  >>> data_z = zarr.creation.array(data_np, chunks=(100, 100))
+  >>> data_z = zarr.creation.array(data, chunks=(100, 100))
   >>> img.load_data(data_z)
 
 From an ``astropy.io.fits.HDU``::
