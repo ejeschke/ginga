@@ -258,12 +258,14 @@ class Image(OnePointMixin, CanvasObjectBase):
         x1, y1, x2, y2 = self.get_coords()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
-    def contains_pt(self, pt):
-        data_x, data_y = pt[:2]
-        x1, y1, x2, y2 = self.get_coords()
-        if ((x1 <= data_x < x2) and (y1 <= data_y < y2)):
-            return True
-        return False
+    def contains_pts(self, pts):
+        x_arr, y_arr = np.asarray(pts).T
+        x1, y1, x2, y2 = self.get_llur()
+
+        contains = np.logical_and(
+            np.logical_and(x1 <= x_arr, x_arr <= x2),
+            np.logical_and(y1 <= y_arr, y_arr <= y2))
+        return contains
 
     def rotate(self, theta, xoff=0, yoff=0):
         raise ValueError("Images cannot be rotated")

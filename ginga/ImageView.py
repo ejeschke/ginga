@@ -519,6 +519,7 @@ class ImageViewBase(Callback.Callbacks):
         # private canvas set?
         if private_canvas is not None:
             self.private_canvas = private_canvas
+            self.initialize_private_canvas(self.private_canvas)
 
             if private_canvas != canvas:
                 private_canvas.set_surface(self)
@@ -529,13 +530,12 @@ class ImageViewBase(Callback.Callbacks):
         # set it to the "advertised" canvas
         if self.private_canvas is None:
             self.private_canvas = canvas
+            self.initialize_private_canvas(self.private_canvas)
 
         # make sure private canvas has our non-private one added
         if (self.private_canvas != self.canvas) and (
                 not self.private_canvas.has_object(canvas)):
             self.private_canvas.add(canvas)
-
-        self.initialize_private_canvas(self.private_canvas)
 
     def get_private_canvas(self):
         """Get the private canvas object used by this instance.
@@ -717,7 +717,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         if self._imgobj is not None:
-            # quick optomization
+            # quick optimization
             return self._imgobj.get_image()
 
         canvas_img = self.get_canvas_image()
@@ -787,6 +787,13 @@ class ImageViewBase(Callback.Callbacks):
 
         with self.suppress_redraw:
 
+            # update viewer limits
+            wd, ht = image.get_size()
+            limits = ((self.data_off, self.data_off),
+                      (float(wd - self.data_off),
+                       float(ht - self.data_off)))
+            self.t_.set(limits=limits)
+
             # this line should force the callback of _image_set_cb()
             canvas_img.set_image(image)
 
@@ -796,7 +803,6 @@ class ImageViewBase(Callback.Callbacks):
 
                 except KeyError:
                     self.canvas.add(canvas_img, tag=self._canvas_img_tag)
-                    #self.logger.debug("adding image to canvas %s" % self.canvas)
 
                 # move image to bottom of layers
                 self.canvas.lower_object(canvas_img)
@@ -1446,24 +1452,15 @@ class ImageViewBase(Callback.Callbacks):
         limits = self.t_['limits']
 
         if limits is None:
-            # No user defined limits.  If there is an image loaded
-            # use its dimensions as the limits
-            image = self.get_image()
-            if image is not None:
-                wd, ht = image.get_size()
-                limits = ((self.data_off, self.data_off),
-                          (float(wd - 1 + self.data_off),
-                           float(ht - 1 + self.data_off)))
-
+            # No user defined limits.
+            # Calculate limits based on plotted points, if any
+            canvas = self.get_canvas()
+            pts = canvas.get_points()
+            if len(pts) > 0:
+                limits = trcalc.get_bounds(pts)
             else:
-                # Calculate limits based on plotted points, if any
-                canvas = self.get_canvas()
-                pts = canvas.get_points()
-                if len(pts) > 0:
-                    limits = trcalc.get_bounds(pts)
-                else:
-                    # No limits found, go to default
-                    limits = ((0.0, 0.0), (0.0, 0.0))
+                # No limits found, go to default
+                limits = ((0.0, 0.0), (0.0, 0.0))
 
         # convert to desired coordinates
         crdmap = self.get_coordmap(coord)
@@ -1489,6 +1486,15 @@ class ImageViewBase(Callback.Callbacks):
             limits = crdmap.to_data(limits)
 
         self.t_.set(limits=limits)
+
+    def reset_limits(self):
+        """Reset the bounding box of the viewer extents.
+
+        Parameters
+        ----------
+        None
+        """
+        self.t_.set(limits=None)
 
     def _set_limits_cb(self, setting, limits):
         # TODO: deprecate this chained callback and have users just use
@@ -1928,6 +1934,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         xy_mn, xy_mx = self.get_limits()
+
         width = abs(xy_mx[0] - xy_mn[0])
         height = abs(xy_mx[1] - xy_mn[1])
 
@@ -2007,11 +2014,6 @@ class ImageViewBase(Callback.Callbacks):
             raise ImageViewError("window size undefined")
 
         # final sanity check on resulting output image size
-        if (win_wd * scale_x < 1) or (win_ht * scale_y < 1):
-            raise ValueError(
-                "resulting scale (%f, %f) would result in image size of "
-                "<1 in width or height" % (scale_x, scale_y))
-
         sx = float(win_wd) / scale_x
         sy = float(win_ht) / scale_y
         if (sx < 1.0) or (sy < 1.0):
@@ -2248,11 +2250,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         # calculate actual width of the limits/image, considering rotation
-        try:
-            xy_mn, xy_mx = self.get_limits()
-
-        except ImageViewNoDataError:
-            return
+        xy_mn, xy_mx = self.get_limits()
 
         try:
             wwidth, wheight = self.get_window_size()
@@ -2524,12 +2522,7 @@ class ImageViewBase(Callback.Callbacks):
         scale factors, where 1 is 100%.
 
         """
-        try:
-            xy_mn, xy_mx = self.get_limits()
-
-        except Exception as e:
-            self.logger.error("Can't compute limits: %s" % (str(e)))
-            return
+        xy_mn, xy_mx = self.get_limits()
 
         data_x = (xy_mn[0] + xy_mx[0]) * pct_x
         data_y = (xy_mn[1] + xy_mx[1]) * pct_y
@@ -2545,20 +2538,10 @@ class ImageViewBase(Callback.Callbacks):
             See :meth:`set_pan`.
 
         """
-        try:
-            xy_mn, xy_mx = self.get_limits()
-            data_x = float(xy_mn[0] + xy_mx[0]) / 2.0
-            data_y = float(xy_mn[1] + xy_mx[1]) / 2.0
+        xy_mn, xy_mx = self.get_limits()
 
-        except ImageViewNoDataError:
-            # No data, so try to get center of any plotted objects
-            canvas = self.get_canvas()
-            try:
-                data_x, data_y = canvas.get_center_pt()[:2]
-
-            except Exception as e:
-                self.logger.error("Can't compute center point: %s" % (str(e)))
-                return
+        data_x = (xy_mn[0] + xy_mx[0]) * 0.5
+        data_y = (xy_mn[1] + xy_mx[1]) * 0.5
 
         self.panset_xy(data_x, data_y, no_reset=no_reset)
 
@@ -2801,7 +2784,7 @@ class ImageViewBase(Callback.Callbacks):
         attrlist : list
             A list of attribute names to copy. They can be ``'transforms'``,
             ``'rotation'``, ``'cutlevels'``, ``'rgbmap'``, ``'zoom'``,
-            ``'pan'``, ``'autocuts'``.
+            ``'pan'``, ``'autocuts'``, ``'limits'``.
 
         share : bool
             If True, the designated settings will be shared, otherwise the
@@ -2825,6 +2808,9 @@ class ImageViewBase(Callback.Callbacks):
             keylist.extend(['color_algorithm', 'color_hashsize',
                             'color_map', 'intensity_map',
                             'color_array', 'shift_array'])
+
+        if 'limits' in attrlist:
+            keylist.extend(['limits'])
 
         if 'zoom' in attrlist:
             keylist.extend(['scale'])

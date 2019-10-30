@@ -29,6 +29,7 @@ from ginga.util import catalog, iohelper, loader, toolbox
 from ginga.util import viewer as gviewer
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
+from ginga.canvas.types.image import Image
 from ginga.canvas import render
 
 # GUI imports
@@ -2758,6 +2759,20 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Update the info from the last position recorded under the cursor.
         """
         self._cursor_last_update = time.time()
+
+        # get first canvas image object found under the cursor
+        pt = (data_x, data_y)
+        canvas = viewer.get_canvas()
+        objs = canvas.get_items_at(pt)
+        objs = list(filter(lambda obj: isinstance(obj, Image), objs))
+        if len(objs) > 0:
+            obj = objs[0]
+        else:
+            # hmm, ok see if there is an image loaded in the viewer
+            if viewer._imgobj is None:
+                return
+            obj = viewer._imgobj
+
         try:
             image = viewer.get_dataobj()
             if (image is None) or not isinstance(image, BaseImage.BaseImage):
@@ -2766,6 +2781,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             if image.ndim < 2:
                 return
+
+            # adjust data coords for where this image is plotted
+            data_x, data_y = data_x - obj.x, data_y - obj.y
 
             settings = viewer.get_settings()
             info = image.info_xy(data_x, data_y, settings)

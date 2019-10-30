@@ -63,7 +63,10 @@ class CompoundMixin(object):
     def get_items_at(self, pt):
         res = []
         for obj in self.objects:
-            if obj.contains_pt(pt):
+            if obj.is_compound() and not obj.opaque:
+                # non-opaque compound object, list up compatible members
+                res.extend(obj.get_items_at(pt))
+            elif obj.contains_pt(pt):
                 #res.insert(0, obj)
                 res.append(obj)
         return res
