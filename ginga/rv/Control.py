@@ -2774,7 +2774,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             obj = viewer._imgobj
 
         try:
-            image = viewer.get_dataobj()
+            image = obj.get_image()
+
             if (image is None) or not isinstance(image, BaseImage.BaseImage):
                 # No compatible image loaded for this channel
                 return
