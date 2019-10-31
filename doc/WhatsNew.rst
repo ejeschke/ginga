@@ -2,6 +2,12 @@
 What's New
 ++++++++++
 
+Ver 3.1.0 (unreleased)
+======================
+- Zoom plugin refactored. Now shows graphical overlays.
+- Improved performance of rendering when flipping, swapping axes or
+  rotating viewer.
+
 Ver 3.0.0 (2019-09-20)
 ======================
 - Dropped Python 2 support. Ginga now requires Python 3.5 or later.

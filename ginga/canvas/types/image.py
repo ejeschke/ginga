@@ -147,7 +147,7 @@ class Image(OnePointMixin, CanvasObjectBase):
 
         if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
-            pts = np.asarray(viewer.get_pan_rect()).T
+            pts = np.asarray(viewer.get_draw_rect()).T
             xmin = int(np.min(pts[0]))
             ymin = int(np.min(pts[1]))
             xmax = int(np.ceil(np.max(pts[0])))
@@ -382,7 +382,7 @@ class NormImage(Image):
 
         if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
-            pts = np.asarray(viewer.get_pan_rect()).T
+            pts = np.asarray(viewer.get_draw_rect()).T
             xmin = int(np.min(pts[0]))
             ymin = int(np.min(pts[1]))
             xmax = int(np.ceil(np.max(pts[0])))
@@ -454,7 +454,7 @@ class NormImage(Image):
         image_order = self.image.get_order()
         get_order = dst_order
 
-        if (whence <= 2.5) or (cache.rgbarr is None) or (not self.optimize):
+        if (whence <= 2.0) or (cache.rgbarr is None) or (not self.optimize):
             # get RGB mapped array
             rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
                                          image_order=image_order)

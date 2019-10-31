@@ -239,19 +239,14 @@ class ImageViewBase(Callback.Callbacks):
         # (pixels are centered on the coordinate)
         self.data_off = 0.5
 
-        # Origin in the data array of what is currently displayed (LL, UR)
-        self._org_x1 = 0
-        self._org_y1 = 0
-        self._org_x2 = 0
-        self._org_y2 = 0
         # offsets in the screen image for drawing (in screen coords)
         self._dst_x = 0
         self._dst_y = 0
         self._invert_y = True
         self._self_scaling = False
-        # offsets in the screen image (in data coords)
-        self._off_x = 0
-        self._off_y = 0
+        # see apply_transforms() and apply_rotation()
+        self._xoff = 0
+        self._yoff = 0
 
         # actual scale factors produced from desired ones
         self._org_scale_x = 1.0
@@ -260,6 +255,7 @@ class ImageViewBase(Callback.Callbacks):
 
         self._rgbarr = None
         self._rgbarr2 = None
+        self._rgbarr3 = None
         self._rgbobj = None
 
         # optimization of redrawing
@@ -1342,7 +1338,7 @@ class ImageViewBase(Callback.Callbacks):
 
         self.make_callback('redraw', whence)
 
-        if whence < 2:
+        if whence < 3:
             self.check_cursor_location()
 
     def check_cursor_location(self):
@@ -1426,19 +1422,6 @@ class ImageViewBase(Callback.Callbacks):
             return outarr.tostring(order='C')
         return outarr.tobytes(order='C')
 
-    def get_datarect(self):
-        """Get the approximate bounding box of the displayed image.
-
-        Returns
-        -------
-        rect : tuple
-            Bounding box in data coordinates in the form of
-            ``(x1, y1, x2, y2)``.
-
-        """
-        x1, y1, x2, y2 = self._org_x1, self._org_y1, self._org_x2, self._org_y2
-        return (x1, y1, x2, y2)
-
     def get_limits(self, coord='data'):
         """Get the bounding box of the viewer extents.
 
@@ -1511,11 +1494,12 @@ class ImageViewBase(Callback.Callbacks):
             Optimization flag that reduces the time to create
             the RGB object by only recalculating what is necessary:
 
-                0. New image, pan/scale has changed, or rotation/transform
-                   has changed; Recalculate everything
-                1. Cut levels or similar has changed
-                2. Color mapping has changed
-                3. Graphical overlays have changed
+                0.  New image, pan/scale has changed
+                1.  Cut levels or similar has changed
+                2.  Color mapping has changed
+                2.5 Transforms have changed
+                2.6 Rotation has changed
+                3.  Graphical overlays have changed
 
         Returns
         -------
@@ -1560,13 +1544,17 @@ class ImageViewBase(Callback.Callbacks):
                                          working_profile, output_profile)
             t3 = time.time()
 
-        if (whence <= 2.5) or (self._rgbobj is None):
-            rotimg = self._rgbarr2
+        if (whence <= 2.5) or (self._rgbarr3 is None):
+            data = np.copy(self._rgbarr2)
 
-            # Apply any viewing transformations or rotations
-            # if not applied earlier
-            rotimg = self.apply_transforms(rotimg,
-                                           self.t_['rot_deg'])
+            # Apply any viewing transformations
+            self._rgbarr3 = self._apply_transforms(data)
+
+        if (whence <= 2.6) or (self._rgbobj is None):
+            rotimg = np.copy(self._rgbarr3)
+
+            # Apply any viewing rotations
+            rotimg = self._apply_rotation(rotimg, self.t_['rot_deg'])
             rotimg = np.ascontiguousarray(rotimg)
 
             self._rgbobj = RGBMap.RGBPlanes(rotimg, order)
@@ -1602,34 +1590,13 @@ class ImageViewBase(Callback.Callbacks):
             #self.logger.warning("new scale would exceed max/min; scale unchanged")
             raise ImageViewError("new scale would exceed pixel max; scale unchanged")
 
-        # It is necessary to store these so that the get_pan_rect()
-        # (below) calculation can proceed
+        # record location of pan position pixel
         self._org_x, self._org_y = pan_x - self.data_off, pan_y - self.data_off
         self._org_scale_x, self._org_scale_y = scale_x, scale_y
         self._org_scale_z = (scale_x + scale_y) / 2.0
 
         # calc minimum size of pixel image we will generate
         # necessary to fit the window in the desired size
-
-        # get the data points in the four corners
-        a, b = trcalc.get_bounds(self.get_pan_rect())
-
-        # determine bounding box
-        a1, b1 = a[:2]
-        a2, b2 = b[:2]
-
-        # constrain to integer indexes
-        x1, y1, x2, y2 = int(a1), int(b1), int(np.round(a2)), int(np.round(b2))
-        x1 = max(0, x1)
-        y1 = max(0, y1)
-
-        self.logger.debug("approx area covered is %dx%d to %dx%d" % (
-            x1, y1, x2, y2))
-
-        self._org_x1 = x1
-        self._org_y1 = y1
-        self._org_x2 = x2
-        self._org_y2 = y2
 
         # Make a square from the scaled cutout, with room to rotate
         slop = 20
@@ -1657,17 +1624,16 @@ class ImageViewBase(Callback.Callbacks):
         self._calc_bg_dimensions(scale_x, scale_y,
                                  pan_x, pan_y, win_wd, win_ht)
 
-    def apply_transforms(self, data, rot_deg):
+    def _apply_transforms(self, data):
         """Apply transformations to the given data.
-        These include flip/swap X/Y, invert Y, and rotation.
+        These include flipping on axis and swapping X/Y axes.
+
+        This is an internal method, called during viewer rendering.
 
         Parameters
         ----------
         data : ndarray
             Data to be transformed.
-
-        rot_deg : float
-            Rotate the data by the given degrees.
 
         Returns
         -------
@@ -1692,16 +1658,43 @@ class ImageViewBase(Callback.Callbacks):
             xoff = wd - xoff
         if swap_xy:
             xoff, yoff = yoff, xoff
+        self._xoff, self._yoff = xoff, yoff
 
         split_time = time.time()
-        self.logger.debug("reshape time %.3f sec" % (
+        self.logger.debug("transform time %.3f sec" % (
             split_time - start_time))
+
+        return data
+
+    def _apply_rotation(self, data, rot_deg):
+        """Apply transformations to the given data.
+        These include rotation and invert Y.
+
+        This is an internal method, called during viewer rendering.
+
+        Parameters
+        ----------
+        data : ndarray
+            Data to be rotated.
+
+        rot_deg : float
+            Rotate the data by the given degrees.
+
+        Returns
+        -------
+        data : ndarray
+            Rotated data.
+
+        """
+        start_time = time.time()
+        xoff, yoff = self._xoff, self._yoff
 
         # Rotate the image as necessary
         if rot_deg != 0:
-            # This is the slowest part of the rendering--install the OpenCv or pyopencl
-            # packages to speed it up
+            # This is the slowest part of the rendering--
+            # install the OpenCv or pyopencl packages to speed it up
             data = np.ascontiguousarray(data)
+            pre_y, pre_x = data.shape[:2]
             data = trcalc.rotate_clip(data, -rot_deg, out=data,
                                       logger=self.logger)
 
@@ -1709,12 +1702,12 @@ class ImageViewBase(Callback.Callbacks):
 
         # apply other transforms
         if self._invert_y:
-            # Flip Y for natural natural Y-axis inversion between FITS coords
+            # Flip Y for natural Y-axis inversion between FITS coords
             # and screen coords
             data = np.flipud(data)
 
-        self.logger.debug("rotate time %.3f sec, total reshape %.3f sec" % (
-            split2_time - split_time, split2_time - start_time))
+        self.logger.debug("rotate time %.3f sec" % (
+            split2_time - start_time))
 
         # dimensions may have changed in transformations
         wd, ht = self.get_dims(data)
@@ -1954,10 +1947,52 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         wd, ht = self.get_window_size()
-        #win_pts = np.asarray([(0, 0), (wd-1, 0), (wd-1, ht-1), (0, ht-1)])
         win_pts = np.asarray([(0, 0), (wd, 0), (wd, ht), (0, ht)])
         arr_pts = self.tform['data_to_window'].from_(win_pts)
         return arr_pts
+
+    def get_draw_rect(self):
+        """Get the coordinates in the actual data corresponding to the
+        area needed for drawing images for the current zoom level and pan.
+        Unlike ``get_pan_rect``(), this includes areas outside of the
+        current viewport, but that might be viewed with a transformation
+        or rotation subsequently applied.
+
+        Returns
+        -------
+        points : list
+            Coordinates in the form of
+            ``[(x0, y0), (x1, y1), (x2, y2), (x3, y3)]``
+            from lower-left to lower-right.
+
+        """
+        wd, ht = self.get_window_size()
+        side = int(math.sqrt(wd**2 + ht**2))
+        xoff, yoff = (side - wd) // 2, (side - ht) // 2
+        win_pts = np.asarray([(-xoff, -yoff), (wd + xoff, -yoff),
+                              (wd + xoff, ht + yoff), (-xoff, ht + yoff)])
+        arr_pts = self.tform['data_to_window'].from_(win_pts)
+        return arr_pts
+
+    def get_datarect(self):
+        """Get the approximate LL and UR corners of the displayed image.
+        Like ``get_pan_rect``(), but returned as a list of two corner's
+        coordinates.
+
+        Returns
+        -------
+        rect : tuple
+            Bounding box in data coordinates in the form of
+            ``(x1, y1, x2, y2)``.
+
+        """
+        # get the data points in the four corners
+        a, b = trcalc.get_bounds(self.get_pan_rect())
+
+        # determine bounding box
+        x1, y1 = a[:2]
+        x2, y2 = b[:2]
+        return (x1, y1, x2, y2)
 
     def get_data(self, data_x, data_y):
         """Get the data value at the given position.
@@ -2149,7 +2184,6 @@ class ImageViewBase(Callback.Callbacks):
             Scale factors for X and Y, in that order.
 
         """
-        #return (self._org_scale_x, self._org_scale_y)
         return self.t_['scale'][:2]
 
     def get_scale_base_xy(self):
@@ -2766,11 +2800,7 @@ class ImageViewBase(Callback.Callbacks):
         """Handle callback related to changes in transformations."""
         self.make_callback('transform')
 
-        # whence=0 because need to calculate new extents for proper
-        # cutout for rotation (TODO: always make extents consider
-        #  room for rotation)
-        whence = 0
-        self.redraw(whence=whence)
+        self.redraw(whence=2.5)
 
     def copy_attributes(self, dst_fi, attrlist, share=False):
         """Copy interesting attributes of our configuration to another
@@ -2856,11 +2886,7 @@ class ImageViewBase(Callback.Callbacks):
 
     def rotation_change_cb(self, setting, value):
         """Handle callback related to changes in rotation angle."""
-        # whence=0 because need to calculate new extents for proper
-        # cutout for rotation (TODO: always make extents consider
-        #  room for rotation)
-        whence = 0
-        self.redraw(whence=whence)
+        self.redraw(whence=2.6)
 
     def get_center(self):
         """Get image center.
@@ -3577,8 +3603,7 @@ class SuppressRedraw(object):
         self.viewer._hold_redraw_cnt -= 1
 
         if (self.viewer._hold_redraw_cnt <= 0):
-            # TODO: whence should be largest possible
-            #whence = 0
+            # whence should be largest possible
             whence = self.viewer._defer_whence
             self.viewer.redraw(whence=whence)
         return False

@@ -646,20 +646,21 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
         src_wd -= dx
         dst_x = 0
 
-    if src_wd <= 0 or src_ht <= 0:
-        return dstarr
-
     # Trim off parts of srcarr that would be "hidden"
     # to the right and below the dstarr edge.
     ex = dst_y + src_ht - dst_ht
     if ex > 0:
-        srcarr = srcarr[:dst_ht, :, :]
+        #srcarr = srcarr[:dst_ht, :, :]
         src_ht -= ex
 
     ex = dst_x + src_wd - dst_wd
     if ex > 0:
-        srcarr = srcarr[:, :dst_wd, :]
+        #srcarr = srcarr[:, :dst_wd, :]
         src_wd -= ex
+
+    if src_wd <= 0 or src_ht <= 0:
+        # nothing to do
+        return dstarr
 
     if copy:
         dstarr = np.copy(dstarr, order='C')
@@ -749,27 +750,25 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         src_dp -= dz
         dst_z = 0
 
-    if src_wd <= 0 or src_ht <= 0 or src_dp <= 0:
-        return dstarr
-
     # Trim off parts of srcarr that would be "hidden"
     # to the right and below the dstarr edge.
     ex = dst_y + src_ht - dst_ht
     if ex > 0:
-        srcarr = srcarr[:dst_ht, :, :]
+        #srcarr = srcarr[:dst_ht, :, :]
         src_ht -= ex
 
     ex = dst_x + src_wd - dst_wd
     if ex > 0:
-        srcarr = srcarr[:, :dst_wd, :]
+        #srcarr = srcarr[:, :dst_wd, :]
         src_wd -= ex
 
     ex = dst_z + src_dp - dst_dp
     if ex > 0:
-        srcarr = srcarr[:, :, :dst_dp]
+        #srcarr = srcarr[:, :, :dst_dp]
         src_dp -= ex
 
     if src_wd <= 0 or src_ht <= 0 or src_dp <= 0:
+        # nothing to do
         return dstarr
 
     if copy:
