@@ -1494,12 +1494,12 @@ class ImageViewBase(Callback.Callbacks):
             Optimization flag that reduces the time to create
             the RGB object by only recalculating what is necessary:
 
-                0.  New image, pan/scale has changed
-                1.  Cut levels or similar has changed
-                2.  Color mapping has changed
-                2.5 Transforms have changed
-                2.6 Rotation has changed
-                3.  Graphical overlays have changed
+                0: New image, pan/scale has changed
+                1: Cut levels or similar has changed
+                2: Color mapping has changed
+                2.5: Transforms have changed
+                2.6: Rotation has changed
+                3: Graphical overlays have changed
 
         Returns
         -------
