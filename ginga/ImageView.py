@@ -1954,7 +1954,7 @@ class ImageViewBase(Callback.Callbacks):
     def get_draw_rect(self):
         """Get the coordinates in the actual data corresponding to the
         area needed for drawing images for the current zoom level and pan.
-        Unlike ``get_pan_rect``(), this includes areas outside of the
+        Unlike get_pan_rect(), this includes areas outside of the
         current viewport, but that might be viewed with a transformation
         or rotation subsequently applied.
 
@@ -1976,8 +1976,6 @@ class ImageViewBase(Callback.Callbacks):
 
     def get_datarect(self):
         """Get the approximate LL and UR corners of the displayed image.
-        Like ``get_pan_rect``(), but returned as a list of two corner's
-        coordinates.
 
         Returns
         -------
