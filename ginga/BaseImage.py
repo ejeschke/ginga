@@ -243,7 +243,7 @@ class BaseImage(ViewerObjectBase):
                 if depth == 1:
                     self.order = 'M'
                 elif depth == 2:
-                    self.order = 'AM'
+                    self.order = 'MA'
                 elif depth == 3:
                     self.order = 'RGB'
                 elif depth == 4:

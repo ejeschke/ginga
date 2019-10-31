@@ -413,7 +413,7 @@ class RGBMapper(Callback.Callbacks):
     def _get_rgbarray(self, idx, rgbobj, image_order=''):
         # NOTE: data is assumed to be in the range 0-maxc at this point
         # but clip as a precaution
-        # See NOTE [A]: idx is always an array calculated in the caller and
+        # NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
         # idx = idx.clip(0, self.maxc).astype(np.uint, copy=False)
         idx.clip(0, self.maxc, out=idx)
@@ -427,17 +427,28 @@ class RGBMapper(Callback.Callbacks):
         ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
         out = rgbobj.rgbarr
 
-        # change [A]
-        if (image_order is None) or (len(image_order) < 3):
+        # See NOTE [A]
+        if (image_order is None) or (len(image_order) == 1):
             out[..., ri] = self.arr[0][idx]
             out[..., gi] = self.arr[1][idx]
             out[..., bi] = self.arr[2][idx]
+        elif len(image_order) == 2:
+            mj, aj = self.get_order_indexes(image_order, 'MA')
+            out[..., ri] = self.arr[0][idx[..., mj]]
+            out[..., gi] = self.arr[1][idx[..., mj]]
+            out[..., bi] = self.arr[2][idx[..., mj]]
+            ais = self.get_order_indexes(rgbobj.get_order(), 'A')
+            if len(ais) > 0:
+                ai = ais[0]
+                # alpha channel is passed directly through
+                out[..., ai] = idx[..., aj].astype(out.dtype)
         else:
             # <== indexes already contain RGB info.
             rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
             out[..., ri] = self.arr[0][idx[..., rj]]
             out[..., gi] = self.arr[1][idx[..., gj]]
             out[..., bi] = self.arr[2][idx[..., bj]]
+
 
     def get_rgbarray(self, idx, out=None, order='RGB', image_order=''):
         """
@@ -469,9 +480,9 @@ class RGBMapper(Callback.Callbacks):
             out = np.empty(res_shape, dtype=self.dtype, order='C')
         else:
             # TODO: assertion check on shape of out
-            assert res_shape == out.shape, \
-                RGBMapError("Output array shape %s doesn't match result "
-                            "shape %s" % (str(out.shape), str(res_shape)))
+            if res_shape != out.shape:
+                raise RGBMapError("Output array shape %s doesn't match result "
+                                  "shape %s" % (str(out.shape), str(res_shape)))
 
         res = RGBPlanes(out, order)
 

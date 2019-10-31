@@ -935,7 +935,7 @@ def make_filled_array(shp, dtype, order, r, g, b, a):
                  B=int(maxv * b))
     bgtup = tuple([bgval[order[i]] for i in range(len(order))])
     if dtype is np.uint8 and len(bgtup) == 4:
-        # optimiztion when dealing with 32-bit RGBA arrays
+        # optimization when dealing with 32-bit RGBA arrays
         fill_val = np.array(bgtup, dtype=dtype).view(np.uint32)
         rgba = np.zeros(shp, dtype=dtype)
         rgba_i = rgba.view(np.uint32)
@@ -943,4 +943,26 @@ def make_filled_array(shp, dtype, order, r, g, b, a):
         return rgba
     return np.full(shp, bgtup, dtype=dtype)
 
-# END
+
+def add_alpha(arr, alpha=None):
+    """Takes an array and adds an alpha layer to it if it doesn't already
+    exist."""
+    if len(arr.shape) == 2:
+        arr = arr[..., np.newaxis]
+
+    if arr.shape[2] in (1, 3):
+        a_arr = np.zeros(arr.shape[:2], dtype=arr.dtype)
+        if alpha is not None:
+            a_arr[:, :] = alpha
+        arr = np.dstack((arr, a_arr))
+
+    return arr
+
+
+def get_minmax(dtype):
+    if issubclass(dtype.type, np.integer):
+        info = np.iinfo(dtype)
+    else:
+        info = np.finfo(dtype)
+
+    return info.min, info.max
