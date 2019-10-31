@@ -449,7 +449,6 @@ class RGBMapper(Callback.Callbacks):
             out[..., gi] = self.arr[1][idx[..., gj]]
             out[..., bi] = self.arr[2][idx[..., bj]]
 
-
     def get_rgbarray(self, idx, out=None, order='RGB', image_order=''):
         """
         Parameters
