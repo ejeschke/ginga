@@ -264,7 +264,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         paninfo = channel.extdata._pan_info
         if paninfo is not None:
             fitsimage.copy_attributes(paninfo.panimage, self.copy_attrs)
-            if whence == 0:
+            if whence < 3:
                 self.panset(channel.fitsimage, channel, paninfo)
         return True
 

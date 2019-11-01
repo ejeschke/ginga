@@ -244,7 +244,7 @@ class ImageViewBase(Callback.Callbacks):
         self._dst_y = 0
         self._invert_y = True
         self._self_scaling = False
-        # see apply_transforms() and apply_rotation()
+        # see _apply_transforms() and _apply_rotation()
         self._xoff = 0
         self._yoff = 0
 
@@ -380,11 +380,27 @@ class ImageViewBase(Callback.Callbacks):
             The height of the window in pixels.
 
         """
-        self._imgwin_wd = int(width)
-        self._imgwin_ht = int(height)
+        width, height = int(width), int(height)
+        self._imgwin_wd = width
+        self._imgwin_ht = height
         self._ctr_x = width // 2
         self._ctr_y = height // 2
         self.logger.debug("widget resized to %dx%d" % (width, height))
+
+        # calculate dimensions of window RGB backing image
+        wd, ht = self._calc_bg_dimensions(width, height)
+
+        # create backing image
+        order = self.get_rgb_order()
+        depth = len(order)
+        rgbmap = self.get_rgbmap()
+
+        # make backing image with the background color
+        r, g, b = self.img_bg
+        rgba = trcalc.make_filled_array((ht, wd, depth), rgbmap.dtype,
+                                        order, r, g, b, 1.0)
+
+        self._rgbarr = rgba
 
         self.make_callback('configure', width, height)
         self.redraw(whence=0)
@@ -997,7 +1013,7 @@ class ImageViewBase(Callback.Callbacks):
                     tb_str = "Traceback information unavailable."
                     self.logger.error(tb_str)
 
-            self.canvas.update_canvas(whence=0)
+            self.canvas.update_canvas(whence=1)
 
     def set_data(self, data, metadata=None):
         """Set an image to be displayed by providing raw data.
@@ -1507,28 +1523,21 @@ class ImageViewBase(Callback.Callbacks):
             RGB object.
 
         """
-        time_start = t2 = t3 = time.time()
         win_wd, win_ht = self.get_window_size()
         order = self.get_rgb_order()
 
-        if (whence <= 0.0) or (self._rgbarr is None):
-            # calculate dimensions of window RGB backing image
+        if whence <= 0.0:
+            # confirm and record pan and scale
             pan_x, pan_y = self.get_pan(coord='data')[:2]
             scale_x, scale_y = self.get_scale_xy()
-            wd, ht = self._calc_bg_dimensions(scale_x, scale_y,
-                                              pan_x, pan_y,
-                                              win_wd, win_ht)
+            self._confirm_pan_and_scale(scale_x, scale_y,
+                                        pan_x, pan_y,
+                                        win_wd, win_ht)
 
-            # create backing image
-            depth = len(order)
-            rgbmap = self.get_rgbmap()
-            # make backing image with the background color
-            r, g, b = self.img_bg
-            rgba = trcalc.make_filled_array((ht, wd, depth), rgbmap.dtype,
-                                            order, r, g, b, 1.0)
+        if self._rgbarr is None:
+            raise ImageViewError("viewer window dimensions are not set")
 
-            self._rgbarr = rgba
-            t2 = time.time()
+        time_start = t2 = t3 = time.time()
 
         if (whence <= 2.0) or (self._rgbarr2 is None):
             # Apply any RGB image overlays
@@ -1542,13 +1551,15 @@ class ImageViewBase(Callback.Callbacks):
             if (working_profile is not None) and (output_profile is not None):
                 self.convert_via_profile(self._rgbarr2, order,
                                          working_profile, output_profile)
-            t3 = time.time()
+            t2 = time.time()
 
         if (whence <= 2.5) or (self._rgbarr3 is None):
             data = np.copy(self._rgbarr2)
 
             # Apply any viewing transformations
             self._rgbarr3 = self._apply_transforms(data)
+
+            t3 = time.time()
 
         if (whence <= 2.6) or (self._rgbobj is None):
             rotimg = np.copy(self._rgbarr3)
@@ -1560,17 +1571,43 @@ class ImageViewBase(Callback.Callbacks):
             self._rgbobj = RGBMap.RGBPlanes(rotimg, order)
 
         time_end = time.time()
-        ## self.logger.debug("times: total=%.4f" % (
-        ##     (time_end - time_start)))
         self.logger.debug("times: t1=%.4f t2=%.4f t3=%.4f total=%.4f" % (
             t2 - time_start, t3 - t2, time_end - t3,
             (time_end - time_start)))
 
         return self._rgbobj
 
-    def _calc_bg_dimensions(self, scale_x, scale_y,
-                            pan_x, pan_y, win_wd, win_ht):
+    def _calc_bg_dimensions(self, win_wd, win_ht):
+        """Calculate background image size necessary for rendering.
+
+        This is an internal method, called during viewer window size
+        configuration.
+
+        Parameters
+        ----------
+        win_wd, win_ht : int
+            window dimensions in pixels
         """
+        # calc minimum size of pixel image we will generate
+        # necessary to fit the window in the desired size
+
+        # Make a square from the scaled cutout, with room to rotate
+        slop = 20
+        side = int(math.sqrt(win_wd**2 + win_ht**2) + slop)
+        wd = ht = side
+
+        # Find center of new array
+        ncx, ncy = wd // 2, ht // 2
+        self._org_xoff, self._org_yoff = ncx, ncy
+
+        return (wd, ht)
+
+    def _confirm_pan_and_scale(self, scale_x, scale_y,
+                               pan_x, pan_y, win_wd, win_ht):
+        """Check and record the desired pan and scale factors.
+
+        This is an internal method, called during viewer rendering.
+
         Parameters
         ----------
         scale_x, scale_y : float
@@ -1595,20 +1632,6 @@ class ImageViewBase(Callback.Callbacks):
         self._org_scale_x, self._org_scale_y = scale_x, scale_y
         self._org_scale_z = (scale_x + scale_y) / 2.0
 
-        # calc minimum size of pixel image we will generate
-        # necessary to fit the window in the desired size
-
-        # Make a square from the scaled cutout, with room to rotate
-        slop = 20
-        side = int(math.sqrt(win_wd**2 + win_ht**2) + slop)
-        wd = ht = side
-
-        # Find center of new array
-        ncx, ncy = wd // 2, ht // 2
-        self._org_xoff, self._org_yoff = ncx, ncy
-
-        return (wd, ht)
-
     def _reset_bbox(self):
         """This function should only be called internally.  It resets
         the viewers bounding box based on changes to pan or scale.
@@ -1621,8 +1644,8 @@ class ImageViewBase(Callback.Callbacks):
         # issue 431
         win_wd, win_ht = max(1, win_wd), max(1, win_ht)
 
-        self._calc_bg_dimensions(scale_x, scale_y,
-                                 pan_x, pan_y, win_wd, win_ht)
+        self._confirm_pan_and_scale(scale_x, scale_y,
+                                    pan_x, pan_y, win_wd, win_ht)
 
     def _apply_transforms(self, data):
         """Apply transformations to the given data.
@@ -1641,8 +1664,6 @@ class ImageViewBase(Callback.Callbacks):
             Transformed data.
 
         """
-        start_time = time.time()
-
         wd, ht = self.get_dims(data)
         xoff, yoff = self._org_xoff, self._org_yoff
 
@@ -1659,10 +1680,6 @@ class ImageViewBase(Callback.Callbacks):
         if swap_xy:
             xoff, yoff = yoff, xoff
         self._xoff, self._yoff = xoff, yoff
-
-        split_time = time.time()
-        self.logger.debug("transform time %.3f sec" % (
-            split_time - start_time))
 
         return data
 
@@ -1686,7 +1703,6 @@ class ImageViewBase(Callback.Callbacks):
             Rotated data.
 
         """
-        start_time = time.time()
         xoff, yoff = self._xoff, self._yoff
 
         # Rotate the image as necessary
@@ -1698,16 +1714,11 @@ class ImageViewBase(Callback.Callbacks):
             data = trcalc.rotate_clip(data, -rot_deg, out=data,
                                       logger=self.logger)
 
-        split2_time = time.time()
-
         # apply other transforms
         if self._invert_y:
             # Flip Y for natural Y-axis inversion between FITS coords
             # and screen coords
             data = np.flipud(data)
-
-        self.logger.debug("rotate time %.3f sec" % (
-            split2_time - start_time))
 
         # dimensions may have changed in transformations
         wd, ht = self.get_dims(data)
