@@ -320,7 +320,7 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
     x2, y2, z2 = p2
     new_wd, new_ht, new_dp = new_dims
 
-    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2), int(z1), int(z2)
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
     z1, z2, new_wd, new_ht = int(z1), int(z2), int(new_wd), int(new_ht)
 
     # calculate dimensions of NON-scaled cutout
