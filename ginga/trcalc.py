@@ -1190,7 +1190,7 @@ def fancy_index(d_obj, view):
 
     Parameters
     ----------
-    d_obj : numpy ndarray, dask array or zarr array
+    d_obj : numpy ndarray, dask array, or zarr array
         2D or 3D data array
 
     view : tuple of slice or int array

@@ -8,9 +8,9 @@ from ginga import AstroImage, trcalc
 from ginga.misc import log
 
 
-class Test_zarr(object):
+class TestZarr:
     def setup_class(self):
-        self.logger = log.get_logger("Test_zarr", null=True)
+        self.logger = log.get_logger("TestZarr", null=True)
 
     def _get_data(self, shape, data_np=None):
         if data_np is None:
@@ -42,7 +42,7 @@ class Test_zarr(object):
         assert isinstance(data_np, np.ndarray)
         assert data_np.shape == (70, 99)
 
-    def test_dask_aimg_get_data_xy(self):
+    def test_zarr_aimg_get_data_xy(self):
         """Test that we can get a single value from an AstroImage object.
         """
         aimg = AstroImage.AstroImage(logger=self.logger)
