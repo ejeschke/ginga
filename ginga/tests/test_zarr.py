@@ -42,9 +42,9 @@ class TestZarr:
         assert isinstance(data_np, np.ndarray)
         assert data_np.shape == (86, 163)
         assert isinstance(data_np[0, 0], np.integer)
-        res = 'be219a7516d02d3c3fd399f66af68ddec820496da09c0646e23c7c6437155fee'
+        res = '177e1ed261ea24df277511078631ec0f95dfc3e781ac15b2d200f0f0040282ae'
         m = hashlib.sha256()
-        m.update(np.asarray(data_np).tobytes())
+        m.update(str(data_np.tolist()).encode())
         assert m.hexdigest() == res
 
     def test_zarr_slice_aimg(self):
@@ -59,9 +59,9 @@ class TestZarr:
         assert isinstance(data_np, np.ndarray)
         assert data_np.shape == (70, 99)
         assert isinstance(data_np[0, 0], np.integer)
-        res = '39f4fe77ed29b083ad18e692baa27cecbd48fc835f515070b3d7f8b6fe81a741'
+        res = 'd6f0e61dc54f0c888c8f79d94ead85f8d3c4736efede289ff9946e0091960524'
         m = hashlib.sha256()
-        m.update(data_np.tobytes())
+        m.update(str(data_np.tolist()).encode())
         assert m.hexdigest() == res
 
     def test_zarr_aimg_get_data_xy(self):
@@ -89,7 +89,7 @@ class TestZarr:
         assert isinstance(data_np, np.ndarray)
         assert data_np.shape == new_dims
         assert isinstance(data_np[0, 0, 0], np.integer)
-        res = 'e60bfb1ae30b2b5c5261bc288d344f6c4ec7715ca17cdd65d9ad50f91911f0a4'
+        res = '4d6bb43463f435d76d226c38314fa22a5ba540b7db785b1ccfd2c75d84063fc4'
         m = hashlib.sha256()
-        m.update(data_np.tobytes())
+        m.update(str(data_np.tolist()).encode())
         assert m.hexdigest() == res
