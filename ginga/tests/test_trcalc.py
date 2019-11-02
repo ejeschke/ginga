@@ -37,9 +37,9 @@ class TestTrcalc:
         new_data = trcalc.fancy_index(data, view)
         assert new_data.shape == (10, 8)
         assert isinstance(new_data[0, 0], np.integer)
-        res = '0dfbf5e591f6ab6ac54576cd145ea88800f81f7303e57bbdb3d0a1f0868884e6'
+        res = 'dc025d4e14db5529c581cbe24f0616721bb33f63aabcfcc0d432edf00d8cdc2d'
         m = hashlib.sha256()
-        m.update(new_data.tobytes())
+        m.update(str(new_data.tolist()).encode())
         assert m.hexdigest() == res
 
     def test_get_scaled_cutout_wdhtdp_view(self):
@@ -54,7 +54,7 @@ class TestTrcalc:
         new_data = trcalc.fancy_index(data, view)
         assert new_data.shape == (4, 4, 4)
         assert isinstance(new_data[0, 0, 0], np.integer)
-        res = '979a2f0ee87ba04b0a552674ca77546028d49b248274aef4e1030b4fa74a0d1b'
+        res = 'c01c00af06fb2dc5c8cd6cf96927ba6ddd8d2caba3fc33074c9eaab5cc0ac498'
         m = hashlib.sha256()
-        m.update(new_data.tobytes())
+        m.update(str(new_data.tolist()).encode())
         assert m.hexdigest() == res
