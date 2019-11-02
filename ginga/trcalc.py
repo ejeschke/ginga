@@ -1194,7 +1194,8 @@ def fancy_index(d_obj, view):
         2D or 3D data array
 
     view : tuple of slice or int array
-        View into the array
+        View into the array.  Tuple can contain slice objects or
+        1D integer arrays (indexes into an axis).
 
     Returns
     -------

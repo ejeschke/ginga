@@ -86,8 +86,8 @@ class TestDask:
         new_dims = (51, 51, 51)
 
         data_np, scales = trcalc.get_scaled_cutout_wdhtdp(arr_dk, p1, p2,
-                                                      new_dims,
-                                                      logger=self.logger)
+                                                          new_dims,
+                                                          logger=self.logger)
         assert isinstance(data_np, np.ndarray)
         assert data_np.shape == new_dims
         assert isinstance(data_np[0, 0, 0], np.integer)
