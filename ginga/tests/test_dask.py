@@ -8,9 +8,9 @@ from ginga import AstroImage, trcalc
 from ginga.misc import log
 
 
-class Test_dask(object):
+class TestDask:
     def setup_class(self):
-        self.logger = log.get_logger("Test_dask", null=True)
+        self.logger = log.get_logger("TestDask", null=True)
 
     def _get_data(self, shape, data_np=None):
         if data_np is None:
