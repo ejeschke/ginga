@@ -1200,9 +1200,6 @@ def fancy_index(d_obj, view):
     -------
     arr : ndarray
         The result of the fancy index as a numpy array
-
-    d_obj can define a 2D or 3D array which can be a numpy, dask or zarr
-    array.  We always return a numpy array.
     """
     if not isinstance(view[0], slice):
         # <-- indicates fancy indexing being used instead of slices
