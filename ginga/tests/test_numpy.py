@@ -9,27 +9,16 @@ class TestNumpy:
     def setup_class(self):
         self.logger = log.get_logger("TestNumpy", null=True)
 
-    def _2ddata(self, shape, data_np=None):
+    def _getdata(self, shape, data_np=None):
         if data_np is None:
-            data_np = np.asarray([min(i, j)
-                                  for i in range(shape[0])
-                                  for j in range(shape[1])])
-        data_np = data_np.reshape(shape)
-        return data_np
-
-    def _3ddata(self, shape, data_np=None):
-        if data_np is None:
-            data_np = np.asarray([min(i, j, k)
-                                  for i in range(shape[0])
-                                  for j in range(shape[1])
-                                  for k in range(shape[2])])
+            data_np = np.min(np.indices(shape), axis=0)
         data_np = data_np.reshape(shape)
         return data_np
 
     def test_numpy_slice_trcalc(self):
         """Test that we can get a subslice of an array.
         """
-        arr_np = self._2ddata((1000, 500))
+        arr_np = self._getdata((1000, 500))
 
         x_slice, y_slice = slice(12, 499, 3), slice(10, 951, 11)
         view = (y_slice, x_slice)
@@ -46,7 +35,7 @@ class TestNumpy:
         """Test that we can get a subslice of an AstroImage object.
         """
         aimg = AstroImage.AstroImage(logger=self.logger)
-        aimg.set_data(self._2ddata((700, 800)))
+        aimg.set_data(self._getdata((700, 800)))
 
         x_slice, y_slice = slice(12, 800, 8), slice(0, 700, 10)
         view = (y_slice, x_slice)
@@ -59,11 +48,11 @@ class TestNumpy:
         m.update(str(data_np.tolist()).encode())
         assert m.hexdigest() == res
 
-    def test_numpy_aimg_2ddata_xy(self):
+    def test_numpy_aimg_getdata_xy(self):
         """Test that we can get a single value from an AstroImage object.
         """
         aimg = AstroImage.AstroImage(logger=self.logger)
-        aimg.set_data(self._2ddata((5, 5), data_np=np.arange(0, 25)))
+        aimg.set_data(self._getdata((5, 5), data_np=np.arange(0, 25)))
 
         val = int(aimg.get_data_xy(3, 3))
         assert isinstance(val, int)
@@ -72,7 +61,7 @@ class TestNumpy:
     def test_numpy_fancy_scale(self):
         """Test that we can get a fancy superslice of a numpy array.
         """
-        arr_np = self._3ddata((5, 5, 5))
+        arr_np = self._getdata((5, 5, 5))
 
         p1 = (0, 0, 0)
         p2 = (5, 5, 5)
