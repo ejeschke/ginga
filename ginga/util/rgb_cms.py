@@ -8,6 +8,7 @@
 import os
 import glob
 import hashlib
+import numpy as np
 
 from ginga.misc import Bunch
 
@@ -16,16 +17,10 @@ from . import paths
 # How about color management (ICC profile) support?
 try:
     import PIL.ImageCms as ImageCms
+    from PIL import Image
     have_cms = True
 except ImportError:
     have_cms = False
-
-have_pilutil = False
-try:
-    from scipy.misc import toimage, fromimage
-    have_pilutil = True
-except ImportError:
-    pass
 
 basedir = paths.ginga_home
 
@@ -137,13 +132,26 @@ class ColorManager(object):
 
     def profile_to_working_numpy(self, image_np, kwds, intent=None):
 
-        image_in = toimage(image_np)
+        image_in = to_image(image_np)
         image_out = self.profile_to_working_pil(image_in, kwds,
                                                 intent=intent)
-        return fromimage(image_out)
+        return from_image(image_out)
 
 
 # --- Color Management conversion functions ---
+
+def to_image(image_np, flip_y=True):
+    if flip_y:
+        image_np = np.flipud(image_np)
+    return Image.fromarray(image_np)
+
+
+def from_image(image_pil, flip_y=True):
+    image_np = np.array(image_pil)
+    if flip_y:
+        image_np = np.flipud(image_np)
+    return image_np
+
 
 def convert_profile_pil(image_pil, inprof_path, outprof_path, intent_name,
                         inPlace=False):
@@ -171,23 +179,23 @@ def convert_profile_pil_transform(image_pil, transform, inPlace=False):
 
 
 def convert_profile_numpy(image_np, inprof_path, outprof_path, intent_name):
-    if (not have_pilutil) or (not have_cms):
+    if not have_cms:
         return image_np
 
-    in_image_pil = toimage(image_np)
+    in_image_pil = to_image(image_np)
     out_image_pil = convert_profile_pil(in_image_pil,
                                         inprof_path, outprof_path, intent_name)
-    image_out = fromimage(out_image_pil)
+    image_out = from_image(out_image_pil)
     return image_out
 
 
 def convert_profile_numpy_transform(image_np, transform):
-    if (not have_pilutil) or (not have_cms):
+    if not have_cms:
         return image_np
 
-    in_image_pil = toimage(image_np)
+    in_image_pil = to_image(image_np)
     convert_profile_pil_transform(in_image_pil, transform, inPlace=True)
-    image_out = fromimage(in_image_pil)
+    image_out = from_image(in_image_pil)
     return image_out
 
 
