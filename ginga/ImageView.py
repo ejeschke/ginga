@@ -191,9 +191,7 @@ class ImageViewBase(Callback.Callbacks):
                  icc_black_point_compensation=False)
         self.t_.add_defaults(**d)
         for key in d:
-            # Note: transform_cb will redraw enough to pick up
-            #       ICC profile change
-            self.t_.get_setting(key).add_callback('set', self.transform_cb)
+            self.t_.get_setting(key).add_callback('set', self.icc_profile_cb)
 
         # viewer profile support
         self.use_image_profile = False
@@ -256,6 +254,7 @@ class ImageViewBase(Callback.Callbacks):
         self._rgbarr = None
         self._rgbarr2 = None
         self._rgbarr3 = None
+        self._rgbarr4 = None
         self._rgbobj = None
 
         # optimization of redrawing
@@ -1513,6 +1512,7 @@ class ImageViewBase(Callback.Callbacks):
                 0: New image, pan/scale has changed
                 1: Cut levels or similar has changed
                 2: Color mapping has changed
+                2.3: ICC profile has changed
                 2.5: Transforms have changed
                 2.6: Rotation has changed
                 3: Graphical overlays have changed
@@ -1537,7 +1537,7 @@ class ImageViewBase(Callback.Callbacks):
         if self._rgbarr is None:
             raise ImageViewError("viewer window dimensions are not set")
 
-        time_start = t2 = t3 = time.time()
+        t1 = t2 = t3 = time.time()
 
         if (whence <= 2.0) or (self._rgbarr2 is None):
             # Apply any RGB image overlays
@@ -1545,24 +1545,32 @@ class ImageViewBase(Callback.Callbacks):
             self.overlay_images(self.private_canvas, self._rgbarr2,
                                 whence=whence)
 
-            # convert to output ICC profile, if one is specified
-            output_profile = self.t_.get('icc_output_profile', None)
-            working_profile = rgb_cms.working_profile
-            if (working_profile is not None) and (output_profile is not None):
-                self.convert_via_profile(self._rgbarr2, order,
-                                         working_profile, output_profile)
             t2 = time.time()
 
-        if (whence <= 2.5) or (self._rgbarr3 is None):
-            data = np.copy(self._rgbarr2)
+        output_profile = self.t_.get('icc_output_profile', None)
+        if output_profile is None:
+            self._rgbarr3 = self._rgbarr2
+            t3 = t2
 
-            # Apply any viewing transformations
-            self._rgbarr3 = self._apply_transforms(data)
+        elif (whence <= 2.3) or (self._rgbarr3 is None):
+            self._rgbarr3 = np.copy(self._rgbarr2)
+
+            # convert to output ICC profile, if one is specified
+            working_profile = rgb_cms.working_profile
+            if (working_profile is not None) and (output_profile is not None):
+                self.convert_via_profile(self._rgbarr3, order,
+                                         working_profile, output_profile)
 
             t3 = time.time()
 
+        if (whence <= 2.5) or (self._rgbarr4 is None):
+            data = np.copy(self._rgbarr3)
+
+            # Apply any viewing transformations
+            self._rgbarr4 = self._apply_transforms(data)
+
         if (whence <= 2.6) or (self._rgbobj is None):
-            rotimg = np.copy(self._rgbarr3)
+            rotimg = np.copy(self._rgbarr4)
 
             # Apply any viewing rotations
             rotimg = self._apply_rotation(rotimg, self.t_['rot_deg'])
@@ -1570,10 +1578,9 @@ class ImageViewBase(Callback.Callbacks):
 
             self._rgbobj = RGBMap.RGBPlanes(rotimg, order)
 
-        time_end = time.time()
-        self.logger.debug("times: t1=%.4f t2=%.4f t3=%.4f total=%.4f" % (
-            t2 - time_start, t3 - t2, time_end - t3,
-            (time_end - time_start)))
+        t4 = time.time()
+        self.logger.debug("times: t2=%.4f t3=%.4f t4=%.4f total=%.4f" % (
+            t2 - t1, t3 - t2, t4 - t3, t4 - t1))
 
         return self._rgbobj
 
@@ -1806,6 +1813,10 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warning("Error converting output from working profile: %s" % (str(e)))
             # TODO: maybe should have a traceback here
             self.logger.info("Output left unprofiled")
+
+    def icc_profile_cb(self, setting, value):
+        """Handle callback related to changes in output ICC profiles."""
+        self.redraw(whence=2.3)
 
     def get_data_pt(self, win_pt):
         """Similar to :meth:`get_data_xy`, except that it takes a single
@@ -2709,7 +2720,7 @@ class ImageViewBase(Callback.Callbacks):
 
         # Redo the auto levels
         #if self.t_['autocuts'] != 'off':
-        # NOTE: users seems to expect that when the auto cuts parameters
+        # NOTE: users seem to expect that when the auto cuts parameters
         # are changed that the cuts should be immediately recalculated
         self.auto_levels()
 
@@ -2823,7 +2834,8 @@ class ImageViewBase(Callback.Callbacks):
         attrlist : list
             A list of attribute names to copy. They can be ``'transforms'``,
             ``'rotation'``, ``'cutlevels'``, ``'rgbmap'``, ``'zoom'``,
-            ``'pan'``, ``'autocuts'``, ``'limits'``.
+            ``'pan'``, ``'autocuts'``, ``'limits'``, ``'icc'`` or
+            ``'interpolation'``.
 
         share : bool
             If True, the designated settings will be shared, otherwise the
@@ -2831,31 +2843,51 @@ class ImageViewBase(Callback.Callbacks):
         """
         # TODO: change API to just go with settings names?
         keylist = []
+        whence = 3.0
+
         if 'transforms' in attrlist:
             keylist.extend(['flip_x', 'flip_y', 'swap_xy'])
+            whence = min(whence, 2.5)
 
         if 'rotation' in attrlist:
             keylist.extend(['rot_deg'])
+            whence = min(whence, 2.6)
 
         if 'autocuts' in attrlist:
             keylist.extend(['autocut_method', 'autocut_params'])
+            whence = min(whence, 1.0)
 
         if 'cutlevels' in attrlist:
             keylist.extend(['cuts'])
+            whence = min(whence, 1.0)
 
         if 'rgbmap' in attrlist:
             keylist.extend(['color_algorithm', 'color_hashsize',
                             'color_map', 'intensity_map',
                             'color_array', 'shift_array'])
+            whence = min(whence, 2.0)
+
+        if 'icc' in attrlist:
+            keylist.extend(['icc_output_profile', 'icc_output_intent',
+                            'icc_proof_profile', 'icc_proof_intent',
+                            'icc_black_point_compensation'])
+            whence = min(whence, 2.3)
 
         if 'limits' in attrlist:
             keylist.extend(['limits'])
+            whence = min(whence, 0.0)
 
         if 'zoom' in attrlist:
             keylist.extend(['scale'])
+            whence = min(whence, 0.0)
+
+        if 'interpolation' in attrlist:
+            keylist.extend(['interpolation'])
+            whence = min(whence, 0.0)
 
         if 'pan' in attrlist:
             keylist.extend(['pan'])
+            whence = min(whence, 0.0)
 
         with dst_fi.suppress_redraw:
             if share:
@@ -2864,7 +2896,7 @@ class ImageViewBase(Callback.Callbacks):
             else:
                 self.t_.copy_settings(dst_fi.get_settings(),
                                       keylist=keylist)
-            dst_fi.redraw(whence=0)
+            dst_fi.redraw(whence=whence)
 
     def get_rotation(self):
         """Get image rotation angle.

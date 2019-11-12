@@ -78,7 +78,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         self.zoom_amount = self.settings.get('zoom_amount', self.default_zoom)
         self.refresh_interval = self.settings.get('refresh_interval', 0.02)
-        self.copy_attrs = ['transforms', 'cutlevels', 'rotation', 'rgbmap']
+        self.copy_attrs = ['transforms', 'cutlevels', 'rotation', 'rgbmap',
+                           'icc']  # , 'interpolation']
 
         self._wd = 300
         self._ht = 300

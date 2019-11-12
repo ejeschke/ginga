@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import time
 import numpy as np
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
@@ -140,10 +141,29 @@ class Image(OnePointMixin, CanvasObjectBase):
         if self.image is None:
             return
 
+        t1 = t2 = time.time()
         cache = self.get_cache(viewer)
 
+        self._common_draw(viewer, dstarr, cache, whence)
+
+        t2 = time.time()
         dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
+
+        # composite the image into the destination array at the
+        # calculated position
+        trcalc.overlay_image(dstarr, cache.cvs_pos, cache.cutout,
+                             dst_order=dst_order, src_order=image_order,
+                             alpha=self.alpha, fill=True, flipy=False)
+
+        t3 = time.time()
+        self.logger.debug("draw: t2=%.4f t3=%.4f total=%.4f" % (
+            t2 - t1, t3 - t2, t3 - t1))
+
+    def _common_draw(self, viewer, dstarr, cache, whence):
+        # internal common drawing phase for all images
+        if self.image is None:
+            return
 
         if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
@@ -179,8 +199,8 @@ class Image(OnePointMixin, CanvasObjectBase):
             res = self.image.get_scaled_cutout2((a1, b1), (a2, b2),
                                                 (_scale_x, _scale_y),
                                                 method=self.interpolation)
-
             data = res.data
+
             if self.flipy:
                 data = np.flipud(data)
             cache.cutout = data
@@ -200,12 +220,6 @@ class Image(OnePointMixin, CanvasObjectBase):
             cvs_x = int(np.round(wd / 2.0 + off_x))
             cvs_y = int(np.round(ht / 2.0 + off_y))
             cache.cvs_pos = (cvs_x, cvs_y)
-
-        # composite the image into the destination array at the
-        # calculated position
-        trcalc.overlay_image(dstarr, cache.cvs_pos, cache.cutout,
-                             dst_order=dst_order, src_order=image_order,
-                             alpha=self.alpha, fill=True, flipy=False)
 
     def _reset_cache(self, cache):
         cache.setvals(cutout=None, drawn=False, cvs_pos=(0, 0))
@@ -378,60 +392,12 @@ class NormImage(Image):
         if self.image is None:
             return
 
+        t1 = t2 = t3 = t4 = time.time()
         cache = self.get_cache(viewer)
 
-        if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
-            # get extent of our data coverage in the window
-            pts = np.asarray(viewer.get_draw_rect()).T
-            xmin = int(np.min(pts[0]))
-            ymin = int(np.min(pts[1]))
-            xmax = int(np.ceil(np.max(pts[0])))
-            ymax = int(np.ceil(np.max(pts[1])))
+        self._common_draw(viewer, dstarr, cache, whence)
 
-            # destination location in data_coords
-            dst_x, dst_y = self.crdmap.to_data((self.x, self.y))
-
-            a1, b1, a2, b2 = 0, 0, self.image.width - 1, self.image.height - 1
-
-            # calculate the cutout that we can make and scale to merge
-            # onto the final image--by only cutting out what is necessary
-            # this speeds scaling greatly at zoomed in sizes
-            ((dst_x, dst_y), (a1, b1), (a2, b2)) = \
-                trcalc.calc_image_merge_clip((xmin, ymin), (xmax, ymax),
-                                             (dst_x, dst_y),
-                                             (a1, b1), (a2, b2))
-
-            # is image completely off the screen?
-            if (a2 - a1 <= 0) or (b2 - b1 <= 0):
-                # no overlay needed
-                return
-
-            # cutout and scale the piece appropriately by viewer scale
-            scale_x, scale_y = viewer.get_scale_xy()
-            # scale additionally by our scale
-            _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
-
-            res = self.image.get_scaled_cutout2((a1, b1), (a2, b2),
-                                                (_scale_x, _scale_y),
-                                                method=self.interpolation)
-            cache.cutout = res.data
-
-            # calculate our offset from the pan position
-            pan_x, pan_y = viewer.get_pan()
-            pan_off = viewer.data_off
-            pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
-            off_x, off_y = dst_x - pan_x, dst_y - pan_y
-            # scale offset
-            off_x *= scale_x
-            off_y *= scale_y
-
-            # dst position in the pre-transformed array should be calculated
-            # from the center of the array plus offsets
-            ht, wd, dp = dstarr.shape
-            cvs_x = int(np.round(wd / 2.0 + off_x))
-            cvs_y = int(np.round(ht / 2.0 + off_y))
-            cache.cvs_pos = (cvs_x, cvs_y)
-
+        t2 = time.time()
         if self.rgbmap is not None:
             rgbmap = self.rgbmap
         else:
@@ -450,6 +416,7 @@ class NormImage(Image):
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
             cache.prergb = idx
 
+        t3 = time.time()
         dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
         get_order = dst_order
@@ -460,11 +427,16 @@ class NormImage(Image):
                                          image_order=image_order)
             cache.rgbarr = rgbobj.get_array(get_order)
 
+        t4 = time.time()
         # composite the image into the destination array at the
         # calculated position
         trcalc.overlay_image(dstarr, cache.cvs_pos, cache.rgbarr,
                              dst_order=dst_order, src_order=get_order,
                              alpha=self.alpha, fill=True, flipy=False)
+
+        t5 = time.time()
+        self.logger.debug("draw: t2=%.4f t3=%.4f t4=%.4f t5=%.4f total=%.4f" % (
+            t2 - t1, t3 - t2, t4 - t3, t5 - t4, t5 - t1))
 
     def apply_visuals(self, viewer, data, vmin, vmax):
         if self.autocuts is not None:

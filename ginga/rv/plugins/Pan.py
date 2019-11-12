@@ -78,7 +78,8 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         self._wd = 200
         self._ht = 200
-        self.copy_attrs = ['transforms', 'cutlevels', 'rotation', 'rgbmap']
+        self.copy_attrs = ['transforms', 'cutlevels', 'rotation', 'rgbmap',
+                           'icc', 'interpolation']
         self.gui_up = False
 
     def build_gui(self, container):
@@ -363,7 +364,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             point.x, point.y = x, y
             point.radius = radius
             bbox.points = points
-            p_canvas.update_canvas(whence=0)
+            p_canvas.update_canvas(whence=3)
 
         except KeyError:
             paninfo.panrect = p_canvas.add(self.dc.CompoundObject(

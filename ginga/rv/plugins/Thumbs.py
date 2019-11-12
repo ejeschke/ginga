@@ -88,7 +88,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    autoload_interval=1.0,
                                    closeable=not spec.get('hidden', False),
                                    transfer_attrs=['transforms',
-                                                   'cutlevels', 'rgbmap'])
+                                                   'cutlevels', 'rgbmap',
+                                                   'icc', 'interpolation'])
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumb_width = self.settings.get('thumb_length', 180)
