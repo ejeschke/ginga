@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import numpy as np
-import threading
 
 from ginga.misc import Bunch
 #from ginga.misc.ParamSet import Param
@@ -15,14 +14,9 @@ have_scipy = True
 autocut_methods = ('minmax', 'median', 'histogram', 'stddev', 'zscale')
 try:
     import scipy.ndimage.filters
-    import scipy.optimize as optimize
-    #import scipy.misc
 except ImportError:
     have_scipy = False
     autocut_methods = ('minmax', 'histogram', 'stddev', 'zscale')
-
-# Lock to work around a non-threadsafe bug in scipy
-_lock = threading.RLock()
 
 
 class Param(Bunch.Bunch):
@@ -72,22 +66,19 @@ class AutoCutsBase(object):
 
     def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
         loval, hival = float(loval), float(hival)
+        # ensure hival >= loval
+        hival = max(loval, hival)
         self.logger.debug("loval=%.2f hival=%.2f" % (loval, hival))
         delta = hival - loval
-        if delta != 0.0:
-            data = data.clip(loval, hival)
-            f = ((data - loval) / delta)
-        else:
-            #f = (data - loval).clip(0.0, 1.0)
-            f = data - loval
-            f.clip(0.0, 1.0, out=f)
-            # threshold
-            f[np.nonzero(f)] = 1.0
+        if delta > 0.0:
+            f = (((data - loval) / delta) * vmax)
+            # NOTE: optimization using in-place outputs for speed
+            f.clip(0.0, vmax, out=f)
+            return f
 
-        # f = f.clip(0.0, 1.0) * vmax
-        # NOTE: optimization using in-place outputs for speed
-        f.clip(0.0, 1.0, out=f)
-        np.multiply(f, vmax, out=f)
+        # hival == loval, so thresholding operation
+        f = (data - loval).clip(0.0, vmax)
+        f[f > 0.0] = vmax
         return f
 
     def __str__(self):
@@ -447,210 +438,6 @@ class ZScale(AutoCutsBase):
         return loval, hival
 
 
-class ZScale2(AutoCutsBase):
-
-    @classmethod
-    def get_params_metadata(cls):
-        return [
-            Param(name='contrast', type=float,
-                  default=0.25, allow_none=True,
-                  description="Contrast"),
-            Param(name='num_points', type=int,
-                  default=600, allow_none=True,
-                  description="Number of points to sample"),
-            Param(name='num_per_row', type=int,
-                  default=None, allow_none=True,
-                  description="Number of points to sample"),
-        ]
-
-    def __init__(self, logger, contrast=0.25, num_points=1000,
-                 num_per_row=None):
-        super(ZScale2, self).__init__(logger)
-
-        self.kind = 'zscale'
-        self.contrast = contrast
-        self.num_points = num_points
-        self.num_per_row = num_per_row
-
-    def calc_cut_levels(self, image):
-        data = image.get_data()
-
-        loval, hival = self.calc_zscale(data, contrast=self.contrast,
-                                        num_points=self.num_points,
-                                        num_per_row=self.num_per_row)
-        return loval, hival
-
-    def calc_zscale(self, data, contrast=0.25,
-                    num_points=1000, num_per_row=None):
-        """
-        From the IRAF documentation:
-
-        The zscale algorithm is designed to display the  image  values
-        near the median  image value  without the  time consuming process of
-        computing a full image histogram.  This is particularly  useful  for
-        astronomical  images  which  generally  have a very peaked histogram
-        corresponding to  the  background  sky  in  direct  imaging  or  the
-        continuum in a two dimensional spectrum.
-
-        The  sample  of pixels, specified by values greater than zero in the
-        sample mask zmask or by an  image  section,  is  selected  up  to  a
-        maximum  of nsample pixels.  If a bad pixel mask is specified by the
-        bpmask parameter then any pixels with mask values which are  greater
-        than  zero  are not counted in the sample.  Only the first pixels up
-        to the limit are selected where the order is by line beginning  from
-        the  first line.  If no mask is specified then a grid of pixels with
-        even spacing along lines and columns that  make  up  a  number  less
-        than or equal to the maximum sample size is used.
-
-        If  a  contrast of zero is specified (or the zrange flag is used and
-        the image does not have a  valid  minimum/maximum  value)  then  the
-        minimum  and maximum of the sample is used for the intensity mapping
-        range.
-
-        If the contrast  is  not  zero  the  sample  pixels  are  ranked  in
-        brightness  to  form  the  function I(i), where i is the rank of the
-        pixel and I is its value.  Generally the midpoint of  this  function
-        (the  median) is very near the peak of the image histogram and there
-        is a well defined slope about the midpoint which is related  to  the
-        width  of the histogram.  At the ends of the I(i) function there are
-        a few very bright and dark pixels due to objects and defects in  the
-        field.   To  determine  the  slope  a  linear  function  is fit with
-        iterative rejection;
-
-            I(i) = intercept + slope * (i - midpoint)
-
-        If more than half of the points are rejected then there is  no  well
-        defined  slope  and  the full range of the sample defines z1 and z2.
-        Otherwise the endpoints of the linear function  are  used  (provided
-        they are within the original range of the sample):
-
-            z1 = I(midpoint) + (slope / contrast) * (1 - midpoint)
-            z2 = I(midpoint) + (slope / contrast) * (npoints - midpoint)
-
-        As  can  be  seen,  the parameter contrast may be used to adjust the
-        contrast produced by this algorithm.
-        """
-
-        assert len(data.shape) >= 2, \
-            AutoCutsError("input data should be 2D or greater")
-        ht, wd = data.shape[:2]
-
-        assert (0.0 < contrast <= 1.0), \
-            AutoCutsError("contrast (%.2f) not in range 0 < c <= 1" % (
-                contrast))
-
-        # calculate num_points parameter, if omitted
-        total_points = np.size(data)
-        if num_points is None:
-            num_points = max(int(total_points * 0.0002), 600)
-        num_points = min(num_points, total_points)
-
-        assert (0 < num_points <= total_points), \
-            AutoCutsError("num_points not in range 0-%d" % (total_points))
-
-        # calculate num_per_row parameter, if omitted
-        if num_per_row is None:
-            num_per_row = max(int(0.015 * num_points), 1)
-        self.logger.debug("contrast=%.4f num_points=%d num_per_row=%d" % (
-            contrast, num_points, num_per_row))
-
-        # sample the data
-        num_rows = num_points // num_per_row
-        xmax = wd - 1
-        xskip = max(xmax // num_per_row, 1)
-        ymax = ht - 1
-        yskip = max(ymax // num_rows, 1)
-        # evenly spaced sampling over rows and cols
-        ## xskip = int(max(1.0, np.sqrt(xmax * ymax / float(num_points))))
-        ## yskip = xskip
-
-        cutout = data[0:ymax:yskip, 0:xmax:xskip]
-        # flatten and trim off excess
-        cutout = cutout.flat[0:num_points]
-
-        # actual number of points selected
-        num_pix = len(cutout)
-        assert num_pix <= num_points, \
-            AutoCutsError("Actual number of points (%d) exceeds calculated "
-                          "number (%d)" % (num_pix, num_points))
-
-        # sort the data by value
-        cutout = np.sort(cutout)
-
-        # flat distribution?
-        data_min = np.nanmin(cutout)
-        data_max = np.nanmax(cutout)
-        if (data_min == data_max) or (contrast == 0.0):
-            return (data_min, data_max)
-
-        # compute the midpoint and median
-        midpoint = (num_pix // 2)
-        if num_pix % 2 != 0:
-            median = cutout[midpoint]
-        else:
-            median = 0.5 * (cutout[midpoint - 1] + cutout[midpoint])
-        self.logger.debug("num_pix=%d midpoint=%d median=%.4f" % (
-            num_pix, midpoint, median))
-
-        ## # Remove outliers to aid fitting
-        ## threshold = np.std(cutout) * 2.5
-        ## cutout = cutout[np.where(np.fabs(cutout - median) > threshold)]
-        ## num_pix = len(cutout)
-
-        # zscale fitting function:
-        # I(x) = slope * (x - midpoint) + intercept
-        def fitting(x, slope, intercept):
-            y = slope * (x - midpoint) + intercept
-            return y
-
-        # compute a least squares fit
-        X = np.arange(num_pix)
-        Y = cutout
-        sigma = np.array([1.0] * num_pix)
-        guess = np.array([0.0, 0.0])
-
-        # Curve fit
-        with _lock:
-            # NOTE: without this mutex, optimize.curvefit causes a fatal error
-            # sometimes--it appears not to be thread safe.
-            # The error is:
-            # "SystemError: null argument to internal routine"
-            # "Fatal Python error: GC object already tracked"
-            try:
-                p, cov = optimize.curve_fit(fitting, X, Y, guess, sigma)
-
-            except Exception as e:
-                self.logger.debug("curve fitting failed: %s" % (str(e)))
-                cov = None
-
-        if cov is None:
-            self.logger.debug("curve fitting failed")
-            return (float(data_min), float(data_max))
-
-        slope, intercept = p
-        ## num_chosen = 0
-        self.logger.debug("intercept=%f slope=%f" % (
-            intercept, slope))
-
-        ## if num_chosen < (num_pix // 2):
-        ##     self.logger.debug("more than half pixels rejected--falling back to min/max of sample")
-        ##     return (data_min, data_max)
-
-        # finally, compute the range
-        falloff = slope / contrast
-        z1 = median - midpoint * falloff
-        z2 = median + (num_pix - midpoint) * falloff
-
-        # final sanity check on cut levels
-        locut = max(z1, data_min)
-        hicut = min(z2, data_max)
-        if locut >= hicut:
-            locut = data_min
-            hicut = data_max
-
-        return (float(locut), float(hicut))
-
-
 # funky boolean converter
 _bool = lambda st: str(st).lower() == 'true'  # noqa
 
@@ -661,7 +448,6 @@ autocuts_table = {
     'histogram': Histogram,
     'median': MedianFilter,
     'zscale': ZScale,
-    #'zscale2': ZScale2,
 }
 
 
