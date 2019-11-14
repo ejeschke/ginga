@@ -7,6 +7,10 @@ Ver 3.1.0 (unreleased)
 - Zoom plugin refactored. Now shows graphical overlays.
 - Improved performance of rendering when flipping, swapping axes or
   rotating viewer.
+- Fixed a bug where the display was not redrawn if an ICC profile was
+  changed
+- Fixed bugs relating to drawing XRange, YRange and Rectangle objects on
+  rotated canvas
 
 Ver 3.0.0 (2019-09-20)
 ======================
