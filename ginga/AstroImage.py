@@ -108,6 +108,14 @@ class AstroImage(BaseImage):
     def load_hdu(self, hdu, fobj=None, naxispath=None,
                  inherit_primary_header=None):
 
+        # this seems to be necessary now for some fits files...
+        try:
+            hdu.verify('fix')
+
+        except Exception as e:
+            # Let's hope for the best!
+            self.logger.warning("Problem verifying fits HDU: {}".format(e))
+
         self.clear_metadata()
 
         # collect HDU header

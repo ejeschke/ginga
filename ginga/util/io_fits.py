@@ -319,7 +319,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         except Exception as e:
             # Let's hope for the best!
-            self.logger.warn("Problem verifying fits file '%s': %s" % (
+            self.logger.warning("Problem verifying fits file '%s': %s" % (
                 filepath, str(e)))
 
         try:
