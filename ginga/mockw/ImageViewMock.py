@@ -105,9 +105,6 @@ class ImageViewMock(ImageView.ImageViewBase):
 
         self.configure(width, height)
 
-    def get_image_as_array(self):
-        return self.getwin_array(order=self.rgb_order, dtype=np.uint8)
-
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
         # copy pixmap to buffer

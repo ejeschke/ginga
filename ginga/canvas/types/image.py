@@ -41,7 +41,7 @@ class Image(OnePointMixin, CanvasObjectBase):
                   description="Scaling factor for X dimension of object"),
             Param(name='scale_y', type=float, default=1.0,
                   description="Scaling factor for Y dimension of object"),
-            Param(name='interpolation', type=str, default='basic',
+            Param(name='interpolation', type=str, default=None,
                   description="Interpolation method for scaling pixels"),
             Param(name='linewidth', type=int, default=0,
                   min=0, max=20, widget='spinbutton', incr=1,
@@ -67,7 +67,7 @@ class Image(OnePointMixin, CanvasObjectBase):
         ]
 
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
-                 interpolation='basic',
+                 interpolation=None,
                  linewidth=0, linestyle='solid', color='lightgreen',
                  showcap=False, flipy=False, optimize=True,
                  **kwdargs):
@@ -146,6 +146,9 @@ class Image(OnePointMixin, CanvasObjectBase):
 
         self._common_draw(viewer, dstarr, cache, whence)
 
+        if cache.cutout is None:
+            return
+
         t2 = time.time()
         dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
@@ -189,6 +192,7 @@ class Image(OnePointMixin, CanvasObjectBase):
             # is image completely off the screen?
             if (a2 - a1 <= 0) or (b2 - b1 <= 0):
                 # no overlay needed
+                cache.cutout = None
                 return
 
             # cutout and scale the piece appropriately by the viewer scale
@@ -196,9 +200,19 @@ class Image(OnePointMixin, CanvasObjectBase):
             # scale additionally by our scale
             _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
 
+            interp = self.interpolation
+            if interp is None:
+                t_ = viewer.get_settings()
+                interp = t_.get('interpolation', 'basic')
+
+            # previous choice might not be available if preferences
+            # were saved when opencv was being used (and not used now);
+            # if so, silently default to "basic"
+            if interp not in trcalc.interpolation_methods:
+                interp = 'basic'
             res = self.image.get_scaled_cutout2((a1, b1), (a2, b2),
                                                 (_scale_x, _scale_y),
-                                                method=self.interpolation)
+                                                method=interp)
             data = res.data
 
             if self.flipy:
@@ -344,7 +358,7 @@ class NormImage(Image):
                   description="Scaling factor for X dimension of object"),
             Param(name='scale_y', type=float, default=1.0,
                   description="Scaling factor for Y dimension of object"),
-            Param(name='interpolation', type=str, default='basic',
+            Param(name='interpolation', type=str, default=None,
                   description="Interpolation method for scaling pixels"),
             Param(name='linewidth', type=int, default=0,
                   min=0, max=20, widget='spinbutton', incr=1,
@@ -374,7 +388,7 @@ class NormImage(Image):
         ]
 
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
-                 interpolation='basic', linewidth=0, linestyle='solid',
+                 interpolation=None, linewidth=0, linestyle='solid',
                  color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
@@ -396,6 +410,9 @@ class NormImage(Image):
         cache = self.get_cache(viewer)
 
         self._common_draw(viewer, dstarr, cache, whence)
+
+        if cache.cutout is None:
+            return
 
         t2 = time.time()
         if self.rgbmap is not None:

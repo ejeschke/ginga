@@ -15,6 +15,7 @@ from ginga.BaseImage import Header, ImageError
 from ginga.util import iohelper, rgb_cms
 from ginga.util.io import io_base
 from ginga.misc import Bunch
+from ginga import trcalc
 
 try:
     # do we have opencv available?
@@ -79,9 +80,8 @@ class BaseRGBFileHandler(io_base.BaseIOHandler):
         header = Header()
         metadata = {'header': header, 'path': filepath}
 
-        data_np = self.imload(filepath, header)
+        data_np = self.imload(filepath, metadata)
 
-        # TODO: set up the channel order correctly
         dstobj.set_data(data_np, metadata=metadata)
 
         if dstobj.name is not None:
@@ -90,6 +90,8 @@ class BaseRGBFileHandler(io_base.BaseIOHandler):
             name = iohelper.name_image_from_path(filepath, idx=None)
             dstobj.set(name=name)
 
+        if 'order' in metadata:
+            dstobj.order = metadata['order']
         dstobj.set(path=filepath, idx=None, image_loader=self.load_file)
         return dstobj
 
@@ -122,10 +124,10 @@ class BaseRGBFileHandler(io_base.BaseIOHandler):
         # call continuation function
         loader_cont_fn(data_obj)
 
-    def imload(self, filepath, kwds):
+    def imload(self, filepath, metadata):
         """Load an image file, guessing the format, and return a numpy
         array containing an RGB image.  If EXIF keywords can be read
-        they are returned in the dict _kwds_.
+        they are returned in the metadata.
         """
         start_time = time.time()
         typ, enc = mimetypes.guess_type(filepath)
@@ -134,7 +136,7 @@ class BaseRGBFileHandler(io_base.BaseIOHandler):
         typ, subtyp = typ.split('/')
         self.logger.debug("MIME type is %s/%s" % (typ, subtyp))
 
-        data_np = self._imload(filepath, kwds)
+        data_np = self._imload(filepath, metadata)
 
         end_time = time.time()
         self.logger.debug("loading time %.4f sec" % (end_time - start_time))
@@ -225,6 +227,7 @@ class OpenCvFileHandler(BaseRGBFileHandler):
 
         self._path = filepath
         self.rgb_f = cv2.VideoCapture(filepath)
+        # self.rgb_f.set(cv2.CAP_PROP_CONVERT_RGB, False)
 
         idx = 0
         extver_db = {}
@@ -263,42 +266,25 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         if self.rgb_f is None:
             raise ValueError("Please call open_file() first!")
 
-        # TODO: idx ignored for now for RGB images!
+        if idx is None:
+            idx = 0
 
-        #self.rgb_f.seek(0)
-        #print(dir(self.rgb_f))
+        self.rgb_f.set(cv2.CAP_PROP_POS_FRAMES, idx)
         okay, data_np = self.rgb_f.read()
         if not okay:
             raise ValueError("Error reading index {}".format(idx))
 
-        # funky indexing because opencv returns BGR images,
-        # whereas PIL and others return RGB
-        if len(data_np.shape) >= 3 and data_np.shape[2] >= 3:
-            data_np = data_np[..., :: -1]
-
-        # OpenCv doesn't "do" image metadata, so we punt to piexif
-        # library (if installed)
-        kwds = {}
-        self.piexif_getexif(self._path, kwds)
-
-        # OpenCv added a feature to do auto-orientation when loading
-        # (see https://github.com/opencv/opencv/issues/4344)
-        # So reset these values to prevent auto-orientation from
-        # happening later
-        kwds['Orientation'] = 1
-        kwds['Image Orientation'] = 1
-
-        # convert to working color profile, if can
-        if self.clr_mgr.can_profile():
-            data_np = self.clr_mgr.profile_to_working_numpy(data_np, kwds)
+        metadata = {}
+        data_np = self._process_opencv_array(data_np, metadata,
+                                             self.fileinfo.filepath)
 
         from ginga.RGBImage import RGBImage
-        data_obj = RGBImage(data_np=data_np, logger=self.logger)
+        data_obj = RGBImage(data_np=data_np, logger=self.logger,
+                            order=metadata['order'], metadata=metadata)
         data_obj.io = self
 
         name = self.fileinfo.name + '[{}]'.format(idx)
-        data_obj.set(name=name, path=self.fileinfo.filepath, idx=idx,
-                     header=kwds)
+        data_obj.set(name=name, path=self.fileinfo.filepath, idx=idx)
 
         return data_obj
 
@@ -312,7 +298,7 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         # multiband images
         cv2.imwrite(filepath, data_np)
 
-    def _imload(self, filepath, kwds):
+    def _imload(self, filepath, metadata):
         if not have_opencv:
             raise ImageError("Install 'opencv' to be able "
                              "to load images")
@@ -321,10 +307,26 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         # multiband images
         data_np = cv2.imread(filepath,
                              cv2.IMREAD_ANYDEPTH + cv2.IMREAD_ANYCOLOR)
-        # funky indexing because opencv returns BGR images,
-        # whereas PIL and others return RGB
+
+        return self._process_opencv_array(data_np, metadata, filepath)
+
+    def _process_opencv_array(self, data_np, metadata, filepath):
+        # opencv returns BGR images, whereas PIL and others return RGB
         if len(data_np.shape) >= 3 and data_np.shape[2] >= 3:
-            data_np = data_np[..., :: -1]
+            #data_np = data_np[..., :: -1]
+            if data_np.shape[2] == 3:
+                order = 'BGR'
+                dst_order = 'RGB'
+            else:
+                order = 'BGRA'
+                dst_order = 'RGBA'
+            data_np = trcalc.reorder_image(dst_order, data_np, order)
+            metadata['order'] = dst_order
+
+        kwds = metadata.get('header', None)
+        if kwds is None:
+            kwds = Header()
+            metadata['header'] = kwds
 
         # OpenCv doesn't "do" image metadata, so we punt to piexif
         # library (if installed)
@@ -426,7 +428,6 @@ class PillowFileHandler(BaseRGBFileHandler):
 
         # "seek" functionality does not seem to be working for all the
         # versions of Pillow we are encountering
-        #self.rgb_f.seek(0)
         #self.rgb_f.seek(idx)
         image = self.rgb_f
 
@@ -445,7 +446,8 @@ class PillowFileHandler(BaseRGBFileHandler):
         data_np = np.array(image)
 
         from ginga.RGBImage import RGBImage
-        data_obj = RGBImage(data_np=data_np, logger=self.logger)
+        data_obj = RGBImage(data_np=data_np, logger=self.logger,
+                            order=image.mode)
         data_obj.io = self
 
         name = self.fileinfo.name + '[{}]'.format(idx)
@@ -468,18 +470,22 @@ class PillowFileHandler(BaseRGBFileHandler):
         else:
             raise Exception("Please install 'piexif' module to get image metadata")
 
-    def _imload(self, filepath, kwds):
+    def _imload(self, filepath, metadata):
         if not have_pil:
             raise ImageError("Install 'pillow' to be able "
                              "to load RGB images")
 
         image = PILimage.open(filepath)
 
-        kwds = {}
+        kwds = metadata.get('header', None)
+        if kwds is None:
+            kwds = Header()
+            metadata['header'] = kwds
+
         try:
             self._get_header(image, kwds)
         except Exception as e:
-            self.logger.warning("Failed to get image metadata: %s" % (str(e)))
+            self.logger.warning("Failed to get image metadata: {!r}".format(e))
 
         # convert to working color profile, if can
         if self.clr_mgr.can_profile():
@@ -487,6 +493,7 @@ class PillowFileHandler(BaseRGBFileHandler):
 
         # convert from PIL to numpy
         data_np = np.array(image)
+        metadata['order'] = image.mode
         return data_np
 
     def _imresize(self, data, new_wd, new_ht, method='bilinear'):
@@ -507,7 +514,7 @@ class PPMFileHandler(BaseRGBFileHandler):
 
     name = 'PPM'
 
-    def _imload(self, filepath, kwds):
+    def _imload(self, filepath, metadata):
         return open_ppm(filepath)
 
 

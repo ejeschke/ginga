@@ -189,7 +189,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
     def prepare(self, fitsimage):
         fitssettings = fitsimage.get_settings()
-        zoomsettings = self.zoomimage.get_settings()
         fitsimage.add_callback('cursor-changed', self.motion_cb)
         fitsimage.add_callback('redraw', self.redraw_cb)
         fitssettings.get_setting('zoomlevel').add_callback(
@@ -231,8 +230,10 @@ class Zoom(GingaPlugin.GlobalPlugin):
             pass
         canvas = fitsimage.get_canvas()
         p_canvas.add(canvas, tag=self.layer_tag)
-        # ack! we shouldn't need to do this!
+        # NOTE: necessary for zoom viewer to correctly handle some settings
+        # TODO: see if there is a cleaner way to do this
         self.zoomimage._imgobj = fitsimage._imgobj
+
         self.zoomimage.redraw(whence=0)
 
     def redo(self, channel, image):

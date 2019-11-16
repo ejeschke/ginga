@@ -54,6 +54,8 @@ class ColorDistBase(object):
             ColorDistError("Computed hash table size (%d) != specified size "
                            "(%d)" % (hashlen, self.hashsize))
 
+        self.hash.clip(0, self.colorlen - 1)
+
     def calc_hash(self):
         raise ColorDistError("Subclass needs to override this method")
 

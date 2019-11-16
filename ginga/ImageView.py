@@ -758,16 +758,9 @@ class ImageViewBase(Callback.Callbacks):
             # add a normalized image item to this canvas if we don't
             # have one already--then just keep reusing it
             NormImage = self.canvas.getDrawClass('normimage')
-            interp = self.t_.get('interpolation', 'basic')
-
-            # previous choice might not be available if preferences
-            # were saved when opencv was being used (and not used now)
-            # --if so, default to "basic"
-            if interp not in trcalc.interpolation_methods:
-                interp = 'basic'
 
             self._imgobj = NormImage(0, 0, None, alpha=1.0,
-                                     interpolation=interp)
+                                     interpolation=None)
             self._imgobj.add_callback('image-set', self._image_set_cb)
 
         return self._imgobj
@@ -3352,16 +3345,17 @@ class ImageViewBase(Callback.Callbacks):
 
         self.configure(width, height)
 
-    def get_image_as_array(self):
+    def get_image_as_array(self, order=None):
         """Get the current image shown in the viewer, with any overlaid
-        graphics, in a numpy array with channels as needed and ordered
-        by the back end widget.
+        graphics, in a numpy array with channels as needed and ordered.
 
         This can be overridden by subclasses.
         """
-        return self.renderer.get_surface_as_array(order=self.rgb_order)
+        if order is None:
+            order = self.rgb_order
+        return self.renderer.get_surface_as_array(order=order)
 
-    def get_image_as_buffer(self, output=None):
+    def get_image_as_buffer(self, output=None, order=None):
         """Get the current image shown in the viewer, with any overlaid
         graphics, in a IO buffer with channels as needed and ordered
         by the back end widget.
@@ -3384,7 +3378,7 @@ class ImageViewBase(Callback.Callbacks):
         if obuf is None:
             obuf = BytesIO()
 
-        arr8 = self.get_image_as_array()
+        arr8 = self.get_image_as_array(order=order)
         if not hasattr(arr8, 'tobytes'):
             # older versions of numpy
             obuf.write(arr8.tostring(order='C'))

@@ -745,8 +745,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 viewer.copy_attributes(self.thumb_generator,
                                        self.transfer_attrs)
 
-        rgb_img = self.thumb_generator.get_image_as_array()
-        thmb_image = RGBImage.RGBImage(rgb_img)
+        order = self.thumb_generator.rgb_order
+        rgb_img = self.thumb_generator.get_image_as_array(order=order)
+        thmb_image = RGBImage.RGBImage(rgb_img, order=order)
         thmb_image.set(placeholder=False)
         return thmb_image
 

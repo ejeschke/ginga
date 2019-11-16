@@ -36,6 +36,10 @@ working_profile = None
 icc_transform = {}
 
 
+class ColorManagerError(Exception):
+    pass
+
+
 class ColorManager(object):
 
     def __init__(self, logger):
@@ -125,7 +129,8 @@ class ColorManager(object):
                 in_profile, profile[out_profile].name))
 
         except Exception as e:
-            self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
+            self.logger.error("Error converting from embedded color profile: {!r}".format(e),
+                              exc_info=True)
             self.logger.warning("Leaving image unprofiled.")
 
         return image
@@ -209,6 +214,10 @@ def get_transform(from_name, to_name, to_intent='perceptual',
                   use_black_pt=False):
     global icc_transform
 
+    if not have_cms:
+        return ColorManagerError("Either pillow is not installed, or there is "
+                                 "no ICC support in this version of pillow")
+
     flags = 0
     if proof_name is not None:
         if hasattr(ImageCms, 'FLAGS'):
@@ -231,7 +240,7 @@ def get_transform(from_name, to_name, to_intent='perceptual',
     except KeyError:
         # try to build transform on the fly
         try:
-            if not (proof_name is None):
+            if proof_name is not None:
                 output_transform = ImageCms.buildProofTransform(
                     profile[from_name].path,
                     profile[to_name].path,
@@ -251,7 +260,7 @@ def get_transform(from_name, to_name, to_intent='perceptual',
             icc_transform[key] = output_transform
 
         except Exception as e:
-            raise Exception("Failed to build profile transform: %s" % (str(e)))
+            raise ColorManagerError("Failed to build profile transform: {!r}".format(e))
 
     return output_transform
 
@@ -273,9 +282,9 @@ def convert_profile_fromto(image_np, from_name, to_name,
 
     except Exception as e:
         if logger is not None:
-            logger.warn("Error converting profile from '%s' to '%s': %s" % (
-                from_name, to_name, str(e)))
-            logger.warn("Leaving image unprofiled")
+            logger.warning("Error converting profile from '{}' to '{}': {!r}".format(
+                from_name, to_name, e))
+            logger.warning("Leaving image unprofiled")
         return image_np
 
 
