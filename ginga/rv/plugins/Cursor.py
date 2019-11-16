@@ -27,8 +27,6 @@ There is no associated configuration GUI.
 """
 import platform
 
-import numpy
-
 from ginga import GingaPlugin, toolkit
 from ginga.gw import Readout
 from ginga.ImageView import ImageViewNoDataError
@@ -162,12 +160,7 @@ class Cursor(GingaPlugin.GlobalPlugin):
         if readout.fitsimage != fitsimage:
             self.change_readout(channel, fitsimage)
 
-        # If this is a multiband image, then average the values
-        # for the readout
         value = info.value
-        if isinstance(value, numpy.ndarray):
-            avg = numpy.average(value)
-            value = avg
 
         # Update the readout
         px_x = "%.3f" % info.x
