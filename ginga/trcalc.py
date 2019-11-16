@@ -796,7 +796,7 @@ def overlay_image_2d_np(dstarr, pos, srcarr, dst_order='RGBA',
 
     # define the two subarrays we are blending
     _dst = dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, slc]
-    _src = srcarr[:, :, slc]
+    _src = srcarr[:src_ht, :src_wd, slc]
 
     if np.isscalar(alpha) and alpha == 1.0:
         # optimization to avoid alpha blending
@@ -817,10 +817,10 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
                      src_order='RGBA',
                      alpha=1.0, copy=False, fill=False, flipy=False):
     # NOTE: not tested yet thoroughly enough to use
-    ## if have_pillow:
-    ##     return overlay_image_2d_pil(dstarr, pos, srcarr, dst_order=dst_order,
-    ##                                 src_order=src_order, alpha=alpha,
-    ##                                 copy=copy, fill=fill, flipy=flipy)
+    # if have_pillow:
+    #     return overlay_image_2d_pil(dstarr, pos, srcarr, dst_order=dst_order,
+    #                                 src_order=src_order, alpha=alpha,
+    #                                 copy=copy, fill=fill, flipy=flipy)
 
     return overlay_image_2d_np(dstarr, pos, srcarr, dst_order=dst_order,
                                src_order=src_order, alpha=alpha,
@@ -927,7 +927,7 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     # define the two subarrays we are blending
     _dst = dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
                   dst_z:dst_z + src_dp, slc]
-    _src = srcarr[:, :, :, slc]
+    _src = srcarr[:src_ht, :src_wd, :src_dp, slc]
 
     if np.isscalar(alpha) and alpha == 1.0:
         # optimization to avoid alpha blending
