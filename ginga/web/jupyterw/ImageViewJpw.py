@@ -289,12 +289,12 @@ class ImageViewEvent(ImageViewJpw):
     def key_press_event(self, event):
         keyname = self.transkey(event['code'], keyname=event['key'])
         self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_ui_callback('key-press', keyname)
+        return self.make_ui_callback_viewer(self, 'key-press', keyname)
 
     def key_release_event(self, event):
         keyname = self.transkey(event['code'], keyname=event['key'])
         self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_ui_callback('key-release', keyname)
+        return self.make_ui_callback_viewer(self, 'key-release', keyname)
 
     def button_press_event(self, event):
         x, y = event['dataX'], event['dataY']
@@ -307,7 +307,7 @@ class ImageViewEvent(ImageViewJpw):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('button-press', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
         x, y = event['dataX'], event['dataY']
@@ -320,7 +320,7 @@ class ImageViewEvent(ImageViewJpw):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('button-release', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'button-release', button, data_x, data_y)
 
     def motion_notify_event(self, event):
         button = self._button
@@ -331,7 +331,7 @@ class ImageViewEvent(ImageViewJpw):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'motion', button, data_x, data_y)
 
     def scroll_event(self, event):
         x, y = event['dataX'], event['dataY']
@@ -341,9 +341,9 @@ class ImageViewEvent(ImageViewJpw):
         if (dx != 0 or dy != 0):
             # <= This browser gives us deltas for x and y
             # Synthesize this as a pan gesture event
-            self.make_ui_callback('pan', 'start', 0, 0)
-            self.make_ui_callback('pan', 'move', -dx, -dy)
-            return self.make_ui_callback('pan', 'stop', 0, 0)
+            self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
+            self.make_ui_callback_viewer(self, 'pan', 'move', -dx, -dy)
+            return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
 
         # <= This code path should not be followed under normal
         # circumstances.
@@ -365,7 +365,7 @@ class ImageViewEvent(ImageViewJpw):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('scroll', direction, num_deg,
+        return self.make_ui_callback_viewer(self, 'scroll', direction, num_deg,
                                      data_x, data_y)
 
 
@@ -389,7 +389,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_set_active(True)
+        self.ui_set_active(True, viewer=self)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)
@@ -505,7 +505,7 @@ class EnhancedCanvasView(CanvasView):
         canvas.enable_draw(True)
         canvas.enable_edit(True)
         canvas.set_drawtype(None)
-        canvas.ui_set_active(True)
+        canvas.ui_set_active(True, viewer=self)
         canvas.set_surface(self)
         canvas.register_for_cursor_drawing(self)
         # add the canvas to the view.

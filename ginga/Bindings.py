@@ -13,6 +13,7 @@ from ginga.misc import Bunch, Settings, Callback
 from ginga import trcalc
 from ginga import cmap, imap
 from ginga.util.paths import icondir
+from ginga.util import wcs
 
 
 class ImageViewBindings(object):
@@ -827,10 +828,7 @@ class ImageViewBindings(object):
 
     def _cut_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        image = viewer.get_image()  # noqa
         loval, hival = viewer.get_cut_levels()
-        ## minval, maxval = image.get_minmax()
-        ## spread = maxval - minval
         spread = hival - loval
         loval = loval + (pct * spread)
         hival = hival - (pct * spread)
@@ -1026,7 +1024,7 @@ class ImageViewBindings(object):
         msg = self.settings.get('msg_orient', msg)
         image = viewer.get_image()
 
-        (x, y, xn, yn, xe, ye) = image.calc_compass_center()
+        (x, y, xn, yn, xe, ye) = wcs.calc_compass_center(image)
         degn = math.degrees(math.atan2(xn - x, yn - y))
         self.logger.info("degn=%f xe=%f ye=%f" % (
             degn, xe, ye))
@@ -2806,7 +2804,7 @@ class BindingMapper(Callback.Callbacks):
         event = KeyEvent(key=keyname, state='down', mode=self._kbdmode,
                          modifiers=self._modifiers, viewer=viewer,
                          data_x=last_x, data_y=last_y)
-        return viewer.make_ui_callback(cbname, event, last_x, last_y)
+        return viewer.make_ui_callback_viewer(viewer, cbname, event, last_x, last_y)
 
     def window_key_release(self, viewer, keyname):
         self.logger.debug("keyname=%s" % (keyname))
@@ -2847,7 +2845,7 @@ class BindingMapper(Callback.Callbacks):
                          modifiers=self._modifiers, viewer=viewer,
                          data_x=last_x, data_y=last_y)
 
-        return viewer.make_ui_callback(cbname, event, last_x, last_y)
+        return viewer.make_ui_callback_viewer(viewer, cbname, event, last_x, last_y)
 
     def window_button_press(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d btncode=%s" % (data_x, data_y,
@@ -2881,7 +2879,7 @@ class BindingMapper(Callback.Callbacks):
         event = PointEvent(button=button, state='down', mode=self._kbdmode,
                            modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
-        return viewer.make_ui_callback(cbname, event, data_x, data_y)
+        return viewer.make_ui_callback_viewer(viewer, cbname, event, data_x, data_y)
 
     def window_motion(self, viewer, btncode, data_x, data_y):
 
@@ -2912,7 +2910,7 @@ class BindingMapper(Callback.Callbacks):
         event = PointEvent(button=button, state='move', mode=self._kbdmode,
                            modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
-        return viewer.make_ui_callback(cbname, event, data_x, data_y)
+        return viewer.make_ui_callback_viewer(viewer, cbname, event, data_x, data_y)
 
     def window_button_release(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d button=%s" % (data_x, data_y,
@@ -2945,7 +2943,7 @@ class BindingMapper(Callback.Callbacks):
         event = PointEvent(button=button, state='up', mode=self._kbdmode,
                            modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
-        return viewer.make_ui_callback(cbname, event, data_x, data_y)
+        return viewer.make_ui_callback_viewer(viewer, cbname, event, data_x, data_y)
 
     def window_scroll(self, viewer, direction, amount, data_x, data_y):
         try:
@@ -2968,7 +2966,7 @@ class BindingMapper(Callback.Callbacks):
                             modifiers=self._modifiers, viewer=viewer,
                             direction=direction, amount=amount,
                             data_x=data_x, data_y=data_y)
-        return viewer.make_ui_callback(cbname, event)
+        return viewer.make_ui_callback_viewer(viewer, cbname, event)
 
     def window_pinch(self, viewer, state, rot_deg, scale):
         btncode = 0
@@ -3001,7 +2999,7 @@ class BindingMapper(Callback.Callbacks):
 
         self.logger.debug("making callback for %s (mode=%s)" % (
             cbname, self._kbdmode))
-        return viewer.make_ui_callback(cbname, event)
+        return viewer.make_ui_callback_viewer(viewer, cbname, event)
 
     def window_pan(self, viewer, state, delta_x, delta_y):
         btncode = 0
@@ -3034,7 +3032,7 @@ class BindingMapper(Callback.Callbacks):
 
         self.logger.debug("making callback for %s (mode=%s)" % (
             cbname, self._kbdmode))
-        return viewer.make_ui_callback(cbname, event)
+        return viewer.make_ui_callback_viewer(viewer, cbname, event)
 
 
 #END

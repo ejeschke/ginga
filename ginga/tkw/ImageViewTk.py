@@ -300,7 +300,7 @@ class ImageViewEvent(ImageViewTk):
         keyname = event.keysym
         keyname = self.transkey(keyname)
         self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_ui_callback('key-press', keyname)
+        return self.make_ui_callback_viewer(self, 'key-press', keyname)
 
     def key_release_event(self, event):
         self.tkcanvas.grab_release()
@@ -308,7 +308,7 @@ class ImageViewEvent(ImageViewTk):
         keyname = event.keysym
         keyname = self.transkey(keyname)
         self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_ui_callback('key-release', keyname)
+        return self.make_ui_callback_viewer(self, 'key-release', keyname)
 
     def button_press_event(self, event):
         x = event.x
@@ -331,8 +331,8 @@ class ImageViewEvent(ImageViewTk):
 
                 data_x, data_y = self.check_cursor_location()
 
-                return self.make_ui_callback('scroll', direction, num_degrees,
-                                             data_x, data_y)
+                return self.make_ui_callback_viewer(self, 'scroll', direction,
+                                                    num_degrees, data_x, data_y)
 
             button |= 0x1 << (event.num - 1)
         self._button = button
@@ -340,7 +340,8 @@ class ImageViewEvent(ImageViewTk):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('button-press', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'button-press', button,
+                                            data_x, data_y)
 
     def button_release_event(self, event):
         # event.button, event.x, event.y
@@ -359,7 +360,8 @@ class ImageViewEvent(ImageViewTk):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('button-release', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'button-release', button,
+                                            data_x, data_y)
 
     def motion_notify_event(self, event):
         #button = 0
@@ -378,7 +380,8 @@ class ImageViewEvent(ImageViewTk):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'motion', button,
+                                            data_x, data_y)
 
     ## def drop_event(self, widget, context, x, y, selection, targetType,
     ##                time):
@@ -386,7 +389,7 @@ class ImageViewEvent(ImageViewTk):
     ##         return False
     ##     paths = selection.data.split('\n')
     ##     self.logger.debug("dropped filename(s): %s" % (str(paths)))
-    ##     return self.make_ui_callback('drag-drop', paths)
+    ##     return self.make_ui_callback_viewer(self, 'drag-drop', paths)
 
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
@@ -409,7 +412,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_set_active(True)
+        self.ui_set_active(True, viewer=self)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)

@@ -463,14 +463,14 @@ class PixTable(GingaPlugin.LocalPlugin):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
         self.redo()
 
     def redo(self):
         if self.pixview is None:
             return
         # cut out and set the pixel table data
-        image = self.fitsimage.get_image()
+        image = self.fitsimage.get_vip()
 
         if image is None:
             return

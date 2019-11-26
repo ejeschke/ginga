@@ -112,6 +112,8 @@ class Info(GingaPlugin.GlobalPlugin):
                     ('Object:', 'label', 'Object', 'llabel'),
                     ('X:', 'label', 'X', 'llabel'),
                     ('Y:', 'label', 'Y', 'llabel'),
+                    ('Image-X:', 'label', 'Image_X', 'llabel'),
+                    ('Image-Y:', 'label', 'Image_Y', 'llabel'),
                     ('Value:', 'label', 'Value', 'llabel'),
                     ('RA:', 'label', 'RA', 'llabel'),
                     ('DEC:', 'label', 'DEC', 'llabel'),
@@ -493,6 +495,14 @@ class Info(GingaPlugin.GlobalPlugin):
 
         obj.winfo.x.set_text("%.3f" % info.x)
         obj.winfo.y.set_text("%.3f" % info.y)
+        if 'image_x' in info:
+            obj.winfo.image_x.set_text("%.3f" % info.image_x)
+        else:
+            obj.winfo.image_x.set_text("")
+        if 'image_y' in info:
+            obj.winfo.image_y.set_text("%.3f" % info.image_y)
+        else:
+            obj.winfo.image_y.set_text("")
         obj.winfo.value.set_text(str(info.value))
         if 'ra_txt' in info:
             obj.winfo.ra.set_text(info.ra_txt)

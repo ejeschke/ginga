@@ -198,7 +198,8 @@ class BaseImage(ViewerObjectBase):
         self._data = np.zeros((1, 1))
 
     def _slice(self, view):
-        view = tuple(view)
+        if not isinstance(view, tuple):
+            view = tuple(view)
         return self._get_data()[view]
 
     def get_slice(self, c):
@@ -298,14 +299,17 @@ class BaseImage(ViewerObjectBase):
         other = self.__class__(data_np=data, metadata=metadata)
         return other
 
-    def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):
+    def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, z=None,
+                    astype=None):
         """cut out data area based on coords.
         """
         view = np.s_[y1:y2:ystep, x1:x2:xstep]
-        data = self._slice(view)
+        data_np = self._slice(view)
+        if z is not None and len(data_np.shape) > 2:
+            data_np = data_np[..., z]
         if astype:
-            data = data.astype(astype, copy=False)
-        return data
+            data_np = data_np.astype(astype, copy=False)
+        return data_np
 
     def cutout_adjust(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):
         dx = x2 - x1
@@ -557,8 +561,12 @@ class BaseImage(ViewerObjectBase):
             value = None
 
         info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
-                           x=data_x, y=data_y,
-                           value=value)
+                           x=data_x, y=data_y, value=value)
+
+        wd, ht = self.get_size()
+        if 0 < data_x < wd and 0 < data_y < ht:
+            info.image_x, info.image_y = data_x, data_y
+
         return info
 
 

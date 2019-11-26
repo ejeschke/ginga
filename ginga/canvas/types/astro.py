@@ -564,9 +564,7 @@ class CrosshairP(OnePointMixin, CanvasObjectBase):
                 text = "X:%f, Y:%f" % (self.x, self.y)
 
             else:
-                image = viewer.get_image()
-                if image is None:
-                    return
+                image = viewer.get_vip()
                 # NOTE: x, y are assumed to be in data coordinates
                 info = image.info_xy(self.x, self.y, viewer.get_settings())
                 if self.format == 'coords':
@@ -576,7 +574,9 @@ class CrosshairP(OnePointMixin, CanvasObjectBase):
                         text = "%s:%s, %s:%s" % (info.ra_lbl, info.ra_txt,
                                                  info.dec_lbl, info.dec_txt)
                 else:
-                    if np.isscalar(info.value) or len(info.value) <= 1:
+                    if info.value is None:
+                        text = "V: None"
+                    elif np.isscalar(info.value) or len(info.value) <= 1:
                         text = "V: %f" % (info.value)
                     else:
                         values = ', '.join(["%d" % info.value[i]

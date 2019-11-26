@@ -1942,7 +1942,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi.add_callback('cursor-down', self.force_focus_cb)
         fi.add_callback('key-down-none', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
-        fi.ui_set_active(True)
+        fi.ui_set_active(True, viewer=fi)
 
         bd = fi.get_bindings()
         bd.enable_all(True)
@@ -2758,31 +2758,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         self._cursor_last_update = time.time()
 
-        # get first canvas image object found under the cursor
-        pt = (data_x, data_y)
-        canvas = viewer.get_canvas()
-        objs = canvas.get_items_at(pt)
-        objs = list(filter(lambda obj: isinstance(obj, Image), objs))
-        if len(objs) > 0:
-            obj = objs[0]
-        else:
-            # hmm, ok see if there is an image loaded in the viewer
-            if viewer._imgobj is None:
-                return
-            obj = viewer._imgobj
-
         try:
-            image = obj.get_image()
-
-            if (image is None) or not isinstance(image, BaseImage.BaseImage):
-                # No compatible image loaded for this channel
-                return
-
+            image = viewer.get_vip()
             if image.ndim < 2:
                 return
-
-            # adjust data coords for where this image is plotted
-            data_x, data_y = data_x - obj.x, data_y - obj.y
 
             settings = viewer.get_settings()
             info = image.info_xy(data_x, data_y, settings)
@@ -2791,10 +2770,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             off = self.settings.get('pixel_coords_offset', 0.0)
             info.x += off
             info.y += off
+            if 'image_x' in info:
+                info.image_x += off
+            if 'image_y' in info:
+                info.image_y += off
 
         except Exception as e:
             self.logger.warning(
-                "Can't get info under the cursor: %s" % (str(e)))
+                "Can't get info under the cursor: %s" % (str(e)), exc_info=True)
             return
 
         # TODO: can this be made more efficient?

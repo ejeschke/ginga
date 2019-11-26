@@ -10,15 +10,12 @@ channel.  An instance can be opened for each channel.
 
 **Usage**
 
-.. warning:: This can be very memory intensive.
-
 This plugin is used to automatically create a mosaic in the channel using
 images provided by the user (e.g., using ``FBrowser``).
 The position of an image on the mosaic is determined by its WCS without
 distortion correction. This is meant as a quick-look tool, not a
 replacement for image drizzling that takes account of image distortion, etc.
-The mosaic only exists in memory but you can save it out to a
-FITS file using ``SaveImage``.
+The mosaic only exists as a plot on the Ginga canvas.
 
 When a mosaic falls out of memory, it is no longer accessible in Ginga.
 To avoid this, you must configure your session such that your Ginga data cache
@@ -30,14 +27,15 @@ Images must have a working WCS.
 """
 import math
 import time
-from datetime import datetime
 import threading
 
 import numpy as np
 
 from ginga.AstroImage import AstroImage
-from ginga.util import wcs, iqcalc, dp, io_fits, mosaic
-from ginga import GingaPlugin
+from ginga.util import wcs, iqcalc, dp, io_fits
+from ginga.util.mosaic import CanvasMosaicer
+from ginga import GingaPlugin, trcalc
+from ginga.misc import Task
 from ginga.gw import Widgets
 
 
@@ -50,17 +48,15 @@ class Mosaic(GingaPlugin.LocalPlugin):
         # superclass defines some variables for us, like logger
         super(Mosaic, self).__init__(fv, fitsimage)
 
-        self.mosaic_count = 0
-        self.img_mosaic = None
-        self.bg_ref = 0.0
+        self.mosaicer = CanvasMosaicer(self.logger)
+        self.mosaicer.add_callback('progress', self._plot_progress_cb)
+        self.mosaicer.add_callback('finished', self._plot_finished_cb)
 
         self.ev_intr = threading.Event()
         self.lock = threading.RLock()
-        self.read_elapsed = 0.0
-        self.process_elapsed = 0.0
-        self.ingest_count = 0
         # holds processed images to be inserted into mosaic image
         self.images = []
+        self.ingest_count = 0
         self.total_files = 0
         self.num_groups = 0
         # can set this to annotate images with a specific
@@ -73,30 +69,22 @@ class Mosaic(GingaPlugin.LocalPlugin):
         canvas.enable_draw(False)
         canvas.add_callback('drag-drop', self.drop_cb)
         canvas.set_surface(fitsimage)
-        #canvas.ui_set_active(True)
+        canvas.ui_set_active(True, viewer=fitsimage)
         self.canvas = canvas
         self.layertag = 'mosaic-canvas'
 
         # Load plugin preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Mosaic')
-        self.settings.set_defaults(annotate_images=False, fov_deg=0.2,
-                                   match_bg=False, trim_px=0,
-                                   merge=False, num_threads=4,
-                                   drop_creates_new_mosaic=False,
-                                   mosaic_hdus=False, skew_limit=0.1,
-                                   allow_expand=True, expand_pad_deg=0.01,
-                                   max_center_deg_delta=2.0,
-                                   make_thumbs=True, reuse_image=False)
+        self.settings.set_defaults(annotate_images=False,
+                                   match_bg=False,
+                                   num_threads=4,
+                                   mosaic_hdus=False,
+                                   make_thumbs=True)
         self.settings.load(onError='silent')
-
-        # channel where mosaic should appear (default=ours)
-        self.mosaic_chname = self.chname
 
         # hook to allow special processing before inlining
         self.preprocess = lambda x: x
-
-        self.fv.add_callback('remove-image', self._remove_image_cb)
 
         self.gui_up = False
 
@@ -111,52 +99,31 @@ class Mosaic(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Mosaic")
 
         captions = [
-            ("FOV (deg):", 'label', 'Fov', 'llabel', 'set_fov', 'entry'),
-            ("New Mosaic", 'button', "Allow expansion", 'checkbutton'),
-            ("Label images", 'checkbutton', "Match bg", 'checkbutton'),
-            ("Trim Pixels:", 'label', 'Trim Px', 'llabel',
-             'trim_pixels', 'entry'),
+            ("New Mosaic", 'button'),
+            ("Mosaic HDUs", 'checkbutton', "Label images", 'checkbutton',
+             "Match bg", 'checkbutton'),
             ("Num Threads:", 'label', 'Num Threads', 'llabel',
              'set_num_threads', 'entry'),
-            ("Merge data", 'checkbutton', "Drop new",
-             'checkbutton'),
-            ("Mosaic HDUs", 'checkbutton'),
         ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        fov_deg = self.settings.get('fov_deg', 1.0)
-        if np.isscalar(fov_deg):
-            fov_str = str(fov_deg)
-        else:
-            x_fov, y_fov = fov_deg
-            fov_str = str(x_fov) + ', ' + str(y_fov)
-        #b.set_fov.set_length(8)
-        b.fov.set_text(fov_str)
-        b.set_fov.set_text(fov_str)
-        b.set_fov.add_callback('activated', self.set_fov_cb)
-        b.set_fov.set_tooltip("Set size of mosaic FOV (deg)")
-        b.allow_expansion.set_tooltip("Allow image to expand the FOV")
-        allow_expand = self.settings.get('allow_expand', True)
-        b.allow_expansion.set_state(allow_expand)
-        b.allow_expansion.add_callback('activated', self.allow_expand_cb)
         b.new_mosaic.add_callback('activated', lambda w: self.new_mosaic_cb())
+
+        mosaic_hdus = self.settings.get('mosaic_hdus', False)
+        b.mosaic_hdus.set_tooltip("Mosaic data HDUs in each file")
+        b.mosaic_hdus.set_state(mosaic_hdus)
+        b.mosaic_hdus.add_callback('activated', self.mosaic_hdus_cb)
+
         labelem = self.settings.get('annotate_images', False)
         b.label_images.set_state(labelem)
-        b.label_images.set_tooltip(
-            "Label tiles with their names (only if allow_expand=False)")
+        b.label_images.set_tooltip("Label tiles with their names")
         b.label_images.add_callback('activated', self.annotate_cb)
 
-        trim_px = self.settings.get('trim_px', 0)
         match_bg = self.settings.get('match_bg', False)
         b.match_bg.set_tooltip("Try to match background levels")
         b.match_bg.set_state(match_bg)
         b.match_bg.add_callback('activated', self.match_bg_cb)
-        b.trim_pixels.set_tooltip("Set number of pixels to trim from each edge")
-        b.trim_px.set_text(str(trim_px))
-        b.trim_pixels.add_callback('activated', self.trim_pixels_cb)
-        #b.trim_pixels.set_length(8)
-        b.trim_pixels.set_text(str(trim_px))
 
         num_threads = self.settings.get('num_threads', 4)
         b.num_threads.set_text(str(num_threads))
@@ -164,18 +131,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
         b.set_num_threads.set_text(str(num_threads))
         b.set_num_threads.set_tooltip("Number of threads to use for mosaicing")
         b.set_num_threads.add_callback('activated', self.set_num_threads_cb)
-        merge = self.settings.get('merge', False)
-        b.merge_data.set_tooltip("Merge data instead of overlay")
-        b.merge_data.set_state(merge)
-        b.merge_data.add_callback('activated', self.merge_cb)
-        drop_new = self.settings.get('drop_creates_new_mosaic', False)
-        b.drop_new.set_tooltip("Dropping files on image starts a new mosaic")
-        b.drop_new.set_state(drop_new)
-        b.drop_new.add_callback('activated', self.drop_new_cb)
-        mosaic_hdus = self.settings.get('mosaic_hdus', False)
-        b.mosaic_hdus.set_tooltip("Mosaic data HDUs in each file")
-        b.mosaic_hdus.set_state(mosaic_hdus)
-        b.mosaic_hdus.add_callback('activated', self.mosaic_hdus_cb)
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -236,139 +191,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
             fn = lambda x: x  # noqa
         self.preprocess = fn
 
-    def prepare_mosaic(self, image, fov_deg, name=None):
-        """Prepare a new (blank) mosaic image based on the pointing of
-        the parameter image
-        """
-        header = image.get_header()
-        ra_deg, dec_deg = header['CRVAL1'], header['CRVAL2']
-
-        data_np = image.get_data()
-        #dtype = data_np.dtype
-        dtype = None
-        self.bg_ref = iqcalc.get_median(data_np)
-
-        # TODO: handle skew (differing rotation for each axis)?
-
-        skew_limit = self.settings.get('skew_limit', 0.1)
-        (rot_deg, cdelt1, cdelt2) = wcs.get_rotation_and_scale(
-            header, skew_threshold=skew_limit)
-        self.logger.debug("image0 rot=%f cdelt1=%f cdelt2=%f" % (
-            rot_deg, cdelt1, cdelt2))
-
-        # Prepare pixel scale for each axis
-        px_scale = (math.fabs(cdelt1), math.fabs(cdelt2))
-        cdbase = [np.sign(cdelt1), np.sign(cdelt2)]
-
-        reuse_image = self.settings.get('reuse_image', False)
-        if (not reuse_image) or (self.img_mosaic is None):
-            self.logger.debug("creating blank image to hold mosaic")
-            self.fv.gui_do(self._prepare_mosaic1, "Creating blank image...")
-
-            # GC old mosaic
-            self.img_mosaic = None
-
-            img_mosaic = dp.create_blank_image(ra_deg, dec_deg,
-                                               fov_deg, px_scale,
-                                               rot_deg,
-                                               cdbase=cdbase,
-                                               logger=self.logger,
-                                               pfx='mosaic',
-                                               dtype=dtype)
-
-            if name is not None:
-                img_mosaic.set(name=name)
-            imname = img_mosaic.get('name', image.get('name', "NoName"))
-            self.logger.debug("mosaic name is '%s'" % (imname))
-
-            # avoid making a thumbnail of this if seed image is also that way
-            nothumb = not self.settings.get('make_thumbs', False)
-            if nothumb:
-                img_mosaic.set(nothumb=True)
-
-            # image is not on disk, set indication for other plugins
-            img_mosaic.set(path=None)
-
-            # TODO: fill in interesting/select object headers from seed image
-
-            self.img_mosaic = img_mosaic
-            self.logger.info("adding mosaic image '%s' to channel" % (imname))
-            self.fv.gui_call(self.fv.add_image, imname, img_mosaic,
-                             chname=self.mosaic_chname)
-
-        else:
-            # <-- reuse image (faster)
-            self.logger.debug("Reusing previous mosaic image")
-            self.fv.gui_do(
-                self._prepare_mosaic1, "Reusing previous mosaic image...")
-
-            img_mosaic = dp.recycle_image(self.img_mosaic,
-                                          ra_deg, dec_deg,
-                                          fov_deg, px_scale,
-                                          rot_deg,
-                                          cdbase=cdbase,
-                                          logger=self.logger,
-                                          pfx='mosaic')
-
-        header = img_mosaic.get_header()
-        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(
-            header, skew_threshold=skew_limit)
-        self.logger.debug("mosaic rot=%f cdelt1=%f cdelt2=%f" % (
-            rot, cdelt1, cdelt2))
-
-        return img_mosaic
-
-    def _prepare_mosaic1(self, msg):
-        self.canvas.delete_all_objects()
-        self.update_status(msg)
-
-    def _inline(self, images):
-        self.fv.assert_nongui_thread()
-
-        # Get optional parameters
-        trim_px = self.settings.get('trim_px', 0)
-        match_bg = self.settings.get('match_bg', False)
-        merge = self.settings.get('merge', False)
-        allow_expand = self.settings.get('allow_expand', True)
-        expand_pad_deg = self.settings.get('expand_pad_deg', 0.010)
-        annotate = self.settings.get('annotate_images', False)
-        bg_ref = None
-        if match_bg:
-            bg_ref = self.bg_ref
-
-        time_intr1 = time.time()
-
-        loc = mosaic.mosaic_inline(self.img_mosaic, images,
-                                   bg_ref=bg_ref, trim_px=trim_px,
-                                   merge=merge, allow_expand=allow_expand,
-                                   expand_pad_deg=expand_pad_deg,
-                                   suppress_callback=True)
-
-        # Add description for ChangeHistory
-        info = dict(time_modified=datetime.utcnow(),
-                    reason_modified='Added {0}'.format(
-            ','.join([im.get('name') for im in images])))
-        self.fv.update_image_info(self.img_mosaic, info)
-
-        # annotate ingested image with its name?
-        if annotate and (not allow_expand):
-            for i, image in enumerate(images):
-                (xlo, ylo, xhi, yhi) = loc[i]
-                header = image.get_header()
-                if self.ann_fits_kwd is not None:
-                    imname = str(header[self.ann_fits_kwd])
-                else:
-                    imname = image.get('name', 'noname')
-
-                x, y = (xlo + xhi) / 2., (ylo + yhi) / 2.
-                self.canvas.add(self.dc.Text(x, y, imname, color='red'),
-                                redraw=False)
-
-        time_intr2 = time.time()
-        self.process_elapsed += time_intr2 - time_intr1
-
     def close(self):
-        self.img_mosaic = None
+        self.canvas.delete_all_objects()
+        self.mosaicer.reset()
         self.fv.stop_local_plugin(self.chname, str(self))
         self.gui_up = False
         return True
@@ -383,6 +208,13 @@ class Mosaic(GingaPlugin.LocalPlugin):
             # Add canvas layer
             p_canvas.add(self.canvas, tag=self.layertag)
 
+        # image loaded in channel is used as initial reference image,
+        # if there is one
+        ref_image = self.fitsimage.get_image()
+        if ref_image is not None:
+            self.mosaicer.prepare_mosaic(ref_image)
+        else:
+            self.mosaicer.reset()
         self.resume()
 
     def stop(self):
@@ -392,8 +224,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
             p_canvas.delete_object_by_tag(self.layertag)
         except Exception:
             pass
-        # dereference potentially large mosaic image
-        self.img_mosaic = None
+        self.fitsimage.clear()
+        self.fitsimage.reset_limits()
+        self.mosaicer.reset()
         self.fv.show_status("")
 
     def pause(self):
@@ -403,36 +236,27 @@ class Mosaic(GingaPlugin.LocalPlugin):
         pass
 
     def resume(self):
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
 
     def new_mosaic_cb(self):
-        self.img_mosaic = None
+        self.mosaicer.reset()
+        self.canvas.delete_all_objects()
+        self.fitsimage.clear()
         self.fitsimage.onscreen_message("Drag new files...",
                                         delay=2.0)
 
     def drop_cb(self, canvas, paths, *args):
         self.logger.info("files dropped: %s" % str(paths))
-        new_mosaic = self.settings.get('drop_creates_new_mosaic', False)
-        self.fv.nongui_do(self.fv.error_wrap, self.mosaic, paths,
-                          new_mosaic=new_mosaic)
+        self.fv.gui_do(self.fv.error_wrap, self.mosaic, paths)
         return True
 
     def annotate_cb(self, widget, tf):
         self.settings.set(annotate_images=tf)
 
-    def allow_expand_cb(self, widget, tf):
-        self.settings.set(allow_expand=tf)
+    def load_tiles(self, paths, image_loader=None):
+        # NOTE: this runs in a gui thread
+        self.fv.assert_nongui_thread()
 
-    def ingest_one(self, image):
-
-        with self.lock:
-            self.images.append(image)
-            self.ingest_count += 1
-            count = self.ingest_count
-
-            self.update_progress(float(count) / self.total_files)
-
-    def mosaic_some(self, paths, image_loader=None):
         if image_loader is None:
             image_loader = self.fv.load_image
 
@@ -475,12 +299,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
                             image = self.preprocess(image)
 
-                            # we have to up the number of total files
-                            if i > 1:
-                                with self.lock:
-                                    self.total_files += 1
+                            with self.lock:
+                                self.images.append(image)
 
-                            self.ingest_one(image)
                     finally:
                         opener.close()
                         opener = None
@@ -489,120 +310,70 @@ class Mosaic(GingaPlugin.LocalPlugin):
                     image = image_loader(url)
 
                     image = self.preprocess(image)
-                    self.ingest_one(image)
+
+                    with self.lock:
+                        self.images.append(image)
+
+                with self.lock:
+                    self.ingest_count += 1
+                    self.update_progress(self.ingest_count / self.total_files)
 
         finally:
             with self.lock:
                 self.num_groups -= 1
                 if self.num_groups <= 0:
-                    self.fv.nongui_do(self.finish_mosaic)
+                    self.fv.gui_do(self.finish_mosaic)
 
-    def finish_mosaic(self):
-        # NOTE: this runs in a nongui thread
-        self.fv.assert_nongui_thread()
-
-        self.update_status("mosaicing images...")
-        images, self.images = self.images, []
-        self._inline(images)
-
-        self.end_progress()
-
-        total_elapsed = time.time() - self.start_time
-        msg = "Done. Total=%.2f Process=%.2f (sec)" % (
-            total_elapsed, self.process_elapsed)
-        self.update_status(msg)
-
-        self.fv.gui_do(self.img_mosaic.make_callback, 'modified')
-
-    def mosaic(self, paths, new_mosaic=False, name=None, image_loader=None):
+    def mosaic(self, paths, image_loader=None):
         if image_loader is None:
             image_loader = self.fv.load_image
 
-        # NOTE: this runs in a non-gui thread
-        self.fv.assert_nongui_thread()
+        self.fv.assert_gui_thread()
 
-        # Initialize progress bar
+        self.ingest_count = 0
         self.total_files = len(paths)
         if self.total_files == 0:
             return
 
-        self.ingest_count = 0
         self.images = []
         self.ev_intr.clear()
-        self.process_elapsed = 0.0
+        # Initialize progress bar
+        self.update_status("Loading files...")
         self.init_progress()
         self.start_time = time.time()
 
-        image = image_loader(paths[0])
-        time_intr1 = time.time()
-
-        fov_deg = self.settings.get('fov_deg', 0.2)
-        max_center_deg_delta = self.settings.get('max_center_deg_delta', None)
-
-        # If there is no current mosaic then prepare a new one
-        if new_mosaic or (self.img_mosaic is None):
-            self.prepare_mosaic(image, fov_deg, name=name)
-
-        elif max_center_deg_delta is not None:
-            # get our center position
-            ctr_x, ctr_y = self.img_mosaic.get_center()
-            ra1_deg, dec1_deg = self.img_mosaic.pixtoradec(ctr_x, ctr_y)
-
-            # get new image's center position
-            ctr_x, ctr_y = image.get_center()
-            ra2_deg, dec2_deg = image.pixtoradec(ctr_x, ctr_y)
-
-            # distance between our center and new image's center
-            dist = wcs.deltaStarsRaDecDeg(ra1_deg, dec1_deg,
-                                          ra2_deg, dec2_deg)
-            # if distance is greater than trip setting, start a new mosaic
-            if dist > max_center_deg_delta:
-                self.prepare_mosaic(image, fov_deg, name=name)
-
-        self.update_status("Loading images...")
-        #self.fv.gui_call(self.fv.error_wrap, self.ingest_one, image)
-        #self.update_progress(float(self.ingest_count)/self.total_files)
-
-        time_intr2 = time.time()
-        self.process_elapsed += time_intr2 - time_intr1
-
         num_threads = self.settings.get('num_threads', 4)
         groups = dp.split_n(paths, num_threads)
-        with self.lock:
-            self.num_groups = len(groups)
+        self.num_groups = len(groups)
         self.logger.info("num groups=%d" % (self.num_groups))
 
         for group in groups:
-            self.fv.nongui_do(self.mosaic_some, group,
+            self.fv.nongui_do(self.load_tiles, group,
                               image_loader=image_loader)
 
-        return self.img_mosaic
+    def finish_mosaic(self):
+        self.fv.assert_gui_thread()
 
-    def set_fov_cb(self, w):
-        fov_str = w.get_text()
-        if ',' in fov_str:
-            x_fov, y_fov = fov_str.split(',')
-            x_fov, y_fov = float(x_fov), float(y_fov)
-            fov_deg = (x_fov, y_fov)
-            self.w.fov.set_text(str(x_fov) + ', ' + str(y_fov))
-        else:
-            fov_deg = float(fov_str)
-            self.w.fov.set_text(str(fov_deg))
-        self.settings.set(fov_deg=fov_deg)
+        self.load_time = time.time() - self.start_time
+        images, self.images = self.images, []
+        self.logger.info("num images={}".format(len(images)))
 
-    def trim_pixels_cb(self, w):
-        trim_px = int(w.get_text())
-        self.w.trim_px.set_text(str(trim_px))
-        self.settings.set(trim_px=trim_px)
+        if self.ev_intr.is_set():
+            self.update_status("mosaic cancelled!")
+            self.end_progress()
+            return
+
+        self.w.eval_pgs.set_value(0.0)
+        self.w.btn_intr_eval.set_enabled(False)
+
+        # set options
+        self.mosaicer.annotate = self.settings.get('annotate_images', False)
+        self.mosaicer.match_bg = self.settings.get('match_bg', False)
+
+        self.mosaicer.mosaic(self.fitsimage, images, canvas=self.canvas,)
 
     def match_bg_cb(self, w, tf):
         self.settings.set(match_bg=tf)
-
-    def merge_cb(self, w, tf):
-        self.settings.set(merge=tf)
-
-    def drop_new_cb(self, w, tf):
-        self.settings.set(drop_creates_new_mosaic=tf)
 
     def mosaic_hdus_cb(self, w, tf):
         self.settings.set(mosaic_hdus=tf)
@@ -612,16 +383,20 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.w.num_threads.set_text(str(num_threads))
         self.settings.set(num_threads=num_threads)
 
-    def _remove_image_cb(self, fv, chname, imname, impath):
-        # clear our handle to the mosaic image if it has been
-        # deleted from the channel
-        if self.img_mosaic is not None:
-            if imname == self.img_mosaic.get('name', None):
-                self.img_mosaic = None
-
     def update_status(self, text):
         if self.gui_up:
             self.fv.gui_do(self.w.eval_status.set_text, text)
+            self.fv.gui_do(self.fv.update_pending)
+
+    def _plot_progress_cb(self, mosaicer, category, pct):
+        self.w.eval_status.set_text(category + '...')
+        self.w.eval_pgs.set_value(pct)
+
+    def _plot_finished_cb(self, mosaicer, t_sec):
+        total = self.load_time + t_sec
+        msg = "done. load: %.4f mosaic: %.4f total: %.4f sec" % (
+            self.load_time, t_sec, total)
+        self.update_status(msg)
 
     def init_progress(self):
         def _foo():
@@ -631,8 +406,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
             self.fv.gui_do(_foo)
 
     def update_progress(self, pct):
+        def _foo():
+            self.w.eval_pgs.set_value(pct)
         if self.gui_up:
-            self.fv.gui_do(self.w.eval_pgs.set_value, pct)
+            self.fv.gui_do(_foo)
 
     def end_progress(self):
         if self.gui_up:

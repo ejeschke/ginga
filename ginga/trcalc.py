@@ -1037,6 +1037,12 @@ def get_bounds(pts):
                        [np.max(_pts) for _pts in pts_t]))
 
 
+def sort_xy(x1, y1, x2, y2):
+    """Sort a set of bounding box parameters."""
+    pmn, pmx = get_bounds(((x1, y1), (x2, y2)))
+    return (pmn[0], pmn[1], pmx[0], pmx[1])
+
+
 def fill_array(dstarr, order, r, g, b, a):
     """Fill array dstarr with a color value. order defines the color planes
     in the array.  (r, g, b, a) are expected to be in the range 0..1 and
@@ -1095,7 +1101,7 @@ def add_alpha(arr, alpha=None):
     return arr
 
 
-def get_minmax(dtype):
+def get_minmax_dtype(dtype):
     if issubclass(dtype.type, np.integer):
         info = np.iinfo(dtype)
     else:

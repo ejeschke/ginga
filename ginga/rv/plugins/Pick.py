@@ -1254,7 +1254,7 @@ class Pick(GingaPlugin.LocalPlugin):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
         self.fv.show_status("Draw a shape with the right mouse button")
 
     def stop(self):
@@ -1304,7 +1304,7 @@ class Pick(GingaPlugin.LocalPlugin):
         text.x, text.y = x1, y2
 
         try:
-            image = self.fitsimage.get_image()
+            image = self.fitsimage.get_vip()
 
             # sanity check on size of region
             width, height = abs(x2 - x1), abs(y2 - y1)
@@ -1419,7 +1419,7 @@ class Pick(GingaPlugin.LocalPlugin):
     def _make_report_header(self):
         return self.rpt_header + '\n'
 
-    def _make_report(self, image, qs):
+    def _make_report(self, vip_img, qs):
         d = Bunch.Bunch()
         try:
             x, y = qs.objx, qs.objy
@@ -1427,6 +1427,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 # user wants RA/DEC calculated by centroid instead of fwhm
                 x, y = qs.oid_x, qs.oid_y
 
+            image, pt2 = vip_img.get_image_at_pt((x, y))
             equinox = float(image.get_keyword('EQUINOX', 2000.0))
             try:
                 ra_deg, dec_deg = image.pixtoradec(x, y, coords='data')
@@ -1486,7 +1487,7 @@ class Pick(GingaPlugin.LocalPlugin):
             objs = self.canvas.get_objects_by_tag_pfx('peak')
             self.canvas.delete_objects(objs)
 
-            image = self.fitsimage.get_image()
+            vip_img = self.fitsimage.get_vip()
             shape_obj = pickobj.objects[0]
             point = pickobj.objects[1]
             text = pickobj.objects[2]
@@ -1499,14 +1500,13 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # Mark new peaks, if desired
             if self.show_candidates:
-                reports = list(map(lambda x: self._make_report(image, x),
-                                   objlist))
+                reports = [self._make_report(vip_img, x) for x in objlist]
                 for obj in objlist:
                     self.canvas.add(self.dc.Point(
                         obj.objx, obj.objy, 5, linewidth=1,
                         color=self.candidate_color), tagpfx='peak')
             else:
-                reports = [self._make_report(image, qs)]
+                reports = [self._make_report(vip_img, qs)]
 
             # Calculate X/Y of center of star
             obj_x = qs.objx
@@ -1565,9 +1565,9 @@ class Pick(GingaPlugin.LocalPlugin):
             self.plot_panx = float(i1) / wd
             self.plot_pany = float(j1) / ht
             if self.have_mpl:
-                self.plot_contours(image)
-                self.plot_fwhm(qs, image)
-                self.plot_radial(qs, image)
+                self.plot_contours(vip_img)
+                self.plot_fwhm(qs, vip_img)
+                self.plot_radial(qs, vip_img)
 
         except Exception as e:
             errmsg = "Error calculating quality metrics: %s" % (
@@ -1596,7 +1596,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.pickimage.center_image()
             self.plot_panx = self.plot_pany = 0.5
             if self.have_mpl:
-                self.plot_contours(image)
+                self.plot_contours(vip_img)
                 # TODO: could calc background based on numpy calc
                 self.clear_fwhm()
                 self.clear_radial()
@@ -1612,9 +1612,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.ev_intr.set()
 
     def redo_quick(self):
-        image = self.fitsimage.get_image()
-        if image is None:
-            return
+        vip_img = self.fitsimage.get_vip()
 
         self.cuts_plot.clear()
 
@@ -1623,7 +1621,7 @@ class Pick(GingaPlugin.LocalPlugin):
             return
         shape = obj.objects[0]
 
-        x1, y1, x2, y2, data = self.cutdetail(image, shape)
+        x1, y1, x2, y2, data = self.cutdetail(vip_img, shape)
         self.pick_x1, self.pick_y1 = x1, y1
         self.pick_data = data
 
@@ -1851,7 +1849,6 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def cutdetail(self, image, shape_obj):
         view, mask = image.get_shape_view(shape_obj)
-
         data = image._slice(view)
 
         y1, y2 = view[0].start, view[0].stop

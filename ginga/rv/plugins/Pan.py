@@ -66,20 +66,17 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Pan')
-        self.settings.add_defaults(use_shared_canvas=False,
-                                   closeable=not spec.get('hidden', False),
+        self.settings.add_defaults(closeable=not spec.get('hidden', False),
                                    pan_position_color='yellow',
                                    pan_rectangle_color='red',
                                    compass_color='skyblue',
                                    rotate_pan_image=True)
         self.settings.load(onError='silent')
-        # share canvas with channel viewer?
-        self.use_shared_canvas = self.settings.get('use_shared_canvas', False)
 
         self._wd = 200
         self._ht = 200
         self.copy_attrs = ['transforms', 'cutlevels', 'rotation', 'rgbmap',
-                           'icc', 'interpolation']
+                           'limits', 'icc', 'interpolation']
         self.gui_up = False
 
     def build_gui(self, container):
@@ -126,15 +123,13 @@ class Pan(GingaPlugin.GlobalPlugin):
         # for debugging
         pi.set_name('panimage')
 
-        my_canvas = pi.get_canvas()
+        my_canvas = pi.get_private_canvas()
         my_canvas.enable_draw(True)
         my_canvas.set_drawtype('rectangle', linestyle='dash', color='green')
         my_canvas.set_callback('draw-event', self.draw_cb)
-        my_canvas.ui_set_active(True)
 
-        if self.use_shared_canvas:
-            canvas = fitsimage.get_canvas()
-            pi.set_canvas(canvas)
+        canvas = fitsimage.get_canvas()
+        pi.set_canvas(canvas)
 
         bd = pi.get_bindings()
         bd.enable_pan(False)
@@ -147,13 +142,23 @@ class Pan(GingaPlugin.GlobalPlugin):
             return
         fitsimage = channel.fitsimage
         panimage = self._create_pan_viewer(fitsimage)
+        p_canvas = panimage.get_private_canvas()
+
+        # add X/Y compass
+        x, y = 0.5, 0.5
+        radius = 0.1
+
+        compass_xy = p_canvas.add(self.dc.Compass(
+            x, y, radius,
+            color=self.settings.get('xy_compass_color', 'yellow'),
+            fontsize=14, ctype='pixel', coord='percentage'))
 
         iw = Viewers.GingaViewerWidget(panimage)
         iw.resize(self._wd, self._ht)
         self.nb.add_widget(iw)
         #index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,
-                              compass_wcs=None, compass_xy=None,
+                              compass_wcs=None, compass_xy=compass_xy,
                               panrect=None)
         channel.extdata._pan_info = paninfo
 
@@ -264,9 +269,12 @@ class Pan(GingaPlugin.GlobalPlugin):
             return
         paninfo = channel.extdata._pan_info
         if paninfo is not None:
-            fitsimage.copy_attributes(paninfo.panimage, self.copy_attrs)
             if whence < 3:
+                fitsimage.copy_attributes(paninfo.panimage, self.copy_attrs,
+                                          whence=whence)
+                paninfo.panimage.zoom_fit()
                 self.panset(channel.fitsimage, channel, paninfo)
+                pass
         return True
 
     # LOGIC
@@ -281,11 +289,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             paninfo.panimage.clear()
             return
 
-        if not self.use_shared_canvas:
-            self.logger.debug("setting Pan viewer image")
-            paninfo.panimage.set_image(image)
-        else:
-            paninfo.panimage.zoom_fit()
+        paninfo.panimage.zoom_fit()
 
         p_canvas = paninfo.panimage.get_private_canvas()
         # remove old compasses
@@ -293,22 +297,11 @@ class Pan(GingaPlugin.GlobalPlugin):
             p_canvas.delete_object_by_tag(paninfo.compass_wcs)
         except Exception:
             pass
-        try:
-            p_canvas.delete_object_by_tag(paninfo.compass_xy)
-        except Exception:
-            pass
-
-        x, y = 0.5, 0.5
-        radius = 0.1
-
-        paninfo.compass_xy = p_canvas.add(self.dc.Compass(
-            x, y, radius,
-            color=self.settings.get('xy_compass_color', 'yellow'),
-            fontsize=14, ctype='pixel', coord='percentage'))
 
         # create compass
         if image.has_valid_wcs():
             try:
+                x, y = 0.5, 0.5
                 # HACK: force a wcs error here if one is going to happen
                 wcs.add_offset_xy(image, x, y, 1.0, 1.0)
 
@@ -320,16 +313,15 @@ class Pan(GingaPlugin.GlobalPlugin):
 
             except Exception as e:
                 paninfo.compass_wcs = None
-                self.logger.warning("Can't calculate wcs compass: %s" % (
-                    str(e)))
+                self.logger.warning("Can't calculate wcs compass: {}".format(e))
                 try:
                     # log traceback, if possible
                     (type_, value_, tb) = sys.exc_info()
                     tb_str = "".join(traceback.format_tb(tb))
-                    self.logger.error("Traceback:\n%s" % (tb_str))
+                    self.logger.debug("Traceback:\n%s" % (tb_str))
                 except Exception:
                     tb_str = "Traceback information unavailable."
-                    self.logger.error(tb_str)
+                    self.logger.debug(tb_str)
 
         self.panset(channel.fitsimage, channel, paninfo)
 
@@ -337,19 +329,13 @@ class Pan(GingaPlugin.GlobalPlugin):
         image = fitsimage.get_image()
         if image is None or not paninfo.panimage.viewable(image):
             paninfo.panimage.clear()
-            return
 
         x, y = fitsimage.get_pan()
         points = fitsimage.get_pan_rect()
 
-        # calculate pan position point radius
-        p_image = paninfo.panimage.get_image()  # noqa
-        try:
-            obj = paninfo.panimage.canvas.get_object_by_tag('__image')
-        except KeyError:
-            obj = None
-
-        width, height = image.get_size()
+        limits = fitsimage.get_limits()
+        width = limits[1][0] - limits[0][0]
+        height = limits[1][1] - limits[0][1]
         edgew = math.sqrt(width**2 + height**2)
         radius = int(0.015 * edgew)
 
@@ -375,7 +361,7 @@ class Pan(GingaPlugin.GlobalPlugin):
                     points,
                     color=self.settings.get('pan_rectangle_color', 'red'))))
 
-        paninfo.panimage.zoom_fit()
+        #paninfo.panimage.zoom_fit()
         return True
 
     def motion_cb(self, fitsimage, event, data_x, data_y):

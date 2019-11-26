@@ -124,7 +124,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
         self.canvas.ui_set_active(False)
 
     def resume(self):
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
         self.fv.show_status("Click and drag to position crosshair")
 
     def stop(self):

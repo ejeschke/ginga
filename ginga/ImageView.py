@@ -25,6 +25,7 @@ from ginga import colors, trcalc
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util import addons
+from ginga.util import rgb_cms, addons, vip
 
 __all__ = ['ImageViewBase']
 
@@ -211,6 +212,8 @@ class ImageViewBase(Callback.Callbacks):
         klass = AutoCuts.get_autocuts(name)
         self.autocuts = klass(self.logger)
 
+        self.vip = vip.ViewerImageProxy(self)
+
         # PRIVATE IMPLEMENTATION STATE
 
         # flag indicating whether our size has been set
@@ -266,7 +269,7 @@ class ImageViewBase(Callback.Callbacks):
         self.canvas.initialize(None, self, self.logger)
         self.canvas.add_callback('modified', self.canvas_changed_cb)
         self.canvas.set_surface(self)
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self)
 
         # private canvas for drawing
         self.private_canvas = self.canvas
@@ -413,20 +416,6 @@ class ImageViewBase(Callback.Callbacks):
         height, width = data.shape[:2]
         return (width, height)
 
-    def get_data_size(self):
-        """Get the dimensions of the image currently being displayed.
-
-        Returns
-        -------
-        size : tuple
-            Image dimensions in the form of ``(width, height)``.
-
-        """
-        image = self.get_image()
-        if image is None:
-            raise ImageViewNoDataError("No data found")
-        return image.get_size()
-
     def get_settings(self):
         """Get the settings used by this instance.
 
@@ -448,6 +437,17 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         return self.logger
+
+    def get_vip(self):
+        """Get the ViewerImageProxy object used by this instance.
+
+        Returns
+        -------
+        vip : `~ginga.util.vip.ViewerImageProxy`
+            A ViewerImageProxy object.
+
+        """
+        return self.vip
 
     def set_renderer(self, renderer):
         """Set and initialize the renderer used by this instance.
@@ -484,7 +484,7 @@ class ImageViewBase(Callback.Callbacks):
         canvas.initialize(None, self, self.logger)
         canvas.add_callback('modified', self.canvas_changed_cb)
         canvas.set_surface(self)
-        canvas.ui_set_active(True)
+        canvas.ui_set_active(True, viewer=self)
 
         self._imgobj = None
 
@@ -495,7 +495,7 @@ class ImageViewBase(Callback.Callbacks):
 
             if private_canvas != canvas:
                 private_canvas.set_surface(self)
-                private_canvas.ui_set_active(True)
+                private_canvas.ui_set_active(True, viewer=self)
                 private_canvas.add_callback('modified', self.canvas_changed_cb)
 
         # sanity check that we have a private canvas, and if not,
@@ -1548,6 +1548,20 @@ class ImageViewBase(Callback.Callbacks):
         arr_pts = np.asarray((data_x, data_y)).T
         return self.tform['data_to_native'].to_(arr_pts).T[:2]
 
+    def get_data_size(self):
+        """Get the dimensions of the image currently being displayed.
+
+        Returns
+        -------
+        size : tuple
+            Image dimensions in the form of ``(width, height)``.
+
+        """
+        xy_mn, xy_mx = self.get_limits()
+        ht = abs(xy_mx[1] - xy_mn[1])
+        wd = abs(xy_mx[0] - xy_mn[0])
+        return (wd, ht)
+
     def get_data_pct(self, xpct, ypct):
         """Calculate new data size for the given axis ratios.
         See :meth:`get_limits`.
@@ -1563,12 +1577,8 @@ class ImageViewBase(Callback.Callbacks):
             Scaled dimensions.
 
         """
-        xy_mn, xy_mx = self.get_limits()
-
-        width = abs(xy_mx[0] - xy_mn[0])
-        height = abs(xy_mx[1] - xy_mn[1])
-
-        x, y = int(float(xpct) * width), int(float(ypct) * height)
+        wd, ht = self.get_data_size()
+        x, y = int(float(xpct) * wd), int(float(ypct) * ht)
         return (x, y)
 
     def get_pan_rect(self):
@@ -1641,19 +1651,9 @@ class ImageViewBase(Callback.Callbacks):
         Returns
         -------
         value
-            Data slice.
-
-        Raises
-        ------
-        ginga.ImageView.ImageViewNoDataError
-            Image not found.
-
+            Data value.
         """
-        image = self.get_image()
-        if image is not None:
-            return image.get_data_xy(data_x, data_y)
-
-        raise ImageViewNoDataError("No image found")
+        return self.vip.get_data_xy(data_x, data_y)
 
     def get_pixel_distance(self, x1, y1, x2, y2):
         """Calculate distance between the given pixel positions.
@@ -2320,6 +2320,7 @@ class ImageViewBase(Callback.Callbacks):
 
         image = self.get_image()
         if image is None:
+            #image = self.vip
             return
 
         loval, hival = autocuts.calc_cut_levels(image)
@@ -2450,7 +2451,7 @@ class ImageViewBase(Callback.Callbacks):
         state = (self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy'])
         self.renderer.transform_2d(state)
 
-    def copy_attributes(self, dst_fi, attrlist, share=False):
+    def copy_attributes(self, dst_fi, attrlist, share=False, whence=0):
         """Copy interesting attributes of our configuration to another
         image view.
 
@@ -2471,51 +2472,59 @@ class ImageViewBase(Callback.Callbacks):
         """
         # TODO: change API to just go with settings names?
         keylist = []
-        whence = 3.0
+        _whence = 3.0
 
-        if 'transforms' in attrlist:
-            keylist.extend(['flip_x', 'flip_y', 'swap_xy'])
-            whence = min(whence, 2.5)
+        if whence <= 0.0:
+            if 'limits' in attrlist:
+                keylist.extend(['limits'])
+                _whence = min(_whence, 0.0)
 
-        if 'rotation' in attrlist:
-            keylist.extend(['rot_deg'])
-            whence = min(whence, 2.6)
+            if 'zoom' in attrlist:
+                keylist.extend(['scale'])
+                _whence = min(_whence, 0.0)
 
-        if 'autocuts' in attrlist:
-            keylist.extend(['autocut_method', 'autocut_params'])
-            whence = min(whence, 1.0)
+            if 'interpolation' in attrlist:
+                keylist.extend(['interpolation'])
+                _whence = min(_whence, 0.0)
 
-        if 'cutlevels' in attrlist:
-            keylist.extend(['cuts'])
-            whence = min(whence, 1.0)
+            if 'pan' in attrlist:
+                keylist.extend(['pan'])
+                _whence = min(_whence, 0.0)
 
-        if 'rgbmap' in attrlist:
-            keylist.extend(['color_algorithm', 'color_hashsize',
-                            'color_map', 'intensity_map',
-                            'color_array', 'shift_array'])
-            whence = min(whence, 2.0)
+        if whence <= 1.0:
+            if 'autocuts' in attrlist:
+                keylist.extend(['autocut_method', 'autocut_params'])
+                _whence = min(_whence, 1.0)
 
-        if 'icc' in attrlist:
-            keylist.extend(['icc_output_profile', 'icc_output_intent',
-                            'icc_proof_profile', 'icc_proof_intent',
-                            'icc_black_point_compensation'])
-            whence = min(whence, 2.3)
+            if 'cutlevels' in attrlist:
+                keylist.extend(['cuts'])
+                _whence = min(_whence, 1.0)
 
-        if 'limits' in attrlist:
-            keylist.extend(['limits'])
-            whence = min(whence, 0.0)
+        if whence <= 2.0:
+            if 'rgbmap' in attrlist:
+                keylist.extend(['color_algorithm', 'color_hashsize',
+                                'color_map', 'intensity_map',
+                                'color_array', 'shift_array'])
+                _whence = min(_whence, 2.0)
 
-        if 'zoom' in attrlist:
-            keylist.extend(['scale'])
-            whence = min(whence, 0.0)
+        if whence <= 2.3:
+            if 'icc' in attrlist:
+                keylist.extend(['icc_output_profile', 'icc_output_intent',
+                                'icc_proof_profile', 'icc_proof_intent',
+                                'icc_black_point_compensation'])
+                _whence = min(_whence, 2.3)
 
-        if 'interpolation' in attrlist:
-            keylist.extend(['interpolation'])
-            whence = min(whence, 0.0)
+        if whence <= 2.5:
+            if 'transforms' in attrlist:
+                keylist.extend(['flip_x', 'flip_y', 'swap_xy'])
+                _whence = min(_whence, 2.5)
 
-        if 'pan' in attrlist:
-            keylist.extend(['pan'])
-            whence = min(whence, 0.0)
+        if whence <= 2.6:
+            if 'rotation' in attrlist:
+                keylist.extend(['rot_deg'])
+                _whence = min(_whence, 2.6)
+
+        whence = max(_whence, whence)
 
         with dst_fi.suppress_redraw:
             if share:

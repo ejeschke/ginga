@@ -332,7 +332,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         self.canvas.ui_set_active(False)
 
     def resume(self):
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
         self.fv.show_status("Draw a ruler with the right mouse button")
 
     def stop(self):
