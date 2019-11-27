@@ -381,6 +381,8 @@ class NormImage(Image):
             Param(name='optimize', type=_bool,
                   default=True, valid=[False, True],
                   description="Optimize rendering for this object"),
+            ## Param(name='cuts', type=tuple, default=None,
+            ##       description="Tuple of (lo, hi) cut levels for image"),
             ## Param(name='rgbmap', type=?,
             ##       description="RGB mapper for the image"),
             ## Param(name='autocuts', type=?,
@@ -388,7 +390,7 @@ class NormImage(Image):
         ]
 
     def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
-                 interpolation=None, linewidth=0, linestyle='solid',
+                 interpolation=None, cuts=None, linewidth=0, linestyle='solid',
                  color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
@@ -400,6 +402,7 @@ class NormImage(Image):
                                         showcap=showcap, optimize=optimize,
                                         **kwdargs)
         self.rgbmap = rgbmap
+        self.cuts = cuts
         self.autocuts = autocuts
 
     def draw_image(self, viewer, dstarr, whence=0.0):
@@ -462,7 +465,10 @@ class NormImage(Image):
             autocuts = viewer.autocuts
 
         # Apply cut levels
-        loval, hival = viewer.t_['cuts']
+        if self.cuts is not None:
+            loval, hival = self.cuts
+        else:
+            loval, hival = viewer.t_['cuts']
         newdata = autocuts.cut_levels(data, loval, hival,
                                       vmin=vmin, vmax=vmax)
         return newdata
