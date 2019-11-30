@@ -433,11 +433,6 @@ class RGBMapper(Callback.Callbacks):
         elif len(image_order) == 2:
             mj, aj = self.get_order_indexes(image_order, 'MA')
             out[..., [ri, gi, bi]] = self.arr[idx[..., mj]]
-            ais = self.get_order_indexes(rgbobj.get_order(), 'A')
-            if len(ais) > 0:
-                ai = ais[0]
-                # alpha channel is passed directly through
-                out[..., ai] = idx[..., aj].astype(out.dtype)
 
         else:
             # <== indexes already contain RGB info.

@@ -423,6 +423,24 @@ class NormImage(Image):
         else:
             rgbmap = viewer.get_rgbmap()
 
+        image_order = self.image.get_order()
+
+        if (whence <= 0.0) or (not self.optimize):
+            # if image has an alpha channel, then strip it off and save
+            # it until it is recombined later with the colorized output
+            # this saves us having to deal with an alpha band in the
+            # cuts leveling and RGB mapping routines
+            img_arr = cache.cutout
+            if 'A' not in image_order:
+                cache.alpha = None
+            else:
+                # normalize alpha array to the final output range
+                mn, mx = trcalc.get_minmax_dtype(img_arr.dtype)
+                a_idx = image_order.index('A')
+                cache.alpha = (img_arr[..., a_idx] / mx *
+                               rgbmap.maxc).astype(rgbmap.dtype)
+                cache.cutout = img_arr[..., 0:a_idx]
+
         if (whence <= 1.0) or (cache.prergb is None) or (not self.optimize):
             # apply visual changes prior to color mapping (cut levels, etc)
             vmax = rgbmap.get_hash_size() - 1
@@ -438,20 +456,22 @@ class NormImage(Image):
 
         t3 = time.time()
         dst_order = viewer.get_rgb_order()
-        image_order = self.image.get_order()
-        get_order = dst_order
 
         if (whence <= 2.0) or (cache.rgbarr is None) or (not self.optimize):
             # get RGB mapped array
             rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
                                          image_order=image_order)
-            cache.rgbarr = rgbobj.get_array(get_order)
+            cache.rgbarr = rgbobj.get_array(dst_order)
+
+            if cache.alpha is not None and 'A' in dst_order:
+                a_idx = dst_order.index('A')
+                cache.rgbarr[..., a_idx] = cache.alpha
 
         t4 = time.time()
         # composite the image into the destination array at the
         # calculated position
         trcalc.overlay_image(dstarr, cache.cvs_pos, cache.rgbarr,
-                             dst_order=dst_order, src_order=get_order,
+                             dst_order=dst_order, src_order=dst_order,
                              alpha=self.alpha, fill=True, flipy=False)
 
         t5 = time.time()
@@ -474,7 +494,7 @@ class NormImage(Image):
         return newdata
 
     def _reset_cache(self, cache):
-        cache.setvals(cutout=None, prergb=None, rgbarr=None,
+        cache.setvals(cutout=None, alpha=None, prergb=None, rgbarr=None,
                       drawn=False, cvs_pos=(0, 0))
         return cache
 
