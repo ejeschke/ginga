@@ -12,6 +12,11 @@ An instance can be opened for each channel.
 
 **Usage**
 
+Start the ``Crosshair`` plugin from the "Operation->Utils" (below) or
+"Plugins->Utils" (above) menu, as per default layout.
+The tab should show up under the "Dialogs" tab in the viewer to the right
+as ``<channel name>:Crosshair``.
+
 Select the appropriate type of output in the "Format" drop-down
 box in the UI: "xy" for pixel coordinates, "coords" for the WCS
 coordinates, and "value" for the value at the crosshair position.

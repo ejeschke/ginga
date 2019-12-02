@@ -10,6 +10,10 @@ to the image and showing the example values along the range.
 
 **Usage**
 
+This plugin is automatically loaded in the reference viewer by default
+and appears under the image display. There is no option to start or
+close it under "Operation" nor "Plugins" menu.
+
 Clicking and dragging in the ``Colorbar`` window will shift the colormap
 left or right.  Scrolling will stretch or shrink the colormap at the
 cursor position.  Right-clicking will restore the colormap from any

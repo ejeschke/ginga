@@ -2,9 +2,7 @@
 # Please see the file LICENSE.txt for details.
 """
 The ``Cursor`` plugin displays a summary line of text that changes as the
-user moves the cursor around an image.  In the standard reference viewer
-configuration, it appears as a line containing green text just below the
-``Colorbar`` plugin.
+user moves the cursor around an image.
 
 **Plugin Type: Global**
 
@@ -12,7 +10,11 @@ configuration, it appears as a line containing green text just below the
 
 **Usage**
 
-``Cursor`` simply tracks the cursor as it moves around an image and displays
+In the standard reference viewer configuration, it appears as a line
+containing green text just below the ``Colorbar`` plugin.
+There is no option to start or close it under "Operation" nor "Plugins" menu.
+
+``Cursor`` tracks the cursor as it moves around an image and displays
 information about the pixel coordinates, WCS coordinates (if available)
 and the value of the pixel under the cursor.
 

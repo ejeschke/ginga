@@ -14,10 +14,16 @@ eyes.
 it cycles through the images in the channel, or as a global
 plugin, in which case it cycles through the channels.
 
-Local plugins are started from the "Operations" button, while
-global plugins are started from the "Plugins" menu.
-
 **Usage**
+
+Start the plugin from the "Operation->Analysis" (below) or
+"Plugins->Analysis" (above) menu, as per default layout.
+To start it as a global plugin, choose "Blink Channels [G]" and
+a new tab named "Blink Channels" would appear at the same level
+as "Dialogs" tab in the viewer to the right.
+To start as a local plugin, choose "Blink Images" instead and
+a new tab would appear *under* the "Dialogs" tab as
+``<channel name>:Blink``.
 
 Set the interval between image changes in terms of seconds in
 the box labeled "Interval".  Then, press "Start Blink" to start

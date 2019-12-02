@@ -33,9 +33,11 @@ defining three cone search catalogs for guide stars::
         def post_gui_config(ginga):
             pass
 
-Then, start Ginga and then start the ``Catalogs`` local plugin from the
-channel you want to perform searchs on. You will see the catalogs listed
-in a drop-down menu on the plugin GUI.
+Then, start the ``Catalogs`` plugin from the "Operation->Utils" (below) or
+"Plugins->Utils" (above) menu, as per default layout.
+The tab should show up under the
+"Dialogs" tab in the viewer to the right as ``<channel name>:Catalogs``.
+You will see the catalogs listed in a drop-down menu on the plugin GUI.
 
 Draw a shape on the displayed image and adjust search parameters as desired.
 When you are ready, press on the button to perform the search.

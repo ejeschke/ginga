@@ -13,22 +13,33 @@ This plugin provides a command line interface to the reference viewer.
 
 **Usage**
 
+Start the plugin from the "Operation->Debug" (below) or
+"Plugins->Debug" (above) menu, as per default layout, and then choose
+"Command Line [G]". A tab named "Command" should show up under "Info"
+tab in the viewer to the left, next to "Synopsis".
+
 Get a list of commands and parameters::
 
-        g> help
+    help
 
 Execute a shell command::
 
-        g> !cmd arg arg ...
+    !cmd arg arg ...
 
 **Notes**
 
 An especially powerful tool is to use the ``reload_local`` and
 ``reload_global`` commands to reload a plugin when you are developing
-that plugin.  This avoids having to restart the reference viewer and
+that plugin. This avoids having to restart the reference viewer and
 laboriously reload data, etc.  Simply close the plugin, execute the
 appropriate "reload" command (see the help!) and then start the plugin
-again.
+again; e.g.::
+
+    reload_local Histogram
+
+::
+
+    reload_global Zoom
 
 .. note:: If you have modifed modules *other* than the plugin itself,
           these will not be reloaded by these commands.

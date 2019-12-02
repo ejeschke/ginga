@@ -7,16 +7,23 @@ Keep track of buffer change history.
 
 ``ChangeHistory`` is a global plugin.  Only one instance can be opened.
 
+**Usage**
+
+Start the plugin from the "Operation->Utils" (below) or
+"Plugins->Utils" (above) menu, as per default layout, and then choose
+"History [G]". The tab named "History" should show up at the same level
+as "Dialogs" tab in the viewer to the right.
+
 This plugin is used to log any changes to data buffer. For example,
 a change log would appear here if a new image is added to a mosaic via the
 ``Mosaic`` plugin. Like ``Contents``,
 the log is sorted by channel, and then by image name.
 
-**Usage**
-
 History should stay no matter what channel or image is active.
 New history can be added, but old history cannot be deleted,
 unless the image/channel itself is deleted.
+
+**Developer Info**
 
 The ``redo()`` method picks up an ``'add-image-info'`` event and displays
 related metadata here. The metadata is obtained as follows::
