@@ -23,13 +23,11 @@ import queue as Queue  # noqa
 
 # Local application imports
 from ginga import cmap, imap
-from ginga import BaseImage
 from ginga.misc import Bunch, Timer, Future
 from ginga.util import catalog, iohelper, loader, toolbox
 from ginga.util import viewer as gviewer
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
-from ginga.canvas.types.image import Image
 
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager

@@ -10,7 +10,6 @@ Usage:
    $ ./mosaic.py -o output.fits input1.fits input2.fits ... inputN.fits
 """
 
-import sys
 import os
 import math
 import time
@@ -452,7 +451,6 @@ class CanvasMosaicer(Callback.Callbacks):
             rotdata = trcalc.rotate(rotdata, rot_deg,
                                     #rotctr_x=ctr_x, rotctr_y=ctr_y
                                     logger=self.logger, pad=0)
-
 
         # Flip X due to negative CDELT1
         if np.sign(cdelt1) != np.sign(self.cdelt1_ref):

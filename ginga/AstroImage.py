@@ -13,7 +13,6 @@ import numpy as np
 
 from ginga.util import wcs, wcsmod
 from ginga.BaseImage import BaseImage, ImageError, Header
-from ginga.misc import Bunch
 
 
 class AstroHeader(Header):

@@ -25,17 +25,13 @@ To create a new mosaic, set the FOV and drag files onto the display window.
 Images must have a working WCS.
 
 """
-import math
 import time
 import threading
 
-import numpy as np
-
 from ginga.AstroImage import AstroImage
-from ginga.util import wcs, iqcalc, dp, io_fits
+from ginga.util import dp, io_fits
 from ginga.util.mosaic import CanvasMosaicer
-from ginga import GingaPlugin, trcalc
-from ginga.misc import Task
+from ginga import GingaPlugin
 from ginga.gw import Widgets
 
 
