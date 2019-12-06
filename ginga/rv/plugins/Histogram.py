@@ -308,7 +308,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.draw_cb(canvas, tag)
 
     def get_data(self, image, x1, y1, x2, y2, z=0):
-        tup = image.cutout_adjust(x1, y1, x2, y2, z=z)
+        tup = image.cutout_adjust(x1, y1, x2 + 1, y2 + 1, z=z)
         return tup[0]
 
     def histogram(self, image, x1, y1, x2, y2, z=None, pct=1.0, numbins=2048):

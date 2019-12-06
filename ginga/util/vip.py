@@ -178,15 +178,15 @@ class ViewerImageProxy:
         xstep, ystep = int(xstep), int(ystep)
 
         # output size
-        x_len = len(range(x1, x2 + 1, xstep))
-        y_len = len(range(y1, y2 + 1, ystep))
+        x_len = len(range(x1, x2, xstep))
+        y_len = len(range(y1, y2, ystep))
 
         # create result array, filled with fill value
         data_np = np.full((y_len, x_len), fill_value, dtype=astype)
 
         # calculate pixel containment indexes in cutout bbox
-        yi = np.mgrid[y1:y2 + 1].reshape(-1, 1)
-        xi = np.mgrid[x1:x2 + 1].reshape(1, -1)
+        yi = np.mgrid[y1:y2].reshape(-1, 1)
+        xi = np.mgrid[x1:x2].reshape(1, -1)
         pts = np.asarray((xi, yi)).T
 
         canvas = self.viewer.get_canvas()
@@ -212,7 +212,7 @@ class ViewerImageProxy:
             xpos, ypos = cv_img.crdmap.to_data((cv_img.x, cv_img.y))
             xpos, ypos = int(xpos), int(ypos)
             xstart, ystart = x1 - xpos, y1 - ypos
-            xstop, ystop = x2 - xpos + 1, y2 - ypos + 1
+            xstop, ystop = x2 - xpos, y2 - ypos
             yii, xii = np.mgrid[ystart:ystop:ystep, xstart:xstop:xstep]
             yi, xi = yii[mask].ravel(), xii[mask].ravel()
 
