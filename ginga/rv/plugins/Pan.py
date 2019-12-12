@@ -165,6 +165,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         fitsimage.copy_attributes(panimage, self.copy_attrs)
 
         fitsimage.add_callback('redraw', self.redraw_cb, channel)
+        fitsimage.add_callback('image-set',
+                               lambda viewer, image: self._redo(channel, image))
 
         self.logger.debug("channel '%s' added." % (channel.name))
 
@@ -212,7 +214,10 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     # CALLBACKS
 
-    def redo(self, channel, image):
+    def _redo(self, channel, image):
+        """NOTE: this plugin is triggered not by a CHANNEL getting a new
+        image, but by the VIEWER getting a new image, OR the viewer redrawing.
+        """
         if not self.gui_up:
             return
         self.logger.debug("redo")

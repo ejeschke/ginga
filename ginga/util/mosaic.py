@@ -443,6 +443,7 @@ class CanvasMosaicer(Callback.Callbacks):
             rotdata = data_np
 
         # Finish with any necessary rotation of piece
+        ignore_alpha = False
         if not np.isclose(rot_dy, 0.0):
             rot_deg = rot_dy
             minv, maxv = trcalc.get_minmax_dtype(rotdata.dtype)
@@ -451,6 +452,7 @@ class CanvasMosaicer(Callback.Callbacks):
             rotdata = trcalc.rotate(rotdata, rot_deg,
                                     #rotctr_x=ctr_x, rotctr_y=ctr_y
                                     logger=self.logger, pad=0)
+            ignore_alpha = True
 
         # Flip X due to negative CDELT1
         if np.sign(cdelt1) != np.sign(self.cdelt1_ref):
@@ -465,8 +467,8 @@ class CanvasMosaicer(Callback.Callbacks):
                                        flip_x=flip_x, flip_y=flip_y)
 
         # new wrapper for transformed image
-        new_image = AstroImage.AstroImage(data_np=rotdata,
-                                          metadata=dict(header=header))
+        metadata = dict(header=header, ignore_alpha=ignore_alpha)
+        new_image = AstroImage.AstroImage(data_np=rotdata, metadata=metadata)
 
         # Get size and data of new image
         ht, wd = rotdata.shape[:2]

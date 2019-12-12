@@ -170,7 +170,12 @@ class BaseImage(ViewerObjectBase):
             ImageError("Indexes out of range: (x=%d, y=%d)" % (
                 x, y))
         view = np.s_[y, x]
-        return self._slice(view)
+        res = self._slice(view)
+        if isinstance(res, np.ndarray) and self.get('ignore_alpha', False):
+            # <-- this image has a "hidden" alpha array
+            # NOTE: assumes that data is at index 0
+            res = res[0]
+        return res
 
     def set_data(self, data_np, metadata=None, order=None, astype=None):
         """Use this method to SHARE (not copy) the incoming array.

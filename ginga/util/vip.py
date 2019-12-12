@@ -408,8 +408,8 @@ class ViewerImageProxy:
             y1, y2 = max(xy_mn[1], y1), min(y2, xy_mx[1] - 1)
 
         # calculate pixel containment mask in bbox
-        yi = np.mgrid[y1:y2 + 1].reshape(-1, 1)
-        xi = np.mgrid[x1:x2 + 1].reshape(1, -1)
+        yi = np.mgrid[y1:y2].reshape(-1, 1)
+        xi = np.mgrid[x1:x2].reshape(1, -1)
         pts = np.asarray((xi, yi)).T
         contains = shape_obj.contains_pts(pts)
 
@@ -541,3 +541,9 @@ class ViewerImageProxy:
             return image.pixtoradec(pt[0], pt[1], format=format, coords=coords)
 
         raise ValueError("No image found for WCS conversion")
+
+    def has_valid_wcs(self):
+        ld_image = self.viewer.get_image()
+        if ld_image is not None:
+            return ld_image.has_valid_wcs()
+        return False
