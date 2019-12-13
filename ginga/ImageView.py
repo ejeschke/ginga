@@ -793,7 +793,7 @@ class ImageViewBase(Callback.Callbacks):
 
             # update viewer limits
             wd, ht = image.get_size()
-            limits = ((self.data_off, self.data_off),
+            limits = ((-self.data_off, -self.data_off),
                       (float(wd - self.data_off),
                        float(ht - self.data_off)))
             self.t_.set(limits=limits)
