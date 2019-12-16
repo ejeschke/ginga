@@ -260,7 +260,7 @@ class Image(OnePointMixin, CanvasObjectBase):
     def get_coords(self):
         x1, y1 = self.crdmap.to_data((self.x, self.y))
         wd, ht = self.get_scaled_wdht()
-        x2, y2 = x1 + wd, y1 + ht
+        x2, y2 = x1 + wd - 1, y1 + ht - 1
         return (x1, y1, x2, y2)
 
     def get_llur(self):

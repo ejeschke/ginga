@@ -322,17 +322,29 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
         # Is there a more efficient way to do this?
         yi = np.mgrid[0:new_ht].reshape(-1, 1)
         xi = np.mgrid[0:new_wd].reshape(1, -1)
-        iscale_x = float(old_wd) / float(new_wd)
-        iscale_y = float(old_ht) / float(new_ht)
+
+        if new_wd == 0:
+            iscale_x = 0.0
+        else:
+            iscale_x = float(old_wd) / float(new_wd)
+        if new_ht == 0:
+            iscale_y = 0.0
+        else:
+            iscale_y = float(old_ht) / float(new_ht)
 
         xi = (x1 + xi * iscale_x).clip(0, max_x).astype(np.int, copy=False)
         yi = (y1 + yi * iscale_y).clip(0, max_y).astype(np.int, copy=False)
         wd, ht = xi.shape[1], yi.shape[0]
 
         # bounds check against shape (to protect future data access)
-        xi_max, yi_max = xi[0, -1], yi[-1, 0]
-        assert xi_max <= max_x, ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
-        assert yi_max <= max_y, ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
+        if new_wd > 0:
+            xi_max = xi[0, -1]
+            if xi_max > max_x:
+                raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
+        if new_ht > 0:
+            yi_max = yi[-1, 0]
+            if yi_max > max_y:
+                raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
 
         view = np.s_[yi, xi]
 
@@ -374,9 +386,19 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
         yi = np.mgrid[0:new_ht].reshape(-1, 1, 1)
         xi = np.mgrid[0:new_wd].reshape(1, -1, 1)
         zi = np.mgrid[0:new_dp].reshape(1, 1, -1)
-        iscale_x = float(old_wd) / float(new_wd)
-        iscale_y = float(old_ht) / float(new_ht)
-        iscale_z = float(old_dp) / float(new_dp)
+
+        if new_wd == 0:
+            iscale_x = 0.0
+        else:
+            iscale_x = float(old_wd) / float(new_wd)
+        if new_ht == 0:
+            iscale_y = 0.0
+        else:
+            iscale_y = float(old_ht) / float(new_ht)
+        if new_dp == 0:
+            iscale_z = 0.0
+        else:
+            iscale_z = float(old_dp) / float(new_dp)
 
         xi = (x1 + xi * iscale_x).clip(0, max_x).astype(np.int, copy=False)
         yi = (y1 + yi * iscale_y).clip(0, max_y).astype(np.int, copy=False)
@@ -384,10 +406,18 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
         wd, ht, dp = xi.shape[1], yi.shape[0], zi.shape[2]
 
         # bounds check against shape (to protect future data access)
-        xi_max, yi_max, zi_max = xi[0, -1, 0], yi[-1, 0, 0], zi[0, 0, -1]
-        assert xi_max <= max_x, ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
-        assert yi_max <= max_y, ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
-        assert zi_max <= max_z, ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
+        if new_wd > 0:
+            xi_max = xi[0, -1, 0]
+            if xi_max > max_x:
+                raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
+        if new_ht > 0:
+            yi_max = yi[-1, 0, 0]
+            if yi_max > max_y:
+                raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
+        if new_dp > 0:
+            zi_max = zi[0, 0, -1]
+            if zi_max > max_z:
+                raise ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
 
         view = np.s_[yi, xi, zi]
 

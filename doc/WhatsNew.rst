@@ -11,6 +11,10 @@ Ver 3.1.0 (unreleased)
   changed
 - Fixed bugs relating to drawing XRange, YRange and Rectangle objects on
   rotated canvas
+- Fixed a bug with fit image to window (zoom_fit) which was off by half
+  a pixel
+- Fixed an issue where an error message appears in the log if the scale
+  is so small the image is invisible
 
 Ver 3.0.0 (2019-09-20)
 ======================
