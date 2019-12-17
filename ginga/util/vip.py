@@ -502,15 +502,16 @@ class ViewerImageProxy:
 
         image, pt = self.get_image_at_pt((data_x, data_y))
         ld_image = self.viewer.get_image()
+        data_off = self.viewer.data_off
 
         if ld_image is not None:
             info = ld_image.info_xy(data_x, data_y, settings)
 
             if image is not None and image is not ld_image:
                 info.image_x, info.image_y = pt
-                # TODO: Hmmm, why do we need to SUBTRACT half a pixel here?
-                info.value = self.get_data_xy(int(data_x - 0.5),
-                                              int(data_y - 0.5))
+                _d_x, _d_y = (int(np.floor(data_x + data_off)),
+                              int(np.floor(data_y + data_off)))
+                info.value = self.get_data_xy(_d_x, _d_y)
 
         elif image is not None:
             info = image.info_xy(pt[0], pt[1], settings)
