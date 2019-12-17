@@ -492,7 +492,8 @@ class AstroImage(BaseImage):
         try:
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            value = self.get_data_xy(int(data_x + 0.5), int(data_y + 0.5))
+            _d_x, _d_y = int(np.floor(data_x + 0.5)), int(np.floor(data_y + 0.5))
+            value = self.get_data_xy(_d_x, _d_y)
 
         except Exception as e:
             value = None

@@ -15,6 +15,8 @@ Ver 3.1.0 (unreleased)
   a pixel
 - Fixed an issue where an error message appears in the log if the scale
   is so small the image is invisible
+- Fixed an issue where the readout under the cursor for value is
+  reported for an empty row to the left and column below of pixels
 
 Ver 3.0.0 (2019-09-20)
 ======================

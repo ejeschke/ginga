@@ -548,7 +548,10 @@ class BaseImage(ViewerObjectBase):
     def info_xy(self, data_x, data_y, settings):
         # Get the value under the data coordinates
         try:
-            value = self.get_data_xy(int(data_x), int(data_y))
+            # We report the value across the pixel, even though the coords
+            # change halfway across the pixel
+            _d_x, _d_y = int(np.floor(data_x + 0.5)), int(np.floor(data_y + 0.5))
+            value = self.get_data_xy(_d_x, _d_y)
 
         except Exception as e:
             value = None
