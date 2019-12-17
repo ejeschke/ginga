@@ -126,6 +126,7 @@ class ViewerImageProxy:
                 res.append(obj)
             elif isinstance(obj, Canvas):
                 self._get_images(res, obj)
+        return res
 
     # ----- for compatibility with BaseImage objects -----
 
@@ -468,8 +469,8 @@ class ViewerImageProxy:
 
     def get_size(self):
         xy_mn, xy_mx = self.viewer.get_limits()
-        wd = abs(xy_mx[0] - xy_mn[0])
-        ht = abs(xy_mx[1] - xy_mn[1])
+        wd = int(abs(xy_mx[0] - xy_mn[0]))
+        ht = int(abs(xy_mx[1] - xy_mn[1]))
         return (wd, ht)
 
     def get_depth(self):
@@ -490,18 +491,12 @@ class ViewerImageProxy:
         return (ctr_x, ctr_y)
 
     def get_data_xy(self, x, y):
-        # get first canvas image object found under the cursor
-        image, pt = self.get_image_at_pt((x, y))
-
-        if (image is None) or not isinstance(image, BaseImage.BaseImage):
-            # No compatible image plotted to this space
+        x1, y1 = int(x), int(y)
+        data = self.cutout_data(x1, y1, x1 + 1, y1 + 1)
+        val = data[0, 0]
+        if np.isnan(val):
             return None
-
-        if image.ndim < 2:
-            return None
-
-        data_x, data_y = int(pt[0]), int(pt[1])
-        return image.get_data_xy(data_x, data_y)
+        return val
 
     def info_xy(self, data_x, data_y, settings):
 
@@ -513,8 +508,9 @@ class ViewerImageProxy:
 
             if image is not None and image is not ld_image:
                 info.image_x, info.image_y = pt
-                info.value = image.get_data_xy(int(pt[0] + 0.5),
-                                               int(pt[1] + 0.5))
+                # TODO: Hmmm, why do we need to SUBTRACT half a pixel here?
+                info.value = self.get_data_xy(int(data_x - 0.5),
+                                              int(data_y - 0.5))
 
         elif image is not None:
             info = image.info_xy(pt[0], pt[1], settings)
