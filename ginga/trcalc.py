@@ -809,7 +809,7 @@ def overlay_image_2d_np(dstarr, pos, srcarr, dst_order='RGBA',
     # and use it, otherwise use scalar keyword parameter
     if (src_ch > 3) and ('A' in src_order):
         sa_idx = src_order.index('A')
-        alpha = srcarr[:, :, sa_idx]
+        alpha = srcarr[:src_ht, :src_wd, sa_idx]
         if np.all(np.isclose(alpha, src_max_val)):
             # optimization to avoid blending if all alpha elements are max
             alpha = 1.0
@@ -936,7 +936,7 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     # and use it, otherwise use scalar keyword parameter
     if (src_ch > 3) and ('A' in src_order):
         sa_idx = src_order.index('A')
-        alpha = srcarr[:, :, :, sa_idx]
+        alpha = srcarr[:src_ht, :src_wd, :src_dp, sa_idx]
         if np.all(np.isclose(alpha, src_max_val)):
             # optimization to avoid blending if all alpha elements are max
             alpha = 1.0
