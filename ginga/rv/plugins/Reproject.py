@@ -27,6 +27,7 @@ The parameters for the reprojection can be set in the GUI controls.
 """
 import os.path
 import numpy as np
+#np.set_printoptions(threshold=np.inf)
 from astropy.io import fits
 import reproject
 
@@ -152,6 +153,7 @@ class Reproject(GingaPlugin.LocalPlugin):
         return True
 
     def stop(self):
+        self.img_out = None
         self._split_sizes = self.w.splitter.get_sizes()
 
     def redo(self):
@@ -166,7 +168,8 @@ class Reproject(GingaPlugin.LocalPlugin):
         if shape is None:
             shape = image.shape
 
-        proj_out = self.wcs_out
+        header = self.img_out.get_header()
+        proj_out = fits.Header(header)
 
         method = _choose[self._proj_type]['method']
 
@@ -186,6 +189,8 @@ class Reproject(GingaPlugin.LocalPlugin):
 
         # TODO: use mask (probably as alpha mask)
         hdu = fits.PrimaryHDU(data_out)
+        # add conversion wcs keywords
+        hdu.header.update(self.img_out.wcs.wcs.to_header())
         if name is None:
             name = self.get_name(image.get('name'), cache_dir)
 
@@ -197,7 +202,6 @@ class Reproject(GingaPlugin.LocalPlugin):
             hdulst.writeto(path)
             self.logger.info("wrote {}".format(path))
 
-        # TODO: decent header with WCS
         img_out = AstroImage.AstroImage(logger=self.logger)
         img_out.load_hdu(hdu)
         img_out.set(name=name, path=path)
@@ -210,9 +214,7 @@ class Reproject(GingaPlugin.LocalPlugin):
             return
 
         self.rpt_image.set_image(image)
-        #self.wcs_out = image.wcs.wcs
-        header = image.get_header()
-        self.wcs_out = fits.Header(header)
+        self.img_out = image
         self.rpt_image.onscreen_message("WCS set", delay=1.0)
 
     def reproject_cb(self, w):
