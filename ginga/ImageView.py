@@ -723,6 +723,7 @@ class ImageViewBase(Callback.Callbacks):
 
             self._imgobj = NormImage(0, 0, None, alpha=1.0,
                                      interpolation=None)
+            self._imgobj.is_data = True
             self._imgobj.add_callback('image-set', self._image_set_cb)
 
         return self._imgobj

@@ -87,6 +87,8 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         self.image_id = str(uuid.uuid4())
         # images are not editable by default
         self.editable = False
+        # is this image "data" or something else
+        self.is_data = False
 
         self.enable_callback('image-set')
 

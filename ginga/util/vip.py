@@ -120,12 +120,12 @@ class ViewerImageProxy:
     ##         idx = 0
     ##     return view + (idx:idx+1,)
 
-    def _get_images(self, res, canvas):
+    def get_images(self, res, canvas):
         for obj in canvas.objects:
-            if isinstance(obj, Image):
+            if isinstance(obj, Image) and obj.is_data:
                 res.append(obj)
             elif isinstance(obj, Canvas):
-                self._get_images(res, obj)
+                self.get_images(res, obj)
         return res
 
     # ----- for compatibility with BaseImage objects -----
@@ -191,8 +191,7 @@ class ViewerImageProxy:
         pts = np.asarray((xi, yi)).T
 
         canvas = self.viewer.get_canvas()
-        images = []
-        self._get_images(images, canvas)
+        images = self.get_images([], canvas)
 
         # iterate through images on this canvas, filling the result
         # array with pixels that overlap in each image

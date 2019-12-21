@@ -509,6 +509,7 @@ class CanvasMosaicer(Callback.Callbacks):
         dc = canvas.get_draw_classes()
         xpos, ypos = image.get_list('xpos', 'ypos')
         img = dc.NormImage(xpos, ypos, image)
+        img.is_data = True
         canvas.add(img, redraw=False)
 
         if self.annotate:
