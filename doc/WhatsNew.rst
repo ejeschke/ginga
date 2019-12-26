@@ -17,6 +17,7 @@ Ver 3.1.0 (unreleased)
   is so small the image is invisible
 - Fixed an issue where the readout under the cursor for value is
   reported for an empty row to the left and column below of pixels
+- Removed dependence on astropy-helpers submodule.
 
 Ver 3.0.0 (2019-09-20)
 ======================

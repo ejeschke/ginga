@@ -11,18 +11,6 @@ os:
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
 
-# The apt packages below are needed for sphinx builds. A full list of packages
-# that can be included can be found here:
-#
-# https://github.com/travis-ci/apt-package-whitelist/blob/master/ubuntu-precise
-
-addons:
-    apt:
-        packages:
-            - graphviz
-            - texlive-latex-extra
-            - dvipng
-
 env:
     global:
         # The following versions are the 'default' for tests, unless
@@ -31,22 +19,13 @@ env:
         - PYTHON_VERSION=3.7
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
-        - SETUP_CMD='test'
         - PIP_DEPENDENCIES=''
-        - MAIN_CMD='python setup.py'
+        - INSTALL_CMD='pip install -e .'
+        - MAIN_CMD='pytest --pyargs ginga doc'
         # *** TODO: We should test the various GUI toolkits that ginga supports
-        # on travis-ci ... probably one build for Python 2 / 3 and each toolkit
+        # on travis-ci ...
         # https://ginga.readthedocs.io/en/latest/install.html#dependences
         - CONDA_DEPENDENCIES='pyqt'
-        # Conda channels now need to be explicitly listed, ci-helpers won't
-        # add astropy and astropy-ci-extras by default.
-        - CONDA_CHANNELS='astropy-ci-extras astropy'
-
-    matrix:
-        # Make sure that egg_info works without dependencies
-        - SETUP_CMD='egg_info'
-        # Try all python versions with the latest Numpy
-        - SETUP_CMD='test'
 
 matrix:
 
@@ -55,13 +34,10 @@ matrix:
 
     include:
 
-        # Do a coverage test in Python 3.
-        # *** TODO: `python setup.py test --coverage` doesn't work yet for `ginga` ... skipping for now
-        # - os: linux
-        #  env: SETUP_CMD='test --coverage'
+        # Try with the latest Numpy
+        - os: linux
 
         # Try older Numpy versions
-        # TODO: Change to ASTROPY_VERSION=lts when PY2 job starts to fail.
         - os: linux
           env: PYTHON_VERSION=3.6 NUMPY_VERSION=1.13
         - os: linux
@@ -73,11 +49,16 @@ matrix:
 
         # Try on Windows
         - os: windows
-          env: SETUP_CMD='test'
 
-        # Do a PEP8 test with flake8 (white-list in setup.cfg)
+        # Do a PEP 8 test with flake8 (white-list in setup.cfg)
         - os: linux
-          env: MAIN_CMD='flake8 ginga --count' SETUP_CMD=''
+          env: MAIN_CMD='flake8 ginga --count' INSTALL_CMD=''
+
+        # Do a PEP 517 test with twine check
+        - os: linux
+          env: CONDA_DEPENDENCIES='' PIP_DEPENDENCIES='pep517 twine'
+               INSTALL_CMD='python -m pep517.build --source .'
+               MAIN_CMD='twine check dist/*'
 
 before_install:
 
@@ -91,7 +72,7 @@ install:
     # We now use the ci-helpers package to set up our testing environment.
     # This is done by using Miniconda and then using conda and pip to install
     # dependencies. Which dependencies are installed using conda and pip is
-    # determined by the CONDA_DEPDENDENCIES and PIP_DEPENDENCIES variables,
+    # determined by the CONDA_DEPENDENCIES and PIP_DEPENDENCIES variables,
     # which should be space-delimited lists of package names. See the README
     # in https://github.com/astropy/ci-helpers for information about the full
     # list of environment variables that can be used to customize your
@@ -112,10 +93,6 @@ install:
     # other dependencies.
 
 script:
-   - $MAIN_CMD $SETUP_CMD
+   - $INSTALL_CMD
+   - $MAIN_CMD
 
-after_success:
-    # If coveralls.io is set up for this package, uncomment the line
-    # below and replace "packagename" with the name of your package.
-    # The coveragerc file may be customized as needed for your package.
-    # - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='ginga/tests/coveragerc'; fi
