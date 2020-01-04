@@ -49,6 +49,23 @@ class TestColors(object):
         with pytest.raises(errtype):
             ginga.colors.lookup_color(*args)
 
+    # Tests for the resolve_color() function
+
+    def test_resolve_color_name(self):
+        expected = (1.0, 0.0, 0.0)
+        actual = ginga.colors.resolve_color('red')
+        assert expected == actual
+
+    def test_resolve_color_hex(self):
+        expected = (1.0, 0.0, 0.0)
+        actual = ginga.colors.resolve_color('#FF0000')
+        assert expected == actual
+
+    def test_resolve_color_tuple(self):
+        expected = (1.0, 0.0, 0.0)
+        actual = ginga.colors.resolve_color(expected)
+        assert expected == actual
+
     # Tests for the get_colors() function
     def test_get_colors_len(self):
         expected = self.color_list_length

@@ -3079,7 +3079,18 @@ class ImageViewBase(Callback.Callbacks):
             RGB values, which should be between 0 and 1, inclusive.
 
         """
-        self.img_bg = (r, g, b)
+        self.set_background((r, g, b))
+
+    def set_background(self, bg):
+        """Set the background color.
+
+        Parameters
+        ----------
+        bg : str or tuple of float
+            color name or tuple of floats, between 0 and 1, inclusive.
+
+        """
+        self.img_bg = colors.resolve_color(bg)
         self.redraw(whence=0)
 
     def get_bg(self):
@@ -3102,8 +3113,19 @@ class ImageViewBase(Callback.Callbacks):
             RGB values, which should be between 0 and 1, inclusive.
 
         """
-        self.img_fg = (r, g, b)
-        self.redraw(whence=3)
+        self.set_foreground((r, g, b))
+
+    def set_foreground(self, fg):
+        """Set the foreground color.
+
+        Parameters
+        ----------
+        fg : str or tuple of float
+            color name or tuple of floats, between 0 and 1, inclusive.
+
+        """
+        self.img_fg = colors.resolve_color(fg)
+        self.redraw(whence=0)
 
     def get_fg(self):
         """Get the foreground color.
