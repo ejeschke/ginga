@@ -477,7 +477,8 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         # We report the value across the pixel, even though the coords
         # change halfway across the pixel
-        data_x, data_y = int(self.lastx + 0.5), int(self.lasty + 0.5)
+        px_off = self.fitsimage.data_off
+        data_x, data_y = int(self.lastx + px_off), int(self.lasty + px_off)
 
         # cutout image data
         data, x1, y1, x2, y2 = image.cutout_radius(data_x, data_y,

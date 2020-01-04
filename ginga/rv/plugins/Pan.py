@@ -369,7 +369,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         except KeyError:
             paninfo.panrect = p_canvas.add(self.dc.CompoundObject(
                 self.dc.Point(
-                    x, y, radius=radius, style='plus',
+                    x, y, radius, style='plus',
                     color=self.settings.get('pan_position_color', 'yellow')),
                 self.dc.Polygon(
                     points,

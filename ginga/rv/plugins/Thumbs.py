@@ -969,7 +969,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
             xt, yt, xi, yi = self._calc_thumb_pos(row, col)
             l2 = []
-            namelbl = canvas.dc.Text(xt, yt, thumbname, color=fg,
+            namelbl = canvas.dc.Text(xt, yt, text=thumbname, color=fg,
                                      fontsize=fontsize, coord='data')
             l2.append(namelbl)
 
