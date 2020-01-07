@@ -20,7 +20,7 @@ env:
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - PIP_DEPENDENCIES=''
-        - INSTALL_CMD='pip install -e .'
+        - INSTALL_CMD='pip install -e .[test]'
         - MAIN_CMD='pytest --pyargs ginga doc'
         # *** TODO: We should test the various GUI toolkits that ginga supports
         # on travis-ci ...
