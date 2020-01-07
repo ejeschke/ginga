@@ -37,11 +37,12 @@ matrix:
         # Try with the latest Numpy
         - os: linux
 
-        # Try older Numpy versions
+        # Try older Numpy version(s)
+        # NOTE: Need NO_HELPERS and extra incantations to prevent conda solver timeout.
         - os: linux
-          env: PYTHON_VERSION=3.6 NUMPY_VERSION=1.13
-        - os: linux
-          env: NUMPY_VERSION=1.14
+          language: python
+          python: 3.6
+          env: PYTHON_VERSION=3.6 NUMPY_VERSION=1.15 NO_HELPERS=true
 
         # Try with Astropy dev and matplotlib installed
         - os: linux
@@ -81,7 +82,7 @@ install:
     # commands in the install: section below.
 
     - git clone git://github.com/astropy/ci-helpers.git
-    - source ci-helpers/travis/setup_conda.sh
+    - if [[ -z $NO_HELPERS ]]; then source ci-helpers/travis/setup_conda.sh; fi
 
     # As described above, using ci-helpers, you should be able to set up an
     # environment with dependencies installed using conda and pip, but in some
@@ -95,4 +96,3 @@ install:
 script:
    - $INSTALL_CMD
    - $MAIN_CMD
-
