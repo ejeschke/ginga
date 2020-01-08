@@ -115,7 +115,7 @@ GTK
 
 Ginga can use GTK 3 (with ``gi``).  (If you have an older version of
 ``pycairo`` package, you may need to install a newer version from
-``pycairo``). 
+``pycairo``).
 
 Tk
 ==
@@ -178,7 +178,7 @@ Installation from Source
 
 #. Unpack, go into the top level directory, and run::
 
-     python setup.py install
+     pip install -e .
 
 ==============================
 Platform Specific Instructions

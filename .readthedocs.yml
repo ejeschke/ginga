@@ -17,11 +17,6 @@ python:
       extra_requirements:
         - docs
         - recommended
-    - method: setuptools
-      path: .
-
-submodules:
-  include: all
 
 # Build PDF & ePub
 formats:

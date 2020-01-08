@@ -1,43 +1,18 @@
-"""
-Ginga is a toolkit designed for building viewers for scientific image
-data in Python, visualizing 2D pixel data in numpy arrays.
-The Ginga toolkit centers around an image display class which supports
-zooming and panning, color and intensity mapping, a choice of several
-automatic cut levels algorithms and canvases for plotting scalable
-geometric forms.  In addition to this widget, a general purpose
-'reference' FITS viewer is provided, based on a plugin framework.
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+"""See LONG_DESC.txt"""
 
-Ginga is distributed under an open-source BSD licence. Please see the
-file LICENSE.txt in the top-level directory for details.
-"""
+# Set up the version
+from pkg_resources import get_distribution, DistributionNotFound
 
-# Affiliated packages may add whatever they like to this file, but
-# should keep this content at the top.
-# ----------------------------------------------------------------------------
-from ._astropy_init import *  # noqa
-# ----------------------------------------------------------------------------
-
-import sys
-
-__minimum_python_version__ = '3.5'
-
-
-class UnsupportedPythonError(Exception):
-    pass
-
-
-# This is the same check as the one in setup.cfg
-if sys.version_info < tuple((int(val) for val in __minimum_python_version__.split('.'))):
-    raise UnsupportedPythonError("Ginga does not support Python < {}".format(__minimum_python_version__))
-
-# For egg_info test builds to pass, put package imports here.
-if not _ASTROPY_SETUP_:  # noqa
-    #from example_mod import *
-    pass
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    __version__ = 'unknown'
 
 try:
     # As long as we're using setuptools/distribute, we need to do this the
-    # setuptools way or else pkg_resources will throw up unncessary and
+    # setuptools way or else pkg_resources will throw up unnecessary and
     # annoying warnings (even though the namespace mechanism will still
     # otherwise work without it).
     __import__('pkg_resources').declare_namespace(__name__)
