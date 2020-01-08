@@ -7,7 +7,7 @@
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        register_canvas_types,
                                        colors_plus_none, coord_names)
-from .basic import Rectangle
+from .basic import RectangleP
 from ginga.misc.ParamSet import Param
 
 
@@ -197,7 +197,7 @@ class ColorBar(CanvasObjectBase):
             cr.draw_polygon(tr.to_(cpoints))
 
 
-class DrawableColorBar(Rectangle):
+class DrawableColorBarP(RectangleP):
 
     @classmethod
     def get_params_metadata(cls):
@@ -243,16 +243,16 @@ class DrawableColorBar(Rectangle):
                   description="Opacity of fill"),
         ]
 
-    def __init__(self, x1, y1, x2, y2, showrange=True,
+    def __init__(self, p1, p2, showrange=True,
                  font='Sans Serif', fontsize=8,
                  color='black', bgcolor='white',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):
-        Rectangle.__init__(self, x1, y1, x2, y2,
-                           font=font, fontsize=fontsize,
-                           color=color, bgcolor=bgcolor, linewidth=linewidth,
-                           linestyle=linestyle, alpha=alpha,
-                           fillalpha=fillalpha, **kwdargs)
+        RectangleP.__init__(self, p1, p2,
+                            font=font, fontsize=fontsize,
+                            color=color, bgcolor=bgcolor, linewidth=linewidth,
+                            linestyle=linestyle, alpha=alpha,
+                            fillalpha=fillalpha, **kwdargs)
         self.showrange = showrange
         self.rgbmap = rgbmap
         self.kind = 'drawablecolorbar'
@@ -383,6 +383,26 @@ class DrawableColorBar(Rectangle):
             cx1, cy1, cx2, cy2 = x_base, y_base, x_top, y_top
             cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
             cr.draw_polygon(tr.to_(cpoints))
+
+
+class DrawableColorBar(DrawableColorBarP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
+
+    def __init__(self, x1, y1, x2, y2, showrange=True,
+                 font='Sans Serif', fontsize=8,
+                 color='black', bgcolor='white',
+                 linewidth=1, linestyle='solid', alpha=1.0,
+                 fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):
+        DrawableColorBarP.__init__(self, (x1, y1), (x2, y2),
+                                   showrange=showrange, font=font,
+                                   fontsize=fontsize,
+                                   color=color, bgcolor=bgcolor,
+                                   linewidth=linewidth, linestyle=linestyle,
+                                   alpha=alpha, fillalpha=fillalpha,
+                                   rgbmap=rgbmap, optimize=optimize, **kwdargs)
 
 
 class ModeIndicator(CanvasObjectBase):

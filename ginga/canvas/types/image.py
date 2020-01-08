@@ -18,7 +18,7 @@ from ginga import trcalc
 from .mixins import OnePointMixin
 
 
-class Image(OnePointMixin, CanvasObjectBase):
+class ImageP(OnePointMixin, CanvasObjectBase):
     """Draws an image on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of one corner in the data space
@@ -66,13 +66,13 @@ class Image(OnePointMixin, CanvasObjectBase):
                   description="Optimize rendering for this object"),
         ]
 
-    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+    def __init__(self, pt, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
                  interpolation=None,
                  linewidth=0, linestyle='solid', color='lightgreen',
                  showcap=False, flipy=False, optimize=True,
                  **kwdargs):
         self.kind = 'image'
-        points = np.asarray([(x, y)], dtype=np.float)
+        points = np.asarray([pt], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, image=image, alpha=alpha,
                                   scale_x=scale_x, scale_y=scale_y,
                                   interpolation=interpolation,
@@ -334,7 +334,23 @@ class Image(OnePointMixin, CanvasObjectBase):
         self.reset_optimize()
 
 
-class NormImage(Image):
+class Image(ImageP):
+
+    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+                 interpolation=None,
+                 linewidth=0, linestyle='solid', color='lightgreen',
+                 showcap=False, flipy=False, optimize=True,
+                 **kwdargs):
+        ImageP.__init__(self, (x, y), image, alpha=alpha,
+                        scale_x=scale_x, scale_y=scale_y,
+                        interpolation=interpolation,
+                        linewidth=linewidth, linestyle=linestyle,
+                        color=color, showcap=showcap,
+                        flipy=flipy, optimize=optimize,
+                        **kwdargs)
+
+
+class NormImageP(ImageP):
     """Draws an image on a ImageViewCanvas.
 
     Parameters are:
@@ -389,18 +405,18 @@ class NormImage(Image):
             ##       description="Cuts manager for the image"),
         ]
 
-    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+    def __init__(self, pt, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
                  interpolation=None, cuts=None, linewidth=0, linestyle='solid',
                  color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
-        super(NormImage, self).__init__(x, y, image=image, alpha=alpha,
-                                        scale_x=scale_x, scale_y=scale_y,
-                                        interpolation=interpolation,
-                                        linewidth=linewidth, linestyle=linestyle,
-                                        color=color,
-                                        showcap=showcap, optimize=optimize,
-                                        **kwdargs)
+        super(NormImageP, self).__init__(pt, image, alpha=alpha,
+                                         scale_x=scale_x, scale_y=scale_y,
+                                         interpolation=interpolation,
+                                         linewidth=linewidth, linestyle=linestyle,
+                                         color=color,
+                                         showcap=showcap, optimize=optimize,
+                                         **kwdargs)
         self.rgbmap = rgbmap
         self.cuts = cuts
         self.autocuts = autocuts
@@ -508,6 +524,20 @@ class NormImage(Image):
         self.scale_x *= scale_x
         self.scale_y *= scale_y
         self.reset_optimize()
+
+
+class NormImage(NormImageP):
+
+    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+                 interpolation=None, cuts=None, linewidth=0, linestyle='solid',
+                 color='lightgreen', showcap=False,
+                 optimize=True, rgbmap=None, autocuts=None, **kwdargs):
+        NormImageP.__init__(self, (x, y), image, alpha=alpha,
+                            scale_x=scale_x, scale_y=scale_y,
+                            interpolation=interpolation,
+                            linewidth=linewidth, linestyle=linestyle,
+                            color=color, showcap=showcap, optimize=optimize,
+                            **kwdargs)
 
 
 # register our types

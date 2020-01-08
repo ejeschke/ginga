@@ -27,7 +27,7 @@ __all__ = ['Ruler', 'Compass', 'Crosshair', 'AnnulusMixin', 'Annulus',
            'Annulus2R', 'WCSAxes']
 
 
-class Ruler(TwoPointMixin, CanvasObjectBase):
+class RulerP(TwoPointMixin, CanvasObjectBase):
     """
     Draws a WCS ruler (like a right triangle) on a DrawingCanvas.
     Parameters are:
@@ -86,14 +86,14 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), (cxt.x, cxt.y), **cxt.drawparams)
 
-    def __init__(self, x1, y1, x2, y2, color='green', color2='skyblue',
+    def __init__(self, pt1, pt2, color='green', color2='skyblue',
                  alpha=1.0, linewidth=1, linestyle='solid',
                  showcap=True, showplumb=True, showends=False, units='arcmin',
                  font='Sans Serif', fontsize=None, **kwdargs):
         self.kind = 'ruler'
-        points = np.asarray([(x1, y1), (x2, y2)], dtype=np.float)
+        points = np.asarray([pt1, pt2], dtype=np.float)
         CanvasObjectBase.__init__(self, color=color, color2=color2,
                                   alpha=alpha, units=units,
                                   showplumb=showplumb, showends=showends,
@@ -247,7 +247,25 @@ class Ruler(TwoPointMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, ((cx2, cy1), ))
 
 
-class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
+class Ruler(RulerP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
+
+    def __init__(self, x1, y1, x2, y2, color='green', color2='skyblue',
+                 alpha=1.0, linewidth=1, linestyle='solid',
+                 showcap=True, showplumb=True, showends=False, units='arcmin',
+                 font='Sans Serif', fontsize=None, **kwdargs):
+        RulerP.__init__(self, (x1, y1), (x2, y2), color=color, color2=color2,
+                        alpha=alpha, units=units,
+                        showplumb=showplumb, showends=showends,
+                        linewidth=linewidth, showcap=showcap,
+                        linestyle=linestyle, font=font, fontsize=fontsize,
+                        **kwdargs)
+
+
+class CompassP(OnePointOneRadiusMixin, CanvasObjectBase):
     """
     Draws a WCS compass on a DrawingCanvas.
     Parameters are:
@@ -298,13 +316,13 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
     def idraw(cls, canvas, cxt):
         radius = np.sqrt(abs(cxt.start_x - cxt.x) ** 2 +
                          abs(cxt.start_y - cxt.y) ** 2)
-        return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), radius, **cxt.drawparams)
 
-    def __init__(self, x, y, radius, ctype='wcs', color='skyblue',
+    def __init__(self, pt, radius, ctype='wcs', color='skyblue',
                  linewidth=1, fontsize=None, font='Sans Serif',
                  alpha=1.0, linestyle='solid', showcap=True, **kwdargs):
         self.kind = 'compass'
-        points = np.asarray([(x, y)], dtype=np.float)
+        points = np.asarray([pt], dtype=np.float)
         CanvasObjectBase.__init__(self, ctype=ctype, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -440,7 +458,24 @@ class Compass(OnePointOneRadiusMixin, CanvasObjectBase):
         return (xd, yd)
 
 
-class Crosshair(OnePointMixin, CanvasObjectBase):
+class Compass(CompassP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        radius = np.sqrt(abs(cxt.start_x - cxt.x) ** 2 +
+                         abs(cxt.start_y - cxt.y) ** 2)
+        return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
+
+    def __init__(self, x, y, radius, ctype='wcs', color='skyblue',
+                 linewidth=1, fontsize=None, font='Sans Serif',
+                 alpha=1.0, linestyle='solid', showcap=True, **kwdargs):
+        CompassP.__init__(self, (x, y), radius, ctype=ctype, color=color,
+                          alpha=alpha, linewidth=linewidth, showcap=showcap,
+                          linestyle=linestyle, font=font, fontsize=fontsize,
+                          **kwdargs)
+
+
+class CrosshairP(OnePointMixin, CanvasObjectBase):
     """
     Draws a crosshair on a DrawingCanvas.
     Parameters are:
@@ -490,15 +525,15 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        return cls(cxt.x, cxt.y, **cxt.drawparams)
+        return cls((cxt.x, cxt.y), **cxt.drawparams)
 
-    def __init__(self, x, y, color='green',
+    def __init__(self, pt, color='green',
                  linewidth=1, alpha=1.0, linestyle='solid',
                  text=None, textcolor='yellow',
                  fontsize=10.0, font='Sans Serif', fontscale=True,
                  format='xy', **kwdargs):
         self.kind = 'crosshair'
-        points = np.asarray([(x, y)], dtype=np.float)
+        points = np.asarray([pt], dtype=np.float)
         CanvasObjectBase.__init__(self, color=color, alpha=alpha,
                                   linewidth=linewidth, linestyle=linestyle,
                                   text=text, textcolor=textcolor,
@@ -564,6 +599,25 @@ class Crosshair(OnePointMixin, CanvasObjectBase):
         cr.draw_text(cx + 10, cy + 4 + txtht, text)
 
 
+class Crosshair(CrosshairP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        return cls(cxt.x, cxt.y, **cxt.drawparams)
+
+    def __init__(self, x, y, color='green',
+                 linewidth=1, alpha=1.0, linestyle='solid',
+                 text=None, textcolor='yellow',
+                 fontsize=10.0, font='Sans Serif', fontscale=True,
+                 format='xy', **kwdargs):
+        CrosshairP.__init__(self, (x, y), color=color, alpha=alpha,
+                            linewidth=linewidth, linestyle=linestyle,
+                            text=text, textcolor=textcolor,
+                            fontsize=fontsize, font=font,
+                            fontscale=fontscale,
+                            format=format, **kwdargs)
+
+
 class AnnulusMixin(object):
 
     def contains_pt(self, pt):
@@ -588,7 +642,7 @@ class AnnulusMixin(object):
         return obj2.select_contains_pt(viewer, pt)
 
 
-class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
+class AnnulusP(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
     """
     Special compound object to handle annulus shape that
     consists of two objects with the same centroid.
@@ -637,14 +691,13 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
     def idraw(cls, canvas, cxt):
         radius = np.sqrt(abs(cxt.start_x - cxt.x)**2 +
                          abs(cxt.start_y - cxt.y)**2)
-        return cls(cxt.start_x, cxt.start_y, radius,
+        return cls((cxt.start_x, cxt.start_y), radius,
                    **cxt.drawparams)
 
-    def __init__(self, x, y, radius, width=None,
+    def __init__(self, pt, radius, width=None,
                  atype='circle', color='yellow',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  **kwdargs):
-
         if width is None:
             # default width is 15% of radius
             width = 0.15 * radius
@@ -656,19 +709,19 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
         coord = kwdargs.get('coord', None)
 
         klass = get_canvas_type(atype)
-        obj1 = klass(x, y, radius, color=color,
+        obj1 = klass(pt[0], pt[1], radius, color=color,
                      linewidth=linewidth,
                      linestyle=linestyle, alpha=alpha,
                      coord=coord)
         obj1.editable = False
 
-        obj2 = klass(x, y, oradius, color=color,
+        obj2 = klass(pt[0], pt[1], oradius, color=color,
                      linewidth=linewidth,
                      linestyle=linestyle, alpha=alpha,
                      coord=coord)
         obj2.editable = False
 
-        points = np.asarray([(x, y)], dtype=np.float)
+        points = np.asarray([pt], dtype=np.float)
 
         CompoundObject.__init__(self, obj1, obj2,
                                 points=points, radius=radius,
@@ -743,7 +796,25 @@ class Annulus(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
         self.set_data_points([dst_pt])
 
 
-class Annulus2R(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
+class Annulus(AnnulusP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        radius = np.sqrt(abs(cxt.start_x - cxt.x)**2 +
+                         abs(cxt.start_y - cxt.y)**2)
+        return cls(cxt.start_x, cxt.start_y, radius,
+                   **cxt.drawparams)
+
+    def __init__(self, x, y, radius, width=None,
+                 atype='circle', color='yellow',
+                 linewidth=1, linestyle='solid', alpha=1.0,
+                 **kwdargs):
+        AnnulusP.__init__(self, (x, y), radius, width=width, atype=atype,
+                          color=color, linewidth=linewidth,
+                          linestyle=linestyle, alpha=alpha, **kwdargs)
+
+
+class Annulus2RP(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
     """
     Special compound object to handle annulus shape that
     consists of two objects, (one center point, plus two radii).
@@ -800,13 +871,14 @@ class Annulus2R(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
     @classmethod
     def idraw(cls, canvas, cxt):
         xradius, yradius = abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y)
-        return cls(cxt.start_x, cxt.start_y, xradius, yradius, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), (xradius, yradius),
+                   **cxt.drawparams)
 
-    def __init__(self, x, y, xradius, yradius, xwidth=None,
+    def __init__(self, pt, radii, xwidth=None,
                  ywidth=None, atype='ellipse', color='yellow',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  rot_deg=0.0, **kwdargs):
-
+        xradius, yradius = radii
         if xwidth is None:
             # default X width is 15% of X radius
             xwidth = 0.15 * xradius
@@ -822,19 +894,19 @@ class Annulus2R(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
         coord = kwdargs.get('coord', None)
 
         klass = get_canvas_type(atype)
-        obj1 = klass(x, y, xradius, yradius, color=color,
+        obj1 = klass(pt[0], pt[1], radii[0], radii[1], color=color,
                      linewidth=linewidth,
                      linestyle=linestyle, alpha=alpha,
                      coord=coord, rot_deg=rot_deg)
         obj1.editable = False
 
-        obj2 = klass(x, y, oxradius, oyradius, color=color,
+        obj2 = klass(pt[0], pt[1], oxradius, oyradius, color=color,
                      linewidth=linewidth,
                      linestyle=linestyle, alpha=alpha,
                      coord=coord, rot_deg=rot_deg)
         obj2.editable = False
 
-        points = np.asarray([(x, y)], dtype=np.float)
+        points = np.asarray([pt], dtype=np.float)
 
         CompoundObject.__init__(self, obj1, obj2,
                                 points=points, xradius=xradius, yradius=yradius,
@@ -946,6 +1018,25 @@ class Annulus2R(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
         super(Annulus2R, self).move_to_pt(dst_pt)
 
         self.set_data_points([dst_pt])
+
+
+class Annulus2R(Annulus2RP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        xradius, yradius = abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y)
+        return cls(cxt.start_x, cxt.start_y, xradius, yradius,
+                   **cxt.drawparams)
+
+    def __init__(self, x, y, xradius, yradius, xwidth=None,
+                 ywidth=None, atype='ellipse', color='yellow',
+                 linewidth=1, linestyle='solid', alpha=1.0,
+                 rot_deg=0.0, **kwdargs):
+        Annulus2RP.__init__(self, (x, y), (xradius, yradius),
+                            xwidth=xwidth, ywidth=ywidth, atype=atype,
+                            color=color, linewidth=linewidth,
+                            linestyle=linestyle, alpha=alpha,
+                            rot_deg=rot_deg, **kwdargs)
 
 
 class WCSAxes(CompoundObject):
