@@ -48,7 +48,7 @@ class NaxisMode(Mode):
         return 'naxis'
 
     def start(self):
-        pass
+        self.axis = 3
 
     def stop(self):
         self.onscreen_message(None)
@@ -150,7 +150,7 @@ class NaxisMode(Mode):
         if event.state in ('down', 'move'):
             win_wd, win_ht = viewer.get_window_size()
             x_pct = min(max(0.0, x / float(win_wd)), 1.0)
-            idx = int(x_pct * axis_lim - 1)
+            idx = int(round(x_pct * (axis_lim - 1)))
             naxispath[m] = idx
             image.set_naxispath(naxispath)
             if msg:

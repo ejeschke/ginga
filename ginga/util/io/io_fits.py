@@ -719,7 +719,10 @@ class FitsioFileHandler(BaseFitsFileHandler):
         self.hdu_db = {}
         self.extver_db = {}
         self.info = None
+        fits_f = self.fits_f
         self.fits_f = None
+        if fits_f is not None:
+            fits_f.close()
 
     def find_first_good_hdu(self):
 

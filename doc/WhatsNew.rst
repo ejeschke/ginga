@@ -37,6 +37,11 @@ Ver 5.0.0 (unreleased)
 - Added mode help; type 'h' in the viewer window when you are in a mode
   to display a help tab for that mode (reference viewer only)
 - Better support for touchpad gestures in modes
+- Better support for RGB files
+
+  - Support additional types (ico/icns/tga/bmp)
+  - RGB video files can be opened (with OpenCv loader) and examined with
+    MultiDim plugin or naxis mode (video frames is treated as axis 3)
 
 Ver 4.1.0 (2022-06-30)
 ======================

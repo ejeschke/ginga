@@ -58,6 +58,23 @@ class RGBImage(BaseImage):
         return self.io.get_buffer(self._get_data(), self.get_header(),
                                   format, output=output)
 
+    def set_naxispath(self, naxispath):
+        """Choose a slice out of multidimensional data.
+        """
+        # Currently, RGBImage only supports regular 3D images (H, W, D)
+        # But we support a "fake" 4th axis for RGB video files (for this
+        # you need to use the OpenCv loader)
+        self.logger.debug(f"naxispath is {naxispath}")
+        num = naxispath[0]
+        data = self.io.get_frame(num, metadata=self.metadata)
+
+        if data is None or len(data.shape) not in [3]:
+            raise ImageError(
+                "naxispath does not lead to a 2D RGB slice: {}".format(naxispath))
+
+        self.naxispath = naxispath
+        self.set_data(data)
+
     def copy(self, astype=None):
         other = RGBImage()
         self.transfer(other, astype=astype)

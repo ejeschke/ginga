@@ -82,7 +82,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         self.play_idx = 0
         self.play_max = 0
         self.play_int_sec = 0.1
-        self.play_min_sec = 1.0 / 30
+        self.play_min_sec = 0.0
         self.play_last_time = 0.0
         self.play_fps = 0
         self.timer = fv.get_timer()

@@ -7,7 +7,6 @@
 import time
 import mimetypes
 from io import BytesIO
-from collections.abc import Sequence, Iterator
 
 import numpy as np
 from PIL import Image
@@ -55,6 +54,7 @@ class BaseRGBFileHandler(io_base.BaseIOHandler):
         super(BaseRGBFileHandler, self).__init__(logger)
 
         self._path = None
+        self.fileinfo = None
 
         self.clr_mgr = rgb_cms.ColorManager(self.logger)
 
@@ -196,6 +196,9 @@ class BaseRGBFileHandler(io_base.BaseIOHandler):
         image.save(buf, format)
         return buf
 
+    def get_frame(self, num):
+        raise NotImplementedError("subclass should implement this method")
+
     def get_directory(self):
         return self.hdu_db
 
@@ -209,8 +212,8 @@ class OpenCvFileHandler(BaseRGBFileHandler):
 
     name = 'OpenCv'
     mimetypes = ['image/jpeg',
-                 'image/png',
                  'image/tiff',
+                 'image/png',
                  'image/gif',
                  'image/x-portable-pixmap',
                  'image/ppm',
@@ -219,7 +222,15 @@ class OpenCvFileHandler(BaseRGBFileHandler):
                  'image/x-portable-bitmap',
                  'image/pbm',
                  'image/x-portable-graymap',
-                 'image/pgm']
+                 'image/x-portable-greymap',
+                 'image/pgm',
+                 'image/vnd.microsoft.icon',
+                 'image/bmp',
+                 'image/x-tga',
+                 'video/x-msvideo',
+                 'video/mp4',
+                 'video/quicktime',
+                 'video/x-matroska']
 
     @classmethod
     def check_availability(cls):
@@ -237,23 +248,23 @@ class OpenCvFileHandler(BaseRGBFileHandler):
 
         self._path = filepath
         self.rgb_f = cv2.VideoCapture(filepath)
-        # self.rgb_f.set(cv2.CAP_PROP_CONVERT_RGB, False)
 
         idx = 0
         extver_db = {}
         self.hdu_info = []
         self.hdu_db = {}
-        numframes = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.logger.info("number of frames: {}".format(numframes))
+        self.numframes = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.logger.info("number of frames: {}".format(self.numframes))
 
-        naxispath = [numframes]
-        idx = 0
-        name = "frame{}".format(idx)
+        name = "image{}".format(idx)
         extver = 0
         # prepare a record of pertinent info about the HDU for
         # lookups by numerical index or (NAME, EXTVER)
+        # NOTE: dtype is uint8 even though we may later read it at a higher
+        # bit depth--because there doesn't seem to be a straightforward way
+        # to know the bit depth before reading the data, unfortunately
         d = Bunch.Bunch(index=idx, name=name, extver=extver,
-                        dtype='uint8', htype='N/A')
+                        dtype='uint8', htype='imagehdu')
         self.hdu_info.append(d)
         # different ways of accessing this HDU:
         # by numerical index
@@ -268,6 +279,8 @@ class OpenCvFileHandler(BaseRGBFileHandler):
 
     def close(self):
         self._path = None
+        if self.rgb_f is not None:
+            self.rgb_f.release()
         self.rgb_f = None
 
     def __len__(self):
@@ -283,25 +296,41 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         metadata = dict()
         if idx == 0:
             data_np = self.imload(self.fileinfo.filepath, metadata)
-
         else:
-            self.rgb_f.set(cv2.CAP_PROP_POS_FRAMES, idx)
-            okay, data_np = self.rgb_f.read()
-            if not okay:
-                raise ValueError("Error reading index {}".format(idx))
-
-            data_np = self._process_opencv_array(data_np, metadata,
-                                                 self.fileinfo.filepath)
+            raise IndexError(f"index {idx} out of range")
 
         from ginga.RGBImage import RGBImage
         data_obj = RGBImage(data_np=data_np, metadata=metadata,
                             logger=self.logger)
         data_obj.io = self
 
+        data_obj.axisdim = [self.numframes] + list(data_np.shape[:2])
+        data_obj.naxispath = [0, 0, 0]
+
         name = self.fileinfo.name + '[{}]'.format(idx)
         data_obj.set(name=name, path=self.fileinfo.filepath, idx=idx)
 
         return data_obj
+
+    def get_frame(self, num, metadata=None):
+        if self.rgb_f is None:
+            if self.fileinfo is None:
+                raise ValueError("Please call open_file() first!")
+            # re-open file/stream, if not open already
+            self._path = self.fileinfo.filepath
+            self.rgb_f = cv2.VideoCapture(self._path)
+
+        if num < 0 or num >= self.numframes:
+            raise IndexError(f"Frame outside valid range of 0-{self.numframes}")
+
+        self.rgb_f.set(cv2.CAP_PROP_POS_FRAMES, num)
+        okay, data_np = self.rgb_f.read()
+        if not okay:
+            raise IndexError(f"Error reading frame {num}")
+
+        data_np = self._reorder_array(data_np, metadata=metadata)
+
+        return data_np
 
     def save_file_as(self, filepath, data_np, header):
         # TODO: save keyword metadata!
@@ -316,29 +345,22 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         if not have_opencv:
             raise ImageError("Install 'opencv' to be able to load images")
 
-        ## data_np = cv2.imread(filepath,
-        ##                      cv2.IMREAD_ANYDEPTH + cv2.IMREAD_ANYCOLOR +
-        ##                      cv2.IMREAD_IGNORE_ORIENTATION)
-        #
-        # OpenCv supports high-bit depth multiband images if you read like
-        # this
+        # OpenCv supports high-bit depth multiband images if you use
+        # IMREAD_UNCHANGED.
         # NOTE: IMREAD_IGNORE_ORIENTATION does not seem to be obeyed here!
+        # Seems to need to be combined with IMREAD_COLOR, which forces an
+        # 8bpp image
         data_np = cv2.imread(filepath,
                              cv2.IMREAD_UNCHANGED + cv2.IMREAD_IGNORE_ORIENTATION)
+        if data_np is None:
+            self.rgb_f.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            okay, data_np = self.rgb_f.read()
+            if not okay:
+                raise IndexError("Error reading frame 0")
 
         return self._process_opencv_array(data_np, metadata, filepath)
 
     def _process_opencv_array(self, data_np, metadata, filepath):
-        # opencv returns BGR images, whereas PIL and others return RGB
-        if len(data_np.shape) >= 3 and data_np.shape[2] >= 3:
-            if data_np.shape[2] == 3:
-                order = 'BGR'
-                dst_order = 'RGB'
-            else:
-                order = 'BGRA'
-                dst_order = 'RGBA'
-            data_np = trcalc.reorder_image(dst_order, data_np, order)
-            metadata['order'] = dst_order
 
         kwds = metadata.get('header', None)
         if kwds is None:
@@ -349,18 +371,41 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         # library (if installed)
         self._getexif(filepath, kwds)
 
+        data_np = self._reorder_array(data_np, metadata)
+
         # OpenCv added a feature to do auto-orientation when loading
         # (see https://github.com/opencv/opencv/issues/4344)
         # So reset these values to prevent auto-orientation from
         # happening later
-        # NOTE: this is only needed if IMREAD_IGNORE_ORIENTATION is not
-        # working
+        # NOTE: this is only needed if IMREAD_IGNORE_ORIENTATION
+        # (see above) is not working
         kwds['Orientation'] = 1
         kwds['Image Orientation'] = 1
 
-        # convert to working color profile, if can
-        if self.clr_mgr.can_profile():
-            data_np = self.clr_mgr.profile_to_working_numpy(data_np, kwds)
+        return data_np
+
+    def _reorder_array(self, data_np, metadata=None):
+        # opencv returns BGR images, whereas PIL and others return RGB
+        if len(data_np.shape) >= 3 and data_np.shape[2] >= 3:
+            if data_np.shape[2] == 3:
+                order = 'BGR'
+                dst_order = 'RGB'
+            else:
+                order = 'BGRA'
+                dst_order = 'RGBA'
+            data_np = trcalc.reorder_image(dst_order, data_np, order)
+
+            if metadata is not None:
+                metadata['order'] = dst_order
+
+                # convert to working color profile, if can
+                if self.clr_mgr.can_profile():
+                    kwds = metadata.get('header', None)
+                    if kwds is None:
+                        kwds = Header()
+                        metadata['header'] = kwds
+                    data_np = self.clr_mgr.profile_to_working_numpy(data_np,
+                                                                    kwds)
 
         return data_np
 
@@ -392,7 +437,12 @@ class PillowFileHandler(BaseRGBFileHandler):
                  'image/x-portable-bitmap',
                  'image/pbm',
                  'image/x-portable-graymap',
-                 'image/pgm']
+                 'image/x-portable-greymap',
+                 'image/pgm',
+                 'image/bmp',
+                 'image/x-tga',
+                 'image/x-icns',
+                 'image/vnd.microsoft.icon']
 
     @classmethod
     def check_availability(cls):
@@ -415,24 +465,26 @@ class PillowFileHandler(BaseRGBFileHandler):
         extver_db = {}
         self.hdu_info = []
         self.hdu_db = {}
-        numframes = getattr(self.rgb_f, 'n_frames', 1)
-        self.logger.info("number of frames: {}".format(numframes))
+        if hasattr(self.rgb_f, 'n_frames'):
+            self.numframes = self.rgb_f.n_frames - 1
+        else:
+            self.numframes = 0
+        self.logger.info("number of frames: {}".format(self.numframes))
 
-        for idx in range(numframes):
-            name = "frame{}".format(idx)
-            extver = 0
-            # prepare a record of pertinent info about the HDU for
-            # lookups by numerical index or (NAME, EXTVER)
-            d = Bunch.Bunch(index=idx, name=name, extver=extver,
-                            dtype='uint8', htype='N/A')
-            self.hdu_info.append(d)
-            # different ways of accessing this HDU:
-            # by numerical index
-            self.hdu_db[idx] = d
-            # by (hduname, extver)
-            key = (name, extver)
-            if key not in self.hdu_db:
-                self.hdu_db[key] = d
+        name = "image{}".format(idx)
+        extver = 0
+        # prepare a record of pertinent info about the HDU for
+        # lookups by numerical index or (NAME, EXTVER)
+        d = Bunch.Bunch(index=idx, name=name, extver=extver,
+                        dtype='uint8', htype='imagehdu')
+        self.hdu_info.append(d)
+        # different ways of accessing this HDU:
+        # by numerical index
+        self.hdu_db[idx] = d
+        # by (hduname, extver)
+        key = (name, extver)
+        if key not in self.hdu_db:
+            self.hdu_db[key] = d
 
         self.extver_db = extver_db
         return self
@@ -443,6 +495,26 @@ class PillowFileHandler(BaseRGBFileHandler):
 
     def __len__(self):
         return len(self.hdu_info)
+
+    def get_frame(self, num, metadata=None):
+        if self.rgb_f is None:
+            if self.fileinfo is None:
+                raise ValueError("Please call open_file() first!")
+            # re-open file, if not open already
+            self._path = self.fileinfo.filepath
+            self.rgb_f = Image.open(self._path)
+
+        if num < 0 or num >= self.numframes:
+            raise IndexError(f"Frame outside valid range of 0-{self.numframes}")
+
+        # NOTE: pillow does not seem to be consistent on supporting
+        # 0-based indexing on RGB images--it seems to depend on whether
+        # there is a "base image"
+        #self.rgb_f.seek(num)
+        self.rgb_f.seek(num + 1)
+
+        image_pil = self.rgb_f
+        return self._process_image(image_pil, metadata=metadata)
 
     def save_file_as(self, filepath, data_np, header):
         # TODO: save keyword metadata!
@@ -457,30 +529,25 @@ class PillowFileHandler(BaseRGBFileHandler):
         if self.rgb_f is None:
             raise ValueError("Please call open_file() first!")
 
-        # "seek" functionality does not seem to be working for all the
-        # versions of Pillow we are encountering
-        #self.rgb_f.seek(idx)
-        image = self.rgb_f
+        if idx > 0:
+            raise IndexError(f"index {idx} out of range")
 
         kwds = Header()
         metadata = dict(header=kwds)
 
-        try:
-            self._get_header(image, kwds)
-        except Exception as e:
-            self.logger.warning("Failed to get image metadata: %s" % (str(e)))
+        if self.numframes > 0:
+            self.rgb_f.seek(idx + 1)
 
-        # convert to working color profile, if can
-        if self.clr_mgr.can_profile():
-            image = self.clr_mgr.profile_to_working_pil(image, kwds)
-
-        # convert from PIL to numpy
-        data_np = np.array(image)
+        image_pil = self.rgb_f
+        data_np = self._process_image(image_pil, metadata=metadata)
 
         from ginga.RGBImage import RGBImage
         data_obj = RGBImage(data_np=data_np, metadata=metadata,
-                            logger=self.logger, order=image.mode)
+                            logger=self.logger, order=image_pil.mode)
         data_obj.io = self
+
+        data_obj.axisdim = [self.numframes] + list(data_np.shape[:2])
+        data_obj.naxispath = [0, 0, 0]
 
         name = self.fileinfo.name + '[{}]'.format(idx)
         data_obj.set(name=name, path=self.fileinfo.filepath, idx=idx,
@@ -488,9 +555,9 @@ class PillowFileHandler(BaseRGBFileHandler):
 
         return data_obj
 
-    def _get_header(self, image, kwds):
-        if hasattr(image, '_getexif'):
-            info = image._getexif()
+    def _get_header(self, image_pil, kwds):
+        if hasattr(image_pil, '_getexif'):
+            info = image_pil._getexif()
             if info is not None:
                 for tag, value in info.items():
                     kwd = TAGS.get(tag, tag)
@@ -500,91 +567,45 @@ class PillowFileHandler(BaseRGBFileHandler):
             self.logger.warning("can't get EXIF data; no _getexif() method")
 
         # is there an embedded color profile?
-        if 'icc_profile' in image.info:
-            kwds['icc_profile'] = image.info['icc_profile']
+        if 'icc_profile' in image_pil.info:
+            kwds['icc_profile'] = image_pil.info['icc_profile']
 
     def _imload(self, filepath, metadata):
-        image = Image.open(filepath)
+        image_pil = Image.open(filepath)
+        data_np = self._process_image(image_pil, metadata=metadata)
+        return data_np
 
-        kwds = metadata.get('header', None)
-        if kwds is None:
-            kwds = Header()
-            metadata['header'] = kwds
+    def _process_image(self, image_pil, metadata=None):
+        if metadata is not None:
+            metadata['order'] = image_pil.mode
+            kwds = metadata.get('header', None)
+            if kwds is None:
+                kwds = Header()
+                metadata['header'] = kwds
+            else:
+                kwds = Header()
 
         try:
-            self._get_header(image, kwds)
+            self._get_header(image_pil, kwds)
         except Exception as e:
             self.logger.warning("Failed to get image metadata: {!r}".format(e))
 
         # convert to working color profile, if can
         if self.clr_mgr.can_profile():
-            image = self.clr_mgr.profile_to_working_pil(image, kwds)
+            image_pil = self.clr_mgr.profile_to_working_pil(image_pil, kwds)
 
         # convert from PIL to numpy
-        data_np = np.array(image)
-        metadata['order'] = image.mode
+        data_np = np.array(image_pil)
         return data_np
 
     def _imresize(self, data, new_wd, new_ht, method='bilinear'):
         # TODO: take into account the method parameter
 
-        img = Image.fromarray(data)
-        img = img.resize((new_wd, new_ht), Image.BICUBIC)
-        newdata = np.array(img)
+        image_pil = Image.fromarray(data)
+        image_pil = image_pil.resize((new_wd, new_ht), Image.BICUBIC)
+        newdata = np.array(image_pil)
 
         return newdata
-
-
-class VideoAccess(Sequence, Iterator):
-    def __init__(self):
-        super(Sequence, self).__init__()
-
-        self.rgb_f = None
-        self.idx = -1
-        self.shape = (0, 0, 0)
-
-    def open(self, filepath):
-        self.rgb_f = cv2.VideoCapture(filepath)
-        # self.rgb_f.set(cv2.CAP_PROP_CONVERT_RGB, False)
-
-        self.idx = 0
-
-        # Get width and height of frames and resize window
-        width = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        depth = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.shape = (width, height, depth)
-
-        return self
-
-    def read(self, idx):
-        self.rgb_f.set(cv2.CAP_PROP_POS_FRAMES, idx)
-        okay, data_np = self.rgb_f.read()
-        if not okay:
-            raise ValueError("Error reading index {}".format(idx))
-
-        data_np = data_np[..., :: -1]
-        return data_np
-
-    def __next__(self):
-        self.idx += 1
-        if self.idx == self.shape[2]:
-            raise StopIteration("Reached the end of frames")
-        return self.read(self.idx)
-
-    def __getitem__(self, idx):
-        return self.read(idx)
-
-    def __len__(self):
-        return self.shape[2]
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        # hopefully this closes the object
-        self.rgb_f = None
-        return False
 
 
 RGBFileHandler = PillowFileHandler
