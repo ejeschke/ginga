@@ -32,6 +32,7 @@ from astropy.io import fits
 import reproject
 
 from ginga import GingaPlugin, AstroImage
+from ginga.misc import Future
 from ginga.gw import Widgets, Viewers
 
 __all__ = ['Reproject']
@@ -106,6 +107,7 @@ class Reproject(GingaPlugin.LocalPlugin):
 
         captions = (("Reproject type", 'combobox'),
                     ("Order", 'combobox'),
+                    ("status", 'llabel'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -179,13 +181,7 @@ class Reproject(GingaPlugin.LocalPlugin):
             kwargs['order'] = order
 
         # do reprojection
-        try:
-            data_out, mask = method((data_in, wcs_in), proj_out,
-                                    **kwargs)
-
-        except Exception as e:
-            self.fv.show_error("reproject error: {}".format(e))
-            return None
+        data_out, mask = method((data_in, wcs_in), proj_out, **kwargs)
 
         # TODO: use mask (probably as alpha mask)
         hdu = fits.PrimaryHDU(data_out)
@@ -217,12 +213,27 @@ class Reproject(GingaPlugin.LocalPlugin):
         self.img_out = image
         self.rpt_image.onscreen_message("WCS set", delay=1.0)
 
-    def reproject_cb(self, w):
-        image = self.fitsimage.get_image()
-        img_out = self.reproject(image, cache_dir=self.cache_dir)
+    def _reproject_cont(self, future):
+        self.fv.gui_call(self.w.status.set_text, "")
+        try:
+            img_out = future.get_value()
+
+        except Exception as e:
+            self.fv.show_error("reproject error: {}".format(e))
+            return
 
         if img_out is not None:
-            self.channel.add_image(img_out)
+            self.fv.gui_do(self.channel.add_image, img_out)
+
+    def reproject_cb(self, w):
+        image = self.fitsimage.get_image()
+
+        future = Future.Future()
+        future.freeze(self.reproject, image, cache_dir=self.cache_dir)
+        future.add_callback('resolved', self._reproject_cont)
+
+        self.w.status.set_text("Working...")
+        self.fv.nongui_do_future(future)
 
     def get_name(self, name_in, cache_dir):
         found = False
