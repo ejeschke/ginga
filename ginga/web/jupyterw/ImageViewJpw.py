@@ -366,7 +366,7 @@ class ImageViewEvent(ImageViewJpw):
         data_x, data_y = self.check_cursor_location()
 
         return self.make_ui_callback_viewer(self, 'scroll', direction, num_deg,
-                                     data_x, data_y)
+                                            data_x, data_y)
 
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):

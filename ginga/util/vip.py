@@ -9,7 +9,7 @@ import numpy as np
 # for debugging
 #np.set_printoptions(threshold=np.inf)
 
-from ginga import BaseImage, trcalc
+from ginga import trcalc
 from ginga.canvas.types.image import Image
 from ginga.canvas.types.layer import Canvas
 from ginga.misc import Bunch
@@ -360,9 +360,10 @@ class ViewerImageProxy:
                 y += sy
 
         if getvalues:
-            x1, y1, x2, y2 = trcalc.sort_xy(x1, y1, x2, y2)
-            data_np = self.cutout_data(x1, y1, x2 + 1, y2 + 1)
-            return [data_np[y - y1, x - x1] for x, y in res]
+            ## x1, y1, x2, y2 = trcalc.sort_xy(x1, y1, x2, y2)
+            ## data_np = self.cutout_data(x1, y1, x2 + 1, y2 + 1)
+            ## return [data_np[y - y1, x - x1] for x, y in res]
+            return [self.getval_pt((x, y)) for x, y in res]
 
         return res
 
@@ -371,10 +372,11 @@ class ViewerImageProxy:
                for x, y in curve_obj.get_points_on_curve(None)]
 
         if getvalues:
-            x1, y1, x2, y2 = curve_obj.get_llur()
-            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-            data_np = self.cutout_data(x1, y1, x2 + 1, y2 + 1)
-            return [data_np[y - y1, x - x1] for x, y in res]
+            ## x1, y1, x2, y2 = curve_obj.get_llur()
+            ## x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+            ## data_np = self.cutout_data(x1, y1, x2 + 1, y2 + 1)
+            ## return [data_np[y - y1, x - x1] for x, y in res]
+            return [self.getval_pt((x, y)) for x, y in res]
 
         return res
 
