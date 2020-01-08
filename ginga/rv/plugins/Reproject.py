@@ -26,7 +26,7 @@ sequence at any time.
 The parameters for the reprojection can be set in the GUI controls.
 """
 import os.path
-import numpy as np
+#import numpy as np
 #np.set_printoptions(threshold=np.inf)
 from astropy.io import fits
 import reproject
