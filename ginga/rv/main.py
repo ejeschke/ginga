@@ -144,6 +144,8 @@ plugins = [
     Bunch(module='ChangeHistory', tab='History', workspace='right',
           menu="History [G]", start=False, category='Utils', ptype='global'),
     Bunch(module='Mosaic', workspace='dialogs', category='Utils', ptype='local'),
+    Bunch(module='Undistort', workspace='dialogs', category='Utils',
+          ptype='local'),
     Bunch(module='FBrowser', tab='Open File', workspace='right',
           menu="Open File [G]", start=False, category='Utils', ptype='global'),
     Bunch(module='Preferences', workspace='dialogs', category='Utils',
