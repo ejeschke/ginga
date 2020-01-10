@@ -26,7 +26,7 @@ sequence at any time.
 The parameters for the reprojection can be set in the GUI controls.
 """
 import os.path
-#import numpy as np
+import numpy as np
 #np.set_printoptions(threshold=np.inf)
 from astropy.io import fits
 import reproject
@@ -34,6 +34,7 @@ import reproject
 from ginga import GingaPlugin, AstroImage
 from ginga.misc import Future
 from ginga.gw import Widgets, Viewers
+from ginga.util import wcs
 
 __all__ = ['Reproject']
 
@@ -113,6 +114,8 @@ class Reproject(GingaPlugin.LocalPlugin):
         self.w.update(b)
         vbox2.add_widget(w, stretch=0)
 
+        b.status.set_text("")
+
         cb = b.reproject_type
         for name in self._proj_types:
             cb.insert_alpha(name)
@@ -161,21 +164,36 @@ class Reproject(GingaPlugin.LocalPlugin):
     def redo(self):
         pass
 
-    def reproject(self, image, name=None, shape=None, cache_dir=None):
+    def reproject(self, image, name=None, cache_dir=None):
         if image is None or image.wcs is None:
             self.fv.show_error("Reproject: null target image or WCS")
             return
         wcs_in = image.wcs.wcs
         data_in = image.get_data()
-        if shape is None:
-            shape = image.shape
+        hdr_in = image.get_header()
 
         header = self.img_out.get_header()
+
+        ((_xr, _yr),
+         (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(hdr_in)
+
+        # preserve transformed image's pixel scale
+        header['CDELT1'] = cdelt1
+        header['CDELT2'] = cdelt2
+
+        # create shape big enough to handle rotation
+        ht, wd = data_in.shape[:2]
+        side = int(np.ceil(np.sqrt(wd ** 2 + ht ** 2)))
+        header['NAXIS1'] = side
+        header['NAXIS2'] = side
+        header['CRPIX1'] = side / 2
+        header['CRPIX2'] = side / 2
+
         proj_out = fits.Header(header)
 
         method = _choose[self._proj_type]['method']
 
-        kwargs = dict(return_footprint=True, shape_out=shape)
+        kwargs = dict(return_footprint=True)
         order = self.w.order.get_text()
         if order != 'n/a':
             kwargs['order'] = order
