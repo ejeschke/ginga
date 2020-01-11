@@ -12,9 +12,12 @@ An instance can be opened for each channel.
 **Usage**
 
 Start the plugin on a channel.  Load the image which has the WCS that you
-want to use for the reprojection into the channel.  Click "Set WCS" to save
-the WCS; you will see the image copied into the plugin viewer and the
-message "WCS set" will briefly appear there.
+want to use for the reprojection into the channel.
+
+**Reprojection**
+
+Click "Set WCS" to save the WCS; you will see the image copied into the
+plugin viewer and the message "WCS set" will briefly appear there.
 
 Now load any image that you want to reproject into the channel.  Click
 "Reproject" to reproject the image using the saved image and it's header/WCS
@@ -24,8 +27,19 @@ do a different reprojection, simply repeat the "Set WCS", "Reproject"
 sequence at any time.
 
 The parameters for the reprojection can be set in the GUI controls.
+
+**Undistort**
+
+Clicking the "Undistort" button will attempt to "undistort" the image by
+doing a reprojection based on the current image's WCS with SIP distortion
+information removed.
+
+In this case there is no need to click "Set WCS".  The WCS from the channel
+image will be used to create the reprojection WCS.  To use this feature the
+WCS must contain SIP distortion information.
 """
 import os.path
+import copy
 import numpy as np
 #np.set_printoptions(threshold=np.inf)
 from astropy.io import fits
@@ -63,10 +77,10 @@ class Reproject(GingaPlugin.LocalPlugin):
 
         self.count = 1
         self.cache_dir = "/tmp"
-        self.out_wcs = None
+        self.img_out = None
         self._proj_types = list(_choose.keys())
         self._proj_types.sort()
-        self._proj_type = self._proj_types[0]
+        self._proj_type = 'interp'
 
     def build_gui(self, container):
         vtop = Widgets.VBox()
@@ -96,15 +110,20 @@ class Reproject(GingaPlugin.LocalPlugin):
 
         vbox2 = Widgets.VBox()
         captions = (("Reproject", 'button', "Set WCS", 'button'),
+                    ("Undistort", 'button'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         vbox2.add_widget(w, stretch=0)
 
-        b.reproject.add_callback('activated', self.reproject_cb)
+        b.reproject.add_callback('activated', self.reproject_cb, False)
         b.reproject.set_tooltip("Click to save channel image as reprojection WCS")
+        b.reproject.set_enabled(False)
         b.set_wcs.add_callback('activated', self.set_wcs_cb)
         b.set_wcs.set_tooltip("Click to reproject channel image using saved WCS")
+        b.undistort.add_callback('activated', self.reproject_cb, True)
+        b.undistort.set_tooltip("Click to correct SIP distortion")
+        #b.undistort.set_enabled(False)
 
         captions = (("Reproject type", 'combobox'),
                     ("Order", 'combobox'),
@@ -157,43 +176,65 @@ class Reproject(GingaPlugin.LocalPlugin):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
+    def start(self):
+        self.redo()
+
     def stop(self):
         self.img_out = None
         self._split_sizes = self.w.splitter.get_sizes()
+        self.gui_up = False
 
     def redo(self):
-        pass
+        if not self.gui_up:
+            return
+        image = self.fitsimage.get_image()
+        if image is None or image.wcs is None or image.wcs.wcs is None:
+            self.w.set_wcs.set_enabled(False)
+            self.w.reproject.set_enabled(False)
+            self.w.undistort.set_enabled(False)
+        else:
+            self.w.set_wcs.set_enabled(True)
+            self.w.reproject.set_enabled(self.img_out is not None)
+            self.w.undistort.set_enabled(image.wcs.wcs.sip is not None)
 
-    def reproject(self, image, name=None, cache_dir=None):
+    def reproject(self, image, name=None, undistort_sip=False, cache_dir=None):
         if image is None or image.wcs is None:
             self.fv.show_error("Reproject: null target image or WCS")
             return
         wcs_in = image.wcs.wcs
         data_in = image.get_data()
-        hdr_in = image.get_header()
 
-        header = self.img_out.get_header()
+        if undistort_sip:
+            proj_out = copy.deepcopy(wcs_in)
+            proj_out.sip = None
+            shape = data_in.shape
 
-        ((_xr, _yr),
-         (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(hdr_in)
+        else:
+            hdr_in = image.get_header()
 
-        # preserve transformed image's pixel scale
-        header['CDELT1'] = cdelt1
-        header['CDELT2'] = cdelt2
+            header = self.img_out.get_header()
 
-        # create shape big enough to handle rotation
-        ht, wd = data_in.shape[:2]
-        side = int(np.ceil(np.sqrt(wd ** 2 + ht ** 2)))
-        header['NAXIS1'] = side
-        header['NAXIS2'] = side
-        header['CRPIX1'] = side / 2
-        header['CRPIX2'] = side / 2
+            ((_xr, _yr),
+             (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(hdr_in)
 
-        proj_out = fits.Header(header)
+            # preserve transformed image's pixel scale
+            header['CDELT1'] = cdelt1
+            header['CDELT2'] = cdelt2
+
+            # create shape big enough to handle rotation
+            ht, wd = data_in.shape[:2]
+            side = int(np.ceil(np.sqrt(wd ** 2 + ht ** 2)))
+            header['NAXIS1'] = side
+            header['NAXIS2'] = side
+            header['CRPIX1'] = side / 2
+            header['CRPIX2'] = side / 2
+
+            proj_out = fits.Header(header)
+            shape = (side, side)
 
         method = _choose[self._proj_type]['method']
 
-        kwargs = dict(return_footprint=True)
+        kwargs = dict(return_footprint=True, shape_out=shape)
         order = self.w.order.get_text()
         if order != 'n/a':
             kwargs['order'] = order
@@ -203,8 +244,14 @@ class Reproject(GingaPlugin.LocalPlugin):
 
         # TODO: use mask (probably as alpha mask)
         hdu = fits.PrimaryHDU(data_out)
-        # add conversion wcs keywords
-        hdu.header.update(self.img_out.wcs.wcs.to_header())
+
+        # Add WCS to the new image
+        # TODO: carry over other keywords besides WCS?
+        if undistort_sip:
+            hdu.header.update(proj_out.to_header())
+        else:
+            hdu.header.update(self.img_out.wcs.wcs.to_header())
+
         if name is None:
             name = self.get_name(image.get('name'), cache_dir)
 
@@ -229,6 +276,7 @@ class Reproject(GingaPlugin.LocalPlugin):
 
         self.rpt_image.set_image(image)
         self.img_out = image
+        self.w.reproject.set_enabled(True)
         self.rpt_image.onscreen_message("WCS set", delay=1.0)
 
     def _reproject_cont(self, future):
@@ -243,11 +291,12 @@ class Reproject(GingaPlugin.LocalPlugin):
         if img_out is not None:
             self.fv.gui_do(self.channel.add_image, img_out)
 
-    def reproject_cb(self, w):
+    def reproject_cb(self, w, undistort_sip):
         image = self.fitsimage.get_image()
 
         future = Future.Future()
-        future.freeze(self.reproject, image, cache_dir=self.cache_dir)
+        future.freeze(self.reproject, image, cache_dir=self.cache_dir,
+                      undistort_sip=undistort_sip)
         future.add_callback('resolved', self._reproject_cont)
 
         self.w.status.set_text("Working...")
