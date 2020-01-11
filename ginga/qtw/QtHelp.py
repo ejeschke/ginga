@@ -402,14 +402,16 @@ _painters = weakref.WeakKeyDictionary()
 
 
 def get_painter(surface):
-    if surface in _painters:
-        return _painters[surface]
+    # QImage is not hashable
+    if not isinstance(surface, QImage):
+        if surface in _painters:
+            return _painters[surface]
 
     painter = QPainter(surface)
     painter.setRenderHint(QPainter.Antialiasing)
     painter.setRenderHint(QPainter.TextAntialiasing)
-    _painters[surface] = painter
+    if not isinstance(surface, QImage):
+        _painters[surface] = painter
     return painter
-
 
 # END
