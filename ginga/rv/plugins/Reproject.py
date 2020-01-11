@@ -7,7 +7,8 @@ another.
 **Plugin Type: Local**
 
 ``Reproject`` is a local plugin, which means it is associated with a channel.
-An instance can be opened for each channel.
+An instance can be opened for each channel.  You need to have the Astropy
+'reproject' module installed to use this plugin.
 
 **Usage**
 
@@ -43,7 +44,13 @@ import copy
 import numpy as np
 #np.set_printoptions(threshold=np.inf)
 from astropy.io import fits
-import reproject
+
+have_reproject = False
+try:
+    import reproject
+    have_reproject = True
+except ImportError:
+    pass
 
 from ginga import GingaPlugin, AstroImage
 from ginga.misc import Future
@@ -52,15 +59,17 @@ from ginga.util import wcs
 
 __all__ = ['Reproject']
 
-
-_choose = {'adaptive': dict(order=['nearest-neighbor', 'bilinear'],
-                            method=reproject.reproject_adaptive),
-           'interp': dict(order=['nearest-neighbor', 'bilinear',
-                                 'biquadratic', 'bicubic'],
-                          method=reproject.reproject_interp),
-           'exact': dict(order=['n/a'],
-                         method=reproject.reproject_exact),
-           }
+if have_reproject:
+    _choose = {'adaptive': dict(order=['nearest-neighbor', 'bilinear'],
+                                method=reproject.reproject_adaptive),
+               'interp': dict(order=['nearest-neighbor', 'bilinear',
+                                     'biquadratic', 'bicubic'],
+                              method=reproject.reproject_interp),
+               'exact': dict(order=['n/a'],
+                             method=reproject.reproject_exact),
+               }
+else:
+    _choose = {}
 
 
 class Reproject(GingaPlugin.LocalPlugin):
@@ -83,12 +92,13 @@ class Reproject(GingaPlugin.LocalPlugin):
         self._proj_type = 'interp'
 
     def build_gui(self, container):
+        if not have_reproject:
+            raise Exception("Please install the 'reproject' module to use "
+                            "this plugin")
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
 
         box, sw, orientation = Widgets.get_oriented_box(container)
-        # Uncomment to debug; passing parent logger generates too
-        # much noise in the main logger
         zi = Viewers.CanvasView(logger=self.logger)
         zi.set_desired_size(self._wd, self._ht)
         zi.enable_autozoom('override')
