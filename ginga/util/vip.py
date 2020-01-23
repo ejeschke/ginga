@@ -10,7 +10,7 @@ import numpy as np
 #np.set_printoptions(threshold=np.inf)
 
 from ginga import trcalc
-from ginga.canvas.types.image import Image
+from ginga.canvas.types.image import ImageP
 from ginga.canvas.types.layer import Canvas
 from ginga.misc import Bunch
 
@@ -53,7 +53,7 @@ class ViewerImageProxy:
         data_x, data_y = pt[:2]
         canvas = self.viewer.get_canvas()
         objs = canvas.get_items_at(pt)
-        objs = list(filter(lambda obj: isinstance(obj, Image), objs))
+        objs = list(filter(lambda obj: isinstance(obj, ImageP), objs))
         if len(objs) == 0:
             return None
 
@@ -122,7 +122,7 @@ class ViewerImageProxy:
 
     def get_images(self, res, canvas):
         for obj in canvas.objects:
-            if isinstance(obj, Image) and obj.is_data:
+            if isinstance(obj, ImageP) and obj.is_data:
                 res.append(obj)
             elif isinstance(obj, Canvas):
                 self.get_images(res, obj)
