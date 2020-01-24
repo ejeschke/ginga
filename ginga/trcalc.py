@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import sys
 import math
 import numpy as np
 
@@ -175,10 +176,9 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         # opencv is fastest
         M = cv2.getRotationMatrix2D((rotctr_y, rotctr_x), theta_deg, 1)
 
-        if data_np.dtype == np.dtype('>f8'):
-            # special hack for OpenCv warpAffine bug on numpy arrays of
-            # dtype '>f8'-- it corrupts them
-            data_np = data_np.astype(np.float64)
+        # special hack for OpenCv warpAffine operation on numpy arrays
+        # whose endian-ness doesn't match native--it corrupts them
+        swapped, data_np = ensure_byteorder(data_np)
 
         newdata = cv2.warpAffine(data_np, M, (wd, ht))
         new_ht, new_wd = newdata.shape[:2]
@@ -1106,3 +1106,28 @@ def get_minmax(dtype):
         info = np.finfo(dtype)
 
     return info.min, info.max
+
+
+def ensure_byteorder(data_np):
+    """Adjust byte order of ndarray to match the native byte ordering.
+
+    Parameters
+    ----------
+    data_np : ndarray
+        Input numpy array
+
+    Returns
+    -------
+    swapped : bool
+        True if the data was converted, False otherwise
+
+    out_np : ndarray
+        A new array (if converted), `data_np` otherwise
+    """
+    dt = str(data_np.dtype)
+
+    if ((dt.startswith('>') and sys.byteorder == 'little') or
+        (dt.startswith('<') and sys.byteorder == 'big')):
+        return True, data_np.astype(dt[1:])
+
+    return False, data_np
