@@ -817,6 +817,7 @@ class ImageViewBase(Callback.Callbacks):
     set_dataobj = set_image
 
     def _image_set_cb(self, canvas_img, image):
+
         try:
             self.apply_profile_or_settings(image)
 
@@ -972,6 +973,13 @@ class ImageViewBase(Callback.Callbacks):
             return
 
         with self.suppress_redraw:
+
+            # update viewer limits
+            wd, ht = image.get_size()
+            limits = ((-self.data_off, -self.data_off),
+                      (float(wd - self.data_off),
+                       float(ht - self.data_off)))
+            self.t_.set(limits=limits)
 
             canvas_img.reset_optimize()
 
