@@ -275,11 +275,11 @@ def get_xy_rotation_and_scale(header):
         cdelt1 = float(header['CDELT1'])
         cdelt2 = float(header['CDELT2'])
 
-        cd1_1, cd1_2 = pc1_1 * cdelt1, pc1_2 * cdelt1
-        cd2_1, cd2_2 = pc2_1 * cdelt2, pc2_2 * cdelt2
+        cd1_1, cd1_2 = cdelt1 * pc1_1, cdelt1 * pc1_2
+        cd2_1, cd2_2 = cdelt2 * pc2_1, cdelt2 * pc2_2
 
-        xrot, yrot, cdelt1p, cdelt2p = calc_from_cd(pc1_1, pc1_2,
-                                                    pc2_1, pc2_2)
+        xrot, yrot, cdelt1p, cdelt2p = calc_from_cd(cd1_1, cd1_2,
+                                                    cd2_1, cd2_2)
 
     except KeyError:
         # 2nd, check for presence of CD matrix
@@ -356,26 +356,11 @@ def get_relative_orientation(image, ref_image):
     # Figure out rotation relative to our orientation
     rrot_dx, rrot_dy = xrot - xrot_ref, yrot - yrot_ref
 
-    # flip_x = False
-    # flip_y = False
-
-    # ## # Flip X due to negative CDELT1
-    # ## if np.sign(cdelt1) < 0:
-    # ##     flip_x = True
-
-    # ## # Flip Y due to negative CDELT2
-    # ## if np.sign(cdelt2) < 0:
-    # ##     flip_y = True
-
-    # # Optomization for 180 rotations
-    # if np.isclose(math.fabs(rrot_dx), 180.0):
-    #     flip_x = not flip_x
-    #     rrot_dx = 0.0
-    # if np.isclose(math.fabs(rrot_dy), 180.0):
-    #     flip_y = not flip_y
-    #     rrot_dy = 0.0
-
-    rrot_deg = max(rrot_dx, rrot_dy)
+    # Use whichever rotation has the overall largest absolute value
+    if abs(rrot_dx) > abs(rrot_dy):
+        rrot_deg = rrot_dx
+    else:
+        rrot_deg = rrot_dy
 
     res = Bunch.Bunch(rscale_x=rscale_x, rscale_y=rscale_y,
                       rrot_deg=rrot_deg)
