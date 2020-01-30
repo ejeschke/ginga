@@ -1,14 +1,11 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """See LONG_DESC.txt"""
 
-# Set up the version
-from pkg_resources import get_distribution, DistributionNotFound
-
-try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
-    # package is not installed
-    __version__ = 'unknown'
+# Packages may add whatever they like to this file, but
+# should keep this content at the top.
+# ----------------------------------------------------------------------------
+from ._astropy_init import *  # noqa
+# ----------------------------------------------------------------------------
 
 try:
     # As long as we're using setuptools/distribute, we need to do this the
