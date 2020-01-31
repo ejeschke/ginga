@@ -170,15 +170,11 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     if rotctr_y is None:
         rotctr_y = ht // 2
 
-    if have_opencv and _use in (None, 'opencv'):
+    if dtype == np.uint8 and have_opencv and _use in (None, 'opencv'):
         if logger is not None:
             logger.debug("rotating with OpenCv")
         # opencv is fastest
         M = cv2.getRotationMatrix2D((rotctr_y, rotctr_x), theta_deg, 1)
-
-        # special hack for OpenCv warpAffine operation on numpy arrays
-        # whose endian-ness doesn't match native--it corrupts them
-        swapped, data_np = ensure_byteorder(data_np)
 
         newdata = cv2.warpAffine(data_np, M, (wd, ht))
         new_ht, new_wd = newdata.shape[:2]
@@ -192,7 +188,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             out[:, :, ...] = newdata
             newdata = out
 
-    elif have_pillow and _use in (None, 'pillow'):
+    elif dtype == np.uint8 and have_pillow and _use in (None, 'pillow'):
         if logger is not None:
             logger.debug("rotating with pillow")
         img = PILimage.fromarray(data_np)
@@ -204,7 +200,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             Exception("rotated cutout is %dx%d original=%dx%d" % (
                 new_wd, new_ht, wd, ht))
 
-    elif have_opencl and _use in (None, 'opencl'):
+    elif dtype == np.uint8 and have_opencl and _use in (None, 'opencl'):
         if logger is not None:
             logger.debug("rotating with OpenCL")
         # opencl is very close, sometimes better, sometimes worse
@@ -448,7 +444,7 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
     if dtype is None:
         dtype = data_np.dtype
 
-    if have_opencv and _use in (None, 'opencv'):
+    if data_np.dtype == np.uint8 and have_opencv and _use in (None, 'opencv'):
         if logger is not None:
             logger.debug("resizing with OpenCv")
         # opencv is fastest and supports many methods
@@ -469,7 +465,7 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif have_pillow and _use in (None, 'pillow'):
+    elif data_np.dtype == np.uint8 and have_pillow and _use in (None, 'pillow'):
         if logger is not None:
             logger.info("resizing with pillow")
         if interpolation == 'basic':
@@ -483,7 +479,8 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif (have_opencl and interpolation in ('basic', 'nearest') and
+    elif (data_np.dtype == np.uint8 and have_opencl and
+            interpolation in ('basic', 'nearest') and
             open_cl_ok and _use in (None, 'opencl')):
         # opencl is almost as fast or sometimes faster, but currently
         # we only support nearest neighbor
@@ -559,7 +556,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
     if dtype is None:
         dtype = data_np.dtype
 
-    if have_opencv and _use in (None, 'opencv'):
+    if data_np.dtype == np.uint8 and have_opencv and _use in (None, 'opencv'):
         if logger is not None:
             logger.debug("resizing with OpenCv")
         # opencv is fastest
@@ -582,7 +579,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif have_pillow and _use in (None, 'pillow'):
+    elif data_np.dtype == np.uint8 and have_pillow and _use in (None, 'pillow'):
         if logger is not None:
             logger.info("resizing with pillow")
         if interpolation == 'basic':
@@ -1054,7 +1051,7 @@ def fill_array(dstarr, order, r, g, b, a):
     bgval = dict(A=int(maxv * a), R=int(maxv * r), G=int(maxv * g),
                  B=int(maxv * b))
     bgtup = tuple([bgval[order[i]] for i in range(len(order))])
-    if dtype is np.uint8 and len(bgtup) == 4:
+    if dtype == np.uint8 and len(bgtup) == 4:
         # optimiztion
         bgtup = np.array(bgtup, dtype=dtype).view(np.uint32)[0]
         dstarr = dstarr.view(np.uint32)
@@ -1074,7 +1071,7 @@ def make_filled_array(shp, dtype, order, r, g, b, a):
     bgval = dict(A=int(maxv * a), R=int(maxv * r), G=int(maxv * g),
                  B=int(maxv * b))
     bgtup = tuple([bgval[order[i]] for i in range(len(order))])
-    if dtype is np.uint8 and len(bgtup) == 4:
+    if dtype == np.uint8 and len(bgtup) == 4:
         # optimization when dealing with 32-bit RGBA arrays
         fill_val = np.array(bgtup, dtype=dtype).view(np.uint32)
         rgba = np.zeros(shp, dtype=dtype)
@@ -1108,26 +1105,8 @@ def get_minmax(dtype):
     return info.min, info.max
 
 
-def ensure_byteorder(data_np):
-    """Adjust byte order of ndarray to match the native byte ordering.
-
-    Parameters
-    ----------
-    data_np : ndarray
-        Input numpy array
-
-    Returns
-    -------
-    swapped : bool
-        True if the data was converted, False otherwise
-
-    out_np : ndarray
-        A new array (if converted), `data_np` otherwise
-    """
+def check_native_byteorder(data_np):
     dt = str(data_np.dtype)
 
-    if ((dt.startswith('>') and sys.byteorder == 'little') or
-        (dt.startswith('<') and sys.byteorder == 'big')):
-        return True, data_np.astype(dt[1:])
-
-    return False, data_np
+    return ((dt.startswith('>') and sys.byteorder == 'little') or
+            (dt.startswith('<') and sys.byteorder == 'big'))
