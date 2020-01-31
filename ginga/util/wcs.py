@@ -356,11 +356,8 @@ def get_relative_orientation(image, ref_image):
     # Figure out rotation relative to our orientation
     rrot_dx, rrot_dy = xrot - xrot_ref, yrot - yrot_ref
 
-    # Use whichever rotation has the overall largest absolute value
-    if abs(rrot_dx) > abs(rrot_dy):
-        rrot_deg = rrot_dx
-    else:
-        rrot_deg = rrot_dy
+    # Choose Y rotation as default
+    rrot_deg = rrot_dy
 
     res = Bunch.Bunch(rscale_x=rscale_x, rscale_y=rscale_y,
                       rrot_deg=rrot_deg)
