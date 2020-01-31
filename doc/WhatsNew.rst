@@ -18,6 +18,10 @@ Ver 3.1.0 (unreleased)
 - Fixed an issue where the readout under the cursor for value is
   reported for an empty row to the left and column below of pixels
 - Removed dependence on astropy-helpers submodule.
+- Fixed an issue where limits were not reset correctly if image being
+  viewed is modified in place (and data array changes size)
+- Fixed an issue with Mosaic plugin where images with a PC matrix were
+  not always oriented correctly
 
 Ver 3.0.0 (2019-09-20)
 ======================

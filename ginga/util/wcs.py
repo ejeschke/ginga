@@ -278,8 +278,8 @@ def get_xy_rotation_and_scale(header):
         cd1_1, cd1_2 = cdelt1 * pc1_1, cdelt1 * pc1_2
         cd2_1, cd2_2 = cdelt2 * pc2_1, cdelt2 * pc2_2
 
-        xrot, yrot, cdelt1p, cdelt2p = calc_from_cd(cd1_1, cd1_2,
-                                                    cd2_1, cd2_2)
+        xrot, yrot, cdelt1, cdelt2 = calc_from_cd(cd1_1, cd1_2,
+                                                  cd2_1, cd2_2)
 
     except KeyError:
         # 2nd, check for presence of CD matrix
