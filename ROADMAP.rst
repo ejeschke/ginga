@@ -1,5 +1,5 @@
 Roadmap for Ginga
-==================
+=================
 
 This is a roadmap for Ginga development, which lays out
 the long-term plans for this package.
@@ -7,15 +7,14 @@ the long-term plans for this package.
 *Note: As a caveat, this is a living document, and
 will evolve as priorities grow and shift.*
 
-Last updated: May 2019
+Last updated: Feb 2020
 
 Short-Term Goals
 ----------------
 
 Things that might happen in the next release or two:
 
-* Dropping Python 2 support (bug fixes to 2.x.y branches until end of 2019).
-* Support ASDF and GWCS.
+* Improve support for ASDF and GWCS.
 
 Mid-Term Goals
 --------------
@@ -41,6 +40,8 @@ Completed Goals
 
 Goals that were completed, in reverse chronological order:
 
+* Initial ASDF and GWCS support (with v3.0 release in late 2019).
+* Drop Python 2 support (with v3.0 release in late 2019).
 * Last major release that is compatible with Python 2 (time frame: late
   2018). Beginning with v3.x.y, Ginga will be Python 3 compatible only.
 * Convert ``master`` to be Python 3.5-compatible (and above) only
