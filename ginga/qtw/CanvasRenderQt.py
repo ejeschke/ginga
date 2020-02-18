@@ -127,18 +127,20 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_image(self, cx, cy, data, order='RGB'):
+    def draw_image(self, image_id, cpoints, rgb_arr, whence, order='RGBA'):
+        return
         # reorder data as needed for this renderer
         ## need_order = self.renderer.rgb_order
-        ## data = self.renderer.reorder(need_order, data, order)
-        ## data = data.astype(np.uint8, copy=False, casting='unsafe')
+        ## rgb_arr = self.renderer.reorder(need_order, rgb_arr, order)
+        ## rgb_arr = rgb_arr.astype(np.uint8, copy=False, casting='unsafe')
 
-        (height, width) = data.shape[:2]
-        #print(data.shape, np.mean(data))
+        (height, width) = rgb_arr.shape[:2]
+        #print(rgb_arr.shape, np.mean(rgb_arr))
 
         # Get qimage for copying pixel data
-        qimage = self.renderer._get_qimage(data)
+        qimage = self.renderer._get_qimage(rgb_arr)
 
+        cx, cy = cpoints[0][:2]
         # draw image data to renderer surface
         self.cr.drawImage(QtCore.QRect(cx, cy, width, height),
                           qimage,

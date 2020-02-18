@@ -113,8 +113,8 @@ def get_transforms(v):
         'cartesian_to_window': (transform.FlipSwapTransform(v) +
                                 transform.CartesianWindowTransform(v)),
         # CHANGED
-        'cartesian_to_native': (transform.RotationTransform(v) +
-                                transform.FlipSwapTransform(v) +
+        'cartesian_to_native': (transform.FlipSwapTransform(v) +
+                                transform.RotationTransform(v) +
                                 transform.CartesianNativeTransform(v)),
         'data_to_cartesian': (transform.DataCartesianTransform(v) +
                               transform.ScaleTransform(v)),

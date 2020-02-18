@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import time
 import numpy as np
 
 # NOTE: we don't need GLU but we import it to workaround a
@@ -16,7 +17,6 @@ from ginga.canvas import render, transform
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga.canvas.transform import BaseTransform
-from ginga.canvas.types.image_ss import NormImage
 from ginga.cairow import CairoHelp
 from ginga import trcalc
 
@@ -128,11 +128,15 @@ class RenderContext(render.RenderContextBase):
         tr = transform.FlipSwapTransform(self.viewer)
         cp += tr.to_(off)
 
-        if whence < 2.5:
-            self.viewer.prepare_image(image_id, cp, rgb_arr, whence)
+        #if whence < 2.5:
+        #    self.viewer.prepare_image(image_id, cp, rgb_arr, whence)
 
         gl.glColor4f(1, 1, 1, 1.0)
         gl.glEnable(gl.GL_TEXTURE_2D)
+        # TODO: either image_id is the GL texture id or there is an accessible
+        # mapping to one
+        image_id = self.renderer.tex_id
+        gl.glBindTexture(gl.GL_TEXTURE_2D, image_id)
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
         gl.glBegin(gl.GL_QUADS)
         try:
@@ -264,9 +268,6 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         self.mn_y, self.mx_y = -self.lim_y, self.lim_y
         self.mn_z, self.mx_z = -self.lim_z, self.lim_z
 
-    def _get_image_klass(self):
-        return NormImage
-
     def set_3dmode(self, tf):
         self.mode3d = tf
         self.gl_resize(self.wd, self.ht)
@@ -301,12 +302,15 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             #self.viewer.gl_update()
 
         self.viewer.redraw(whence=2.5)
-        # this is necessary to get other widgets
-        #self.viewer.make_callback('redraw', whence=0.0)
+        # this is necessary for other widgets to get the same kind of
+        # callback as for the standard pixel renderer
+        self.viewer.make_callback('redraw', whence=0.0)
 
     def pan(self, pos):
         self.viewer.redraw(whence=2.5)
-        #self.viewer.make_callback('redraw', whence=0.0)
+        # this is necessary for other widgets to get the same kind of
+        # callback as for the standard pixel renderer
+        self.viewer.make_callback('redraw', whence=0.0)
 
     def rotate_2d(self, ang_deg):
         if self.mode3d:
@@ -317,6 +321,136 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
 
     def transform_2d(self, state):
         self.viewer.redraw(whence=2.5)
+
+    def _common_draw(self, cvs_img, cache, whence):
+        # internal common drawing phase for all images
+        image = cvs_img.image
+        if image is None:
+            return
+        viewer = self.viewer
+
+        if (whence <= 0.0) or (cache.cutout is None) or (not cvs_img.optimize):
+
+            # get destination location in data_coords
+            dst_x, dst_y = cvs_img.crdmap.to_data((cvs_img.x, cvs_img.y))
+
+            ## a1, b1, a2, b2 = 0, 0, cvs_img.image.width - 1, cvs_img.image.height - 1
+
+            ## # scale by our scale
+            ## _scale_x, _scale_y = cvs_img.scale_x, cvs_img.scale_y
+
+            ## interp = cvs_img.interpolation
+            ## if interp is None:
+            ##     t_ = viewer.get_settings()
+            ##     interp = t_.get('interpolation', 'basic')
+
+            ## # previous choice might not be available if preferences
+            ## # were saved when opencv was being used (and not used now);
+            ## # if so, silently default to "basic"
+            ## if interp not in trcalc.interpolation_methods:
+            ##     interp = 'basic'
+            ## res = image.get_scaled_cutout2((a1, b1), (a2, b2),
+            ##                                (_scale_x, _scale_y),
+            ##                                method=interp)
+            ## data = res.data
+
+            data = image.get_data()
+
+            if cvs_img.flipy:
+                data = np.flipud(data)
+
+            cache.cutout = data
+
+            # calculate our offset
+            pan_off = viewer.data_off
+            cvs_x, cvs_y = dst_x - pan_off, dst_y - pan_off
+
+            cache.cvs_pos = (cvs_x, cvs_y)
+
+    def _prepare_image(self, cvs_img, cache, whence):
+        self._common_draw(cvs_img, cache, whence)
+
+        cache.rgbarr = trcalc.add_alpha(cache.cutout, alpha=255)
+        cache.drawn = True
+
+    def _prepare_norm_image(self, cvs_img, cache, whence):
+        t1 = t2 = t3 = t4 = time.time()
+
+        self._common_draw(cvs_img, cache, whence)
+
+        if cache.cutout is None:
+            return
+
+        t2 = time.time()
+        if cvs_img.rgbmap is not None:
+            rgbmap = cvs_img.rgbmap
+        else:
+            rgbmap = self.viewer.get_rgbmap()
+
+        image_order = cvs_img.image.get_order()
+
+        if (whence <= 0.0) or (not cvs_img.optimize):
+            # if image has an alpha channel, then strip it off and save
+            # it until it is recombined later with the colorized output
+            # this saves us having to deal with an alpha band in the
+            # cuts leveling and RGB mapping routines
+            img_arr = cache.cutout
+            if 'A' not in image_order:
+                cache.alpha = None
+            else:
+                # normalize alpha array to the final output range
+                mn, mx = trcalc.get_minmax_dtype(img_arr.dtype)
+                a_idx = image_order.index('A')
+                cache.alpha = (img_arr[..., a_idx] / mx *
+                               rgbmap.maxc).astype(rgbmap.dtype)
+                cache.cutout = img_arr[..., 0:a_idx]
+
+        if (whence <= 1.0) or (cache.prergb is None) or (not cvs_img.optimize):
+            # apply visual changes prior to color mapping (cut levels, etc)
+            vmax = rgbmap.get_hash_size() - 1
+            newdata = self._apply_visuals(cvs_img, cache.cutout, 0, vmax)
+
+            # result becomes an index array fed to the RGB mapper
+            if not np.issubdtype(newdata.dtype, np.dtype('uint')):
+                newdata = newdata.astype(np.uint)
+            idx = newdata
+
+            self.logger.debug("shape of index is %s" % (str(idx.shape)))
+            cache.prergb = idx
+
+        t3 = time.time()
+        dst_order = self.viewer.get_rgb_order()
+
+        if (whence <= 2.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
+            # get RGB mapped array
+            rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
+                                         image_order=image_order)
+            cache.rgbarr = rgbobj.get_array(dst_order)
+
+            if cache.alpha is not None and 'A' in dst_order:
+                a_idx = dst_order.index('A')
+                cache.rgbarr[..., a_idx] = cache.alpha
+
+        t4 = time.time()
+
+        #cache.rgbarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
+
+        cache.drawn = True
+        t5 = time.time()
+        self.logger.debug("draw: t2=%.4f t3=%.4f t4=%.4f t5=%.4f total=%.4f" % (
+            t2 - t1, t3 - t2, t4 - t3, t5 - t4, t5 - t1))
+
+
+    def prepare_image(self, cvs_img, cache, whence):
+        if cvs_img.kind == 'image':
+            self._prepare_image(cvs_img, cache, whence)
+        elif cvs_img.kind == 'normimage':
+            self._prepare_norm_image(cvs_img, cache, whence)
+        else:
+            raise RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
+
+        image_id = self.tex_id
+        self.gl_set_image(image_id, cache.rgbarr)
 
     ## def initialize(self):
     ##     self.rl = []

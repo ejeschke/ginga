@@ -414,82 +414,82 @@ class RotationTransform(BaseTransform):
         return off_pts
 
 
-## class RotationTransform(BaseTransform):
-##     """
-##     A transform in cartesian coordinates based on the flip/swap setting and
-##     rotation setting of a viewer.
-##     """
+class RotationFlipTransform(BaseTransform):
+    """
+    A transform in cartesian coordinates based on the flip/swap setting and
+    rotation setting of a viewer.
+    """
 
-##     def __init__(self, viewer):
-##         super(RotationTransform, self).__init__()
-##         self.viewer = viewer
+    def __init__(self, viewer):
+        super(RotationFlipTransform, self).__init__()
+        self.viewer = viewer
 
-##     def to_(self, off_pts):
-##         off_pts = np.asarray(off_pts, dtype=np.float)
-##         has_z = (off_pts.shape[-1] > 2)
+    def to_(self, off_pts):
+        off_pts = np.asarray(off_pts, dtype=np.float)
+        has_z = (off_pts.shape[-1] > 2)
 
-##         t_ = self.viewer.t_
+        t_ = self.viewer.t_
 
-##         # flip
-##         flip_pt = [1.0, 1.0]
-##         if t_['flip_x']:
-##             flip_pt[0] = -1.0
-##         if t_['flip_y']:
-##             flip_pt[1] = -1.0
-##         if has_z:
-##             # no flip_z at the moment
-##             flip_pt.append(1.0)
+        # flip
+        flip_pt = [1.0, 1.0]
+        if t_['flip_x']:
+            flip_pt[0] = -1.0
+        if t_['flip_y']:
+            flip_pt[1] = -1.0
+        if has_z:
+            # no flip_z at the moment
+            flip_pt.append(1.0)
 
-##         off_pts = np.multiply(off_pts, flip_pt)
+        off_pts = np.multiply(off_pts, flip_pt)
 
-##         # swap
-##         if t_['swap_xy']:
-##             p = list(off_pts.T)
-##             off_pts = np.asarray([p[1], p[0]] + list(p[2:])).T
+        # swap
+        if t_['swap_xy']:
+            p = list(off_pts.T)
+            off_pts = np.asarray([p[1], p[0]] + list(p[2:])).T
 
-##         # rotate
-##         if t_['rot_deg'] != 0:
-##             thetas = [t_['rot_deg']]
-##             offset = [0.0, 0.0]
-##             if has_z:
-##                 offset.append(0.0)
-##             off_pts = trcalc.rotate_coord(off_pts, thetas, offset)
+        # rotate
+        if t_['rot_deg'] != 0:
+            thetas = [t_['rot_deg']]
+            offset = [0.0, 0.0]
+            if has_z:
+                offset.append(0.0)
+            off_pts = trcalc.rotate_coord(off_pts, thetas, offset)
 
-##         return off_pts
+        return off_pts
 
-##     def from_(self, off_pts):
-##         """Reverse of :meth:`to_`."""
-##         off_pts = np.asarray(off_pts, dtype=np.float)
-##         has_z = (off_pts.shape[-1] > 2)
+    def from_(self, off_pts):
+        """Reverse of :meth:`to_`."""
+        off_pts = np.asarray(off_pts, dtype=np.float)
+        has_z = (off_pts.shape[-1] > 2)
 
-##         t_ = self.viewer.t_
+        t_ = self.viewer.t_
 
-##         # rotate
-##         if t_['rot_deg'] != 0:
-##             thetas = [- t_['rot_deg']]
-##             offset = [0.0, 0.0]
-##             if has_z:
-##                 offset.append(0.0)
-##             off_pts = trcalc.rotate_coord(off_pts, thetas, offset)
+        # rotate
+        if t_['rot_deg'] != 0:
+            thetas = [- t_['rot_deg']]
+            offset = [0.0, 0.0]
+            if has_z:
+                offset.append(0.0)
+            off_pts = trcalc.rotate_coord(off_pts, thetas, offset)
 
-##         # swap
-##         if t_['swap_xy']:
-##             p = list(off_pts.T)
-##             off_pts = np.asarray([p[1], p[0]] + list(p[2:])).T
+        # swap
+        if t_['swap_xy']:
+            p = list(off_pts.T)
+            off_pts = np.asarray([p[1], p[0]] + list(p[2:])).T
 
-##         # flip
-##         flip_pt = [1.0, 1.0]
-##         if t_['flip_x']:
-##             flip_pt[0] = -1.0
-##         if t_['flip_y']:
-##             flip_pt[1] = -1.0
-##         if has_z:
-##             # no flip_z at the moment
-##             flip_pt.append(1.0)
+        # flip
+        flip_pt = [1.0, 1.0]
+        if t_['flip_x']:
+            flip_pt[0] = -1.0
+        if t_['flip_y']:
+            flip_pt[1] = -1.0
+        if has_z:
+            # no flip_z at the moment
+            flip_pt.append(1.0)
 
-##         off_pts = np.multiply(off_pts, flip_pt)
+        off_pts = np.multiply(off_pts, flip_pt)
 
-##         return off_pts
+        return off_pts
 
 
 class ScaleTransform(BaseTransform):

@@ -185,10 +185,6 @@ class StandardPixelRenderer(RendererBase):
     def get_rgb_order(self):
         return self.rgb_order
 
-    def _get_image_klass(self):
-        from ginga.canvas.types.image import NormImage
-        return NormImage
-
     def invalidate(self):
         # handles to various intermediate arrays
         self._rgbarr = None
@@ -261,7 +257,7 @@ class StandardPixelRenderer(RendererBase):
             # Apply any RGB image overlays
             self._rgbarr2 = np.copy(self._rgbarr)
             p_canvas = self.viewer.get_private_canvas()
-            self.overlay_images(p_canvas, self._rgbarr2, whence=whence)
+            self._overlay_images(p_canvas, whence=whence)
 
             t2 = time.time()
 
@@ -451,7 +447,7 @@ class StandardPixelRenderer(RendererBase):
 
         return data
 
-    def overlay_images(self, canvas, data, whence=0.0):
+    def _overlay_images(self, canvas, whence=0.0):
         """Overlay data from any canvas image objects.
 
         Parameters
@@ -471,10 +467,211 @@ class StandardPixelRenderer(RendererBase):
             return
 
         for obj in canvas.get_objects():
-            if hasattr(obj, 'draw_image'):
-                obj.draw_image(self.viewer, data, whence=whence)
+            if hasattr(obj, 'prepare_image'):
+                obj.prepare_image(self.viewer, whence)
             elif obj.is_compound() and (obj != canvas):
-                self.overlay_images(obj, data, whence=whence)
+                self._overlay_images(obj, whence=whence)
+
+    def _common_draw(self, cvs_img, cache, whence):
+        # internal common drawing phase for all images
+        image = cvs_img.image
+        if image is None:
+            return
+        dstarr = self._rgbarr2
+
+        if (whence <= 0.0) or (cache.cutout is None) or (not cvs_img.optimize):
+            # get extent of our data coverage in the window
+            pts = np.asarray(self.viewer.get_draw_rect()).T
+            xmin = int(np.min(pts[0]))
+            ymin = int(np.min(pts[1]))
+            xmax = int(np.ceil(np.max(pts[0])))
+            ymax = int(np.ceil(np.max(pts[1])))
+
+            # get destination location in data_coords
+            dst_x, dst_y = cvs_img.crdmap.to_data((cvs_img.x, cvs_img.y))
+
+            a1, b1, a2, b2 = 0, 0, cvs_img.image.width - 1, cvs_img.image.height - 1
+
+            # calculate the cutout that we can make and scale to merge
+            # onto the final image--by only cutting out what is necessary
+            # this speeds scaling greatly at zoomed in sizes
+            ((dst_x, dst_y), (a1, b1), (a2, b2)) = \
+                trcalc.calc_image_merge_clip((xmin, ymin), (xmax, ymax),
+                                             (dst_x, dst_y),
+                                             (a1, b1), (a2, b2))
+
+            # is image completely off the screen?
+            if (a2 - a1 <= 0) or (b2 - b1 <= 0):
+                # no overlay needed
+                cache.cutout = None
+                return
+
+            # cutout and scale the piece appropriately by the viewer scale
+            scale_x, scale_y = self.viewer.get_scale_xy()
+            # scale additionally by our scale
+            _scale_x, _scale_y = (scale_x * cvs_img.scale_x,
+                                  scale_y * cvs_img.scale_y)
+
+            interp = cvs_img.interpolation
+            if interp is None:
+                t_ = self.viewer.get_settings()
+                interp = t_.get('interpolation', 'basic')
+
+            # previous choice might not be available if preferences
+            # were saved when opencv was being used (and not used now);
+            # if so, silently default to "basic"
+            if interp not in trcalc.interpolation_methods:
+                interp = 'basic'
+            res = image.get_scaled_cutout2((a1, b1), (a2, b2),
+                                           (_scale_x, _scale_y),
+                                           method=interp)
+            data = res.data
+
+            if cvs_img.flipy:
+                data = np.flipud(data)
+            cache.cutout = data
+
+            # calculate our offset from the pan position
+            pan_x, pan_y = self.viewer.get_pan()
+            pan_off = self.viewer.data_off
+            pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
+            off_x, off_y = dst_x - pan_x, dst_y - pan_y
+            # scale offset
+            off_x *= scale_x
+            off_y *= scale_y
+
+            # dst position in the pre-transformed array should be calculated
+            # from the center of the array plus offsets
+            ht, wd, dp = dstarr.shape
+            cvs_x = int(np.round(wd / 2.0 + off_x))
+            cvs_y = int(np.round(ht / 2.0 + off_y))
+            cache.cvs_pos = (cvs_x, cvs_y)
+
+    def _prepare_image(self, cvs_img, cache, whence):
+        if whence > 2.3 and cache.rgbarr is not None:
+            return
+        dstarr = self._rgbarr2
+
+        t1 = t2 = time.time()
+
+        self._common_draw(cvs_img, cache, whence)
+
+        if cache.cutout is None:
+            return
+
+        t2 = time.time()
+        # should this be self.get_rgb_order() ?
+        dst_order = self.viewer.get_rgb_order()
+        image_order = cvs_img.image.get_order()
+
+        # composite the image into the destination array at the
+        # calculated position
+        trcalc.overlay_image(dstarr, cache.cvs_pos, cache.cutout,
+                             dst_order=dst_order, src_order=image_order,
+                             alpha=cvs_img.alpha, fill=True, flipy=False)
+
+        cache.drawn = True
+        t3 = time.time()
+        self.logger.debug("draw: t2=%.4f t3=%.4f total=%.4f" % (
+            t2 - t1, t3 - t2, t3 - t1))
+
+    def _prepare_norm_image(self, cvs_img, cache, whence):
+        if whence > 2.3 and cache.rgbarr is not None:
+            return
+        dstarr = self._rgbarr2
+
+        t1 = t2 = t3 = t4 = time.time()
+
+        self._common_draw(cvs_img, cache, whence)
+
+        if cache.cutout is None:
+            return
+
+        t2 = time.time()
+        if cvs_img.rgbmap is not None:
+            rgbmap = cvs_img.rgbmap
+        else:
+            rgbmap = self.viewer.get_rgbmap()
+
+        image_order = cvs_img.image.get_order()
+
+        if (whence <= 0.0) or (not cvs_img.optimize):
+            # if image has an alpha channel, then strip it off and save
+            # it until it is recombined later with the colorized output
+            # this saves us having to deal with an alpha band in the
+            # cuts leveling and RGB mapping routines
+            img_arr = cache.cutout
+            if 'A' not in image_order:
+                cache.alpha = None
+            else:
+                # normalize alpha array to the final output range
+                mn, mx = trcalc.get_minmax_dtype(img_arr.dtype)
+                a_idx = image_order.index('A')
+                cache.alpha = (img_arr[..., a_idx] / mx *
+                               rgbmap.maxc).astype(rgbmap.dtype)
+                cache.cutout = img_arr[..., 0:a_idx]
+
+        if (whence <= 1.0) or (cache.prergb is None) or (not cvs_img.optimize):
+            # apply visual changes prior to color mapping (cut levels, etc)
+            vmax = rgbmap.get_hash_size() - 1
+            newdata = self._apply_visuals(cvs_img, cache.cutout, 0, vmax)
+
+            # result becomes an index array fed to the RGB mapper
+            if not np.issubdtype(newdata.dtype, np.dtype('uint')):
+                newdata = newdata.astype(np.uint)
+            idx = newdata
+
+            self.logger.debug("shape of index is %s" % (str(idx.shape)))
+            cache.prergb = idx
+
+        t3 = time.time()
+        dst_order = self.get_rgb_order()
+
+        if (whence <= 2.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
+            # get RGB mapped array
+            rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
+                                         image_order=image_order)
+            cache.rgbarr = rgbobj.get_array(dst_order)
+
+            if cache.alpha is not None and 'A' in dst_order:
+                a_idx = dst_order.index('A')
+                cache.rgbarr[..., a_idx] = cache.alpha
+
+        t4 = time.time()
+
+        # composite the image into the destination array at the
+        # calculated position
+        trcalc.overlay_image(dstarr, cache.cvs_pos, cache.rgbarr,
+                             dst_order=dst_order, src_order=dst_order,
+                             alpha=cvs_img.alpha, fill=True, flipy=False)
+
+        cache.drawn = True
+        t5 = time.time()
+        self.logger.debug("draw: t2=%.4f t3=%.4f t4=%.4f t5=%.4f total=%.4f" % (
+            t2 - t1, t3 - t2, t4 - t3, t5 - t4, t5 - t1))
+
+    def _apply_visuals(self, cvs_img, data, vmin, vmax):
+        if cvs_img.autocuts is not None:
+            autocuts = cvs_img.autocuts
+        else:
+            autocuts = self.viewer.autocuts
+
+        # Apply cut levels
+        if cvs_img.cuts is not None:
+            loval, hival = cvs_img.cuts
+        else:
+            loval, hival = self.viewer.t_['cuts']
+        newdata = autocuts.cut_levels(data, loval, hival,
+                                      vmin=vmin, vmax=vmax)
+        return newdata
+
+    def prepare_image(self, cvs_img, cache, whence):
+        if cvs_img.kind == 'image':
+            self._prepare_image(cvs_img, cache, whence)
+        elif cvs_img.kind == 'normimage':
+            self._prepare_norm_image(cvs_img, cache, whence)
+        else:
+            raise RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
 
     def convert_via_profile(self, data_np, order, inprof_name, outprof_name):
         """Convert the given RGB data from the working ICC profile

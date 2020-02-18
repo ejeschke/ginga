@@ -154,13 +154,13 @@ class CanvasRenderer(render.StandardPixelRenderer):
         ## print('RENDER LIST', len(self.rl), self.rl)
         ## print('---------------')
         if self.surface is None:
-            raise render.RenderError("No AGG surface defined")
+            raise render.RenderError("No VEC surface defined")
 
         # TODO: could these have changed between the time that self.surface
         # was last updated?
         wd, ht = self.dims
 
-        # Get agg surface as a numpy array
+        # Get surface as a numpy array
         arr8 = np.fromstring(self.surface.tobytes(), dtype=np.uint8)
         arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
 

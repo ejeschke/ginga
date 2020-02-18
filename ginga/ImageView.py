@@ -714,7 +714,7 @@ class ImageViewBase(Callback.Callbacks):
         except KeyError:
             # add a normalized image item to this canvas if we don't
             # have one already--then just keep reusing it
-            NormImage = self.renderer._get_image_klass()
+            NormImage = self.canvas.get_draw_class('normimage')
 
             self._imgobj = NormImage(0, 0, None, alpha=1.0,
                                      interpolation=None)
@@ -2996,6 +2996,9 @@ class ImageViewBase(Callback.Callbacks):
         self.renderer.resize((width, height))
 
         self.configure(width, height)
+
+    def prepare_image(self, cvs_img, cache, whence):
+        self.renderer.prepare_image(cvs_img, cache, whence)
 
     def get_image_as_array(self, order=None):
         """Get the current image shown in the viewer, with any overlaid

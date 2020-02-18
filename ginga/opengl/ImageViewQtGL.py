@@ -80,14 +80,13 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         qimg.save(ibuf, format=format, quality=quality)
         return ibuf
 
-    def prepare_image(self, image_id, cp, rgb_arr, whence):
+    def prepare_image(self, cvs_img, cache, whence):
         if whence >= 2.5:
             return
 
         #<-- image has changed, need to update texture
         self.imgwin.makeCurrent()
-
-        self.renderer.gl_set_image(image_id, rgb_arr)
+        self.renderer.prepare_image(cvs_img, cache, whence)
 
     def update_image(self):
         if self.imgwin is None:
