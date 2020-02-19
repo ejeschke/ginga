@@ -81,9 +81,6 @@ class ImageViewQtGL(ImageViewQt.ImageViewQt):
         return ibuf
 
     def prepare_image(self, cvs_img, cache, whence):
-        if whence >= 2.5:
-            return
-
         #<-- image has changed, need to update texture
         self.imgwin.makeCurrent()
         self.renderer.prepare_image(cvs_img, cache, whence)

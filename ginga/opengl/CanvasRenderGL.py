@@ -24,8 +24,10 @@ from ginga import trcalc
 from .Camera import Camera
 from . import GlHelp
 
-opengl_version = float("{}.{}".format(gl.glGetIntegerv(gl.GL_MAJOR_VERSION),
-                                      gl.glGetIntegerv(gl.GL_MINOR_VERSION)))
+# this is not reliable. We update the version later in gl_initialize()
+## opengl_version = float("{}.{}".format(gl.glGetIntegerv(gl.GL_MAJOR_VERSION),
+##                                       gl.glGetIntegerv(gl.GL_MINOR_VERSION)))
+opengl_version = 3.0
 
 
 class RenderContext(render.RenderContextBase):
@@ -468,8 +470,9 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         return image
 
     def render_whence(self, whence):
-        # a no-op for this renderer
-        pass
+        if whence <= 2.0:
+            p_canvas = self.viewer.get_private_canvas()
+            self._overlay_images(p_canvas, whence=whence)
 
     ## def setup_cr(self, shape):
     ##     cr = CanvasRenderVec.RenderContext(self, self.viewer, self.surface)
@@ -516,11 +519,14 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         return info
 
     def gl_initialize(self):
+        global opengl_version
         d = self.getOpenGLInfo()
         self.logger.info("OpenGL info--Vendor: '%(vendor)s'  "
                          "Renderer: '%(renderer)s'  "
                          "Version: '%(opengl_version)s'  "
                          "Shader: '%(shader_version)s'" % d)
+
+        opengl_version = float(d['opengl_version'].split(' ')[0])
 
         r, g, b = self.viewer.img_bg
         gl.glClearColor(r, g, b, 1.0)
@@ -528,12 +534,12 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
 
         gl.glDisable(gl.GL_CULL_FACE)
         gl.glFrontFace(gl.GL_CCW)
-        if opengl_version < 4:
+        if opengl_version <= 3.0:
             gl.glDisable(gl.GL_LIGHTING)
             gl.glShadeModel(gl.GL_FLAT)
             #gl.glShadeModel(gl.GL_SMOOTH)
 
-        gl.glEnable(gl.GL_TEXTURE_2D)
+            gl.glEnable(gl.GL_TEXTURE_2D)
         gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
         self.tex_id = gl.glGenTextures(1)
 
