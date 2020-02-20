@@ -49,6 +49,8 @@ class FitsViewer(object):
         fi.ui_set_active(True)
         self.fitsimage = fi
 
+        fi.get_settings().set(enter_focus=True)
+
         # quick hack to get 'u' to invoke hidden camera mode
         bm = fi.get_bindmap()
         bm.mode_map['u'] = bm.mode_map['mode_camera']

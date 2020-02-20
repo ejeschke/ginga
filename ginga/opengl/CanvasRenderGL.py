@@ -6,11 +6,13 @@
 #
 import time
 import numpy as np
+import ctypes
 
 # NOTE: we don't need GLU but we import it to workaround a
 #   potential bug: http://bugs.python.org/issue26245
-from OpenGL import GLU as glu
+from OpenGL import GLU as glu  # noqa
 from OpenGL import GL as gl
+from OpenGL.GL import shaders
 
 from ginga.vec import CanvasRenderVec
 from ginga.canvas import render, transform
@@ -117,7 +119,7 @@ class RenderContext(render.RenderContextBase):
         """Render the image represented by (rgb_arr) at (cx, cy)
         in the pixel space.
         """
-        cp = np.asarray(cp, dtype=np.float)
+        cp = np.asarray(cp, dtype=np.float32)
 
         # This bit is necessary because OpenGL assumes that pixels are
         # centered at 0.5 offsets from the start of the pixel.  Need to
@@ -133,27 +135,88 @@ class RenderContext(render.RenderContextBase):
         #if whence < 2.5:
         #    self.viewer.prepare_image(image_id, cp, rgb_arr, whence)
 
-        gl.glColor4f(1, 1, 1, 1.0)
-        gl.glEnable(gl.GL_TEXTURE_2D)
         # TODO: either image_id is the GL texture id or there is an accessible
         # mapping to one
         image_id = self.renderer.tex_id
-        gl.glBindTexture(gl.GL_TEXTURE_2D, image_id)
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-        gl.glBegin(gl.GL_QUADS)
-        try:
-            gl.glTexCoord(0, 0)
-            gl.glVertex(cp[0][0], cp[0][1])
-            gl.glTexCoord(1, 0)
-            gl.glVertex(cp[1][0], cp[1][1])
-            gl.glTexCoord(1, 1)
-            gl.glVertex(cp[2][0], cp[2][1])
-            gl.glTexCoord(0, 1)
-            gl.glVertex(cp[3][0], cp[3][1])
-        finally:
-            gl.glEnd()
 
-        gl.glDisable(gl.GL_TEXTURE_2D)
+        if opengl_version < 3.1:
+            gl.glColor4f(1, 1, 1, 1.0)
+            gl.glEnable(gl.GL_TEXTURE_2D)
+
+            gl.glBindTexture(gl.GL_TEXTURE_2D, image_id)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+            gl.glBegin(gl.GL_QUADS)
+            try:
+                gl.glTexCoord(0, 0)
+                gl.glVertex(cp[0][0], cp[0][1])
+                gl.glTexCoord(1, 0)
+                gl.glVertex(cp[1][0], cp[1][1])
+                gl.glTexCoord(1, 1)
+                gl.glVertex(cp[2][0], cp[2][1])
+                gl.glTexCoord(0, 1)
+                gl.glVertex(cp[3][0], cp[3][1])
+            finally:
+                gl.glEnd()
+
+            gl.glDisable(gl.GL_TEXTURE_2D)
+
+        else:
+            # pad with z=0 coordinate if lacking
+            vertices = trcalc.pad_z(cp, dtype=np.float32)
+            shape = gl.GL_LINE_LOOP
+
+            shader = self.renderer.shader_img
+            gl.glUseProgram(shader)
+
+            # Create a new VAO (Vertex Array Object) and bind it
+            vao = gl.glGenVertexArrays(1)
+            gl.glBindVertexArray(vao)
+
+            # Generate buffers to hold our vertices
+            vbo = gl.glGenBuffers(1)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
+            # Get the position of the 'position' in parameter of our shader
+            # and bind it.
+            _pos = gl.glGetAttribLocation(shader, 'position')
+            gl.glEnableVertexAttribArray(_pos)
+            # Describe the position data layout in the buffer
+            gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 5*4,
+                                     ctypes.c_void_p(0))
+            _pos2 = gl.glGetAttribLocation(shader, 'i_tex_coord')
+            gl.glEnableVertexAttribArray(_pos2)
+            gl.glVertexAttribPointer(_pos2, 2, gl.GL_FLOAT, False, 5*4,
+                                     ctypes.c_void_p(3*4))
+            # Send the data over to the buffer
+            ## texcoord = np.array([(0.0, 0.0), (1.0, 0.0),
+            ##                      (1.0, 1.0), (0.0, 1.0)], dtype=np.float32)
+            # NOTE: we swap elements 0 and 1, because we will also swap
+            # vertices 0 and 1, this allows us to draw two triangles to complete
+            # the image
+            texcoord = np.array([(1.0, 0.0), (0.0, 0.0),
+                                 (1.0, 1.0), (0.0, 1.0)], dtype=np.float32)
+            # swap order of rows 0 and 1
+            vertices[[0, 1]] = vertices[[1, 0]]
+            data = np.concatenate((vertices, texcoord), axis=1)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, data, gl.GL_STATIC_DRAW)
+            # Unbind the VAO first (important)
+            gl.glBindVertexArray(0)
+            # Unbind other stuff
+            gl.glDisableVertexAttribArray(_pos)
+            gl.glDisableVertexAttribArray(_pos2)
+
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+            gl.glUseProgram(shader)
+            gl.glBindVertexArray(vao)
+
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+
+            gl.glDrawArrays(gl.GL_TRIANGLES, 0, 3)
+            gl.glDrawArrays(gl.GL_TRIANGLES, 1, 4)
+
+            gl.glBindVertexArray(0)
+            gl.glUseProgram(0)
+
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
 
         gl.glEnable(gl.GL_BLEND)
@@ -186,38 +249,109 @@ class RenderContext(render.RenderContextBase):
             # the OpenGL context is set for us correctly
             return
 
-        z_pts = cpoints
+        # pad with z=0 coordinate if lacking
+        z_pts = trcalc.pad_z(cpoints, dtype=np.float32)
 
-        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+        if opengl_version < 3.1:
+            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
 
-        # draw fill, if any
-        if self.brush is not None:
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-            gl.glColor4f(*self.brush.color)
+            # draw fill, if any
+            if self.brush is not None:
+                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+                gl.glColor4f(*self.brush.color)
 
-            gl.glVertexPointerf(z_pts)
-            gl.glDrawArrays(shape, 0, len(z_pts))
+                gl.glVertexPointerf(z_pts)
+                gl.glDrawArrays(shape, 0, len(z_pts))
 
-        if self.pen is not None and self.pen.linewidth > 0:
-            # draw outline
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-            gl.glColor4f(*self.pen.color)
-            gl.glLineWidth(self.pen.linewidth)
+            if self.pen is not None and self.pen.linewidth > 0:
+                # draw outline
+                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+                gl.glColor4f(*self.pen.color)
+                gl.glLineWidth(self.pen.linewidth)
 
-            if self.pen.linestyle == 'dash':
-                gl.glEnable(gl.GL_LINE_STIPPLE)
-                gl.glLineStipple(3, 0x1C47)
+                if self.pen.linestyle == 'dash':
+                    gl.glEnable(gl.GL_LINE_STIPPLE)
+                    gl.glLineStipple(3, 0x1C47)
 
-            gl.glVertexPointerf(z_pts)
-            gl.glDrawArrays(shape, 0, len(z_pts))
+                gl.glVertexPointerf(z_pts)
+                gl.glDrawArrays(shape, 0, len(z_pts))
 
-            if self.pen.linestyle == 'dash':
-                gl.glDisable(gl.GL_LINE_STIPPLE)
+                if self.pen.linestyle == 'dash':
+                    gl.glDisable(gl.GL_LINE_STIPPLE)
 
-        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+            gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+            return
+
+        else:
+            shader = self.renderer.shader_line
+            gl.glUseProgram(shader)
+
+            # Create a new VAO (Vertex Array Object) and bind it
+            vao = gl.glGenVertexArrays(1)
+            gl.glBindVertexArray(vao)
+
+            # Generate buffers to hold our vertices
+            vbo = gl.glGenBuffers(1)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
+            # Get the position of the 'position' in parameter of our shader
+            # and bind it.
+            _pos = gl.glGetAttribLocation(shader, 'position')
+            gl.glEnableVertexAttribArray(_pos)
+            # Describe the position data layout in the buffer
+            gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 0,
+                                     ctypes.c_void_p(0))
+            # Send the data over to the buffer
+            vertices = z_pts.astype(np.float32)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_STATIC_DRAW)
+            # Unbind the VAO first (important)
+            gl.glBindVertexArray(0)
+            # Unbind other stuff
+            gl.glDisableVertexAttribArray(_pos)
+
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+            gl.glUseProgram(shader)
+            gl.glBindVertexArray(vao)
+
+            _loc = gl.glGetUniformLocation(shader, "fg_clr")
+
+            # draw fill, if any
+            if self.brush is not None and self.brush.color is not None:
+                _c = self.brush.color
+                gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
+
+                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+
+                gl.glDrawArrays(shape, 0, len(vertices))
+
+            if self.pen is not None and self.pen.linewidth > 0:
+                _c = self.pen.color
+                gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
+
+                # draw outline
+                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+                gl.glLineWidth(self.pen.linewidth)
+
+                if self.pen.linestyle == 'dash':
+                    gl.glEnable(gl.GL_LINE_STIPPLE)
+                    gl.glLineStipple(3, 0x1C47)
+
+                #gl.glDrawArrays(shape, 0, len(vertices))
+                gl.glDrawArrays(shape, 0, len(vertices))
+
+                if self.pen.linestyle == 'dash':
+                    gl.glDisable(gl.GL_LINE_STIPPLE)
+
+            gl.glBindVertexArray(0)
+            gl.glUseProgram(0)
 
     def draw_polygon(self, cpoints):
-        self._draw_pts(gl.GL_POLYGON, cpoints)
+        if opengl_version >= 3.1:
+            shape = gl.GL_LINE_LOOP
+        else:
+            shape = gl.GL_POLYGON
+
+        self._draw_pts(shape, cpoints)
 
     def draw_circle(self, cx, cy, cradius):
         # we have to approximate a circle in OpenGL
@@ -231,7 +365,12 @@ class RenderContext(render.RenderContextBase):
             dy = cradius * np.sin(theta)
             cpoints.append((cx + dx, cy + dy))
 
-        self._draw_pts(gl.GL_POLYGON, cpoints)
+        if opengl_version >= 3.1:
+            shape = gl.GL_LINE_LOOP
+        else:
+            shape = gl.GL_POLYGON
+
+        self._draw_pts(shape, cpoints)
 
     def draw_line(self, cx1, cy1, cx2, cy2):
         cpoints = [(cx1, cy1), (cx2, cy2)]
@@ -281,27 +420,12 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         given dimensions.
         """
         super(CanvasRenderer, self).resize(dims)
-
         width, height = dims[:2]
         self.gl_resize(width, height)
 
-        self.viewer.redraw(whence=2.5)
-
-    def reset_ortho_projection(self):
-        pts = np.asarray(self.viewer.get_pan_rect())
-        x, y = self.viewer.tform['data_to_native'].to_(pts).T
-
-        self.mn_x, self.mx_x = x.min(), x.max()
-        self.mn_y, self.mx_y = y.min(), y.max()
-        self.mn_z, self.mx_z = 0.0, 1.0
-
     def scale(self, scales):
-        if not self.mode3d:
-            self.reset_ortho_projection()
-            self.viewer.gl_update()
-        else:
-            self.camera.scale_2d(scales[:2])
-            #self.viewer.gl_update()
+        self.camera.scale_2d(scales[:2])
+        #self.viewer.gl_update()
 
         self.viewer.redraw(whence=2.5)
         # this is necessary for other widgets to get the same kind of
@@ -315,9 +439,8 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         self.viewer.make_callback('redraw', whence=0.0)
 
     def rotate_2d(self, ang_deg):
-        if self.mode3d:
-            self.camera.rotate_2d(ang_deg)
-            #self.viewer.gl_update()
+        self.camera.rotate_2d(ang_deg)
+        #self.viewer.gl_update()
 
         self.viewer.redraw(whence=2.6)
 
@@ -494,22 +617,34 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         return self.camera
 
     def setup_3D(self, mode3d):
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
+        if opengl_version < 3.1:
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glLoadIdentity()
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glLoadIdentity()
 
-        if mode3d:
-            gl.glDepthFunc(gl.GL_LEQUAL)
-            gl.glEnable(gl.GL_DEPTH_TEST)
+        gl.glDepthFunc(gl.GL_LEQUAL)
+        gl.glEnable(gl.GL_DEPTH_TEST)
 
-            self.camera.set_gl_transform()
-        else:
-            gl.glDisable(gl.GL_DEPTH_TEST)
-            gl.glOrtho(self.mn_x, self.mx_x, self.mn_y, self.mx_y,
-                       self.mn_z, self.mx_z)
-            #gl.glRotatef(45.0, 0.0, 0.0, 0.0)
+        # set camera view and projection matrices
+        self.camera.set_gl_transform()
 
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
+        if opengl_version >= 3.1:
+            gl.glUseProgram(self.shader_line)
+            _loc = gl.glGetUniformLocation(self.shader_line, "projection")
+            gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
+            _loc = gl.glGetUniformLocation(self.shader_line, "view")
+            gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
+
+            gl.glUseProgram(self.shader_img)
+            _loc = gl.glGetUniformLocation(self.shader_img, "projection")
+            gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
+            _loc = gl.glGetUniformLocation(self.shader_img, "view")
+            gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
+
+        ## if opengl_version < 3.1:
+        ##     gl.glMatrixMode(gl.GL_MODELVIEW)
+        ##     gl.glLoadIdentity()
 
     def getOpenGLInfo(self):
         info = dict(vendor=gl.glGetString(gl.GL_VENDOR).decode(),
@@ -532,14 +667,29 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         gl.glClearColor(r, g, b, 1.0)
         gl.glClearDepth(1.0)
 
-        gl.glDisable(gl.GL_CULL_FACE)
-        gl.glFrontFace(gl.GL_CCW)
-        if opengl_version <= 3.0:
+        if opengl_version < 3.1:
             gl.glDisable(gl.GL_LIGHTING)
             gl.glShadeModel(gl.GL_FLAT)
             #gl.glShadeModel(gl.GL_SMOOTH)
 
             gl.glEnable(gl.GL_TEXTURE_2D)
+        else:
+            vertex_shader_prog = shaders.compileShader(vertex_source,
+                                                       gl.GL_VERTEX_SHADER)
+            fragment_shader_prog = shaders.compileShader(fragment_source,
+                                                         gl.GL_FRAGMENT_SHADER)
+            self.shader_line = shaders.compileProgram(vertex_shader_prog,
+                                                      fragment_shader_prog)
+
+            vertex_shader_prog = shaders.compileShader(vertex_source2,
+                                                       gl.GL_VERTEX_SHADER)
+            fragment_shader_prog = shaders.compileShader(fragment_source2,
+                                                         gl.GL_FRAGMENT_SHADER)
+            self.shader_img = shaders.compileProgram(vertex_shader_prog,
+                                                     fragment_shader_prog)
+
+        gl.glDisable(gl.GL_CULL_FACE)
+        gl.glFrontFace(gl.GL_CCW)
         gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
         self.tex_id = gl.glGenTextures(1)
 
@@ -576,13 +726,9 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
     def gl_resize(self, width, height):
         self.wd, self.ht = width, height
 
-        if not self.mode3d:
-            self.reset_ortho_projection()
-
-        else:
-            self.camera.set_viewport_dimensions(width, height)
-
         gl.glViewport(0, 0, width, height)
+
+        self.camera.set_viewport_dimensions(width, height)
 
     def gl_paint(self):
         self._drawing = True
@@ -606,21 +752,92 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             gl.glFlush()
 
     def _draw_spines(self):
-        # draw orienting spines radiating in x, y and z
-        gl.glColor(1.0, 0.0, 0.0)
-        gl.glBegin(gl.GL_LINES)
-        gl.glVertex(self.mn_x, 0, 0)
-        gl.glVertex(self.mx_x, 0, 0)
-        gl.glEnd()
-        gl.glColor(0.0, 1.0, 0.0)
-        gl.glBegin(gl.GL_LINES)
-        gl.glVertex(0, self.mn_y, 0)
-        gl.glVertex(0, self.mx_y, 0)
-        gl.glEnd()
-        gl.glColor(0.0, 0.0, 1.0)
-        gl.glBegin(gl.GL_LINES)
-        gl.glVertex(0, 0, self.mn_z)
-        gl.glVertex(0, 0, self.mx_z)
-        gl.glEnd()
+        if opengl_version < 3.1:
+            # draw orienting spines radiating in x, y and z
+            gl.glColor(1.0, 0.0, 0.0)
+            gl.glBegin(gl.GL_LINES)
+            gl.glVertex(self.mn_x, 0, 0)
+            gl.glVertex(self.mx_x, 0, 0)
+            gl.glEnd()
+            gl.glColor(0.0, 1.0, 0.0)
+            gl.glBegin(gl.GL_LINES)
+            gl.glVertex(0, self.mn_y, 0)
+            gl.glVertex(0, self.mx_y, 0)
+            gl.glEnd()
+            gl.glColor(0.0, 0.0, 1.0)
+            gl.glBegin(gl.GL_LINES)
+            gl.glVertex(0, 0, self.mn_z)
+            gl.glVertex(0, 0, self.mx_z)
+            gl.glEnd()
+
+
+vertex_source = '''
+#version 330 core
+layout (location = 0) in vec3 position;
+
+// uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    // note that we read the multiplication from right to left
+    // gl_Position = projection * view * model * vec4(aPos, 1.0);
+    gl_Position = projection * view * vec4(position, 1.0);
+
+}
+'''
+
+fragment_source = '''
+#version 330
+
+out vec4 outputColor;
+
+uniform vec4 fg_clr;
+
+void main()
+{
+    // pass thru
+    outputColor = fg_clr;
+
+}
+'''
+
+vertex_source2 = '''
+#version 330 core
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec2 i_tex_coord;
+
+out vec2 o_tex_coord;
+
+// uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    // note that we read the multiplication from right to left
+    // gl_Position = projection * view * model * vec4(aPos, 1.0);
+    gl_Position = projection * view * vec4(position, 1.0);
+
+    o_tex_coord = i_tex_coord;
+}
+'''
+
+fragment_source2 = '''
+#version 330 core
+
+out vec4 outputColor;
+
+in vec2 o_tex_coord;
+
+uniform sampler2D img_texture;
+
+void main()
+{
+    outputColor = texture(img_texture, o_tex_coord);
+}
+'''
+
 
 # END

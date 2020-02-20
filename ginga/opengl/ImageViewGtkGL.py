@@ -30,9 +30,12 @@ class ImageViewGtkGL(ImageViewGtk.ImageViewGtk):
         self.imgwin = Gtk.GLArea()
         self.imgwin.connect('realize', self.on_realize_cb)
         self.imgwin.connect('render', self.on_render_cb)
+        self.imgwin.connect("resize", self.configure_cb)
         self.imgwin.set_has_depth_buffer(False)
         self.imgwin.set_has_stencil_buffer(False)
         self.imgwin.set_auto_render(False)
+        # set up other events, since we switched widgets
+        ImageViewGtk.GtkEventMixin.__init__(self)
 
         # Gtk expects 32bit RGBA data for color images
         self.rgb_order = 'RGBA'
@@ -51,11 +54,16 @@ class ImageViewGtkGL(ImageViewGtk.ImageViewGtk):
         self.choose_renderer('gtkgl')
 
     def configure_window(self, width, height):
-        self.logger.info("window size reconfigured to %dx%d" % (
+        self.logger.debug("window size reconfigured to %dx%d" % (
             width, height))
         self.renderer.resize((width, height))
 
         self.configure(width, height)
+
+    def configure_cb(self, widget, width, height):
+        self.logger.debug("allocation is %dx%d" % (width, height))
+        self.configure_window(width, height)
+        return True
 
     def get_rgb_image_as_widget(self):
         return self.imgwin.grabFrameBuffer()
@@ -70,15 +78,11 @@ class ImageViewGtkGL(ImageViewGtk.ImageViewGtk):
         qimg.save(ibuf, format=format, quality=quality)
         return ibuf
 
-    def prepare_image(self, image_id, cp, rgb_arr, whence):
-        # NOTE: parameters `cp` and `whence` unused for now; possible future use
-        if whence >= 2.5:
-            return
-
+    def prepare_image(self, cvs_img, cache, whence):
         #<-- image has changed, need to update texture
         self.imgwin.make_current()
 
-        self.renderer.gl_set_image(image_id, rgb_arr)
+        self.renderer.prepare_image(cvs_img, cache, whence)
 
     def update_image(self):
         if self.imgwin is None:

@@ -97,12 +97,12 @@ class RenderContext(render.RenderContextBase):
         self.renderer.rl.append((CIRCLE, (cx, cy, cradius),
                                  self.pen, self.brush))
 
-    def draw_bezier_curve(self, cpoints):
-        self.renderer.rl.append((BEZIER, cpoints, self.pen, self.brush))
+    ## def draw_bezier_curve(self, cpoints):
+    ##     self.renderer.rl.append((BEZIER, cpoints, self.pen, self.brush))
 
-    def draw_ellipse_bezier(self, cpoints):
-        # draw 4 bezier curves to make the ellipse
-        self.renderer.rl.append((ELLIPSE_BEZIER, cpoints, self.pen, self.brush))
+    ## def draw_ellipse_bezier(self, cpoints):
+    ##     # draw 4 bezier curves to make the ellipse
+    ##     self.renderer.rl.append((ELLIPSE_BEZIER, cpoints, self.pen, self.brush))
 
     ## def draw_ellipse(self, cx, cy, cxradius, cyradius, rot_deg):
     ##     self.renderer.rl.append((ELLIPSE,

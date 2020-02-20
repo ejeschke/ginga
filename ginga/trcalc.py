@@ -1018,10 +1018,10 @@ def strip_z(pts):
     return pts
 
 
-def pad_z(pts, value=0.0):
+def pad_z(pts, value=0.0, dtype=np.float32):
     """Adds a Z component from `pts` if it is missing.
     The value defaults to `value` (0.0)"""
-    pts = np.asarray(pts)
+    pts = np.asarray(pts, dtype=dtype)
     if pts.shape[-1] < 3:
         if len(pts.shape) < 2:
             return np.asarray((pts[0], pts[1], value), dtype=pts.dtype)

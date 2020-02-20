@@ -149,6 +149,9 @@ class Camera(object):
         """This side effects the OpenGL context to set the view to match
         the camera.
         """
+        # prevent a circular import situation
+        from .CanvasRenderGL import opengl_version
+
         tangent = np.tan(self.fov_deg / 2.0 / 180.0 * np.pi)
         vport_radius = self.near_plane * tangent
         # calculate aspect of the viewport
@@ -160,14 +163,37 @@ class Camera(object):
             vport_ht = 2.0 * vport_radius
             vport_wd = vport_ht * self.vport_wd_px / float(self.vport_ht_px)
 
-        gl.glFrustum(
-            -0.5 * vport_wd, 0.5 * vport_wd,    # left, right
-            -0.5 * vport_ht, 0.5 * vport_ht,    # bottom, top
-            self.near_plane, self.far_plane
-        )
+        left, right = -0.5 * vport_wd, 0.5 * vport_wd
+        bottom, top = -0.5 * vport_ht, 0.5 * vport_ht
+        z_near, z_far = self.near_plane, self.far_plane
 
+        # view matrix
         M = Matrix4x4.look_at(self.position, self.target, self.up, False)
-        gl.glMultMatrixf(M.get())
+
+        if opengl_version < 3.1:
+            gl.glFrustum(left, right, bottom, top, z_near, z_far)
+
+            gl.glMultMatrixf(M.get())
+
+        else:
+            self.view_mtx = M.get().astype(np.float32)
+
+            A = (right + left) / (right - left)
+            B = (top + bottom) / (top - bottom)
+            C = - (z_far + z_near) / (z_far - z_near)
+            # D = (-2.0 * z_far * z_near) / (z_far - z_near)
+            # WHY DO WE NEED TO DO THIS ???
+            D = - 1.0
+
+            # projection matrix
+            P = Matrix4x4([((2 * z_near) / (right - left), 0.0, A, 0.0),
+                           (0.0, (2 * z_near) / (top - bottom), B, 0.0),
+                           (0.0, 0.0, C, D),
+                           (0.0, 0.0, -1.0, 0.0)])
+            self.proj_mtx = P.get().astype(np.float32)
+
+            #Q = P * M
+            #gl.glLoadMatrixf(Q.get())
 
     def get_translation_speed(self, distance_from_target):
         """Returns the translation speed for ``distance_from_target``
