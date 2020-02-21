@@ -32,7 +32,7 @@ except Exception:
 
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox',
-           'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
+           'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
            'WebView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
@@ -569,6 +569,39 @@ class Slider(WidgetBase):
     def set_limits(self, minval, maxval, incr_value=1):
         adj = self.widget.get_adjustment()
         adj.configure(minval, minval, maxval, incr_value, incr_value, 0)
+
+
+class Dial(WidgetBase):
+    def __init__(self, dtype=float, wrap=False, track=False):
+        super(Dial, self).__init__()
+
+        w = GtkHelp.ValueDial()
+        self.widget = w
+
+        w.draw_value = False
+        w.wrap = wrap
+        w.set_tracking(track)
+        w.connect('value-changed', self._cb_redirect)
+        self.dtype = dtype
+
+        self.enable_callback('value-changed')
+
+    def _cb_redirect(self, dial, val):
+        ext_val = self.dtype(val)
+        self.make_callback('value-changed', ext_val)
+
+    def get_value(self):
+        int_val = self.widget.get_value()
+        return self.dtype(int_val)
+
+    def set_value(self, val):
+        self.widget.set_value(val)
+
+    def set_tracking(self, tf):
+        self.widget.set_tracking(tf)
+
+    def set_limits(self, minval, maxval, incr_value=1):
+        self.widget.set_limits(minval, maxval, incr_value)
 
 
 class ScrollBar(WidgetBase):
