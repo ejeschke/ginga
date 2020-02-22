@@ -20,13 +20,13 @@ STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcNa
 
 class FitsViewer(QtGui.QMainWindow):
 
-    def __init__(self, logger):
+    def __init__(self, logger, render='widget'):
         super(FitsViewer, self).__init__()
         self.logger = logger
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
 
-        fi = CanvasView(logger, render='widget')
+        fi = CanvasView(logger, render=render)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -288,7 +288,7 @@ def main(options, args):
         except Exception as e:
             logger.warning("failed to set OpenCL preference: %s" % (str(e)))
 
-    w = FitsViewer(logger)
+    w = FitsViewer(logger, render=options.render)
     w.resize(524, 540)
     w.show()
     app.setActiveWindow(w)
@@ -317,6 +317,8 @@ if __name__ == "__main__":
     argprs.add_argument("--opencl", dest="opencl", default=False,
                         action="store_true",
                         help="Use OpenCL acceleration")
+    argprs.add_argument("-r", "--render", dest="render", default='widget',
+                        help="Set render type {widget|scene|opengl}")
     argprs.add_argument("--profile", dest="profile", action="store_true",
                         default=False,
                         help="Run the profiler on main()")

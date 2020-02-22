@@ -132,7 +132,8 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_image(self, cx, cy, data, order='RGB'):
+    def draw_image(self, image_id, cpoints, rgb_arr, whence, order='RGBA'):
+        return
         # reorder data as needed for this renderer
         need_order = self.renderer.rgb_order
         data = self.renderer.reorder(need_order, data, order)

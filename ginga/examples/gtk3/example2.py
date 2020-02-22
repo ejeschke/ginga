@@ -22,7 +22,7 @@ STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcNa
 
 class FitsViewer(object):
 
-    def __init__(self, logger):
+    def __init__(self, logger, render='widget'):
 
         self.logger = logger
         self.drawcolors = colors.get_colors()
@@ -36,7 +36,7 @@ class FitsViewer(object):
 
         vbox = Gtk.VBox(spacing=2)
 
-        fi = CanvasView(logger)
+        fi = CanvasView(logger, render=render)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -67,9 +67,9 @@ class FitsViewer(object):
         self.drawtypes.sort()
 
         # add a color bar
-        fi.show_color_bar(True)
+        #fi.show_color_bar(True)
 
-        fi.show_focus_indicator(True)
+        #fi.show_focus_indicator(True)
 
         # add little mode indicator that shows keyboard modal states
         fi.show_mode_indicator(True, corner='ur')
@@ -228,7 +228,7 @@ def main(options, args):
         except Exception as e:
             logger.warning("failed to set OpenCL preference: %s" % (str(e)))
 
-    fv = FitsViewer(logger)
+    fv = FitsViewer(logger, render=options.render)
     root = fv.get_widget()
     root.show_all()
 
@@ -254,6 +254,8 @@ if __name__ == "__main__":
     argprs.add_argument("--opencl", dest="opencl", default=False,
                         action="store_true",
                         help="Use OpenCL acceleration")
+    argprs.add_argument("-r", "--render", dest="render", default='widget',
+                        help="Set render type {widget|opengl}")
     argprs.add_argument("--profile", dest="profile", action="store_true",
                         default=False,
                         help="Run the profiler on main()")

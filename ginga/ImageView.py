@@ -2998,6 +2998,8 @@ class ImageViewBase(Callback.Callbacks):
         self.configure(width, height)
 
     def prepare_image(self, cvs_img, cache, whence):
+        """This can be overridden by subclasses.
+        """
         self.renderer.prepare_image(cvs_img, cache, whence)
 
     def get_image_as_array(self, order=None):

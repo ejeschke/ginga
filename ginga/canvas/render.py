@@ -559,6 +559,8 @@ class StandardPixelRenderer(RendererBase):
         if cache.cutout is None:
             return
 
+        cache.rgbarr = cache.cutout
+
         t2 = time.time()
         # should this be self.get_rgb_order() ?
         dst_order = self.viewer.get_rgb_order()
@@ -566,7 +568,7 @@ class StandardPixelRenderer(RendererBase):
 
         # composite the image into the destination array at the
         # calculated position
-        trcalc.overlay_image(dstarr, cache.cvs_pos, cache.cutout,
+        trcalc.overlay_image(dstarr, cache.cvs_pos, cache.rgbarr,
                              dst_order=dst_order, src_order=image_order,
                              alpha=cvs_img.alpha, fill=True, flipy=False)
 

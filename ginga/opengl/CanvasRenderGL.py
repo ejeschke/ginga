@@ -26,9 +26,7 @@ from ginga import trcalc
 from .Camera import Camera
 from . import GlHelp
 
-# this is not reliable. We update the version later in gl_initialize()
-## opengl_version = float("{}.{}".format(gl.glGetIntegerv(gl.GL_MAJOR_VERSION),
-##                                       gl.glGetIntegerv(gl.GL_MINOR_VERSION)))
+# NOTE: we update the version later in gl_initialize()
 opengl_version = 3.0
 
 
@@ -132,14 +130,12 @@ class RenderContext(render.RenderContextBase):
         tr = transform.FlipSwapTransform(self.viewer)
         cp += tr.to_(off)
 
-        #if whence < 2.5:
-        #    self.viewer.prepare_image(image_id, cp, rgb_arr, whence)
-
         # TODO: either image_id is the GL texture id or there is an accessible
         # mapping to one
         image_id = self.renderer.tex_id
 
         if opengl_version < 3.1:
+            # <-- legacy OpenGL
             gl.glColor4f(1, 1, 1, 1.0)
             gl.glEnable(gl.GL_TEXTURE_2D)
 
@@ -161,60 +157,36 @@ class RenderContext(render.RenderContextBase):
             gl.glDisable(gl.GL_TEXTURE_2D)
 
         else:
+            # <-- modern OpenGL
             # pad with z=0 coordinate if lacking
             vertices = trcalc.pad_z(cp, dtype=np.float32)
             shape = gl.GL_LINE_LOOP
 
-            shader = self.renderer.shader_img
-            gl.glUseProgram(shader)
+            gl.glUseProgram(self.renderer.shader_img)
+            gl.glBindVertexArray(self.renderer.vao_img)
 
-            # Create a new VAO (Vertex Array Object) and bind it
-            vao = gl.glGenVertexArrays(1)
-            gl.glBindVertexArray(vao)
-
-            # Generate buffers to hold our vertices
-            vbo = gl.glGenBuffers(1)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
-            # Get the position of the 'position' in parameter of our shader
-            # and bind it.
-            _pos = gl.glGetAttribLocation(shader, 'position')
-            gl.glEnableVertexAttribArray(_pos)
-            # Describe the position data layout in the buffer
-            gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 5*4,
-                                     ctypes.c_void_p(0))
-            _pos2 = gl.glGetAttribLocation(shader, 'i_tex_coord')
-            gl.glEnableVertexAttribArray(_pos2)
-            gl.glVertexAttribPointer(_pos2, 2, gl.GL_FLOAT, False, 5*4,
-                                     ctypes.c_void_p(3*4))
             # Send the data over to the buffer
-            ## texcoord = np.array([(0.0, 0.0), (1.0, 0.0),
-            ##                      (1.0, 1.0), (0.0, 1.0)], dtype=np.float32)
             # NOTE: we swap elements 0 and 1, because we will also swap
             # vertices 0 and 1, this allows us to draw two triangles to complete
             # the image
             texcoord = np.array([(1.0, 0.0), (0.0, 0.0),
                                  (1.0, 1.0), (0.0, 1.0)], dtype=np.float32)
-            # swap order of rows 0 and 1
+            # swap vertices of rows 0 and 1
             vertices[[0, 1]] = vertices[[1, 0]]
             data = np.concatenate((vertices, texcoord), axis=1)
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, data, gl.GL_STATIC_DRAW)
-            # Unbind the VAO first (important)
-            gl.glBindVertexArray(0)
-            # Unbind other stuff
-            gl.glDisableVertexAttribArray(_pos)
-            gl.glDisableVertexAttribArray(_pos2)
-
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-
-            gl.glUseProgram(shader)
-            gl.glBindVertexArray(vao)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.renderer.vbo_img)
+            # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
+            #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, data, gl.GL_DYNAMIC_DRAW)
 
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
 
+            # See NOTE above
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 3)
             gl.glDrawArrays(gl.GL_TRIANGLES, 1, 4)
 
             gl.glBindVertexArray(0)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
             gl.glUseProgram(0)
 
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
@@ -253,6 +225,7 @@ class RenderContext(render.RenderContextBase):
         z_pts = trcalc.pad_z(cpoints, dtype=np.float32)
 
         if opengl_version < 3.1:
+            # <-- legacy OpenGL
             gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
 
             # draw fill, if any
@@ -283,47 +256,32 @@ class RenderContext(render.RenderContextBase):
             return
 
         else:
+            # <-- modern OpenGL
             shader = self.renderer.shader_line
             gl.glUseProgram(shader)
+            gl.glBindVertexArray(self.renderer.vao_line)
 
-            # Create a new VAO (Vertex Array Object) and bind it
-            vao = gl.glGenVertexArrays(1)
-            gl.glBindVertexArray(vao)
-
-            # Generate buffers to hold our vertices
-            vbo = gl.glGenBuffers(1)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
-            # Get the position of the 'position' in parameter of our shader
-            # and bind it.
-            _pos = gl.glGetAttribLocation(shader, 'position')
-            gl.glEnableVertexAttribArray(_pos)
-            # Describe the position data layout in the buffer
-            gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 0,
-                                     ctypes.c_void_p(0))
-            # Send the data over to the buffer
+            # Update the vertices data in the VBO
             vertices = z_pts.astype(np.float32)
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_STATIC_DRAW)
-            # Unbind the VAO first (important)
-            gl.glBindVertexArray(0)
-            # Unbind other stuff
-            gl.glDisableVertexAttribArray(_pos)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.renderer.vbo_line)
+            # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
+            #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_DYNAMIC_DRAW)
 
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-
-            gl.glUseProgram(shader)
-            gl.glBindVertexArray(vao)
-
+            # update color uniform
             _loc = gl.glGetUniformLocation(shader, "fg_clr")
 
             # draw fill, if any
-            if self.brush is not None and self.brush.color is not None:
-                _c = self.brush.color
-                gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
+            # TODO: fill currently does not work with GL_LINE_STRIP/LOOP
+            ## if self.brush is not None and self.brush.color is not None:
+            ##     _c = self.brush.color
+            ##     gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
 
-                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+            ##     gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
 
-                gl.glDrawArrays(shape, 0, len(vertices))
+            ##     gl.glDrawArrays(shape, 0, len(vertices))
 
+            # draw line, if any
             if self.pen is not None and self.pen.linewidth > 0:
                 _c = self.pen.color
                 gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
@@ -336,13 +294,13 @@ class RenderContext(render.RenderContextBase):
                     gl.glEnable(gl.GL_LINE_STIPPLE)
                     gl.glLineStipple(3, 0x1C47)
 
-                #gl.glDrawArrays(shape, 0, len(vertices))
                 gl.glDrawArrays(shape, 0, len(vertices))
 
                 if self.pen.linestyle == 'dash':
                     gl.glDisable(gl.GL_LINE_STIPPLE)
 
             gl.glBindVertexArray(0)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
             gl.glUseProgram(0)
 
     def draw_polygon(self, cpoints):
@@ -388,6 +346,7 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         self.kind = 'gl'
         self.rgb_order = 'RGBA'
         self.surface = self.viewer.get_widget()
+        self.use_offscreen_fbo = False
 
         # size of our GL viewport
         # these will change when the resize() is called
@@ -400,7 +359,7 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
 
         self.draw_wrapper = False
         self.mode3d = True
-        self.draw_spines = True
+        self.draw_spines = False
         self._drawing = False
 
         # initial values, will be recalculated at window map/resize
@@ -430,13 +389,13 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         self.viewer.redraw(whence=2.5)
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
-        self.viewer.make_callback('redraw', whence=0.0)
+        self.viewer.make_callback('redraw', 0.0)
 
     def pan(self, pos):
         self.viewer.redraw(whence=2.5)
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
-        self.viewer.make_callback('redraw', whence=0.0)
+        self.viewer.make_callback('redraw', 0.0)
 
     def rotate_2d(self, ang_deg):
         self.camera.rotate_2d(ang_deg)
@@ -584,13 +543,22 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         # a no-op for this renderer
         pass
 
-    def get_surface_as_array(self, order=None):
-        win_wd, win_ht = self.viewer.get_window_size()
-        image_buffer = gl.glReadPixels(0, 0, width, height, gl.GL_RGB,
-                                       gl.GL_UNSIGNED_BYTE)
-        image = np.frombuffer(image_buffer, dtype=np.uint8).reshape(width,
-                                                                    height, 3)
-        return image
+    def get_surface_as_array(self, order='RGBA'):
+        width, height = self.dims
+        gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)
+        if self.use_offscreen_fbo:
+            gl.glReadBuffer(gl.GL_COLOR_ATTACHMENT0)
+        img_buf = gl.glReadPixels(0, 0, width, height, gl.GL_RGBA,
+                                  gl.GL_UNSIGNED_BYTE)
+        img_np = np.frombuffer(img_buf, dtype=np.uint8).reshape(height,
+                                                                width, 4)
+        img_np = np.flipud(img_np)
+
+        if order is None or order == 'RGBA':
+            return img_np
+
+        img_np = trcalc.reorder_image(order, img_np, 'RGBA')
+        return img_np
 
     def render_whence(self, whence):
         if whence <= 2.0:
@@ -642,10 +610,6 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             _loc = gl.glGetUniformLocation(self.shader_img, "view")
             gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
 
-        ## if opengl_version < 3.1:
-        ##     gl.glMatrixMode(gl.GL_MODELVIEW)
-        ##     gl.glLoadIdentity()
-
     def getOpenGLInfo(self):
         info = dict(vendor=gl.glGetString(gl.GL_VENDOR).decode(),
                     renderer=gl.glGetString(gl.GL_RENDERER).decode(),
@@ -663,6 +627,9 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
 
         opengl_version = float(d['opengl_version'].split(' ')[0])
 
+        if self.use_offscreen_fbo:
+            self.create_offscreen_fbo()
+
         r, g, b = self.viewer.img_bg
         gl.glClearColor(r, g, b, 1.0)
         gl.glClearDepth(1.0)
@@ -674,6 +641,7 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
 
             gl.glEnable(gl.GL_TEXTURE_2D)
         else:
+            # --- line drawing shaders ---
             vertex_shader_prog = shaders.compileShader(vertex_source,
                                                        gl.GL_VERTEX_SHADER)
             fragment_shader_prog = shaders.compileShader(fragment_source,
@@ -681,12 +649,64 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             self.shader_line = shaders.compileProgram(vertex_shader_prog,
                                                       fragment_shader_prog)
 
+            # --- setup VAO for line drawing ---
+            gl.glUseProgram(self.shader_line)
+
+            # Create a new VAO (Vertex Array Object) and bind it
+            self.vao_line = gl.glGenVertexArrays(1)
+            gl.glBindVertexArray(self.vao_line)
+
+            # Generate buffers to hold our vertices
+            self.vbo_line = gl.glGenBuffers(1)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_line)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
+            # Get the position of the 'position' in parameter of our shader
+            # and bind it.
+            _pos = gl.glGetAttribLocation(self.shader_line, 'position')
+            gl.glEnableVertexAttribArray(_pos)
+            # Describe the position data layout in the buffer
+            gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 0,
+                                     ctypes.c_void_p(0))
+
+            # Unbind the VAO first (important)
+            gl.glBindVertexArray(0)
+            gl.glDisableVertexAttribArray(_pos)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+            gl.glUseProgram(0)
+
+            # --- image drawing shaders ---
             vertex_shader_prog = shaders.compileShader(vertex_source2,
                                                        gl.GL_VERTEX_SHADER)
             fragment_shader_prog = shaders.compileShader(fragment_source2,
                                                          gl.GL_FRAGMENT_SHADER)
             self.shader_img = shaders.compileProgram(vertex_shader_prog,
                                                      fragment_shader_prog)
+
+            # --- setup VAO for image drawing ---
+            self.vao_img = gl.glGenVertexArrays(1)
+            gl.glBindVertexArray(self.vao_img)
+
+            # Generate buffers to hold our vertices
+            self.vbo_img = gl.glGenBuffers(1)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_img)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
+            # Get the position of the 'position' in parameter of our shader
+            # and bind it.
+            _pos = gl.glGetAttribLocation(self.shader_img, 'position')
+            gl.glEnableVertexAttribArray(_pos)
+            # Describe the position data layout in the buffer
+            gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 5*4,
+                                     ctypes.c_void_p(0))
+            _pos2 = gl.glGetAttribLocation(self.shader_img, 'i_tex_coord')
+            gl.glEnableVertexAttribArray(_pos2)
+            gl.glVertexAttribPointer(_pos2, 2, gl.GL_FLOAT, False, 5*4,
+                                     ctypes.c_void_p(3*4))
+            # Unbind the VAO first (important)
+            gl.glBindVertexArray(0)
+            gl.glDisableVertexAttribArray(_pos)
+            gl.glDisableVertexAttribArray(_pos2)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+            gl.glUseProgram(0)
 
         gl.glDisable(gl.GL_CULL_FACE)
         gl.glFrontFace(gl.GL_CCW)
@@ -698,10 +718,6 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         ht, wd = rgb_arr.shape[:2]
 
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.tex_id)
-        ## gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S,
-        ##                    gl.GL_CLAMP)
-        ## gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T,
-        ##                    gl.GL_CLAMP)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER,
                            gl.GL_NEAREST)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER,
@@ -770,6 +786,37 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             gl.glVertex(0, 0, self.mx_z)
             gl.glEnd()
 
+    def create_offscreen_fbo(self):
+        width, height = self.dims
+        self.fbo = gl.glGenFramebuffers(1)
+        self.color_buf = gl.glGenRenderbuffers(1)
+        self.depth_buf = gl.glGenRenderbuffers(1)
+
+        # binds created FBO to context both for read and draw
+        gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.fbo)
+
+        # bind color render buffer
+        gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.color_buf)
+        gl.glRenderbufferStorage(gl.GL_RENDERBUFFER, gl.GL_RGBA8, width, height)
+        gl.glFramebufferRenderbuffer(gl.GL_FRAMEBUFFER, gl.GL_COLOR_ATTACHMENT0,
+                                     gl.GL_RENDERBUFFER, self.color_buf)
+
+        # bind depth render buffer
+        gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.depth_buf)
+        gl.glRenderbufferStorage(gl.GL_RENDERBUFFER, gl.GL_DEPTH_COMPONENT,
+                                 width, height)
+        gl.glFramebufferRenderbuffer(gl.GL_FRAMEBUFFER, gl.GL_DEPTH_ATTACHMENT,
+                                     gl.GL_RENDERBUFFER, self.depth_buf)
+
+    def delete_fbo_buffers(self):
+        gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
+        gl.glDeleteRenderbuffers(1, self.color_buf)
+        self.color_buf = None
+        gl.glDeleteRenderbuffers(1, self.depth_buf)
+        self.depth_buf = None
+        gl.glDeleteFramebuffers(1, self.fbo)
+        self.fbo = None
+
 
 vertex_source = '''
 #version 330 core
@@ -789,7 +836,7 @@ void main()
 '''
 
 fragment_source = '''
-#version 330
+#version 330 core
 
 out vec4 outputColor;
 

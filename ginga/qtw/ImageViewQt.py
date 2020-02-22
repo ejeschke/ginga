@@ -11,9 +11,18 @@ import numpy as np
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
 from ginga.qtw.QtHelp import (QtGui, QtCore, QImage, QPixmap, QCursor,
-                              QPainter, Timer, get_scroll_info, get_painter)
+                              QPainter, QOpenGLWidget, Timer,
+                              get_scroll_info, get_painter)
 
 from .CanvasRenderQt import CanvasRenderer
+
+have_opengl = False
+try:
+    from ginga.opengl.CanvasRenderGL import CanvasRenderer as OpenGLRenderer
+    from ginga.opengl.GlHelp import get_transforms
+    have_opengl = True
+except ImportError:
+    pass
 
 # set to True to debug window painting
 DEBUG_MODE = False
@@ -105,6 +114,29 @@ class RenderWidget(QtGui.QWidget):
         return QtCore.QSize(width, height)
 
 
+class RenderGLWidget(QOpenGLWidget):
+
+    def __init__(self, *args, **kwdargs):
+        QOpenGLWidget.__init__(self, *args, **kwdargs)
+
+        self.viewer = None
+
+    def initializeGL(self):
+        self.viewer.renderer.gl_initialize()
+
+    def resizeGL(self, width, height):
+        self.viewer.configure_window(width, height)
+
+    def paintGL(self):
+        self.viewer.renderer.gl_paint()
+
+    def sizeHint(self):
+        width, height = 300, 300
+        if self.viewer is not None:
+            width, height = self.viewer.get_desired_size()
+        return QtCore.QSize(width, height)
+
+
 class ImageViewQt(ImageView.ImageViewBase):
 
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
@@ -112,13 +144,15 @@ class ImageViewQt(ImageView.ImageViewBase):
                                          rgbmap=rgbmap, settings=settings)
 
         if render is None:
-            render = 'widget'
+            render = self.t_.get('render_widget', 'widget')
         self.wtype = render
         if self.wtype == 'widget':
             self.imgwin = RenderWidget()
         elif self.wtype == 'scene':
             self.scene = QtGui.QGraphicsScene()
             self.imgwin = RenderGraphicsView(self.scene)
+        elif self.wtype == 'opengl':
+            self.imgwin = RenderGLWidget()
         else:
             raise ImageViewQtError("Undefined render type: '%s'" % (render))
         self.imgwin.viewer = self
@@ -126,11 +160,19 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.qimg_fmt = QImage.Format_RGB32
         # find out optimum format for backing store
         #self.qimg_fmt = QPixmap(1, 1).toImage().format()
-        # Qt needs this to be in BGR(A)
-        self.rgb_order = 'BGRA'
 
-        # default renderer is Qt one
-        self.renderer = CanvasRenderer(self, surface_type='qpixmap')
+        if self.wtype == 'opengl':
+            if not have_opengl:
+                raise ValueError("OpenGL imports failed")
+            self.rgb_order = 'RGBA'
+            self.renderer = OpenGLRenderer(self)
+            # we replace some transforms in the catalog for OpenGL rendering
+            self.tform = get_transforms(self)
+        else:
+            # Qt needs this to be in BGR(A)
+            self.rgb_order = 'BGRA'
+            # default renderer is Qt one
+            self.renderer = CanvasRenderer(self, surface_type='qpixmap')
 
         self.msgtimer = Timer()
         self.msgtimer.add_callback('expired',
@@ -158,7 +200,10 @@ class ImageViewQt(ImageView.ImageViewBase):
         # tell renderer about our new size
         self.renderer.resize((width, height))
 
-        if isinstance(self.renderer.surface, QPixmap):
+        if self.wtype == 'opengl':
+            pass
+
+        elif isinstance(self.renderer.surface, QPixmap):
             # optimization when Qt is used as the renderer:
             # renderer surface is already a QPixmap
             self.pixmap = self.renderer.surface
@@ -197,11 +242,21 @@ class ImageViewQt(ImageView.ImageViewBase):
         self._defer_task.stop()
         self._defer_task.start(time_sec)
 
+    def prepare_image(self, cvs_img, cache, whence):
+        if self.wtype == 'opengl':
+            #<-- image has changed, need to update texture
+            self.imgwin.makeCurrent()
+
+        self.renderer.prepare_image(cvs_img, cache, whence)
+
     def update_image(self):
-        if (not self.pixmap) or (not self.imgwin):
+        if self.imgwin is None:
             return
 
-        if isinstance(self.renderer.surface, QPixmap):
+        if self.wtype == 'opengl':
+            pass
+
+        elif isinstance(self.renderer.surface, QPixmap):
             # optimization when Qt is used as the renderer:
             # if renderer surface is already an offscreen QPixmap
             # then we can update the window directly from it
@@ -213,6 +268,9 @@ class ImageViewQt(ImageView.ImageViewBase):
                 qimage.save('/tmp/offscreen_image.png', format='png', quality=90)
 
         else:
+            if self.pixmap is None:
+                return
+
             if isinstance(self.renderer.surface, QImage):
                 # optimization when Qt is used as the renderer:
                 # renderer surface is already a QImage
@@ -376,6 +434,10 @@ class RenderWidgetZoom(RenderMixin, RenderWidget):
 
 
 class RenderGraphicsViewZoom(RenderMixin, RenderGraphicsView):
+    pass
+
+
+class RenderGLWidgetZoom(RenderMixin, RenderGLWidget):
     pass
 
 
@@ -741,7 +803,9 @@ class ImageViewEvent(QtEventMixin, ImageViewQt):
                              settings=settings, render=render)
 
         # replace the widget our parent provided
-        if self.wtype == 'scene':
+        if self.wtype == 'opengl':
+            imgwin = RenderGLWidgetZoom()
+        elif self.wtype == 'scene':
             imgwin = RenderGraphicsViewZoom()
             imgwin.setScene(self.scene)
         else:

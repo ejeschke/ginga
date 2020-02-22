@@ -1000,6 +1000,10 @@ class ImageViewBindings(object):
     def _rotate_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_rotate', msg)
         ctr_x, ctr_y = viewer.get_center()
+        if None in (self._start_x, self._start_y):
+            # missed button down event, most likely, or we're getting this
+            # motion callback too early
+            return
         deg1 = math.degrees(math.atan2(ctr_y - self._start_y,
                                        self._start_x - ctr_x))
         deg2 = math.degrees(math.atan2(ctr_y - y, x - ctr_x))
