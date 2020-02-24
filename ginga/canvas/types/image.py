@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
+import uuid
 import numpy as np
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
@@ -85,6 +86,7 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         # Depending on value of `whence` they may not need to be recomputed.
         self._cache = {}
         self._zorder = 0
+        self.image_id = str(uuid.uuid4())
         # images are not editable by default
         self.editable = False
 
@@ -133,8 +135,7 @@ class ImageP(OnePointMixin, CanvasObjectBase):
 
         # TODO: need an "image id" here that identifies the particular
         # image in the renderer to be updated
-        image_id = 0
-        cr.draw_image(image_id, cpoints, cache.rgbarr, whence)
+        cr.draw_image(self, cpoints, cache.rgbarr, whence)
 
         # draw optional border
         if self.linewidth > 0:
@@ -333,20 +334,10 @@ class NormImageP(ImageP):
         self.cuts = cuts
         self.autocuts = autocuts
 
-    def prepare_image(self, viewer, whence):
-        cache = self.get_cache(viewer)
-        viewer.prepare_image(self, cache, whence)
-
     def _reset_cache(self, cache):
         cache.setvals(cutout=None, alpha=None, prergb=None, rgbarr=None,
                       drawn=False, cvs_pos=(0, 0))
         return cache
-
-    def set_image(self, image):
-        self.image = image
-        self.reset_optimize()
-
-        self.make_callback('image-set', image)
 
     def scale_by(self, scale_x, scale_y):
         self.scale_x *= scale_x

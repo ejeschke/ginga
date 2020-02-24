@@ -113,7 +113,7 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_image(self, image_id, cp, rgb_arr, whence, order='RGB'):
+    def draw_image(self, cvs_img, cp, rgb_arr, whence, order='RGB'):
         """Render the image represented by (rgb_arr) at (cx, cy)
         in the pixel space.
         """
@@ -132,14 +132,14 @@ class RenderContext(render.RenderContextBase):
 
         # TODO: either image_id is the GL texture id or there is an accessible
         # mapping to one
-        image_id = self.renderer.tex_id
+        tex_id = self.renderer.get_texture_id(cvs_img.image_id)
 
         if opengl_version < 3.1:
             # <-- legacy OpenGL
             gl.glColor4f(1, 1, 1, 1.0)
             gl.glEnable(gl.GL_TEXTURE_2D)
+            gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
 
-            gl.glBindTexture(gl.GL_TEXTURE_2D, image_id)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
             gl.glBegin(gl.GL_QUADS)
             try:
@@ -158,6 +158,8 @@ class RenderContext(render.RenderContextBase):
 
         else:
             # <-- modern OpenGL
+            gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
+
             # pad with z=0 coordinate if lacking
             vertices = trcalc.pad_z(cp, dtype=np.float32)
             shape = gl.GL_LINE_LOOP
@@ -361,6 +363,7 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         self.mode3d = True
         self.draw_spines = False
         self._drawing = False
+        self._tex_cache = dict()
 
         # initial values, will be recalculated at window map/resize
         self.lim_x, self.lim_y, self.lim_z = 1.0, 1.0, 1.0
@@ -533,8 +536,15 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         else:
             raise RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
 
-        image_id = self.tex_id
-        self.gl_set_image(image_id, cache.rgbarr)
+        tex_id = self.get_texture_id(cvs_img.image_id)
+        self.gl_set_image(tex_id, cache.rgbarr)
+
+    def get_texture_id(self, image_id):
+        tex_id = self._tex_cache.get(image_id, None)
+        if tex_id is None:
+            tex_id = gl.glGenTextures(1)
+            self._tex_cache[image_id] = tex_id
+        return tex_id
 
     ## def initialize(self):
     ##     self.rl = []
@@ -710,14 +720,13 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
 
         gl.glDisable(gl.GL_CULL_FACE)
         gl.glFrontFace(gl.GL_CCW)
-        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
-        self.tex_id = gl.glGenTextures(1)
 
-    def gl_set_image(self, image_id, rgb_arr):
+    def gl_set_image(self, tex_id, rgb_arr):
         """NOTE: this is a slow operation--downloading a texture."""
         ht, wd = rgb_arr.shape[:2]
 
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.tex_id)
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER,
                            gl.GL_NEAREST)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER,

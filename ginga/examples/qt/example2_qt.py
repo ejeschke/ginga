@@ -64,7 +64,7 @@ class FitsViewer(QtGui.QMainWindow):
 
         # add a color bar
         #fi.show_color_bar(True)
-        fi.show_focus_indicator(True)
+        #fi.show_focus_indicator(True)
 
         # add little mode indicator that shows keyboard modal states
         fi.show_mode_indicator(True, corner='ur')
