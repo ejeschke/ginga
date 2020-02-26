@@ -804,10 +804,12 @@ class Dial(Gtk.DrawingArea):
         if event.button == 1:
             self._dragging = True
             self._calc_action(event.x, event.y)
+            return True
 
     def button_release_event(self, widget, event):
         self._dragging = False
         self._calc_action(event.x, event.y)
+        return True
 
     def motion_notify_event(self, widget, event):
         # Are we holding down the left mouse button?
@@ -815,6 +817,7 @@ class Dial(Gtk.DrawingArea):
             return False
 
         self._calc_action(event.x, event.y)
+        return True
 
     def scroll_event(self, widget, event):
         degrees, direction = get_scroll_info(event)
@@ -824,10 +827,12 @@ class Dial(Gtk.DrawingArea):
             self.turn_cw()
 
         self.draw()
+        return True
 
     def focus_event(self, widget, event, tf):
         self._has_focus = tf
         self.draw()
+        return True
 
     def _calc_action(self, x, y):
         ang_deg = np.degrees(np.arctan2(x - self.center[0],
