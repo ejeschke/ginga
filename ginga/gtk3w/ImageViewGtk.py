@@ -63,6 +63,13 @@ class ImageViewGtk(ImageView.ImageViewBase):
                 self.rgb_order = 'RGBA'
 
         elif self.wtype == 'opengl':
+            # NOTE: See https://gitlab.gnome.org/GNOME/gtk/issues/1270 for
+            # an issue regarding a buggy GLX/Mesa driver for X11 on Linux;
+            # if you experience non-GL widgets flashing when using the
+            # opengl renderer then try setting the following environment
+            # variable:
+            #   GDK_GL=software-draw-surface
+            #
             imgwin = Gtk.GLArea()
 
             imgwin.connect('realize', self.on_realize_cb)
@@ -203,7 +210,7 @@ class ImageViewGtk(ImageView.ImageViewBase):
         if self.surface is None:
             # window is not mapped/configured yet
             return
-        self.logger.debug("updating window from surface")
+        #self.logger.debug("updating window from surface")
         # redraw the screen from backing surface
         cr.set_source_surface(self.surface, 0, 0)
 

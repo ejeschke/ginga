@@ -2310,7 +2310,7 @@ class ImageViewBindings(object):
         scales = camera.get_scale_2d()
         # TODO: need to set scale in viewer settings, without triggering a
         # scale operation on this viewer
-        viewer.gl_update()
+        viewer.update_image()
         return True
 
     def ms_camera_orbit(self, viewer, event, data_x, data_y, msg=True):
@@ -2335,7 +2335,7 @@ class ImageViewBindings(object):
         ## else:
         ##     viewer.onscreen_message(None)
 
-        viewer.gl_update()
+        viewer.update_image()
         return True
 
     def ms_camera_pan_delta(self, viewer, event, data_x, data_y, msg=True):
@@ -2362,7 +2362,7 @@ class ImageViewBindings(object):
         # TODO: need to get the updated pan position and set it in
         # viewer's settings without triggering a callback to the viewer
         # itself
-        viewer.gl_update()
+        viewer.update_image()
         return True
 
     def kp_camera_reset(self, viewer, event, data_x, data_y):
@@ -2373,7 +2373,7 @@ class ImageViewBindings(object):
 
         camera.reset()
         viewer.onscreen_message("Reset camera", delay=0.5)
-        viewer.gl_update()
+        viewer.update_image()
         return True
 
     def kp_camera_save(self, viewer, event, data_x, data_y):
@@ -2394,7 +2394,7 @@ class ImageViewBindings(object):
 
         renderer = viewer.renderer
         renderer.mode3d = not renderer.mode3d
-        viewer.gl_update()
+        viewer.update_image()
         return True
 
 
