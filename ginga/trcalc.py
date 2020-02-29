@@ -556,7 +556,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
     if dtype is None:
         dtype = data_np.dtype
 
-    if data_np.dtype == np.uint8 and have_opencv and _use in (None, 'opencv'):
+    if have_opencv and _use in (None, 'opencv'):
         if logger is not None:
             logger.debug("resizing with OpenCv")
         # opencv is fastest
@@ -567,9 +567,8 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         cutout = data_np[y1:y2 + 1, x1:x2 + 1]
 
-        if cutout.dtype == np.dtype('>f8'):
-            # special hack for OpenCl resize bug on numpy arrays of
-            # dtype '>f8'-- it corrupts them
+        if cutout.dtype not in (np.uint8, np.uint16):
+            # special hack for OpenCl resize on certain numpy array types
             cutout = cutout.astype(np.float64)
         newdata = cv2.resize(cutout, None,
                              fx=scale_x, fy=scale_y,

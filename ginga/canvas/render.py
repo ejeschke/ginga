@@ -141,9 +141,23 @@ class RendererBase(object):
     def transform_2d(self, state):
         self.viewer.redraw(whence=2.5)
 
+    def rgbmap_change(self, rgbmap):
+        self.viewer.redraw(whence=2)
+
+    def levels_change(self, levels):
+        self.viewer.redraw(whence=1)
+
+    def icc_profile_change(self):
+        self.viewer.redraw(whence=2.3)
+
+    def interpolation_change(self, interp):
+        self.viewer.redraw(whence=0)
+
 
 class StandardPixelRenderer(RendererBase):
-    """Base class from which all Renderer classes are derived."""
+    """Standard renderer for generating bitmap-based image that can be
+    copied to an RGB image type-widget or a canvas.
+    """
 
     def __init__(self, viewer):
         super(StandardPixelRenderer, self).__init__(viewer)
@@ -801,12 +815,18 @@ class StandardPixelRenderer(RendererBase):
     def get_window_size(self):
         return self.dims[:2]
 
-    def resize(self, dims):
+    def _resize(self, dims):
         self.dims = dims
         width, height = dims[:2]
 
         self._ctr_x = width // 2
         self._ctr_y = height // 2
+
+    def resize(self, dims):
+        self._resize(dims)
+
+        self.invalidate()
+        self.viewer.redraw(whence=0)
 
     def get_center(self):
         return (self._ctr_x, self._ctr_y)

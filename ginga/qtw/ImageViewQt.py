@@ -198,7 +198,7 @@ class ImageViewQt(ImageView.ImageViewBase):
             self.scene.setSceneRect(1, 1, width - 2, height - 2)
 
         # tell renderer about our new size
-        self.renderer.resize((width, height))
+        #self.renderer.resize((width, height))
 
         if self.wtype == 'opengl':
             pass

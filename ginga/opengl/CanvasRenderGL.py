@@ -97,7 +97,8 @@ class RenderContext(render.RenderContextBase):
     def setup_pen_brush(self, pen, brush):
         # pen, brush are from ginga.vec
         self.pen = self.cr.get_pen(pen.color, alpha=pen.alpha,
-                                   linewidth=pen.linewidth)
+                                   linewidth=pen.linewidth,
+                                   linestyle=pen.linestyle)
         if brush is None:
             self.brush = None
         else:
@@ -191,11 +192,6 @@ class RenderContext(render.RenderContextBase):
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
             gl.glUseProgram(0)
 
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         # TODO: this draws text as polygons, since there is no native
         # text support in OpenGL.  It uses cairo to convert the text to
@@ -213,6 +209,8 @@ class RenderContext(render.RenderContextBase):
                 pts = trcalc.rotate_coord(pts, [rot_deg], (cx, cy))
             pts = (pts - base) * (1 / scale) + base
             self.set_line(self.font.color, alpha=self.font.alpha)
+            # NOTE: since non-convex polygons are not filled correctly, it
+            # doesn't work to set any fill here
             self.set_fill(None)
             self.draw_polygon(pts)
 
@@ -225,6 +223,9 @@ class RenderContext(render.RenderContextBase):
 
         # pad with z=0 coordinate if lacking
         z_pts = trcalc.pad_z(cpoints, dtype=np.float32)
+
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 
         if opengl_version < 3.1:
             # <-- legacy OpenGL
@@ -265,6 +266,7 @@ class RenderContext(render.RenderContextBase):
 
             # Update the vertices data in the VBO
             vertices = z_pts.astype(np.float32)
+
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.renderer.vbo_line)
             # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
             #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
@@ -275,15 +277,17 @@ class RenderContext(render.RenderContextBase):
 
             # draw fill, if any
             # TODO: fill currently does not work with GL_LINE_STRIP/LOOP
-            ## if self.brush is not None and self.brush.color is not None:
-            ##     _c = self.brush.color
-            ##     gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
+            if self.brush is not None and self.brush.color is not None:
+                _c = self.brush.color
+                gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
 
-            ##     gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
 
-            ##     gl.glDrawArrays(shape, 0, len(vertices))
+                # TODO: this will not fill in non-convex polygons correctly
+                gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(vertices))
 
             # draw line, if any
+            # TODO: support line stippling (dash)
             if self.pen is not None and self.pen.linewidth > 0:
                 _c = self.pen.color
                 gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
@@ -292,14 +296,7 @@ class RenderContext(render.RenderContextBase):
                 gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
                 gl.glLineWidth(self.pen.linewidth)
 
-                if self.pen.linestyle == 'dash':
-                    gl.glEnable(gl.GL_LINE_STIPPLE)
-                    gl.glLineStipple(3, 0x1C47)
-
                 gl.glDrawArrays(shape, 0, len(vertices))
-
-                if self.pen.linestyle == 'dash':
-                    gl.glDisable(gl.GL_LINE_STIPPLE)
 
             gl.glBindVertexArray(0)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
@@ -381,13 +378,14 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
-        super(CanvasRenderer, self).resize(dims)
+        self._resize(dims)
+
         width, height = dims[:2]
         self.gl_resize(width, height)
+        self.viewer.redraw(whence=2.5)
 
     def scale(self, scales):
         self.camera.scale_2d(scales[:2])
-        #self.viewer.gl_update()
 
         self.viewer.redraw(whence=2.5)
         # this is necessary for other widgets to get the same kind of
@@ -402,12 +400,8 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
 
     def rotate_2d(self, ang_deg):
         self.camera.rotate_2d(ang_deg)
-        #self.viewer.gl_update()
 
         self.viewer.redraw(whence=2.6)
-
-    def transform_2d(self, state):
-        self.viewer.redraw(whence=2.5)
 
     def _common_draw(self, cvs_img, cache, whence):
         # internal common drawing phase for all images
@@ -546,8 +540,8 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             self._tex_cache[image_id] = tex_id
         return tex_id
 
-    ## def initialize(self):
-    ##     self.rl = []
+    def initialize(self):
+        self.rl = []
 
     def finalize(self):
         # a no-op for this renderer

@@ -97,7 +97,8 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_image(self, cx, cy, rgb_arr, order='RGB'):
+    def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
+        return
         # get window contents as a buffer and paste it into the surface
         # TODO: allow greater bit depths
         rgb_arr = self.viewer.getwin_array(order=self.rgb_order,
@@ -145,8 +146,6 @@ class CanvasRenderer(render.StandardPixelRenderer):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
-        super(CanvasRenderer, self).resize(dims)
-
         width, height = dims[:2]
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
@@ -155,13 +154,8 @@ class CanvasRenderer(render.StandardPixelRenderer):
         # (cv just uses numpy arrays!)
         depth = len(self.rgb_order)
         self.surface = np.zeros((height, width, depth), dtype=np.uint8)
-        print('OPENCV RESIZE', width, height)
 
-    def text_extents(self, text, font):
-        cr = RenderContext(self, self.viewer, self.surface)
-        cr.set_font(font.fontname, font.fontsize, color=font.color,
-                    alpha=font.alpha)
-        return cr.text_extents(text)
+        super(CanvasRenderer, self).resize(dims)
 
     ## def finalize(self):
     ##     cr = RenderContext(self, self.viewer, self.surface)
@@ -197,5 +191,11 @@ class CanvasRenderer(render.StandardPixelRenderer):
         cr = self.setup_cr(shape)
         cr.set_font_from_shape(shape)
         return cr.text_extents(shape.text)
+
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)
 
 #END

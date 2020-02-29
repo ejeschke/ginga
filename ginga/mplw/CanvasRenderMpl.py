@@ -90,7 +90,14 @@ class RenderContext(render.RenderContextBase):
     def text_extents(self, text):
         return self.cr.text_extents(text, self.font)
 
+    def setup_pen_brush(self, pen, brush):
+        self.pen = pen
+        self.brush = brush
+
     ##### DRAWING OPERATIONS #####
+
+    def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
+        return
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         fontdict = self.font.get_fontdict()
@@ -148,11 +155,15 @@ class RenderContext(render.RenderContextBase):
         self.cr.axes.add_patch(p)
 
     def draw_line(self, cx1, cy1, cx2, cy2):
+        print('draw_line')
         self.cr.init(transform=None)
         self.cr.update_line(self.pen)
+        print(self.cr.kwdargs)
 
+        print((cx1, cx2), (cy1, cy2))
         l = lines.Line2D((cx1, cx2), (cy1, cy2), **self.cr.kwdargs)
         self.cr.axes.add_line(l)
+        print('end draw_line')
 
     def draw_path(self, cpoints):
         self.cr.init(closed=False, transform=None)
@@ -164,10 +175,10 @@ class RenderContext(render.RenderContextBase):
         self.cr.axes.add_patch(p)
 
 
-class CanvasRenderer(render.RendererBase):
+class CanvasRenderer(render.StandardPixelRenderer):
 
     def __init__(self, viewer):
-        render.RendererBase.__init__(self, viewer)
+        render.StandardPixelRenderer.__init__(self, viewer)
 
         self.kind = 'mpl'
         self.rgb_order = viewer.rgb_order
@@ -177,7 +188,7 @@ class CanvasRenderer(render.RendererBase):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
-        pass
+        super(CanvasRenderer, self).resize(dims)
 
     def render_image(self, rgbobj, dst_x, dst_y):
         # for compatibility with the other renderers
@@ -195,6 +206,12 @@ class CanvasRenderer(render.RendererBase):
         cr = self.setup_cr(shape)
         cr.set_font_from_shape(shape)
         return cr.text_extents(shape.text)
+
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.viewer.ax_util)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)
 
 
 #END

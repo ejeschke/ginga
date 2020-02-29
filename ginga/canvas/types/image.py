@@ -85,21 +85,11 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         # The cache holds intermediate step results by viewer.
         # Depending on value of `whence` they may not need to be recomputed.
         self._cache = {}
-        self._zorder = 0
         self.image_id = str(uuid.uuid4())
         # images are not editable by default
         self.editable = False
 
         self.enable_callback('image-set')
-
-    def get_zorder(self):
-        return self._zorder
-
-    def set_zorder(self, zorder):
-        self._zorder = zorder
-        for viewer in self._cache:
-            viewer.reorder_layers()
-            viewer.redraw(whence=2)
 
     def in_cache(self, viewer):
         return viewer in self._cache

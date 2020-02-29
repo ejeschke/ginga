@@ -356,17 +356,19 @@ class ImageViewBase(Callback.Callbacks):
         self._imgwin_ht = height
         self.logger.debug("widget resized to %dx%d" % (width, height))
 
-        self.renderer.invalidate()
-        # this is called by our subclass
-        #self.renderer.resize((width, height))
+        self.renderer.resize((width, height))
 
         self.make_callback('configure', width, height)
-        self.redraw(whence=0)
 
     def configure(self, width, height):
         """See :meth:`set_window_size`."""
         self._imgwin_set = True
         self.set_window_size(width, height)
+
+    def configure_surface(self, width, height):
+        """See :meth:`configure`."""
+        # legacy API--to be deprecated
+        self.configure(width, height)
 
     def set_desired_size(self, width, height):
         """See :meth:`set_window_size`."""
@@ -646,7 +648,7 @@ class ImageViewBase(Callback.Callbacks):
     def rgbmap_cb(self, rgbmap):
         """Handle callback for when RGB map has changed."""
         self.logger.debug("RGB map has changed.")
-        self.redraw(whence=2)
+        self.renderer.rgbmap_change(rgbmap)
 
     def get_rgbmap(self):
         """Get the RGB map object used by this instance.
@@ -673,7 +675,8 @@ class ImageViewBase(Callback.Callbacks):
         t_ = rgbmap.get_settings()
         t_.share_settings(self.t_, keylist=rgbmap.settings_keys)
         rgbmap.add_callback('changed', self.rgbmap_cb)
-        self.redraw(whence=2)
+
+        self.renderer.rgbmap_change(rgbmap)
 
     def get_image(self):
         """Get the image currently being displayed.
@@ -862,8 +865,6 @@ class ImageViewBase(Callback.Callbacks):
             if self.use_image_profile:
                 self.checkpoint_profile()
 
-            self.redraw(whence=0)
-
     def apply_profile(self, profile, keylist=None):
         """Apply a profile to the viewer.
 
@@ -879,7 +880,6 @@ class ImageViewBase(Callback.Callbacks):
         with self.suppress_redraw:
             profile.copy_settings(self.t_, keylist=keylist,
                                   callback=True)
-            self.redraw(whence=0)
 
     def capture_profile(self, profile):
         self.t_.copy_settings(profile)
@@ -1429,7 +1429,7 @@ class ImageViewBase(Callback.Callbacks):
 
     def icc_profile_cb(self, setting, value):
         """Handle callback related to changes in output ICC profiles."""
-        self.redraw(whence=2.3)
+        self.renderer.icc_profile_change()
 
     def get_data_pt(self, win_pt):
         """Similar to :meth:`get_data_xy`, except that it takes a single
@@ -2046,10 +2046,7 @@ class ImageViewBase(Callback.Callbacks):
 
     def interpolation_change_cb(self, setting, value):
         """Handle callback related to changes in interpolation."""
-        canvas_img = self.get_canvas_image()
-        canvas_img.interpolation = value
-        canvas_img.reset_optimize()
-        self.redraw(whence=0)
+        self.renderer.interpolation_change(value)
 
     def set_name(self, name):
         """Set viewer name."""
@@ -2094,8 +2091,8 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         option = option.lower()
-        assert(option in self.autozoom_options), \
-            ImageViewError("Bad autozoom option '%s': must be one of %s" % (
+        if option not in self.autozoom_options:
+            raise ImageViewError("Bad autozoom option '%s': must be one of %s" % (
                 str(self.autozoom_options)))
         self.t_.set(autozoom=option)
 
@@ -2354,7 +2351,7 @@ class ImageViewBase(Callback.Callbacks):
 
     def cut_levels_cb(self, setting, value):
         """Handle callback related to changes in cut levels."""
-        self.redraw(whence=1)
+        self.renderer.levels_change(value)
 
     def enable_autocuts(self, option):
         """Set ``autocuts`` behavior.
@@ -2525,7 +2522,6 @@ class ImageViewBase(Callback.Callbacks):
             else:
                 self.t_.copy_settings(dst_fi.get_settings(),
                                       keylist=keylist)
-            dst_fi.redraw(whence=whence)
 
     def get_rotation(self):
         """Get image rotation angle.
@@ -2986,16 +2982,6 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.set_cursor(self.cursor[cname])
-
-    def configure_surface(self, width, height):
-        """Reconfigure the renderer for a new size, then reconfigure
-        our viewer for the same.
-
-        This can be overridden by subclasses.
-        """
-        self.renderer.resize((width, height))
-
-        self.configure(width, height)
 
     def prepare_image(self, cvs_img, cache, whence):
         """This can be overridden by subclasses.

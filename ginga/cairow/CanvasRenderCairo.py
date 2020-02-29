@@ -13,6 +13,7 @@ import cairo
 from ginga import colors
 from ginga.fonts import font_asst
 from ginga.canvas import render
+from ginga.vec import CanvasRenderVec
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 
@@ -132,8 +133,10 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_image(self, image_id, cpoints, rgb_arr, whence, order='RGBA'):
-        return
+    def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
+        if not isinstance(self.renderer, CanvasRenderVec.CanvasRenderer):
+            return
+
         # reorder data as needed for this renderer
         need_order = self.renderer.rgb_order
         data = self.renderer.reorder(need_order, data, order)
@@ -236,8 +239,6 @@ class CanvasRenderer(render.StandardPixelRenderer):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
-        super(CanvasRenderer, self).resize(dims)
-
         width, height = dims[:2]
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
@@ -264,11 +265,7 @@ class CanvasRenderer(render.StandardPixelRenderer):
         cr.set_source_rgba(r, g, b)
         cr.fill()
 
-    def text_extents(self, text, font):
-        cr = RenderContext(self, self.viewer, self.surface)
-        cr.set_font(font.fontname, font.fontsize, color=font.color,
-                    alpha=font.alpha)
-        return cr.text_extents(text)
+        super(CanvasRenderer, self).resize(dims)
 
     ## def finalize(self):
     ##     cr = RenderContext(self, self.viewer, self.surface)
@@ -328,5 +325,11 @@ class CanvasRenderer(render.StandardPixelRenderer):
         cr = self.setup_cr(shape)
         cr.set_font_from_shape(shape)
         return cr.text_extents(shape.text)
+
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)
 
 # END

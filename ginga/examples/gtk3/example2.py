@@ -47,6 +47,7 @@ class FitsViewer(object):
         fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
+        fi.set_enter_focus(True)
         self.fitsimage = fi
 
         bd = fi.get_bindings()

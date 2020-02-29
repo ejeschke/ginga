@@ -26,10 +26,11 @@ class RenderContext(render.RenderContextBase):
         self.font = None
 
     def set_line_from_shape(self, shape):
-        # TODO: support style
         alpha = getattr(shape, 'alpha', 1.0)
         linewidth = getattr(shape, 'linewidth', 1.0)
-        self.pen = Pen(shape.color, linewidth=linewidth, alpha=alpha)
+        linestyle = getattr(shape, 'linestyle', 'solid')
+        self.pen = Pen(shape.color, linewidth=linewidth,
+                       linestyle=linestyle, alpha=alpha)
 
     def set_fill_from_shape(self, shape):
         fill = getattr(shape, 'fill', False)
@@ -84,7 +85,8 @@ class RenderContext(render.RenderContextBase):
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, image_id, cpoints, rgb_arr, whence, order='RGB'):
-        self.renderer.rl.append((IMAGE, (image_id, cpoints, rgb_arr, whence, order)))
+        self.renderer.rl.append((IMAGE, (image_id, cpoints, rgb_arr, whence,
+                                         order)))
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         self.renderer.rl.append((TEXT, (cx, cy, text, rot_deg),

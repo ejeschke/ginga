@@ -2328,6 +2328,8 @@ class ImageViewBindings(object):
             ## mst = "Camera position: (%.4f, %.4f, %.4f)" % pos
             ## if msg:
             ##     viewer.onscreen_message(mst, delay=0.5)
+            tup = camera.position.get()
+            print('camera position', tup)
 
         elif event.state == 'down':
             self._start_x, self._start_y = x, y
@@ -2362,6 +2364,11 @@ class ImageViewBindings(object):
         # TODO: need to get the updated pan position and set it in
         # viewer's settings without triggering a callback to the viewer
         # itself
+        tup = camera.position.get()
+        print('native position', tup)
+        data_x, data_y = viewer.tform['data_to_native'].from_(tup[:2])
+        print('translated', data_x, data_y)
+
         viewer.update_image()
         return True
 

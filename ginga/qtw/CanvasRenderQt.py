@@ -127,8 +127,10 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_image(self, image_id, cpoints, rgb_arr, whence, order='RGBA'):
-        return
+    def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
+        if not isinstance(self.renderer, CanvasRenderVec.CanvasRenderer):
+            return
+
         # reorder data as needed for this renderer
         ## need_order = self.renderer.rgb_order
         ## rgb_arr = self.renderer.reorder(need_order, rgb_arr, order)
@@ -219,8 +221,6 @@ class CanvasRenderer(render.StandardPixelRenderer):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
-        super(CanvasRenderer, self).resize(dims)
-
         width, height = dims[:2]
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
@@ -233,24 +233,7 @@ class CanvasRenderer(render.StandardPixelRenderer):
         else:
             self.surface = QImage(width, height, self.qimg_fmt)
 
-        # fill surface with background color;
-        # this reduces unwanted garbage in the resizing window
-        painter = get_painter(self.surface)
-        size = self.surface.size()
-        sf_wd, sf_ht = size.width(), size.height()
-        bg = self.viewer.img_bg
-        bgclr = self._get_color(*bg)
-        painter.fillRect(QtCore.QRect(0, 0, sf_wd, sf_ht), bgclr)
-
-    def text_extents(self, text, font):
-        qfont = get_font(font.fontname, font.fontsize)
-        fm = QFontMetrics(qfont)
-        if hasattr(fm, 'horizontalAdvance'):
-            width = fm.horizontalAdvance(text)
-        else:
-            width = fm.width(text)
-        height = fm.height()
-        return width, height
+        super(CanvasRenderer, self).resize(dims)
 
     def _get_qimage(self, rgb_data):
         ht, wd, channels = rgb_data.shape
@@ -342,6 +325,16 @@ class CanvasRenderer(render.StandardPixelRenderer):
         cr = self.setup_cr(shape)
         cr.set_font_from_shape(shape)
         return cr.text_extents(shape.text)
+
+    def text_extents(self, text, font):
+        qfont = get_font(font.fontname, font.fontsize)
+        fm = QFontMetrics(qfont)
+        if hasattr(fm, 'horizontalAdvance'):
+            width = fm.horizontalAdvance(text)
+        else:
+            width = fm.width(text)
+        height = fm.height()
+        return width, height
 
 
 #END

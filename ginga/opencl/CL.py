@@ -88,8 +88,7 @@ class CL(object):
         else:
             out_np = np.empty(out_shape, dtype=np.float64)
 
-        cl.enqueue_read_buffer(self.queue, dst_buf, out_np).wait()
-        #cl.enqueue_copy(self.queue, out_np, dst_buf).wait()
+        cl.enqueue_copy(self.queue, out_np, dst_buf).wait()
 
         res = out_np.astype(dtype, copy=False)
         if out is not None:
@@ -136,8 +135,7 @@ class CL(object):
             np.float64(clip_val))
 
         out_np = np.empty_like(data_np)
-        cl.enqueue_read_buffer(self.queue, dst_buf, out_np).wait()
-        #cl.enqueue_copy(self.queue, out_np, dst_buf).wait()
+        cl.enqueue_copy(self.queue, out_np, dst_buf).wait()
 
         res = out_np.astype(dtype, copy=False)
         if out is not None:
@@ -180,7 +178,7 @@ class CL(object):
             np.float64(sin_theta), np.float64(cos_theta),
             np.uint32(clip_val))
 
-        cl.enqueue_read_buffer(self.queue, dst_buf, out).wait()
+        cl.enqueue_copy(self.queue, out, dst_buf).wait()
 
         return out
 
@@ -222,7 +220,7 @@ class CL(object):
             np.float64(sin_theta), np.float64(cos_theta),
             np.uint32(clip_val))
 
-        cl.enqueue_read_buffer(self.queue, dst_buf, out).wait()
+        cl.enqueue_copy(self.queue, out, dst_buf).wait()
 
         return out
 
@@ -253,7 +251,7 @@ class CL(object):
 
         if out is None:
             out = np.empty_like(data_np).reshape(new_size)
-        cl.enqueue_read_buffer(self.queue, dst_buf, out).wait()
+        cl.enqueue_copy(self.queue, out, dst_buf).wait()
 
         return out
 
@@ -282,7 +280,7 @@ class CL(object):
 
         if out is None:
             out = np.empty(new_shape, dtype=data_np.dtype)
-        cl.enqueue_read_buffer(self.queue, dst_buf, out).wait()
+        cl.enqueue_copy(self.queue, out, dst_buf).wait()
 
         return out
 
@@ -316,7 +314,7 @@ class CL(object):
         else:
             out_np = np.empty(new_shape, dtype=np.float64)
 
-        cl.enqueue_read_buffer(self.queue, dst_buf, out_np).wait()
+        cl.enqueue_copy(self.queue, out, dst_buf).wait()
 
         res = out_np.astype(dtype, copy=False)
         if out is not None:

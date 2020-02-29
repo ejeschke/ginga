@@ -144,7 +144,7 @@ class ImageViewPg(ImageView.ImageViewBase):
         self.onscreen_message(None)
 
     def configure_window(self, width, height):
-        self.configure_surface(width, height)
+        self.configure(width, height)
 
     def map_event(self, event):
         self.logger.info("window mapped to %dx%d" % (

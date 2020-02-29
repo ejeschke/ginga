@@ -138,7 +138,7 @@ class ImageViewJpw(ImageView.ImageViewBase):
         self._defer_task.start(time_sec)
 
     def configure_window(self, width, height):
-        self.configure_surface(width, height)
+        self.configure(width, height)
 
     def _resize_cb(self, event):
         self.configure_window(event.width, event.height)

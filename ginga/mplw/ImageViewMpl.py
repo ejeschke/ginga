@@ -250,6 +250,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
             self.render_image1(rgbobj, dst_x, dst_y)
 
         # clear utility axis
+        print('ax_img is', self.ax_img)
+        print('ax_util is', self.ax_util)
         self.ax_util.cla()
 
         # force an update of the figure
@@ -266,8 +268,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
         ##     ax.set_ylim(y0, y1)
 
     def configure_window(self, width, height):
-        #self.renderer.resize((width, height))
-
         self.configure(width, height)
 
     def _resize_cb(self, event):
@@ -308,6 +308,9 @@ class ImageViewMpl(ImageView.ImageViewBase):
         return buf.getvalue()
 
     def update_image(self):
+        # force an update of the figure
+        if self.figure is not None and self.figure.canvas is not None:
+            self.figure.canvas.draw()
         pass
 
     def set_cursor(self, cursor):

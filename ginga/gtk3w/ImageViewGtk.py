@@ -221,7 +221,7 @@ class ImageViewGtk(ImageView.ImageViewBase):
     def configure_window(self, width, height):
         self.logger.debug("window size reconfigured to %dx%d" % (
             width, height))
-        self.configure_surface(width, height)
+        self.configure(width, height)
 
     def configure_event(self, widget, event):
         # NOTE: this callback is only for the DrawingArea widget

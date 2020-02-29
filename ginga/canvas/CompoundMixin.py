@@ -237,12 +237,6 @@ class CompoundMixin(object):
 
     get_center_pt = get_reference_pt
 
-    def reorder_layers(self):
-        self.objects.sort(key=lambda obj: getattr(obj, '_zorder', 0))
-        for obj in self.objects:
-            if obj.is_compound():
-                obj.reorder_layers()
-
     def get_points(self):
         res = []
         for obj in self.objects:

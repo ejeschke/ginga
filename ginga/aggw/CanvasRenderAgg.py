@@ -105,6 +105,9 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
+    def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
+        return
+
     def draw_text(self, cx, cy, text, rot_deg=0.0):
 
         wd, ht = self.cr.text_extents(text, self.font)
@@ -173,13 +176,13 @@ class CanvasRenderer(render.StandardPixelRenderer):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
-        super(CanvasRenderer, self).resize(dims)
-
         width, height = dims[:2]
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
         # create agg surface the size of the window
         self.surface = agg.Draw(self.rgb_order, self.dims, 'black')
+
+        super(CanvasRenderer, self).resize(dims)
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
