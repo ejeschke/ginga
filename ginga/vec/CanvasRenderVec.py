@@ -4,16 +4,13 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import math
-from itertools import chain
 import numpy as np
 
-from .VecHelp import *
+from .VecHelp import (IMAGE, LINE, CIRCLE, BEZIER, ELLIPSE_BEZIER, POLYGON,
+                      PATH, TEXT)
+from .VecHelp import Pen, Brush, Font
 
 from ginga.canvas import render
-# force registration of all canvas types
-import ginga.canvas.types.all  # noqa
-from ginga import trcalc
 
 
 class RenderContext(render.RenderContextBase):
@@ -220,7 +217,7 @@ class CanvasRenderer(render.StandardPixelRenderer):
 
             except Exception as e:
                 self.logger.error("Error drawing '{}': {}".format(dtyp, e),
-                                  exc_info=True )
+                                  exc_info=True)
 
     def setup_cr(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)

@@ -20,11 +20,11 @@ import cairo
 
 have_opengl = False
 try:
-    from ginga.opengl.CanvasRenderGL import CanvasRenderer as OpenGLRenderer
     from ginga.opengl.GlHelp import get_transforms
     have_opengl = True
 except ImportError:
     pass
+
 
 class ImageViewGtkError(ImageView.ImageViewError):
     pass
@@ -87,7 +87,7 @@ class ImageViewGtk(ImageView.ImageViewBase):
             self.tform = get_transforms(self)
 
         else:
-            raise ImageViewQtError("Undefined render type: '%s'" % (render))
+            raise ImageViewGtkError("Undefined render type: '%s'" % (render))
         self.imgwin = imgwin
         self.imgwin.show_all()
 

@@ -1912,14 +1912,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         bindprefs = self.prefs.create_category('bindings')
         bd = bclass(self.logger, settings=bindprefs)
 
-        render = 'widget'
+        wtype = 'widget'
         if self.settings.get('use_opengl', False):
-           render = 'opengl'
+            wtype = 'opengl'
 
         fi = Viewers.ImageViewCanvas(logger=self.logger,
                                      rgbmap=rgbmap,
                                      settings=settings,
-                                     render=render,
+                                     render=wtype,
                                      bindings=bd)
         fi.set_desired_size(size[0], size[1])
 

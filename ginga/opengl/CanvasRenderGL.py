@@ -5,26 +5,22 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
+import os.path
 import numpy as np
 import ctypes
 
-# NOTE: we don't need GLU but we import it to workaround a
-#   potential bug: http://bugs.python.org/issue26245
-from OpenGL import GLU as glu  # noqa
 from OpenGL import GL as gl
-from OpenGL.GL import shaders
 
 from ginga.vec import CanvasRenderVec
 from ginga.canvas import render, transform
-# force registration of all canvas types
-import ginga.canvas.types.all  # noqa
-from ginga.canvas.transform import BaseTransform
 from ginga.cairow import CairoHelp
 from ginga import trcalc
 
 # Local imports
 from .Camera import Camera
 from . import GlHelp
+from .glsl import __file__
+shader_dir, _ = os.path.split(__file__)
 
 # NOTE: we update the version later in gl_initialize()
 opengl_version = 3.0
@@ -131,8 +127,6 @@ class RenderContext(render.RenderContextBase):
         tr = transform.FlipSwapTransform(self.viewer)
         cp += tr.to_(off)
 
-        # TODO: either image_id is the GL texture id or there is an accessible
-        # mapping to one
         tex_id = self.renderer.get_texture_id(cvs_img.image_id)
 
         if opengl_version < 3.1:
@@ -165,7 +159,7 @@ class RenderContext(render.RenderContextBase):
             vertices = trcalc.pad_z(cp, dtype=np.float32)
             shape = gl.GL_LINE_LOOP
 
-            gl.glUseProgram(self.renderer.shader_img)
+            self.renderer.pgm_mgr.setup_program('image')
             gl.glBindVertexArray(self.renderer.vao_img)
 
             # Send the data over to the buffer
@@ -190,7 +184,7 @@ class RenderContext(render.RenderContextBase):
 
             gl.glBindVertexArray(0)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-            gl.glUseProgram(0)
+            self.renderer.pgm_mgr.setup_program(None)
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         # TODO: this draws text as polygons, since there is no native
@@ -260,8 +254,7 @@ class RenderContext(render.RenderContextBase):
 
         else:
             # <-- modern OpenGL
-            shader = self.renderer.shader_line
-            gl.glUseProgram(shader)
+            self.renderer.pgm_mgr.setup_program('shape')
             gl.glBindVertexArray(self.renderer.vao_line)
 
             # Update the vertices data in the VBO
@@ -273,10 +266,9 @@ class RenderContext(render.RenderContextBase):
             gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_DYNAMIC_DRAW)
 
             # update color uniform
-            _loc = gl.glGetUniformLocation(shader, "fg_clr")
+            _loc = self.renderer.pgm_mgr.get_uniform_loc("fg_clr")
 
             # draw fill, if any
-            # TODO: fill currently does not work with GL_LINE_STRIP/LOOP
             if self.brush is not None and self.brush.color is not None:
                 _c = self.brush.color
                 gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
@@ -300,7 +292,7 @@ class RenderContext(render.RenderContextBase):
 
             gl.glBindVertexArray(0)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-            gl.glUseProgram(0)
+            self.renderer.pgm_mgr.setup_program(None)
 
     def draw_polygon(self, cpoints):
         if opengl_version >= 3.1:
@@ -361,6 +353,8 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         self.draw_spines = False
         self._drawing = False
         self._tex_cache = dict()
+
+        self.pgm_mgr = GlHelp.ShaderManager(self.logger)
 
         # initial values, will be recalculated at window map/resize
         self.lim_x, self.lim_y, self.lim_z = 1.0, 1.0, 1.0
@@ -521,14 +515,13 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         self.logger.debug("draw: t2=%.4f t3=%.4f t4=%.4f t5=%.4f total=%.4f" % (
             t2 - t1, t3 - t2, t4 - t3, t5 - t4, t5 - t1))
 
-
     def prepare_image(self, cvs_img, cache, whence):
         if cvs_img.kind == 'image':
             self._prepare_image(cvs_img, cache, whence)
         elif cvs_img.kind == 'normimage':
             self._prepare_norm_image(cvs_img, cache, whence)
         else:
-            raise RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
+            raise render.RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
 
         tex_id = self.get_texture_id(cvs_img.image_id)
         self.gl_set_image(tex_id, cache.rgbarr)
@@ -602,16 +595,16 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         self.camera.set_gl_transform()
 
         if opengl_version >= 3.1:
-            gl.glUseProgram(self.shader_line)
-            _loc = gl.glGetUniformLocation(self.shader_line, "projection")
+            self.pgm_mgr.setup_program('shape')
+            _loc = self.pgm_mgr.get_uniform_loc("projection")
             gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
-            _loc = gl.glGetUniformLocation(self.shader_line, "view")
+            _loc = self.pgm_mgr.get_uniform_loc("view")
             gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
 
-            gl.glUseProgram(self.shader_img)
-            _loc = gl.glGetUniformLocation(self.shader_img, "projection")
+            self.pgm_mgr.setup_program('image')
+            _loc = self.pgm_mgr.get_uniform_loc("projection")
             gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
-            _loc = gl.glGetUniformLocation(self.shader_img, "view")
+            _loc = self.pgm_mgr.get_uniform_loc("view")
             gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
 
     def getOpenGLInfo(self):
@@ -646,15 +639,10 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             gl.glEnable(gl.GL_TEXTURE_2D)
         else:
             # --- line drawing shaders ---
-            vertex_shader_prog = shaders.compileShader(vertex_source,
-                                                       gl.GL_VERTEX_SHADER)
-            fragment_shader_prog = shaders.compileShader(fragment_source,
-                                                         gl.GL_FRAGMENT_SHADER)
-            self.shader_line = shaders.compileProgram(vertex_shader_prog,
-                                                      fragment_shader_prog)
+            self.pgm_mgr.load_program('shape', shader_dir)
 
             # --- setup VAO for line drawing ---
-            gl.glUseProgram(self.shader_line)
+            shader = self.pgm_mgr.setup_program('shape')
 
             # Create a new VAO (Vertex Array Object) and bind it
             self.vao_line = gl.glGenVertexArrays(1)
@@ -666,7 +654,7 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
             # Get the position of the 'position' in parameter of our shader
             # and bind it.
-            _pos = gl.glGetAttribLocation(self.shader_line, 'position')
+            _pos = gl.glGetAttribLocation(shader, 'position')
             gl.glEnableVertexAttribArray(_pos)
             # Describe the position data layout in the buffer
             gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 0,
@@ -676,15 +664,11 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             gl.glBindVertexArray(0)
             gl.glDisableVertexAttribArray(_pos)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-            gl.glUseProgram(0)
+            self.pgm_mgr.setup_program(None)
 
             # --- image drawing shaders ---
-            vertex_shader_prog = shaders.compileShader(vertex_source2,
-                                                       gl.GL_VERTEX_SHADER)
-            fragment_shader_prog = shaders.compileShader(fragment_source2,
-                                                         gl.GL_FRAGMENT_SHADER)
-            self.shader_img = shaders.compileProgram(vertex_shader_prog,
-                                                     fragment_shader_prog)
+            self.pgm_mgr.load_program('image', shader_dir)
+            shader = self.pgm_mgr.setup_program('image')
 
             # --- setup VAO for image drawing ---
             self.vao_img = gl.glGenVertexArrays(1)
@@ -696,21 +680,21 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
             # Get the position of the 'position' in parameter of our shader
             # and bind it.
-            _pos = gl.glGetAttribLocation(self.shader_img, 'position')
+            _pos = gl.glGetAttribLocation(shader, 'position')
             gl.glEnableVertexAttribArray(_pos)
             # Describe the position data layout in the buffer
-            gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 5*4,
+            gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 5 * 4,
                                      ctypes.c_void_p(0))
-            _pos2 = gl.glGetAttribLocation(self.shader_img, 'i_tex_coord')
+            _pos2 = gl.glGetAttribLocation(shader, 'i_tex_coord')
             gl.glEnableVertexAttribArray(_pos2)
-            gl.glVertexAttribPointer(_pos2, 2, gl.GL_FLOAT, False, 5*4,
-                                     ctypes.c_void_p(3*4))
-            # Unbind the VAO first (important)
+            gl.glVertexAttribPointer(_pos2, 2, gl.GL_FLOAT, False, 5 * 4,
+                                     ctypes.c_void_p(3 * 4))
+            # Unbind the VAO first
             gl.glBindVertexArray(0)
             gl.glDisableVertexAttribArray(_pos)
             gl.glDisableVertexAttribArray(_pos2)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-            gl.glUseProgram(0)
+            self.pgm_mgr.setup_program(None)
 
         gl.glDisable(gl.GL_CULL_FACE)
         gl.glFrontFace(gl.GL_CCW)
@@ -819,75 +803,5 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         self.depth_buf = None
         gl.glDeleteFramebuffers(1, self.fbo)
         self.fbo = None
-
-
-vertex_source = '''
-#version 330 core
-layout (location = 0) in vec3 position;
-
-// uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
-
-void main()
-{
-    // note that we read the multiplication from right to left
-    // gl_Position = projection * view * model * vec4(aPos, 1.0);
-    gl_Position = projection * view * vec4(position, 1.0);
-
-}
-'''
-
-fragment_source = '''
-#version 330 core
-
-out vec4 outputColor;
-
-uniform vec4 fg_clr;
-
-void main()
-{
-    // pass thru
-    outputColor = fg_clr;
-
-}
-'''
-
-vertex_source2 = '''
-#version 330 core
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec2 i_tex_coord;
-
-out vec2 o_tex_coord;
-
-// uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
-
-void main()
-{
-    // note that we read the multiplication from right to left
-    // gl_Position = projection * view * model * vec4(aPos, 1.0);
-    gl_Position = projection * view * vec4(position, 1.0);
-
-    o_tex_coord = i_tex_coord;
-}
-'''
-
-fragment_source2 = '''
-#version 330 core
-
-out vec4 outputColor;
-
-in vec2 o_tex_coord;
-
-uniform sampler2D img_texture;
-
-void main()
-{
-    outputColor = texture(img_texture, o_tex_coord);
-}
-'''
-
 
 # END
