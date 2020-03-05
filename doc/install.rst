@@ -20,14 +20,14 @@ REQUIRED
 ========
 
 * python (v. 3.5 or higher)
-* setuptools
+* setuptools-scm
 * numpy  (v. 1.13 or higher)
 * astropy
 
 Highly recommended, because some features will not be available without it:
 
 * scipy
-* Pillow
+* pillow
 * opencv-python (also distributed as opencv or python-opencv,
   depending on where you get it from)
 * piexif
@@ -83,6 +83,7 @@ Helpful, but not necessary (may optimize or speed up certain operations):
 
 * opencv-python (speeds up rotation, mosaicing and some transformations)
 * pyopencl (speeds up rotation, mosaicing and some transformations)
+* pyopengl (for using OpenGL features)
 * numexpr (speeds up rotation a little)
 * filemagic (aids in identifying files when opening them)
 * Pillow (useful for various RGB file manipulations)
@@ -210,3 +211,28 @@ Ginga.
 
 After installing Anaconda, open the Anaconda Prompt and follow instructions
 under :ref:`install_generic` via ``conda``.
+
+=============
+Running tests
+=============
+
+#. Install the following packages::
+
+    $ pip install -e .[test]
+
+#. Run the tests using `pytest`::
+
+    $ pytest
+
+======================
+Building documentation
+======================
+
+#. Install the following packages::
+
+    $ pip install -e .[docs]
+
+#. Build the documentation using `make`::
+
+   $ cd doc
+   $ make html
