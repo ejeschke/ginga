@@ -3,6 +3,7 @@ import os
 try:
     from pytest_astropy_header.display import PYTEST_HEADER_MODULES, TESTED_VERSIONS
 except ImportError:
+    TESTED_VERSIONS = {}
     PYTEST_HEADER_MODULES = {}
 
 try:
