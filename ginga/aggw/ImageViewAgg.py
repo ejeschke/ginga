@@ -24,7 +24,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
         pass
 
     def configure_window(self, width, height):
-        self.configure_surface(width, height)
+        self.configure(width, height)
 
 
 class CanvasView(ImageViewAgg):

@@ -30,9 +30,6 @@ class ImageViewMock(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-        self.t_.setDefaults(show_pan_position=False,
-                            onscreen_ff='Sans Serif')
-
         # This holds the off-screen pixel map.  It's creation is usually
         # deferred until we know the final size of the window.
         self.pixmap = None
@@ -56,38 +53,6 @@ class ImageViewMock(ImageView.ImageViewBase):
         surface = self.getwin_array(order=self.rgb_order)
         return surface
 
-    def _render_offscreen(self, drawable, data, dst_x, dst_y,
-                          width, height):
-        # NOTE [A]
-        daht, dawd, depth = data.shape
-        self.logger.debug("data shape is %dx%dx%d" % (dawd, daht, depth))
-
-        # fill pixmap with background color
-        imgwin_wd, imgwin_ht = self.get_window_size()
-        # fillRect(Rect(0, 0, imgwin_wd, imgwin_ht), bgclr)
-
-        # draw image data from buffer to offscreen pixmap at
-        # (dst_x, dst_y) with size (width x height)
-        ## painter.drawImage(Rect(dst_x, dst_y, width, height),
-        ##                   data,
-        ##                   Rect(0, 0, width, height))
-
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
-        in the offscreen pixmap.
-        """
-        self.logger.debug("redraw pixmap=%s" % (self.pixmap))
-        if self.pixmap is None:
-            return
-        self.logger.debug("drawing to pixmap")
-
-        # Prepare array for rendering
-        arr = rgbobj.get_array(self.rgb_order, dtype=np.uint8)
-        (height, width) = arr.shape[:2]
-
-        return self._render_offscreen(self.pixmap, arr, dst_x, dst_y,
-                                      width, height)
-
     def configure_window(self, width, height):
         """
         This method is called by the event handler when the
@@ -95,59 +60,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         We allocate an off-screen pixmap of the appropriate size
         and inform the superclass of our window size.
         """
-        self.configure_surface(width, height)
-
-    def configure_surface(self, width, height):
-        self.logger.debug("window size reconfigured to %dx%d" % (
-            width, height))
-        # TODO: allocate pixmap of width x height
-        self.pixmap = None
-
         self.configure(width, height)
-
-    def get_rgb_image_as_buffer(self, output=None, format='png',
-                                quality=90):
-        # copy pixmap to buffer
-        data_np = self.getwin_array(order=self.rgb_order, dtype=np.uint8)
-        header = {}
-        fmt_buf = self.rgb_fh.get_buffer(data_np, header, format,
-                                         output=output)
-        return fmt_buf
-
-    def get_rgb_image_as_widget(self, output=None, format='png',
-                                quality=90):
-        imgwin_wd, imgwin_ht = self.get_window_size()
-        # copy pixmap to native widget type
-        # ...
-        # image_w = self.pixmap.copy(0, 0, imgwin_wd, imgwin_ht)
-        image_w = None
-
-        return image_w
-
-    def save_rgb_image_as_file(self, filepath, format='png', quality=90):
-        img_w = self.get_rgb_image_as_widget()
-        # assumes that the image widget has some method for saving to
-        # a file
-        img_w.save(filepath, format=format, quality=quality)
-
-    def get_plain_image_as_widget(self):
-        """Used for generating thumbnails.  Does not include overlaid
-        graphics.
-        """
-        arr = self.getwin_array(order=self.rgb_order)
-
-        # convert numpy array to native image widget
-        image_w = self._get_wimage(arr)
-        return image_w
-
-    def save_plain_image_as_file(self, filepath, format='png', quality=90):
-        """Used for generating thumbnails.  Does not include overlaid
-        graphics.
-        """
-        img_w = self.get_plain_image_as_widget()
-        # assumes that the image widget has some method for saving to
-        # a file
-        img_w.save(filepath, format=format, quality=quality)
 
     def reschedule_redraw(self, time_sec):
         # stop any pending redraws, if possible
@@ -177,30 +90,6 @@ class ImageViewMock(ImageView.ImageViewBase):
         # cursor hot spot
         cursorw = None
         return cursorw
-
-    def _get_wimage(self, arr_np):
-        """Convert the numpy array (which is in our expected order)
-        to a native image object in this widget set.
-        """
-        #return result
-        raise NotImplementedError
-
-    def _get_color(self, r, g, b):
-        """Convert red, green and blue values specified in floats with
-        range 0-1 to whatever the native widget color object is.
-        """
-        clr = (r, g, b)
-        return clr
-
-    def onscreen_message(self, text, delay=None, redraw=True):
-        # stop any scheduled updates of the message
-
-        # set new message text
-        self.set_onscreen_message(text, redraw=redraw)
-        if delay:
-            # schedule a call to onscreen_message_off after
-            # `delay` sec
-            pass
 
     def take_focus(self):
         # have the widget grab the keyboard focus
