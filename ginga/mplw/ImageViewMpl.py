@@ -83,6 +83,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self.figure = figure
 
         ax = self.figure.add_axes((0, 0, 1, 1), frame_on=False,
+                                  zorder=0.0,
                                   #viewer=self,
                                   #projection='ginga'
                                   )
@@ -103,7 +104,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # Add an overlapped axis for drawing graphics
         newax = self.figure.add_axes(self.ax_img.get_position(),
                                      sharex=ax, sharey=ax,
-                                     frameon=False,
+                                     frame_on=False,
+                                     zorder=1.0,
                                      #viewer=self,
                                      #projection='ginga'
                                      )
@@ -250,8 +252,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
             self.render_image1(rgbobj, dst_x, dst_y)
 
         # clear utility axis
-        print('ax_img is', self.ax_img)
-        print('ax_util is', self.ax_util)
         self.ax_util.cla()
 
         # force an update of the figure
@@ -259,10 +259,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Set the axis limits
         # TODO: should we do this only for those who have autoaxis=True?
-        ## wd, ht = self.get_window_size()
-        ## x0, y0 = self.get_data_xy(0, 0)
-        ## x1, tm = self.get_data_xy(wd-1, 0)
-        ## tm, y1 = self.get_data_xy(0, ht-1)
+        ## x0, y0, x1, y1 = self.get_datarect()
         ## for ax in self.figure.axes:
         ##     ax.set_xlim(x0, x1)
         ##     ax.set_ylim(y0, y1)
@@ -277,7 +274,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
     def add_axes(self):
         ax = self.figure.add_axes(self.ax_img.get_position(),
-                                  frameon=False,
+                                  frame_on=False,
+                                  zorder=1.0,
                                   viewer=self,
                                   projection='ginga')
         ax.get_xaxis().set_visible(False)

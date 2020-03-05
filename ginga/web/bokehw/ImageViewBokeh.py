@@ -494,7 +494,9 @@ class ImageViewEvent(ImageViewBokeh):
         ##     button |= 0x1 << (event.button - 1)
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
+        self.last_win_x, self.last_win_y = x, y
+        data_x, data_y = self.check_cursor_location()
+
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def button_release_event(self, event):
@@ -504,7 +506,9 @@ class ImageViewEvent(ImageViewBokeh):
             button |= 0x1 << (event.button - 1)
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
+        self.last_win_x, self.last_win_y = x, y
+        data_x, data_y = self.check_cursor_location()
+
         return self.make_ui_callback('button-release', button, data_x, data_y)
 
     def select_event_cb(self, attrname, old_val, new_val):
@@ -526,7 +530,9 @@ class ImageViewEvent(ImageViewBokeh):
         ##     button |= 0x1 << (event.button - 1)
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
+        self.last_win_x, self.last_win_y = x, y
+        data_x, data_y = self.check_cursor_location()
+
         self.last_data_x, self.last_data_y = data_x, data_y
         self.logger.info("motion event at DATA %dx%d" % (data_x, data_y))
 
@@ -549,7 +555,9 @@ class ImageViewEvent(ImageViewBokeh):
         self.logger.info("scroll deg=%f direction=%f" % (
             amount, direction))
 
-        data_x, data_y = self.get_data_xy(x, y)
+        self.last_win_x, self.last_win_y = x, y
+        data_x, data_y = self.check_cursor_location()
+
         self.last_data_x, self.last_data_y = data_x, data_y
 
         return self.make_ui_callback('scroll', direction, amount,
@@ -582,7 +590,9 @@ class ImageViewEvent(ImageViewBokeh):
         ##     button |= 0x1 << (event.button - 1)
         self.logger.debug("tap event at %dx%d, button=%x" % (x, y, button))
 
-        data_x, data_y = self.get_data_xy(x, y)
+        self.last_win_x, self.last_win_y = x, y
+        data_x, data_y = self.check_cursor_location()
+
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
     def press_event(self, event):

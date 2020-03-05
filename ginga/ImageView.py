@@ -1436,7 +1436,7 @@ class ImageViewBase(Callback.Callbacks):
         array of points.
 
         """
-        return self.tform['data_to_window'].from_(win_pt)
+        return self.tform['mouse_to_data'].to_(win_pt)
 
     def get_data_xy(self, win_x, win_y, center=None):
         """Get the closest coordinates in the data array to those
@@ -1463,7 +1463,7 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warning("`center` keyword is ignored and will be deprecated")
 
         arr_pts = np.asarray((win_x, win_y)).T
-        return self.tform['data_to_window'].from_(arr_pts).T[:2]
+        return self.tform['mouse_to_data'].to_(arr_pts).T[:2]
 
     def offset_to_data(self, off_x, off_y, center=None):
         """Get the closest coordinates in the data array to those
@@ -2678,36 +2678,35 @@ class ImageViewBase(Callback.Callbacks):
         self.tform = {
             'window_to_native': trcat.WindowNativeTransform(self),
             'cartesian_to_window': trcat.CartesianWindowTransform(self),
-            'cartesian_to_native': (trcat.FlipSwapTransform(self) +
-                                    trcat.RotationTransform(self) +
+            'cartesian_to_native': (trcat.RotationFlipTransform(self) +
                                     trcat.CartesianNativeTransform(self)),
             'data_to_cartesian': (trcat.DataCartesianTransform(self) +
                                   trcat.ScaleTransform(self)),
             'data_to_scrollbar': (trcat.DataCartesianTransform(self) +
-                                  trcat.FlipSwapTransform(self) +
-                                  trcat.RotationTransform(self)),
+                                  trcat.RotationFlipTransform(self)),
+            'mouse_to_data': (
+                trcat.InvertedTransform(trcat.DataCartesianTransform(self) +
+                                        trcat.ScaleTransform(self) +
+                                        trcat.RotationFlipTransform(self) +
+                                        trcat.CartesianNativeTransform(self))),
             'data_to_window': (trcat.DataCartesianTransform(self) +
                                trcat.ScaleTransform(self) +
-                               trcat.FlipSwapTransform(self) +
-                               trcat.RotationTransform(self) +
+                               trcat.RotationFlipTransform(self) +
                                trcat.CartesianWindowTransform(self)),
             'data_to_percentage': (trcat.DataCartesianTransform(self) +
                                    trcat.ScaleTransform(self) +
-                                   trcat.FlipSwapTransform(self) +
-                                   trcat.RotationTransform(self) +
+                                   trcat.RotationFlipTransform(self) +
                                    trcat.CartesianWindowTransform(self) +
                                    trcat.WindowPercentageTransform(self)),
             'data_to_native': (trcat.DataCartesianTransform(self) +
                                trcat.ScaleTransform(self) +
-                               trcat.FlipSwapTransform(self) +
-                               trcat.RotationTransform(self) +
+                               trcat.RotationFlipTransform(self) +
                                trcat.CartesianNativeTransform(self)),
             'wcs_to_data': trcat.WCSDataTransform(self),
             'wcs_to_native': (trcat.WCSDataTransform(self) +
                               trcat.DataCartesianTransform(self) +
                               trcat.ScaleTransform(self) +
-                              trcat.FlipSwapTransform(self) +
-                              trcat.RotationTransform(self) +
+                              trcat.RotationFlipTransform(self) +
                               trcat.CartesianNativeTransform(self)),
         }
 

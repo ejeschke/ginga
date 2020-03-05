@@ -155,15 +155,11 @@ class RenderContext(render.RenderContextBase):
         self.cr.axes.add_patch(p)
 
     def draw_line(self, cx1, cy1, cx2, cy2):
-        print('draw_line')
         self.cr.init(transform=None)
         self.cr.update_line(self.pen)
-        print(self.cr.kwdargs)
 
-        print((cx1, cx2), (cy1, cy2))
         l = lines.Line2D((cx1, cx2), (cy1, cy2), **self.cr.kwdargs)
         self.cr.axes.add_line(l)
-        print('end draw_line')
 
     def draw_path(self, cpoints):
         self.cr.init(closed=False, transform=None)

@@ -236,16 +236,11 @@ class ShaderManager:
 
 def get_transforms(v):
     tform = {
-        # CHANGED
         'window_to_native': (transform.CartesianWindowTransform(v).invert() +
                              transform.RotationTransform(v).invert() +
-                             #transform.FlipSwapTransform(v).invert() +
-                             transform.ScaleTransform(v).invert()
-                             #transform.ScaleTransform(v)
-                             ),
+                             transform.ScaleTransform(v).invert()),
         'cartesian_to_window': (transform.FlipSwapTransform(v) +
                                 transform.CartesianWindowTransform(v)),
-        # CHANGED
         'cartesian_to_native': (transform.FlipSwapTransform(v) +
                                 transform.RotationTransform(v) +
                                 transform.CartesianNativeTransform(v)),
@@ -254,10 +249,13 @@ def get_transforms(v):
         'data_to_scrollbar': (transform.DataCartesianTransform(v) +
                               transform.FlipSwapTransform(v) +
                               transform.RotationTransform(v)),
-        ## 'window_to_data': (transform.CartesianWindowTransform(v).invert() +
-        ##                    transform.FlipSwapTransform(v) +
-        ##                    transform.RotationTransform(v).invert()
-        ##                    ),
+        'mouse_to_data': (
+            transform.InvertedTransform(transform.DataCartesianTransform(v) +
+                                        transform.ScaleTransform(v) +
+                                        transform.FlipSwapTransform(v) +
+                                        transform.RotationTransform(v) +
+                                        transform.CartesianWindowTransform(v)
+                                        )),
         'data_to_window': (transform.DataCartesianTransform(v) +
                            transform.ScaleTransform(v) +
                            transform.FlipSwapTransform(v) +
@@ -270,12 +268,10 @@ def get_transforms(v):
                                transform.RotationTransform(v) +
                                transform.CartesianWindowTransform(v) +
                                transform.WindowPercentageTransform(v)),
-        # CHANGED
         'data_to_native': (transform.DataCartesianTransform(v) +
                            transform.FlipSwapTransform(v)
                            ),
         'wcs_to_data': transform.WCSDataTransform(v),
-        # CHANGED
         'wcs_to_native': (transform.WCSDataTransform(v) +
                           transform.DataCartesianTransform(v) +
                           transform.FlipSwapTransform(v)),

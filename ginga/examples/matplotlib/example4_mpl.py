@@ -56,7 +56,7 @@ from ginga.util.loader import load_data
 cmap.add_matplotlib_cmaps()
 
 # Set to True to get diagnostic logging output
-use_logger = False
+use_logger = True
 logger = log.get_logger(null=not use_logger, log_stderr=True)
 
 # create a regular matplotlib figure

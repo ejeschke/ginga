@@ -138,12 +138,12 @@ class TextP(OnePointMixin, CanvasObjectBase):
     def _get_unrotated_text_llur(self, viewer):
         # convert coordinate to data point and then pixel pt
         x1, y1 = self.get_data_points()[0]
-        cx1, cy1 = viewer.get_canvas_xy(x1, y1)
+        cx1, cy1 = viewer.tform['data_to_native'].to_((x1, y1))
         # width and height of text define bbox
         wd_px, ht_px = viewer.renderer.get_dimensions(self)
         cx2, cy2 = cx1 + wd_px, cy1 - ht_px
         # convert back to data points and construct bbox
-        x2, y2 = viewer.get_data_xy(cx2, cy2)
+        x2, y2 = viewer.tform['data_to_native'].from_((cx2, cy2))
         x1, y1, x2, y2 = self.swapxy(x1, y1, x2, y2)
         return (x1, y1, x2, y2)
 
