@@ -218,7 +218,7 @@ Running tests
 
 #. Install the following packages::
 
-    $ pip install pytest pytest-astropy-header
+    $ pip install -e .[test]
 
 #. Run the tests using `pytest`::
 
@@ -230,10 +230,9 @@ Building documentation
 
 #. Install the following packages::
 
-    $ pip install sphinx-astropy sphinx_rtd_theme
+    $ pip install -e .[docs]
 
 #. Build the documentation using `make`::
 
    $ cd doc
    $ make html
-
