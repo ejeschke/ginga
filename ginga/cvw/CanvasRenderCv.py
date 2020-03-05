@@ -98,14 +98,8 @@ class RenderContext(render.RenderContextBase):
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
-        return
-        # get window contents as a buffer and paste it into the surface
-        # TODO: allow greater bit depths
-        rgb_arr = self.viewer.getwin_array(order=self.rgb_order,
-                                           dtype=np.uint8)
-        cx, cy = 0, 0
-
-        self.cr.image((cx, cy), rgb_arr)
+        # no-op for this renderer
+        pass
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         self.cr.text((cx, cy), text, self.font)
@@ -157,10 +151,6 @@ class CanvasRenderer(render.StandardPixelRenderer):
 
         super(CanvasRenderer, self).resize(dims)
 
-    ## def finalize(self):
-    ##     cr = RenderContext(self, self.viewer, self.surface)
-    ##     self.draw_vector(cr)
-
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
@@ -171,7 +161,6 @@ class CanvasRenderer(render.StandardPixelRenderer):
 
         # get window contents as an array and store it into the CV surface
         rgb_arr = self.getwin_array(order='RGBA', dtype=np.uint8)
-        print('opencv rgbarr render image', rgb_arr.shape)
         # TODO: is there a faster way to copy this array in?
         self.surface[:, :, :] = rgb_arr[:, :, 0:3]
 

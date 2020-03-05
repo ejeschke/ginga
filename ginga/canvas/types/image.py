@@ -122,8 +122,6 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         cpoints = self.get_cpoints(viewer)
         cr = viewer.renderer.setup_cr(self)
 
-        # TODO: need an "image id" here that identifies the particular
-        # image in the renderer to be updated
         cr.draw_image(self, cpoints, cache.rgbarr, whence)
 
         # draw optional border

@@ -4,8 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-import numpy as np
-
 from .VecHelp import (IMAGE, LINE, CIRCLE, BEZIER, ELLIPSE_BEZIER, POLYGON,
                       PATH, TEXT)
 from .VecHelp import Pen, Brush, Font
@@ -116,16 +114,9 @@ class RenderContext(render.RenderContextBase):
         self.renderer.rl.append((PATH, cpoints, self.pen, self.brush))
 
 
-class CanvasRenderer(render.StandardPixelRenderer):
+class VectorRenderMixin:
 
-    def __init__(self, viewer):
-        super(CanvasRenderer, self).__init__(viewer)
-
-        self.kind = 'vec'
-        self.rgb_order = 'RGBA'
-        self.surface = None
-        self.dims = (0, 0)
-
+    def __init__(self):
         # the render list
         self.rl = []
 
@@ -137,35 +128,6 @@ class CanvasRenderer(render.StandardPixelRenderer):
         brush = Brush(color=bg, fill=True)
         self.rl = [(POLYGON, cpoints, pen, brush)]
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
-        in the pixel space.
-        *** internal method-- do not use ***
-        """
-        self.logger.debug("redraw surface")
-        data = rgbobj.get_array(self.rgb_order, dtype=np.uint8)
-
-        cr = RenderContext(self, self.viewer, self.surface)
-        cr.draw_image(dst_x, dst_y, data)
-
-    def get_surface_as_array(self, order=None):
-        ## print('---------------')
-        ## print('RENDER LIST', len(self.rl), self.rl)
-        ## print('---------------')
-        if self.surface is None:
-            raise render.RenderError("No VEC surface defined")
-
-        # TODO: could these have changed between the time that self.surface
-        # was last updated?
-        wd, ht = self.dims
-
-        # Get surface as a numpy array
-        arr8 = np.fromstring(self.surface.tobytes(), dtype=np.uint8)
-        arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
-
-        # adjust according to viewer's needed order
-        return self.reorder(order, arr8)
-
     def draw_vector(self, cr):
         for tup in self.rl:
             dtyp, font = None, None
@@ -174,7 +136,6 @@ class CanvasRenderer(render.StandardPixelRenderer):
                 if dtyp == IMAGE:
                     (image_id, cpoints, rgb_arr, whence, order) = tup[1]
                     cr.draw_image(image_id, cpoints, rgb_arr, whence,
-                                  #order=order,
                                   order=self.rgb_order)
 
                 elif dtyp == LINE:
@@ -218,15 +179,5 @@ class CanvasRenderer(render.StandardPixelRenderer):
             except Exception as e:
                 self.logger.error("Error drawing '{}': {}".format(dtyp, e),
                                   exc_info=True)
-
-    def setup_cr(self, shape):
-        cr = RenderContext(self, self.viewer, self.surface)
-        cr.initialize_from_shape(shape, font=False)
-        return cr
-
-    def get_dimensions(self, shape):
-        cr = self.setup_cr(shape)
-        cr.set_font_from_shape(shape)
-        return cr.text_extents(shape.text)
 
 #END

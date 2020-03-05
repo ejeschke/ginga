@@ -106,7 +106,8 @@ class RenderContext(render.RenderContextBase):
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
-        return
+        # no-op for this renderer
+        pass
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
 
@@ -180,7 +181,7 @@ class CanvasRenderer(render.StandardPixelRenderer):
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
         # create agg surface the size of the window
-        self.surface = agg.Draw(self.rgb_order, self.dims, 'black')
+        self.surface = agg.Draw(self.rgb_order, (width, height), 'black')
 
         super(CanvasRenderer, self).resize(dims)
 
@@ -225,5 +226,11 @@ class CanvasRenderer(render.StandardPixelRenderer):
         cr = self.setup_cr(shape)
         cr.set_font_from_shape(shape)
         return cr.text_extents(shape.text)
+
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)
 
 #END

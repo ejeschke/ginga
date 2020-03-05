@@ -113,23 +113,8 @@ class RenderContext(render.RenderContextBase):
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
-        ## if not isinstance(self.renderer, CanvasRenderVec.CanvasRenderer):
-        ##     return
-
-        # get window contents as a buffer and paste it into the PIL surface
-        # TODO: allow greater bit depths when support is better in PIL
-        rgb_arr = self.viewer.getwin_array(order=self.renderer.rgb_order,
-                                           dtype=np.uint8)
-
-        ## arr_size = rgb_arr.shape[:2]
-        ## if arr_size != self.cr.surface.size:
-        ##     # window size must have changed out from underneath us!
-        ##     width, height = self.viewer.get_window_size()
-        ##     self.renderer.resize((width, height))
-        ##     if p_image.size != self.cr.surface.size:
-        ##         raise render.RenderError("Rendered image does not match window size")
-
-        self.cr.image((0, 0), rgb_arr)
+        # no-op for this renderer
+        pass
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         wd, ht = self.cr.text_extents(text, self.font)

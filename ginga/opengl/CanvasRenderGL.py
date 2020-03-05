@@ -11,7 +11,7 @@ import ctypes
 
 from OpenGL import GL as gl
 
-from ginga.vec import CanvasRenderVec
+from ginga.vec import CanvasRenderVec as vec
 from ginga.canvas import render, transform
 from ginga.cairow import CairoHelp
 from ginga import trcalc
@@ -329,12 +329,13 @@ class RenderContext(render.RenderContextBase):
         self._draw_pts(gl.GL_LINE_STRIP, cpoints)
 
 
-class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
+class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
     def __init__(self, viewer):
-        CanvasRenderVec.CanvasRenderer.__init__(self, viewer)
+        render.StandardPixelRenderer.__init__(self, viewer)
+        vec.VectorRenderMixin.__init__(self)
 
-        self.kind = 'gl'
+        self.kind = 'opengl'
         self.rgb_order = 'RGBA'
         self.surface = self.viewer.get_widget()
         self.use_offscreen_fbo = False
@@ -533,13 +534,6 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
             self._tex_cache[image_id] = tex_id
         return tex_id
 
-    def initialize(self):
-        self.rl = []
-
-    def finalize(self):
-        # a no-op for this renderer
-        pass
-
     def get_surface_as_array(self, order='RGBA'):
         width, height = self.dims
         gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)
@@ -561,22 +555,6 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         if whence <= 2.0:
             p_canvas = self.viewer.get_private_canvas()
             self._overlay_images(p_canvas, whence=whence)
-
-    ## def setup_cr(self, shape):
-    ##     cr = CanvasRenderVec.RenderContext(self, self.viewer, self.surface)
-    ##     cr.initialize_from_shape(shape, font=False)
-    ##     return cr
-
-    def text_extents(self, text, font):
-        cr = RenderContext(self, self.viewer, self.surface)
-        cr.set_font(font.fontname, font.fontsize, color=font.color,
-                    alpha=font.alpha)
-        return cr.text_extents(text)
-
-    ## def get_dimensions(self, shape):
-    ##     cr = self.setup_cr(shape)
-    ##     cr.set_font_from_shape(shape)
-    ##     return cr.text_extents(shape.text)
 
     def get_camera(self):
         return self.camera
@@ -804,4 +782,26 @@ class CanvasRenderer(CanvasRenderVec.CanvasRenderer):
         gl.glDeleteFramebuffers(1, self.fbo)
         self.fbo = None
 
-# END
+    def initialize(self):
+        self.rl = []
+
+    def finalize(self):
+        # for this renderer, this is handled in gl_paint()
+        pass
+
+    def setup_cr(self, shape):
+        # special cr that just stores up a render list
+        cr = vec.RenderContext(self, self.viewer, self.surface)
+        cr.initialize_from_shape(shape, font=False)
+        return cr
+
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)
+
+    def get_dimensions(self, shape):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font_from_shape(shape)
+        return cr.text_extents(shape.text)

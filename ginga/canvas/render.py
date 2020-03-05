@@ -859,10 +859,6 @@ def get_render_class(rtype):
         from ginga.qtw import CanvasRenderQt
         return CanvasRenderQt.CanvasRenderer
 
-    if rtype == 'vec':
-        from ginga.vec import CanvasRenderVec
-        return CanvasRenderVec.CanvasRenderer
-
     if rtype == 'vqt':
         from ginga.qtw import CanvasRenderQt
         return CanvasRenderQt.VectorCanvasRenderer

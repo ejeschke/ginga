@@ -13,7 +13,6 @@ import cairo
 from ginga import colors
 from ginga.fonts import font_asst
 from ginga.canvas import render
-from ginga.vec import CanvasRenderVec
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 
@@ -134,29 +133,8 @@ class RenderContext(render.RenderContextBase):
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
-        if not isinstance(self.renderer, CanvasRenderVec.CanvasRenderer):
-            return
-
-        # reorder data as needed for this renderer
-        need_order = self.renderer.rgb_order
-        data = self.renderer.reorder(need_order, data, order)
-        data = data.astype(np.uint8, copy=False, casting='unsafe')
-
-        # Prepare array for Cairo rendering
-        daht, dawd, depth = data.shape
-
-        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
-                                                            dawd)
-        img_surface = cairo.ImageSurface.create_for_data(data,
-                                                         cairo.FORMAT_ARGB32,
-                                                         dawd, daht, stride)
-
-        self.cr.set_source_surface(img_surface, cx, cy)
-        self.cr.set_operator(cairo.OPERATOR_SOURCE)
-
-        self.cr.mask_surface(img_surface, cx, cy)
-        self.cr.fill()
-        self.cr.new_path()
+        # no-op for this renderer
+        pass
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         self.cr.save()
@@ -266,10 +244,6 @@ class CanvasRenderer(render.StandardPixelRenderer):
         cr.fill()
 
         super(CanvasRenderer, self).resize(dims)
-
-    ## def finalize(self):
-    ##     cr = RenderContext(self, self.viewer, self.surface)
-    ##     self.draw_vector(cr)
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
