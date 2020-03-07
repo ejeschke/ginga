@@ -20,6 +20,14 @@ have_opengl = False
 try:
     from ginga.opengl.CanvasRenderGL import CanvasRenderer as OpenGLRenderer
     from ginga.opengl.GlHelp import get_transforms
+
+    # ensure we are using at least opengl >= 4.5
+    from PyQt5.QtGui import QSurfaceFormat
+    fmt = QSurfaceFormat()
+    fmt.setVersion(4, 5)
+    fmt.setProfile(QSurfaceFormat.CoreProfile)
+    fmt.setDefaultFormat(fmt)
+
     have_opengl = True
 except ImportError:
     pass
@@ -122,6 +130,14 @@ class RenderGLWidget(QOpenGLWidget):
         self.viewer = None
 
     def initializeGL(self):
+
+        ## version = QOpenGLVersionProfile()
+        ## version.setVersion(3, 3)
+
+        ## context.setFormat(self.requestedFormat())
+        ## #ver = context.versionFunctions(version)
+        ## #print(ver)
+
         self.viewer.renderer.gl_initialize()
 
     def resizeGL(self, width, height):
@@ -242,11 +258,10 @@ class ImageViewQt(ImageView.ImageViewBase):
         self._defer_task.stop()
         self._defer_task.start(time_sec)
 
-    def prepare_image(self, cvs_img, cache, whence):
-        if self.wtype == 'opengl':
-            #<-- image has changed, need to update texture
-            self.imgwin.makeCurrent()
+    def make_context_current(self):
+        return self.imgwin.makeCurrent()
 
+    def prepare_image(self, cvs_img, cache, whence):
         self.renderer.prepare_image(cvs_img, cache, whence)
 
     def update_image(self):

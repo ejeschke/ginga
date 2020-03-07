@@ -1,5 +1,13 @@
 #version 330 core
+/*
+ * image.vert -- vertex shader for Ginga images
+ *
+ * This is open-source software licensed under a BSD license.
+ * Please see the file LICENSE.txt for details.
+ *
+ */
 layout (location = 0) in vec3 position;
+// input texture coordinate
 layout (location = 1) in vec2 i_tex_coord;
 
 out vec2 o_tex_coord;

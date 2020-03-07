@@ -1,5 +1,11 @@
 #version 330 core
-
+/*
+ * shape.vert -- vertex shader for Ginga shapes
+ *
+ * This is open-source software licensed under a BSD license.
+ * Please see the file LICENSE.txt for details.
+ *
+ */
 layout (location = 0) in vec3 position;
 
 // uniform mat4 model;

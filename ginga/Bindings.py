@@ -2329,7 +2329,6 @@ class ImageViewBindings(object):
             ## if msg:
             ##     viewer.onscreen_message(mst, delay=0.5)
             tup = camera.position.get()
-            print('camera position', tup)
 
         elif event.state == 'down':
             self._start_x, self._start_y = x, y
@@ -2365,9 +2364,7 @@ class ImageViewBindings(object):
         # viewer's settings without triggering a callback to the viewer
         # itself
         tup = camera.position.get()
-        print('native position', tup)
         data_x, data_y = viewer.tform['data_to_native'].from_(tup[:2])
-        print('translated', data_x, data_y)
 
         viewer.update_image()
         return True

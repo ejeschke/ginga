@@ -249,24 +249,20 @@ class ImageViewGtk(ImageView.ImageViewBase):
         self.configure_window(width, height)
         return True
 
-    def on_realize_cb(self, area):
-        # NOTE: this callback is only for the GLArea (OpenGL) widget
+    def make_context_current(self):
         ctx = self.imgwin.get_context()
         ctx.make_current()
+        return ctx
 
+    def on_realize_cb(self, area):
+        # NOTE: this callback is only for the GLArea (OpenGL) widget
         self.renderer.gl_initialize()
 
     def on_render_cb(self, area, ctx):
         # NOTE: this callback is only for the GLArea (OpenGL) widget
-        ctx.make_current()
-
         self.renderer.gl_paint()
 
     def prepare_image(self, cvs_img, cache, whence):
-        if self.wtype == 'opengl':
-            #<-- image has changed, need to update texture
-            self.imgwin.make_current()
-
         self.renderer.prepare_image(cvs_img, cache, whence)
 
     def set_cursor(self, cursor):
@@ -623,16 +619,16 @@ class GtkEventMixin(object):
         return True
 
 
-class ImageViewEvent(GtkEventMixin, ImageViewGtk):
+class ImageViewEvent(Mixins.UIMixin, GtkEventMixin, ImageViewGtk):
 
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         ImageViewGtk.__init__(self, logger=logger, rgbmap=rgbmap,
                               settings=settings, render=render)
-
+        Mixins.UIMixin.__init__(self)
         GtkEventMixin.__init__(self)
 
 
-class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
+class ImageViewZoom(ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
@@ -650,7 +646,6 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                  render=None, bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings, render=render)
-        Mixins.UIMixin.__init__(self)
 
         self.ui_set_active(True)
 

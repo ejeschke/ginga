@@ -128,63 +128,54 @@ class RenderContext(render.RenderContextBase):
         cp += tr.to_(off)
 
         tex_id = self.renderer.get_texture_id(cvs_img.image_id)
+        map_id = self.renderer.get_texture_id('rgbmap')
 
-        if opengl_version < 3.1:
-            # <-- legacy OpenGL
-            gl.glColor4f(1, 1, 1, 1.0)
-            gl.glEnable(gl.GL_TEXTURE_2D)
-            gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
+        self.renderer.pgm_mgr.setup_program('image')
+        gl.glBindVertexArray(self.renderer.vao_img)
 
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-            gl.glBegin(gl.GL_QUADS)
-            try:
-                gl.glTexCoord(0, 0)
-                gl.glVertex(cp[0][0], cp[0][1])
-                gl.glTexCoord(1, 0)
-                gl.glVertex(cp[1][0], cp[1][1])
-                gl.glTexCoord(1, 1)
-                gl.glVertex(cp[2][0], cp[2][1])
-                gl.glTexCoord(0, 1)
-                gl.glVertex(cp[3][0], cp[3][1])
-            finally:
-                gl.glEnd()
+        gl.glActiveTexture(gl.GL_TEXTURE0 + 0)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
+        _loc = self.renderer.pgm_mgr.get_uniform_loc("img_texture")
+        gl.glUniform1i(_loc, 0)
 
-            gl.glDisable(gl.GL_TEXTURE_2D)
+        gl.glActiveTexture(gl.GL_TEXTURE0 + 1)
+        gl.glBindTexture(gl.GL_TEXTURE_1D, map_id)
+        _loc = self.renderer.pgm_mgr.get_uniform_loc("color_map")
+        gl.glUniform1i(_loc, 1)
 
-        else:
-            # <-- modern OpenGL
-            gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
+        _loc = self.renderer.pgm_mgr.get_uniform_loc("loval")
+        gl.glUniform1f(_loc, self.renderer._levels[0])
 
-            # pad with z=0 coordinate if lacking
-            vertices = trcalc.pad_z(cp, dtype=np.float32)
-            shape = gl.GL_LINE_LOOP
+        _loc = self.renderer.pgm_mgr.get_uniform_loc("hival")
+        gl.glUniform1f(_loc, self.renderer._levels[1])
 
-            self.renderer.pgm_mgr.setup_program('image')
-            gl.glBindVertexArray(self.renderer.vao_img)
+        # pad with z=0 coordinate if lacking
+        vertices = trcalc.pad_z(cp, dtype=np.float32)
+        shape = gl.GL_LINE_LOOP
 
-            # Send the data over to the buffer
-            # NOTE: we swap elements 0 and 1, because we will also swap
-            # vertices 0 and 1, this allows us to draw two triangles to complete
-            # the image
-            texcoord = np.array([(1.0, 0.0), (0.0, 0.0),
-                                 (1.0, 1.0), (0.0, 1.0)], dtype=np.float32)
-            # swap vertices of rows 0 and 1
-            vertices[[0, 1]] = vertices[[1, 0]]
-            data = np.concatenate((vertices, texcoord), axis=1)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.renderer.vbo_img)
-            # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
-            #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, data, gl.GL_DYNAMIC_DRAW)
+        # Send the data over to the buffer
+        # NOTE: we swap elements 0 and 1, because we will also swap
+        # vertices 0 and 1, this allows us to draw two triangles to complete
+        # the image
+        texcoord = np.array([(1.0, 0.0), (0.0, 0.0),
+                             (1.0, 1.0), (0.0, 1.0)], dtype=np.float32)
+        # swap vertices of rows 0 and 1
+        vertices[[0, 1]] = vertices[[1, 0]]
+        data = np.concatenate((vertices, texcoord), axis=1)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.renderer.vbo_img)
+        # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
+        #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, data, gl.GL_DYNAMIC_DRAW)
 
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
 
-            # See NOTE above
-            gl.glDrawArrays(gl.GL_TRIANGLES, 0, 3)
-            gl.glDrawArrays(gl.GL_TRIANGLES, 1, 4)
+        # See NOTE above
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, 3)
+        gl.glDrawArrays(gl.GL_TRIANGLES, 1, 4)
 
-            gl.glBindVertexArray(0)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-            self.renderer.pgm_mgr.setup_program(None)
+        gl.glBindVertexArray(0)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        self.renderer.pgm_mgr.setup_program(None)
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         # TODO: this draws text as polygons, since there is no native
@@ -221,86 +212,48 @@ class RenderContext(render.RenderContextBase):
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
 
-        if opengl_version < 3.1:
-            # <-- legacy OpenGL
-            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+        self.renderer.pgm_mgr.setup_program('shape')
+        gl.glBindVertexArray(self.renderer.vao_line)
 
-            # draw fill, if any
-            if self.brush is not None:
-                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-                gl.glColor4f(*self.brush.color)
+        # Update the vertices data in the VBO
+        vertices = z_pts.astype(np.float32)
 
-                gl.glVertexPointerf(z_pts)
-                gl.glDrawArrays(shape, 0, len(z_pts))
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.renderer.vbo_line)
+        # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
+        #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_DYNAMIC_DRAW)
 
-            if self.pen is not None and self.pen.linewidth > 0:
-                # draw outline
-                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-                gl.glColor4f(*self.pen.color)
-                gl.glLineWidth(self.pen.linewidth)
+        # update color uniform
+        _loc = self.renderer.pgm_mgr.get_uniform_loc("fg_clr")
 
-                if self.pen.linestyle == 'dash':
-                    gl.glEnable(gl.GL_LINE_STIPPLE)
-                    gl.glLineStipple(3, 0x1C47)
+        # draw fill, if any
+        if self.brush is not None and self.brush.color is not None:
+            _c = self.brush.color
+            gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
 
-                gl.glVertexPointerf(z_pts)
-                gl.glDrawArrays(shape, 0, len(z_pts))
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
 
-                if self.pen.linestyle == 'dash':
-                    gl.glDisable(gl.GL_LINE_STIPPLE)
+            # TODO: this will not fill in non-convex polygons correctly
+            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(vertices))
 
-            gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-            return
+        # draw line, if any
+        # TODO: support line stippling (dash)
+        if self.pen is not None and self.pen.linewidth > 0:
+            _c = self.pen.color
+            gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
 
-        else:
-            # <-- modern OpenGL
-            self.renderer.pgm_mgr.setup_program('shape')
-            gl.glBindVertexArray(self.renderer.vao_line)
+            # draw outline
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+            gl.glLineWidth(self.pen.linewidth)
 
-            # Update the vertices data in the VBO
-            vertices = z_pts.astype(np.float32)
+            gl.glDrawArrays(shape, 0, len(vertices))
 
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.renderer.vbo_line)
-            # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
-            #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_DYNAMIC_DRAW)
-
-            # update color uniform
-            _loc = self.renderer.pgm_mgr.get_uniform_loc("fg_clr")
-
-            # draw fill, if any
-            if self.brush is not None and self.brush.color is not None:
-                _c = self.brush.color
-                gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
-
-                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-
-                # TODO: this will not fill in non-convex polygons correctly
-                gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(vertices))
-
-            # draw line, if any
-            # TODO: support line stippling (dash)
-            if self.pen is not None and self.pen.linewidth > 0:
-                _c = self.pen.color
-                gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
-
-                # draw outline
-                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-                gl.glLineWidth(self.pen.linewidth)
-
-                gl.glDrawArrays(shape, 0, len(vertices))
-
-            gl.glBindVertexArray(0)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-            self.renderer.pgm_mgr.setup_program(None)
+        gl.glBindVertexArray(0)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        self.renderer.pgm_mgr.setup_program(None)
 
     def draw_polygon(self, cpoints):
-        if opengl_version >= 3.1:
-            shape = gl.GL_LINE_LOOP
-        else:
-            shape = gl.GL_POLYGON
-
-        self._draw_pts(shape, cpoints)
+        self._draw_pts(gl.GL_LINE_LOOP, cpoints)
 
     def draw_circle(self, cx, cy, cradius):
         # we have to approximate a circle in OpenGL
@@ -314,12 +267,7 @@ class RenderContext(render.RenderContextBase):
             dy = cradius * np.sin(theta)
             cpoints.append((cx + dx, cy + dy))
 
-        if opengl_version >= 3.1:
-            shape = gl.GL_LINE_LOOP
-        else:
-            shape = gl.GL_POLYGON
-
-        self._draw_pts(shape, cpoints)
+        self._draw_pts(gl.GL_LINE_LOOP, cpoints)
 
     def draw_line(self, cx1, cy1, cx2, cy2):
         cpoints = [(cx1, cy1), (cx2, cy2)]
@@ -351,9 +299,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         self.draw_wrapper = False
         self.mode3d = True
-        self.draw_spines = False
         self._drawing = False
         self._tex_cache = dict()
+        self._levels = (0.0, 0.0)
 
         self.pgm_mgr = GlHelp.ShaderManager(self.logger)
 
@@ -397,6 +345,32 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.camera.rotate_2d(ang_deg)
 
         self.viewer.redraw(whence=2.6)
+
+    def _prep_cmap_arr(self, rgbmap):
+        # TODO: this does not work with 'histeq' color distribution or
+        # when hashsize != 256
+        idx = rgbmap.get_hasharray(np.arange(0, 256))
+        img_arr = rgbmap.arr[rgbmap.sarr[idx]]
+        ## wd = img_arr.shape[0]
+        ## alpha = np.full((wd, 1), 255)
+        ## img_arr = np.concatenate((img_arr, alpha), axis=1)
+        tex_id = self.get_texture_id('rgbmap')
+        self.gl_set_cmap(tex_id, img_arr)
+
+    def rgbmap_change(self, rgbmap):
+        self._prep_cmap_arr(rgbmap)
+        # this seems to be necessary to see continuous updates
+        self.viewer.update_image()
+        # this is necessary for other widgets to get the same kind of
+        # callback as for the standard pixel renderer
+        self.viewer.make_callback('redraw', 2.0)
+
+    def levels_change(self, levels):
+        self._levels = levels
+        self.viewer.update_image()
+        # this is necessary for other widgets to get the same kind of
+        # callback as for the standard pixel renderer
+        self.viewer.make_callback('redraw', 1.0)
 
     def _common_draw(self, cvs_img, cache, whence):
         # internal common drawing phase for all images
@@ -519,13 +493,19 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     def prepare_image(self, cvs_img, cache, whence):
         if cvs_img.kind == 'image':
             self._prepare_image(cvs_img, cache, whence)
+            img_arr = cache.rgbarr
         elif cvs_img.kind == 'normimage':
             self._prepare_norm_image(cvs_img, cache, whence)
+            if cvs_img.rgbmap is not None:
+                img_arr = cache.rgbarr
+            else:
+                #img_arr = cache.prergb.astype(np.float32)
+                img_arr = cache.cutout.astype(np.float32)
         else:
             raise render.RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
 
         tex_id = self.get_texture_id(cvs_img.image_id)
-        self.gl_set_image(tex_id, cache.rgbarr)
+        self.gl_set_image(tex_id, img_arr)
 
     def get_texture_id(self, image_id):
         tex_id = self._tex_cache.get(image_id, None)
@@ -560,30 +540,23 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         return self.camera
 
     def setup_3D(self, mode3d):
-        if opengl_version < 3.1:
-            gl.glMatrixMode(gl.GL_MODELVIEW)
-            gl.glLoadIdentity()
-            gl.glMatrixMode(gl.GL_PROJECTION)
-            gl.glLoadIdentity()
-
         gl.glDepthFunc(gl.GL_LEQUAL)
         gl.glEnable(gl.GL_DEPTH_TEST)
 
         # set camera view and projection matrices
         self.camera.set_gl_transform()
 
-        if opengl_version >= 3.1:
-            self.pgm_mgr.setup_program('shape')
-            _loc = self.pgm_mgr.get_uniform_loc("projection")
-            gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
-            _loc = self.pgm_mgr.get_uniform_loc("view")
-            gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
+        self.pgm_mgr.setup_program('shape')
+        _loc = self.pgm_mgr.get_uniform_loc("projection")
+        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
+        _loc = self.pgm_mgr.get_uniform_loc("view")
+        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
 
-            self.pgm_mgr.setup_program('image')
-            _loc = self.pgm_mgr.get_uniform_loc("projection")
-            gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
-            _loc = self.pgm_mgr.get_uniform_loc("view")
-            gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
+        self.pgm_mgr.setup_program('image')
+        _loc = self.pgm_mgr.get_uniform_loc("projection")
+        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
+        _loc = self.pgm_mgr.get_uniform_loc("view")
+        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
 
     def getOpenGLInfo(self):
         info = dict(vendor=gl.glGetString(gl.GL_VENDOR).decode(),
@@ -594,6 +567,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
     def gl_initialize(self):
         global opengl_version
+        context = self.viewer.make_context_current()
         d = self.getOpenGLInfo()
         self.logger.info("OpenGL info--Vendor: '%(vendor)s'  "
                          "Renderer: '%(renderer)s'  "
@@ -609,87 +583,118 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glClearColor(r, g, b, 1.0)
         gl.glClearDepth(1.0)
 
-        if opengl_version < 3.1:
-            gl.glDisable(gl.GL_LIGHTING)
-            gl.glShadeModel(gl.GL_FLAT)
-            #gl.glShadeModel(gl.GL_SMOOTH)
+        rgbmap = self.viewer.get_rgbmap()
+        self._prep_cmap_arr(rgbmap)
 
-            gl.glEnable(gl.GL_TEXTURE_2D)
-        else:
-            # --- line drawing shaders ---
-            self.pgm_mgr.load_program('shape', shader_dir)
+        # --- line drawing shaders ---
+        self.pgm_mgr.load_program('shape', shader_dir)
 
-            # --- setup VAO for line drawing ---
-            shader = self.pgm_mgr.setup_program('shape')
+        # --- setup VAO for line drawing ---
+        shader = self.pgm_mgr.setup_program('shape')
 
-            # Create a new VAO (Vertex Array Object) and bind it
-            self.vao_line = gl.glGenVertexArrays(1)
-            gl.glBindVertexArray(self.vao_line)
+        # Create a new VAO (Vertex Array Object) and bind it
+        self.vao_line = gl.glGenVertexArrays(1)
+        gl.glBindVertexArray(self.vao_line)
 
-            # Generate buffers to hold our vertices
-            self.vbo_line = gl.glGenBuffers(1)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_line)
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
-            # Get the position of the 'position' in parameter of our shader
-            # and bind it.
-            _pos = gl.glGetAttribLocation(shader, 'position')
-            gl.glEnableVertexAttribArray(_pos)
-            # Describe the position data layout in the buffer
-            gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 0,
-                                     ctypes.c_void_p(0))
+        # Generate buffers to hold our vertices
+        self.vbo_line = gl.glGenBuffers(1)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_line)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
+        # Get the position of the 'position' in parameter of our shader
+        # and bind it.
+        _pos = gl.glGetAttribLocation(shader, 'position')
+        gl.glEnableVertexAttribArray(_pos)
+        # Describe the position data layout in the buffer
+        gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 0,
+                                 ctypes.c_void_p(0))
 
-            # Unbind the VAO first (important)
-            gl.glBindVertexArray(0)
-            gl.glDisableVertexAttribArray(_pos)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-            self.pgm_mgr.setup_program(None)
+        # Unbind the VAO first (important)
+        gl.glBindVertexArray(0)
+        gl.glDisableVertexAttribArray(_pos)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        self.pgm_mgr.setup_program(None)
 
-            # --- image drawing shaders ---
-            self.pgm_mgr.load_program('image', shader_dir)
-            shader = self.pgm_mgr.setup_program('image')
+        # --- image drawing shaders ---
+        self.pgm_mgr.load_program('image', shader_dir)
+        shader = self.pgm_mgr.setup_program('image')
 
-            # --- setup VAO for image drawing ---
-            self.vao_img = gl.glGenVertexArrays(1)
-            gl.glBindVertexArray(self.vao_img)
+        # --- setup VAO for image drawing ---
+        self.vao_img = gl.glGenVertexArrays(1)
+        gl.glBindVertexArray(self.vao_img)
 
-            # Generate buffers to hold our vertices
-            self.vbo_img = gl.glGenBuffers(1)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_img)
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
-            # Get the position of the 'position' in parameter of our shader
-            # and bind it.
-            _pos = gl.glGetAttribLocation(shader, 'position')
-            gl.glEnableVertexAttribArray(_pos)
-            # Describe the position data layout in the buffer
-            gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 5 * 4,
-                                     ctypes.c_void_p(0))
-            _pos2 = gl.glGetAttribLocation(shader, 'i_tex_coord')
-            gl.glEnableVertexAttribArray(_pos2)
-            gl.glVertexAttribPointer(_pos2, 2, gl.GL_FLOAT, False, 5 * 4,
-                                     ctypes.c_void_p(3 * 4))
-            # Unbind the VAO first
-            gl.glBindVertexArray(0)
-            gl.glDisableVertexAttribArray(_pos)
-            gl.glDisableVertexAttribArray(_pos2)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-            self.pgm_mgr.setup_program(None)
+        # Generate buffers to hold our vertices
+        self.vbo_img = gl.glGenBuffers(1)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_img)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
+        # Get the position of the 'position' in parameter of our shader
+        # and bind it.
+        _pos = gl.glGetAttribLocation(shader, 'position')
+        gl.glEnableVertexAttribArray(_pos)
+        # Describe the position data layout in the buffer
+        gl.glVertexAttribPointer(_pos, 3, gl.GL_FLOAT, False, 5 * 4,
+                                 ctypes.c_void_p(0))
+        _pos2 = gl.glGetAttribLocation(shader, 'i_tex_coord')
+        gl.glEnableVertexAttribArray(_pos2)
+        gl.glVertexAttribPointer(_pos2, 2, gl.GL_FLOAT, False, 5 * 4,
+                                 ctypes.c_void_p(3 * 4))
+        # Unbind the VAO first
+        gl.glBindVertexArray(0)
+        gl.glDisableVertexAttribArray(_pos)
+        gl.glDisableVertexAttribArray(_pos2)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        self.pgm_mgr.setup_program(None)
 
         gl.glDisable(gl.GL_CULL_FACE)
         gl.glFrontFace(gl.GL_CCW)
 
-    def gl_set_image(self, tex_id, rgb_arr):
+    def gl_set_image(self, tex_id, img_arr):
         """NOTE: this is a slow operation--downloading a texture."""
-        ht, wd = rgb_arr.shape[:2]
+        context = self.viewer.make_context_current()
 
-        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        ht, wd = img_arr.shape[:2]
+
+        gl.glActiveTexture(gl.GL_TEXTURE0 + 0)
         gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER,
                            gl.GL_NEAREST)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER,
                            gl.GL_NEAREST)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_R,
+                           gl.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S,
+                           gl.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T,
+                           gl.GL_CLAMP_TO_EDGE)
 
-        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
-                        gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, rgb_arr)
+        if len(img_arr.shape) > 2:
+            gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+            gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
+                            gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_arr)
+            self._image_type = 0
+        else:
+            gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
+            gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, wd, ht, 0,
+                            gl.GL_RED, gl.GL_FLOAT, img_arr)
+            self._image_type = 1
+
+    def gl_set_cmap(self, tex_id, img_arr):
+        wd = img_arr.shape[0]
+        context = self.viewer.make_context_current()
+        gl.glActiveTexture(gl.GL_TEXTURE0 + 1)
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        gl.glBindTexture(gl.GL_TEXTURE_1D, tex_id)
+        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER,
+                           gl.GL_NEAREST)
+        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER,
+                           gl.GL_NEAREST)
+        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_R,
+                           gl.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S,
+                           gl.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_T,
+                           gl.GL_CLAMP_TO_EDGE)
+        gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB, wd, 0,
+                        gl.GL_RGB, gl.GL_UNSIGNED_BYTE, img_arr)
 
     ## def gl_set_image_interpolation(self, interp):
     ##     gl.glBindTexture(gl.GL_TEXTURE_2D, self.tex_id)
@@ -707,11 +712,14 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     def gl_resize(self, width, height):
         self.wd, self.ht = width, height
 
+        context = self.viewer.make_context_current()
+
         gl.glViewport(0, 0, width, height)
 
         self.camera.set_viewport_dimensions(width, height)
 
     def gl_paint(self):
+        context = self.viewer.make_context_current()
         self._drawing = True
         try:
             self.setup_3D(self.mode3d)
@@ -724,32 +732,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             cr = RenderContext(self, self.viewer, self.surface)
             self.draw_vector(cr)
 
-            if self.mode3d and self.draw_spines:
-                # for debugging
-                self._draw_spines()
-
         finally:
             self._drawing = False
             gl.glFlush()
-
-    def _draw_spines(self):
-        if opengl_version < 3.1:
-            # draw orienting spines radiating in x, y and z
-            gl.glColor(1.0, 0.0, 0.0)
-            gl.glBegin(gl.GL_LINES)
-            gl.glVertex(self.mn_x, 0, 0)
-            gl.glVertex(self.mx_x, 0, 0)
-            gl.glEnd()
-            gl.glColor(0.0, 1.0, 0.0)
-            gl.glBegin(gl.GL_LINES)
-            gl.glVertex(0, self.mn_y, 0)
-            gl.glVertex(0, self.mx_y, 0)
-            gl.glEnd()
-            gl.glColor(0.0, 0.0, 1.0)
-            gl.glBegin(gl.GL_LINES)
-            gl.glVertex(0, 0, self.mn_z)
-            gl.glVertex(0, 0, self.mx_z)
-            gl.glEnd()
 
     def create_offscreen_fbo(self):
         width, height = self.dims
