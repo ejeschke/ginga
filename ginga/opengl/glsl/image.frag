@@ -17,7 +17,7 @@ uniform sampler1D color_map;
 uniform float loval;
 uniform float hival;
 
-const int image_type = 1;
+uniform int image_type;
 
 float cut_levels(float value)
 {

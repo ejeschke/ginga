@@ -2731,7 +2731,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.img_bg = colors.resolve_color(bg)
-        self.redraw(whence=0)
+        self.renderer.bg_change(self.img_bg)
 
     def get_bg(self):
         """Get the background color.
@@ -2765,7 +2765,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.img_fg = colors.resolve_color(fg)
-        self.redraw(whence=0)
+        self.redraw(whence=3)
 
     def get_fg(self):
         """Get the foreground color.

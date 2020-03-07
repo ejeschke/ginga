@@ -259,7 +259,9 @@ class ImageViewQt(ImageView.ImageViewBase):
         self._defer_task.start(time_sec)
 
     def make_context_current(self):
-        return self.imgwin.makeCurrent()
+        ctx = self.imgwin.context()
+        self.imgwin.makeCurrent()
+        return ctx
 
     def prepare_image(self, cvs_img, cache, whence):
         self.renderer.prepare_image(cvs_img, cache, whence)

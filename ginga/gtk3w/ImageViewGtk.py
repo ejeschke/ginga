@@ -251,7 +251,8 @@ class ImageViewGtk(ImageView.ImageViewBase):
 
     def make_context_current(self):
         ctx = self.imgwin.get_context()
-        ctx.make_current()
+        if ctx is not None:
+            ctx.make_current()
         return ctx
 
     def on_realize_cb(self, area):

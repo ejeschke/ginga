@@ -143,6 +143,9 @@ class RenderContext(render.RenderContextBase):
         _loc = self.renderer.pgm_mgr.get_uniform_loc("color_map")
         gl.glUniform1i(_loc, 1)
 
+        _loc = self.renderer.pgm_mgr.get_uniform_loc("image_type")
+        gl.glUniform1i(_loc, self.renderer._image_type)
+
         _loc = self.renderer.pgm_mgr.get_uniform_loc("loval")
         gl.glUniform1f(_loc, self.renderer._levels[0])
 
@@ -302,14 +305,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self._drawing = False
         self._tex_cache = dict()
         self._levels = (0.0, 0.0)
+        self._image_type = 0
 
         self.pgm_mgr = GlHelp.ShaderManager(self.logger)
-
-        # initial values, will be recalculated at window map/resize
-        self.lim_x, self.lim_y, self.lim_z = 1.0, 1.0, 1.0
-        self.mn_x, self.mx_x = -self.lim_x, self.lim_x
-        self.mn_y, self.mx_y = -self.lim_y, self.lim_y
-        self.mn_z, self.mx_z = -self.lim_z, self.lim_z
 
     def set_3dmode(self, tf):
         self.mode3d = tf
@@ -325,18 +323,22 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         width, height = dims[:2]
         self.gl_resize(width, height)
-        self.viewer.redraw(whence=2.5)
+
+        self.viewer.update_image()
+        # this is necessary for other widgets to get the same kind of
+        # callback as for the standard pixel renderer
+        self.viewer.make_callback('redraw', 0.0)
 
     def scale(self, scales):
         self.camera.scale_2d(scales[:2])
 
-        self.viewer.redraw(whence=2.5)
+        self.viewer.update_image()
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
         self.viewer.make_callback('redraw', 0.0)
 
     def pan(self, pos):
-        self.viewer.redraw(whence=2.5)
+        self.viewer.update_image()
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
         self.viewer.make_callback('redraw', 0.0)
@@ -344,29 +346,28 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     def rotate_2d(self, ang_deg):
         self.camera.rotate_2d(ang_deg)
 
-        self.viewer.redraw(whence=2.6)
-
-    def _prep_cmap_arr(self, rgbmap):
-        # TODO: this does not work with 'histeq' color distribution or
-        # when hashsize != 256
-        idx = rgbmap.get_hasharray(np.arange(0, 256))
-        img_arr = rgbmap.arr[rgbmap.sarr[idx]]
-        ## wd = img_arr.shape[0]
-        ## alpha = np.full((wd, 1), 255)
-        ## img_arr = np.concatenate((img_arr, alpha), axis=1)
-        tex_id = self.get_texture_id('rgbmap')
-        self.gl_set_cmap(tex_id, img_arr)
+        self.viewer.update_image()
+        # this is necessary for other widgets to get the same kind of
+        # callback as for the standard pixel renderer
+        self.viewer.make_callback('redraw', 2.6)
 
     def rgbmap_change(self, rgbmap):
-        self._prep_cmap_arr(rgbmap)
-        # this seems to be necessary to see continuous updates
+        self.gl_set_cmap(rgbmap)
+
         self.viewer.update_image()
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
         self.viewer.make_callback('redraw', 2.0)
 
+    def bg_change(self, bg):
+        self.viewer.update_image()
+        # this is necessary for other widgets to get the same kind of
+        # callback as for the standard pixel renderer
+        self.viewer.make_callback('redraw', 3.0)
+
     def levels_change(self, levels):
         self._levels = levels
+
         self.viewer.update_image()
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
@@ -455,35 +456,35 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
                                rgbmap.maxc).astype(rgbmap.dtype)
                 cache.cutout = img_arr[..., 0:a_idx]
 
-        if (whence <= 1.0) or (cache.prergb is None) or (not cvs_img.optimize):
-            # apply visual changes prior to color mapping (cut levels, etc)
-            vmax = rgbmap.get_hash_size() - 1
-            newdata = self._apply_visuals(cvs_img, cache.cutout, 0, vmax)
+        ## if (whence <= 1.0) or (cache.prergb is None) or (not cvs_img.optimize):
+        ##     # apply visual changes prior to color mapping (cut levels, etc)
+        ##     vmax = rgbmap.get_hash_size() - 1
+        ##     newdata = self._apply_visuals(cvs_img, cache.cutout, 0, vmax)
 
-            # result becomes an index array fed to the RGB mapper
-            if not np.issubdtype(newdata.dtype, np.dtype('uint')):
-                newdata = newdata.astype(np.uint)
-            idx = newdata
+        ##     # result becomes an index array fed to the RGB mapper
+        ##     if not np.issubdtype(newdata.dtype, np.dtype('uint')):
+        ##         newdata = newdata.astype(np.uint)
+        ##     idx = newdata
 
-            self.logger.debug("shape of index is %s" % (str(idx.shape)))
-            cache.prergb = idx
+        ##     self.logger.debug("shape of index is %s" % (str(idx.shape)))
+        ##     cache.prergb = idx
 
         t3 = time.time()
-        dst_order = self.viewer.get_rgb_order()
+        ## dst_order = self.viewer.get_rgb_order()
 
-        if (whence <= 2.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
-            # get RGB mapped array
-            rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
-                                         image_order=image_order)
-            cache.rgbarr = rgbobj.get_array(dst_order)
+        ## if (whence <= 2.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
+        ##     # get RGB mapped array
+        ##     rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
+        ##                                  image_order=image_order)
+        ##     cache.rgbarr = rgbobj.get_array(dst_order)
 
-            if cache.alpha is not None and 'A' in dst_order:
-                a_idx = dst_order.index('A')
-                cache.rgbarr[..., a_idx] = cache.alpha
+        ##     if cache.alpha is not None and 'A' in dst_order:
+        ##         a_idx = dst_order.index('A')
+        ##         cache.rgbarr[..., a_idx] = cache.alpha
 
         t4 = time.time()
 
-        #cache.rgbarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
+        ## #cache.rgbarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
 
         cache.drawn = True
         t5 = time.time()
@@ -499,8 +500,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             if cvs_img.rgbmap is not None:
                 img_arr = cache.rgbarr
             else:
-                #img_arr = cache.prergb.astype(np.float32)
                 img_arr = cache.cutout.astype(np.float32)
+                print('img_arr', img_arr.shape)
+                #img_arr = cache.rgbarr
         else:
             raise render.RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
 
@@ -510,11 +512,14 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     def get_texture_id(self, image_id):
         tex_id = self._tex_cache.get(image_id, None)
         if tex_id is None:
+            context = self.viewer.make_context_current()
+            print('get_texture_id', image_id)
             tex_id = gl.glGenTextures(1)
             self._tex_cache[image_id] = tex_id
         return tex_id
 
     def get_surface_as_array(self, order='RGBA'):
+        print('get_surface_as_array')
         width, height = self.dims
         gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)
         if self.use_offscreen_fbo:
@@ -567,7 +572,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
     def gl_initialize(self):
         global opengl_version
+        print('gl_initialize')
         context = self.viewer.make_context_current()
+
         d = self.getOpenGLInfo()
         self.logger.info("OpenGL info--Vendor: '%(vendor)s'  "
                          "Renderer: '%(renderer)s'  "
@@ -579,12 +586,12 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         if self.use_offscreen_fbo:
             self.create_offscreen_fbo()
 
-        r, g, b = self.viewer.img_bg
-        gl.glClearColor(r, g, b, 1.0)
-        gl.glClearDepth(1.0)
+        ## r, g, b = self.viewer.img_bg
+        ## gl.glClearColor(r, g, b, 1.0)
+        ## gl.glClearDepth(1.0)
 
         rgbmap = self.viewer.get_rgbmap()
-        self._prep_cmap_arr(rgbmap)
+        self.gl_set_cmap(rgbmap)
 
         # --- line drawing shaders ---
         self.pgm_mgr.load_program('shape', shader_dir)
@@ -649,6 +656,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
     def gl_set_image(self, tex_id, img_arr):
         """NOTE: this is a slow operation--downloading a texture."""
+        print('gl_set_image')
         context = self.viewer.make_context_current()
 
         ht, wd = img_arr.shape[:2]
@@ -671,13 +679,25 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
                             gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_arr)
             self._image_type = 0
+            print('uploaded rgbarr')
         else:
             gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
             gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, wd, ht, 0,
                             gl.GL_RED, gl.GL_FLOAT, img_arr)
             self._image_type = 1
+            print('uploaded mono')
 
-    def gl_set_cmap(self, tex_id, img_arr):
+    def gl_set_cmap(self, rgbmap):
+        # TODO: this does not work with 'histeq' color distribution or
+        # when hashsize != 256
+        idx = rgbmap.get_hasharray(np.arange(0, 256))
+        img_arr = rgbmap.arr[rgbmap.sarr[idx]]
+        ## wd = img_arr.shape[0]
+        ## alpha = np.full((wd, 1), 255)
+        ## img_arr = np.concatenate((img_arr, alpha), axis=1)
+        tex_id = self.get_texture_id('rgbmap')
+
+        print('gl_set_cmap')
         wd = img_arr.shape[0]
         context = self.viewer.make_context_current()
         gl.glActiveTexture(gl.GL_TEXTURE0 + 1)
@@ -710,6 +730,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     ##                            gl.GL_LINEAR)
 
     def gl_resize(self, width, height):
+        print('gl_resize')
         self.wd, self.ht = width, height
 
         context = self.viewer.make_context_current()
@@ -719,6 +740,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.camera.set_viewport_dimensions(width, height)
 
     def gl_paint(self):
+        print('gl_paint')
         context = self.viewer.make_context_current()
         self._drawing = True
         try:
