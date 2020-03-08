@@ -150,6 +150,9 @@ class RendererBase(object):
     def bg_change(self, bg):
         self.viewer.redraw(whence=3)
 
+    def fg_change(self, fg):
+        self.viewer.redraw(whence=3)
+
     def icc_profile_change(self):
         self.viewer.redraw(whence=2.3)
 

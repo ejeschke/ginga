@@ -105,10 +105,12 @@ class Camera(object):
         self.home_position = self.position.copy()
         self.tgt_position = self.target.copy()
 
-    def pan_2d(self, pos):
-        pan_x, pan_y = pos[:2]
-        self.target = Point3D(pan_x, pan_y, self.target.z)
-        self.position = Point3D(pan_x, pan_y, self.position.z)
+    ## def pan_2d(self, pos):
+    ##     pan_x, pan_y = pos[:2]
+    ##     self.target = Point3D(pan_x, pan_y, self.target.z)
+    ##     self.position = Point3D(pan_x, pan_y, self.position.z)
+
+    ##     self.calc_gl_transform()
 
     def rotate_2d(self, ang_deg):
         ang_rad = np.radians(ang_deg)
@@ -122,6 +124,8 @@ class Camera(object):
         self.up = M * up
         self.position = self.target + t2p
 
+        self.calc_gl_transform()
+
     def scale_2d(self, scales):
         # for now, scale is uniform for X and Y
         scale = scales[0]
@@ -132,6 +136,8 @@ class Camera(object):
 
         dolly_distance = 1.0 / scale * self.magic_z
         self.position = self.target - direction * dolly_distance
+
+        self.calc_gl_transform()
 
     def get_scale_2d(self):
         # solve for scale based on distance from target
@@ -144,9 +150,9 @@ class Camera(object):
         # this is handled by a transform on the viewer side
         pass
 
-    def set_gl_transform(self):
-        """This side effects the OpenGL context to set the view to match
-        the camera.
+    def calc_gl_transform(self):
+        """This calculates the transformation matrices necessary to match
+        the camera's position.
         """
         tangent = np.tan(self.fov_deg / 2.0 / 180.0 * np.pi)
         vport_radius = self.near_plane * tangent

@@ -127,58 +127,7 @@ class RenderContext(render.RenderContextBase):
         tr = transform.FlipSwapTransform(self.viewer)
         cp += tr.to_(off)
 
-        tex_id = self.renderer.get_texture_id(cvs_img.image_id)
-        map_id = self.renderer.get_texture_id('rgbmap')
-
-        self.renderer.pgm_mgr.setup_program('image')
-        gl.glBindVertexArray(self.renderer.vao_img)
-
-        gl.glActiveTexture(gl.GL_TEXTURE0 + 0)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
-        _loc = self.renderer.pgm_mgr.get_uniform_loc("img_texture")
-        gl.glUniform1i(_loc, 0)
-
-        gl.glActiveTexture(gl.GL_TEXTURE0 + 1)
-        gl.glBindTexture(gl.GL_TEXTURE_1D, map_id)
-        _loc = self.renderer.pgm_mgr.get_uniform_loc("color_map")
-        gl.glUniform1i(_loc, 1)
-
-        _loc = self.renderer.pgm_mgr.get_uniform_loc("image_type")
-        gl.glUniform1i(_loc, self.renderer._image_type)
-
-        _loc = self.renderer.pgm_mgr.get_uniform_loc("loval")
-        gl.glUniform1f(_loc, self.renderer._levels[0])
-
-        _loc = self.renderer.pgm_mgr.get_uniform_loc("hival")
-        gl.glUniform1f(_loc, self.renderer._levels[1])
-
-        # pad with z=0 coordinate if lacking
-        vertices = trcalc.pad_z(cp, dtype=np.float32)
-        shape = gl.GL_LINE_LOOP
-
-        # Send the data over to the buffer
-        # NOTE: we swap elements 0 and 1, because we will also swap
-        # vertices 0 and 1, this allows us to draw two triangles to complete
-        # the image
-        texcoord = np.array([(1.0, 0.0), (0.0, 0.0),
-                             (1.0, 1.0), (0.0, 1.0)], dtype=np.float32)
-        # swap vertices of rows 0 and 1
-        vertices[[0, 1]] = vertices[[1, 0]]
-        data = np.concatenate((vertices, texcoord), axis=1)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.renderer.vbo_img)
-        # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
-        #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, data, gl.GL_DYNAMIC_DRAW)
-
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-
-        # See NOTE above
-        gl.glDrawArrays(gl.GL_TRIANGLES, 0, 3)
-        gl.glDrawArrays(gl.GL_TRIANGLES, 1, 4)
-
-        gl.glBindVertexArray(0)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-        self.renderer.pgm_mgr.setup_program(None)
+        self.renderer.gl_draw_image(cvs_img, cp)
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         # TODO: this draws text as polygons, since there is no native
@@ -202,61 +151,9 @@ class RenderContext(render.RenderContextBase):
             self.set_fill(None)
             self.draw_polygon(pts)
 
-    def _draw_pts(self, shape, cpoints):
-
-        if not self.renderer._drawing:
-            # this test ensures that we are not trying to draw before
-            # the OpenGL context is set for us correctly
-            return
-
-        # pad with z=0 coordinate if lacking
-        z_pts = trcalc.pad_z(cpoints, dtype=np.float32)
-
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-
-        self.renderer.pgm_mgr.setup_program('shape')
-        gl.glBindVertexArray(self.renderer.vao_line)
-
-        # Update the vertices data in the VBO
-        vertices = z_pts.astype(np.float32)
-
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.renderer.vbo_line)
-        # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
-        #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_DYNAMIC_DRAW)
-
-        # update color uniform
-        _loc = self.renderer.pgm_mgr.get_uniform_loc("fg_clr")
-
-        # draw fill, if any
-        if self.brush is not None and self.brush.color is not None:
-            _c = self.brush.color
-            gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
-
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-
-            # TODO: this will not fill in non-convex polygons correctly
-            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(vertices))
-
-        # draw line, if any
-        # TODO: support line stippling (dash)
-        if self.pen is not None and self.pen.linewidth > 0:
-            _c = self.pen.color
-            gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
-
-            # draw outline
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-            gl.glLineWidth(self.pen.linewidth)
-
-            gl.glDrawArrays(shape, 0, len(vertices))
-
-        gl.glBindVertexArray(0)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-        self.renderer.pgm_mgr.setup_program(None)
-
     def draw_polygon(self, cpoints):
-        self._draw_pts(gl.GL_LINE_LOOP, cpoints)
+        self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints,
+                                    self.brush, self.pen)
 
     def draw_circle(self, cx, cy, cradius):
         # we have to approximate a circle in OpenGL
@@ -270,14 +167,17 @@ class RenderContext(render.RenderContextBase):
             dy = cradius * np.sin(theta)
             cpoints.append((cx + dx, cy + dy))
 
-        self._draw_pts(gl.GL_LINE_LOOP, cpoints)
+        self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints,
+                                    self.brush, self.pen)
 
     def draw_line(self, cx1, cy1, cx2, cy2):
         cpoints = [(cx1, cy1), (cx2, cy2)]
-        self._draw_pts(gl.GL_LINES, cpoints)
+        self.renderer.gl_draw_shape(gl.GL_LINES, cpoints,
+                                    self.brush, self.pen)
 
     def draw_path(self, cpoints):
-        self._draw_pts(gl.GL_LINE_STRIP, cpoints)
+        self.renderer.gl_draw_shape(gl.GL_LINE_STRIP, cpoints,
+                                    self.brush, self.pen)
 
 
 class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
@@ -303,6 +203,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.draw_wrapper = False
         self.mode3d = True
         self._drawing = False
+        self._initialized = False
         self._tex_cache = dict()
         self._levels = (0.0, 0.0)
         self._image_type = 0
@@ -319,15 +220,17 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         """Resize our drawing area to encompass a space defined by the
         given dimensions.
         """
-        self._resize(dims)
+        if self._initialized:
+            self._resize(dims)
 
-        width, height = dims[:2]
-        self.gl_resize(width, height)
+            width, height = dims[:2]
+            self.gl_resize(width, height)
 
-        self.viewer.update_image()
-        # this is necessary for other widgets to get the same kind of
-        # callback as for the standard pixel renderer
-        self.viewer.make_callback('redraw', 0.0)
+            self.viewer.update_image()
+
+            # this is necessary for other widgets to get the same kind of
+            # callback as for the standard pixel renderer
+            self.viewer.make_callback('redraw', 0.0)
 
     def scale(self, scales):
         self.camera.scale_2d(scales[:2])
@@ -385,27 +288,25 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             # get destination location in data_coords
             dst_x, dst_y = cvs_img.crdmap.to_data((cvs_img.x, cvs_img.y))
 
-            ## a1, b1, a2, b2 = 0, 0, cvs_img.image.width - 1, cvs_img.image.height - 1
+            a1, b1, a2, b2 = 0, 0, image.width - 1, image.height - 1
 
-            ## # scale by our scale
-            ## _scale_x, _scale_y = cvs_img.scale_x, cvs_img.scale_y
+            # scale by our scale
+            _scale_x, _scale_y = cvs_img.scale_x, cvs_img.scale_y
 
-            ## interp = cvs_img.interpolation
-            ## if interp is None:
-            ##     t_ = viewer.get_settings()
-            ##     interp = t_.get('interpolation', 'basic')
+            interp = cvs_img.interpolation
+            if interp is None:
+                t_ = viewer.get_settings()
+                interp = t_.get('interpolation', 'basic')
 
-            ## # previous choice might not be available if preferences
-            ## # were saved when opencv was being used (and not used now);
-            ## # if so, silently default to "basic"
-            ## if interp not in trcalc.interpolation_methods:
-            ##     interp = 'basic'
-            ## res = image.get_scaled_cutout2((a1, b1), (a2, b2),
-            ##                                (_scale_x, _scale_y),
-            ##                                method=interp)
-            ## data = res.data
-
-            data = image.get_data()
+            # previous choice might not be available if preferences
+            # were saved when opencv was being used (and not used now);
+            # if so, silently default to "basic"
+            if interp not in trcalc.interpolation_methods:
+                interp = 'basic'
+            res = image.get_scaled_cutout2((a1, b1), (a2, b2),
+                                           (_scale_x, _scale_y),
+                                           method=interp)
+            data = res.data
 
             if cvs_img.flipy:
                 data = np.flipud(data)
@@ -440,12 +341,14 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         image_order = cvs_img.image.get_order()
 
+        print('prepare norm image', whence)
         if (whence <= 0.0) or (not cvs_img.optimize):
             # if image has an alpha channel, then strip it off and save
             # it until it is recombined later with the colorized output
             # this saves us having to deal with an alpha band in the
             # cuts leveling and RGB mapping routines
             img_arr = cache.cutout
+            print('cutout', img_arr.shape, img_arr.dtype)
             if 'A' not in image_order:
                 cache.alpha = None
             else:
@@ -456,35 +359,37 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
                                rgbmap.maxc).astype(rgbmap.dtype)
                 cache.cutout = img_arr[..., 0:a_idx]
 
-        ## if (whence <= 1.0) or (cache.prergb is None) or (not cvs_img.optimize):
-        ##     # apply visual changes prior to color mapping (cut levels, etc)
-        ##     vmax = rgbmap.get_hash_size() - 1
-        ##     newdata = self._apply_visuals(cvs_img, cache.cutout, 0, vmax)
+        if cvs_img.rgbmap is not None or len(cache.cutout.shape) > 2:
 
-        ##     # result becomes an index array fed to the RGB mapper
-        ##     if not np.issubdtype(newdata.dtype, np.dtype('uint')):
-        ##         newdata = newdata.astype(np.uint)
-        ##     idx = newdata
+            if (whence <= 1.0) or (cache.prergb is None) or (not cvs_img.optimize):
+                # apply visual changes prior to color mapping (cut levels, etc)
+                vmax = rgbmap.get_hash_size() - 1
+                newdata = self._apply_visuals(cvs_img, cache.cutout, 0, vmax)
 
-        ##     self.logger.debug("shape of index is %s" % (str(idx.shape)))
-        ##     cache.prergb = idx
+                # result becomes an index array fed to the RGB mapper
+                if not np.issubdtype(newdata.dtype, np.dtype('uint')):
+                    newdata = newdata.astype(np.uint)
+                idx = newdata
 
-        t3 = time.time()
-        ## dst_order = self.viewer.get_rgb_order()
+                self.logger.debug("shape of index is %s" % (str(idx.shape)))
+                cache.prergb = idx
 
-        ## if (whence <= 2.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
-        ##     # get RGB mapped array
-        ##     rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
-        ##                                  image_order=image_order)
-        ##     cache.rgbarr = rgbobj.get_array(dst_order)
+            t3 = time.time()
+            dst_order = self.viewer.get_rgb_order()
 
-        ##     if cache.alpha is not None and 'A' in dst_order:
-        ##         a_idx = dst_order.index('A')
-        ##         cache.rgbarr[..., a_idx] = cache.alpha
+            if (whence <= 2.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
+                # get RGB mapped array
+                rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
+                                             image_order=image_order)
+                cache.rgbarr = rgbobj.get_array(dst_order)
 
-        t4 = time.time()
+                if cache.alpha is not None and 'A' in dst_order:
+                    a_idx = dst_order.index('A')
+                    cache.rgbarr[..., a_idx] = cache.alpha
 
-        ## #cache.rgbarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
+            t4 = time.time()
+
+        ## #cache.imgarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
 
         cache.drawn = True
         t5 = time.time()
@@ -495,14 +400,16 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         if cvs_img.kind == 'image':
             self._prepare_image(cvs_img, cache, whence)
             img_arr = cache.rgbarr
+
         elif cvs_img.kind == 'normimage':
             self._prepare_norm_image(cvs_img, cache, whence)
-            if cvs_img.rgbmap is not None:
-                img_arr = cache.rgbarr
+            if len(cache.cutout.shape) == 2:
+                # <-- monochrome image with adjustable RGB map
+                img_arr = np.ascontiguousarray(cache.cutout, dtype=np.float32)
             else:
-                img_arr = cache.cutout.astype(np.float32)
-                print('img_arr', img_arr.shape)
-                #img_arr = cache.rgbarr
+                img_arr = np.ascontiguousarray(cache.rgbarr, dtype=np.uint8)
+            print('img_arr', img_arr.shape)
+
         else:
             raise render.RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
 
@@ -543,25 +450,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
     def get_camera(self):
         return self.camera
-
-    def setup_3D(self, mode3d):
-        gl.glDepthFunc(gl.GL_LEQUAL)
-        gl.glEnable(gl.GL_DEPTH_TEST)
-
-        # set camera view and projection matrices
-        self.camera.set_gl_transform()
-
-        self.pgm_mgr.setup_program('shape')
-        _loc = self.pgm_mgr.get_uniform_loc("projection")
-        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
-        _loc = self.pgm_mgr.get_uniform_loc("view")
-        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
-
-        self.pgm_mgr.setup_program('image')
-        _loc = self.pgm_mgr.get_uniform_loc("projection")
-        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
-        _loc = self.pgm_mgr.get_uniform_loc("view")
-        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
 
     def getOpenGLInfo(self):
         info = dict(vendor=gl.glGetString(gl.GL_VENDOR).decode(),
@@ -653,6 +541,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         gl.glDisable(gl.GL_CULL_FACE)
         gl.glFrontFace(gl.GL_CCW)
+        self._initialized = True
 
     def gl_set_image(self, tex_id, img_arr):
         """NOTE: this is a slow operation--downloading a texture."""
@@ -729,6 +618,128 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     ##         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER,
     ##                            gl.GL_LINEAR)
 
+    def gl_draw_image(self, cvs_img, cp):
+        if not self._drawing:
+            # this test ensures that we are not trying to draw before
+            # the OpenGL context is set for us correctly
+            return
+
+        tex_id = self.get_texture_id(cvs_img.image_id)
+        map_id = self.get_texture_id('rgbmap')
+
+        self.pgm_mgr.setup_program('image')
+        gl.glBindVertexArray(self.vao_img)
+
+        _loc = self.pgm_mgr.get_uniform_loc("projection")
+        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
+        _loc = self.pgm_mgr.get_uniform_loc("view")
+        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
+
+        gl.glActiveTexture(gl.GL_TEXTURE0 + 0)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
+        _loc = self.pgm_mgr.get_uniform_loc("img_texture")
+        gl.glUniform1i(_loc, 0)
+
+        gl.glActiveTexture(gl.GL_TEXTURE0 + 1)
+        gl.glBindTexture(gl.GL_TEXTURE_1D, map_id)
+        _loc = self.pgm_mgr.get_uniform_loc("color_map")
+        gl.glUniform1i(_loc, 1)
+
+        _loc = self.pgm_mgr.get_uniform_loc("image_type")
+        gl.glUniform1i(_loc, self._image_type)
+
+        _loc = self.pgm_mgr.get_uniform_loc("loval")
+        gl.glUniform1f(_loc, self._levels[0])
+
+        _loc = self.pgm_mgr.get_uniform_loc("hival")
+        gl.glUniform1f(_loc, self._levels[1])
+
+        # pad with z=0 coordinate if lacking
+        vertices = trcalc.pad_z(cp, dtype=np.float32)
+        shape = gl.GL_LINE_LOOP
+
+        # Send the data over to the buffer
+        # NOTE: we swap elements 0 and 1, because we will also swap
+        # vertices 0 and 1, this allows us to draw two triangles to complete
+        # the image
+        texcoord = np.array([(1.0, 0.0), (0.0, 0.0),
+                             (1.0, 1.0), (0.0, 1.0)], dtype=np.float32)
+        # swap vertices of rows 0 and 1
+        vertices[[0, 1]] = vertices[[1, 0]]
+        data = np.concatenate((vertices, texcoord), axis=1)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_img)
+        # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
+        #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, data, gl.GL_DYNAMIC_DRAW)
+
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+
+        # See NOTE above
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, 3)
+        gl.glDrawArrays(gl.GL_TRIANGLES, 1, 4)
+
+        gl.glBindVertexArray(0)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        self.pgm_mgr.setup_program(None)
+
+    def gl_draw_shape(self, gl_shape, cpoints, brush, pen):
+
+        if not self._drawing:
+            # this test ensures that we are not trying to draw before
+            # the OpenGL context is set for us correctly
+            return
+
+        # pad with z=0 coordinate if lacking
+        z_pts = trcalc.pad_z(cpoints, dtype=np.float32)
+
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+
+        self.pgm_mgr.setup_program('shape')
+        gl.glBindVertexArray(self.vao_line)
+
+        # Update the vertices data in the VBO
+        vertices = z_pts.astype(np.float32)
+
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_line)
+        # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
+        #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_DYNAMIC_DRAW)
+
+        _loc = self.pgm_mgr.get_uniform_loc("projection")
+        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
+        _loc = self.pgm_mgr.get_uniform_loc("view")
+        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
+
+        # update color uniform
+        _loc = self.pgm_mgr.get_uniform_loc("fg_clr")
+
+        # draw fill, if any
+        if brush is not None and brush.color is not None:
+            _c = brush.color
+            gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
+
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+
+            # TODO: this will not fill in non-convex polygons correctly
+            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(vertices))
+
+        # draw line, if any
+        # TODO: support line stippling (dash)
+        if pen is not None and pen.linewidth > 0:
+            _c = pen.color
+            gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
+
+            # draw outline
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+            gl.glLineWidth(pen.linewidth)
+
+            gl.glDrawArrays(gl_shape, 0, len(vertices))
+
+        gl.glBindVertexArray(0)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        self.pgm_mgr.setup_program(None)
+
     def gl_resize(self, width, height):
         print('gl_resize')
         self.wd, self.ht = width, height
@@ -738,13 +749,15 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glViewport(0, 0, width, height)
 
         self.camera.set_viewport_dimensions(width, height)
+        self.camera.calc_gl_transform()
 
     def gl_paint(self):
         print('gl_paint')
         context = self.viewer.make_context_current()
         self._drawing = True
         try:
-            self.setup_3D(self.mode3d)
+            gl.glDepthFunc(gl.GL_LEQUAL)
+            gl.glEnable(gl.GL_DEPTH_TEST)
 
             r, g, b = self.viewer.img_bg
             gl.glClearColor(r, g, b, 1.0)

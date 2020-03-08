@@ -2306,6 +2306,7 @@ class ImageViewBindings(object):
             delta = - delta
 
         camera.track(delta)
+        camera.calc_gl_transform()
 
         scales = camera.get_scale_2d()
         # TODO: need to set scale in viewer settings, without triggering a
@@ -2324,6 +2325,7 @@ class ImageViewBindings(object):
         if event.state == 'move':
             camera.orbit(self._start_x, self._start_y, x, y)
             self._start_x, self._start_y = x, y
+            camera.calc_gl_transform()
             ## pos = tuple(camera.position.get())
             ## mst = "Camera position: (%.4f, %.4f, %.4f)" % pos
             ## if msg:
@@ -2351,6 +2353,7 @@ class ImageViewBindings(object):
             dx, dy = x - self._start_x, self._start_y - y
             camera.pan_delta(dx, dy)
             self._start_x, self._start_y = x, y
+            camera.calc_gl_transform()
 
         elif event.state == 'down':
             self._start_x, self._start_y = x, y
@@ -2376,6 +2379,7 @@ class ImageViewBindings(object):
             return False
 
         camera.reset()
+        camera.calc_gl_transform()
         viewer.onscreen_message("Reset camera", delay=0.5)
         viewer.update_image()
         return True

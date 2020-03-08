@@ -771,7 +771,7 @@ class ImageViewBase(Callback.Callbacks):
                 # move image to bottom of layers
                 self.canvas.lower_object(canvas_img)
 
-            #self.canvas.update_canvas(whence=0)
+            self.canvas.update_canvas(whence=0)
 
     # for compatibility with other viewers
     set_dataobj = set_image
@@ -2765,7 +2765,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.img_fg = colors.resolve_color(fg)
-        self.redraw(whence=3)
+        self.renderer.fg_change(self.img_fg)
 
     def get_fg(self):
         """Get the foreground color.
