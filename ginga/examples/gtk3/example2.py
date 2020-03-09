@@ -38,7 +38,7 @@ class FitsViewer(object):
 
         fi = CanvasView(logger, render=render)
         fi.enable_autocuts('on')
-        fi.set_autocut_params('zscale')
+        fi.set_autocut_params('histogram')
         fi.enable_autozoom('on')
         fi.set_zoom_algorithm('rate')
         fi.set_zoomrate(1.4)

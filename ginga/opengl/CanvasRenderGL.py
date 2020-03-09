@@ -206,7 +206,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self._initialized = False
         self._tex_cache = dict()
         self._levels = (0.0, 0.0)
-        self._image_type = 0
+        self._rgbmap_created = False
 
         self.pgm_mgr = GlHelp.ShaderManager(self.logger)
 
@@ -311,7 +311,13 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             if cvs_img.flipy:
                 data = np.flipud(data)
 
-            cache.cutout = data
+            if len(data.shape) == 2:
+                # <-- monochrome image
+                dtype = np.float32
+            else:
+                dtype = np.uint8
+
+            cache.cutout = np.ascontiguousarray(data, dtype=dtype)
 
             # calculate our offset
             pan_off = viewer.data_off
@@ -400,15 +406,18 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         if cvs_img.kind == 'image':
             self._prepare_image(cvs_img, cache, whence)
             img_arr = cache.rgbarr
+            cache.image_type = 0
 
         elif cvs_img.kind == 'normimage':
             self._prepare_norm_image(cvs_img, cache, whence)
             if len(cache.cutout.shape) == 2:
                 # <-- monochrome image with adjustable RGB map
-                img_arr = np.ascontiguousarray(cache.cutout, dtype=np.float32)
+                img_arr = cache.cutout
+                cache.image_type = 2
             else:
-                img_arr = np.ascontiguousarray(cache.rgbarr, dtype=np.uint8)
-            print('img_arr', img_arr.shape)
+                img_arr = cache.rgbarr
+                cache.image_type = 1
+            print('img_arr', img_arr.dtype, img_arr.shape)
 
         else:
             raise render.RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
@@ -532,6 +541,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glEnableVertexAttribArray(_pos2)
         gl.glVertexAttribPointer(_pos2, 2, gl.GL_FLOAT, False, 5 * 4,
                                  ctypes.c_void_p(3 * 4))
+
         # Unbind the VAO first
         gl.glBindVertexArray(0)
         gl.glDisableVertexAttribArray(_pos)
@@ -567,20 +577,20 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
             gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
                             gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_arr)
-            self._image_type = 0
             print('uploaded rgbarr')
         else:
             gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
             gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, wd, ht, 0,
                             gl.GL_RED, gl.GL_FLOAT, img_arr)
-            self._image_type = 1
             print('uploaded mono')
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
     def gl_set_cmap(self, rgbmap):
         # TODO: this does not work with 'histeq' color distribution or
         # when hashsize != 256
         idx = rgbmap.get_hasharray(np.arange(0, 256))
-        img_arr = rgbmap.arr[rgbmap.sarr[idx]]
+        img_arr = np.ascontiguousarray(rgbmap.arr[rgbmap.sarr[idx]],
+                                       dtype=np.uint8)
         ## wd = img_arr.shape[0]
         ## alpha = np.full((wd, 1), 255)
         ## img_arr = np.concatenate((img_arr, alpha), axis=1)
@@ -590,20 +600,26 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         wd = img_arr.shape[0]
         context = self.viewer.make_context_current()
         gl.glActiveTexture(gl.GL_TEXTURE0 + 1)
-        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
         gl.glBindTexture(gl.GL_TEXTURE_1D, tex_id)
-        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER,
-                           gl.GL_NEAREST)
-        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER,
-                           gl.GL_NEAREST)
-        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_R,
-                           gl.GL_CLAMP_TO_EDGE)
-        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S,
-                           gl.GL_CLAMP_TO_EDGE)
-        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_T,
-                           gl.GL_CLAMP_TO_EDGE)
-        gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB, wd, 0,
-                        gl.GL_RGB, gl.GL_UNSIGNED_BYTE, img_arr)
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        if not self._rgbmap_created:
+            gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER,
+                               gl.GL_NEAREST)
+            gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER,
+                               gl.GL_NEAREST)
+            gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_R,
+                               gl.GL_CLAMP_TO_EDGE)
+            gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S,
+                               gl.GL_CLAMP_TO_EDGE)
+            gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_T,
+                               gl.GL_CLAMP_TO_EDGE)
+            gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB, wd, 0,
+                            gl.GL_RGB, gl.GL_UNSIGNED_BYTE, img_arr)
+            self._rgbmap_created = True
+        else:
+            gl.glTexSubImage1D(gl.GL_TEXTURE_1D, 0, 0, wd,
+                               gl.GL_RGB, gl.GL_UNSIGNED_BYTE, img_arr)
+        gl.glBindTexture(gl.GL_TEXTURE_1D, 0)
 
     ## def gl_set_image_interpolation(self, interp):
     ##     gl.glBindTexture(gl.GL_TEXTURE_2D, self.tex_id)
@@ -624,6 +640,8 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             # the OpenGL context is set for us correctly
             return
 
+        cache = cvs_img.get_cache(self.viewer)
+        # TODO: put tex_id in cache?
         tex_id = self.get_texture_id(cvs_img.image_id)
         map_id = self.get_texture_id('rgbmap')
 
@@ -646,8 +664,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glUniform1i(_loc, 1)
 
         _loc = self.pgm_mgr.get_uniform_loc("image_type")
-        gl.glUniform1i(_loc, self._image_type)
+        gl.glUniform1i(_loc, cache.image_type)
 
+        # TODO: if image has set levels, use those
         _loc = self.pgm_mgr.get_uniform_loc("loval")
         gl.glUniform1f(_loc, self._levels[0])
 

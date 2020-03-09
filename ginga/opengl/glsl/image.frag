@@ -45,17 +45,33 @@ void main()
     vec4 color;
     
     if (image_type == 0) {
-        // RGBA traditional image
+        // RGBA traditional image, no interactive RGB map
         color = texture(img_texture, o_tex_coord);
     }
-    else {
+    else if (image_type == 1) {
+        // color image to be colored
+        vec4 value = texture(img_texture, o_tex_coord);
+
+        // cut levels
+        // RGBA textures are normalized to 0..1 when unpacked
+        int idx_r = int(cut_levels(value.r * 256.0));
+        int idx_g = int(cut_levels(value.g * 256.0));
+        int idx_b = int(cut_levels(value.b * 256.0));
+        
+        // apply RGB mapping
+        float r = texelFetch(color_map, idx_r, 0).r;
+        float g = texelFetch(color_map, idx_g, 0).g;
+        float b = texelFetch(color_map, idx_b, 0).b;
+        color = vec4(r, g, b, value.a);
+    }
+    else if (image_type == 2) {
         // monochrome image to be colored
         // get source value, passed in single red channel
         float value = texture(img_texture, o_tex_coord).r;
 
         // cut levels
         int idx = int(cut_levels(value));
-
+        
         // apply RGB mapping
         color = texelFetch(color_map, idx, 0);
     }
