@@ -14,6 +14,7 @@ import threading
 import sys
 import traceback
 import time
+import uuid
 
 import numpy as np
 
@@ -105,7 +106,8 @@ class ImageViewBase(Callback.Callbacks):
         self.renderer = None
 
         # for debugging
-        self.name = str(self)
+        self.viewer_id = str(uuid.uuid4())
+        self.name = self.viewer_id
 
         # Initialize RGBMap
         rgbmap.add_callback('changed', self.rgbmap_cb)

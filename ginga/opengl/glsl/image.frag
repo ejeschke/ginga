@@ -11,7 +11,7 @@ out vec4 outputColor;
 in vec2 o_tex_coord;
 
 uniform sampler2D img_texture;
-uniform sampler1D color_map;
+uniform usamplerBuffer color_map;
 
 // for cut levels
 uniform float loval;
@@ -59,9 +59,9 @@ void main()
         int idx_b = int(cut_levels(value.b * 256.0));
         
         // apply RGB mapping
-        float r = texelFetch(color_map, idx_r, 0).r;
-        float g = texelFetch(color_map, idx_g, 0).g;
-        float b = texelFetch(color_map, idx_b, 0).b;
+        float r = texelFetch(color_map, idx_r).r / 255.0;
+        float g = texelFetch(color_map, idx_g).g / 255.0;
+        float b = texelFetch(color_map, idx_b).b / 255.0;
         color = vec4(r, g, b, value.a);
     }
     else if (image_type == 2) {
@@ -73,7 +73,9 @@ void main()
         int idx = int(cut_levels(value));
         
         // apply RGB mapping
-        color = texelFetch(color_map, idx, 0);
+        uvec4 clr = texelFetch(color_map, idx);
+        color = vec4(clr.r / 255.0, clr.g / 255.0, clr.b / 255.0,
+                     clr.a / 255.0);
     }
     outputColor = color;
 }

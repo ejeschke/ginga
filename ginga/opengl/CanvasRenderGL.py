@@ -200,13 +200,13 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.camera.set_camera_home_position((0, 0, 1000))
         self.camera.reset()
 
-        self.draw_wrapper = False
         self.mode3d = True
         self._drawing = False
         self._initialized = False
         self._tex_cache = dict()
         self._levels = (0.0, 0.0)
         self._rgbmap_created = False
+        self.max_texture_dimension = 0
 
         self.pgm_mgr = GlHelp.ShaderManager(self.logger)
 
@@ -284,6 +284,8 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         viewer = self.viewer
 
         if (whence <= 0.0) or (cache.cutout is None) or (not cvs_img.optimize):
+            # TODO: images larger than self.max_texture_dim in any
+            # dimension need to be downsampled to fit!
 
             # get destination location in data_coords
             dst_x, dst_y = cvs_img.crdmap.to_data((cvs_img.x, cvs_img.y))
@@ -461,10 +463,13 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         return self.camera
 
     def getOpenGLInfo(self):
+        self.max_texture_dim = gl.glGetIntegerv(gl.GL_MAX_TEXTURE_SIZE)
         info = dict(vendor=gl.glGetString(gl.GL_VENDOR).decode(),
                     renderer=gl.glGetString(gl.GL_RENDERER).decode(),
                     opengl_version=gl.glGetString(gl.GL_VERSION).decode(),
-                    shader_version=gl.glGetString(gl.GL_SHADING_LANGUAGE_VERSION).decode())
+                    shader_version=gl.glGetString(gl.GL_SHADING_LANGUAGE_VERSION).decode(),
+                    max_tex="{}x{}".format(self.max_texture_dim,
+                                           self.max_texture_dim))
         return info
 
     def gl_initialize(self):
@@ -476,7 +481,8 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.logger.info("OpenGL info--Vendor: '%(vendor)s'  "
                          "Renderer: '%(renderer)s'  "
                          "Version: '%(opengl_version)s'  "
-                         "Shader: '%(shader_version)s'" % d)
+                         "Shader: '%(shader_version)s' "
+                         "Max texture: '%(max_tex)s'" % d)
 
         opengl_version = float(d['opengl_version'].split(' ')[0])
 
@@ -486,9 +492,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         ## r, g, b = self.viewer.img_bg
         ## gl.glClearColor(r, g, b, 1.0)
         ## gl.glClearDepth(1.0)
-
-        rgbmap = self.viewer.get_rgbmap()
-        self.gl_set_cmap(rgbmap)
 
         # --- line drawing shaders ---
         self.pgm_mgr.load_program('shape', shader_dir)
@@ -514,7 +517,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         # Unbind the VAO first (important)
         gl.glBindVertexArray(0)
-        gl.glDisableVertexAttribArray(_pos)
+        #gl.glDisableVertexAttribArray(_pos)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         self.pgm_mgr.setup_program(None)
 
@@ -544,10 +547,18 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         # Unbind the VAO first
         gl.glBindVertexArray(0)
-        gl.glDisableVertexAttribArray(_pos)
-        gl.glDisableVertexAttribArray(_pos2)
+        #gl.glDisableVertexAttribArray(_pos)
+        #gl.glDisableVertexAttribArray(_pos2)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         self.pgm_mgr.setup_program(None)
+
+        self.cmap_buf = gl.glGenBuffers(1)
+        gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, self.cmap_buf)
+        gl.glBufferData(gl.GL_TEXTURE_BUFFER, 256 * 4, None, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, 0)
+
+        rgbmap = self.viewer.get_rgbmap()
+        self.gl_set_cmap(rgbmap)
 
         gl.glDisable(gl.GL_CULL_FACE)
         gl.glFrontFace(gl.GL_CCW)
@@ -591,35 +602,20 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         idx = rgbmap.get_hasharray(np.arange(0, 256))
         img_arr = np.ascontiguousarray(rgbmap.arr[rgbmap.sarr[idx]],
                                        dtype=np.uint8)
-        ## wd = img_arr.shape[0]
-        ## alpha = np.full((wd, 1), 255)
-        ## img_arr = np.concatenate((img_arr, alpha), axis=1)
-        tex_id = self.get_texture_id('rgbmap')
 
-        print('gl_set_cmap')
+        # append alpha channel
         wd = img_arr.shape[0]
+        alpha = np.full((wd, 1), 255, dtype=np.uint8)
+        img_arr = np.concatenate((img_arr, alpha), axis=1)
+        rgbmap_id = "{}_rgbmap".format(self.viewer.viewer_id)
+        map_id = self.get_texture_id(rgbmap_id)
+
+        # transfer colormap info to GPU buffer
+        print('gl_set_cmap', img_arr.shape, img_arr.dtype)
         context = self.viewer.make_context_current()
-        gl.glActiveTexture(gl.GL_TEXTURE0 + 1)
-        gl.glBindTexture(gl.GL_TEXTURE_1D, tex_id)
-        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
-        if not self._rgbmap_created:
-            gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER,
-                               gl.GL_NEAREST)
-            gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER,
-                               gl.GL_NEAREST)
-            gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_R,
-                               gl.GL_CLAMP_TO_EDGE)
-            gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S,
-                               gl.GL_CLAMP_TO_EDGE)
-            gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_T,
-                               gl.GL_CLAMP_TO_EDGE)
-            gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB, wd, 0,
-                            gl.GL_RGB, gl.GL_UNSIGNED_BYTE, img_arr)
-            self._rgbmap_created = True
-        else:
-            gl.glTexSubImage1D(gl.GL_TEXTURE_1D, 0, 0, wd,
-                               gl.GL_RGB, gl.GL_UNSIGNED_BYTE, img_arr)
-        gl.glBindTexture(gl.GL_TEXTURE_1D, 0)
+        gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, self.cmap_buf)
+        gl.glBufferSubData(gl.GL_TEXTURE_BUFFER, 0, img_arr)
+        gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, 0)
 
     ## def gl_set_image_interpolation(self, interp):
     ##     gl.glBindTexture(gl.GL_TEXTURE_2D, self.tex_id)
@@ -643,8 +639,8 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         cache = cvs_img.get_cache(self.viewer)
         # TODO: put tex_id in cache?
         tex_id = self.get_texture_id(cvs_img.image_id)
-        map_id = self.get_texture_id('rgbmap')
-
+        rgbmap_id = "{}_rgbmap".format(self.viewer.viewer_id)
+        map_id = self.get_texture_id(rgbmap_id)
         self.pgm_mgr.setup_program('image')
         gl.glBindVertexArray(self.vao_img)
 
@@ -659,10 +655,12 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glUniform1i(_loc, 0)
 
         gl.glActiveTexture(gl.GL_TEXTURE0 + 1)
-        gl.glBindTexture(gl.GL_TEXTURE_1D, map_id)
+        gl.glBindTexture(gl.GL_TEXTURE_BUFFER, map_id)
+        gl.glTexBuffer(gl.GL_TEXTURE_BUFFER, gl.GL_RGBA8UI, self.cmap_buf)
         _loc = self.pgm_mgr.get_uniform_loc("color_map")
         gl.glUniform1i(_loc, 1)
 
+        print('cache image type', cache.image_type)
         _loc = self.pgm_mgr.get_uniform_loc("image_type")
         gl.glUniform1i(_loc, cache.image_type)
 
@@ -675,7 +673,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         # pad with z=0 coordinate if lacking
         vertices = trcalc.pad_z(cp, dtype=np.float32)
-        shape = gl.GL_LINE_LOOP
 
         # Send the data over to the buffer
         # NOTE: we swap elements 0 and 1, because we will also swap
