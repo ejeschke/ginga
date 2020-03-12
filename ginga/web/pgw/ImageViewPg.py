@@ -118,16 +118,12 @@ class ImageViewPg(ImageView.ImageViewBase):
             self.delayed_redraw()
 
     def get_plain_image_as_widget(self):
-        """Used for generating thumbnails.  Does not include overlaid
-        graphics.
-        """
+        """Does not include overlaid graphics."""
         image_buf = self.renderer.get_surface_as_rgb_format_buffer()
         return image_buf.getvalue()
 
     def save_plain_image_as_file(self, filepath, format='png', quality=90):
-        """Used for generating thumbnails.  Does not include overlaid
-        graphics.
-        """
+        """Does not include overlaid graphics."""
         pass
 
     def set_cursor(self, cursor):

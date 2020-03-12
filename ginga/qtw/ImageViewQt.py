@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
-from io import BytesIO
 
 import numpy as np
 
@@ -176,41 +175,21 @@ class ImageViewQt(ImageView.ImageViewBase):
 
         self.configure(width, height)
 
-    def get_rgb_image_as_buffer(self, output=None, format='png',
-                                quality=90):
-        ibuf = output
-        if ibuf is None:
-            ibuf = BytesIO()
-        imgwin_wd, imgwin_ht = self.get_window_size()
-        qpix = self.pixmap.copy(0, 0,
-                                imgwin_wd, imgwin_ht)
-        qbuf = QtCore.QBuffer()
-        qbuf.open(QtCore.QIODevice.ReadWrite)
-        qpix.save(qbuf, format=format, quality=quality)
-        ibuf.write(bytes(qbuf.data()))
-        qbuf.close()
-        return ibuf
-
     def get_rgb_image_as_widget(self):
-        imgwin_wd, imgwin_ht = self.get_window_size()
-        qpix = self.pixmap.copy(0, 0, imgwin_wd, imgwin_ht)
-        return qpix.toImage()
-
-    def save_rgb_image_as_file(self, filepath, format='png', quality=90):
-        qimg = self.get_rgb_image_as_widget()
-        qimg.save(filepath, format=format, quality=quality)
+        arr = self.renderer.get_surface_as_array(order=self.rgb_order)
+        image = self._get_qimage(arr, self.qimg_fmt)
+        return image
 
     def get_plain_image_as_widget(self):
-        """Used for generating thumbnails.  Does not include overlaid
-        graphics.
+        """Returns a QImage of the drawn images.
+        Does not include overlaid graphics.
         """
         arr = self.getwin_array(order=self.rgb_order)
         image = self._get_qimage(arr, self.qimg_fmt)
         return image
 
     def save_plain_image_as_file(self, filepath, format='png', quality=90):
-        """Used for generating thumbnails.  Does not include overlaid
-        graphics.
+        """Does not include overlaid graphics.
         """
         qimg = self.get_plain_image_as_widget()
         qimg.save(filepath, format=format, quality=quality)
@@ -249,7 +228,6 @@ class ImageViewQt(ImageView.ImageViewBase):
 
             # copy image from renderer to offscreen pixmap
             painter = get_painter(self.pixmap)
-            #painter.setWorldMatrixEnabled(True)
 
             # fill surface with background color
             size = self.pixmap.size()

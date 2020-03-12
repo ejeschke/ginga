@@ -108,8 +108,8 @@ class ImageViewGtk(ImageView.ImageViewBase):
         return pixbuf
 
     def get_plain_image_as_widget(self):
-        """Used for generating thumbnails.  Does not include overlaid
-        graphics.
+        """Returns a Gtk.Image widget of the images displayed.
+        Does not include overlaid graphics.
         """
         pixbuf = self.get_plain_image_as_pixbuf()
         image = Gtk.Image()
@@ -118,27 +118,8 @@ class ImageViewGtk(ImageView.ImageViewBase):
         return image
 
     def save_plain_image_as_file(self, filepath, format='png', quality=90):
-        """Used for generating thumbnails.  Does not include overlaid
-        graphics.
-        """
+        """Does not include overlaid graphics."""
         pixbuf = self.get_plain_image_as_pixbuf()
-        options, values = [], []
-        if format == 'jpeg':
-            options.append('quality')
-            values.append(str(quality))
-        pixbuf.savev(filepath, format, options, values)
-
-    def get_rgb_image_as_pixbuf(self):
-        arr8 = self.renderer.get_surface_as_array(order='RGB')
-        daht, dawd = arr8.shape[:2]
-        rgb_buf = arr8.tobytes(order='C')
-        pixbuf = GtkHelp.pixbuf_new_from_data(rgb_buf, GdkPixbuf.Colorspace.RGB,
-                                              False, 8, dawd, daht, dawd * 3)
-
-        return pixbuf
-
-    def save_rgb_image_as_file(self, filepath, format='png', quality=90):
-        pixbuf = self.get_rgb_image_as_pixbuf()
         options, values = [], []
         if format == 'jpeg':
             options.append('quality')
