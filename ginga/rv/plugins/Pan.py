@@ -78,7 +78,8 @@ class Pan(GingaPlugin.GlobalPlugin):
 
         self._wd = 200
         self._ht = 200
-        self.copy_attrs = ['transforms', 'cutlevels', 'rotation', 'rgbmap']
+        self.copy_attrs = ['transforms', 'cutlevels', 'rotation', 'rgbmap',
+                           'icc', 'interpolation']
         self.gui_up = False
 
     def build_gui(self, container):
@@ -264,7 +265,7 @@ class Pan(GingaPlugin.GlobalPlugin):
         paninfo = channel.extdata._pan_info
         if paninfo is not None:
             fitsimage.copy_attributes(paninfo.panimage, self.copy_attrs)
-            if whence == 0:
+            if whence < 3:
                 self.panset(channel.fitsimage, channel, paninfo)
         return True
 
@@ -363,12 +364,12 @@ class Pan(GingaPlugin.GlobalPlugin):
             point.x, point.y = x, y
             point.radius = radius
             bbox.points = points
-            p_canvas.update_canvas(whence=0)
+            p_canvas.update_canvas(whence=3)
 
         except KeyError:
             paninfo.panrect = p_canvas.add(self.dc.CompoundObject(
                 self.dc.Point(
-                    x, y, radius=radius, style='plus',
+                    x, y, radius, style='plus',
                     color=self.settings.get('pan_position_color', 'yellow')),
                 self.dc.Polygon(
                     points,

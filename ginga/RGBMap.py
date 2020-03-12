@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import time
 import numpy as np
 
 from ginga.misc import Callback, Settings
@@ -62,6 +63,7 @@ class RGBPlanes(object):
 
         res = trcalc.reorder_image(order, self.rgbarr, self.order)
         res = res.astype(dtype, copy=False, casting='unsafe')
+
         return res
 
     def get_size(self):
@@ -261,9 +263,7 @@ class RGBMapper(Callback.Callbacks):
         assert (index >= 0) and (index <= self.maxc), \
             RGBMapError("Index must be in range 0-%d !" % (self.maxc))
         index = int(self.sarr[index].clip(0, self.maxc))
-        return (self.arr[0][index],
-                self.arr[1][index],
-                self.arr[2][index])
+        return self.arr[index]
 
     def set_intensity_map(self, imap_name):
         self.t_.set(intensity_map=imap_name)
@@ -310,18 +310,18 @@ class RGBMapper(Callback.Callbacks):
 
     def set_sarr(self, sarr, callback=True):
         if sarr is not None:
-            sarr = np.asarray(sarr, dtype=np.uint)
+            sarr = np.asarray(sarr)
         # TEMP: ignore passed callback parameter
         self.t_.set(shift_array=sarr)
 
     def shift_array_set_cb(self, setting, sarr):
         if sarr is not None:
-            sarr = np.asarray(sarr)
+            sarr = np.asarray(sarr).clip(0, self.maxc).astype(np.uint)
             maxlen = self.maxc + 1
             _len = len(sarr)
             if _len != maxlen:
                 raise RGBMapError("shift map length %d != %d" % (_len, maxlen))
-            self.sarr = sarr.astype(np.uint, copy=False)
+            self.sarr = sarr
             # NOTE: can't reset scale_pct here because it results in a
             # loop with e.g. scale_and_shift()
             #self.scale_pct = 1.0
@@ -340,9 +340,9 @@ class RGBMapper(Callback.Callbacks):
 
     def color_array_set_cb(self, setting, carr):
         if carr is not None:
-            carr = np.asarray(carr)
+            carr = np.asarray(carr).clip(0, self.maxc).astype(self.dtype)
             maxlen = self.maxc + 1
-            self.carr = carr.astype(self.dtype, copy=False)
+            self.carr = carr
             _len = carr.shape[1]
             if _len != maxlen:
                 raise RGBMapError("color map length %d != %d" % (_len, maxlen))
@@ -351,13 +351,10 @@ class RGBMapper(Callback.Callbacks):
         self.recalc(callback=True)
 
     def recalc(self, callback=True):
-        self.arr = np.copy(self.carr)
+        self.arr = np.copy(self.carr.T)
         # Apply intensity map to rearrange colors
         if self.iarr is not None:
-            idx = self.iarr
-            self.arr[0] = self.arr[0][idx]
-            self.arr[1] = self.arr[1][idx]
-            self.arr[2] = self.arr[2][idx]
+            self.arr = self.arr[self.iarr]
 
         # NOTE: don't reset shift array
         #self.reset_sarr(callback=False)
@@ -413,31 +410,36 @@ class RGBMapper(Callback.Callbacks):
     def _get_rgbarray(self, idx, rgbobj, image_order=''):
         # NOTE: data is assumed to be in the range 0-maxc at this point
         # but clip as a precaution
-        # See NOTE [A]: idx is always an array calculated in the caller and
+        # NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
         # idx = idx.clip(0, self.maxc).astype(np.uint, copy=False)
-        idx.clip(0, self.maxc, out=idx)
+        #idx.clip(0, self.maxc, out=idx)
 
         # run it through the shift array and clip the result
         # See NOTE [A]
         # idx = self.sarr[idx].clip(0, self.maxc).astype(np.uint, copy=False)
         idx = self.sarr[idx]
-        idx.clip(0, self.maxc, out=idx)
+        # TODO: I think we can avoid this operation, if shift array contents
+        # can be limited to 0..maxc
+        #idx.clip(0, self.maxc, out=idx)
 
         ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
         out = rgbobj.rgbarr
 
-        # change [A]
-        if (image_order is None) or (len(image_order) < 3):
-            out[..., ri] = self.arr[0][idx]
-            out[..., gi] = self.arr[1][idx]
-            out[..., bi] = self.arr[2][idx]
+        # See NOTE [A]
+        if (image_order is None) or (len(image_order) == 1):
+            out[..., [ri, gi, bi]] = self.arr[idx]
+
+        elif len(image_order) == 2:
+            mj, aj = self.get_order_indexes(image_order, 'MA')
+            out[..., [ri, gi, bi]] = self.arr[idx[..., mj]]
+
         else:
             # <== indexes already contain RGB info.
             rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
-            out[..., ri] = self.arr[0][idx[..., rj]]
-            out[..., gi] = self.arr[1][idx[..., gj]]
-            out[..., bi] = self.arr[2][idx[..., bj]]
+            out[..., ri] = self.arr[:, 0][idx[..., rj]]
+            out[..., gi] = self.arr[:, 1][idx[..., gj]]
+            out[..., bi] = self.arr[:, 2][idx[..., bj]]
 
     def get_rgbarray(self, idx, out=None, order='RGB', image_order=''):
         """
@@ -455,6 +457,7 @@ class RGBMapper(Callback.Callbacks):
         image_order : str or None
             The order of channels if indexes already contain RGB info.
         """
+        t1 = time.time()
         # prepare output array
         shape = idx.shape
         depth = len(order)
@@ -469,9 +472,9 @@ class RGBMapper(Callback.Callbacks):
             out = np.empty(res_shape, dtype=self.dtype, order='C')
         else:
             # TODO: assertion check on shape of out
-            assert res_shape == out.shape, \
-                RGBMapError("Output array shape %s doesn't match result "
-                            "shape %s" % (str(out.shape), str(res_shape)))
+            if res_shape != out.shape:
+                raise RGBMapError("Output array shape %s doesn't match result "
+                                  "shape %s" % (str(out.shape), str(res_shape)))
 
         res = RGBPlanes(out, order)
 
@@ -480,10 +483,15 @@ class RGBMapper(Callback.Callbacks):
             aa = res.get_slice('A')
             aa.fill(self.maxc)
 
+        t2 = time.time()
         idx = self.get_hasharray(idx)
 
+        t3 = time.time()
         self._get_rgbarray(idx, res, image_order=image_order)
 
+        t4 = time.time()
+        self.logger.debug("rgbmap: t2=%.4f t3=%.4f t4=%.4f total=%.4f" % (
+            t2 - t1, t3 - t2, t4 - t3, t4 - t1))
         return res
 
     def get_hasharray(self, idx):
@@ -590,20 +598,18 @@ class NonColorMapper(RGBMapper):
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
-        idx.clip(0, self.maxc, out=idx)
+        #idx.clip(0, self.maxc, out=idx)
 
         # run it through the shift array and clip the result
         # See NOTE [A]
         idx = self.sarr[idx]
-        idx.clip(0, self.maxc, out=idx)
+        #idx.clip(0, self.maxc, out=idx)
 
         ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
         rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
         out = rgbobj.rgbarr
 
-        out[..., ri] = idx[..., rj]
-        out[..., gi] = idx[..., gj]
-        out[..., bi] = idx[..., bj]
+        out[..., [ri, gi, bi]] = idx[..., [rj, gj, bj]]
 
 
 class PassThruRGBMapper(RGBMapper):
@@ -631,7 +637,7 @@ class PassThruRGBMapper(RGBMapper):
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
-        idx.clip(0, self.maxc, out=idx)
+        #idx.clip(0, self.maxc, out=idx)
 
         # bypass the shift array and skip color mapping,
         # index is the final data
@@ -639,9 +645,7 @@ class PassThruRGBMapper(RGBMapper):
         rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
         out = rgbobj.rgbarr
 
-        out[..., ri] = idx[..., rj]
-        out[..., gi] = idx[..., gj]
-        out[..., bi] = idx[..., bj]
+        out[..., [ri, gi, bi]] = idx[..., [rj, gj, bj]]
 
 
 #END

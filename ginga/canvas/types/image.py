@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import time
 import numpy as np
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
@@ -17,7 +18,7 @@ from ginga import trcalc
 from .mixins import OnePointMixin
 
 
-class Image(OnePointMixin, CanvasObjectBase):
+class ImageP(OnePointMixin, CanvasObjectBase):
     """Draws an image on a ImageViewCanvas.
     Parameters are:
     x, y: 0-based coordinates of one corner in the data space
@@ -40,7 +41,7 @@ class Image(OnePointMixin, CanvasObjectBase):
                   description="Scaling factor for X dimension of object"),
             Param(name='scale_y', type=float, default=1.0,
                   description="Scaling factor for Y dimension of object"),
-            Param(name='interpolation', type=str, default='basic',
+            Param(name='interpolation', type=str, default=None,
                   description="Interpolation method for scaling pixels"),
             Param(name='linewidth', type=int, default=0,
                   min=0, max=20, widget='spinbutton', incr=1,
@@ -65,13 +66,13 @@ class Image(OnePointMixin, CanvasObjectBase):
                   description="Optimize rendering for this object"),
         ]
 
-    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
-                 interpolation='basic',
+    def __init__(self, pt, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+                 interpolation=None,
                  linewidth=0, linestyle='solid', color='lightgreen',
                  showcap=False, flipy=False, optimize=True,
                  **kwdargs):
         self.kind = 'image'
-        points = np.asarray([(x, y)], dtype=np.float)
+        points = np.asarray([pt], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, image=image, alpha=alpha,
                                   scale_x=scale_x, scale_y=scale_y,
                                   interpolation=interpolation,
@@ -140,14 +141,36 @@ class Image(OnePointMixin, CanvasObjectBase):
         if self.image is None:
             return
 
+        t1 = t2 = time.time()
         cache = self.get_cache(viewer)
 
+        self._common_draw(viewer, dstarr, cache, whence)
+
+        if cache.cutout is None:
+            return
+
+        t2 = time.time()
         dst_order = viewer.get_rgb_order()
         image_order = self.image.get_order()
 
+        # composite the image into the destination array at the
+        # calculated position
+        trcalc.overlay_image(dstarr, cache.cvs_pos, cache.cutout,
+                             dst_order=dst_order, src_order=image_order,
+                             alpha=self.alpha, fill=True, flipy=False)
+
+        t3 = time.time()
+        self.logger.debug("draw: t2=%.4f t3=%.4f total=%.4f" % (
+            t2 - t1, t3 - t2, t3 - t1))
+
+    def _common_draw(self, viewer, dstarr, cache, whence):
+        # internal common drawing phase for all images
+        if self.image is None:
+            return
+
         if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
             # get extent of our data coverage in the window
-            pts = np.asarray(viewer.get_pan_rect()).T
+            pts = np.asarray(viewer.get_draw_rect()).T
             xmin = int(np.min(pts[0]))
             ymin = int(np.min(pts[1]))
             xmax = int(np.ceil(np.max(pts[0])))
@@ -169,6 +192,7 @@ class Image(OnePointMixin, CanvasObjectBase):
             # is image completely off the screen?
             if (a2 - a1 <= 0) or (b2 - b1 <= 0):
                 # no overlay needed
+                cache.cutout = None
                 return
 
             # cutout and scale the piece appropriately by the viewer scale
@@ -176,22 +200,21 @@ class Image(OnePointMixin, CanvasObjectBase):
             # scale additionally by our scale
             _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
 
+            interp = self.interpolation
+            if interp is None:
+                t_ = viewer.get_settings()
+                interp = t_.get('interpolation', 'basic')
+
+            # previous choice might not be available if preferences
+            # were saved when opencv was being used (and not used now);
+            # if so, silently default to "basic"
+            if interp not in trcalc.interpolation_methods:
+                interp = 'basic'
             res = self.image.get_scaled_cutout2((a1, b1), (a2, b2),
                                                 (_scale_x, _scale_y),
-                                                method=self.interpolation)
-
-            # don't ask for an alpha channel from overlaid image if it
-            # doesn't have one
-            ## if ('A' in dst_order) and not ('A' in image_order):
-            ##     dst_order = dst_order.replace('A', '')
-
-            ## if dst_order != image_order:
-            ##     # reorder result to match desired rgb_order by backend
-            ##     cache.cutout = trcalc.reorder_image(dst_order, res.data,
-            ##                                          image_order)
-            ## else:
-            ##     cache.cutout = res.data
+                                                method=interp)
             data = res.data
+
             if self.flipy:
                 data = np.flipud(data)
             cache.cutout = data
@@ -211,12 +234,6 @@ class Image(OnePointMixin, CanvasObjectBase):
             cvs_x = int(np.round(wd / 2.0 + off_x))
             cvs_y = int(np.round(ht / 2.0 + off_y))
             cache.cvs_pos = (cvs_x, cvs_y)
-
-        # composite the image into the destination array at the
-        # calculated position
-        trcalc.overlay_image(dstarr, cache.cvs_pos, cache.cutout,
-                             dst_order=dst_order, src_order=image_order,
-                             alpha=self.alpha, fill=True, flipy=False)
 
     def _reset_cache(self, cache):
         cache.setvals(cutout=None, drawn=False, cvs_pos=(0, 0))
@@ -243,7 +260,7 @@ class Image(OnePointMixin, CanvasObjectBase):
     def get_coords(self):
         x1, y1 = self.crdmap.to_data((self.x, self.y))
         wd, ht = self.get_scaled_wdht()
-        x2, y2 = x1 + wd, y1 + ht
+        x2, y2 = x1 + wd - 1, y1 + ht - 1
         return (x1, y1, x2, y2)
 
     def get_llur(self):
@@ -258,12 +275,14 @@ class Image(OnePointMixin, CanvasObjectBase):
         x1, y1, x2, y2 = self.get_coords()
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
-    def contains_pt(self, pt):
-        data_x, data_y = pt[:2]
-        x1, y1, x2, y2 = self.get_coords()
-        if ((x1 <= data_x < x2) and (y1 <= data_y < y2)):
-            return True
-        return False
+    def contains_pts(self, pts):
+        x_arr, y_arr = np.asarray(pts).T
+        x1, y1, x2, y2 = self.get_llur()
+
+        contains = np.logical_and(
+            np.logical_and(x1 <= x_arr, x_arr <= x2),
+            np.logical_and(y1 <= y_arr, y_arr <= y2))
+        return contains
 
     def rotate(self, theta, xoff=0, yoff=0):
         raise ValueError("Images cannot be rotated")
@@ -315,7 +334,23 @@ class Image(OnePointMixin, CanvasObjectBase):
         self.reset_optimize()
 
 
-class NormImage(Image):
+class Image(ImageP):
+
+    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+                 interpolation=None,
+                 linewidth=0, linestyle='solid', color='lightgreen',
+                 showcap=False, flipy=False, optimize=True,
+                 **kwdargs):
+        ImageP.__init__(self, (x, y), image, alpha=alpha,
+                        scale_x=scale_x, scale_y=scale_y,
+                        interpolation=interpolation,
+                        linewidth=linewidth, linestyle=linestyle,
+                        color=color, showcap=showcap,
+                        flipy=flipy, optimize=optimize,
+                        **kwdargs)
+
+
+class NormImageP(ImageP):
     """Draws an image on a ImageViewCanvas.
 
     Parameters are:
@@ -339,7 +374,7 @@ class NormImage(Image):
                   description="Scaling factor for X dimension of object"),
             Param(name='scale_y', type=float, default=1.0,
                   description="Scaling factor for Y dimension of object"),
-            Param(name='interpolation', type=str, default='basic',
+            Param(name='interpolation', type=str, default=None,
                   description="Interpolation method for scaling pixels"),
             Param(name='linewidth', type=int, default=0,
                   min=0, max=20, widget='spinbutton', incr=1,
@@ -362,89 +397,65 @@ class NormImage(Image):
             Param(name='optimize', type=_bool,
                   default=True, valid=[False, True],
                   description="Optimize rendering for this object"),
+            ## Param(name='cuts', type=tuple, default=None,
+            ##       description="Tuple of (lo, hi) cut levels for image"),
             ## Param(name='rgbmap', type=?,
             ##       description="RGB mapper for the image"),
             ## Param(name='autocuts', type=?,
             ##       description="Cuts manager for the image"),
         ]
 
-    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
-                 interpolation='basic', linewidth=0, linestyle='solid',
+    def __init__(self, pt, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+                 interpolation=None, cuts=None, linewidth=0, linestyle='solid',
                  color='lightgreen', showcap=False,
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         self.kind = 'normimage'
-        super(NormImage, self).__init__(x, y, image=image, alpha=alpha,
-                                        scale_x=scale_x, scale_y=scale_y,
-                                        interpolation=interpolation,
-                                        linewidth=linewidth, linestyle=linestyle,
-                                        color=color,
-                                        showcap=showcap, optimize=optimize,
-                                        **kwdargs)
+        super(NormImageP, self).__init__(pt, image, alpha=alpha,
+                                         scale_x=scale_x, scale_y=scale_y,
+                                         interpolation=interpolation,
+                                         linewidth=linewidth, linestyle=linestyle,
+                                         color=color,
+                                         showcap=showcap, optimize=optimize,
+                                         **kwdargs)
         self.rgbmap = rgbmap
+        self.cuts = cuts
         self.autocuts = autocuts
 
     def draw_image(self, viewer, dstarr, whence=0.0):
         if self.image is None:
             return
 
+        t1 = t2 = t3 = t4 = time.time()
         cache = self.get_cache(viewer)
 
-        if (whence <= 0.0) or (cache.cutout is None) or (not self.optimize):
-            # get extent of our data coverage in the window
-            pts = np.asarray(viewer.get_pan_rect()).T
-            xmin = int(np.min(pts[0]))
-            ymin = int(np.min(pts[1]))
-            xmax = int(np.ceil(np.max(pts[0])))
-            ymax = int(np.ceil(np.max(pts[1])))
+        self._common_draw(viewer, dstarr, cache, whence)
 
-            # destination location in data_coords
-            dst_x, dst_y = self.crdmap.to_data((self.x, self.y))
+        if cache.cutout is None:
+            return
 
-            a1, b1, a2, b2 = 0, 0, self.image.width - 1, self.image.height - 1
-
-            # calculate the cutout that we can make and scale to merge
-            # onto the final image--by only cutting out what is necessary
-            # this speeds scaling greatly at zoomed in sizes
-            ((dst_x, dst_y), (a1, b1), (a2, b2)) = \
-                trcalc.calc_image_merge_clip((xmin, ymin), (xmax, ymax),
-                                             (dst_x, dst_y),
-                                             (a1, b1), (a2, b2))
-
-            # is image completely off the screen?
-            if (a2 - a1 <= 0) or (b2 - b1 <= 0):
-                # no overlay needed
-                return
-
-            # cutout and scale the piece appropriately by viewer scale
-            scale_x, scale_y = viewer.get_scale_xy()
-            # scale additionally by our scale
-            _scale_x, _scale_y = scale_x * self.scale_x, scale_y * self.scale_y
-
-            res = self.image.get_scaled_cutout2((a1, b1), (a2, b2),
-                                                (_scale_x, _scale_y),
-                                                method=self.interpolation)
-            cache.cutout = res.data
-
-            # calculate our offset from the pan position
-            pan_x, pan_y = viewer.get_pan()
-            pan_off = viewer.data_off
-            pan_x, pan_y = pan_x + pan_off, pan_y + pan_off
-            off_x, off_y = dst_x - pan_x, dst_y - pan_y
-            # scale offset
-            off_x *= scale_x
-            off_y *= scale_y
-
-            # dst position in the pre-transformed array should be calculated
-            # from the center of the array plus offsets
-            ht, wd, dp = dstarr.shape
-            cvs_x = int(np.round(wd / 2.0 + off_x))
-            cvs_y = int(np.round(ht / 2.0 + off_y))
-            cache.cvs_pos = (cvs_x, cvs_y)
-
+        t2 = time.time()
         if self.rgbmap is not None:
             rgbmap = self.rgbmap
         else:
             rgbmap = viewer.get_rgbmap()
+
+        image_order = self.image.get_order()
+
+        if (whence <= 0.0) or (not self.optimize):
+            # if image has an alpha channel, then strip it off and save
+            # it until it is recombined later with the colorized output
+            # this saves us having to deal with an alpha band in the
+            # cuts leveling and RGB mapping routines
+            img_arr = cache.cutout
+            if 'A' not in image_order:
+                cache.alpha = None
+            else:
+                # normalize alpha array to the final output range
+                mn, mx = trcalc.get_minmax_dtype(img_arr.dtype)
+                a_idx = image_order.index('A')
+                cache.alpha = (img_arr[..., a_idx] / mx *
+                               rgbmap.maxc).astype(rgbmap.dtype)
+                cache.cutout = img_arr[..., 0:a_idx]
 
         if (whence <= 1.0) or (cache.prergb is None) or (not self.optimize):
             # apply visual changes prior to color mapping (cut levels, etc)
@@ -459,25 +470,29 @@ class NormImage(Image):
             self.logger.debug("shape of index is %s" % (str(idx.shape)))
             cache.prergb = idx
 
+        t3 = time.time()
         dst_order = viewer.get_rgb_order()
-        image_order = self.image.get_order()
-        get_order = dst_order
-        # note: is this still needed?  I think overlay_image will handle
-        # a mismatch of alpha channel now
-        if ('A' in dst_order) and not ('A' in image_order):
-            get_order = dst_order.replace('A', '')
 
-        if (whence <= 2.5) or (cache.rgbarr is None) or (not self.optimize):
+        if (whence <= 2.0) or (cache.rgbarr is None) or (not self.optimize):
             # get RGB mapped array
             rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
                                          image_order=image_order)
-            cache.rgbarr = rgbobj.get_array(get_order)
+            cache.rgbarr = rgbobj.get_array(dst_order)
 
+            if cache.alpha is not None and 'A' in dst_order:
+                a_idx = dst_order.index('A')
+                cache.rgbarr[..., a_idx] = cache.alpha
+
+        t4 = time.time()
         # composite the image into the destination array at the
         # calculated position
         trcalc.overlay_image(dstarr, cache.cvs_pos, cache.rgbarr,
-                             dst_order=dst_order, src_order=get_order,
+                             dst_order=dst_order, src_order=dst_order,
                              alpha=self.alpha, fill=True, flipy=False)
+
+        t5 = time.time()
+        self.logger.debug("draw: t2=%.4f t3=%.4f t4=%.4f t5=%.4f total=%.4f" % (
+            t2 - t1, t3 - t2, t4 - t3, t5 - t4, t5 - t1))
 
     def apply_visuals(self, viewer, data, vmin, vmax):
         if self.autocuts is not None:
@@ -486,13 +501,16 @@ class NormImage(Image):
             autocuts = viewer.autocuts
 
         # Apply cut levels
-        loval, hival = viewer.t_['cuts']
+        if self.cuts is not None:
+            loval, hival = self.cuts
+        else:
+            loval, hival = viewer.t_['cuts']
         newdata = autocuts.cut_levels(data, loval, hival,
                                       vmin=vmin, vmax=vmax)
         return newdata
 
     def _reset_cache(self, cache):
-        cache.setvals(cutout=None, prergb=None, rgbarr=None,
+        cache.setvals(cutout=None, alpha=None, prergb=None, rgbarr=None,
                       drawn=False, cvs_pos=(0, 0))
         return cache
 
@@ -506,6 +524,20 @@ class NormImage(Image):
         self.scale_x *= scale_x
         self.scale_y *= scale_y
         self.reset_optimize()
+
+
+class NormImage(NormImageP):
+
+    def __init__(self, x, y, image, alpha=1.0, scale_x=1.0, scale_y=1.0,
+                 interpolation=None, cuts=None, linewidth=0, linestyle='solid',
+                 color='lightgreen', showcap=False,
+                 optimize=True, rgbmap=None, autocuts=None, **kwdargs):
+        NormImageP.__init__(self, (x, y), image, alpha=alpha,
+                            scale_x=scale_x, scale_y=scale_y,
+                            interpolation=interpolation,
+                            linewidth=linewidth, linestyle=linestyle,
+                            color=color, showcap=showcap, optimize=optimize,
+                            **kwdargs)
 
 
 # register our types

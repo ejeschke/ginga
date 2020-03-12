@@ -43,12 +43,8 @@ class AggContext(object):
         self.canvas = canvas
 
     def get_color(self, color):
-        if isinstance(color, str) or isinstance(color, type(u"")):
-            r, g, b = colors.lookup_color(color)
-        elif isinstance(color, tuple):
-            # color is assumed to be a 3-tuple of RGB values as floats
-            # between 0 and 1
-            r, g, b = color
+        if color is not None:
+            r, g, b = colors.resolve_color(color)
         else:
             r, g, b = 1.0, 1.0, 1.0
 

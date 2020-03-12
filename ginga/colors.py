@@ -6,6 +6,7 @@
 #
 
 import re
+import collections
 
 color_dict = {
  'aliceblue': (0.9411764705882353, 0.9725490196078431, 1.0),  # noqa
@@ -777,8 +778,20 @@ def lookup_color(name, format='tuple'):
         raise ValueError("format needs to be 'tuple' or 'hash'")
 
 
+def resolve_color(color):
+    if isinstance(color, str):
+        r, g, b = lookup_color(color)
+    elif isinstance(color, collections.Sequence):
+        r, g, b = color[:3]
+        _validate_color_tuple((r, g, b))
+    else:
+        raise ValueError("color parameter must be a str or sequence")
+
+    return (r, g, b)
+
+
 def _validate_color_tuple(tup):
-    if not isinstance(tup, (tuple, list)):
+    if isinstance(tup, str) or not isinstance(tup, collections.Sequence):
         raise TypeError("the color element must be a tuple or list")
 
     if len(tup) != 3:

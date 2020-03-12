@@ -23,7 +23,7 @@ except ImportError:
 
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'GrowingTextEdit', 'TextArea', 'Label', 'Button', 'ComboBox',
-           'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
+           'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
            'WebView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
@@ -499,6 +499,76 @@ class Slider(WidgetBase):
         adj = self.widget
         adj.setRange(minval, maxval)
         adj.setSingleStep(incr_value)
+
+
+class Dial(WidgetBase):
+    def __init__(self, dtype=float, wrap=False, track=False):
+        super(Dial, self).__init__()
+
+        w = QtGui.QDial()
+        w.setWrapping(wrap)
+        w.setNotchesVisible(True)
+
+        self._precision = 10000
+        w.setRange(0, self._precision)
+        w.setSingleStep(int(self._precision / 100))
+        self.dtype = dtype
+        self.min_val = dtype(0)
+        self.max_val = dtype(100)
+        self.inc_val = dtype(1)
+
+        # this controls whether the callbacks are made *as the user
+        # moves the slider* or afterwards
+        w.setTracking(track)
+        self.widget = w
+        w.valueChanged.connect(self._cb_redirect)
+
+        self.enable_callback('value-changed')
+
+    def _cb_redirect(self, val):
+        # It appears that Qt uses set_value() to set the value of the
+        # slider when it is dragged, so we cannot use the usual method
+        # of setting a hidden "changed" variable to suppress the callback
+        # when setting the value programmatically.
+        # if self.changed:
+        #     self.changed = False
+        #     return
+        val = self.get_value()
+        self.make_callback('value-changed', val)
+
+    def _cvt_value_out(self, int_val):
+        pct = int_val / self._precision
+        rng = self.max_val - self.min_val
+        val = self.dtype(self.min_val + pct * rng)
+        return val
+
+    def _cvt_value_in(self, ext_val):
+        rng = self.max_val - self.min_val
+        pct = (ext_val - self.min_val) / rng
+        val = int(pct * self._precision)
+        return val
+
+    def get_value(self):
+        int_val = self.widget.value()
+        return self._cvt_value_out(int_val)
+
+    def set_value(self, val):
+        if val < self.min_val or val > self.max_val:
+            raise ValueError("Value '{}' is out of range".format(val))
+        self.changed = True
+        int_val = self._cvt_value_in(val)
+        self.widget.setValue(int_val)
+
+    def set_tracking(self, tf):
+        self.widget.setTracking(tf)
+
+    def set_limits(self, minval, maxval, incr_value=1):
+        self.min_val = minval
+        self.max_val = maxval
+        self.inc_val = incr_value
+
+        int_val = self._cvt_value_in(incr_value)
+        self.widget.setSingleStep(int_val)
 
 
 class ScrollBar(WidgetBase):

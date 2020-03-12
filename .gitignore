@@ -50,6 +50,7 @@ sdist
 develop-eggs
 .installed.cfg
 distribute-*.tar.gz
+pip-wheel-metadata/
 
 # IPython notebook (Jupyter) checkpoints
 .ipynb_checkpoints

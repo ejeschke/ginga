@@ -17,6 +17,15 @@ ASCL ID: 1303.020
 
 Zenodo: https://zenodo.org/badge/latestdoi/4758330
 
+@inproceedings{Lim19A,
+        author = "P. L. Lim and E. Jeschke",
+        title  = "stginga: Ginga Plugins for Data Analysis and Quality Assurance of HST and JWST Science Data",
+        booktitle = "Astronomical Data Analysis Software and Systems XXVIII",
+        editor = "P. J. Teuben and M. W. Pound and B. A. Thomas and E. M. Warner",
+        year   = "2019",
+        publisher = "ASP",
+        note   = "Vol. 523" }
+
 @inproceedings{Jeschke13B,
         author = "E. Jeschke",
         title  = "Ginga: an open-source astronomical image viewer and toolkit",

@@ -37,23 +37,8 @@ class BaseTransform(object):
     def __add__(self, trans):
         return ComposedTransform(self, trans)
 
-    @classmethod
-    def inverted_class(cls):
-        class _inverted(cls):
-
-            def __init__(self, *args, **kwargs):
-                cls.__init__(self, *args, **kwargs)
-
-            def to_(self, pts, **kwargs):
-                return cls.from_(self, pts, **kwargs)
-
-            def from_(self, pts, **kwargs):
-                return cls.to_(self, pts, **kwargs)
-
-        return _inverted
-
     def invert(self):
-        return self.inverted_class()(self)
+        return InvertedTransform(self)
 
 
 class ComposedTransform(BaseTransform):
@@ -272,7 +257,6 @@ class CartesianNativeTransform(BaseTransform):
 
         win_pts = np.add(np.multiply(off_pts, mpy_pt), ctr_pt)
 
-        # round to pixel units, if asked
         # round to pixel units, if asked
         if self.as_int:
             win_pts = np.rint(win_pts).astype(np.int, copy=False)

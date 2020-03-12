@@ -4,36 +4,29 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import sys
 import math
 import numpy as np
 
 interpolation_methods = ['basic']
+_use = None
 
 
 def use(pkgname):
-    global interpolation_methods
-    global have_opencv, cv2, cv2_resize
     global have_opencl, trcalc_cl
+    global _use
 
     if pkgname == 'opencv':
-        import cv2
-        cv2_resize = {
-            'nearest': cv2.INTER_NEAREST,
-            'linear': cv2.INTER_LINEAR,
-            'area': cv2.INTER_AREA,
-            'bicubic': cv2.INTER_CUBIC,
-            'lanczos': cv2.INTER_LANCZOS4,
-        }
-        have_opencv = True
-        if 'nearest' not in interpolation_methods:
-            interpolation_methods = list(set(['basic'] +
-                                             list(cv2_resize.keys())))
-            interpolation_methods.sort()
+        _use = 'opencv'
+
+    elif pkgname == 'pillow':
+        _use = 'pillow'
 
     elif pkgname == 'opencl':
         try:
             from ginga.opencl import CL
             have_opencl = True
+            _use = 'opencl'
 
             trcalc_cl = CL.CL('trcalc.cl')
         except Exception as e:
@@ -44,7 +37,20 @@ have_opencv = False
 try:
     # optional opencv package speeds up certain operations, especially
     # rotation
-    use('opencv')
+    import cv2
+    cv2_resize = {
+        'nearest': cv2.INTER_NEAREST,
+        'linear': cv2.INTER_LINEAR,
+        'area': cv2.INTER_AREA,
+        'bicubic': cv2.INTER_CUBIC,
+        'lanczos': cv2.INTER_LANCZOS4,
+    }
+    have_opencv = True
+
+    if 'nearest' not in interpolation_methods:
+        interpolation_methods = list(set(['basic'] +
+                                         list(cv2_resize.keys())))
+        interpolation_methods.sort()
 
 except ImportError:
     pass
@@ -63,10 +69,31 @@ try:
 except ImportError:
     pass
 
+have_pillow = False
+try:
+    # do we have Python Imaging Library available?
+    import PIL.Image as PILimage
+    pil_resize = {
+        'nearest': PILimage.NEAREST,
+        'linear': PILimage.BILINEAR,
+        'area': PILimage.HAMMING,
+        'bicubic': PILimage.BICUBIC,
+        'lanczos': PILimage.LANCZOS,
+    }
+    have_pillow = True
+
+    if 'nearest' not in interpolation_methods:
+        interpolation_methods = list(set(['basic'] +
+                                         list(pil_resize.keys())))
+        interpolation_methods.sort()
+
+except ImportError:
+    pass
+
 have_numexpr = False
 try:
     # optional numexpr package speeds up certain combined numpy array
-    # operations, especially rotation
+    # operations, useful to have
     import numexpr as ne
     have_numexpr = True
 
@@ -77,6 +104,7 @@ except ImportError:
 #have_numexpr = False
 #have_opencv = False
 #have_opencl = False
+#have_pillow = False
 
 
 def get_center(data_np):
@@ -119,7 +147,7 @@ def rotate_coord(coord, thetas, offsets):
 
 
 def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
-                out=None, use_opencl=True, logger=None):
+                out=None, logger=None):
     """
     Rotate numpy array `data_np` by `theta_deg` around rotation center
     (rotctr_x, rotctr_y).  If the rotation center is omitted it defaults
@@ -142,16 +170,11 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     if rotctr_y is None:
         rotctr_y = ht // 2
 
-    if have_opencv:
+    if dtype == np.uint8 and have_opencv and _use in (None, 'opencv'):
         if logger is not None:
             logger.debug("rotating with OpenCv")
         # opencv is fastest
         M = cv2.getRotationMatrix2D((rotctr_y, rotctr_x), theta_deg, 1)
-
-        if data_np.dtype == np.dtype('>f8'):
-            # special hack for OpenCv warpAffine bug on numpy arrays of
-            # dtype '>f8'-- it corrupts them
-            data_np = data_np.astype(np.float64)
 
         newdata = cv2.warpAffine(data_np, M, (wd, ht))
         new_ht, new_wd = newdata.shape[:2]
@@ -165,7 +188,19 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             out[:, :, ...] = newdata
             newdata = out
 
-    elif have_opencl and use_opencl:
+    elif dtype == np.uint8 and have_pillow and _use in (None, 'pillow'):
+        if logger is not None:
+            logger.debug("rotating with pillow")
+        img = PILimage.fromarray(data_np)
+        img_rot = img.rotate(theta_deg, resample=False, expand=False,
+                             center=(rotctr_x, rotctr_y))
+        newdata = np.array(img_rot, dtype=data_np.dtype)
+        new_ht, new_wd = newdata.shape[:2]
+        assert (wd == new_wd) and (ht == new_ht), \
+            Exception("rotated cutout is %dx%d original=%dx%d" % (
+                new_wd, new_ht, wd, ht))
+
+    elif dtype == np.uint8 and have_opencl and _use in (None, 'opencl'):
         if logger is not None:
             logger.debug("rotating with OpenCL")
         # opencl is very close, sometimes better, sometimes worse
@@ -220,7 +255,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
 
 
 def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None, pad=20,
-           use_opencl=True, logger=None):
+           logger=None):
 
     # If there is no rotation, then we are done
     if math.fmod(theta_deg, 360.0) == 0.0:
@@ -237,7 +272,7 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None, pad=20,
     # Find center of new data array
     ncx, ncy = new_wd // 2, new_ht // 2
 
-    if have_opencl and use_opencl:
+    if have_opencl and _use == 'opencl':
         if logger is not None:
             logger.debug("rotating with OpenCL")
         # find offsets of old image in new image
@@ -283,17 +318,29 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
         # Is there a more efficient way to do this?
         yi = np.mgrid[0:new_ht].reshape(-1, 1)
         xi = np.mgrid[0:new_wd].reshape(1, -1)
-        iscale_x = float(old_wd) / float(new_wd)
-        iscale_y = float(old_ht) / float(new_ht)
+
+        if new_wd == 0:
+            iscale_x = 0.0
+        else:
+            iscale_x = float(old_wd) / float(new_wd)
+        if new_ht == 0:
+            iscale_y = 0.0
+        else:
+            iscale_y = float(old_ht) / float(new_ht)
 
         xi = (x1 + xi * iscale_x).clip(0, max_x).astype(np.int, copy=False)
         yi = (y1 + yi * iscale_y).clip(0, max_y).astype(np.int, copy=False)
         wd, ht = xi.shape[1], yi.shape[0]
 
         # bounds check against shape (to protect future data access)
-        xi_max, yi_max = xi[0, -1], yi[-1, 0]
-        assert xi_max <= max_x, ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
-        assert yi_max <= max_y, ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
+        if new_wd > 0:
+            xi_max = xi[0, -1]
+            if xi_max > max_x:
+                raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
+        if new_ht > 0:
+            yi_max = yi[-1, 0]
+            if yi_max > max_y:
+                raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
 
         view = np.s_[yi, xi]
 
@@ -320,7 +367,7 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
     x2, y2, z2 = p2
     new_wd, new_ht, new_dp = new_dims
 
-    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2), int(z1), int(z2)
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
     z1, z2, new_wd, new_ht = int(z1), int(z2), int(new_wd), int(new_ht)
 
     # calculate dimensions of NON-scaled cutout
@@ -335,9 +382,19 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
         yi = np.mgrid[0:new_ht].reshape(-1, 1, 1)
         xi = np.mgrid[0:new_wd].reshape(1, -1, 1)
         zi = np.mgrid[0:new_dp].reshape(1, 1, -1)
-        iscale_x = float(old_wd) / float(new_wd)
-        iscale_y = float(old_ht) / float(new_ht)
-        iscale_z = float(old_dp) / float(new_dp)
+
+        if new_wd == 0:
+            iscale_x = 0.0
+        else:
+            iscale_x = float(old_wd) / float(new_wd)
+        if new_ht == 0:
+            iscale_y = 0.0
+        else:
+            iscale_y = float(old_ht) / float(new_ht)
+        if new_dp == 0:
+            iscale_z = 0.0
+        else:
+            iscale_z = float(old_dp) / float(new_dp)
 
         xi = (x1 + xi * iscale_x).clip(0, max_x).astype(np.int, copy=False)
         yi = (y1 + yi * iscale_y).clip(0, max_y).astype(np.int, copy=False)
@@ -345,10 +402,18 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
         wd, ht, dp = xi.shape[1], yi.shape[0], zi.shape[2]
 
         # bounds check against shape (to protect future data access)
-        xi_max, yi_max, zi_max = xi[0, -1, 0], yi[-1, 0, 0], zi[0, 0, -1]
-        assert xi_max <= max_x, ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
-        assert yi_max <= max_y, ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
-        assert zi_max <= max_z, ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
+        if new_wd > 0:
+            xi_max = xi[0, -1, 0]
+            if xi_max > max_x:
+                raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
+        if new_ht > 0:
+            yi_max = yi[-1, 0, 0]
+            if yi_max > max_y:
+                raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
+        if new_dp > 0:
+            zi_max = zi[0, 0, -1]
+            if zi_max > max_z:
+                raise ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
 
         view = np.s_[yi, xi, zi]
 
@@ -379,7 +444,7 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
     if dtype is None:
         dtype = data_np.dtype
 
-    if have_opencv:
+    if data_np.dtype == np.uint8 and have_opencv and _use in (None, 'opencv'):
         if logger is not None:
             logger.debug("resizing with OpenCv")
         # opencv is fastest and supports many methods
@@ -400,8 +465,23 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif (have_opencl and interpolation in ('basic', 'nearest') and
-            open_cl_ok):
+    elif data_np.dtype == np.uint8 and have_pillow and _use in (None, 'pillow'):
+        if logger is not None:
+            logger.info("resizing with pillow")
+        if interpolation == 'basic':
+            interpolation = 'nearest'
+        method = pil_resize[interpolation]
+        img = PILimage.fromarray(data_np[y1:y2 + 1, x1:x2 + 1])
+        img_siz = img.resize((new_wd, new_ht), resample=method)
+        newdata = np.array(img_siz, dtype=dtype)
+
+        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+        ht, wd = newdata.shape[:2]
+        scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
+
+    elif (data_np.dtype == np.uint8 and have_opencl and
+            interpolation in ('basic', 'nearest') and
+            open_cl_ok and _use in (None, 'opencl')):
         # opencl is almost as fast or sometimes faster, but currently
         # we only support nearest neighbor
         if logger is not None:
@@ -476,7 +556,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
     if dtype is None:
         dtype = data_np.dtype
 
-    if have_opencv:
+    if data_np.dtype == np.uint8 and have_opencv and _use in (None, 'opencv'):
         if logger is not None:
             logger.debug("resizing with OpenCv")
         # opencv is fastest
@@ -499,8 +579,23 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
+    elif data_np.dtype == np.uint8 and have_pillow and _use in (None, 'pillow'):
+        if logger is not None:
+            logger.info("resizing with pillow")
+        if interpolation == 'basic':
+            interpolation = 'nearest'
+        method = pil_resize[interpolation]
+        img = PILimage.fromarray(data_np[y1:y2 + 1, x1:x2 + 1])
+        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+        new_wd, new_ht = int(scale_x * old_wd), int(scale_y * old_ht)
+        img_siz = img.resize((new_wd, new_ht), resample=method)
+        newdata = np.array(img_siz, dtype=dtype)
+
+        ht, wd = newdata.shape[:2]
+        scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
+
     elif (have_opencl and interpolation in ('basic', 'nearest') and
-            open_cl_ok):
+            open_cl_ok and _use in (None, 'opencl')):
         if logger is not None:
             logger.debug("resizing with OpenCL")
         newdata, (scale_x, scale_y) = trcalc_cl.get_scaled_cutout_basic(
@@ -617,9 +712,35 @@ def calc_image_merge_clip(p1, p2, dst, q1, q2):
         return ((dst_x, dst_y), (a1, b1), (a2, b2))
 
 
-def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
-                     src_order='RGBA',
-                     alpha=1.0, copy=False, fill=False, flipy=False):
+def overlay_image_2d_pil(dstarr, pos, srcarr, dst_order='RGBA',
+                         src_order='RGBA',
+                         alpha=1.0, copy=False, fill=False, flipy=False):
+
+    dst_x, dst_y = int(round(pos[0])), int(round(pos[1]))
+
+    if flipy:
+        srcarr = np.flipud(srcarr)
+
+    if dst_order != src_order:
+        srcarr = reorder_image(dst_order, srcarr, src_order)
+    img_dst = PILimage.fromarray(dstarr)
+    img_src = PILimage.fromarray(srcarr)
+
+    mask = img_src
+    if 'A' not in src_order:
+        mask = None
+    img_dst.paste(img_src, (dst_x, dst_y), mask=mask)
+
+    res_arr = np.array(img_dst, dtype=dstarr.dtype)
+    if copy:
+        return res_arr
+
+    dstarr[:, :, :] = res_arr
+
+
+def overlay_image_2d_np(dstarr, pos, srcarr, dst_order='RGBA',
+                        src_order='RGBA',
+                        alpha=1.0, copy=False, fill=False, flipy=False):
 
     dst_ht, dst_wd, dst_ch = dstarr.shape
     dst_type = dstarr.dtype
@@ -646,9 +767,6 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
         src_wd -= dx
         dst_x = 0
 
-    if src_wd <= 0 or src_ht <= 0:
-        return dstarr
-
     # Trim off parts of srcarr that would be "hidden"
     # to the right and below the dstarr edge.
     ex = dst_y + src_ht - dst_ht
@@ -660,6 +778,10 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
     if ex > 0:
         srcarr = srcarr[:, :dst_wd, :]
         src_wd -= ex
+
+    if src_wd <= 0 or src_ht <= 0:
+        # nothing to do
+        return dstarr
 
     if copy:
         dstarr = np.copy(dstarr, order='C')
@@ -680,45 +802,62 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
     if fill and (da_idx >= 0):
         dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, da_idx] = dst_max_val
 
+    # if overlay source contains an alpha channel, extract it
+    # and use it, otherwise use scalar keyword parameter
     if (src_ch > 3) and ('A' in src_order):
         sa_idx = src_order.index('A')
-        # if overlay source contains an alpha channel, extract it
-        # and use it, otherwise use scalar keyword parameter
-        alpha = srcarr[0:src_ht, 0:src_wd, sa_idx] / float(src_max_val)
-        alpha = np.dstack((alpha, alpha, alpha))
+        alpha = srcarr[:src_ht, :src_wd, sa_idx]
+        if np.all(np.isclose(alpha, src_max_val)):
+            # optimization to avoid blending if all alpha elements are max
+            alpha = 1.0
+        else:
+            alpha = alpha / float(src_max_val)
+            alpha = np.dstack((alpha, alpha, alpha))
 
     # reorder srcarr if necessary to match dstarr for alpha merge
     get_order = dst_order
-    if ('A' in dst_order) and not ('A' in src_order):
+    if ('A' in dst_order) and ('A' not in src_order):
         get_order = dst_order.replace('A', '')
     if get_order != src_order:
         srcarr = reorder_image(get_order, srcarr, src_order)
 
+    # define the two subarrays we are blending
+    _dst = dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, slc]
+    _src = srcarr[:src_ht, :src_wd, slc]
+
     if np.isscalar(alpha) and alpha == 1.0:
         # optimization to avoid alpha blending
         # Place our srcarr into this dstarr at dst offsets
-        dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, slc] = (
-            srcarr[0:src_ht, 0:src_wd, slc])
+        _dst[:, :, :] = _src
     else:
         # calculate alpha blending
         #   Co = CaAa + CbAb(1 - Aa)
-        a_arr = (alpha * srcarr[0:src_ht, 0:src_wd, slc]).astype(dst_type,
-                                                                 copy=False)
-        b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y + src_ht,
-                                        dst_x:dst_x + src_wd,
-                                        slc]).astype(dst_type, copy=False)
-
-        # Place our srcarr into this dstarr at dst offsets
-        dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd, slc] = (
-            a_arr[0:src_ht, 0:src_wd, slc] + b_arr[0:src_ht, 0:src_wd, slc])
+        if have_numexpr:
+            _dst[:, :, :] = ne.evaluate("(alpha * _src) + (1.0 - alpha) * _dst")
+        else:
+            _dst[:, :, :] = (alpha * _src) + (1.0 - alpha) * _dst
 
     return dstarr
+
+
+def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
+                     src_order='RGBA',
+                     alpha=1.0, copy=False, fill=False, flipy=False):
+    # NOTE: not tested yet thoroughly enough to use
+    # if have_pillow:
+    #     return overlay_image_2d_pil(dstarr, pos, srcarr, dst_order=dst_order,
+    #                                 src_order=src_order, alpha=alpha,
+    #                                 copy=copy, fill=fill, flipy=flipy)
+
+    return overlay_image_2d_np(dstarr, pos, srcarr, dst_order=dst_order,
+                               src_order=src_order, alpha=alpha,
+                               copy=copy, fill=fill, flipy=flipy)
 
 
 def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
                      alpha=1.0, copy=False, fill=True, flipy=False):
 
-    dst_x, dst_y, dst_z = pos
+    dst_x, dst_y, dst_z = [int(round(pos[n])) for n in range(3)]
     dst_ht, dst_wd, dst_dp, dst_ch = dstarr.shape
     dst_type = dstarr.dtype
     dst_max_val = np.iinfo(dst_type).max
@@ -733,43 +872,41 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     # to the left and above the dstarr edge.
     if dst_y < 0:
         dy = abs(dst_y)
-        srcarr = srcarr[dy:, :, :]
+        srcarr = srcarr[dy:, :, :, :]
         src_ht -= dy
         dst_y = 0
 
     if dst_x < 0:
         dx = abs(dst_x)
-        srcarr = srcarr[:, dx:, :]
+        srcarr = srcarr[:, dx:, :, :]
         src_wd -= dx
         dst_x = 0
 
     if dst_z < 0:
         dz = abs(dst_z)
-        srcarr = srcarr[:, :, dz:]
+        srcarr = srcarr[:, :, dz:, :]
         src_dp -= dz
         dst_z = 0
-
-    if src_wd <= 0 or src_ht <= 0 or src_dp <= 0:
-        return dstarr
 
     # Trim off parts of srcarr that would be "hidden"
     # to the right and below the dstarr edge.
     ex = dst_y + src_ht - dst_ht
     if ex > 0:
-        srcarr = srcarr[:dst_ht, :, :]
+        srcarr = srcarr[:dst_ht, :, :, :]
         src_ht -= ex
 
     ex = dst_x + src_wd - dst_wd
     if ex > 0:
-        srcarr = srcarr[:, :dst_wd, :]
+        srcarr = srcarr[:, :dst_wd, :, :]
         src_wd -= ex
 
     ex = dst_z + src_dp - dst_dp
     if ex > 0:
-        srcarr = srcarr[:, :, :dst_dp]
+        srcarr = srcarr[:, :, :dst_dp, :]
         src_dp -= ex
 
     if src_wd <= 0 or src_ht <= 0 or src_dp <= 0:
+        # nothing to do
         return dstarr
 
     if copy:
@@ -792,15 +929,20 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
         dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
                dst_z:dst_z + src_dp, da_idx] = dst_max_val
 
+    # if overlay source contains an alpha channel, extract it
+    # and use it, otherwise use scalar keyword parameter
     if (src_ch > 3) and ('A' in src_order):
         sa_idx = src_order.index('A')
-        # if overlay source contains an alpha channel, extract it
-        # and use it, otherwise use scalar keyword parameter
-        alpha = srcarr[0:src_ht, 0:src_wd, 0:src_dp, sa_idx] / float(src_max_val)
-        alpha = np.concatenate([alpha[..., np.newaxis],
-                                alpha[..., np.newaxis],
-                                alpha[..., np.newaxis]],
-                               axis=-1)
+        alpha = srcarr[:src_ht, :src_wd, :src_dp, sa_idx]
+        if np.all(np.isclose(alpha, src_max_val)):
+            # optimization to avoid blending if all alpha elements are max
+            alpha = 1.0
+        else:
+            alpha = srcarr[0:src_ht, 0:src_wd, 0:src_dp, sa_idx] / float(src_max_val)
+            alpha = np.concatenate([alpha[..., np.newaxis],
+                                    alpha[..., np.newaxis],
+                                    alpha[..., np.newaxis]],
+                                   axis=-1)
 
     # reorder srcarr if necessary to match dstarr for alpha merge
     get_order = dst_order
@@ -809,27 +951,22 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     if get_order != src_order:
         srcarr = reorder_image(get_order, srcarr, src_order)
 
+    # define the two subarrays we are blending
+    _dst = dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
+                  dst_z:dst_z + src_dp, slc]
+    _src = srcarr[:src_ht, :src_wd, :src_dp, slc]
+
     if np.isscalar(alpha) and alpha == 1.0:
         # optimization to avoid alpha blending
         # Place our srcarr into this dstarr at dst offsets
-        dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
-               dst_z:dst_z + src_dp, slc] = (
-            srcarr[0:src_ht, 0:src_wd, 0:src_dp, slc])
+        _dst[:, :, :, :] = _src
     else:
         # calculate alpha blending
         #   Co = CaAa + CbAb(1 - Aa)
-        a_arr = (alpha * srcarr[0:src_ht, 0:src_wd,
-                                0:src_dp, slc]).astype(dst_type, copy=False)
-        b_arr = ((1.0 - alpha) * dstarr[dst_y:dst_y + src_ht,
-                                        dst_x:dst_x + src_wd,
-                                        dst_z:dst_z + src_dp,
-                                        slc]).astype(dst_type, copy=False)
-
-        # Place our srcarr into this dstarr at dst offsets
-        dstarr[dst_y:dst_y + src_ht, dst_x:dst_x + src_wd,
-               dst_z:dst_z + src_dp, slc] = (
-            a_arr[0:src_ht, 0:src_wd, 0:src_dp, slc] +
-            b_arr[0:src_ht, 0:src_wd, 0:src_dp, slc])
+        if have_numexpr:
+            _dst[:, :, :, :] = ne.evaluate("(alpha * _src) + (1.0 - alpha) * _dst")
+        else:
+            _dst[:, :, :, :] = (alpha * _src) + (1.0 - alpha) * _dst
 
     return dstarr
 
@@ -914,7 +1051,7 @@ def fill_array(dstarr, order, r, g, b, a):
     bgval = dict(A=int(maxv * a), R=int(maxv * r), G=int(maxv * g),
                  B=int(maxv * b))
     bgtup = tuple([bgval[order[i]] for i in range(len(order))])
-    if dtype is np.uint8 and len(bgtup) == 4:
+    if dtype == np.uint8 and len(bgtup) == 4:
         # optimiztion
         bgtup = np.array(bgtup, dtype=dtype).view(np.uint32)[0]
         dstarr = dstarr.view(np.uint32)
@@ -934,8 +1071,8 @@ def make_filled_array(shp, dtype, order, r, g, b, a):
     bgval = dict(A=int(maxv * a), R=int(maxv * r), G=int(maxv * g),
                  B=int(maxv * b))
     bgtup = tuple([bgval[order[i]] for i in range(len(order))])
-    if dtype is np.uint8 and len(bgtup) == 4:
-        # optimiztion when dealing with 32-bit RGBA arrays
+    if dtype == np.uint8 and len(bgtup) == 4:
+        # optimization when dealing with 32-bit RGBA arrays
         fill_val = np.array(bgtup, dtype=dtype).view(np.uint32)
         rgba = np.zeros(shp, dtype=dtype)
         rgba_i = rgba.view(np.uint32)
@@ -943,4 +1080,33 @@ def make_filled_array(shp, dtype, order, r, g, b, a):
         return rgba
     return np.full(shp, bgtup, dtype=dtype)
 
-# END
+
+def add_alpha(arr, alpha=None):
+    """Takes an array and adds an alpha layer to it if it doesn't already
+    exist."""
+    if len(arr.shape) == 2:
+        arr = arr[..., np.newaxis]
+
+    if arr.shape[2] in (1, 3):
+        a_arr = np.zeros(arr.shape[:2], dtype=arr.dtype)
+        if alpha is not None:
+            a_arr[:, :] = alpha
+        arr = np.dstack((arr, a_arr))
+
+    return arr
+
+
+def get_minmax(dtype):
+    if issubclass(dtype.type, np.integer):
+        info = np.iinfo(dtype)
+    else:
+        info = np.finfo(dtype)
+
+    return info.min, info.max
+
+
+def check_native_byteorder(data_np):
+    dt = str(data_np.dtype)
+
+    return ((dt.startswith('>') and sys.byteorder == 'little') or
+            (dt.startswith('<') and sys.byteorder == 'big'))

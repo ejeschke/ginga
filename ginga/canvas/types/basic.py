@@ -23,8 +23,9 @@ from .mixins import (OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin,
 #
 #   ==== BASIC CLASSES FOR GRAPHICS OBJECTS ====
 #
-class Text(OnePointMixin, CanvasObjectBase):
+class TextP(OnePointMixin, CanvasObjectBase):
     """Draws text on a DrawingCanvas.
+
     Parameters are:
     x, y: 0-based coordinates in the data space
     text: the text to draw
@@ -73,22 +74,22 @@ class Text(OnePointMixin, CanvasObjectBase):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        return cls(cxt.start_x, cxt.start_y, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), **cxt.drawparams)
 
-    def __init__(self, x, y, text='EDIT ME',
+    def __init__(self, pt, text='EDIT ME',
                  font='Sans Serif', fontsize=None, fontscale=False,
                  fontsize_min=6.0, fontsize_max=None,
                  color='yellow', alpha=1.0, rot_deg=0.0,
                  showcap=False, **kwdargs):
         self.kind = 'text'
-        points = np.asarray([(x, y)], dtype=np.float)
-        super(Text, self).__init__(points=points, color=color, alpha=alpha,
-                                   font=font, fontsize=fontsize,
-                                   fontscale=fontscale,
-                                   fontsize_min=fontsize_min,
-                                   fontsize_max=fontsize_max,
-                                   text=text, rot_deg=rot_deg,
-                                   showcap=showcap, **kwdargs)
+        points = np.asarray([pt], dtype=np.float)
+        super(TextP, self).__init__(points=points, color=color, alpha=alpha,
+                                    font=font, fontsize=fontsize,
+                                    fontscale=fontscale,
+                                    fontsize_min=fontsize_min,
+                                    fontsize_max=fontsize_max,
+                                    text=text, rot_deg=rot_deg,
+                                    showcap=showcap, **kwdargs)
         OnePointMixin.__init__(self)
 
     def set_edit_point(self, i, pt, detail):
@@ -159,6 +160,23 @@ class Text(OnePointMixin, CanvasObjectBase):
         x, y = self.get_data_points()[0]
         cx, cy = viewer.get_canvas_xy(x, y)
         cr.draw_text(cx, cy, self.text, rot_deg=self.rot_deg)
+
+
+class Text(TextP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        return cls(cxt.start_x, cxt.start_y, **cxt.drawparams)
+
+    def __init__(self, x, y, text='EDIT ME',
+                 font='Sans Serif', fontsize=None, fontscale=False,
+                 fontsize_min=6.0, fontsize_max=None,
+                 color='yellow', alpha=1.0, rot_deg=0.0,
+                 showcap=False, **kwdargs):
+        TextP.__init__(self, (x, y), text=text, color=color, alpha=alpha,
+                       font=font, fontsize=fontsize, fontscale=fontscale,
+                       fontsize_min=fontsize_min, fontsize_max=fontsize_max,
+                       rot_deg=rot_deg, showcap=showcap, **kwdargs)
 
 
 class Polygon(PolygonMixin, CanvasObjectBase):
@@ -432,7 +450,7 @@ class BezierCurve(Path):
             self.draw_caps(cr, self.cap, cpoints)
 
 
-class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
+class BoxP(OnePointTwoRadiusMixin, CanvasObjectBase):
     """Draws a box on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -488,13 +506,15 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
     @classmethod
     def idraw(cls, canvas, cxt):
         xradius, yradius = abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y)
-        return cls(cxt.start_x, cxt.start_y, xradius, yradius, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), (xradius, yradius),
+                   **cxt.drawparams)
 
-    def __init__(self, x, y, xradius, yradius, color='red',
+    def __init__(self, pt, radii, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
-        points = np.asarray([(x, y)], dtype=np.float)
+        xradius, yradius = radii[:2]
+        points = np.asarray([pt], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -546,7 +566,28 @@ class Box(OnePointTwoRadiusMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, cpoints)
 
 
-class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
+class Box(BoxP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        xradius, yradius = abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y)
+        return cls(cxt.start_x, cxt.start_y, xradius, yradius,
+                   **cxt.drawparams)
+
+    def __init__(self, x, y, xradius, yradius, color='red',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0, **kwdargs):
+        BoxP.__init__(self, (x, y), (xradius, yradius), color=color,
+                      linewidth=linewidth, showcap=showcap,
+                      linestyle=linestyle,
+                      fill=fill, fillcolor=fillcolor,
+                      alpha=alpha, fillalpha=fillalpha,
+                      rot_deg=rot_deg,
+                      **kwdargs)
+
+
+class SquareBoxP(OnePointOneRadiusMixin, CanvasObjectBase):
     """Draws a square box on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -601,13 +642,13 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
         len_x = cxt.start_x - cxt.x
         len_y = cxt.start_y - cxt.y
         radius = max(abs(len_x), abs(len_y))
-        return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), radius, **cxt.drawparams)
 
-    def __init__(self, x, y, radius, color='red',
+    def __init__(self, pt, radius, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
-        points = np.asarray([(x, y)], dtype=np.float)
+        points = np.asarray([pt], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -685,7 +726,28 @@ class SquareBox(OnePointOneRadiusMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, cpoints)
 
 
-class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
+class SquareBox(SquareBoxP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        len_x = cxt.start_x - cxt.x
+        len_y = cxt.start_y - cxt.y
+        radius = max(abs(len_x), abs(len_y))
+        return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
+
+    def __init__(self, x, y, radius, color='red',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0, **kwdargs):
+        SquareBoxP.__init__(self, (x, y), radius, color=color,
+                            linewidth=linewidth, showcap=showcap,
+                            linestyle=linestyle,
+                            fill=fill, fillcolor=fillcolor,
+                            alpha=alpha, fillalpha=fillalpha,
+                            rot_deg=rot_deg, **kwdargs)
+
+
+class EllipseP(OnePointTwoRadiusMixin, CanvasObjectBase):
     """Draws an ellipse on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -741,13 +803,15 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
     @classmethod
     def idraw(cls, canvas, cxt):
         xradius, yradius = abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y)
-        return cls(cxt.start_x, cxt.start_y, xradius, yradius, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), (xradius, yradius),
+                   **cxt.drawparams)
 
-    def __init__(self, x, y, xradius, yradius, color='yellow',
+    def __init__(self, pt, radii, color='yellow',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
-        points = np.asarray([(x, y)], dtype=np.float)
+        xradius, yradius = radii
+        points = np.asarray([pt], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -865,7 +929,27 @@ class Ellipse(OnePointTwoRadiusMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, cpoints)
 
 
-class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
+class Ellipse(EllipseP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        xradius, yradius = abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y)
+        return cls(cxt.start_x, cxt.start_y, xradius, yradius,
+                   **cxt.drawparams)
+
+    def __init__(self, x, y, xradius, yradius, color='yellow',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0, **kwdargs):
+        EllipseP.__init__(self, (x, y), (xradius, yradius), color=color,
+                          linewidth=linewidth, showcap=showcap,
+                          linestyle=linestyle,
+                          fill=fill, fillcolor=fillcolor,
+                          alpha=alpha, fillalpha=fillalpha,
+                          rot_deg=rot_deg, **kwdargs)
+
+
+class TriangleP(OnePointTwoRadiusMixin, CanvasObjectBase):
     """Draws a triangle on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -921,14 +1005,16 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
     @classmethod
     def idraw(cls, canvas, cxt):
         xradius, yradius = abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y)
-        return cls(cxt.start_x, cxt.start_y, xradius, yradius, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), (xradius, yradius),
+                   **cxt.drawparams)
 
-    def __init__(self, x, y, xradius, yradius, color='pink',
+    def __init__(self, pt, radii, color='pink',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
         self.kind = 'triangle'
-        points = np.asarray([(x, y)], dtype=np.float)
+        xradius, yradius = radii[:2]
+        points = np.asarray([pt], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle, alpha=alpha,
@@ -995,7 +1081,27 @@ class Triangle(OnePointTwoRadiusMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, cpoints)
 
 
-class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
+class Triangle(TriangleP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        xradius, yradius = abs(cxt.start_x - cxt.x), abs(cxt.start_y - cxt.y)
+        return cls(cxt.start_x, cxt.start_y, xradius, yradius,
+                   **cxt.drawparams)
+
+    def __init__(self, x, y, xradius, yradius, color='pink',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 rot_deg=0.0, **kwdargs):
+        TriangleP.__init__(self, (x, y), (xradius, yradius), color=color,
+                           linewidth=linewidth, showcap=showcap,
+                           linestyle=linestyle, alpha=alpha,
+                           fill=fill, fillcolor=fillcolor,
+                           fillalpha=fillalpha,
+                           rot_deg=rot_deg, **kwdargs)
+
+
+class CircleP(OnePointOneRadiusMixin, CanvasObjectBase):
     """Draws a circle on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -1046,13 +1152,13 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
     def idraw(cls, canvas, cxt):
         radius = np.sqrt(abs(cxt.start_x - cxt.x) ** 2 +
                          abs(cxt.start_y - cxt.y) ** 2)
-        return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), radius, **cxt.drawparams)
 
-    def __init__(self, x, y, radius, color='yellow',
+    def __init__(self, pt, radius, color='yellow',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  **kwdargs):
-        points = np.asarray([(x, y)], dtype=np.float)
+        points = np.asarray([pt], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -1118,7 +1224,27 @@ class Circle(OnePointOneRadiusMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
-class Point(OnePointOneRadiusMixin, CanvasObjectBase):
+class Circle(CircleP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        radius = np.sqrt(abs(cxt.start_x - cxt.x) ** 2 +
+                         abs(cxt.start_y - cxt.y) ** 2)
+        return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
+
+    def __init__(self, x, y, radius, color='yellow',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 **kwdargs):
+        CircleP.__init__(self, (x, y), radius, color=color,
+                         linewidth=linewidth, showcap=showcap,
+                         linestyle=linestyle,
+                         fill=fill, fillcolor=fillcolor,
+                         alpha=alpha, fillalpha=fillalpha,
+                         **kwdargs)
+
+
+class PointP(OnePointOneRadiusMixin, CanvasObjectBase):
     """Draws a point on a DrawingCanvas.
     Parameters are:
     x, y: 0-based coordinates of the center in the data space
@@ -1165,13 +1291,13 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
     def idraw(cls, canvas, cxt):
         radius = max(abs(cxt.start_x - cxt.x),
                      abs(cxt.start_y - cxt.y))
-        return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), radius, **cxt.drawparams)
 
-    def __init__(self, x, y, radius, style='cross', color='yellow',
+    def __init__(self, pt, radius, style='cross', color='yellow',
                  linewidth=1, linestyle='solid', alpha=1.0, showcap=False,
                  **kwdargs):
         self.kind = 'point'
-        points = np.asarray([(x, y)], dtype=np.float)
+        points = np.asarray([pt], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, alpha=alpha,
                                   linestyle=linestyle, radius=radius,
@@ -1225,13 +1351,13 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
             cr.draw_polygon(cpts)
 
         elif self.style == 'diamond':
-            cpts = [(cx, cy1), ((cx + cx2) / 2.0, cy),
-                    (cx, cy2), ((cx1 + cx) / 2.0, cy)]
+            cpts = [(cx, cy1), ((cx + cx2) * 0.5, cy),
+                    (cx, cy2), ((cx1 + cx) * 0.5, cy)]
             cr.draw_polygon(cpts)
 
         elif self.style == 'hexagon':
-            cpts = [(cx1, cy), ((cx1 + cx) / 2.0, cy2), ((cx + cx2) / 2.0, cy2),
-                    (cx2, cy), ((cx + cx2) / 2.0, cy1), ((cx1 + cx) / 2.0, cy1)]
+            cpts = [(cx1, cy), ((cx1 + cx) * 0.5, cy2), ((cx + cx2) * 0.5, cy2),
+                    (cx2, cy), ((cx + cx2) * 0.5, cy1), ((cx1 + cx) * 0.5, cy1)]
             cr.draw_polygon(cpts)
 
         elif self.style == 'downtriangle':
@@ -1249,7 +1375,24 @@ class Point(OnePointOneRadiusMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, ((cx, cy), ))
 
 
-class Rectangle(TwoPointMixin, CanvasObjectBase):
+class Point(PointP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        radius = max(abs(cxt.start_x - cxt.x),
+                     abs(cxt.start_y - cxt.y))
+        return cls(cxt.start_x, cxt.start_y, radius, **cxt.drawparams)
+
+    def __init__(self, x, y, radius, style='cross', color='yellow',
+                 linewidth=1, linestyle='solid', alpha=1.0, showcap=False,
+                 **kwdargs):
+        PointP.__init__(self, (x, y), radius, color=color,
+                        linewidth=linewidth, alpha=alpha,
+                        linestyle=linestyle, showcap=showcap, style=style,
+                        **kwdargs)
+
+
+class RectangleP(TwoPointMixin, CanvasObjectBase):
     """Draws a rectangle on a DrawingCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one corner in the data space
@@ -1304,15 +1447,15 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), (cxt.x, cxt.y), **cxt.drawparams)
 
-    def __init__(self, x1, y1, x2, y2, color='red',
+    def __init__(self, pt1, pt2, color='red',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0,
                  drawdims=False, font='Sans Serif', fillalpha=1.0,
                  **kwdargs):
         self.kind = 'rectangle'
-        points = np.asarray([(x1, y1), (x2, y2)], dtype=np.float)
+        points = np.asarray([pt1, pt2], dtype=np.float)
 
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
@@ -1352,24 +1495,41 @@ class Rectangle(TwoPointMixin, CanvasObjectBase):
             fontsize = self.scale_font(viewer)
             cr.set_font(self.font, fontsize, color=self.color)
 
-            cx1, cy1 = cpoints[0]
-            cx2, cy2 = cpoints[2]
-
             # draw label on X dimension
-            cx = cx1 + (cx2 - cx1) // 2
-            cy = cy2 + -4
+            pt = ((self.x1 + self.x2) * 0.5, self.y2)
+            cx, cy = self.get_cpoints(viewer, points=[pt])[0]
             cr.draw_text(cx, cy, "%f" % abs(self.x2 - self.x1))
 
             # draw label on Y dimension
-            cy = cy1 + (cy2 - cy1) // 2
-            cx = cx2 + 4
+            pt = (self.x2, (self.y1 + self.y2) * 0.5)
+            cx, cy = self.get_cpoints(viewer, points=[pt])[0]
             cr.draw_text(cx, cy, "%f" % abs(self.y2 - self.y1))
 
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
 
 
-class Square(Rectangle):
+class Rectangle(RectangleP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
+
+    def __init__(self, x1, y1, x2, y2, color='red',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0,
+                 drawdims=False, font='Sans Serif', fillalpha=1.0,
+                 **kwdargs):
+        RectangleP.__init__(self, (x1, y1), (x2, y2), color=color,
+                            linewidth=linewidth, showcap=showcap,
+                            linestyle=linestyle,
+                            fill=fill, fillcolor=fillcolor,
+                            alpha=alpha, fillalpha=fillalpha,
+                            drawdims=drawdims, font=font,
+                            **kwdargs)
+
+
+class Square(RectangleP):
 
     @classmethod
     def idraw(cls, canvas, cxt):
@@ -1378,12 +1538,12 @@ class Square(Rectangle):
         length = max(abs(len_x), abs(len_y))
         len_x = np.sign(len_x) * length
         len_y = np.sign(len_y) * length
-        return cls(cxt.start_x, cxt.start_y,
-                   cxt.start_x - len_x, cxt.start_y - len_y,
+        return cls((cxt.start_x, cxt.start_y),
+                   (cxt.start_x - len_x, cxt.start_y - len_y),
                    **cxt.drawparams)
 
 
-class Line(TwoPointMixin, CanvasObjectBase):
+class LineP(TwoPointMixin, CanvasObjectBase):
     """Draws a line on a DrawingCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end in the data space
@@ -1427,13 +1587,13 @@ class Line(TwoPointMixin, CanvasObjectBase):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), (cxt.x, cxt.y), **cxt.drawparams)
 
-    def __init__(self, x1, y1, x2, y2, color='red',
+    def __init__(self, pt1, pt2, color='red',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  arrow=None, showcap=False, **kwdargs):
         self.kind = 'line'
-        points = np.asarray([(x1, y1), (x2, y2)], dtype=np.float)
+        points = np.asarray([pt1, pt2], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle, arrow=arrow,
@@ -1483,7 +1643,22 @@ class Line(TwoPointMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, caps)
 
 
-class RightTriangle(TwoPointMixin, CanvasObjectBase):
+class Line(LineP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
+
+    def __init__(self, x1, y1, x2, y2, color='red',
+                 linewidth=1, linestyle='solid', alpha=1.0,
+                 arrow=None, showcap=False, **kwdargs):
+        LineP.__init__(self, (x1, y1), (x2, y2), color=color, alpha=alpha,
+                       linewidth=linewidth, showcap=showcap,
+                       linestyle=linestyle, arrow=arrow,
+                       **kwdargs)
+
+
+class RightTriangleP(TwoPointMixin, CanvasObjectBase):
     """Draws a right triangle on a DrawingCanvas.
     Parameters are:
     x1, y1: 0-based coordinates of one end of the diagonal in the data space
@@ -1533,14 +1708,14 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
+        return cls((cxt.start_x, cxt.start_y), (cxt.x, cxt.y), **cxt.drawparams)
 
-    def __init__(self, x1, y1, x2, y2, color='pink',
+    def __init__(self, pt1, pt2, color='pink',
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  **kwdargs):
         self.kind = 'righttriangle'
-        points = np.asarray([(x1, y1), (x2, y2)], dtype=np.float)
+        points = np.asarray([pt1, pt2], dtype=np.float)
         CanvasObjectBase.__init__(self, points=points, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -1586,7 +1761,24 @@ class RightTriangle(TwoPointMixin, CanvasObjectBase):
             self.draw_caps(cr, self.cap, cpoints)
 
 
-class XRange(Rectangle):
+class RightTriangle(RightTriangleP):
+
+    @classmethod
+    def idraw(cls, canvas, cxt):
+        return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
+
+    def __init__(self, x1, y1, x2, y2, color='pink',
+                 linewidth=1, linestyle='solid', showcap=False,
+                 fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
+                 **kwdargs):
+        RightTriangleP.__init__(self, (x1, y1), (x2, y2), color=color,
+                                alpha=alpha, linewidth=linewidth,
+                                showcap=showcap, linestyle=linestyle,
+                                fill=fill, fillcolor=fillcolor,
+                                fillalpha=fillalpha, **kwdargs)
+
+
+class XRange(RectangleP):
     """Draws an xrange on a DrawingCanvas.
     Parameters are:
     x1: start X coordinate in the data space
@@ -1638,13 +1830,13 @@ class XRange(Rectangle):
                  fillcolor='aquamarine', alpha=1.0,
                  drawdims=False, font='Sans Serif', fillalpha=0.5,
                  **kwdargs):
-        Rectangle.__init__(self, x1, 0, x2, 0, color=color,
-                           linewidth=linewidth,
-                           linestyle=linestyle,
-                           fill=True, fillcolor=fillcolor,
-                           alpha=alpha, fillalpha=fillalpha,
-                           drawdims=drawdims, font=font,
-                           **kwdargs)
+        RectangleP.__init__(self, (x1, 0), (x2, 0), color=color,
+                            linewidth=linewidth,
+                            linestyle=linestyle,
+                            fill=True, fillcolor=fillcolor,
+                            alpha=alpha, fillalpha=fillalpha,
+                            drawdims=drawdims, font=font,
+                            **kwdargs)
         self.kind = 'xrange'
 
     def contains_pts(self, pts):
@@ -1655,20 +1847,20 @@ class XRange(Rectangle):
         return contains
 
     def get_edit_points(self, viewer):
-        win_wd, win_ht = viewer.get_window_size()
-        crdmap = viewer.get_coordmap('window')
-        dx, dy = crdmap.to_data((0, win_ht // 2))
+        tup = viewer.get_datarect()
+        dy = (tup[1] + tup[3]) * 0.5
         pt = self.get_data_points(points=self.get_points())
-        return [MovePoint((pt[0][0] + pt[2][0]) / 2.0, dy),
+        return [MovePoint((pt[0][0] + pt[2][0]) * 0.5, dy),
                 EditPoint(pt[0][0], dy),
                 EditPoint(pt[2][0], dy)]
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
 
-        win_wd, win_ht = viewer.get_window_size()
-        cp = self.get_cpoints(viewer)
-        cpoints = ((cp[0][0], 0), (cp[1][0], 0), (cp[2][0], win_ht), (cp[3][0], win_ht))
+        tup = viewer.get_datarect()
+        pts = [(self.x1, tup[1]), (self.x2, tup[1]),
+               (self.x2, tup[3]), (self.x1, tup[3])]
+        cpoints = self.get_cpoints(viewer, points=pts)
 
         cr.draw_polygon(cpoints)
 
@@ -1676,16 +1868,12 @@ class XRange(Rectangle):
             fontsize = self.scale_font(viewer)
             cr.set_font(self.font, fontsize, color=self.color)
 
-            cx1, cy1 = cpoints[0]
-            cx2, cy2 = cpoints[2]
-
-            # draw label on X dimension
-            cx = cx1 + (cx2 - cx1) // 2
-            cy = (cy1 + cy2) // 2
+            pt = ((self.x1 + self.x2) * 0.5, (tup[1] + tup[3]) * 0.5)
+            cx, cy = self.get_cpoints(viewer, points=[pt])[0]
             cr.draw_text(cx, cy, "%f:%f" % (self.x1, self.x2))
 
 
-class YRange(Rectangle):
+class YRange(RectangleP):
     """Draws a yrange on a DrawingCanvas.
     Parameters are:
     y1: start Y coordinate in the data space
@@ -1737,13 +1925,13 @@ class YRange(Rectangle):
                  fill=True, fillcolor='aquamarine', alpha=1.0,
                  drawdims=False, font='Sans Serif', fillalpha=0.5,
                  **kwdargs):
-        Rectangle.__init__(self, 0, y1, 0, y2,
-                           color=color, linewidth=linewidth,
-                           linestyle=linestyle,
-                           fill=True, fillcolor=fillcolor,
-                           alpha=alpha, fillalpha=fillalpha,
-                           drawdims=drawdims, font=font,
-                           **kwdargs)
+        RectangleP.__init__(self, (0, y1), (0, y2),
+                            color=color, linewidth=linewidth,
+                            linestyle=linestyle,
+                            fill=True, fillcolor=fillcolor,
+                            alpha=alpha, fillalpha=fillalpha,
+                            drawdims=drawdims, font=font,
+                            **kwdargs)
         self.kind = 'yrange'
 
     def contains_pts(self, pts):
@@ -1754,20 +1942,20 @@ class YRange(Rectangle):
         return contains
 
     def get_edit_points(self, viewer):
-        win_wd, win_ht = viewer.get_window_size()
-        crdmap = viewer.get_coordmap('window')
-        dx, dy = crdmap.to_data((win_wd // 2, 0))
+        tup = viewer.get_datarect()
+        dx = (tup[0] + tup[2]) * 0.5
         pt = self.get_data_points(points=self.get_points())
-        return [MovePoint(dx, (pt[0][1] + pt[2][1]) / 2.0),
+        return [MovePoint(dx, (pt[0][1] + pt[2][1]) * 0.5),
                 EditPoint(dx, pt[0][1]),
                 EditPoint(dx, pt[2][1])]
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
 
-        win_wd, win_ht = viewer.get_window_size()
-        cp = self.get_cpoints(viewer)
-        cpoints = ((0, cp[0][1]), (win_wd, cp[1][1]), (win_wd, cp[2][1]), (0, cp[3][1]))
+        tup = viewer.get_datarect()
+        pts = [(tup[0], self.y1), (tup[2], self.y1),
+               (tup[2], self.y2), (tup[0], self.y2)]
+        cpoints = self.get_cpoints(viewer, points=pts)
 
         cr.draw_polygon(cpoints)
 
@@ -1775,12 +1963,8 @@ class YRange(Rectangle):
             fontsize = self.scale_font(viewer)
             cr.set_font(self.font, fontsize, color=self.color)
 
-            cx1, cy1 = cpoints[0]
-            cx2, cy2 = cpoints[2]
-
-            # draw label on Y dimension
-            cy = cy1 + (cy2 - cy1) // 2
-            cx = (cx1 + cx2) // 2
+            pt = ((tup[0] + tup[2]) * 0.5, (self.y1 + self.y2) * 0.5)
+            cx, cy = self.get_cpoints(viewer, points=[pt])[0]
             cr.draw_text(cx, cy, "%f:%f" % (self.y1, self.y2))
 
 

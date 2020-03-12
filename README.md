@@ -24,19 +24,20 @@ star catalog access, cuts, star pick/FWHM, thumbnails, etc.
 
 ## COPYRIGHT AND LICENSE
 
-Copyright (c) 2011-2019  Ginga Maintainers.  All rights reserved.
+Copyright (c) 2011-2020  Ginga Maintainers.  All rights reserved.
 Ginga is distributed under an open-source BSD licence.  Please see the
 file `LICENSE.txt` in the top-level directory for details.
 
 ## BUILDING AND INSTALLATION
 
-Ginga uses a standard `distutils`-based install, e.g.:
+The current release of Ginga can be downloaded and installed from `pip` using:
 
-    $ python setup.py build
+    $ pip install ginga
 
-or
+From source code, you should also use `pip`, e.g.:
 
-    $ python setup.py install
+    $ cd ginga
+    $ pip install -e .
 
 The program can then be run using the command "ginga".
 

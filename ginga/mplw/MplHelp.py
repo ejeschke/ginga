@@ -100,12 +100,8 @@ class MplContext(object):
         self.kwdargs['linestyle'] = pen.linestyle
 
     def get_color(self, color, alpha):
-        if isinstance(color, str) or isinstance(color, type(u"")):
-            r, g, b = colors.lookup_color(color)
-        elif isinstance(color, tuple):
-            # color is assumed to be a 3-tuple of RGBA values as floats
-            # between 0 and 1
-            r, g, b = color
+        if color is not None:
+            r, g, b = colors.resolve_color(color)
         else:
             r, g, b = 1.0, 1.0, 1.0
 

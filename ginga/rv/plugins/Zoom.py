@@ -13,10 +13,8 @@ plugin operations.
 
 **Usage**
 
-The size of the cutout radius can be adjusted by the slider below the
-zoom image labeled "Zoom Radius". The default radius is 30 pixels,
-making a 61x61 zoom image.  The magnification can be changed by
-adjusting the "Zoom Amount" slider.
+The magnification of the zoom window can be changed by adjusting the
+"Zoom Amount" slider.
 
 Two modes of operation are possible -- absolute and relative zoom:
 
@@ -68,27 +66,20 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoomtask = fv.get_timer()
         self.zoomtask.set_callback('expired', self.showzoom_timer_cb)
         self.fitsimage_focus = None
+        self.layer_tag = 'shared-canvas'
         self.update_time = time.time()
 
         # read preferences for this plugin
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Zoom')
-        self.settings.add_defaults(zoom_radius=self.default_radius,
-                                   zoom_amount=self.default_zoom,
-                                   zoom_cmap_name=None,
-                                   zoom_imap_name=None,
-                                   refresh_interval=0.02,
-                                   rotate_zoom_image=True)
+        self.settings.add_defaults(zoom_amount=self.default_zoom,
+                                   refresh_interval=0.02)
         self.settings.load(onError='silent')
 
-        self.zoom_radius = self.settings.get('zoom_radius', self.default_radius)
         self.zoom_amount = self.settings.get('zoom_amount', self.default_zoom)
         self.refresh_interval = self.settings.get('refresh_interval', 0.02)
-        self.zoom_rotate = self.settings.get('rotate_zoom_image', False)
-        self.copy_attrs = ['transforms', 'cutlevels', 'rotation']
-        if (self.settings.get('zoom_cmap_name', None) is None and
-                self.settings.get('zoom_imap_name', None) is None):
-            self.copy_attrs.append('rgbmap')
+        self.copy_attrs = ['transforms', 'cutlevels', 'rotation', 'rgbmap',
+                           'icc']  # , 'interpolation']
 
         self._wd = 300
         self._ht = 300
@@ -120,12 +111,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
             'set', self.zoomset, zi)
         zi.set_bg(0.4, 0.4, 0.4)
         zi.show_pan_mark(True)
-        cmname = self.settings.get('zoom_cmap_name', None)
-        if cmname is not None:
-            zi.set_color_map(cmname)
-        imname = self.settings.get('zoom_imap_name', None)
-        if imname is not None:
-            zi.set_intensity_map(imname)
         # for debugging
         zi.set_name('zoomimage')
         self.zoomimage = zi
@@ -142,17 +127,11 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.w.splitter = paned
 
         vbox2 = Widgets.VBox()
-        captions = (("Zoom Radius:", 'label', 'Zoom Radius', 'hscale'),
-                    ("Zoom Amount:", 'label', 'Zoom Amount', 'hscale'),
+        captions = (("Zoom Amount:", 'label', 'Zoom Amount', 'hscale'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         vbox2.add_widget(w, stretch=0)
-
-        self.w.zoom_radius.set_limits(1, 300, incr_value=1)
-        self.w.zoom_radius.set_value(self.zoom_radius)
-        self.w.zoom_radius.add_callback('value-changed', self.set_radius_cb)
-        self.w.zoom_radius.set_tracking(True)
 
         self.w.zoom_amount.set_limits(-20, 30, incr_value=1)
         self.w.zoom_amount.set_value(self.zoom_amount)
@@ -210,7 +189,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
     def prepare(self, fitsimage):
         fitssettings = fitsimage.get_settings()
-        zoomsettings = self.zoomimage.get_settings()
         fitsimage.add_callback('cursor-changed', self.motion_cb)
         fitsimage.add_callback('redraw', self.redraw_cb)
         fitssettings.get_setting('zoomlevel').add_callback(
@@ -245,6 +223,19 @@ class Zoom(GingaPlugin.GlobalPlugin):
         # Reflect transforms, colormap, etc.
         fitsimage.copy_attributes(self.zoomimage, self.copy_attrs)
 
+        p_canvas = self.zoomimage.get_private_canvas()
+        try:
+            p_canvas.delete_object_by_tag(self.layer_tag)
+        except Exception:
+            pass
+        canvas = fitsimage.get_canvas()
+        p_canvas.add(canvas, tag=self.layer_tag)
+        # NOTE: necessary for zoom viewer to correctly handle some settings
+        # TODO: see if there is a cleaner way to do this
+        self.zoomimage._imgobj = fitsimage._imgobj
+
+        self.zoomimage.redraw(whence=0)
+
     def redo(self, channel, image):
         if not self.gui_up:
             return
@@ -273,7 +264,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.logger.debug("zoomlevel=%d myzoom=%d" % (
             zoomlevel, myzoomlevel))
         self.zoomimage.zoom_to(myzoomlevel)
-        text = self.fv.scale2text(self.zoomimage.get_scale())  # noqa
         return True
 
     def zoomset_cb(self, setting, zoomlevel, fitsimage):
@@ -291,25 +281,9 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
     # LOGIC
 
-    def set_radius(self, val):
-        self.logger.debug("Setting radius to %d" % val)
-        self.zoom_radius = int(val)
-        fitsimage = self.fitsimage_focus
-        if fitsimage is None:
-            return True
-        image = fitsimage.get_image()
-        wd, ht = image.get_size()
-        data_x, data_y = wd // 2, ht // 2
-        self.magnify_xy(fitsimage, data_x, data_y)
-
     def magnify_xy(self, fitsimage, data_x, data_y):
-        # Cut and show zoom image in zoom window
+        # Show zoom image in zoom window
         self.zoom_x, self.zoom_y = data_x, data_y
-
-        image = fitsimage.get_image()
-        if image is None:
-            # No image loaded into this channel
-            return True
 
         # If this is a new source, then update our widget with the
         # attributes of the source
@@ -325,11 +299,10 @@ class Zoom(GingaPlugin.GlobalPlugin):
         if elapsed > self.refresh_interval:
             # cancel timer
             self.zoomtask.clear()
-            self.showzoom(image, data_x, data_y)
+            self.showzoom(data_x, data_y)
         else:
             # store needed data into the timer
-            self.zoomtask.data.setvals(image=image,
-                                       data_x=data_x, data_y=data_y)
+            self.zoomtask.data.setvals(data_x=data_x, data_y=data_y)
             # calculate delta until end of refresh interval
             period = self.refresh_interval - elapsed
             # set timer
@@ -356,23 +329,14 @@ class Zoom(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return
         data = timer.data
-        self.showzoom(data.image, data.data_x, data.data_y)
+        self.showzoom(data.data_x, data.data_y)
 
-    def _zoom_data(self, fitsimage, data, pan_pos):
-        with fitsimage.suppress_redraw:
-            self.update_time = time.time()
-            self.zoomimage.set_data(data)
-            pan_x, pan_y = pan_pos[:2]
-            self.zoomimage.panset_xy(pan_x, pan_y)
+    def _zoom_data(self, fitsimage, data_x, data_y):
+        fitsimage.set_pan(data_x, data_y)
 
-    def showzoom(self, image, data_x, data_y):
-        # cut out detail area and set the zoom image
-        data, x1, y1, x2, y2 = image.cutout_radius(int(data_x), int(data_y),
-                                                   self.zoom_radius)
-        # pan to the exact position of the center of the cutout
-        pan_pos = (data_x - x1, data_y - y1)
-
-        self.fv.gui_do(self._zoom_data, self.zoomimage, data, pan_pos)
+    def showzoom(self, data_x, data_y):
+        # set the zoom image
+        self.fv.gui_do(self._zoom_data, self.zoomimage, data_x, data_y)
 
     def set_amount_cb(self, widget, val):
         """This method is called when 'Zoom Amount' control is adjusted.
@@ -389,16 +353,12 @@ class Zoom(GingaPlugin.GlobalPlugin):
     def set_defaults(self):
         self.t_abszoom = True
         self.w.relative_zoom.set_state(not self.t_abszoom)
-        self.w.zoom_radius.set_value(self.default_radius)
         self.w.zoom_amount.set_value(self.default_zoom)
         self.zoomimage.zoom_to(self.default_zoom)
 
     def zoomset(self, setting, zoomlevel, fitsimage):
         text = self.fv.scale2text(self.zoomimage.get_scale())
         self.w.zoom.set_text(text)
-
-    def set_radius_cb(self, w, val):
-        self.set_radius(val)
 
     def set_refresh_cb(self, w, val):
         self.refresh_interval = val / 1000.0

@@ -34,6 +34,7 @@ except (ImportError, Exception):
 # 'mimetypes' module.  You can add an extension here if the loaders
 # can reliably load it and it is not recognized properly by 'mimetypes'
 known_types = {
+    '.fit': 'image/fits',
     '.fits': 'image/fits',
     '.fits.gz': 'image/fits',
     '.fits.fz': 'image/fits',

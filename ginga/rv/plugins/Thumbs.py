@@ -88,7 +88,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    autoload_interval=1.0,
                                    closeable=not spec.get('hidden', False),
                                    transfer_attrs=['transforms',
-                                                   'cutlevels', 'rgbmap'])
+                                                   'cutlevels', 'rgbmap',
+                                                   'icc', 'interpolation'])
         self.settings.load(onError='silent')
         # max length of thumb on the long side
         self.thumb_width = self.settings.get('thumb_length', 180)
@@ -744,8 +745,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 viewer.copy_attributes(self.thumb_generator,
                                        self.transfer_attrs)
 
-        rgb_img = self.thumb_generator.get_image_as_array()
-        thmb_image = RGBImage.RGBImage(rgb_img)
+        order = self.thumb_generator.rgb_order
+        rgb_img = self.thumb_generator.get_image_as_array(order=order)
+        thmb_image = RGBImage.RGBImage(rgb_img, order=order)
         thmb_image.set(placeholder=False)
         return thmb_image
 
@@ -967,7 +969,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
             xt, yt, xi, yi = self._calc_thumb_pos(row, col)
             l2 = []
-            namelbl = canvas.dc.Text(xt, yt, thumbname, color=fg,
+            namelbl = canvas.dc.Text(xt, yt, text=thumbname, color=fg,
                                      fontsize=fontsize, coord='data')
             l2.append(namelbl)
 

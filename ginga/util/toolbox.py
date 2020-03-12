@@ -74,7 +74,7 @@ class ModeIndicator(object):
 
             color = 'cyan' if mode == 'meta' else 'yellow'
 
-            o1 = Text(0, 0, text,
+            o1 = Text(0, 0, text=text,
                       fontsize=self.fontsize, color=color, coord='window')
 
             txt_wd, txt_ht = self.viewer.renderer.get_dimensions(o1)

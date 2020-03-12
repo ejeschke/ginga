@@ -8,6 +8,7 @@
 import os
 import glob
 import hashlib
+import numpy as np
 
 from ginga.misc import Bunch
 
@@ -16,16 +17,10 @@ from . import paths
 # How about color management (ICC profile) support?
 try:
     import PIL.ImageCms as ImageCms
+    from PIL import Image
     have_cms = True
 except ImportError:
     have_cms = False
-
-have_pilutil = False
-try:
-    from scipy.misc import toimage, fromimage
-    have_pilutil = True
-except ImportError:
-    pass
 
 basedir = paths.ginga_home
 
@@ -39,6 +34,10 @@ working_profile = None
 
 # Holds transforms
 icc_transform = {}
+
+
+class ColorManagerError(Exception):
+    pass
 
 
 class ColorManager(object):
@@ -130,20 +129,34 @@ class ColorManager(object):
                 in_profile, profile[out_profile].name))
 
         except Exception as e:
-            self.logger.error("Error converting from embedded color profile: %s" % (str(e)))
+            self.logger.error("Error converting from embedded color profile: {!r}".format(e),
+                              exc_info=True)
             self.logger.warning("Leaving image unprofiled.")
 
         return image
 
     def profile_to_working_numpy(self, image_np, kwds, intent=None):
 
-        image_in = toimage(image_np)
+        image_in = to_image(image_np)
         image_out = self.profile_to_working_pil(image_in, kwds,
                                                 intent=intent)
-        return fromimage(image_out)
+        return from_image(image_out)
 
 
 # --- Color Management conversion functions ---
+
+def to_image(image_np, flip_y=True):
+    if flip_y:
+        image_np = np.flipud(image_np)
+    return Image.fromarray(image_np)
+
+
+def from_image(image_pil, flip_y=True):
+    image_np = np.array(image_pil)
+    if flip_y:
+        image_np = np.flipud(image_np)
+    return image_np
+
 
 def convert_profile_pil(image_pil, inprof_path, outprof_path, intent_name,
                         inPlace=False):
@@ -171,23 +184,23 @@ def convert_profile_pil_transform(image_pil, transform, inPlace=False):
 
 
 def convert_profile_numpy(image_np, inprof_path, outprof_path, intent_name):
-    if (not have_pilutil) or (not have_cms):
+    if not have_cms:
         return image_np
 
-    in_image_pil = toimage(image_np)
+    in_image_pil = to_image(image_np)
     out_image_pil = convert_profile_pil(in_image_pil,
                                         inprof_path, outprof_path, intent_name)
-    image_out = fromimage(out_image_pil)
+    image_out = from_image(out_image_pil)
     return image_out
 
 
 def convert_profile_numpy_transform(image_np, transform):
-    if (not have_pilutil) or (not have_cms):
+    if not have_cms:
         return image_np
 
-    in_image_pil = toimage(image_np)
+    in_image_pil = to_image(image_np)
     convert_profile_pil_transform(in_image_pil, transform, inPlace=True)
-    image_out = fromimage(in_image_pil)
+    image_out = from_image(in_image_pil)
     return image_out
 
 
@@ -200,6 +213,10 @@ def get_transform(from_name, to_name, to_intent='perceptual',
                   proof_name=None, proof_intent=None,
                   use_black_pt=False):
     global icc_transform
+
+    if not have_cms:
+        return ColorManagerError("Either pillow is not installed, or there is "
+                                 "no ICC support in this version of pillow")
 
     flags = 0
     if proof_name is not None:
@@ -223,7 +240,7 @@ def get_transform(from_name, to_name, to_intent='perceptual',
     except KeyError:
         # try to build transform on the fly
         try:
-            if not (proof_name is None):
+            if proof_name is not None:
                 output_transform = ImageCms.buildProofTransform(
                     profile[from_name].path,
                     profile[to_name].path,
@@ -243,7 +260,7 @@ def get_transform(from_name, to_name, to_intent='perceptual',
             icc_transform[key] = output_transform
 
         except Exception as e:
-            raise Exception("Failed to build profile transform: %s" % (str(e)))
+            raise ColorManagerError("Failed to build profile transform: {!r}".format(e))
 
     return output_transform
 
@@ -265,9 +282,9 @@ def convert_profile_fromto(image_np, from_name, to_name,
 
     except Exception as e:
         if logger is not None:
-            logger.warn("Error converting profile from '%s' to '%s': %s" % (
-                from_name, to_name, str(e)))
-            logger.warn("Leaving image unprofiled")
+            logger.warning("Error converting profile from '{}' to '{}': {!r}".format(
+                from_name, to_name, e))
+            logger.warning("Leaving image unprofiled")
         return image_np
 
 

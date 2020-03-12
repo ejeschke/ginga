@@ -9,6 +9,8 @@ import os.path
 import math
 import random
 
+import numpy as np
+
 from ginga.misc import Bunch, Callback
 from ginga.fonts import font_asst
 import ginga.toolkit
@@ -20,6 +22,7 @@ from gi.repository import Gdk  # noqa
 from gi.repository import GdkPixbuf  # noqa
 from gi.repository import GObject  # noqa
 from gi.repository import Pango  # noqa
+import cairo
 
 ginga.toolkit.use('gtk3')
 
@@ -728,6 +731,494 @@ class MDIWidget(Gtk.Layout):
 
     def close_page(self, subwin):
         self._update_area_size()
+
+
+class Dial(Gtk.DrawingArea):
+
+    __gtype_name__ = "Dial"
+
+    __gsignals__ = {
+        "value-changed": (GObject.SignalFlags.RUN_FIRST, GObject.TYPE_NONE,
+                          (GObject.TYPE_FLOAT,)),
+    }
+
+    def __init__(self):
+        Gtk.DrawingArea.__init__(self)
+        self.set_can_focus(True)
+        self.dims = np.array((0, 0))
+        self.center = np.array((0.0, 0.0))
+        self.bg = (0.94, 0.94, 0.94)
+        self.fg = (0.4, 0.4, 0.4)
+        self.knob_fg = (1.0, 1.0, 1.0)
+        self.knob_fill = (0.2, 0.2, 0.2)
+        self.focus_fg = (0.2, 0.6, 0.9)
+        self.fontname = 'Sans Serif'
+        self.fontsize = 10.0
+        self._has_focus = False
+        self.surface = None
+
+        # draw labels
+        self.draw_scale = True
+        # how to rotate the labels
+        self.label_style = 1
+        self.values = []
+        self.draw_value_pos = 0
+
+        self.value = 0.0
+        self.value_text = str(self.value)
+
+        # internal state
+        self._dragging = False
+        self.tracking = False
+        self.wrap = False
+        self.angle = 0.0
+        self.ang_offset = 0.0
+        self.ang_invert = False
+        self.turn_delta = 6.0
+        self.min_ang_deg = 0.0
+        self.max_ang_deg = 360.0
+
+        self.connect("draw", self.draw_event)
+        self.connect("configure-event", self.configure_event)
+        self.set_app_paintable(True)
+        # prevents extra redraws, because we manually redraw on a size
+        # change
+        self.set_redraw_on_allocate(False)
+
+        self.connect('button-press-event', self.button_press_event)
+        self.connect('button-release-event', self.button_release_event)
+        self.connect('motion-notify-event', self.motion_notify_event)
+        self.connect('scroll-event', self.scroll_event)
+        self.connect('focus_in_event', self.focus_event, True)
+        self.connect('focus_out_event', self.focus_event, False)
+        mask = self.get_events()
+        self.set_events(mask |
+                        Gdk.EventMask.BUTTON_PRESS_MASK |
+                        Gdk.EventMask.BUTTON_RELEASE_MASK |
+                        Gdk.EventMask.POINTER_MOTION_MASK |
+                        Gdk.EventMask.SCROLL_MASK |
+                        Gdk.EventMask.FOCUS_CHANGE_MASK |
+                        Gdk.EventMask.EXPOSURE_MASK)
+
+    def button_press_event(self, widget, event):
+        if event.button == 1:
+            self._dragging = True
+            self._calc_action(event.x, event.y)
+            return True
+
+    def button_release_event(self, widget, event):
+        self._dragging = False
+        self._calc_action(event.x, event.y)
+        return True
+
+    def motion_notify_event(self, widget, event):
+        # Are we holding down the left mouse button?
+        if not self._dragging:
+            return False
+
+        self._calc_action(event.x, event.y)
+        return True
+
+    def scroll_event(self, widget, event):
+        degrees, direction = get_scroll_info(event)
+        if direction < 180.0:
+            self.turn_ccw()
+        else:
+            self.turn_cw()
+
+        self.draw()
+        return True
+
+    def focus_event(self, widget, event, tf):
+        self._has_focus = tf
+        self.draw()
+        return True
+
+    def _calc_action(self, x, y):
+        ang_deg = np.degrees(np.arctan2(x - self.center[0],
+                                        y - self.center[1]) + np.pi * 1.5)
+        ang_deg = self.normalize_angle(ang_deg + self.ang_offset)
+        if self.ang_invert:
+            ang_deg = 360.0 - ang_deg
+
+        self.angle_action(x, y, ang_deg)
+
+    def draw(self):
+        if self.surface is None:
+            return
+        cr = cairo.Context(self.surface)
+
+        cr.select_font_face(self.fontname)
+        cr.set_font_size(self.fontsize)
+
+        # fill background
+        wd, ht = self.dims
+        cr.rectangle(0, 0, wd, ht)
+        r, g, b = self.bg
+        cr.set_source_rgba(r, g, b)
+        cr.fill()
+
+        r, g, b = self.fg
+        cr.set_source_rgba(r, g, b)
+        cr.set_line_width(2.0)
+
+        cr.save()
+        cx, cy = self.center
+        cr.translate(cx, cy)
+        cr.move_to(0, 0)
+
+        # draw circle
+        cradius = min(cx, cy)
+        cradius *= 0.66
+        cr.arc(0, 0, cradius, 0, 2 * np.pi)
+        cr.fill()
+
+        if self._has_focus:
+            r, g, b = self.focus_fg
+        else:
+            r, g, b = (0.0, 0.0, 0.0)
+        cr.set_source_rgba(r, g, b)
+        cr.new_path()
+        cr.set_line_width(2)
+        cr.arc(0, 0, cradius, 0, 2 * np.pi)
+        cr.stroke()
+        cr.new_path()
+        cr.set_line_width(1)
+
+        if self.draw_scale:
+            cr.new_path()
+            cr.set_source_rgba(0.0, 0.0, 0.0)
+            for tup in self.values:
+                if len(tup) == 3:
+                    label, value, theta = tup
+                else:
+                    value, theta = tup
+                    label = str(value)
+                if self.ang_invert:
+                    theta = 360.0 - theta
+                theta_pos = self.normalize_angle(theta + 90.0 - self.ang_offset)
+                theta_rad = np.radians(theta_pos)
+                a, b, wd, ht, i, j = cr.text_extents(label)
+                crad2 = cradius + ht / 2.0
+                if self.label_style == 0:
+                    crad2 += wd
+
+                # draw small filled dot as position marker
+                cx, cy = (np.sin(theta_rad) * cradius,
+                          np.cos(theta_rad) * cradius)
+                cr.move_to(cx, cy)
+                r, g, b = self.knob_fill
+                cr.set_source_rgba(r, g, b)
+                cr.arc(cx, cy, 2, 0, 2 * np.pi)
+                cr.stroke_preserve()
+                cr.fill()
+
+                # draw label
+                cx, cy = np.sin(theta_rad) * crad2, np.cos(theta_rad) * crad2
+                cr.move_to(cx, cy)
+
+                text_rad = np.arctan2(cx, cy)
+                if self.label_style == 0:
+                    text_rad = 0.0
+                elif self.label_style == 1:
+                    text_rad += np.pi
+                elif self.label_style == 2:
+                    text_rad += - np.pi / 2
+                cr.save()
+                cr.translate(cx, cy)
+                cr.rotate(-text_rad)
+                if self.label_style == 1:
+                    cr.move_to(-wd / 2, 0)
+                cr.show_text(label)
+                #cr.rotate(text_rad)
+                cr.restore()
+
+            cr.new_path()
+
+        cr.move_to(0, 0)
+        theta = self.angle
+        if self.ang_invert:
+            theta = 360.0 - theta
+        theta = self.normalize_angle(theta - self.ang_offset)
+
+        cr.rotate(-np.radians(theta))
+
+        # draw knob (pointer)
+        r, g, b = self.knob_fg
+        cr.set_source_rgba(r, g, b)
+        crad2 = cradius
+        cr.new_path()
+        x1, y1, x2, y2 = -crad2, 0, crad2, 0
+        cx1, cy1, cx2, cy2 = self.calc_vertexes(x1, y1, x2, y2,
+                                                arrow_length=crad2)
+        cr.move_to(x2, y2)
+        cr.line_to(cx1, cy1)
+        #cr.line_to(0, 0)
+        cr.line_to(cx2, cy2)
+        cr.close_path()
+        r, g, b = self.knob_fg
+        cr.set_source_rgba(r, g, b)
+        cr.stroke_preserve()
+        r, g, b = self.knob_fill
+        cr.set_source_rgba(r, g, b)
+        cr.fill()
+        cr.move_to(0, 0)
+        cr.arc(0, 0, abs(cx1 + cx2) * 2.1, 0, 2 * np.pi)
+        cr.stroke_preserve()
+        cr.fill()
+
+        text = self.value_text
+        if self.draw_value_pos == 1:
+            r, g, b = self.bg
+            cr.set_source_rgba(r, g, b)
+            cr.move_to(0, 0)
+            cr.show_text(text)
+
+        cr.restore()
+
+        if self.draw_value_pos == 2:
+            a, b, wd, ht, i, j = cr.text_extents(text)
+            r, g, b = self.fg
+            cr.set_source_rgba(r, g, b)
+            x, y = self.center
+            cr.move_to(x - wd / 2, (y - cradius) * 0.5 + ht)
+            cr.show_text(text)
+
+        cr.move_to(0, 0)
+
+        self.update_image()
+
+    def normalize_angle(self, ang_deg):
+        ang_deg = np.fmod(ang_deg + 360.0, 360.0)
+        return ang_deg
+
+    def finalize_angle(self, ang_deg):
+        self.angle = ang_deg
+        self.draw()
+
+    def get_angle(self):
+        return self.angle
+
+    def set_labels(self, val_ang_pairs):
+        self.values = val_ang_pairs
+
+        self.draw()
+
+    def set_tracking(self, tf):
+        self.tracking = tf
+
+    def configure_event(self, widget, event):
+        rect = widget.get_allocation()
+        x, y, width, height = rect.x, rect.y, rect.width, rect.height
+
+        self.dims = np.array((width, height))
+        self.center = np.array((width / 2, height / 2))
+
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+
+        self.draw()
+        return True
+
+    def update_image(self):
+        if self.surface is None:
+            # window is not mapped/configured yet
+            return
+
+        win = self.get_window()
+        if win is not None and self.surface is not None:
+            wd, ht = self.dims
+
+            self.queue_draw_area(0, 0, wd, ht)
+
+    def draw_event(self, widget, cr):
+        # redraw the screen from backing surface
+        cr.set_source_surface(self.surface, 0, 0)
+
+        cr.set_operator(cairo.OPERATOR_SOURCE)
+        cr.paint()
+        return False
+
+    def calc_vertexes(self, start_cx, start_cy, end_cx, end_cy,
+                      arrow_length=10, arrow_degrees=0.35):
+
+        angle = np.arctan2(end_cy - start_cy, end_cx - start_cx) + np.pi
+
+        cx1 = end_cx + arrow_length * np.cos(angle - arrow_degrees)
+        cy1 = end_cy + arrow_length * np.sin(angle - arrow_degrees)
+        cx2 = end_cx + arrow_length * np.cos(angle + arrow_degrees)
+        cy2 = end_cy + arrow_length * np.sin(angle + arrow_degrees)
+
+        return (cx1, cy1, cx2, cy2)
+
+    def angle_action(self, x, y, ang_deg):
+        """Subclass overrides to provide custom behavior"""
+        self._set_value(ang_deg)
+
+    def turn_ccw(self):
+        """Subclass overrides to provide custom behavior"""
+        self._set_value(self.angle + self.turn_delta)
+
+    def turn_cw(self):
+        """Subclass overrides to provide custom behavior"""
+        self._set_value(self.angle - self.turn_delta)
+
+    def _set_value(self, ang_deg):
+        """Subclass overrides to provide custom behavior"""
+        ang_deg = self.normalize_angle(ang_deg)
+        ang_deg = np.clip(ang_deg, self.min_ang_deg, self.max_ang_deg)
+        self.value = ang_deg
+        self.finalize_angle(ang_deg)
+
+        if not self._dragging or self.tracking:
+            self.emit("value-changed", self.value)
+
+    def set_value(self, ang_deg):
+        """Subclass overrides to provide custom behavior"""
+        self._set_value(ang_deg)
+
+    def get_value(self):
+        """Subclass overrides to provide custom behavior"""
+        return self.value
+
+
+class ValueDial(Dial):
+
+    __gtype_name__ = "ValueDial"
+
+    def __init__(self):
+        Dial.__init__(self)
+
+        # for drawing value
+        self.label_style = 1
+        self.draw_value_pos = 2
+
+        # setup axis orientation to match value
+        self.ang_offset = 140.0
+        self.ang_invert = True
+        self.min_ang_deg = 0.0
+        self.max_ang_deg = 260.0
+        self.set_labels([("min", 0.0), ("max", 260.0)])
+
+        self.min_val = 0.0
+        self.max_val = 0.0
+        self.inc_val = 0.0
+
+    def angle_action(self, x, y, ang_deg):
+        value = self._angle_to_value(ang_deg)
+        self._set_value(value)
+
+    def turn_ccw(self):
+        ang_deg = np.clip(self.angle + self.turn_delta,
+                          0.0, self.max_ang_deg)
+        value = self._angle_to_value(ang_deg)
+        self._set_value(value)
+
+    def turn_cw(self):
+        ang_deg = np.clip(self.angle - self.turn_delta,
+                          0.0, self.max_ang_deg)
+        value = self._angle_to_value(ang_deg)
+        self._set_value(value)
+
+    def _set_value(self, value):
+        if value < self.min_val or value > self.max_val:
+            raise ValueError("value '{}' is out of range".format(value))
+
+        self.value = value
+        self.value_text = "%.2f" % self.value
+
+        ang_deg = self._value_to_angle(value)
+        self.finalize_angle(ang_deg)
+
+        if not self._dragging or self.tracking:
+            self.emit("value-changed", self.value)
+
+    def get_value(self):
+        return self.value
+
+    def _value_to_angle(self, value):
+        # make angle match value
+        rng = self.max_val - self.min_val
+        pct = (value - self.min_val) / rng
+        ang_deg = pct * self.max_ang_deg
+        ang_deg = np.clip(ang_deg, 0.0, self.max_ang_deg)
+        return ang_deg
+
+    def _angle_to_value(self, ang_deg):
+        # make value match angle
+        pct = ang_deg / self.max_ang_deg
+        rng = self.max_val - self.min_val
+        value = self.min_val + pct * rng
+        value = np.clip(value, self.min_val, self.max_val)
+        return value
+
+    def set_limits(self, min_val, max_val, inc_val):
+        self.min_val = min_val
+        self.max_val = max_val
+        self.inc_val = inc_val
+
+        pct = inc_val / (max_val - min_val)
+        self.turn_delta = pct * self.max_ang_deg
+
+
+class IndexDial(Dial):
+
+    __gtype_name__ = "IndexDial"
+
+    def __init__(self):
+        Dial.__init__(self)
+
+        self.idx = 0
+        self.label_style = 1
+
+    def angle_action(self, x, y, ang_deg):
+        idx = self.best_index(ang_deg)
+        self.set_index(idx)
+
+    def turn_ccw(self):
+        idx = self.idx - 1
+        if idx < 0:
+            if self.wrap:
+                self.set_index(len(self.values) - 1)
+        else:
+            self.set_index(idx)
+
+    def turn_cw(self):
+        idx = self.idx + 1
+        if idx >= len(self.values):
+            if self.wrap:
+                self.set_index(0)
+        else:
+            self.set_index(idx)
+
+    def set_index(self, idx):
+        idx = int(idx)
+        if idx < 0 or idx >= len(self.values):
+            raise ValueError("index '{}' is outside range 0-{}".format(idx,
+                                                                       len(self.values)))
+        self.idx = idx
+        tup = self.values[idx]
+        self.value = tup[0] if len(tup) == 2 else tup[1]
+        self.value_text = str(self.value)
+
+        self.angle = tup[-1]
+        self.draw()
+
+        if not self._dragging or self.tracking:
+            self.emit("value-changed", idx)
+
+    def get_index(self):
+        return self.idx
+
+    def get_value(self):
+        return self.value
+
+    def best_index(self, ang_deg):
+        # find the index that is closest to the angle ang_deg
+        angles = np.array([tup[-1] for tup in self.values])
+        ang_deg = self.normalize_angle(ang_deg)
+        angles = np.abs(angles - ang_deg)
+        idx = np.argmin(angles)
+        return idx
 
 
 class FileSelection(object):

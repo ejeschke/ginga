@@ -210,7 +210,8 @@ def mosaic_inline(baseimage, imagelist, bg_ref=None, trim_px=None,
                 # Adjust our WCS for relocation of the reference pixel
                 crpix1, crpix2 = baseimage.get_keywords_list('CRPIX1', 'CRPIX2')
                 kwds = dict(CRPIX1=crpix1 + nx1_off,
-                            CRPIX2=crpix2 + ny1_off)
+                            CRPIX2=crpix2 + ny1_off,
+                            NAXIS1=new_wd, NAXIS2=new_ht)
                 baseimage.update_keywords(kwds)
 
         # fit image piece into our array

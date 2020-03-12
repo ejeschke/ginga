@@ -2,7 +2,28 @@
 What's New
 ++++++++++
 
-Ver 3.0.0 (unreleased)
+Ver 3.1.0 (unreleased)
+======================
+- Zoom plugin refactored. Now shows graphical overlays.
+- Improved performance of rendering when flipping, swapping axes or
+  rotating viewer.
+- Fixed a bug where the display was not redrawn if an ICC profile was
+  changed
+- Fixed bugs relating to drawing XRange, YRange and Rectangle objects on
+  rotated canvas
+- Fixed a bug with fit image to window (zoom_fit) which was off by half
+  a pixel
+- Fixed an issue where an error message appears in the log if the scale
+  is so small the image is invisible
+- Fixed an issue where the readout under the cursor for value is
+  reported for an empty row to the left and column below of pixels
+- Removed dependence on astropy-helpers submodule.
+- Fixed an issue where limits were not reset correctly if image being
+  viewed is modified in place (and data array changes size)
+- Fixed an issue with Mosaic plugin where images with a PC matrix were
+  not always oriented correctly
+
+Ver 3.0.0 (2019-09-20)
 ======================
 - Dropped Python 2 support. Ginga now requires Python 3.5 or later.
 - Fixed an issue with some RGB images being viewed flipped
@@ -38,6 +59,9 @@ Ver 3.0.0 (unreleased)
   hexagon, uptriangle, downtriangle
 - New file opener framework
 - Text objects can be resized and rotated in edit mode on the canvas
+- Added ellipse and box annulus types as Annulus2R canvas object
+- Supports plotting DS9 regions via 2-way conversion between Ginga canvas
+  types and Astropy regions
 
 Ver 2.7.2 (2018-11-05)
 ======================

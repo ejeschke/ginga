@@ -10,7 +10,6 @@ These algorithms are modeled after the ones described for ds9 here:
     http://ds9.si.edu/doc/ref/how.html
 
 """
-import math
 import numpy as np
 
 
@@ -54,10 +53,30 @@ class ColorDistBase(object):
             ColorDistError("Computed hash table size (%d) != specified size "
                            "(%d)" % (hashlen, self.hashsize))
 
+        self.hash.clip(0, self.colorlen - 1)
+
     def calc_hash(self):
+        """Create the hash table that implements the distribution function.
+        """
         raise ColorDistError("Subclass needs to override this method")
 
     def get_dist_pct(self, pct):
+        """Calculate a domain value based on a percentage into the range.
+
+        Given a value between 0 and 1, calculate the value in the domain
+        that corresponds to this percentage of the distribution range.
+        This function is primarily used to build color bars for display.
+
+        Parameters
+        ----------
+        pct : float
+            A floating point value between 0 and 1
+
+        Returns
+        -------
+        val : float
+            A value in the domain of the color distribution function
+        """
         raise ColorDistError("Subclass needs to override this method")
 
 
@@ -79,7 +98,8 @@ class LinearDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        val = min(max(float(pct), 0.0), 1.0)
+        pct = np.asarray(pct, dtype=np.float)
+        val = np.clip(pct, 0.0, 1.0)
         return val
 
     def __str__(self):
@@ -107,8 +127,9 @@ class LogDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        val_inv = (math.exp(pct * math.log(self.exp)) - 1) / self.exp
-        val = min(max(float(val_inv), 0.0), 1.0)
+        pct = np.asarray(pct, dtype=np.float)
+        val_inv = (np.exp(pct * np.log(self.exp)) - 1) / self.exp
+        val = np.clip(val_inv, 0.0, 1.0)
         return val
 
     def __str__(self):
@@ -136,8 +157,9 @@ class PowerDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        val_inv = math.log(self.exp * pct + 1, self.exp)
-        val = min(max(float(val_inv), 0.0), 1.0)
+        pct = np.asarray(pct, dtype=np.float)
+        val_inv = np.log(self.exp * pct + 1) / np.log(self.exp)
+        val = np.clip(val_inv, 0.0, 1.0)
         return val
 
     def __str__(self):
@@ -164,8 +186,9 @@ class SqrtDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
+        pct = np.asarray(pct, dtype=np.float)
         val_inv = pct ** 2.0
-        val = min(max(float(val_inv), 0.0), 1.0)
+        val = np.clip(val_inv, 0.0, 1.0)
         return val
 
     def __str__(self):
@@ -191,8 +214,9 @@ class SquaredDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        val_inv = math.sqrt(pct)
-        val = min(max(float(val_inv), 0.0), 1.0)
+        pct = np.asarray(pct, dtype=np.float)
+        val_inv = np.sqrt(pct)
+        val = np.clip(val_inv, 0.0, 1.0)
         return val
 
     def __str__(self):
@@ -222,9 +246,10 @@ class AsinhDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
+        pct = np.asarray(pct, dtype=np.float)
         # calculate inverse of dist fn
-        val_inv = math.sinh(self.nonlinearity * pct) / self.factor
-        val = min(max(float(val_inv), 0.0), 1.0)
+        val_inv = np.sinh(self.nonlinearity * pct) / self.factor
+        val = np.clip(val_inv, 0.0, 1.0)
         return val
 
     def __str__(self):
@@ -254,9 +279,10 @@ class SinhDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
+        pct = np.asarray(pct, dtype=np.float)
         # calculate inverse of dist fn
-        val_inv = math.asinh(self.nonlinearity * pct) / self.factor
-        val = min(max(float(val_inv), 0.0), 1.0)
+        val_inv = np.arcsinh(self.nonlinearity * pct) / self.factor
+        val = np.clip(val_inv, 0.0, 1.0)
         return val
 
     def __str__(self):
@@ -302,7 +328,9 @@ class HistogramEqualizationDist(ColorDistBase):
         return arr
 
     def get_dist_pct(self, pct):
+        pct = np.asarray(pct, dtype=np.float)
         # TODO: this is wrong but we need a way to invert the hash
+        val = np.clip(pct, 0.0, 1.0)
         return pct
 
     def __str__(self):
