@@ -250,6 +250,11 @@ class CanvasRenderer(render.StandardPixelRenderer):
 
         arr = np.array(ptr).reshape(height, width, 4)
 
+        # rendering surface is usually larger than window, so cutout
+        # just enough to show what has been drawn
+        win_wd, win_ht = self.dims[:2]
+        arr = np.ascontiguousarray(arr[:win_ht, :win_wd, :])
+
         # adjust according to viewer's needed order
         return self.reorder(order, arr)
 
