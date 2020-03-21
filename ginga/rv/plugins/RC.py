@@ -335,7 +335,7 @@ class GingaWrapper(object):
                     "'help channel <chname> <method>'")
 
     def load_buffer(self, imname, chname, img_buf, dims, dtype,
-                    header, metadata, compressed):
+                    header, metadata, compressed, wcs_image=None):
         """Display a FITS image buffer.
 
         Parameters
@@ -356,6 +356,8 @@ class GingaWrapper(object):
             other metadata about image to attach to image
         compressed : bool
             decompress buffer using "bz2"
+        wcs_img : bool, optional
+            JXP hack to pass in wavelength image
 
         Returns
         -------
@@ -386,7 +388,8 @@ class GingaWrapper(object):
             byteswap = metadata.get('byteswap', False)
 
             # WCS?
-            if 'WCS-XIMG' in header.keys():
+            #if 'WCS-XIMG' in header.keys():
+            if wcs_image is not None:
                 from ginga.util import wcsmod
                 from ginga.util.wcsmod.common import register_wcs
                 from ginga.util.wcsmod.wcs_img import ImgWCS
@@ -400,6 +403,9 @@ class GingaWrapper(object):
                               metadata=metadata)
             image.update_keywords(header)
             image.set(name=imname, path=None)
+            if wcs_image is not None:
+                wcs_buf = bz2.decompress(wcs_image)
+                image.wcs.wcs_ximage = np.fromstring(wcs_buf, dtype=dtype)
 
         except Exception as e:
             # Some kind of error unpacking the data

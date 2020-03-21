@@ -2,6 +2,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import numpy as np
 
 from ginga.util.wcsmod import common
 
@@ -31,7 +32,6 @@ class ImgWCS(common.BaseWCS):
                 self.wcs_ximage = hdu[exten].data
                 return
         # Set dummy image if we get here
-        import numpy as np
         try:
             shape = self.header['NAXIS2'], self.header['NAXIS1']
         except:

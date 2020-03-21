@@ -57,7 +57,8 @@ class _channel_proxy(object):
             return self._fn(self._chname, name, *args, **kwdargs)
         return _call
 
-    def load_np(self, imname, data_np, imtype, header):
+
+    def load_np(self, imname, data_np, imtype, header, wcs_image=None):
         """Display a numpy image buffer in a remote Ginga reference viewer.
 
         Parameters
@@ -74,6 +75,9 @@ class _channel_proxy(object):
         header : dict
             Fits header as a dictionary, or other keyword metadata.
 
+        wcs_image : ndarray, optional
+            This should be at least a 2D Numpy array.
+
         Returns
         -------
         0
@@ -84,11 +88,16 @@ class _channel_proxy(object):
         """
         # future: handle imtype
         load_buffer = self._client.lookup_attr('load_buffer')
+        if wcs_image is not None:
+            _wcs_image = Blob(wcs_image.tobytes())
+        else:
+            _wcs_image = None
 
         return load_buffer(imname, self._chname,
                            Blob(data_np.tobytes()),
                            data_np.shape, str(data_np.dtype),
-                           header, {}, False)
+                           header, {}, False,
+                           wcs_image=_wcs_image)
 
     def load_hdu(self, imname, hdulist, num_hdu):
         """Display an astropy.io.fits HDU in a remote Ginga reference viewer.
