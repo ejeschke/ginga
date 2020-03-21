@@ -86,18 +86,17 @@ class _channel_proxy(object):
         -----
         * The "RC" plugin needs to be started in the viewer for this to work.
         """
+        import numpy as np
         # future: handle imtype
         load_buffer = self._client.lookup_attr('load_buffer')
         if wcs_image is not None:
-            _wcs_image = Blob(wcs_image.tobytes())
+            _wcs_image = Blob(wcs_image.astype('>f8').tobytes())
         else:
-            _wcs_image = None
-
+            _wcs_image = ''
         return load_buffer(imname, self._chname,
                            Blob(data_np.tobytes()),
                            data_np.shape, str(data_np.dtype),
-                           header, {}, False,
-                           wcs_image=_wcs_image)
+                           header, {}, False, _wcs_image)
 
     def load_hdu(self, imname, hdulist, num_hdu):
         """Display an astropy.io.fits HDU in a remote Ginga reference viewer.
