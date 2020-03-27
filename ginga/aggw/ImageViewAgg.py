@@ -20,7 +20,7 @@ class ImageViewAgg(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-    def update_image(self):
+    def update_widget(self):
         pass
 
     def configure_window(self, width, height):

@@ -95,7 +95,7 @@ class ImageViewTk(ImageView.ImageViewBase):
 
         raise ImageViewTkError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
-    def update_image(self):
+    def update_widget(self):
         if self.tkcanvas is None:
             return
 

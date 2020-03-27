@@ -91,8 +91,8 @@ class ImageViewPg(ImageView.ImageViewBase):
 
         raise ImageViewPgError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
-    def update_image(self):
-        self.logger.debug("update_image pgcanvas=%s" % self.pgcanvas)
+    def update_widget(self):
+        self.logger.debug("update_widget pgcanvas=%s" % self.pgcanvas)
         if self.pgcanvas is None:
             return
 

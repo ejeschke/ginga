@@ -126,7 +126,7 @@ class ImageViewJpw(ImageView.ImageViewBase):
 
         raise ImageViewJpwError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
-    def update_image(self):
+    def update_widget(self):
         fmt = self.jp_img.format
         web_img = self.renderer.get_surface_as_rgb_format_bytes(
             format=fmt)

@@ -305,7 +305,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
         return buf.getvalue()
 
-    def update_image(self):
+    def update_widget(self):
         # force an update of the figure
         if self.figure is not None and self.figure.canvas is not None:
             self.figure.canvas.draw()

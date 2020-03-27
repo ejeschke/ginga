@@ -106,7 +106,7 @@ class ImageViewBokeh(ImageViewSS):
     def get_figure(self):
         return self.figure
 
-    def update_image(self):
+    def update_widget(self):
         if self.figure is None:
             return
 
@@ -266,7 +266,7 @@ class ImageViewBokeh2(ImageView.ImageViewBase):
         self.figure.write_to_png(ibuf)
         return ibuf
 
-    def update_image(self):
+    def update_widget(self):
         self.logger.debug("redraw surface")
         if self.figure is None:
             return

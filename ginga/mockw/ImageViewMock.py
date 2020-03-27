@@ -71,7 +71,7 @@ class ImageViewMock(ImageView.ImageViewBase):
         # ...
         pass
 
-    def update_image(self):
+    def update_widget(self):
         if (not self.pixmap) or (not self.imgwin):
             return
 

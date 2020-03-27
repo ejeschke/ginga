@@ -19,11 +19,10 @@ uniform float hival;
 
 uniform int image_type;
 
-float cut_levels(float value)
+float cut_levels(float value, float vmax)
 {
     float f, delta, _hival;
     const float vmin = 0.0;
-    const float vmax = 255.0;
 
     // ensure hival >= loval
     _hival = max(loval, hival);
@@ -43,6 +42,8 @@ float cut_levels(float value)
 void main()
 {
     vec4 color;
+    int clen = textureSize(color_map);
+    float vmax = clen - 1;
     
     if (image_type == 0) {
         // RGBA traditional image, no interactive RGB map
@@ -54,14 +55,14 @@ void main()
 
         // cut levels
         // RGBA textures are normalized to 0..1 when unpacked
-        int idx_r = int(cut_levels(value.r * 256.0));
-        int idx_g = int(cut_levels(value.g * 256.0));
-        int idx_b = int(cut_levels(value.b * 256.0));
+        int idx_r = int(cut_levels(value.r * vmax, vmax));
+        int idx_g = int(cut_levels(value.g * vmax, vmax));
+        int idx_b = int(cut_levels(value.b * vmax, vmax));
         
         // apply RGB mapping
-        float r = texelFetch(color_map, idx_r).r / 255.0;
-        float g = texelFetch(color_map, idx_g).g / 255.0;
-        float b = texelFetch(color_map, idx_b).b / 255.0;
+        float r = texelFetch(color_map, idx_r).r / vmax;
+        float g = texelFetch(color_map, idx_g).g / vmax;
+        float b = texelFetch(color_map, idx_b).b / vmax;
         color = vec4(r, g, b, value.a);
     }
     else if (image_type == 2) {
@@ -70,12 +71,12 @@ void main()
         float value = texture(img_texture, o_tex_coord).r;
 
         // cut levels
-        int idx = int(cut_levels(value));
-        
+        int idx = int(cut_levels(value, vmax));
+
         // apply RGB mapping
         uvec4 clr = texelFetch(color_map, idx);
-        color = vec4(clr.r / 255.0, clr.g / 255.0, clr.b / 255.0,
-                     clr.a / 255.0);
+        color = vec4(clr.r / vmax, clr.g / vmax, clr.b / vmax,
+                     clr.a / vmax);
     }
     outputColor = color;
 }

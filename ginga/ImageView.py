@@ -1280,7 +1280,7 @@ class ImageViewBase(Callback.Callbacks):
             self.renderer.finalize()
 
             # finally update the window drawable from the offscreen surface
-            self.update_image()
+            self.update_widget()
 
             time_done = time.time()
             time_delta = time_start - self.time_last_redraw
@@ -2857,12 +2857,16 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.t_.set(enter_focus=tf)
 
-    def update_image(self):
-        """Update image.
+    def update_widget(self):
+        """Update the area corresponding to the backend widget.
         This must be implemented by subclasses.
 
         """
         self.logger.warning("Subclass should override this abstract method!")
+
+    # TO BE DEPRECATED--please use update_widget
+    def update_image(self):
+        return self.update_widget()
 
     def reschedule_redraw(self, time_sec):
         """Reschedule redraw event.

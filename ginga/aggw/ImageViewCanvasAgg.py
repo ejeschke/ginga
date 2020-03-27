@@ -34,7 +34,7 @@ class ImageViewCanvas(ImageViewAgg.ImageViewAgg,
     def reschedule_redraw(self, time_sec):
         pass
 
-    def update_image(self):
+    def update_widget(self):
         pass
 
     # METHODS THAT WERE IN IPG

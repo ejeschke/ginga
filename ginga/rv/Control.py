@@ -1923,11 +1923,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                      bindings=bd)
         fi.set_desired_size(size[0], size[1])
 
+        # Not quite ready for prime time...
         # Custom renderer set in channel settings?
-        r_name = settings.get('renderer', None)
-        if r_name is not None:
-            render_class = render.get_render_class(r_name)
-            fi.set_renderer(render_class(fi))
+        ## r_name = settings.get('renderer', None)
+        ## if r_name is not None:
+        ##     render_class = render.get_render_class(r_name)
+        ##     fi.set_renderer(render_class(fi))
 
         canvas = DrawingCanvas()
         canvas.enable_draw(False)

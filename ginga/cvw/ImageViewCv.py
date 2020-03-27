@@ -30,7 +30,7 @@ class ImageViewCv(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-    def update_image(self):
+    def update_widget(self):
         # no widget to update
         pass
 

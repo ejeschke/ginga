@@ -986,7 +986,7 @@ class Dial(Gtk.DrawingArea):
 
         cr.move_to(0, 0)
 
-        self.update_image()
+        self.update_widget()
 
     def normalize_angle(self, ang_deg):
         ang_deg = np.fmod(ang_deg + 360.0, 360.0)
@@ -1019,7 +1019,7 @@ class Dial(Gtk.DrawingArea):
         self.draw()
         return True
 
-    def update_image(self):
+    def update_widget(self):
         if self.surface is None:
             # window is not mapped/configured yet
             return

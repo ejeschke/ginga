@@ -32,7 +32,7 @@ class ImageViewPil(ImageView.ImageViewBase):
         # time_sec
         self.delayed_redraw()
 
-    def update_image(self):
+    def update_widget(self):
         # no widget to update
         pass
 

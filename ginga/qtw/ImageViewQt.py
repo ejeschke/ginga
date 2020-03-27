@@ -266,7 +266,7 @@ class ImageViewQt(ImageView.ImageViewBase):
     def prepare_image(self, cvs_img, cache, whence):
         self.renderer.prepare_image(cvs_img, cache, whence)
 
-    def update_image(self):
+    def update_widget(self):
         if self.imgwin is None:
             return
 

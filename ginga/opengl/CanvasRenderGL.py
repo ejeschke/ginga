@@ -8,6 +8,7 @@ import time
 import os.path
 import numpy as np
 import ctypes
+import threading
 
 from OpenGL import GL as gl
 
@@ -206,13 +207,17 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self._tex_cache = dict()
         self._levels = (0.0, 0.0)
         self._rgbmap_created = False
-        self.max_texture_dimension = 0
+        self._cmap_len = 256
+        self.max_texture_dim = 0
+        self.image_uploads = []
+        self.cmap_uploads = []
 
         self.pgm_mgr = GlHelp.ShaderManager(self.logger)
 
         self.fbo = None
         self.color_buf = None
         self.depth_buf = None
+        self.lock = threading.RLock()
 
     def set_3dmode(self, tf):
         self.mode3d = tf
@@ -230,7 +235,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             width, height = dims[:2]
             self.gl_resize(width, height)
 
-            self.viewer.update_image()
+            self.viewer.update_widget()
 
             # this is necessary for other widgets to get the same kind of
             # callback as for the standard pixel renderer
@@ -239,13 +244,13 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     def scale(self, scales):
         self.camera.scale_2d(scales[:2])
 
-        self.viewer.update_image()
+        self.viewer.update_widget()
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
         self.viewer.make_callback('redraw', 0.0)
 
     def pan(self, pos):
-        self.viewer.update_image()
+        self.viewer.update_widget()
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
         self.viewer.make_callback('redraw', 0.0)
@@ -253,21 +258,23 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     def rotate_2d(self, ang_deg):
         self.camera.rotate_2d(ang_deg)
 
-        self.viewer.update_image()
+        self.viewer.update_widget()
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
         self.viewer.make_callback('redraw', 2.6)
 
     def rgbmap_change(self, rgbmap):
-        self.gl_set_cmap(rgbmap)
+        if rgbmap not in self.cmap_uploads:
+            self.cmap_uploads.append(rgbmap)
+        #self.gl_set_cmap(rgbmap)
 
-        self.viewer.update_image()
+        self.viewer.update_widget()
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
         self.viewer.make_callback('redraw', 2.0)
 
     def bg_change(self, bg):
-        self.viewer.update_image()
+        self.viewer.update_widget()
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
         self.viewer.make_callback('redraw', 3.0)
@@ -275,7 +282,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     def levels_change(self, levels):
         self._levels = levels
 
-        self.viewer.update_image()
+        self.viewer.update_widget()
         # this is necessary for other widgets to get the same kind of
         # callback as for the standard pixel renderer
         self.viewer.make_callback('redraw', 1.0)
@@ -288,8 +295,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         viewer = self.viewer
 
         if (whence <= 0.0) or (cache.cutout is None) or (not cvs_img.optimize):
-            # TODO: images larger than self.max_texture_dim in any
-            # dimension need to be downsampled to fit!
 
             # get destination location in data_coords
             dst_x, dst_y = cvs_img.crdmap.to_data((cvs_img.x, cvs_img.y))
@@ -313,6 +318,18 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
                                            (_scale_x, _scale_y),
                                            method=interp)
             data = res.data
+
+            # We are limited by maximum texture size supported for the
+            # OpenGl implementation.  Images larger than the maximum
+            # in any dimension need to be downsampled to fit.
+            ht, wd = data.shape[:2]
+            extra = max(wd, ht) - self.max_texture_dim
+            if extra > 0:
+                new_wd, new_ht = wd - extra, ht - extra
+                tup = trcalc.get_scaled_cutout_wdht(data, 0, 0, wd, ht,
+                                                    new_wd, new_ht,
+                                                    logger=self.logger)
+                data = tup[0]
 
             if cvs_img.flipy:
                 data = np.flipud(data)
@@ -428,8 +445,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         else:
             raise render.RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
 
-        tex_id = self.get_texture_id(cvs_img.image_id)
-        self.gl_set_image(tex_id, img_arr)
+        #tex_id = self.get_texture_id(cvs_img.image_id)
+        #self.gl_set_image(tex_id, img_arr)
+        self.image_uploads.append((cvs_img.image_id, img_arr))
 
     def get_texture_id(self, image_id):
         tex_id = self._tex_cache.get(image_id, None)
@@ -474,10 +492,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         if self.use_offscreen_fbo:
             self.create_offscreen_fbo()
-
-        ## r, g, b = self.viewer.img_bg
-        ## gl.glClearColor(r, g, b, 1.0)
-        ## gl.glClearDepth(1.0)
 
         # --- line drawing shaders ---
         self.pgm_mgr.load_program('shape', shader_dir)
@@ -540,11 +554,13 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         self.cmap_buf = gl.glGenBuffers(1)
         gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, self.cmap_buf)
-        gl.glBufferData(gl.GL_TEXTURE_BUFFER, 256 * 4, None, gl.GL_DYNAMIC_DRAW)
+        gl.glBufferData(gl.GL_TEXTURE_BUFFER, self._cmap_len * 4, None,
+                        gl.GL_DYNAMIC_DRAW)
         gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, 0)
 
         rgbmap = self.viewer.get_rgbmap()
-        self.gl_set_cmap(rgbmap)
+        if rgbmap not in self.cmap_uploads:
+            self.cmap_uploads.append(rgbmap)
 
         gl.glDisable(gl.GL_CULL_FACE)
         gl.glFrontFace(gl.GL_CCW)
@@ -553,11 +569,11 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     def gl_set_image(self, tex_id, img_arr):
         """NOTE: this is a slow operation--downloading a texture."""
         print('gl_set_image')
-        context = self.viewer.make_context_current()
+        #context = self.viewer.make_context_current()
 
         ht, wd = img_arr.shape[:2]
 
-        gl.glActiveTexture(gl.GL_TEXTURE0 + 0)
+        #gl.glActiveTexture(gl.GL_TEXTURE0 + 0)
         gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER,
                            gl.GL_NEAREST)
@@ -583,18 +599,23 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
     def gl_set_cmap(self, rgbmap):
-        # TODO: this does not work with 'histeq' color distribution or
-        # when hashsize != 256
-        idx = rgbmap.get_hasharray(np.arange(0, 256))
+        # TODO: this does not yet work with 'histeq' color distribution
+        # Downsample color distribution hash to our opengl colormap length
+        hashsize = rgbmap.get_hash_size()
+        idx = rgbmap.get_hasharray(np.arange(0, hashsize))
+        xi = (np.arange(0, self._cmap_len) * (hashsize / self._cmap_len)).clip(0, hashsize).astype(np.uint)
+        if len(xi) != self._cmap_len:
+            raise render.RenderError("Error generating color hash table index: size mismatch {} != {}".format(len(xi), self._cmap_len))
+
+        idx = idx[xi]
         img_arr = np.ascontiguousarray(rgbmap.arr[rgbmap.sarr[idx]],
                                        dtype=np.uint8)
 
         # append alpha channel
         wd = img_arr.shape[0]
-        alpha = np.full((wd, 1), 255, dtype=np.uint8)
+        alpha = np.full((wd, 1), self._cmap_len - 1, dtype=np.uint8)
         img_arr = np.concatenate((img_arr, alpha), axis=1)
-        rgbmap_id = "{}_rgbmap".format(self.viewer.viewer_id)
-        map_id = self.get_texture_id(rgbmap_id)
+        map_id = self.get_texture_id(rgbmap.mapper_id)
 
         # transfer colormap info to GPU buffer
         print('gl_set_cmap', img_arr.shape, img_arr.dtype)
@@ -602,19 +623,10 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, self.cmap_buf)
         gl.glBufferSubData(gl.GL_TEXTURE_BUFFER, 0, img_arr)
         gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, 0)
+        print('uploaded', rgbmap.mapper_id)
 
-    ## def gl_set_image_interpolation(self, interp):
-    ##     gl.glBindTexture(gl.GL_TEXTURE_2D, self.tex_id)
-    ##     if interp in ['nearest', 'basic']:
-    ##         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER,
-    ##                            gl.GL_NEAREST)
-    ##         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER,
-    ##                            gl.GL_NEAREST)
-    ##     elif interp in ['bilinear']:
-    ##         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER,
-    ##                            gl.GL_LINEAR)
-    ##         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER,
-    ##                            gl.GL_LINEAR)
+    def gl_set_image_interpolation(self, interp):
+        pass
 
     def gl_draw_image(self, cvs_img, cp):
         if not self._drawing:
@@ -625,8 +637,8 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         cache = cvs_img.get_cache(self.viewer)
         # TODO: put tex_id in cache?
         tex_id = self.get_texture_id(cvs_img.image_id)
-        rgbmap_id = "{}_rgbmap".format(self.viewer.viewer_id)
-        map_id = self.get_texture_id(rgbmap_id)
+        rgbmap = self.viewer.get_rgbmap()
+        map_id = self.get_texture_id(rgbmap.mapper_id)
         self.pgm_mgr.setup_program('image')
         gl.glBindVertexArray(self.vao_img)
 
@@ -650,12 +662,18 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         _loc = self.pgm_mgr.get_uniform_loc("image_type")
         gl.glUniform1i(_loc, cache.image_type)
 
-        # TODO: if image has set levels, use those
+        # if image has fixed cut levels, use those
+        cuts = getattr(cvs_img, 'cuts', None)
+        if cuts is not None:
+            loval, hival = cuts
+        else:
+            loval, hival = self._levels
+
         _loc = self.pgm_mgr.get_uniform_loc("loval")
-        gl.glUniform1f(_loc, self._levels[0])
+        gl.glUniform1f(_loc, loval)
 
         _loc = self.pgm_mgr.get_uniform_loc("hival")
-        gl.glUniform1f(_loc, self._levels[1])
+        gl.glUniform1f(_loc, hival)
 
         # pad with z=0 coordinate if lacking
         vertices = trcalc.pad_z(cp, dtype=np.float32)
@@ -742,6 +760,13 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         self.pgm_mgr.setup_program(None)
 
+    def show_errors(self):
+        while True:
+            err = gl.glGetError()
+            if err == gl.GL_NO_ERROR:
+                return
+            self.logger.error("gl error: {}".format(err))
+
     def gl_resize(self, width, height):
         print('gl_resize')
         self.wd, self.ht = width, height
@@ -757,24 +782,43 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             self.create_offscreen_fbo()
 
     def gl_paint(self):
+        if self._drawing:
+            return
         print('gl_paint')
-        context = self.viewer.make_context_current()
-        self._drawing = True
-        try:
-            gl.glDepthFunc(gl.GL_LEQUAL)
-            gl.glEnable(gl.GL_DEPTH_TEST)
+        with self.lock:
+            context = self.viewer.make_context_current()
 
-            r, g, b = self.viewer.img_bg
-            gl.glClearColor(r, g, b, 1.0)
-            gl.glClearDepth(1.0)
-            gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+            # perform any necessary image updates
+            uploads, self.image_uploads = self.image_uploads, []
+            for image_id, img_arr in uploads:
+                tex_id = self.get_texture_id(image_id)
+                self.gl_set_image(tex_id, img_arr)
 
-            cr = RenderContext(self, self.viewer, self.surface)
-            self.draw_vector(cr)
+            # perform any necessary rgbmap updates
+            rgbmap = self.viewer.get_rgbmap()
+            if not rgbmap in self.cmap_uploads:
+                self.cmap_uploads.append(rgbmap)
+            uploads, self.cmap_uploads = self.cmap_uploads, []
+            for rgbmap in uploads:
+                self.gl_set_cmap(rgbmap)
 
-        finally:
-            self._drawing = False
-            gl.glFlush()
+            self._drawing = True
+            try:
+                gl.glDepthFunc(gl.GL_LEQUAL)
+                gl.glEnable(gl.GL_DEPTH_TEST)
+
+                r, g, b = self.viewer.img_bg
+                gl.glClearColor(r, g, b, 1.0)
+                gl.glClearDepth(1.0)
+                gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+
+                cr = RenderContext(self, self.viewer, self.surface)
+                self.draw_vector(cr)
+
+            finally:
+                self._drawing = False
+                gl.glFlush()
+                self.show_errors()
 
     def create_offscreen_fbo(self):
         if self.fbo is not None:

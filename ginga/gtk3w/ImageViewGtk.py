@@ -56,6 +56,9 @@ class ImageViewGtk(ImageView.ImageViewBase):
 
             renderers = ['cairo', 'agg', 'pil', 'opencv']
             self.t_.set_defaults(renderer='cairo')
+            if self.t_['renderer'] == 'opengl':
+                # currently cannot use opengl renderer except with GLArea
+                self.t_.set(renderer='cairo')
 
             if sys.byteorder == 'little':
                 self.rgb_order = 'BGRA'
@@ -80,7 +83,9 @@ class ImageViewGtk(ImageView.ImageViewBase):
             imgwin.set_auto_render(False)
 
             renderers = ['opengl']
-            self.t_.set_defaults(renderer='opengl')
+            # currently can only use opengl renderer with GLArea
+            #self.t_.set_defaults(renderer='opengl')
+            self.t_.set(renderer='opengl')
             self.rgb_order = 'RGBA'
 
             # we replace some transforms in the catalog for OpenGL rendering
@@ -185,7 +190,7 @@ class ImageViewGtk(ImageView.ImageViewBase):
                                                               cairo.FORMAT_ARGB32,
                                                               dawd, daht, stride)
 
-    def update_image(self):
+    def update_widget(self):
         if self.imgwin is None:
             return
 
