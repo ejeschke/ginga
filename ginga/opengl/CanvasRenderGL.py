@@ -190,7 +190,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.kind = 'opengl'
         self.rgb_order = 'RGBA'
         self.surface = self.viewer.get_widget()
-        self.use_offscreen_fbo = False
+        self.use_offscreen_fbo = True
 
         # size of our GL viewport
         # these will change when the resize() is called
@@ -206,7 +206,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self._initialized = False
         self._tex_cache = dict()
         self._levels = (0.0, 0.0)
-        self._rgbmap_created = False
         self._cmap_len = 256
         self.max_texture_dim = 0
         self.image_uploads = []
@@ -215,6 +214,8 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.pgm_mgr = GlHelp.ShaderManager(self.logger)
 
         self.fbo = None
+        #self.cur_fbo = None
+        self.fbo_size = (0, 0)
         self.color_buf = None
         self.depth_buf = None
         self.lock = threading.RLock()
@@ -778,15 +779,15 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.camera.set_viewport_dimensions(width, height)
         self.camera.calc_gl_transform()
 
-        if self.use_offscreen_fbo:
-            self.create_offscreen_fbo()
+        ## if self.use_offscreen_fbo:
+        ##     self.create_offscreen_fbo()
 
     def gl_paint(self):
-        if self._drawing:
-            return
         print('gl_paint')
         with self.lock:
             context = self.viewer.make_context_current()
+            ## if self.cur_fbo is None:
+            ##     self.cur_fbo = gl.glGetIntegerv(gl.GL_FRAMEBUFFER_BINDING)
 
             # perform any necessary image updates
             uploads, self.image_uploads = self.image_uploads, []
@@ -824,12 +825,14 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         if self.fbo is not None:
             self.delete_fbo_buffers()
         width, height = self.dims
+        self.fbo_size = self.dims
         self.color_buf = gl.glGenRenderbuffers(1)
         self.depth_buf = gl.glGenRenderbuffers(1)
 
         # binds created FBO to context both for read and draw
         self.fbo = gl.glGenFramebuffers(1)
         gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.fbo)
+        gl.glViewport(0, 0, width, height)
 
         # bind color render buffer
         gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.color_buf)
@@ -844,15 +847,17 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         ## gl.glFramebufferRenderbuffer(gl.GL_FRAMEBUFFER, gl.GL_DEPTH_ATTACHMENT,
         ##                              gl.GL_RENDERBUFFER, self.depth_buf)
 
-        gl.glDrawBuffers(1, [gl.GL_COLOR_ATTACHMENT0])
+        self.drawbuffers = [gl.GL_COLOR_ATTACHMENT0]
+        gl.glDrawBuffers(1, self.drawbuffers)
 
         # check FBO status
         status = gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER);
-        if status != gl.GL_FRAMEBUFFER_COMPLETE:
-            raise render.RenderError("Error initializing offscreen framebuffer: status={}".format(status))
+        ## if status != gl.GL_FRAMEBUFFER_COMPLETE:
+        ##     raise render.RenderError("Error initializing offscreen framebuffer: status={}".format(status))
+        gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
 
     def delete_fbo_buffers(self):
-        gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
+        #gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
         if self.color_buf is not None:
             gl.glDeleteRenderbuffers(1, [self.color_buf])
             self.color_buf = None
@@ -862,15 +867,31 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         if self.fbo is not None:
             gl.glDeleteFramebuffers(1, [self.fbo])
             self.fbo = None
+        self.fbo_size = (0, 0)
 
     def get_surface_as_array(self, order='RGBA'):
         print('get_surface_as_array')
+        if self.dims != self.fbo_size:
+            self.create_offscreen_fbo()
         width, height = self.dims
-        gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)
-        if self.use_offscreen_fbo:
-            gl.glReadBuffer(gl.GL_COLOR_ATTACHMENT0)
-        img_buf = gl.glReadPixels(0, 0, width, height, gl.GL_RGBA,
-                                  gl.GL_UNSIGNED_BYTE)
+
+        context = self.viewer.make_context_current()
+
+        gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.fbo)
+        ## if self.use_offscreen_fbo:
+        ##     gl.glReadBuffer(gl.GL_COLOR_ATTACHMENT0)
+
+        try:
+            self.gl_paint()
+            img_buf = gl.glReadPixels(0, 0, width, height, gl.GL_RGBA,
+                                      gl.GL_UNSIGNED_BYTE)
+            print("read pixels")
+        finally:
+            #gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.cur_fbo)
+            #gl.glDrawBuffer(gl.GL_BACK)
+            pass
+        print("end use framebuffer")
+
         img_np = np.frombuffer(img_buf, dtype=np.uint8).reshape(height,
                                                                 width, 4)
         img_np = np.flipud(img_np)
@@ -879,6 +900,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             return img_np
 
         img_np = trcalc.reorder_image(order, img_np, 'RGBA')
+        print("returning array")
         return img_np
 
     def initialize(self):
