@@ -43,7 +43,7 @@ try:
     from qtpy.QtGui import (QImage, QColor, QFont, QPixmap, QIcon, QCursor,
                             QPainter, QPen, QPolygonF, QPolygon, QTextCursor,
                             QDrag, QPainterPath, QBrush, QFontDatabase,
-                            QFontMetrics)  # noqa
+                            QFontMetrics, QSurfaceFormat)  # noqa
     from qtpy.QtWidgets import QOpenGLWidget  # noqa
     from qtpy.QtCore import QItemSelectionModel  # noqa
     from qtpy.QtWidgets import QApplication  # noqa

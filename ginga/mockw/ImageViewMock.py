@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
-import numpy as np
 
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.io_rgb import RGBFileHandler

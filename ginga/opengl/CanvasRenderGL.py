@@ -371,14 +371,12 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         image_order = cvs_img.image.get_order()
 
-        print('prepare norm image', whence)
         if (whence <= 0.0) or (not cvs_img.optimize):
             # if image has an alpha channel, then strip it off and save
             # it until it is recombined later with the colorized output
             # this saves us having to deal with an alpha band in the
             # cuts leveling and RGB mapping routines
             img_arr = cache.cutout
-            print('cutout', img_arr.shape, img_arr.dtype)
             if 'A' not in image_order:
                 cache.alpha = None
             else:
@@ -441,7 +439,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             else:
                 img_arr = cache.rgbarr
                 cache.image_type = 1
-            print('img_arr', img_arr.dtype, img_arr.shape)
 
         else:
             raise render.RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
@@ -454,7 +451,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         tex_id = self._tex_cache.get(image_id, None)
         if tex_id is None:
             context = self.viewer.make_context_current()
-            print('get_texture_id', image_id)
             tex_id = gl.glGenTextures(1)
             self._tex_cache[image_id] = tex_id
         return tex_id
@@ -479,7 +475,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
     def gl_initialize(self):
         global opengl_version
-        print('gl_initialize')
         context = self.viewer.make_context_current()
 
         d = self.getOpenGLInfo()
@@ -569,12 +564,10 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
     def gl_set_image(self, tex_id, img_arr):
         """NOTE: this is a slow operation--downloading a texture."""
-        print('gl_set_image')
         #context = self.viewer.make_context_current()
 
         ht, wd = img_arr.shape[:2]
 
-        #gl.glActiveTexture(gl.GL_TEXTURE0 + 0)
         gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER,
                            gl.GL_NEAREST)
@@ -591,12 +584,12 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
             gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
                             gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_arr)
-            print('uploaded rgbarr')
+            self.logger.debug("uploaded rgbarr as texture {}".format(tex_id))
         else:
             gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
             gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, wd, ht, 0,
                             gl.GL_RED, gl.GL_FLOAT, img_arr)
-            print('uploaded mono')
+            self.logger.debug("uploaded mono as texture {}".format(tex_id))
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
     def gl_set_cmap(self, rgbmap):
@@ -619,14 +612,14 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         map_id = self.get_texture_id(rgbmap.mapper_id)
 
         # transfer colormap info to GPU buffer
-        print('gl_set_cmap', img_arr.shape, img_arr.dtype)
-        context = self.viewer.make_context_current()
+        #context = self.viewer.make_context_current()
         gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, self.cmap_buf)
         gl.glBufferSubData(gl.GL_TEXTURE_BUFFER, 0, img_arr)
         gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, 0)
-        print('uploaded', rgbmap.mapper_id)
+        self.logger.debug("uploaded cmap as texture buffer {}".format(map_id))
 
     def gl_set_image_interpolation(self, interp):
+        # TODO
         pass
 
     def gl_draw_image(self, cvs_img, cp):
@@ -659,7 +652,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         _loc = self.pgm_mgr.get_uniform_loc("color_map")
         gl.glUniform1i(_loc, 1)
 
-        print('cache image type', cache.image_type)
         _loc = self.pgm_mgr.get_uniform_loc("image_type")
         gl.glUniform1i(_loc, cache.image_type)
 
@@ -769,7 +761,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             self.logger.error("gl error: {}".format(err))
 
     def gl_resize(self, width, height):
-        print('gl_resize')
         self.wd, self.ht = width, height
 
         context = self.viewer.make_context_current()
@@ -783,7 +774,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         ##     self.create_offscreen_fbo()
 
     def gl_paint(self):
-        print('gl_paint')
         with self.lock:
             context = self.viewer.make_context_current()
             ## if self.cur_fbo is None:
@@ -797,7 +787,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
             # perform any necessary rgbmap updates
             rgbmap = self.viewer.get_rgbmap()
-            if not rgbmap in self.cmap_uploads:
+            if rgbmap not in self.cmap_uploads:
                 self.cmap_uploads.append(rgbmap)
             uploads, self.cmap_uploads = self.cmap_uploads, []
             for rgbmap in uploads:
@@ -851,7 +841,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glDrawBuffers(1, self.drawbuffers)
 
         # check FBO status
-        status = gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER);
+        status = gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER)
         ## if status != gl.GL_FRAMEBUFFER_COMPLETE:
         ##     raise render.RenderError("Error initializing offscreen framebuffer: status={}".format(status))
         gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
@@ -870,7 +860,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.fbo_size = (0, 0)
 
     def get_surface_as_array(self, order='RGBA'):
-        print('get_surface_as_array')
         if self.dims != self.fbo_size:
             self.create_offscreen_fbo()
         width, height = self.dims
@@ -885,12 +874,10 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             self.gl_paint()
             img_buf = gl.glReadPixels(0, 0, width, height, gl.GL_RGBA,
                                       gl.GL_UNSIGNED_BYTE)
-            print("read pixels")
         finally:
             #gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.cur_fbo)
             #gl.glDrawBuffer(gl.GL_BACK)
             pass
-        print("end use framebuffer")
 
         img_np = np.frombuffer(img_buf, dtype=np.uint8).reshape(height,
                                                                 width, 4)
@@ -900,7 +887,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             return img_np
 
         img_np = trcalc.reorder_image(order, img_np, 'RGBA')
-        print("returning array")
         return img_np
 
     def initialize(self):
@@ -921,6 +907,15 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         cr.set_font(font.fontname, font.fontsize, color=font.color,
                     alpha=font.alpha)
         return cr.text_extents(text)
+
+    def calc_const_len(self, clen):
+        # zoom is accomplished by viewing distance in OpenGL, so we
+        # have to adjust clen by scale to get a constant size
+        scale = self.viewer.get_scale_max()
+        return clen / scale
+
+    def scale_fontsize(self, fontsize):
+        return fontsize
 
     def get_dimensions(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)

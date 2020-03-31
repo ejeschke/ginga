@@ -37,7 +37,8 @@ class RenderContextBase(object):
         self.renderkey = renderer.kind
 
     def scale_fontsize(self, fontsize):
-        return font_asst.scale_fontsize(self.renderkey, fontsize)
+        # TO BE EVENTUALLY DEPRECATED
+        return self.renderer.scale_fontsize(fontsize)
 
 
 class RendererBase(object):
@@ -836,6 +837,13 @@ class StandardPixelRenderer(RendererBase):
 
     def get_center(self):
         return (self._ctr_x, self._ctr_y)
+
+    def calc_const_len(self, clen):
+        # For standard pixel renderer, pixel size is constant
+        return clen
+
+    def scale_fontsize(self, fontsize):
+        return font_asst.scale_fontsize(self.kind, fontsize)
 
 
 def get_render_class(rtype):

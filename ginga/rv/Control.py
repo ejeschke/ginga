@@ -30,7 +30,6 @@ from ginga.util import viewer as gviewer
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.canvas.types.image import Image
-from ginga.canvas import render
 
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager
@@ -1922,13 +1921,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                      render=wtype,
                                      bindings=bd)
         fi.set_desired_size(size[0], size[1])
-
-        # Not quite ready for prime time...
-        # Custom renderer set in channel settings?
-        ## r_name = settings.get('renderer', None)
-        ## if r_name is not None:
-        ##     render_class = render.get_render_class(r_name)
-        ##     fi.set_renderer(render_class(fi))
 
         canvas = DrawingCanvas()
         canvas.enable_draw(False)

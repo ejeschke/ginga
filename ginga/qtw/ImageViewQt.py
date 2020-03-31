@@ -11,8 +11,8 @@ import numpy as np
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
 from ginga.qtw.QtHelp import (QtGui, QtCore, QImage, QPixmap, QCursor,
-                              QPainter, QOpenGLWidget, Timer,
-                              get_scroll_info, get_painter)
+                              QPainter, QOpenGLWidget, QSurfaceFormat,
+                              Timer, get_scroll_info, get_painter)
 
 from .CanvasRenderQt import CanvasRenderer
 
@@ -20,13 +20,6 @@ have_opengl = False
 try:
     from ginga.opengl.CanvasRenderGL import CanvasRenderer as OpenGLRenderer
     from ginga.opengl.GlHelp import get_transforms
-
-    # ensure we are using at least opengl >= 4.5
-    from PyQt5.QtGui import QSurfaceFormat
-    fmt = QSurfaceFormat()
-    fmt.setVersion(4, 5)
-    fmt.setProfile(QSurfaceFormat.CoreProfile)
-    fmt.setDefaultFormat(fmt)
 
     have_opengl = True
 except ImportError:
@@ -129,15 +122,14 @@ class RenderGLWidget(QOpenGLWidget):
 
         self.viewer = None
 
+        # ensure we are using at least opengl >= 4.5 core
+        fmt = QSurfaceFormat()
+        fmt.setVersion(4, 5)
+        fmt.setProfile(QSurfaceFormat.CoreProfile)
+        #fmt.setDefaultFormat(fmt)
+        self.setFormat(fmt)
+
     def initializeGL(self):
-
-        ## version = QOpenGLVersionProfile()
-        ## version.setVersion(3, 3)
-
-        ## context.setFormat(self.requestedFormat())
-        ## #ver = context.versionFunctions(version)
-        ## #print(ver)
-
         self.viewer.renderer.gl_initialize()
 
     def resizeGL(self, width, height):

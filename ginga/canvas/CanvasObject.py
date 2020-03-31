@@ -157,12 +157,14 @@ class CanvasObjectBase(Callback.Callbacks):
                 # Draw edit control points in different colors than the others
                 if isinstance(pt, EditPoint):
                     cr.set_fill('black', alpha=alpha)
-                    cr.draw_circle(cx, cy, radius + 2.0)
+                    r = cr.renderer.calc_const_len(radius + 2.0)
+                    cr.draw_circle(cx, cy, r)
 
                     color = pt.edit_color
 
                 cr.set_fill(color, alpha=alpha)
-                cr.draw_circle(cx, cy, radius)
+                r = cr.renderer.calc_const_len(radius)
+                cr.draw_circle(cx, cy, r)
                 #cr.set_fill(self, None)
             i += 1
 
