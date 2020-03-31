@@ -27,7 +27,7 @@ except ImportError:
     pass
 
 # set to True to debug window painting
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 
 class ImageViewQtError(ImageView.ImageViewError):
