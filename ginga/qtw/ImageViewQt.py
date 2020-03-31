@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
+import tempfile
 
 import numpy as np
 
@@ -26,7 +27,7 @@ except ImportError:
     pass
 
 # set to True to debug window painting
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 
 class ImageViewQtError(ImageView.ImageViewError):
@@ -97,7 +98,7 @@ class RenderWidget(QtGui.QWidget):
         painter.drawPixmap(rect, pixmap, rect)
         if DEBUG_MODE:
             qimage = pixmap.toImage()
-            qimage.save('/tmp/final_image.png', format='png')
+            save_debug_image(qimage, 'final_image.png', format='png')
 
     def resizeEvent(self, event):
         rect = self.geometry()
@@ -274,7 +275,7 @@ class ImageViewQt(ImageView.ImageViewBase):
 
             if DEBUG_MODE:
                 qimage = self.pixmap.toImage()
-                qimage.save('/tmp/offscreen_image.png', format='png', quality=90)
+                save_debug_image(qimage, 'offscreen_image.png', format='png')
 
         else:
             if self.pixmap is None:
@@ -308,7 +309,7 @@ class ImageViewQt(ImageView.ImageViewBase):
                               QtCore.QRect(0, 0, width, height))
 
             if DEBUG_MODE:
-                qimage.save('/tmp/offscreen_image.png', format='png')
+                save_debug_image(qimage, 'offscreen_image.png', format='png')
 
         self.logger.debug("updating window from pixmap")
         if hasattr(self, 'scene'):
@@ -1036,4 +1037,6 @@ class ScrolledView(QtGui.QAbstractScrollArea):
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
 
 
-#END
+def save_debug_image(qimage, filename, format='png'):
+    path = os.path.join(tempfile.gettempdir(), filename)
+    qimage.save(path, format=format)

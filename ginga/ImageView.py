@@ -1020,9 +1020,9 @@ class ImageViewBase(Callback.Callbacks):
 
         Parameters
         ----------
-        whence : {0, 1, 2, 3}
-            Optimization flag that reduces the time to create
-            the RGB object by only recalculating what is necessary:
+        whence : int or float
+            Optimization flag that reduces the time to refresh the
+            viewer by only recalculating what is necessary:
 
                 0: New image, pan/scale has changed
                 1: Cut levels or similar has changed
