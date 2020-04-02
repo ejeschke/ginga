@@ -9,6 +9,7 @@ import os.path
 import numpy as np
 import ctypes
 import threading
+from distutils.version import LooseVersion
 
 from OpenGL import GL as gl
 
@@ -24,7 +25,7 @@ from .glsl import __file__
 shader_dir, _ = os.path.split(__file__)
 
 # NOTE: we update the version later in gl_initialize()
-opengl_version = 3.0
+opengl_version = LooseVersion('3.0')
 
 
 class RenderContext(render.RenderContextBase):
@@ -484,7 +485,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
                          "Shader: '%(shader_version)s' "
                          "Max texture: '%(max_tex)s'" % d)
 
-        opengl_version = float(d['opengl_version'].split(' ')[0])
+        opengl_version = LooseVersion(d['opengl_version'].split(' ')[0])
 
         if self.use_offscreen_fbo:
             self.create_offscreen_fbo()
