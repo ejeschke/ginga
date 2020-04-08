@@ -9,6 +9,7 @@ import os
 import numpy as np
 
 from ginga.gtk3w import GtkHelp
+from ginga.opengl.glsl import req
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
 from ginga.canvas import render
@@ -74,13 +75,14 @@ class ImageViewGtk(ImageView.ImageViewBase):
             #   GDK_GL=software-draw-surface
             #
             imgwin = Gtk.GLArea()
+            imgwin.set_required_version(req.major, req.minor)
+            imgwin.set_has_depth_buffer(False)
+            imgwin.set_has_stencil_buffer(False)
+            imgwin.set_auto_render(False)
 
             imgwin.connect('realize', self.on_realize_cb)
             imgwin.connect('render', self.on_render_cb)
             imgwin.connect("resize", self.configure_glarea_cb)
-            imgwin.set_has_depth_buffer(False)
-            imgwin.set_has_stencil_buffer(False)
-            imgwin.set_auto_render(False)
 
             renderers = ['opengl']
             # currently can only use opengl renderer with GLArea

@@ -215,7 +215,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.pgm_mgr = GlHelp.ShaderManager(self.logger)
 
         self.fbo = None
-        #self.cur_fbo = None
         self.fbo_size = (0, 0)
         self.color_buf = None
         self.depth_buf = None
@@ -771,14 +770,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.camera.set_viewport_dimensions(width, height)
         self.camera.calc_gl_transform()
 
-        ## if self.use_offscreen_fbo:
-        ##     self.create_offscreen_fbo()
-
     def gl_paint(self):
         with self.lock:
             context = self.viewer.make_context_current()
-            ## if self.cur_fbo is None:
-            ##     self.cur_fbo = gl.glGetIntegerv(gl.GL_FRAMEBUFFER_BINDING)
 
             # perform any necessary image updates
             uploads, self.image_uploads = self.image_uploads, []
@@ -842,13 +836,14 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glDrawBuffers(1, self.drawbuffers)
 
         # check FBO status
-        status = gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER)
+        # TODO: returning a non-zero status, even though it seems to be working
+        # fine.
+        ## status = gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER)
         ## if status != gl.GL_FRAMEBUFFER_COMPLETE:
         ##     raise render.RenderError("Error initializing offscreen framebuffer: status={}".format(status))
         gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
 
     def delete_fbo_buffers(self):
-        #gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
         if self.color_buf is not None:
             gl.glDeleteRenderbuffers(1, [self.color_buf])
             self.color_buf = None
@@ -867,7 +862,12 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         context = self.viewer.make_context_current()
 
+        # some widget sets use a non-default FBO for rendering, so save
+        # and restore
+        cur_fbo = gl.glGetIntegerv(gl.GL_FRAMEBUFFER_BINDING)
+
         gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.fbo)
+        gl.glViewport(0, 0, width, height)
         ## if self.use_offscreen_fbo:
         ##     gl.glReadBuffer(gl.GL_COLOR_ATTACHMENT0)
 
@@ -876,9 +876,10 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             img_buf = gl.glReadPixels(0, 0, width, height, gl.GL_RGBA,
                                       gl.GL_UNSIGNED_BYTE)
         finally:
-            #gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.cur_fbo)
-            #gl.glDrawBuffer(gl.GL_BACK)
-            pass
+            gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, cur_fbo)
+
+        # seems to be necessary to redraw the main window
+        self.viewer.update_widget()
 
         img_np = np.frombuffer(img_buf, dtype=np.uint8).reshape(height,
                                                                 width, 4)

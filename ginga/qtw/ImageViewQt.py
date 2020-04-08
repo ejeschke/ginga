@@ -21,6 +21,13 @@ have_opengl = False
 try:
     from ginga.opengl.CanvasRenderGL import CanvasRenderer as OpenGLRenderer
     from ginga.opengl.GlHelp import get_transforms
+    from ginga.opengl.glsl import req
+
+    # ensure we are using correct version of opengl
+    fmt = QSurfaceFormat()
+    fmt.setVersion(req.major, req.minor)
+    fmt.setProfile(QSurfaceFormat.CoreProfile)
+    fmt.setDefaultFormat(fmt)
 
     have_opengl = True
 except ImportError:
@@ -124,11 +131,11 @@ class RenderGLWidget(QOpenGLWidget):
         self.viewer = None
 
         # ensure we are using at least opengl >= 4.5 core
-        fmt = QSurfaceFormat()
-        fmt.setVersion(4, 5)
-        fmt.setProfile(QSurfaceFormat.CoreProfile)
-        #fmt.setDefaultFormat(fmt)
-        self.setFormat(fmt)
+        ## fmt = QSurfaceFormat()
+        ## fmt.setVersion(4, 5)
+        ## fmt.setProfile(QSurfaceFormat.CoreProfile)
+        ## #fmt.setDefaultFormat(fmt)
+        ## self.setFormat(fmt)
 
     def initializeGL(self):
         self.viewer.renderer.gl_initialize()
