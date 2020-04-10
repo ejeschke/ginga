@@ -89,7 +89,7 @@ class GingaVision(object):
         vbox.set_border_width(2)
         vbox.set_spacing(1)
 
-        fi = Viewers.CanvasView(logger=logger)
+        fi = Viewers.CanvasView(logger=logger, render=options.render)
         fi.set_autocut_params('histogram')
         fi.enable_autozoom('off')
         fi.enable_autocenter('once')
@@ -294,6 +294,8 @@ if __name__ == '__main__':
     argprs.add_argument("--profile", dest="profile", action="store_true",
                         default=False,
                         help="Run the profiler on main()")
+    argprs.add_argument("-r", "--render", dest="render", default='widget',
+                        help="Set render type {widget|opengl}")
     log.addlogopts(argprs)
 
     (options, args) = argprs.parse_known_args(sys.argv[1:])
