@@ -40,10 +40,10 @@ qtpy_import_error = ""
 try:
     from qtpy import QtCore
     from qtpy import QtWidgets as QtGui
-    from qtpy.QtGui import (QImage, QColor, QFont, QPixmap, QIcon, QCursor,
+    from qtpy.QtGui import (QImage, QColor, QFont, QPixmap, QIcon,  # noqa
                             QPainter, QPen, QPolygonF, QPolygon, QTextCursor,
                             QDrag, QPainterPath, QBrush, QFontDatabase,
-                            QFontMetrics, QSurfaceFormat)  # noqa
+                            QCursor, QFontMetrics, QSurfaceFormat)
     from qtpy.QtWidgets import QOpenGLWidget  # noqa
     from qtpy.QtCore import QItemSelectionModel  # noqa
     from qtpy.QtWidgets import QApplication  # noqa
