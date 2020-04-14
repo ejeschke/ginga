@@ -4,6 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import numpy as np
+
 from ginga.canvas import render
 from ginga.fonts import font_asst
 # force registration of all canvas types
@@ -59,7 +61,14 @@ class RenderContext(render.RenderContextBase):
         height = 15
         return width, height
 
+    def setup_pen_brush(self, pen, brush):
+        pass
+
     ##### DRAWING OPERATIONS #####
+
+    def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
+        # no-op for this renderer
+        pass
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         #self.cr.draw_text(cx, cy, text)
@@ -93,13 +102,26 @@ class RenderContext(render.RenderContextBase):
         pass
 
 
-class CanvasRenderer(render.RendererBase):
+class CanvasRenderer(render.StandardPixelRenderer):
 
     def __init__(self, viewer):
-        render.RendererBase.__init__(self, viewer)
+        render.StandardPixelRenderer.__init__(self, viewer)
 
-        self.rgb_order = 'BGRA'
+        self.kind = 'mock'
+        self.rgb_order = 'RGBA'
         self.surface = None
+        self._rgb_arr = None
+
+    def resize(self, dims):
+        super(CanvasRenderer, self).resize(dims)
+
+    def get_surface_as_array(self, order=None):
+        # adjust according to viewer's needed order
+        return self.reorder(order, self._rgb_arr)
+
+    def render_image(self, rgbobj, win_x, win_y):
+        self._rgb_arr = self.viewer.getwin_array(order=self.rgb_order,
+                                                 dtype=np.uint8)
 
     def setup_cr(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)
@@ -111,4 +133,8 @@ class CanvasRenderer(render.RendererBase):
         cr.set_font_from_shape(shape)
         return cr.text_extents(shape.text)
 
-#END
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)

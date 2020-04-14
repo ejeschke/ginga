@@ -265,6 +265,9 @@ class ReferenceViewer(object):
         add_argument("--opencl", dest="opencl", default=False,
                      action="store_true",
                      help="Use OpenCL acceleration")
+        add_argument("--opengl", dest="opengl", default=False,
+                     action="store_true",
+                     help="Use OpenGL acceleration")
         add_argument("--plugins", dest="plugins", metavar="NAMES",
                      help="Specify additional plugins to load")
         add_argument("--profile", dest="profile", action="store_true",
@@ -317,6 +320,7 @@ class ReferenceViewer(object):
                               icc_working_profile=None,
                               font_scaling_factor=None,
                               save_layout=True,
+                              use_opengl=False,
                               channel_prefix="Image")
         settings.load(onError='silent')
 
@@ -442,6 +446,9 @@ class ReferenceViewer(object):
             except Exception as e:
                 logger.warning(
                     "failed to set OpenCL preference: %s" % (str(e)))
+
+        if options.opengl:
+            settings.set(use_opengl=True)
 
         # Create the dynamic module manager
         mm = ModuleManager.ModuleManager(logger)

@@ -30,12 +30,12 @@ class ImageViewCv(ImageView.ImageViewBase):
 
         self.renderer = CanvasRenderer(self)
 
-    def update_image(self):
+    def update_widget(self):
         # no widget to update
         pass
 
     def configure_window(self, width, height):
-        self.configure_surface(width, height)
+        self.configure(width, height)
 
 
 class CanvasView(ImageViewCv):

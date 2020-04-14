@@ -1000,6 +1000,10 @@ class ImageViewBindings(object):
     def _rotate_xy(self, viewer, x, y, msg=True):
         msg = self.settings.get('msg_rotate', msg)
         ctr_x, ctr_y = viewer.get_center()
+        if None in (self._start_x, self._start_y):
+            # missed button down event, most likely, or we're getting this
+            # motion callback too early
+            return
         deg1 = math.degrees(math.atan2(ctr_y - self._start_y,
                                        self._start_x - ctr_x))
         deg2 = math.degrees(math.atan2(ctr_y - y, x - ctr_x))
@@ -2294,14 +2298,20 @@ class ImageViewBindings(object):
             # this viewer doesn't have a camera
             return
 
-        delta = event.amount * 6
+        zoom_accel = self.settings.get('scroll_zoom_acceleration', 6.0)
+        delta = event.amount * zoom_accel
+
         direction = self.get_direction(event.direction)
         if direction == 'down':
             delta = - delta
 
         camera.track(delta)
+        camera.calc_gl_transform()
 
-        viewer.gl_update()
+        scales = camera.get_scale_2d()
+        # TODO: need to set scale in viewer settings, without triggering a
+        # scale operation on this viewer
+        viewer.update_widget()
         return True
 
     def ms_camera_orbit(self, viewer, event, data_x, data_y, msg=True):
@@ -2315,10 +2325,12 @@ class ImageViewBindings(object):
         if event.state == 'move':
             camera.orbit(self._start_x, self._start_y, x, y)
             self._start_x, self._start_y = x, y
+            camera.calc_gl_transform()
             ## pos = tuple(camera.position.get())
             ## mst = "Camera position: (%.4f, %.4f, %.4f)" % pos
             ## if msg:
             ##     viewer.onscreen_message(mst, delay=0.5)
+            tup = camera.position.get()
 
         elif event.state == 'down':
             self._start_x, self._start_y = x, y
@@ -2326,7 +2338,7 @@ class ImageViewBindings(object):
         ## else:
         ##     viewer.onscreen_message(None)
 
-        viewer.gl_update()
+        viewer.update_widget()
         return True
 
     def ms_camera_pan_delta(self, viewer, event, data_x, data_y, msg=True):
@@ -2341,6 +2353,7 @@ class ImageViewBindings(object):
             dx, dy = x - self._start_x, self._start_y - y
             camera.pan_delta(dx, dy)
             self._start_x, self._start_y = x, y
+            camera.calc_gl_transform()
 
         elif event.state == 'down':
             self._start_x, self._start_y = x, y
@@ -2350,7 +2363,13 @@ class ImageViewBindings(object):
         ## else:
         ##     viewer.onscreen_message(None)
 
-        viewer.gl_update()
+        # TODO: need to get the updated pan position and set it in
+        # viewer's settings without triggering a callback to the viewer
+        # itself
+        tup = camera.position.get()
+        data_x, data_y = viewer.tform['data_to_native'].from_(tup[:2])
+
+        viewer.update_widget()
         return True
 
     def kp_camera_reset(self, viewer, event, data_x, data_y):
@@ -2360,8 +2379,9 @@ class ImageViewBindings(object):
             return False
 
         camera.reset()
+        camera.calc_gl_transform()
         viewer.onscreen_message("Reset camera", delay=0.5)
-        viewer.gl_update()
+        viewer.update_widget()
         return True
 
     def kp_camera_save(self, viewer, event, data_x, data_y):
@@ -2382,7 +2402,7 @@ class ImageViewBindings(object):
 
         renderer = viewer.renderer
         renderer.mode3d = not renderer.mode3d
-        viewer.gl_update()
+        viewer.update_widget()
         return True
 
 

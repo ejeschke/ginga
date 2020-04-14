@@ -83,6 +83,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self.figure = figure
 
         ax = self.figure.add_axes((0, 0, 1, 1), frame_on=False,
+                                  zorder=0.0,
                                   #viewer=self,
                                   #projection='ginga'
                                   )
@@ -103,7 +104,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # Add an overlapped axis for drawing graphics
         newax = self.figure.add_axes(self.ax_img.get_position(),
                                      sharex=ax, sharey=ax,
-                                     frameon=False,
+                                     frame_on=False,
+                                     zorder=1.0,
                                      #viewer=self,
                                      #projection='ginga'
                                      )
@@ -257,17 +259,12 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Set the axis limits
         # TODO: should we do this only for those who have autoaxis=True?
-        ## wd, ht = self.get_window_size()
-        ## x0, y0 = self.get_data_xy(0, 0)
-        ## x1, tm = self.get_data_xy(wd-1, 0)
-        ## tm, y1 = self.get_data_xy(0, ht-1)
+        ## x0, y0, x1, y1 = self.get_datarect()
         ## for ax in self.figure.axes:
         ##     ax.set_xlim(x0, x1)
         ##     ax.set_ylim(y0, y1)
 
     def configure_window(self, width, height):
-        #self.renderer.resize((width, height))
-
         self.configure(width, height)
 
     def _resize_cb(self, event):
@@ -277,7 +274,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
     def add_axes(self):
         ax = self.figure.add_axes(self.ax_img.get_position(),
-                                  frameon=False,
+                                  frame_on=False,
+                                  zorder=1.0,
                                   viewer=self,
                                   projection='ginga')
         ax.get_xaxis().set_visible(False)
@@ -307,7 +305,10 @@ class ImageViewMpl(ImageView.ImageViewBase):
         buf = self.get_rgb_image_as_buffer(format=format, quality=quality)
         return buf.getvalue()
 
-    def update_image(self):
+    def update_widget(self):
+        # force an update of the figure
+        if self.figure is not None and self.figure.canvas is not None:
+            self.figure.canvas.draw()
         pass
 
     def set_cursor(self, cursor):

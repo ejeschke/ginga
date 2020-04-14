@@ -32,12 +32,12 @@ class ImageViewPil(ImageView.ImageViewBase):
         # time_sec
         self.delayed_redraw()
 
-    def update_image(self):
+    def update_widget(self):
         # no widget to update
         pass
 
     def configure_window(self, width, height):
-        self.configure_surface(width, height)
+        self.configure(width, height)
 
 
 class CanvasView(ImageViewPil):

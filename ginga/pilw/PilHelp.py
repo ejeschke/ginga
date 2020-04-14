@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 
 import numpy as np
-from PIL import ImageFont, ImageDraw
+from PIL import Image, ImageFont, ImageDraw
 
 from ginga import colors
 from ginga.fonts import font_asst
@@ -30,6 +30,35 @@ def load_font(font_name, font_file):
     if not font_asst.have_font(font_name):
         font_asst.add_font(font_file, font_name=font_name)
     return font_name
+
+
+def text_size(text, font):
+    f = get_cached_font(font.fontname, font.fontsize)
+    i = Image.new('RGBA', (1, 1))
+    d = ImageDraw.Draw(i, 'RGBA')
+    return d.textsize(text)
+
+
+def text_to_array(text, font, rot_deg=0.0):
+    wd, ht = text_size(text, font)
+    f = get_cached_font(font.fontname, font.fontsize)
+    color = get_color(font.color)
+    i = Image.new('RGBA', (wd, ht))
+    d = ImageDraw.Draw(i, 'RGBA')
+    d.text((0, 0), text, font=f, fill=color)
+    i.rotate(rot_deg, expand=1)
+    arr8 = np.fromstring(i.tobytes(), dtype=np.uint8)
+    arr8 = arr8.reshape((ht, wd, 4))
+    return arr8
+
+
+def get_color(color, alpha=1.0):
+    if color is not None:
+        r, g, b = colors.resolve_color(color)
+    else:
+        r, g, b = 1.0, 1.0, 1.0
+
+    return (int(r * 255), int(g * 255), int(b * 255), int(alpha * 255))
 
 
 class Pen(object):
@@ -68,6 +97,7 @@ class PilContext(object):
         self.set_canvas(surface)
 
     def set_canvas(self, surface):
+        self.surface = surface
         self.ctx = ImageDraw.Draw(surface, 'RGBA')
 
     def get_color(self, color, alpha=1.0):
@@ -104,6 +134,11 @@ class PilContext(object):
         retval = self.ctx.textsize(text, font.font)
         wd, ht = retval
         return wd, ht
+
+    def image(self, pt, rgb_arr):
+        p_image = Image.fromarray(rgb_arr)
+
+        self.surface.paste(p_image)
 
     def text(self, pt, text, font, pen):
         x, y = pt

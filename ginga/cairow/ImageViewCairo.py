@@ -68,7 +68,7 @@ class ImageViewCairo(ImageView.ImageViewBase):
         self.surface.write_to_png(ibuf)
         return ibuf
 
-    def update_image(self):
+    def update_widget(self):
         if not self.surface:
             return
         if not self.dst_surface:

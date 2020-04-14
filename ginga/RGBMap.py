@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import time
+import uuid
 import numpy as np
 
 from ginga.misc import Callback, Settings
@@ -85,6 +86,7 @@ class RGBMapper(Callback.Callbacks):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
+        self.mapper_id = str(uuid.uuid4())
 
         # Create settings and set defaults
         if settings is None:
@@ -99,7 +101,7 @@ class RGBMapper(Callback.Callbacks):
         # add our defaults
         self.t_.add_defaults(color_map='gray', intensity_map='ramp',
                              color_algorithm='linear',
-                             color_hashsize=65535,
+                             color_hashsize=65536,
                              color_array=None, shift_array=None)
         self.t_.get_setting('color_map').add_callback('set',
                                                       self.color_map_set_cb)

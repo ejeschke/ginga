@@ -91,8 +91,8 @@ class ImageViewPg(ImageView.ImageViewBase):
 
         raise ImageViewPgError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
-    def update_image(self):
-        self.logger.debug("update_image pgcanvas=%s" % self.pgcanvas)
+    def update_widget(self):
+        self.logger.debug("update_widget pgcanvas=%s" % self.pgcanvas)
         if self.pgcanvas is None:
             return
 
@@ -144,7 +144,7 @@ class ImageViewPg(ImageView.ImageViewBase):
         self.onscreen_message(None)
 
     def configure_window(self, width, height):
-        self.configure_surface(width, height)
+        self.configure(width, height)
 
     def map_event(self, event):
         self.logger.info("window mapped to %dx%d" % (

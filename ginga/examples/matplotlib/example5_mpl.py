@@ -40,7 +40,7 @@ if len(macos_ver) > 0:
 import matplotlib.pyplot as plt
 
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
-from ginga.mplw.ImageViewCanvasTypesMpl import DrawingCanvas
+from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
 from ginga.util.loader import load_data
 
@@ -59,10 +59,12 @@ class MyGingaFigure(object):
         fi.set_figure(fig)
         self.fitsimage = fi
 
+        self.dc = get_canvas_types()
+
         # enable all interactive features
         fi.get_bindings().enable_all(True)
 
-        canvas = DrawingCanvas()
+        canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_callback('button-press', self.btn_down)
         canvas.set_callback('button-release', self.btn_up)

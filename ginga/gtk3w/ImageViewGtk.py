@@ -9,6 +9,7 @@ import os
 import numpy as np
 
 from ginga.gtk3w import GtkHelp
+from ginga.opengl.glsl import req
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
 from ginga.canvas import render
@@ -18,6 +19,13 @@ from gi.repository import Gdk
 from gi.repository import GdkPixbuf
 import cairo
 
+have_opengl = False
+try:
+    from ginga.opengl.GlHelp import get_transforms
+    have_opengl = True
+except ImportError:
+    pass
+
 
 class ImageViewGtkError(ImageView.ImageViewError):
     pass
@@ -25,40 +33,70 @@ class ImageViewGtkError(ImageView.ImageViewError):
 
 class ImageViewGtk(ImageView.ImageViewBase):
 
-    def __init__(self, logger=None, rgbmap=None, settings=None):
+    def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         ImageView.ImageViewBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap,
                                          settings=settings)
 
-        imgwin = Gtk.DrawingArea()
-        imgwin.connect("draw", self.draw_event)
-        imgwin.connect("configure-event", self.configure_event)
-        imgwin.set_events(Gdk.EventMask.EXPOSURE_MASK)
-        # prevents some flickering
-        imgwin.set_double_buffered(True)
-        imgwin.set_app_paintable(True)
-        # prevents extra redraws, because we manually redraw on a size
-        # change
-        imgwin.set_redraw_on_allocate(False)
+        if render is None:
+            render = self.t_.get('render_widget', 'widget')
+        self.wtype = render
+        self.surface = None
+        if self.wtype == 'widget':
+            imgwin = Gtk.DrawingArea()
+
+            imgwin.connect("draw", self.draw_event)
+            imgwin.connect("configure-event", self.configure_event)
+            imgwin.set_events(Gdk.EventMask.EXPOSURE_MASK)
+            # prevents some flickering
+            imgwin.set_double_buffered(True)
+            imgwin.set_app_paintable(True)
+            # prevents extra redraws, because we manually redraw on a size
+            # change
+            imgwin.set_redraw_on_allocate(False)
+
+            renderers = ['cairo', 'agg', 'pil', 'opencv']
+            self.t_.set_defaults(renderer='cairo')
+            if self.t_['renderer'] == 'opengl':
+                # currently cannot use opengl renderer except with GLArea
+                self.t_.set(renderer='cairo')
+
+            if sys.byteorder == 'little':
+                self.rgb_order = 'BGRA'
+            else:
+                self.rgb_order = 'RGBA'
+
+        elif self.wtype == 'opengl':
+            # NOTE: See https://gitlab.gnome.org/GNOME/gtk/issues/1270 for
+            # an issue regarding a buggy GLX/Mesa driver for X11 on Linux;
+            # if you experience non-GL widgets flashing when using the
+            # opengl renderer then try setting the following environment
+            # variable:
+            #   GDK_GL=software-draw-surface
+            #
+            imgwin = Gtk.GLArea()
+            imgwin.set_required_version(req.major, req.minor)
+            imgwin.set_has_depth_buffer(False)
+            imgwin.set_has_stencil_buffer(False)
+            imgwin.set_auto_render(False)
+
+            imgwin.connect('realize', self.on_realize_cb)
+            imgwin.connect('render', self.on_render_cb)
+            imgwin.connect("resize", self.configure_glarea_cb)
+
+            renderers = ['opengl']
+            # currently can only use opengl renderer with GLArea
+            #self.t_.set_defaults(renderer='opengl')
+            self.t_.set(renderer='opengl')
+            self.rgb_order = 'RGBA'
+
+            # we replace some transforms in the catalog for OpenGL rendering
+            self.tform = get_transforms(self)
+
+        else:
+            raise ImageViewGtkError("Undefined render type: '%s'" % (render))
         self.imgwin = imgwin
         self.imgwin.show_all()
-
-        self.t_.set_defaults(renderer='cairo')
-
-        # create our default double-buffered surface area that we copy
-        # to the widget
-        rect = self.imgwin.get_allocation()
-        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
-        arr = np.zeros((ht, wd, 4), dtype=np.uint8)
-        stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
-                                                            wd)
-        self.surface = cairo.ImageSurface.create_for_data(arr,
-                                                          cairo.FORMAT_ARGB32,
-                                                          wd, ht, stride)
-        if sys.byteorder == 'little':
-            self.rgb_order = 'BGRA'
-        else:
-            self.rgb_order = 'ARGB'
 
         # see reschedule_redraw() method
         self._defer_task = GtkHelp.Timer()
@@ -70,7 +108,6 @@ class ImageViewGtk(ImageView.ImageViewBase):
 
         self.renderer = None
         # Pick a renderer that can work with us
-        renderers = ['cairo', 'agg', 'pil', 'opencv']
         preferred = self.t_['renderer']
         if preferred in renderers:
             renderers.remove(preferred)
@@ -81,6 +118,10 @@ class ImageViewGtk(ImageView.ImageViewBase):
         return self.imgwin
 
     def choose_renderer(self, name):
+        if self.wtype == 'opengl':
+            if name != 'opengl':
+                raise ValueError("Only possible renderer for this widget "
+                                 "is 'opengl'")
         klass = render.get_render_class(name)
         self.renderer = klass(self)
 
@@ -151,9 +192,13 @@ class ImageViewGtk(ImageView.ImageViewBase):
                                                               cairo.FORMAT_ARGB32,
                                                               dawd, daht, stride)
 
-    def update_image(self):
-        if self.surface is None:
-            # window is not mapped/configured yet
+    def update_widget(self):
+        if self.imgwin is None:
+            return
+
+        self.logger.debug("updating window")
+        if self.wtype == 'opengl':
+            self.imgwin.queue_render()
             return
 
         self._renderer_to_surface()
@@ -169,7 +214,10 @@ class ImageViewGtk(ImageView.ImageViewBase):
             win.process_updates(True)
 
     def draw_event(self, widget, cr):
-        self.logger.debug("updating window from surface")
+        if self.surface is None:
+            # window is not mapped/configured yet
+            return
+        #self.logger.debug("updating window from surface")
         # redraw the screen from backing surface
         cr.set_source_surface(self.surface, 0, 0)
 
@@ -178,9 +226,12 @@ class ImageViewGtk(ImageView.ImageViewBase):
         return False
 
     def configure_window(self, width, height):
-        self.configure_surface(width, height)
+        self.logger.debug("window size reconfigured to %dx%d" % (
+            width, height))
+        self.configure(width, height)
 
     def configure_event(self, widget, event):
+        # NOTE: this callback is only for the DrawingArea widget
         rect = widget.get_allocation()
         x, y, width, height = rect.x, rect.y, rect.width, rect.height
 
@@ -198,6 +249,29 @@ class ImageViewGtk(ImageView.ImageViewBase):
             x, y, width, height))
         self.configure_window(width, height)
         return True
+
+    def configure_glarea_cb(self, widget, width, height):
+        # NOTE: this callback is only for the GLArea (OpenGL) widget
+        self.logger.debug("allocation is %dx%d" % (width, height))
+        self.configure_window(width, height)
+        return True
+
+    def make_context_current(self):
+        ctx = self.imgwin.get_context()
+        if ctx is not None:
+            ctx.make_current()
+        return ctx
+
+    def on_realize_cb(self, area):
+        # NOTE: this callback is only for the GLArea (OpenGL) widget
+        self.renderer.gl_initialize()
+
+    def on_render_cb(self, area, ctx):
+        # NOTE: this callback is only for the GLArea (OpenGL) widget
+        self.renderer.gl_paint()
+
+    def prepare_image(self, cvs_img, cache, whence):
+        self.renderer.prepare_image(cvs_img, cache, whence)
 
     def set_cursor(self, cursor):
         win = self.imgwin.get_window()
@@ -245,12 +319,9 @@ class ImageViewGtk(ImageView.ImageViewBase):
         self.imgwin.grab_focus()
 
 
-class ImageViewEvent(ImageViewGtk):
+class GtkEventMixin(object):
 
-    def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageViewGtk.__init__(self, logger=logger, rgbmap=rgbmap,
-                              settings=settings)
-
+    def __init__(self):
         imgwin = self.imgwin
         imgwin.set_can_focus(True)
         imgwin.connect("map_event", self.map_event)
@@ -385,7 +456,8 @@ class ImageViewEvent(ImageViewGtk):
         return self._keytbl
 
     def map_event(self, widget, event):
-        super(ImageViewZoom, self).configure_event(widget, event)
+        #super(GtkEventMixin, self).configure_event(widget, event)
+        self.configure_event(widget, event)
         return self.make_callback('map')
 
     def focus_event(self, widget, event, hasFocus):
@@ -555,7 +627,16 @@ class ImageViewEvent(ImageViewGtk):
         return True
 
 
-class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
+class ImageViewEvent(Mixins.UIMixin, GtkEventMixin, ImageViewGtk):
+
+    def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
+        ImageViewGtk.__init__(self, logger=logger, rgbmap=rgbmap,
+                              settings=settings, render=render)
+        Mixins.UIMixin.__init__(self)
+        GtkEventMixin.__init__(self)
+
+
+class ImageViewZoom(ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
@@ -570,10 +651,9 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
         cls.bindmapClass = klass
 
     def __init__(self, logger=None, rgbmap=None, settings=None,
-                 bindmap=None, bindings=None):
+                 render=None, bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
-                                settings=settings)
-        Mixins.UIMixin.__init__(self)
+                                settings=settings, render=render)
 
         self.ui_set_active(True)
 
@@ -601,9 +681,9 @@ class CanvasView(ImageViewZoom):
     """A Ginga viewer for viewing 2D slices of image data."""
 
     def __init__(self, logger=None, settings=None, rgbmap=None,
-                 bindmap=None, bindings=None):
+                 render=None, bindmap=None, bindings=None):
         ImageViewZoom.__init__(self, logger=logger, settings=settings,
-                               rgbmap=rgbmap,
+                               rgbmap=rgbmap, render=render,
                                bindmap=bindmap, bindings=bindings)
 
         # Needed for UIMixin to propagate events correctly

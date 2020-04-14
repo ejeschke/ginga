@@ -9,7 +9,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import numpy as np
-from OpenGL import GL as gl
 
 from .geometry_helper import Point3D, Vector3D, Matrix4x4
 
@@ -22,8 +21,8 @@ class Camera(object):
         self.orbit_speed = 300.0
 
         # These are in world-space units.
-        self.near_plane = 1.0
-        self.far_plane = 10000.0
+        self.near_plane = 0.001
+        self.far_plane = 1000000.0
 
         # During dollying (i.e. when the camera is translating into
         # the scene), if the camera gets too close to the target
@@ -42,6 +41,7 @@ class Camera(object):
         self.vport_radius_px = 5
 
         self.scene_radius = 10
+        self.magic_z = 1000.0
 
         # point of view, or center of camera; the ego-center; the eye-point
         self.position = Point3D()
@@ -75,6 +75,13 @@ class Camera(object):
         self.vport_ht_px = ht_px
         self.vport_radius_px = 0.5 * wd_px if (wd_px < ht_px) else 0.5 * ht_px
 
+        ht_px = self.vport_radius_px * 2.0
+        fov_deg = fov_for_height_and_distance(ht_px, self.magic_z)
+        self.fov_deg = fov_deg
+
+        scene_radius = self.vport_radius_px * 2.0
+        self.set_scene_radius(scene_radius)
+
     def get_viewport_dimensions(self):
         return (self.vport_wd_px, self.vport_ht_px)
 
@@ -98,9 +105,54 @@ class Camera(object):
         self.home_position = self.position.copy()
         self.tgt_position = self.target.copy()
 
-    def set_gl_transform(self):
-        """This side effects the OpenGL context to set the view to match
-        the camera.
+    ## def pan_2d(self, pos):
+    ##     pan_x, pan_y = pos[:2]
+    ##     self.target = Point3D(pan_x, pan_y, self.target.z)
+    ##     self.position = Point3D(pan_x, pan_y, self.position.z)
+
+    ##     self.calc_gl_transform()
+
+    def rotate_2d(self, ang_deg):
+        ang_rad = np.radians(ang_deg)
+
+        t2p = self.position - self.target
+
+        pos = Vector3D(0, 0, -1)
+        M = Matrix4x4.rotation(ang_rad, pos, self.position)
+        t2p = M * t2p
+        up = self.ground.copy()
+        self.up = M * up
+        self.position = self.target + t2p
+
+        self.calc_gl_transform()
+
+    def scale_2d(self, scales):
+        # for now, scale is uniform for X and Y
+        scale = scales[0]
+
+        # set distance ro target based on scale
+        direction = self.target - self.position
+        direction = direction.normalized()
+
+        dolly_distance = 1.0 / scale * self.magic_z
+        self.position = self.target - direction * dolly_distance
+
+        self.calc_gl_transform()
+
+    def get_scale_2d(self):
+        # solve for scale based on distance from target
+        direction = self.target - self.position
+        dolly_distance = direction.length()
+        scale = 1.0 / (dolly_distance / self.magic_z)
+        return scale, scale
+
+    def transform_2d(self, state):
+        # this is handled by a transform on the viewer side
+        pass
+
+    def calc_gl_transform(self):
+        """This calculates the transformation matrices necessary to match
+        the camera's position.
         """
         tangent = np.tan(self.fov_deg / 2.0 / 180.0 * np.pi)
         vport_radius = self.near_plane * tangent
@@ -113,14 +165,28 @@ class Camera(object):
             vport_ht = 2.0 * vport_radius
             vport_wd = vport_ht * self.vport_wd_px / float(self.vport_ht_px)
 
-        gl.glFrustum(
-            -0.5 * vport_wd, 0.5 * vport_wd,    # left, right
-            -0.5 * vport_ht, 0.5 * vport_ht,    # bottom, top
-            self.near_plane, self.far_plane
-        )
+        left, right = -0.5 * vport_wd, 0.5 * vport_wd
+        bottom, top = -0.5 * vport_ht, 0.5 * vport_ht
+        z_near, z_far = self.near_plane, self.far_plane
 
+        # view matrix
         M = Matrix4x4.look_at(self.position, self.target, self.up, False)
-        gl.glMultMatrixf(M.get())
+
+        self.view_mtx = M.get().astype(np.float32)
+
+        A = (right + left) / (right - left)
+        B = (top + bottom) / (top - bottom)
+        C = - (z_far + z_near) / (z_far - z_near)
+        # D = (-2.0 * z_far * z_near) / (z_far - z_near)
+        # WHY DO WE NEED TO DO THIS ???
+        D = - 1.0
+
+        # projection matrix
+        P = Matrix4x4([((2 * z_near) / (right - left), 0.0, A, 0.0),
+                       (0.0, (2 * z_near) / (top - bottom), B, 0.0),
+                       (0.0, 0.0, C, D),
+                       (0.0, 0.0, -1.0, 0.0)])
+        self.proj_mtx = P.get().astype(np.float32)
 
     def get_translation_speed(self, distance_from_target):
         """Returns the translation speed for ``distance_from_target``
@@ -216,7 +282,6 @@ class Camera(object):
             distance_from_target = direction.length()
             fov_deg = fov_for_height_and_distance(initial_ht,
                                                   distance_from_target)
-            #print("fov is now %.4f" % fov_deg)
             self.fov_deg = fov_deg
 
     def frustum_dimensions_at_target(self, vfov_deg=None):

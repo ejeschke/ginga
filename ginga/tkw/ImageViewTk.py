@@ -95,7 +95,7 @@ class ImageViewTk(ImageView.ImageViewBase):
 
         raise ImageViewTkError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
-    def update_image(self):
+    def update_widget(self):
         if self.tkcanvas is None:
             return
 
@@ -134,7 +134,7 @@ class ImageViewTk(ImageView.ImageViewBase):
         self._defer_task.start(time_sec)
 
     def configure_window(self, width, height):
-        self.configure_surface(width, height)
+        self.configure(width, height)
 
     def _resize_cb(self, event):
         self.configure_window(event.width, event.height)

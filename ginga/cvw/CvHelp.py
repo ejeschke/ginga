@@ -108,6 +108,13 @@ class CvContext(object):
         wd, ht = retval
         return wd, ht
 
+    def image(self, pt, rgb_arr):
+        # TODO: is there a faster way to copy this array in?
+        cx, cy = pt[:2]
+        daht, dawd, depth = rgb_arr.shape
+
+        self.canvas[cy:cy + daht, cx:cx + dawd, :] = rgb_arr
+
     def text(self, pt, text, font):
         x, y = pt
         font.font.putText(self.canvas, text, (x, y), font.scale,

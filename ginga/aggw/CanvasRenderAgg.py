@@ -105,6 +105,10 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
+    def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
+        # no-op for this renderer
+        pass
+
     def draw_text(self, cx, cy, text, rot_deg=0.0):
 
         wd, ht = self.cr.text_extents(text, self.font)
@@ -159,10 +163,10 @@ class RenderContext(render.RenderContextBase):
         self.cr.canvas.path(path, self.pen, self.brush)
 
 
-class CanvasRenderer(render.RendererBase):
+class CanvasRenderer(render.StandardPixelRenderer):
 
     def __init__(self, viewer):
-        render.RendererBase.__init__(self, viewer)
+        render.StandardPixelRenderer.__init__(self, viewer)
 
         self.kind = 'agg'
         self.rgb_order = 'RGBA'
@@ -174,11 +178,12 @@ class CanvasRenderer(render.RendererBase):
         given dimensions.
         """
         width, height = dims[:2]
-        self.dims = (width, height)
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
         # create agg surface the size of the window
-        self.surface = agg.Draw(self.rgb_order, self.dims, 'black')
+        self.surface = agg.Draw(self.rgb_order, (width, height), 'black')
+
+        super(CanvasRenderer, self).resize(dims)
 
     def render_image(self, rgbobj, dst_x, dst_y):
         """Render the image represented by (rgbobj) at dst_x, dst_y
@@ -221,5 +226,11 @@ class CanvasRenderer(render.RendererBase):
         cr = self.setup_cr(shape)
         cr.set_font_from_shape(shape)
         return cr.text_extents(shape.text)
+
+    def text_extents(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize, color=font.color,
+                    alpha=font.alpha)
+        return cr.text_extents(text)
 
 #END

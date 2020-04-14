@@ -126,7 +126,7 @@ class ImageViewJpw(ImageView.ImageViewBase):
 
         raise ImageViewJpwError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
-    def update_image(self):
+    def update_widget(self):
         fmt = self.jp_img.format
         web_img = self.renderer.get_surface_as_rgb_format_bytes(
             format=fmt)
@@ -138,7 +138,7 @@ class ImageViewJpw(ImageView.ImageViewBase):
         self._defer_task.start(time_sec)
 
     def configure_window(self, width, height):
-        self.configure_surface(width, height)
+        self.configure(width, height)
 
     def _resize_cb(self, event):
         self.configure_window(event.width, event.height)

@@ -20,8 +20,9 @@ from ginga import toolkit
 toolkit.use('qt5')
 
 from ginga.gw import Widgets  # noqa
-from ginga.opengl.ImageViewQtGL import CanvasView  # noqa
+from ginga.qtw.ImageViewQt import CanvasView  # noqa
 from ginga.canvas.CanvasObject import get_canvas_types  # noqa
+from ginga.canvas import transform  # noqa
 from ginga.misc import log  # noqa
 
 
@@ -34,7 +35,7 @@ class Viewer(object):
 
         self.top = app.make_window(title="Simple Ginga 3D Viewer")
 
-        vw = CanvasView(self.logger)
+        vw = CanvasView(self.logger, render='opengl')
         vw.ui_set_active(True)
         self.vw = vw
 
@@ -52,9 +53,6 @@ class Viewer(object):
         # add canvas to view
         private_canvas = vw.get_canvas()
         private_canvas.add(canvas)
-
-        # add little mode indicator that shows keyboard modal states
-        #vw.show_mode_indicator(True, corner='ur')
 
         # little hack because we don't have a way yet to ask for this
         # variation of back end through ginga.toolkit

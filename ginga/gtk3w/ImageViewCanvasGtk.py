@@ -17,10 +17,11 @@ class ImageViewCanvas(ImageViewGtk.ImageViewZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
     def __init__(self, logger=None, rgbmap=None, settings=None,
-                 bindmap=None, bindings=None):
+                 render=None, bindmap=None, bindings=None):
         ImageViewGtk.ImageViewZoom.__init__(self, logger=logger,
                                             rgbmap=rgbmap,
                                             settings=settings,
+                                            render=render,
                                             bindmap=bindmap,
                                             bindings=bindings)
         CompoundMixin.__init__(self)
