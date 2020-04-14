@@ -237,7 +237,7 @@ class ViewerImageProxy:
             else:
                 data_np[mask] = src_data[yi, xi]
 
-        self.logger.info("time to cutout_data %.4f sec" % (time.time() - t1))
+        self.logger.debug("time to cutout_data %.4f sec" % (time.time() - t1))
         return data_np
 
     def cutout_adjust(self, x1, y1, x2, y2, xstep=1, ystep=1, z=0,
