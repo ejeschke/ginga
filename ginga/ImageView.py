@@ -24,8 +24,7 @@ from ginga import RGBMap, AutoCuts, ColorDist, zoom
 from ginga import colors, trcalc
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
-from ginga.util import addons
-from ginga.util import rgb_cms, addons, vip
+from ginga.util import addons, vip
 
 __all__ = ['ImageViewBase']
 
@@ -1611,14 +1610,16 @@ class ImageViewBase(Callback.Callbacks):
         points : list
             Coordinates in the form of
             ``[(x0, y0), (x1, y1), (x2, y2), (x3, y3)]``
-            from lower-left to lower-right.
+            corresponding to the four corners.
 
         """
         wd, ht = self.get_window_size()
-        side = int(math.sqrt(wd**2 + ht**2))
-        xoff, yoff = (side - wd) // 2, (side - ht) // 2
-        win_pts = np.asarray([(-xoff, -yoff), (wd + xoff, -yoff),
-                              (wd + xoff, ht + yoff), (-xoff, ht + yoff)])
+        radius = int(np.ceil(math.sqrt(wd**2 + ht**2) * 0.5))
+        ctr_x, ctr_y = self.get_center()[:2]
+        win_pts = np.asarray([(ctr_x - radius, ctr_y - radius),
+                              (ctr_x + radius, ctr_y - radius),
+                              (ctr_x + radius, ctr_y + radius),
+                              (ctr_x - radius, ctr_y + radius)])
         arr_pts = self.tform['data_to_window'].from_(win_pts)
         return arr_pts
 
@@ -2575,7 +2576,6 @@ class ImageViewBase(Callback.Callbacks):
             X and Y positions, in that order.
 
         """
-        #center = (self._imgwin_wd // 2, self._imgwin_ht // 2)
         center = self.renderer.get_center()[:2]
         return center
 

@@ -52,7 +52,7 @@ def mosaic_inline(baseimage, imagelist, bg_ref=None, trim_px=None,
 
         # Calculate sky position at the center of the piece
         ctr_x, ctr_y = trcalc.get_center(data_np)
-        ra, dec = image.pixtoradec(ctr_x, ctr_y)
+        ra, dec = image.pixtoradec(ctr_x, ctr_y, coords='data')
 
         # User specified a trim?  If so, trim edge pixels from each
         # side of the array
@@ -137,7 +137,7 @@ def mosaic_inline(baseimage, imagelist, bg_ref=None, trim_px=None,
         ctr_x, ctr_y = trcalc.get_center(rotdata)
 
         # Find location of image piece (center) in our array
-        x0, y0 = baseimage.radectopix(ra, dec)
+        x0, y0 = baseimage.radectopix(ra, dec, coords='data')
 
         # Merge piece as closely as possible into our array
         # Unfortunately we lose a little precision rounding to the
@@ -406,7 +406,7 @@ class CanvasMosaicer(Callback.Callbacks):
 
         # Calculate sky position at the center of the piece
         ctr_x, ctr_y = trcalc.get_center(data_np)
-        ra, dec = image.pixtoradec(ctr_x, ctr_y)
+        ra, dec = image.pixtoradec(ctr_x, ctr_y, coords='data')
 
         # Get rotation and scale of piece
         header = image.get_header()
@@ -423,7 +423,8 @@ class CanvasMosaicer(Callback.Callbacks):
             self.logger.debug("scaling piece by x(%f), y(%f)" % (
                 nscale_x, nscale_y))
             data_np, (ascale_x, ascale_y) = trcalc.get_scaled_cutout_basic(
-                data_np, 0, 0, wd - 1, ht - 1, nscale_x, nscale_y,
+                #data_np, 0, 0, wd - 1, ht - 1, nscale_x, nscale_y,
+                data_np, 0, 0, wd, ht, nscale_x, nscale_y,
                 logger=self.logger)
 
         # Rotate piece into our orientation, according to wcs
@@ -475,11 +476,11 @@ class CanvasMosaicer(Callback.Callbacks):
         ctr_x, ctr_y = trcalc.get_center(rotdata)
 
         # Find location of image piece (center) in our array
-        x0, y0 = self.ref_image.radectopix(ra, dec)
+        x0, y0 = self.ref_image.radectopix(ra, dec, coords='data')
 
         # Merge piece as closely as possible into our array
-        # Unfortunately we lose a little precision rounding to the
-        # nearest pixel--can't be helped with this approach
+        # Uncomment this line to make pixel aligned mosaic similar to
+        # functions that build a new array.
         #x0, y0 = int(np.round(x0)), int(np.round(y0))
         self.logger.debug("Fitting image '%s' into mosaic at %f,%f" % (
             name, x0, y0))

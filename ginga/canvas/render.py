@@ -502,11 +502,14 @@ class StandardPixelRenderer(RendererBase):
 
         if (whence <= 0.0) or (cache.cutout is None) or (not cvs_img.optimize):
             # get extent of our data coverage in the window
+            # TODO: get rid of padding by fixing get_draw_rect() which
+            # doesn't quite get the coverage right at high magnifications
+            pad = 1.0
             pts = np.asarray(self.viewer.get_draw_rect()).T
-            xmin = int(np.min(pts[0]))
-            ymin = int(np.min(pts[1]))
-            xmax = int(np.ceil(np.max(pts[0])))
-            ymax = int(np.ceil(np.max(pts[1])))
+            xmin = int(np.min(pts[0])) - pad
+            ymin = int(np.min(pts[1])) - pad
+            xmax = int(np.ceil(np.max(pts[0]))) + pad
+            ymax = int(np.ceil(np.max(pts[1]))) + pad
 
             # get destination location in data_coords
             dst_x, dst_y = cvs_img.crdmap.to_data((cvs_img.x, cvs_img.y))
