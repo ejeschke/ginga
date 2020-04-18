@@ -16,11 +16,49 @@ from ginga.misc import Bunch
 
 
 class ViewerImageProxy:
-    """This class is used in lieu of a `~ginga.AstroImage.AstroImage` to
-    handle cases where either an image has been loaded into a viewer in
-    the conventional way, OR multiple images have been plotted onto the
-    viewer canvas.  It has a subset of the API for an image wrapper
-    object, and thus can be used for .
+    """This class can be used in lieu of a `~ginga.BaseImage`-subclassed
+    object (such as `~ginga.AstroImage` to handle cases where either an
+    image has been loaded into a viewer in the conventional way, OR multiple
+    images have been plotted onto the viewer canvas.  It has a subset of the
+    API for an image wrapper object, and can be substituted for that in cases
+    that only use the subset.
+
+    Every `ImageView`-based viewer has one already constructed inside it.
+
+    Example. Previously, one might do:
+
+       image = viewer.get_image()
+       data, x1, y1, x2, y2 = image.cutout_radius(data_x, data_y, radius)
+
+    Alternative, using the already built vip:
+
+        image = viewer.get_vip()
+        data, x1, y1, x2, y2 = image.cutout_radius(data_x, data_y, radius)
+
+    Here are the methods that are supported:
+    * cutout_data
+    * cutout_adjust
+    * cutout_radius
+    * cutout_cross
+    * get_pixels_on_line
+    * get_pixels_on_curve
+    * get_shape_view
+    * cutout_shape
+    * get_size
+    * get_depth
+    * get_center
+    * get_data_xy
+    * info_xy
+    * pixtoradec
+    * has_valid_wcs
+    * _slice
+
+    Supported properties:
+    * shape
+    * width
+    * height
+    * depth
+    * ndim
     """
 
     def __init__(self, viewer):
@@ -143,10 +181,10 @@ class ViewerImageProxy:
             Starting Y coordinate
 
         x2 : int
-            Ending X coordinate
+            (One more than) Ending X coordinate
 
         y2 : int
-            Ending Y coordinate
+            (one more than) Ending Y coordinate
 
         xstep : int (optional, default: 1)
             Step in X direction
@@ -252,60 +290,28 @@ class ViewerImageProxy:
 
         xy_mn, xy_mx = self.viewer.get_limits()
 
+        if x2 >= xy_mx[0]:
+            x2 = xy_mx[0]
+            x1 = x2 - dx
+
         if x1 < xy_mn[0]:
-            x1, x2 = xy_mn[0], dx
-        else:
-            if x2 >= xy_mx[0]:
-                x2 = xy_mx[0]
-                x1 = x2 - dx
+            x1 = xy_mn[0]
+
+        if y2 >= xy_mx[1]:
+            y2 = xy_mx[1]
+            y1 = y2 - dy
 
         if y1 < xy_mn[1]:
-            y1, y2 = xy_mn[1], dy
-        else:
-            if y2 >= xy_mx[1]:
-                y2 = xy_mx[1]
-                y1 = y2 - dy
+            y1 = xy_mn[1]
 
         data = self.cutout_data(x1, y1, x2, y2, xstep=xstep, ystep=ystep,
                                 z=z, astype=astype)
         return (data, x1, y1, x2, y2)
 
-    def cutout_radius(self, x, y, radius, xstep=1, ystep=1, z=0,
-                      astype=None):
-        """Cut out data area based on a point and a radius.
-
-        Parameters
-        ----------
-        x : int
-            X coordinate of center of interest
-
-        y : int
-            Y coordinate of center of interest
-
-        radius : int
-            radius of square
-
-        xstep : int (optional, default: 1)
-            Step in X direction
-
-        ystep : int (optional, default: 1)
-            Step in Y direction
-
-        z : None or int (optional, default: None)
-            Index of a Z slice, if cutout array has three dimensions
-
-        astype : None, str or `numpy.dtype` (optional, default: None)
-            Optional type to coerce the result array to
-
-        Returns
-        -------
-        arr : `numpy.ndarray`
-            The cut out array
-
-        """
+    def cutout_radius(self, x, y, radius, xstep=1, ystep=1, astype=None):
         return self.cutout_adjust(x - radius, y - radius,
                                   x + radius + 1, y + radius + 1,
-                                  xstep=xstep, ystep=ystep, z=z,
+                                  xstep=xstep, ystep=ystep, z=0,
                                   astype=astype)
 
     def cutout_cross(self, x, y, radius):
@@ -322,6 +328,52 @@ class ViewerImageProxy:
         yarr = data_np[:, x - x1]
 
         return (x1, y1, xarr, yarr)
+
+    ## def get_shape_mask(self, shape_obj):
+    ##     """
+    ##     Return full mask where True marks pixels within the given shape.
+    ##     """
+    ##     xy_mn, xy_mx = self.viewer.get_limits()
+    ##     yi = np.mgrid[xy_mn[1]:xy_mx[1]].reshape(-1, 1)
+    ##     xi = np.mgrid[xy_mn[0]:xy_mx[0]].reshape(1, -1)
+    ##     pts = np.asarray((xi, yi)).T
+    ##     contains = shape_obj.contains_pts(pts)
+    ##     return contains
+
+    def cutout_shape(self, shape_obj):
+        view, mask = self.get_shape_view(shape_obj)
+
+        data = self._slice(view)
+
+        # mask non-containing members
+        mdata = np.ma.array(data, mask=np.logical_not(mask))
+        return mdata
+
+    def get_shape_view(self, shape_obj, avoid_oob=True):
+        """
+        Calculate a bounding box in the data enclosing `shape_obj` and
+        return a view that accesses it and a mask that is True only for
+        pixels enclosed in the region.
+
+        If `avoid_oob` is True (default) then the bounding box is clipped
+        to avoid coordinates outside of the actual data.
+        """
+        x1, y1, x2, y2 = [int(np.round(n)) for n in shape_obj.get_llur()]
+
+        if avoid_oob:
+            # avoid out of bounds indexes
+            xy_mn, xy_mx = self.viewer.get_limits()
+            x1, x2 = max(xy_mn[0], x1), min(x2, xy_mx[0] - 1)
+            y1, y2 = max(xy_mn[1], y1), min(y2, xy_mx[1] - 1)
+
+        # calculate pixel containment mask in bbox
+        yi = np.mgrid[y1:y2 + 1].reshape(-1, 1)
+        xi = np.mgrid[x1:x2 + 1].reshape(1, -1)
+        pts = np.asarray((xi, yi)).T
+        contains = shape_obj.contains_pts(pts)
+
+        view = np.s_[y1:y2 + 1, x1:x2 + 1]
+        return (view, contains)
 
     def get_pixels_on_line(self, x1, y1, x2, y2, getvalues=True):
         """Uses Bresenham's line algorithm to enumerate the pixels along
@@ -379,59 +431,6 @@ class ViewerImageProxy:
             return [self.getval_pt((x, y)) for x, y in res]
 
         return res
-
-    ## def get_shape_mask(self, shape_obj):
-    ##     """
-    ##     Return full mask where True marks pixels within the given shape.
-    ##     """
-    ##     xy_mn, xy_mx = self.viewer.get_limits()
-    ##     yi = np.mgrid[xy_mn[1]:xy_mx[1]].reshape(-1, 1)
-    ##     xi = np.mgrid[xy_mn[0]:xy_mx[0]].reshape(1, -1)
-    ##     pts = np.asarray((xi, yi)).T
-    ##     contains = shape_obj.contains_pts(pts)
-    ##     return contains
-
-    def get_shape_view(self, shape_obj, avoid_oob=True):
-        """
-        Calculate a bounding box in the data enclosing `shape_obj` and
-        return a view that accesses it and a mask that is True only for
-        pixels enclosed in the region.
-
-        If `avoid_oob` is True (default) then the bounding box is clipped
-        to avoid coordinates outside of the actual data.
-        """
-        #x1, y1, x2, y2 = [int(np.round(n)) for n in shape_obj.get_llur()]
-        x1, y1, x2, y2 = [int(n) for n in shape_obj.get_llur()]
-
-        if avoid_oob:
-            # avoid out of bounds indexes
-            xy_mn, xy_mx = self.viewer.get_limits()
-            x1, x2 = max(xy_mn[0], x1), min(x2, xy_mx[0] - 1)
-            y1, y2 = max(xy_mn[1], y1), min(y2, xy_mx[1] - 1)
-
-        # calculate pixel containment mask in bbox
-        yi = np.mgrid[y1:y2].reshape(-1, 1)
-        xi = np.mgrid[x1:x2].reshape(1, -1)
-        pts = np.asarray((xi, yi)).T
-        contains = shape_obj.contains_pts(pts)
-
-        view = np.s_[y1:y2, x1:x2]
-        return (view, contains)
-
-    def cutout_shape(self, shape_obj):
-        """
-        Cut out and return a portion of the data corresponding to `shape_obj`.
-        A masked numpy array is returned, where the pixels not enclosed in
-        the shape are masked out.
-        """
-
-        view, mask = self.get_shape_view(shape_obj)
-
-        data = self._slice(view)
-
-        # mask non-containing members
-        mdata = np.ma.array(data, mask=np.logical_not(mask))
-        return mdata
 
     def _slice(self, view):
         # cutout our enclosing (possibly shortened) bbox

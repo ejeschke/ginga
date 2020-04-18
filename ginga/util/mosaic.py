@@ -451,7 +451,7 @@ class CanvasMosaicer(Callback.Callbacks):
             rotdata = trcalc.add_alpha(rotdata, alpha=maxv)
             self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
             rotdata = trcalc.rotate(rotdata, rot_deg,
-                                    #rotctr_x=ctr_x, rotctr_y=ctr_y
+                                    #rotctr_x=ctr_x, rotctr_y=ctr_y,
                                     logger=self.logger, pad=0)
             ignore_alpha = True
 
@@ -479,9 +479,9 @@ class CanvasMosaicer(Callback.Callbacks):
         x0, y0 = self.ref_image.radectopix(ra, dec, coords='data')
 
         # Merge piece as closely as possible into our array
-        # Uncomment this line to make pixel aligned mosaic similar to
-        # functions that build a new array.
-        #x0, y0 = int(np.round(x0)), int(np.round(y0))
+        # Unfortunately we lose a little precision rounding to the
+        # nearest pixel--can't be helped with this approach
+        x0, y0 = int(np.round(x0)), int(np.round(y0))
         self.logger.debug("Fitting image '%s' into mosaic at %f,%f" % (
             name, x0, y0))
 

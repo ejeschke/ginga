@@ -402,6 +402,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         width, height = self.fitsimage.get_dims(data)
         if self.txt_arr is None:
             return
+        if data.shape != self.txt_arr.shape:
+            return
 
         maxval = np.nanmax(data)
         minval = np.nanmin(data)

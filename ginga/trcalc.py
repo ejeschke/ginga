@@ -112,6 +112,8 @@ def get_center(data_np):
 
     ctr_x = int(wd // 2)
     ctr_y = int(ht // 2)
+    ## ctr_x = wd * 0.5
+    ## ctr_y = ht * 0.5
     return (ctr_x, ctr_y)
 
 
@@ -419,7 +421,15 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
                            interpolation='basic', logger=None,
                            dtype=None):
+    """Extract a region of the `data_np` defined by corners (x1, y1) and
+    (x2, y2) and resample it to fit dimensions (new_wd, new_ht).
 
+    `interpolation` describes the method of interpolation used, where the
+    default "basic" is nearest neighbor.  If `logger` is not `None` it will
+    be used for logging messages.  If `dtype` is defined then the output
+    array will be converted to that type; the default is the same as the
+    input type.
+    """
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
     new_wd, new_ht = int(new_wd), int(new_ht)
 

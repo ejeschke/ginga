@@ -306,7 +306,26 @@ class BaseImage(ViewerObjectBase):
 
     def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, z=None,
                     astype=None):
-        """cut out data area based on coords.
+        """Cut out data area based on bounded coordinates.
+
+        Parameters
+        ----------
+        x1, y1 : int
+            Coordinates defining the minimum corner to be cut out
+
+        x2, y2 : int
+            Coordinates *one greater* than the maximum corner
+
+        xstep, ystep : int
+            Step values for skip intervals in the cutout region
+
+        z : int
+            Value for a depth (slice) component for color images
+
+        astype :
+
+        Note that the coordinates for `x2`, `y2` are *outside* the
+        cutout region, similar to slicing parameters in Python.
         """
         view = np.s_[y1:y2:ystep, x1:x2:xstep]
         data_np = self._slice(view)
@@ -316,7 +335,12 @@ class BaseImage(ViewerObjectBase):
             data_np = data_np.astype(astype, copy=False)
         return data_np
 
-    def cutout_adjust(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):
+    def cutout_adjust(self, x1, y1, x2, y2, xstep=1, ystep=1, z=0, astype=None):
+        """Like `cutout_data`, but adjusts coordinates `x1`, `y1`, `x2`, `y2`
+        to be inside the data area if they are not already.  It tries to
+        preserve the width and height of the region, so e.g. (-2, -2, 5, 5)
+        could become (0, 0, 7, 7)
+        """
         dx = x2 - x1
         dy = y2 - y1
 
@@ -335,14 +359,13 @@ class BaseImage(ViewerObjectBase):
                 y1 = y2 - dy
 
         data = self.cutout_data(x1, y1, x2, y2, xstep=xstep, ystep=ystep,
-                                astype=astype)
+                                z=z, astype=astype)
         return (data, x1, y1, x2, y2)
 
     def cutout_radius(self, x, y, radius, xstep=1, ystep=1, astype=None):
         return self.cutout_adjust(x - radius, y - radius,
                                   x + radius + 1, y + radius + 1,
-                                  xstep=xstep, ystep=ystep,
-                                  astype=astype)
+                                  xstep=xstep, ystep=ystep, astype=astype)
 
     def cutout_cross(self, x, y, radius):
         """Cut two data subarrays that have a center at (x, y) and with
@@ -417,13 +440,7 @@ class BaseImage(ViewerObjectBase):
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
                                method='basic'):
-        """Extract a region of the image defined by corners (x1, y1) and
-        (x2, y2) and resample it to fit dimensions (new_wd, new_ht).
-
-        `method` describes the method of interpolation used, where the
-        default "basic" is nearest neighbor.
-        """
-
+        # TO BE DEPRECATED
         data_np = self._get_data()
         (newdata, (scale_x, scale_y)) = \
             trcalc.get_scaled_cutout_wdht(data_np, x1, y1, x2, y2,
@@ -436,6 +453,7 @@ class BaseImage(ViewerObjectBase):
 
     def get_scaled_cutout_basic(self, x1, y1, x2, y2, scale_x, scale_y,
                                 method='basic'):
+        # TO BE DEPRECATED
         p1, p2 = (x1, y1), (x2, y2)
         scales = (scale_x, scale_y)
 
@@ -444,6 +462,7 @@ class BaseImage(ViewerObjectBase):
 
     def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
                           method='basic', logger=None):
+        # TO BE DEPRECATED
         p1, p2 = (x1, y1), (x2, y2)
         scales = (scale_x, scale_y)
 
