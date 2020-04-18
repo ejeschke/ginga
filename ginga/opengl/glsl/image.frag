@@ -78,5 +78,18 @@ void main()
         color = vec4(clr.r / vmax, clr.g / vmax, clr.b / vmax,
                      clr.a / vmax);
     }
+    else if (image_type == 3) {
+        // monochrome image to be colored
+        // get source and alpha value, passed in red and green channels
+        vec2 value = texture(img_texture, o_tex_coord).rg;
+
+        // cut levels
+        int idx = int(cut_levels(value.r, vmax));
+
+        // apply RGB mapping
+        uvec4 clr = texelFetch(color_map, idx);
+        color = vec4(clr.r / vmax, clr.g / vmax, clr.b / vmax,
+                     value.g);
+    }
     outputColor = color;
 }

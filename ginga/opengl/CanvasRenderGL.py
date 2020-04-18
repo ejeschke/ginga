@@ -335,24 +335,22 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             if cvs_img.flipy:
                 data = np.flipud(data)
 
-            if len(data.shape) == 2:
-                # <-- monochrome image
-                dtype = np.float32
-            else:
-                dtype = np.uint8
-
-            cache.cutout = np.ascontiguousarray(data, dtype=dtype)
-
             # calculate our offset
             pan_off = viewer.data_off
             cvs_x, cvs_y = dst_x - pan_off, dst_y - pan_off
 
+            cache.cutout = data
             cache.cvs_pos = (cvs_x, cvs_y)
 
     def _prepare_image(self, cvs_img, cache, whence):
         self._common_draw(cvs_img, cache, whence)
 
-        cache.rgbarr = trcalc.add_alpha(cache.cutout, alpha=255)
+        if (whence <= 0.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
+            # add an alpha channel if missing
+            rgbarr = trcalc.add_alpha(cache.cutout, alpha=255)
+            cache.rgbarr = np.ascontiguousarray(rgbarr, dtype=np.uint8)
+
+        cache.image_type = 0
         cache.drawn = True
 
     def _prepare_norm_image(self, cvs_img, cache, whence):
@@ -371,53 +369,25 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         image_order = cvs_img.image.get_order()
 
-        if (whence <= 0.0) or (not cvs_img.optimize):
-            # if image has an alpha channel, then strip it off and save
-            # it until it is recombined later with the colorized output
-            # this saves us having to deal with an alpha band in the
-            # cuts leveling and RGB mapping routines
+        if (whence <= 0.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
+
             img_arr = cache.cutout
-            if 'A' not in image_order:
-                cache.alpha = None
+
+            if len(img_arr.shape) == 2:
+                # <-- monochrome image with no alpha
+                cache.rgbarr = img_arr.astype(np.float32)
+                cache.image_type = 2
+
+            elif img_arr.shape[2] < 3:
+                cache.image_type = 3
+                # <-- monochrome image with alpha
+                cache.rgbarr = img_arr.astype(np.float32)
+
             else:
-                # normalize alpha array to the final output range
-                mn, mx = trcalc.get_minmax_dtype(img_arr.dtype)
-                a_idx = image_order.index('A')
-                cache.alpha = (img_arr[..., a_idx] / mx *
-                               rgbmap.maxc).astype(rgbmap.dtype)
-                cache.cutout = img_arr[..., 0:a_idx]
-
-        if cvs_img.rgbmap is not None or len(cache.cutout.shape) > 2:
-
-            if (whence <= 1.0) or (cache.prergb is None) or (not cvs_img.optimize):
-                # apply visual changes prior to color mapping (cut levels, etc)
-                vmax = rgbmap.get_hash_size() - 1
-                newdata = self._apply_visuals(cvs_img, cache.cutout, 0, vmax)
-
-                # result becomes an index array fed to the RGB mapper
-                if not np.issubdtype(newdata.dtype, np.dtype('uint')):
-                    newdata = newdata.astype(np.uint)
-                idx = newdata
-
-                self.logger.debug("shape of index is %s" % (str(idx.shape)))
-                cache.prergb = idx
-
-            t3 = time.time()
-            dst_order = self.viewer.get_rgb_order()
-
-            if (whence <= 2.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
-                # get RGB mapped array
-                rgbobj = rgbmap.get_rgbarray(cache.prergb, order=dst_order,
-                                             image_order=image_order)
-                cache.rgbarr = rgbobj.get_array(dst_order)
-
-                if cache.alpha is not None and 'A' in dst_order:
-                    a_idx = dst_order.index('A')
-                    cache.rgbarr[..., a_idx] = cache.alpha
-
-            t4 = time.time()
-
-        ## #cache.imgarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
+                # TODO: take care of high bit depth RGBA
+                img_arr = trcalc.add_alpha(img_arr, alpha=255)
+                cache.rgbarr = np.ascontiguousarray(img_arr, dtype=np.uint8)
+                cache.image_type = 1
 
         cache.drawn = True
         t5 = time.time()
@@ -427,25 +397,17 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     def prepare_image(self, cvs_img, cache, whence):
         if cvs_img.kind == 'image':
             self._prepare_image(cvs_img, cache, whence)
-            img_arr = cache.rgbarr
-            cache.image_type = 0
 
         elif cvs_img.kind == 'normimage':
             self._prepare_norm_image(cvs_img, cache, whence)
-            if len(cache.cutout.shape) == 2:
-                # <-- monochrome image with adjustable RGB map
-                img_arr = cache.cutout
-                cache.image_type = 2
-            else:
-                img_arr = cache.rgbarr
-                cache.image_type = 1
 
         else:
             raise render.RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
 
+        img_arr = cache.rgbarr
         #tex_id = self.get_texture_id(cvs_img.image_id)
-        #self.gl_set_image(tex_id, img_arr)
-        self.image_uploads.append((cvs_img.image_id, img_arr))
+        #self.gl_set_image(tex_id, img_arr, cache.image_type)
+        self.image_uploads.append((cvs_img.image_id, img_arr, cache.image_type))
 
     def get_texture_id(self, image_id):
         tex_id = self._tex_cache.get(image_id, None)
@@ -562,7 +524,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glFrontFace(gl.GL_CCW)
         self._initialized = True
 
-    def gl_set_image(self, tex_id, img_arr):
+    def gl_set_image(self, tex_id, img_arr, image_type):
         """NOTE: this is a slow operation--downloading a texture."""
         #context = self.viewer.make_context_current()
 
@@ -580,16 +542,24 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T,
                            gl.GL_CLAMP_TO_EDGE)
 
-        if len(img_arr.shape) > 2:
+        if image_type in (0, 1):
             gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
             gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
                             gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_arr)
             self.logger.debug("uploaded rgbarr as texture {}".format(tex_id))
-        else:
+
+        elif image_type == 2:
             gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
             gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, wd, ht, 0,
                             gl.GL_RED, gl.GL_FLOAT, img_arr)
             self.logger.debug("uploaded mono as texture {}".format(tex_id))
+
+        else:
+            gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
+            gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RG32F, wd, ht, 0,
+                            gl.GL_RG, gl.GL_FLOAT, img_arr)
+            self.logger.debug("uploaded mono w/alpha as texture {}".format(tex_id))
+
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
     def gl_set_cmap(self, rgbmap):
@@ -776,9 +746,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
             # perform any necessary image updates
             uploads, self.image_uploads = self.image_uploads, []
-            for image_id, img_arr in uploads:
+            for image_id, img_arr, image_type in uploads:
                 tex_id = self.get_texture_id(image_id)
-                self.gl_set_image(tex_id, img_arr)
+                self.gl_set_image(tex_id, img_arr, image_type)
 
             # perform any necessary rgbmap updates
             rgbmap = self.viewer.get_rgbmap()
