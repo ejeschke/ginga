@@ -73,8 +73,10 @@ class ViewerImageProxy:
         self.viewer = viewer
         self.logger = viewer.get_logger()
 
-    def get_canvas_image_at_pt(self, pt):
-        """Extract the canvas Image-based object under the point.
+        self.limit_cutout = 5000
+
+    def get_canvas_images_at_pt(self, pt):
+        """Extract the canvas Image-based objects under the point.
 
         Parameters
         ----------
@@ -92,11 +94,9 @@ class ViewerImageProxy:
         canvas = self.viewer.get_canvas()
         objs = canvas.get_items_at(pt)
         objs = list(filter(lambda obj: isinstance(obj, ImageP), objs))
-        if len(objs) == 0:
-            return None
-
-        obj = objs[-1]
-        return obj
+        # top most objects are farther down
+        objs.reverse()
+        return objs
 
     def get_image_at_pt(self, pt):
         """Extract the image wrapper object under the point.
@@ -114,17 +114,30 @@ class ViewerImageProxy:
             subtracted.
 
         """
-        obj = self.get_canvas_image_at_pt(pt)
-        if obj is None:
-            return None, pt
-
-        image = obj.get_image()
-
-        # adjust data coords for where this image is plotted
+        objs = self.get_canvas_images_at_pt(pt)
         data_x, data_y = pt[:2]
-        data_x, data_y = data_x - obj.x, data_y - obj.y
+        off = self.viewer.data_off
 
-        return (image, (data_x, data_y))
+        for obj in objs:
+            image = obj.get_image()
+            # adjust data coords for where this image is plotted
+            _x, _y = data_x - obj.x, data_y - obj.y
+            order = image.get_order()
+            if 'A' not in order:
+                # no alpha channel, so this image's data is valid
+                return (image, (_x, _y))
+
+            aix = order.index('A')
+            data = image.get_data()
+            _d_x, _d_y = int(np.floor(_x + off)), int(np.floor(_y + off))
+            val = data[_d_y, _d_x]
+            if np.isclose(val[aix], 0.0):
+                # alpha value is 0
+                continue
+
+            return (image, (_x, _y))
+
+        return None, pt
 
     def getval_pt(self, pt):
         """Extract the data value from an image under the point.
@@ -412,10 +425,12 @@ class ViewerImageProxy:
                 y += sy
 
         if getvalues:
-            ## x1, y1, x2, y2 = trcalc.sort_xy(x1, y1, x2, y2)
-            ## data_np = self.cutout_data(x1, y1, x2 + 1, y2 + 1)
-            ## return [data_np[y - y1, x - x1] for x, y in res]
-            return [self.getval_pt((x, y)) for x, y in res]
+            if np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) > self.limit_cutout:
+                return [self.getval_pt((x, y)) for x, y in res]
+
+            x1, y1, x2, y2 = trcalc.sort_xy(x1, y1, x2, y2)
+            data_np = self.cutout_data(x1, y1, x2 + 1, y2 + 1)
+            res = [data_np[y - y1, x - x1] for x, y in res]
 
         return res
 

@@ -363,7 +363,7 @@ class Pick(GingaPlugin.LocalPlugin):
                                                   30.0)
 
         self.iqcalc = iqcalc.IQCalc(self.logger)
-        self.copy_attrs = ['transforms', 'cutlevels', 'autocuts']
+        self.copy_attrs = ['transforms', 'cutlevels']
         if (self.settings.get('pick_cmap_name', None) is None and
                 self.settings.get('pick_imap_name', None) is None):
             self.copy_attrs.append('rgbmap')
@@ -1829,23 +1829,20 @@ class Pick(GingaPlugin.LocalPlugin):
         text = self.fv.scale2text(scalefactor)
         self.wdetail.zoom.set_text(text)
 
-    def detailxy(self, canvas, button, data_x, data_y):
+    def detailxy(self, canvas, event, data_x, data_y):
         """Motion event in the pick fits window.  Show the pointing
         information under the cursor.
         """
-        if button == 0:
-            # TODO: we could track the focus changes to make this check
-            # more efficient
-            chviewer = self.fv.getfocus_viewer()
-            # Don't update global information if our chviewer isn't focused
-            if chviewer != self.fitsimage:
-                return True
+        chviewer = self.fv.getfocus_viewer()
+        # Don't update global information if our chviewer isn't focused
+        if chviewer != self.fitsimage:
+            return True
 
-            # Add offsets from cutout
-            data_x = data_x + self.pick_x1
-            data_y = data_y + self.pick_y1
+        # Add offsets from cutout
+        data_x = data_x + self.pick_x1
+        data_y = data_y + self.pick_y1
 
-            return self.fv.showxy(chviewer, data_x, data_y)
+        return self.fv.showxy(chviewer, data_x, data_y)
 
     def cutdetail(self, image, shape_obj):
         view, mask = image.get_shape_view(shape_obj)
