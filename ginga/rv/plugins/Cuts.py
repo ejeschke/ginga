@@ -922,9 +922,9 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         coords = []
         if cuttype == 'horizontal':
-            coords.append((0, data_y, wd, data_y))
+            coords.append((0, data_y, wd - 1, data_y))
         elif cuttype == 'vertical':
-            coords.append((data_x, 0, data_x, ht))
+            coords.append((data_x, 0, data_x, ht - 1))
 
         count = self._get_cut_index()
         tag = "cuts%d" % (count)

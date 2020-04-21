@@ -237,8 +237,7 @@ class ViewerImageProxy:
         data_np = np.full((y_len, x_len), fill_value, dtype=astype)
 
         # calculate pixel containment indexes in cutout bbox
-        yi = np.mgrid[y1:y2].reshape(-1, 1)
-        xi = np.mgrid[x1:x2].reshape(1, -1)
+        yi, xi = np.mgrid[y1:y2, x1:x2]
         pts = np.asarray((xi, yi)).T
 
         canvas = self.viewer.get_canvas()
