@@ -1,7 +1,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 """
-Plugin to create image mosaic.
+Plugin to create an image mosaic by constructing a composite image.
 
 **Plugin Type: Local**
 
@@ -27,6 +27,13 @@ is sufficiently large (see "Customizing Ginga" in the manual).
 To create a new mosaic, set the FOV and drag files onto the display window.
 Images must have a working WCS.  The first image's WCS will be used to orient
 the other tiles.
+
+**Difference from `Collage` plugin**
+
+- Allocates a single large array to hold all the mosaic contents
+- Slower to build, but can be quicker to manipulate large resultant images
+- Can save the mosaic as a new data file
+- Fills in values between tiles with a fill value (can be `NaN`)
 
 """
 import math
@@ -650,5 +657,3 @@ class Mosaic(GingaPlugin.LocalPlugin):
 from ginga.util.toolbox import generate_cfg_example  # noqa
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Mosaic', package='ginga')
-
-# END

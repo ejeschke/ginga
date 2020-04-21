@@ -407,7 +407,7 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
         if zi_max > max_z:
             raise ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
 
-    view = np.xi_(yi, xi, zi)
+    view = np.ix_(yi, xi, zi)
 
     # Calculate actual scale used (vs. desired)
     scale_x = float(wd) / old_wd

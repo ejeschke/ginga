@@ -1,7 +1,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 """
-Plugin to create image mosaic via the collage method.
+Plugin to create an image mosaic via the collage method.
 
 **Plugin Type: Local**
 
@@ -11,22 +11,38 @@ channel.  An instance can be opened for each channel.
 **Usage**
 
 This plugin is used to automatically create a mosaic collage in the
-channel viewer using images provided by the user (e.g., using ``FBrowser``).
-The position of an image on the collage is determined by its WCS without
-distortion correction. This is meant as a quick-look tool, not a
-replacement for image drizzling that takes account of image distortion, etc.
+channel viewer using images provided by the user. The position of an image
+on the collage is determined by its WCS without distortion correction.
+This is meant as a quick-look tool, not a replacement for image drizzling
+that takes account of image distortion, etc.
 
 The collage only exists as a plot on the Ginga canvas.  No new single image
 is actually built (if you want that, see the "Mosaic" plugin).  Some plugins
 that expect to operate on single images may not work correctly with a collage.
 
 To create a new collage, click the "New Collage" button and drag files onto
-the display window.  Images must have a working WCS.  The first image
-processed will be loaded and its WCS will be used to orient the other tiles.
+the display window (e.g. files can be dragged from the `FBrowser` plugin).
+Images must have a working WCS.  The first image processed will be loaded
+and its WCS will be used to orient the other tiles.
 You can add new images to an existing collage simply by dragging addtional
 files.
 
-**Difference from Mosaic plugin**
+**Controls**
+
+Check the "Collage HDUs" button to have `Collage` attempt to plot all the
+image HDUs in a dragged file instead of just the first found one.
+
+Check "Label Images" to have the plugin draw the name of each image over each
+plotted tile.
+
+If "Match bg" is checked, the background of each tile is adjusted relative
+to the median of the first tile plotted (a kind of rough smoothing).
+
+The "Num Threads" box assigns how many threads will be used from the thread
+pool to load the data.  Using several threads will usually speed up loading
+of many files.
+
+**Difference from `Mosaic` plugin**
 
 - Doesn't allocate a large array to hold all the mosaic contents
 - No need to specify output FOV or worry about it
@@ -85,8 +101,7 @@ class Collage(GingaPlugin.LocalPlugin):
         self.settings.set_defaults(annotate_images=False,
                                    match_bg=False,
                                    num_threads=4,
-                                   collage_hdus=False,
-                                   make_thumbs=True)
+                                   collage_hdus=False)
         self.settings.load(onError='silent')
 
         # hook to allow special processing before inlining
@@ -432,5 +447,3 @@ class Collage(GingaPlugin.LocalPlugin):
 from ginga.util.toolbox import generate_cfg_example  # noqa
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Collage', package='ginga')
-
-# END

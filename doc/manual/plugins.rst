@@ -83,6 +83,7 @@ is the graphical way to start an operation.
    plugins_local/preferences
    plugins_local/catalogs
    plugins_local/mosaic
+   plugins_local/collage
    plugins_local/drawing
    plugins_local/fbrowser
    plugins_local/compose
