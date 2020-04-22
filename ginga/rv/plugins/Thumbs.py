@@ -261,6 +261,20 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         return thumbkey
 
     def add_image_cb(self, viewer, chname, image, info):
+        self.fv.gui_do(self._add_image, viewer, chname, image, info)
+
+    def _add_image(self, viewer, chname, image, info):
+        self.fv.assert_gui_thread()
+
+        channel = self.fv.get_channel(chname)
+        if info is None:
+            try:
+                imname = image.get('name', None)
+                info = channel.get_image_info(imname)
+            except KeyError:
+                self.logger.warn("no information in channel about image '%s'" % (
+                    imname))
+                return False
 
         # Get any previously stored thumb information in the image info
         _te = info.setdefault('thumb_extras', Bunch.Bunch())
@@ -275,11 +289,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return False
 
-        channel = self.fv.get_channel(chname)
-
-        self.fv.gui_do(self.redo_thumbnail_image, channel, image, info)
+        return self._add_image_info(viewer, channel, info)
 
     def add_image_info_cb(self, viewer, channel, info):
+        self.fv.gui_do(self._add_image_info, viewer, channel, info)
+
+    def _add_image_info(self, viewer, channel, info):
+        self.fv.assert_gui_thread()
 
         genthumb = channel.settings.get('genthumb', True)
         if not genthumb:
@@ -298,27 +314,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 # changed on the file, better reload and regenerate
                 if bnch.thumbpath == thumbpath:
                     self.logger.debug("we have this thumb--skipping regeneration")
-                    return
+                    return False
                 self.logger.debug("we have this thumb, but thumbpath is different--regenerating thumb")
             except KeyError:
                 self.logger.debug("we don't seem to have this thumb--generating thumb")
 
         thumb_image = self._get_thumb_image(channel, info, None)
 
-        self.fv.gui_do(self._make_thumb, chname, thumb_image, info, thumbkey,
-                       save_thumb=save_thumb, thumbpath=thumbpath)
-
-    def _add_image(self, viewer, chname, image):
-        channel = self.fv.get_channel(chname)
-        try:
-            imname = image.get('name', None)
-            info = channel.get_image_info(imname)
-        except KeyError:
-            self.logger.warn("no information in channel about image '%s'" % (
-                imname))
-            return
-
-        self.add_image_cb(viewer, chname, image, info)
+        self._make_thumb(chname, thumb_image, info, thumbkey,
+                         save_thumb=save_thumb, thumbpath=thumbpath)
+        return True
 
     def remove_image_info_cb(self, viewer, channel, image_info):
         if not self.gui_up:
@@ -473,8 +478,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             ignore = _te.get('ignore', False)
             path = bnch.info.path
             if placeholder and path is not None and not ignore:
-                #self.fv.nongui_do(self.force_load_for_thumb, thumbkey, path,
-                #                  bnch, _te)
+                ## self.fv.nongui_do(self.force_load_for_thumb, thumbkey, path,
+                ##                   bnch, _te)
                 self.force_load_for_thumb(thumbkey, path, bnch, _te)
                 break
 
@@ -492,6 +497,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self.fv.gui_do(channel.add_image_update, image, info,
                            update_viewer=False)
 
+            save_thumb = self.settings.get('cache_thumbs', False)
+            self.fv.gui_do(self.redo_thumbnail_image, channel, image, info,
+                           save_thumb=save_thumb)
+
         except Exception as e:
             # load errors will be reported in self.fv.load_image()
             # Just ignore autoload errors for now...
@@ -505,8 +514,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         """
         with self.thmblock:
-            un_hilite_set = old_highlight_set - new_highlight_set
-            re_hilite_set = new_highlight_set - old_highlight_set
+            common = old_highlight_set & new_highlight_set
+            un_hilite_set = old_highlight_set - common
+            re_hilite_set = new_highlight_set | common
 
             # highlight new labels that should be
             bg = self.settings.get('label_bg_color', 'lightgreen')
@@ -528,6 +538,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def redo(self, channel, image):
         """This method is called when an image is set in a channel."""
+        self.fv.assert_gui_thread()
         self.logger.debug("image set")
         chname = channel.name
 
@@ -545,9 +556,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             new_highlight = set([])
 
         # TODO: already calculated thumbkey, use simpler test
-        if not self.have_thumbnail(channel.fitsimage, image):
-            # No memory of this thumbnail, so regenerate it
-            self._add_image(self.fv, chname, image)
+        with self.thmblock:
+            #if not self.have_thumbnail(channel.fitsimage, image):
+            if thumbkey not in self.thumb_dict:
+                # No memory of this thumbnail, so regenerate it
+                if not self._add_image(self.fv, chname, image, None):
+                    return
 
         self.logger.debug("highlighting")
         # Only highlights active image in the current channel
@@ -560,7 +574,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self.update_highlights(old_highlight, new_highlight)
             channel.extdata.thumbs_old_highlight = new_highlight
 
-        self.fv.gui_do(self.redo_thumbnail, channel.fitsimage)
+        self.redo_delay(channel.fitsimage)
 
     def have_thumbnail(self, fitsimage, image):
         """Returns True if we already have a thumbnail version of this image
@@ -627,8 +641,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             if thumbkey not in self.thumb_dict:
                 # No memory of this thumbnail, so regenerate it
                 self.logger.debug("No memory of %s, adding..." % (str(thumbkey)))
-                self._add_image(self.fv, chname, image)
-                return
+                if not self._add_image(self.fv, chname, image, info):
+                    return
 
             # Generate new thumbnail
             self.logger.debug("generating new thumbnail")
@@ -798,8 +812,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             try:
                 # try to load the thumbnail image
                 thumb_image = self.rgb_opener.load_file(thumbpath)
+                wd, ht = thumb_image.get_size()[:2]
+                if max(wd, ht) > self.thumb_width:
+                    # <-- thumb size does not match our expected size
+                    thumb_image = self._regen_thumb_image(thumb_image, _te,
+                                                          None)
                 thumb_image.set(name=info.name)
-                thumb_image = self._regen_thumb_image(thumb_image, _te, None)
+                _te.setvals(placeholder=False, time_update=None)
                 return thumb_image
 
             except Exception as e:
