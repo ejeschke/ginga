@@ -85,9 +85,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    label_font_size=10,
                                    label_bg_color='lightgreen',
                                    autoload_visible_thumbs=True,
-                                   autoload_interval=1.0,
+                                   autoload_interval=0.1,
                                    closeable=not spec.get('hidden', False),
-                                   transfer_attrs=['transforms',
+                                   transfer_attrs=['transforms', 'autocuts',
                                                    'cutlevels', 'rgbmap',
                                                    'icc', 'interpolation'])
         self.settings.load(onError='silent')
@@ -261,26 +261,41 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         return thumbkey
 
     def add_image_cb(self, viewer, chname, image, info):
+        self.fv.gui_do(self._add_image, viewer, chname, image, info)
+
+    def _add_image(self, viewer, chname, image, info):
+        self.fv.assert_gui_thread()
+
+        channel = self.fv.get_channel(chname)
+        if info is None:
+            try:
+                imname = image.get('name', None)
+                info = channel.get_image_info(imname)
+            except KeyError:
+                self.logger.warn("no information in channel about image '%s'" % (
+                    imname))
+                return False
 
         # Get any previously stored thumb information in the image info
-        thumb_extra = info.setdefault('thumb_extras', Bunch.Bunch())
+        _te = info.setdefault('thumb_extras', Bunch.Bunch())
 
         # Get metadata for mouse-over tooltip
         metadata = self._get_tooltip_metadata(info, image)
 
         # Update the tooltip, in case of new or changed metadata
         text = self._mk_tooltip_text(metadata)
-        thumb_extra.tooltip = text
+        _te.tooltip = text
 
         if not self.gui_up:
             return False
 
-        channel = self.fv.get_channel(chname)
-
-        if thumb_extra.get('time_update', None) is None:
-            self.fv.gui_do(self.redo_thumbnail_image, channel, image, info)
+        return self._add_image_info(viewer, channel, info)
 
     def add_image_info_cb(self, viewer, channel, info):
+        self.fv.gui_do(self._add_image_info, viewer, channel, info)
+
+    def _add_image_info(self, viewer, channel, info):
+        self.fv.assert_gui_thread()
 
         genthumb = channel.settings.get('genthumb', True)
         if not genthumb:
@@ -299,27 +314,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 # changed on the file, better reload and regenerate
                 if bnch.thumbpath == thumbpath:
                     self.logger.debug("we have this thumb--skipping regeneration")
-                    return
+                    return False
                 self.logger.debug("we have this thumb, but thumbpath is different--regenerating thumb")
             except KeyError:
                 self.logger.debug("we don't seem to have this thumb--generating thumb")
 
-        thmb_image = self._get_thumb_image(channel, info, None)
+        thumb_image = self._get_thumb_image(channel, info, None)
 
-        self.fv.gui_do(self._make_thumb, chname, thmb_image, info, thumbkey,
-                       save_thumb=save_thumb, thumbpath=thumbpath)
-
-    def _add_image(self, viewer, chname, image):
-        channel = self.fv.get_channel(chname)
-        try:
-            imname = image.get('name', None)
-            info = channel.get_image_info(imname)
-        except KeyError:
-            self.logger.warn("no information in channel about image '%s'" % (
-                imname))
-            return
-
-        self.add_image_cb(viewer, chname, image, info)
+        self._make_thumb(chname, thumb_image, info, thumbkey,
+                         save_thumb=save_thumb, thumbpath=thumbpath)
+        return True
 
     def remove_image_info_cb(self, viewer, channel, image_info):
         if not self.gui_up:
@@ -456,34 +460,51 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def timer_autoload_cb(self, timer):
         self.logger.debug("autoload missing thumbs")
+        self.fv.assert_nongui_thread()
 
-        with self.thmblock:
-            if len(self._to_build) == 0:
-                return
-            thumbkey = self._to_build.pop()
-            bnch = self.thumb_dict[thumbkey]
+        done = False
+        while not done:
+            with self.thmblock:
+                if len(self._to_build) == 0:
+                    break
 
-        self.fv.nongui_do(self.force_load_for_thumb, thumbkey, bnch, timer)
+                thumbkey = self._to_build.pop()
+                bnch = self.thumb_dict[thumbkey]
 
-    def force_load_for_thumb(self, thumbkey, bnch, timer):
-        placeholder = bnch.image.get_image().get('placeholder', False)
-        path = bnch.info.path
-        if placeholder and (path is not None):
-            self.logger.debug("autoload missing [%s]" % (path))
-            info = bnch.info
-            chname = thumbkey[0]
-            channel = self.fv.get_channel(chname)
-            try:
-                image = self.fv.load_image(path, show_error=False)
-                self.logger.debug("loaded [%s]" % (path))
-                self.fv.gui_do(channel.add_image_update, image, info,
-                               update_viewer=False)
-            except Exception as e:
-                # load errors will be reported in self.fv.load_image()
-                # Just ignore autoload errors for now...
-                pass
+            # Get any previously stored thumb information in the image info
+            _te = bnch.info.setdefault('thumb_extras', Bunch.Bunch())
 
-        timer.cond_set(0.10)
+            placeholder = _te.get('placeholder', True)
+            ignore = _te.get('ignore', False)
+            path = bnch.info.path
+            if placeholder and path is not None and not ignore:
+                ## self.fv.nongui_do(self.force_load_for_thumb, thumbkey, path,
+                ##                   bnch, _te)
+                self.force_load_for_thumb(thumbkey, path, bnch, _te)
+                break
+
+        timer.cond_set(self.autoload_interval)
+
+    def force_load_for_thumb(self, thumbkey, path, bnch, thumb_extras):
+        self.logger.debug("autoload missing [%s]" % (path))
+        info = bnch.info
+        chname = thumbkey[0]
+        channel = self.fv.get_channel(chname)
+        try:
+            image = self.fv.load_image(path, show_error=False)
+            self.logger.debug("loaded [%s]" % (path))
+
+            self.fv.gui_do(channel.add_image_update, image, info,
+                           update_viewer=False)
+
+            save_thumb = self.settings.get('cache_thumbs', False)
+            self.fv.gui_do(self.redo_thumbnail_image, channel, image, info,
+                           save_thumb=save_thumb)
+
+        except Exception as e:
+            # load errors will be reported in self.fv.load_image()
+            # Just ignore autoload errors for now...
+            thumb_extras.ignore = True
 
     def update_highlights(self, old_highlight_set, new_highlight_set):
         """Unhighlight the thumbnails represented by `old_highlight_set`
@@ -493,8 +514,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         """
         with self.thmblock:
-            un_hilite_set = old_highlight_set - new_highlight_set
-            re_hilite_set = new_highlight_set - old_highlight_set
+            common = old_highlight_set & new_highlight_set
+            un_hilite_set = old_highlight_set - common
+            re_hilite_set = new_highlight_set | common
 
             # highlight new labels that should be
             bg = self.settings.get('label_bg_color', 'lightgreen')
@@ -516,6 +538,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
     def redo(self, channel, image):
         """This method is called when an image is set in a channel."""
+        self.fv.assert_gui_thread()
         self.logger.debug("image set")
         chname = channel.name
 
@@ -533,9 +556,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             new_highlight = set([])
 
         # TODO: already calculated thumbkey, use simpler test
-        if not self.have_thumbnail(channel.fitsimage, image):
-            # No memory of this thumbnail, so regenerate it
-            self._add_image(self.fv, chname, image)
+        with self.thmblock:
+            #if not self.have_thumbnail(channel.fitsimage, image):
+            if thumbkey not in self.thumb_dict:
+                # No memory of this thumbnail, so regenerate it
+                if not self._add_image(self.fv, chname, image, None):
+                    return
 
         self.logger.debug("highlighting")
         # Only highlights active image in the current channel
@@ -547,6 +573,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         else:
             self.update_highlights(old_highlight, new_highlight)
             channel.extdata.thumbs_old_highlight = new_highlight
+
+        self.redo_delay(channel.fitsimage)
 
     def have_thumbnail(self, fitsimage, image):
         """Returns True if we already have a thumbnail version of this image
@@ -602,7 +630,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             save_thumb = self.settings.get('cache_thumbs', False)
 
         # Get any previously stored thumb information in the image info
-        thumb_extra = info.setdefault('thumb_extras', Bunch.Bunch())
+        _te = info.setdefault('thumb_extras', Bunch.Bunch())
 
         # Get metadata for mouse-over tooltip
         metadata = self._get_tooltip_metadata(info, image)
@@ -613,13 +641,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             if thumbkey not in self.thumb_dict:
                 # No memory of this thumbnail, so regenerate it
                 self.logger.debug("No memory of %s, adding..." % (str(thumbkey)))
-                self._add_image(self.fv, chname, image)
-                return
+                if not self._add_image(self.fv, chname, image, info):
+                    return
 
             # Generate new thumbnail
             self.logger.debug("generating new thumbnail")
-            thmb_image = self._regen_thumb_image(image, channel.fitsimage)
-            thumb_extra.time_update = time.time()
+            thumb_image = self._regen_thumb_image(image, _te, channel.fitsimage)
 
             # Save a thumbnail for future browsing
             if save_thumb and info.path is not None:
@@ -627,9 +654,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 if thumbpath is not None:
                     if os.path.exists(thumbpath):
                         os.remove(thumbpath)
-                    thmb_image.save_as_file(thumbpath)
+                    thumb_image.save_as_file(thumbpath)
 
-            self.update_thumbnail(thumbkey, thmb_image, metadata)
+            self.update_thumbnail(thumbkey, thumb_image, metadata)
         self.fv.update_pending()
 
     def delete_channel_cb(self, viewer, channel):
@@ -730,7 +757,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             tt = self.make_tt(self.c_view, canvas, text, pt, obj)
             canvas.add(tt, tag=tag)
 
-    def _regen_thumb_image(self, image, viewer):
+    def _regen_thumb_image(self, image, thumb_extras, viewer):
         self.logger.debug("generating new thumbnail")
 
         if not self.thumb_generator.viewable(image):
@@ -747,19 +774,20 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         order = self.thumb_generator.rgb_order
         rgb_img = self.thumb_generator.get_image_as_array(order=order)
-        thmb_image = RGBImage.RGBImage(rgb_img, order=order)
-        thmb_image.set(placeholder=False)
-        return thmb_image
+        thumb_image = RGBImage.RGBImage(rgb_img, order=order)
+        thumb_extras.setvals(rgbimg=thumb_image, placeholder=False,
+                             time_update=time.time())
+        return thumb_image
 
     def _get_thumb_image(self, channel, info, image):
 
         # Get any previously stored thumb information in the image info
-        thumb_extra = info.setdefault('thumb_extras', Bunch.Bunch())
+        _te = info.setdefault('thumb_extras', Bunch.Bunch())
 
         # Choice [A]: is there a thumb image attached to the image info?
-        if 'rgbimg' in thumb_extra:
+        if 'rgbimg' in _te:
             # yes
-            return thumb_extra.rgbimg
+            return _te.rgbimg
 
         thumbpath = self.get_thumbpath(info.path)
 
@@ -773,10 +801,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         if image is not None:
             try:
-                thmb_image = self._regen_thumb_image(image, None)
-                thumb_extra.rgbimg = thmb_image
-                thumb_extra.time_update = time.time()
-                return thmb_image
+                thumb_image = self._regen_thumb_image(image, _te, None)
+                return thumb_image
 
             except Exception as e:
                 self.logger.warning("Error generating thumbnail: %s" % (str(e)))
@@ -785,36 +811,44 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         if (thumbpath is not None) and os.path.exists(thumbpath):
             try:
                 # try to load the thumbnail image
-                thmb_image = self.rgb_opener.load_file(thumbpath)
-                thmb_image.set(name=info.name, placeholder=False)
-                thmb_image = self._regen_thumb_image(thmb_image, None)
-                thumb_extra.rgbimg = thmb_image
-                return thmb_image
+                thumb_image = self.rgb_opener.load_file(thumbpath)
+                wd, ht = thumb_image.get_size()[:2]
+                if max(wd, ht) > self.thumb_width:
+                    # <-- thumb size does not match our expected size
+                    thumb_image = self._regen_thumb_image(thumb_image, _te,
+                                                          None)
+                thumb_image.set(name=info.name)
+                _te.setvals(placeholder=False, time_update=None)
+                return thumb_image
 
             except Exception as e:
                 self.logger.warning("Error loading thumbnail: %s" % (str(e)))
 
         # Choice [D]: load a placeholder image
         tmp_path = os.path.join(icondir, 'fits.png')
-        thmb_image = self.rgb_opener.load_file(tmp_path)
-        thmb_image.set(name=info.name, path=None, placeholder=True)
+        thumb_image = self.rgb_opener.load_file(tmp_path)
+        thumb_image.set(name=info.name, path=None)
+        _te.setvals(placeholder=True, time_update=None)
 
-        return thmb_image
+        return thumb_image
 
-    def _make_thumb(self, chname, thmb_image, info, thumbkey,
+    def _make_thumb(self, chname, thumb_image, info, thumbkey,
                     save_thumb=False, thumbpath=None):
+
+        _te = info.setdefault('thumb_extras', Bunch.Bunch())
+        placeholder = _te.get('placeholder', True)
 
         # This is called by the plugin FBrowser.make_thumbs() as
         # a gui thread
         with self.thmblock:
             # Save a thumbnail for future browsing
-            if save_thumb and (thumbpath is not None):
-                thmb_image.save_as_file(thumbpath)
+            if save_thumb and thumbpath is not None and not placeholder:
+                thumb_image.save_as_file(thumbpath)
 
         # Get metadata for mouse-over tooltip
         metadata = self._get_tooltip_metadata(info, None)
 
-        self.insert_thumbnail(thmb_image, thumbkey, chname,
+        self.insert_thumbnail(thumb_image, thumbkey, chname,
                               thumbpath, metadata, info)
 
     def get_thumbpath(self, path, makedir=True):
@@ -937,14 +971,14 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         menu = self._mk_context_menu(thumbkey, chname, info)  # noqa
 
         # Get any previously stored thumb information in the image info
-        thumb_extra = info.setdefault('thumb_extras', Bunch.Bunch())
+        _te = info.setdefault('thumb_extras', Bunch.Bunch())
 
         # If there is no previously made tooltip, then generate one
-        if 'tooltip' in thumb_extra:
-            text = thumb_extra.tooltip
+        if 'tooltip' in _te:
+            text = _te.tooltip
         else:
             text = self._mk_tooltip_text(metadata)
-            thumb_extra.tooltip = text
+            _te.tooltip = text
 
         canvas = self.thumb_generator.get_canvas()
         fg = self.settings.get('label_font_color', 'black')
@@ -1103,7 +1137,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         return menu
 
-    def update_thumbnail(self, thumbkey, thmb_image, metadata):
+    def update_thumbnail(self, thumbkey, thumb_image, metadata):
         with self.thmblock:
             try:
                 bnch = self.thumb_dict[thumbkey]
@@ -1114,18 +1148,18 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
             info = bnch.info
             # Get any previously stored thumb information in the image info
-            thumb_extra = info.setdefault('thumb_extras', Bunch.Bunch())
+            _te = info.setdefault('thumb_extras', Bunch.Bunch())
 
             # Update the tooltip, in case of new or changed metadata
             text = self._mk_tooltip_text(metadata)
-            thumb_extra.tooltip = text
+            _te.tooltip = text
 
             self.logger.debug("updating thumbnail '%s'" % (info.name))
             # TODO: figure out why set_image() causes corruption of the
             # redraw here.  Instead we force a manual redraw.
-            #bnch.image.set_image(thmb_image)
-            bnch.image.image = thmb_image
-            thumb_extra.rgbimg = thmb_image
+            #bnch.image.set_image(thumb_image)
+            bnch.image.image = thumb_image
+            _te.rgbimg = thumb_image
 
             if self.gui_up:
                 self.c_view.redraw(whence=0)
