@@ -517,7 +517,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
         self.fv.show_status("Draw a line with the right mouse button")
         self.replot_all()
         if self.use_slit:
@@ -576,7 +576,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def _plotpoints(self, obj, color):
 
-        image = self.fitsimage.get_image()
+        image = self.fitsimage.get_vip()
 
         # Get points on the line
         if obj.kind == 'line':
@@ -606,7 +606,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                 x1, y1 = x2, y2
 
         elif obj.kind == 'beziercurve':
-            points = obj.get_pixels_on_curve(image)
+            points = image.get_pixels_on_curve(obj)
 
         points = np.array(points)
 
@@ -922,9 +922,9 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         coords = []
         if cuttype == 'horizontal':
-            coords.append((0, data_y, wd, data_y))
+            coords.append((0, data_y, wd - 1, data_y))
         elif cuttype == 'vertical':
-            coords.append((data_x, 0, data_x, ht))
+            coords.append((data_x, 0, data_x, ht - 1))
 
         count = self._get_cut_index()
         tag = "cuts%d" % (count)

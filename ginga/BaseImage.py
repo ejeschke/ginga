@@ -170,7 +170,12 @@ class BaseImage(ViewerObjectBase):
             ImageError("Indexes out of range: (x=%d, y=%d)" % (
                 x, y))
         view = np.s_[y, x]
-        return self._slice(view)
+        res = self._slice(view)
+        if isinstance(res, np.ndarray) and self.get('ignore_alpha', False):
+            # <-- this image has a "hidden" alpha array
+            # NOTE: assumes that data is at index 0
+            res = res[0]
+        return res
 
     def set_data(self, data_np, metadata=None, order=None, astype=None):
         """Use this method to SHARE (not copy) the incoming array.
@@ -198,7 +203,8 @@ class BaseImage(ViewerObjectBase):
         self._data = np.zeros((1, 1))
 
     def _slice(self, view):
-        view = tuple(view)
+        if not isinstance(view, tuple):
+            view = tuple(view)
         return self._get_data()[view]
 
     def get_slice(self, c):
@@ -298,16 +304,43 @@ class BaseImage(ViewerObjectBase):
         other = self.__class__(data_np=data, metadata=metadata)
         return other
 
-    def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):
-        """cut out data area based on coords.
+    def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, z=None,
+                    astype=None):
+        """Cut out data area based on bounded coordinates.
+
+        Parameters
+        ----------
+        x1, y1 : int
+            Coordinates defining the minimum corner to be cut out
+
+        x2, y2 : int
+            Coordinates *one greater* than the maximum corner
+
+        xstep, ystep : int
+            Step values for skip intervals in the cutout region
+
+        z : int
+            Value for a depth (slice) component for color images
+
+        astype :
+
+        Note that the coordinates for `x2`, `y2` are *outside* the
+        cutout region, similar to slicing parameters in Python.
         """
         view = np.s_[y1:y2:ystep, x1:x2:xstep]
-        data = self._slice(view)
+        data_np = self._slice(view)
+        if z is not None and len(data_np.shape) > 2:
+            data_np = data_np[..., z]
         if astype:
-            data = data.astype(astype, copy=False)
-        return data
+            data_np = data_np.astype(astype, copy=False)
+        return data_np
 
-    def cutout_adjust(self, x1, y1, x2, y2, xstep=1, ystep=1, astype=None):
+    def cutout_adjust(self, x1, y1, x2, y2, xstep=1, ystep=1, z=0, astype=None):
+        """Like `cutout_data`, but adjusts coordinates `x1`, `y1`, `x2`, `y2`
+        to be inside the data area if they are not already.  It tries to
+        preserve the width and height of the region, so e.g. (-2, -2, 5, 5)
+        could become (0, 0, 7, 7)
+        """
         dx = x2 - x1
         dy = y2 - y1
 
@@ -326,14 +359,13 @@ class BaseImage(ViewerObjectBase):
                 y1 = y2 - dy
 
         data = self.cutout_data(x1, y1, x2, y2, xstep=xstep, ystep=ystep,
-                                astype=astype)
+                                z=z, astype=astype)
         return (data, x1, y1, x2, y2)
 
     def cutout_radius(self, x, y, radius, xstep=1, ystep=1, astype=None):
         return self.cutout_adjust(x - radius, y - radius,
                                   x + radius + 1, y + radius + 1,
-                                  xstep=xstep, ystep=ystep,
-                                  astype=astype)
+                                  xstep=xstep, ystep=ystep, astype=astype)
 
     def cutout_cross(self, x, y, radius):
         """Cut two data subarrays that have a center at (x, y) and with
@@ -408,82 +440,54 @@ class BaseImage(ViewerObjectBase):
 
     def get_scaled_cutout_wdht(self, x1, y1, x2, y2, new_wd, new_ht,
                                method='basic'):
-        """Extract a region of the image defined by corners (x1, y1) and
-        (x2, y2) and resample it to fit dimensions (new_wd, new_ht).
-
-        `method` describes the method of interpolation used, where the
-        default "basic" is nearest neighbor.
-        """
-
-        if method in ('basic', 'view'):
-            shp = self.shape
-
-            (view, (scale_x, scale_y)) = \
-                trcalc.get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2,
-                                                   new_wd, new_ht)
-            newdata = self._slice(view)
-
-        else:
-            data_np = self._get_data()
-            (newdata, (scale_x, scale_y)) = \
-                trcalc.get_scaled_cutout_wdht(data_np, x1, y1, x2, y2,
-                                              new_wd, new_ht,
-                                              interpolation=method,
-                                              logger=self.logger)
+        # TO BE DEPRECATED
+        data_np = self._get_data()
+        (newdata, (scale_x, scale_y)) = \
+            trcalc.get_scaled_cutout_wdht(data_np, x1, y1, x2, y2,
+                                          new_wd, new_ht,
+                                          interpolation=method,
+                                          logger=self.logger)
 
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         return res
 
     def get_scaled_cutout_basic(self, x1, y1, x2, y2, scale_x, scale_y,
                                 method='basic'):
-        """Extract a region of the image defined by corners (x1, y1) and
-        (x2, y2) and scale it by scale factors (scale_x, scale_y).
+        # TO BE DEPRECATED
+        p1, p2 = (x1, y1), (x2, y2)
+        scales = (scale_x, scale_y)
+
+        return self.get_scaled_cutout2(p1, p2, scales, method=method,
+                                       logger=self.logger)
+
+    def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
+                          method='basic', logger=None):
+        # TO BE DEPRECATED
+        p1, p2 = (x1, y1), (x2, y2)
+        scales = (scale_x, scale_y)
+
+        return self.get_scaled_cutout2(p1, p2, scales, method=method,
+                                       logger=logger)
+
+    def get_scaled_cutout2(self, p1, p2, scales,
+                           method='basic', logger=None):
+        """Extract a region of the image defined by points `p1` and `p2`
+         and scale it by scale factors `scales`.
 
         `method` describes the method of interpolation used, where the
         default "basic" is nearest neighbor.
         """
-
-        new_wd = int(round(scale_x * (x2 - x1 + 1)))
-        new_ht = int(round(scale_y * (y2 - y1 + 1)))
-
-        return self.get_scaled_cutout_wdht(x1, y1, x2, y2, new_wd, new_ht,
-                                           method=method)
-
-    def get_scaled_cutout(self, x1, y1, x2, y2, scale_x, scale_y,
-                          method='basic', logger=None):
-        if method in ('basic', 'view'):
-            return self.get_scaled_cutout_basic(x1, y1, x2, y2,
-                                                scale_x, scale_y,
-                                                method=method)
+        if logger is None:
+            logger = self.logger
 
         data = self._get_data()
-        newdata, (scale_x, scale_y) = trcalc.get_scaled_cutout_basic(
-            data, x1, y1, x2, y2, scale_x, scale_y, interpolation=method,
-            logger=logger)
-
-        res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
-        return res
-
-    def get_scaled_cutout2(self, p1, p2, scales,
-                           method='basic', logger=None):
-
-        if method not in ('basic', 'view') and len(scales) == 2:
-            # for 2D images with alternate interpolation requirements
-            return self.get_scaled_cutout(p1[0], p1[1], p2[0], p2[1],
-                                          scales[0], scales[1],
-                                          method=method)
-
-        shp = self.shape
-
-        view, scales = trcalc.get_scaled_cutout_basic_view(
-            shp, p1, p2, scales)
-
-        newdata = self._slice(view)
-
-        scale_x, scale_y = scales[:2]
+        newdata, oscales = trcalc.get_scaled_cutout_basic2(data, p1, p2, scales,
+                                                           interpolation=method,
+                                                           logger=logger)
+        scale_x, scale_y = oscales[:2]
         res = Bunch.Bunch(data=newdata, scale_x=scale_x, scale_y=scale_y)
         if len(scales) > 2:
-            res.scale_z = scales[2]
+            res.scale_z = oscales[2]
 
         return res
 
@@ -550,15 +554,20 @@ class BaseImage(ViewerObjectBase):
         try:
             # We report the value across the pixel, even though the coords
             # change halfway across the pixel
-            _d_x, _d_y = int(np.floor(data_x + 0.5)), int(np.floor(data_y + 0.5))
+            _d_x, _d_y = (int(np.floor(data_x + 0.5)),
+                          int(np.floor(data_y + 0.5)))
             value = self.get_data_xy(_d_x, _d_y)
 
         except Exception as e:
             value = None
 
         info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
-                           x=data_x, y=data_y,
-                           value=value)
+                           x=data_x, y=data_y, value=value)
+
+        wd, ht = self.get_size()
+        if 0 < data_x < wd and 0 < data_y < ht:
+            info.image_x, info.image_y = data_x, data_y
+
         return info
 
 

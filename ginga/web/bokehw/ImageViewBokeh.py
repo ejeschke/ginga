@@ -478,14 +478,14 @@ class ImageViewEvent(ImageViewBokeh):
         keyname = self.transkey(keyname)
         if keyname is not None:
             self.logger.debug("key press event, key=%s" % (keyname))
-            return self.make_ui_callback('key-press', keyname)
+            return self.make_ui_callback_viewer(self, 'key-press', keyname)
 
     def key_release_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
         if keyname is not None:
             self.logger.debug("key release event, key=%s" % (keyname))
-            return self.make_ui_callback('key-release', keyname)
+            return self.make_ui_callback_viewer(self, 'key-release', keyname)
 
     def button_press_event(self, event):
         x, y = int(event.x), int(event.y)
@@ -536,7 +536,8 @@ class ImageViewEvent(ImageViewBokeh):
         self.last_data_x, self.last_data_y = data_x, data_y
         self.logger.info("motion event at DATA %dx%d" % (data_x, data_y))
 
-        return self.make_ui_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'motion', button,
+                                            data_x, data_y)
 
     def scroll_event(self, event):
         x, y = int(event.x), int(event.y)
@@ -560,8 +561,8 @@ class ImageViewEvent(ImageViewBokeh):
 
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_ui_callback('scroll', direction, amount,
-                                     data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'scroll', direction, amount,
+                                            data_x, data_y)
 
     def pinch_event(self, event):
         # no rotation (seemingly) in the Bokeh pinch event
@@ -569,19 +570,19 @@ class ImageViewEvent(ImageViewBokeh):
         scale = event.scale
         self.logger.debug("pinch gesture rot=%f scale=%f" % (rot, scale))
 
-        return self.make_ui_callback('pinch', 'move', rot, scale)
+        return self.make_ui_callback_viewer(self, 'pinch', 'move', rot, scale)
 
     def pan_start_event(self, event):
         dx, dy = int(event.delta_x), int(event.delta_y)
         self.logger.debug("pan gesture dx=%f dy=%f" % (dx, dy))
 
-        return self.make_ui_callback('pan', 'start', dx, dy)
+        return self.make_ui_callback_viewer(self, 'pan', 'start', dx, dy)
 
     def pan_event(self, event):
         dx, dy = int(event.delta_x), int(event.delta_y)
         self.logger.debug("pan gesture dx=%f dy=%f" % (dx, dy))
 
-        return self.make_ui_callback('pan', 'move', dx, dy)
+        return self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
 
     def tap_event(self, event):
         x, y = int(event.x), int(event.y)
@@ -620,7 +621,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_set_active(True)
+        self.ui_set_active(True, viewer=self)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)

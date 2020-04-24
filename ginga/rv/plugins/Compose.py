@@ -181,7 +181,7 @@ class Compose(GingaPlugin.LocalPlugin):
 
         zi.get_canvas().add(self.canvas)
         self.canvas.set_surface(zi)
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=zi)
 
         fr = Widgets.Frame("Preview")
         fr.set_widget(iw)

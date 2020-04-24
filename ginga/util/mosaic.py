@@ -10,16 +10,16 @@ Usage:
    $ ./mosaic.py -o output.fits input1.fits input2.fits ... inputN.fits
 """
 
-import sys
 import os
 import math
+import time
 
 import numpy as np
 
 from ginga import AstroImage, trcalc
 from ginga.util import wcs, loader, dp, iqcalc
 from ginga.util import io_fits
-from ginga.misc import log
+from ginga.misc import log, Callback
 
 
 def mosaic_inline(baseimage, imagelist, bg_ref=None, trim_px=None,
@@ -52,7 +52,7 @@ def mosaic_inline(baseimage, imagelist, bg_ref=None, trim_px=None,
 
         # Calculate sky position at the center of the piece
         ctr_x, ctr_y = trcalc.get_center(data_np)
-        ra, dec = image.pixtoradec(ctr_x, ctr_y)
+        ra, dec = image.pixtoradec(ctr_x, ctr_y, coords='data')
 
         # User specified a trim?  If so, trim edge pixels from each
         # side of the array
@@ -137,7 +137,7 @@ def mosaic_inline(baseimage, imagelist, bg_ref=None, trim_px=None,
         ctr_x, ctr_y = trcalc.get_center(rotdata)
 
         # Find location of image piece (center) in our array
-        x0, y0 = baseimage.radectopix(ra, dec)
+        x0, y0 = baseimage.radectopix(ra, dec, coords='data')
 
         # Merge piece as closely as possible into our array
         # Unfortunately we lose a little precision rounding to the
@@ -326,49 +326,248 @@ def main(options, args):
         img_mosaic.save_as_file(outfile)
 
 
-if __name__ == "__main__":
+class CanvasMosaicer(Callback.Callbacks):
 
-    # Parse command line options
-    from argparse import ArgumentParser
+    def __init__(self, logger):
+        super(CanvasMosaicer, self).__init__()
 
-    argprs = ArgumentParser()
+        self.logger = logger
 
-    argprs.add_argument("--debug", dest="debug", default=False,
-                        action="store_true",
-                        help="Enter the pdb debugger on main()")
-    argprs.add_argument("--fov", dest="fov", metavar="DEG",
-                        type=float,
-                        help="Set output field of view")
-    argprs.add_argument("--log", dest="logfile", metavar="FILE",
-                        help="Write logging output to FILE")
-    argprs.add_argument("--loglevel", dest="loglevel", metavar="LEVEL",
-                        type=int,
-                        help="Set logging level to LEVEL")
-    argprs.add_argument("-o", "--outfile", dest="outfile", metavar="FILE",
-                        help="Write mosaic output to FILE")
-    argprs.add_argument("--stderr", dest="logstderr", default=False,
-                        action="store_true",
-                        help="Copy logging also to stderr")
-    argprs.add_argument("--profile", dest="profile", action="store_true",
-                        default=False,
-                        help="Run the profiler on main()")
+        self.ingest_count = 0
+        # holds processed images to be inserted into mosaic image
+        self.total_images = 0
 
-    (options, args) = argprs.parse_known_args(sys.argv[1:])
+        # options
+        self.annotate = False
+        self.annotate_color = 'pink'
+        self.annotate_fontsize = 10.0
+        self.match_bg = False
+        self.center_image = True
 
-    # Are we debugging this?
-    if options.debug:
-        import pdb
+        # these are updated in prepare_mosaic() and represent measurements
+        # on the reference image
+        self.bg_ref = 0.0
+        self.xrot_ref, self.yrot_ref = 0.0, 0.0
+        self.cdelt1_ref, self.cdelt2_ref = 1.0, 1.0
+        self.scale_x = 1.0
+        self.scale_y = 1.0
+        self.limits = None
+        self.ref_image = None
 
-        pdb.run('main(options, args)')
+        for name in ['progress', 'finished']:
+            self.enable_callback(name)
 
-    # Are we profiling this?
-    elif options.profile:
-        import profile
+    def prepare_mosaic(self, ref_image):
+        """Prepare a new (blank) mosaic image based on the pointing of
+        the parameter image
+        """
+        self.ref_image = ref_image
 
-        print("%s profile:" % sys.argv[0])
-        profile.run('main(options, args)')
+        # if user requesting us to match backgrounds, then calculate
+        # median of root image and save it
+        if self.match_bg:
+            data_np = ref_image.get_data()
+            self.bg_ref = iqcalc.get_median(data_np)
 
-    else:
-        main(options, args)
+        header = ref_image.get_header()
 
-# END
+        # TODO: handle skew (differing rotation for each axis)?
+        (rot_xy, cdelt_xy) = wcs.get_xy_rotation_and_scale(header)
+        self.logger.debug("ref image rot_x=%f rot_y=%f cdelt1=%f cdelt2=%f" % (
+            rot_xy[0], rot_xy[1], cdelt_xy[0], cdelt_xy[1]))
+
+        # Store base image rotation and scale
+        self.xrot_ref, self.yrot_ref = rot_xy
+        self.cdelt1_ref, self.cdelt2_ref = cdelt_xy
+        self.scale_x = math.fabs(cdelt_xy[0])
+        self.scale_y = math.fabs(cdelt_xy[1])
+        self.limits = ((0, 0), (0, 0))
+
+    def ingest_one(self, canvas, image):
+        """prepare an image to be dropped in the right place in the canvas.
+        """
+        self.ingest_count += 1
+        count = self.ingest_count
+        name = image.get('name', 'image{}'.format(count))
+
+        data_np = image._get_data()
+        if 0 in data_np.shape:
+            self.logger.info("Skipping image with zero length axis")
+            return
+
+        ht, wd = data_np.shape
+
+        # If caller asked us to match background of pieces then
+        # fix up this data
+        if self.match_bg:
+            bg = iqcalc.get_median(data_np)
+            bg_inc = self.bg_ref - bg
+            data_np = data_np + bg_inc
+
+        # Calculate sky position at the center of the piece
+        ctr_x, ctr_y = trcalc.get_center(data_np)
+        ra, dec = image.pixtoradec(ctr_x, ctr_y, coords='data')
+
+        # Get rotation and scale of piece
+        header = image.get_header()
+        ((xrot, yrot),
+         (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(header)
+        self.logger.debug("image(%s) xrot=%f yrot=%f cdelt1=%f "
+                          "cdelt2=%f" % (name, xrot, yrot, cdelt1, cdelt2))
+
+        # scale if necessary to scale of reference image
+        if (not np.isclose(math.fabs(cdelt1), self.scale_x) or
+            not np.isclose(math.fabs(cdelt2), self.scale_y)):
+            nscale_x = math.fabs(cdelt1) / self.scale_x
+            nscale_y = math.fabs(cdelt2) / self.scale_y
+            self.logger.debug("scaling piece by x(%f), y(%f)" % (
+                nscale_x, nscale_y))
+            data_np, (ascale_x, ascale_y) = trcalc.get_scaled_cutout_basic(
+                #data_np, 0, 0, wd - 1, ht - 1, nscale_x, nscale_y,
+                data_np, 0, 0, wd, ht, nscale_x, nscale_y,
+                logger=self.logger)
+
+        # Rotate piece into our orientation, according to wcs
+        rot_dx, rot_dy = xrot - self.xrot_ref, yrot - self.yrot_ref
+
+        flip_x = False
+        flip_y = False
+
+        # Optomization for 180 rotations
+        if (np.isclose(math.fabs(rot_dx), 180.0) or
+            np.isclose(math.fabs(rot_dy), 180.0)):
+            rotdata = trcalc.transform(data_np,
+                                       flip_x=True, flip_y=True)
+            rot_dx = 0.0
+            rot_dy = 0.0
+        else:
+            rotdata = data_np
+
+        # Finish with any necessary rotation of piece
+        ignore_alpha = False
+        if not np.isclose(rot_dy, 0.0):
+            rot_deg = rot_dy
+            minv, maxv = trcalc.get_minmax_dtype(rotdata.dtype)
+            rotdata = trcalc.add_alpha(rotdata, alpha=maxv)
+            self.logger.debug("rotating %s by %f deg" % (name, rot_deg))
+            rotdata = trcalc.rotate(rotdata, rot_deg,
+                                    #rotctr_x=ctr_x, rotctr_y=ctr_y,
+                                    logger=self.logger, pad=0)
+            ignore_alpha = True
+
+        # Flip X due to negative CDELT1
+        if np.sign(cdelt1) != np.sign(self.cdelt1_ref):
+            flip_x = True
+
+        # Flip Y due to negative CDELT2
+        if np.sign(cdelt2) != np.sign(self.cdelt2_ref):
+            flip_y = True
+
+        if flip_x or flip_y:
+            rotdata = trcalc.transform(rotdata,
+                                       flip_x=flip_x, flip_y=flip_y)
+
+        # new wrapper for transformed image
+        metadata = dict(header=header, ignore_alpha=ignore_alpha)
+        new_image = AstroImage.AstroImage(data_np=rotdata, metadata=metadata)
+
+        # Get size and data of new image
+        ht, wd = rotdata.shape[:2]
+        ctr_x, ctr_y = trcalc.get_center(rotdata)
+
+        # Find location of image piece (center) in our array
+        x0, y0 = self.ref_image.radectopix(ra, dec, coords='data')
+
+        # Merge piece as closely as possible into our array
+        # Unfortunately we lose a little precision rounding to the
+        # nearest pixel--can't be helped with this approach
+        x0, y0 = int(np.round(x0)), int(np.round(y0))
+        self.logger.debug("Fitting image '%s' into mosaic at %f,%f" % (
+            name, x0, y0))
+
+        # update limits
+        xlo, xhi = x0 - ctr_x, x0 + ctr_x
+        ylo, yhi = y0 - ctr_y, y0 + ctr_y
+
+        new_image.set(xpos=xlo, ypos=ylo, name=name)
+
+        _xlo, _ylo, = self.limits[0]
+        _xhi, _yhi, = self.limits[1]
+        _xlo, _ylo = min(_xlo, xlo), min(_ylo, ylo)
+        _xhi, _yhi = max(_xhi, xhi), max(_yhi, yhi)
+        self.limits = ((_xlo, _ylo), (_xhi, _yhi))
+
+        self.plot_image(canvas, new_image)
+
+        self.make_callback('progress', 'fitting',
+                           float(count) / self.total_images)
+
+    def plot_image(self, canvas, image):
+        name = image.get('name', 'noname'),
+        # TODO: figure out where/why name gets encased in a tuple
+        name = name[0]
+
+        dc = canvas.get_draw_classes()
+        xpos, ypos = image.get_list('xpos', 'ypos')
+        img = dc.NormImage(xpos, ypos, image)
+        img.is_data = True
+        canvas.add(img, redraw=False)
+
+        if self.annotate:
+            wd, ht = image.get_size()
+            ## pts = [(xpos, ypos), (xpos + wd, ypos),
+            ##        (xpos + wd, ypos + ht), (xpos, ypos + ht)]
+            ## box = self.dc.Polygon(pts, color='pink')
+            text = dc.Text(xpos + 10, ypos + ht * 0.5, name,
+                           color=self.annotate_color,
+                           fontsize=self.annotate_fontsize,
+                           fontscale=True)
+            canvas.add(text, redraw=False)
+
+    def reset(self):
+        self.ref_image = None
+
+    def mosaic(self, viewer, images, canvas=None):
+        self.total_images = len(images)
+        self.ingest_count = 0
+        if self.total_images == 0:
+            return
+
+        self.make_callback('progress', 'fitting', 0.0)
+        t1 = time.time()
+
+        if canvas is None:
+            canvas = viewer.get_canvas()
+
+        with viewer.suppress_redraw:
+            # If there is no current mosaic then prepare a new one
+            if self.ref_image is None:
+                ref_image = images.pop(0)
+                self.ingest_count += 1
+                self.prepare_mosaic(ref_image)
+
+                canvas.delete_all_objects(redraw=False)
+                # first image is loaded in the usual way
+                viewer.set_image(ref_image)
+                self.limits = viewer.get_limits()
+
+            self.logger.info("fitting tiles...")
+
+            for image in images:
+                self.ingest_one(canvas, image)
+                pct = self.ingest_count / self.total_images
+                self.make_callback('progress', 'fitting', pct)
+
+            self.logger.info("finishing...")
+            self.make_callback('progress', 'finishing', 0.0)
+
+            viewer.set_limits(self.limits)
+            if self.center_image:
+                viewer.center_image()
+            canvas.update_canvas(whence=0)
+
+        self.process_elapsed = time.time() - t1
+        self.logger.info("mosaic done. process=%.4f (sec)" % (
+            self.process_elapsed))
+
+        self.make_callback('finished', self.process_elapsed)

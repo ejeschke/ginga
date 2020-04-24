@@ -9,7 +9,6 @@
 import math
 import numpy as np
 
-from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        Point, MovePoint, ScalePoint,
                                        register_canvas_types, get_canvas_type,
@@ -564,9 +563,7 @@ class CrosshairP(OnePointMixin, CanvasObjectBase):
                 text = "X:%f, Y:%f" % (self.x, self.y)
 
             else:
-                image = viewer.get_image()
-                if image is None:
-                    return
+                image = viewer.get_vip()
                 # NOTE: x, y are assumed to be in data coordinates
                 info = image.info_xy(self.x, self.y, viewer.get_settings())
                 if self.format == 'coords':
@@ -576,7 +573,9 @@ class CrosshairP(OnePointMixin, CanvasObjectBase):
                         text = "%s:%s, %s:%s" % (info.ra_lbl, info.ra_txt,
                                                  info.dec_lbl, info.dec_txt)
                 else:
-                    if np.isscalar(info.value) or len(info.value) <= 1:
+                    if info.value is None:
+                        text = "V: None"
+                    elif np.isscalar(info.value) or len(info.value) <= 1:
                         text = "V: %f" % (info.value)
                     else:
                         values = ', '.join(["%d" % info.value[i]
@@ -1081,7 +1080,7 @@ class WCSAxes(CompoundObject):
         # for keeping track of changes to image and orientation
         self._cur_rot = None
         self._cur_swap = None
-        self._cur_image = None
+        self._cur_images = set([])
 
         CompoundObject.__init__(self,
                                 color=color, alpha=alpha,
@@ -1093,27 +1092,27 @@ class WCSAxes(CompoundObject):
         self.opaque = True
         self.kind = 'wcsaxes'
 
-    def _calc_axes(self, viewer, image, rot_deg, swapxy):
-        self._cur_image = image
+    def _calc_axes(self, viewer, images, rot_deg, swapxy):
+        self._cur_images = images
         self._cur_rot = rot_deg
         self._cur_swap = swapxy
 
-        if not isinstance(image, AstroImage) or not image.has_valid_wcs():
+        image = viewer.get_image()
+        if image is None or not image.has_valid_wcs():
             self.logger.debug(
-                'WCSAxes can only be displayed for AstroImage with valid WCS')
+                'WCSAxes can only be displayed for image with valid WCS')
             return []
 
-        min_imsize = min(image.width, image.height)
+        (x1, y1), (x2, y2) = viewer.get_limits()
+        min_imsize = min(x2 - x1, y2 - y1)
         if min_imsize <= 0:
             self.logger.debug('Cannot draw WCSAxes on image with 0 dim')
             return []
 
         # Approximate bounding box in RA/DEC space
-        xmax = image.width - 1
-        ymax = image.height - 1
         try:
             radec = image.wcs.datapt_to_system(
-                [[0, 0], [0, ymax], [xmax, 0], [xmax, ymax]],
+                [(x1, y1), (x1, y2), (x2, y1), (x2, y2)],
                 naxispath=image.naxispath)
         except Exception as e:
             self.logger.warning('WCSAxes failed: {}'.format(str(e)))
@@ -1158,9 +1157,10 @@ class WCSAxes(CompoundObject):
             self.logger.warning('WCSAxes failed: {}'.format(str(e)))
             return []
 
+        (x1, y1), (x2, y2) = viewer.get_limits()
         # Don't draw outside image area
-        mask = ((pts[:, 0] >= 0) & (pts[:, 0] < image.width) &
-                (pts[:, 1] >= 0) & (pts[:, 1] < image.height))
+        mask = ((pts[:, 0] >= x1) & (pts[:, 0] <= x2) &
+                (pts[:, 1] >= y1) & (pts[:, 1] <= y2))
         pts = pts[mask]
 
         if len(pts) == 0:
@@ -1251,9 +1251,13 @@ class WCSAxes(CompoundObject):
 
     def draw(self, viewer):
         # see if we need to recalculate our grid
-        image = viewer.get_image()
+        canvas = viewer.get_canvas()
+        vip = viewer.get_vip()
+        images = set(vip.get_images([], canvas))
+        diff = images.difference(self._cur_images)
+        print('diff', diff)
         update = False
-        if self._cur_image != image:
+        if len(diff) > 0:
             # new image loaded
             update = True
 
@@ -1278,7 +1282,8 @@ class WCSAxes(CompoundObject):
             # only expensive recalculation of grid if needed
             self.ra_angle = None
             self.dec_angle = None
-            self.objects = self._calc_axes(viewer, image, cur_rot, cur_swap)
+            image = viewer.get_image()
+            self.objects = self._calc_axes(viewer, images, cur_rot, cur_swap)
 
         super(WCSAxes, self).draw(viewer)
 

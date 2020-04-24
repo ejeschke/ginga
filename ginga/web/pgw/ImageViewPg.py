@@ -418,7 +418,7 @@ class ImageViewEvent(ImageViewPg):
         if keyname in self._keytbl3:
             keyname = self._keytbl3[keyname]
         self.logger.debug("making key-press cb, key=%s" % (keyname))
-        return self.make_ui_callback('key-press', keyname)
+        return self.make_ui_callback_viewer(self, 'key-press', keyname)
 
     def key_down_event(self, event):
         # For key down events, javascript only validly reports a key code.
@@ -434,7 +434,7 @@ class ImageViewEvent(ImageViewPg):
             # JS doesn't report key press callbacks for certain keys
             # so we synthesize one here for those
             self.logger.debug("making key-press cb, key=%s" % (keyname))
-            return self.make_ui_callback('key-press', keyname)
+            return self.make_ui_callback_viewer(self, 'key-press', keyname)
         return False
 
     def key_up_event(self, event):
@@ -446,7 +446,7 @@ class ImageViewEvent(ImageViewPg):
             self._shifted = False
 
         self.logger.debug("making key-release cb, key=%s" % (keyname))
-        return self.make_ui_callback('key-release', keyname)
+        return self.make_ui_callback_viewer(self, 'key-release', keyname)
 
     def button_press_event(self, event):
         x = event.x
@@ -458,7 +458,8 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.check_cursor_location()
-        return self.make_ui_callback('button-press', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'button-press', button,
+                                            data_x, data_y)
 
     def button_release_event(self, event):
         # event.button, event.x, event.y
@@ -471,7 +472,8 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
         data_x, data_y = self.check_cursor_location()
-        return self.make_ui_callback('button-release', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'button-release', button,
+                                            data_x, data_y)
 
     def motion_notify_event(self, event):
         #button = 0
@@ -483,7 +485,8 @@ class ImageViewEvent(ImageViewPg):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'motion', button,
+                                            data_x, data_y)
 
     def scroll_event(self, event):
         x, y = event.x, event.y
@@ -494,9 +497,9 @@ class ImageViewEvent(ImageViewPg):
         if (dx != 0 or dy != 0):
             # <= This browser gives us deltas for x and y
             # Synthesize this as a pan gesture event
-            self.make_ui_callback('pan', 'start', 0, 0)
-            self.make_ui_callback('pan', 'move', dx, dy)
-            return self.make_ui_callback('pan', 'stop', 0, 0)
+            self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
+            self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
+            return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
 
         # 15 deg is standard 1-click turn for a wheel mouse
         # delta usually returns +/- 1.0
@@ -512,15 +515,15 @@ class ImageViewEvent(ImageViewPg):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('scroll', direction, num_degrees,
-                                     data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'scroll', direction,
+                                            num_degrees, data_x, data_y)
 
     def drop_event(self, event):
         data = event.delta
         self.logger.debug("data=%s" % (str(data)))
         paths = data.split('\n')
         self.logger.debug("dropped text(s): %s" % (str(paths)))
-        return self.make_ui_callback('drag-drop', paths)
+        return self.make_ui_callback_viewer(self, 'drag-drop', paths)
 
     def pinch_event(self, event):
         self.logger.debug("pinch: event=%s" % (str(event)))
@@ -534,7 +537,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
             rot, scale, state))
 
-        return self.make_ui_callback('pinch', state, rot, scale)
+        return self.make_ui_callback_viewer(self, 'pinch', state, rot, scale)
 
     def rotate_event(self, event):
         state = 'move'
@@ -546,7 +549,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("rotate gesture rot=%f state=%s" % (
             rot, state))
 
-        return self.make_ui_callback('rotate', state, rot)
+        return self.make_ui_callback_viewer(self, 'rotate', state, rot)
 
     def pan_event(self, event):
         state = 'move'
@@ -559,7 +562,7 @@ class ImageViewEvent(ImageViewPg):
         self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
             dx, dy, state))
 
-        return self.make_ui_callback('pan', state, dx, dy)
+        return self.make_ui_callback_viewer(self, 'pan', state, dx, dy)
 
     def swipe_event(self, event):
         if event.isfinal:
@@ -567,7 +570,8 @@ class ImageViewEvent(ImageViewPg):
             self.logger.debug("swipe gesture event=%s" % (str(event)))
             ## self.logger.debug("swipe gesture hdir=%s vdir=%s" % (
             ##     hdir, vdir))
-            ## return self.make_ui_callback('swipe', state, hdir, vdir)
+            ## return self.make_ui_callback_viewer(self, 'swipe', state,
+            ##                                     hdir, vdir)
 
     def tap_event(self, event):
         if event.isfinal:
@@ -595,7 +599,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_set_active(True)
+        self.ui_set_active(True, viewer=self)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)

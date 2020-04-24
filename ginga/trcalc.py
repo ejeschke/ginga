@@ -110,8 +110,10 @@ except ImportError:
 def get_center(data_np):
     ht, wd = data_np.shape[:2]
 
-    ctr_x = wd // 2
-    ctr_y = ht // 2
+    ctr_x = int(wd // 2)
+    ctr_y = int(ht // 2)
+    ## ctr_x = wd * 0.5
+    ## ctr_y = ht * 0.5
     return (ctr_x, ctr_y)
 
 
@@ -301,56 +303,44 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None, pad=20,
 
 
 def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
-    """
-    Like get_scaled_cutout_wdht, but returns the view/slice to extract
-    from an image instead of the extraction itself.
-    """
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-    new_wd, new_ht = int(new_wd), int(new_ht)
 
     # calculate dimensions of NON-scaled cutout
-    old_wd = x2 - x1 + 1
-    old_ht = y2 - y1 + 1
+    old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+
+    if new_wd == 0:
+        iscale_x = 0.0
+    else:
+        iscale_x = float(old_wd) / float(new_wd)
+
+    if new_ht == 0:
+        iscale_y = 0.0
+    else:
+        iscale_y = float(old_ht) / float(new_ht)
+
     max_x, max_y = shp[1] - 1, shp[0] - 1
 
-    if (new_wd != old_wd) or (new_ht != old_ht):
-        # Make indexes and scale them
-        # Is there a more efficient way to do this?
-        yi = np.mgrid[0:new_ht].reshape(-1, 1)
-        xi = np.mgrid[0:new_wd].reshape(1, -1)
+    # Make indexes and scale them
+    # Is there a more efficient way to do this?
+    xi = np.clip(x1 + np.arange(0, new_wd) * iscale_x,
+                 0, max_x).astype(np.int, copy=False)
+    yi = np.clip(y1 + np.arange(0, new_ht) * iscale_y,
+                 0, max_y).astype(np.int, copy=False)
+    wd, ht = xi.size, yi.size
 
-        if new_wd == 0:
-            iscale_x = 0.0
-        else:
-            iscale_x = float(old_wd) / float(new_wd)
-        if new_ht == 0:
-            iscale_y = 0.0
-        else:
-            iscale_y = float(old_ht) / float(new_ht)
+    # bounds check against shape (to protect future data access)
+    if new_wd > 0:
+        xi_max = xi[-1]
+        if xi_max > max_x:
+            raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
+    if new_ht > 0:
+        yi_max = yi[-1]
+        if yi_max > max_y:
+            raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
 
-        xi = (x1 + xi * iscale_x).clip(0, max_x).astype(np.int, copy=False)
-        yi = (y1 + yi * iscale_y).clip(0, max_y).astype(np.int, copy=False)
-        wd, ht = xi.shape[1], yi.shape[0]
-
-        # bounds check against shape (to protect future data access)
-        if new_wd > 0:
-            xi_max = xi[0, -1]
-            if xi_max > max_x:
-                raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
-        if new_ht > 0:
-            yi_max = yi[-1, 0]
-            if yi_max > max_y:
-                raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
-
-        view = np.s_[yi, xi]
-
-    else:
-        # simple stepped view will do, because new view is same as old
-        wd, ht = old_wd, old_ht
-        view = np.s_[y1:y2 + 1, x1:x2 + 1]
+    view = np.ix_(yi, xi)
 
     # Calculate actual scale used (vs. desired)
-    old_wd, old_ht = max(old_wd, 1), max(old_ht, 1)
     scale_x = float(wd) / old_wd
     scale_y = float(ht) / old_ht
 
@@ -371,59 +361,55 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
     z1, z2, new_wd, new_ht = int(z1), int(z2), int(new_wd), int(new_ht)
 
     # calculate dimensions of NON-scaled cutout
-    old_wd = x2 - x1 + 1
-    old_ht = y2 - y1 + 1
-    old_dp = z2 - z1 + 1
+    old_wd = max(x2 - x1 + 1, 1)
+    old_ht = max(y2 - y1 + 1, 1)
+    old_dp = max(z2 - z1 + 1, 1)
     max_x, max_y, max_z = shp[1] - 1, shp[0] - 1, shp[2] - 1
 
-    if (new_wd != old_wd) or (new_ht != old_ht) or (new_dp != old_dp):
-        # Make indexes and scale them
-        # Is there a more efficient way to do this?
-        yi = np.mgrid[0:new_ht].reshape(-1, 1, 1)
-        xi = np.mgrid[0:new_wd].reshape(1, -1, 1)
-        zi = np.mgrid[0:new_dp].reshape(1, 1, -1)
-
-        if new_wd == 0:
-            iscale_x = 0.0
-        else:
-            iscale_x = float(old_wd) / float(new_wd)
-        if new_ht == 0:
-            iscale_y = 0.0
-        else:
-            iscale_y = float(old_ht) / float(new_ht)
-        if new_dp == 0:
-            iscale_z = 0.0
-        else:
-            iscale_z = float(old_dp) / float(new_dp)
-
-        xi = (x1 + xi * iscale_x).clip(0, max_x).astype(np.int, copy=False)
-        yi = (y1 + yi * iscale_y).clip(0, max_y).astype(np.int, copy=False)
-        zi = (z1 + zi * iscale_z).clip(0, max_z).astype(np.int, copy=False)
-        wd, ht, dp = xi.shape[1], yi.shape[0], zi.shape[2]
-
-        # bounds check against shape (to protect future data access)
-        if new_wd > 0:
-            xi_max = xi[0, -1, 0]
-            if xi_max > max_x:
-                raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
-        if new_ht > 0:
-            yi_max = yi[-1, 0, 0]
-            if yi_max > max_y:
-                raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
-        if new_dp > 0:
-            zi_max = zi[0, 0, -1]
-            if zi_max > max_z:
-                raise ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
-
-        view = np.s_[yi, xi, zi]
-
+    # Make indexes and scale them
+    # Is there a more efficient way to do this?
+    if new_wd == 0:
+        iscale_x = 0.0
     else:
-        # simple stepped view will do, because new view is same as old
-        wd, ht, dp = old_wd, old_ht, old_dp
-        view = np.s_[y1:y2 + 1, x1:x2 + 1, z1:z2 + 1]
+        iscale_x = float(old_wd) / float(new_wd)
+
+    if new_ht == 0:
+        iscale_y = 0.0
+    else:
+        iscale_y = float(old_ht) / float(new_ht)
+
+    if new_dp == 0:
+        iscale_z = 0.0
+    else:
+        iscale_z = float(old_dp) / float(new_dp)
+
+    xi = np.clip(x1 + np.arange(0, new_wd) * iscale_x,
+                 0, max_x).astype(np.int, copy=False)
+    yi = np.clip(y1 + np.arange(0, new_ht) * iscale_y,
+                 0, max_y).astype(np.int, copy=False)
+    zi = np.clip(z1 + np.arange(0, new_dp) * iscale_z,
+                 0, max_z).astype(np.int, copy=False)
+    wd, ht, dp = xi.size, yi.size, zi.size
+
+    # bounds check against shape (to protect future data access)
+    if new_wd > 0:
+        xi_max = xi[-1]
+        if xi_max > max_x:
+            raise ValueError("X index (%d) exceeds shape bounds (%d)" % (xi_max, max_x))
+
+    if new_ht > 0:
+        yi_max = yi[-1]
+        if yi_max > max_y:
+            raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
+
+    if new_dp > 0:
+        zi_max = zi[-1]
+        if zi_max > max_z:
+            raise ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
+
+    view = np.ix_(yi, xi, zi)
 
     # Calculate actual scale used (vs. desired)
-    old_wd, old_ht, old_dp = max(old_wd, 1), max(old_ht, 1), max(old_dp, 1)
     scale_x = float(wd) / old_wd
     scale_y = float(ht) / old_ht
     scale_z = float(dp) / old_dp
@@ -435,7 +421,15 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
 def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
                            interpolation='basic', logger=None,
                            dtype=None):
+    """Extract a region of the `data_np` defined by corners (x1, y1) and
+    (x2, y2) and resample it to fit dimensions (new_wd, new_ht).
 
+    `interpolation` describes the method of interpolation used, where the
+    default "basic" is nearest neighbor.  If `logger` is not `None` it will
+    be used for logging messages.  If `dtype` is defined then the output
+    array will be converted to that type; the default is the same as the
+    input type.
+    """
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
     new_wd, new_ht = int(new_wd), int(new_ht)
 
@@ -444,7 +438,7 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
     if dtype is None:
         dtype = data_np.dtype
 
-    if data_np.dtype == np.uint8 and have_opencv and _use in (None, 'opencv'):
+    if have_opencv and _use in (None, 'opencv'):
         if logger is not None:
             logger.debug("resizing with OpenCv")
         # opencv is fastest and supports many methods
@@ -453,9 +447,8 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         method = cv2_resize[interpolation]
 
         cutout = data_np[y1:y2 + 1, x1:x2 + 1]
-        if cutout.dtype == np.dtype('>f8'):
-            # special hack for OpenCv resize bug on numpy arrays of
-            # dtype '>f8'-- it corrupts them
+        if cutout.dtype not in (np.uint8, np.uint16):
+            # special hack for OpenCv resize on certain numpy array types
             cutout = cutout.astype(np.float64)
 
         newdata = cv2.resize(cutout, (new_wd, new_ht),
@@ -526,22 +519,19 @@ def get_scaled_cutout_basic_view(shp, p1, p2, scales):
     from an image, instead of the extraction itself
     """
 
-    x1, y1 = p1[:2]
-    x2, y2 = p2[:2]
+    x1, y1, x2, y2 = int(p1[0]), int(p1[1]), int(p2[0]), int(p2[1])
     scale_x, scale_y = scales[:2]
+
     # calculate dimensions of NON-scaled cutout
-    old_wd = x2 - x1 + 1
-    old_ht = y2 - y1 + 1
-    # calculate dimensions of scaled cutout
-    new_wd = int(round(scale_x * old_wd))
-    new_ht = int(round(scale_y * old_ht))
+    old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
+    new_wd, new_ht = int(scale_x * old_wd), int(scale_y * old_ht)
 
     if len(scales) == 2:
         return get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht)
 
     z1, z2, scale_z = p1[2], p2[2], scales[2]
-    old_dp = z2 - z1 + 1
-    new_dp = int(round(scale_z * old_dp))
+    old_dp = max(z2 - z1 + 1, 1)
+    new_dp = int(scale_z * old_dp)
     return get_scaled_cutout_wdhtdp_view(shp, p1, p2, (new_wd, new_ht, new_dp))
 
 
@@ -568,7 +558,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         cutout = data_np[y1:y2 + 1, x1:x2 + 1]
 
         if cutout.dtype not in (np.uint8, np.uint16):
-            # special hack for OpenCl resize on certain numpy array types
+            # special hack for OpenCv resize on certain numpy array types
             cutout = cutout.astype(np.float64)
         newdata = cv2.resize(cutout, None,
                              fx=scale_x, fy=scale_y,
@@ -621,17 +611,23 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
 def get_scaled_cutout_basic2(data_np, p1, p2, scales,
                              interpolation='basic', logger=None):
 
-    if interpolation not in ('basic', 'nearest'):
-        raise ValueError("Interpolation method not supported: '%s'" % (
-            interpolation))
+    if interpolation not in ('basic', 'view'):
+        if len(scales) != 2:
+            raise ValueError("Interpolation method not supported: '%s'" % (
+                interpolation))
+        return get_scaled_cutout_basic(data_np, p1[0], p1[1],
+                                       p2[0], p2[1],
+                                       scales[0], scales[1],
+                                       interpolation=interpolation,
+                                       logger=logger)
 
     if logger is not None:
         logger.debug('resizing by slicing')
-    view, scales = get_scaled_cutout_basic_view(data_np.shape,
-                                                p1, p2, scales)
+    view, oscales = get_scaled_cutout_basic_view(data_np.shape,
+                                                 p1, p2, scales)
     newdata = data_np[view]
 
-    return newdata, scales
+    return newdata, oscales
 
 
 def transform(data_np, flip_x=False, flip_y=False, swap_xy=False):
@@ -1037,6 +1033,12 @@ def get_bounds(pts):
                        [np.max(_pts) for _pts in pts_t]))
 
 
+def sort_xy(x1, y1, x2, y2):
+    """Sort a set of bounding box parameters."""
+    pmn, pmx = get_bounds(((x1, y1), (x2, y2)))
+    return (pmn[0], pmn[1], pmx[0], pmx[1])
+
+
 def fill_array(dstarr, order, r, g, b, a):
     """Fill array dstarr with a color value. order defines the color planes
     in the array.  (r, g, b, a) are expected to be in the range 0..1 and
@@ -1095,7 +1097,7 @@ def add_alpha(arr, alpha=None):
     return arr
 
 
-def get_minmax(dtype):
+def get_minmax_dtype(dtype):
     if issubclass(dtype.type, np.integer):
         info = np.iinfo(dtype)
     else:

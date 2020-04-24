@@ -172,7 +172,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         canvas = c_v.get_canvas()
         canvas.register_for_cursor_drawing(c_v)
         canvas.set_draw_mode('pick')
-        canvas.ui_set_active(True)
+        canvas.ui_set_active(True, viewer=c_v)
         self.canvas = canvas
 
         bd = c_v.get_bindings()

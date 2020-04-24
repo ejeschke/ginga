@@ -13,7 +13,6 @@ import numpy as np
 
 from ginga.util import wcs, wcsmod
 from ginga.BaseImage import BaseImage, ImageError, Header
-from ginga.misc import Bunch
 
 
 class AstroHeader(Header):
@@ -488,15 +487,7 @@ class AstroImage(BaseImage):
     # <----- TODO: deprecate
 
     def info_xy(self, data_x, data_y, settings):
-        # Get the value under the data coordinates
-        try:
-            # We report the value across the pixel, even though the coords
-            # change halfway across the pixel
-            _d_x, _d_y = int(np.floor(data_x + 0.5)), int(np.floor(data_y + 0.5))
-            value = self.get_data_xy(_d_x, _d_y)
-
-        except Exception as e:
-            value = None
+        info = super(AstroImage, self).info_xy(data_x, data_y, settings)
 
         system = settings.get('wcs_coords', None)
         format = settings.get('wcs_display', 'sexagesimal')
@@ -567,11 +558,8 @@ class AstroImage(BaseImage):
                 tb_str = "Traceback information unavailable."
                 self.logger.error(tb_str)
 
-        info = Bunch.Bunch(itype='astro', data_x=data_x, data_y=data_y,
-                           x=data_x, y=data_y,
-                           ra_txt=ra_txt, dec_txt=dec_txt,
-                           ra_lbl=ra_lbl, dec_lbl=dec_lbl,
-                           value=value)
+        info.update(dict(itype='astro', ra_txt=ra_txt, dec_txt=dec_txt,
+                         ra_lbl=ra_lbl, dec_lbl=dec_lbl))
         return info
 
 # END

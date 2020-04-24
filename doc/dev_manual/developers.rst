@@ -413,7 +413,7 @@ shown in :ref:`fig6`.
             self.layertag = 'ruler-canvas'
             self.ruletag = None
 
-            self.dc = fv.getDrawClasses()
+            self.dc = fv.get_draw_classes()
             canvas = self.dc.DrawingCanvas()
             canvas.enable_draw(True)
             canvas.enable_edit(True)
@@ -439,7 +439,7 @@ shown in :ref:`fig6`.
             vbox.set_border_width(4)
             vbox.set_spacing(2)
 
-            self.msgFont = self.fv.getFont("sansFont", 12)
+            self.msgFont = self.fv.get_font("sansFont", 12)
             tw = Widgets.TextArea(wrap=True, editable=False)
             tw.set_font(self.msgFont)
             self.tw = tw
@@ -506,14 +506,14 @@ shown in :ref:`fig6`.
             self.canvas.set_drawtype('ruler', color='cyan', units=units)
 
             if self.ruletag is not None:
-                obj = self.canvas.getObjectByTag(self.ruletag)
+                obj = self.canvas.get_object_by_tag(self.ruletag)
                 if obj.kind == 'ruler':
                     obj.units = units
                     self.canvas.redraw(whence=3)
             return True
 
         def close(self):
-            chname = self.fv.get_channelName(self.fitsimage)
+            chname = self.fv.get_channel_name(self.fitsimage)
             self.fv.stop_local_plugin(chname, str(self))
             return True
 
@@ -533,11 +533,11 @@ shown in :ref:`fig6`.
             self.resume()
 
         def pause(self):
-            self.canvas.ui_setActive(False)
+            self.canvas.ui_set_active(False)
 
         def resume(self):
-            self.canvas.ui_setActive(True)
-            self.fv.showStatus("Draw a ruler with the right mouse button")
+            self.canvas.ui_set_active(True)
+            self.fv.show_status("Draw a ruler with the right mouse button")
 
         def stop(self):
             # remove the canvas from the image
@@ -546,8 +546,8 @@ shown in :ref:`fig6`.
                 p_canvas.delete_object_by_tag(self.layertag)
             except:
                 pass
-            self.canvas.ui_setActive(False)
-            self.fv.showStatus("")
+            self.canvas.ui_set_active(False)
+            self.fv.show_status("")
 
         def redo(self):
             obj = self.canvas.get_object_by_tag(self.ruletag)

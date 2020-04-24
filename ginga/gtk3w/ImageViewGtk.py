@@ -484,7 +484,7 @@ class GtkEventMixin(object):
         keyname = Gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
         self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_ui_callback('key-press', keyname)
+        return self.make_ui_callback_viewer(self, 'key-press', keyname)
 
     def key_release_event(self, widget, event):
         #Gdk.keyboard_ungrab(event.time)
@@ -492,7 +492,7 @@ class GtkEventMixin(object):
         keyname = Gdk.keyval_name(event.keyval)
         keyname = self.transkey(keyname)
         self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_ui_callback('key-release', keyname)
+        return self.make_ui_callback_viewer(self, 'key-release', keyname)
 
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
@@ -507,7 +507,8 @@ class GtkEventMixin(object):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('button-press', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'button-press', button,
+                                            data_x, data_y)
 
     def button_release_event(self, widget, event):
         # event.button, event.x, event.y
@@ -522,7 +523,8 @@ class GtkEventMixin(object):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('button-release', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'button-release', button,
+                                            data_x, data_y)
 
     def motion_notify_event(self, widget, event):
         button = 0
@@ -543,7 +545,8 @@ class GtkEventMixin(object):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'motion', button,
+                                            data_x, data_y)
 
     def scroll_event(self, widget, event):
         # event.button, event.x, event.y
@@ -566,8 +569,8 @@ class GtkEventMixin(object):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('scroll', direction, degrees,
-                                     data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'scroll', direction, degrees,
+                                            data_x, data_y)
 
     def drag_drop_cb(self, widget, context, x, y, time):
         self.logger.debug("drag_drop_cb initiated")
@@ -622,7 +625,7 @@ class GtkEventMixin(object):
         self.logger.debug("dropped filename(s): %s" % (str(paths)))
 
         if len(paths) > 0:
-            self.make_ui_callback('drag-drop', paths)
+            self.make_ui_callback_viewer(self, 'drag-drop', paths)
 
         return True
 
@@ -655,7 +658,7 @@ class ImageViewZoom(ImageViewEvent):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings, render=render)
 
-        self.ui_set_active(True)
+        self.ui_set_active(True, viewer=self)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)

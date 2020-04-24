@@ -1,7 +1,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 """
-Plugin to create image mosaic.
+Plugin to create an image mosaic by constructing a composite image.
 
 **Plugin Type: Local**
 
@@ -12,8 +12,8 @@ channel.  An instance can be opened for each channel.
 
 .. warning:: This can be very memory intensive.
 
-This plugin is used to automatically create a mosaic in the channel using
-images provided by the user (e.g., using ``FBrowser``).
+This plugin is used to automatically build a mosaic image in the channel
+using images provided by the user (e.g., using ``FBrowser``).
 The position of an image on the mosaic is determined by its WCS without
 distortion correction. This is meant as a quick-look tool, not a
 replacement for image drizzling that takes account of image distortion, etc.
@@ -25,7 +25,15 @@ To avoid this, you must configure your session such that your Ginga data cache
 is sufficiently large (see "Customizing Ginga" in the manual).
 
 To create a new mosaic, set the FOV and drag files onto the display window.
-Images must have a working WCS.
+Images must have a working WCS.  The first image's WCS will be used to orient
+the other tiles.
+
+**Difference from `Collage` plugin**
+
+- Allocates a single large array to hold all the mosaic contents
+- Slower to build, but can be quicker to manipulate large resultant images
+- Can save the mosaic as a new data file
+- Fills in values between tiles with a fill value (can be `NaN`)
 
 """
 import math
@@ -649,5 +657,3 @@ class Mosaic(GingaPlugin.LocalPlugin):
 from ginga.util.toolbox import generate_cfg_example  # noqa
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Mosaic', package='ginga')
-
-# END

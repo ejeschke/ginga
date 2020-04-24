@@ -87,6 +87,8 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         self.image_id = str(uuid.uuid4())
         # images are not editable by default
         self.editable = False
+        # is this image "data" or something else
+        self.is_data = False
 
         self.enable_callback('image-set')
 
@@ -153,23 +155,25 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         self.make_callback('image-set', image)
 
     def get_scaled_wdht(self):
-        width = int(self.image.width * self.scale_x)
-        height = int(self.image.height * self.scale_y)
+        width = self.image.width * self.scale_x
+        height = self.image.height * self.scale_y
         return (width, height)
 
     def get_coords(self):
         x1, y1 = self.crdmap.to_data((self.x, self.y))
+        # TODO: this should be viewer.data_off instead of hard-coded,
+        # but we don't have a handle to the viewer here.
+        x1, y1 = x1 - 0.5, y1 - 0.5
         wd, ht = self.get_scaled_wdht()
-        x2, y2 = x1 + wd - 1, y1 + ht - 1
+        x2, y2 = x1 + wd, y1 + ht
         return (x1, y1, x2, y2)
 
     def get_llur(self):
         return self.get_coords()
 
     def get_center_pt(self):
-        wd, ht = self.get_scaled_wdht()
         x1, y1, x2, y2 = self.get_coords()
-        return ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
+        return ((x1 + x2) * 0.5, (y1 + y2) * 0.5)
 
     def get_points(self):
         x1, y1, x2, y2 = self.get_coords()
@@ -177,7 +181,7 @@ class ImageP(OnePointMixin, CanvasObjectBase):
 
     def contains_pts(self, pts):
         x_arr, y_arr = np.asarray(pts).T
-        x1, y1, x2, y2 = self.get_llur()
+        x1, y1, x2, y2 = self.get_coords()
 
         contains = np.logical_and(
             np.logical_and(x1 <= x_arr, x_arr <= x2),
@@ -196,10 +200,10 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         if i == 0:
             self.move_to_pt(pt)
         elif i == 1:
-            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            scale_x = self.calc_scale_from_pt(pt, detail)
             self.scale_x = detail.scale_x * scale_x
         elif i == 2:
-            scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
+            scale_y = self.calc_scale_from_pt(pt, detail)
             self.scale_y = detail.scale_y * scale_y
         elif i == 3:
             scale_x, scale_y = self.calc_dual_scale_from_pt(pt, detail)
@@ -209,12 +213,13 @@ class ImageP(OnePointMixin, CanvasObjectBase):
             raise ValueError("No point corresponding to index %d" % (i))
 
         self.reset_optimize()
+        detail.viewer.redraw(whence=0)
 
     def get_edit_points(self, viewer):
         x1, y1, x2, y2 = self.get_coords()
         return [MovePoint(*self.get_center_pt()),    # location
-                Point(x2, (y1 + y2) / 2.),           # width scale
-                Point((x1 + x2) / 2., y2),           # height scale
+                Point(x2, (y1 + y2) * 0.5),          # width scale
+                Point((x1 + x2) * 0.5, y2),          # height scale
                 Point(x2, y2),                       # both scale
                 ]
 

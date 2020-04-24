@@ -271,7 +271,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
         self.fv.show_status("Draw a rectangle with the right mouse button")
 
     def stop(self):
@@ -299,7 +299,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         except Exception:
             pass
 
-        image = self.fitsimage.get_image()
+        image = self.fitsimage.get_vip()
         width, height = image.get_size()
         x1, y1, x2, y2 = 0, 0, width - 1, height - 1
         tag = canvas.add(self.dc.Rectangle(x1, y1, x2, y2,
@@ -307,15 +307,9 @@ class Histogram(GingaPlugin.LocalPlugin):
                                            linestyle='dash'))
         self.draw_cb(canvas, tag)
 
-    def get_data(self, image, x1, y1, x2, y2, z=None):
-        if z is not None:
-            data = image.get_data()
-            data = data[y1:y2, x1:x2, z]
-        else:
-            tup = image.cutout_adjust(x1, y1, x2, y2)
-            data = tup[0]
-
-        return data
+    def get_data(self, image, x1, y1, x2, y2, z=0):
+        tup = image.cutout_adjust(x1, y1, x2 + 1, y2 + 1, z=z)
+        return tup[0]
 
     def histogram(self, image, x1, y1, x2, y2, z=None, pct=1.0, numbins=2048):
         self.logger.warning("This call will be deprecated soon. "
@@ -336,7 +330,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         bbox = obj.objects[0]
 
         # Do histogram on the points within the rect
-        image = self.fitsimage.get_image()
+        image = self.fitsimage.get_vip()
         self.plot.clear()
 
         numbins = self.numbins

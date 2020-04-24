@@ -155,7 +155,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         self.canvas.ui_set_active(False)
 
     def resume(self):
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
         self.fv.show_status("Enter a value for saturation limit")
 
     def stop(self):
@@ -202,12 +202,16 @@ class Overlays(GingaPlugin.LocalPlugin):
         except KeyError:
             self.fv.show_error("No such color found: '%s'" % (self.lo_color))
 
-        image = self.fitsimage.get_image()
+        image = self.fitsimage.get_vip()
         if image is None:
             return
 
+        (x1, y1), (x2, y2) = self.fitsimage.get_limits()
+        data = image.cutout_data(x1, y1, x2, y2)
+
         self.logger.debug("preparing RGB image")
-        wd, ht = image.get_size()
+        #wd, ht = image.get_size()
+        ht, wd = data.shape[:2]
         if (wd, ht) != self.arrsize:
             rgbarr = np.zeros((ht, wd, 4), dtype=np.uint8)
             self.arrsize = (wd, ht)
@@ -225,7 +229,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         self.logger.debug("Calculating alpha channel")
         # set alpha channel according to saturation limit
         try:
-            data = image.get_data()
+            #data = image.get_data()
             ac[:] = 0
             if self.hi_value is not None:
                 idx = data >= self.hi_value
@@ -244,7 +248,7 @@ class Overlays(GingaPlugin.LocalPlugin):
 
         if self.canvas_img is None:
             self.logger.debug("Adding image to canvas")
-            self.canvas_img = self.dc.Image(0, 0, self.rgbobj)
+            self.canvas_img = self.dc.Image(x1, y1, self.rgbobj)
             self.canvas.add(self.canvas_img)
         else:
             self.logger.debug("Updating canvas image")

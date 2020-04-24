@@ -688,7 +688,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
         self.fv.show_status("Mark a point or region and choose axis")
         self.redo()
 

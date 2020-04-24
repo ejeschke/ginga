@@ -452,14 +452,14 @@ class ImageViewEvent(ImageViewMpl):
         keyname = self.transkey(keyname)
         if keyname is not None:
             self.logger.debug("key press event, key=%s" % (keyname))
-            return self.make_ui_callback('key-press', keyname)
+            return self.make_ui_callback_viewer(self, 'key-press', keyname)
 
     def key_release_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
         if keyname is not None:
             self.logger.debug("key release event, key=%s" % (keyname))
-            return self.make_ui_callback('key-release', keyname)
+            return self.make_ui_callback_viewer(self, 'key-release', keyname)
 
     def button_press_event(self, event):
         x, y = event.x, event.y
@@ -472,7 +472,8 @@ class ImageViewEvent(ImageViewMpl):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('button-press', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'button-press', button,
+                                            data_x, data_y)
 
     def button_release_event(self, event):
         x, y = event.x, event.y
@@ -485,7 +486,8 @@ class ImageViewEvent(ImageViewMpl):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('button-release', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'button-release', button,
+                                            data_x, data_y)
 
     def motion_notify_event(self, event):
         button = 0
@@ -499,7 +501,8 @@ class ImageViewEvent(ImageViewMpl):
         data_x, data_y = self.check_cursor_location()
         self.logger.debug("motion event at DATA %dx%d" % (data_x, data_y))
 
-        return self.make_ui_callback('motion', button, data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'motion', button,
+                                            data_x, data_y)
 
     def scroll_event(self, event):
         x, y = event.x, event.y
@@ -520,8 +523,8 @@ class ImageViewEvent(ImageViewMpl):
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('scroll', direction, amount,
-                                     data_x, data_y)
+        return self.make_ui_callback_viewer(self, 'scroll', direction, amount,
+                                            data_x, data_y)
 
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
@@ -544,7 +547,7 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                                 settings=settings)
         Mixins.UIMixin.__init__(self)
 
-        self.ui_set_active(True)
+        self.ui_set_active(True, viewer=self)
 
         if bindmap is None:
             bindmap = ImageViewZoom.bindmapClass(self.logger)

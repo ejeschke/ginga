@@ -152,7 +152,7 @@ class Cursor(GingaPlugin.GlobalPlugin):
         return True
 
     def field_info_cb(self, viewer, channel, info):
-        if not self.gui_up:
+        if not self.gui_up or channel is None:
             return
         readout = self.readout
         fitsimage = channel.fitsimage

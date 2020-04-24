@@ -22,6 +22,7 @@ Ver 3.1.0 (unreleased)
   viewed is modified in place (and data array changes size)
 - Fixed an issue with Mosaic plugin where images with a PC matrix were
   not always oriented correctly
+- New Collage plugin offers an efficient alternative way to view mosaics
 
 Ver 3.0.0 (2019-09-20)
 ======================

@@ -402,6 +402,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         width, height = self.fitsimage.get_dims(data)
         if self.txt_arr is None:
             return
+        if data.shape != self.txt_arr.shape:
+            return
 
         maxval = np.nanmax(data)
         minval = np.nanmin(data)
@@ -463,14 +465,14 @@ class PixTable(GingaPlugin.LocalPlugin):
         # turn off any mode user may be in
         self.modes_off()
 
-        self.canvas.ui_set_active(True)
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
         self.redo()
 
     def redo(self):
         if self.pixview is None:
             return
         # cut out and set the pixel table data
-        image = self.fitsimage.get_image()
+        image = self.fitsimage.get_vip()
 
         if image is None:
             return
@@ -478,11 +480,13 @@ class PixTable(GingaPlugin.LocalPlugin):
         # We report the value across the pixel, even though the coords
         # change halfway across the pixel
         px_off = self.fitsimage.data_off
-        data_x, data_y = int(self.lastx + px_off), int(self.lasty + px_off)
+        data_x, data_y = (np.floor(self.lastx + px_off),
+                          np.floor(self.lasty + px_off))
 
         # cutout image data
         data, x1, y1, x2, y2 = image.cutout_radius(data_x, data_y,
                                                    self.pixtbl_radius)
+
         self.fv.error_wrap(self.plot, data, x1, y1, x2, y2,
                            self.lastx, self.lasty,
                            self.pixtbl_radius, maxv=9)

@@ -212,7 +212,7 @@ def add_zoom_buttons(viewer, canvas=None, color='black'):
     tag = '_$zoom_buttons'
     if canvas is None:
         canvas = viewer.get_private_canvas()
-    canvas.ui_set_active(True)
+    canvas.ui_set_active(True, viewer)
     canvas.register_for_cursor_drawing(viewer)
     canvas.set_draw_mode('pick')
     viewer.add_callback('configure', zoom_resize, canvas, tag)
