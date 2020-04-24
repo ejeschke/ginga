@@ -487,7 +487,7 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.dimensions.set_text(dim_txt)
 
     def field_info(self, viewer, channel, info):
-        if not self.gui_up:
+        if not self.gui_up or channel is None:
             return
         if '_info_info' not in channel.extdata:
             return
