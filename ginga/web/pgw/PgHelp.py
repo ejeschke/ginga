@@ -191,6 +191,8 @@ class Timer(Callback.Callbacks):
         # For storing aritrary data with timers
         self.data = Bunch.Bunch()
         self.deadline = None
+        self.start_time = 0.0
+        self.end_time = 0.0
 
         for name in ('expired', 'canceled'):
             self.enable_callback(name)
@@ -206,10 +208,32 @@ class Timer(Callback.Callbacks):
 
     def set(self, duration):
         self.stop()
-        self.deadline = time.time() + duration
+
+        self.start_time = time.time()
+        # this attribute is used externally to manage the timer
+        self.deadline = self.start_time + duration
+        self.end_time = self.deadline
         self.app.add_timer(self)
 
+    def is_set(self):
+        return self.deadline is not None
+
+    def cond_set(self, time_sec):
+        if not self.is_set():
+            # TODO: probably a race condition here
+            self.set(time_sec)
+
+    def elapsed_time(self):
+        return time.time() - self.start_time
+
+    def time_left(self):
+        return max(0.0, self.time_end - time.time())
+
+    def get_deadline(self):
+        return self.time_end
+
     def expire(self):
+        """This method is called externally to expire the timer."""
         self.stop()
         self.make_callback('expired')
 

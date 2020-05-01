@@ -104,11 +104,15 @@ class Timer(Callback.Callbacks):
     def cond_set(self, time_sec):
         self.timer.cond_start(time_sec)
 
+    def elapsed_time(self):
+        """Return the elapsed time since the timer was started."""
+        return self.timer.elapsed_time()
+
     def time_left(self):
         return self.timer.remaining_time()
 
     def get_deadline(self):
-        return self.timer.expiration_time()
+        return time.time() + self.time_left()
 
     def stop(self):
         self.timer.stop()

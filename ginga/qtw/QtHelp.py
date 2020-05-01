@@ -8,6 +8,7 @@ import glob
 import os
 import math
 import weakref
+import time
 
 import ginga.toolkit
 from ginga.util import iohelper
@@ -269,6 +270,8 @@ class Timer(Callback.Callbacks):
         self.timer.setSingleShot(True)
         self.timer.setTimerType(QtCore.Qt.PreciseTimer)
         self.timer.timeout.connect(self._expired_cb)
+        self.start_time = 0.0
+        self.deadline = 0.0
 
         for name in ('expired', 'canceled'):
             self.enable_callback(name)
@@ -285,12 +288,35 @@ class Timer(Callback.Callbacks):
     def set(self, duration):
         self.stop()
 
+        self.start_time = time.time()
+        self.deadline = self.start_time + duration
         # QTimer set in milliseconds
         ms = int(duration * 1000.0)
         self.timer.start(ms)
 
     def _expired_cb(self):
         self.make_callback('expired')
+
+    def is_set(self):
+        return self.timer.isActive()
+
+    def cond_set(self, time_sec):
+        if not self.is_set():
+            # TODO: probably a race condition here
+            self.set(time_sec)
+
+    def elapsed_time(self):
+        return time.time() - self.start_time
+
+    def time_left(self):
+        #return max(0.0, self.deadline - time.time())
+        # remainingTime() returns value in msec, or -1 if timer is not set
+        t = self.timer.remainingTime()
+        t = max(0.0, t)
+        return t / 1000.0
+
+    def get_deadline(self):
+        return self.deadline
 
     def stop(self):
         try:

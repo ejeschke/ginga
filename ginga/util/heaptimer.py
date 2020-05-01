@@ -36,6 +36,7 @@ class Timer (object):
         self.action = action
         self.args = args
         self.kwargs = kwargs
+        self.start_time = 0.0
         self.expire = None
         self.timer_heap = heap
         self.logger = heap.logger
@@ -85,7 +86,7 @@ class Timer (object):
 
     def remaining_time(self):
         """Return the remaining time to the timer expiration.
-        If the timer has already expired then None is returned.
+        If the timer has already expired then 0 is returned.
         """
         if self.expire is None:
             return 0.0

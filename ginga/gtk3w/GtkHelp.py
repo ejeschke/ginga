@@ -8,6 +8,7 @@ import sys
 import os.path
 import math
 import random
+import time
 
 import numpy as np
 
@@ -1300,6 +1301,8 @@ class Timer(Callback.Callbacks):
         self.data = Bunch.Bunch()
 
         self._timer = None
+        self.start_time = 0.0
+        self.deadline = 0.0
 
         for name in ('expired', 'canceled'):
             self.enable_callback(name)
@@ -1317,6 +1320,8 @@ class Timer(Callback.Callbacks):
 
         self.stop()
 
+        self.start_time = time.time()
+        self.deadline = self.start_time + duration
         # Gtk timer set in milliseconds
         time_ms = int(duration * 1000.0)
         self._timer = GObject.timeout_add(time_ms, self._redirect_cb)
@@ -1325,13 +1330,30 @@ class Timer(Callback.Callbacks):
         self._timer = None
         self.make_callback('expired')
 
+    def is_set(self):
+        return self._timer is not None
+
+    def cond_set(self, time_sec):
+        if not self.is_set():
+            # TODO: probably a race condition here
+            self.set(time_sec)
+
+    def elapsed_time(self):
+        return time.time() - self.start_time
+
+    def time_left(self):
+        return max(0.0, self.deadline - time.time())
+
+    def get_deadline(self):
+        return self.deadline
+
     def stop(self):
         try:
             if self._timer is not None:
                 GObject.source_remove(self._timer)
-                self._timer = None
         except Exception:
             pass
+        self._timer = None
 
     def cancel(self):
         """Cancel this timer.  If the timer is not running, there

@@ -33,6 +33,9 @@ class CompoundMixin(object):
         self.opaque = False
         self._contains_reduce = np.logical_or
 
+    def __contains__(self, key):
+        return key in self.objects
+
     def get_llur(self):
         """
         Get lower-left and upper-right coordinates of the bounding box
