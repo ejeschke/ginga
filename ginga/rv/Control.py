@@ -158,7 +158,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.imgsrv = catalog.ServerBank(self.logger)
 
         # state for implementing field-info callback
-        self._cursor_task = self.get_timer()
+        self._cursor_task = self.get_backend_timer()
         self._cursor_task.set_callback('expired', self._cursor_timer_cb)
         self._cursor_last_update = time.time()
         self.cursor_interval = self.settings.get('cursor_interval', 0.050)
@@ -216,6 +216,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def get_timer(self):
         return self.timer_factory.timer()
+
+    def get_backend_timer(self):
+        return GwHelp.Timer()
 
     def stop(self):
         self.logger.info("shutting down Ginga...")

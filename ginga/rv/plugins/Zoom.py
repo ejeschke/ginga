@@ -63,7 +63,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoom_x = 0
         self.zoom_y = 0
         self.t_abszoom = True
-        self.zoomtask = fv.get_timer()
+        self.zoomtask = fv.get_backend_timer()
         self.zoomtask.set_callback('expired', self.showzoom_timer_cb)
         self.fitsimage_focus = None
         self.layer_tag = 'shared-canvas'
@@ -329,7 +329,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return
         data = timer.data
-        self.showzoom(data.data_x, data.data_y)
+        self._zoom_data(self.zoomimage, data.data_x, data.data_y)
 
     def _zoom_data(self, fitsimage, data_x, data_y):
         fitsimage.set_pan(data_x, data_y)

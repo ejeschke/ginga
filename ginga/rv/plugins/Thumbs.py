@@ -38,7 +38,7 @@ from ginga import GingaPlugin
 from ginga import RGBImage
 from ginga.misc import Bunch
 from ginga.util import iohelper
-from ginga.gw import Widgets, Viewers, GwHelp
+from ginga.gw import Widgets, Viewers
 from ginga.util.paths import icondir
 from ginga.pilw.ImageViewPil import CanvasView
 from ginga.util import io_rgb
@@ -109,13 +109,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # a timer that controls how fast we attempt to update a thumbnail
         # after its associated full image has been modified
-        self.timer_redo = GwHelp.Timer()
+        self.timer_redo = self.fv.get_backend_timer()
         self.timer_redo.set_callback('expired', self.timer_redo_cb)
         self.lagtime = self.settings.get('rebuild_wait', 0.5)
 
         # a timer that controls how quickly we attempt to autoload missing
         # thumbnails
-        self.timer_autoload = GwHelp.Timer()
+        self.timer_autoload = self.fv.get_backend_timer()
         self.timer_autoload.set_callback('expired', self.timer_autoload_cb)
         self.autoload_interval = self.settings.get('autoload_interval',
                                                    0.25)
@@ -125,7 +125,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # timer that controls how quickly we attempt to rebuild thumbs after
         # a pan/scroll operation
-        self.timer_update = GwHelp.Timer()
+        self.timer_update = self.fv.get_backend_timer()
         self.timer_update.set_callback('expired', self.timer_update_cb)
         self.update_interval = 0.25
         self._to_build = set([])
