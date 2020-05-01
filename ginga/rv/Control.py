@@ -84,11 +84,29 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                  ev_quit=None):
         GwMain.GwMain.__init__(self, logger=logger, ev_quit=ev_quit,
                                app=self, thread_pool=thread_pool)
-        Widgets.Application.__init__(self, logger=logger)
 
-        self.logger = logger
-        self.mm = module_manager
+        # Create general preferences
         self.prefs = preferences
+        settings = self.prefs.create_category('general')
+        settings.add_defaults(fixedFont=None,
+                              serifFont=None,
+                              sansFont=None,
+                              channel_follows_focus=False,
+                              scrollbars='off',
+                              numImages=10,
+                              # Offset to add to numpy-based coords
+                              pixel_coords_offset=1.0,
+                              # inherit from primary header
+                              inherit_primary_header=False,
+                              cursor_interval=0.050,
+                              download_folder=None,
+                              save_layout=False,
+                              channel_prefix="Image")
+        settings.load(onError='silent')
+        # this will set self.logger and self.settings
+        Widgets.Application.__init__(self, logger=logger, settings=settings)
+
+        self.mm = module_manager
         # event for controlling termination of threads executing in this
         # object
         if not ev_quit:
@@ -121,23 +139,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.preload_lock = threading.RLock()
         self.preload_list = deque([], 4)
 
-        # Create general preferences
-        self.settings = self.prefs.create_category('general')
-        self.settings.add_defaults(fixedFont=None,
-                                   serifFont=None,
-                                   sansFont=None,
-                                   channel_follows_focus=False,
-                                   scrollbars='off',
-                                   numImages=10,
-                                   # Offset to add to numpy-based coords
-                                   pixel_coords_offset=1.0,
-                                   # inherit from primary header
-                                   inherit_primary_header=False,
-                                   cursor_interval=0.050,
-                                   download_folder=None,
-                                   save_layout=False,
-                                   channel_prefix="Image")
-        self.settings.load(onError='silent')
         # Load bindings preferences
         bindprefs = self.prefs.create_category('bindings')
         bindprefs.load(onError='silent')

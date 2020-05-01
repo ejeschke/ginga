@@ -444,4 +444,12 @@ def get_painter(surface):
         _painters[surface] = painter
     return painter
 
+
+def set_default_opengl_context():
+    from ginga.opengl.glsl import req
+    fmt = QSurfaceFormat()
+    fmt.setVersion(req.major, req.minor)
+    fmt.setProfile(QSurfaceFormat.CoreProfile)
+    fmt.setDefaultFormat(fmt)
+
 # END

@@ -23,12 +23,6 @@ try:
     from ginga.opengl.GlHelp import get_transforms
     from ginga.opengl.glsl import req
 
-    # ensure we are using correct version of opengl
-    fmt = QSurfaceFormat()
-    fmt.setVersion(req.major, req.minor)
-    fmt.setProfile(QSurfaceFormat.CoreProfile)
-    fmt.setDefaultFormat(fmt)
-
     have_opengl = True
 except ImportError:
     pass
@@ -130,12 +124,12 @@ class RenderGLWidget(QOpenGLWidget):
 
         self.viewer = None
 
-        # ensure we are using at least opengl >= 4.5 core
-        ## fmt = QSurfaceFormat()
-        ## fmt.setVersion(4, 5)
-        ## fmt.setProfile(QSurfaceFormat.CoreProfile)
-        ## #fmt.setDefaultFormat(fmt)
-        ## self.setFormat(fmt)
+        # ensure we are using correct version of opengl
+        fmt = QSurfaceFormat()
+        fmt.setVersion(req.major, req.minor)
+        fmt.setProfile(QSurfaceFormat.CoreProfile)
+        #fmt.setDefaultFormat(fmt)
+        self.setFormat(fmt)
 
     def initializeGL(self):
         self.viewer.renderer.gl_initialize()

@@ -10,7 +10,7 @@ import time
 import json
 from functools import reduce
 
-from ginga.misc import Callback, Bunch, LineHistory
+from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.web.pgw import PgHelp
 
 # For future support of WebView widget
@@ -2360,12 +2360,18 @@ class Application(Callback.Callbacks):
     }
 
     def __init__(self, logger=None, base_url=None,
-                 host='localhost', port=9909):
+                 host='localhost', port=9909, settings=None):
+        # NOTE: base_url parameter not used, but here for backward compatibility
         global _app, widget_dict
         super(Application, self).__init__()
 
         self.logger = logger
-        self.base_url = base_url
+        if settings is None:
+            settings = Settings.SettingGroup(logger=self.logger)
+        self.settings = settings
+        self.settings.add_defaults(host=host, port=port)
+
+        self.base_url = self.settings.get('base_url', None)
         self.window_dict = {}
         self.wincnt = 0
         # list of web socket handlers connected to this application
@@ -2380,8 +2386,8 @@ class Application(Callback.Callbacks):
         self._timer_lock = threading.RLock()
         self._timers = []
 
-        self.host = host
-        self.port = port
+        self.host = self.settings.get('host', 'localhost')
+        self.port = self.settings.get('port', 9909)
         self.base_url = "http://%s:%d/app" % (self.host, self.port)
 
         # Get screen size

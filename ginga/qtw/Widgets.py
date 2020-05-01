@@ -11,7 +11,7 @@ from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
                               QImage, QCursor, QFont, have_pyqt4)
 from ginga.qtw import QtHelp
 
-from ginga.misc import Callback, Bunch, LineHistory
+from ginga.misc import Callback, Bunch, Settings, LineHistory
 import ginga.icons
 
 has_webkit = False
@@ -1881,15 +1881,26 @@ class TopLevel(TopLevelMixin, ContainerBase):
 
 class Application(Callback.Callbacks):
 
-    def __init__(self, logger=None):
+    def __init__(self, logger=None, settings=None):
         global _app
         super(Application, self).__init__()
 
         self.logger = logger
-        self.window_list = []
+        if settings is None:
+            settings = Settings.SettingGroup(logger=self.logger)
+        self.settings = settings
+        self.settings.add_defaults(use_opengl=False)
 
+        self.window_list = []
         self.window_dict = {}
         self.wincnt = 0
+
+        if self.settings.get('use_opengl', False):
+            # ensure we are using correct version of opengl
+            # NOTE: On MacOSX w/Qt it is necessary to set the default OpenGL
+            # profile BEFORE creating the QApplication object, because it
+            # shares the OpenGL context
+            QtHelp.set_default_opengl_context()
 
         if have_pyqt4:
             QtGui.QApplication.setGraphicsSystem('raster')
@@ -2169,6 +2180,5 @@ def wrap(native_widget):
     wrapper = WidgetBase()
     wrapper.widget = native_widget
     return wrapper
-
 
 # END

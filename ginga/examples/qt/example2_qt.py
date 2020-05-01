@@ -8,7 +8,7 @@
 
 import sys
 
-from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw.QtHelp import QtGui, QtCore, set_default_opengl_context
 from ginga import colors
 from ginga.qtw.ImageViewQt import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
@@ -266,6 +266,9 @@ class FitsViewer(QtGui.QMainWindow):
 
 
 def main(options, args):
+
+    if options.render == 'opengl':
+        set_default_opengl_context()
 
     #QtGui.QApplication.setGraphicsSystem('raster')
     app = QtGui.QApplication(args)

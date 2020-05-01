@@ -464,15 +464,6 @@ class ReferenceViewer(object):
         ginga_shell = GingaShell(logger, thread_pool, mm, prefs,
                                  ev_quit=ev_quit)
 
-        # user wants to set font scaling.
-        # NOTE: this happens *after* creation of shell object, since
-        # Application object constructor will also set this
-        font_scaling = settings.get('font_scaling_factor', None)
-        if font_scaling is not None:
-            logger.debug("overriding font_scaling_factor to {}".format(font_scaling))
-            from ginga.fonts import font_asst
-            font_asst.default_scaling_factor = font_scaling
-
         layout_file = None
         if not options.norestore and settings.get('save_layout', False):
             layout_file = os.path.join(basedir, 'layout')

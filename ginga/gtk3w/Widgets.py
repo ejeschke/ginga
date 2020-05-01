@@ -9,7 +9,7 @@
 
 from ginga.gtk3w import GtkHelp
 
-from ginga.misc import Callback, Bunch, LineHistory
+from ginga.misc import Callback, Bunch, Settings, LineHistory
 from functools import reduce
 
 from gi.repository import Gtk
@@ -2015,13 +2015,17 @@ class TopLevel(TopLevelMixin, ContainerBase):
 
 class Application(Callback.Callbacks):
 
-    def __init__(self, logger=None):
+    def __init__(self, logger=None, settings=None):
         global _app
         super(Application, self).__init__()
 
         self.logger = logger
-        self.window_list = []
+        if settings is None:
+            settings = Settings.SettingGroup(logger=self.logger)
+        self.settings = settings
+        self.settings.add_defaults(font_scaling_factor=None)
 
+        self.window_list = []
         self.window_dict = {}
         self.wincnt = 0
 
@@ -2037,8 +2041,10 @@ class Application(Callback.Callbacks):
 
             self.screen_res = screen.get_resolution()
 
-            # hack for Gtk--scale fonts on HiDPI displays
-            scale = self.screen_res / 72.0
+            scale = self.settings.get('font_scaling_factor', None)
+            if scale is None:
+                # hack for Gtk--scale fonts on HiDPI displays
+                scale = self.screen_res / 72.0
             self.logger.debug("setting default font_scaling_factor={}".format(scale))
             from ginga.fonts import font_asst
             font_asst.default_scaling_factor = scale
