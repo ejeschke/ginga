@@ -87,12 +87,13 @@ class BaseImage(ViewerObjectBase):
                                   name=name)
 
         if data_np is None:
-            data_np = np.zeros((1, 1))
+            data_np = np.zeros((0, 0))
         self._data = data_np
         self.order = ''
         self.name = name
 
         # For navigating multidimensional data
+        self.axisdim = []
         self.naxispath = []
         self.revnaxis = []
 
@@ -107,9 +108,9 @@ class BaseImage(ViewerObjectBase):
 
     @property
     def width(self):
-        # NOTE: numpy stores data in column-major layout
         if self.ndim < 2:
             return 0
+        # NOTE: numpy stores data in column-major layout
         return self.shape[1]
 
     @property
@@ -200,7 +201,7 @@ class BaseImage(ViewerObjectBase):
         super(BaseImage, self).clear_all()
 
         # unreference data array
-        self._data = np.zeros((1, 1))
+        self._data = np.zeros((0, 0))
 
     def _slice(self, view):
         if not isinstance(view, tuple):

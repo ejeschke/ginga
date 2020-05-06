@@ -90,6 +90,7 @@ class AstroImage(BaseImage):
 
         # this is a handle to the full data array
         self._md_data = data
+        self.axisdim = data.shape
 
         # this will get reset in set_naxispath() if array is
         # multidimensional

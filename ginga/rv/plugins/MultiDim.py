@@ -651,11 +651,12 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 self.w.hdu.show_text(toc_ent)
 
         # rebuild the NAXIS controls, if necessary
+        wd, ht = image.get_size()
         # No two images in the same channel can have the same name.
         # Here we keep track of the name to decide if we need to rebuild
         if self.img_name != name:
             self.img_name = name
-            dims = [0, 0]
+            dims = [wd, ht]
             data = image.get_data()
             if data is None:
                 # <- empty data part to this HDU
@@ -669,10 +670,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
                     str(idx), htype))
 
             else:
-                mddata = image.get_mddata()
-                if mddata is not None:
-                    dims = list(mddata.shape)
-                    dims.reverse()
+                dims = list(image.axisdim)
+                dims.reverse()
 
             self.build_naxis(dims, image)
 

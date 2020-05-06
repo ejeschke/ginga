@@ -1054,14 +1054,14 @@ class ImageViewBindings(object):
         image = viewer.get_image()
         if image is None:
             return
-        mddata = image.get_mddata()
-        if len(mddata.shape) < (axis + 1):
-            # image dimensions < 3D
+        _axis = len(image.axisdim) - axis
+        if _axis < 0:
+            # attempting to access a non-existant axis
             return
 
+        axis_lim = image.axisdim[_axis]
         naxispath = list(image.naxispath)
-        axis_lim = mddata.shape[axis]
-        m = axis - 2
+        m = axis - 3
 
         idx = naxispath[m]
         if direction == 'down':
@@ -1850,26 +1850,28 @@ class ImageViewBindings(object):
 
     def ms_naxis(self, viewer, event, data_x, data_y, msg=True):
 
+        # which axis (in FITS NAXIS terminology)
         # TODO: be able to pick axis
-        axis = 2
+        axis = 3
         x, y = self.get_win_xy(viewer)
 
         image = viewer.get_image()
         if image is None:
             return
-        mddata = image.get_mddata()
-        if len(mddata.shape) < (axis + 1):
-            # image dimensions < 3D
+
+        _axis = len(image.axisdim) - axis
+        if _axis < 0:
+            # attempting to access a non-existant axis
             return
 
+        axis_lim = image.axisdim[_axis]
         naxispath = list(image.naxispath)
-        axis_lim = mddata.shape[axis]
-        m = axis - 2
+        m = axis - 3
 
         if event.state in ('down', 'move'):
             win_wd, win_ht = viewer.get_window_size()
-            x_pct = x / float(win_wd)
-            idx = int(x_pct * axis_lim)
+            x_pct = min(max(0.0, x / float(win_wd)), 1.0)
+            idx = int(x_pct * axis_lim - 1)
             naxispath[m] = idx
             image.set_naxispath(naxispath)
 
@@ -2028,7 +2030,7 @@ class ImageViewBindings(object):
         by scrolling.
         """
         # TODO: be able to pick axis
-        axis = 2
+        axis = 3
         direction = self.get_direction(event.direction)
 
         return self._nav_naxis(viewer, axis, direction, msg=msg)
@@ -2277,7 +2279,7 @@ class ImageViewBindings(object):
             return False
 
         # TODO: be able to pick axis
-        axis = 2
+        axis = 3
         direction = self.get_direction(event.direction)
 
         return self._nav_naxis(viewer, axis, direction, msg=msg)
