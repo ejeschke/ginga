@@ -32,6 +32,7 @@ Highly recommended, because some features will not be available without it:
   depending on where you get it from)
 * piexif
 * beautifulsoup4
+* docutils (to display help for plugins)
 
 For opening `FITS <https://fits.gsfc.nasa.gov/>`_ files you will
 need one of the following packages:
