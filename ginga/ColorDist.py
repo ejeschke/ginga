@@ -337,6 +337,32 @@ class HistogramEqualizationDist(ColorDistBase):
         return 'histeq'
 
 
+class CurveDist(ColorDistBase):
+    """
+    y = x
+        where x in (0..1)
+    """
+
+    def __init__(self, hashsize, colorlen=None):
+        super(CurveDist, self).__init__(hashsize, colorlen=colorlen)
+
+    def calc_hash(self):
+        base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
+        # normalize to color range
+        l = base * (self.colorlen - 1)
+        self.hash = l.astype(np.uint, copy=False)
+
+        self.check_hash()
+
+    def get_dist_pct(self, pct):
+        pct = np.asarray(pct, dtype=np.float)
+        val = np.clip(pct, 0.0, 1.0)
+        return val
+
+    def __str__(self):
+        return 'curve'
+
+
 distributions = {
     'linear': LinearDist,
     'log': LogDist,

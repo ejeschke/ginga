@@ -236,21 +236,22 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         numframes = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_COUNT))
         self.logger.info("number of frames: {}".format(numframes))
 
-        for idx in range(numframes):
-            name = "frame{}".format(idx)
-            extver = 0
-            # prepare a record of pertinent info about the HDU for
-            # lookups by numerical index or (NAME, EXTVER)
-            d = Bunch.Bunch(index=idx, name=name, extver=extver,
-                            dtype='uint8', htype='N/A')
-            self.hdu_info.append(d)
-            # different ways of accessing this HDU:
-            # by numerical index
-            self.hdu_db[idx] = d
-            # by (hduname, extver)
-            key = (name, extver)
-            if key not in self.hdu_db:
-                self.hdu_db[key] = d
+        naxispath = [numframes]
+        idx = 0
+        name = "frame{}".format(idx)
+        extver = 0
+        # prepare a record of pertinent info about the HDU for
+        # lookups by numerical index or (NAME, EXTVER)
+        d = Bunch.Bunch(index=idx, name=name, extver=extver,
+                        dtype='uint8', htype='N/A')
+        self.hdu_info.append(d)
+        # different ways of accessing this HDU:
+        # by numerical index
+        self.hdu_db[idx] = d
+        # by (hduname, extver)
+        key = (name, extver)
+        if key not in self.hdu_db:
+            self.hdu_db[key] = d
 
         self.extver_db = extver_db
         return self
@@ -300,11 +301,10 @@ class OpenCvFileHandler(BaseRGBFileHandler):
 
     def _imload(self, filepath, metadata):
         if not have_opencv:
-            raise ImageError("Install 'opencv' to be able "
-                             "to load images")
+            raise ImageError("Install 'opencv' to be able to load images")
 
-        # First choice is OpenCv, because it supports high-bit depth
-        # multiband images
+        # OpenCv supports high-bit depth multiband images if you read like
+        # this
         data_np = cv2.imread(filepath,
                              cv2.IMREAD_ANYDEPTH + cv2.IMREAD_ANYCOLOR)
 
@@ -557,6 +557,61 @@ def open_ppm(filepath):
     if sys.byteorder == 'little':
         arr = arr.byteswap()
     return arr
+
+
+from collections.abc import Sequence, Iterator
+
+class VideoAccess(Sequence, Iterator):
+    def __init__(self):
+        super(Sequence, self).__init__()
+
+        self.rgb_f = None
+        self.idx = -1
+        self.shape = (0, 0, 0)
+
+    def open(self, filepath):
+        self.rgb_f = cv2.VideoCapture(filepath)
+        # self.rgb_f.set(cv2.CAP_PROP_CONVERT_RGB, False)
+
+        self.idx = 0
+
+         # Get width and height of frames and resize window
+        width = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        depth = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.shape = (width, height, depth)
+
+        return self
+
+    def read(self, idx):
+        self.rgb_f.set(cv2.CAP_PROP_POS_FRAMES, idx)
+        okay, data_np = self.rgb_f.read()
+        if not okay:
+            raise ValueError("Error reading index {}".format(idx))
+
+        data_np = data_np[..., :: -1]
+        return data_np
+
+    def __next__(self):
+        self.idx += 1
+        if self.idx == self.shape[2]:
+            raise StopIteration("Reached the end of frames")
+        return self.read(idx)
+
+    def __getitem__(self, idx):
+        return self.read(idx)
+
+    def __len__(self):
+        return self.shape[2]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # hopefully this closes the object
+        self.rgb_f = None
+        return False
+
 
 
 RGBFileHandler = PillowFileHandler
