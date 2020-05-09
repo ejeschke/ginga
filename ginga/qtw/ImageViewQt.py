@@ -162,6 +162,8 @@ class ImageViewQt(ImageView.ImageViewBase):
             self.scene = QtGui.QGraphicsScene()
             self.imgwin = RenderGraphicsView(self.scene)
         elif self.wtype == 'opengl':
+            if not have_opengl:
+                raise ImageViewQtError("Please install 'pyopengl' to use render: '%s'" % (render))
             self.imgwin = RenderGLWidget()
         else:
             raise ImageViewQtError("Undefined render type: '%s'" % (render))

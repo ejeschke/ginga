@@ -255,7 +255,7 @@ class Overlays(GingaPlugin.LocalPlugin):
             self.canvas_img.set_image(self.rgbobj)
 
         self.logger.debug("redrawing canvas")
-        self.canvas.update_canvas()
+        self.canvas.update_canvas(whence=0)
 
         self.logger.debug("redo completed")
 

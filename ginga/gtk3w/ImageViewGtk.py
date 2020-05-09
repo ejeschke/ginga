@@ -22,6 +22,7 @@ import cairo
 have_opengl = False
 try:
     from ginga.opengl.GlHelp import get_transforms
+    from ginga.opengl.glsl import req
     have_opengl = True
 except ImportError:
     pass

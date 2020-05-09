@@ -76,7 +76,7 @@ class ModuleManager(object):
 
         except Exception as e:
             self.logger.error("Failed to load module '%s': %s" % (
-                module_name, str(e)))
+                module_name, str(e)), exc_info=True)
             raise ModuleManagerError(e)
 
     def get_module(self, module_name):

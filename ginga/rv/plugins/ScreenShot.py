@@ -330,6 +330,13 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         # load the snapped image into the screenshot viewer
         self.scrnimage.set_image(img)
 
+        image = self.fitsimage.get_image()
+        name = image.get('name', 'NoName')
+        name, _ext = os.path.splitext(name)
+        wd, ht = img.get_size()
+        save_name = name + '_{}x{}'.format(wd, ht) + '.' + format
+        self.w.name.set_text(save_name)
+
     def _center_cb(self, w):
         """This function is called when the user clicks the 'Center' button.
         """
