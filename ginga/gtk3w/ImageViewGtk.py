@@ -9,7 +9,6 @@ import os
 import numpy as np
 
 from ginga.gtk3w import GtkHelp
-from ginga.opengl.glsl import req
 from ginga import ImageView, Mixins, Bindings
 from ginga.util.paths import icondir
 from ginga.canvas import render
@@ -68,6 +67,8 @@ class ImageViewGtk(ImageView.ImageViewBase):
                 self.rgb_order = 'RGBA'
 
         elif self.wtype == 'opengl':
+            if not have_opengl:
+                raise ImageViewGtkError("Please install 'pyopengl' to use render: '%s'" % (render))
             # NOTE: See https://gitlab.gnome.org/GNOME/gtk/issues/1270 for
             # an issue regarding a buggy GLX/Mesa driver for X11 on Linux;
             # if you experience non-GL widgets flashing when using the
