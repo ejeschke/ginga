@@ -1210,6 +1210,16 @@ class Box(ContainerBase):
     def set_spacing(self, val):
         self.widget.set_spacing(val)
 
+    def insert_widget(self, idx, child, stretch=0.0):
+        child_w = child.get_widget()
+        # TODO: can this be made more accurate?
+        expand = (float(stretch) > 0.0)
+        self.widget.pack_start(child_w, expand, True, 0)
+        self.widget.reorder_child(child_w, idx)
+        self.children.insert(idx, child)
+        self.widget.show_all()
+        self.make_callback('widget-added', child)
+
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         child_w = child.get_widget()

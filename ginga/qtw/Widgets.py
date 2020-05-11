@@ -1094,6 +1094,12 @@ class Box(ContainerBase):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.widget.setLayout(self.layout)
 
+    def insert_widget(self, idx, child, stretch=0.0):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        self.layout.insertWidget(idx, child_w, stretch=stretch)
+        self.make_callback('widget-added', child)
+
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         child_w = child.get_widget()

@@ -1,10 +1,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 """
-Simple data reduction pipeline plugin for Ginga.
-
-.. note:: This plugin is available but not loaded into Ginga
-          reference viewer by default because it is experimental.
+Simple data processing pipeline plugin for Ginga.
 
 **Plugin Type: Local**
 
@@ -15,9 +12,11 @@ An instance can be opened for each channel.
 
 """
 
-from ginga.util import dp
-from ginga import GingaPlugin
+from ginga import GingaPlugin, RGBImage
+from ginga.util import pipeline, loader
 from ginga.gw import Widgets
+from ginga.util.stages import (Input, Output, Scale, Rotate, Flip, Cuts,
+                               RGBMap, CProf)
 
 __all__ = ['Pipeline']
 
@@ -34,145 +33,78 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.settings.set_defaults(num_threads=4)
         self.settings.load(onError='silent')
 
-        # For building up an image stack
-        self.imglist = []
+        self.dc = fv.get_draw_classes()
+        self.layertag = 'pipeline-canvas'
+        canvas = self.dc.DrawingCanvas()
+        canvas.enable_draw(True)
+        canvas.enable_edit(True)
+        canvas.set_drawtype('line', color='cyan', linestyle='dash')
+        ## canvas.set_callback('draw-event', self.draw_cb)
+        ## canvas.set_callback('edit-event', self.edit_cb)
+        ## canvas.add_draw_mode('move', down=self.buttondown_cb,
+        ##                      move=self.motion_cb, up=self.buttonup_cb,
+        ##                      key=self.keydown)
+        ## canvas.set_draw_mode('draw')
+        #canvas.add_callback('drag-drop', self.drop_cb)
+        canvas.register_for_cursor_drawing(self.fitsimage)
+        canvas.set_surface(self.fitsimage)
+        self.canvas = canvas
 
-        # For applying flat fielding
-        self.flat = None
-        # For subtracting bias
-        self.bias = None
+        self.stage_classes = [Scale, Cuts, RGBMap, CProf, Flip,
+                              Rotate]
+        self.stage_dict = {klass._stagename: klass
+                           for klass in self.stage_classes}
+        self.stage_names = list(self.stage_dict.keys())
+        self.stage_names.sort()
+
+        stages = [Input(), Output(self.fv)]
+        self.pipeline = pipeline.Pipeline(self.logger, stages)
+        self.pipeline.add_callback('stage-executing', self.stage_status, 'X')
+        self.pipeline.add_callback('stage-done', self.stage_status, 'D')
+        self.pipeline.add_callback('stage-errored', self.stage_status, 'E')
+        self.pipeline.add_callback('pipeline-start', self.clear_status)
 
         self.gui_up = False
 
     def build_gui(self, container):
         top = Widgets.VBox()
         top.set_border_width(4)
+        top.set_spacing(2)
 
-        vbox1, sw, orientation = Widgets.get_oriented_box(container)
-        vbox1.set_border_width(4)
-        vbox1.set_spacing(2)
-
-        # Main pipeline control area
-        captions = [
-            ("Subtract Bias", 'button', "Bias Image:", 'label',
-             'bias_image', 'llabel'),
-            ("Apply Flat Field", 'button', "Flat Image:", 'label',
-             'flat_image', 'llabel')]
-        w, b = Widgets.build_info(captions, orientation=orientation)
-        self.w.update(b)
-
-        fr = Widgets.Frame("Pipeline")
-        fr.set_widget(w)
-        vbox1.add_widget(fr, stretch=0)
-
-        b.subtract_bias.add_callback('activated', self.subtract_bias_cb)
-        b.subtract_bias.set_tooltip("Subtract a bias image")
-        bias_name = 'None'
-        if self.bias is not None:
-            bias_name = self.bias.get('name', "NoName")
-        b.bias_image.set_text(bias_name)
-
-        b.apply_flat_field.add_callback('activated', self.apply_flat_cb)
-        b.apply_flat_field.set_tooltip("Apply a flat field correction")
-        flat_name = 'None'
-        if self.flat is not None:
-            flat_name = self.flat.get('name', "NoName")
-        b.flat_image.set_text(flat_name)
-
-        vbox2 = Widgets.VBox()
-        # Pipeline status
-        hbox = Widgets.HBox()
-        hbox.set_spacing(4)
-        hbox.set_border_width(4)
-        label = Widgets.Label()
-        self.w.eval_status = label
-        hbox.add_widget(self.w.eval_status, stretch=0)
-        hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox2.add_widget(hbox, stretch=0)
-
-        # progress bar and stop button
-        hbox = Widgets.HBox()
-        hbox.set_spacing(4)
-        hbox.set_border_width(4)
-        btn = Widgets.Button("Stop")
-        btn.add_callback('activated', lambda w: self.eval_intr())
-        btn.set_enabled(False)
-        self.w.btn_intr_eval = btn
-        hbox.add_widget(btn, stretch=0)
-
-        self.w.eval_pgs = Widgets.ProgressBar()
-        hbox.add_widget(self.w.eval_pgs, stretch=1)
-        vbox2.add_widget(hbox, stretch=0)
-        vbox2.add_widget(Widgets.Label(''), stretch=1)
-        vbox1.add_widget(vbox2, stretch=0)
-
-        # Image list
-        captions = [
-            ("Append", 'button', "Prepend", 'button', "Clear", 'button'),
-        ]
-        w, b = Widgets.build_info(captions, orientation=orientation)
-        self.w.update(b)
-
-        fr = Widgets.Frame("Image Stack")
-
+        #top.add_widget(Widgets.Label("Pipeline"), stretch=0)
         vbox = Widgets.VBox()
-        hbox = Widgets.HBox()
-        self.w.stack = Widgets.Label('')
-        hbox.add_widget(self.w.stack, stretch=0)
-        vbox.add_widget(hbox, stretch=0)
-        vbox.add_widget(w, stretch=0)
-        fr.set_widget(vbox)
-        vbox1.add_widget(fr, stretch=0)
+        self.pipelist = vbox
 
-        self.update_stack_gui()
+        for stage in self.pipeline:
+            stage_gui = self.make_stage_gui(stage)
+            vbox.add_widget(stage_gui, stretch=0)
 
-        b.append.add_callback('activated', self.append_image_cb)
-        b.append.set_tooltip("Append an individual image to the stack")
-        b.prepend.add_callback('activated', self.prepend_image_cb)
-        b.prepend.set_tooltip("Prepend an individual image to the stack")
-        b.clear.add_callback('activated', self.clear_stack_cb)
-        b.clear.set_tooltip("Clear the stack of images")
+        # add stretch
+        vbox.add_widget(Widgets.Label(''), stretch=1)
 
-        # Bias
-        captions = [
-            ("Make Bias", 'button', "Set Bias", 'button'),
-        ]
-        w, b = Widgets.build_info(captions, orientation=orientation)
-        self.w.update(b)
+        # wrap it in a scrollbox
+        scr = Widgets.ScrollArea()
+        scr.set_widget(vbox)
+        top.add_widget(scr, stretch=1)
 
-        fr = Widgets.Frame("Bias Subtraction")
-        fr.set_widget(w)
-        vbox1.add_widget(fr, stretch=0)
-
-        b.make_bias.add_callback('activated', self.make_bias_cb)
-        b.make_bias.set_tooltip(
-            "Makes a bias image from a stack of individual images")
-        b.set_bias.add_callback('activated', self.set_bias_cb)
-        b.set_bias.set_tooltip(
-            "Set the currently loaded image as the bias image")
-
-        # Flat fielding
-        captions = [
-            ("Make Flat Field", 'button', "Set Flat Field", 'button'),
-        ]
-        w, b = Widgets.build_info(captions, orientation=orientation)
-        self.w.update(b)
-
-        fr = Widgets.Frame("Flat Fielding")
-        fr.set_widget(w)
-        vbox1.add_widget(fr, stretch=0)
-
-        b.make_flat_field.add_callback('activated', self.make_flat_cb)
-        b.make_flat_field.set_tooltip(
-            "Makes a flat field from a stack of individual flats")
-        b.set_flat_field.add_callback('activated', self.set_flat_cb)
-        b.set_flat_field.set_tooltip(
-            "Set the currently loaded image as the flat field")
-
-        spacer = Widgets.Label('')
-        vbox1.add_widget(spacer, stretch=1)
-
-        top.add_widget(sw, stretch=1)
+        tbar = Widgets.Toolbar(orientation='horizontal')
+        btn = tbar.add_action('Delete')
+        btn.add_callback('activated', self.delete_stage_cb)
+        btn.set_tooltip("Delete selected stages")
+        self.w.delete = btn
+        btn = tbar.add_action('Insert')
+        btn.set_tooltip("Insert above selected stage")
+        btn.add_callback('activated', self.insert_stage_cb)
+        self.w.insert = btn
+        self.insert_menu = Widgets.Menu()
+        for name in self.stage_names:
+            item = self.insert_menu.add_name(name)
+            item.add_callback('activated', self._insert_stage_cb, name)
+        btn = tbar.add_action('Run')
+        btn.set_tooltip("Run pipeline (or from selected stage)")
+        btn.add_callback('activated', self.run_pipeline_cb)
+        self.w.run = btn
+        top.add_widget(tbar, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_spacing(3)
@@ -186,8 +118,37 @@ class Pipeline(GingaPlugin.LocalPlugin):
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
 
+        self._update_toolbar()
         container.add_widget(top, stretch=1)
         self.gui_up = True
+
+    def make_stage_gui(self, stage):
+        _vbox = Widgets.VBox()
+        hbox = Widgets.HBox()
+
+        tbar = Widgets.Toolbar(orientation='horizontal')
+        chk = tbar.add_action('B', toggle=True)
+        chk.add_callback('activated', self.bypass_stage_cb, stage)
+        chk.set_tooltip("Bypass this stage")
+        chk = tbar.add_action('S', toggle=True)
+        chk.add_callback('activated', self.select_stage_cb)
+        chk.set_tooltip("Select this stage")
+        stage.w.select = chk
+        status = Widgets.Label('_')
+        stage.w.status = status
+        chk = tbar.add_widget(status)
+        hbox.add_widget(tbar, stretch=0)
+        ent = Widgets.TextEntry(str(stage))
+        ent.add_callback('activated', self.rename_stage_cb, stage)
+        ent.set_tooltip("Rename this stage")
+        hbox.add_widget(ent, stretch=1)
+        _vbox.add_widget(hbox, stretch=0)
+        xpd = Widgets.Expander(title=str(stage))
+        stage.build_gui(xpd)
+        stage.gui_up = True
+        _vbox.add_widget(xpd, stretch=0)
+        stage.w.gui = _vbox
+        return _vbox
 
     def close(self):
         chname = self.fv.get_channel_name(self.fitsimage)
@@ -196,96 +157,141 @@ class Pipeline(GingaPlugin.LocalPlugin):
         return True
 
     def start(self):
-        pass
+        # insert canvas, if not already
+        p_canvas = self.fitsimage.get_canvas()
+        try:
+            p_canvas.get_object_by_tag(self.layertag)
+
+        except KeyError:
+            # Add our canvas
+            p_canvas.add(self.canvas, tag=self.layertag)
+
+        for stage in self.pipeline:
+            stage.start()
+
+        # load any image in the channel into the start of the pipeline
+        image = self.fitsimage.get_image()
+        if image is not None:
+            self.pipeline[0].set_image(image)
+
+    def pause(self):
+        self.canvas.ui_set_active(False)
+
+    def resume(self):
+        # turn off any mode user may be in
+        self.modes_off()
+
+        self.canvas.ui_set_active(True, viewer=self.fitsimage)
 
     def stop(self):
+        self.gui_up = False
+
+        for stage in self.pipeline:
+            stage.stop()
+
+        # remove the canvas from the image
+        p_canvas = self.fitsimage.get_canvas()
+        p_canvas.delete_object_by_tag(self.layertag)
         self.fv.show_status("")
 
-    def update_status(self, text):
-        self.fv.gui_do(self.w.eval_status.set_text, text)
+    def bypass_stage_cb(self, widget, tf, stage):
+        idx = self.pipeline.index(stage)
+        stage.bypass(tf)
+        self.pipeline.run_from(stage)
 
-    def update_stack_gui(self):
-        stack = [image.get('name', "NoName") for image in self.imglist]
-        self.w.stack.set_text(str(stack))
+    def _update_toolbar(self):
+        stages = self.get_selected_stages()
+        self.w.insert.set_enabled(len(stages) == 1)
+        self.w.delete.set_enabled(len(stages) >= 1)
+        self.w.run.set_enabled(len(stages) <= 1)
 
-    def append_image_cb(self, w):
+    def select_stage_cb(self, widget, tf):
+        self._update_toolbar()
+
+    def rename_stage_cb(self, widget, stage):
+        name = widget.get_text().strip()
+        stage.name = name
+
+    def get_selected_stages(self):
+        res = [stage for stage in self.pipeline
+               if stage.w.select.get_state()]
+        return res
+
+    def clear_selected(self):
+        for stage in self.pipeline:
+            stage.w.select.set_state(False)
+        self._update_toolbar()
+
+    def delete_stage_cb(self, widget):
+        stages = self.get_selected_stages()
+        for stage in stages:
+            self.pipeline.remove(stage)
+        # destroy stage gui
+        stage.gui_up = False
+        stage.stop()
+        self.pipelist.remove(stage.w.gui, delete=True)
+        stage.w = None
+
+    def insert_stage_cb(self, widget):
+        stages = self.get_selected_stages()
+        if len(stages) != 1:
+            self.fv.show_error("Please select only a single stage",
+                               raisetab=True)
+            return
+        self.insert_menu.popup()
+
+    def _insert_stage_cb(self, widget, name):
+        stages = self.get_selected_stages()
+        stage = stages[0]
+        idx = self.pipeline.index(stage)
+        # realize this stage
+        stage = self.stage_dict[name]()
+        stage.pipeline = self.pipeline
+        self.pipeline.insert(idx, stage)
+        stage_gui = self.make_stage_gui(stage)
+        self.pipelist.insert_widget(idx, stage_gui, stretch=0)
+        self.clear_selected()
+
+    def run_pipeline_cb(self, widget):
+        stages = self.get_selected_stages()
+        if len(stages) == 0:
+            self.pipeline.run_all()
+            return
+        if len(stages) != 1:
+            self.fv.show_error("Please select only a single stage",
+                               raisetab=True)
+            return
+        stage = stages[0]
+        self.pipeline.run_from(stage)
+
+    def load_file(self, filepath):
+        image = loader.load_data(filepath, logger=self.logger)
+        self.pipeline[0].set_image(image)
+        self.pipeline.run_all()
+        self.fitsimage.reload_image()
+
+    def drop_cb(self, canvas, paths):
+        self.logger.info("files dropped: %s" % str(paths))
+        filename = paths[0]
+        self.load_file(filename)
+        return True
+
+    def redo(self):
         image = self.fitsimage.get_image()
-        self.imglist.append(image)
-        self.update_stack_gui()
-        self.update_status("Appended image #%d to stack." % (len(self.imglist)))
+        if image is not None:
+            stage0 = self.pipeline[0]
+            stage0.set_image(image)
 
-    def prepend_image_cb(self, w):
-        image = self.fitsimage.get_image()
-        self.imglist.insert(0, image)
-        self.update_stack_gui()
-        self.update_status("Prepended image #%d to stack." % (len(self.imglist)))
+    def stage_status(self, pipeline, stage, txt):
+        if stage.gui_up:
+            stage.w.status.set_text(txt)
+            self.fv.update_pending()
 
-    def clear_stack_cb(self, w):
-        self.imglist = []
-        self.update_stack_gui()
-        self.update_status("Cleared image stack.")
-
-    def show_result(self, image):
-        chname = self.fv.get_channelName(self.fitsimage)
-        name = dp.get_image_name(image)
-        self.imglist.insert(0, image)
-        self.update_stack_gui()
-        self.fv.add_image(name, image, chname=chname)
-
-    # BIAS
-
-    def _make_bias(self):
-        image = dp.make_bias(self.imglist)
-        self.imglist = []
-        self.fv.gui_do(self.show_result, image)
-        self.update_status("Made bias image.")
-
-    def make_bias_cb(self, w):
-        self.update_status("Making bias image...")
-        self.fv.nongui_do(self.fv.error_wrap, self._make_bias)
-
-    def subtract_bias_cb(self, w):
-        image = self.fitsimage.get_image()
-        if self.bias is None:
-            self.fv.show_error("Please set a bias image first")
-        else:
-            result = self.fv.error_wrap(dp.subtract, image, self.bias)
-            self.fv.gui_do(self.show_result, result)
-
-    def set_bias_cb(self, w):
-        # Current image is a bias image we should set
-        self.bias = self.fitsimage.get_image()
-        biasname = dp.get_image_name(self.bias, pfx='bias')
-        self.w.bias_image.set_text(biasname)
-        self.update_status("Set bias image.")
-
-    # FLAT FIELDING
-
-    def _make_flat_field(self):
-        result = dp.make_flat(self.imglist)
-        self.imglist = []
-        self.show_result(result)
-        self.update_status("Made flat field.")
-
-    def make_flat_cb(self, w):
-        self.update_status("Making flat field...")
-        self.fv.nongui_do(self.fv.error_wrap, self._make_flat_field)
-
-    def apply_flat_cb(self, w):
-        image = self.fitsimage.get_image()
-        if self.flat is None:
-            self.fv.show_error("Please set a flat field image first")
-        else:
-            result = self.fv.error_wrap(dp.divide, image, self.flat)
-            print(result, image)
-            self.fv.gui_do(self.show_result, result)
-
-    def set_flat_cb(self, w):
-        # Current image is a flat field we should set
-        self.flat = self.fitsimage.get_image()
-        flatname = dp.get_image_name(self.flat, pfx='flat')
-        self.w.flat_image.set_text(flatname)
-        self.update_status("Set flat field.")
+    def clear_status(self, pipeline, stage):
+        for stage in pipeline:
+            if stage.gui_up:
+                stage.w.status.set_text('_')
+        self.fv.update_pending()
 
     def __str__(self):
         return 'pipeline'

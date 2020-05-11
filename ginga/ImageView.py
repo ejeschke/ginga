@@ -800,6 +800,9 @@ class ImageViewBase(Callback.Callbacks):
         # out with the old, in with the new...
         self.make_callback('image-set', image)
 
+    def reload_image(self):
+        self.set_image(self.get_image())
+
     def apply_profile_or_settings(self, image):
         """Apply a profile to the viewer.
 

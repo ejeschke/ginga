@@ -47,6 +47,7 @@ class RGBImage(BaseImage):
 
     def save_as_file(self, filepath):
         data = self._get_data()
+        data = data.astype(np.uint8)
         hdr = self.get_header()
         self.io.save_file_as(filepath, data, hdr)
 

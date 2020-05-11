@@ -6,6 +6,7 @@
 #
 import numpy as np
 
+from ginga import trcalc
 from ginga.misc import Bunch
 #from ginga.misc.ParamSet import Param
 from ginga.util import zscale
@@ -64,6 +65,15 @@ class AutoCutsBase(object):
                                                      crop_radius)
         return data
 
+    def get_crop_data(self, data, crop_radius=None):
+        if crop_radius is None:
+            crop_radius = self.crop_radius
+
+        ht, wd = data.shape[:2]
+        (data, x1, y1, x2, y2) = trcalc.cutout_radius(data, wd // 2, ht // 2,
+                                                      crop_radius)
+        return data
+
     def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
         loval, hival = float(loval), float(hival)
         # ensure hival >= loval
@@ -96,6 +106,12 @@ class Clip(AutoCutsBase):
 
         return (float(loval), float(hival))
 
+    def calc_cut_levels_data(self, data_np):
+        loval = np.nanmin(data_np)
+        hival = np.nanmax(data_np)
+
+        return (float(loval), float(hival))
+
     def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
         return data.clip(vmin, vmax)
 
@@ -108,6 +124,12 @@ class Minmax(AutoCutsBase):
 
     def calc_cut_levels(self, image):
         loval, hival = image.get_minmax()
+
+        return (float(loval), float(hival))
+
+    def calc_cut_levels_data(self, data_np):
+        loval = np.nanmin(data_np)
+        hival = np.nanmax(data_np)
 
         return (float(loval), float(hival))
 
@@ -139,20 +161,24 @@ class Histogram(AutoCutsBase):
         self.numbins = numbins
 
     def calc_cut_levels(self, image):
+        data = image.get_data()
+        return self.calc_cut_levels_data(data)
+
+    def calc_cut_levels_data(self, data_np):
         if self.usecrop:
-            data = self.get_crop(image)
+            data = self.get_crop_data(data_np)
             count = np.count_nonzero(np.isfinite(data))
             if count < (self.crop_radius ** 2.0) * 0.50:
                 # if we have less than 50% finite pixels then fall back
                 # to using the whole array
                 self.logger.debug("too many non-finite values in crop--"
                                   "falling back to full image data")
-                data = image.get_data()
+                data = data_np
         else:
-            data = image.get_data()
+            data = data_np
+
         bnch = self.calc_histogram(data, pct=self.pct, numbins=self.numbins)
         loval, hival = bnch.loval, bnch.hival
-
         return loval, hival
 
     def calc_histogram(self, data, pct=1.0, numbins=2048):
@@ -278,19 +304,23 @@ class StdDev(AutoCutsBase):
         self.hensa_hi = 90.0
 
     def calc_cut_levels(self, image):
+        data = image.get_data()
+        return self.calc_cut_levels_data(data)
+
+    def calc_cut_levels_data(self, data_np):
         if self.usecrop:
-            data = self.get_crop(image)
+            data = self.get_crop_data(data_np)
             count = np.count_nonzero(np.isfinite(data))
             if count < (self.crop_radius ** 2.0) * 0.50:
                 # if we have less than 50% finite pixels then fall back
                 # to using the whole array
                 self.logger.info("too many non-finite values in crop--"
                                  "falling back to full image data")
-                data = image.get_data()
+                data = data_np
         else:
-            data = image.get_data()
+            data = data_np
 
-        loval, hival = self.calc_stddev(data, hensa_lo=self.hensa_lo,
+        loval, hival = self.calc_stddev(data_np, hensa_lo=self.hensa_lo,
                                         hensa_hi=self.hensa_hi)
         return loval, hival
 
@@ -334,7 +364,11 @@ class MedianFilter(AutoCutsBase):
         self.length = length
 
     def calc_cut_levels(self, image):
-        wd, ht = image.get_size()
+        data = image.get_data()
+        return self.calc_cut_levels_data(data)
+
+    def calc_cut_levels_data(self, data_np):
+        ht, wd = data_np.shape[:2]
 
         # sample the data
         xmax = wd - 1
@@ -343,8 +377,8 @@ class MedianFilter(AutoCutsBase):
         xskip = int(max(1.0, np.sqrt(xmax * ymax / float(self.num_points))))
         yskip = xskip
 
-        cutout = image.cutout_data(0, 0, xmax, ymax,
-                                   xstep=xskip, ystep=yskip)
+        cutout = trcalc.cutout_data(data_np, 0, 0, xmax, ymax,
+                                    xstep=xskip, ystep=yskip)
 
         loval, hival = self.calc_medianfilter(cutout, length=self.length)
         return loval, hival
@@ -387,7 +421,11 @@ class ZScale(AutoCutsBase):
         self.num_points = num_points
 
     def calc_cut_levels(self, image):
-        wd, ht = image.get_size()
+        data = image.get_data()
+        return self.calc_cut_levels_data(data)
+
+    def calc_cut_levels_data(self, data_np):
+        ht, wd = data_np.shape[:2]
 
         # calculate num_points parameter, if omitted
         total_points = wd * ht
@@ -409,8 +447,8 @@ class ZScale(AutoCutsBase):
         xskip = int(max(1.0, np.sqrt(xmax * ymax / float(num_points))))
         yskip = xskip
 
-        cutout = image.cutout_data(0, 0, xmax, ymax,
-                                   xstep=xskip, ystep=yskip)
+        cutout = trcalc.cutout_data(data_np, 0, 0, xmax, ymax,
+                                    xstep=xskip, ystep=yskip)
 
         loval, hival = self.calc_zscale(cutout, contrast=self.contrast,
                                         num_points=self.num_points)

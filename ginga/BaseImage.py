@@ -241,20 +241,7 @@ class BaseImage(ViewerObjectBase):
         if order is not None and order != '':
             self.order = order.upper()
         else:
-            shape = self.shape
-            if len(shape) <= 2:
-                self.order = 'M'
-            else:
-                depth = shape[-1]
-                # TODO: need something better here than a guess!
-                if depth == 1:
-                    self.order = 'M'
-                elif depth == 2:
-                    self.order = 'MA'
-                elif depth == 3:
-                    self.order = 'RGB'
-                elif depth == 4:
-                    self.order = 'RGBA'
+            self.order = trcalc.guess_order(self.shape)
 
     def has_valid_wcs(self):
         return hasattr(self, 'wcs') and self.wcs.has_valid_wcs()
@@ -293,7 +280,15 @@ class BaseImage(ViewerObjectBase):
 
     # kwargs is needed so subclasses can interoperate with optional keywords.
     def get_header(self, **kwargs):
-        return self.get('header', Header())
+        header = self.get('header', None)
+        if header is None:
+            header = Header()
+            self.set(header=header)
+        return header
+
+    def update_keywords(self, key_dict):
+        hdr = self.get_header()
+        hdr.update(key_dict)
 
     def transfer(self, other, astype=None):
         data = self._get_data()

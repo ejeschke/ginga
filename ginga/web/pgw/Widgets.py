@@ -1482,6 +1482,9 @@ class Box(ContainerBase):
         else:
             self.add_css_classes(['vbox'])
 
+    def insert_widget(self, idx, child, stretch=0.0):
+        raise NotImplementedError("insert_widget()")
+
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         flex = int(round(stretch))

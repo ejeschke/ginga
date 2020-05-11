@@ -140,6 +140,8 @@ plugins = [
           ptype='local'),
     Bunch(module='Drawing', workspace='dialogs', category='Utils',
           ptype='local'),
+    Bunch(module='Pipeline', workspace='dialogs', category='Utils',
+          ptype='local'),
     Bunch(module='FBrowser', workspace='dialogs', category='Utils',
           ptype='local'),
     Bunch(module='ChangeHistory', tab='History', workspace='right',
