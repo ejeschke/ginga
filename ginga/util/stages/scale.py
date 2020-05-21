@@ -67,8 +67,5 @@ class Scale(Stage):
                                                         wd - 1, ht - 1,
                                                         self.scale, self.scale,
                                                         interpolation=self.interp,
-                                                        logger=self.pipeline.logger)
+                                                        logger=self.logger)
         self.pipeline.send(res_np=res_np)
-
-    def __str__(self):
-        return self._stagename

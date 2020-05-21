@@ -32,6 +32,7 @@ class Stage(object):
         self._bypass = False
         # these get assigned by the owning pipeline
         self.pipeline = None
+        self.logger = None
         self.result = None
         self.gui_up = False
         self.__varlist = ['name', '_bypass']
@@ -46,6 +47,10 @@ class Stage(object):
 
     def stop(self):
         """subclass can override this to do any necessary teardown."""
+        pass
+
+    def invalidate(self):
+        """subclass can override this to do any necessary invalidation."""
         pass
 
     def bypass(self, tf):

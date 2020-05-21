@@ -113,7 +113,7 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_image(self, cvs_img, cp, rgb_arr, whence, order='RGB'):
+    def draw_image(self, cvs_img, cp, cache, whence, order='RGB'):
         """Render the image represented by (rgb_arr) at (cx, cy)
         in the pixel space.
         """
@@ -226,6 +226,17 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.gl_resize(self.wd, self.ht)
         scales = self.viewer.get_scale_xy()
         self.scale(scales)
+
+    def _overlay_images(self, canvas, whence=0.0):
+        #if not canvas.is_compound():
+        if not hasattr(canvas, 'objects'):
+            return
+
+        for obj in canvas.get_objects():
+            if hasattr(obj, 'prepare_image'):
+                obj.prepare_image(self.viewer, whence)
+            elif obj.is_compound() and (obj != canvas):
+                self._overlay_images(obj, whence=whence)
 
     def resize(self, dims):
         """Resize our drawing area to encompass a space defined by the

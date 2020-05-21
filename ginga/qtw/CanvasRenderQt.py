@@ -127,9 +127,9 @@ class RenderContext(render.RenderContextBase):
 
     ##### DRAWING OPERATIONS #####
 
-    def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
-        # no-op for this renderer
-        pass
+    ## def draw_image(self, cvs_img, cpoints, cache, whence, order='RGBA'):
+    ##     # no-op for this renderer
+    ##     pass
 
     def draw_text(self, cx, cy, text, rot_deg=0.0):
         self.cr.save()
@@ -258,7 +258,7 @@ class CanvasRenderer(render.StandardPixelRenderer):
         # adjust according to viewer's needed order
         return self.reorder(order, arr)
 
-    def render_image(self, rgbobj, win_x, win_y):
+    def render_image(self, data, order, win_coord):
         """Render the image represented by (rgbobj) at win_x, win_y
         in the pixel space.
         *** internal method-- do not use ***
@@ -268,9 +268,10 @@ class CanvasRenderer(render.StandardPixelRenderer):
             return
         self.logger.debug("drawing to surface")
 
+        if data is None:
+            return
+        win_x, win_y = win_coord
         # Prepare array for rendering
-        # TODO: what are options for high bit depth under Qt?
-        data = rgbobj.get_array(self.rgb_order, dtype=np.uint8)
 
         daht, dawd, depth = data.shape
         self.logger.debug("data shape is %dx%dx%d" % (dawd, daht, depth))

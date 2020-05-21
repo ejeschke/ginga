@@ -119,12 +119,15 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         cache = self.get_cache(viewer)
 
         if not cache.drawn:
+            # Normally, prepare_image() will be called earlier, and
+            # cache.drawn will be true.  This catches the case for
+            # some renderers where that might not happen
             viewer.prepare_image(self, cache, whence)
 
         cpoints = self.get_cpoints(viewer)
         cr = viewer.renderer.setup_cr(self)
 
-        cr.draw_image(self, cpoints, cache.rgbarr, whence)
+        cr.draw_image(self, cpoints, cache, whence)
 
         # draw optional border
         if self.linewidth > 0:

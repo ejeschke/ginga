@@ -35,7 +35,7 @@ class Input(Stage):
 
     def set_path_cb(self, widget):
         self.path = widget.get_text().strip()
-        image = loader.load_data(self.path, logger=self.pipeline.logger)
+        image = loader.load_data(self.path, logger=self.logger)
         self.set_image(image)
 
     def run(self, prev_stage):
@@ -47,6 +47,3 @@ class Input(Stage):
 
         data_np = self.image.get_data()
         self.pipeline.send(res_np=data_np)
-
-    def __str__(self):
-        return self._stagename

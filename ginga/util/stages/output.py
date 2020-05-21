@@ -105,6 +105,3 @@ class Output(Stage):
 
     def get_image(self):
         return self.image
-
-    def __str__(self):
-        return self._stagename

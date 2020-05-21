@@ -2645,7 +2645,7 @@ class ImageViewBase(Callback.Callbacks):
             X and Y positions, in that order.
 
         """
-        center = self.renderer.get_center()[:2]
+        center = self.renderer.get_window_center()[:2]
         return center
 
     def get_rgb_order(self):

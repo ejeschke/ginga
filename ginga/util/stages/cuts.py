@@ -61,7 +61,7 @@ class Cuts(Stage):
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
 
-        self.autocuts = AutoCuts.Histogram(self.pipeline.logger)
+        self.autocuts = AutoCuts.Histogram(self.logger)
         self.autocut_methods = self.autocuts.get_algorithms()
         # Setup auto cuts method choice
         combobox = b.auto_method
@@ -107,7 +107,7 @@ class Cuts(Stage):
         # Get the canonical version of this object stored in our cache
         # and make a ParamSet from it
         params = self.autocuts_cache.setdefault(method, Bunch.Bunch())
-        self.ac_params = ParamSet.ParamSet(self.pipeline.logger, params)
+        self.ac_params = ParamSet.ParamSet(self.logger, params)
 
         # Build widgets for the parameter/attribute list
         w = self.ac_params.build_params(paramlst,
@@ -121,11 +121,9 @@ class Cuts(Stage):
         params = dict(params)
 
         if method != str(self.autocuts):
-            print("making new autocuts object for '{}'".format(method))
             ac_class = AutoCuts.get_autocuts(method)
-            self.autocuts = ac_class(self.pipeline.logger, **params)
+            self.autocuts = ac_class(self.logger, **params)
         else:
-            print("updating autocuts parameters...")
             self.autocuts.update_params(**params)
 
         self.pipeline.run_from(self)

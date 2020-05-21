@@ -205,9 +205,6 @@ class Histogram(AutoCutsBase):
             substval = (minval + maxval) / 2.0
             data[np.isnan(data)] = substval
             data[np.isinf(data)] = substval
-            ## dsum = np.sum(data)
-            ## if np.isnan(dsum) or np.isinf(dsum):
-            ##     print "NaNs STILL PRESENT"
 
             dist, bins = np.histogram(data, bins=numbins,
                                       density=False)
@@ -218,7 +215,6 @@ class Histogram(AutoCutsBase):
         cutoff = int((float(total_px) * (1.0 - pct)) / 2.0)
         top = len(dist) - 1
         self.logger.debug("top=%d cutoff=%d" % (top, cutoff))
-        #print "DIST: %s\nBINS: %s" % (str(dist), str(bins))
 
         # calculate low cutoff
         cumsum = np.cumsum(dist)

@@ -13,14 +13,14 @@ icc_profiles.insert(0, None)
 icc_intents = list(rgb_cms.get_intents())
 
 
-class CProf(Stage):
+class ICCProf(Stage):
     """Convert the given RGB data from the input ICC profile
     to the output ICC profile.
     """
     _stagename = 'icc-profile'
 
     def __init__(self):
-        super(CProf, self).__init__()
+        super(ICCProf, self).__init__()
 
         self.icc_input_profile = None
         self.icc_output_profile = None
@@ -162,7 +162,6 @@ class CProf(Stage):
         # color profiling will not work with other types
         data = data.astype(np.uint8)
 
-        logger = self.pipeline.logger
         try:
             arr = rgb_cms.convert_profile_fromto(data,
                                                  self.icc_input_profile,
@@ -171,18 +170,15 @@ class CProf(Stage):
                                                  proof_name=self.icc_proof_profile,
                                                  proof_intent=self.icc_proof_intent,
                                                  use_black_pt=self.icc_black_point_compensation,
-                                                 logger=logger)
+                                                 logger=self.logger)
 
-            logger.debug("Converted from '%s' to '%s' profile" % (
+            self.logger.debug("Converted from '%s' to '%s' profile" % (
                 self.icc_input_profile, self.icc_output_profile))
 
         except Exception as e:
-            logger.warning("Error converting output from working profile: %s" % (str(e)))
+            self.logger.warning("Error converting output from working profile: %s" % (str(e)))
             # TODO: maybe should have a traceback here
-            logger.info("Output left unprofiled")
+            self.logger.info("Output left unprofiled")
             arr = data
 
         self.pipeline.send(res_np=arr)
-
-    def __str__(self):
-        return self._stagename

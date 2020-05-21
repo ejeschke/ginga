@@ -57,12 +57,9 @@ class Rotate(Stage):
 
         if self.clip:
             res_np = trcalc.rotate_clip(data, self.rot_deg,
-                                        logger=self.pipeline.logger)
+                                        logger=self.logger)
         else:
             res_np = trcalc.rotate(data, self.rot_deg, pad=0,
-                                   logger=self.pipeline.logger)
+                                   logger=self.logger)
 
         self.pipeline.send(res_np=res_np)
-
-    def __str__(self):
-        return self._stagename

@@ -32,7 +32,7 @@ class RGBMap(Stage):
         top = Widgets.VBox()
 
         # create and initialize RGB mapper
-        self.rgbmap = RGBMapper(self.pipeline.logger)
+        self.rgbmap = RGBMapper(self.logger)
         self.rgbmap.set_hash_size(self.hash_size)
         self.rgbmap.set_color_algorithm(self.calg_name)
         self.rgbmap.set_color_map(self.cmap_name)

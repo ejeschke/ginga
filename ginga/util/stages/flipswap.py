@@ -8,12 +8,12 @@ from ginga.gw import Widgets
 from .base import Stage
 
 
-class Flip(Stage):
+class FlipSwap(Stage):
 
     _stagename = 'flip-swap'
 
     def __init__(self):
-        super(Flip, self).__init__()
+        super(FlipSwap, self).__init__()
 
         self.flip_x = False
         self.flip_y = False
@@ -58,6 +58,3 @@ class Flip(Stage):
                                   swap_xy=self.swap_xy)
 
         self.pipeline.send(res_np=res_np)
-
-    def __str__(self):
-        return self._stagename

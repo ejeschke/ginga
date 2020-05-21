@@ -15,8 +15,8 @@ An instance can be opened for each channel.
 from ginga import GingaPlugin, RGBImage
 from ginga.util import pipeline, loader
 from ginga.gw import Widgets
-from ginga.util.stages import (Input, Output, Scale, Rotate, Flip, Cuts,
-                               RGBMap, CProf)
+from ginga.util.stages import (Input, Output, Scale, Rotate, FlipSwap, Cuts,
+                               RGBMap, ICCProf)
 
 __all__ = ['Pipeline']
 
@@ -50,7 +50,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
-        self.stage_classes = [Scale, Cuts, RGBMap, CProf, Flip,
+        self.stage_classes = [Scale, Cuts, RGBMap, ICCProf, FlipSwap,
                               Rotate]
         self.stage_dict = {klass._stagename: klass
                            for klass in self.stage_classes}
