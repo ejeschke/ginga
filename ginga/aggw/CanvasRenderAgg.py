@@ -185,8 +185,8 @@ class CanvasRenderer(render.StandardPixelRenderer):
 
         super(CanvasRenderer, self).resize(dims)
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
+    def render_image(self, data, order, win_coord):
+        """Render the image represented by (data) at (win_coord)
         in the pixel space.
         *** internal method-- do not use ***
         """
@@ -195,8 +195,7 @@ class CanvasRenderer(render.StandardPixelRenderer):
         self.logger.debug("redraw surface")
 
         # get window contents as a buffer and load it into the AGG surface
-        rgb_buf = self.viewer.getwin_buffer(order=self.rgb_order,
-                                            dtype=np.uint8)
+        rgb_buf = data.tobytes(order='C')
         self.surface.frombytes(rgb_buf)
 
         # for debugging

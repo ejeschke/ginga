@@ -12,11 +12,11 @@ An instance can be opened for each channel.
 
 """
 
-from ginga import GingaPlugin, RGBImage
+from ginga import GingaPlugin
 from ginga.util import pipeline, loader
 from ginga.gw import Widgets
 from ginga.util.stages import (Input, Output, Scale, Rotate, FlipSwap, Cuts,
-                               RGBMap, ICCProf)
+                               RGBMap, ICCProf, Crop, ChannelMixer)
 
 __all__ = ['Pipeline']
 
@@ -33,25 +33,8 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.settings.set_defaults(num_threads=4)
         self.settings.load(onError='silent')
 
-        self.dc = fv.get_draw_classes()
-        self.layertag = 'pipeline-canvas'
-        canvas = self.dc.DrawingCanvas()
-        canvas.enable_draw(True)
-        canvas.enable_edit(True)
-        canvas.set_drawtype('line', color='cyan', linestyle='dash')
-        ## canvas.set_callback('draw-event', self.draw_cb)
-        ## canvas.set_callback('edit-event', self.edit_cb)
-        ## canvas.add_draw_mode('move', down=self.buttondown_cb,
-        ##                      move=self.motion_cb, up=self.buttonup_cb,
-        ##                      key=self.keydown)
-        ## canvas.set_draw_mode('draw')
-        #canvas.add_callback('drag-drop', self.drop_cb)
-        canvas.register_for_cursor_drawing(self.fitsimage)
-        canvas.set_surface(self.fitsimage)
-        self.canvas = canvas
-
         self.stage_classes = [Scale, Cuts, RGBMap, ICCProf, FlipSwap,
-                              Rotate]
+                              Rotate, Crop, ChannelMixer]
         self.stage_dict = {klass._stagename: klass
                            for klass in self.stage_classes}
         self.stage_names = list(self.stage_dict.keys())
@@ -64,6 +47,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.pipeline.add_callback('stage-errored', self.stage_status, 'E')
         self.pipeline.add_callback('pipeline-start', self.clear_status)
 
+        self.pipeline.set(fv=self.fv, viewer=self.fitsimage)
         self.gui_up = False
 
     def build_gui(self, container):
@@ -71,8 +55,23 @@ class Pipeline(GingaPlugin.LocalPlugin):
         top.set_border_width(4)
         top.set_spacing(2)
 
-        #top.add_widget(Widgets.Label("Pipeline"), stretch=0)
+        tbar = Widgets.Toolbar(orientation='horizontal')
+        menu = tbar.add_menu('Pipe', mtype='tool')
+        #menu.add_callback('activated', self.pipeline_menu_cb)
+        menu.set_tooltip("Operation on pipeline")
+        item = menu.add_name('Load')
+        item.set_tooltip("Load a new pipeline")
+        item = menu.add_name('Save')
+        item.set_tooltip("Save this pipeline")
+
+        status = Widgets.TextEntry()
+        self.w.pipestatus = status
+        tbar.add_widget(status)
+        top.add_widget(tbar, stretch=0)
+
         vbox = Widgets.VBox()
+        vbox.set_border_width(2)
+        vbox.set_spacing(2)
         self.pipelist = vbox
 
         for stage in self.pipeline:
@@ -85,25 +84,49 @@ class Pipeline(GingaPlugin.LocalPlugin):
         # wrap it in a scrollbox
         scr = Widgets.ScrollArea()
         scr.set_widget(vbox)
-        top.add_widget(scr, stretch=1)
+
+        name = self.pipeline.name
+        if len(name) > 20:
+            name = name[:20] + '...'
+        fr = Widgets.Frame("Pipeline: {}".format(name))
+        fr.set_widget(scr)
+        #top.add_widget(scr, stretch=1)
+        top.add_widget(fr, stretch=1)
 
         tbar = Widgets.Toolbar(orientation='horizontal')
-        btn = tbar.add_action('Delete')
+        btn = tbar.add_action('Del')
         btn.add_callback('activated', self.delete_stage_cb)
         btn.set_tooltip("Delete selected stages")
         self.w.delete = btn
-        btn = tbar.add_action('Insert')
+        btn = tbar.add_action('Ins')
         btn.set_tooltip("Insert above selected stage")
         btn.add_callback('activated', self.insert_stage_cb)
         self.w.insert = btn
+        btn = tbar.add_action('Up')
+        btn.set_tooltip("Move selected stage up")
+        btn.add_callback('activated', self.move_stage_cb, 'up')
+        self.w.move_up = btn
+        btn = tbar.add_action('Dn')
+        btn.set_tooltip("Move selected stage down")
+        btn.add_callback('activated', self.move_stage_cb, 'down')
+        self.w.move_dn = btn
+        btn = tbar.add_action('Clr')
+        btn.set_tooltip("Clear selection")
+        btn.add_callback('activated', lambda w: self.clear_selected())
+        self.w.clear = btn
         self.insert_menu = Widgets.Menu()
         for name in self.stage_names:
             item = self.insert_menu.add_name(name)
             item.add_callback('activated', self._insert_stage_cb, name)
         btn = tbar.add_action('Run')
-        btn.set_tooltip("Run pipeline (or from selected stage)")
+        btn.set_tooltip("Run entire pipeline")
         btn.add_callback('activated', self.run_pipeline_cb)
         self.w.run = btn
+        btn = tbar.add_action('En', toggle=True)
+        btn.set_tooltip("Enable pipeline")
+        btn.set_state(self.pipeline.enabled)
+        btn.add_callback('activated', self.enable_pipeline_cb)
+        self.w.enable = btn
         top.add_widget(tbar, stretch=0)
 
         btns = Widgets.HBox()
@@ -126,6 +149,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         _vbox = Widgets.VBox()
         hbox = Widgets.HBox()
 
+        xpd = Widgets.Expander(title=str(stage), notoggle=True)
         tbar = Widgets.Toolbar(orientation='horizontal')
         chk = tbar.add_action('B', toggle=True)
         chk.add_callback('activated', self.bypass_stage_cb, stage)
@@ -134,17 +158,18 @@ class Pipeline(GingaPlugin.LocalPlugin):
         chk.add_callback('activated', self.select_stage_cb)
         chk.set_tooltip("Select this stage")
         stage.w.select = chk
-        status = Widgets.Label('_')
-        stage.w.status = status
-        chk = tbar.add_widget(status)
+        chk = tbar.add_action('C', toggle=True)
+        chk.add_callback('activated', self.configure_stage_cb, xpd)
+        chk.set_tooltip("Configure this stage")
         hbox.add_widget(tbar, stretch=0)
         ent = Widgets.TextEntry(str(stage))
         ent.add_callback('activated', self.rename_stage_cb, stage)
         ent.set_tooltip("Rename this stage")
         hbox.add_widget(ent, stretch=1)
         _vbox.add_widget(hbox, stretch=0)
-        xpd = Widgets.Expander(title=str(stage))
         stage.build_gui(xpd)
+        xpd.add_callback('opened', lambda w: stage.resume())
+        xpd.add_callback('closed', lambda w: stage.pause())
         stage.gui_up = True
         _vbox.add_widget(xpd, stretch=0)
         stage.w.gui = _vbox
@@ -157,15 +182,6 @@ class Pipeline(GingaPlugin.LocalPlugin):
         return True
 
     def start(self):
-        # insert canvas, if not already
-        p_canvas = self.fitsimage.get_canvas()
-        try:
-            p_canvas.get_object_by_tag(self.layertag)
-
-        except KeyError:
-            # Add our canvas
-            p_canvas.add(self.canvas, tag=self.layertag)
-
         for stage in self.pipeline:
             stage.start()
 
@@ -175,24 +191,16 @@ class Pipeline(GingaPlugin.LocalPlugin):
             self.pipeline[0].set_image(image)
 
     def pause(self):
-        self.canvas.ui_set_active(False)
+        pass
 
     def resume(self):
-        # turn off any mode user may be in
-        self.modes_off()
-
-        self.canvas.ui_set_active(True, viewer=self.fitsimage)
+        pass
 
     def stop(self):
         self.gui_up = False
 
         for stage in self.pipeline:
             stage.stop()
-
-        # remove the canvas from the image
-        p_canvas = self.fitsimage.get_canvas()
-        p_canvas.delete_object_by_tag(self.layertag)
-        self.fv.show_status("")
 
     def bypass_stage_cb(self, widget, tf, stage):
         idx = self.pipeline.index(stage)
@@ -203,10 +211,17 @@ class Pipeline(GingaPlugin.LocalPlugin):
         stages = self.get_selected_stages()
         self.w.insert.set_enabled(len(stages) == 1)
         self.w.delete.set_enabled(len(stages) >= 1)
+        self.w.move_up.set_enabled(len(stages) == 1)
+        self.w.move_dn.set_enabled(len(stages) == 1)
+        self.w.clear.set_enabled(len(stages) >= 1)
         self.w.run.set_enabled(len(stages) <= 1)
+        self.w.enable.set_enabled(len(self.pipeline) > 0)
 
     def select_stage_cb(self, widget, tf):
         self._update_toolbar()
+
+    def configure_stage_cb(self, widget, tf, xpd):
+        xpd.expand(tf)
 
     def rename_stage_cb(self, widget, stage):
         name = widget.get_text().strip()
@@ -222,15 +237,20 @@ class Pipeline(GingaPlugin.LocalPlugin):
             stage.w.select.set_state(False)
         self._update_toolbar()
 
+    def _remove_stage(self, stage, destroy=False):
+        self.pipeline.remove(stage)
+        self.pipelist.remove(stage.w.gui, delete=destroy)
+        if destroy:
+            # destroy stage gui
+            stage.gui_up = False
+            stage.stop()
+            stage.w = None
+
     def delete_stage_cb(self, widget):
         stages = self.get_selected_stages()
+        self.clear_selected()
         for stage in stages:
-            self.pipeline.remove(stage)
-        # destroy stage gui
-        stage.gui_up = False
-        stage.stop()
-        self.pipelist.remove(stage.w.gui, delete=True)
-        stage.w = None
+            self._remove_stage(stage, destroy=True)
 
     def insert_stage_cb(self, widget):
         stages = self.get_selected_stages()
@@ -250,9 +270,41 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.pipeline.insert(idx, stage)
         stage_gui = self.make_stage_gui(stage)
         self.pipelist.insert_widget(idx, stage_gui, stretch=0)
-        self.clear_selected()
+
+    def _relocate_stage(self, idx, stage):
+        self._remove_stage(stage, destroy=False)
+        self.pipeline.insert(idx, stage)
+        self.pipelist.insert_widget(idx, stage.w.gui, stretch=0)
+
+    def move_up(self, stage):
+        idx = self.pipeline.index(stage)
+        if idx == 0:
+            # stage is already at the top
+            return
+        self._relocate_stage(idx - 1, stage)
+
+    def move_down(self, stage):
+        idx = self.pipeline.index(stage)
+        if idx == len(self.pipeline) - 1:
+            # stage is already at the bottom
+            return
+        self._relocate_stage(idx + 1, stage)
+
+    def move_stage_cb(self, widget, direction):
+        stages = self.get_selected_stages()
+        if len(stages) != 1:
+            self.fv.show_error("Please select only a single stage",
+                               raisetab=True)
+        stage = stages[0]
+        if direction == 'up':
+            self.move_up(stage)
+        else:
+            self.move_down(stage)
 
     def run_pipeline_cb(self, widget):
+        self.pipeline.run_all()
+
+    def run_pipeline_partial_cb(self, widget):
         stages = self.get_selected_stages()
         if len(stages) == 0:
             self.pipeline.run_all()
@@ -263,6 +315,9 @@ class Pipeline(GingaPlugin.LocalPlugin):
             return
         stage = stages[0]
         self.pipeline.run_from(stage)
+
+    def enable_pipeline_cb(self, widget, tf):
+        self.pipeline.enable(tf)
 
     def load_file(self, filepath):
         image = loader.load_data(filepath, logger=self.logger)
@@ -284,13 +339,13 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
     def stage_status(self, pipeline, stage, txt):
         if stage.gui_up:
-            stage.w.status.set_text(txt)
+            self.w.pipestatus.set_text(stage.name)
             self.fv.update_pending()
 
     def clear_status(self, pipeline, stage):
         for stage in pipeline:
             if stage.gui_up:
-                stage.w.status.set_text('_')
+                self.w.pipestatus.set_text(stage.name)
         self.fv.update_pending()
 
     def __str__(self):

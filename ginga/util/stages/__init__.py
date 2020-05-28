@@ -1,9 +1,11 @@
 
-from .input import Input
-from .output import Output
-from .scale import Scale
-from .rotate import Rotate
-from .flipswap import FlipSwap
-from .cuts import Cuts
-from .rgbmap import RGBMap
-from .iccprof import ICCProf
+from .input import Input  # noqa
+from .output import Output  # noqa
+from .scale import Scale  # noqa
+from .rotate import Rotate  # noqa
+from .flipswap import FlipSwap  # noqa
+from .cuts import Cuts  # noqa
+from .rgbmap import RGBMap  # noqa
+from .iccprof import ICCProf  # noqa
+from .crop import Crop  # noqa
+from .chmix import ChannelMixer  # noqa

@@ -4,18 +4,14 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy as np
-
 from ginga.misc import Bunch
-from ginga import trcalc
-from ginga.util import loader
-from ginga.gw import Widgets
 
 #__all__ = ['Pipeline']
 
 
 class StageError(Exception):
     pass
+
 
 class Stage(object):
     """Class to handle a pipeline stage."""
@@ -46,6 +42,14 @@ class Stage(object):
         pass
 
     def stop(self):
+        """subclass can override this to do any necessary teardown."""
+        pass
+
+    def pause(self):
+        """subclass can override this to do any necessary teardown."""
+        pass
+
+    def resume(self):
         """subclass can override this to do any necessary teardown."""
         pass
 

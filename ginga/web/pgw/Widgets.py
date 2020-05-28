@@ -1557,6 +1557,12 @@ class Frame(ContainerBase):
         self._rendered = True
         self.html_template % d
 
+    def set_text(self, text):
+        self.label = text
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_html', id=self.id, value=self.render())
+
 
 class Expander(ContainerBase):
 
@@ -1575,9 +1581,11 @@ class Expander(ContainerBase):
     </script>
     """
 
-    def __init__(self, title=''):
+    def __init__(self, title='', notoggle=False):
         super(Expander, self).__init__()
-
+        if notoggle:
+            raise NotImplementedError("notoggle=True not implemented "
+                                      "for this backend")
         self.widget = None
         self.label = title
 

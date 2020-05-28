@@ -1,12 +1,15 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import os.path
+
 from ginga.gw import Widgets
-from ginga import RGBImage
+from ginga.util.paths import ginga_home
 
 from .base import Stage
 
 count = 0
+
 
 class Output(Stage):
 
@@ -25,6 +28,7 @@ class Output(Stage):
 
         captions = [('Channel:', 'label', 'Channel', 'entryset'),
                     ('Path:', 'label', 'Path', 'entryset'),
+                    ('Save', 'button'),
                     ]
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
@@ -34,6 +38,8 @@ class Output(Stage):
         b.path.set_text(self.path)
         b.path.set_tooltip("Enter a path to save the result")
         b.path.add_callback('activated', self.set_path_cb)
+        b.save.add_callback('activated', self.save_as_cb)
+        b.save.set_tooltip("Save as path when clicked")
 
         fr.set_widget(w)
         container.set_widget(fr)
@@ -42,7 +48,8 @@ class Output(Stage):
         self.chname = widget.get_text().strip()
         # TODO: ask user to create channel if it doesn't exist?
         channel = self.fv.get_channel_on_demand(self.chname)
-        #self.pipeline.run_from(self)
+
+        self.pipeline.run_from(self)
 
     def run(self, prev_stage):
         global count
@@ -77,7 +84,7 @@ class Output(Stage):
                 # assign an output image name
                 # TODO: name a better output name, that is some kind
                 # of modified name of the input image name
-                self.image.set(name='P'+str(count))
+                self.image.set(name='P' + str(count))
                 count += 1
                 self.image.set_data(data)
 
@@ -90,7 +97,9 @@ class Output(Stage):
         if len(self.path) != 0:
             # TODO: check for overwrite, confirmation?
             # TODO: save quality parameters
-            self.image.save_as_file(self.path)
+            #self.image.save_as_file(self.path)
+            #self.save_as(self.path, data)
+            pass
 
         self.pipeline.send(res_np=data)
 
@@ -102,6 +111,22 @@ class Output(Stage):
             self.path = None
 
         self.pipeline.run_from(self)
+
+    def save_as_cb(self, widget):
+        data = self.pipeline.get_data(self)
+        self._save_as(self.path, data)
+
+    def _save_as(self, path, data, format='jpeg', quality=90):
+        from PIL import Image
+
+        profile_file = os.path.join(ginga_home, "profiles", "AdobeRGB.icc")
+        with open(profile_file, 'rb') as in_f:
+            profile = in_f.read()
+
+        img = Image.fromarray(data[:, :, 0:3])
+        img.save(self.path, format=format, quality=quality,
+                 #icc_profile=img.info.get('icc_profile')
+                 icc_profile=profile)
 
     def get_image(self):
         return self.image

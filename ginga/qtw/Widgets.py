@@ -1145,6 +1145,10 @@ class Frame(ContainerBase):
         self.add_ref(child)
         self.widget.layout().addWidget(child.get_widget(), stretch=stretch)
 
+    def set_text(self, text):
+        if self.label is not None:
+            self.label.setText(text)
+
 
 # Qt custom expander widget
 # See http://stackoverflow.com/questions/10364589/equivalent-of-gtks-expander-in-pyqt4  # noqa
@@ -1159,7 +1163,7 @@ class Expander(ContainerBase):
                   border-width: 0px; border-style: solid; }
     """
 
-    def __init__(self, title=''):
+    def __init__(self, title='', notoggle=False):
         super(Expander, self).__init__()
 
         # Qt doesn't seem to like it (segfault) if we actually construct
@@ -1177,13 +1181,20 @@ class Expander(ContainerBase):
         vbox.setSpacing(0)
         self.layout = vbox
 
-        self.toggle = QtGui.QPushButton(Expander.r_arrow, title)
-        self.toggle.setStyleSheet(Expander.widget_style)
-        # self.toggle.setCheckable(True)
-        self.toggle.clicked.connect(self._toggle_widget)
+        self.toggle = None
+        if not notoggle:
+            toggle = ToggleButton(title)
+            self.toggle = toggle
+            toggle_w = toggle.get_widget()
+            toggle_w.setIcon(Expander.r_arrow)
+            toggle_w.setStyleSheet(Expander.widget_style)
+            toggle.add_callback('activated', self._toggle_widget)
+            vbox.addWidget(toggle.get_widget(), stretch=0)
 
-        vbox.addWidget(self.toggle, stretch=0)
         self.widget.setLayout(vbox)
+
+        for name in ('opened', 'closed'):
+            self.enable_callback(name)
 
     def set_widget(self, child, stretch=1):
         self.remove_all()
@@ -1192,16 +1203,28 @@ class Expander(ContainerBase):
         self.widget.layout().addWidget(child_w, stretch=stretch)
         child_w.setVisible(False)
 
-    def _toggle_widget(self):
+    def expand(self, tf):
         child = self.get_children()[0]
         child_w = child.get_widget()
-        # if self.toggle.isChecked():
-        if child_w.isVisible():
-            self.toggle.setIcon(Expander.r_arrow)
-            child_w.setVisible(False)
-        else:
-            self.toggle.setIcon(Expander.d_arrow)
+        if tf:
+            if child_w.isVisible():
+                # child already open
+                return
+            if self.toggle is not None:
+                self.toggle.get_widget().setIcon(Expander.d_arrow)
             child_w.setVisible(True)
+            self.make_callback('opened')
+        else:
+            if not child_w.isVisible():
+                # child already closed
+                return
+            if self.toggle is not None:
+                self.toggle.get_widget().setIcon(Expander.r_arrow)
+            child_w.setVisible(False)
+            self.make_callback('closed')
+
+    def _toggle_widget(self, w, tf):
+        self.expand(tf)
 
 
 class TabWidget(ContainerBase):

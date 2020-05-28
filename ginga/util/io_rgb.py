@@ -561,6 +561,7 @@ def open_ppm(filepath):
 
 from collections.abc import Sequence, Iterator
 
+
 class VideoAccess(Sequence, Iterator):
     def __init__(self):
         super(Sequence, self).__init__()
@@ -575,7 +576,7 @@ class VideoAccess(Sequence, Iterator):
 
         self.idx = 0
 
-         # Get width and height of frames and resize window
+        # Get width and height of frames and resize window
         width = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_HEIGHT))
         depth = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -596,7 +597,7 @@ class VideoAccess(Sequence, Iterator):
         self.idx += 1
         if self.idx == self.shape[2]:
             raise StopIteration("Reached the end of frames")
-        return self.read(idx)
+        return self.read(self.idx)
 
     def __getitem__(self, idx):
         return self.read(idx)
@@ -611,7 +612,6 @@ class VideoAccess(Sequence, Iterator):
         # hopefully this closes the object
         self.rgb_f = None
         return False
-
 
 
 RGBFileHandler = PillowFileHandler

@@ -4,8 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy as np
-
 from ginga.canvas import render
 from ginga.fonts import font_asst
 # force registration of all canvas types
@@ -119,9 +117,8 @@ class CanvasRenderer(render.StandardPixelRenderer):
         # adjust according to viewer's needed order
         return self.reorder(order, self._rgb_arr)
 
-    def render_image(self, rgbobj, win_x, win_y):
-        self._rgb_arr = self.viewer.getwin_array(order=self.rgb_order,
-                                                 dtype=np.uint8)
+    def render_image(self, data, order, win_coord):
+        self._rgb_arr = data
 
     def setup_cr(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)

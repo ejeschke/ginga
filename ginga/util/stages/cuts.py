@@ -1,10 +1,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import numpy as np
-
 from ginga.misc import ParamSet, Bunch
-from ginga import trcalc, AutoCuts
+from ginga import AutoCuts
 from ginga.gw import Widgets
 
 from .base import Stage
@@ -34,6 +32,8 @@ class Cuts(Stage):
         captions = (('Auto:', 'label', 'Auto', 'checkbutton'),
                     ('Cut Low:', 'label', 'locut', 'entryset'),
                     ('Cut High:', 'label', 'hicut', 'entryset'),
+                    ('VMin:', 'label', 'vmin', 'entryset'),
+                    ('VMax:', 'label', 'vmax', 'entryset'),
                     )
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
@@ -48,6 +48,13 @@ class Cuts(Stage):
         b.hicut.set_tooltip("Set high cut level")
         b.hicut.add_callback('activated', self.manual_cuts_cb)
 
+        b.vmin.set_text(str(self.vmin))
+        b.vmin.set_tooltip("Set output minimum level")
+        b.vmin.add_callback('activated', self.manual_output_cb)
+        b.vmax.set_text(str(self.vmax))
+        b.vmax.set_tooltip("Set output maximum level")
+        b.vmax.add_callback('activated', self.manual_output_cb)
+
         fr.set_widget(w)
         top.add_widget(fr, stretch=0)
 
@@ -55,8 +62,7 @@ class Cuts(Stage):
         vbox2 = Widgets.VBox()
         fr.set_widget(vbox2)
 
-        captions = ((#'Auto Cuts', 'button',
-                     'Auto Method:', 'label', 'Auto Method', 'combobox'),
+        captions = (("Auto Method:", 'label', "Auto Method", 'combobox'),
                     )
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
@@ -153,6 +159,11 @@ class Cuts(Stage):
         self.w.auto.set_state(self.auto)
         self.pipeline.run_from(self)
 
+    def manual_output_cb(self, widget):
+        self.vmin = float(self.w.vmin.get_text().strip())
+        self.vmax = float(self.w.vmax.get_text().strip())
+        self.pipeline.run_from(self)
+
     def auto_cb(self, widget, tf):
         self.auto = tf
         self.w.auto.set_state(self.auto)
@@ -172,9 +183,8 @@ class Cuts(Stage):
                 self.w.locut.set_text(str(self.locut))
                 self.w.hicut.set_text(str(self.hicut))
 
-        vmin, vmax = 0, 255
         res_np = self.autocuts.cut_levels(data, self.locut, self.hicut,
-                                          vmin=vmin, vmax=vmax)
+                                          vmin=self.vmin, vmax=self.vmax)
         self.pipeline.send(res_np=res_np)
 
     def export_as_dict(self):
@@ -187,6 +197,3 @@ class Cuts(Stage):
         super(Cuts, self).import_from_dict(d)
         for name in self.__varlist:
             d[name] = self.__dict__[name]
-
-    def __str__(self):
-        return self._stagename

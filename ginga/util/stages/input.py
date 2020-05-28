@@ -6,6 +6,7 @@ from ginga.gw import Widgets
 
 from .base import Stage, StageError
 
+
 class Input(Stage):
 
     _stagename = 'input'

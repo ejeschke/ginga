@@ -259,7 +259,7 @@ class CanvasRenderer(render.StandardPixelRenderer):
         return self.reorder(order, arr)
 
     def render_image(self, data, order, win_coord):
-        """Render the image represented by (rgbobj) at win_x, win_y
+        """Render the image represented by (data) at (win_coord)
         in the pixel space.
         *** internal method-- do not use ***
         """
@@ -282,12 +282,13 @@ class CanvasRenderer(render.StandardPixelRenderer):
 
         painter = get_painter(drawable)
 
-        # fill surface with background color
-        size = drawable.size()
-        sf_wd, sf_ht = size.width(), size.height()
-        bg = self.viewer.img_bg
-        bgclr = self._get_color(*bg)
-        painter.fillRect(QtCore.QRect(0, 0, sf_wd, sf_ht), bgclr)
+        # fill surface with background color (not-strictly necessary,
+        # since image should cover entire window, but to be safe, I guess...)
+        ## size = drawable.size()
+        ## sf_wd, sf_ht = size.width(), size.height()
+        ## bg = self.viewer.img_bg
+        ## bgclr = self._get_color(*bg)
+        ## painter.fillRect(QtCore.QRect(0, 0, sf_wd, sf_ht), bgclr)
 
         # draw image data from buffer to offscreen pixmap
         painter.drawImage(QtCore.QRect(win_x, win_y, dawd, daht),

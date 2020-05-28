@@ -186,9 +186,9 @@ class CanvasRenderer(render.StandardPixelRenderer):
         """
         super(CanvasRenderer, self).resize(dims)
 
-    def render_image(self, rgbobj, dst_x, dst_y):
+    def render_image(self, data, order, win_coord):
         # for compatibility with the other renderers
-        return self.viewer.render_image(rgbobj, dst_x, dst_y)
+        return self.viewer.render_image(data, order, win_coord)
 
     def get_surface_as_array(self, order=None):
         raise render.RenderError("This renderer can only be used with a matplotlib viewer")

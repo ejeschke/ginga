@@ -5,6 +5,7 @@ import numpy as np
 
 from ginga.gw import Widgets
 from ginga.util import rgb_cms
+from ginga import trcalc
 
 from .base import Stage
 
@@ -156,11 +157,19 @@ class ICCProf(Stage):
 
         if (self._bypass or data is None or None in [self.icc_input_profile,
                                                      self.icc_output_profile]):
+            self.pipeline.set(icc_output_profile=self.icc_input_profile)
             self.pipeline.send(res_np=data)
             return
 
         # color profiling will not work with other types
         data = data.astype(np.uint8)
+
+        alpha = None
+        ht, wd, dp = data.shape
+        if dp > 3:
+            # color profile conversion does not handle an alpha layer
+            alpha = data[:, :, 3]
+            data = data[:, :, 0:3]
 
         try:
             arr = rgb_cms.convert_profile_fromto(data,
@@ -181,4 +190,8 @@ class ICCProf(Stage):
             self.logger.info("Output left unprofiled")
             arr = data
 
+        if alpha is not None:
+            arr = trcalc.add_alpha(arr, alpha)
+
+        self.pipeline.set(icc_output_profile=self.icc_output_profile)
         self.pipeline.send(res_np=arr)

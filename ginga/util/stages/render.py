@@ -27,8 +27,12 @@ class CreateBg(Stage):
         self.dtype = np.uint8
 
     def run(self, prev_stage):
-        assert prev_stage is None, \
-               StageError("'{}' in wrong location".format(self._stagename))
+        if prev_stage is not None:
+            raise StageError("'{}' in wrong location".format(self._stagename))
+
+        if self._bypass:
+            self.pipeline.send(res_np=None)
+            return
 
         state = self.pipeline.get('state')
         win_wd, win_ht = state.win_dim
@@ -75,30 +79,48 @@ class ICCProf(Stage):
         t_ = self.viewer.get_settings()
         output_profile = t_.get('icc_output_profile', None)
 
-        if None not in [working_profile, output_profile]:
-            # get rest of necessary conversion parameters
-            to_intent = t_.get('icc_output_intent', 'perceptual')
-            proofprof_name = t_.get('icc_proof_profile', None)
-            proof_intent = t_.get('icc_proof_intent', 'perceptual')
-            use_black_pt = t_.get('icc_black_point_compensation', False)
-            try:
-                data = rgb_cms.convert_profile_fromto(data,
-                                                      working_profile,
-                                                      output_profile,
-                                                      to_intent=to_intent,
-                                                      proof_name=proofprof_name,
-                                                      proof_intent=proof_intent,
-                                                      use_black_pt=use_black_pt,
-                                                      logger=self.logger)
+        if self._bypass or None in [working_profile, output_profile]:
+            self.pipeline.set(icc_output_profile=working_profile)
+            self.pipeline.send(res_np=data)
+            return
 
-                self.logger.debug("Converted from '%s' to '%s' profile" % (
-                    working_profile, output_profile))
+        # color profiling will not work with other types
+        data = data.astype(np.uint8)
 
-            except Exception as e:
-                self.logger.warning("Error converting output from working profile: %s" % (str(e)))
-                # TODO: maybe should have a traceback here
-                self.logger.info("Output left unprofiled")
+        alpha = None
+        ht, wd, dp = data.shape
+        if dp > 3:
+            # color profile conversion does not handle an alpha layer
+            alpha = data[:, :, 3]
+            data = data[:, :, 0:3]
 
+        # get rest of necessary conversion parameters
+        to_intent = t_.get('icc_output_intent', 'perceptual')
+        proofprof_name = t_.get('icc_proof_profile', None)
+        proof_intent = t_.get('icc_proof_intent', 'perceptual')
+        use_black_pt = t_.get('icc_black_point_compensation', False)
+        try:
+            data = rgb_cms.convert_profile_fromto(data,
+                                                  working_profile,
+                                                  output_profile,
+                                                  to_intent=to_intent,
+                                                  proof_name=proofprof_name,
+                                                  proof_intent=proof_intent,
+                                                  use_black_pt=use_black_pt,
+                                                  logger=self.logger)
+
+            self.logger.debug("Converted from '%s' to '%s' profile" % (
+                working_profile, output_profile))
+
+        except Exception as e:
+            self.logger.warning("Error converting output from working profile: %s" % (str(e)))
+            # TODO: maybe should have a traceback here
+            self.logger.info("Output left unprofiled")
+
+        if alpha is not None:
+            data = trcalc.add_alpha(data, alpha)
+
+        self.pipeline.set(icc_output_profile=output_profile)
         self.pipeline.send(res_np=data)
 
 
@@ -116,19 +138,20 @@ class FlipSwap(Stage):
         self.verify_2d(data)
 
         xoff, yoff = self.pipeline.get('org_off')
-        flip_x, flip_y, swap_xy = self.viewer.get_transforms()
+        if not self._bypass:
+            flip_x, flip_y, swap_xy = self.viewer.get_transforms()
 
-        ht, wd = data.shape[:2]
+            ht, wd = data.shape[:2]
 
-        # Do transforms as necessary
-        data = trcalc.transform(data, flip_x=flip_x, flip_y=flip_y,
-                                swap_xy=swap_xy)
-        if flip_y:
-            yoff = ht - yoff
-        if flip_x:
-            xoff = wd - xoff
-        if swap_xy:
-            xoff, yoff = yoff, xoff
+            # Do transforms as necessary
+            data = trcalc.transform(data, flip_x=flip_x, flip_y=flip_y,
+                                    swap_xy=swap_xy)
+            if flip_y:
+                yoff = ht - yoff
+            if flip_x:
+                xoff = wd - xoff
+            if swap_xy:
+                xoff, yoff = yoff, xoff
 
         self.pipeline.set(off=(xoff, yoff))
         self.pipeline.send(res_np=data)
@@ -147,19 +170,20 @@ class Rotate(Stage):
         data = self.pipeline.get_data(prev_stage)
         self.verify_2d(data)
 
-        rot_deg = self.viewer.get_rotation()
+        if not self._bypass:
+            rot_deg = self.viewer.get_rotation()
 
-        if not np.isclose(rot_deg, 0.0):
-            data = np.copy(data)
-            #data = np.ascontiguousarray(data)
-            data = trcalc.rotate_clip(data, -rot_deg, out=data,
+            if not np.isclose(rot_deg, 0.0):
+                data = np.copy(data)
+                #data = np.ascontiguousarray(data)
+                data = trcalc.rotate_clip(data, -rot_deg, out=data,
                                           logger=self.logger)
 
-        # apply other transforms
-        if self.viewer._invert_y:
-            # Flip Y for natural Y-axis inversion between FITS coords
-            # and screen coords
-            data = np.flipud(data)
+            # apply other transforms
+            if self.viewer._invert_y:
+                # Flip Y for natural Y-axis inversion between FITS coords
+                # and screen coords
+                data = np.flipud(data)
 
         # dimensions may have changed in transformations
         ht, wd = data.shape[:2]
@@ -196,27 +220,31 @@ class Output(Stage):
         ##         StageError("Expecting a RGB[A] image in final stage")
         self.verify_2d(data)
 
-        ht, wd = data.shape[:2]
         state = self.pipeline.get('state')
-        win_wd, win_ht = state.win_dim
-        if wd < win_wd or ht < win_ht:
-            raise StageError("pipeline output doesn't cover window")
+        out_order = state.order
 
-        # now cut out the size that we need
-        dst_x, dst_y = self.pipeline.get('dst')
-        if dst_x > 0 or dst_y > 0:
-            raise StageError("pipeline calculated dst is not correct")
+        if not self._bypass:
+            ht, wd = data.shape[:2]
+            state = self.pipeline.get('state')
+            win_wd, win_ht = state.win_dim
+            if wd < win_wd or ht < win_ht:
+                raise StageError("pipeline output doesn't cover window")
 
-        x1, y1 = abs(dst_x), abs(dst_y)
-        data = data[y1:y1 + win_ht, x1:x1 + win_wd]
+            # now cut out the size that we need
+            dst_x, dst_y = self.pipeline.get('dst')
+            if dst_x > 0 or dst_y > 0:
+                raise StageError("pipeline calculated dst is not correct")
 
-        # reorder image for desired
-        ## state = self.pipeline.get('state')
-        ## dst_order = state.order
-        ## data = trcalc.reorder_image(dst_order, data, state.order)
+            x1, y1 = abs(dst_x), abs(dst_y)
+            data = data[y1:y1 + win_ht, x1:x1 + win_wd]
 
-        data = np.ascontiguousarray(data)
+            # reorder image for renderer's desired format
+            dst_order = self.viewer.renderer.get_rgb_order()
+            data = trcalc.reorder_image(dst_order, data, state.order)
+            data = np.ascontiguousarray(data)
+            out_order = dst_order
 
+        self.pipeline.set(out_order=out_order)
         self.pipeline.send(res_np=data)
 
 
@@ -652,7 +680,7 @@ class Clip(Stage):
             mn, mx = trcalc.get_minmax_dtype(data.dtype)
             a_idx = image_order.index('A')
             alpha = (data[..., a_idx] / mx *
-                           rgbmap.maxc).astype(rgbmap.dtype)
+                     rgbmap.maxc).astype(rgbmap.dtype)
             data = data[..., 0:a_idx]
             ht, wd, dp = data.shape
             if dp == 1:

@@ -980,27 +980,33 @@ def reorder_image(dst_order, src_arr, src_order):
     """
     depth = src_arr.shape[2]
     if depth != len(src_order):
-        raise ValueError("src_order (%s) does not match array depth (%d)" % (
-            src_order, depth))
+        if len(dst_order.replace('A', '')) != len(src_order.replace('A', '')):
+            raise ValueError("src_order (%s) does not match array depth (%d)" % (
+                src_order, depth))
 
     bands = []
     if dst_order == src_order:
         return np.ascontiguousarray(src_arr)
 
-    elif 'A' not in dst_order or 'A' in src_order:
+    missing = set(dst_order) - set(src_order)
+    if len(missing) == 0:
         # <-- we don't have to add an alpha plane, just create a new view
         idx = np.array([src_order.index(c) for c in dst_order])
         return np.ascontiguousarray(src_arr[..., idx])
 
-    else:
-        # <-- dst order requires missing alpha channel
-        indexes = [src_order.index(c) for c in dst_order.replace('A', '')]
-        bands = [src_arr[..., idx, np.newaxis] for idx in indexes]
-        ht, wd = src_arr.shape[:2]
-        dst_type = src_arr.dtype
-        dst_max_val = np.iinfo(dst_type).max
-        alpha = np.full((ht, wd, 1), dst_max_val, dtype=dst_type)
-        bands.insert(dst_order.index('A'), alpha)
+    if missing != set(['A']):
+        missing = list(missing - set(['A']))
+        raise ValueError("source array missing channels ({}) needed in "
+                         "destination array ({})".format(src_order, dst_order))
+
+    # <-- dst order requires missing alpha channel
+    indexes = [src_order.index(c) for c in dst_order.replace('A', '')]
+    bands = [src_arr[..., idx, np.newaxis] for idx in indexes]
+    ht, wd = src_arr.shape[:2]
+    dst_type = src_arr.dtype
+    dst_max_val = np.iinfo(dst_type).max
+    alpha = np.full((ht, wd, 1), dst_max_val, dtype=dst_type)
+    bands.insert(dst_order.index('A'), alpha)
 
     return np.concatenate(bands, axis=-1)
 
@@ -1195,3 +1201,16 @@ def guess_order(shape):
             order = 'RGBA'
 
     return order
+
+
+def get_aspect(shape):
+    return shape[1] / shape[0]
+
+
+def calc_aspect_str(wd, ht):
+    # calculate the aspect ratio given by width and height and make
+    # string of the form "x:y"
+    gcd = np.gcd(wd, ht)
+    _wd, _ht = int(wd / gcd), int(ht / gcd)
+    _as = str(_wd) + ':' + str(_ht)
+    return _as

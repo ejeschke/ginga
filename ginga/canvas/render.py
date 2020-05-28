@@ -5,8 +5,6 @@
 # Please see the file LICENSE.txt for details.
 
 from io import BytesIO
-import math
-import time
 
 import numpy as np
 
@@ -18,7 +16,7 @@ try:
 except ImportError:
     have_PIL = False
 
-from ginga import trcalc, RGBMap
+from ginga import trcalc
 from ginga.fonts import font_asst
 from ginga.util import pipeline
 from ginga.util.stages import render
@@ -44,6 +42,7 @@ class RenderContextBase(object):
 
     def draw_image(self, cvs_img, cpoints, cache, whence, order='RGBA'):
         pass
+
 
 class RendererBase(object):
     """Base class from which all Renderer classes are derived."""
@@ -335,7 +334,8 @@ class StandardPixelRenderer(RendererBase):
         self.state = Bunch.Bunch(org_scale=(1.0, 1.0),
                                  org_pan=(0.0, 0.0),
                                  ctr=(0, 0),
-                                 win_dim=(0, 0))
+                                 win_dim=(0, 0),
+                                 order=self.std_order)
         self.pipeline.set(state=self.state)
         # initialize pipeline
         self.pipeline.invalidate()
@@ -351,8 +351,6 @@ class StandardPixelRenderer(RendererBase):
         pass
 
     def render_whence(self, whence):
-        order = self.get_rgb_order()
-
         if whence < 3.0:
             # Search the table and stop at the first stage whose threshold
             # is <= whence. Run the pipeline from that stage.
@@ -366,7 +364,16 @@ class StandardPixelRenderer(RendererBase):
         last_stage = self.pipeline[-1]
         rgbarr = self.pipeline.get_data(last_stage)
 
-        self.render_image(rgbarr, order, (0, 0))
+        # NOTE: we assume Output stage has rendered according to the
+        # RGB order needed by the renderer
+        dst_order = self.get_rgb_order()
+        out_order = self.pipeline.get('out_order')
+        if dst_order != out_order:
+            raise RenderError("RGB order of pipeline output ({}) "
+                              "does not match renderer expected ({})".format(
+                                  out_order, dst_order))
+
+        self.render_image(rgbarr, dst_order, (0, 0))
 
     def finalize(self):
         # not currently used by this renderer
@@ -384,12 +391,13 @@ class StandardPixelRenderer(RendererBase):
     def getwin_array(self, order='RGBA', alpha=1.0, dtype=None):
         # NOTE: alpha parameter temporarily ignored for now
         dst_order = order.upper()
-        src_order = self.std_order
+        #src_order = self.std_order
+        src_order = self.get_rgb_order()
 
         last_stage = self.pipeline[-1]
         outarr = self.pipeline.get_data(last_stage)
 
-        # reorder as backend needs it
+        # reorder as caller needs it
         outarr = self.reorder(dst_order, outarr, src_order=src_order)
         outarr = np.ascontiguousarray(outarr)
         if dtype is not None:
@@ -422,7 +430,7 @@ class StandardPixelRenderer(RendererBase):
         wd, ht = dims[:2]
         ctr = (wd // 2, ht // 2)
         self.state.setvals(win_dim=dims[:2], ctr=ctr,
-                           order=self.get_rgb_order())
+                           order=self.std_order)
 
     def _confirm_pan_and_scale(self, scale_x, scale_y, pan_x, pan_y,
                                win_wd, win_ht):

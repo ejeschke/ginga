@@ -11,6 +11,10 @@ from ginga.misc import Bunch, Callback
 __all__ = ['Pipeline']
 
 
+class PipeError(Exception):
+    pass
+
+
 class Pipeline(Callback.Callbacks):
 
     def __init__(self, logger, stages, name=None):
@@ -22,6 +26,7 @@ class Pipeline(Callback.Callbacks):
         if name is None:
             name = str(self)
         self.name = name
+        self.enabled = True
         self.pipeline = list(stages)
 
         for stage in self.pipeline:
@@ -35,6 +40,7 @@ class Pipeline(Callback.Callbacks):
     def _init_stage(self, stage):
         stage.pipeline = self
         stage.logger = self.logger
+        stage.result = Bunch.Bunch(res_np=None)
 
     def insert(self, i, stage):
         self.pipeline.insert(i, stage)
@@ -48,7 +54,13 @@ class Pipeline(Callback.Callbacks):
         stage.pipeline = None
         self.pipeline.remove(stage)
 
+    def enable(self, tf):
+        self.enabled = tf
+
     def run_stage_idx(self, i):
+        if not self.enabled:
+            self.logger.info("pipeline disabled")
+
         if i < 0 or i >= len(self.pipeline):
             raise ValueError("No stage at index {}".format(i))
 
@@ -70,7 +82,7 @@ class Pipeline(Callback.Callbacks):
             self.make_callback('stage-errored', stage)
 
         self.logger.debug("stage '%s' took %.4f sec" % (stage._stagename,
-                                                       stop_time - start_time))
+                                                        stop_time - start_time))
 
     def run_from(self, stage):
         self.make_callback('pipeline-start', stage)

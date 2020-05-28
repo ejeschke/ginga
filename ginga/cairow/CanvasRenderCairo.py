@@ -245,17 +245,16 @@ class CanvasRenderer(render.StandardPixelRenderer):
 
         super(CanvasRenderer, self).resize(dims)
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
+    def render_image(self, arr, order, win_coord):
+        """Render the image represented by (data) at (win_coord)
         in the pixel space.
+        *** internal method-- do not use ***
         """
         self.logger.debug("redraw surface")
         if self.surface is None:
             return
 
-        # Prepare array for Cairo rendering
-        # TODO: is there some high-bit depth option for Cairo?
-        arr = rgbobj.get_array(self.rgb_order, dtype=np.uint8)
+        dst_x, dst_y = win_coord[:2]
 
         daht, dawd, depth = arr.shape
         self.logger.debug("arr shape is %dx%dx%d" % (dawd, daht, depth))
@@ -288,7 +287,8 @@ class CanvasRenderer(render.StandardPixelRenderer):
             raise render.RenderError("No cairo surface defined")
 
         # adjust according to viewer's needed order
-        return self.reorder(order, self.surface_arr)
+        src_order = self.get_rgb_order()
+        return self.reorder(order, self.surface_arr, src_order=src_order)
 
     def setup_cr(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)

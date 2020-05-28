@@ -166,8 +166,8 @@ class CanvasRenderer(render.StandardPixelRenderer):
     ##     cr = RenderContext(self, self.viewer, self.surface)
     ##     self.draw_vector(cr)
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
+    def render_image(self, rgb_arr, order, win_coord):
+        """Render the image represented by (data) at (win_coord)
         in the pixel space.
         *** internal method-- do not use ***
         """
@@ -177,7 +177,6 @@ class CanvasRenderer(render.StandardPixelRenderer):
 
         # get window contents as a buffer and paste it into the PIL surface
         # TODO: allow greater bit depths when support is better in PIL
-        rgb_arr = self.viewer.getwin_array(order=self.rgb_order, dtype=np.uint8)
         p_image = Image.fromarray(rgb_arr)
 
         if self.surface is None or p_image.size != self.surface.size:
