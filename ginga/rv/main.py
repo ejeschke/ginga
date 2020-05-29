@@ -32,7 +32,7 @@ default_layout = ['seq', {},
                     dict(row=['hbox', dict(name='menu')],
                          stretch=0),
                     dict(row=['hpanel', dict(name='hpnl'),
-                     ['ws', dict(name='left', wstype='tabs',
+                     ['ws', dict(name='left', wstype='tabs',  # noqa
                                  width=300, height=-1, group=2),
                       # (tabname, layout), ...
                       [("Info", ['vpanel', {},
@@ -61,7 +61,7 @@ default_layout = ['seq', {},
                                     ]
                         )]
                       ],
-                     ], stretch=1),
+                     ], stretch=1),  # noqa
                     dict(row=['ws', dict(name='toolbar', wstype='stack',
                                          height=40, group=2)],
                          stretch=0),
@@ -169,6 +169,7 @@ class ReferenceViewer(object):
     This class exists solely to be able to customize the reference
     viewer startup.
     """
+
     def __init__(self, layout=default_layout):
         self.plugins = []
         self.layout = layout
