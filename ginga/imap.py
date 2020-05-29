@@ -265,7 +265,7 @@ imap_equa = (
                    1.00000,
                    1.00000,
                    1.00000,
-                   )
+)
 
 imap_ultrasmooth = (
     0.0,
@@ -783,7 +783,7 @@ imap_lasritt = (
                 1.00000,
                 1.00000,
                 1.00000,
-        )
+)
 
 imap_expo = (
                 0.00458,  # noqa
@@ -1042,7 +1042,7 @@ imap_expo = (
                 0.99888,
                 1.00000,
                 1.00000,
-        )
+)
 
 imap_jigsaw = (
                 0.00000,  # noqa
@@ -1301,7 +1301,7 @@ imap_jigsaw = (
                 0.96471,
                 0.98039,
                 0.99608,
-        )
+)
 
 imap_ramp = (
                 0.00000,  # noqa
@@ -1819,7 +1819,7 @@ imap_neg = (
                 0.00784,
                 0.00392,
                 0.00000,
-        )
+)
 
 imap_stairs = (
                 0.00000,  # noqa
@@ -2078,7 +2078,7 @@ imap_stairs = (
                 0.94118,
                 1.00000,
                 1.00000,
-        )
+)
 
 iamp_equa = (
                 0.06275,  # noqa
@@ -2337,7 +2337,7 @@ iamp_equa = (
                 1.00000,
                 1.00000,
                 1.00000,
-        )
+)
 
 imap_neglog = (
                 1.00000,  # noqa
@@ -2596,7 +2596,7 @@ imap_neglog = (
                 0.00000,
                 0.00000,
                 0.00000,
-        )
+)
 
 imap_log = (
                 0.00000,  # noqa
@@ -3373,7 +3373,7 @@ imap_null = (
                 0.00000,
                 0.00000,
                 0.00000,
-        )
+)
 
 min_imap_len = 256
 
@@ -3407,8 +3407,7 @@ def has_imap(name):
 
 
 def get_names():
-    res = list(imaps.keys())
-    res.sort()
+    res = sorted(imaps.keys())
     return res
 
 
