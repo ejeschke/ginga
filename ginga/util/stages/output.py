@@ -15,19 +15,22 @@ class Output(Stage):
 
     _stagename = 'output'
 
-    def __init__(self, fv):
+    def __init__(self):
         super(Output, self).__init__()
 
-        self.fv = fv
+        self.fv = None
         self.in_image = None
         self.chname = ""
-        self.path = ""
+        self.output_folder = None
 
     def build_gui(self, container):
+        self.fv = self.pipeline.get("fv")
+
         fr = Widgets.Frame("Output")
 
         captions = [('Channel:', 'label', 'Channel', 'entryset'),
-                    ('Path:', 'label', 'Path', 'entryset'),
+                    ('Output Folder:', 'label', 'output_folder', 'entryset'),
+                    ('Output Filename:', 'label', 'output_filename', 'entry'),
                     ('Save', 'button'),
                     ]
         w, b = Widgets.build_info(captions, orientation='vertical')
@@ -35,11 +38,14 @@ class Output(Stage):
 
         b.channel.set_tooltip("Channel for output images")
         b.channel.add_callback('activated', self.set_channel_cb)
-        b.path.set_text(self.path)
-        b.path.set_tooltip("Enter a path to save the result")
-        b.path.add_callback('activated', self.set_path_cb)
+        b.output_folder.set_text('')
+        b.output_folder.set_tooltip("Folder for pipeline output")
+        b.output_folder.add_callback('activated', self.set_folder_cb)
+        b.output_filename.set_text('')
+        b.output_filename.set_tooltip("File for pipeline output")
+        #b.output_filename.add_callback('activated', self.set_filename_cb)
         b.save.add_callback('activated', self.save_as_cb)
-        b.save.set_tooltip("Save as path when clicked")
+        b.save.set_tooltip("Save file when clicked")
 
         fr.set_widget(w)
         container.set_widget(fr)
@@ -48,6 +54,15 @@ class Output(Stage):
         self.chname = widget.get_text().strip()
         # TODO: ask user to create channel if it doesn't exist?
         channel = self.fv.get_channel_on_demand(self.chname)
+
+        self.pipeline.run_from(self)
+
+    def set_folder_cb(self, widget):
+        folder = widget.get_text().strip()
+        if len(folder) > 0:
+            self.output_folder = folder
+        else:
+            self.output_folder = None
 
         self.pipeline.run_from(self)
 
@@ -60,6 +75,20 @@ class Output(Stage):
         if self._bypass or data is None:
             self.pipeline.send(res_np=data)
             return
+
+        output_folder = self.output_folder
+        if output_folder is None:
+            output_folder = self.pipeline.get('input_folder', '.')
+        if self.gui_up:
+            self.w.output_folder.set_text(output_folder)
+
+        filename = self.pipeline.get('input_filename', '')
+        if len(filename) > 0:
+            f_name, f_ext = os.path.splitext(filename)
+            #output_filename = f_name + '-pipe' + f_ext
+            output_filename = f_name + '-pipe' + '.png'
+            if self.gui_up:
+                self.w.output_filename.set_text(output_filename)
 
         if len(self.chname) > 0:
             self.pipeline.logger.info('pipeline output')
@@ -94,38 +123,35 @@ class Output(Stage):
                 if self.image is not None:
                     self.image.set_data(data)
 
-        if len(self.path) != 0:
-            # TODO: check for overwrite, confirmation?
-            # TODO: save quality parameters
-            #self.image.save_as_file(self.path)
-            #self.save_as(self.path, data)
-            pass
+            # data has changed so redraw image completely
+            channel.fitsimage.redraw(whence=0)
+
+        ## if len(self.path) != 0:
+        ##     # TODO: check for overwrite, confirmation?
+        ##     # TODO: save quality parameters
+        ##     #self.image.save_as_file(self.path)
+        ##     #self.save_as(self.path, data)
+        ##     pass
 
         self.pipeline.send(res_np=data)
 
-    def set_path_cb(self, widget):
-        filepath = widget.get_text().strip()
-        if len(filepath) > 0:
-            self.path = filepath
-        else:
-            self.path = None
-
-        self.pipeline.run_from(self)
-
     def save_as_cb(self, widget):
         data = self.pipeline.get_data(self)
-        self._save_as(self.path, data)
+
+        path = os.path.join(self.w.output_folder.get_text().strip(),
+                            self.w.output_filename.get_text().strip())
+        self._save_as(path, data)
 
     def _save_as(self, path, data, format='jpeg', quality=90):
         from PIL import Image
 
+        # TEMP: need to get the color profile passed through the pipeline
         profile_file = os.path.join(ginga_home, "profiles", "AdobeRGB.icc")
         with open(profile_file, 'rb') as in_f:
             profile = in_f.read()
 
         img = Image.fromarray(data[:, :, 0:3])
-        img.save(self.path, format=format, quality=quality,
-                 #icc_profile=img.info.get('icc_profile')
+        img.save(path, format=format, quality=quality,
                  icc_profile=profile)
 
     def get_image(self):

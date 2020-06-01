@@ -31,6 +31,8 @@ class Crop(Stage):
         self.canvas = canvas
 
     def build_gui(self, container):
+        self.viewer = self.pipeline.get('viewer')
+
         fr = Widgets.Frame("Crop")
 
         captions = (('Crop %:', 'label', 'crop', 'llabel'),
@@ -46,7 +48,6 @@ class Crop(Stage):
         fr.set_widget(w)
         container.set_widget(fr)
 
-        self.viewer = self.pipeline.get('viewer')
         self.canvas.set_surface(self.viewer)
         self.canvas.register_for_cursor_drawing(self.viewer)
 
@@ -183,7 +184,11 @@ class Crop(Stage):
 
         if self.gui_up:
             _ht, _wd = res_np.shape[:2]
-            asp_s = trcalc.calc_aspect_str(_wd, _ht)
+            try:
+                asp_s = trcalc.calc_aspect_str(_wd, _ht)
+            except Exception as e:
+                # sometimes Numpy throws a NaN error here
+                asp_s = "{}:{}".format(_wd, _ht)
             s = "{}x{} ({})".format(_wd, _ht, asp_s)
             self.w.size.set_text(s)
 

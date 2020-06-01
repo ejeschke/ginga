@@ -29,16 +29,19 @@ class ChannelMixer(Stage):
         grid.add_widget(Widgets.Label('Red:'), 0, 0)
         red = Widgets.SpinBox(dtype=float)
         red.set_value(self.mix[0])
+        red.set_tooltip("Amount of red channel to mix in")
         grid.add_widget(red, 1, 0)
         self.w.red = red
         grid.add_widget(Widgets.Label('Green:'), 0, 1)
         grn = Widgets.SpinBox(dtype=float)
         grn.set_value(self.mix[1])
+        grn.set_tooltip("Amount of green channel to mix in")
         grid.add_widget(grn, 1, 1)
         self.w.grn = grn
         grid.add_widget(Widgets.Label('Blue:'), 0, 2)
         blu = Widgets.SpinBox(dtype=float)
         blu.set_value(self.mix[2])
+        blu.set_tooltip("Amount of blue channel to mix in")
         grid.add_widget(blu, 1, 2)
         self.w.blu = blu
 
@@ -57,6 +60,7 @@ class ChannelMixer(Stage):
         self.w.total = lbl
         tbar.add_widget(lbl)
         act = tbar.add_action('Std')
+        act.set_tooltip("Reset mix to standard grey")
         act.add_callback('activated', self.set_std_cb)
 
         top.add_widget(tbar, stretch=0)

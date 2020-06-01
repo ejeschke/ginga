@@ -32,16 +32,21 @@ class Scale(Stage):
         self.longside = None
         self.scale = 1.0
         self.interp = 'lanczos'
+        self.viewer = None
 
     def build_gui(self, container):
+        self.viewer = self.pipeline.get('viewer')
+
+        fr = Widgets.Frame("Scale")
+
         captions = ((),
                     ('Long side:', 'label', 'longside', 'entryset'),
                     ('Interpolation:', 'label', 'Interpolation', 'combobox'),
                     ('Scale:', 'label', 'scale', 'entryset'),
+                    ('_sp1', 'spacer', 'hbox1', 'hbox'),
                     ('Output Size:', 'label', 'size', 'llabel'),
                     )
         w, b = Widgets.build_info(captions, orientation='vertical')
-        self.w.update(b)
 
         b.longside.set_tooltip("Set the length of the long side in pixels")
         b.longside.set_text("")
@@ -50,6 +55,12 @@ class Scale(Stage):
         b.scale.set_tooltip("Set the scale")
         b.scale.set_text(str(1.0))
         b.scale.add_callback('activated', self.set_scale_cb)
+
+        b.copy_from_viewer = Widgets.Button("Copy from viewer")
+        b.copy_from_viewer.set_tooltip("Copy scale setting from viewer")
+        b.copy_from_viewer.add_callback('activated', self.copy_from_viewer_cb)
+        b.hbox1.add_widget(b.copy_from_viewer, stretch=0)
+        b.hbox1.add_widget(Widgets.Label(''), stretch=1)
 
         index = 0
         for name in trcalc.interpolation_methods:
@@ -68,7 +79,10 @@ class Scale(Stage):
 
         b.size.set_text('unknown')
 
-        container.set_widget(w)
+        self.w.update(b)
+        fr.set_widget(w)
+
+        container.set_widget(fr)
 
     def set_longside_cb(self, widget):
         length = widget.get_text().strip()
@@ -88,6 +102,12 @@ class Scale(Stage):
 
     def set_interp_cb(self, w, idx):
         self.interp = trcalc.interpolation_methods[idx]
+
+        self.pipeline.run_from(self)
+
+    def copy_from_viewer_cb(self, widget):
+        self.scale = self.viewer.get_scale()
+        self.w.scale.set_text(str(self.scale))
 
         self.pipeline.run_from(self)
 

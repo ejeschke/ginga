@@ -575,13 +575,15 @@ class RGBMapper(Callback.Callbacks):
         self.scale_pct *= scale_factor
         self.scale_and_shift(self.scale_pct, 0.0, callback=callback)
 
-    def copy_attributes(self, dst_rgbmap):
-        self.t_.copy_settings(dst_rgbmap.get_settings(),
-                              keylist=self.settings_keys)
+    def copy_attributes(self, dst_rgbmap, keylist=None):
+        if keylist is None:
+            keylist = self.settings_keys
+        self.t_.copy_settings(dst_rgbmap.get_settings(), keylist=keylist)
 
-    def share_attributes(self, dst_rgbmap):
-        self.t_.share_settings(dst_rgbmap.get_settings(),
-                               keylist=self.settings_keys)
+    def share_attributes(self, dst_rgbmap, keylist=None):
+        if keylist is None:
+            keylist = self.settings_keys
+        self.t_.share_settings(dst_rgbmap.get_settings(), keylist=keylist)
 
 
 class NonColorMapper(RGBMapper):

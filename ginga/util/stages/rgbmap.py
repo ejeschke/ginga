@@ -27,8 +27,11 @@ class RGBMap(Stage):
         self.cmap_name = 'gray'
         self.imap_name = 'ramp'
         self.hash_size = 256
+        # TODO: currently hash size cannot be changed
+        self.viewer = None
 
     def build_gui(self, container):
+        self.viewer = self.pipeline.get('viewer')
         top = Widgets.VBox()
 
         # create and initialize RGB mapper
@@ -37,6 +40,8 @@ class RGBMap(Stage):
         self.rgbmap.set_color_algorithm(self.calg_name)
         self.rgbmap.set_color_map(self.cmap_name)
         self.rgbmap.set_intensity_map(self.imap_name)
+        self.settings_keys = list(self.rgbmap.settings_keys)
+        self.settings_keys.remove('color_hashsize')
 
         fr = Widgets.Frame("Color Distribution")
 
@@ -80,7 +85,7 @@ class RGBMap(Stage):
 
         captions = (('Colormap:', 'label', 'Colormap', 'combobox'),
                     ('Intensity:', 'label', 'Intensity', 'combobox'),
-                    ('Color Defaults', 'button'))
+                    ('Color Defaults', 'button', 'Copy from viewer', 'button'))
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
         self.w.cmap_choice = b.colormap
@@ -119,6 +124,9 @@ class RGBMap(Stage):
             index = self.imap_names.index('ramp')
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_imap_cb)
+
+        b.copy_from_viewer.set_tooltip("Copy settings from viewer")
+        b.copy_from_viewer.add_callback('activated', self.copy_from_viewer_cb)
 
         top.add_widget(fr, stretch=0)
 
@@ -165,6 +173,12 @@ class RGBMap(Stage):
         index = self.calg_names.index(name)
         self.w.calg_choice.set_index(index)
         self.rgbmap.set_color_algorithm(name)
+
+        self.pipeline.run_from(self)
+
+    def copy_from_viewer_cb(self, w):
+        rgbmap = self.viewer.get_rgbmap()
+        rgbmap.copy_attributes(self.rgbmap, keylist=self.settings_keys)
 
         self.pipeline.run_from(self)
 

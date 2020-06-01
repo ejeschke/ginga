@@ -30,17 +30,17 @@ class Pipeline(GingaPlugin.LocalPlugin):
         # Load preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Pipeline')
-        self.settings.set_defaults(num_threads=4)
+        self.settings.set_defaults(output_suffix='-pipe')
         self.settings.load(onError='silent')
 
         self.stage_classes = [Scale, Cuts, RGBMap, ICCProf, FlipSwap,
-                              Rotate, Crop, ChannelMixer]
+                              Rotate, Crop, ChannelMixer, Input, Output]
         self.stage_dict = {klass._stagename: klass
                            for klass in self.stage_classes}
         self.stage_names = list(self.stage_dict.keys())
         self.stage_names.sort()
 
-        stages = [Input(), Output(self.fv)]
+        stages = [Input(), Output()]
         self.pipeline = pipeline.Pipeline(self.logger, stages)
         self.pipeline.add_callback('stage-executing', self.stage_status, 'X')
         self.pipeline.add_callback('stage-done', self.stage_status, 'D')
@@ -64,9 +64,9 @@ class Pipeline(GingaPlugin.LocalPlugin):
         item = menu.add_name('Save')
         item.set_tooltip("Save this pipeline")
 
-        status = Widgets.TextEntry()
-        self.w.pipestatus = status
-        tbar.add_widget(status)
+        name = Widgets.TextEntry(editable=True)
+        name.add_callback('activated', self.set_pipeline_name_cb)
+        tbar.add_widget(name)
         top.add_widget(tbar, stretch=0)
 
         vbox = Widgets.VBox()
@@ -89,6 +89,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         if len(name) > 20:
             name = name[:20] + '...'
         fr = Widgets.Frame("Pipeline: {}".format(name))
+        self.w.gui_fr = fr
         fr.set_widget(scr)
         #top.add_widget(scr, stretch=1)
         top.add_widget(fr, stretch=1)
@@ -128,6 +129,10 @@ class Pipeline(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', self.enable_pipeline_cb)
         self.w.enable = btn
         top.add_widget(tbar, stretch=0)
+
+        status = Widgets.Label('')
+        self.w.pipestatus = status
+        top.add_widget(status, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_spacing(3)
@@ -202,6 +207,13 @@ class Pipeline(GingaPlugin.LocalPlugin):
         for stage in self.pipeline:
             stage.stop()
 
+    def set_pipeline_name_cb(self, widget):
+        name = widget.get_text().strip()
+        self.pipeline.name = name
+        if len(name) > 20:
+            name = name[:20] + '...'
+        self.w.gui_fr.set_text(name)
+
     def bypass_stage_cb(self, widget, tf, stage):
         idx = self.pipeline.index(stage)
         stage.bypass(tf)
@@ -209,7 +221,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
     def _update_toolbar(self):
         stages = self.get_selected_stages()
-        self.w.insert.set_enabled(len(stages) == 1)
+        self.w.insert.set_enabled(len(stages) <= 1)
         self.w.delete.set_enabled(len(stages) >= 1)
         self.w.move_up.set_enabled(len(stages) == 1)
         self.w.move_dn.set_enabled(len(stages) == 1)
@@ -254,16 +266,19 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
     def insert_stage_cb(self, widget):
         stages = self.get_selected_stages()
-        if len(stages) != 1:
-            self.fv.show_error("Please select only a single stage",
+        if len(stages) > 1:
+            self.fv.show_error("Please select at most only one stage",
                                raisetab=True)
             return
         self.insert_menu.popup()
 
     def _insert_stage_cb(self, widget, name):
         stages = self.get_selected_stages()
-        stage = stages[0]
-        idx = self.pipeline.index(stage)
+        if len(stages) == 1:
+            stage = stages[0]
+            idx = self.pipeline.index(stage)
+        else:
+            idx = len(stages)
         # realize this stage
         stage = self.stage_dict[name]()
         stage.pipeline = self.pipeline
@@ -339,7 +354,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
     def stage_status(self, pipeline, stage, txt):
         if stage.gui_up:
-            self.w.pipestatus.set_text(stage.name)
+            self.w.pipestatus.set_text(txt + ': ' + stage.name)
             self.fv.update_pending()
 
     def clear_status(self, pipeline, stage):

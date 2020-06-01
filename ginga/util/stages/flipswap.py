@@ -17,24 +17,38 @@ class FlipSwap(Stage):
         self.flip_x = False
         self.flip_y = False
         self.swap_xy = False
+        self.viewer = None
 
     def build_gui(self, container):
-        # TRANSFORM OPTIONS
-        fr = Widgets.Frame("Transform")
+        self.viewer = self.pipeline.get('viewer')
 
-        captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton',
-                    'Swap XY', 'checkbutton'),
+        # TRANSFORM OPTIONS
+        fr = Widgets.Frame("Flip / Swap")
+
+        captions = (('Transform:', 'label', 'hbox1', 'hbox'),
+                    ('_sp1', 'spacer', 'hbox2', 'hbox'),
                     )
         w, b = Widgets.build_info(captions, orientation='vertical')
-        self.w.update(b)
 
-        for name in ('flip_x', 'flip_y', 'swap_xy'):
-            btn = b[name]
+        for wname, name in (('flip_x', "Flip X"), ('flip_y', "Flip Y"),
+                            ('swap_xy', "Swap XY")):
+            btn = Widgets.CheckBox(name)
+            b[wname] = btn
             btn.set_state(False)
             btn.add_callback('activated', self.set_transforms_cb)
+            b.hbox1.add_widget(btn, stretch=0)
+
         b.flip_x.set_tooltip("Flip the image around the X axis")
         b.flip_y.set_tooltip("Flip the image around the Y axis")
         b.swap_xy.set_tooltip("Swap the X and Y axes in the image")
+
+        b.copy_from_viewer = Widgets.Button("Copy from viewer")
+        b.copy_from_viewer.set_tooltip("Copy flip/swap setting from viewer")
+        b.copy_from_viewer.add_callback('activated', self.copy_from_viewer_cb)
+        b.hbox2.add_widget(b.copy_from_viewer, stretch=0)
+        b.hbox2.add_widget(Widgets.Label(''), stretch=1)
+
+        self.w.update(b)
         fr.set_widget(w)
 
         container.set_widget(fr)
@@ -43,6 +57,15 @@ class FlipSwap(Stage):
         self.flip_x = self.w.flip_x.get_state()
         self.flip_y = self.w.flip_y.get_state()
         self.swap_xy = self.w.swap_xy.get_state()
+
+        self.pipeline.run_from(self)
+
+    def copy_from_viewer_cb(self, widget):
+        self.flip_x, self.flip_y, self.swap_xy = self.viewer.get_transforms()
+        self.w.flip_x.set_state(self.flip_x)
+        self.w.flip_y.set_state(self.flip_y)
+        self.w.swap_xy.set_state(self.swap_xy)
+
         self.pipeline.run_from(self)
 
     def run(self, prev_stage):

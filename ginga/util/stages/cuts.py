@@ -26,17 +26,19 @@ class Cuts(Stage):
         self.__varlist = ['auto', 'locut', 'hicut', 'vmin', 'vmax']
 
     def build_gui(self, container):
+        self.viewer = self.pipeline.get('viewer')
+
         top = Widgets.VBox()
         fr = Widgets.Frame("Cuts")
 
         captions = (('Auto:', 'label', 'Auto', 'checkbutton'),
                     ('Cut Low:', 'label', 'locut', 'entryset'),
                     ('Cut High:', 'label', 'hicut', 'entryset'),
+                    ('__sp1', 'spacer', 'hbox1', 'hbox'),
                     ('VMin:', 'label', 'vmin', 'entryset'),
                     ('VMax:', 'label', 'vmax', 'entryset'),
                     )
         w, b = Widgets.build_info(captions, orientation='vertical')
-        self.w.update(b)
 
         b.auto.set_tooltip("Auto calculate cut levels")
         b.auto.set_state(self.auto)
@@ -55,6 +57,13 @@ class Cuts(Stage):
         b.vmax.set_tooltip("Set output maximum level")
         b.vmax.add_callback('activated', self.manual_output_cb)
 
+        b.copy_from_viewer = Widgets.Button("Copy from viewer")
+        b.copy_from_viewer.set_tooltip("Copy cut levels from viewer")
+        b.copy_from_viewer.add_callback('activated', self.copy_from_viewer_cb)
+        b.hbox1.add_widget(b.copy_from_viewer, stretch=0)
+        b.hbox1.add_widget(Widgets.Label(''), stretch=1)
+
+        self.w.update(b)
         fr.set_widget(w)
         top.add_widget(fr, stretch=0)
 
@@ -167,6 +176,13 @@ class Cuts(Stage):
     def auto_cb(self, widget, tf):
         self.auto = tf
         self.w.auto.set_state(self.auto)
+        self.pipeline.run_from(self)
+
+    def copy_from_viewer_cb(self, widget):
+        self.locut, self.hicut = self.viewer.get_cut_levels()
+        self.w.locut.set_text(str(self.locut))
+        self.w.hicut.set_text(str(self.hicut))
+
         self.pipeline.run_from(self)
 
     def run(self, prev_stage):
