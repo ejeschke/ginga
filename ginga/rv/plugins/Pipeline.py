@@ -16,7 +16,7 @@ from ginga import GingaPlugin
 from ginga.util import pipeline, loader
 from ginga.gw import Widgets
 from ginga.util.stages import (Input, Output, Scale, Rotate, FlipSwap, Cuts,
-                               RGBMap, ICCProf, Crop, ChannelMixer)
+                               RGBMap, ICCProf, Crop, ChannelMixer, Sharpen)
 
 __all__ = ['Pipeline']
 
@@ -34,7 +34,8 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.settings.load(onError='silent')
 
         self.stage_classes = [Scale, Cuts, RGBMap, ICCProf, FlipSwap,
-                              Rotate, Crop, ChannelMixer, Input, Output]
+                              Rotate, Crop, ChannelMixer, Input, Output,
+                              Sharpen]
         self.stage_dict = {klass._stagename: klass
                            for klass in self.stage_classes}
         self.stage_names = list(self.stage_dict.keys())

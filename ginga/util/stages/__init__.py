@@ -9,3 +9,4 @@ from .rgbmap import RGBMap  # noqa
 from .iccprof import ICCProf  # noqa
 from .crop import Crop  # noqa
 from .chmix import ChannelMixer  # noqa
+from .sharpen import Sharpen  # noqa
