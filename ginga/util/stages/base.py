@@ -31,7 +31,6 @@ class Stage(object):
         self.logger = None
         self.result = None
         self.gui_up = False
-        self.__varlist = ['name', '_bypass']
 
     def build_gui(self, container):
         """subclass can override this to build some kind of GUI."""
@@ -65,14 +64,12 @@ class Stage(object):
             raise StageError("Expecting a 2D or greater array in final stage")
 
     def export_as_dict(self):
-        # get some of the base names
-        d = {name: self.__dict__[name]
-             for name in self.__varlist}
+        d = dict(name=self.name, type=self._stagename, bypass=self._bypass)
         return d
 
     def import_from_dict(self, d):
-        for name in self.__varlist:
-            self.__dict__[name] = d[name]
+        self.name = d['name']
+        self._bypass = d['bypass']
 
     def __str__(self):
         return self._stagename

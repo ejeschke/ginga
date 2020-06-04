@@ -4,8 +4,9 @@
 import numpy as np
 
 from ginga.canvas.CanvasObject import get_canvas_types
-from ginga import trcalc
+#from ginga import trcalc
 from ginga.gw import Widgets
+from ginga.util import action
 
 from .base import Stage
 
@@ -20,8 +21,8 @@ class Crop(Stage):
         self.dc = get_canvas_types()
         self.cropcolor = 'yellow'
         self.layertag = 'crop-layer'
-        self.crop_rect = ((0.0, 0.0), (1.0, 1.0))
-        self.aspect = None
+        self._crop_rect = (0.0, 0.0, 1.0, 1.0)
+        self._aspect = None
         self._img_dims = (1, 1)
 
         canvas = self.dc.DrawingCanvas()
@@ -42,8 +43,14 @@ class Crop(Stage):
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
 
+        arr = np.asarray(self._crop_rect) * 100.0
+        crop = "%6.2f,%6.2f to %6.2f,%6.2f" % tuple(arr)
+        b.crop.set_text(crop)
+
         b.aspect.set_tooltip("Set the aspect ratio (wd/ht)")
         b.aspect.add_callback('activated', self._set_aspect_cb)
+        if self._aspect is not None:
+            b.aspect.set_text(str(self._aspect))
 
         fr.set_widget(w)
         container.set_widget(fr)
@@ -62,8 +69,29 @@ class Crop(Stage):
         self._gui_update_crop()
         self.w.size.set_text("unknown")
 
+    @property
+    def crop_rect(self):
+        return self._crop_rect
+
+    @crop_rect.setter
+    def crop_rect(self, val):
+        self._crop_rect = val
+        if self.gui_up:
+            self._gui_update_crop()
+
+    @property
+    def aspect(self):
+        return self._aspect
+
+    @aspect.setter
+    def aspect(self, val):
+        self._aspect = val
+        if self.gui_up:
+            asp = self._aspect
+            self.w.aspect.set_text('' if asp is None else str(asp))
+
     def _gui_update_crop(self):
-        arr = np.asarray(self.crop_rect).flatten() * 100.0
+        arr = np.asarray(self._crop_rect) * 100.0
         crop = "%6.2f,%6.2f to %6.2f,%6.2f" % tuple(arr)
 
         self.w.crop.set_text(crop)
@@ -98,7 +126,12 @@ class Crop(Stage):
             return True
 
         x1, y1, x2, y2 = obj.get_llur()
+        old = self._get_state()
         self._update_crop_rect(x1, y1, x2, y2)
+        new = self._get_state()
+        self.pipeline.push(action.AttrAction(self, old, new,
+                                             descr="change crop"))
+        self.pipeline.run_from(self)
 
     def _update_crop_rect(self, x1, y1, x2, y2):
         # reposition other elements to match
@@ -113,40 +146,42 @@ class Crop(Stage):
         wd, ht = self._img_dims
         self.set_crop_rect(wd, ht, x1, y1, x2, y2)
 
-        self.pipeline.run_from(self)
-
     def set_crop_rect(self, wd, ht, x1, y1, x2, y2):
         x1p, y1p, x2p, y2p = [x1 / wd, y1 / ht, x2 / wd, y2 / ht]
-        self.crop_rect = np.asarray((x1p, y1p, x2p, y2p))
-        if self.gui_up:
-            self._gui_update_crop()
+        self.crop_rect = (x1p, y1p, x2p, y2p)
 
     def get_crop_rect_px(self, wd, ht, use_image_lim=False):
-        x1p, y1p, x2p, y2p = np.array(self.crop_rect).flatten()
+        x1p, y1p, x2p, y2p = np.array(self._crop_rect)
         x1, y1, x2, y2 = (int(x1p * wd), int(y1p * ht),
                           int(x2p * wd), int(y2p * ht))
         if use_image_lim:
             x1, y1, x2, y2 = max(0, x1), max(0, y1), min(x2, wd), min(y2, ht)
         return x1, y1, x2, y2
 
-    def _set_aspect_cb(self, widget):
-        asp_s = widget.get_text().strip()
-
+    def _set_aspect(self, asp_s):
         wd, ht = self._img_dims
-        #x1, y1, x2, y2 = 0, 0, wd, ht
         x1, y1, x2, y2 = self.get_crop_rect_px(wd, ht)
 
         if len(asp_s) == 0:
-            self.aspect = None
+            self._aspect = None
 
         else:
             if ':' in asp_s:
                 wd, ht = [float(n) for n in asp_s.split(':')]
-                self.aspect = wd / ht
+                self._aspect = wd / ht
             else:
-                self.aspect = float(asp_s)
+                self._aspect = float(asp_s)
 
         self._update_crop_rect(x1, y1, x2, y2)
+
+    def _set_aspect_cb(self, widget):
+        asp_s = widget.get_text().strip()
+        old = self._get_state()
+        self._set_aspect(asp_s)
+        new = self._get_state()
+        self.pipeline.push(action.AttrAction(self, old, new,
+                                             descr="set aspect ratio"))
+        self.pipeline.run_from(self)
 
     def _enforce_aspect(self, x1, y1, x2, y2):
 
@@ -163,6 +198,10 @@ class Crop(Stage):
             x1, x2 = ctr_x - hwd, ctr_x + hwd
 
         return x1, y1, x2, y2
+
+    def _get_state(self):
+        return dict(crop_rect=[float(n) for n in self._crop_rect],
+                    aspect=self._aspect)
 
     def run(self, prev_stage):
         data = self.pipeline.get_data(prev_stage)
@@ -184,12 +223,23 @@ class Crop(Stage):
 
         if self.gui_up:
             _ht, _wd = res_np.shape[:2]
-            try:
-                asp_s = trcalc.calc_aspect_str(_wd, _ht)
-            except Exception as e:
-                # sometimes Numpy throws a NaN error here
-                asp_s = "{}:{}".format(_wd, _ht)
-            s = "{}x{} ({})".format(_wd, _ht, asp_s)
+            ## try:
+            ##     asp_s = trcalc.calc_aspect_str(_wd, _ht)
+            ## except Exception as e:
+            ##     # sometimes Numpy throws a NaN error here
+            ##     asp_s = "{}:{}".format(_wd, _ht)
+            asp = _wd / _ht
+            s = "{}x{} ({})".format(_wd, _ht, asp)
             self.w.size.set_text(s)
 
         self.pipeline.send(res_np=res_np)
+
+    def export_as_dict(self):
+        d = super(Crop, self).export_as_dict()
+        d.update(self._get_state())
+        return d
+
+    def import_from_dict(self, d):
+        super(Crop, self).import_from_dict(d)
+        self.crop_rect = d['crop_rect']
+        self.aspect = d['aspect']

@@ -202,14 +202,3 @@ class Cuts(Stage):
         res_np = self.autocuts.cut_levels(data, self.locut, self.hicut,
                                           vmin=self.vmin, vmax=self.vmax)
         self.pipeline.send(res_np=res_np)
-
-    def export_as_dict(self):
-        d = super(Cuts, self).export_as_dict()
-        for name in self.__varlist:
-            d[name] = self.__dict__[name]
-        return d
-
-    def import_from_dict(self, d):
-        super(Cuts, self).import_from_dict(d)
-        for name in self.__varlist:
-            d[name] = self.__dict__[name]

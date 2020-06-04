@@ -7,6 +7,7 @@
 import time
 
 from ginga.misc import Bunch, Callback
+from ginga.util import action
 
 __all__ = ['Pipeline']
 
@@ -24,14 +25,15 @@ class Pipeline(Callback.Callbacks):
         self._i = 0
         self.bboard = Bunch.Bunch()
         if name is None:
-            name = str(self)
+            name = 'noname'
         self.name = name
         self.enabled = True
         self.pipeline = list(stages)
+        # undo/redo stack
+        self.actions = action.ActionStack()
 
         for stage in self.pipeline:
-            stage.pipeline = self
-            stage.logger = self.logger
+            self._init_stage(stage)
 
         for name in ['pipeline-start',
                      'stage-executing', 'stage-errored', 'stage-done']:
@@ -122,6 +124,44 @@ class Pipeline(Callback.Callbacks):
     def invalidate(self):
         for stage in self.pipeline:
             stage.invalidate()
+
+    def push(self, act):
+        self.actions.push(act)
+
+    def undo(self):
+        act = self.actions.undo()
+        self.run_from(act.obj)
+
+    def redo(self):
+        act = self.actions.redo()
+        self.run_from(act.obj)
+
+    def save(self):
+        dd = dict(name=self.name)
+        d = dict(pipeline=dd)
+        l = [stage.export_as_dict() for stage in self.pipeline]
+        dd['stages'] = l
+        return d
+
+    def load(self, d, cd):
+        # reinitialize some things
+        self.cur_stage = None
+        self._i = 0
+        self.bboard = Bunch.Bunch()
+        self.actions = action.ActionStack()
+
+        dd = d['pipeline']
+        self.name = dd['name']
+        l = []
+        for sd in dd['stages']:
+            # instantiate stage
+            stage = cd[sd['type']]()
+            self._init_stage(stage)
+            stage.import_from_dict(sd)
+            l.append(stage)
+        self.pipeline = l
+
+        return d
 
     def __getitem__(self, idx):
         return self.pipeline[idx]

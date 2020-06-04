@@ -193,13 +193,11 @@ class RGBMap(Stage):
         if not np.issubdtype(data.dtype, np.uint):
             data = data.astype(np.uint)
 
-        #print('rgbmap input', data.shape, data.dtype, data.max())
         # get RGB mapped array
         image_order = trcalc.guess_order(data.shape)
         rgbobj = self.rgbmap.get_rgbarray(data, order=self.order,
                                           image_order=image_order)
         res_np = rgbobj.get_array(self.order)
-        #print('rgbmap res', res_np)
 
         self.pipeline.send(res_np=res_np)
 

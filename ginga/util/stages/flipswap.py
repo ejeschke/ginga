@@ -3,6 +3,7 @@
 #
 from ginga import trcalc
 from ginga.gw import Widgets
+from ginga.util import action
 
 from .base import Stage
 
@@ -14,9 +15,9 @@ class FlipSwap(Stage):
     def __init__(self):
         super(FlipSwap, self).__init__()
 
-        self.flip_x = False
-        self.flip_y = False
-        self.swap_xy = False
+        self._flip_x = False
+        self._flip_y = False
+        self._swap_xy = False
         self.viewer = None
 
     def build_gui(self, container):
@@ -30,11 +31,12 @@ class FlipSwap(Stage):
                     )
         w, b = Widgets.build_info(captions, orientation='vertical')
 
-        for wname, name in (('flip_x', "Flip X"), ('flip_y', "Flip Y"),
-                            ('swap_xy', "Swap XY")):
+        for wname, name, tf in (('flip_x', "Flip X", self._flip_x),
+                                ('flip_y', "Flip Y", self._flip_y),
+                                ('swap_xy', "Swap XY", self._swap_xy)):
             btn = Widgets.CheckBox(name)
             b[wname] = btn
-            btn.set_state(False)
+            btn.set_state(tf)
             btn.add_callback('activated', self.set_transforms_cb)
             b.hbox1.add_widget(btn, stretch=0)
 
@@ -53,19 +55,56 @@ class FlipSwap(Stage):
 
         container.set_widget(fr)
 
-    def set_transforms_cb(self, *args):
-        self.flip_x = self.w.flip_x.get_state()
-        self.flip_y = self.w.flip_y.get_state()
-        self.swap_xy = self.w.swap_xy.get_state()
+    @property
+    def flip_x(self):
+        return self._flip_x
 
+    @flip_x.setter
+    def flip_x(self, tf):
+        self._flip_x = tf
+        if self.gui_up:
+            self.w.flip_x.set_state(tf)
+
+    @property
+    def flip_y(self):
+        return self._flip_y
+
+    @flip_y.setter
+    def flip_y(self, tf):
+        self._flip_y = tf
+        if self.gui_up:
+            self.w.flip_y.set_state(tf)
+
+    @property
+    def swap_xy(self):
+        return self._swap_xy
+
+    @swap_xy.setter
+    def swap_xy(self, tf):
+        self._swap_xy = tf
+        if self.gui_up:
+            self.w.swap_xy.set_state(tf)
+
+    def _get_state(self):
+        return dict(flip_x=self._flip_x, flip_y=self._flip_y,
+                    swap_xy=self._swap_xy)
+
+    def set_transforms_cb(self, *args):
+        old = self._get_state()
+        self._flip_x = self.w.flip_x.get_state()
+        self._flip_y = self.w.flip_y.get_state()
+        self._swap_xy = self.w.swap_xy.get_state()
+        new = self._get_state()
+        self.pipeline.push(action.AttrAction(self, old, new,
+                                             descr="flip / swap"))
         self.pipeline.run_from(self)
 
     def copy_from_viewer_cb(self, widget):
+        old = self._get_state()
         self.flip_x, self.flip_y, self.swap_xy = self.viewer.get_transforms()
-        self.w.flip_x.set_state(self.flip_x)
-        self.w.flip_y.set_state(self.flip_y)
-        self.w.swap_xy.set_state(self.swap_xy)
-
+        new = self._get_state()
+        self.pipeline.push(action.AttrAction(self, old, new,
+                                             descr="flip / swap"))
         self.pipeline.run_from(self)
 
     def run(self, prev_stage):
@@ -80,3 +119,14 @@ class FlipSwap(Stage):
                                   swap_xy=self.swap_xy)
 
         self.pipeline.send(res_np=res_np)
+
+    def export_as_dict(self):
+        d = super(FlipSwap, self).export_as_dict()
+        d.update(self._get_state())
+        return d
+
+    def import_from_dict(self, d):
+        super(FlipSwap, self).import_from_dict(d)
+        self.flip_x = d['flip_x']
+        self.flip_y = d['flip_y']
+        self.swap_xy = d['swap_xy']

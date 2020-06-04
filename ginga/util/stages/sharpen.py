@@ -3,7 +3,7 @@
 #
 import numpy as np
 
-#from PIL import Image, ImageFilter
+## from PIL import Image, ImageFilter
 from scipy.ndimage.filters import median_filter
 import cv2
 
@@ -77,20 +77,33 @@ class Sharpen(Stage):
         self.pipeline.send(res_np=res_np)
 
 
-def unsharp(image, sigma, strength):
+def unsharp(imarr, sigma, strength, minmax=None):
+    """
+    Credit: Unsharp masking with Python and OpenCV
+    https://www.idtools.com.au/unsharp-masking-python-opencv/
+    """
+    if minmax is None:
+        minmax = trcalc.get_minmax_dtype(imarr.dtype)
+
     # Median filtering
-    image_mf = median_filter(image, sigma)
+    image_mf = median_filter(imarr, sigma)
 
     # Calculate the Laplacian
     lap = cv2.Laplacian(image_mf, cv2.CV_64F)
 
     # Calculate the sharpened image
-    sharp = (image-strength * lap).clip(0, 255)
+    sharp = (imarr - strength * lap).clip(minmax[0], minmax[1])
     return sharp
 
-def unsharpen(image, sigma, strength):
-    res = np.zeros_like(image)
-    for i in range(3):
-        res[:, :, i] = unsharp(image[:, :, i], sigma, strength)
+
+def unsharpen(imarr, sigma, strength):
+    res = np.zeros_like(imarr)
+    if len(imarr.shape) < 3:
+        # monochrome image
+        return unsharp(imarr, sigma, strength)
+
+    # RGB image
+    for i in range(imarr.shape[2]):
+        res[:, :, i] = unsharp(imarr[:, :, i], sigma, strength)
 
     return res

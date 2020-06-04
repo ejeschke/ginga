@@ -20,8 +20,8 @@ class Output(Stage):
 
         self.fv = None
         self.in_image = None
-        self.chname = ""
-        self.output_folder = None
+        self._chname = ""
+        self._output_folder = None
 
     def build_gui(self, container):
         self.fv = self.pipeline.get("fv")
@@ -38,7 +38,11 @@ class Output(Stage):
 
         b.channel.set_tooltip("Channel for output images")
         b.channel.add_callback('activated', self.set_channel_cb)
-        b.output_folder.set_text('')
+        b.channel.set_text(self._chname)
+        txt = self._output_folder
+        if txt is None:
+            txt = ''
+        b.output_folder.set_text(txt)
         b.output_folder.set_tooltip("Folder for pipeline output")
         b.output_folder.add_callback('activated', self.set_folder_cb)
         b.output_filename.set_text('')
@@ -50,8 +54,30 @@ class Output(Stage):
         fr.set_widget(w)
         container.set_widget(fr)
 
+    @property
+    def chname(self):
+        return self._chname
+
+    @chname.setter
+    def chname(self, val):
+        self._chname = val
+        if self.gui_up:
+            self.w.channel.set_text(val)
+
+    @property
+    def output_folder(self):
+        return self._output_folder
+
+    @output_folder.setter
+    def output_folder(self, val):
+        self._output_folder = val
+        if self.gui_up:
+            if val is None:
+                val = ""
+            self.w.output_folder.set_text(val)
+
     def set_channel_cb(self, widget):
-        self.chname = widget.get_text().strip()
+        self._chname = widget.get_text().strip()
         # TODO: ask user to create channel if it doesn't exist?
         channel = self.fv.get_channel_on_demand(self.chname)
 
@@ -59,10 +85,7 @@ class Output(Stage):
 
     def set_folder_cb(self, widget):
         folder = widget.get_text().strip()
-        if len(folder) > 0:
-            self.output_folder = folder
-        else:
-            self.output_folder = None
+        self.output_folder = folder
 
         self.pipeline.run_from(self)
 
@@ -76,7 +99,7 @@ class Output(Stage):
             self.pipeline.send(res_np=data)
             return
 
-        output_folder = self.output_folder
+        output_folder = self._output_folder
         if output_folder is None:
             output_folder = self.pipeline.get('input_folder', '.')
         if self.gui_up:
@@ -92,7 +115,7 @@ class Output(Stage):
 
         if len(self.chname) > 0:
             self.pipeline.logger.info('pipeline output')
-            channel = self.fv.get_channel(self.chname)
+            channel = self.fv.get_channel_on_demand(self._chname)
 
             in_image = self.pipeline.get('input_image')
             if in_image is not self.in_image:
@@ -126,13 +149,6 @@ class Output(Stage):
             # data has changed so redraw image completely
             channel.fitsimage.redraw(whence=0)
 
-        ## if len(self.path) != 0:
-        ##     # TODO: check for overwrite, confirmation?
-        ##     # TODO: save quality parameters
-        ##     #self.image.save_as_file(self.path)
-        ##     #self.save_as(self.path, data)
-        ##     pass
-
         self.pipeline.send(res_np=data)
 
     def save_as_cb(self, widget):
@@ -156,3 +172,16 @@ class Output(Stage):
 
     def get_image(self):
         return self.image
+
+    def _get_state(self):
+        return dict(chname=self._chname, output_folder=self._output_folder)
+
+    def export_as_dict(self):
+        d = super(Output, self).export_as_dict()
+        d.update(self._get_state())
+        return d
+
+    def import_from_dict(self, d):
+        super(Output, self).import_from_dict(d)
+        self.chname = d['chname']
+        self.output_folder = d['output_folder']

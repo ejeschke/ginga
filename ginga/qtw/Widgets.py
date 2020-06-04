@@ -53,7 +53,6 @@ class WidgetBase(Callback.Callbacks):
         super(WidgetBase, self).__init__()
 
         self.widget = None
-        self.changed = False
         # external data can be attached here
         self.extdata = Bunch.Bunch()
 
@@ -393,11 +392,13 @@ class ComboBox(WidgetBase):
         self.widget.clear()
 
     def set_text(self, text):
+        self.widget.blockSignals(True)
         index = self.widget.findText(text)
         if index >= 0:
             self.set_index(index)
         else:
             self.widget.setEditText(text)
+        self.widget.blockSignals(False)
 
     # to be deprecated someday
     show_text = set_text
@@ -410,7 +411,9 @@ class ComboBox(WidgetBase):
         self.widget.addItem(text)
 
     def set_index(self, index):
+        self.widget.blockSignals(True)
         self.widget.setCurrentIndex(index)
+        self.widget.blockSignals(False)
 
     def get_index(self):
         return self.widget.currentIndex()
@@ -432,17 +435,15 @@ class SpinBox(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
-        if self.changed:
-            self.changed = False
-            return
         self.make_callback('value-changed', val)
 
     def get_value(self):
         return self.widget.value()
 
     def set_value(self, val):
-        self.changed = True
+        self.widget.blockSignals(True)
         self.widget.setValue(val)
+        self.widget.blockSignals(False)
 
     def set_decimals(self, num):
         if hasattr(self.widget, 'setDecimals'):
@@ -477,21 +478,15 @@ class Slider(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
-        # It appears that Qt uses set_value() to set the value of the
-        # slider when it is dragged, so we cannot use the usual method
-        # of setting a hidden "changed" variable to suppress the callback
-        # when setting the value programmatically.
-        # if self.changed:
-        #     self.changed = False
-        #     return
         self.make_callback('value-changed', val)
 
     def get_value(self):
         return self.widget.value()
 
     def set_value(self, val):
-        self.changed = True
+        self.widget.blockSignals(True)
         self.widget.setValue(val)
+        self.widget.blockSignals(False)
 
     def set_tracking(self, tf):
         self.widget.setTracking(tf)
@@ -527,13 +522,6 @@ class Dial(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
-        # It appears that Qt uses set_value() to set the value of the
-        # slider when it is dragged, so we cannot use the usual method
-        # of setting a hidden "changed" variable to suppress the callback
-        # when setting the value programmatically.
-        # if self.changed:
-        #     self.changed = False
-        #     return
         val = self.get_value()
         self.make_callback('value-changed', val)
 
@@ -558,7 +546,9 @@ class Dial(WidgetBase):
             raise ValueError("Value '{}' is out of range".format(val))
         self.changed = True
         int_val = self._cvt_value_in(val)
+        self.widget.blockSignals(True)
         self.widget.setValue(int_val)
+        self.widget.blockSignals(False)
 
     def set_tracking(self, tf):
         self.widget.setTracking(tf)
@@ -603,7 +593,9 @@ class CheckBox(WidgetBase):
         self.make_callback('activated', val)
 
     def set_state(self, tf):
+        self.widget.blockSignals(True)
         self.widget.setChecked(tf)
+        self.widget.blockSignals(False)
 
     def get_state(self):
         val = self.widget.checkState()
@@ -625,7 +617,9 @@ class ToggleButton(WidgetBase):
         self.make_callback('activated', val)
 
     def set_state(self, tf):
+        self.widget.blockSignals(True)
         self.widget.setChecked(tf)
+        self.widget.blockSignals(False)
 
     def get_state(self):
         return self.widget.isChecked()
@@ -641,16 +635,14 @@ class RadioButton(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, val):
-        if self.changed:
-            self.changed = False
-            return
         self.make_callback('activated', val)
 
     def set_state(self, tf):
         if self.widget.isChecked() != tf:
             # toggled only fires when the value is toggled
-            self.changed = True
+            self.widget.blockSignals(True)
             self.widget.setChecked(tf)
+            self.widget.blockSignals(False)
 
     def get_state(self):
         return self.widget.isChecked()

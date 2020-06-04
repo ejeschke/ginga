@@ -11,9 +11,10 @@ An instance can be opened for each channel.
 **Usage**
 
 """
+import yaml
 
 from ginga import GingaPlugin
-from ginga.util import pipeline, loader
+from ginga.util import pipeline
 from ginga.gw import Widgets
 from ginga.util.stages import (Input, Output, Scale, Rotate, FlipSwap, Cuts,
                                RGBMap, ICCProf, Crop, ChannelMixer, Sharpen)
@@ -57,16 +58,28 @@ class Pipeline(GingaPlugin.LocalPlugin):
         top.set_spacing(2)
 
         tbar = Widgets.Toolbar(orientation='horizontal')
-        menu = tbar.add_menu('Pipe', mtype='tool')
-        #menu.add_callback('activated', self.pipeline_menu_cb)
+        menu = tbar.add_menu('Pipe', mtype='menu')
         menu.set_tooltip("Operation on pipeline")
         item = menu.add_name('Load')
         item.set_tooltip("Load a new pipeline")
+        item.add_callback('activated', self.load_pipeline_cb)
         item = menu.add_name('Save')
         item.set_tooltip("Save this pipeline")
+        item.add_callback('activated', self.save_pipeline_cb)
+
+        menu = tbar.add_menu('Edit', mtype='menu')
+        menu.set_tooltip("Edit on pipeline")
+        item = menu.add_name('Undo')
+        item.set_tooltip("Undo last action")
+        item.add_callback('activated', self.undo_pipeline_cb)
+        item = menu.add_name('Redo')
+        item.set_tooltip("Redo last action")
+        item.add_callback('activated', self.redo_pipeline_cb)
 
         name = Widgets.TextEntry(editable=True)
         name.add_callback('activated', self.set_pipeline_name_cb)
+        name.set_text(self.pipeline.name)
+        self.w.pipeline_name = name
         tbar.add_widget(name)
         top.add_widget(tbar, stretch=0)
 
@@ -282,7 +295,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
             idx = len(stages)
         # realize this stage
         stage = self.stage_dict[name]()
-        stage.pipeline = self.pipeline
+        self.pipeline._init_stage(stage)
         self.pipeline.insert(idx, stage)
         stage_gui = self.make_stage_gui(stage)
         self.pipelist.insert_widget(idx, stage_gui, stretch=0)
@@ -335,17 +348,44 @@ class Pipeline(GingaPlugin.LocalPlugin):
     def enable_pipeline_cb(self, widget, tf):
         self.pipeline.enable(tf)
 
-    def load_file(self, filepath):
-        image = loader.load_data(filepath, logger=self.logger)
-        self.pipeline[0].set_image(image)
-        self.pipeline.run_all()
-        self.fitsimage.reload_image()
+    def undo_pipeline_cb(self, widget):
+        self.pipeline.undo()
 
-    def drop_cb(self, canvas, paths):
-        self.logger.info("files dropped: %s" % str(paths))
-        filename = paths[0]
-        self.load_file(filename)
-        return True
+    def redo_pipeline_cb(self, widget):
+        self.pipeline.redo()
+
+    def save_pipeline(self, path):
+        d = self.pipeline.save()
+        s = yaml.dump(d)
+        with open(path, 'w') as out_f:
+            out_f.write(s)
+
+    def load_pipeline(self, path):
+        self.pipelist.remove_all(delete=True)
+        self.pipelist.add_widget(Widgets.Label(''), stretch=1)
+
+        with open(path, 'r') as in_f:
+            s = in_f.read()
+        d = yaml.safe_load(s)
+        self.pipeline.load(d, self.stage_dict)
+
+        self.pipeline.set(fv=self.fv, viewer=self.fitsimage)
+
+        for i, stage in enumerate(self.pipeline):
+            stage_gui = self.make_stage_gui(stage)
+            self.pipelist.insert_widget(i, stage_gui, stretch=0)
+
+        name = self.pipeline.name
+        self.w.pipeline_name.set_text(name)
+        if len(name) > 20:
+            name = name[:20] + '...'
+        self.w.gui_fr.set_text(name)
+
+    def save_pipeline_cb(self, widget):
+        self.save_pipeline("/tmp/pipeline.yml")
+
+    def load_pipeline_cb(self, widget):
+        self.load_pipeline("/tmp/pipeline.yml")
 
     def redo(self):
         image = self.fitsimage.get_image()
