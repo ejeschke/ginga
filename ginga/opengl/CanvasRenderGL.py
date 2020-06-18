@@ -16,7 +16,8 @@ from OpenGL import GL as gl
 from ginga.vec import CanvasRenderVec as vec
 from ginga.canvas import render, transform
 from ginga.cairow import CairoHelp
-from ginga import trcalc
+from ginga import trcalc, RGBMap
+from ginga.util import rgb_cms
 
 # Local imports
 from .Camera import Camera
@@ -288,6 +289,12 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         # callback as for the standard pixel renderer
         self.viewer.make_callback('redraw', 1.0)
 
+    def icc_profile_change(self):
+        self.viewer.redraw(whence=0.1)
+
+    def interpolation_change(self, interp):
+        self.logger.warning("Interpolation setting currently not supported fully by OpenGL renderer--defaulting to nearest neighbor")
+
     def _common_draw(self, cvs_img, cache, whence):
         # internal common drawing phase for all images
         image = cvs_img.image
@@ -345,10 +352,25 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
     def _prepare_image(self, cvs_img, cache, whence):
         self._common_draw(cvs_img, cache, whence)
 
-        if (whence <= 0.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
+        # convert to output ICC profile, if one is specified
+        working_profile = rgb_cms.working_profile
+        output_profile = self.viewer.t_.get('icc_output_profile', None)
+        if (whence <= 0.1 and working_profile is not None and
+                output_profile is not None):
+            rgbarr = np.copy(cache.cutout)
+            order = cvs_img.get_image().get_order()
+            self.convert_via_profile(rgbarr, order,
+                                     working_profile, output_profile)
+            cache.rgbarr = rgbarr
+        else:
+            cache.rgbarr = cache.cutout
+
+        depth = cache.rgbarr.shape[2]
+        if depth < 4:
             # add an alpha channel if missing
-            rgbarr = trcalc.add_alpha(cache.cutout, alpha=255)
-            cache.rgbarr = np.ascontiguousarray(rgbarr, dtype=np.uint8)
+            cache.rgbarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
+
+        cache.rgbarr = np.ascontiguousarray(cache.rgbarr, dtype=np.uint8)
 
         cache.image_type = 0
         cache.drawn = True
@@ -384,10 +406,29 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
                 cache.rgbarr = img_arr.astype(np.float32)
 
             else:
-                # TODO: take care of high bit depth RGBA
-                img_arr = trcalc.add_alpha(img_arr, alpha=255)
-                cache.rgbarr = np.ascontiguousarray(img_arr, dtype=np.uint8)
                 cache.image_type = 1
+
+        if cache.image_type == 1:
+            # convert to output ICC profile, if one is specified
+            working_profile = rgb_cms.working_profile
+            output_profile = self.viewer.t_.get('icc_output_profile', None)
+
+            if (whence <= 0.1 and working_profile is not None and
+                    output_profile is not None):
+                rgbarr = np.copy(cache.cutout)
+                order = cvs_img.get_image().get_order()
+                self.convert_via_profile(rgbarr, order,
+                                         working_profile, output_profile)
+                cache.rgbarr = rgbarr
+            else:
+                cache.rgbarr = cache.cutout
+
+            depth = cache.rgbarr.shape[2]
+            if depth < 4:
+                # add an alpha channel if missing
+                cache.rgbarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
+
+            cache.rgbarr = np.ascontiguousarray(cache.rgbarr, dtype=np.uint8)
 
         cache.drawn = True
         t5 = time.time()
@@ -408,6 +449,54 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         #tex_id = self.get_texture_id(cvs_img.image_id)
         #self.gl_set_image(tex_id, img_arr, cache.image_type)
         self.image_uploads.append((cvs_img.image_id, img_arr, cache.image_type))
+
+    def convert_via_profile(self, data_np, order, inprof_name, outprof_name):
+        """Convert the given RGB data from the working ICC profile
+        to the output profile in-place.
+
+        Parameters
+        ----------
+        data_np : ndarray
+            RGB image data to be displayed.
+
+        order : str
+            Order of channels in the data (e.g. "BGRA").
+
+        inprof_name, outprof_name : str
+            ICC profile names (see :func:`ginga.util.rgb_cms.get_profiles`).
+
+        """
+        t_ = self.viewer.get_settings()
+        # get rest of necessary conversion parameters
+        to_intent = t_.get('icc_output_intent', 'perceptual')
+        proofprof_name = t_.get('icc_proof_profile', None)
+        proof_intent = t_.get('icc_proof_intent', 'perceptual')
+        use_black_pt = t_.get('icc_black_point_compensation', False)
+
+        try:
+            rgbobj = RGBMap.RGBPlanes(data_np, order)
+            arr_np = rgbobj.get_array('RGB')
+
+            arr = rgb_cms.convert_profile_fromto(arr_np, inprof_name, outprof_name,
+                                                 to_intent=to_intent,
+                                                 proof_name=proofprof_name,
+                                                 proof_intent=proof_intent,
+                                                 use_black_pt=use_black_pt,
+                                                 logger=self.logger)
+            ri, gi, bi = rgbobj.get_order_indexes('RGB')
+
+            out = data_np
+            out[..., ri] = arr[..., 0]
+            out[..., gi] = arr[..., 1]
+            out[..., bi] = arr[..., 2]
+
+            self.logger.debug("Converted from '%s' to '%s' profile" % (
+                inprof_name, outprof_name))
+
+        except Exception as e:
+            self.logger.warning("Error converting output from working profile: %s" % (str(e)))
+            # TODO: maybe should have a traceback here
+            self.logger.info("Output left unprofiled")
 
     def get_texture_id(self, image_id):
         tex_id = self._tex_cache.get(image_id, None)
