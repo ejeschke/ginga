@@ -349,28 +349,37 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
             cache.cutout = data
             cache.cvs_pos = (cvs_x, cvs_y)
 
+    def _prep_rgb_image(self, cvs_img, cache, whence):
+        image = cvs_img.get_image()
+        image_order = image.get_order()
+
+        if whence <= 0.1 or cache.rgbarr is None:
+            # convert to output ICC profile, if one is specified
+            working_profile = rgb_cms.working_profile
+            output_profile = self.viewer.t_.get('icc_output_profile', None)
+
+            if working_profile is not None and output_profile is not None:
+                rgbarr = np.copy(cache.cutout)
+                self.convert_via_profile(rgbarr, image_order,
+                                         working_profile, output_profile)
+            else:
+                rgbarr = self.reorder(self.rgb_order, cache.cutout,
+                                      image_order)
+            cache.rgbarr = rgbarr
+
+            depth = cache.rgbarr.shape[2]
+            if depth < 4:
+                # add an alpha channel if missing
+                cache.rgbarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
+
+            # array needs to be contiguous to transfer properly as buffer
+            # to OpenGL
+            cache.rgbarr = np.ascontiguousarray(cache.rgbarr, dtype=np.uint8)
+
     def _prepare_image(self, cvs_img, cache, whence):
         self._common_draw(cvs_img, cache, whence)
 
-        # convert to output ICC profile, if one is specified
-        working_profile = rgb_cms.working_profile
-        output_profile = self.viewer.t_.get('icc_output_profile', None)
-        if (whence <= 0.1 and working_profile is not None and
-                output_profile is not None):
-            rgbarr = np.copy(cache.cutout)
-            order = cvs_img.get_image().get_order()
-            self.convert_via_profile(rgbarr, order,
-                                     working_profile, output_profile)
-            cache.rgbarr = rgbarr
-        else:
-            cache.rgbarr = cache.cutout
-
-        depth = cache.rgbarr.shape[2]
-        if depth < 4:
-            # add an alpha channel if missing
-            cache.rgbarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
-
-        cache.rgbarr = np.ascontiguousarray(cache.rgbarr, dtype=np.uint8)
+        self._prep_rgb_image(cvs_img, cache, whence)
 
         cache.image_type = 0
         cache.drawn = True
@@ -389,7 +398,8 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         else:
             rgbmap = self.viewer.get_rgbmap()
 
-        image_order = cvs_img.image.get_order()
+        image = cvs_img.get_image()
+        image_order = image.get_order()
 
         if (whence <= 0.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
 
@@ -409,26 +419,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
                 cache.image_type = 1
 
         if cache.image_type == 1:
-            # convert to output ICC profile, if one is specified
-            working_profile = rgb_cms.working_profile
-            output_profile = self.viewer.t_.get('icc_output_profile', None)
-
-            if (whence <= 0.1 and working_profile is not None and
-                    output_profile is not None):
-                rgbarr = np.copy(cache.cutout)
-                order = cvs_img.get_image().get_order()
-                self.convert_via_profile(rgbarr, order,
-                                         working_profile, output_profile)
-                cache.rgbarr = rgbarr
-            else:
-                cache.rgbarr = cache.cutout
-
-            depth = cache.rgbarr.shape[2]
-            if depth < 4:
-                # add an alpha channel if missing
-                cache.rgbarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
-
-            cache.rgbarr = np.ascontiguousarray(cache.rgbarr, dtype=np.uint8)
+            self._prep_rgb_image(cvs_img, cache, whence)
 
         cache.drawn = True
         t5 = time.time()
