@@ -16,20 +16,24 @@ elif tkname == 'pg':
 
 # MODULE FUNCTIONS
 
-def get_orientation(container):
+def get_orientation(container, aspect=1.0):
     if not hasattr(container, 'size'):
         return 'vertical'
     (wd, ht) = container.size
     # wd, ht = container.get_size()
     # print('container size is %dx%d' % (wd, ht))
-    if wd < ht:
+    if ht == 0:
+        return 'horizontal' if wd > 0 else 'vertical'
+    calc_aspect = wd / ht
+    if calc_aspect <= aspect:
         return 'vertical'
     else:
         return 'horizontal'
 
 
-def get_oriented_box(container, scrolled=True, fill=False):
-    orientation = get_orientation(container)
+def get_oriented_box(container, scrolled=True, fill=False,
+                     aspect=2.0):
+    orientation = get_orientation(container, aspect=aspect)
 
     if orientation == 'vertical':
         box1 = VBox()  # noqa
