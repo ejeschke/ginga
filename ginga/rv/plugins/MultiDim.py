@@ -101,12 +101,9 @@ class MultiDim(GingaPlugin.LocalPlugin):
         top = Widgets.VBox()
         top.set_border_width(4)
 
-        # Force vertical stacking no matter what.
-        vbox = Widgets.VBox()
-        sw = Widgets.ScrollArea()
-        sw.set_widget(vbox)
-        orientation = 'vertical'
-
+        vbox, sw, orientation = Widgets.get_oriented_box(container,
+                                                         scrolled=True,
+                                                         factor=1.5)
         self.orientation = orientation
         vbox.set_border_width(4)
         vbox.set_spacing(2)
