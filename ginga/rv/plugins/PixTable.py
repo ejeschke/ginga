@@ -119,7 +119,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         self.dc = self.fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
-        canvas.set_callback('cursor-changed', self.cursor_cb)
+        self.fitsimage.set_callback('cursor-changed', self.cursor_cb)
         canvas.enable_draw(True)
         canvas.set_drawtype('point', color='cyan', linestyle='dash')
         canvas.set_callback('draw-event', self.draw_cb)
@@ -480,8 +480,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         # We report the value across the pixel, even though the coords
         # change halfway across the pixel
         px_off = self.fitsimage.data_off
-        data_x, data_y = (np.floor(self.lastx + px_off),
-                          np.floor(self.lasty + px_off))
+        data_x, data_y = (int(np.floor(self.lastx + px_off)),
+                          int(np.floor(self.lasty + px_off)))
 
         # cutout image data
         data, x1, y1, x2, y2 = image.cutout_radius(data_x, data_y,
@@ -551,6 +551,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         self._rebuild_table()
 
     def cursor_cb(self, canvas, junk, data_x, data_y):
+        if not self.gui_up:
+            return
         if self.mark_selected is not None:
             return False
         if self.pixview is None:
