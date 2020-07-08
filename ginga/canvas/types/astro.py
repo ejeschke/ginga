@@ -1253,13 +1253,10 @@ class WCSAxes(CompoundObject):
         # see if we need to recalculate our grid
         canvas = viewer.get_canvas()
         vip = viewer.get_vip()
-        images = set(vip.get_images([], canvas))
+        cvs_imgs = vip.get_images([], canvas)
+        images = set([cvs_img.get_image() for cvs_img in cvs_imgs])
         diff = images.difference(self._cur_images)
-        print('diff', diff)
-        update = False
-        if len(diff) > 0:
-            # new image loaded
-            update = True
+        update = len(diff) > 0
 
         cur_swap = viewer.get_transforms()[2]
         if cur_swap != self._cur_swap:
@@ -1282,7 +1279,6 @@ class WCSAxes(CompoundObject):
             # only expensive recalculation of grid if needed
             self.ra_angle = None
             self.dec_angle = None
-            image = viewer.get_image()
             self.objects = self._calc_axes(viewer, images, cur_rot, cur_swap)
 
         super(WCSAxes, self).draw(viewer)
