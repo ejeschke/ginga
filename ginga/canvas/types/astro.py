@@ -790,7 +790,7 @@ class AnnulusP(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
         self.objects[1].__dict__.update(d)
 
     def move_to_pt(self, dst_pt):
-        super(Annulus, self).move_to_pt(dst_pt)
+        super(AnnulusP, self).move_to_pt(dst_pt)
 
         self.set_data_points([dst_pt])
 
@@ -1014,7 +1014,7 @@ class Annulus2RP(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
         self.objects[1].__dict__.update(d)
 
     def move_to_pt(self, dst_pt):
-        super(Annulus2R, self).move_to_pt(dst_pt)
+        super(Annulus2RP, self).move_to_pt(dst_pt)
 
         self.set_data_points([dst_pt])
 
