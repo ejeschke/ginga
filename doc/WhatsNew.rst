@@ -23,6 +23,8 @@ Ver 3.1.0 (unreleased)
 - Fixed an issue with Mosaic plugin where images with a PC matrix were
   not always oriented correctly
 - New Collage plugin offers an efficient alternative way to view mosaics
+- Fix for a bug where using Zoom and PixTable at the same time can cause
+  wrong results to be displayed in PixTable
 
 Ver 3.0.0 (2019-09-20)
 ======================
