@@ -1425,6 +1425,8 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.set(limits=None)
 
     def _set_limits_cb(self, setting, limits):
+        self.renderer.limits_change(limits)
+
         # TODO: deprecate this chained callback and have users just use
         # 'set' callback for "limits" setting ?
         self.make_callback('limits-set', limits)

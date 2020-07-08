@@ -1080,6 +1080,7 @@ class WCSAxes(CompoundObject):
         # for keeping track of changes to image and orientation
         self._cur_rot = None
         self._cur_swap = None
+        self._cur_limits = None
         self._cur_images = set([])
 
         CompoundObject.__init__(self,
@@ -1092,10 +1093,12 @@ class WCSAxes(CompoundObject):
         self.opaque = True
         self.kind = 'wcsaxes'
 
-    def _calc_axes(self, viewer, images, rot_deg, swapxy):
+    def _calc_axes(self, viewer, images, rot_deg, swapxy, limits):
+        self.logger.debug("recalculating axes...")
         self._cur_images = images
         self._cur_rot = rot_deg
         self._cur_swap = swapxy
+        self._cur_limits = limits
 
         image = viewer.get_image()
         if image is None or not image.has_valid_wcs():
@@ -1103,7 +1106,8 @@ class WCSAxes(CompoundObject):
                 'WCSAxes can only be displayed for image with valid WCS')
             return []
 
-        (x1, y1), (x2, y2) = viewer.get_limits()
+        x1, y1 = limits[0][:2]
+        x2, y2 = limits[1][:2]
         min_imsize = min(x2 - x1, y2 - y1)
         if min_imsize <= 0:
             self.logger.debug('Cannot draw WCSAxes on image with 0 dim')
@@ -1271,6 +1275,11 @@ class WCSAxes(CompoundObject):
             # and update all the text objects in self.objects
             update = True
 
+        cur_limits = viewer.get_limits()
+        if cur_limits != self._cur_limits:
+            # limits have changed
+            update = True
+
         if len(self.objects) == 0:
             # initial time
             update = True
@@ -1279,7 +1288,8 @@ class WCSAxes(CompoundObject):
             # only expensive recalculation of grid if needed
             self.ra_angle = None
             self.dec_angle = None
-            self.objects = self._calc_axes(viewer, images, cur_rot, cur_swap)
+            self.objects = self._calc_axes(viewer, images, cur_rot, cur_swap,
+                                           cur_limits)
 
         super(WCSAxes, self).draw(viewer)
 
