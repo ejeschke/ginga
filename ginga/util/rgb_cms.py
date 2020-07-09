@@ -55,19 +55,19 @@ class ColorManager(object):
         # If we have a working color profile then handle any embedded
         # profile or color space information, if possible
         if not have_cms:
-            self.logger.warning(
+            self.logger.info(
                 "No CMS is installed; leaving image unprofiled.")
             return image
 
         if not have_profile(working_profile):
-            self.logger.warning(
+            self.logger.info(
                 "No working profile defined; leaving image unprofiled.")
             return image
 
         out_profile = profile[working_profile].name
 
         if not os.path.exists(profile[out_profile].path):
-            self.logger.warning(
+            self.logger.info(
                 "Working profile '%s' (%s) not found; leaving image "
                 "unprofiled." % (out_profile, profile[out_profile].path))
             return image
