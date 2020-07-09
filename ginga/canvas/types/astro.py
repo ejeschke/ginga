@@ -1080,7 +1080,7 @@ class WCSAxes(CompoundObject):
         # for keeping track of changes to image and orientation
         self._cur_rot = None
         self._cur_swap = None
-        self._cur_limits = None
+        self._cur_limits = ((0.0, 0.0), (0.0, 0.0))
         self._cur_images = set([])
 
         CompoundObject.__init__(self,
@@ -1276,7 +1276,7 @@ class WCSAxes(CompoundObject):
             update = True
 
         cur_limits = viewer.get_limits()
-        if cur_limits != self._cur_limits:
+        if np.any(np.isclose(cur_limits, self._cur_limits)):
             # limits have changed
             update = True
 
