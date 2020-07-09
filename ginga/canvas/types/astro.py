@@ -1276,7 +1276,7 @@ class WCSAxes(CompoundObject):
             update = True
 
         cur_limits = viewer.get_limits()
-        if np.any(np.isclose(cur_limits, self._cur_limits)):
+        if not np.all(np.isclose(cur_limits, self._cur_limits)):
             # limits have changed
             update = True
 
