@@ -160,6 +160,9 @@ class RendererBase(object):
     def interpolation_change(self, interp):
         self.viewer.redraw(whence=0)
 
+    def limits_change(self, limits):
+        self.viewer.redraw(whence=3)
+
 
 class StandardPixelRenderer(RendererBase):
     """Standard renderer for generating bitmap-based image that can be

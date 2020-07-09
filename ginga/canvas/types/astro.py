@@ -1080,6 +1080,7 @@ class WCSAxes(CompoundObject):
         # for keeping track of changes to image and orientation
         self._cur_rot = None
         self._cur_swap = None
+        self._cur_limits = ((0.0, 0.0), (0.0, 0.0))
         self._cur_images = set([])
 
         CompoundObject.__init__(self,
@@ -1092,10 +1093,12 @@ class WCSAxes(CompoundObject):
         self.opaque = True
         self.kind = 'wcsaxes'
 
-    def _calc_axes(self, viewer, images, rot_deg, swapxy):
+    def _calc_axes(self, viewer, images, rot_deg, swapxy, limits):
+        self.logger.debug("recalculating axes...")
         self._cur_images = images
         self._cur_rot = rot_deg
         self._cur_swap = swapxy
+        self._cur_limits = limits
 
         image = viewer.get_image()
         if image is None or not image.has_valid_wcs():
@@ -1103,7 +1106,8 @@ class WCSAxes(CompoundObject):
                 'WCSAxes can only be displayed for image with valid WCS')
             return []
 
-        (x1, y1), (x2, y2) = viewer.get_limits()
+        x1, y1 = limits[0][:2]
+        x2, y2 = limits[1][:2]
         min_imsize = min(x2 - x1, y2 - y1)
         if min_imsize <= 0:
             self.logger.debug('Cannot draw WCSAxes on image with 0 dim')
@@ -1253,13 +1257,10 @@ class WCSAxes(CompoundObject):
         # see if we need to recalculate our grid
         canvas = viewer.get_canvas()
         vip = viewer.get_vip()
-        images = set(vip.get_images([], canvas))
+        cvs_imgs = vip.get_images([], canvas)
+        images = set([cvs_img.get_image() for cvs_img in cvs_imgs])
         diff = images.difference(self._cur_images)
-        print('diff', diff)
-        update = False
-        if len(diff) > 0:
-            # new image loaded
-            update = True
+        update = len(diff) > 0
 
         cur_swap = viewer.get_transforms()[2]
         if cur_swap != self._cur_swap:
@@ -1274,6 +1275,11 @@ class WCSAxes(CompoundObject):
             # and update all the text objects in self.objects
             update = True
 
+        cur_limits = viewer.get_limits()
+        if not np.all(np.isclose(cur_limits, self._cur_limits)):
+            # limits have changed
+            update = True
+
         if len(self.objects) == 0:
             # initial time
             update = True
@@ -1282,8 +1288,8 @@ class WCSAxes(CompoundObject):
             # only expensive recalculation of grid if needed
             self.ra_angle = None
             self.dec_angle = None
-            image = viewer.get_image()
-            self.objects = self._calc_axes(viewer, images, cur_rot, cur_swap)
+            self.objects = self._calc_axes(viewer, images, cur_rot, cur_swap,
+                                           cur_limits)
 
         super(WCSAxes, self).draw(viewer)
 
