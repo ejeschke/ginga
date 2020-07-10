@@ -8,13 +8,14 @@ import json
 
 from ginga.misc import Bunch
 
+__all__ = ['BunchEncoder', 'as_bunch', 'dumps', 'loads']
 
 class BunchEncoder(json.JSONEncoder):
     """Custom encoder to serialize Ginga's Bunch.Bunch class.
 
     Usage
     -----
-      json.dumps(objs, indent=2, cls=BunchEncoder)
+    json.dumps(objs, indent=2, cls=BunchEncoder)
 
     """
     def default(self, obj):
@@ -30,7 +31,7 @@ def as_bunch(dct):
 
     Usage
     -----
-      json.loads(buf, )
+    json.loads(buf, )
 
     """
     if '__bunch__' in dct:
