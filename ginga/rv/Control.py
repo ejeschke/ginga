@@ -377,6 +377,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 name, str(e)))
 
     def add_plugin(self, spec):
+        if not spec.get('enabled', True):
+            return
         ptype = spec.get('ptype', 'local')
         if ptype == 'global':
             self.add_global_plugin(spec)
@@ -1654,9 +1656,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         return imap.get_names()
 
-    def set_layout(self, layout, layout_file=None, main_wsname=None):
+    def set_layout(self, layout, layout_file=None, save_layout=False,
+                   main_wsname=None):
         self.layout = layout
         self.layout_file = layout_file
+        self.save_layout = save_layout
         if main_wsname is not None:
             self.main_wsname = main_wsname
 
@@ -2397,7 +2401,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Quit the application.
         """
         self.logger.info("Attempting to shut down the application...")
-        if self.layout_file is not None:
+        if self.layout_file is not None and self.save_layout:
             self.error_wrap(self.ds.write_layout_conf, self.layout_file)
 
         self.stop()

@@ -4,7 +4,7 @@ What's New
 
 Ver 3.1.0 (unreleased)
 ======================
-- Zoom plugin refactored. Now shows graphical overlays.
+- Zoom and Pan plugins refactored. Now shows graphical overlays.
 - Improved performance of rendering when flipping, swapping axes or
   rotating viewer.
 - Fixed a bug where the display was not redrawn if an ICC profile was
@@ -25,6 +25,8 @@ Ver 3.1.0 (unreleased)
 - New Collage plugin offers an efficient alternative way to view mosaics
 - Fix for a bug where using Zoom and PixTable at the same time can cause
   wrong results to be displayed in PixTable
+- New ability to specify alternative Ginga home directories, with custom
+  layouts and plugin configurations (--basedir option)
 
 Ver 3.0.0 (2019-09-20)
 ======================

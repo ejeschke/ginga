@@ -1,5 +1,5 @@
 #
-# json.py -- augment JSON parsing
+# json.py -- augmented JSON parsing
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
@@ -10,12 +10,13 @@ from ginga.misc import Bunch
 
 __all__ = ['BunchEncoder', 'as_bunch', 'dumps', 'loads']
 
+
 class BunchEncoder(json.JSONEncoder):
     """Custom encoder to serialize Ginga's Bunch.Bunch class.
 
     Usage
     -----
-    json.dumps(objs, indent=2, cls=BunchEncoder)
+    st = json.dumps(objs, indent=2, cls=BunchEncoder)
 
     """
     def default(self, obj):
@@ -27,13 +28,7 @@ class BunchEncoder(json.JSONEncoder):
 
 
 def as_bunch(dct):
-    """Custom decoder to deserialize Ginga's Bunch.Bunch class.
-
-    Usage
-    -----
-    json.loads(buf, )
-
-    """
+    """If `dct` is a serialized Bunch, return it as a Bunch."""
     if '__bunch__' in dct:
         d = dct.copy()
         del d['__bunch__']

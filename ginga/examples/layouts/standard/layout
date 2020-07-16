@@ -1,0 +1,44 @@
+['seq', {},
+    ['vbox', dict(name='top', width=1400, height=700),
+         dict(row=['hbox', dict(name='menu')],
+              stretch=0),
+         dict(row=['hpanel', dict(name='hpnl'),
+                   ['ws', dict(name='left', wstype='tabs',
+                               width=300, height=-1, group=2),
+                       # (tabname, layout), ...
+                       [("Info", ['vpanel', {},
+                                     ['ws', dict(name='uleft', wstype='stack',
+                                                 height=250, group=3)],
+                                     ['ws', dict(name='lleft', wstype='tabs',
+                                                 height=330, group=3)],
+                                  ]
+                         )]],
+                   ['vbox', dict(name='main', width=600),
+                       dict(row=['ws', dict(name='channels', wstype='tabs',
+                                            group=1, use_toolbar=True,
+                                            default=True)],
+                            stretch=1),
+                       dict(row=['ws', dict(name='cbar', wstype='stack',
+                                            group=99)], stretch=0),
+                       dict(row=['ws', dict(name='readout', wstype='stack',
+                                            group=99)], stretch=0),
+                       dict(row=['ws', dict(name='operations', wstype='stack',
+                                            group=99)], stretch=0),
+                    ],
+                   ['ws', dict(name='right', wstype='tabs',
+                               width=400, height=-1, group=2),
+                       # (tabname, layout), ...
+                       [("Dialogs", ['ws', dict(name='dialogs', wstype='tabs',
+                                                group=2)
+                                     ]
+                         )]
+                    ],
+                   ],
+              stretch=1),
+         dict(row=['ws', dict(name='toolbar', wstype='stack',
+                              height=40, group=2)],
+              stretch=0),
+         dict(row=['hbox', dict(name='status')],
+              stretch=0),
+     ]
+ ]

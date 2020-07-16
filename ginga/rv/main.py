@@ -329,7 +329,7 @@ class ReferenceViewer(object):
                               font_scaling_factor=None,
                               save_layout=True,
                               use_opengl=False,
-                              layout_file='layout.json',
+                              layout_file='layout',
                               plugin_file='plugins.json',
                               channel_prefix="Image")
         settings.load(onError='silent')
@@ -473,12 +473,10 @@ class ReferenceViewer(object):
         ginga_shell = GingaShell(logger, thread_pool, mm, prefs,
                                  ev_quit=ev_quit)
 
-        layout_file = None
-        if settings.get('save_layout', False):
-            layout_file = os.path.join(basedir, settings.get('layout_file',
-                                                             'layout.json'))
-
-        ginga_shell.set_layout(self.layout, layout_file=layout_file)
+        layout_file = os.path.join(basedir, settings.get('layout_file',
+                                                         'layout'))
+        ginga_shell.set_layout(self.layout, layout_file=layout_file,
+                               save_layout=settings.get('save_layout', True))
 
         # User configuration (custom star catalogs, etc.)
         if have_ginga_config:
@@ -577,10 +575,13 @@ class ReferenceViewer(object):
                          hidden=False, pfx=pfx)
             self.add_plugin_spec(spec)
 
-        # Add non-disabled plugins
-        enabled_plugins = [spec for spec in self.plugins
-                           if spec.module.lower() not in disabled_plugins]
-        ginga_shell.set_plugins(enabled_plugins)
+        # Mark disabled plugins
+        for spec in self.plugins:
+            if spec.get('enabled', None) is None:
+                spec['enabled'] = (False if spec.module.lower() in disabled_plugins
+                                   else True)
+        # submit plugin specs to shell
+        ginga_shell.set_plugins(self.plugins)
 
         # start any plugins that have start=True
         ginga_shell.boot_plugins()
