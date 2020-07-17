@@ -130,6 +130,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.update_interval = 0.25
         self._to_build = set([])
         self._latest_thumb = None
+        self.save_thumbs = self.settings.get('cache_thumbs', False)
 
         # this will hold the thumbnails pane viewer
         self.c_view = None
@@ -231,7 +232,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         container.add_widget(vbox, stretch=1)
 
-        self.save_thumbs = self.settings.get('cache_thumbs', False)
         self.gui_up = True
 
     def get_thumb_generator(self):

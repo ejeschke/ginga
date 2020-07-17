@@ -22,45 +22,56 @@
     {
         "__bunch__": true,
         "category": "System",
+        "hidden": false,
+        "menu": "Info [G]",
+        "module": "Info",
+        "ptype": "global",
+        "start": false,
+        "tab": "Synopsis",
+        "workspace": "in:toplevel"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "hidden": false,
+        "menu": "Header [G]",
+        "module": "Header",
+        "ptype": "global",
+        "start": true,
+        "tab": "Header",
+        "workspace": "upper"
+    },
+    {
+        "__bunch__": true,
+        "category": "System",
         "hidden": true,
         "menu": "Pan [G]",
         "module": "Pan",
         "ptype": "global",
         "start": true,
-        "workspace": "uleft"
+        "workspace": "upper"
     },
     {
         "__bunch__": true,
         "category": "System",
-        "hidden": true,
-        "menu": "Info [G]",
-        "module": "Info",
-        "ptype": "global",
-        "start": true,
-        "tab": "Synopsis",
-        "workspace": "lleft"
-    },
-    {
-        "__bunch__": true,
-        "category": "System",
-        "hidden": true,
+        "hidden": false,
         "menu": "Thumbs [G]",
         "module": "Thumbs",
         "ptype": "global",
-        "start": true,
+        "start": false,
         "tab": "Thumbs",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "System",
-        "hidden": true,
+        "hidden": false,
         "menu": "Contents [G]",
         "module": "Contents",
         "ptype": "global",
-        "start": true,
+        "start": false,
         "tab": "Contents",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -75,6 +86,7 @@
     {
         "__bunch__": true,
         "category": "System",
+        "enabled": true,
         "hidden": true,
         "menu": "Cursor [G]",
         "module": "Cursor",
@@ -85,13 +97,13 @@
     {
         "__bunch__": true,
         "category": "System",
-        "hidden": true,
+        "hidden": false,
         "menu": "Errors [G]",
         "module": "Errors",
         "ptype": "global",
-        "start": true,
+        "start": false,
         "tab": "Errors",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -101,7 +113,7 @@
         "ptype": "global",
         "start": false,
         "tab": "Downloads",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -111,7 +123,7 @@
         "ptype": "global",
         "start": false,
         "tab": "Blink Channels",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -119,63 +131,63 @@
         "menu": "Blink Images",
         "module": "Blink",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Analysis",
         "module": "Cuts",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Analysis.Datacube",
         "module": "LineProfile",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Analysis",
         "module": "Histogram",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Analysis",
         "module": "Overlays",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Analysis",
         "module": "Pick",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Analysis",
         "module": "PixTable",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Analysis",
         "module": "TVMark",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Analysis",
         "module": "TVMask",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -185,7 +197,7 @@
         "ptype": "global",
         "start": false,
         "tab": "WCSMatch",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -195,7 +207,7 @@
         "ptype": "global",
         "start": false,
         "tab": "Command",
-        "workspace": "lleft"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -205,14 +217,14 @@
         "ptype": "global",
         "start": false,
         "tab": "Log",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Navigation",
         "module": "MultiDim",
         "ptype": "local",
-        "workspace": "lleft"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -222,7 +234,7 @@
         "ptype": "global",
         "start": false,
         "tab": "RC",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -232,21 +244,21 @@
         "ptype": "global",
         "start": false,
         "tab": "SAMP",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "RGB",
         "module": "Compose",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "RGB",
         "module": "ScreenShot",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -256,42 +268,42 @@
         "ptype": "global",
         "start": false,
         "tab": "ColorMapPicker",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Table",
         "module": "PlotTable",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Utils",
         "module": "Catalogs",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Utils",
         "module": "Crosshair",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Utils",
         "module": "Drawing",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Utils",
         "module": "FBrowser",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -301,21 +313,21 @@
         "ptype": "global",
         "start": false,
         "tab": "History",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Utils",
         "module": "Mosaic",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Utils",
         "module": "Collage",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -325,21 +337,21 @@
         "ptype": "global",
         "start": false,
         "tab": "Open File",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Utils",
         "module": "Preferences",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Utils",
         "module": "Ruler",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -349,14 +361,14 @@
         "ptype": "global",
         "start": false,
         "tab": "SaveImage",
-        "workspace": "right"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
         "category": "Utils",
         "module": "WCSAxes",
         "ptype": "local",
-        "workspace": "dialogs"
+        "workspace": "in:toplevel"
     },
     {
         "__bunch__": true,
@@ -371,22 +383,11 @@
     {
         "__bunch__": true,
         "category": "Utils",
-        "hidden": false,
-        "menu": "Header [G]",
-        "module": "Header",
-        "ptype": "global",
-        "start": false,
-        "tab": "Header",
-        "workspace": "left"
-    },
-    {
-        "__bunch__": true,
-        "category": "Utils",
         "menu": "Zoom [G]",
         "module": "Zoom",
         "ptype": "global",
         "start": false,
         "tab": "Zoom",
-        "workspace": "left"
+        "workspace": "in:toplevel"
     }
 ]

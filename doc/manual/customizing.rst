@@ -180,7 +180,7 @@ container:
   for the workspace type, whether that is a notebook tab, MDI window
   titlebar, etc.
 
-Here is the standard layout, as an example:
+Here is the standard layout (Python format), as an example:
 
 .. literalinclude:: ../../ginga/examples/layouts/standard/layout
     :language: python
@@ -233,7 +233,7 @@ Example:
 The keys for each object are defined as follows:
 
 * ``__bunch__``: should be present and set to ``true`` to force
-  deserialization to a ``~ginga.misc.Bunch.Bunch``.
+  deserialization to a `~ginga.misc.Bunch.Bunch`.
 * ``module``: The name of the module in the ``$PYTHONPATH`` containing
   the plugin.
 * ``class``: if present, indicates the name of the class within the
@@ -256,7 +256,7 @@ The keys for each object are defined as follows:
 * ``category``: an arbitrary organizational name under which plugins
   are organized in the ``Operation`` and ``Plugins`` menus.
 * ``menu``: a name for how the plugin should appear under the category
-  in the menu structure.  The convention is to append " [G]" if it is
+  in the menu structure.  The convention is to append "[G]" if it is
   a global plugin.
 * ``ptype``: either "local" or "global", depending on whether the
   plugin is a local or global one.
