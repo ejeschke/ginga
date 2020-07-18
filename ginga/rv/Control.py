@@ -1426,8 +1426,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                     settings.load(onError='raise')
 
                 except Exception as e:
-                    self.logger.warning("no saved preferences found for channel "
-                                        "'%s': %s" % (name, str(e)))
+                    self.logger.info("no saved preferences found for channel "
+                                     "'%s', using default: %s" % (name, str(e)))
 
                     # copy template settings to new channel
                     if settings_template is not None:
