@@ -338,6 +338,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         self.update_channel_buttons(channel)
 
     def update_channel_buttons(self, channel):
+        if not self.gui_up:
+            return
         # Update toolbar channel buttons
         enabled = len(channel) > 1
         self.w.btn_up.set_enabled(enabled)

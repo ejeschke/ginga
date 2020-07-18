@@ -1,0 +1,392 @@
+[
+    {
+        "__bunch__": true,
+        "category": "System",
+        "hidden": true,
+        "menu": "Operations [G]",
+        "module": "Operations",
+        "ptype": "global",
+        "start": true,
+        "workspace": "operations"
+    },
+    {
+        "__bunch__": true,
+        "category": "System",
+        "hidden": true,
+        "menu": "Toolbar [G]",
+        "module": "Toolbar",
+        "ptype": "global",
+        "start": true,
+        "workspace": "toolbar"
+    },
+    {
+        "__bunch__": true,
+        "category": "System",
+        "hidden": true,
+        "menu": "Pan [G]",
+        "module": "Pan",
+        "ptype": "global",
+        "start": true,
+        "workspace": "uleft"
+    },
+    {
+        "__bunch__": true,
+        "category": "System",
+        "hidden": true,
+        "menu": "Info [G]",
+        "module": "Info",
+        "ptype": "global",
+        "start": true,
+        "tab": "Synopsis",
+        "workspace": "lleft"
+    },
+    {
+        "__bunch__": true,
+        "category": "System",
+        "hidden": true,
+        "menu": "Thumbs [G]",
+        "module": "Thumbs",
+        "ptype": "global",
+        "start": true,
+        "tab": "Thumbs",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "System",
+        "hidden": true,
+        "menu": "Contents [G]",
+        "module": "Contents",
+        "ptype": "global",
+        "start": true,
+        "tab": "Contents",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "System",
+        "hidden": true,
+        "menu": "Colorbar [G]",
+        "module": "Colorbar",
+        "ptype": "global",
+        "start": true,
+        "workspace": "cbar"
+    },
+    {
+        "__bunch__": true,
+        "category": "System",
+        "hidden": true,
+        "menu": "Cursor [G]",
+        "module": "Cursor",
+        "ptype": "global",
+        "start": true,
+        "workspace": "readout"
+    },
+    {
+        "__bunch__": true,
+        "category": "System",
+        "hidden": true,
+        "menu": "Errors [G]",
+        "module": "Errors",
+        "ptype": "global",
+        "start": true,
+        "tab": "Errors",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "menu": "Downloads [G]",
+        "module": "Downloads",
+        "ptype": "global",
+        "start": false,
+        "tab": "Downloads",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis",
+        "menu": "Blink Channels [G]",
+        "module": "Blink",
+        "ptype": "global",
+        "start": false,
+        "tab": "Blink Channels",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis",
+        "menu": "Blink Images",
+        "module": "Blink",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis",
+        "module": "Cuts",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis.Datacube",
+        "module": "LineProfile",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis",
+        "module": "Histogram",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis",
+        "module": "Overlays",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis",
+        "module": "Pick",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis",
+        "module": "PixTable",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis",
+        "module": "TVMark",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis",
+        "module": "TVMask",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Analysis",
+        "menu": "WCS Match [G]",
+        "module": "WCSMatch",
+        "ptype": "global",
+        "start": false,
+        "tab": "WCSMatch",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "Debug",
+        "menu": "Command Line [G]",
+        "module": "Command",
+        "ptype": "global",
+        "start": false,
+        "tab": "Command",
+        "workspace": "lleft"
+    },
+    {
+        "__bunch__": true,
+        "category": "Debug",
+        "menu": "Logger Info [G]",
+        "module": "Log",
+        "ptype": "global",
+        "start": false,
+        "tab": "Log",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "Navigation",
+        "module": "MultiDim",
+        "ptype": "local",
+        "workspace": "lleft"
+    },
+    {
+        "__bunch__": true,
+        "category": "Remote",
+        "menu": "Remote Control [G]",
+        "module": "RC",
+        "ptype": "global",
+        "start": false,
+        "tab": "RC",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "Remote",
+        "menu": "SAMP Client [G]",
+        "module": "SAMP",
+        "ptype": "global",
+        "start": false,
+        "tab": "SAMP",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "RGB",
+        "module": "Compose",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "RGB",
+        "module": "ScreenShot",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "RGB",
+        "menu": "Set Color Map [G]",
+        "module": "ColorMapPicker",
+        "ptype": "global",
+        "start": false,
+        "tab": "ColorMapPicker",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "Table",
+        "module": "PlotTable",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "module": "Catalogs",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "module": "Crosshair",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "module": "Drawing",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "module": "FBrowser",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "menu": "History [G]",
+        "module": "ChangeHistory",
+        "ptype": "global",
+        "start": false,
+        "tab": "History",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "module": "Mosaic",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "module": "Collage",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "menu": "Open File [G]",
+        "module": "FBrowser",
+        "ptype": "global",
+        "start": false,
+        "tab": "Open File",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "module": "Preferences",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "module": "Ruler",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "menu": "Save File [G]",
+        "module": "SaveImage",
+        "ptype": "global",
+        "start": false,
+        "tab": "SaveImage",
+        "workspace": "right"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "module": "WCSAxes",
+        "ptype": "local",
+        "workspace": "dialogs"
+    },
+    {
+        "__bunch__": true,
+        "category": "Help",
+        "menu": "Help [G]",
+        "module": "WBrowser",
+        "ptype": "global",
+        "start": false,
+        "tab": "Help",
+        "workspace": "channels"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "hidden": false,
+        "menu": "Header [G]",
+        "module": "Header",
+        "ptype": "global",
+        "start": false,
+        "tab": "Header",
+        "workspace": "left"
+    },
+    {
+        "__bunch__": true,
+        "category": "Utils",
+        "menu": "Zoom [G]",
+        "module": "Zoom",
+        "ptype": "global",
+        "start": false,
+        "tab": "Zoom",
+        "workspace": "left"
+    }
+]

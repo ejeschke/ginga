@@ -6,9 +6,11 @@
 #
 import time
 import math
+import os.path
 
 from ginga.misc import Bunch, Callback
 from ginga.gw import Widgets, Viewers
+from ginga.util import json
 
 
 class Desktop(Callback.Callbacks):
@@ -22,6 +24,7 @@ class Desktop(Callback.Callbacks):
         self.tab = Bunch.caselessDict()
         self.tabcount = 0
         self.workspace = Bunch.caselessDict()
+        self.default_ws_name = None
 
         self.toplevels = []
         self.node = {}
@@ -74,6 +77,11 @@ class Desktop(Callback.Callbacks):
 
     def get_nb(self, name):
         return self.workspace[name].nb
+
+    def get_default_ws(self):
+        if self.default_ws_name is not None:
+            return self.get_ws(self.default_ws_name)
+        return None
 
     def get_size(self, widget):
         return widget.get_size()
@@ -349,6 +357,8 @@ class Desktop(Callback.Callbacks):
                                   use_toolbar=params.use_toolbar)
                 widget = ws.widget
                 # debug(widget)
+                if params.get('default', False):
+                    self.default_ws_name = params.name
 
             # If a title was passed as a parameter, then make a frame to
             # wrap the widget using the title.
@@ -642,21 +652,30 @@ class Desktop(Callback.Callbacks):
         if layout is None:
             layout = self.layout
 
-        import pprint
         self.record_sizes()
 
+        _n, ext = os.path.splitext(lo_file)
         # write layout
         with open(lo_file, 'w') as out_f:
-            pprint.pprint(layout, out_f)
+            if ext.lower() == '.json':
+                out_f.write(json.dumps(layout, indent=2))
+            else:
+                # older, python format
+                import pprint
+                pprint.pprint(layout, out_f)
 
     def read_layout_conf(self, lo_file):
-        import ast
-
         # read layout
         with open(lo_file, 'r') as in_f:
             buf = in_f.read()
 
-        layout = ast.literal_eval(buf)
+        _n, ext = os.path.splitext(lo_file)
+        if ext.lower() == '.json':
+            layout = json.loads(buf)
+        else:
+            # older, python format
+            import ast
+            layout = ast.literal_eval(buf)
         return layout
 
     def build_desktop(self, layout, lo_file=None, widget_dict=None):
@@ -666,7 +685,8 @@ class Desktop(Callback.Callbacks):
                 layout = self.read_layout_conf(lo_file)
 
             except Exception as e:
-                self.logger.info("Error reading saved layout: %s" % (str(e)))
+                self.logger.warning("Error reading saved layout: %s" % (str(e)))
+                self.logger.info("reverting to default layout")
                 layout = alt_layout
 
         return self.make_desktop(layout, widget_dict=widget_dict)

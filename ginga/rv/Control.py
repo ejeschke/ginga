@@ -133,7 +133,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.channel = {}
         self.channel_names = []
         self.cur_channel = None
-        self.main_wsname = 'channels'
         self.wscount = 0
         self.statustask = None
         self.preload_lock = threading.RLock()
@@ -194,7 +193,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # GUI initialization
         self.w = Bunch.Bunch()
         self.iconpath = icon_path
-        self._lastwsname = self.main_wsname
+        self.main_wsname = None
+        self._lastwsname = None
+        self.ds = None
         self.layout = None
         self.layout_file = None
         self._lsize = None
@@ -376,6 +377,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 name, str(e)))
 
     def add_plugin(self, spec):
+        if not spec.get('enabled', True):
+            return
         ptype = spec.get('ptype', 'local')
         if ptype == 'global':
             self.add_global_plugin(spec)
@@ -1653,16 +1656,21 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         return imap.get_names()
 
-    def set_layout(self, layout, layout_file=None, main_wsname=None):
+    def set_layout(self, layout, layout_file=None, save_layout=False,
+                   main_wsname=None):
         self.layout = layout
         self.layout_file = layout_file
+        self.save_layout = save_layout
         if main_wsname is not None:
             self.main_wsname = main_wsname
 
     def get_screen_dimensions(self):
         return (self.screen_wd, self.screen_ht)
 
-    def build_toplevel(self):
+    def build_toplevel(self, ignore_saved_layout=False):
+        lo_file = self.layout_file
+        if ignore_saved_layout:
+            lo_file = None
 
         self.font = self.get_font('fixed', 12)
         self.font11 = self.get_font('fixed', 11)
@@ -1672,8 +1680,17 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.w.tooltips = None
 
         self.ds = Desktop.Desktop(self)
-        self.ds.build_desktop(self.layout, lo_file=self.layout_file,
+        self.ds.build_desktop(self.layout, lo_file=lo_file,
                               widget_dict=self.w)
+        if self.main_wsname is None:
+            ws = self.ds.get_default_ws()
+            if ws is not None:
+                self.main_wsname = ws.name
+            else:
+                # legacy value for layouts that don't define a default
+                # workspace
+                self.main_wsname = 'channels'
+        self._lastwsname = self.main_wsname
         # TEMP: FIX ME!
         self.gpmon.ds = self.ds
 
@@ -2384,7 +2401,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Quit the application.
         """
         self.logger.info("Attempting to shut down the application...")
-        if self.layout_file is not None:
+        if self.layout_file is not None and self.save_layout:
             self.error_wrap(self.ds.write_layout_conf, self.layout_file)
 
         self.stop()

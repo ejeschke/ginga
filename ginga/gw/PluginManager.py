@@ -423,6 +423,7 @@ class PluginManager(Callback.Callbacks):
                 topw.add_callback('close',
                                   lambda *args: self.deactivate(p_info.name))
                 topw.resize(wd, ht)
+                topw.set_title(p_info.tabname)
                 topw.set_widget(vbox)
                 p_info.widget = topw
                 p_info.is_toplevel = True

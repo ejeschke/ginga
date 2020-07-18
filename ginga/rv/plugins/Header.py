@@ -47,11 +47,14 @@ class Header(GingaPlugin.GlobalPlugin):
                         ('Comment', 'comment'),
                         ]
 
+        spec = self.fv.get_plugin_spec(str(self))
+
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Header')
         self.settings.add_defaults(sortable=False,
                                    color_alternate_rows=True,
-                                   max_rows_for_col_resize=5000)
+                                   max_rows_for_col_resize=5000,
+                                   closeable=not spec.get('hidden', False))
         self.settings.load(onError='silent')
 
         self.flg_sort = self.settings.get('sortable', False)
@@ -86,18 +89,19 @@ class Header(GingaPlugin.GlobalPlugin):
         hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
 
-        btns = Widgets.HBox()
-        btns.set_border_width(4)
-        btns.set_spacing(4)
+        if self.settings.get('closeable', False):
+            btns = Widgets.HBox()
+            btns.set_border_width(4)
+            btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
-        btn.add_callback('activated', lambda w: self.close())
-        btns.add_widget(btn)
-        btn = Widgets.Button("Help")
-        btn.add_callback('activated', lambda w: self.help())
-        btns.add_widget(btn, stretch=0)
-        btns.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(btns, stretch=0)
+            btn = Widgets.Button("Close")
+            btn.add_callback('activated', lambda w: self.close())
+            btns.add_widget(btn)
+            btn = Widgets.Button("Help")
+            btn.add_callback('activated', lambda w: self.help())
+            btns.add_widget(btn, stretch=0)
+            btns.add_widget(Widgets.Label(''), stretch=1)
+            vbox.add_widget(btns, stretch=0)
 
         container.add_widget(vbox, stretch=1)
         self.gui_up = True
