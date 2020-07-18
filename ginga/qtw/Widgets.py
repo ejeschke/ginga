@@ -82,6 +82,7 @@ class WidgetBase(Callback.Callbacks):
 
     def delete(self):
         self.widget.deleteLater()
+        self.widget = None
 
     def focus(self):
         self.widget.activateWindow()
