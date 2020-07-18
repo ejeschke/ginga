@@ -97,13 +97,12 @@ Customizing the Layout
 
 Ginga has a flexible table-driven layout scheme for dynamically creating
 workspaces and mapping the available plugins to workspaces.  This layout
-can be specified with a Python structure (`layout`) or a JSON structure
-(`layout.json`) file in the configuration area (Ginga will default to
-the Python format).
-By default, Ginga will will update its window size, position and some
-layout information to the layout file when the program is closed.  Upon a 
-subsequent startup Ginga will attempt to restore the window to the saved
-configuration. 
+can be specified with a Python structure (`layout`) in the configuration
+area.  If there is no file initially, Ginga will use the built in
+default layout.  Ginga will will update its window size, position and
+some layout information to the layout file when the program is closed,
+creating a new custom layout.  Upon a subsequent startup Ginga will
+attempt to restore the window to the saved configuration.
 
 .. note:: The name of the layout file is set in the general
           configuration file (``general.cfg``) as the value for
@@ -114,7 +113,8 @@ configuration.
 .. note:: If you don't want Ginga to remember your changes to the window
           size or position, you can add the option ``save_layout =
           False`` to your general configuration file. Ginga will still
-          read the layout from the file, but will not update it when
+          read the layout from the file (if it exists--otherwise it will
+          use the default, built-in layout), but will not update it when
           closing. 
 
 .. note:: Invoking the program with the ``--norestore`` option 

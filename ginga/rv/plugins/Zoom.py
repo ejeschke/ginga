@@ -69,10 +69,13 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.layer_tag = 'shared-canvas'
         self.update_time = time.time()
 
+        spec = self.fv.get_plugin_spec(str(self))
+
         # read preferences for this plugin
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Zoom')
         self.settings.add_defaults(zoom_amount=self.default_zoom,
+                                   closeable=not spec.get('hidden', False),
                                    refresh_interval=0.02)
         self.settings.load(onError='silent')
 
@@ -171,18 +174,19 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
         vtop.add_widget(paned, stretch=5)
 
-        btns = Widgets.HBox()
-        btns.set_border_width(4)
-        btns.set_spacing(4)
+        if self.settings.get('closeable', False):
+            btns = Widgets.HBox()
+            btns.set_border_width(4)
+            btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
-        btn.add_callback('activated', lambda w: self.close())
-        btns.add_widget(btn)
-        btn = Widgets.Button("Help")
-        btn.add_callback('activated', lambda w: self.help())
-        btns.add_widget(btn, stretch=0)
-        btns.add_widget(Widgets.Label(''), stretch=1)
-        vtop.add_widget(btns, stretch=0)
+            btn = Widgets.Button("Close")
+            btn.add_callback('activated', lambda w: self.close())
+            btns.add_widget(btn)
+            btn = Widgets.Button("Help")
+            btn.add_callback('activated', lambda w: self.help())
+            btns.add_widget(btn, stretch=0)
+            btns.add_widget(Widgets.Label(''), stretch=1)
+            vtop.add_widget(btns, stretch=0)
 
         container.add_widget(vtop, stretch=5)
         self.gui_up = True

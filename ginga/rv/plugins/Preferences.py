@@ -170,14 +170,22 @@ is unflipped, unswapped, and unrotated.
 
    "Auto Cuts" preferences.
 
-The "Auto Cuts" preferences control the calculation of auto cut levels for
+The "Auto Cuts" preferences control the calculation of cut levels for
 the view when the auto cut levels button or key is pressed, or when
-loading a new image with auto cuts enabled.
+loading a new image with auto cuts enabled.  You can also set the cut
+levels manually from here.
 
+The "Cut Low" and "Cut High" fields can be used to manually specify lower
+and upper cut levels.  Pressing "Cut Levels" will set the levels to these
+values manually. If a value is missing, it is assumed to default to the
+whatever the current value is.
+
+Pressing "Auto Levels" will calculate the levels according to an algorithm.
 The "Auto Method" control is used to choose which auto cuts algorithm
-used: "minmax" (minimum maximum values), "histogram" (based on an image
-histogram), "stddev" (based on the standard deviation of pixel values), or
-"zscale" (based on the ZSCALE algorithm popularized by IRAF).
+used: "minmax" (minimum maximum values), "median" (based on median
+filtering), "histogram" (based on an image histogram), "stddev" (based on
+the standard deviation of pixel values), or "zscale" (based on the ZSCALE
+algorithm popularized by IRAF).
 As the algorithm is changed, the boxes under it may also change to
 allow changes to parameters particular to each algorithm.
 
@@ -373,12 +381,12 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.t_.get_setting(name).add_callback(
                 'set', self.set_transform_ext_cb)
 
-        # TODO: assigning a callback for "autocut_method" results in a bad
-        # feedback loop, at least under Qt
-        ## self.t_.get_setting('autocut_method').add_callback('set',
-        ##                                                    self.set_autocut_method_ext_cb)
+        self.t_.get_setting('autocut_method').add_callback('set',
+                                                           self.set_autocut_method_ext_cb)
         self.t_.get_setting('autocut_params').add_callback('set',
                                                            self.set_autocut_params_ext_cb)
+        self.t_.get_setting('cuts').add_callback(
+            'set', self.cutset_cb)
 
         self.t_.setdefault('wcs_coords', 'icrs')
         self.t_.setdefault('wcs_display', 'sexagesimal')
@@ -495,10 +503,31 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox2 = Widgets.VBox()
         fr.set_widget(vbox2)
 
-        captions = (('Auto Method:', 'label', 'Auto Method', 'combobox'),
-                    )
+        captions = (('Cut Low:', 'label', 'Cut Low Value', 'llabel',
+                     'Cut Low', 'entry'),
+                    ('Cut High:', 'label', 'Cut High Value', 'llabel',
+                     'Cut High', 'entry'),
+                    ('spacer_1', 'spacer', 'spacer_2', 'spacer',
+                     'Cut Levels', 'button'),
+                    ('Auto Method:', 'label', 'Auto Method', 'combobox',
+                     'Auto Levels', 'button'),)
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
+
+        loval, hival = self.t_['cuts']
+        b.cut_levels.set_tooltip("Set cut levels manually")
+        b.auto_levels.set_tooltip("Set cut levels by algorithm")
+        b.cut_low.set_tooltip("Set low cut level (press Enter)")
+        b.cut_low.set_length(9)
+        b.cut_low_value.set_text('%.4g' % (loval))
+        b.cut_high.set_tooltip("Set high cut level (press Enter)")
+        b.cut_high.set_length(9)
+        b.cut_high_value.set_text('%.4g' % (hival))
+
+        b.cut_low.add_callback('activated', self.cut_levels)
+        b.cut_high.add_callback('activated', self.cut_levels)
+        b.cut_levels.add_callback('activated', self.cut_levels)
+        b.auto_levels.add_callback('activated', self.auto_levels)
 
         # Setup auto cuts method choice
         combobox = b.auto_method
@@ -1123,6 +1152,35 @@ class Preferences(GingaPlugin.LocalPlugin):
             return
         index = self.autozoom_options.index(option)
         self.w.zoom_new.set_index(index)
+
+    def cut_levels(self, w):
+        fitsimage = self.fitsimage
+        loval, hival = fitsimage.get_cut_levels()
+        try:
+            lostr = self.w.cut_low.get_text().strip()
+            if lostr != '':
+                loval = float(lostr)
+
+            histr = self.w.cut_high.get_text().strip()
+            if histr != '':
+                hival = float(histr)
+            self.logger.debug("locut=%f hicut=%f" % (loval, hival))
+
+            return fitsimage.cut_levels(loval, hival)
+        except Exception as e:
+            self.fv.show_error("Error cutting levels: %s" % (str(e)))
+
+        return True
+
+    def auto_levels(self, w):
+        self.fitsimage.auto_levels()
+
+    def cutset_cb(self, setting, value):
+        if not self.gui_up:
+            return
+        loval, hival = value
+        self.w.cut_low_value.set_text('%.4g' % (loval))
+        self.w.cut_high_value.set_text('%.4g' % (hival))
 
     def config_autocut_params(self, method):
         try:

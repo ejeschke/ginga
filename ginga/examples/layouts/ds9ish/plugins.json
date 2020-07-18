@@ -33,7 +33,7 @@
     {
         "__bunch__": true,
         "category": "Utils",
-        "hidden": false,
+        "hidden": true,
         "menu": "Header [G]",
         "module": "Header",
         "ptype": "global",

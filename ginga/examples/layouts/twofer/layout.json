@@ -1,0 +1,293 @@
+[
+  "seq",
+  {
+    "__bunch__": true,
+    "name": "top_1",
+    "height": 1009,
+    "width": 1720,
+    "xpos": 3862,
+    "ypos": 26,
+    "spacing": null
+  },
+  [
+    "vbox",
+    {
+      "__bunch__": true,
+      "name": "top",
+      "width": 1720,
+      "height": 1009,
+      "xpos": -1,
+      "ypos": -1,
+      "spacing": null
+    },
+    {
+      "row": [
+        "hbox",
+        {
+          "__bunch__": true,
+          "name": "menu",
+          "height": 20,
+          "width": 1720,
+          "xpos": -1,
+          "ypos": -1,
+          "spacing": null
+        }
+      ],
+      "stretch": 0
+    },
+    {
+      "row": [
+        "hpanel",
+        {
+          "__bunch__": true,
+          "name": "hpnl",
+          "height": 938,
+          "width": 1720,
+          "xpos": -1,
+          "ypos": -1,
+          "spacing": null,
+          "sizes": [
+            308,
+            902,
+            502
+          ]
+        },
+        [
+          "ws",
+          {
+            "__bunch__": true,
+            "name": "left",
+            "wstype": "tabs",
+            "width": 308,
+            "height": 938,
+            "group": 2,
+            "title": null,
+            "show_tabs": true,
+            "show_border": false,
+            "scrollable": true,
+            "detachable": false,
+            "tabpos": "top",
+            "use_toolbar": false,
+            "xpos": -1,
+            "ypos": -1,
+            "spacing": null
+          },
+          []
+        ],
+        [
+          "vpanel",
+          {
+            "__bunch__": true,
+            "width": 902,
+            "height": 938,
+            "xpos": -1,
+            "ypos": -1,
+            "spacing": null,
+            "name": "vpanel_0",
+            "sizes": [
+              621,
+              313
+            ]
+          },
+          [
+            "vbox",
+            {
+              "__bunch__": true,
+              "name": "main",
+              "width": 902,
+              "height": 621,
+              "xpos": -1,
+              "ypos": -1,
+              "spacing": null
+            },
+            {
+              "row": [
+                "ws",
+                {
+                  "__bunch__": true,
+                  "name": "channels",
+                  "wstype": "tabs",
+                  "group": 1,
+                  "use_toolbar": true,
+                  "default": true,
+                  "title": null,
+                  "height": 538,
+                  "width": 902,
+                  "show_tabs": true,
+                  "show_border": false,
+                  "scrollable": true,
+                  "detachable": false,
+                  "tabpos": "top",
+                  "xpos": -1,
+                  "ypos": -1,
+                  "spacing": null
+                },
+                []
+              ],
+              "stretch": 1
+            },
+            {
+              "row": [
+                "ws",
+                {
+                  "__bunch__": true,
+                  "name": "cbar",
+                  "wstype": "stack",
+                  "group": 99,
+                  "title": null,
+                  "height": 36,
+                  "width": 902,
+                  "show_tabs": true,
+                  "show_border": false,
+                  "scrollable": true,
+                  "detachable": false,
+                  "tabpos": "top",
+                  "use_toolbar": false,
+                  "xpos": -1,
+                  "ypos": -1,
+                  "spacing": null
+                },
+                []
+              ],
+              "stretch": 0
+            },
+            {
+              "row": [
+                "ws",
+                {
+                  "__bunch__": true,
+                  "name": "readout",
+                  "wstype": "stack",
+                  "group": 99,
+                  "title": null,
+                  "height": 24,
+                  "width": 902,
+                  "show_tabs": true,
+                  "show_border": false,
+                  "scrollable": true,
+                  "detachable": false,
+                  "tabpos": "top",
+                  "use_toolbar": false,
+                  "xpos": -1,
+                  "ypos": -1,
+                  "spacing": null
+                },
+                []
+              ],
+              "stretch": 0
+            },
+            {
+              "row": [
+                "ws",
+                {
+                  "__bunch__": true,
+                  "name": "operations",
+                  "wstype": "stack",
+                  "group": 99,
+                  "title": null,
+                  "height": 23,
+                  "width": 902,
+                  "show_tabs": true,
+                  "show_border": false,
+                  "scrollable": true,
+                  "detachable": false,
+                  "tabpos": "top",
+                  "use_toolbar": false,
+                  "xpos": -1,
+                  "ypos": -1,
+                  "spacing": null
+                },
+                []
+              ],
+              "stretch": 0
+            }
+          ],
+          [
+            "ws",
+            {
+              "__bunch__": true,
+              "name": "bottom",
+              "wstype": "mdi",
+              "width": 902,
+              "height": 313,
+              "group": 2,
+              "title": null,
+              "show_tabs": true,
+              "show_border": false,
+              "scrollable": true,
+              "detachable": false,
+              "tabpos": "top",
+              "use_toolbar": true,
+              "xpos": -1,
+              "ypos": -1,
+              "spacing": null
+            },
+            []
+          ]
+        ],
+        [
+          "ws",
+          {
+            "__bunch__": true,
+            "name": "dialogs",
+            "wstype": "tabs",
+            "width": 502,
+            "height": 938,
+            "group": 2,
+            "title": null,
+            "show_tabs": true,
+            "show_border": false,
+            "scrollable": true,
+            "detachable": false,
+            "tabpos": "top",
+            "use_toolbar": true,
+            "xpos": -1,
+            "ypos": -1,
+            "spacing": null
+          }
+        ]
+      ],
+      "stretch": 1
+    },
+    {
+      "row": [
+        "ws",
+        {
+          "__bunch__": true,
+          "name": "toolbar",
+          "wstype": "stack",
+          "height": 29,
+          "group": 2,
+          "title": null,
+          "width": 1720,
+          "show_tabs": true,
+          "show_border": false,
+          "scrollable": true,
+          "detachable": false,
+          "tabpos": "top",
+          "use_toolbar": false,
+          "xpos": -1,
+          "ypos": -1,
+          "spacing": null
+        },
+        []
+      ],
+      "stretch": 0
+    },
+    {
+      "row": [
+        "hbox",
+        {
+          "__bunch__": true,
+          "name": "status",
+          "height": 22,
+          "width": 1720,
+          "xpos": -1,
+          "ypos": -1,
+          "spacing": null
+        }
+      ],
+      "stretch": 0
+    }
+  ]
+]
