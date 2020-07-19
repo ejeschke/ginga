@@ -14,6 +14,7 @@ from . import Callback
 from . import Bunch
 
 unset_value = "^^UNSET^^"
+regex_assign = re.compile(r'^([a-zA-Z_]\w*)\s*=\s*(\S.+)$')
 regex_array = re.compile(r'^\s*array\((\[.*\])\s*(,\s*dtype=(.+)\s*)?\)\s*$',
                          flags=re.DOTALL)
 
@@ -219,40 +220,15 @@ class SettingGroup(object):
 
     def load(self, onError='raise', buf=None):
         try:
-            d = {}
             if buf is None:
                 with open(self.preffile, 'r') as in_f:
                     buf = in_f.read()
-            for line_no, line in enumerate(buf.split('\n')):
-                line = line.strip()
-                # skip comments and anything that doesn't look like an
-                # assignment
-                if line.startswith('#') or (not ('=' in line)):
-                    continue
-                else:
-                    try:
-                        i = line.index('=')
-                        key = line[:i].strip()
-                        val_s = line[i + 1:].strip()
-                        match = regex_array.match(val_s)
-                        if match:
-                            data, _x, dtype = match.groups()
-                            # special case for parsing numpy arrays
-                            val = np.asarray(ast.literal_eval(data),
-                                             dtype=dtype)
-                        else:
-                            val = ast.literal_eval(val_s)
-                        d[key] = val
-                    except Exception as e:
-                        if self.logger is not None:
-                            self.logger.warn("Error loading '%s' at line %d: "
-                                             "%s" % (self.preffile, line_no,
-                                                     str(e)))
-                        continue
-
+            d = dict(list(eval_assignments(make_assignments(strip_comments(
+                     buf.split('\n'))))))
             self.set_dict(d)
+
         except Exception as e:
-            errmsg = "Error opening settings file (%s): %s" % (
+            errmsg = "Error loading settings file (%s): %s" % (
                 self.preffile, str(e))
             if onError == 'silent':
                 pass
@@ -278,10 +254,6 @@ class SettingGroup(object):
     def _save(self, out_f, keys, d):
         for key in keys:
             val_s = repr(d[key])
-            match = regex_array.match(val_s)
-            if match:
-                # special processing for numpy arrays
-                val_s = val_s.replace('\n', ' ')
             out_f.write("%s = %s\n" % (key, val_s))
 
     def save(self, keylist=None, output=None):
@@ -363,4 +335,78 @@ class Preferences(object):
     getDict = get_dict
 
 
-#END
+def strip_comments(lines):
+    """Strips all blank lines and comments from `lines`.
+
+    Parameters
+    ----------
+    lines : iterable of str
+        The input file, stripped into lines
+
+    Returns
+    -------
+    results : iterable of (int, str)
+        An iterable containing tuples of (line number, text)
+    """
+    for line_no, line in enumerate(lines):
+        line = line.strip()
+        if len(line) == 0 or line.startswith('#'):
+            continue
+        yield (line_no, line)
+
+
+def make_assignments(results):
+    """Makes line_no, kwd, value string triples.
+
+    Parameters
+    ----------
+    results: iterable of (int, str)
+        Output of `strip_comments()`
+
+    Returns
+    -------
+    results: iterable of (int, str, str)
+        An iterable containing tuples of (line_number, kwd, val_str)
+    """
+    building = False
+    kwd, vals, n = None, [], 0
+    for line_no, line in results:
+        match = regex_assign.match(line)
+        if match:
+            if building:
+                yield n, kwd, ' '.join(vals)
+
+            building = True
+            n = line_no
+            kwd, val = match.groups()
+            vals = [val]
+        else:
+            if building:
+                vals.append(line)
+            else:
+                raise Exception("Unexpected syntax on line {}: {}".format(line_no, line))
+
+
+def eval_assignments(results):
+    """Makes kwd, value pairs.
+
+    Parameters
+    ----------
+    results: iterable of (int, str, str)
+        Output of `make_assignments()`
+
+    Returns
+    -------
+    results: iterable of (str, val)
+        An iterable containing tuples of (kwd, val)
+    """
+    for line_no, kwd, val_s in results:
+        match = regex_array.match(val_s)
+        if match:
+            data, _x, dtype = match.groups()
+            # special case for parsing numpy arrays
+            val = np.asarray(ast.literal_eval(data), dtype=dtype)
+        else:
+            val = ast.literal_eval(val_s)
+
+        yield kwd, val
