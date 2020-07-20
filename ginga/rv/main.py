@@ -305,7 +305,7 @@ class ReferenceViewer(object):
         logger = log.get_logger(name='ginga', options=options)
 
         if options.basedir is not None:
-            paths.ginga_home = options.basedir
+            paths.ginga_home = os.path.expanduser(options.basedir)
 
         # Get settings (preferences)
         basedir = paths.ginga_home
