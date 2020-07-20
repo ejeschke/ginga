@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 3.1.0 (unreleased)
+Ver 3.1.0 (2020-07-20)
 ======================
 - Zoom and Pan plugins refactored. Now shows graphical overlays.
 - Improved performance of rendering when flipping, swapping axes or
