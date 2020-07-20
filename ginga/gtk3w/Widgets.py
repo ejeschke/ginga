@@ -103,6 +103,7 @@ class WidgetBase(Callback.Callbacks):
 
     def delete(self):
         self.widget.destroy()
+        self.widget = None
 
     def show(self):
         # self.widget.show()

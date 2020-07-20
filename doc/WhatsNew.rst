@@ -27,6 +27,8 @@ Ver 3.1.0 (unreleased)
   wrong results to be displayed in PixTable
 - New ability to specify alternative Ginga home directories, with custom
   layouts and plugin configurations (--basedir option)
+- Fix for a bug that caused a crash when closing the Help window with
+  Qt/PySide backend
 
 Ver 3.0.0 (2019-09-20)
 ======================
