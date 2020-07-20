@@ -417,7 +417,7 @@ class BaseImage(ViewerObjectBase):
         # calculate pixel containment mask in bbox
         yi = np.mgrid[y1:y2 + 1].reshape(-1, 1)
         xi = np.mgrid[x1:x2 + 1].reshape(1, -1)
-        pts = np.asarray((xi, yi)).T
+        pts = np.asarray((xi, yi), dtype=object).T
         contains = shape_obj.contains_pts(pts)
 
         view = np.s_[y1:y2 + 1, x1:x2 + 1]
