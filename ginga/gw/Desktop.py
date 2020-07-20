@@ -679,7 +679,7 @@ class Desktop(Callback.Callbacks):
         return layout
 
     def build_desktop(self, layout, lo_file=None, widget_dict=None):
-        if lo_file is not None:
+        if lo_file is not None and os.path.exists(lo_file):
             alt_layout = layout
             try:
                 layout = self.read_layout_conf(lo_file)
