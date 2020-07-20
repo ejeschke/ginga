@@ -14,7 +14,7 @@ from . import Callback
 from . import Bunch
 
 unset_value = "^^UNSET^^"
-regex_assign = re.compile(r'^([a-zA-Z_]\w*)\s*=\s*(\S.+)$')
+regex_assign = re.compile(r'^([a-zA-Z_]\w*)\s*=\s*(\S.*)$')
 regex_array = re.compile(r'^\s*array\((\[.*\])\s*(,\s*dtype=(.+)\s*)?\)\s*$',
                          flags=re.DOTALL)
 
