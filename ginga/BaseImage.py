@@ -392,7 +392,7 @@ class BaseImage(ViewerObjectBase):
         """
         wd, ht = self.get_size()
         xi, yi = np.meshgrid(range(0, wd), range(0, ht))
-        pts = np.array((xi, yi)).T.reshape(-1, 2)
+        pts = np.array((xi, yi)).T
         contains = shape_obj.contains_pts(pts)
         return contains
 
@@ -415,7 +415,7 @@ class BaseImage(ViewerObjectBase):
 
         # calculate pixel containment mask in bbox
         xi, yi = np.meshgrid(range(x1, x2 + 1), range(y1, y2 + 1))
-        pts = np.array((xi, yi)).T.reshape(-1, 2)
+        pts = np.array((xi, yi)).T
         contains = shape_obj.contains_pts(pts)
 
         view = np.s_[y1:y2 + 1, x1:x2 + 1]

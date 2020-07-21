@@ -380,7 +380,7 @@ class ViewerImageProxy:
 
         # calculate pixel containment mask in bbox
         xi, yi = np.meshgrid(range(x1, x2 + 1), range(y1, y2 + 1))
-        pts = np.array((xi, yi)).T.reshape(-1, 2)
+        pts = np.array((xi, yi)).T
 
         contains = shape_obj.contains_pts(pts)
 
