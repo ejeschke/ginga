@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 3.2.dev (unreleased)
+========================
+- Fixed some numpy deprecation warnings with numpy 1.19.0
+
 Ver 3.1.0 (2020-07-20)
 ======================
 - Zoom and Pan plugins refactored. Now shows graphical overlays.

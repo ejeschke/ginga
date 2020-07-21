@@ -40,7 +40,7 @@ def get_mean(data_np):
     i = np.isfinite(data_np)
     if not np.any(i):
         return np.nan
-    return np.mean(data_np[i])
+    return np.ma.mean(data_np[i])
 
 
 def get_median(data_np):
@@ -48,7 +48,7 @@ def get_median(data_np):
     i = np.isfinite(data_np)
     if not np.any(i):
         return np.nan
-    return np.median(data_np[i])
+    return np.ma.median(data_np[i])
 
 
 class IQCalcError(Exception):

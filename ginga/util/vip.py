@@ -379,9 +379,9 @@ class ViewerImageProxy:
             y1, y2 = max(xy_mn[1], y1), min(y2, xy_mx[1] - 1)
 
         # calculate pixel containment mask in bbox
-        yi = np.mgrid[y1:y2 + 1].reshape(-1, 1)
-        xi = np.mgrid[x1:x2 + 1].reshape(1, -1)
-        pts = np.asarray((xi, yi)).T
+        xi, yi = np.meshgrid(range(x1, x2 + 1), range(y1, y2 + 1))
+        pts = np.array((xi, yi)).T.reshape(-1, 2)
+
         contains = shape_obj.contains_pts(pts)
 
         view = np.s_[y1:y2 + 1, x1:x2 + 1]
