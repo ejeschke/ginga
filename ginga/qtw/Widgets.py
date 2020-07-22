@@ -1511,6 +1511,12 @@ class Splitter(ContainerBase):
         super(Splitter, self).__init__()
 
         w = QtGui.QSplitter()
+        # NOTE: need to style splitter due to lack of any visual
+        # indicator on Linux and Windows
+        w.setStyleSheet(
+            """
+            QSplitter::handle { image: url(%s/splitter.png); }
+            """ % (icondir))
         self.orientation = orientation
         if orientation == 'horizontal':
             w.setOrientation(QtCore.Qt.Horizontal)
