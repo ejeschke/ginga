@@ -319,16 +319,7 @@ class PolygonMixin(object):
                         y_arr.astype(np.float, copy=False))
         xa, ya = x_arr, y_arr
 
-        # promote input arrays dimension cardinality, if necessary
-        promoted = False
-        if len(xa.shape) == 1:
-            xa = xa.reshape(1, -1)
-            promoted = True
-        if len(ya.shape) == 1:
-            ya = ya.reshape(-1, 1)
-            promoted = True
-
-        result = np.empty((ya.size, xa.size), dtype=np.bool)
+        result = np.empty(y_arr.shape, dtype=np.bool)
         result.fill(False)
 
         points = self.get_data_points()
@@ -354,10 +345,6 @@ class PolygonMixin(object):
             idx = np.nonzero(tf)
             result[idx] ^= cross[idx]
             xj, yj = xi, yi
-
-        if promoted:
-            # de-promote result
-            result = result[np.eye(len(y_arr), len(x_arr), dtype=np.bool)]
 
         return result
 

@@ -461,7 +461,7 @@ class FWHMPlot(Plot):
             if cutout_data is None:
                 cutout_data, x1, y1, x2, y2 = image.cutout_radius(x, y, radius)
 
-            skybg = np.median(cutout_data)
+            skybg = np.ma.median(cutout_data)
             self.logger.debug("cutting x=%d y=%d r=%d med=%f" % (
                 x, y, radius, skybg))
 

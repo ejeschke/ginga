@@ -391,9 +391,8 @@ class BaseImage(ViewerObjectBase):
         Return full mask where True marks pixels within the given shape.
         """
         wd, ht = self.get_size()
-        yi = np.mgrid[:ht].reshape(-1, 1)
-        xi = np.mgrid[:wd].reshape(1, -1)
-        pts = np.asarray((xi, yi)).T
+        xi, yi = np.meshgrid(range(0, wd), range(0, ht))
+        pts = np.array((xi, yi)).T
         contains = shape_obj.contains_pts(pts)
         return contains
 
@@ -415,9 +414,8 @@ class BaseImage(ViewerObjectBase):
             y1, y2 = max(0, y1), min(y2, ht - 1)
 
         # calculate pixel containment mask in bbox
-        yi = np.mgrid[y1:y2 + 1].reshape(-1, 1)
-        xi = np.mgrid[x1:x2 + 1].reshape(1, -1)
-        pts = np.asarray((xi, yi)).T
+        xi, yi = np.meshgrid(range(x1, x2 + 1), range(y1, y2 + 1))
+        pts = np.array((xi, yi)).T
         contains = shape_obj.contains_pts(pts)
 
         view = np.s_[y1:y2 + 1, x1:x2 + 1]
