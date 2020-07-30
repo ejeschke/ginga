@@ -32,14 +32,6 @@ except ImportError:
     except ImportError:
         pass
 
-# How about pyvo?
-have_pyvo = False
-try:
-    import pyvo
-    have_pyvo = True
-except ImportError:
-    pass
-
 
 class Star(object):
     def __init__(self, **kwdargs):
@@ -139,9 +131,10 @@ class AstroPyCatalogServer(object):
             warnings.simplefilter('ignore')
             results = conesearch.conesearch(
                 c, radius_deg * units.degree, catalog_db=self.full_name,
-                verbose=False)
+                verbose=False, return_astropy_table=True,
+                use_names_over_ids=False)
         time_elapsed = time.time() - time_start
-        numsources = results.array.size
+        numsources = len(results)
         self.logger.info("Found %d sources in %.2f sec" % (
             numsources, time_elapsed))
 
@@ -149,15 +142,14 @@ class AstroPyCatalogServer(object):
         # particulars from (ra, dec, id, magnitude)
         mags = []
         ext = {}
-        fields = results.array.dtype.names
+        fields = results.colnames
         for name in fields:
-            ucd = results.get_field_by_id(name).ucd
-            ucd = str(ucd).lower()
-            if ucd == 'id_main':
+            ucd = name.lower()
+            if ucd == 'htmid':
                 ext['id'] = name
-            elif ucd == 'pos_eq_ra_main':
+            elif ucd == 'ra':
                 ext['ra'] = name
-            elif ucd == 'pos_eq_dec_main':
+            elif ucd == 'dec':
                 ext['dec'] = name
             if ('phot_' in ucd) or ('phot.' in ucd):
                 mags.append(name)
@@ -169,9 +161,8 @@ class AstroPyCatalogServer(object):
 
         # prepare the result list
         starlist = []
-        arr = results.array
         for i in range(numsources):
-            source = dict(zip(fields, arr[i]))
+            source = dict(zip(fields, results[i]))
             starlist.append(self.toStar(source, ext, magfield))
 
         # metadata about the list
@@ -268,214 +259,6 @@ class AstroQueryImageServer(object):
 
         # TODO: download file
         fitspath = url
-
-        # explicit return
-        return fitspath
-
-
-class PyVOCatalogServer(object):
-
-    def __init__(self, logger, full_name, key, url, description):
-        if not have_pyvo:
-            raise ImportError('pyvo not found, please install pyvo')
-
-        self.logger = logger
-        self.full_name = full_name
-        self.short_name = key
-        self.description = description
-        self.kind = 'pyvo-catalog'
-        self.url = url
-
-        # For compatibility with URL catalog servers
-        self.params = {}
-        count = 0
-        for label, key in (('RA', 'ra'), ('DEC', 'dec'), ('Radius', 'r')):
-            self.params[key] = Bunch.Bunch(name=key, convert=str,
-                                           label=label, order=count)
-            count += 1
-
-    def getParams(self):
-        return self.params
-
-    def toStar(self, data, ext, magfield):
-        try:
-            mag = float(data[magfield])
-        except Exception:
-            mag = 0.0
-
-        # Make sure we have at least these Ginga standard fields defined
-        d = {'name': data[ext['id']],
-             'ra_deg': float(data[ext['ra']]),
-             'dec_deg': float(data[ext['dec']]),
-             'mag': mag,
-             'preference': 0.0,
-             'priority': 0,
-             'description': 'fake magnitude'}
-        data.update(d)
-        data['ra'] = wcs.raDegToString(data['ra_deg'])
-        data['dec'] = wcs.decDegToString(data['dec_deg'])
-        return Star(**data)
-
-    def search(self, **params):
-        """
-        For compatibility with generic star catalog search.
-        """
-
-        self.logger.debug("search params=%s" % (str(params)))
-        ra, dec = params['ra'], params['dec']
-        if not (':' in ra):
-            # Assume RA and DEC are in degrees
-            ra_deg = float(ra)
-            dec_deg = float(dec)
-        else:
-            # Assume RA and DEC are in standard string notation
-            ra_deg = wcs.hmsStrToDeg(ra)
-            dec_deg = wcs.dmsStrToDeg(dec)
-
-        # Convert to degrees for search radius
-        radius_deg = float(params['r']) / 60.0
-        # radius_deg = float(params['r'])
-
-        # initialize our query object with the service's base URL
-        query = pyvo.scs.SCSQuery(self.url)
-        query.ra = ra_deg
-        query.dec = dec_deg
-        query.radius = radius_deg
-        self.logger.info("Will query: %s" % query.getqueryurl(True))
-
-        time_start = time.time()
-        results = query.execute()
-        time_elapsed = time.time() - time_start
-
-        numsources = len(results)
-        self.logger.info("Found %d sources in %.2f sec" % (
-            numsources, time_elapsed))
-
-        # Scan the returned fields to find ones we need to extract
-        # particulars from (ra, dec, id, magnitude)
-        mags = []
-        ext = {}
-        fields = results.fielddesc()
-        for field in fields:
-            ucd = str(field.ucd).lower()
-            if ucd == 'id_main':
-                ext['id'] = field.name
-            elif ucd == 'pos_eq_ra_main':
-                ext['ra'] = field.name
-            elif ucd == 'pos_eq_dec_main':
-                ext['dec'] = field.name
-            if ('phot_' in ucd) or ('phot.' in ucd):
-                mags.append(field.name)
-        self.logger.debug("possible magnitude fields: %s" % str(mags))
-        if len(mags) > 0:
-            magfield = mags[0]
-        else:
-            magfield = None
-
-        self.logger.info("Found %d sources" % len(results))
-
-        starlist = []
-        for source in results:
-            data = dict(source.items())
-            starlist.append(self.toStar(data, ext, magfield))
-
-        # metadata about the list
-        columns = [('Name', 'name'),
-                   ('RA', 'ra'),
-                   ('DEC', 'dec'),
-                   ('Mag', 'mag'),
-                   ('Preference', 'preference'),
-                   ('Priority', 'priority'),
-                   ('Description', 'description'),
-                   ]
-        # Append extra columns returned by search to table header
-        cols = list(source.keys())
-        cols.remove(ext['ra'])
-        cols.remove(ext['dec'])
-        cols.remove(ext['id'])
-        columns.extend(zip(cols, cols))
-
-        # which column is the likely one to color source circles
-        colorCode = 'Mag'
-
-        info = Bunch.Bunch(columns=columns, color=colorCode)
-        return starlist, info
-
-    def get_catalogs(self):
-        return conesearch.list_catalogs()
-
-
-class PyVOImageServer(object):
-
-    def __init__(self, logger, full_name, key, url, description):
-        if not have_pyvo:
-            raise ImportError('pyvo not found, please install pyvo')
-
-        self.logger = logger
-        self.full_name = full_name
-        self.short_name = key
-        self.description = description
-        self.kind = 'pyvo-image'
-        self.url = url
-
-        # For compatibility with other Ginga catalog servers
-        self.params = {}
-        count = 0
-        for label, key in (('RA', 'ra'), ('DEC', 'dec'),
-                           ('Width', 'width'), ('Height', 'height')):
-            self.params[key] = Bunch.Bunch(name=key, convert=str,
-                                           label=label, order=count)
-            count += 1
-
-    def getParams(self):
-        return self.params
-
-    # TODO: dstpath provides the pathname for storing the image
-    def search(self, dstpath, **params):
-        """
-        For compatibility with generic image catalog search.
-        """
-
-        self.logger.debug("search params=%s" % (str(params)))
-        ra, dec = params['ra'], params['dec']
-        if not (':' in ra):
-            # Assume RA and DEC are in degrees
-            ra_deg = float(ra)
-            dec_deg = float(dec)
-        else:
-            # Assume RA and DEC are in standard string notation
-            ra_deg = wcs.hmsStrToDeg(ra)
-            dec_deg = wcs.dmsStrToDeg(dec)
-
-        # Convert to degrees for search
-        wd_deg = float(params['width']) / 60.0
-        ht_deg = float(params['height']) / 60.0
-        # wd_deg = float(params['width'])
-        # ht_deg = float(params['height'])
-
-        # initialize our query object with the service's base URL
-        query = pyvo.sia.SIAQuery(self.url)
-        query.ra = ra_deg
-        query.dec = dec_deg
-        query.size = (wd_deg, ht_deg)
-        query.format = 'image/fits'
-        self.logger.info("Will query: %s" % query.getqueryurl(True))
-
-        results = query.execute()
-        if len(results) > 0:
-            self.logger.info("Found %d images" % len(results))
-        else:
-            self.logger.warning("Found no images in this area" % len(results))
-            return None
-
-        # For now, we pick the first one found
-
-        # REQUIRES FIX IN PYVO:
-        # imfile = results[0].cachedataset(dir=tempfile.gettempdir())
-        #
-        # Workaround:
-        fitspath = results[0].make_dataset_filename(dir=tempfile.gettempdir())
-        results[0].cachedataset(fitspath)
 
         # explicit return
         return fitspath
