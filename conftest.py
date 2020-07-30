@@ -1,5 +1,3 @@
-import os
-
 try:
     from pytest_astropy_header.display import PYTEST_HEADER_MODULES, TESTED_VERSIONS
 except ImportError:
@@ -7,7 +5,7 @@ except ImportError:
     PYTEST_HEADER_MODULES = {}
 
 try:
-    from .version import version
+    from ginga import __version__ as version
 except ImportError:
     version = 'unknown'
 
@@ -22,5 +20,4 @@ enable_deprecations_as_exceptions()
 PYTEST_HEADER_MODULES['Astropy'] = 'astropy'
 PYTEST_HEADER_MODULES['scikit-image'] = 'skimage'
 
-packagename = os.path.basename(os.path.dirname(__file__))
-TESTED_VERSIONS[packagename] = version
+TESTED_VERSIONS['ginga'] = version
