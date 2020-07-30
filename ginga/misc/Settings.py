@@ -386,6 +386,9 @@ def make_assignments(results):
             else:
                 raise Exception("Unexpected syntax on line {}: {}".format(line_no, line))
 
+    if len(vals) > 0:
+        yield n, kwd, ' '.join(vals)
+
 
 def eval_assignments(results):
     """Makes kwd, value pairs.
