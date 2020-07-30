@@ -69,11 +69,11 @@ jobs:
     - name: Install and build
       run: |
         python -m pip install --upgrade pip setuptools
-        python -m pip install PyQt5 numpy==1.15 'astropy<4'
+        python -m pip install PyQt5 numpy==1.16
         python -m pip install -e .[test]
     - name: Install Qt
       uses: jurplel/install-qt-action@8ffcd60
-    - name: Test without optional deps
+    - name: Run tests
       run: pytest --pyargs ginga doc
 
   dev_deps_tests:
@@ -95,5 +95,5 @@ jobs:
         python -m pip install -e .[test]
     - name: Install Qt
       uses: jurplel/install-qt-action@8ffcd60
-    - name: Test with dev deps
+    - name: Run tests
       run: pytest --pyargs ginga doc
