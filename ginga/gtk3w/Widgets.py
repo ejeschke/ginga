@@ -95,7 +95,6 @@ class WidgetBase(Callback.Callbacks):
     def get_pos(self):
         rect = self.widget.get_allocation()
         x, y = rect.x, rect.y
-        # width, height = rect.width, rect.height
         return x, y
 
     def get_app(self):
@@ -1431,27 +1430,11 @@ class MDIWidget(ContainerBase):
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
-        child_w = child.get_widget()
-        label = Gtk.Label(title)
-        subwin = self.mdi_w.append_page(child_w, label)
-        # self.mdi_w.show_all()
-        # attach title to child
-        child.extdata.tab_title = title
-
-        # does child have a previously saved size
-        size = child.extdata.get('mdi_size', None)
-        if size is not None:
-            wd, ht = size
-            self.mdi_w.resize_page(subwin, wd, ht)
-
-        # does child have a previously saved position
-        pos = child.extdata.get('mdi_pos', None)
-        if pos is not None:
-            x, y = pos
-            self.mdi_w.move_page(subwin, x, y)
-
+        subwin = MDIWindow(self, child, title=title)
         subwin.add_callback('close', self._window_close, child)
+
         self.make_callback('widget-added', child)
+        return subwin
 
     def _remove(self, childw, delete=False):
         self.mdi_w.remove(childw)
@@ -1508,6 +1491,84 @@ class MDIWidget(ContainerBase):
 
     def use_tabs(self, tf):
         pass
+
+
+class MDIWindow(WidgetBase):
+    def __init__(self, parent, child, title=''):
+        """NOTE: this widget is not meant to be instantiated except *inside*
+        of MDIWidget implementation.
+        """
+        WidgetBase.__init__(self)
+        self.parent = parent
+        mdi_w = parent.mdi_w
+
+        # does child have a previously saved size?
+        size = child.extdata.get('mdi_size', None)
+        if size is not None:
+            wd, ht = size
+            child.resize(wd, ht)
+
+        child_w = child.get_widget()
+        label = Gtk.Label(title)
+        subwin = GtkHelp.MDISubWindow(child_w, label)
+        self.widget = subwin
+        # attach title to child
+        child.extdata.tab_title = title
+
+        self.enable_callback('close')
+        subwin.add_callback('close', self._window_close)
+
+        # does child have a previously saved position?
+        pos = child.extdata.get('mdi_pos', None)
+        if pos is not None:
+            subwin.x, subwin.y = pos
+
+        mdi_w.add_subwin(subwin)
+
+    def get_pos(self):
+        return self.widget.x, self.widget.y
+
+    def raise_(self):
+        self.widget.raise_()
+
+    def lower(self):
+        self.widget.lower()
+
+    def focus(self):
+        self.widget.focus()
+
+    def move(self, x, y):
+        self.parent.mdi_w.move_page(self.widget, x, y)
+
+    def resize(self, wd, ht):
+        self.parent.mdi_w.resize_page(self.widget, wd, ht)
+
+    def maximize(self):
+        self.parent.mdi_w.maximize_page(self.widget)
+
+    def unmaximize(self):
+        raise WidgetError("this call not available for MDIWindow")
+
+    def fullscreen(self):
+        raise WidgetError("this call not available for MDIWindow")
+
+    def unfullscreen(self):
+        raise WidgetError("this call not available for MDIWindow")
+
+    def is_fullscreen(self):
+        raise WidgetError("this call not available for MDIWindow")
+
+    def iconify(self):
+        self.parent.mdi_w.minimize_page(self.widget)
+
+    def uniconify(self):
+        raise WidgetError("this call not available for MDIWindow")
+
+    def set_title(self, title):
+        self.widget.label.set_text(title)
+
+    def _window_close(self, subwin):
+        return self.make_callback('close')
 
 
 class ScrollArea(ContainerBase):
@@ -1932,64 +1993,56 @@ class TopLevelMixin(object):
 
     def raise_(self):
         window = self.widget.get_window()
-        window.raise_()
+        if window is not None:
+            window.raise_()
 
     def lower(self):
         window = self.widget.get_window()
-        if window is None:
-            return
-        window.lower()
+        if window is not None:
+            window.lower()
 
     def focus(self):
         window = self.widget.get_window()
-        if window is None:
-            return
-        window.focus()
+        if window is not None:
+            window.focus()
 
     def move(self, x, y):
         window = self.widget.get_window()
-        if window is None:
-            return
-        window.move(x, y)
+        if window is not None:
+            window.move(x, y)
 
     def maximize(self):
         window = self.widget.get_window()
-        if window is None:
-            return
-        window.maximize()
+        if window is not None:
+            window.maximize()
 
     def unmaximize(self):
         window = self.widget.get_window()
-        if window is None:
-            return
-        window.unmaximize()
+        if window is not None:
+            window.unmaximize()
 
     def fullscreen(self):
         window = self.widget.get_window()
-        if window is None:
-            return
-        window.fullscreen()
+        if window is not None:
+            window.fullscreen()
 
     def unfullscreen(self):
         window = self.widget.get_window()
-        if window is None:
-            return
-        window.unfullscreen()
+        if window is not None:
+            window.unfullscreen()
 
     def is_fullscreen(self):
         return self._fullscreen
 
     def iconify(self):
         window = self.widget.get_window()
-        if window is None:
-            return
-        window.iconify()
+        if window is not None:
+            window.iconify()
 
     def uniconify(self):
         window = self.widget.get_window()
-        if window is None:
-            return
-        window.deiconify()
+        if window is not None:
+            window.deiconify()
 
     def set_title(self, title):
         self.widget.set_title(title)

@@ -293,7 +293,7 @@ class MDISubWindow(Callback.Callbacks):
         evbox = Gtk.EventBox()
         evbox.add(label)
         modify_bg(evbox, "gray90")
-        self.label = evbox
+        self.label = label
         self.evbox = evbox
         hbox.pack_start(evbox, True, True, 2)
 
@@ -325,12 +325,23 @@ class MDISubWindow(Callback.Callbacks):
         minim.connect('clicked', lambda *args: self.make_callback('minimize'))
         close.connect('clicked', lambda *args: self.make_callback('close'))
 
+    def raise_(self):
+        window = self.frame.get_window()
+        if window is not None:
+            window.raise_()
+
+    def lower(self):
+        window = self.frame.get_window()
+        if window is not None:
+            window.lower()
+
+    def focus(self):
+        self.frame.grab_focus()
+
 
 class MDIWidget(Gtk.Layout):
     """
     Multiple Document Interface type widget for Gtk.
-
-    NOTE: *** This is somewhat of a work in progress! ***
     """
     def __init__(self):
         Gtk.Layout.__init__(self)
@@ -363,9 +374,8 @@ class MDIWidget(Gtk.Layout):
 
         modify_bg(self, "gray50")
 
-    def append_page(self, widget, label):
+    def add_subwin(self, subwin):
 
-        subwin = MDISubWindow(widget, label)
         self.children.append(subwin)
 
         subwin.evbox.connect("button_press_event", self.select_child_cb, subwin)
@@ -373,15 +383,7 @@ class MDIWidget(Gtk.Layout):
         subwin.add_callback('maximize', lambda *args: self.maximize_page(subwin))
         subwin.add_callback('minimize', lambda *args: self.minimize_page(subwin))
 
-        # pick a random spot to place the window initially
-        rect = self.get_allocation()
-        wd, ht = rect.width, rect.height
-        x = random.randint(self.cascade_offset,
-                           max(self.cascade_offset + 10, wd // 2))
-        y = random.randint(self.cascade_offset,
-                           max(self.cascade_offset + 10, ht // 2))
-
-        self.put(subwin.frame, x, y)
+        self.put(subwin.frame, subwin.x, subwin.y)
 
         # note: seem to need a slight delay to let the widget be mapped
         # in order to accurately determine its position and size
@@ -391,6 +393,21 @@ class MDIWidget(Gtk.Layout):
         GObject.timeout_add(1500, self.update_subwin_size, subwin)
 
         self._update_area_size()
+
+    def append_page(self, widget, label):
+
+        subwin = MDISubWindow(widget, label)
+
+        # pick a random spot to place the window initially
+        rect = self.get_allocation()
+        wd, ht = rect.width, rect.height
+        x = random.randint(self.cascade_offset,
+                           max(self.cascade_offset + 10, wd // 2))
+        y = random.randint(self.cascade_offset,
+                           max(self.cascade_offset + 10, ht // 2))
+        subwin.x, subwin.y = x, y
+
+        self.add_subwin(subwin)
         return subwin
 
     def set_tab_reorderable(self, w, tf):
@@ -414,9 +431,7 @@ class MDIWidget(Gtk.Layout):
 
     def set_current_page(self, idx):
         subwin = self.children[idx]
-        #frame = subwin.frame
-        #frame.show()
-        self.raise_widget(subwin)
+        subwin.raise_()
         self.cur_index = idx
 
     def get_current_page(self):
@@ -465,12 +480,7 @@ class MDIWidget(Gtk.Layout):
         subwin.width, subwin.height = wd, ht
 
     def raise_widget(self, subwin):
-        frame = subwin.frame
-        # Hack to bring widget to the top--no documentation on any other
-        # way to accomplish this
-        super(MDIWidget, self).remove(frame)
-        frame.unparent()
-        self.put(frame, subwin.x, subwin.y)
+        subwin.raise_()
 
     def select_child_cb(self, layout, event, subwin):
         x_root, y_root = event.x_root, event.y_root
@@ -679,7 +689,7 @@ class MDIWidget(Gtk.Layout):
                     x, y = j * wd, i * ht
                     self.move_page(subwin, x, y)
 
-                    self.raise_widget(subwin)
+                    subwin.raise_()
 
         self._update_area_size()
 
@@ -687,7 +697,7 @@ class MDIWidget(Gtk.Layout):
         x, y = 0, 0
         for subwin in self.children:
             self.move_page(subwin, x, y)
-            self.raise_widget(subwin)
+            subwin.raise_()
             x += self.cascade_offset
             y += self.cascade_offset
 
@@ -708,7 +718,7 @@ class MDIWidget(Gtk.Layout):
         rect = self.get_allocation()
         wd, ht = rect.width, rect.height
 
-        self.raise_widget(subwin)
+        subwin.raise_()
         self.resize_page(subwin, wd, ht)
         self.move_page(subwin, 0, 0)
 
@@ -726,7 +736,7 @@ class MDIWidget(Gtk.Layout):
 
         self.resize_page(subwin, self.minimized_width, ht)
         self.move_page(subwin, x, height - ht)
-        #self.lower_widget(subwin)
+        subwin.lower()
 
         self._update_area_size()
 

@@ -38,14 +38,15 @@ class Desktop(Callback.Callbacks):
 
     def make_ws(self, name, group=1, show_tabs=True, show_border=False,
                 detachable=False, tabpos=None, scrollable=True,
-                closeable=False, wstype='tabs', use_toolbar=False):
+                closeable=False, wstype='tabs', use_toolbar=False,
+                child_catalog={}):
 
         if (wstype in ('nb', 'ws', 'tabs')) and (not show_tabs):
             wstype = 'stack'
 
         ws = Workspace(name=name, wstype=wstype,
                        group=group, detachable=detachable,
-                       use_toolbar=use_toolbar)
+                       use_toolbar=use_toolbar, child_catalog=child_catalog)
         ws.add_callback('page-switch', self.switch_page_cb)
         ws.add_callback('page-detach', self.page_detach_cb)
         ws.add_callback('page-close', self.page_close_cb)
@@ -347,6 +348,7 @@ class Desktop(Callback.Callbacks):
 
             elif kind == 'ws':
                 group = int(params.group)
+                child_catalog = params.get('child_attribs', {})
                 ws = self.make_ws(params.name, group=group,
                                   show_tabs=params.show_tabs,
                                   show_border=params.show_border,
@@ -354,7 +356,8 @@ class Desktop(Callback.Callbacks):
                                   tabpos=params.tabpos,
                                   wstype=params.wstype,
                                   scrollable=params.scrollable,
-                                  use_toolbar=params.use_toolbar)
+                                  use_toolbar=params.use_toolbar,
+                                  child_catalog=child_catalog)
                 widget = ws.widget
                 # debug(widget)
                 if params.get('default', False):
@@ -639,7 +642,20 @@ class Desktop(Callback.Callbacks):
             if rec.kind in ('ws',):
                 # record ws type
                 # TODO: record positions of subwindows
-                rec.params.update(dict(wstype=rec.ws.wstype))
+                wstype = rec.ws.wstype
+                d = dict(wstype=wstype)
+                cd = dict()
+                for child in rec.ws.nb.get_children():
+                    title = child.extdata.get('tab_title', None)
+                    mdi_pos = child.extdata.get('mdi_pos', (0, 0))
+                    size = child.extdata.get('mdi_size', None)
+                    if size is None:
+                        size = child.get_size()
+                    if title is not None:
+                        cd[title] = dict(title=title, mdi_pos=mdi_pos,
+                                         size=size)
+                d['child_attribs'] = cd
+                rec.params.update(d)
 
             if rec.kind == 'top':
                 # record position for top-level widgets as well
@@ -697,7 +713,7 @@ class Desktop(Callback.Callbacks):
 class Workspace(Widgets.WidgetBase):
 
     def __init__(self, name, wstype='tab', group=0, detachable=False,
-                 use_toolbar=False):
+                 use_toolbar=False, child_catalog={}):
         super(Workspace, self).__init__()
 
         self.name = name
@@ -716,6 +732,7 @@ class Workspace(Widgets.WidgetBase):
         self.wstypes_l = ['tabs', 'grid', 'mdi', 'stack']
         self.extdata = Bunch.Bunch(toolbar=None)
         self.toolbar = None
+        self.child_catalog = child_catalog
 
         if use_toolbar:
             toolbar = Widgets.Toolbar(orientation='horizontal')
@@ -836,10 +853,10 @@ class Workspace(Widgets.WidgetBase):
 
     def configure_wstype(self, wstype):
         old_widget = self.nb
-        self.vbox.remove(old_widget)
-
         # remember which tab was on top
         idx = old_widget.get_index()
+
+        self.vbox.remove(old_widget)
 
         self._set_wstype(wstype)
         self.vbox.add_widget(self.nb, stretch=1)
@@ -848,6 +865,7 @@ class Workspace(Widgets.WidgetBase):
             # TODO: sort by previous index so they get added to the
             # new widget in the same order
             title = child.extdata.get('tab_title', '')
+            child.hide()
             old_widget.remove(child)
             self.nb.add_widget(child, title=title)
             child.show()
@@ -906,7 +924,19 @@ class Workspace(Widgets.WidgetBase):
         self.focus_index()
 
     def add_tab(self, child, title=''):
-        self.nb.add_widget(child, title=title)
+        d = {}
+        if len(title) > 0 and title in self.child_catalog:
+            d = self.child_catalog.get(title, {})
+        w = self.nb.add_widget(child, title=title)
+
+        if self.wstype == 'mdi':
+            mdi_pos = d.get('mdi_pos', None)
+            size = d.get('size', None)
+            if w is not None:
+                if size is not None:
+                    w.resize(*size)
+                if mdi_pos is not None:
+                    w.move(*mdi_pos)
 
     def remove_tab(self, child):
         self.nb.remove(child)

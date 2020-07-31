@@ -1382,79 +1382,16 @@ class MDIWidget(ContainerBase):
                 self.cur_index = -1
             self.make_callback('page-switch', child)
 
-    def _window_resized(self, event, subwin, widget):
-        qsize = event.size()
-        wd, ht = qsize.width(), qsize.height()
-        # save size
-        widget.extdata.mdi_size = (wd, ht)
-        subwin._resizeEvent(event)
-
-    def _window_moved(self, event, subwin, widget):
-        qpos = event.pos()
-        x, y = qpos.x(), qpos.y()
-        # save position
-        widget.extdata.mdi_pos = (x, y)
-        subwin._moveEvent(event)
-
-    def _window_closed(self, event, subwin, widget):
-        nchild = subwin.widget()
-        child = self._native_to_child(nchild)
-
-        # let the application deal with this if desired in page-close
-        # callback
-        event.ignore()
-        # self.widget.removeSubWindow(subwin)
-
+    def _child_close(self, subwin, child):
         self.make_callback('page-close', child)
 
     def add_widget(self, child, title=''):
         self.add_ref(child)
-        child_w = child.get_widget()
-        subwin = QtGui.QMdiSubWindow(self.widget)
-        # NOTE: we fire the page-switch callback by intercepting the
-        # focus event on the subwindow, rather than off of the
-        # subWindowActivated signal because the latter fires if
-        # the widget accepts focus when the mouse enters the window,
-        # whereas this approach one actually has to click in the window
-        # or title bar.
+        subwin = MDIWindow(self, child, title=title)
+        subwin.add_callback('close', self._child_close, child)
 
-        def _focus_cb(event):
-            if event.gotFocus():
-                self._cb_redirect(subwin)
-
-        subwin.focusInEvent = _focus_cb
-        # remove Qt logo from subwindow
-        subwin.setWindowIcon(QIcon(QPixmap(1, 1)))
-        subwin.setWidget(child_w)
-        # attach title to child
-        child.extdata.tab_title = title
-
-        w = self.widget.addSubWindow(subwin)
-        w._closeEvent = w.closeEvent
-        w.closeEvent = lambda event: self._window_closed(event, w, child)
-
-        # does child have a previously saved size
-        size = child.extdata.get('mdi_size', None)
-        if size is not None:
-            wd, ht = size
-            w.resize(wd, ht)
-
-        # does child have a previously saved position
-        pos = child.extdata.get('mdi_pos', None)
-        if pos is not None:
-            x, y = pos
-            w.move(x, y)
-
-        # Monkey-patching the widget to take control of resize and move
-        # events
-        w._resizeEvent = w.resizeEvent
-        w.resizeEvent = lambda event: self._window_resized(event, w, child)
-        w._moveEvent = w.moveEvent
-        w.moveEvent = lambda event: self._window_moved(event, w, child)
-        w.setWindowTitle(title)
-        child_w.show()
-        w.show()
         self.make_callback('widget-added', child)
+        return subwin
 
     def _remove(self, nchild, delete=False):
         subwins = list(self.widget.subWindowList())
@@ -1858,6 +1795,87 @@ class TopLevelMixin(object):
 
     def set_title(self, title):
         self.widget.setWindowTitle(title)
+
+
+class MDIWindow(TopLevelMixin, WidgetBase):
+    def __init__(self, parent, child, title=''):
+        """NOTE: this widget is not meant to be instantiated except *inside*
+        of MDIWidget implementation.
+        """
+        WidgetBase.__init__(self)
+        self.parent = parent
+        w = QtGui.QMdiSubWindow(parent.get_widget())
+        # remove Qt logo from subwindow
+        w.setWindowIcon(QIcon(QPixmap(1, 1)))
+        self.widget = w
+
+        child_w = child.get_widget()
+        w.setWidget(child_w)
+
+        # NOTE: we fire the page-switch callback by intercepting the
+        # focus event on the subwindow, rather than off of the
+        # subWindowActivated signal because the latter fires if
+        # the widget accepts focus when the mouse enters the window,
+        # whereas this approach one actually has to click in the window
+        # or title bar.
+
+        def _focus_cb(event):
+            if event.gotFocus():
+                self.parent._cb_redirect(self.widget)
+
+        parent_w = parent.get_widget()
+        parent_w.addSubWindow(w)
+
+        w.focusInEvent = _focus_cb
+        # Monkey-patching the widget to take control of resize and move
+        # events
+        w._resizeEvent = w.resizeEvent
+        w.resizeEvent = lambda event: self._window_resized(event, w, child)
+        w._moveEvent = w.moveEvent
+        w.moveEvent = lambda event: self._window_moved(event, w, child)
+        w._closeEvent = w.closeEvent
+        w.closeEvent = lambda event: self._window_closed(event, w, child)
+        # attach title to child
+        child.extdata.tab_title = title
+
+        TopLevelMixin.__init__(self, title=title)
+
+        # does child have a previously saved size
+        size = child.extdata.get('mdi_size', None)
+        if size is not None:
+            wd, ht = size
+            w.resize(wd, ht)
+
+        # does child have a previously saved position
+        pos = child.extdata.get('mdi_pos', None)
+        if pos is not None:
+            x, y = pos
+            w.move(x, y)
+
+        child.show()
+        w.show()
+
+    def _window_resized(self, event, subwin, child):
+        qsize = event.size()
+        wd, ht = qsize.width(), qsize.height()
+        # save size into child widget metadata
+        child.extdata.mdi_size = (wd, ht)
+        subwin._resizeEvent(event)
+
+    def _window_moved(self, event, subwin, child):
+        qpos = event.pos()
+        x, y = qpos.x(), qpos.y()
+        # save position into child widget metadata
+        child.extdata.mdi_pos = (x, y)
+        subwin._moveEvent(event)
+
+    def _window_closed(self, event, subwin, widget):
+        # let the application deal with this if desired in page-close
+        # callback
+        event.ignore()
+        # self.widget.removeSubWindow(subwin)
+
+        self.make_callback('close')
 
 
 class TopLevel(TopLevelMixin, ContainerBase):
