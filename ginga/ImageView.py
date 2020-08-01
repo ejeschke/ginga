@@ -132,7 +132,7 @@ class ImageViewBase(Callback.Callbacks):
         self.t_.add_defaults(autocuts='override', autocut_method='zscale',
                              autocut_params=[])
         for name in ('autocut_method', 'autocut_params'):
-            self.t_.get_setting(name).add_callback('set', self.auto_levels_cb)
+            self.t_.get_setting(name).add_callback('set', self.autocut_params_cb)
 
         # for zooming
         self.t_.add_defaults(zoomlevel=1.0, zoom_algorithm='step',
@@ -2337,17 +2337,18 @@ class ImageViewBase(Callback.Callbacks):
         if self.t_['autocuts'] == 'once':
             self.t_.set(autocuts='off')
 
-    def auto_levels_cb(self, setting, value):
+    def autocut_params_cb(self, setting, value):
         """Handle callback related to changes in auto-cut levels."""
         # Did we change the method?
-        method = self.t_['autocut_method']
-        params = self.t_.get('autocut_params', [])
-        params = dict(params)
+        if setting.name == 'autocut_method':
+            method = self.t_['autocut_method']
+            if method != str(self.autocuts):
+                ac_class = AutoCuts.get_autocuts(method)
+                self.autocuts = ac_class(self.logger)
 
-        if method != str(self.autocuts):
-            ac_class = AutoCuts.get_autocuts(method)
-            self.autocuts = ac_class(self.logger, **params)
-        else:
+        elif setting.name == 'autocut_params':
+            params = self.t_.get('autocut_params', [])
+            params = dict(params)
             self.autocuts.update_params(**params)
 
         # Redo the auto levels
@@ -2407,8 +2408,13 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.logger.debug("Setting autocut params method=%s params=%s" % (
             method, str(params)))
+        # NOTE: we need to do them sequentially in this order because
+        # if params is set before method, they might be some parameters
+        # that are incompatible with the current method. We want to be sure
+        # the method is set first
+        self.t_.set(autocut_method=method, autocut_params=[])
         params = list(params.items())
-        self.t_.set(autocut_method=method, autocut_params=params)
+        self.t_.set(autocut_params=params)
 
     def get_autocut_methods(self):
         """Same as :meth:`ginga.AutoCuts.AutoCutsBase.get_algorithms`."""
