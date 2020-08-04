@@ -1,5 +1,5 @@
 #
-# catalog.py -- DSS and star catalog interfaces for the Ginga reference viewer
+# catalog.py -- image and star catalog interfaces for Ginga
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
@@ -15,30 +15,21 @@ from urllib.error import URLError, HTTPError
 from ginga.misc import Bunch
 from ginga.util import wcs
 
-# star_attrs = ('name', 'ra', 'dec', 'ra_deg', 'dec_deg', 'mag', 'preference',
-#               'priority', 'flag', 'b_r', 'dst', 'description')
+from astropy import coordinates, units
 
 # Do we have astroquery >=0.3.5 installed?
 have_astroquery = False
 try:
-    from astropy import coordinates, units
     from astroquery.vo_conesearch import conesearch
     have_astroquery = True
 except ImportError:
-    try:  # Backward-compatibility for astropy < 2.0
-        from astropy import coordinates, units
-        from astropy.vo.client import conesearch
-        have_astroquery = True
-    except ImportError:
-        pass
+    pass
 
 
 class Star(object):
     def __init__(self, **kwdargs):
         starInfo = {}
         starInfo.update(kwdargs)
-        # for attrname in star_attrs:
-        #     starInfo[attrname] = kwdargs.get(attrname)
         self.starInfo = starInfo
 
     def __getitem__(self, key):
@@ -55,21 +46,20 @@ class Star(object):
         return key in self.starInfo
 
 
-# TODO: Deprecate this class name and replace with something that reflects
-#       Cone Search in Astroquery.
-class AstroPyCatalogServer(object):
+class AstroQueryVOCatalogServer(object):
+    """For queries using the `astroquery.vo.conesearch` function."""
 
-    def __init__(self, logger, full_name, key, url, description):
+
+    def __init__(self, logger, full_name, key, mapping, description):
         if not have_astroquery:
-            raise ImportError('astroquery or astropy.vo (deprecated) not found, '
-                              'please install astroquery')
+            raise ImportError("'astroquery' not found, please install it")
 
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
+        self.mapping = mapping
         self.description = description
         self.kind = 'astropy.vo-catalog'
-        self.url = url
 
         # For compatibility with URL catalog servers
         self.params = {}
@@ -144,14 +134,13 @@ class AstroPyCatalogServer(object):
         ext = {}
         fields = results.colnames
         for name in fields:
-            ucd = name.lower()
-            if ucd == 'htmid':
+            if name == self.mapping['id']:
                 ext['id'] = name
-            elif ucd == 'ra':
+            elif name == self.mapping['ra']:
                 ext['ra'] = name
-            elif ucd == 'dec':
+            elif name == self.mapping['dec']:
                 ext['dec'] = name
-            if ('phot_' in ucd) or ('phot.' in ucd):
+            if name in self.mapping['mag']:
                 mags.append(name)
         self.logger.debug("possible magnitude fields: %s" % str(mags))
         if len(mags) > 0:
@@ -191,6 +180,7 @@ class AstroPyCatalogServer(object):
 
 
 class AstroQueryImageServer(object):
+    """For queries using the `astroquery.vo.conesearch` function."""
 
     def __init__(self, logger, full_name, key, querymod, description):
         if not have_astroquery:
@@ -203,7 +193,7 @@ class AstroQueryImageServer(object):
         self.kind = 'astroquery-image'
         self.querymod = querymod
 
-        # For compatibility with other Ginga catalog servers
+        # For compatibility with other Ginga image servers
         self.params = {}
         count = 0
         for label, key in (('RA', 'ra'), ('DEC', 'dec'),
@@ -368,21 +358,6 @@ class URLServer(object):
             return in_f.read()
 
     def search(self, filepath, **params):
-
-        # values = urllib.urlencode(params)
-        # if self.reqtype == 'get':
-        #     url = self.base_url + '?' + values
-        #     req = Request(url)
-
-        # elif self.reqtype == 'post':
-        #     url = self.base_url
-        #     req = Request(self.base_url, values)
-
-        # else:
-        #     raise Exception(
-        #         "Don't know how to handle a request of type '%s'" % (
-        #             self.reqtype))
-
         url = self.base_url % params
 
         self.fetch(url, filepath=filepath)

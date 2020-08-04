@@ -9,39 +9,32 @@ A plugin for plotting object locations from a catalog on an image.
 channel.  An instance can be opened for each channel.
 
 **Usage**
-
-Before ``Catalogs`` can be used, you need to define at least one catalog or
-image server to be queried in ``ginga_config.py``. Here is an example for
-defining three cone search catalogs for guide stars::
-
-        def pre_gui_config(ginga):
-            from ginga.util.catalog import AstroPyCatalogServer
-
-            # Add Cone Search services
-            catalogs = [
-                ('The HST Guide Star Catalog, Version 1.2 (Lasker+ 1996) 1',
-                 'GSC_1.2'),
-                ('The PMM USNO-A1.0 Catalogue (Monet 1997) 1', 'USNO_A1'),
-                ('The USNO-A2.0 Catalogue (Monet+ 1998) 1', 'USNO_A2'),
-            ]
-            bank = ginga.get_ServerBank()
-            for longname, shortname in catalogs:
-                obj = AstroPyCatalogServer(
-                    ginga.logger, longname, shortname, '', shortname)
-                bank.addCatalogServer(obj)
-
-        def post_gui_config(ginga):
-            pass
-
-Then, start Ginga and then start the ``Catalogs`` local plugin from the
-channel you want to perform searchs on. You will see the catalogs listed
-in a drop-down menu on the plugin GUI.
-
 Draw a shape on the displayed image and adjust search parameters as desired.
 When you are ready, press on the button to perform the search.
 When search results are available, they will be displayed on the image and
 also listed in a table on the plugin GUI. You can click on either the table
 or the image to highlight selection.
+
+**Defining catalogs**
+You can customize the catalogs used by copying the `plugin_Catalogs.cfg`
+from the example configurations directory to your $HOME/.ginga directory and
+modifying the `catalog_sources` table defined inside.
+
+The format of this option is a list of dicts, where each dict defines a
+source and has the following fields:
+
+* shortname: str, the short name appearing in the control for selecting
+  a source in the plugin.  This is the name that will appear in the
+  drop-down menu in the catalogs control area of the GUI
+* fullname: str, the full name, should correspond *exactly* with the
+  name required by the `~astroquery.vo.conesearch` `catalog` parameter
+* type: str, should be "astroquery.vo" for an astroquery.vo.conesearch
+  function
+* mapping: dict, a nested dict providing the mapping for the return results
+  to the GUI, in terms of field name to Ginga table.  In each source dict,
+  there must be keys for 'id', 'ra' and 'dec'. 'mag', if present, can be a
+  list of field names that define magnitudes of the elements in various
+  wavelengths.
 
 """
 import os
@@ -53,10 +46,27 @@ import numpy as np
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 from ginga import cmap, imap
-from ginga.util import wcs
+from ginga.util import wcs, catalog
 from ginga.gw import ColorBar, Widgets
 
 __all__ = ['Catalogs']
+
+
+default_catalog_sources = [
+    {'shortname': "GSC 2.3", 'fullname': "Guide Star Catalog 2.3 Cone Search 1",
+     'type': 'astroquery.vo',
+     'mapping': {'id': 'objID', 'ra': 'ra', 'dec': 'dec', 'mag': ['Mag']}},
+    {'shortname': "USNO-A2.0 1", 'fullname': "The USNO-A2.0 Catalogue (Monet+ 1998) 1",
+     'type': 'astroquery.vo',
+     'mapping': {'id': 'USNO-A2.0', 'ra': 'RAJ2000', 'dec': 'DEJ2000', 'mag': ['Bmag', 'Rmag']}},
+    {'shortname': "2MASS 1", 'fullname': "Two Micron All Sky Survey (2MASS) 1",
+     'type': 'astroquery.vo',
+     'mapping': {'id': 'htmID', 'ra': 'ra', 'dec': 'dec', 'mag': []}},
+    ]
+
+
+default_image_sources = [
+    ]
 
 
 class Catalogs(GingaPlugin.LocalPlugin):
@@ -69,7 +79,9 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.settings.add_defaults(draw_type='circle',
                                    select_color='skyblue',
                                    color_outline='aquamarine',
-                                   click_radius=10)
+                                   click_radius=10,
+                                   catalog_sources=default_catalog_sources,
+                                   image_sources=default_image_sources)
         self.settings.load(onError='silent')
 
         self.limit_stars_to_area = False
@@ -111,6 +123,39 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.color_selected = self.settings.get('select_color', 'skyblue')
         self.hilite = None
         self.gui_up = False
+
+        bank = self.fv.get_ServerBank()
+
+        # add catalogs found in configuration file
+        catalogs = self.settings.get('catalog_sources', [])
+        for d in catalogs:
+            typ = d.get('type', None)
+            obj = None
+            if typ == 'astroquery.vo':
+                obj = catalog.AstroQueryVOCatalogServer(self.logger, d['fullname'],
+                                                        d['shortname'], d['mapping'],
+                                                        d['fullname'])
+            else:
+                self.logger.debug("Unknown type ({}) specified for catalog--skipping".format(typ))
+
+            if obj is not None:
+                bank.addCatalogServer(obj)
+
+        # add image servers found in configuration file
+        catalogs = self.settings.get('image_sources', [])
+        for d in catalogs:
+            typ = d.get('type', None)
+            obj = None
+            if typ == 'astroquery':
+                obj = catalog.AstroQueryVOCatalogServer(self.logger, d['fullname'],
+                                                        d['shortname'], d['mapping'],
+                                                        d['fullname'])
+            else:
+                self.logger.debug("Unknown type ({}) specified for catalog--skipping".format(typ))
+
+            if obj is not None:
+                bank.addCatalogServer(obj)
+
 
     def build_gui(self, container, future=None):
         vbox1 = Widgets.VBox()
