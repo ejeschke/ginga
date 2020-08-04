@@ -49,7 +49,6 @@ class Star(object):
 class AstroQueryVOCatalogServer(object):
     """For queries using the `astroquery.vo.conesearch` function."""
 
-
     def __init__(self, logger, full_name, key, mapping, description):
         if not have_astroquery:
             raise ImportError("'astroquery' not found, please install it")

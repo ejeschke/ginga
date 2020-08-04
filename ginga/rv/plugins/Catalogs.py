@@ -62,11 +62,10 @@ default_catalog_sources = [
     {'shortname': "2MASS 1", 'fullname': "Two Micron All Sky Survey (2MASS) 1",
      'type': 'astroquery.vo',
      'mapping': {'id': 'htmID', 'ra': 'ra', 'dec': 'dec', 'mag': []}},
-    ]
+]
 
 
-default_image_sources = [
-    ]
+default_image_sources = []
 
 
 class Catalogs(GingaPlugin.LocalPlugin):
@@ -155,7 +154,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
             if obj is not None:
                 bank.addCatalogServer(obj)
-
 
     def build_gui(self, container, future=None):
         vbox1 = Widgets.VBox()
