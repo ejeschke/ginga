@@ -16,23 +16,24 @@ also listed in a table on the plugin GUI. You can click on either the table
 or the image to highlight selection.
 
 **Defining catalogs**
-You can customize the catalogs used by copying the `plugin_Catalogs.cfg`
-from the example configurations directory to your $HOME/.ginga directory and
-modifying the `catalog_sources` table defined inside.
+
+You can customize the catalogs used by copying the ``plugin_Catalogs.cfg``
+from the example configurations directory to your ``$HOME/.ginga`` directory and
+modifying the ``catalog_sources`` table defined inside.
 
 The format of this option is a list of dicts, where each dict defines a
 source and has the following fields:
 
-* shortname: str, the short name appearing in the control for selecting
+* ``shortname``: str, the short name appearing in the control for selecting
   a source in the plugin.  This is the name that will appear in the
   drop-down menu in the catalogs control area of the GUI
-* fullname: str, the full name, should correspond *exactly* with the
-  name required by the `~astroquery.vo.conesearch` `catalog` parameter
-* type: str, should be "astroquery.vo" for an astroquery.vo.conesearch
+* ``fullname``: str, the full name, should correspond *exactly* with the
+  name required by the ``astroquery.vo_conesearch`` ``catalog`` parameter
+* ``type``: str, should be "astroquery.vo_conesearch" for an ``astroquery.vo_conesearch``
   function
-* mapping: dict, a nested dict providing the mapping for the return results
+* ``mapping``: dict, a nested dict providing the mapping for the return results
   to the GUI, in terms of field name to Ginga table.  In each source dict,
-  there must be keys for 'id', 'ra' and 'dec'. 'mag', if present, can be a
+  there must be keys for 'id', 'ra', and 'dec'. 'mag', if present, can be a
   list of field names that define magnitudes of the elements in various
   wavelengths.
 
@@ -54,13 +55,13 @@ __all__ = ['Catalogs']
 
 default_catalog_sources = [
     {'shortname': "GSC 2.3", 'fullname': "Guide Star Catalog 2.3 Cone Search 1",
-     'type': 'astroquery.vo',
+     'type': 'astroquery.vo_conesearch',
      'mapping': {'id': 'objID', 'ra': 'ra', 'dec': 'dec', 'mag': ['Mag']}},
     {'shortname': "USNO-A2.0 1", 'fullname': "The USNO-A2.0 Catalogue (Monet+ 1998) 1",
-     'type': 'astroquery.vo',
+     'type': 'astroquery.vo_conesearch',
      'mapping': {'id': 'USNO-A2.0', 'ra': 'RAJ2000', 'dec': 'DEJ2000', 'mag': ['Bmag', 'Rmag']}},
     {'shortname': "2MASS 1", 'fullname': "Two Micron All Sky Survey (2MASS) 1",
-     'type': 'astroquery.vo',
+     'type': 'astroquery.vo_conesearch',
      'mapping': {'id': 'htmID', 'ra': 'ra', 'dec': 'dec', 'mag': []}},
 ]
 
@@ -130,8 +131,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
         for d in catalogs:
             typ = d.get('type', None)
             obj = None
-            if typ == 'astroquery.vo':
-                obj = catalog.AstroQueryVOCatalogServer(self.logger, d['fullname'],
+            if typ == 'astroquery.vo_conesearch':
+                obj = catalog.AstroqueryVOCatalogServer(self.logger, d['fullname'],
                                                         d['shortname'], d['mapping'],
                                                         d['fullname'])
             else:
@@ -146,7 +147,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             typ = d.get('type', None)
             obj = None
             if typ == 'astroquery':
-                obj = catalog.AstroQueryVOCatalogServer(self.logger, d['fullname'],
+                obj = catalog.AstroqueryVOCatalogServer(self.logger, d['fullname'],
                                                         d['shortname'], d['mapping'],
                                                         d['fullname'])
             else:

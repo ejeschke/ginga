@@ -46,8 +46,8 @@ class Star(object):
         return key in self.starInfo
 
 
-class AstroQueryVOCatalogServer(object):
-    """For queries using the `astroquery.vo.conesearch` function."""
+class AstroqueryVOCatalogServer(object):
+    """For queries using the ``astroquery.vo_conesearch`` function."""
 
     def __init__(self, logger, full_name, key, mapping, description):
         if not have_astroquery:
@@ -179,7 +179,7 @@ class AstroQueryVOCatalogServer(object):
 
 
 class AstroQueryImageServer(object):
-    """For queries using the `astroquery.vo.conesearch` function."""
+    """For queries using the ``astroquery.vo_conesearch`` function."""
 
     def __init__(self, logger, full_name, key, querymod, description):
         if not have_astroquery:
