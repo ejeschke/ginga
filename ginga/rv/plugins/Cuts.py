@@ -93,6 +93,12 @@ pixels, etc.
 Use the "Save" button to save the ``Cuts`` plot as as image and
 data as a Numpy compressed archive.
 
+**Copying Cuts**
+
+To copy a cut, select its name from the "Cut" dropdown and click the
+"Copy Cut" button. A new cut will be created from it. You can then manipulate
+the new cut independently.
+
 **User Configuration**
 
 """
@@ -211,7 +217,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         captions = (('Cut:', 'label', 'Cut', 'combobox',
                      'New Cut Type:', 'label', 'Cut Type', 'combobox'),
                     ('Delete Cut', 'button', 'Delete All', 'button'),
-                    ('Save', 'button'),
+                    ('Save', 'button', 'Copy Cut', 'button'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -240,6 +246,10 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.save_cuts.add_callback('activated',
                                     lambda w: self.save_cb(mode='cuts'))
         self.save_cuts.set_enabled(self.save_enabled)
+
+        btn = b.copy_cut
+        btn.add_callback('activated', self.copy_cut_cb)
+        btn.set_tooltip("Copy selected cut")
 
         btn = b.delete_cut
         btn.add_callback('activated', self.delete_cut_cb)
@@ -416,6 +426,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.w.cuts.show_text(tag)
 
         if (tag == self._new_cut) or len(self.tags) < 2:
+            self.w.copy_cut.set_enabled(False)
             self.w.delete_cut.set_enabled(False)
 
             self.w.btn_move.set_enabled(False)
@@ -425,6 +436,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             if self.use_slit:
                 self.redraw_slit('clear')
         else:
+            self.w.copy_cut.set_enabled(True)
             self.w.delete_cut.set_enabled(True)
 
             self.w.btn_move.set_enabled(True)
@@ -443,6 +455,28 @@ class Cuts(GingaPlugin.LocalPlugin):
     def set_cutsdrawtype_cb(self, w, index):
         self.cuttype = self.cuttypes[index]
         self.canvas.set_drawtype(self.cuttype, color='cyan', linestyle='dash')
+
+    def copy_cut_cb(self, w):
+        old_tag = self.cutstag
+        if old_tag == self._new_cut:  # Can only copy existing cut
+            return
+
+        old_obj = self.canvas.get_object_by_tag(old_tag)
+
+        new_index = self._get_new_count()
+        new_tag = "cuts{}".format(new_index)
+        new_obj = old_obj.objects[0].copy()
+        new_obj.move_delta_pt((20, 20))
+        new_cut = self._create_cut_obj(new_index, new_obj, color='cyan')
+        new_cut.set_data(count=new_index)
+        self._update_tines(new_cut)
+
+        self.logger.debug("adding new cut {} from {}".format(new_tag, old_tag))
+        self.canvas.add(new_cut, tag=new_tag)
+        self.add_cuts_tag(new_tag)
+
+        self.logger.debug("redoing cut plots")
+        return self.replot_all()
 
     def delete_cut_cb(self, w):
         tag = self.cutstag
