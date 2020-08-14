@@ -6,6 +6,7 @@
 #
 import numpy as np
 from collections import namedtuple
+import copy
 
 from ginga.misc import Callback, Bunch
 from ginga import trcalc, colors
@@ -125,6 +126,13 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def is_compound(self):
         return False
+
+    def copy(self, share=[]):
+        obj = copy.copy(self)
+        obj.viewer = None
+        if 'data' not in share:
+            obj.data = None
+        return obj
 
     def contains_pts(self, points):
         contains = np.asarray([False] * len(points))

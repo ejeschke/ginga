@@ -141,7 +141,7 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         captions = (("Rotate By:", 'label', 'Rotate By', 'entry',
                      "Scale By:", 'label', 'Scale By', 'entry'),
-                    ("Delete Obj", 'button', "sp1", 'spacer',
+                    ("Delete Obj", 'button', "Copy Obj", 'button',
                      "Create mask", 'button', "Clear canvas", 'button'),
                     )
         w, b = Widgets.build_info(captions)
@@ -149,6 +149,9 @@ class Drawing(GingaPlugin.LocalPlugin):
         b.delete_obj.add_callback('activated', lambda w: self.delete_object())
         b.delete_obj.set_tooltip("Delete selected object in edit mode")
         b.delete_obj.set_enabled(False)
+        b.copy_obj.add_callback('activated', lambda w: self.copy_object())
+        b.copy_obj.set_tooltip("Copy selected object in edit mode")
+        b.copy_obj.set_enabled(False)
         b.scale_by.add_callback('activated', self.scale_object)
         b.scale_by.set_text('0.9')
         b.scale_by.set_tooltip("Scale selected object in edit mode")
@@ -263,6 +266,7 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         # disable edit-only controls
         self.w.delete_obj.set_enabled(False)
+        self.w.copy_obj.set_enabled(False)
         self.w.scale_by.set_enabled(False)
         self.w.rotate_by.set_enabled(False)
 
@@ -329,12 +333,14 @@ class Drawing(GingaPlugin.LocalPlugin):
 
             self.w.drawvbox.add_widget(w, stretch=1)
             self.w.delete_obj.set_enabled(True)
+            self.w.copy_obj.set_enabled(True)
             self.w.scale_by.set_enabled(True)
             self.w.rotate_by.set_enabled(True)
         else:
             self.w.attrlbl.set_text("")
 
             self.w.delete_obj.set_enabled(False)
+            self.w.copy_obj.set_enabled(False)
             self.w.scale_by.set_enabled(False)
             self.w.rotate_by.set_enabled(False)
 
@@ -425,6 +431,12 @@ class Drawing(GingaPlugin.LocalPlugin):
         self._drawn_tags.remove(tag)
         self.toggle_create_button()
         self.canvas.edit_delete()
+        self.canvas.redraw(whence=2)
+
+    def copy_object(self):
+        obj = self.canvas._edit_obj.copy()
+        self.canvas.add(obj)
+        obj.move_delta_pt((20, 20))
         self.canvas.redraw(whence=2)
 
     def rotate_object(self, w):
