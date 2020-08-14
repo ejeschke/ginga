@@ -1,0 +1,9 @@
+exclude_dirs:
+  - ginga/tests
+  - ginga/misc/tests
+  - ginga/qtw/tests
+
+# [B101:assert_used] Use of assert detected.
+# [B110:try_except_pass] Try, Except, Pass detected.
+# [B112:try_except_continue] Try, Except, Continue detected.
+skips: ['B101', 'B110', 'B112']

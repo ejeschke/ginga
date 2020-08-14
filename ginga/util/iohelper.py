@@ -239,7 +239,7 @@ def shorten_name(name, char_limit, side='right'):
 
 
 def gethex(s):
-    return hashlib.sha1(s.encode()).hexdigest()
+    return hashlib.sha1(s.encode()).hexdigest()  # nosec
 
 
 def get_thumbpath(thumbdir, path, makedir=True):

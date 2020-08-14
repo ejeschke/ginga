@@ -90,7 +90,7 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
 
         # randomize the first timeout so we don't get every timer
         # expiring at the same time
-        interval = random.randint(1, self.interval)
+        interval = random.randint(1, self.interval)  # nosec
         delta = datetime.timedelta(milliseconds=interval)
         self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
 

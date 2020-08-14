@@ -335,11 +335,11 @@ def get_exitcode_stdout_stderr(cmd):
     """
     Execute the external command and get its exitcode, stdout and stderr.
     """
-    from subprocess import Popen, PIPE
+    from subprocess import Popen, PIPE  # nosec
     import shlex
     args = shlex.split(cmd)
 
-    proc = Popen(args, stdout=PIPE, stderr=PIPE)
+    proc = Popen(args, stdout=PIPE, stderr=PIPE)  # nosec
     out, err = proc.communicate()
     exitcode = proc.returncode
 

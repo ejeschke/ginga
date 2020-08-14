@@ -1,7 +1,7 @@
 # Uses Voki Codder's solution
 # http://vokicodder.blogspot.in/2011/02/numpy-arrays-to-video.html
 
-import subprocess
+import subprocess  # nosec
 
 
 class VideoSink(object):
@@ -15,7 +15,7 @@ class VideoSink(object):
 
     def open(self):
         self.p = subprocess.Popen(self.cmdstring, stdin=subprocess.PIPE,
-                                  shell=False)
+                                  shell=False)  # nosec
 
     def write(self, image):
         assert image.shape == self.size
