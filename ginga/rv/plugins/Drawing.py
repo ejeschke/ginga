@@ -435,8 +435,9 @@ class Drawing(GingaPlugin.LocalPlugin):
 
     def copy_object(self):
         obj = self.canvas._edit_obj.copy()
-        self.canvas.add(obj)
+        tag = self.canvas.add(obj)
         obj.move_delta_pt((20, 20))
+        self._drawn_tags.append(tag)
         self.canvas.redraw(whence=2)
 
     def rotate_object(self, w):
