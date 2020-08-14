@@ -154,6 +154,11 @@ class CompoundMixin(object):
     def has_object(self, obj):
         return obj in self.objects
 
+    def copy(self, share=[]):
+        obj = super(CompoundMixin, self).copy(share=share)
+        obj.objects = [obj.copy(share=share) for obj in self.objects]
+        return obj
+
     def delete_object(self, obj):
         self.objects.remove(obj)
 
