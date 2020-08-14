@@ -781,7 +781,7 @@ def lookup_color(name, format='tuple'):
 def resolve_color(color):
     if isinstance(color, str):
         r, g, b = lookup_color(color)
-    elif isinstance(color, collections.Sequence):
+    elif isinstance(color, collections.abc.Sequence):
         r, g, b = color[:3]
         _validate_color_tuple((r, g, b))
     else:
@@ -791,7 +791,7 @@ def resolve_color(color):
 
 
 def _validate_color_tuple(tup):
-    if isinstance(tup, str) or not isinstance(tup, collections.Sequence):
+    if isinstance(tup, str) or not isinstance(tup, collections.abc.Sequence):
         raise TypeError("the color element must be a tuple or list")
 
     if len(tup) != 3:

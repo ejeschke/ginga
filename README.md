@@ -2,7 +2,7 @@
 
 [![Powered by Astropy Badge](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org)
 [![Documentation Status](https://readthedocs.org/projects/ginga/badge/?version=latest)](https://ginga.readthedocs.io/en/latest/)
-[![Travis CI Status](https://travis-ci.org/ejeschke/ginga.svg?branch=master)](https://travis-ci.org/ejeschke/ginga/)
+[![Github Actions CI Status](https://github.com/ejeschke/ginga/workflows/CI/badge.svg)](https://github.com/ejeschke/ginga/actions/)
 
 Ginga is a toolkit designed for building viewers for scientific image
 data in Python, visualizing 2D pixel data in numpy arrays.
