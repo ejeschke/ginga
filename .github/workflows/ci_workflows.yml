@@ -10,7 +10,7 @@ on:
 
 jobs:
   pep:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -97,3 +97,24 @@ jobs:
       uses: jurplel/install-qt-action@8ffcd60
     - name: Run tests
       run: pytest --pyargs ginga doc
+
+  conda_linux_tests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Fetch tags
+      run: git fetch --prune --unshallow --tags
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Install and build
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        $CONDA/bin/conda install pip setuptools setuptools_scm
+        $CONDA/bin/conda install qtpy pyqt matplotlib
+        $CONDA/bin/conda install attrs astropy pytest-astropy -c conda-forge
+        $CONDA/bin/pip install -e .
+    - name: Run tests
+      run: $CONDA/bin/pytest --pyargs ginga doc
