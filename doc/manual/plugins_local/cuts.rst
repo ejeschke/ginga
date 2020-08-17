@@ -3,7 +3,7 @@
 Cuts
 ====
 
-.. image:: figures/cuts-plugin.png
+.. image:: figures/cuts-plugin.jpg
    :align: center
    :alt: Cuts plugin
 
