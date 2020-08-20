@@ -39,3 +39,9 @@ Reference/API
 
 .. automodapi:: ginga.util.ap_region
    :no-inheritance-diagram:
+
+.. automodapi:: ginga.util.iqcalc
+   :no-inheritance-diagram:
+
+.. automodapi:: ginga.util.iqcalc_astropy
+   :no-inheritance-diagram:
