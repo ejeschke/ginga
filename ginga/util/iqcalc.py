@@ -28,7 +28,7 @@ def get_mean(data_np):
     Parameters
     ----------
     data_np : ndarray
-        Input array.
+        Input array. Can contain masked values.
 
     Returns
     -------
@@ -40,6 +40,8 @@ def get_mean(data_np):
     i = np.isfinite(data_np)
     if not np.any(i):
         return np.nan
+    # NOTE: we use "ma" version of mean because this can be used with
+    # masked arrays created by cutting out non-rectangular shapes
     return np.ma.mean(data_np[i])
 
 
@@ -48,6 +50,8 @@ def get_median(data_np):
     i = np.isfinite(data_np)
     if not np.any(i):
         return np.nan
+    # NOTE: we use "ma" version of median because this can be used with
+    # masked arrays created by cutting out non-rectangular shapes
     return np.ma.median(data_np[i])
 
 
