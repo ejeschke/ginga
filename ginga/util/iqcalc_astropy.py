@@ -96,7 +96,8 @@ class IQCalc(_IQCalc):
         N, X, Y, maxv = self._prep_for_fitting(arr1d, medv)
 
         # Gaussian model with initial guess
-        m_init = models.Gaussian1D(amplitude=maxv, mean=0, stddev=(N - 1))
+        m_init = models.Gaussian1D(
+            amplitude=maxv, mean=N * 0.5, stddev=(N * 0.25))
 
         # NOTE: without this mutex, optimize.leastsq causes a fatal error
         # sometimes--it appears not to be thread safe.
@@ -173,7 +174,8 @@ class IQCalc(_IQCalc):
         N, X, Y, maxv = self._prep_for_fitting(arr1d, medv)
 
         # Moffat model with initial guess
-        m_init = models.Moffat1D(amplitude=maxv, x_0=0, gamma=(N - 1), alpha=2)
+        m_init = models.Moffat1D(
+            amplitude=maxv, x_0=(N * 0.5), gamma=(N * 0.25), alpha=2)
 
         # NOTE: without this mutex, optimize.leastsq causes a fatal error
         # sometimes--it appears not to be thread safe.
@@ -252,7 +254,8 @@ class IQCalc(_IQCalc):
         N, X, Y, maxv = self._prep_for_fitting(arr1d, medv)
 
         # Lorentz model with initial guess
-        m_init = models.Lorentz1D(amplitude=maxv, x_0=0, fwhm=(N - 1))
+        m_init = models.Lorentz1D(
+            amplitude=maxv, x_0=(N * 0.5), fwhm=(N * 0.25))
 
         # NOTE: without this mutex, optimize.leastsq causes a fatal error
         # sometimes--it appears not to be thread safe.
