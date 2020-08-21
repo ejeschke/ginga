@@ -3,6 +3,11 @@ import numpy as np
 import pytest
 
 from ginga.util import iqcalc, iqcalc_astropy
+try:
+    from scipy import optimize  # noqa
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
 
 try:
     from scipy import optimize  # noqa
