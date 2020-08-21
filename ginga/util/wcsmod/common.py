@@ -10,8 +10,14 @@ import numpy as np
 
 from ginga.misc import Bunch
 
+__all__ = ['WCSError', 'BaseWCS', 'register_wcs', 'choose_coord_units',
+           'get_coord_system_name', 'get_astropy_frame']
+
 # Holds custom WCSes that are registered
 custom_wcs = Bunch.caselessDict()
+
+# Cache Astropy coordinate frames
+astropy_coord_frames = {}
 
 
 class WCSError(Exception):
@@ -423,3 +429,15 @@ def get_coord_system_name(header):
 
     #raise WCSError("Cannot determine appropriate coordinate system from FITS header")  # noqa
     return 'icrs'
+
+
+def get_astropy_frame(to_class):
+    """Obtain and instance of requested Astropy coordinates frame class.
+    This instance is cached, if necessary.
+    """
+    global astropy_coord_frames
+
+    cname = to_class.__name__
+    if cname not in astropy_coord_frames:
+        astropy_coord_frames[cname] = to_class()
+    return astropy_coord_frames[cname]
