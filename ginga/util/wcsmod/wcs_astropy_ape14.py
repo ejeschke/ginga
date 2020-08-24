@@ -151,7 +151,7 @@ class AstropyWCS(common.BaseWCS):
         # Skip in input and output is the same (no realize_frame
         # call in astropy)
         if to_class != coord.name:
-            coord = coord.transform_to(to_class)
+            coord = coord.transform_to(common.get_astropy_frame(to_class))
 
         return coord
 
@@ -246,7 +246,7 @@ class AstropyWCS(common.BaseWCS):
         # Skip in input and output is the same (no realize_frame
         # call in astropy)
         if to_class != frame_class:
-            coord = coord.transform_to(to_class)
+            coord = coord.transform_to(common.get_astropy_frame(to_class))
 
         return coord
 
