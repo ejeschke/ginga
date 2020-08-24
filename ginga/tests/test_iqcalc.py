@@ -4,6 +4,12 @@ import pytest
 
 from ginga.util import iqcalc
 
+try:
+    from scipy import optimize  # noqa
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
+
 
 @pytest.mark.parametrize(
     ('arr', 'ans'),
@@ -35,6 +41,7 @@ def test_get_median_mask():
     assert np.isclose(iqcalc.get_median(m_arr), 4.5)
 
 
+@pytest.mark.skipif('not HAS_SCIPY')
 class TestIQCalc:
 
     def setup_class(self):
