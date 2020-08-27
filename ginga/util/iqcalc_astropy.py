@@ -9,6 +9,9 @@ from ginga.misc import Bunch
 from ginga.util.iqcalc import IQCalcError, get_median, have_scipy
 from ginga.util.iqcalc import IQCalc as _IQCalc
 
+# Import the rest into namespace so we can use this module like iqcalc.
+from ginga.util.iqcalc import get_mean  # noqa
+
 __all__ = ['IQCalc']
 
 

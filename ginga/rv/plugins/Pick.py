@@ -262,7 +262,7 @@ The "Settings" tab controls aspects of the search within the pick area:
 * The "FWHM fitting" parameter is used to determine which function is
   is used for FWHM fitting ("gaussian" or "moffat"). The option to use
   "lorentz" is also available if "calc_fwhm_lib" is set to "astropy"
-  in `~/.ginga/plugin_Pick.cfg`.
+  in ``~/.ginga/plugin_Pick.cfg``.
 * The "Contour Interpolation" parameter is used to set the interpolation
   method used in rendering the background image in the "Contour" plot.
 
