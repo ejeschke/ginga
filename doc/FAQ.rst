@@ -20,7 +20,7 @@ Linux, Mac and Windows versions, all of these packages are available.
 
 Does Ginga work with Python 3?
 ------------------------------
-Yes, but only Python 3.5 or later. Just install with Python 3.
+Yes, but only Python 3.7 or later. Just install with Python 3.
 Of course, you need all the supporting modules for Python 3 (NumPy, SciPy, Qt 5, etc.).
 
 Does Ginga work with Python 2?
