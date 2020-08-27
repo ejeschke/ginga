@@ -10,6 +10,8 @@ Ver 3.2.0 (unreleased)
 - Added an option to make a copy of existing shape in Drawing plugin
 - Added an option to make a copy of existing cut in Cuts plugin
 - Added new iqcalc_astropy module to handle FWHM fitting using astropy
+- Added new calc_fwhm_lib configuration item to let Pick switch between
+  iqcalc and iqcalc_astropy
 - Fixed a bug where certain plots were not cleared in Pick plugin
 - Removed support for matplotlib versions < 2.1
 
