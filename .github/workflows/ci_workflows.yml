@@ -53,7 +53,7 @@ jobs:
     - name: Install Qt
       uses: jurplel/install-qt-action@8ffcd60
     - name: Run tests
-      run: pytest --pyargs ginga doc
+      run: pytest --pyargs ginga doc -sv
 
   older_deps_tests:
     runs-on: ubuntu-16.04
@@ -74,7 +74,7 @@ jobs:
     - name: Install Qt
       uses: jurplel/install-qt-action@8ffcd60
     - name: Run tests
-      run: pytest --pyargs ginga doc
+      run: pytest --pyargs ginga doc -sv
 
   dev_deps_tests:
     runs-on: ubuntu-latest
@@ -96,7 +96,7 @@ jobs:
     - name: Install Qt
       uses: jurplel/install-qt-action@8ffcd60
     - name: Run tests
-      run: pytest --pyargs ginga doc
+      run: pytest --pyargs ginga doc -sv
 
   conda_linux_tests:
     runs-on: ubuntu-latest
@@ -117,4 +117,4 @@ jobs:
         $CONDA/bin/conda install attrs astropy pytest-astropy -c conda-forge
         $CONDA/bin/pip install -e .
     - name: Run tests
-      run: $CONDA/bin/pytest --pyargs ginga doc
+      run: $CONDA/bin/pytest --pyargs ginga doc -sv
