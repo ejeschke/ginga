@@ -260,7 +260,9 @@ The "Settings" tab controls aspects of the search within the pick area:
 * The "Calc center" parameter is used to determine whether the center
   is calculated from FWHM fitting ("fwhm") or centroiding ("centroid").
 * The "FWHM fitting" parameter is used to determine which function is
-  is used for FWHM fitting ("gaussian" or "moffat").
+  is used for FWHM fitting ("gaussian" or "moffat"). The option to use
+  "lorentz" is also available if "calc_fwhm_lib" is set to "astropy"
+  in `~/.ginga/plugin_Pick.cfg`.
 * The "Contour Interpolation" parameter is used to set the interpolation
   method used in rendering the background image in the "Contour" plot.
 
@@ -288,7 +290,7 @@ import numpy as np
 
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
-from ginga.util import iqcalc, wcs, contour
+from ginga.util import wcs, contour
 from ginga import GingaPlugin, colors, cmap, trcalc
 
 try:
@@ -362,6 +364,16 @@ class Pick(GingaPlugin.LocalPlugin):
         self.rpt_wrt_interval = self.settings.get('report_write_interval',
                                                   30.0)
 
+        if self.iqcalc_lib == 'astropy':
+            self.logger.debug('Using iqcalc_astropy')
+            from ginga.util import iqcalc_astropy as iqcalc
+        else:  # Falls back to native
+            self.logger.debug('Using native iqcalc')
+            from ginga.util import iqcalc
+
+        if not iqcalc.have_scipy:
+            raise ImportError('Please install scipy to use this plugin')
+
         self.iqcalc = iqcalc.IQCalc(self.logger)
         self.copy_attrs = ['transforms', 'cutlevels']
         if (self.settings.get('pick_cmap_name', None) is None and
@@ -429,6 +441,9 @@ class Pick(GingaPlugin.LocalPlugin):
         self.center_algs = ['fwhm', 'centroid']
         self.center_alg = self.settings.get('calc_center_alg', 'fwhm')
         self.fwhm_algs = ['gaussian', 'moffat']
+        self.iqcalc_lib = self.settings.get('calc_fwhm_lib', 'native')
+        if self.iqcalc_lib == 'astropy':
+            self.fwhm_algs.append('lorentz')
         self.fwhm_alg = self.settings.get('calc_fwhm_alg', 'gaussian')
         self.center_on_pick = self.settings.get('center_on_pick', False)
 
@@ -458,9 +473,6 @@ class Pick(GingaPlugin.LocalPlugin):
                                                        'nearest')
 
     def build_gui(self, container):
-        assert iqcalc.have_scipy is True, \
-            Exception("Please install python-scipy to use this plugin")
-
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
 
