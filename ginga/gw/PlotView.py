@@ -66,11 +66,7 @@ class PlotViewGw(Callback.Callbacks):
         self.line_plot = plots.Plot(logger=self.logger,
                                     width=400, height=400)
         bg = self.settings.get('plot_bg', 'white')
-        if plots.MPL_GE_2_0:
-            kwargs = {'facecolor': bg}
-        else:
-            kwargs = {'axisbg': bg}
-        self.line_plot.add_axis(**kwargs)
+        self.line_plot.add_axis(facecolor=bg)
         self.plot_w = Plot.PlotWidget(self.line_plot)
         self.plot_w.resize(400, 400)
 

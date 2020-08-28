@@ -571,11 +571,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 # Contour plot
                 self.contour_plot = plots.ContourPlot(
                     logger=self.logger, width=width, height=height)
-                if plots.MPL_GE_2_0:
-                    kwargs = {'facecolor': 'black'}
-                else:
-                    kwargs = {'axisbg': 'black'}
-                self.contour_plot.add_axis(**kwargs)
+                self.contour_plot.add_axis(facecolor='black')
                 self.contour_plot.enable(pan=True, zoom=True)
                 pw = Plot.PlotWidget(self.contour_plot)
                 pw.resize(width, height)
@@ -591,11 +587,7 @@ class Pick(GingaPlugin.LocalPlugin):
             # FWHM gaussians plot
             self.fwhm_plot = plots.FWHMPlot(logger=self.logger,
                                             width=width, height=height)
-            if plots.MPL_GE_2_0:
-                kwargs = {'facecolor': 'white'}
-            else:
-                kwargs = {'axisbg': 'white'}
-            self.fwhm_plot.add_axis(**kwargs)
+            self.fwhm_plot.add_axis(facecolor='white')
             pw = Plot.PlotWidget(self.fwhm_plot)
             pw.resize(width, height)
             nb.add_widget(pw, title="FWHM")
@@ -603,7 +595,7 @@ class Pick(GingaPlugin.LocalPlugin):
             # Radial profile plot
             self.radial_plot = plots.RadialPlot(logger=self.logger,
                                                 width=width, height=height)
-            self.radial_plot.add_axis(**kwargs)
+            self.radial_plot.add_axis(facecolor='white')
             pw = Plot.PlotWidget(self.radial_plot)
             pw.resize(width, height)
             nb.add_widget(pw, title="Radial")
