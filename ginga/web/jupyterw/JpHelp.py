@@ -38,7 +38,7 @@ class TimerFactory(object):
     def wind(self):
         # randomize the first timeout so we don't get every timer
         # expiring at the same time
-        interval = random.randint(1, self.base_interval_msec)
+        interval = random.randint(1, self.base_interval_msec)  # nosec
         delta = datetime.timedelta(milliseconds=interval)
         self._timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
 

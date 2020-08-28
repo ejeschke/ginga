@@ -83,7 +83,7 @@ class ColorManager(object):
                 buf_profile = image.info['icc_profile']
 
                 # Write out embedded profile (if needed)
-                prof_md5 = hashlib.md5(buf_profile).hexdigest()
+                prof_md5 = hashlib.md5(buf_profile).hexdigest()  # nosec
                 in_profile = os.path.join("/tmp", "_image_%d_%s.icc" % (
                     os.getpid(), prof_md5))
                 if not os.path.exists(in_profile):

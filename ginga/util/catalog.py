@@ -526,7 +526,7 @@ class URLServer(object):
         try:
             self.logger.info("Opening url=%s" % (url))
             try:
-                response = urlopen(req)
+                response = urlopen(req)  # nosec
 
             except HTTPError as e:
                 self.logger.error("Server returned error code %s" % (e.code))
@@ -570,9 +570,9 @@ class URLServer(object):
             self.logger.info("Opening url=%s" % (url))
 
             if cb_fn is not None:
-                localpath, info = urlretrieve(url, filepath, cb_fn)
+                localpath, info = urlretrieve(url, filepath, cb_fn)  # nosec
             else:
-                localpath, info = urlretrieve(url, filepath)
+                localpath, info = urlretrieve(url, filepath)  # nosec
 
         except Exception as e:
             self.logger.error("URL fetch failure: %s" % (str(e)))

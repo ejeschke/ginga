@@ -69,7 +69,7 @@ class Timer (object):
         self.start_time = time.time()
         if self.jitter:
             self.expire = self.start_time + time_sec * (
-                1 - random.random() * self.jitter)
+                1 - random.random() * self.jitter)  # nosec
         else:
             self.expire = self.start_time + time_sec
 

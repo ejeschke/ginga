@@ -27,7 +27,7 @@ def _find_rtd_version():
 
     # Get RTD download listing.
     url = 'https://readthedocs.org/projects/ginga/downloads/'
-    with urllib.request.urlopen(url) as r:
+    with urllib.request.urlopen(url) as r:  # nosec
         soup = BeautifulSoup(r, 'html.parser')
 
     # Compile a list of available HTML doc versions for download.
@@ -92,7 +92,7 @@ def _download_rtd_zip(rtd_version=None, **kwargs):
 
     url = ('https://readthedocs.org/projects/ginga/downloads/htmlzip/'
            '{}/'.format(rtd_version))
-    local_path = urllib.request.urlretrieve(url, **kwargs)[0]
+    local_path = urllib.request.urlretrieve(url, **kwargs)[0]  # nosec
 
     with zipfile.ZipFile(local_path, 'r') as zf:
         zf.extractall(data_path)
