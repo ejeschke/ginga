@@ -9,6 +9,7 @@ Ver 3.2.0 (unreleased)
 - Canvas shapes can now be copied
 - Added an option to make a copy of existing shape in Drawing plugin
 - Added an option to make a copy of existing cut in Cuts plugin
+- Fixed a bug where certain plots were not cleared in Pick plugin
 
 Ver 3.1.0 (2020-07-20)
 ======================

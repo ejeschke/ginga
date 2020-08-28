@@ -94,6 +94,7 @@ class Plot(Callback.Callbacks):
         self.ax.cla()
         self.xdata = []
         self.ydata = []
+        self.draw()
 
     def draw(self):
         self.fig.canvas.draw()
