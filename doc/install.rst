@@ -19,7 +19,7 @@ to compile anything, but as always, your mileage may vary.
 REQUIRED
 ========
 
-* python (v. 3.5 or higher)
+* python (v. 3.7 or higher)
 * setuptools-scm
 * numpy  (v. 1.13 or higher)
 * astropy

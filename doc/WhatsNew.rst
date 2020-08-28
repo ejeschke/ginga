@@ -4,6 +4,7 @@ What's New
 
 Ver 3.2.0 (unreleased)
 ======================
+- Minimum supported Python version is now 3.7
 - Fixed some numpy deprecation warnings with numpy 1.19.0
 - Canvas shapes can now be copied
 - Added an option to make a copy of existing shape in Drawing plugin

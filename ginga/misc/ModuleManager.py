@@ -21,9 +21,7 @@ def my_import(name, path=None):
 
     # Documentation for importlib says this may be needed to pick up
     # modules created after the program has started
-    if hasattr(importlib, 'invalidate_caches'):
-        # python 3.3+
-        importlib.invalidate_caches()
+    importlib.invalidate_caches()
 
     if path is not None:
         directory, src_file = os.path.split(path)
