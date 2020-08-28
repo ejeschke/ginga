@@ -460,12 +460,12 @@ class FWHMPlot(Plot):
 
             self.logger.debug("xarr=%s" % (str(xarr)))
             fwhm_x = self._plot_fwhm_axis(xarr, iqcalc, skybg,
-                                          'blue', 'blue', 'skyblue',
+                                          'plum', 'plum', 'thistle',
                                           fwhm_method=fwhm_method)
 
             self.logger.debug("yarr=%s" % (str(yarr)))
             fwhm_y = self._plot_fwhm_axis(yarr, iqcalc, skybg,
-                                          'orange', 'orange', 'peachpuff',
+                                          'mediumseagreen', 'mediumseagreen', 'aquamarine',
                                           fwhm_method=fwhm_method)
 
             falg = fwhm_method

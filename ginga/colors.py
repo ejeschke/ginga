@@ -8,6 +8,8 @@
 import re
 import collections
 
+import numpy as np
+
 color_dict = {
  'aliceblue': (0.9411764705882353, 0.9725490196078431, 1.0),  # noqa
  'antiquewhite': (0.9803921568627451, 0.9215686274509803, 0.8431372549019608),
@@ -755,27 +757,95 @@ def recalc_color_list():
 
 
 def lookup_color(name, format='tuple'):
-    color = None
-    if name.startswith('#'):
-        # hex notation
-        name = name[1:]
-        color = (int(name[:2], 16) / 255.0,
-                 int(name[2:4], 16) / 255.0,
-                 int(name[4:6], 16) / 255.0)
-    else:
-        # must be a name
-        try:
-            color = color_dict[name]
-        except KeyError:
-            raise KeyError("%s color does not exist in color_dict" % name)
+    """Find RGB or hex values for a supported color.
 
-    if format == 'tuple':
+    name : str
+        Color name (e.g., ``'red'``) or hash (e.g., ``'#ff0000'``).
+        Color name is case-sensitive.
+
+    format : {'tuple', 'hash', 'name'}
+        Desired output to be an RGB tuple, hash, or name.
+
+    Returns
+    -------
+    color : tuple or str
+        Color value as specified by ``format``.
+
+    Raises
+    ------
+    KeyError
+        Color name is not supported.
+
+    ValueError
+        Invalid format.
+
+    """
+    supported_formats = ('tuple', 'hash', 'name')
+    if format not in supported_formats:
+        raise ValueError(f'format needs to be one of {supported_formats}')
+
+    if name.startswith('#'):  # hex notation
+        if format == 'hash':
+            return name  # no-op
+
+        name = name[1:]  # Strip leading #
+        rgb = (int(name[:2], 16) / 255.0,
+               int(name[2:4], 16) / 255.0,
+               int(name[4:6], 16) / 255.0)
+        if format == 'tuple':
+            return rgb
+
+        color = _reverse_lookup(rgb)
+        if color is None:
+            raise KeyError(f'No color name for resolved RGB {rgb}')
+
         return color
-    elif format == 'hash':
-        return "#%02x%02x%02x" % (
-            int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
-    else:
-        raise ValueError("format needs to be 'tuple' or 'hash'")
+
+    # must be a name
+
+    elif name not in color_dict:
+        raise KeyError(f'{name} does not exist in color_dict')
+
+    if format == 'name':
+        return name  # no-op
+
+    rgb = color_dict[name]
+    if format == 'tuple':
+        return rgb
+
+    return f'#{int(rgb[0] * 255):02x}{int(rgb[1] * 255):02x}{int(rgb[2] * 255):02x}'
+
+
+def _reverse_lookup(rgb_tuple):
+    """Look up color name by RGB tuple. Return first match."""
+    color = None
+    for k, v in color_dict.items():
+        if np.allclose(rgb_tuple, v):
+            color = k
+            break
+    return color
+
+
+def find_closest_match_by_hex(hex_color):
+    """Given a hex, find closest matched color name by comparing RGB.
+    If there are multiple matches, only the first one is returned.
+
+    """
+    hx = hex_color[1:]
+    rgb = (int(hx[:2], 16) / 255.0,
+           int(hx[2:4], 16) / 255.0,
+           int(hx[4:6], 16) / 255.0)
+    min_diff = 999
+    name = ''
+    rng = range(len(rgb))
+
+    for k, v in color_dict.items():
+        diff = np.sqrt(np.sum([abs(v[i] - rgb[i]) for i in rng]))
+        if diff < min_diff:
+            min_diff = diff
+            name = k
+
+    return name
 
 
 def resolve_color(color):
