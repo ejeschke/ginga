@@ -2,8 +2,8 @@
 
 import logging
 
-import numpy as np
 import pytest
+from numpy.testing import assert_allclose
 
 import ginga.colors
 
@@ -15,35 +15,39 @@ class TestColors(object):
 
     # Tests for the lookup_color() funtion
 
-    def test_lookup_color_white_tuple(self):
-        expected = (1.0, 1.0, 1.0)
-        actual = ginga.colors.lookup_color("white", "tuple")
-        np.testing.assert_allclose(expected, actual)
+    @pytest.mark.parametrize(
+        ('input_color', 'format', 'expected'),
+        [("white", "tuple", (1.0, 1.0, 1.0)),
+         ("black", "tuple", (0.0, 0.0, 0.0)),
+         ("yellow", None, (1.0, 1.0, 0.0)),
+         ("#ff0000", "tuple", (1, 0, 0)),
+         ("#0000FF", "tuple", (0, 0, 1)),
+         ("white", "hash", "#ffffff"),
+         ("black", "hash", "#000000"),
+         ("#FFFFFF", "hash", "#FFFFFF")])
+    def test_lookup_color_to_tuple(self, input_color, format, expected):
+        if format is not None:
+            kwargs = {'format': format}
+            if format == 'tuple':
+                use_allclose = True
+            else:
+                use_allclose = False
+        else:
+            kwargs = {}
+            use_allclose = True
 
-    def test_lookup_color_black_tuple(self):
-        expected = (0.0, 0.0, 0.0)
-        actual = ginga.colors.lookup_color("black", "tuple")
-        np.testing.assert_allclose(expected, actual)
-
-    def test_lookup_color_white_hash(self):
-        expected = "#ffffff"
-        actual = ginga.colors.lookup_color("white", "hash")
-        assert expected == actual
-
-    def test_lookup_color_black_black(self):
-        expected = "#000000"
-        actual = ginga.colors.lookup_color("black", "hash")
-        assert expected == actual
-
-    def test_lookup_color_yellow_tuple(self):
-        expected = (1.0, 1.0, 0.0)
-        actual = ginga.colors.lookup_color("yellow")
-        np.testing.assert_allclose(expected, actual)
+        actual = ginga.colors.lookup_color(input_color, **kwargs)
+        if use_allclose:
+            assert_allclose(actual, expected)
+        else:
+            assert actual == expected
 
     @pytest.mark.parametrize(
         ('args', 'errtype'),
         [(("unknown_color", ), KeyError),
          (("unknown_key", ), KeyError),
+         (("White", ), KeyError),
+         (("#af8dc3", "name"), ValueError),
          (("white", "unknown_format"), ValueError)])
     def test_lookup_color_unknown(self, args, errtype):
         with pytest.raises(errtype):
@@ -51,22 +55,17 @@ class TestColors(object):
 
     # Tests for the resolve_color() function
 
-    def test_resolve_color_name(self):
-        expected = (1.0, 0.0, 0.0)
-        actual = ginga.colors.resolve_color('red')
-        assert expected == actual
-
-    def test_resolve_color_hex(self):
-        expected = (1.0, 0.0, 0.0)
-        actual = ginga.colors.resolve_color('#FF0000')
-        assert expected == actual
-
-    def test_resolve_color_tuple(self):
-        expected = (1.0, 0.0, 0.0)
-        actual = ginga.colors.resolve_color(expected)
-        assert expected == actual
+    @pytest.mark.parametrize(
+        ('color_input', 'expected'),
+        [('red', (1.0, 0.0, 0.0)),
+         ('#FF0000', (1.0, 0.0, 0.0)),
+         ('#00ff00', (0.0, 1.0, 0.0)),
+         ((1.0, 0.0, 0.0), (1.0, 0.0, 0.0))])
+    def test_resolve_color(self, color_input, expected):
+        assert_allclose(ginga.colors.resolve_color(color_input), expected)
 
     # Tests for the get_colors() function
+
     def test_get_colors_len(self):
         expected = self.color_list_length
         actual = len(ginga.colors.get_colors())
@@ -109,7 +108,7 @@ class TestColors(object):
 
         expected = (0.0, 0.0, 0.0)
         actual = ginga.colors.lookup_color("test_color_white")
-        np.testing.assert_allclose(expected, actual)
+        assert_allclose(expected, actual)
 
         ginga.colors.remove_color("test_color_white")
         with pytest.raises(KeyError):
@@ -176,6 +175,6 @@ class TestColors(object):
 
         expected = (1.0, 1.0, 1.0)
         actual = result["white"]
-        np.testing.assert_allclose(expected, actual)
+        assert_allclose(expected, actual)
 
 # END

@@ -27,6 +27,8 @@ Reference/API
 .. automodapi:: ginga.rv.main
    :no-inheritance-diagram:
 
+.. automodapi:: ginga.colors
+
 .. automodapi:: ginga.util.io.io_asdf
 
 .. automodapi:: ginga.util.wcsmod
