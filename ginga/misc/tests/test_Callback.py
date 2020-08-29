@@ -381,7 +381,7 @@ class TestCallbacks(object):
         actual = test_callbacks.make_callback("test_name")
         assert expected == actual
 
-    def test_make_callback_raises_no_exception(self):
+    def test_make_callback_raises_no_exception(self, capsys):
         test_callbacks = Callback.Callbacks()
 
         # This function when used as a callback should raise a TypeError
@@ -397,7 +397,10 @@ class TestCallbacks(object):
         actual = test_callbacks.make_callback("test_name")
         assert expected == actual
 
-    def test_make_callback_raises_no_exception_completes_all_callbacks(self):
+        captured = capsys.readouterr()
+        assert 'Error making callback' in captured.out
+
+    def test_make_callback_raises_no_exception_completes_all_callbacks(self, capsys):
         test_callbacks = Callback.Callbacks()
 
         def test_callback_function():
@@ -415,5 +418,8 @@ class TestCallbacks(object):
         expected = True
         actual = test_callbacks.make_callback("test_name")
         assert expected == actual
+
+        captured = capsys.readouterr()
+        assert 'Error making callback' in captured.out
 
 # END
