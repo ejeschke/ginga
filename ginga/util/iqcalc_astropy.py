@@ -43,7 +43,7 @@ class IQCalc(_IQCalc):
         # a. subtract sky background
         if medv is None:
             medv = get_median(Y)
-        Y -= medv
+        Y = Y - medv
         maxv = Y.max()
         # b. clamp to 0..max (of the sky subtracted field)
         Y = Y.clip(0, maxv)
