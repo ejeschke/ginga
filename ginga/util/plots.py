@@ -390,8 +390,8 @@ class RadialPlot(Plot):
 
             yerror = 0   # for now, no error bars
             self.ax.errorbar(r, v, yerr=yerror, marker='s', ls='none',
-                             mfc='none', mec='blue')
-            self.ax.plot(x_curve, y_curve, '-', color='green', lw=2)
+                             mfc='none', mec='#7570b3')
+            self.ax.plot(x_curve, y_curve, '-', color='#1b9e77', lw=2)
 
             self.draw()
 
@@ -460,12 +460,12 @@ class FWHMPlot(Plot):
 
             self.logger.debug("xarr=%s" % (str(xarr)))
             fwhm_x = self._plot_fwhm_axis(xarr, iqcalc, skybg,
-                                          '#af8dc3', '#af8dc3', 'thistle',
+                                          '#7570b3', '#7570b3', 'purple',
                                           fwhm_method=fwhm_method)
 
             self.logger.debug("yarr=%s" % (str(yarr)))
             fwhm_y = self._plot_fwhm_axis(yarr, iqcalc, skybg,
-                                          '#7fbf7b', '#7fbf7b', 'aquamarine',
+                                          '#1b9e77', '#1b9e77', 'seagreen',
                                           fwhm_method=fwhm_method)
 
             falg = fwhm_method
