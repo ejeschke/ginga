@@ -429,7 +429,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.max_side = self.settings.get('max_side', 1024)
         self.radius = self.settings.get('radius', 10)
         self.threshold = self.settings.get('threshold', None)
-        self.min_fwhm = self.settings.get('min_fwhm', 2.0)
+        self.min_fwhm = self.settings.get('min_fwhm', 1.5)
         self.max_fwhm = self.settings.get('max_fwhm', 50.0)
         self.min_ellipse = self.settings.get('min_ellipse', 0.5)
         self.edgew = self.settings.get('edge_width', 0.01)
