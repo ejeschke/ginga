@@ -15,8 +15,6 @@ from ginga.misc import Callback, Bunch
 # fix issue of negative numbers rendering incorrectly with default font
 mpl.rcParams['axes.unicode_minus'] = False
 
-MPL_GE_2_0 = mpl.__version__[0] not in ('0', '1')
-
 
 class Plot(Callback.Callbacks):
 
@@ -84,10 +82,7 @@ class Plot(Callback.Callbacks):
     def set_bg(self, color, ax=None):
         if ax is None:
             ax = self.ax
-        if MPL_GE_2_0:
-            ax.set_facecolor(color)
-        else:
-            ax.set_axis_bgcolor(color)
+        ax.set_facecolor(color)
 
     def clear(self):
         self.logger.debug('clearing canvas...')
@@ -303,10 +298,7 @@ class ContourPlot(Plot):
         ##     self.cbar.remove()
 
         self.ax.cla()
-        if MPL_GE_2_0:
-            self.ax.set_facecolor('#303030')
-        else:
-            self.ax.set_axis_bgcolor('#303030')
+        self.ax.set_facecolor('#303030')
 
         try:
             im = self.ax.imshow(data, interpolation=self.interpolation,
@@ -512,12 +504,7 @@ class SurfacePlot(Plot):
             from mpl_toolkits.mplot3d import Axes3D  # noqa
             from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
-            if MPL_GE_2_0:
-                kwargs = {'facecolor': '#808080'}
-            else:
-                kwargs = {'axisbg': '#808080'}
-
-            self.ax = self.fig.gca(projection='3d', **kwargs)
+            self.ax = self.fig.gca(projection='3d', facecolor='#808080')
 
             self.set_titles(ytitle='Y', xtitle='X',
                             title='Surface Plot')
