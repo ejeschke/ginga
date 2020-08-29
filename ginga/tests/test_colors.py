@@ -24,9 +24,7 @@ class TestColors(object):
          ("#0000FF", "tuple", (0, 0, 1)),
          ("white", "hash", "#ffffff"),
          ("black", "hash", "#000000"),
-         ("#FFFFFF", "hash", "#FFFFFF"),
-         ("white", "name", "white"),
-         ("#FFffFF", "name", "gray100")])
+         ("#FFFFFF", "hash", "#FFFFFF")])
     def test_lookup_color_to_tuple(self, input_color, format, expected):
         if format is not None:
             kwargs = {'format': format}
@@ -49,18 +47,11 @@ class TestColors(object):
         [(("unknown_color", ), KeyError),
          (("unknown_key", ), KeyError),
          (("White", ), KeyError),
-         (("#af8dc3", "name"), KeyError),
+         (("#af8dc3", "name"), ValueError),
          (("white", "unknown_format"), ValueError)])
     def test_lookup_color_unknown(self, args, errtype):
         with pytest.raises(errtype):
             ginga.colors.lookup_color(*args)
-
-    @pytest.mark.parametrize(
-        ('input_hex', 'expected'),
-        [('#af8dc3', 'plum3'),
-         ('#ffFFff', 'gray100')])
-    def test_closest_match(self, input_hex, expected):
-        assert ginga.colors.find_closest_match_by_hex(input_hex) == expected
 
     # Tests for the resolve_color() function
 

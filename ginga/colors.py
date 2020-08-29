@@ -1,3 +1,4 @@
+"""Module to handle colors supported by Ginga."""
 #
 # colors.py -- color definitions
 #
@@ -8,7 +9,8 @@
 import re
 import collections
 
-import numpy as np
+__all__ = ['recalc_color_list', 'lookup_color', 'resolve_color', 'add_color',
+           'remove_color', 'get_colors', 'scan_rgbtxt', 'scan_rgbtxt_buf']
 
 color_dict = {
  'aliceblue': (0.9411764705882353, 0.9725490196078431, 1.0),  # noqa
@@ -751,6 +753,7 @@ color_list = []
 
 
 def recalc_color_list():
+    """Recalculate ``ginga.colors.color_list``."""
     global color_list
     color_list = list(color_dict.keys())
     color_list.sort()
@@ -763,8 +766,8 @@ def lookup_color(name, format='tuple'):
         Color name (e.g., ``'red'``) or hash (e.g., ``'#ff0000'``).
         Color name is case-sensitive.
 
-    format : {'tuple', 'hash', 'name'}
-        Desired output to be an RGB tuple, hash, or name.
+    format : {'tuple', 'hash'}
+        Desired output to be an RGB tuple or hash.
 
     Returns
     -------
@@ -780,7 +783,7 @@ def lookup_color(name, format='tuple'):
         Invalid format.
 
     """
-    supported_formats = ('tuple', 'hash', 'name')
+    supported_formats = ('tuple', 'hash')
     if format not in supported_formats:
         raise ValueError(f'format needs to be one of {supported_formats}')
 
@@ -792,22 +795,13 @@ def lookup_color(name, format='tuple'):
         rgb = (int(name[:2], 16) / 255.0,
                int(name[2:4], 16) / 255.0,
                int(name[4:6], 16) / 255.0)
-        if format == 'tuple':
-            return rgb
 
-        color = _reverse_lookup(rgb)
-        if color is None:
-            raise KeyError(f'No color name for resolved RGB {rgb}')
-
-        return color
+        return rgb
 
     # must be a name
 
     elif name not in color_dict:
         raise KeyError(f'{name} does not exist in color_dict')
-
-    if format == 'name':
-        return name  # no-op
 
     rgb = color_dict[name]
     if format == 'tuple':
@@ -816,39 +810,8 @@ def lookup_color(name, format='tuple'):
     return f'#{int(rgb[0] * 255):02x}{int(rgb[1] * 255):02x}{int(rgb[2] * 255):02x}'
 
 
-def _reverse_lookup(rgb_tuple):
-    """Look up color name by RGB tuple. Return first match."""
-    color = None
-    for k, v in color_dict.items():
-        if np.allclose(rgb_tuple, v):
-            color = k
-            break
-    return color
-
-
-def find_closest_match_by_hex(hex_color):
-    """Given a hex, find closest matched color name by comparing RGB.
-    If there are multiple matches, only the first one is returned.
-
-    """
-    hx = hex_color[1:]
-    rgb = (int(hx[:2], 16) / 255.0,
-           int(hx[2:4], 16) / 255.0,
-           int(hx[4:6], 16) / 255.0)
-    min_diff = 999
-    name = ''
-    rng = range(len(rgb))
-
-    for k, v in color_dict.items():
-        diff = np.sqrt(np.sum([abs(v[i] - rgb[i]) for i in rng]))
-        if diff < min_diff:
-            min_diff = diff
-            name = k
-
-    return name
-
-
 def resolve_color(color):
+    """Return RGB tuple of a given color."""
     if isinstance(color, str):
         r, g, b = lookup_color(color)
     elif isinstance(color, collections.abc.Sequence):
@@ -873,6 +836,7 @@ def _validate_color_tuple(tup):
 
 
 def add_color(name, tup):
+    """Add ``(color, RGB`` to ``ginga.colors.color_list``."""
     _validate_color_tuple(tup)
 
     global color_dict
@@ -882,6 +846,7 @@ def add_color(name, tup):
 
 # TODO: Should this throw KeyError if key not present or silently pass?
 def remove_color(name):
+    """Remove a given color from ``ginga.colors.color_list``."""
     global color_dict
     try:
         del color_dict[name]
@@ -891,10 +856,12 @@ def remove_color(name):
 
 
 def get_colors():
+    """Return ``ginga.colors.color_list``."""
     return color_list
 
 
 def scan_rgbtxt(filepath):
+    """Parse colors from a given filename."""
     with open(filepath, 'r') as in_f:
         buf = in_f.read()
 
@@ -902,6 +869,7 @@ def scan_rgbtxt(filepath):
 
 
 def scan_rgbtxt_buf(buf):
+    """Parse colors from a given string buffer."""
     res = {}
 
     for line in buf.split('\n'):
