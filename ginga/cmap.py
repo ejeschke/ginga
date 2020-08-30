@@ -13315,6 +13315,7 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
         # silently fail
         return
 
+    # NOTE: Update if matplotlib has new public API for this.
     for name in plt.colormaps():
         if not isinstance(name, str):
             continue
