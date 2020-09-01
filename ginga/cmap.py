@@ -13306,6 +13306,7 @@ def add_matplotlib_cmap(cm, name=None):
 def add_matplotlib_cmaps(fail_on_import_error=True):
     """Add all matplotlib colormaps."""
     try:
+        import matplotlib.pyplot as plt
         from matplotlib import cm as _cm
         from matplotlib.cbook import mplDeprecation
     except ImportError:
@@ -13314,7 +13315,8 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
         # silently fail
         return
 
-    for name in _cm.cmap_d:
+    # NOTE: Update if matplotlib has new public API for this.
+    for name in plt.colormaps():
         if not isinstance(name, str):
             continue
         try:
