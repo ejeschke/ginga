@@ -1,3 +1,4 @@
+"""Module to handle image quality calculations."""
 #
 # iqcalc.py -- image quality calculations on FITS data
 #
@@ -20,6 +21,8 @@ except ImportError:
     have_scipy = False
 
 from ginga.misc import Bunch
+
+__all__ = ['get_mean', 'get_median', 'IQCalcError', 'IQCalc']
 
 
 def get_mean(data_np):
@@ -61,7 +64,22 @@ class IQCalcError(Exception):
 
 
 class IQCalc(object):
+    """Class to handle model fitting and FWHM calculations.
 
+    Parameters
+    ----------
+    logger : obj or `None`
+        Python logger. If not given, one will be created.
+
+    Attributes
+    ----------
+    lock : :py:class:`threading.RLock`
+        For mutex around `scipy.optimize`, which seems to be non-threadsafe.
+
+    skylevel_magnification, skylevel_offset : float
+        For adjustments to sky background level.
+
+    """
     def __init__(self, logger=None):
         if not logger:
             logger = logging.getLogger('IQCalc')
@@ -77,10 +95,21 @@ class IQCalc(object):
     # FWHM CALCULATION
 
     def gaussian(self, x, p):
-        """Gaussian fitting function in 1D.  Makes a sine function with
-        amplitude determined by maxv.  See calc_fwhm().
+        """Evaluate Gaussian function in 1D. See :meth:`calc_fwhm`.
 
-        p[0]==mean, p[1]==sdev, p[2]=maxv
+        Parameters
+        ----------
+        x : array-like
+            X values.
+
+        p : tuple of float
+            Parameters for Gaussian, i.e., ``(mean, stddev, amplitude)``.
+
+        Returns
+        -------
+        y : array-like
+            Y values.
+
         """
         y = (1.0 / (p[1] * np.sqrt(2 * np.pi)) *
              np.exp(-(x - p[0]) ** 2 / (2 * p[1] ** 2))) * p[2]
@@ -88,8 +117,30 @@ class IQCalc(object):
 
     def calc_fwhm_gaussian(self, arr1d, medv=None, gauss_fn=None):
         """FWHM calculation on a 1D array by using least square fitting of
-        a gaussian function on the data.  arr1d is a 1D array cut in either
-        X or Y direction on the object.
+        a Gaussian function on the data.
+
+        Parameters
+        ----------
+        arr1d : array-like
+            1D array cut in either X or Y direction on the object.
+
+        medv : float or `None`
+            Median of the data. If not given, it is calculated from ``arr1d``.
+
+        gauss_fn : func or `None`
+            Gaussian function for fitting. If not given, :meth:`gaussian`
+            is used.
+
+        Returns
+        -------
+        res : `~ginga.misc.Bunch.Bunch`
+            Fitting results.
+
+        Raises
+        ------
+        IQCalcError
+            Fitting failed.
+
         """
         if not have_scipy:
             raise IQCalcError("Please install the 'scipy' module "
@@ -123,7 +174,7 @@ class IQCalc(object):
             p1, success = optimize.leastsq(errfunc, p0[:], args=(X, Y))
 
         if not success:
-            raise IQCalcError("FWHM gaussian fitting failed")
+            raise IQCalcError("FWHM Gaussian fitting failed")
 
         mu, sdev, maxv = p1
         self.logger.debug("mu=%f sdev=%f maxv=%f" % (mu, sdev, maxv))
@@ -142,16 +193,51 @@ class IQCalc(object):
         return res
 
     def moffat(self, x, p):
-        """Moffat fitting function in 1D.
-        p[0]==mean, p[1]==corewidth(gamma), p[2]=power(alpha), p[3]=maxv
+        """Evaluate Moffat function in 1D. See :meth:`calc_fwhm`.
+
+        Parameters
+        ----------
+        x : array-like
+            X values.
+
+        p : tuple of float
+            Parameters for Moffat, i.e., ``(x_0, gamma, alpha, amplitude)``,
+            where ``x_0`` a.k.a. mean and ``gamma`` core width.
+
+        Returns
+        -------
+        y : array-like
+            Y values.
+
         """
         y = (1.0 + (x - p[0]) ** 2 / p[1] ** 2) ** (-1.0 * p[2]) * p[3]
         return y
 
     def calc_fwhm_moffat(self, arr1d, medv=None, moffat_fn=None):
         """FWHM calculation on a 1D array by using least square fitting of
-        a Moffat function on the data.  arr1d is a 1D array cut in either
-        X or Y direction on the object.
+        a Moffat function on the data.
+
+        Parameters
+        ----------
+        arr1d : array-like
+            1D array cut in either X or Y direction on the object.
+
+        medv : float or `None`
+            Median of the data. If not given, it is calculated from ``arr1d``.
+
+        moffat_fn : func or `None`
+            Moffat function for fitting. If not given, :meth:`moffat` is used.
+
+        Returns
+        -------
+        res : `~ginga.misc.Bunch.Bunch`
+            Fitting results.
+
+        Raises
+        ------
+        IQCalcError
+            Fitting failed.
+
         """
         if not have_scipy:
             raise IQCalcError("Please install the 'scipy' module "
@@ -185,7 +271,7 @@ class IQCalc(object):
             p1, success = optimize.leastsq(errfunc, p0[:], args=(X, Y))
 
         if not success:
-            raise IQCalcError("FWHM moffat fitting failed")
+            raise IQCalcError("FWHM Moffat fitting failed")
 
         mu, width, power, maxv = p1
         width = np.abs(width)
@@ -208,7 +294,25 @@ class IQCalc(object):
         return res
 
     def calc_fwhm(self, arr1d, medv=None, method_name='gaussian'):
+        """Calculate FWHM for the given input array.
 
+        Parameters
+        ----------
+        arr1d : array-like
+            1D array cut in either X or Y direction on the object.
+
+        medv : float or `None`
+            Median of the data. If not given, it is calculated from ``arr1d``.
+
+        method_name : {'gaussian', 'moffat'}
+            Function to use for fitting.
+
+        Returns
+        -------
+        res : `~ginga.misc.Bunch.Bunch`
+            Fitting results.
+
+        """
         # Calculate FWHM in each direction
         fwhm_fn = self.calc_fwhm_gaussian
         if method_name == 'moffat':

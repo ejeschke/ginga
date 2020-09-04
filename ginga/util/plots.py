@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib as mpl
 from matplotlib.figure import Figure
 
-from ginga.util import iqcalc
+from ginga.util import iqcalc as _iqcalc  # Prevent namespace confusion below
 from ginga.misc import Callback, Bunch
 
 # fix issue of negative numbers rendering incorrectly with default font
@@ -405,7 +405,7 @@ class FWHMPlot(Plot):
     def __init__(self, *args, **kwargs):
         super(FWHMPlot, self).__init__(*args, **kwargs)
 
-        self.iqcalc = iqcalc.IQCalc(self.logger)
+        self.iqcalc = _iqcalc.IQCalc(self.logger)
 
     def _plot_fwhm_axis(self, arr, iqcalc, skybg, color1, color2, color3,
                         fwhm_method='gaussian'):
