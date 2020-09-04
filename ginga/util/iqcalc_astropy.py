@@ -12,6 +12,12 @@ from ginga.util.iqcalc import IQCalc as _IQCalc
 # Import the rest into namespace so we can use this module like iqcalc.
 from ginga.util.iqcalc import get_mean  # noqa
 
+try:
+    from photutils.centroids import centroid_com
+    have_photutils = True
+except ImportError:
+    have_photutils = False
+
 __all__ = ['IQCalc']
 
 
@@ -319,3 +325,39 @@ class IQCalc(_IQCalc):
                 'Fitting with {} is unsupported'.format(method_name))
 
         return fwhm_fn(arr1d, medv=medv)
+
+    def centroid(self, data, xc, yc, radius):
+        if not have_photutils:
+            raise IQCalcError("Please install the 'photutils' package "
+                              "to use this function")
+
+        x0, y0, arr = self.cut_region(int(xc), int(yc), int(radius), data)
+        cx, cy = centroid_com(np.asarray(arr))  # Return (X, Y), not (Y, X)
+        return (x0 + cx, y0 + cy)
+
+    def find_bright_peaks(self, data, threshold=None, sigma=5, radius=5):
+        if not have_photutils:
+            raise IQCalcError("Please install the 'photutils' package "
+                              "to use this function")
+
+        from photutils.detection import find_peaks
+
+        if threshold is None:
+            # set threshold to default if none provided
+            threshold = self.get_threshold(data, sigma=sigma)
+            self.logger.debug(f"threshold defaults to {threshold} (sigma={sigma})")
+
+        if np.ma.is_masked(data):
+            mask = data.mask
+            data = data.data
+        else:
+            mask = None
+
+        out_tab = find_peaks(data, threshold, box_size=(radius * 2), mask=mask)
+        peaks = list(zip(out_tab['x_peak'], out_tab['y_peak']))
+
+        self.logger.debug(f"peaks={peaks}")
+        return peaks
+
+    # TODO: Perhaps evaluate_peaks or pick_field can also use photutils.
+    # https://github.com/astropy/photutils/issues/1074
