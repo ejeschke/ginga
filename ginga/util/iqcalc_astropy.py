@@ -14,6 +14,7 @@ from ginga.util.iqcalc import get_mean  # noqa
 
 try:
     from photutils.centroids import centroid_com
+    from photutils.detection import find_peaks
     have_photutils = True
 except ImportError:
     have_photutils = False
@@ -339,8 +340,6 @@ class IQCalc(_IQCalc):
         if not have_photutils:
             raise IQCalcError("Please install the 'photutils' package "
                               "to use this function")
-
-        from photutils.detection import find_peaks
 
         if threshold is None:
             # set threshold to default if none provided
