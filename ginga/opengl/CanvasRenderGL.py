@@ -293,7 +293,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         self.viewer.redraw(whence=0.1)
 
     def interpolation_change(self, interp):
-        self.logger.warning("Interpolation setting currently not supported fully by OpenGL renderer--defaulting to nearest neighbor")
+        self.viewer.redraw(whence=0.0)
 
     def _common_draw(self, cvs_img, cache, whence):
         # internal common drawing phase for all images
@@ -326,6 +326,21 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
                                            (_scale_x, _scale_y),
                                            method=interp)
             data = res.data
+
+            if interp in ('basic', 'nearest'):
+                cache.interp = 0
+            elif interp in ('linear', 'bilinear'):
+                cache.interp = 1
+            elif interp in ('cubic', 'bicubic'):
+                cache.interp = 2
+            elif interp == 'lanczos':
+                # TODO
+                self.logger.warning("'lanczos' interpolation not yet implemented"
+                                    " for this renderer--using 'bicubic' instead")
+                #cache.interp = 3
+                cache.interp = 2
+            else:
+                cache.interp = 0
 
             # We are limited by maximum texture size supported for the
             # OpenGl implementation.  Images larger than the maximum
@@ -668,10 +683,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, 0)
         self.logger.debug("uploaded cmap as texture buffer {}".format(map_id))
 
-    def gl_set_image_interpolation(self, interp):
-        # TODO
-        pass
-
     def gl_draw_image(self, cvs_img, cp):
         if not self._drawing:
             # this test ensures that we are not trying to draw before
@@ -704,6 +715,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         _loc = self.pgm_mgr.get_uniform_loc("image_type")
         gl.glUniform1i(_loc, cache.image_type)
+
+        _loc = self.pgm_mgr.get_uniform_loc("interp")
+        gl.glUniform1i(_loc, cache.interp)
 
         # if image has fixed cut levels, use those
         cuts = getattr(cvs_img, 'cuts', None)

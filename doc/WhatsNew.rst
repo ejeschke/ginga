@@ -14,6 +14,7 @@ Ver 3.2.0 (unreleased)
   iqcalc and iqcalc_astropy
 - Fixed a bug where certain plots were not cleared in Pick plugin
 - Removed support for matplotlib versions < 2.1
+- Added bicubic and bilinear interpolation methods to OpenGL backend
 
 Ver 3.1.0 (2020-07-20)
 ======================
