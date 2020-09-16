@@ -334,7 +334,7 @@ class ViewerImageProxy:
         x, y, radius = int(x), int(y), int(radius)
         x1, x2 = x - radius, x + radius
         y1, y2 = y - radius, y + radius
-        data_np = self.cutout_data(x1, y1, x2, y2)
+        data_np = self.cutout_data(x1, y1, x2 + 1, y2 + 1)
 
         xarr = data_np[y - y1, :]
         yarr = data_np[:, x - x1]

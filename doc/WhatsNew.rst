@@ -15,6 +15,8 @@ Ver 3.2.0 (unreleased)
 - Fixed a bug where certain plots were not cleared in Pick plugin
 - Removed support for matplotlib versions < 2.1
 - Added bicubic and bilinear interpolation methods to OpenGL backend
+- Fixed a bug where the FWHM labels in the plot didn't match report
+  values in the Pick plugin
 
 Ver 3.1.0 (2020-07-20)
 ======================

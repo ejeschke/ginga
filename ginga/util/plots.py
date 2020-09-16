@@ -420,7 +420,7 @@ class FWHMPlot(Plot):
         self.logger.debug("Y=%s" % (str(Y)))
         self.ax.plot(X, Y, color=color1, marker='.')
 
-        res = iqcalc.calc_fwhm(arr, method_name=fwhm_method)
+        res = iqcalc.calc_fwhm(arr, medv=skybg, method_name=fwhm_method)
         fwhm, mu = res.fwhm, res.mu
 
         # Make a little smoother fitted curve by plotting intermediate
