@@ -83,9 +83,9 @@ vec4 bicubic(sampler2D tex_sampler, vec2 tex_coord)
     {
         for (int n =-1; n<= 2; n++)
         {
-            vec4 vecData = texture2D(tex_sampler,
-                                     tex_coord + vec2(inv_size.x * float(m),
-                                                      inv_size.y * float(n)));
+            vec4 vecData = texture(tex_sampler,
+                                   tex_coord + vec2(inv_size.x * float(m),
+                                                    inv_size.y * float(n)));
             float f = bell_func(float(m) - a);
             vec4 vcoef1 = vec4(f, f, f, f);
             float f1 = bell_func(-(float(n) - b));
@@ -106,11 +106,11 @@ vec4 bilinear(sampler2D tex_sampler, vec2 tex_coord)
     vec2 tex_size = textureSize(tex_sampler, 0);
     vec2 inv_size = 1.0 / tex_size;
 
-    vec4 p0q0 = texture2D(tex_sampler, tex_coord);
-    vec4 p1q0 = texture2D(tex_sampler, tex_coord + vec2(inv_size.x, 0));
+    vec4 p0q0 = texture(tex_sampler, tex_coord);
+    vec4 p1q0 = texture(tex_sampler, tex_coord + vec2(inv_size.x, 0));
 
-    vec4 p0q1 = texture2D(tex_sampler, tex_coord + vec2(0, inv_size.y));
-    vec4 p1q1 = texture2D(tex_sampler, tex_coord + vec2(inv_size.x, inv_size.y));
+    vec4 p0q1 = texture(tex_sampler, tex_coord + vec2(0, inv_size.y));
+    vec4 p1q1 = texture(tex_sampler, tex_coord + vec2(inv_size.x, inv_size.y));
 
     // get Interpolation factor for X direction
     float a = fract(tex_coord.x * tex_size.x);
