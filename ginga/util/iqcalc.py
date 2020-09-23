@@ -321,8 +321,34 @@ class IQCalc(object):
         return fwhm_fn(arr1d, medv=medv)
 
     def get_fwhm(self, x, y, radius, data, medv=None, method_name='gaussian'):
-        """Get the FWHM value of the object at the coordinates (x, y) using
+        """Get the FWHM values of the object at the given coordinates and
         radius.
+
+        Parameters
+        ----------
+        x, y : int
+            Indices of the object location in data array.
+
+        radius : float
+            Radius of the region encompassing the object.
+
+        data : array-like
+            Data array.
+
+        medv, method_name
+            See :meth:`calc_fwhm`.
+
+        Returns
+        -------
+        fwhm_x, fwhm_y : float
+            FWHM in X and Y, respectively.
+
+        ctr_x, ctr_y : float
+            Center in X and Y, respectively.
+
+        x_res, y_res : dict
+            Fit results from :meth:`calc_fwhm` in X and Y, respectively.
+
         """
         if medv is None:
             medv = get_median(data)
@@ -344,6 +370,28 @@ class IQCalc(object):
         return (fwhm_x, fwhm_y, ctr_x, ctr_y, x_res, y_res)
 
     def starsize(self, fwhm_x, deg_pix_x, fwhm_y, deg_pix_y):
+        """Calculate average FWHM in arcseconds.
+
+        Parameters
+        ----------
+        fwhm_x : float
+            FWHM in X (pixels).
+
+        deg_pix_x : float
+            Plate scale from CDELT1 in degrees per pixel.
+
+        fwhm_y : float
+            FWHM in Y (pixels).
+
+        deg_pix_y : float
+            Plate scale from CDELT2 in degrees per pixel.
+
+        Returns
+        -------
+        fwhm : float
+            Average FWHM in arcseconds.
+
+        """
         cdelta1 = math.fabs(deg_pix_x)
         cdelta2 = math.fabs(deg_pix_y)
         fwhm = (fwhm_x * cdelta1 + fwhm_y * cdelta2) / 2.0
@@ -351,6 +399,30 @@ class IQCalc(object):
         return fwhm
 
     def centroid(self, data, xc, yc, radius):
+        """Calculate centroid from center of mass.
+
+        Parameters
+        ----------
+        data : array-like
+            Data array.
+
+        xc, yc : int
+            X and Y indices of the approximate center.
+
+        radius : float
+            Half-width of the region to consider around the given center.
+
+        Returns
+        -------
+        x, y : float
+            Centroid indices.
+
+        Raises
+        ------
+        IQCalcError
+            Missing dependency.
+
+        """
         if not have_scipy:
             raise IQCalcError("Please install the 'scipy' module "
                               "to use this function")
@@ -364,6 +436,22 @@ class IQCalc(object):
     # FINDING BRIGHT PEAKS
 
     def get_threshold(self, data, sigma=5.0):
+        """Calculate threshold for :meth:`find_bright_peaks`.
+
+        Parameters
+        ----------
+        data : array-like
+            Data array.
+
+        sigma : float
+            Sigma for the threshold.
+
+        Returns
+        -------
+        threshold : float
+            Threshold based on good data, its median, and the given sigma.
+
+        """
         # remove masked elements
         fdata = data[np.logical_not(np.ma.getmaskarray(data))]
         # remove Inf or NaN
@@ -384,15 +472,30 @@ class IQCalc(object):
         return threshold
 
     def find_bright_peaks(self, data, threshold=None, sigma=5, radius=5):
-        """
-        Find bright peak candidates in (data).  (threshold) specifies a
-        threshold value below which an object is not considered a candidate.
-        If threshold is blank, a default is calculated using (sigma).
-        (radius) defines a pixel radius for determining local maxima--if the
-        desired objects are larger in size, specify a larger radius.
+        """Find bright peak candidates in in the given data.
 
-        The routine returns a list of candidate object coordinate tuples
-        (x, y) in data.
+        Parameters
+        ----------
+        data : array-like
+            Input data to find peaks from.
+
+        threshold : float or `None`
+            Detection threshold. Below this value, an object is not
+            considered a candidate. If not given, a default is calculated
+            using :meth:`get_threshold` with the given ``sigma``.
+
+        sigma : float
+            Sigma for the threshold.
+
+        radius : float
+            Pixel radius for determining local maxima. If the
+            desired objects are larger in size, specify a larger radius.
+
+        Returns
+        -------
+        peaks : list of tuple
+            A list of candidate object coordinate tuples ``(x, y)`` in data.
+
         """
         if not have_scipy:
             raise IQCalcError("Please install the 'scipy' module "
@@ -425,7 +528,27 @@ class IQCalc(object):
         return peaks
 
     def cut_region(self, x, y, radius, data):
-        """Return a cut region (radius) pixels away from (x, y) in (data).
+        """Return a cut region.
+
+        Parameters
+        ----------
+        x, y : int
+            Indices of central pixel.
+
+        radius : int
+            Half-width in both X and Y directions.
+
+        data : array-like
+            Data array to cut from.
+
+        Returns
+        -------
+        x0, y0 : int
+            Origin of the region.
+
+        arr : array-like
+            Cut region (a view, not copy).
+
         """
         n = radius
         ht, wd = data.shape
@@ -435,9 +558,34 @@ class IQCalc(object):
         return (x0, y0, arr)
 
     def cut_cross(self, x, y, radius, data):
-        """Cut two data subarrays that have a center at (x, y) and with
-        radius (radius) from (data).  Returns the starting pixel (x0, y0)
-        of each cut and the respective arrays (xarr, yarr).
+        """Cut data vertically and horizontally at the given position
+        with the given radius.
+
+        Parameters
+        ----------
+        x, y : int
+            Indices where vertical and horizontal cuts meet.
+
+        radius : float
+            Radius of both cuts.
+
+        data : array-like
+            Data array to cut from.
+
+        Returns
+        -------
+        x0 : array-like
+            Starting pixel of horizontal cut (in X).
+
+        y0 : array-like
+            Starting pixel of vertical cut (in Y).
+
+        xarr : array-like
+            Horizontal cut (in X).
+
+        yarr : array-like
+            Vertical cut (in Y).
+
         """
         n = int(round(radius))
         ht, wd = data.shape
@@ -449,8 +597,28 @@ class IQCalc(object):
         return (x0, y0, xarr, yarr)
 
     def brightness(self, x, y, radius, medv, data):
-        """Return the brightness value found in a region (radius) pixels away
-        from (x, y) in (data).
+        """Return the brightness value found in a region defined by input
+        location and radius. Region is cut using :meth:`cut_region`.
+
+        Parameters
+        ----------
+        x, y : int
+            Indices of central pixel.
+
+        radius : int
+            Half-width in both X and Y directions.
+
+        medv : float
+            Background to subtract off.
+
+        data : array-like
+            Data array.
+
+        Returns
+        -------
+        res : float
+            Brightness.
+
         """
         x0, y0, arr = self.cut_region(x, y, radius, data)
         arr2 = np.sort(arr.flat)
@@ -459,13 +627,57 @@ class IQCalc(object):
         return float(res)
 
     def fwhm_data(self, x, y, data, radius=15, method_name='gaussian'):
+        """Equivalent to :meth:`get_fwhm`."""
         return self.get_fwhm(x, y, radius, data, method_name=method_name)
 
     # EVALUATION ON A FIELD
 
     def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=15,
                        fwhm_method='gaussian', cb_fn=None, ev_intr=None):
+        """Evaluate photometry for given peaks in data array.
 
+        Parameters
+        ----------
+        peaks : list of tuple
+            List of ``(x, y)`` tuples containing indices of peaks.
+
+        data : array-like
+            Data array that goes with the given peaks.
+
+        bright_radius : int
+            **This is not used.**
+
+        fwhm_radius, fwhm_method
+            See :meth:`get_fwhm`.
+
+        cb_fn : func or `None`
+            If applicable, provide a callback function that takes a
+            `ginga.misc.Bunch.Bunch` containing the result for each peak.
+            It should not return anything.
+
+        ev_intr : :py:class:`threading.Event` or `None`
+            For threading, if applicable.
+
+        Returns
+        -------
+        objlist : list of `ginga.misc.Bunch.Bunch`
+            A list of successful results for the given peaks.
+            Each result contains the following keys:
+
+            * ``objx``, ``objy``: Fitted centroid from :meth:`get_fwhm`.
+            * ``pos``: A measure of distance from the center of the image.
+            * ``oid_x``, ``oid_y``: Center-of-mass centroid from :meth:`centroid`.
+            * ``fwhm_x``, ``fwhm_y``: Fitted FWHM from :meth:`get_fwhm`.
+            * ``fwhm``: Overall measure of fwhm as a single value.
+            * ``fwhm_radius``: Input FWHM radius.
+            * ``brightness``: Average peak value based on :meth:`get_fwhm` fits.
+            * ``elipse``: A measure of ellipticity.
+            * ``x``, ``y``: Input indices of the peak.
+            * ``skylevel``: Sky level estimated from median of data array and
+              ``skylevel_magnification`` and ``skylevel_offset`` attributes.
+            * ``background``: Median of the input array.
+
+        """
         height, width = data.shape
         hh = float(height) / 2.0
         ht = float(height)
@@ -547,13 +759,39 @@ class IQCalc(object):
         return objlist
 
     def _sortkey(self, obj):
+        """For sorting of result in :meth:`objlist_select`."""
         val = obj.brightness * obj.pos / math.sqrt(obj.fwhm)
         return val
 
     def objlist_select(self, objlist, width, height,
                        minfwhm=2.0, maxfwhm=150.0, minelipse=0.5,
                        edgew=0.01):
+        """Filter output from :meth:`evaluate_peaks`.
 
+        Parameters
+        ----------
+        objlist : list of `ginga.misc.Bunch.Bunch`
+            Output from :meth:`evaluate_peaks`.
+
+        width, height : int
+            Dimension of data array from which ``objlist`` was derived.
+
+        minfwhm, maxfwhm : float
+            Limits for desired FWHM, where ``(minfwhm, maxfwhm)``.
+
+        minelipse : float
+            Minimum value of desired ellipticity (not inclusive).
+
+        edgew : float
+            Factor between 0 and 1 that determines if a location is too close to the edge or not.
+
+        Returns
+        -------
+        results : list of `ginga.misc.Bunch.Bunch`
+            Elements of ``objlist`` that contain desired FWHM, ellipticity,
+            and not too close to the edge.
+
+        """
         results = []
         count = 0
         for obj in objlist:
@@ -577,7 +815,34 @@ class IQCalc(object):
                    threshold=None,
                    minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
                    edgew=0.01):
+        """Pick the first good object within the given field.
 
+        Parameters
+        ----------
+        data : array-like
+            Data array of the field.
+
+        peak_radius, threshold
+            See :meth:`find_bright_peaks`.
+
+        bright_radius, fwhm_radius
+            See :meth:`evaluate_peaks`.
+
+        minfwhm, maxfwhm, minelipse, edgew
+            See :meth:`objlist_select`.
+
+        Returns
+        -------
+        result : `ginga.misc.Bunch.Bunch`
+            This is a single element of ``objlist`` as described in
+            :meth:`evaluate_peaks`.
+
+        Raises
+        ------
+        IQCalcError
+            No object matches selection criteria.
+
+        """
         height, width = data.shape
 
         # Find the bright peaks in the image
@@ -607,6 +872,40 @@ class IQCalc(object):
                  radius=5, bright_radius=2, fwhm_radius=15, threshold=None,
                  minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
                  edgew=0.01):
+        """Run :meth:`pick_field` on the given image.
+
+        Parameters
+        ----------
+        image : `ginga.AstroImage.AstroImage`
+            Image to process.
+
+        x1, y1, x2, y2 : int
+            See :meth:`ginga.BaseImage.BaseImage.cutout_data`.
+
+        radius, threshold
+            See :meth:`find_bright_peaks`.
+
+        bright_radius, fwhm_radius
+            See :meth:`evaluate_peaks`.
+
+        minfwhm, maxfwhm, minelipse, edgew
+            See :meth:`objlist_select`.
+
+        Returns
+        -------
+        qs : `ginga.misc.Bunch.Bunch`
+            This is a single element of ``objlist`` as described in
+            :meth:`evaluate_peaks`.
+
+        """
+        if x1 is None:
+            x1 = 0
+        if y1 is None:
+            y1 = 0
+        if x2 is None:
+            x2 = image.width
+        if y2 is None:
+            y2 = image.height
 
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         data = image.cutout_data(x1, y1, x2, y2, astype=np.float)
@@ -629,4 +928,4 @@ class IQCalc(object):
 
         return qs
 
-#END
+# END
