@@ -21,6 +21,8 @@ Ver 3.2.0 (unreleased)
 - Fixed a bug in gtk/cairo backend where paths were not drawn correctly
 - Included a couple of additional bundled fonts to improve legibility of
   small text
+- Fixed a bug in PixTable that reversed pixel indices on display
+- Added box sum result to PixTable and improved statistics display
 
 Ver 3.1.0 (2020-07-20)
 ======================

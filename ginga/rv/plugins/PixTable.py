@@ -136,10 +136,9 @@ class PixTable(GingaPlugin.LocalPlugin):
         # For pixel table
         self.pixtbl_radius = 2
         self.txt_arr = None
-        self.sum_arr = None
         self.sizes = [1, 2, 3, 4]
         self.maxdigits = 9
-        self.fmt_cell = '{:> %d.%dg}' % (self.maxdigits - 1, self.maxdigits // 2)
+        self.fmt_cell = f'> {self.maxdigits - 1}.{self.maxdigits // 2}g'
         self.lastx = 0
         self.lasty = 0
         self.font = self.settings.get('font', 'fixed')
@@ -194,6 +193,20 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         self._rebuild_table()
 
+        vbox2 = Widgets.VBox()
+
+        # Stats report panel
+        captions = (
+            ('Min:', 'label', 'Min', 'llabel',
+             'Mean:', 'label', 'Mean', 'llabel',
+             'Median:', 'label', 'Median', 'llabel'),
+            ('Max:', 'label', 'Max', 'llabel',
+             'RMS:', 'label', 'RMS', 'llabel',
+             'Sum:', 'label', 'Sum', 'llabel'))
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        vbox2.add_widget(w, stretch=0)
+
         btns = Widgets.HBox()
         btns.set_border_width(4)
         btns.set_spacing(4)
@@ -222,7 +235,6 @@ class PixTable(GingaPlugin.LocalPlugin):
         cbox2.add_callback('activated', self.mark_select_cb)
         self.w.marks = cbox2
         cbox2.set_tooltip("Select a mark")
-        #cbox2.setMinimumContentsLength(8)
         btns.add_widget(cbox2, stretch=0)
 
         btn1 = Widgets.Button("Delete")
@@ -240,7 +252,6 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.w.btn_delete_all = btn2
         btns.add_widget(Widgets.Label(''), stretch=1)
 
-        vbox2 = Widgets.VBox()
         vbox2.add_widget(btns, stretch=0)
 
         btns = Widgets.HBox()
@@ -409,27 +420,30 @@ class PixTable(GingaPlugin.LocalPlugin):
         minval = np.nanmin(data)
         avgval = np.mean(data)
         rmsval = np.sqrt(np.mean(np.square(data)))
+        medianval = np.median(data)
+        sumval = np.nansum(data)
         fmt_cell = self.fmt_cell
 
-        # can we do this with a np.vectorize() fn call and
-        # speed things up?
-        for i in range(width):
-            for j in range(height):
-                val = data[i][j]
-                if not np.isscalar(val):
-                    val = np.average(val)
-                self.txt_arr[i][j].text = fmt_cell.format(val)
+        def _vecfunc(val, out):
+            if not np.isscalar(val):
+                val = np.average(val)
+            out.text = f'{val:{fmt_cell}}'
+
+        func = np.vectorize(_vecfunc)
+        func(data, self.txt_arr)
 
         ctr_txt = self.txt_arr[width // 2][height // 2]
 
-        # append statistics line
-        fmt_stat = "  Min: %s  Max: %s  Avg: %s  Rms: %s" % (
-            fmt_cell, fmt_cell, fmt_cell, fmt_cell)
-        self.sum_arr[0].text = fmt_stat.format(minval, maxval, avgval, rmsval)
+        # Report statistics
+        self.w.min.set_text(f'{minval:{fmt_cell}}')
+        self.w.max.set_text(f'{maxval:{fmt_cell}}')
+        self.w.sum.set_text(f'{sumval:{fmt_cell}}')
+        self.w.mean.set_text(f'{avgval:{fmt_cell}}')
+        self.w.rms.set_text(f'{rmsval:{fmt_cell}}')
+        self.w.median.set_text(f'{medianval:{fmt_cell}}')
 
         # update the pixtable
         self.pixview.panset_xy(ctr_txt.x, ctr_txt.y)
-        #self.pixview.redraw(whence=3)
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
@@ -526,16 +540,6 @@ class PixTable(GingaPlugin.LocalPlugin):
             rows.append(cols)
 
         self.txt_arr = np.array(rows)
-
-        # add summary row(s)
-        x = (font_wd + 2) + 4
-        y += font_ht + 20
-        dx, dy = crdmap.to_data((x, y))
-        s1 = Text(dx, dy, text='', font=self.font,
-                  color=color, fontsize=self.fontsize,
-                  coord='data')
-        objs.append(s1)
-        self.sum_arr = np.array([s1])
 
         # add all of the text objects to the canvas as one large
         # compound object
