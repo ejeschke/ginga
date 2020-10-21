@@ -1927,12 +1927,19 @@ class ImageViewBase(Callback.Callbacks):
         level = self.zoom.calc_level(self.t_['scale'])
         self.zoom_to(level - decr)
 
-    def zoom_fit(self, no_reset=False):
+    def zoom_fit(self, axis='lock', no_reset=False):
         """Zoom to fit display window.
-        Also see :meth:`zoom_to`.
+        Pan the image and scale the view to fit the size of the set
+        limits (usually set to the image size).  Parameter `axis` can
+        be used to set which axes are allowed to be scaled; if set to
+        'lock' then all axes are scaled in such a way as to keep the
+        scale factor uniform between axes.  Also see :meth:`zoom_to`.
 
         Parameters
         ----------
+        axis : str
+            One of: 'x', 'y', 'xy', or 'lock' (default).
+
         no_reset : bool
             Do not reset ``autozoom`` setting.
 
@@ -1951,7 +1958,16 @@ class ImageViewBase(Callback.Callbacks):
         # zoom_fit also centers image
         with self.suppress_redraw:
 
-            self.center_image(no_reset=no_reset)
+            opan_x, opan_y = self.get_pan()[:2]
+            pan_x = (xy_mn[0] + xy_mx[0]) * 0.5
+            pan_y = (xy_mn[1] + xy_mx[1]) * 0.5
+
+            if axis == 'x':
+                pan_y = opan_y
+            elif axis == 'y':
+                pan_x = opan_x
+
+            self.panset_xy(pan_x, pan_y, no_reset=no_reset)
 
             ctr_x, ctr_y, rot_deg = self.get_rotation_info()
 
@@ -1973,10 +1989,22 @@ class ImageViewBase(Callback.Callbacks):
             scale_y = (float(wheight) /
                        (float(height) * self.t_['scale_y_base']))
 
-            scalefactor = min(scale_x, scale_y)
+            oscale_x, oscale_y = self.get_scale_xy()
+
             # account for t_[scale_x/y_base]
-            scale_x = scalefactor * self.t_['scale_x_base']
-            scale_y = scalefactor * self.t_['scale_y_base']
+            if axis == 'x':
+                scale_x *= self.t_['scale_x_base']
+                scale_y = oscale_y
+            elif axis == 'y':
+                scale_x = oscale_x
+                scale_y *= self.t_['scale_y_base']
+            elif axis == 'xy':
+                scale_x *= self.t_['scale_x_base']
+                scale_y *= self.t_['scale_y_base']
+            else:
+                scalefactor = min(scale_x, scale_y)
+                scale_x = scalefactor * self.t_['scale_x_base']
+                scale_y = scalefactor * self.t_['scale_y_base']
 
             self._scale_to(scale_x, scale_y, no_reset=no_reset)
 

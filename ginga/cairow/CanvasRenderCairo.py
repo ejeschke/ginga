@@ -191,7 +191,7 @@ class RenderContext(render.RenderContextBase):
         self.cr.new_path()
 
     def draw_path(self, cpoints):
-        (cx0, cy0) = cpoints[-1][:2]
+        (cx0, cy0) = cpoints[0][:2]
         self.cr.move_to(cx0, cy0)
         for cpt in cpoints[1:]:
             cx, cy = cpt[:2]

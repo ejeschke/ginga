@@ -18,6 +18,7 @@ Ver 3.2.0 (unreleased)
 - Added bicubic and bilinear interpolation methods to OpenGL backend
 - Fixed a bug where the FWHM labels in the plot didn't match report
   values in the Pick plugin
+- Fixed a bug in gtk/cairo backend where paths were not drawn correctly
 
 Ver 3.1.0 (2020-07-20)
 ======================
