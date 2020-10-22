@@ -499,13 +499,15 @@ class PixTable(GingaPlugin.LocalPlugin):
         rows = []
         objs = []
         max_cx = 0
+        x_offset = 6
+        y_offset = 4
         for row in range(self.pixtbl_radius * 2 + 1):
             cols = []
             for col in range(self.pixtbl_radius * 2 + 1):
                 col_wd = font_wd * max_wd
-                cx = col_wd * col + 4
+                cx = col_wd * col + x_offset
                 max_cx = max(max_cx, cx + col_wd)
-                cy = font_ht * (row + 1) + 4
+                cy = font_ht * (row + 1) + y_offset
 
                 color = 'lightgreen'
                 if (row == col) and (row == self.pixtbl_radius):
@@ -522,13 +524,13 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.txt_arr = np.array(rows)
 
         # add summary row(s)
-        cx = (font_wd + 2) + 4
+        cx = (font_wd + 2) + x_offset
         cy += font_ht + 20
         s1 = Text(cx, cy, text='', font=self.font,
                   color='cyan', fontsize=self.fontsize,
                   coord='window')
         objs.append(s1)
-        cy += font_ht + 4
+        cy += font_ht + y_offset
         s2 = Text(cx, cy, text='', font=self.font,
                   color='cyan', fontsize=self.fontsize,
                   coord='window')
