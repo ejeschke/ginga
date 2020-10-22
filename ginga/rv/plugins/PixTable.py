@@ -136,9 +136,10 @@ class PixTable(GingaPlugin.LocalPlugin):
         # For pixel table
         self.pixtbl_radius = 2
         self.txt_arr = None
+        self.sum_arr = None
         self.sizes = [1, 2, 3, 4]
         self.maxdigits = 9
-        self.fmt_cell = f'> {self.maxdigits - 1}.{self.maxdigits // 2}g'
+        self.fmt_cell = f'^{self.maxdigits}.4g'
         self.lastx = 0
         self.lasty = 0
         self.font = self.settings.get('font', 'fixed')
@@ -193,20 +194,6 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         self._rebuild_table()
 
-        vbox2 = Widgets.VBox()
-
-        # Stats report panel
-        captions = (
-            ('Min:', 'label', 'Min', 'llabel',
-             'Mean:', 'label', 'Mean', 'llabel',
-             'Median:', 'label', 'Median', 'llabel'),
-            ('Max:', 'label', 'Max', 'llabel',
-             'RMS:', 'label', 'RMS', 'llabel',
-             'Sum:', 'label', 'Sum', 'llabel'))
-        w, b = Widgets.build_info(captions)
-        self.w.update(b)
-        vbox2.add_widget(w, stretch=0)
-
         btns = Widgets.HBox()
         btns.set_border_width(4)
         btns.set_spacing(4)
@@ -252,6 +239,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.w.btn_delete_all = btn2
         btns.add_widget(Widgets.Label(''), stretch=1)
 
+        vbox2 = Widgets.VBox()
         vbox2.add_widget(btns, stretch=0)
 
         btns = Widgets.HBox()
@@ -285,9 +273,6 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         box.add_widget(vbox2, stretch=1)
-
-        ## spacer = Widgets.Label('')
-        ## box.add_widget(spacer, stretch=1)
 
         paned.add_widget(sw)
         paned.set_sizes(self._split_sizes)
@@ -435,12 +420,8 @@ class PixTable(GingaPlugin.LocalPlugin):
         ctr_txt = self.txt_arr[width // 2][height // 2]
 
         # Report statistics
-        self.w.min.set_text(f'{minval:{fmt_cell}}')
-        self.w.max.set_text(f'{maxval:{fmt_cell}}')
-        self.w.sum.set_text(f'{sumval:{fmt_cell}}')
-        self.w.mean.set_text(f'{avgval:{fmt_cell}}')
-        self.w.rms.set_text(f'{rmsval:{fmt_cell}}')
-        self.w.median.set_text(f'{medianval:{fmt_cell}}')
+        self.sum_arr[0].text = f"Min: {minval:{fmt_cell}} Mean: {avgval:{fmt_cell}} Median: {medianval:{fmt_cell}}"
+        self.sum_arr[1].text = f"Max: {maxval:{fmt_cell}}  RMS: {rmsval:{fmt_cell}} Sum: {sumval:{fmt_cell}}"
 
         # update the pixtable
         self.pixview.panset_xy(ctr_txt.x, ctr_txt.y)
@@ -517,23 +498,22 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         rows = []
         objs = []
-        max_x = 0
+        max_cx = 0
         for row in range(self.pixtbl_radius * 2 + 1):
             cols = []
             for col in range(self.pixtbl_radius * 2 + 1):
                 col_wd = font_wd * max_wd
-                x = col_wd * col + 4
-                max_x = max(max_x, x + col_wd)
-                y = font_ht * (row + 1) + 4
+                cx = col_wd * col + 4
+                max_cx = max(max_cx, cx + col_wd)
+                cy = font_ht * (row + 1) + 4
 
                 color = 'lightgreen'
                 if (row == col) and (row == self.pixtbl_radius):
                     color = 'pink'
 
-                dx, dy = crdmap.to_data((x, y))
-                text_obj = Text(dx, dy, text='', font=self.font,
+                text_obj = Text(cx, cy, text='', font=self.font,
                                 color=color, fontsize=self.fontsize,
-                                coord='data')
+                                coord='window')
                 objs.append(text_obj)
                 cols.append(text_obj)
 
@@ -541,13 +521,27 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         self.txt_arr = np.array(rows)
 
+        # add summary row(s)
+        cx = (font_wd + 2) + 4
+        cy += font_ht + 20
+        s1 = Text(cx, cy, text='', font=self.font,
+                  color='cyan', fontsize=self.fontsize,
+                  coord='window')
+        objs.append(s1)
+        cy += font_ht + 4
+        s2 = Text(cx, cy, text='', font=self.font,
+                  color='cyan', fontsize=self.fontsize,
+                  coord='window')
+        objs.append(s2)
+        self.sum_arr = np.array([s1, s2])
+
         # add all of the text objects to the canvas as one large
         # compound object
         CompoundObject = canvas.get_draw_class('compoundobject')
         canvas.add(CompoundObject(*objs), redraw=False)
 
         # set limits for scrolling
-        self.pixview.set_limits(((0, 0), (max_x, y)), coord='window')
+        self.pixview.set_limits(((0, 0), (max_cx, cy)), coord='window')
 
     def set_cutout_size_cb(self, w, val):
         index = w.get_index()
