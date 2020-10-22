@@ -19,6 +19,8 @@ Ver 3.2.0 (unreleased)
 - Fixed a bug where the FWHM labels in the plot didn't match report
   values in the Pick plugin
 - Fixed a bug in gtk/cairo backend where paths were not drawn correctly
+- Included a couple of additional bundled fonts to improve legibility of
+  small text
 
 Ver 3.1.0 (2020-07-20)
 ======================

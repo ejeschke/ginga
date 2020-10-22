@@ -108,7 +108,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_PixTable')
-        self.settings.add_defaults(fontsize=12,
+        self.settings.add_defaults(fontsize=10,
                                    font='fixed',
                                    mark_radius=10,
                                    mark_style='cross',
@@ -584,6 +584,7 @@ class PixTable(GingaPlugin.LocalPlugin):
                                style=style, color=color,
                                linestyle='solid')
         txt_obj = self.dc.Text(10, 0, caption,
+                               font=self.font, fontsize=self.fontsize,
                                color=color, ref_obj=pt_obj, coord='offset')
         txt_obj.editable = False
         tag = self.canvas.add(self.dc.CompoundObject(pt_obj, txt_obj),

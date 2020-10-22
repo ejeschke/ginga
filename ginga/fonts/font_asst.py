@@ -100,7 +100,7 @@ def get_font_info(font_name, subst_ok=True):
         font_info = font_dir[font_name]
     elif subst_ok:
         # substitute an alternate font
-        font_name = resolve_alias('fixed', 'fixed')
+        font_name = resolve_alias('house', 'fixed')
         font_info = font_dir[font_name]
     else:
         raise KeyError(font_name)
@@ -134,6 +134,16 @@ def set_scale_factor(key, factor):
 
 fontdir, xx = os.path.split(__file__)
 
-known_font = os.path.join(fontdir, 'Roboto', 'Roboto-Regular.ttf')
-add_font(known_font, font_name='roboto')
-add_alias('fixed', 'roboto')
+add_font(os.path.join(fontdir, 'Roboto', 'Roboto-Regular.ttf'),
+         font_name='roboto')
+add_font(os.path.join(fontdir, 'Roboto_Condensed', 'RobotoCondensed-Regular.ttf'),
+         font_name='roboto condensed')
+add_font(os.path.join(fontdir, 'Ubuntu_Mono', 'UbuntuMono-Regular.ttf'),
+         font_name='ubuntu mono')
+
+# house font needs to be available
+add_alias('house', 'ubuntu mono')
+add_alias('fixed', 'ubuntu mono')
+add_alias('sans', 'roboto')
+add_alias('sans serif', 'roboto')
+add_alias('sans condensed', 'roboto condensed')

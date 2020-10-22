@@ -11,7 +11,7 @@ from ginga.fonts import font_asst
 
 
 def get_cached_font(fontname, fontsize, color, alpha):
-    key = (fontname, fontsize, color, alpha)
+    key = ('agg', fontname, fontsize, color, alpha)
     try:
         return font_asst.get_cache(key)
 

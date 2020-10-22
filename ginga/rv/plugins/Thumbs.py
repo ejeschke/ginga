@@ -82,6 +82,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    label_cutoff='right',
                                    highlight_tracks_keyboard_focus=True,
                                    label_font_color='white',
+                                   label_font='sans condensed',
                                    label_font_size=10,
                                    label_bg_color='lightgreen',
                                    autoload_visible_thumbs=False,
@@ -857,7 +858,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         a, b = 2, 0
         for line in lines:
             text = canvas.dc.Text(a, b, text=line, color='black',
-                                  fontsize=fontsize)
+                                  font='sans condensed', fontsize=fontsize)
             text.crdmap = crdmap
             l.append(text)
             txt_wd, txt_ht = thumbs_viewer.renderer.get_dimensions(text)
@@ -1245,6 +1246,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         canvas = self.canvas
         fg = self.settings.get('label_font_color', 'white')
         bg = self.settings.get('label_bg_color', 'lightgreen')
+        fontname = self.settings.get('label_font', 'sans condensed')
         fontsize = self.settings.get('label_font_size', 10)
 
         # Shorten thumbnail label, if requested
@@ -1264,7 +1266,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         l2 = []
         color = bg if thumbkey in self.re_hilite_set else fg
         namelbl = canvas.dc.Text(xt, yt, text=thumbname, color=color,
-                                 fontsize=fontsize, coord='data')
+                                 font=fontname, fontsize=fontsize,
+                                 coord='data')
         l2.append(namelbl)
 
         image = canvas.dc.Image(xi, yi, thumb_image, alpha=1.0,

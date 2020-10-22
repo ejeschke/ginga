@@ -403,13 +403,58 @@ def get_icon(iconpath, size=None):
     return iconw
 
 
-def get_font(font_family, point_size):
-    font_family = font_asst.resolve_alias(font_family, font_family)
-    font = QFont(font_family, point_size)
+def get_cached_font(font_name, font_size):
+    key = ('qt', font_name, font_size)
+    try:
+        return font_asst.get_cache(key)
+
+    except KeyError:
+        pass
+
+    # font not loaded? try and load it
+    try:
+        info = font_asst.get_font_info(font_name, subst_ok=False)
+        font_family = load_font(font_name, info.font_path)
+        font = QFont(font_family, font_size)
+        font_asst.add_cache(key, font)
+
+    except KeyError:
+        pass
+
+    # see if we can build the font from the name
+    try:
+        font = QFont(font_name, font_size)
+        font_asst.add_cache(key, font)
+        return font
+
+    except Exception:
+        pass
+
+    # try and substitute one of the built in fonts
+    info = font_asst.get_font_info(font_name, subst_ok=True)
+    font_family = load_font(font_name, info.font_path)
+    font = QFont(font_family, font_size)
+    font_asst.add_cache(key, font)
+
     return font
 
 
+# holds mapping of Qt font names to "ginga" font names
+qt_fonts = dict()
+
+
+def get_font(font_name, font_size):
+    font_name = font_asst.resolve_alias(font_name, font_name)
+    return get_cached_font(font_name, font_size)
+
+
 def load_font(font_name, font_file):
+    global qt_fonts
+    if font_name in qt_fonts:
+        # <-- this font is already loaded, just look up Qt's name for it
+        font_family = qt_fonts[font_name]
+        return font_family
+
     # NOTE: you need to have created a QApplication() first (see
     # qtw.Widgets.Application) for this to work correctly, or you will get
     # a crash!
@@ -419,12 +464,14 @@ def load_font(font_name, font_file):
             font_file))
 
     font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+    qt_fonts[font_name] = font_family
 
     if font_name != font_family:
         # If Qt knows this under a different name, add an alias
-        font_asst.add_alias(font_name, font_family)
+        #print("overriding alias '{}' with '{}'".format(font_name, font_family))
+        font_asst.add_alias(font_family, font_name)
 
-    return font_name
+    return font_family
 
 
 # cache of QPainters for surfaces

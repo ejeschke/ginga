@@ -163,20 +163,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self._cursor_last_update = time.time()
         self.cursor_interval = self.settings.get('cursor_interval', 0.050)
 
-        # Try to load some bundled truetype fonts we might like to use
-        for font_name in font_asst.get_loadable_fonts():
-            self.logger.info("trying to load bundled font '%s'" % (font_name))
-            font_info = font_asst.get_font_info(font_name)
-            try:
-                GwHelp.load_font(font_name, font_info.font_path)
-
-            except Exception as e:
-                # quietly ignore font-loading problems for now--
-                # other fonts will be substituted
-                self.logger.warning("Error loading font '%s': %s" % (
-                    font_name, str(e)))
-                font_asst.remove_font(font_name)
-
         # add user preferred fonts for aliases, if present
         fixed_font = self.settings.get('fixedFont', None)
         if fixed_font is not None:

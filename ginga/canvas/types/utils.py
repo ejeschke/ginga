@@ -28,7 +28,7 @@ class ColorBar(CanvasObjectBase):
             Param(name='showrange', type=_bool,
                   default=True, valid=[False, True],
                   description="Show the range in the colorbar"),
-            Param(name='font', type=str, default='Sans Serif',
+            Param(name='font', type=str, default='fixed',
                   description="Font family for text"),
             Param(name='fontsize', type=float, default=8.0,
                   min=8, max=72,
@@ -54,7 +54,7 @@ class ColorBar(CanvasObjectBase):
         ]
 
     def __init__(self, height=36, offset=40, side='bottom', showrange=True,
-                 font='Sans Serif', fontsize=8,
+                 font='fixed', fontsize=8,
                  color='black', bgcolor='white',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):
@@ -218,7 +218,7 @@ class DrawableColorBarP(RectangleP):
             Param(name='showrange', type=_bool,
                   default=True, valid=[False, True],
                   description="Show the range in the colorbar"),
-            Param(name='font', type=str, default='Sans Serif',
+            Param(name='font', type=str, default='fixed',
                   description="Font family for text"),
             Param(name='fontsize', type=float, default=8,
                   min=8, max=72,
@@ -244,7 +244,7 @@ class DrawableColorBarP(RectangleP):
         ]
 
     def __init__(self, p1, p2, showrange=True,
-                 font='Sans Serif', fontsize=8,
+                 font='fixed', fontsize=8,
                  color='black', bgcolor='white',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):
@@ -392,7 +392,7 @@ class DrawableColorBar(DrawableColorBarP):
         return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
 
     def __init__(self, x1, y1, x2, y2, showrange=True,
-                 font='Sans Serif', fontsize=8,
+                 font='fixed', fontsize=8,
                  color='black', bgcolor='white',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):

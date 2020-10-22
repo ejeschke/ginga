@@ -1165,32 +1165,33 @@ class Pick(GingaPlugin.LocalPlugin):
         try:
             if self.contour_image is not None:
                 cv = self.contour_image
-                cv.set_data(data)
-                # copy orientation of main image, so that contour will
-                # make sense.  Don't do rotation, for now.
-                flips = self.fitsimage.get_transforms()
-                cv.transform(*flips)
-                #rot_deg = self.fitsimage.get_rotation()
-                #cv.rotate(rot_deg)
+                with cv.suppress_redraw:
+                    cv.set_data(data)
+                    # copy orientation of main image, so that contour will
+                    # make sense.  Don't do rotation, for now.
+                    flips = self.fitsimage.get_transforms()
+                    cv.transform(*flips)
+                    #rot_deg = self.fitsimage.get_rotation()
+                    #cv.rotate(rot_deg)
 
-                cv.panset_xy(x, y)
+                    cv.panset_xy(x, y)
 
-                canvas = self.contour_canvas
-                try:
-                    canvas.delete_object_by_tag('_$cntr', redraw=False)
-                except KeyError:
-                    pass
+                    canvas = self.contour_canvas
+                    try:
+                        canvas.delete_object_by_tag('_$cntr', redraw=False)
+                    except KeyError:
+                        pass
 
-                # calculate contour polygons
-                contour_grps = contour.calc_contours(data, self.num_contours)
+                    # calculate contour polygons
+                    contour_grps = contour.calc_contours(data, self.num_contours)
 
-                # get compound polygons object
-                c_obj = contour.create_contours_obj(canvas, contour_grps,
-                                                    colors=['black'],
-                                                    linewidth=2)
-                canvas.add(c_obj, tag='_$cntr')
+                    # get compound polygons object
+                    c_obj = contour.create_contours_obj(canvas, contour_grps,
+                                                        colors=['black'],
+                                                        linewidth=2)
+                    canvas.add(c_obj, tag='_$cntr')
 
-            if self.contour_plot is not None:
+            elif self.contour_plot is not None:
                 self.contour_plot.plot_contours_data(
                     x, y, data, num_contours=self.num_contours)
 
@@ -1201,7 +1202,7 @@ class Pick(GingaPlugin.LocalPlugin):
     def clear_contours(self):
         if self.contour_image is not None:
             self.contour_canvas.delete_all_objects()
-        if self.contour_plot is not None:
+        elif self.contour_plot is not None:
             self.contour_plot.clear()
 
     def plot_fwhm(self, qs, image):

@@ -12,7 +12,7 @@ from ginga.fonts import font_asst
 
 
 def get_cached_font(fontname, fontsize):
-    key = (fontname, fontsize)
+    key = ('opencv', fontname, fontsize)
     try:
         return font_asst.get_cache(key)
 
