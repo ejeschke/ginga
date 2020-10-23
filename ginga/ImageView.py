@@ -2242,6 +2242,36 @@ class ImageViewBase(Callback.Callbacks):
 
         self.panset_xy(data_x, data_y)
 
+    def position_at_canvas_xy(self, data_pt, canvas_pt, no_reset=False):
+        """Position a data point at a certain canvas position.
+        Calculates and sets the pan position necessary to position a
+        data point precisely at a point on the canvas.
+
+        Parameters
+        ----------
+        data_pt : tuple
+            data point to position, must include x and y (x, y).
+
+        canvas_pt : tuple
+            canvas coordinate (cx, cy) where data point should end up.
+
+        no_reset : bool
+            See :meth:`set_pan`.
+
+        """
+        # get current data point at desired canvas position
+        cx, cy = canvas_pt[:2]
+        data_cx, data_cy = self.get_data_xy(cx, cy)
+
+        # calc deltas from pan position to desired pos in data coords
+        pan_x, pan_y = self.get_pan()
+        dx, dy = pan_x - data_cx, pan_y - data_cy
+
+        # calc pan position to set by offsetting data_pt by the
+        # deltas
+        data_x, data_y = data_pt[:2]
+        self.panset_xy(data_x + dx, data_y + dy, no_reset=no_reset)
+
     def center_image(self, no_reset=True):
         """Pan to the center of the image.
 
