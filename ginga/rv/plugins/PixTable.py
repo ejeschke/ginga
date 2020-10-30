@@ -387,6 +387,7 @@ class PixTable(GingaPlugin.LocalPlugin):
     def set_font_size_cb(self, w, index):
         self.fontsize = self.fontsizes[index]
         self._rebuild_table()
+        self.redo()
 
     def plot(self, data, x1, y1, x2, y2, data_x, data_y, radius,
              maxv=9):
@@ -549,6 +550,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         index = w.get_index()
         self.pixtbl_radius = self.sizes[index]
         self._rebuild_table()
+        self.redo()
 
     def cursor_cb(self, canvas, junk, data_x, data_y):
         if not self.gui_up:
