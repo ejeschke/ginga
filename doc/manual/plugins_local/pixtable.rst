@@ -4,7 +4,6 @@ PixTable
 ========
 
 .. image:: figures/pixtable-plugin.png
-   :width: 800px
    :align: center
    :alt: PixTable plugin
 
