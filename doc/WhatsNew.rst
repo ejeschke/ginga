@@ -22,7 +22,9 @@ Ver 3.2.0 (unreleased)
 - Included a couple of additional bundled fonts to improve legibility of
   small text
 - Fixed a bug in PixTable that reversed pixel indices on display
-- Added box sum and median results to PixTable; also improved statistics display
+- Added box sum and median results to PixTable; also improved statistics
+  display
+- Fixed an issue for the Tk Ginga widget if PIL.ImageTk was not installed
 
 Ver 3.1.0 (2020-07-20)
 ======================

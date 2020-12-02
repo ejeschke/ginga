@@ -118,7 +118,7 @@ class ImageViewTk(ImageView.ImageViewBase):
 
         else:
             # fallback to a little slower method--make a PNG image
-            image = self.get_surface_as_rgb_format_bytes(format='png')
+            image = self.renderer.get_surface_as_rgb_format_bytes(format='png')
             photo = PhotoImage(data=image)
 
         # hang on to a reference otherwise it gets gc'd
