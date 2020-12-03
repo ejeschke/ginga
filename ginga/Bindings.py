@@ -248,7 +248,8 @@ class ImageViewBindings(object):
         return self.settings
 
     def window_map(self, viewer):
-        self.to_default_mode(viewer)
+        #self.to_default_mode(viewer)
+        pass
 
     def set_bindings(self, viewer):
         viewer.add_callback('map', self.window_map)
