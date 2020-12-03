@@ -18,7 +18,7 @@ from ginga.util.loader import load_data
 
 class FitsViewer(object):
 
-    def __init__(self, logger):
+    def __init__(self, logger, render='widget'):
         self.logger = logger
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
@@ -34,7 +34,7 @@ class FitsViewer(object):
         vbox.set_border_width(2)
         vbox.set_spacing(1)
 
-        fi = Viewers.CanvasView(logger=logger)
+        fi = Viewers.CanvasView(logger=logger, render=render)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
@@ -78,7 +78,7 @@ class FitsViewer(object):
         self.drawtypes.sort()
 
         fi.set_desired_size(512, 512)
-        iw = Viewers.GingaViewerWidget(viewer=fi)
+        iw = Viewers.GingaScrolledViewerWidget(viewer=fi)
         vbox.add_widget(iw, stretch=1)
 
         self.readout = Widgets.Label("")
@@ -275,13 +275,6 @@ def main(options, args):
     # decide our toolkit, then import
     ginga_toolkit.use(options.toolkit)
 
-    if options.use_opencv:
-        from ginga import trcalc
-        try:
-            trcalc.use('opencv')
-        except Exception as e:
-            logger.warning("Error using OpenCv: %s" % str(e))
-
     if options.use_opencl:
         from ginga import trcalc
         try:
@@ -289,9 +282,10 @@ def main(options, args):
         except Exception as e:
             logger.warning("Error using OpenCL: %s" % str(e))
 
-    viewer = FitsViewer(logger)
+    rw = 'opengl' if options.renderer == 'opengl' else 'widget'
+    viewer = FitsViewer(logger, render=rw)
 
-    if options.renderer is not None:
+    if options.renderer is not None and options.renderer != 'opengl':
         render_class = render.get_render_class(options.renderer)
         viewer.fitsimage.set_renderer(render_class(viewer.fitsimage))
 
@@ -326,9 +320,6 @@ if __name__ == "__main__":
     argprs.add_argument("-t", "--toolkit", dest="toolkit", metavar="NAME",
                         default='qt',
                         help="Choose GUI toolkit (gtk|qt)")
-    argprs.add_argument("--opencv", dest="use_opencv", default=False,
-                        action="store_true",
-                        help="Use OpenCv acceleration")
     argprs.add_argument("--opencl", dest="use_opencl", default=False,
                         action="store_true",
                         help="Use OpenCL acceleration")

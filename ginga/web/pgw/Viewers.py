@@ -1,3 +1,6 @@
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+#
 from ginga.web.pgw.ImageViewPg import CanvasView, ImageViewCanvas  # noqa
 from ginga.web.pgw import Widgets
 
@@ -97,8 +100,14 @@ class GingaViewerWidget(Widgets.Canvas):
 
 
 class GingaScrolledViewerWidget(GingaViewerWidget):
-    # until implemented
+
+    def scroll_bars(self, horizontal='on', vertical='on'):
+        # until implemented
+        pass
+
+    def get_scroll_bars_status(self):
+        return dict(horizontal='off', vertical='off')
+
+
+class ScrolledView(GingaScrolledViewerWidget):
     pass
-
-
-#END

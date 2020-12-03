@@ -906,6 +906,7 @@ class ScrolledView(QtGui.QAbstractScrollArea):
         self.viewer = viewer
         super(ScrolledView, self).__init__(parent=parent)
 
+        self._bar_status = dict(horizontal='on', vertical='on')
         # the window jiggles annoyingly as the scrollbar is alternately
         # shown and hidden if we use the default "as needed" policy, so
         # default to always showing them (user can change this after
@@ -1025,6 +1026,8 @@ class ScrolledView(QtGui.QAbstractScrollArea):
             self._scrolling = False
 
     def scroll_bars(self, horizontal='on', vertical='on'):
+        self._bar_status.update(dict(horizontal=horizontal,
+                                     vertical=vertical))
         if horizontal == 'on':
             self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         elif horizontal == 'off':
@@ -1042,6 +1045,9 @@ class ScrolledView(QtGui.QAbstractScrollArea):
             self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
+
+    def get_scroll_bars_status(self):
+        return self._bar_status
 
 
 def save_debug_image(qimage, filename, format='png'):

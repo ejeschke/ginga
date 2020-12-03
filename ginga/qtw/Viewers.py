@@ -32,4 +32,7 @@ class GingaScrolledViewerWidget(Widgets.WidgetBase):
         self.widget.scroll_bars(horizontal=horizontal,
                                 vertical=vertical)
 
+    def get_scroll_bars_status(self):
+        return self.widget.get_scroll_bars_status()
+
 # END

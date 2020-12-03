@@ -21,10 +21,9 @@ class ImageViewPgError(ImageView.ImageViewError):
 
 class ImageViewPg(ImageView.ImageViewBase):
 
-    def __init__(self, logger=None, rgbmap=None, settings=None):
+    def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         ImageView.ImageViewBase.__init__(self, logger=logger,
-                                         rgbmap=rgbmap,
-                                         settings=settings)
+                                         rgbmap=rgbmap, settings=settings)
 
         self.pgcanvas = None
 
@@ -87,6 +86,9 @@ class ImageViewPg(ImageView.ImageViewBase):
                 self.logger.info("best renderer available is '{}'".format(name))
                 return
             except Exception as e:
+                # uncomment to troubleshoot
+                ## self.logger.error("Error choosing renderer '{}': {}".format(name, e),
+                ##                   exc_info=True)
                 continue
 
         raise ImageViewPgError("No valid renderers available: {}".format(str(self.possible_renderers)))
@@ -176,9 +178,9 @@ class ImageViewPg(ImageView.ImageViewBase):
 
 class ImageViewEvent(ImageViewPg):
 
-    def __init__(self, logger=None, rgbmap=None, settings=None):
+    def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         ImageViewPg.__init__(self, logger=logger, rgbmap=rgbmap,
-                             settings=settings)
+                             settings=settings, render=render)
 
         self._button = 0
 
@@ -594,9 +596,10 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
         cls.bindmapClass = klass
 
     def __init__(self, logger=None, rgbmap=None, settings=None,
+                 render='widget',
                  bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
-                                settings=settings)
+                                settings=settings, render=render)
         Mixins.UIMixin.__init__(self)
 
         self.ui_set_active(True, viewer=self)
@@ -632,9 +635,10 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
 class CanvasView(ImageViewZoom):
 
     def __init__(self, logger=None, settings=None, rgbmap=None,
+                 render='widget',
                  bindmap=None, bindings=None):
         ImageViewZoom.__init__(self, logger=logger, settings=settings,
-                               rgbmap=rgbmap,
+                               rgbmap=rgbmap, render=render,
                                bindmap=bindmap, bindings=bindings)
 
         # Needed for UIMixin to propagate events correctly
@@ -651,10 +655,10 @@ class ImageViewCanvas(ImageViewZoom,
                       DrawingMixin, CanvasMixin, CompoundMixin):
 
     def __init__(self, logger=None, rgbmap=None, settings=None,
-                 bindmap=None, bindings=None):
+                 render='widget', bindmap=None, bindings=None):
         ImageViewZoom.__init__(self, logger=logger,
                                rgbmap=rgbmap,
-                               settings=settings,
+                               settings=settings, render=render,
                                bindmap=bindmap,
                                bindings=bindings)
         CompoundMixin.__init__(self)

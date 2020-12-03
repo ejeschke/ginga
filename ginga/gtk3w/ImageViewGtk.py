@@ -138,7 +138,9 @@ class ImageViewGtk(ImageView.ImageViewBase):
                 self.logger.info("best renderer available is '{}'".format(name))
                 return
             except Exception as e:
-                self.logger.error("Error choosing renderer '{}': {}".format(name, e))
+                # uncomment to troubleshoot
+                ## self.logger.error("Error choosing renderer '{}': {}".format(name, e),
+                ##                   exc_info=True)
                 continue
 
         raise ImageViewGtkError("No valid renderers available: {}".format(str(self.possible_renderers)))
@@ -720,6 +722,7 @@ class ScrolledView(Gtk.Table):
         self.sb_thickness = 20
         self.rng_x = 100.0
         self.rng_y = 100.0
+        self._bar_status = dict(horizontal='on', vertical='on')
 
         xoptions = Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL
         yoptions = Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL
@@ -809,6 +812,8 @@ class ScrolledView(Gtk.Table):
         return True
 
     def scroll_bars(self, horizontal='on', vertical='on'):
+        self._bar_status.update(dict(horizontal=horizontal,
+                                     vertical=vertical))
         if horizontal in ('on', 'auto'):
             self.attach(self.hsb, 0, 1, 1, 2,
                         xoptions=Gtk.AttachOptions.FILL, yoptions=0,
@@ -829,7 +834,5 @@ class ScrolledView(Gtk.Table):
         else:
             raise ValueError("Bad scroll bar option: '%s'; should be one of ('on', 'off' or 'auto')" % (vertical))
 
-        #self.viewer.logger.warning("scroll_bar(): settings for gtk currently ignored!")
-
-
-#END
+    def get_scroll_bars_status(self):
+        return self._bar_status

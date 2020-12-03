@@ -809,7 +809,10 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
             # draw outline
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-            gl.glLineWidth(pen.linewidth)
+            # > 1.0 not guaranteed to be supported as of OpenGL 4.2
+            # TODO
+            # gl.glLineWidth(pen.linewidth)
+            gl.glLineWidth(1.0)
 
             gl.glDrawArrays(gl_shape, 0, len(vertices))
 

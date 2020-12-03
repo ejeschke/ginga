@@ -206,7 +206,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         return self.timer_factory.timer()
 
     def get_backend_timer(self):
-        return GwHelp.Timer()
+        return self.get_timer()
 
     def stop(self):
         self.logger.info("shutting down Ginga...")
