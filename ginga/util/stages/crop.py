@@ -219,7 +219,7 @@ class Crop(Stage):
 
         x1, y1, x2, y2 = self.get_crop_rect_px(wd, ht,
                                                use_image_lim=True)
-        res_np = data[y1:y2, x1:x2, :]
+        res_np = data[y1:y2, x1:x2, ...]
 
         if self.gui_up:
             _ht, _wd = res_np.shape[:2]
