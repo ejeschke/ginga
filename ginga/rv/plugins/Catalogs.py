@@ -70,7 +70,7 @@ source and has the following fields:
 * ``fullname``: str, the full name, should correspond *exactly* with the
   name required by the ``astroquery.vo_conesearch`` ``catalog`` parameter
 * ``type``: str, should be "astroquery.vo_conesearch" for an
- ``astroquery.vo_conesearch`` function
+  ``astroquery.vo_conesearch`` function
 * ``mapping``: dict, a nested dict providing the mapping for the return results
   to the GUI, in terms of field name to Ginga table.  In each source dict,
   there must be keys for 'id', 'ra', and 'dec'. 'mag', if present, can be a
