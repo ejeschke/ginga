@@ -395,10 +395,13 @@ class RGBMapper(Callback.Callbacks):
         # TODO: deal with algorithm parameters in kwargs
         self.t_.set(color_algorithm=name)
 
-    def color_algorithm_set_cb(self, setting, name):
+    def set_color_algorithm(self, name):
         size = self.t_.get('color_hashsize', self.dist.get_hash_size())
         dist = ColorDist.get_dist(name)(size)
         self.set_dist(dist, callback=True)
+
+    def color_algorithm_set_cb(self, setting, name):
+        self.set_color_algorithm(name)
 
     def get_order_indexes(self, order, cs):
         order = order.upper()
@@ -572,13 +575,15 @@ class RGBMapper(Callback.Callbacks):
         self.scale_pct *= scale_factor
         self.scale_and_shift(self.scale_pct, 0.0, callback=callback)
 
-    def copy_attributes(self, dst_rgbmap):
-        self.t_.copy_settings(dst_rgbmap.get_settings(),
-                              keylist=self.settings_keys)
+    def copy_attributes(self, dst_rgbmap, keylist=None):
+        if keylist is None:
+            keylist = self.settings_keys
+        self.t_.copy_settings(dst_rgbmap.get_settings(), keylist=keylist)
 
-    def share_attributes(self, dst_rgbmap):
-        self.t_.share_settings(dst_rgbmap.get_settings(),
-                               keylist=self.settings_keys)
+    def share_attributes(self, dst_rgbmap, keylist=None):
+        if keylist is None:
+            keylist = self.settings_keys
+        self.t_.share_settings(dst_rgbmap.get_settings(), keylist=keylist)
 
 
 class NonColorMapper(RGBMapper):

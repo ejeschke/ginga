@@ -91,7 +91,6 @@ def zscale_samples(samples, contrast=0.25):
     ngrow = max(1, int(npix * 0.01))
     ngoodpix, zstart, zslope = zsc_fit_line(samples, npix, KREJ, ngrow,
                                             MAX_ITERATIONS)
-    #print "slope=%f intercept=%f" % (zslope, zstart)
 
     if ngoodpix < minpix:
         z1 = zmin

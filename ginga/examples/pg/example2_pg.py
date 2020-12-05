@@ -11,6 +11,7 @@ import logging
 
 from ginga import colors
 from ginga.canvas.CanvasObject import get_canvas_types
+from ginga.canvas import render
 from ginga.misc import log
 from ginga.web.pgw import Widgets, Viewers
 from ginga.util.loader import load_data
@@ -292,6 +293,10 @@ def main(options, args):
     viewer = FitsViewer(logger, window)
     #server.add_callback('shutdown', viewer.quit)
 
+    if options.renderer is not None:
+        render_class = render.get_render_class(options.renderer)
+        viewer.fitsimage.set_renderer(render_class(viewer.fitsimage))
+
     window.resize(700, 540)
 
     if len(args) > 0:
@@ -337,6 +342,9 @@ if __name__ == "__main__":
     argprs.add_argument("--profile", dest="profile", action="store_true",
                         default=False,
                         help="Run the profiler on main()")
+    argprs.add_argument("-r", "--renderer", dest="renderer", metavar="NAME",
+                        default=None,
+                        help="Choose renderer (pil|agg|opencv|cairo)")
     argprs.add_argument("--stderr", dest="logstderr", default=False,
                         action="store_true",
                         help="Copy logging also to stderr")

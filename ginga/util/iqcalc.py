@@ -848,7 +848,6 @@ class IQCalc(object):
         # Find the bright peaks in the image
         peaks = self.find_bright_peaks(data, radius=peak_radius,
                                        threshold=threshold)
-        #print "peaks=", peaks
         self.logger.debug("peaks=%s" % str(peaks))
         if len(peaks) == 0:
             raise IQCalcError("Cannot find bright peaks")

@@ -151,16 +151,15 @@ class CanvasRenderer(render.StandardPixelRenderer):
 
         super(CanvasRenderer, self).resize(dims)
 
-    def render_image(self, rgbobj, dst_x, dst_y):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
+    def render_image(self, rgb_arr, order, win_coord):
+        """Render the image represented by (rgb_arr) at (win_coord)
         in the pixel space.
+        *** internal method-- do not use ***
         """
         if self.surface is None:
             return
         self.logger.debug("redraw surface")
 
-        # get window contents as an array and store it into the CV surface
-        rgb_arr = self.getwin_array(order='RGBA', dtype=np.uint8)
         # TODO: is there a faster way to copy this array in?
         self.surface[:, :, :] = rgb_arr[:, :, 0:3]
 

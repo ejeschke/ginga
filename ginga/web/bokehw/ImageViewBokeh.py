@@ -240,7 +240,7 @@ class ImageViewBokeh2(ImageView.ImageViewBase):
     def get_figure(self):
         return self.figure
 
-    def render_image(self, rgbobj, dst_x, dst_y):
+    def render_image(self, data, order, win_coord):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
 

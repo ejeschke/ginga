@@ -53,7 +53,6 @@ class WidgetBase(Callback.Callbacks):
         super(WidgetBase, self).__init__()
 
         self.widget = None
-        self.changed = False
         # external data can be attached here
         self.extdata = Bunch.Bunch()
 
@@ -393,11 +392,13 @@ class ComboBox(WidgetBase):
         self.widget.clear()
 
     def set_text(self, text):
+        self.widget.blockSignals(True)
         index = self.widget.findText(text)
         if index >= 0:
             self.set_index(index)
         else:
             self.widget.setEditText(text)
+        self.widget.blockSignals(False)
 
     # to be deprecated someday
     show_text = set_text
@@ -410,7 +411,9 @@ class ComboBox(WidgetBase):
         self.widget.addItem(text)
 
     def set_index(self, index):
+        self.widget.blockSignals(True)
         self.widget.setCurrentIndex(index)
+        self.widget.blockSignals(False)
 
     def get_index(self):
         return self.widget.currentIndex()
@@ -432,17 +435,15 @@ class SpinBox(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
-        if self.changed:
-            self.changed = False
-            return
         self.make_callback('value-changed', val)
 
     def get_value(self):
         return self.widget.value()
 
     def set_value(self, val):
-        self.changed = True
+        self.widget.blockSignals(True)
         self.widget.setValue(val)
+        self.widget.blockSignals(False)
 
     def set_decimals(self, num):
         if hasattr(self.widget, 'setDecimals'):
@@ -477,21 +478,15 @@ class Slider(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
-        # It appears that Qt uses set_value() to set the value of the
-        # slider when it is dragged, so we cannot use the usual method
-        # of setting a hidden "changed" variable to suppress the callback
-        # when setting the value programmatically.
-        # if self.changed:
-        #     self.changed = False
-        #     return
         self.make_callback('value-changed', val)
 
     def get_value(self):
         return self.widget.value()
 
     def set_value(self, val):
-        self.changed = True
+        self.widget.blockSignals(True)
         self.widget.setValue(val)
+        self.widget.blockSignals(False)
 
     def set_tracking(self, tf):
         self.widget.setTracking(tf)
@@ -527,13 +522,6 @@ class Dial(WidgetBase):
         self.enable_callback('value-changed')
 
     def _cb_redirect(self, val):
-        # It appears that Qt uses set_value() to set the value of the
-        # slider when it is dragged, so we cannot use the usual method
-        # of setting a hidden "changed" variable to suppress the callback
-        # when setting the value programmatically.
-        # if self.changed:
-        #     self.changed = False
-        #     return
         val = self.get_value()
         self.make_callback('value-changed', val)
 
@@ -558,7 +546,9 @@ class Dial(WidgetBase):
             raise ValueError("Value '{}' is out of range".format(val))
         self.changed = True
         int_val = self._cvt_value_in(val)
+        self.widget.blockSignals(True)
         self.widget.setValue(int_val)
+        self.widget.blockSignals(False)
 
     def set_tracking(self, tf):
         self.widget.setTracking(tf)
@@ -603,7 +593,9 @@ class CheckBox(WidgetBase):
         self.make_callback('activated', val)
 
     def set_state(self, tf):
+        self.widget.blockSignals(True)
         self.widget.setChecked(tf)
+        self.widget.blockSignals(False)
 
     def get_state(self):
         val = self.widget.checkState()
@@ -625,7 +617,9 @@ class ToggleButton(WidgetBase):
         self.make_callback('activated', val)
 
     def set_state(self, tf):
+        self.widget.blockSignals(True)
         self.widget.setChecked(tf)
+        self.widget.blockSignals(False)
 
     def get_state(self):
         return self.widget.isChecked()
@@ -641,16 +635,14 @@ class RadioButton(WidgetBase):
         self.enable_callback('activated')
 
     def _cb_redirect(self, val):
-        if self.changed:
-            self.changed = False
-            return
         self.make_callback('activated', val)
 
     def set_state(self, tf):
         if self.widget.isChecked() != tf:
             # toggled only fires when the value is toggled
-            self.changed = True
+            self.widget.blockSignals(True)
             self.widget.setChecked(tf)
+            self.widget.blockSignals(False)
 
     def get_state(self):
         return self.widget.isChecked()
@@ -1094,6 +1086,12 @@ class Box(ContainerBase):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.widget.setLayout(self.layout)
 
+    def insert_widget(self, idx, child, stretch=0.0):
+        self.add_ref(child)
+        child_w = child.get_widget()
+        self.layout.insertWidget(idx, child_w, stretch=stretch)
+        self.make_callback('widget-added', child)
+
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         child_w = child.get_widget()
@@ -1139,6 +1137,10 @@ class Frame(ContainerBase):
         self.add_ref(child)
         self.widget.layout().addWidget(child.get_widget(), stretch=stretch)
 
+    def set_text(self, text):
+        if self.label is not None:
+            self.label.setText(text)
+
 
 # Qt custom expander widget
 # See http://stackoverflow.com/questions/10364589/equivalent-of-gtks-expander-in-pyqt4  # noqa
@@ -1153,7 +1155,7 @@ class Expander(ContainerBase):
                   border-width: 0px; border-style: solid; }
     """
 
-    def __init__(self, title=''):
+    def __init__(self, title='', notoggle=False):
         super(Expander, self).__init__()
 
         # Qt doesn't seem to like it (segfault) if we actually construct
@@ -1171,13 +1173,20 @@ class Expander(ContainerBase):
         vbox.setSpacing(0)
         self.layout = vbox
 
-        self.toggle = QtGui.QPushButton(Expander.r_arrow, title)
-        self.toggle.setStyleSheet(Expander.widget_style)
-        # self.toggle.setCheckable(True)
-        self.toggle.clicked.connect(self._toggle_widget)
+        self.toggle = None
+        if not notoggle:
+            toggle = ToggleButton(title)
+            self.toggle = toggle
+            toggle_w = toggle.get_widget()
+            toggle_w.setIcon(Expander.r_arrow)
+            toggle_w.setStyleSheet(Expander.widget_style)
+            toggle.add_callback('activated', self._toggle_widget)
+            vbox.addWidget(toggle.get_widget(), stretch=0)
 
-        vbox.addWidget(self.toggle, stretch=0)
         self.widget.setLayout(vbox)
+
+        for name in ('opened', 'closed'):
+            self.enable_callback(name)
 
     def set_widget(self, child, stretch=1):
         self.remove_all()
@@ -1186,16 +1195,28 @@ class Expander(ContainerBase):
         self.widget.layout().addWidget(child_w, stretch=stretch)
         child_w.setVisible(False)
 
-    def _toggle_widget(self):
+    def expand(self, tf):
         child = self.get_children()[0]
         child_w = child.get_widget()
-        # if self.toggle.isChecked():
-        if child_w.isVisible():
-            self.toggle.setIcon(Expander.r_arrow)
-            child_w.setVisible(False)
-        else:
-            self.toggle.setIcon(Expander.d_arrow)
+        if tf:
+            if child_w.isVisible():
+                # child already open
+                return
+            if self.toggle is not None:
+                self.toggle.get_widget().setIcon(Expander.d_arrow)
             child_w.setVisible(True)
+            self.make_callback('opened')
+        else:
+            if not child_w.isVisible():
+                # child already closed
+                return
+            if self.toggle is not None:
+                self.toggle.get_widget().setIcon(Expander.r_arrow)
+            child_w.setVisible(False)
+            self.make_callback('closed')
+
+    def _toggle_widget(self, w, tf):
+        self.expand(tf)
 
 
 class TabWidget(ContainerBase):

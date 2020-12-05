@@ -5,9 +5,10 @@
 # Please see the file LICENSE.txt for details.
 #
 
-# import time
+import os.path
 
 from ginga.gtk3w import GtkHelp
+import ginga.icons
 
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from functools import reduce
@@ -41,6 +42,9 @@ __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'Dialog', 'SaveDialog', 'DragPackage', 'WidgetMoveEvent',
            'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
            'has_webkit']
+
+# path to our icons
+icondir = os.path.split(ginga.icons.__file__)[0]
 
 
 class WidgetError(Exception):
@@ -1210,6 +1214,16 @@ class Box(ContainerBase):
     def set_spacing(self, val):
         self.widget.set_spacing(val)
 
+    def insert_widget(self, idx, child, stretch=0.0):
+        child_w = child.get_widget()
+        # TODO: can this be made more accurate?
+        expand = (float(stretch) > 0.0)
+        self.widget.pack_start(child_w, expand, True, 0)
+        self.widget.reorder_child(child_w, idx)
+        self.children.insert(idx, child)
+        self.widget.show_all()
+        self.make_callback('widget-added', child)
+
     def add_widget(self, child, stretch=0.0):
         self.add_ref(child)
         child_w = child.get_widget()
@@ -1245,19 +1259,76 @@ class Frame(ContainerBase):
         self.widget.add(child.get_widget())
         self.widget.show_all()
 
+    def set_text(self, text):
+        w = self.get_widget()
+        lbl = w.get_label_widget()
+        lbl.set_text(text)
+
 
 class Expander(ContainerBase):
-    def __init__(self, title=None):
+    r_arrow = None
+    d_arrow = None
+
+    def __init__(self, title=None, notoggle=False):
         super(Expander, self).__init__()
 
-        w = Gtk.Expander(label=title)
-        self.widget = w
+        vbox = VBox()
+        vbox.set_margins(0, 0, 0, 0)
+        vbox.set_spacing(0)
+        self.widget = vbox.get_widget()
+        self._vbox = vbox
+        if Expander.r_arrow is None:
+            iconpath = os.path.join(icondir, 'triangle-right-48.png')
+            Expander.r_arrow = GtkHelp.pixbuf_new_from_file_at_size(iconpath,
+                                                                    12, 12)
+        if Expander.d_arrow is None:
+            iconpath = os.path.join(icondir, 'triangle-down-48.png')
+            Expander.d_arrow = GtkHelp.pixbuf_new_from_file_at_size(iconpath,
+                                                                    12, 12)
+        self._d_arrow = Gtk.Image.new_from_pixbuf(Expander.d_arrow)
+        self._r_arrow = Gtk.Image.new_from_pixbuf(Expander.r_arrow)
 
-    def set_widget(self, child):
-        self.remove_all()
-        self.add_ref(child)
-        self.widget.add(child.get_widget())
-        self.widget.show_all()
+        self.toggle = None
+        if not notoggle:
+            toggle = ToggleButton(title)
+            self.toggle = toggle
+            toggle_w = toggle.get_widget()
+            toggle_w.set_always_show_image(True)
+            r_arrow = Gtk.Image.new_from_pixbuf(Expander.r_arrow)
+            toggle_w.set_image(r_arrow)
+            toggle.add_callback('activated', self._toggle_widget)
+            vbox.add_widget(toggle, stretch=0)
+
+        self.content = None
+
+        for name in ('opened', 'closed'):
+            self.enable_callback(name)
+
+    def set_widget(self, child, stretch=1):
+        if self.content is not None:
+            self.widget.remove(self.content)
+        self.content = child
+
+    def expand(self, tf):
+        children = self._vbox.get_children()
+        if tf:
+            if self.content is None or self.content in children:
+                return
+            if self.toggle is not None:
+                self.toggle.get_widget().set_image(self._d_arrow)
+            self._vbox.add_widget(self.content, stretch=1)
+            self.make_callback('opened')
+
+        else:
+            if self.content is None or self.content not in children:
+                return
+            if self.toggle is not None:
+                self.toggle.get_widget().set_image(self._r_arrow)
+            self._vbox.remove(self.content)
+            self.make_callback('closed')
+
+    def _toggle_widget(self, w, tf):
+        self.expand(tf)
 
 
 class TabWidget(ContainerBase):

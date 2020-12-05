@@ -980,27 +980,33 @@ def reorder_image(dst_order, src_arr, src_order):
     """
     depth = src_arr.shape[2]
     if depth != len(src_order):
-        raise ValueError("src_order (%s) does not match array depth (%d)" % (
-            src_order, depth))
+        if len(dst_order.replace('A', '')) != len(src_order.replace('A', '')):
+            raise ValueError("src_order (%s) does not match array depth (%d)" % (
+                src_order, depth))
 
     bands = []
     if dst_order == src_order:
         return np.ascontiguousarray(src_arr)
 
-    elif 'A' not in dst_order or 'A' in src_order:
+    missing = set(dst_order) - set(src_order)
+    if len(missing) == 0:
         # <-- we don't have to add an alpha plane, just create a new view
         idx = np.array([src_order.index(c) for c in dst_order])
         return np.ascontiguousarray(src_arr[..., idx])
 
-    else:
-        # <-- dst order requires missing alpha channel
-        indexes = [src_order.index(c) for c in dst_order.replace('A', '')]
-        bands = [src_arr[..., idx, np.newaxis] for idx in indexes]
-        ht, wd = src_arr.shape[:2]
-        dst_type = src_arr.dtype
-        dst_max_val = np.iinfo(dst_type).max
-        alpha = np.full((ht, wd, 1), dst_max_val, dtype=dst_type)
-        bands.insert(dst_order.index('A'), alpha)
+    if missing != set(['A']):
+        missing = list(missing - set(['A']))
+        raise ValueError("source array missing channels ({}) needed in "
+                         "destination array ({})".format(src_order, dst_order))
+
+    # <-- dst order requires missing alpha channel
+    indexes = [src_order.index(c) for c in dst_order.replace('A', '')]
+    bands = [src_arr[..., idx, np.newaxis] for idx in indexes]
+    ht, wd = src_arr.shape[:2]
+    dst_type = src_arr.dtype
+    dst_max_val = np.iinfo(dst_type).max
+    alpha = np.full((ht, wd, 1), dst_max_val, dtype=dst_type)
+    bands.insert(dst_order.index('A'), alpha)
 
     return np.concatenate(bands, axis=-1)
 
@@ -1111,3 +1117,100 @@ def check_native_byteorder(data_np):
 
     return ((dt.startswith('>') and sys.byteorder == 'little') or
             (dt.startswith('<') and sys.byteorder == 'big'))
+
+
+def cutout_data(data, x1, y1, x2, y2, xstep=1, ystep=1, z=None,
+                astype=None):
+    """Cut out data area based on bounded coordinates.
+
+    Parameters
+    ----------
+    x1, y1 : int
+        Coordinates defining the minimum corner to be cut out
+
+    x2, y2 : int
+        Coordinates *one greater* than the maximum corner
+
+    xstep, ystep : int
+        Step values for skip intervals in the cutout region
+
+    z : int
+        Value for a depth (slice) component for color images
+
+    astype :
+
+    Note that the coordinates for `x2`, `y2` are *outside* the
+    cutout region, similar to slicing parameters in Python.
+    """
+    view = np.s_[y1:y2:ystep, x1:x2:xstep]
+    data_np = data[view]
+    if z is not None and len(data_np.shape) > 2:
+        data_np = data_np[..., z]
+    if astype:
+        data_np = data_np.astype(astype, copy=False)
+    return data_np
+
+
+def cutout_adjust(data, x1, y1, x2, y2, xstep=1, ystep=1, z=0, astype=None):
+    """Like `cutout_data`, but adjusts coordinates `x1`, `y1`, `x2`, `y2`
+    to be inside the data area if they are not already.  It tries to
+    preserve the width and height of the region, so e.g. (-2, -2, 5, 5)
+    could become (0, 0, 7, 7)
+    """
+    height, width = data.shape[:2]
+    dx = x2 - x1
+    dy = y2 - y1
+
+    if x1 < 0:
+        x1, x2 = 0, dx
+    else:
+        if x2 >= width:
+            x2 = width
+            x1 = x2 - dx
+
+    if y1 < 0:
+        y1, y2 = 0, dy
+    else:
+        if y2 >= height:
+            y2 = height
+            y1 = y2 - dy
+
+    data = cutout_data(data, x1, y1, x2, y2, xstep=xstep, ystep=ystep,
+                       z=z, astype=astype)
+    return (data, x1, y1, x2, y2)
+
+
+def cutout_radius(data, x, y, radius, xstep=1, ystep=1, astype=None):
+    return cutout_adjust(data, x - radius, y - radius,
+                         x + radius + 1, y + radius + 1,
+                         xstep=xstep, ystep=ystep, astype=astype)
+
+
+def guess_order(shape):
+    if len(shape) <= 2:
+        order = 'M'
+    else:
+        depth = shape[-1]
+        if depth == 1:
+            order = 'M'
+        elif depth == 2:
+            order = 'MA'
+        elif depth == 3:
+            order = 'RGB'
+        elif depth == 4:
+            order = 'RGBA'
+
+    return order
+
+
+def get_aspect(shape):
+    return shape[1] / shape[0]
+
+
+def calc_aspect_str(wd, ht):
+    # calculate the aspect ratio given by width and height and make
+    # string of the form "x:y"
+    gcd = np.gcd(wd, ht)
+    _wd, _ht = int(wd / gcd), int(ht / gcd)
+    _as = str(_wd) + ':' + str(_ht)
+    return _as

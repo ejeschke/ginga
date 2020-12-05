@@ -38,9 +38,8 @@ JPEG and PNG formats).
 import os.path
 import shutil
 import tempfile
-import math
 
-from ginga import GingaPlugin
+from ginga import GingaPlugin, trcalc
 from ginga.gw import Widgets, Viewers
 from ginga.pilw.ImageViewPil import CanvasView
 from ginga.util import io_rgb
@@ -153,7 +152,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         b.width.set_enabled(not self._screen_size)
         b.height.set_enabled(not self._screen_size)
         if self._sg_aspect is None:
-            _as = self.calc_aspect_str(wd, ht)
+            _as = trcalc.calc_aspect_str(wd, ht)
             b.aspect.set_text(_as)
         else:
             b.aspect.set_text(str(self._sg_aspect))
@@ -399,7 +398,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
             ht = int(round(wd * 1.0 / aspect))
             self.w.height.set_text(str(ht))
         else:
-            _as = self.calc_aspect_str(wd, ht)
+            _as = trcalc.calc_aspect_str(wd, ht)
             self.w.aspect.set_text(_as)
 
         self.shot_generator.configure_surface(wd, ht)
@@ -419,7 +418,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
             wd = int(round(ht * aspect))
             self.w.width.set_text(str(wd))
         else:
-            _as = self.calc_aspect_str(wd, ht)
+            _as = trcalc.calc_aspect_str(wd, ht)
             self.w.aspect.set_text(_as)
 
         self.shot_generator.configure_surface(wd, ht)
@@ -443,14 +442,6 @@ class ScreenShot(GingaPlugin.LocalPlugin):
             self.w.height.set_text(str(ht))
 
         self._sg_aspect = aspect
-
-    def calc_aspect_str(self, wd, ht):
-        # calculate the aspect ratio given by width and height and make
-        # string of the form "x:y"
-        gcd = math.gcd(wd, ht)
-        _wd, _ht = int(wd / gcd), int(ht / gcd)
-        _as = str(_wd) + ':' + str(_ht)
-        return _as
 
     def get_wdht(self):
         # get the width and height from the UI boxes, unless the screen
@@ -507,7 +498,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
             self._set_aspect_cb()
         else:
             wd, ht = self.get_wdht()
-            _as = self.calc_aspect_str(wd, ht)
+            _as = trcalc.calc_aspect_str(wd, ht)
             self.w.aspect.set_text(_as)
 
     def calc_size_aspect(self, wd, ht, aspect):
@@ -540,7 +531,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         if self._screen_size:
             self.w.width.set_text(str(wd))
             self.w.height.set_text(str(ht))
-            _as = self.calc_aspect_str(wd, ht)
+            _as = trcalc.calc_aspect_str(wd, ht)
             self.w.aspect.set_text(_as)
 
     def __str__(self):

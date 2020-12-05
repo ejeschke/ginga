@@ -276,10 +276,10 @@ class AstroImage(BaseImage):
             prev = kwds[kwd]  # noqa, this raises KeyError
         kwds[kwd] = value
 
-    def update_keywords(self, keyDict):
+    def update_keywords(self, key_dict):
         hdr = self.get_header()
         # Upcase all keywords
-        for kwd, val in keyDict.items():
+        for kwd, val in key_dict.items():
             hdr[kwd.upper()] = val
 
         # Try to make a wcs object on the header

@@ -9,7 +9,6 @@ from io import BytesIO
 # Matplotlib imports
 import matplotlib
 #from matplotlib.path import Path
-import numpy as np
 
 from ginga import ImageView
 from ginga import Mixins, Bindings
@@ -154,7 +153,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         dy = abs(extent[3] - extent[2]) / float(shape[0])
         return dx / dy
 
-    def render_image1(self, rgbobj, dst_x, dst_y):
+    def render_image1(self, data, order, win_coord):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
 
@@ -168,8 +167,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
-        data = self.getwin_array(order=self.rgb_order, dtype=np.uint8)
-
         dst_x = dst_y = 0
 
         # fill background color
@@ -188,7 +185,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
             self.mpimage.oy = dst_y
             self.mpimage.set_data(data)
 
-    def render_image2(self, rgbobj, dst_x, dst_y):
+    def render_image2(self, arr, order, win_coord):
         """Render the image represented by (rgbobj) at dst_x, dst_y
         in the pixel space.
 
@@ -203,7 +200,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Grab the RGB array for the current image and place it in the
         # matplotlib figure axis
-        arr = self.getwin_array(order=self.rgb_order, dtype=np.uint8)
 
         # Get the data extents
         x0, y0 = 0, 0
@@ -232,7 +228,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
             self.mpimage.set_extent(extent)
             #self.ax_img.relim()
 
-    def render_image(self, rgbobj, dst_x, dst_y):
+    def render_image(self, data, order, win_coord):
         # Ugly, ugly hack copied from matplotlib.lines to cause line
         # objects to recompute their cached transformed_path
         # Other mpl artists don't seem to have this affliction
@@ -247,9 +243,9 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # render_image1() currently seems a little faster
         if self.in_axes:
-            self.render_image2(rgbobj, dst_x, dst_y)
+            self.render_image2(data, order, win_coord)
         else:
-            self.render_image1(rgbobj, dst_x, dst_y)
+            self.render_image1(data, order, win_coord)
 
         # clear utility axis
         self.ax_util.cla()
