@@ -16,8 +16,8 @@ import yaml
 from ginga import GingaPlugin
 from ginga.util import pipeline
 from ginga.gw import Widgets
-from ginga.util.stages import (Input, Output, Scale, Rotate, FlipSwap, Cuts,
-                               RGBMap, ICCProf, Crop, ChannelMixer, Sharpen)
+
+from ginga.util.stages.stage_info import get_stage_catalog
 
 __all__ = ['Pipeline']
 
@@ -34,15 +34,12 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.settings.set_defaults(output_suffix='-pipe')
         self.settings.load(onError='silent')
 
-        self.stage_classes = [Scale, Cuts, RGBMap, ICCProf, FlipSwap,
-                              Rotate, Crop, ChannelMixer, Input, Output,
-                              Sharpen]
-        self.stage_dict = {klass._stagename: klass
-                           for klass in self.stage_classes}
+        self.stage_dict = get_stage_catalog(self.logger)
+        self.stage_classes = list(self.stage_dict.values())
         self.stage_names = list(self.stage_dict.keys())
         self.stage_names.sort()
 
-        stages = [Input(), Output()]
+        stages = [self.stage_dict['input'](), self.stage_dict['output']()]
         self.pipeline = pipeline.Pipeline(self.logger, stages)
         self.pipeline.add_callback('stage-executing', self.stage_status, 'X')
         self.pipeline.add_callback('stage-done', self.stage_status, 'D')
@@ -406,6 +403,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'pipeline'
+
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
