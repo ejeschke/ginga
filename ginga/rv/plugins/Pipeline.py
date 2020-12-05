@@ -11,8 +11,6 @@ An instance can be opened for each channel.
 **Usage**
 
 """
-import yaml
-
 from ginga import GingaPlugin
 from ginga.util import pipeline
 from ginga.gw import Widgets
@@ -352,12 +350,13 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.pipeline.redo()
 
     def save_pipeline(self, path):
+        import yaml
         d = self.pipeline.save()
-        s = yaml.dump(d)
         with open(path, 'w') as out_f:
-            out_f.write(s)
+            out_f.write(yaml.dump(d))
 
     def load_pipeline(self, path):
+        import yaml
         self.pipelist.remove_all(delete=True)
         self.pipelist.add_widget(Widgets.Label(''), stretch=1)
 
