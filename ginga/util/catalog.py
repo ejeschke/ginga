@@ -21,9 +21,15 @@ from astropy import coordinates, units
 have_astroquery = False
 try:
     from astroquery.vo_conesearch import conesearch
+
     have_astroquery = True
 except ImportError:
     pass
+
+# these are modifed at bottom of this module
+default_image_sources = []
+default_catalog_sources = []
+default_name_sources = []
 
 
 class SourceError(Exception):
@@ -223,19 +229,6 @@ class AstroqueryVOCatalogServer(AstroqueryCatalogServer):
         return results
 
 
-class AstroPyCatalogServer(AstroqueryVOCatalogServer):
-    """NOTE: this class is for backward-compatibility.  It will be deprecated!
-    Do not use in new code and consider migrating to
-    `~ginga.util.catalog.AstroqueryVOCatalogServer` or
-    `~ginga.util.catalog.AstroqueryCatalogServer`.
-    """
-    def __init__(self, logger, full_name, key, url, description, mapping=None):
-        if mapping is None:
-            mapping = dict(id='htmID', ra='ra', dec='dec', mag=[])
-        super(AstroPyCatalogServer, self).__init__(logger, full_name, key,
-                                                   mapping, description=description)
-
-
 class AstroqueryImageServer(object):
     """For queries using the ``astroquery.vo_conesearch`` function."""
 
@@ -332,17 +325,6 @@ class AstroqueryImageServer(object):
 
         # explicit return
         return fitspath
-
-
-class AstroQueryImageServer(AstroqueryImageServer):
-    """NOTE: this class is for backward-compatibility.  It will be deprecated!
-    Do not use in new code and consider migrating to
-    `~ginga.util.catalog.AstroqueryImageServer`.
-    """
-    def __init__(self, logger, full_name, key, querymod, description):
-        super(AstroQueryImageServer, self).__init__(logger, full_name, key,
-                                                    querymod,
-                                                    description=description)
 
 
 class AstroqueryNameServer(object):
@@ -696,4 +678,65 @@ class ServerBank(object):
     getCatalog = get_catalog
 
 
-# END
+class AstroPyCatalogServer(AstroqueryVOCatalogServer):
+    """NOTE: this class is for backward-compatibility.  IT WILL BE DEPRECATED!
+    Do not use in new code and consider migrating to
+    `~ginga.util.catalog.AstroqueryVOCatalogServer` or
+    `~ginga.util.catalog.AstroqueryCatalogServer`.
+    """
+    def __init__(self, logger, full_name, key, url, description, mapping=None):
+        if mapping is None:
+            mapping = dict(id='htmID', ra='ra', dec='dec', mag=[])
+        super(AstroPyCatalogServer, self).__init__(logger, full_name, key,
+                                                   mapping, description=description)
+
+
+class AstroQueryImageServer(AstroqueryImageServer):
+    """NOTE: this class is for backward-compatibility.  IT WILL BE DEPRECATED!
+    Do not use in new code and consider migrating to
+    `~ginga.util.catalog.AstroqueryImageServer`.
+    """
+    def __init__(self, logger, full_name, key, querymod, description):
+        super(AstroQueryImageServer, self).__init__(logger, full_name, key,
+                                                    querymod,
+                                                    description=description)
+
+
+# ---- SET UP DEFAULT SOURCES ----
+
+if have_astroquery:
+    # set up default name sources, catalog sources and image sources
+
+    default_name_sources.extend([
+        {'shortname': "SIMBAD", 'fullname': "SIMBAD",
+         'type': 'astroquery.names'},
+        {'shortname': "NED", 'fullname': "NED",
+         'type': 'astroquery.names'},
+    ])
+
+    default_catalog_sources.extend([
+        {'shortname': "GSC 2.3",
+         'fullname': "Guide Star Catalog 2.3 Cone Search 1",
+         'type': 'astroquery.vo_conesearch',
+         'mapping': {'id': 'objID', 'ra': 'ra', 'dec': 'dec', 'mag': ['Mag']}},
+        {'shortname': "USNO-A2.0 1",
+         'fullname': "The USNO-A2.0 Catalogue (Monet+ 1998) 1",
+         'type': 'astroquery.vo_conesearch',
+         'mapping': {'id': 'USNO-A2.0', 'ra': 'RAJ2000', 'dec': 'DEJ2000',
+                     'mag': ['Bmag', 'Rmag']}},
+        {'shortname': "2MASS 1",
+         'fullname': "Two Micron All Sky Survey (2MASS) 1",
+         'type': 'astroquery.vo_conesearch',
+         'mapping': {'id': 'htmID', 'ra': 'ra', 'dec': 'dec', 'mag': []}},
+    ])
+
+    from astroquery.skyview import SkyView
+    sd = SkyView.survey_dict
+    for key in sd:
+        val = sd[key]
+        if isinstance(val, list):
+            for name in val:
+                d = dict(shortname=name,
+                         fullname="SkyView [{}]: {}".format(key, name),
+                         type='astroquery.image', source=SkyView)
+                default_image_sources.append(d)

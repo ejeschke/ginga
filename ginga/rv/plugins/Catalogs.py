@@ -91,46 +91,7 @@ from ginga.util import wcs, catalog
 from ginga.gw import ColorBar, Widgets
 from ginga.misc import ParamSet
 
-from astroquery.skyview import SkyView
-
 __all__ = ['Catalogs']
-
-
-default_catalog_sources = [
-    {'shortname': "GSC 2.3",
-     'fullname': "Guide Star Catalog 2.3 Cone Search 1",
-     'type': 'astroquery.vo_conesearch',
-     'mapping': {'id': 'objID', 'ra': 'ra', 'dec': 'dec', 'mag': ['Mag']}},
-    {'shortname': "USNO-A2.0 1",
-     'fullname': "The USNO-A2.0 Catalogue (Monet+ 1998) 1",
-     'type': 'astroquery.vo_conesearch',
-     'mapping': {'id': 'USNO-A2.0', 'ra': 'RAJ2000', 'dec': 'DEJ2000',
-                 'mag': ['Bmag', 'Rmag']}},
-    {'shortname': "2MASS 1",
-     'fullname': "Two Micron All Sky Survey (2MASS) 1",
-     'type': 'astroquery.vo_conesearch',
-     'mapping': {'id': 'htmID', 'ra': 'ra', 'dec': 'dec', 'mag': []}},
-]
-
-
-default_name_sources = [
-    {'shortname': "SIMBAD", 'fullname': "SIMBAD",
-     'type': 'astroquery.names'},
-    {'shortname': "NED", 'fullname': "NED",
-     'type': 'astroquery.names'},
-]
-
-
-default_image_sources = []
-sd = SkyView.survey_dict
-for key in sd:
-    val = sd[key]
-    if isinstance(val, list):
-        for name in val:
-            d = dict(shortname=name,
-                     fullname="SkyView [{}]: {}".format(key, name),
-                     type='astroquery.image', source=SkyView)
-            default_image_sources.append(d)
 
 
 class Catalogs(GingaPlugin.LocalPlugin):
@@ -145,9 +106,9 @@ class Catalogs(GingaPlugin.LocalPlugin):
                                    color_outline='aquamarine',
                                    click_radius=10,
                                    image_channel='',
-                                   name_sources=default_name_sources,
-                                   catalog_sources=default_catalog_sources,
-                                   image_sources=default_image_sources)
+                                   name_sources=catalog.default_name_sources,
+                                   catalog_sources=catalog.default_catalog_sources,
+                                   image_sources=catalog.default_image_sources)
         self.settings.load(onError='silent')
 
         self.limit_stars_to_area = False
