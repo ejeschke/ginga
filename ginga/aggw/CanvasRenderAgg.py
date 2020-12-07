@@ -199,7 +199,9 @@ class CanvasRenderer(render.StandardPixelRenderer):
         self.surface.frombytes(rgb_buf)
 
         # for debugging
-        #self.save_rgb_image_as_file('/tmp/temp.png', format='png')
+        # import os.path, tempfile
+        # self.save_rgb_image_as_file(os.path.join(tempfile.gettempdir(),
+        #                                          'agg_out.png', format='png'))
 
     def get_surface_as_array(self, order=None):
         if self.surface is None:

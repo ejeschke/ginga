@@ -264,7 +264,7 @@ class AstroQueryImageServer(object):
 
         # For now, we pick the first one found
         url = results[0]
-        # fitspath = results[0].make_dataset_filename(dir="/tmp")
+        # fitspath = results[0].make_dataset_filename(dir=tempfile.gettempdir())
 
         # TODO: download file
         fitspath = url
@@ -471,10 +471,10 @@ class PyVOImageServer(object):
         # For now, we pick the first one found
 
         # REQUIRES FIX IN PYVO:
-        # imfile = results[0].cachedataset(dir="/tmp")
+        # imfile = results[0].cachedataset(dir=tempfile.gettempdir())
         #
         # Workaround:
-        fitspath = results[0].make_dataset_filename(dir="/tmp")
+        fitspath = results[0].make_dataset_filename(dir=tempfile.gettempdir())
         results[0].cachedataset(fitspath)
 
         # explicit return

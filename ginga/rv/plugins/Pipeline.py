@@ -11,6 +11,9 @@ An instance can be opened for each channel.
 **Usage**
 
 """
+import os.path
+import tempfile
+
 from ginga import GingaPlugin
 from ginga.util import pipeline
 from ginga.gw import Widgets
@@ -25,6 +28,9 @@ class Pipeline(GingaPlugin.LocalPlugin):
     def __init__(self, fv, fitsimage):
         # superclass defines some variables for us, like logger
         super(Pipeline, self).__init__(fv, fitsimage)
+
+        # TEMP: make user selectable
+        self.save_file = "pipeline.yml"
 
         # Load preferences
         prefs = self.fv.get_preferences()
@@ -378,10 +384,12 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.w.gui_fr.set_text(name)
 
     def save_pipeline_cb(self, widget):
-        self.save_pipeline("/tmp/pipeline.yml")
+        save_file = os.path.join(tempfile.gettempdir(), self.save_file)
+        self.save_pipeline(save_file)
 
     def load_pipeline_cb(self, widget):
-        self.load_pipeline("/tmp/pipeline.yml")
+        save_file = os.path.join(tempfile.gettempdir(), self.save_file)
+        self.load_pipeline(save_file)
 
     def redo(self):
         image = self.fitsimage.get_image()

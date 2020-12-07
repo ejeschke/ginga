@@ -8,6 +8,7 @@
 import os
 import glob
 import hashlib
+import tempfile
 import numpy as np
 
 from ginga.misc import Bunch
@@ -84,11 +85,12 @@ class ColorManager(object):
 
                 # Write out embedded profile (if needed)
                 prof_md5 = hashlib.md5(buf_profile).hexdigest()  # nosec
-                in_profile = os.path.join("/tmp", "_image_%d_%s.icc" % (
-                    os.getpid(), prof_md5))
-                if not os.path.exists(in_profile):
-                    with open(in_profile, 'wb') as icc_f:
-                        icc_f.write(buf_profile)
+                icc_f, in_profile = tempfile.mkstemp(suffix=".icc",
+                                                     prefix="_image_{}_".format(prof_md5))
+                try:
+                    icc_f.write(buf_profile)
+                finally:
+                    icc_f.close()
 
             # see if there is any EXIF tag about the colorspace
             elif 'ColorSpace' in kwds:

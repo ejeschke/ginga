@@ -292,7 +292,7 @@ class BaseWCS(object):
         return self.header[key]
 
     def get_keywords(self, *args):
-        return list(map(lambda key: self.header[key], args))
+        return [self.header[key] for key in args]
 
     def fix_bad_headers(self):
         """
