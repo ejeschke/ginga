@@ -13,6 +13,7 @@ import os
 import socket
 import select
 import threading
+import tempfile
 import logging
 import struct
 import array
@@ -1056,7 +1057,7 @@ def get_interface(addr=None):
         except KeyError:
             #port = 5137
             uid = os.getuid()
-            path = '/tmp/.IMT' + str(uid)
+            path = os.path.join(tempfile.gettempdir(), '.IMT' + str(uid))
             prot = 'unix'
             name = "%s:%s" % (prot, path)
             return Bunch.Bunch(prot=prot, path=path, name=name)

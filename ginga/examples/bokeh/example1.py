@@ -14,6 +14,8 @@ slider to zoom the image.
 """
 
 import sys
+import os.path
+import tempfile
 
 from bokeh.io import curdoc
 from bokeh.layouts import column
@@ -29,7 +31,9 @@ from ginga.util.loader import load_data
 def main(options, args):
 
     #logger = log.get_logger("ginga", options=options)
-    logger = log.get_logger("ginga", level=20, log_file="/tmp/ginga.log")
+    logger = log.get_logger("ginga", level=20,
+                            log_file=os.path.join(tempfile.gettempdir(),
+                                                  "ginga.log"))
 
     #TOOLS = "pan,wheel_zoom,box_select,tap"
     TOOLS = "box_select"
