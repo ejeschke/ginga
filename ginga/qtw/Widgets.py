@@ -1511,17 +1511,22 @@ class Splitter(ContainerBase):
         super(Splitter, self).__init__()
 
         w = QtGui.QSplitter()
+        self.orientation = orientation
         # NOTE: need to style splitter due to lack of any visual
         # indicator on Linux and Windows
-        w.setStyleSheet(
-            """
-            QSplitter::handle { image: url(%s/splitter.png); }
-            """ % (icondir))
-        self.orientation = orientation
-        if orientation == 'horizontal':
+        if self.orientation == 'horizontal':
             w.setOrientation(QtCore.Qt.Horizontal)
+            w.setStyleSheet(
+                """
+                QSplitter::handle { width: 8px; height: 8px;
+                                    image: url(%s/vdots.png); }
+                """ % (icondir))
         else:
             w.setOrientation(QtCore.Qt.Vertical)
+            w.setStyleSheet(
+                """
+                QSplitter::handle { height: 8px; image: url(%s/hdots.png); }
+                """ % (icondir))
         self.widget = w
         w.setChildrenCollapsible(True)
 
