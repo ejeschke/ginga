@@ -47,6 +47,8 @@ class ImageViewGtk(ImageView.ImageViewBase):
 
             imgwin.connect("draw", self.draw_event)
             imgwin.connect("configure-event", self.configure_event)
+            # According to some things I've read, this is not recommended
+            # for Gtk 3+, but not confirmed that it is truly not needed
             imgwin.set_events(Gdk.EventMask.EXPOSURE_MASK)
             # prevents some flickering
             imgwin.set_double_buffered(True)
