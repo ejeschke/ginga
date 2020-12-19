@@ -28,6 +28,7 @@ Ver 3.2.0 (unreleased)
   installed
 - Changed splitter widget so that the "thumbs" have a visual indicator
 - Fixed an issue with cursor warp in free panning with Gtk3 backend
+- Fixed an issue where the cursor was not changed from the default
 
 Ver 3.1.0 (2020-07-20)
 ======================

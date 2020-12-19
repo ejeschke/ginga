@@ -1436,7 +1436,10 @@ class TabWidget(ContainerBase):
         self.widget.set_current_page(idx)
 
     def index_of(self, child):
-        return self.widget.page_num(child.get_widget())
+        widget = child.get_widget()
+        if widget is None:
+            return -1
+        return self.widget.page_num(widget)
 
     def index_to_widget(self, idx):
         """Returns child corresponding to `idx`"""

@@ -646,6 +646,8 @@ class Desktop(Callback.Callbacks):
                 d = dict(wstype=wstype)
                 cd = dict()
                 for child in rec.ws.nb.get_children():
+                    if child.get_widget() is None:
+                        continue
                     title = child.extdata.get('tab_title', None)
                     mdi_pos = child.extdata.get('mdi_pos', (0, 0))
                     size = child.extdata.get('mdi_size', None)

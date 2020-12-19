@@ -166,8 +166,8 @@ class PluginManager(Callback.Callbacks):
             self.stop_plugin(bnch.pInfo)
 
         except Exception as e:
-            self.logger.error("Error deactivating plugin: %s" % (str(e)))
-            # TODO: log traceback
+            self.logger.error("Error deactivating plugin: {}".format(e),
+                              exc_info=True)
 
         # Set focus to another plugin if one is running, but only if it
         # is a local plugin

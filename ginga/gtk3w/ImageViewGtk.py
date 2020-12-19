@@ -470,6 +470,9 @@ class GtkEventMixin(object):
     def map_event(self, widget, event):
         #super(GtkEventMixin, self).configure_event(widget, event)
         self.configure_event(widget, event)
+
+        self.switch_cursor('pick')
+
         return self.make_callback('map')
 
     def focus_event(self, widget, event, hasFocus):
@@ -477,6 +480,7 @@ class GtkEventMixin(object):
 
     def enter_notify_event(self, widget, event):
         self.last_win_x, self.last_win_y = event.x, event.y
+
         self.check_cursor_location()
 
         enter_focus = self.t_.get('enter_focus', False)
