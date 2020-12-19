@@ -761,27 +761,13 @@ class Splitter(Gtk.Layout):
         self.thumbs = []
         self.kbdmouse_mask = 0
 
-        # Gtk says this has been deprecated since 3.12, but this widget
-        # doesn't work without it
-        self.set_resize_mode(Gtk.ResizeMode.QUEUE)
-        #self.set_has_window(True)
-
         mask = self.get_events()
         self.set_events(mask |
-                        Gdk.EventMask.EXPOSURE_MASK |
                         Gdk.EventMask.ENTER_NOTIFY_MASK |
-                        Gdk.EventMask.LEAVE_NOTIFY_MASK |
-                        #Gdk.EventMask.FOCUS_CHANGE_MASK |
-                        Gdk.EventMask.STRUCTURE_MASK
+                        Gdk.EventMask.LEAVE_NOTIFY_MASK
                         )
 
-        self.set_reallocate_redraws(False)
-        # should not be needed if we do a queue_draw() in _size_allocate_cb
-        self.set_redraw_on_allocate(False)
-
         self.connect("size-allocate", self._size_allocate_cb)
-        self.connect("map-event", self._map_event_cb)
-        #self.connect("configure-event", self._map_event_cb)
         modify_bg(self, "gray50")
 
     def add_widget(self, widget):
@@ -809,7 +795,6 @@ class Splitter(Gtk.Layout):
             image = Gtk.Image.new_from_pixbuf(pixbuf)
             thumb = Gtk.EventBox()
             thumb.add(image)
-            #thumb.set_has_window(True)
             modify_bg(thumb, "gray90")
 
             i = len(self.thumbs)
@@ -827,10 +812,7 @@ class Splitter(Gtk.Layout):
                 pos = wd if self.orientation == 'horizontal' else ht
                 sizes.append(pos)
             self.set_sizes(sizes)
-            #thumb.show_all()
 
-        #widget.show_all()
-        #widget.set_child_visible(True)
         self.show_all()
 
     def _thumb_enter_cb(self, widget, event):
@@ -838,7 +820,6 @@ class Splitter(Gtk.Layout):
         display = self.get_display()
         cur_name = ('ew-resize' if self.orientation == 'horizontal'
                     else 'ns-resize')
-        # https://developer.gnome.org/gdk3/3.24/gdk3-Cursors.html#gdk-cursor-new-from-name
         cursor = Gdk.Cursor.new_from_name(display, cur_name)
         win = self.get_window()
         if win is not None:
@@ -859,27 +840,20 @@ class Splitter(Gtk.Layout):
         sizes = list(sizes)
         ## if sizes == self._sizes:
         ##     return
-        print('set_sizes', sizes)
-        #print('children', self.get_children())
-        #self._sizes = sizes
         if self.get_realized():
             rect = self.get_allocation()
             wd, ht = rect.width, rect.height
         else:
             min_req, nat_req = self.get_preferred_size()
             wd, ht = nat_req.width, nat_req.height
-        #print('wd, ht', self._dims, (wd, ht))
-        #wd, ht = self._dims
 
         x, y = 0, 0
         new_sizes = []
         for num, child in enumerate(self.children):
-            #print('num children', len(self.children))
             off = sizes[num]
 
             if self.orientation == 'horizontal':
                 if num == 0:
-                    #print('set_pos hz, child,  pos, size', num, (0, 0), (off, ht))
                     self._move_resize_child(child, 0, 0, off, ht)
                     new_sizes.append(off)
                     x += off
@@ -896,13 +870,11 @@ class Splitter(Gtk.Layout):
                     if num < len(self.children) - 1:
                         rest = min(off, rest)
                     self._move_resize_child(child, x, y, rest, ht)
-                    #print('set_pos hz, child, pos, size', num, (x, y), (rest, ht))
                     new_sizes.append(rest)
                     x += rest
 
             else:
                 if num == 0:
-                    #print('set_pos vt, child, pos, size', num, (0, 0), (wd, off))
                     self._move_resize_child(child, 0, 0, wd, off)
                     new_sizes.append(off)
                     y += off
@@ -919,29 +891,30 @@ class Splitter(Gtk.Layout):
                     if num < len(self.children) - 1:
                         rest = min(off, rest)
                     self._move_resize_child(child, x, y, wd, rest)
-                    #print('set_pos vt, child, pos, size', num, (x, y), (wd, rest))
                     new_sizes.append(rest)
                     y += rest
 
         self._sizes = new_sizes
+        assert len(self._sizes) == len(self.children)
 
+    def remove(self, child):
+        if child not in self.children:
+            raise ValueError("widget is not one of our children")
+        idx = self.children.index(child)
+        if len(self.children) > 1:
+            if idx > 0:
+                # not first child
+                thumb = self.thumbs.pop(idx - 1)
+            else:
+                thumb = self.thumbs.pop(0)
 
-    ## def remove(self, widget):
-    ##     idx, subwin = self._widget_to_index(widget)
-    ##     if subwin is not None:
-    ##         self.children.remove(subwin)
-    ##         self.cur_index = -1
-    ##         frame = subwin.frame
-    ##         super(MDIWidget, self).remove(frame)
-    ##         widget.unparent()
-    ##     self._update_area_size()
+            super(Splitter, self).remove(thumb)
 
-    ## def _process_pending(self):
-    ##     while Gtk.events_pending():
-    ##         try:
-    ##             Gtk.main_iteration()
-    ##         except:
-    ##             pass
+        self._sizes.pop(idx)
+        self.children.remove(child)
+        super(Splitter, self).remove(child)
+
+        self.set_sizes(self._sizes)
 
     def _move_resize_child(self, child, x, y, wd, ht):
         rect = child.get_allocation()
@@ -954,8 +927,6 @@ class Splitter(Gtk.Layout):
         if (rect.width, rect.height) != (wd, ht):
             modified = True
             child.set_size_request(wd, ht)
-
-            #child.queue_resize()
 
             win = child.get_window()
             if win is not None:
@@ -970,15 +941,12 @@ class Splitter(Gtk.Layout):
             #child.queue_resize()
             child.queue_allocate()
 
-        #self._process_pending()
-
     def _calc_size(self, i, pos):
         sizes = list(self._sizes)
         n = sum([sizes[j] for j in range(0, i)])
         return pos - n
 
     def _start_resize_cb(self, widget, event, i):
-        print("START RESIZE")
         x_root, y_root = event.x_root, event.y_root
         x, y = widget.translate_coordinates(self, event.x, event.y)
 
@@ -989,7 +957,6 @@ class Splitter(Gtk.Layout):
         return True
 
     def _stop_resize_cb(self, widget, event, i):
-        print("STOP RESIZE")
         x_root, y_root = event.x_root, event.y_root
         x, y = widget.translate_coordinates(self, event.x, event.y)
 
@@ -1000,7 +967,6 @@ class Splitter(Gtk.Layout):
         return True
 
     def _do_resize_cb(self, widget, event, i):
-        print("START RESIZE")
         button = self.kbdmouse_mask
         x_root, y_root, state = event.x_root, event.y_root, event.state
         x, y = widget.translate_coordinates(self, event.x, event.y)
@@ -1020,28 +986,17 @@ class Splitter(Gtk.Layout):
         return True
 
     def _size_allocate_cb(self, widget, rect):
-        #rect = widget.get_allocation()
         x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
 
         dims = (wd, ht)
         if dims == self._dims:
             return
-        print('RESIZE EVENT')
         super(Splitter, self).set_size(wd, ht)
 
         self._dims = dims
-        #print('my dims', self._dims)
 
         self.set_sizes(self._sizes)
-        #self.queue_resize()
         return True
-
-    def _map_event_cb(self, widget, event):
-        print('MAP EVENT')
-        super(Splitter, self).map()
-
-        rect = widget.get_allocation()
-        return self._size_allocate_cb(widget, rect)
 
 
 class Dial(Gtk.DrawingArea):
