@@ -291,25 +291,31 @@ class ImageViewGtk(ImageView.ImageViewBase):
     def center_cursor(self):
         if self.imgwin is None:
             return
+        win = self.imgwin.get_window()
+        if win is None:
+            return
         win_x, win_y = self.get_center()
-        scrn_x, scrn_y = self.imgwin.window.get_origin()
+        _, scrn_x, scrn_y = win.get_origin()
         scrn_x, scrn_y = scrn_x + win_x, scrn_y + win_y
 
         # set the cursor position
-        disp = self.imgwin.window.get_display()
-        screen = self.imgwin.window.get_screen()
+        disp = win.get_display()
+        screen = win.get_screen()
         disp.warp_pointer(screen, scrn_x, scrn_y)
 
     def position_cursor(self, data_x, data_y):
         if self.imgwin is None:
             return
+        win = self.imgwin.get_window()
+        if win is None:
+            return
         win_x, win_y = self.get_canvas_xy(data_x, data_y)
-        scrn_x, scrn_y = self.imgwin.window.get_origin()
+        _, scrn_x, scrn_y = win.get_origin()
         scrn_x, scrn_y = scrn_x + win_x, scrn_y + win_y
 
         # set the cursor position
-        disp = self.imgwin.window.get_display()
-        screen = self.imgwin.window.get_screen()
+        disp = win.get_display()
+        screen = win.get_screen()
         disp.warp_pointer(screen, scrn_x, scrn_y)
 
     def make_timer(self):

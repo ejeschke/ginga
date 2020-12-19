@@ -27,6 +27,7 @@ Ver 3.2.0 (unreleased)
 - Fixed an issue for the Tk Ginga widget if PIL.ImageTk was not
   installed
 - Changed splitter widget so that the "thumbs" have a visual indicator
+- Fixed an issue with cursor warp in free panning with Gtk3 backend
 
 Ver 3.1.0 (2020-07-20)
 ======================
