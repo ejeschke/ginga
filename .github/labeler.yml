@@ -1,0 +1,36 @@
+documentation:
+  - .readthedocs.yml
+  - CITATION
+  - doc/**/*
+  - ginga/doc/*
+  - licenses/*
+ - '*.md'
+ - '*.txt'
+  - any: ['*.rst', '!CHANGES.rst']
+
+maintenance:
+  - .bandit.yaml
+  - .github/**/*
+  - .gitignore
+  - conftest.py
+  - MANIFEST.in
+  - pyproject.toml
+  - setup.*
+
+plugin:
+  - doc/manual/plugins.rst
+  - doc/manual/plugins_global/**/*
+  - doc/manual/plugins_local/**/*
+  - experimental/plugins/*
+  - ginga/rv/plugins/*
+
+reference viewer:
+  - ginga/rv/**/*
+
+widget:
+  - doc/dev_manual/jupnotebooks.rst
+  - ginga/aggw/**/*
+  - ginga/gtk3w/**/*
+  - ginga/gw/**/*
+  - ginga/qtw/**/*
+  - ginga/web/**/*
