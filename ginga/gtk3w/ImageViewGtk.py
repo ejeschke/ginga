@@ -47,6 +47,8 @@ class ImageViewGtk(ImageView.ImageViewBase):
 
             imgwin.connect("draw", self.draw_event)
             imgwin.connect("configure-event", self.configure_event)
+            # According to some things I've read, this is not recommended
+            # for Gtk 3+, but not confirmed that it is truly not needed
             imgwin.set_events(Gdk.EventMask.EXPOSURE_MASK)
             # prevents some flickering
             imgwin.set_double_buffered(True)
@@ -289,25 +291,31 @@ class ImageViewGtk(ImageView.ImageViewBase):
     def center_cursor(self):
         if self.imgwin is None:
             return
+        win = self.imgwin.get_window()
+        if win is None:
+            return
         win_x, win_y = self.get_center()
-        scrn_x, scrn_y = self.imgwin.window.get_origin()
+        _, scrn_x, scrn_y = win.get_origin()
         scrn_x, scrn_y = scrn_x + win_x, scrn_y + win_y
 
         # set the cursor position
-        disp = self.imgwin.window.get_display()
-        screen = self.imgwin.window.get_screen()
+        disp = win.get_display()
+        screen = win.get_screen()
         disp.warp_pointer(screen, scrn_x, scrn_y)
 
     def position_cursor(self, data_x, data_y):
         if self.imgwin is None:
             return
+        win = self.imgwin.get_window()
+        if win is None:
+            return
         win_x, win_y = self.get_canvas_xy(data_x, data_y)
-        scrn_x, scrn_y = self.imgwin.window.get_origin()
+        _, scrn_x, scrn_y = win.get_origin()
         scrn_x, scrn_y = scrn_x + win_x, scrn_y + win_y
 
         # set the cursor position
-        disp = self.imgwin.window.get_display()
-        screen = self.imgwin.window.get_screen()
+        disp = win.get_display()
+        screen = win.get_screen()
         disp.warp_pointer(screen, scrn_x, scrn_y)
 
     def make_timer(self):
@@ -462,6 +470,9 @@ class GtkEventMixin(object):
     def map_event(self, widget, event):
         #super(GtkEventMixin, self).configure_event(widget, event)
         self.configure_event(widget, event)
+
+        self.switch_cursor('pick')
+
         return self.make_callback('map')
 
     def focus_event(self, widget, event, hasFocus):
@@ -469,6 +480,7 @@ class GtkEventMixin(object):
 
     def enter_notify_event(self, widget, event):
         self.last_win_x, self.last_win_y = event.x, event.y
+
         self.check_cursor_location()
 
         enter_focus = self.t_.get('enter_focus', False)

@@ -1436,7 +1436,10 @@ class TabWidget(ContainerBase):
         self.widget.set_current_page(idx)
 
     def index_of(self, child):
-        return self.widget.page_num(child.get_widget())
+        widget = child.get_widget()
+        if widget is None:
+            return -1
+        return self.widget.page_num(widget)
 
     def index_to_widget(self, idx):
         """Returns child corresponding to `idx`"""
@@ -1683,16 +1686,7 @@ class Splitter(ContainerBase):
         super(Splitter, self).__init__()
 
         self.orientation = orientation
-        self.widget = self._get_pane()
-        self.panes = [self.widget]
-
-    def _get_pane(self):
-        if self.orientation == 'horizontal':
-            w = Gtk.HPaned()
-        else:
-            w = Gtk.VPaned()
-        w.set_wide_handle(True)
-        return w
+        self.widget = GtkHelp.Splitter(orientation=self.orientation)
 
     def add_widget(self, child):
         self.add_ref(child)
@@ -1704,47 +1698,15 @@ class Splitter(ContainerBase):
         frame_w.set_shadow_type(Gtk.ShadowType.NONE)
         frame_w.add(child_w)
 
-        if len(self.children) == 1:
-            self.widget.pack1(frame_w)
-
-        else:
-            last = self.widget
-            if len(self.panes) > 0:
-                last = self.panes[-1]
-
-            w = self._get_pane()
-            self.panes.append(w)
-
-            w.pack1(frame_w)
-            last.pack2(w)
-
+        self.widget.add_widget(frame_w)
         self.widget.show_all()
         self.make_callback('widget-added', child)
 
-    def _get_sizes(self, pane):
-        rect = pane.get_allocation()
-        if self.orientation == 'horizontal':
-            total = rect.width
-        else:
-            total = rect.height
-        pos = pane.get_position()
-        return (pos, total)
-
     def get_sizes(self):
-        res = []
-        if len(self.panes) > 0:
-            for pane in self.panes[:-1]:
-                pos, total = self._get_sizes(pane)
-                res.append(pos)
-            pane = self.panes[-1]
-            pos, total = self._get_sizes(pane)
-            res.append(total)
-        return res
+        return self.widget.get_sizes()
 
     def set_sizes(self, sizes):
-        for i, pos in enumerate(sizes):
-            pane = self.panes[i]
-            pane.set_position(pos)
+        self.widget.set_sizes(sizes)
 
 
 class GridBox(ContainerBase):

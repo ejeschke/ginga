@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import os.path
+import pathlib
 from functools import reduce
 
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
@@ -1512,10 +1513,23 @@ class Splitter(ContainerBase):
 
         w = QtGui.QSplitter()
         self.orientation = orientation
-        if orientation == 'horizontal':
+        # NOTE: need to style splitter due to lack of any visual
+        # indicator on Linux and Windows
+        if self.orientation == 'horizontal':
             w.setOrientation(QtCore.Qt.Horizontal)
+            iconfile = pathlib.Path(icondir) / 'vdots.png'
+            w.setStyleSheet(
+                """
+                QSplitter::handle { width: 8px; height: 8px;
+                                    image: url(%s); }
+                """ % (iconfile))
         else:
             w.setOrientation(QtCore.Qt.Vertical)
+            iconfile = pathlib.Path(icondir) / 'hdots.png'
+            w.setStyleSheet(
+                """
+                QSplitter::handle { height: 8px; image: url(%s); }
+                """ % (iconfile))
         self.widget = w
         w.setChildrenCollapsible(True)
 

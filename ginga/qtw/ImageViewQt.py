@@ -562,6 +562,8 @@ class QtEventMixin(object):
         width = x2 - x1 + 1
         height = y2 - y1 + 1
 
+        self.switch_cursor('pick')
+
         self.configure_window(width, height)
         return self.make_callback('map')
 

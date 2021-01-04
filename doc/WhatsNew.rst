@@ -24,7 +24,11 @@ Ver 3.2.0 (unreleased)
 - Fixed a bug in PixTable that reversed pixel indices on display
 - Added box sum and median results to PixTable; also improved statistics
   display
-- Fixed an issue for the Tk Ginga widget if PIL.ImageTk was not installed
+- Fixed an issue for the Tk Ginga widget if PIL.ImageTk was not
+  installed
+- Changed splitter widget so that the "thumbs" have a visual indicator
+- Fixed an issue with cursor warp in free panning with Gtk3 backend
+- Fixed an issue where the cursor was not changed from the default
 
 Ver 3.1.0 (2020-07-20)
 ======================

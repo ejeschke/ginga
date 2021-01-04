@@ -14,6 +14,7 @@ import numpy as np
 
 from ginga.misc import Bunch, Callback
 from ginga.fonts import font_asst
+import ginga.icons
 import ginga.toolkit
 
 import gi
@@ -27,6 +28,8 @@ import cairo
 
 ginga.toolkit.use('gtk3')
 
+# path to our icons
+icondir = os.path.split(ginga.icons.__file__)[0]
 
 DND_TARGET_TYPE_TEXT = 0
 DND_TARGET_TYPE_URIS = 1
@@ -742,6 +745,258 @@ class MDIWidget(Gtk.Layout):
 
     def close_page(self, subwin):
         self._update_area_size()
+
+
+class Splitter(Gtk.Layout):
+    """
+    Splitter type widget for Gtk.
+    """
+    def __init__(self, orientation='horizontal'):
+        Gtk.Layout.__init__(self)
+
+        self.orientation = orientation
+        self._sizes = []
+        self._dims = (0, 0)
+        self.children = []
+        self.thumbs = []
+        self.kbdmouse_mask = 0
+
+        mask = self.get_events()
+        self.set_events(mask |
+                        Gdk.EventMask.ENTER_NOTIFY_MASK |
+                        Gdk.EventMask.LEAVE_NOTIFY_MASK
+                        )
+
+        self.connect("size-allocate", self._size_allocate_cb)
+        modify_bg(self, "gray50")
+
+    def add_widget(self, widget):
+        rect = self.get_allocation()
+        wd, ht = rect.width, rect.height
+
+        self.children.append(widget)
+
+        if len(self.children) == 1:
+            widget.set_size_request(wd, ht)
+            self.put(widget, 0, 0)
+            sizes = self._sizes
+            if len(sizes) == 0:
+                pos = wd if self.orientation == 'horizontal' else ht
+                sizes = [pos]
+            self.set_sizes(sizes)
+
+        else:
+            if self.orientation == 'horizontal':
+                thumbfile, _w, _h = 'vdots.png', 8, 26
+            else:
+                thumbfile, _w, _h = 'hdots.png', 26, 8
+            iconfile = os.path.join(icondir, thumbfile)
+            pixbuf = pixbuf_new_from_file_at_size(iconfile, _w, _h)
+            image = Gtk.Image.new_from_pixbuf(pixbuf)
+            thumb = Gtk.EventBox()
+            thumb.add(image)
+            modify_bg(thumb, "gray90")
+
+            i = len(self.thumbs)
+            self.thumbs.append(thumb)
+            thumb.connect("button_press_event", self._start_resize_cb, i)
+            thumb.connect("button_release_event", self._stop_resize_cb, i)
+            thumb.connect("motion_notify_event", self._do_resize_cb, i)
+            thumb.connect("enter_notify_event", self._thumb_enter_cb)
+            thumb.connect("leave_notify_event", self._thumb_leave_cb)
+
+            self.put(thumb, 0, 0)
+            self.put(widget, 0, 0)
+            sizes = self._sizes
+            if len(sizes) < len(self.children):
+                pos = wd if self.orientation == 'horizontal' else ht
+                sizes.append(pos)
+            self.set_sizes(sizes)
+
+        self.show_all()
+
+    def _thumb_enter_cb(self, widget, event):
+        # change the cursor to a resize one when we enter the thumb area
+        display = self.get_display()
+        cur_name = ('ew-resize' if self.orientation == 'horizontal'
+                    else 'ns-resize')
+        cursor = Gdk.Cursor.new_from_name(display, cur_name)
+        win = self.get_window()
+        if win is not None:
+            win.set_cursor(cursor)
+
+    def _thumb_leave_cb(self, widget, event):
+        # change the cursor to the normal one when we leave the thumb area
+        display = self.get_display()
+        cursor = Gdk.Cursor.new_from_name(display, 'default')
+        win = self.get_window()
+        if win is not None:
+            win.set_cursor(cursor)
+
+    def get_sizes(self):
+        return list(self._sizes)
+
+    def set_sizes(self, sizes):
+        sizes = list(sizes)
+        ## if sizes == self._sizes:
+        ##     return
+        if self.get_realized():
+            rect = self.get_allocation()
+            wd, ht = rect.width, rect.height
+        else:
+            min_req, nat_req = self.get_preferred_size()
+            wd, ht = nat_req.width, nat_req.height
+
+        x, y = 0, 0
+        new_sizes = []
+        for num, child in enumerate(self.children):
+            off = sizes[num]
+
+            if self.orientation == 'horizontal':
+                if num == 0:
+                    self._move_resize_child(child, 0, 0, off, ht)
+                    new_sizes.append(off)
+                    x += off
+
+                else:
+                    thumb = self.thumbs[num - 1]
+                    min_req, nat_req = thumb.get_preferred_size()
+                    thumb_wd, thumb_ht = nat_req.width, nat_req.height
+
+                    self._move_resize_child(thumb, x, y, thumb_wd, ht)
+                    x += thumb_wd
+
+                    rest = max(0, wd - x)
+                    if num < len(self.children) - 1:
+                        rest = min(off, rest)
+                    self._move_resize_child(child, x, y, rest, ht)
+                    new_sizes.append(rest)
+                    x += rest
+
+            else:
+                if num == 0:
+                    self._move_resize_child(child, 0, 0, wd, off)
+                    new_sizes.append(off)
+                    y += off
+
+                else:
+                    thumb = self.thumbs[num - 1]
+                    min_req, nat_req = thumb.get_preferred_size()
+                    thumb_wd, thumb_ht = nat_req.width, nat_req.height
+
+                    self._move_resize_child(thumb, x, y, wd, thumb_ht)
+                    y += thumb_ht
+
+                    rest = max(0, ht - y)
+                    if num < len(self.children) - 1:
+                        rest = min(off, rest)
+                    self._move_resize_child(child, x, y, wd, rest)
+                    new_sizes.append(rest)
+                    y += rest
+
+        self._sizes = new_sizes
+        assert len(self._sizes) == len(self.children)
+
+    def remove(self, child):
+        if child not in self.children:
+            raise ValueError("widget is not one of our children")
+        idx = self.children.index(child)
+        if len(self.children) > 1:
+            if idx > 0:
+                # not first child
+                thumb = self.thumbs.pop(idx - 1)
+            else:
+                thumb = self.thumbs.pop(0)
+
+            super(Splitter, self).remove(thumb)
+
+        self._sizes.pop(idx)
+        self.children.remove(child)
+        super(Splitter, self).remove(child)
+
+        self.set_sizes(self._sizes)
+
+    def _move_resize_child(self, child, x, y, wd, ht):
+        rect = child.get_allocation()
+        modified = False
+
+        if (rect.x, rect.y) != (x, y):
+            modified = True
+            self.move(child, x, y)
+
+        if (rect.width, rect.height) != (wd, ht):
+            modified = True
+            child.set_size_request(wd, ht)
+
+            win = child.get_window()
+            if win is not None:
+                alloc = Gdk.Rectangle()
+                alloc.x, alloc.y, alloc.width, alloc.height = x, y, wd, ht
+                child.size_allocate(alloc)
+                #win.invalidate_rect(None, True)
+
+        if modified:
+            # don't think this should be necessary, but just in case
+            child.queue_draw()
+            #child.queue_resize()
+            child.queue_allocate()
+
+    def _calc_size(self, i, pos):
+        sizes = list(self._sizes)
+        n = sum([sizes[j] for j in range(0, i)])
+        return pos - n
+
+    def _start_resize_cb(self, widget, event, i):
+        x_root, y_root = event.x_root, event.y_root
+        x, y = widget.translate_coordinates(self, event.x, event.y)
+
+        pos = x if self.orientation == 'horizontal' else y
+        sizes = list(self._sizes)
+        sizes[i] = self._calc_size(i, pos)
+        self.set_sizes(sizes)
+        return True
+
+    def _stop_resize_cb(self, widget, event, i):
+        x_root, y_root = event.x_root, event.y_root
+        x, y = widget.translate_coordinates(self, event.x, event.y)
+
+        pos = x if self.orientation == 'horizontal' else y
+        sizes = list(self._sizes)
+        sizes[i] = self._calc_size(i, pos)
+        self.set_sizes(sizes)
+        return True
+
+    def _do_resize_cb(self, widget, event, i):
+        button = self.kbdmouse_mask
+        x_root, y_root, state = event.x_root, event.y_root, event.state
+        x, y = widget.translate_coordinates(self, event.x, event.y)
+
+        if state & Gdk.ModifierType.BUTTON1_MASK:
+            button |= 0x1
+        elif state & Gdk.ModifierType.BUTTON2_MASK:
+            button |= 0x2
+        elif state & Gdk.ModifierType.BUTTON3_MASK:
+            button |= 0x4
+
+        if button == 0x1:
+            pos = x if self.orientation == 'horizontal' else y
+            sizes = list(self._sizes)
+            sizes[i] = self._calc_size(i, pos)
+            self.set_sizes(sizes)
+        return True
+
+    def _size_allocate_cb(self, widget, rect):
+        x, y, wd, ht = rect.x, rect.y, rect.width, rect.height
+
+        dims = (wd, ht)
+        if dims == self._dims:
+            return
+        super(Splitter, self).set_size(wd, ht)
+
+        self._dims = dims
+
+        self.set_sizes(self._sizes)
+        return True
 
 
 class Dial(Gtk.DrawingArea):
