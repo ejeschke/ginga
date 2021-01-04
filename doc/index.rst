@@ -36,7 +36,7 @@ star catalog access, cuts, star pick/FWHM_, thumbnails, etc.
 Copyright and License
 =====================
 
-Copyright (c) 2011-2020 Ginga Maintainers. All rights reserved.
+Copyright (c) 2011-2021 Ginga Maintainers. All rights reserved.
 
 Ginga is distributed under an open-source BSD licence. Please see the
 file `LICENSE.txt` in the top-level directory for details.

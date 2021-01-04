@@ -1,4 +1,4 @@
-Copyright (c) 2011-2020, Ginga Maintainers
+Copyright (c) 2011-2021, Ginga Maintainers
 
 All rights reserved.
 
