@@ -747,14 +747,10 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
         vertices = trcalc.pad_z(cp, dtype=np.float32)
 
         # Send the data over to the buffer
-        # NOTE: we swap elements 0 and 1, because we will also swap
-        # vertices 0 and 1, this allows us to draw two triangles to complete
-        # the image
-        texcoord = np.array([(1.0, 0.0), (0.0, 0.0),
+        texcoord = np.array([(0.0, 0.0), (1.0, 0.0),
                              (1.0, 1.0), (0.0, 1.0)], dtype=np.float32)
-        # swap vertices of rows 0 and 1
-        vertices[[0, 1]] = vertices[[1, 0]]
         data = np.concatenate((vertices, texcoord), axis=1)
+
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_img)
         # see https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
         #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
@@ -762,9 +758,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
 
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
 
-        # See NOTE above
-        gl.glDrawArrays(gl.GL_TRIANGLES, 0, 3)
-        gl.glDrawArrays(gl.GL_TRIANGLES, 1, 4)
+        gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, 4)
 
         gl.glBindVertexArray(0)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
