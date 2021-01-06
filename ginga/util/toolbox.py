@@ -11,8 +11,16 @@ import os
 import warnings
 
 # THIRD-PARTY
-from astropy.utils.data import _find_pkg_data_path
+import astropy
 from astropy.utils.exceptions import AstropyUserWarning
+from astropy.utils.introspection import minversion
+
+ASTROPY_LT_4_3 = not minversion(astropy, '4.3')
+
+if ASTROPY_LT_4_3:
+    from astropy.utils.data import _find_pkg_data_path as get_pkg_data_path
+else:
+    from astropy.utils.data import get_pkg_data_path
 
 
 class ModeIndicator(object):
@@ -160,7 +168,7 @@ def generate_cfg_example(config_name, cfgpath='examples/configs', **kwargs):
     cfgname = config_name + '.cfg'
 
     try:
-        cfgfile = _find_pkg_data_path(os.path.join(cfgpath, cfgname), **kwargs)
+        cfgfile = get_pkg_data_path(os.path.join(cfgpath, cfgname), **kwargs)
         with open(cfgfile) as f:
             cfgdata = f.readlines()
     except Exception as e:
