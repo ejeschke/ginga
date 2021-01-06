@@ -2079,7 +2079,7 @@ class ImageViewBase(Callback.Callbacks):
         alg_name = self.t_['zoom_algorithm']
         self.zoom = zoom.get_zoom_alg(alg_name)(self)
 
-        self.zoom_to(self.get_zoom())
+        self.zoom_to(self.get_zoom(), no_reset=True)
 
     def interpolation_change_cb(self, setting, value):
         """Handle callback related to changes in interpolation."""
