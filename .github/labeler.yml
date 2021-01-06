@@ -4,8 +4,8 @@ documentation:
   - doc/**/*
   - ginga/doc/*
   - licenses/*
- - '*.md'
- - '*.txt'
+  - '*.md'
+  - '*.txt'
   - any: ['*.rst', '!CHANGES.rst']
 
 maintenance:
