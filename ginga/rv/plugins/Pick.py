@@ -489,14 +489,14 @@ class Pick(GingaPlugin.LocalPlugin):
 
         cm, im = self.fv.cm, self.fv.im
 
+        # Set up "Image" tab viewer
         di = Viewers.CanvasView(logger=self.logger)
         width, height = self._wd, self._ht
         di.set_desired_size(width, height)
-        di.enable_autozoom('off')
+        di.enable_autozoom('override')
         di.enable_autocuts('off')
         di.set_zoom_algorithm('rate')
         di.set_zoomrate(1.6)
-        di.zoom_to(2)
         settings = di.get_settings()
         settings.get_setting('zoomlevel').add_callback('set', self.zoomset, di)
 
@@ -534,16 +534,16 @@ class Pick(GingaPlugin.LocalPlugin):
         iw.resize(width, height)
         nb.add_widget(iw, title="Image")
 
+        # Set up "Contour" tab viewer
         if contour.have_skimage:
             # Contour plot, Ginga-style
             ci = Viewers.CanvasView(logger=self.logger)
             width, height = 400, 300
             ci.set_desired_size(width, height)
-            ci.enable_autozoom('once')
+            ci.enable_autozoom('override')
             ci.enable_autocuts('override')
             ci.set_zoom_algorithm('rate')
             ci.set_zoomrate(1.6)
-            ci.zoom_to(3)
             ci.set_autocut_params('histogram')
 
             t_ = ci.get_settings()
