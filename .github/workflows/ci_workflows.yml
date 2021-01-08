@@ -12,6 +12,8 @@ jobs:
   cancel_ci:
     name: Mandatory checks before CI
     runs-on: ubuntu-latest
+    outputs:
+      run_next: ${{ steps.skip_ci_step.outputs.run_next }}
     steps:
     # Base branch check should run whether we skip CI or not
     - name: Check base branch
@@ -19,13 +21,16 @@ jobs:
       with:
         BASEBRANCH_NAME: master
         SKIP_BASEBRANCH_CHECK_LABEL: skip-basebranch-check
-    - name: Failure means CI is skipped on purpose
+    - name: Check skip CI
       uses: pllim/action-skip-ci@main
+      id: skip_ci_step
       with:
+        NO_FAIL: true
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     # This should only run if we did not skip CI
     - name: Cancel Previous Runs
       uses: styfle/cancel-workflow-action@ce17749
+      if: steps.skip_ci_step.outputs.run_next == 'true'
       with:
         access_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -34,6 +39,7 @@ jobs:
   pep_and_audit:
     runs-on: ubuntu-latest
     needs: cancel_ci
+    if: needs.cancel_ci.outputs.run_next == 'true'
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -61,6 +67,7 @@ jobs:
   multi_oses:
     runs-on: ${{ matrix.os }}
     needs: cancel_ci
+    if: needs.cancel_ci.outputs.run_next == 'true'
     strategy:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
@@ -86,6 +93,7 @@ jobs:
   older_deps_tests:
     runs-on: ubuntu-16.04
     needs: cancel_ci
+    if: needs.cancel_ci.outputs.run_next == 'true'
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -108,6 +116,7 @@ jobs:
   dev_deps_tests:
     runs-on: ubuntu-latest
     needs: cancel_ci
+    if: needs.cancel_ci.outputs.run_next == 'true'
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -131,6 +140,7 @@ jobs:
   conda_linux_tests:
     runs-on: ubuntu-latest
     needs: cancel_ci
+    if: needs.cancel_ci.outputs.run_next == 'true'
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
