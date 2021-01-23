@@ -184,7 +184,7 @@ class RendererBase(object):
         if dst_order is None:
             dst_order = self.viewer.rgb_order
         if src_order is None:
-            src_order = self.std_order
+            src_order = self.rgb_order
         if src_order != dst_order:
             arr = trcalc.reorder_image(dst_order, arr, src_order)
 
