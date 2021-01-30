@@ -1682,11 +1682,12 @@ class ScrollArea(ContainerBase):
 
 
 class Splitter(ContainerBase):
-    def __init__(self, orientation='horizontal'):
+    def __init__(self, orientation='horizontal', thumb_px=8):
         super(Splitter, self).__init__()
 
         self.orientation = orientation
-        self.widget = GtkHelp.Splitter(orientation=self.orientation)
+        self.widget = GtkHelp.Splitter(orientation=self.orientation,
+                                       thumb_px=thumb_px)
 
     def add_widget(self, child):
         self.add_ref(child)

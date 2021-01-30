@@ -1822,11 +1822,12 @@ class Splitter(ContainerBase):
     </script>
     """
 
-    def __init__(self, orientation='horizontal'):
+    def __init__(self, orientation='horizontal', thumb_px=8):
         super(Splitter, self).__init__()
 
         self.orientation = orientation
         self.widget = None
+        self.thumb_px = thumb_px
         self.sizes = []
 
         self.enable_callback('activated')
