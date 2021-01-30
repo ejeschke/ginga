@@ -751,7 +751,7 @@ class Splitter(Gtk.Layout):
     """
     Splitter type widget for Gtk.
     """
-    def __init__(self, orientation='horizontal'):
+    def __init__(self, orientation='horizontal', thumb_px=8):
         Gtk.Layout.__init__(self)
 
         self.orientation = orientation
@@ -759,6 +759,8 @@ class Splitter(Gtk.Layout):
         self._dims = (0, 0)
         self.children = []
         self.thumbs = []
+        self.thumb_px = thumb_px
+        self.thumb_aspect = 3.25
         self.kbdmouse_mask = 0
 
         mask = self.get_events()
@@ -787,13 +789,17 @@ class Splitter(Gtk.Layout):
 
         else:
             if self.orientation == 'horizontal':
-                thumbfile, _w, _h = 'vdots.png', 8, 26
+                thumbfile, _w, _h = ('vdots.png', self.thumb_px,
+                                     int(self.thumb_px * self.thumb_aspect))
             else:
-                thumbfile, _w, _h = 'hdots.png', 26, 8
+                thumbfile, _w, _h = ('hdots.png',
+                                     int(self.thumb_px * self.thumb_aspect),
+                                     self.thumb_px)
             iconfile = os.path.join(icondir, thumbfile)
             pixbuf = pixbuf_new_from_file_at_size(iconfile, _w, _h)
             image = Gtk.Image.new_from_pixbuf(pixbuf)
             thumb = Gtk.EventBox()
+            thumb.set_visible_window(True)
             thumb.add(image)
             modify_bg(thumb, "gray90")
 
@@ -807,6 +813,7 @@ class Splitter(Gtk.Layout):
 
             self.put(thumb, 0, 0)
             self.put(widget, 0, 0)
+
             sizes = self._sizes
             if len(sizes) < len(self.children):
                 pos = wd if self.orientation == 'horizontal' else ht
@@ -848,54 +855,58 @@ class Splitter(Gtk.Layout):
             wd, ht = nat_req.width, nat_req.height
 
         x, y = 0, 0
+        # calc space needed by all necessary thumbs
+        remaining_thumb_space = max(0, len(self.children) - 1) * self.thumb_px
         new_sizes = []
+        thumbs, widgets = [], []
         for num, child in enumerate(self.children):
             off = sizes[num]
 
             if self.orientation == 'horizontal':
                 if num == 0:
-                    self._move_resize_child(child, 0, 0, off, ht)
+                    widgets.append((child, 0, 0, off, ht))
                     new_sizes.append(off)
                     x += off
 
                 else:
                     thumb = self.thumbs[num - 1]
-                    min_req, nat_req = thumb.get_preferred_size()
-                    thumb_wd, thumb_ht = nat_req.width, nat_req.height
+                    thumbs.append((thumb, x, y, self.thumb_px, ht))
+                    x += self.thumb_px
+                    remaining_thumb_space -= self.thumb_px
 
-                    self._move_resize_child(thumb, x, y, thumb_wd, ht)
-                    x += thumb_wd
-
-                    rest = max(0, wd - x)
+                    rest = max(0, wd - (x + remaining_thumb_space))
                     if num < len(self.children) - 1:
                         rest = min(off, rest)
-                    self._move_resize_child(child, x, y, rest, ht)
+                    widgets.append((child, x, y, rest, ht))
                     new_sizes.append(rest)
                     x += rest
 
             else:
                 if num == 0:
-                    self._move_resize_child(child, 0, 0, wd, off)
+                    widgets.append((child, 0, 0, wd, off))
                     new_sizes.append(off)
                     y += off
 
                 else:
                     thumb = self.thumbs[num - 1]
-                    min_req, nat_req = thumb.get_preferred_size()
-                    thumb_wd, thumb_ht = nat_req.width, nat_req.height
+                    thumbs.append((thumb, x, y, wd, self.thumb_px))
+                    y += self.thumb_px
+                    remaining_thumb_space -= self.thumb_px
 
-                    self._move_resize_child(thumb, x, y, wd, thumb_ht)
-                    y += thumb_ht
-
-                    rest = max(0, ht - y)
+                    rest = max(0, ht - (y + remaining_thumb_space))
                     if num < len(self.children) - 1:
                         rest = min(off, rest)
-                    self._move_resize_child(child, x, y, wd, rest)
+                    widgets.append((child, x, y, wd, rest))
                     new_sizes.append(rest)
                     y += rest
 
         self._sizes = new_sizes
         assert len(self._sizes) == len(self.children)
+
+        for child, x, y, wd, ht in widgets:
+            self._move_resize_child(child, x, y, wd, ht)
+        for thumb, x, y, wd, ht in thumbs:
+            self._move_resize_child(thumb, x, y, wd, ht)
 
     def remove(self, child):
         if child not in self.children:
@@ -928,12 +939,16 @@ class Splitter(Gtk.Layout):
             modified = True
             child.set_size_request(wd, ht)
 
+            alloc = Gdk.Rectangle()
+            alloc.x, alloc.y, alloc.width, alloc.height = x, y, wd, ht
+            child.size_allocate(alloc)
+
+            #child.set_clip(alloc)
+
             win = child.get_window()
             if win is not None:
-                alloc = Gdk.Rectangle()
-                alloc.x, alloc.y, alloc.width, alloc.height = x, y, wd, ht
-                child.size_allocate(alloc)
-                #win.invalidate_rect(None, True)
+                win.invalidate_rect(None, True)
+                win.resize(wd, ht)
 
         if modified:
             # don't think this should be necessary, but just in case
@@ -944,7 +959,8 @@ class Splitter(Gtk.Layout):
     def _calc_size(self, i, pos):
         sizes = list(self._sizes)
         n = sum([sizes[j] for j in range(0, i)])
-        return pos - n
+        n += max(0, i - 1) * self.thumb_px
+        return max(0, pos - n)
 
     def _start_resize_cb(self, widget, event, i):
         x_root, y_root = event.x_root, event.y_root

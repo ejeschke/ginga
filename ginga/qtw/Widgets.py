@@ -1508,8 +1508,10 @@ class ScrollArea(ContainerBase):
 
 
 class Splitter(ContainerBase):
-    def __init__(self, orientation='horizontal'):
+    def __init__(self, orientation='horizontal', thumb_px=8):
         super(Splitter, self).__init__()
+
+        self.thumb_px = thumb_px
 
         w = QtGui.QSplitter()
         self.orientation = orientation
@@ -1517,19 +1519,21 @@ class Splitter(ContainerBase):
         # indicator on Linux and Windows
         if self.orientation == 'horizontal':
             w.setOrientation(QtCore.Qt.Horizontal)
-            iconfile = pathlib.Path(icondir) / 'vdots.png'
-            w.setStyleSheet(
-                """
-                QSplitter::handle { width: 8px; height: 8px;
-                                    image: url(%s); }
-                """ % (iconfile))
+            if thumb_px is not None:
+                iconfile = pathlib.Path(icondir) / 'vdots.png'
+                w.setStyleSheet(
+                    """
+                    QSplitter::handle { width: %spx; height: %spx;
+                                        image: url(%s); }
+                    """ % (self.thumb_px, self.thumb_px, iconfile))
         else:
             w.setOrientation(QtCore.Qt.Vertical)
-            iconfile = pathlib.Path(icondir) / 'hdots.png'
-            w.setStyleSheet(
-                """
-                QSplitter::handle { height: 8px; image: url(%s); }
-                """ % (iconfile))
+            if thumb_px is not None:
+                iconfile = pathlib.Path(icondir) / 'hdots.png'
+                w.setStyleSheet(
+                    """
+                    QSplitter::handle { height: %spx; image: url(%s); }
+                    """ % (self.thumb_px, iconfile))
         self.widget = w
         w.setChildrenCollapsible(True)
 
