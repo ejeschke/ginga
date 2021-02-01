@@ -186,8 +186,6 @@ import sys
 import bz2
 from io import BytesIO
 
-import numpy as np
-
 from ginga import GingaPlugin
 from ginga import AstroImage
 from ginga.gw import Widgets
