@@ -161,7 +161,7 @@ class WindowPercentageTransform(BaseTransform):
 
         # round to pixel units, if asked
         if self.as_int:
-            win_pts = np.rint(win_pts).astype(np.int, copy=False)
+            win_pts = np.rint(win_pts).astype(int, copy=False)
 
         return win_pts
 
@@ -197,7 +197,7 @@ class CartesianWindowTransform(BaseTransform):
 
         # round to pixel units, if asked
         if self.as_int:
-            win_pts = np.rint(win_pts).astype(np.int, copy=False)
+            win_pts = np.rint(win_pts).astype(int, copy=False)
 
         return win_pts
 
@@ -259,7 +259,7 @@ class CartesianNativeTransform(BaseTransform):
 
         # round to pixel units, if asked
         if self.as_int:
-            win_pts = np.rint(win_pts).astype(np.int, copy=False)
+            win_pts = np.rint(win_pts).astype(int, copy=False)
 
         return win_pts
 
@@ -299,7 +299,7 @@ class AsIntegerTransform(BaseTransform):
         self.viewer = viewer
 
     def to_(self, flt_pts):
-        int_pts = np.asarray(flt_pts, dtype=np.int)
+        int_pts = np.asarray(flt_pts, dtype=int)
         return int_pts
 
     def from_(self, int_pts):

@@ -7,14 +7,14 @@ from ginga import trcalc
 class TestTrcalc:
 
     def _2ddata(self):
-        data = np.zeros((10, 10), dtype=np.int)
+        data = np.zeros((10, 10), dtype=int)
         for i in range(10):
             for j in range(10):
                 data[i, j] = min(i, j)
         return data
 
     def _3ddata(self):
-        data = np.zeros((10, 10, 10), dtype=np.int)
+        data = np.zeros((10, 10, 10), dtype=int)
         for i in range(10):
             for j in range(10):
                 for k in range(10):
