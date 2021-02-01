@@ -73,7 +73,7 @@ def zsc_sample(image, maxpix, bpmask=None, zmask=None):
 
 
 def zscale_samples(samples, contrast=0.25):
-    samples = np.asarray(samples, dtype=np.float)
+    samples = np.asarray(samples, dtype=float)
     npix = len(samples)
     samples.sort()
     zmin = samples[0]

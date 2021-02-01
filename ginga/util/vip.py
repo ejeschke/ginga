@@ -182,7 +182,7 @@ class ViewerImageProxy:
     # ----- for compatibility with BaseImage objects -----
 
     def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, z=0,
-                    astype=np.float, fill_value=np.NaN):
+                    astype=float, fill_value=np.NaN):
         """Cut out data area based on rectangular coordinates.
 
         Parameters
@@ -220,7 +220,7 @@ class ViewerImageProxy:
         t1 = time.time()
 
         if astype is None:
-            astype = np.float
+            astype = float
         if fill_value is None:
             fill_value = np.NaN
 

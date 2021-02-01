@@ -381,7 +381,7 @@ class GingaWrapper(object):
 
             # dtype string works for most instances
             if dtype == '':
-                dtype = np.float
+                dtype = float
 
             byteswap = metadata.get('byteswap', False)
 
