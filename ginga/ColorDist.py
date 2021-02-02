@@ -98,7 +98,7 @@ class LinearDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        pct = np.asarray(pct, dtype=np.float)
+        pct = np.asarray(pct, dtype=float)
         val = np.clip(pct, 0.0, 1.0)
         return val
 
@@ -127,7 +127,7 @@ class LogDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        pct = np.asarray(pct, dtype=np.float)
+        pct = np.asarray(pct, dtype=float)
         val_inv = (np.exp(pct * np.log(self.exp)) - 1) / self.exp
         val = np.clip(val_inv, 0.0, 1.0)
         return val
@@ -157,7 +157,7 @@ class PowerDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        pct = np.asarray(pct, dtype=np.float)
+        pct = np.asarray(pct, dtype=float)
         val_inv = np.log(self.exp * pct + 1) / np.log(self.exp)
         val = np.clip(val_inv, 0.0, 1.0)
         return val
@@ -186,7 +186,7 @@ class SqrtDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        pct = np.asarray(pct, dtype=np.float)
+        pct = np.asarray(pct, dtype=float)
         val_inv = pct ** 2.0
         val = np.clip(val_inv, 0.0, 1.0)
         return val
@@ -214,7 +214,7 @@ class SquaredDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        pct = np.asarray(pct, dtype=np.float)
+        pct = np.asarray(pct, dtype=float)
         val_inv = np.sqrt(pct)
         val = np.clip(val_inv, 0.0, 1.0)
         return val
@@ -246,7 +246,7 @@ class AsinhDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        pct = np.asarray(pct, dtype=np.float)
+        pct = np.asarray(pct, dtype=float)
         # calculate inverse of dist fn
         val_inv = np.sinh(self.nonlinearity * pct) / self.factor
         val = np.clip(val_inv, 0.0, 1.0)
@@ -279,7 +279,7 @@ class SinhDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        pct = np.asarray(pct, dtype=np.float)
+        pct = np.asarray(pct, dtype=float)
         # calculate inverse of dist fn
         val_inv = np.arcsinh(self.nonlinearity * pct) / self.factor
         val = np.clip(val_inv, 0.0, 1.0)
@@ -328,7 +328,7 @@ class HistogramEqualizationDist(ColorDistBase):
         return arr
 
     def get_dist_pct(self, pct):
-        pct = np.asarray(pct, dtype=np.float)
+        pct = np.asarray(pct, dtype=float)
         # TODO: this is wrong but we need a way to invert the hash
         val = np.clip(pct, 0.0, 1.0)
         return pct
@@ -355,7 +355,7 @@ class CurveDist(ColorDistBase):
         self.check_hash()
 
     def get_dist_pct(self, pct):
-        pct = np.asarray(pct, dtype=np.float)
+        pct = np.asarray(pct, dtype=float)
         val = np.clip(pct, 0.0, 1.0)
         return val
 

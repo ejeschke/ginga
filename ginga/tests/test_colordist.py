@@ -18,7 +18,7 @@ class TestColorDist(object):
         self.nonlinearity = 3.0
 
         # Input data
-        self.data = np.arange(self.hashsize, dtype=np.int)
+        self.data = np.arange(self.hashsize, dtype=int)
 
     def scale_and_rescale(self, disttype, data):
         """This is to generate expected scaled output."""
@@ -28,7 +28,7 @@ class TestColorDist(object):
                 idx.ravel(), self.hashsize, density=False)
             cdf = hist.cumsum()
             ohash = ((cdf - cdf.min()) * (self.colorlen - 1) /
-                     (cdf.max() - cdf.min())).astype(np.int)
+                     (cdf.max() - cdf.min())).astype(int)
             idx = idx.astype(np.uint)
             result = ohash[idx]
         else:
@@ -49,7 +49,7 @@ class TestColorDist(object):
             elif disttype == 'sinh':
                 out = np.sinh(self.nonlinearity * x) / self.factor
 
-            result = (out.clip(0.0, 1.0) * (self.colorlen - 1)).astype(np.int)
+            result = (out.clip(0.0, 1.0) * (self.colorlen - 1)).astype(int)
 
         return result
 

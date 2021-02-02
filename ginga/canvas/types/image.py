@@ -71,7 +71,7 @@ class ImageP(OnePointMixin, CanvasObjectBase):
                  showcap=False, flipy=False, optimize=True,
                  **kwdargs):
         self.kind = 'image'
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
         CanvasObjectBase.__init__(self, points=points, image=image, alpha=alpha,
                                   scale_x=scale_x, scale_y=scale_y,
                                   interpolation=interpolation,

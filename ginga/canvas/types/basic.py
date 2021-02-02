@@ -82,7 +82,7 @@ class TextP(OnePointMixin, CanvasObjectBase):
                  color='yellow', alpha=1.0, rot_deg=0.0,
                  showcap=False, **kwdargs):
         self.kind = 'text'
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
         super(TextP, self).__init__(points=points, color=color, alpha=alpha,
                                     font=font, fontsize=fontsize,
                                     fontscale=fontscale,
@@ -514,7 +514,7 @@ class BoxP(OnePointTwoRadiusMixin, CanvasObjectBase):
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
         xradius, yradius = radii[:2]
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -648,7 +648,7 @@ class SquareBoxP(OnePointOneRadiusMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -811,7 +811,7 @@ class EllipseP(OnePointTwoRadiusMixin, CanvasObjectBase):
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  rot_deg=0.0, **kwdargs):
         xradius, yradius = radii
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -836,8 +836,8 @@ class EllipseP(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def contains_pts(self, pts):
         x_arr, y_arr = np.asarray(pts).T
-        x_arr, y_arr = (x_arr.astype(np.float, copy=False),
-                        y_arr.astype(np.float, copy=False))
+        x_arr, y_arr = (x_arr.astype(float, copy=False),
+                        y_arr.astype(float, copy=False))
 
         points = self.get_points()
         # rotate point back to cartesian alignment for test
@@ -1014,7 +1014,7 @@ class TriangleP(OnePointTwoRadiusMixin, CanvasObjectBase):
                  rot_deg=0.0, **kwdargs):
         self.kind = 'triangle'
         xradius, yradius = radii[:2]
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle, alpha=alpha,
@@ -1037,7 +1037,7 @@ class TriangleP(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def get_llur(self):
         xd, yd = self.crdmap.to_data((self.x, self.y))
-        points = np.asarray(self.get_points(), dtype=np.float)
+        points = np.asarray(self.get_points(), dtype=float)
 
         mpts = trcalc.rotate_coord(points, [self.rot_deg], [xd, yd])
         t_ = mpts.T
@@ -1048,8 +1048,8 @@ class TriangleP(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def contains_pts(self, pts):
         x_arr, y_arr = np.asarray(pts).T
-        x_arr, y_arr = (x_arr.astype(np.float, copy=False),
-                        y_arr.astype(np.float, copy=False))
+        x_arr, y_arr = (x_arr.astype(float, copy=False),
+                        y_arr.astype(float, copy=False))
         # is this the same as self.x, self.y ?
         xd, yd = self.get_center_pt()
         # rotate point back to cartesian alignment for test
@@ -1158,7 +1158,7 @@ class CircleP(OnePointOneRadiusMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', showcap=False,
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  **kwdargs):
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -1170,8 +1170,8 @@ class CircleP(OnePointOneRadiusMixin, CanvasObjectBase):
 
     def contains_pts(self, pts):
         x_arr, y_arr = np.asarray(pts).T
-        x_arr, y_arr = (x_arr.astype(np.float, copy=False),
-                        y_arr.astype(np.float, copy=False))
+        x_arr, y_arr = (x_arr.astype(float, copy=False),
+                        y_arr.astype(float, copy=False))
 
         xd, yd = self.crdmap.to_data((self.x, self.y))
 
@@ -1297,7 +1297,7 @@ class PointP(OnePointOneRadiusMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', alpha=1.0, showcap=False,
                  **kwdargs):
         self.kind = 'point'
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, alpha=alpha,
                                   linestyle=linestyle, radius=radius,
@@ -1455,7 +1455,7 @@ class RectangleP(TwoPointMixin, CanvasObjectBase):
                  drawdims=False, font='Sans Serif', fillalpha=1.0,
                  **kwdargs):
         self.kind = 'rectangle'
-        points = np.asarray([pt1, pt2], dtype=np.float)
+        points = np.asarray([pt1, pt2], dtype=float)
 
         CanvasObjectBase.__init__(self, points=points, color=color,
                                   linewidth=linewidth, showcap=showcap,
@@ -1593,7 +1593,7 @@ class LineP(TwoPointMixin, CanvasObjectBase):
                  linewidth=1, linestyle='solid', alpha=1.0,
                  arrow=None, showcap=False, **kwdargs):
         self.kind = 'line'
-        points = np.asarray([pt1, pt2], dtype=np.float)
+        points = np.asarray([pt1, pt2], dtype=float)
         CanvasObjectBase.__init__(self, points=points, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle, arrow=arrow,
@@ -1715,7 +1715,7 @@ class RightTriangleP(TwoPointMixin, CanvasObjectBase):
                  fill=False, fillcolor=None, alpha=1.0, fillalpha=1.0,
                  **kwdargs):
         self.kind = 'righttriangle'
-        points = np.asarray([pt1, pt2], dtype=np.float)
+        points = np.asarray([pt1, pt2], dtype=float)
         CanvasObjectBase.__init__(self, points=points, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -1732,8 +1732,8 @@ class RightTriangleP(TwoPointMixin, CanvasObjectBase):
 
     def contains_pts(self, pts):
         x_arr, y_arr = np.asarray(pts).T
-        x_arr, y_arr = (x_arr.astype(np.float, copy=False),
-                        y_arr.astype(np.float, copy=False))
+        x_arr, y_arr = (x_arr.astype(float, copy=False),
+                        y_arr.astype(float, copy=False))
         points = self.get_points()
         x1, y1 = points[0]
         x2, y2 = points[1]

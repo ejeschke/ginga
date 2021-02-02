@@ -13281,7 +13281,7 @@ def matplotlib_to_ginga_cmap(cm, name=None):
     """Convert matplotlib colormap to Ginga's."""
     if name is None:
         name = cm.name
-    arr = cm(np.arange(0, min_cmap_len) / np.float(min_cmap_len - 1))
+    arr = cm(np.arange(0, min_cmap_len) / float(min_cmap_len - 1))
     clst = arr[:, 0:3]
     return ColorMap(name, clst)
 

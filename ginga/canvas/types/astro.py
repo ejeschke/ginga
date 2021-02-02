@@ -92,7 +92,7 @@ class RulerP(TwoPointMixin, CanvasObjectBase):
                  showcap=True, showplumb=True, showends=False, units='arcmin',
                  font='Sans Serif', fontsize=None, **kwdargs):
         self.kind = 'ruler'
-        points = np.asarray([pt1, pt2], dtype=np.float)
+        points = np.asarray([pt1, pt2], dtype=float)
         CanvasObjectBase.__init__(self, color=color, color2=color2,
                                   alpha=alpha, units=units,
                                   showplumb=showplumb, showends=showends,
@@ -321,7 +321,7 @@ class CompassP(OnePointOneRadiusMixin, CanvasObjectBase):
                  linewidth=1, fontsize=None, font='Sans Serif',
                  alpha=1.0, linestyle='solid', showcap=True, **kwdargs):
         self.kind = 'compass'
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
         CanvasObjectBase.__init__(self, ctype=ctype, color=color, alpha=alpha,
                                   linewidth=linewidth, showcap=showcap,
                                   linestyle=linestyle,
@@ -532,7 +532,7 @@ class CrosshairP(OnePointMixin, CanvasObjectBase):
                  fontsize=10.0, font='Sans Serif', fontscale=True,
                  format='xy', **kwdargs):
         self.kind = 'crosshair'
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
         CanvasObjectBase.__init__(self, color=color, alpha=alpha,
                                   linewidth=linewidth, linestyle=linestyle,
                                   text=text, textcolor=textcolor,
@@ -720,7 +720,7 @@ class AnnulusP(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
                      coord=coord)
         obj2.editable = False
 
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
 
         CompoundObject.__init__(self, obj1, obj2,
                                 points=points, radius=radius,
@@ -905,7 +905,7 @@ class Annulus2RP(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
                      coord=coord, rot_deg=rot_deg)
         obj2.editable = False
 
-        points = np.asarray([pt], dtype=np.float)
+        points = np.asarray([pt], dtype=float)
 
         CompoundObject.__init__(self, obj1, obj2,
                                 points=points, xradius=xradius, yradius=yradius,

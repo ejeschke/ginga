@@ -291,7 +291,7 @@ class CanvasObjectBase(Callback.Callbacks):
     def set_point_by_index(self, i, pt):
         #self.points[i] = self.crdmap.data_to(pt)
         # Can we eventually use something like the above?
-        points = np.asarray(self.points, dtype=np.float)
+        points = np.asarray(self.points, dtype=float)
         points[i] = self.crdmap.data_to(pt)
         self.points = points
 

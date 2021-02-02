@@ -232,14 +232,14 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
             bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
 
-        #ap = np.rint(ap).clip(0, wd-1).astype(np.int)
-        #bp = np.rint(bp).clip(0, ht-1).astype(np.int)
+        #ap = np.rint(ap).clip(0, wd-1).astype(int)
+        #bp = np.rint(bp).clip(0, ht-1).astype(int)
         # Optomizations to reuse existing intermediate arrays
         np.rint(ap, out=ap)
-        ap = ap.astype(np.int, copy=False)
+        ap = ap.astype(int, copy=False)
         ap.clip(0, wd - 1, out=ap)
         np.rint(bp, out=bp)
-        bp = bp.astype(np.int, copy=False)
+        bp = bp.astype(int, copy=False)
         bp.clip(0, ht - 1, out=bp)
 
         if out is not None:
@@ -323,9 +323,9 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
     # Make indexes and scale them
     # Is there a more efficient way to do this?
     xi = np.clip(x1 + np.arange(0, new_wd) * iscale_x,
-                 0, max_x).astype(np.int, copy=False)
+                 0, max_x).astype(int, copy=False)
     yi = np.clip(y1 + np.arange(0, new_ht) * iscale_y,
-                 0, max_y).astype(np.int, copy=False)
+                 0, max_y).astype(int, copy=False)
     wd, ht = xi.size, yi.size
 
     # bounds check against shape (to protect future data access)
@@ -384,11 +384,11 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
         iscale_z = float(old_dp) / float(new_dp)
 
     xi = np.clip(x1 + np.arange(0, new_wd) * iscale_x,
-                 0, max_x).astype(np.int, copy=False)
+                 0, max_x).astype(int, copy=False)
     yi = np.clip(y1 + np.arange(0, new_ht) * iscale_y,
-                 0, max_y).astype(np.int, copy=False)
+                 0, max_y).astype(int, copy=False)
     zi = np.clip(z1 + np.arange(0, new_dp) * iscale_z,
-                 0, max_z).astype(np.int, copy=False)
+                 0, max_z).astype(int, copy=False)
     wd, ht, dp = xi.size, yi.size, zi.size
 
     # bounds check against shape (to protect future data access)

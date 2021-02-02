@@ -73,7 +73,7 @@ def zsc_sample(image, maxpix, bpmask=None, zmask=None):
 
 
 def zscale_samples(samples, contrast=0.25):
-    samples = np.asarray(samples, dtype=np.float)
+    samples = np.asarray(samples, dtype=float)
     npix = len(samples)
     samples.sort()
     zmin = samples[0]
@@ -118,7 +118,7 @@ def zsc_fit_line(samples, npix, krej, ngrow, maxiter):
     last_ngoodpix = npix + 1
 
     # This is the mask used in k-sigma clipping.  0 is good, 1 is bad
-    badpix = np.zeros(npix, dtype=np.int)
+    badpix = np.zeros(npix, dtype=int)
 
     #
     #  Iterate
@@ -160,7 +160,7 @@ def zsc_fit_line(samples, npix, krej, ngrow, maxiter):
         badpix[above] = BAD_PIXEL
 
         # Convolve with a kernel of length ngrow
-        kernel = np.ones(ngrow, dtype=np.int)
+        kernel = np.ones(ngrow, dtype=int)
         badpix = np.convolve(badpix, kernel, mode='same')
 
         ngoodpix = len(np.where(badpix == GOOD_PIXEL)[0])

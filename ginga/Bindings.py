@@ -580,14 +580,14 @@ class ImageViewBindings(object):
 
         arr = np.array([(mnwd, mnht), (mxwd, mnht),
                         (mxwd, mxht), (mnwd, mxht)],
-                       dtype=np.float)
+                       dtype=float)
         x, y = tr.to_(arr).T
 
         rx1, rx2 = np.min(x), np.max(x)
         ry1, ry2 = np.min(y), np.max(y)
 
         rect = viewer.get_pan_rect()
-        arr = np.array(rect, dtype=np.float)
+        arr = np.array(rect, dtype=float)
         x, y = tr.to_(arr).T
 
         qx1, qx2 = np.min(x), np.max(x)
@@ -633,7 +633,7 @@ class ImageViewBindings(object):
 
         arr = np.array([(mnwd, mnht), (mxwd, mnht),
                         (mxwd, mxht), (mnwd, mxht)],
-                       dtype=np.float)
+                       dtype=float)
         x, y = tr.to_(arr).T
 
         rx1, rx2 = np.min(x), np.max(x)
