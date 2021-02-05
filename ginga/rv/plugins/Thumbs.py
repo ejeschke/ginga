@@ -1060,8 +1060,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # calc in data coords
         thumb_height = self.thumb_width
         twd_vplus = thumb_height + text_ht + self.thumb_vsep
-        row1 = int(math.floor(abs(y1) / twd_vplus) - 2)
-        row2 = int(math.ceil(abs(y2) / twd_vplus) + 2)
+        # remember, Y-axis is flipped
+        row1 = max(0, int(math.floor(y1 / twd_vplus) - 2))
+        row2 = max(row1 + 1, int(math.ceil(y2 / twd_vplus) + 2))
         self.logger.debug("row1, row2 = %d, %d" % (row1, row2))
         return row1, row2
 

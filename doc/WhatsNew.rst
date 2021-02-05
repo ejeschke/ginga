@@ -30,6 +30,8 @@ Ver 3.2.0 (unreleased)
 - Fixed an issue with cursor warp in free panning with Gtk3 backend
 - Fixed an issue where the cursor was not changed from the default
 - Fixed Pick plugin to autozoom the pick and contour images
+- Fixed an issue where Thumbs plugin might not show initial thumb(s)
+  when main window is enlarged to certain sizes
 
 Ver 3.1.0 (2020-07-20)
 ======================
