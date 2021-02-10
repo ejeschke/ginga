@@ -1685,6 +1685,76 @@ class Splitter(ContainerBase):
     def __init__(self, orientation='horizontal', thumb_px=8):
         super(Splitter, self).__init__()
 
+        # thumb_px ignored in this version
+        self.orientation = orientation
+        self.widget = self._get_pane()
+        self.panes = [self.widget]
+
+    def _get_pane(self):
+        if self.orientation == 'horizontal':
+            w = Gtk.HPaned()
+        else:
+            w = Gtk.VPaned()
+        w.set_wide_handle(True)
+        return w
+
+    def add_widget(self, child):
+        self.add_ref(child)
+        child_w = child.get_widget()
+
+        # without a Frame it can be difficult to see the divider
+        frame_w = Gtk.Frame()
+        #frame_w.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+        frame_w.set_shadow_type(Gtk.ShadowType.NONE)
+        frame_w.add(child_w)
+
+        if len(self.children) == 1:
+            self.widget.pack1(frame_w)
+
+        else:
+            last = self.widget
+            if len(self.panes) > 0:
+                last = self.panes[-1]
+
+            w = self._get_pane()
+            self.panes.append(w)
+
+            w.pack1(frame_w)
+            last.pack2(w)
+
+        self.widget.show_all()
+        self.make_callback('widget-added', child)
+
+    def _get_sizes(self, pane):
+        rect = pane.get_allocation()
+        if self.orientation == 'horizontal':
+            total = rect.width
+        else:
+            total = rect.height
+        pos = pane.get_position()
+        return (pos, total)
+
+    def get_sizes(self):
+        res = []
+        if len(self.panes) > 0:
+            for pane in self.panes[:-1]:
+                pos, total = self._get_sizes(pane)
+                res.append(pos)
+            pane = self.panes[-1]
+            pos, total = self._get_sizes(pane)
+            res.append(total)
+        return res
+
+    def set_sizes(self, sizes):
+        for i, pos in enumerate(sizes):
+            pane = self.panes[i]
+            pane.set_position(pos)
+
+
+class Splitter2(ContainerBase):
+    def __init__(self, orientation='horizontal', thumb_px=8):
+        super(Splitter, self).__init__()
+
         self.orientation = orientation
         self.widget = GtkHelp.Splitter(orientation=self.orientation,
                                        thumb_px=thumb_px)
