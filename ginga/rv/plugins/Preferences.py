@@ -334,6 +334,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.imap_names = imap.get_names()
         self.zoomalg_names = ('step', 'rate')
 
+        # get Preferences preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_Preferences')
+        self.settings.add_defaults(orientation=None)
+        self.settings.load(onError='silent')
+
         self.t_ = self.fitsimage.get_settings()
         self.autocuts_cache = {}
         self.gui_up = False

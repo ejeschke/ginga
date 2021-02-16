@@ -65,6 +65,12 @@ class Drawing(GingaPlugin.LocalPlugin):
         canvas.register_for_cursor_drawing(self.fitsimage)
         self.canvas = canvas
 
+        # get Drawing preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_Drawing')
+        self.settings.add_defaults(orientation=None)
+        self.settings.load(onError='silent')
+
         self.drawtypes = list(canvas.get_drawtypes())
         self.drawcolors = draw_colors
         self.linestyles = ['solid', 'dash']

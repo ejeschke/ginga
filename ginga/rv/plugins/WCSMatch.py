@@ -53,6 +53,12 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         self._match = dict(pan=True, scale=True, transforms=True,
                            rotation=True)
 
+        # get WCSMatch preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_WCSMatch')
+        self.settings.add_defaults(orientation=None)
+        self.settings.load(onError='silent')
+
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
 

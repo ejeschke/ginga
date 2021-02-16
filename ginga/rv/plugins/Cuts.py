@@ -186,7 +186,8 @@ class Cuts(GingaPlugin.LocalPlugin):
         top.set_border_width(4)
 
         # Make the cuts plot
-        box, sw, orientation = Widgets.get_oriented_box(container)
+        box, sw, orientation = Widgets.get_oriented_box(container,
+                                                        orientation=self.settings.get('orientation', None))
         box.set_margins(4, 4, 4, 4)
         box.set_spacing(2)
 

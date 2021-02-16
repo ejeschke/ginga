@@ -48,14 +48,20 @@ class Overlays(GingaPlugin.LocalPlugin):
         canvas.set_surface(self.fitsimage)
         self.canvas = canvas
 
+        # get Overlays preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_Overlays')
+        self.settings.add_defaults(hi_color='palevioletred', hi_value=None,
+                                   lo_color='blue', lo_value=None,
+                                   opacity=0.5, orientation=None)
+        self.settings.load(onError='silent')
+
         self.colornames = colors.get_colors()
-        # TODO: there is some problem with basic "red", at least on Linux
-        #self.hi_color = 'red'
-        self.hi_color = 'palevioletred'
-        self.hi_value = None
-        self.lo_color = 'blue'
-        self.lo_value = None
-        self.opacity = 0.5
+        self.hi_color = self.settings.get('hi_color', 'palevioletred')
+        self.hi_value = self.settings.get('hi_value', None)
+        self.lo_color = self.settings.get('lo_color', 'blue')
+        self.lo_value = self.settings.get('lo_value', None)
+        self.opacity = self.settings.get('opacity', 0.5)
         self.arrsize = None
         self.rgbarr = np.zeros((1, 1, 4), dtype=np.uint8)
         self.rgbobj = RGBImage.RGBImage(logger=self.logger, data_np=self.rgbarr)

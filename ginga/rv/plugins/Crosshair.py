@@ -31,7 +31,13 @@ class Crosshair(GingaPlugin.LocalPlugin):
         # superclass defines some variables for us, like logger
         super(Crosshair, self).__init__(fv, fitsimage)
 
-        self.xhcolor = 'green'
+        # get Crosshair preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_Crosshair')
+        self.settings.add_defaults(color='green', orientation=None)
+        self.settings.load(onError='silent')
+
+        self.xhcolor = self.settings.get('color', 'green')
         self.layertag = 'crosshair-canvas'
         self.xhtag = None
 
