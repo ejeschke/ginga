@@ -32,8 +32,9 @@ def get_orientation(container, aspect=1.0):
 
 
 def get_oriented_box(container, scrolled=True, fill=False,
-                     aspect=2.0):
-    orientation = get_orientation(container, aspect=aspect)
+                     aspect=2.0, orientation=None):
+    if orientation is None:
+        orientation = get_orientation(container, aspect=aspect)
 
     if orientation == 'vertical':
         box1 = VBox()  # noqa

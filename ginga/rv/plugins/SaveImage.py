@@ -95,7 +95,8 @@ class SaveImage(GlobalPlugin):
     def build_gui(self, container):
         """Build GUI such that image list area is maximized."""
 
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        vbox, sw, orientation = Widgets.get_oriented_box(container,
+                                                         orientation=self.settings.get('orientation', None))
 
         captions = (('Channel:', 'label', 'Channel Name', 'combobox',
                      'Modified only', 'checkbutton'), )

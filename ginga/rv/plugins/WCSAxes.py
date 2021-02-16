@@ -74,7 +74,8 @@ class WCSAxes(LocalPlugin):
         top = Widgets.VBox()
         top.set_border_width(4)
 
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        vbox, sw, orientation = Widgets.get_oriented_box(container,
+                                                         orientation=self.settings.get('orientation', None))
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 

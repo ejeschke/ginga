@@ -134,7 +134,8 @@ class TVMask(LocalPlugin):
         return [c for c in colors.get_colors() if not re.search(r'\d', c)]
 
     def build_gui(self, container):
-        vbox, sw, self.orientation = Widgets.get_oriented_box(container)
+        vbox, sw, self.orientation = Widgets.get_oriented_box(container,
+                                                              orientation=self.settings.get('orientation', None))
 
         captions = (('Color:', 'label', 'mask color', 'combobox'),
                     ('Alpha:', 'label', 'mask alpha', 'entry'))

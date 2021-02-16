@@ -476,7 +476,8 @@ class Pick(GingaPlugin.LocalPlugin):
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
 
-        box, sw, orientation = Widgets.get_oriented_box(container)
+        box, sw, orientation = Widgets.get_oriented_box(container,
+                                                        orientation=self.settings.get('orientation', None))
         box.set_border_width(4)
         box.set_spacing(2)
 

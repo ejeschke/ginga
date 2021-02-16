@@ -103,7 +103,8 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         vbox, sw, orientation = Widgets.get_oriented_box(container,
                                                          scrolled=True,
-                                                         aspect=3.0)
+                                                         aspect=3.0,
+                                                         orientation=self.settings.get('orientation', None))
         self.orientation = orientation
         vbox.set_border_width(4)
         vbox.set_spacing(2)
