@@ -167,7 +167,8 @@ class TVMark(LocalPlugin):
         return [c for c in colors.get_colors() if not re.search(r'\d', c)]
 
     def build_gui(self, container):
-        vbox, sw, self.orientation = Widgets.get_oriented_box(container)
+        vbox, sw, self.orientation = Widgets.get_oriented_box(container,
+                                                              orientation=self.settings.get('orientation', None))
 
         captions = (('Mark:', 'label', 'mark type', 'combobox'),
                     ('Color:', 'label', 'mark color', 'combobox'),

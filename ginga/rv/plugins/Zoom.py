@@ -100,7 +100,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         vtop = Widgets.VBox()
         vtop.set_border_width(4)
 
-        box, sw, orientation = Widgets.get_oriented_box(container)
+        box, sw, orientation = Widgets.get_oriented_box(container,
+                                                        orientation=self.settings.get('orientation', None))
         # Uncomment to debug; passing parent logger generates too
         # much noise in the main logger
         #zi = Viewers.CanvasView(logger=self.logger)

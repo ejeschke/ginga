@@ -78,7 +78,8 @@ class PlotTable(LocalPlugin):
         top.set_border_width(4)
 
         # Make the plot
-        vbox, sw, orientation = Widgets.get_oriented_box(container)
+        vbox, sw, orientation = Widgets.get_oriented_box(container,
+                                                         orientation=self.settings.get('orientation', None))
         vbox.set_margins(4, 4, 4, 4)
         vbox.set_spacing(2)
 

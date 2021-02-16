@@ -81,7 +81,8 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         and closed.
 
         """
-        vbox, sw, self.orientation = Widgets.get_oriented_box(container)
+        vbox, sw, self.orientation = Widgets.get_oriented_box(container,
+                                                              orientation=self.settings.get('orientation', None))
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
