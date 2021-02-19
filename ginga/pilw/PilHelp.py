@@ -47,7 +47,7 @@ def text_to_array(text, font, rot_deg=0.0):
     d = ImageDraw.Draw(i, 'RGBA')
     d.text((0, 0), text, font=f, fill=color)
     i.rotate(rot_deg, expand=1)
-    arr8 = np.fromstring(i.tobytes(), dtype=np.uint8)
+    arr8 = np.frombuffer(i.tobytes(), dtype=np.uint8)
     arr8 = arr8.reshape((ht, wd, 4))
     return arr8
 

@@ -212,7 +212,7 @@ class CanvasRenderer(render.StandardPixelRenderer):
         wd, ht = self.dims
 
         # Get agg surface as a numpy array
-        arr8 = np.fromstring(self.surface.tobytes(), dtype=np.uint8)
+        arr8 = np.frombuffer(self.surface.tobytes(), dtype=np.uint8)
         arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
 
         # adjust according to viewer's needed order

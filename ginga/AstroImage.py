@@ -182,7 +182,7 @@ class AstroImage(BaseImage):
 
     def load_buffer(self, buf, dims, dtype, byteswap=False,
                     naxispath=None, metadata=None):
-        data = np.fromstring(buf, dtype=dtype)
+        data = np.frombuffer(buf, dtype=dtype)
         if byteswap:
             data.byteswap(True)
         data = data.reshape(dims)
