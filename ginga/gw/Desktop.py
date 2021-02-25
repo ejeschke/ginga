@@ -463,8 +463,11 @@ class Desktop(Callback.Callbacks):
         # Horizontal fixed array
         def hbox(params, cols, pack):
             widget = Widgets.HBox()
-            widget.set_border_width(0)
-            widget.set_spacing(0)
+            widget.set_border_width(params.get('border_width', 0))
+            spacing = params.get('spacing', None)
+            if spacing is None:
+                spacing = 0
+            widget.set_spacing(spacing)
 
             res = []
             for dct in cols:
@@ -473,8 +476,10 @@ class Desktop(Callback.Callbacks):
                     col = dct.get('col', None)
                 else:
                     # assume a list defining the col
-                    stretch = 0
+                    assert isinstance(dct, list)
                     col = dct
+                    if len(dct) >= 2 and isinstance(dct[1], dict):
+                        stretch = dct[1].get('stretch', 0)
                 if col is not None:
                     c = make(col, lambda w: widget.add_widget(w,
                                                               stretch=stretch))
@@ -488,8 +493,11 @@ class Desktop(Callback.Callbacks):
         # Vertical fixed array
         def vbox(params, rows, pack):
             widget = Widgets.VBox()
-            widget.set_border_width(0)
-            widget.set_spacing(0)
+            widget.set_border_width(params.get('border_width', 0))
+            spacing = params.get('spacing', None)
+            if spacing is None:
+                spacing = 0
+            widget.set_spacing(spacing)
 
             res = []
             for dct in rows:
@@ -498,8 +506,11 @@ class Desktop(Callback.Callbacks):
                     row = dct.get('row', None)
                 else:
                     # assume a list defining the row
-                    stretch = 0
+                    assert isinstance(dct, list)
                     row = dct
+                    stretch = 0
+                    if len(dct) >= 2 and isinstance(dct[1], dict):
+                        stretch = dct[1].get('stretch', 0)
                 if row is not None:
                     r = make(row, lambda w: widget.add_widget(w,
                                                               stretch=stretch))
