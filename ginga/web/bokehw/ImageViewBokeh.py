@@ -5,68 +5,35 @@
 # Please see the file LICENSE.txt for details.
 
 import time
-from io import BytesIO
 
 import numpy as np
 
 # Bokeh imports
 from bokeh.plotting import curdoc
-#from bokeh.models import BoxSelectTool, TapTool
-#from bokeh.models import PanTool
 from bokeh.models import ColumnDataSource
-#from bokeh.client import push_session
 from bokeh.io import push_notebook
-# from bokeh.events import (MouseEnter, MouseLeave, MouseMove, MouseWheel,
-#                           Pan, PanEnd, PanStart, Pinch, PinchEnd, PinchStart,
-#                           Press, Tap, DoubleTap, SelectionGeometry)
-from bokeh.events import (MouseEnter, MouseLeave, MouseMove, MouseWheel,
-                          Tap)
+from bokeh import events
 
 from ginga import ImageView
+from ginga.canvas import render
 from ginga import Mixins, Bindings
-from ginga.web.bokehw.CanvasRenderBokeh import CanvasRenderer
-
-# TODO: is this the right place for this call?
-#session = push_session(curdoc())
-
-try:
-    # See if we have aggdraw module--best choice
-    from ginga.aggw.ImageViewAgg import ImageViewAgg as ImageViewSS
-    from ginga.aqqw.ImageViewAgg import ImageViewAggError as ImageViewError
-
-except ImportError:
-    try:
-        # No, hmm..ok, see if we have opencv module...
-        from ginga.cvw.ImageViewCv import ImageViewCv as ImageViewSS
-        from ginga.cvw.ImageViewCv import ImageViewCvError as ImageViewError
-
-    except ImportError:
-        try:
-            # No dice. How about the PIL module?
-            from ginga.pilw.ImageViewPil import ImageViewPil as ImageViewSS
-            from ginga.pilw.ImageViewPil import ImageViewPilError as ImageViewError
-
-        except ImportError:
-            # Fall back to mock--there will be no graphic overlays
-            from ginga.mockw.ImageViewMock import ImageViewMock as ImageViewSS
-            from ginga.mockw.ImageViewMock import ImageViewMockError as ImageViewError
 
 
-## class ImageViewBokehError(ImageView.ImageViewError):
-##     pass
-class ImageViewBokehError(ImageViewError):
+class ImageViewBokehError(ImageView.ImageViewError):
     pass
 
 
-class ImageViewBokeh(ImageViewSS):
+class ImageViewBokeh(ImageView.ImageViewBase):
     """
     This version does all the graphical overlays on the server side.
     """
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageViewSS.__init__(self, logger=logger,
-                             rgbmap=rgbmap,
-                             settings=settings)
+        ImageView.ImageViewBase.__init__(self, logger=logger,
+                                         rgbmap=rgbmap,
+                                         settings=settings)
+
+        self.t_.set_defaults(renderer='cairo')
 
         # Our Bokeh plot
         self.figure = None
@@ -82,10 +49,20 @@ class ImageViewBokeh(ImageViewSS):
 
         # override, until we can get access to a timer
         self.defer_redraw = True
+        self.rgb_order = 'RGBA'
 
         # For timing events
         self._msg_timer = 0
         self._defer_timer = 0
+
+        self.renderer = None
+        # Pick a renderer that can work with us
+        renderers = ['cairo', 'agg', 'pil', 'opencv']
+        preferred = self.t_['renderer']
+        if preferred in renderers:
+            renderers.remove(preferred)
+        self.possible_renderers = [preferred] + renderers
+        self.choose_best_renderer()
 
     def set_figure(self, figure, handle=None):
         """Call this with the Bokeh figure object."""
@@ -93,18 +70,39 @@ class ImageViewBokeh(ImageViewSS):
         self.bkimage = None
         self._push_handle = handle
 
+        self._setup_handlers(figure)
+
         wd = figure.plot_width
         ht = figure.plot_height
 
         self.configure_window(wd, ht)
 
         doc = curdoc()
-        #self.logger.info(str(dir(doc)))
-        doc.add_periodic_callback(self.timer_cb, 50)
+        doc.add_periodic_callback(self.timer_cb, 20)
         self.logger.info("figure set")
 
     def get_figure(self):
         return self.figure
+
+    def choose_renderer(self, name):
+        klass = render.get_render_class(name)
+        self.renderer = klass(self)
+
+        #self.renderer.resize((wd, ht))
+
+    def choose_best_renderer(self):
+        for name in self.possible_renderers:
+            try:
+                self.choose_renderer(name)
+                self.logger.info("best renderer available is '{}'".format(name))
+                return
+            except Exception as e:
+                # uncomment to troubleshoot
+                self.logger.info("can't choose renderer '{}': {}".format(name, e),
+                                 exc_info=True)
+                continue
+
+        raise ImageViewBokehError("No valid renderers available: {}".format(str(self.possible_renderers)))
 
     def update_widget(self):
         if self.figure is None:
@@ -130,7 +128,7 @@ class ImageViewBokeh(ImageViewSS):
                                                   x=dst_x, y=dst_y,
                                                   dw=wd, dh=ht,
                                                   source=self.d_src)
-            self._setup_handlers(self.d_src)
+            #self._setup_handlers(self.d_src)
 
         else:
             # note: get the data source (a ColumnDataSource) and update
@@ -178,178 +176,6 @@ class ImageViewBokeh(ImageViewSS):
 
     def onscreen_message_off(self):
         self.set_onscreen_message(None)
-
-
-class ImageViewBokeh2(ImageView.ImageViewBase):
-    """
-    This version does all the graphical overlays on the client side.
-    """
-
-    def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageView.ImageViewBase.__init__(self, logger=logger,
-                                         rgbmap=rgbmap,
-                                         settings=settings)
-        # Our Bokeh plot
-        self.figure = None
-        # Holds the image on the plot
-        self.bkimage = None
-        self.d_src = None
-        self._push_handle = None
-
-        self.defer_redraw = True
-
-        # NOTE: Bokeh manages it's Y coordinates by default with
-        # the origin at the bottom (see base class)
-        self.origin_upper = True
-        self._invert_y = False
-
-        self.img_fg = (1.0, 1.0, 1.0)
-        self.img_bg = (0.5, 0.5, 0.5)
-
-        # Bokeh expects RGBA data for color images
-        self.rgb_order = 'RGBA'
-
-        self.renderer = CanvasRenderer(self)
-
-        # cursors
-        self.cursor = {}
-
-        # For timing events
-        self._msg_timer = None
-        self._defer_timer = None
-
-        self.t_.set_defaults(show_pan_position=False,
-                             onscreen_ff='Sans Serif')
-
-    def set_figure(self, figure, handle=None):
-        """Call this with the Bokeh figure object."""
-        self.figure = figure
-        self.bkimage = None
-        self._push_handle = handle
-
-        wd = figure.plot_width
-        ht = figure.plot_height
-
-        self.configure_window(wd, ht)
-
-        doc = curdoc()
-        self.logger.info(str(dir(doc)))
-        #doc.add_periodic_callback(self.timer_cb, 100)
-        self.logger.info("figure set")
-
-    def get_figure(self):
-        return self.figure
-
-    def render_image(self, data, order, win_coord):
-        """Render the image represented by (rgbobj) at dst_x, dst_y
-        in the pixel space.
-
-        NOTE: this version uses a Figure.FigImage to render the image.
-        """
-        pass
-
-    def configure_window(self, width, height):
-        self.configure(width, height)
-
-    def _setup_handlers(self, source):
-        pass
-
-    def _resize_cb(self, event):
-        wd, ht = event.width, event.height
-        self.logger.debug("canvas resized %dx%d" % (wd, ht))
-        self.configure_window(wd, ht)
-
-    def get_png_image_as_buffer(self, output=None):
-        ibuf = output
-        if ibuf is None:
-            ibuf = BytesIO()
-        self.figure.write_to_png(ibuf)
-        return ibuf
-
-    def update_widget(self):
-        self.logger.debug("redraw surface")
-        if self.figure is None:
-            return
-
-        # Grab the RGB array for the current image and place it in the
-        # Bokeh image
-        data = self.getwin_array(order=self.rgb_order)
-        ht, wd = data.shape[:2]
-
-        # Casting as a 32-bit uint array type hopefully to get more
-        # efficient JSON encoding en route to the browser
-        data = data.view(dtype=np.uint32).reshape((ht, wd))
-
-        dst_x = dst_y = 0
-
-        try:
-            # Create an Image_RGBA object in the plot
-            if self.bkimage is None:
-                self.d_src = ColumnDataSource({'image': [data]})
-                self.bkimage = self.figure.image_rgba(image='image',
-                                                      x=dst_x, y=dst_y,
-                                                      dw=wd, dh=ht,
-                                                      source=self.d_src)
-                self._setup_handlers(self.d_src)
-
-            else:
-                # note: get the data source (a ColumnDataSource) and update
-                # the values
-                self.logger.info("Updating image")
-                update = dict(image=[data], x=[dst_x], y=[dst_y],
-                              dw=[wd], dh=[ht])
-                self.d_src.data = update
-
-                if self._push_handle is not None:
-                    self.logger.info("pushing to notebook...")
-                    #self.d_src.push_notebook(self._push_handle)
-                    push_notebook(self._push_handle)
-                self.logger.info("Image updated")
-
-        except Exception as e:
-            self.logger.error("Error updating image: %s" % (str(e)))
-            return
-
-    def set_cursor(self, cursor):
-        pass
-
-    def onscreen_message(self, text, delay=None):
-        doc = curdoc()
-        try:
-            doc.remove_timeout_callback(self._msg_timer)
-        except Exception:
-            pass
-
-        if text is not None:
-            self.set_onscreen_message(text)
-
-        msec = int(delay * 1000.0)
-        if delay:
-            self._msg_timer = curdoc().add_timeout_callback(
-                self.onscreen_message_off, msec)
-
-    def onscreen_message_off(self):
-        self.set_onscreen_message(None)
-
-    def reschedule_redraw(self, time_sec):
-        doc = curdoc()
-        try:
-            doc.remove_timeout_callback(self._defer_timer)
-        except Exception:
-            pass
-        msec = int(time_sec * 1000.0)
-        self._defer_timer = curdoc().add_timeout_callback(self.timer_cb,
-                                                          msec)
-        #self.logger.info("redrawing")
-        #self.delayed_redraw()
-
-    def show_pan_mark(self, tf):
-        self.t_.set(show_pan_position=tf)
-        self.redraw(whence=3)
-
-    def timer_cb(self, *args):
-        self.logger.info("redrawing")
-        self.delayed_redraw()
 
 
 class ImageViewEvent(ImageViewBokeh):
@@ -415,36 +241,32 @@ class ImageViewEvent(ImageViewBokeh):
         super(ImageViewEvent, self).set_figure(figure, handle=handle)
 
     def _setup_handlers(self, source):
-        source.on_change('selected', self.select_event_cb)
-
-        ## self._box_select_tool = self.figure.select(dict(type=BoxSelectTool))
-        ## self._box_select_tool.select_every_mousemove = True
-        #self._pan_tool = self.figure.select(dict(type=PanTool))
-        #self._pan_tool.select_every_mousemove = True
-
         fig = self.figure
+        # TODO: lots of events that are supported by other backends!
         ## #connect("map_event", self.map_event)
-        fig.on_event(MouseEnter, self.enter_notify_event)
-        fig.on_event(MouseLeave, self.leave_notify_event)
-        fig.on_event(MouseMove, self.motion_notify_event)
+        fig.on_event(events.MouseEnter, self.enter_notify_event)
+        fig.on_event(events.MouseLeave, self.leave_notify_event)
+        fig.on_event(events.MouseMove, self.motion_notify_event)
         ## #connect("focus_in_event", self.focus_event, True)
         ## #connect("focus_out_event", self.focus_event, False)
         ## connect("button_press_event", self.button_press_event)
         ## connect("button_release_event", self.button_release_event)
         ## connect("key_press_event", self.key_press_event)
         ## connect("key_release_event", self.key_release_event)
-        fig.on_event(MouseWheel, self.scroll_event)
-        fig.on_event(Tap, self.tap_event)
-        #fig.on_event(Press, self.press_event)
-        #fig.on_event(PanStart, self.pan_start_event)
-        #fig.on_event(Pan, self.pan_event)
-        #fig.on_event(Pinch, self.pinch_event)
+        fig.on_event(events.MouseWheel, self.scroll_event)
+        fig.on_event(events.Tap, self.tap_event)
+        #fig.on_event(events.Press, self.press_down_event)
+        #fig.on_event(events.PressUp, self.press_up_event)
+        # NOTE: currently using these for button press events
+        fig.on_event(events.PanStart, self.pan_start_event)
+        fig.on_event(events.Pan, self.pan_event)
+        fig.on_event(events.PanEnd, self.pan_end_event)
+        #fig.on_event(events.Pinch, self.pinch_event)
 
-        # TODO: drag-drop event
         self.logger.info("setup event handlers")
 
     def transkey(self, keyname):
-        self.logger.debug("matplotlib keyname='%s'" % (keyname))
+        self.logger.debug("bokeh keyname='%s'" % (keyname))
         if keyname is None:
             return keyname
         try:
@@ -487,54 +309,15 @@ class ImageViewEvent(ImageViewBokeh):
             self.logger.debug("key release event, key=%s" % (keyname))
             return self.make_ui_callback_viewer(self, 'key-release', keyname)
 
-    def button_press_event(self, event):
-        x, y = int(event.x), int(event.y)
-        button = 0
-        ## if event.button in (1, 2, 3):
-        ##     button |= 0x1 << (event.button - 1)
-        self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
-
-        self.last_win_x, self.last_win_y = x, y
-        data_x, data_y = self.check_cursor_location()
-
-        return self.make_ui_callback('button-press', button, data_x, data_y)
-
-    def button_release_event(self, event):
-        x, y = int(event.x), int(event.y)
-        button = 0
-        if event.button in (1, 2, 3):
-            button |= 0x1 << (event.button - 1)
-        self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
-
-        self.last_win_x, self.last_win_y = x, y
-        data_x, data_y = self.check_cursor_location()
-
-        return self.make_ui_callback('button-release', button, data_x, data_y)
-
-    def select_event_cb(self, attrname, old_val, new_val):
-        print("select cb: %s <-- %s" % (attrname, str(new_val)))
-        self.logger.info("select cb: %s <-- %s" % (attrname, str(new_val)))
-
-    def get_last_win_xy(self):
-        return (self.last_win_x, self.last_win_y)
-
-    def get_last_data_xy(self):
-        return (self.last_data_x, self.last_data_y)
-
     def motion_notify_event(self, event):
         button = 0
-        x, y = int(event.x), int(event.y)
-        self.last_win_x, self.last_win_y = x, y
-
-        ## if event.button in (1, 2, 3):
-        ##     button |= 0x1 << (event.button - 1)
+        x, y = int(event.sx), int(event.sy)
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
 
         self.last_win_x, self.last_win_y = x, y
         data_x, data_y = self.check_cursor_location()
 
         self.last_data_x, self.last_data_y = data_x, data_y
-        self.logger.info("motion event at DATA %dx%d" % (data_x, data_y))
 
         return self.make_ui_callback_viewer(self, 'motion', button,
                                             data_x, data_y)
@@ -542,7 +325,7 @@ class ImageViewEvent(ImageViewBokeh):
     def scroll_event(self, event):
         x, y = int(event.x), int(event.y)
 
-        # Matplotlib only gives us the number of steps of the scroll,
+        # bokeh only gives us the number of steps of the scroll,
         # positive for up and negative for down.  No horizontal scrolling.
         direction = None
         if event.delta > 0:
@@ -573,22 +356,42 @@ class ImageViewEvent(ImageViewBokeh):
         return self.make_ui_callback_viewer(self, 'pinch', 'move', rot, scale)
 
     def pan_start_event(self, event):
-        dx, dy = int(event.delta_x), int(event.delta_y)
-        self.logger.debug("pan gesture dx=%f dy=%f" % (dx, dy))
+        # event attrs: x, y, sx, sy
+        x, y = int(event.sx), int(event.sy)
+        button = 0x1
+        self.last_win_x, self.last_win_y = x, y
+        self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
+        data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'pan', 'start', dx, dy)
+        return self.make_ui_callback_viewer(self, 'button-press', button,
+                                            data_x, data_y)
 
     def pan_event(self, event):
-        dx, dy = int(event.delta_x), int(event.delta_y)
-        self.logger.debug("pan gesture dx=%f dy=%f" % (dx, dy))
+        # event attrs: x, y, sx, sy, delta_x, delta_y
+        x, y = int(event.sx), int(event.sy)
+        button = 0x1
+        self.last_win_x, self.last_win_y = x, y
 
-        return self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
+        data_x, data_y = self.check_cursor_location()
+
+        return self.make_ui_callback_viewer(self, 'motion', button,
+                                            data_x, data_y)
+
+    def pan_end_event(self, event):
+        # event attrs: x, y, sx, sy
+        x, y = int(event.sx), int(event.sy)
+        button = 0x1
+        self.last_win_x, self.last_win_y = x, y
+
+        data_x, data_y = self.check_cursor_location()
+
+        self.logger.debug("button up event at %dx%d, button=%x" % (x, y, button))
+        return self.make_ui_callback_viewer(self, 'button-release', button,
+                                            data_x, data_y)
 
     def tap_event(self, event):
         x, y = int(event.x), int(event.y)
         button = 0
-        ## if event.button in (1, 2, 3):
-        ##     button |= 0x1 << (event.button - 1)
         self.logger.debug("tap event at %dx%d, button=%x" % (x, y, button))
 
         self.last_win_x, self.last_win_y = x, y
@@ -596,9 +399,13 @@ class ImageViewEvent(ImageViewBokeh):
 
         return self.make_ui_callback('button-press', button, data_x, data_y)
 
-    def press_event(self, event):
+    def press_down_event(self, event):
         x, y = int(event.x), int(event.y)
-        self.logger.debug("press event at %dx%d" % (x, y))
+        self.logger.debug("press down event at %dx%d" % (x, y))
+
+    def press_up_event(self, event):
+        x, y = int(event.x), int(event.y)
+        self.logger.debug("press up event at %dx%d" % (x, y))
 
 
 class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
@@ -659,5 +466,3 @@ class CanvasView(ImageViewZoom):
                                            private_canvas=private_canvas)
 
         self.objects[0] = self.private_canvas
-
-# END
