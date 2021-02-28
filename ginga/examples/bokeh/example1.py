@@ -12,18 +12,14 @@ Visit the URL with a browser to interact with the GUI.  Enter a valid
 FITS file path into the box labeled "File:" and press Enter.
 """
 
-import sys
 import os
 import tempfile
 #import io, base64
 
 from bokeh.layouts import column
 from bokeh.plotting import figure, curdoc
-from bokeh.models import Slider, TextInput, RadioButtonGroup, Div
-from bokeh.models.widgets import FileInput
-
-from astropy.io import fits
-import numpy as np
+from bokeh.models import TextInput, RadioButtonGroup, Div
+#from bokeh.models.widgets import FileInput
 
 from ginga.web.bokehw.ImageViewBokeh import CanvasView
 from ginga.misc import log
@@ -39,7 +35,7 @@ def main():
 
     # viewer size
     wd, ht = 600, 600
-    TOOLS=""
+    TOOLS = ""
 
     # create a new plot with default tools, using figure
     fig = figure(x_range=[0, wd], y_range=[0, ht],
@@ -85,11 +81,13 @@ def main():
     #         logger.error("problem loading file: {}".format(e), exc_info=True)
 
     labels = ["Pan", "Rotate", "Contrast", "Dist", "Cuts", "Cmap"]
+
     def mode_change_cb(attr_name, old_val, new_val):
         mode = labels[new_val].lower()
         bd.set_mode(viewer, mode, mode_type='locked')
 
     readout = Div(text="")
+
     def cursor_cb(viewer, button, data_x, data_y):
         # Get the value under the data coordinates
         try:
@@ -113,7 +111,7 @@ def main():
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
                                                format='str', coords='fits')
         except Exception as e:
-            self.logger.warning("Bad coordinate conversion: %s" % (
+            logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
