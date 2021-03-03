@@ -630,6 +630,31 @@ class IQCalc(object):
         """Equivalent to :meth:`get_fwhm`."""
         return self.get_fwhm(x, y, radius, data, method_name=method_name)
 
+    # FIXME: Use better algorith or photutils?
+    def ensquared_energy(self, data):
+        """Return an array of ensquared energy at corresponding pixel indices.
+
+        Data is already a masked array and is assumed to be square.
+
+        """
+        tot = data.sum()
+        nx = data.shape[1]
+        cen = int(nx // 2)
+        ee = []
+
+        if nx % 2 == 0:  # Even
+            for i in range(nx - cen):
+                i1 = cen - i - 1
+                i2 = cen + i + 1
+                ee.append(data[i1:i2, i1:i2].sum() / tot)
+        else:  # Odd
+            for i in range(nx - cen):
+                i1 = cen - i
+                i2 = cen + i + 1
+                ee.append(data[i1:i2, i1:i2].sum() / tot)
+
+        return ee
+
     # EVALUATION ON A FIELD
 
     def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=15,
@@ -744,13 +769,22 @@ class IQCalc(object):
             else:
                 pos = 1.0 - dy2
 
+            # Ensquared energy on background subtracted image
+            iy1 = int(ctr_y - fwhm)
+            iy2 = int(ctr_y + fwhm) + 1
+            ix1 = int(ctr_x - fwhm)
+            ix2 = int(ctr_x + fwhm) + 1
+            ee_data = data[iy1:iy2, ix1:ix2]
+            ee_sq_arr = self.ensquared_energy(ee_data - skylevel)
+
             obj = Bunch.Bunch(objx=ctr_x, objy=ctr_y, pos=pos,
                               oid_x=oid_x, oid_y=oid_y,
                               fwhm_x=fwhm_x, fwhm_y=fwhm_y,
                               fwhm=fwhm, fwhm_radius=fwhm_radius,
                               brightness=bright, elipse=elipse,
                               x=int(x), y=int(y),
-                              skylevel=skylevel, background=median)
+                              skylevel=skylevel, background=median,
+                              ensquared_energy_array=ee_sq_arr)
             objlist.append(obj)
 
             if cb_fn is not None:

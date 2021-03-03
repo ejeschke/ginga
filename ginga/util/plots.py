@@ -481,6 +481,28 @@ class FWHMPlot(Plot):
                 str(e)))
 
 
+class EEPlot(Plot):
+    """Class to handle plotting of ensquared energy values."""
+
+    def plot_ee(self, ensquared_energy):
+        self.ax.cla()
+
+        # Make a radial plot
+        self.ax.set_xlim(-0.1, len(ensquared_energy))
+
+        self.set_titles(title="EE plot", xtitle='Radius [pixels]', ytitle='EE')
+        self.ax.grid(True)
+
+        try:
+            self.ax.plot(ensquared_energy, color='#7570b3',
+                         label='Ensquared Energy')
+            self.ax.legend(loc='lower right', shadow=False, fancybox=False,
+                           prop={'size': 8}, labelspacing=0.2)
+            self.draw()
+        except Exception as e:
+            self.logger.error("Error making EE plot: %s" % (str(e)))
+
+
 class SurfacePlot(Plot):
 
     def __init__(self, *args, **kwargs):

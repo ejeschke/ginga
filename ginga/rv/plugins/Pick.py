@@ -457,6 +457,7 @@ class Pick(GingaPlugin.LocalPlugin):
         columns = [("RA", 'ra_txt'), ("DEC", 'dec_txt'), ("Equinox", 'equinox'),
                    ("X", 'x'), ("Y", 'y'), ("FWHM", 'fwhm'),
                    ("FWHM_X", 'fwhm_x'), ("FWHM_Y", 'fwhm_y'),
+                   ("EE_sq", 'ensquared_energy'),
                    ("Star Size", 'starsize'),
                    ("Ellip", 'ellipse'), ("Background", 'background'),
                    ("Sky Level", 'skylevel'), ("Brightness", 'brightness'),
@@ -613,6 +614,14 @@ class Pick(GingaPlugin.LocalPlugin):
             pw.resize(width, height)
             nb.add_widget(pw, title="Radial")
 
+            # EE profile plot
+            self.ee_plot = plots.EEPlot(logger=self.logger,
+                                        width=width, height=height)
+            self.ee_plot.add_axis(facecolor='white')
+            pw = Plot.PlotWidget(self.ee_plot)
+            pw.resize(width, height)
+            nb.add_widget(pw, title="EE")
+
             # Cuts profile plot
             self.cuts_plot = plots.CutsPlot(logger=self.logger,
                                             width=width, height=height)
@@ -641,6 +650,7 @@ class Pick(GingaPlugin.LocalPlugin):
                      'FWHM Y:', 'label', 'FWHM Y', 'llabel'),
                     ('FWHM:', 'label', 'FWHM', 'llabel',
                      'Star Size:', 'label', 'Star Size', 'llabel'),
+                    ('EE (sq):', 'label', 'Ensquared energy', 'llabel'),
                     ('Sample Area:', 'label', 'Sample Area', 'llabel',
                      'Default Region', 'button', 'Pan to pick', 'button'),
                     ('Quick Mode', 'checkbutton', 'From Peak', 'checkbutton',
@@ -651,6 +661,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.update(b)
         b.zoom.set_text(self.fv.scale2text(di.get_scale()))
         self.wdetail = b
+        b.ensquared_energy.set_tooltip("Ensquared energy")
         b.default_region.add_callback('activated',
                                       lambda w: self.reset_region())
         b.default_region.set_tooltip("Reset region size to default")
@@ -1237,6 +1248,16 @@ class Pick(GingaPlugin.LocalPlugin):
     def clear_radial(self):
         self.radial_plot.clear()
 
+    def plot_ee(self, qs, image):
+        # Make a EE plot
+        try:
+            self.ee_plot.plot_ee(qs.ensquared_energy_array)
+        except Exception as e:
+            self.logger.error("Error making EE plot: %s" % (str(e)))
+
+    def clear_ee(self):
+        self.ee_plot.clear()
+
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
@@ -1461,6 +1482,14 @@ class Pick(GingaPlugin.LocalPlugin):
             rpt_x = x + self.pixel_coords_offset
             rpt_y = y + self.pixel_coords_offset
 
+            # Ensquared energy at around FWHM
+            try:
+                i_half = int(qs.fwhm // 2)
+                ee_sq = qs.ensquared_energy_array[i_half]
+            except Exception as e:
+                self.logger.warning("Couldn't calculate EE: %s" % (str(e)))
+                ee_sq = 0.0
+
             # make a report in the form of a dictionary
             d.setvals(x=rpt_x, y=rpt_y,
                       ra_deg=ra_deg, dec_deg=dec_deg,
@@ -1470,7 +1499,7 @@ class Pick(GingaPlugin.LocalPlugin):
                       fwhm_x=qs.fwhm_x, fwhm_y=qs.fwhm_y,
                       ellipse=qs.elipse, background=qs.background,
                       skylevel=qs.skylevel, brightness=qs.brightness,
-                      starsize=starsize,
+                      ensquared_energy=ee_sq, starsize=starsize,
                       time_local=time.strftime("%Y-%m-%d %H:%M:%S",
                                                time.localtime()),
                       time_ut=time.strftime("%Y-%m-%d %H:%M:%S",
@@ -1539,11 +1568,12 @@ class Pick(GingaPlugin.LocalPlugin):
             self.wdetail.fwhm_x.set_text('%.3f' % fwhm_x)
             self.wdetail.fwhm_y.set_text('%.3f' % fwhm_y)
             self.wdetail.fwhm.set_text('%.3f' % fwhm)
-            self.wdetail.object_x.set_text('%.3f' % (d.x))
-            self.wdetail.object_y.set_text('%.3f' % (d.y))
+            self.wdetail.object_x.set_text('%.3f' % d.x)
+            self.wdetail.object_y.set_text('%.3f' % d.y)
             self.wdetail.sky_level.set_text('%.3f' % qs.skylevel)
             self.wdetail.background.set_text('%.3f' % qs.background)
             self.wdetail.brightness.set_text('%.3f' % qs.brightness)
+            self.wdetail.ensquared_energy.set_text('%.3f' % d.ensquared_energy)
             self.wdetail.ra.set_text(d.ra_txt)
             self.wdetail.dec.set_text(d.dec_txt)
             self.wdetail.equinox.set_text(str(d.equinox))
@@ -1574,6 +1604,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.plot_contours(vip_img)
                 self.plot_fwhm(qs, vip_img)
                 self.plot_radial(qs, vip_img)
+                self.plot_ee(qs, vip_img)
 
         except Exception as e:
             errmsg = "Error calculating quality metrics: %s" % (
