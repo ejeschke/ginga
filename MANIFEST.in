@@ -1,7 +1,7 @@
 include README.md
 include LONG_DESC.txt
 include CHANGES.rst
-include LICENSE.*
+include LICENSE.txt
 include ROADMAP.rst
 include CITATION
 include ginga.desktop

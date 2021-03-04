@@ -39,7 +39,7 @@ Copyright and License
 Copyright (c) 2011-2021 Ginga Maintainers. All rights reserved.
 
 Ginga is distributed under an open-source BSD licence. Please see the
-file `LICENSE.txt` in the top-level directory for details.
+file ``LICENSE.txt`` in the top-level directory for details.
 
 ====================================
 Requirements and Supported Platforms
