@@ -428,6 +428,7 @@ class Pick(GingaPlugin.LocalPlugin):
         # Peak finding parameters and selection criteria
         self.max_side = self.settings.get('max_side', 1024)
         self.radius = self.settings.get('radius', 10)
+        self.ee_sampling_radius = self.settings.get('ee_sampling_radius', 2.5)
         self.threshold = self.settings.get('threshold', None)
         self.min_fwhm = self.settings.get('min_fwhm', 1.5)
         self.max_fwhm = self.settings.get('max_fwhm', 50.0)
@@ -457,7 +458,7 @@ class Pick(GingaPlugin.LocalPlugin):
         columns = [("RA", 'ra_txt'), ("DEC", 'dec_txt'), ("Equinox", 'equinox'),
                    ("X", 'x'), ("Y", 'y'), ("FWHM", 'fwhm'),
                    ("FWHM_X", 'fwhm_x'), ("FWHM_Y", 'fwhm_y'),
-                   ("EE_sq", 'ensquared_energy'),
+                   ("EE_circ", 'encircled_energy'), ("EE_sq", 'ensquared_energy'),
                    ("Star Size", 'starsize'),
                    ("Ellip", 'ellipse'), ("Background", 'background'),
                    ("Sky Level", 'skylevel'), ("Brightness", 'brightness'),
@@ -650,7 +651,8 @@ class Pick(GingaPlugin.LocalPlugin):
                      'FWHM Y:', 'label', 'FWHM Y', 'llabel'),
                     ('FWHM:', 'label', 'FWHM', 'llabel',
                      'Star Size:', 'label', 'Star Size', 'llabel'),
-                    ('EE (sq):', 'label', 'Ensquared energy', 'llabel'),
+                    ('EE (circ):', 'label', 'Encircled energy', 'llabel',
+                     'EE (sq):', 'label', 'Ensquared energy', 'llabel'),
                     ('Sample Area:', 'label', 'Sample Area', 'llabel',
                      'Default Region', 'button', 'Pan to pick', 'button'),
                     ('Quick Mode', 'checkbutton', 'From Peak', 'checkbutton',
@@ -661,6 +663,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.update(b)
         b.zoom.set_text(self.fv.scale2text(di.get_scale()))
         self.wdetail = b
+        b.encircled_energy.set_tooltip("Encircled energy")
         b.ensquared_energy.set_tooltip("Ensquared energy")
         b.default_region.add_callback('activated',
                                       lambda w: self.reset_region())
@@ -750,6 +753,8 @@ class Pick(GingaPlugin.LocalPlugin):
                      "FWHM fitting", 'combobox'),
                     ('Contour Interpolation:', 'label', 'xlbl_cinterp', 'label',
                      'Contour Interpolation', 'combobox'),
+                    ('EE sampling radius:', 'label', 'xlbl_ee_radius', 'label',
+                     'EE sampling radius', 'spinbutton')
                     )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -766,6 +771,7 @@ class Pick(GingaPlugin.LocalPlugin):
         b.calc_center.set_tooltip("How to calculate the center of object")
         b.fwhm_fitting.set_tooltip("Function for fitting the FWHM")
         b.contour_interpolation.set_tooltip("Interpolation for use in contour plot")
+        b.ee_sampling_radius.set_tooltip("Radius for EE sampling")
 
         def chg_pickshape(w, idx):
             pickshape = self.drawtypes[idx]
@@ -791,6 +797,16 @@ class Pick(GingaPlugin.LocalPlugin):
             return True
         b.xlbl_radius.set_text(str(self.radius))
         b.radius.add_callback('value-changed', chg_radius)
+
+        # EE sampling radius control
+        b.ee_sampling_radius.set_limits(0, 200, incr_value=1)
+
+        def chg_ee_sampling_radius(w, val):
+            self.ee_sampling_radius = int(val)
+            self.w.xlbl_ee_radius.set_text(str(self.ee_sampling_radius))
+            return True
+        b.xlbl_ee_radius.set_text(str(self.ee_sampling_radius))
+        b.ee_sampling_radius.add_callback('value-changed', chg_ee_sampling_radius)
 
         # threshold control
         def chg_threshold(w):
@@ -1251,7 +1267,9 @@ class Pick(GingaPlugin.LocalPlugin):
     def plot_ee(self, qs, image):
         # Make a EE plot
         try:
-            self.ee_plot.plot_ee(qs.ensquared_energy_array)
+            self.ee_plot.plot_ee(qs.encircled_energy_array,
+                                 qs.ensquared_energy_array,
+                                 self.ee_sampling_radius)
         except Exception as e:
             self.logger.error("Error making EE plot: %s" % (str(e)))
 
@@ -1482,13 +1500,23 @@ class Pick(GingaPlugin.LocalPlugin):
             rpt_x = x + self.pixel_coords_offset
             rpt_y = y + self.pixel_coords_offset
 
-            # Ensquared energy at around FWHM
+            # EE at sampling radius
             try:
-                i_half = int(qs.fwhm // 2)
-                ee_sq = qs.ensquared_energy_array[i_half]
+                from scipy.interpolate import interp1d
+                ee_circ_fn = interp1d(
+                    list(range(len(qs.encircled_energy_array))),
+                    qs.encircled_energy_array,
+                    kind='cubic', bounds_error=False)
+                ee_sq_fn = interp1d(
+                    list(range(len(qs.ensquared_energy_array))),
+                    qs.ensquared_energy_array,
+                    kind='cubic', bounds_error=False)
+                ee_circ = ee_circ_fn(self.ee_sampling_radius)
+                ee_sq = ee_sq_fn(self.ee_sampling_radius)
             except Exception as e:
                 self.logger.warning("Couldn't calculate EE: %s" % (str(e)))
-                ee_sq = 0.0
+                ee_circ = 0
+                ee_sq = 0
 
             # make a report in the form of a dictionary
             d.setvals(x=rpt_x, y=rpt_y,
@@ -1499,7 +1527,8 @@ class Pick(GingaPlugin.LocalPlugin):
                       fwhm_x=qs.fwhm_x, fwhm_y=qs.fwhm_y,
                       ellipse=qs.elipse, background=qs.background,
                       skylevel=qs.skylevel, brightness=qs.brightness,
-                      ensquared_energy=ee_sq, starsize=starsize,
+                      encircled_energy=ee_circ, ensquared_energy=ee_sq,
+                      starsize=starsize,
                       time_local=time.strftime("%Y-%m-%d %H:%M:%S",
                                                time.localtime()),
                       time_ut=time.strftime("%Y-%m-%d %H:%M:%S",
@@ -1573,6 +1602,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.wdetail.sky_level.set_text('%.3f' % qs.skylevel)
             self.wdetail.background.set_text('%.3f' % qs.background)
             self.wdetail.brightness.set_text('%.3f' % qs.brightness)
+            self.wdetail.encircled_energy.set_text('%.3f' % d.encircled_energy)
             self.wdetail.ensquared_energy.set_text('%.3f' % d.ensquared_energy)
             self.wdetail.ra.set_text(d.ra_txt)
             self.wdetail.dec.set_text(d.dec_txt)

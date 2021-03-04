@@ -630,30 +630,76 @@ class IQCalc(object):
         """Equivalent to :meth:`get_fwhm`."""
         return self.get_fwhm(x, y, radius, data, method_name=method_name)
 
-    # FIXME: Use better algorith or photutils?
+    # Encircled and ensquared energies (EE)
+
     def ensquared_energy(self, data):
         """Return an array of ensquared energy at corresponding pixel indices.
 
-        Data is already a masked array and is assumed to be square.
+        Data is already a masked array and is assumed to be centered.
 
         """
         tot = data.sum()
-        nx = data.shape[1]
-        cen = int(nx // 2)
+        ny, nx = data.shape
+        cen_x = int(nx // 2)
+        cen_y = int(ny // 2)
         ee = []
 
-        if nx % 2 == 0:  # Even
-            for i in range(nx - cen):
-                i1 = cen - i - 1
-                i2 = cen + i + 1
-                ee.append(data[i1:i2, i1:i2].sum() / tot)
+        if ny > nx:
+            n_max = ny
+            cen = cen_y
+        else:
+            n_max = nx
+            cen = cen_x
+
+        if n_max % 2 == 0:  # Even
+            delta_i1 = -1
         else:  # Odd
-            for i in range(nx - cen):
-                i1 = cen - i
-                i2 = cen + i + 1
-                ee.append(data[i1:i2, i1:i2].sum() / tot)
+            delta_i1 = 0
+
+        for i in range(n_max - cen):
+            ix1 = cen_x - i + delta_i1
+            if ix1 < 0:
+                ix1 = 0
+            ix2 = cen_x + i + 1
+            if ix2 > nx:
+                ix2 = nx
+            iy1 = cen_y - i + delta_i1
+            if iy1 < 0:
+                iy1 = 0
+            iy2 = cen_y + i + 1
+            if iy2 > ny:
+                iy2 = ny
+            ee.append(data[iy1:iy2, ix1:ix2].sum() / tot)
 
         return ee
+
+    # This is adapted from poppy package. See licenses/POPPY_LICENSE.md .
+    def encircled_energy(self, data):
+        """Return an array of encircled energy at corresponding pixel indices.
+
+        Data is already a masked array and is assumed to be centered.
+
+        """
+        y, x = np.indices(data.shape, dtype=float)
+        cen = tuple((i - 1) * 0.5 for i in data.shape[::-1])
+        x -= cen[0]
+        y -= cen[1]
+        r = np.sqrt(x * x + y * y)
+
+        ind = np.argsort(r.flat)
+        sorted_r = r.flat[ind]
+        sorted_data = data.flat[ind]
+
+        # data is already masked
+        csim = sorted_data.cumsum(dtype=float)
+
+        sorted_r_int = sorted_r.astype(int)
+        deltar = sorted_r_int[1:] - sorted_r_int[:-1]  # assume all radii represented
+        rind = np.where(deltar)[0]
+
+        ee = csim[rind] / sorted_data.sum()  # Normalize
+        ee.set_fill_value(0)
+        return ee.filled().tolist()
 
     # EVALUATION ON A FIELD
 
@@ -769,13 +815,26 @@ class IQCalc(object):
             else:
                 pos = 1.0 - dy2
 
-            # Ensquared energy on background subtracted image
+            # EE on background subtracted image
+            ee_sq_arr = []
+            ee_circ_arr = []
             iy1 = int(ctr_y - fwhm)
             iy2 = int(ctr_y + fwhm) + 1
             ix1 = int(ctr_x - fwhm)
             ix2 = int(ctr_x + fwhm) + 1
-            ee_data = data[iy1:iy2, ix1:ix2]
-            ee_sq_arr = self.ensquared_energy(ee_data - skylevel)
+
+            if iy1 < 0 or iy2 > height or ix1 < 0 or ix2 > width:
+                self.logger.debug("Error calculating EE on object at %.2f,%.2f: Box out of range" % (x, y))
+            else:
+                ee_data = data[iy1:iy2, ix1:ix2] - skylevel
+                try:
+                    ee_sq_arr = self.ensquared_energy(ee_data)
+                except Exception as e:
+                    self.logger.debug("Error calculating ensquared energy on object at %.2f,%.2f: %s" % (x, y, str(e)))
+                try:
+                    ee_circ_arr = self.encircled_energy(ee_data)
+                except Exception as e:
+                    self.logger.debug("Error calculating encircled energy on object at %.2f,%.2f: %s" % (x, y, str(e)))
 
             obj = Bunch.Bunch(objx=ctr_x, objy=ctr_y, pos=pos,
                               oid_x=oid_x, oid_y=oid_y,
@@ -784,7 +843,8 @@ class IQCalc(object):
                               brightness=bright, elipse=elipse,
                               x=int(x), y=int(y),
                               skylevel=skylevel, background=median,
-                              ensquared_energy_array=ee_sq_arr)
+                              ensquared_energy_array=ee_sq_arr,
+                              encircled_energy_array=ee_circ_arr)
             objlist.append(obj)
 
             if cb_fn is not None:

@@ -482,20 +482,20 @@ class FWHMPlot(Plot):
 
 
 class EEPlot(Plot):
-    """Class to handle plotting of ensquared energy values."""
+    """Class to handle plotting of encircled and ensquared energy (EE) values."""
 
-    def plot_ee(self, ensquared_energy):
+    def plot_ee(self, encircled_energy, ensquared_energy, sampling_radius):
         self.ax.cla()
-
-        # Make a radial plot
-        self.ax.set_xlim(-0.1, len(ensquared_energy))
-
         self.set_titles(title="EE plot", xtitle='Radius [pixels]', ytitle='EE')
         self.ax.grid(True)
 
         try:
-            self.ax.plot(ensquared_energy, color='#7570b3',
+            self.ax.set_xlim(-0.1, max(len(encircled_energy), len(ensquared_energy)))
+            self.ax.plot(encircled_energy, color='#7570b3',
+                         label='Encircled Energy')
+            self.ax.plot(ensquared_energy, color='#1b9e77',
                          label='Ensquared Energy')
+            self.ax.axvline(sampling_radius, 'k--')
             self.ax.legend(loc='lower right', shadow=False, fancybox=False,
                            prop={'size': 8}, labelspacing=0.2)
             self.draw()
