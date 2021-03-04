@@ -505,7 +505,8 @@ class EEPlot(Plot):
         x = list(range(max_x))
 
         self.ax.cla()
-        self.set_titles(title="EE plot", xtitle='Radius [pixels]', ytitle='EE')
+        self.set_titles(title=f"EE(circ)={ee_circ:.2f}, EE(sq)={ee_sq:.2f}",
+                        xtitle='Radius [pixels]', ytitle='EE')
         self.ax.grid(True)
 
         try:
