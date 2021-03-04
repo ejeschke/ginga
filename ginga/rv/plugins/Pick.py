@@ -754,7 +754,7 @@ class Pick(GingaPlugin.LocalPlugin):
                     ('Contour Interpolation:', 'label', 'xlbl_cinterp', 'label',
                      'Contour Interpolation', 'combobox'),
                     ('EE sampling radius:', 'label', 'xlbl_ee_radius', 'label',
-                     'EE sampling radius', 'spinbutton')
+                     'EE sampling radius', 'spinfloat')
                     )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -799,10 +799,11 @@ class Pick(GingaPlugin.LocalPlugin):
         b.radius.add_callback('value-changed', chg_radius)
 
         # EE sampling radius control
-        b.ee_sampling_radius.set_limits(0, 200, incr_value=1)
+        b.ee_sampling_radius.set_limits(0.1, 200.0, incr_value=0.1)
+        b.ee_sampling_radius.set_value(self.ee_sampling_radius)
 
         def chg_ee_sampling_radius(w, val):
-            self.ee_sampling_radius = int(val)
+            self.ee_sampling_radius = float(val)
             self.w.xlbl_ee_radius.set_text(str(self.ee_sampling_radius))
             return True
         b.xlbl_ee_radius.set_text(str(self.ee_sampling_radius))

@@ -482,20 +482,51 @@ class FWHMPlot(Plot):
 
 
 class EEPlot(Plot):
-    """Class to handle plotting of encircled and ensquared energy (EE) values."""
+    """Class to handle plotting of encircled and ensquared energy (EE) values.
+
+    .. note:: This also uses ``scipy``.
+
+    """
 
     def plot_ee(self, encircled_energy, ensquared_energy, sampling_radius):
+
+        # This is duplicate code copied from _make_report in Pick.py .
+        # TODO: Is there a way to avoid code duplication?
+        from scipy.interpolate import interp1d
+        n_circ = len(encircled_energy)
+        n_sq = len(ensquared_energy)
+        ee_circ_fn = interp1d(list(range(n_circ)), encircled_energy,
+                              kind='cubic', bounds_error=False)
+        ee_sq_fn = interp1d(list(range(n_sq)), ensquared_energy,
+                            kind='cubic', bounds_error=False)
+        ee_circ = ee_circ_fn(sampling_radius)
+        ee_sq = ee_sq_fn(sampling_radius)
+        max_x = max(n_circ, n_sq)
+        x = list(range(max_x))
+
         self.ax.cla()
         self.set_titles(title="EE plot", xtitle='Radius [pixels]', ytitle='EE')
         self.ax.grid(True)
 
         try:
-            self.ax.set_xlim(-0.1, max(len(encircled_energy), len(ensquared_energy)))
-            self.ax.plot(encircled_energy, color='#7570b3',
+            self.ax.set_xlim(-0.1, max_x)
+
+            self.ax.plot(encircled_energy, marker='s', ls='none',
+                         mfc='none', mec='#7570b3', label=None)
+            self.ax.plot(x, ee_circ_fn(x), color='#7570b3',
                          label='Encircled Energy')
-            self.ax.plot(ensquared_energy, color='#1b9e77',
+
+            self.ax.plot(ensquared_energy, marker='s', ls='none',
+                         mfc='none', mec='#1b9e77', label=None)
+            self.ax.plot(x, ee_sq_fn(x), color='#1b9e77',
                          label='Ensquared Energy')
-            self.ax.axvline(sampling_radius, 'k--')
+
+            self.ax.axvline(sampling_radius, color='k', ls='--')
+            self.ax.plot(sampling_radius, ee_circ, marker='o', ls='none',
+                         mfc='#7570b3', mec='#7570b3', label=None)
+            self.ax.plot(sampling_radius, ee_sq, marker='o', ls='none',
+                         mfc='#1b9e77', mec='#1b9e77', label=None)
+
             self.ax.legend(loc='lower right', shadow=False, fancybox=False,
                            prop={'size': 8}, labelspacing=0.2)
             self.draw()
