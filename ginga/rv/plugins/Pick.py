@@ -754,7 +754,7 @@ class Pick(GingaPlugin.LocalPlugin):
                      "FWHM fitting", 'combobox'),
                     ('Contour Interpolation:', 'label', 'xlbl_cinterp', 'label',
                      'Contour Interpolation', 'combobox'),
-                    ('EE total:', 'label', 'xlbl_ee_total_radius', 'label',
+                    ('EE total radius:', 'label', 'xlbl_ee_total_radius', 'label',
                      'EE total radius', 'spinfloat'),
                     ('EE sampling radius:', 'label', 'xlbl_ee_radius', 'label',
                      'EE sampling radius', 'spinfloat')
