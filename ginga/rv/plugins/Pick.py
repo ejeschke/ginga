@@ -428,6 +428,7 @@ class Pick(GingaPlugin.LocalPlugin):
         # Peak finding parameters and selection criteria
         self.max_side = self.settings.get('max_side', 1024)
         self.radius = self.settings.get('radius', 10)
+        self.ee_total_radius = self.settings.get('ee_total_radius', 10.0)
         self.ee_sampling_radius = self.settings.get('ee_sampling_radius', 2.5)
         self.threshold = self.settings.get('threshold', None)
         self.min_fwhm = self.settings.get('min_fwhm', 1.5)
@@ -753,6 +754,8 @@ class Pick(GingaPlugin.LocalPlugin):
                      "FWHM fitting", 'combobox'),
                     ('Contour Interpolation:', 'label', 'xlbl_cinterp', 'label',
                      'Contour Interpolation', 'combobox'),
+                    ('EE total:', 'label', 'xlbl_ee_total_radius', 'label',
+                     'EE total radius', 'spinfloat'),
                     ('EE sampling radius:', 'label', 'xlbl_ee_radius', 'label',
                      'EE sampling radius', 'spinfloat')
                     )
@@ -771,6 +774,7 @@ class Pick(GingaPlugin.LocalPlugin):
         b.calc_center.set_tooltip("How to calculate the center of object")
         b.fwhm_fitting.set_tooltip("Function for fitting the FWHM")
         b.contour_interpolation.set_tooltip("Interpolation for use in contour plot")
+        b.ee_total_radius.set_tooltip("Radius where EE fraction is 1")
         b.ee_sampling_radius.set_tooltip("Radius for EE sampling")
 
         def chg_pickshape(w, idx):
@@ -797,6 +801,17 @@ class Pick(GingaPlugin.LocalPlugin):
             return True
         b.xlbl_radius.set_text(str(self.radius))
         b.radius.add_callback('value-changed', chg_radius)
+
+        # EE total radius control
+        b.ee_total_radius.set_limits(0.1, 200.0, incr_value=0.1)
+        b.ee_total_radius.set_value(self.ee_total_radius)
+
+        def chg_ee_total_radius(w, val):
+            self.ee_total_radius = float(val)
+            self.w.xlbl_ee_total_radius.set_text(str(self.ee_total_radius))
+            return True
+        b.xlbl_ee_total_radius.set_text(str(self.ee_total_radius))
+        b.ee_total_radius.add_callback('value-changed', chg_ee_total_radius)
 
         # EE sampling radius control
         b.ee_sampling_radius.set_limits(0.1, 200.0, incr_value=0.1)
@@ -1418,11 +1433,13 @@ class Pick(GingaPlugin.LocalPlugin):
                 # Evaluate those peaks
                 self.update_status("Evaluating %d bright peaks..." % (
                     num_peaks))
-                objlist = self.iqcalc.evaluate_peaks(peaks, data,
-                                                     fwhm_radius=self.radius,
-                                                     cb_fn=cb_fn,
-                                                     ev_intr=self.ev_intr,
-                                                     fwhm_method=self.fwhm_alg)
+                objlist = self.iqcalc.evaluate_peaks(
+                    peaks, data,
+                    fwhm_radius=self.radius,
+                    cb_fn=cb_fn,
+                    ev_intr=self.ev_intr,
+                    fwhm_method=self.fwhm_alg,
+                    ee_total_radius=self.ee_total_radius)
 
                 num_candidates = len(objlist)
                 if num_candidates == 0:

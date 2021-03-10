@@ -704,7 +704,8 @@ class IQCalc(object):
     # EVALUATION ON A FIELD
 
     def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=15,
-                       fwhm_method='gaussian', cb_fn=None, ev_intr=None):
+                       fwhm_method='gaussian', ee_total_radius=10,
+                       cb_fn=None, ev_intr=None):
         """Evaluate photometry for given peaks in data array.
 
         Parameters
@@ -720,6 +721,10 @@ class IQCalc(object):
 
         fwhm_radius, fwhm_method
             See :meth:`get_fwhm`.
+
+        ee_total_radius : float
+            Radius, in pixels, where encircled and ensquared energy fractions
+            are defined as 1.
 
         cb_fn : func or `None`
             If applicable, provide a callback function that takes a
@@ -747,6 +752,8 @@ class IQCalc(object):
             * ``skylevel``: Sky level estimated from median of data array and
               ``skylevel_magnification`` and ``skylevel_offset`` attributes.
             * ``background``: Median of the input array.
+            * ``ensquared_energy_array``: Ensquared energy for different pixel radii.
+            * ``encircled_energy_array``: Encircled energy for different pixel radii.
 
         """
         height, width = data.shape
@@ -818,15 +825,15 @@ class IQCalc(object):
             # EE on background subtracted image
             ee_sq_arr = []
             ee_circ_arr = []
-            iy1 = int(ctr_y - fwhm)
-            iy2 = int(ctr_y + fwhm) + 1
-            ix1 = int(ctr_x - fwhm)
-            ix2 = int(ctr_x + fwhm) + 1
+            iy1 = int(ctr_y - ee_total_radius)
+            iy2 = int(ctr_y + ee_total_radius) + 1
+            ix1 = int(ctr_x - ee_total_radius)
+            ix2 = int(ctr_x + ee_total_radius) + 1
 
             if iy1 < 0 or iy2 > height or ix1 < 0 or ix2 > width:
-                self.logger.debug("Error calculating EE on object at %.2f,%.2f: Box out of range" % (x, y))
+                self.logger.debug("Error calculating EE on object at %.2f,%.2f: Box out of range with radius=%.2f" % (x, y, ee_total_radius))
             else:
-                ee_data = data[iy1:iy2, ix1:ix2] - skylevel
+                ee_data = data[iy1:iy2, ix1:ix2] - median
                 try:
                     ee_sq_arr = self.ensquared_energy(ee_data)
                 except Exception as e:
