@@ -16,6 +16,7 @@ try:
     import scipy.optimize as optimize
     import scipy.ndimage as ndimage
     import scipy.ndimage.filters as filters
+    from scipy.interpolate import interp1d
     have_scipy = True
 except ImportError:
     have_scipy = False
@@ -637,10 +638,10 @@ class IQCalc(object):
 
         Data is already a masked array and is assumed to be centered.
 
-        .. note:: Needs ``scipy``.
-
         """
-        from scipy.interpolate import interp1d
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
 
         tot = data.sum()
         ny, nx = data.shape
@@ -689,7 +690,9 @@ class IQCalc(object):
         .. note:: Needs ``scipy``.
 
         """
-        from scipy.interpolate import interp1d
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
 
         y, x = np.indices(data.shape, dtype=float)
         cen = tuple((i - 1) * 0.5 for i in data.shape[::-1])

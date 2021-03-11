@@ -485,7 +485,8 @@ class EEPlot(Plot):
     """Class to handle plotting of encircled and ensquared energy (EE) values."""
 
     def plot_ee(self, encircled_energy_function=None,
-                ensquared_energy_function=None, sampling_radius=None):
+                ensquared_energy_function=None, sampling_radius=None,
+                total_radius=None):
         """
         Parameters
         ----------
@@ -495,7 +496,10 @@ class EEPlot(Plot):
             If not given, will skip plotting but at least one needs to be given.
 
         sampling_radius : float or `None`
-            Radius for sampling of EE, if desired.
+            Show radius for sampling of EE, if desired.
+
+        total_radius : float or `None`
+            Show radius where EE is expected to be 1, if desired.
 
         """
         if (encircled_energy_function is None and
@@ -504,7 +508,6 @@ class EEPlot(Plot):
 
         self.ax.cla()
         self.ax.grid(True)
-        self.ax.axvline(sampling_radius, color='k', ls='--')
 
         x_max = 0
         title = ''
@@ -529,9 +532,13 @@ class EEPlot(Plot):
             x_max = max(x.max(), x_max)
             self.ax.plot(x, y, color=color, marker=val['marker'], mfc='none',
                          mec=color, label=key)
+            if total_radius and not title:
+                self.ax.axvline(total_radius, color='k', ls='--')
             if sampling_radius:
                 if title:
                     title += ', '
+                else:
+                    self.ax.axvline(sampling_radius, color='k', ls='--')
                 ys = func(sampling_radius)
                 title += f"{val['title_pfx']}={ys:.3f}"
                 self.ax.plot(sampling_radius, ys, marker='o', ls='none',

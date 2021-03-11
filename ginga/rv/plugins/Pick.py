@@ -1286,7 +1286,8 @@ class Pick(GingaPlugin.LocalPlugin):
             self.ee_plot.plot_ee(
                 encircled_energy_function=qs.encircled_energy_fn,
                 ensquared_energy_function=qs.ensquared_energy_fn,
-                sampling_radius=self.ee_sampling_radius)
+                sampling_radius=self.ee_sampling_radius,
+                total_radius=self.ee_total_radius)
         except Exception as e:
             self.logger.error("Error making EE plot: %s" % (str(e)))
 
@@ -1660,7 +1661,8 @@ class Pick(GingaPlugin.LocalPlugin):
             #self.update_status("Error")
             for key in ('sky_level', 'background', 'brightness',
                         'star_size', 'fwhm_x', 'fwhm_y',
-                        'ra', 'dec', 'object_x', 'object_y'):
+                        'ra', 'dec', 'object_x', 'object_y',
+                        'encircled_energy', 'ensquared_energy'):
                 self.wdetail[key].set_text('')
             self.wdetail.fwhm.set_text('Failed')
             self.w.btn_bg_cut.set_enabled(False)
@@ -1677,6 +1679,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 # TODO: could calc background based on numpy calc
                 self.clear_fwhm()
                 self.clear_radial()
+                self.clear_ee()
 
         self.w.btn_intr_eval.set_enabled(False)
         self.pickimage.redraw(whence=3)
