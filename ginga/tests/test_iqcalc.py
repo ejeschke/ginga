@@ -69,6 +69,7 @@ class TestIQCalcNoInherit:
     def test_brightness(self):
         assert_allclose(self.iqcalc.brightness(5, 4, 3, 0, self.data), 66)
 
+    @pytest.mark.skipif('not have_scipy')
     def test_ee_odd(self):
         data = np.ma.array(
             [[0, 0, 0, 0, 0, 0, 0],
@@ -90,6 +91,7 @@ class TestIQCalcNoInherit:
             assert_allclose(interp_fn.x, [0, 1, 2, 3])
             assert_allclose(interp_fn.y, [0.10714286, 0.42857143, 1, 1])
 
+    @pytest.mark.skipif('not have_scipy')
     def test_ee_even(self):
         data = np.ma.array(
             [[0, 0, 0, 0, 0, 0, 0, 0],
