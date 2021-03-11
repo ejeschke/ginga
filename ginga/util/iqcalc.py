@@ -636,7 +636,7 @@ class IQCalc(object):
     def ensquared_energy(self, data):
         """Return a function of ensquared energy across pixel indices.
 
-        Data is already a masked array and is assumed to be centered.
+        Ideally, data is already a masked array and is assumed to be centered.
 
         """
         if not have_scipy:
@@ -685,9 +685,7 @@ class IQCalc(object):
     def encircled_energy(self, data):
         """Return a function of encircled energy across pixel indices.
 
-        Data is already a masked array and is assumed to be centered.
-
-        .. note:: Needs ``scipy``.
+        Ideally, data is already a masked array and is assumed to be centered.
 
         """
         if not have_scipy:
@@ -712,10 +710,11 @@ class IQCalc(object):
         rind = np.where(deltar)[0]
 
         ee = csim[rind] / sorted_data.sum()  # Normalize
-        ee.set_fill_value(0)
-        ee = ee.filled().tolist()
+        if isinstance(ee, np.ma.MaskedArray):
+            ee.set_fill_value(0)
+            ee = ee.filled()
 
-        return interp1d(range(len(ee)), ee, kind='cubic', bounds_error=False,
+        return interp1d(range(ee.size), ee, kind='cubic', bounds_error=False,
                         assume_sorted=True)
 
     # EVALUATION ON A FIELD
@@ -932,7 +931,7 @@ class IQCalc(object):
     def pick_field(self, data, peak_radius=5, bright_radius=2, fwhm_radius=15,
                    threshold=None,
                    minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
-                   edgew=0.01):
+                   edgew=0.01, ee_total_radius=10):
         """Pick the first good object within the given field.
 
         Parameters
@@ -943,7 +942,7 @@ class IQCalc(object):
         peak_radius, threshold
             See :meth:`find_bright_peaks`.
 
-        bright_radius, fwhm_radius
+        bright_radius, fwhm_radius, ee_total_radius
             See :meth:`evaluate_peaks`.
 
         minfwhm, maxfwhm, minelipse, edgew
@@ -973,7 +972,8 @@ class IQCalc(object):
         # Evaluate those peaks
         objlist = self.evaluate_peaks(peaks, data,
                                       bright_radius=bright_radius,
-                                      fwhm_radius=fwhm_radius)
+                                      fwhm_radius=fwhm_radius,
+                                      ee_total_radius=ee_total_radius)
         if len(objlist) == 0:
             raise IQCalcError("Error evaluating bright peaks")
 
@@ -988,7 +988,7 @@ class IQCalc(object):
     def qualsize(self, image, x1=None, y1=None, x2=None, y2=None,
                  radius=5, bright_radius=2, fwhm_radius=15, threshold=None,
                  minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
-                 edgew=0.01):
+                 edgew=0.01, ee_total_radius=10):
         """Run :meth:`pick_field` on the given image.
 
         Parameters
@@ -1002,7 +1002,7 @@ class IQCalc(object):
         radius, threshold
             See :meth:`find_bright_peaks`.
 
-        bright_radius, fwhm_radius
+        bright_radius, fwhm_radius, ee_total_radius
             See :meth:`evaluate_peaks`.
 
         minfwhm, maxfwhm, minelipse, edgew
@@ -1032,7 +1032,8 @@ class IQCalc(object):
                              fwhm_radius=fwhm_radius,
                              threshold=threshold,
                              minfwhm=minfwhm, maxfwhm=maxfwhm,
-                             minelipse=minelipse, edgew=edgew)
+                             minelipse=minelipse, edgew=edgew,
+                             ee_total_radius=ee_total_radius)
 
         # Add back in offsets into image to get correct values with respect
         # to the entire image
