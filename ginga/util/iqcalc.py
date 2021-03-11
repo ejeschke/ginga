@@ -837,8 +837,8 @@ class IQCalc(object):
                 pos = 1.0 - dy2
 
             # EE on background subtracted image
-            ee_sq_arr = []
-            ee_circ_arr = []
+            ee_sq_fn = None
+            ee_circ_fn = None
             iy1 = int(ctr_y - ee_total_radius)
             iy2 = int(ctr_y + ee_total_radius) + 1
             ix1 = int(ctr_x - ee_total_radius)
