@@ -633,11 +633,15 @@ class IQCalc(object):
     # Encircled and ensquared energies (EE)
 
     def ensquared_energy(self, data):
-        """Return an array of ensquared energy at corresponding pixel indices.
+        """Return a function of ensquared energy across pixel indices.
 
         Data is already a masked array and is assumed to be centered.
 
+        .. note:: Needs ``scipy``.
+
         """
+        from scipy.interpolate import interp1d
+
         tot = data.sum()
         ny, nx = data.shape
         cen_x = int(nx // 2)
@@ -656,7 +660,9 @@ class IQCalc(object):
         else:  # Odd
             delta_i1 = 0
 
-        for i in range(n_max - cen):
+        xr = range(n_max - cen)
+
+        for i in xr:
             ix1 = cen_x - i + delta_i1
             if ix1 < 0:
                 ix1 = 0
@@ -671,15 +677,20 @@ class IQCalc(object):
                 iy2 = ny
             ee.append(data[iy1:iy2, ix1:ix2].sum() / tot)
 
-        return ee
+        return interp1d(xr, ee, kind='cubic', bounds_error=False,
+                        assume_sorted=True)
 
     # This is adapted from poppy package. See licenses/POPPY_LICENSE.md .
     def encircled_energy(self, data):
-        """Return an array of encircled energy at corresponding pixel indices.
+        """Return a function of encircled energy across pixel indices.
 
         Data is already a masked array and is assumed to be centered.
 
+        .. note:: Needs ``scipy``.
+
         """
+        from scipy.interpolate import interp1d
+
         y, x = np.indices(data.shape, dtype=float)
         cen = tuple((i - 1) * 0.5 for i in data.shape[::-1])
         x -= cen[0]
@@ -699,7 +710,10 @@ class IQCalc(object):
 
         ee = csim[rind] / sorted_data.sum()  # Normalize
         ee.set_fill_value(0)
-        return ee.filled().tolist()
+        ee = ee.filled().tolist()
+
+        return interp1d(range(len(ee)), ee, kind='cubic', bounds_error=False,
+                        assume_sorted=True)
 
     # EVALUATION ON A FIELD
 
@@ -752,8 +766,8 @@ class IQCalc(object):
             * ``skylevel``: Sky level estimated from median of data array and
               ``skylevel_magnification`` and ``skylevel_offset`` attributes.
             * ``background``: Median of the input array.
-            * ``ensquared_energy_array``: Ensquared energy for different pixel radii.
-            * ``encircled_energy_array``: Encircled energy for different pixel radii.
+            * ``ensquared_energy_fn``: Function of ensquared energy for different pixel radii.
+            * ``encircled_energy_fn``: Function of encircled energy for different pixel radii.
 
         """
         height, width = data.shape
@@ -835,11 +849,11 @@ class IQCalc(object):
             else:
                 ee_data = data[iy1:iy2, ix1:ix2] - median
                 try:
-                    ee_sq_arr = self.ensquared_energy(ee_data)
+                    ee_sq_fn = self.ensquared_energy(ee_data)
                 except Exception as e:
                     self.logger.debug("Error calculating ensquared energy on object at %.2f,%.2f: %s" % (x, y, str(e)))
                 try:
-                    ee_circ_arr = self.encircled_energy(ee_data)
+                    ee_circ_fn = self.encircled_energy(ee_data)
                 except Exception as e:
                     self.logger.debug("Error calculating encircled energy on object at %.2f,%.2f: %s" % (x, y, str(e)))
 
@@ -850,8 +864,8 @@ class IQCalc(object):
                               brightness=bright, elipse=elipse,
                               x=int(x), y=int(y),
                               skylevel=skylevel, background=median,
-                              ensquared_energy_array=ee_sq_arr,
-                              encircled_energy_array=ee_circ_arr)
+                              ensquared_energy_fn=ee_sq_fn,
+                              encircled_energy_fn=ee_circ_fn)
             objlist.append(obj)
 
             if cb_fn is not None:

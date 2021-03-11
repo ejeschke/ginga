@@ -482,57 +482,66 @@ class FWHMPlot(Plot):
 
 
 class EEPlot(Plot):
-    """Class to handle plotting of encircled and ensquared energy (EE) values.
+    """Class to handle plotting of encircled and ensquared energy (EE) values."""
 
-    .. note:: This also uses ``scipy``.
+    def plot_ee(self, encircled_energy_function=None,
+                ensquared_energy_function=None, sampling_radius=None):
+        """
+        Parameters
+        ----------
+        encircled_energy_function, ensquared_energy_function : obj or `None`
+            Interpolation function from ``scipy.interpolate.interp1d`` for
+            encircled and ensquared energy (EE) values, respectively.
+            If not given, will skip plotting but at least one needs to be given.
 
-    """
+        sampling_radius : float or `None`
+            Radius for sampling of EE, if desired.
 
-    def plot_ee(self, encircled_energy, ensquared_energy, sampling_radius):
-
-        # This is duplicate code copied from _make_report in Pick.py .
-        # TODO: Is there a way to avoid code duplication?
-        from scipy.interpolate import interp1d
-        n_circ = len(encircled_energy)
-        n_sq = len(ensquared_energy)
-        ee_circ_fn = interp1d(list(range(n_circ)), encircled_energy,
-                              kind='cubic', bounds_error=False)
-        ee_sq_fn = interp1d(list(range(n_sq)), ensquared_energy,
-                            kind='cubic', bounds_error=False)
-        ee_circ = ee_circ_fn(sampling_radius)
-        ee_sq = ee_sq_fn(sampling_radius)
-        max_x = max(n_circ, n_sq)
-        x = list(range(max_x))
+        """
+        if (encircled_energy_function is None and
+                ensquared_energy_function is None):
+            raise ValueError('At least one EE function must be provided')
 
         self.ax.cla()
-        self.set_titles(title=f"EE(circ)={ee_circ:.2f}, EE(sq)={ee_sq:.2f}",
-                        xtitle='Radius [pixels]', ytitle='EE')
         self.ax.grid(True)
+        self.ax.axvline(sampling_radius, color='k', ls='--')
 
-        try:
-            self.ax.set_xlim(-0.1, max_x)
+        x_max = 0
+        title = ''
+        d = {}
 
-            self.ax.plot(encircled_energy, marker='s', ls='none',
-                         mfc='none', mec='#7570b3', label=None)
-            self.ax.plot(x, ee_circ_fn(x), color='#7570b3',
-                         label='Encircled Energy')
+        if encircled_energy_function:
+            d['Encircled Energy'] = {'func': encircled_energy_function,
+                                     'color': '#7570b3',
+                                     'marker': 's',
+                                     'title_pfx': 'EE(circ)'}
+        if ensquared_energy_function:
+            d['Ensquared Energy'] = {'func': ensquared_energy_function,
+                                     'color': '#1b9e77',
+                                     'marker': 'x',
+                                     'title_pfx': 'EE(sq)'}
 
-            self.ax.plot(ensquared_energy, marker='s', ls='none',
-                         mfc='none', mec='#1b9e77', label=None)
-            self.ax.plot(x, ee_sq_fn(x), color='#1b9e77',
-                         label='Ensquared Energy')
+        for key, val in d.items():
+            func = val['func']
+            color = val['color']
+            x = func.x
+            y = func.y
+            x_max = max(x.max(), x_max)
+            self.ax.plot(x, y, color=color, marker=val['marker'], mfc='none',
+                         mec=color, label=key)
+            if sampling_radius:
+                if title:
+                    title += ', '
+                ys = func(sampling_radius)
+                title += f"{val['title_pfx']}={ys:.3f}"
+                self.ax.plot(sampling_radius, ys, marker='o', ls='none',
+                             mfc=color, mec=color, label=None)
 
-            self.ax.axvline(sampling_radius, color='k', ls='--')
-            self.ax.plot(sampling_radius, ee_circ, marker='o', ls='none',
-                         mfc='#7570b3', mec='#7570b3', label=None)
-            self.ax.plot(sampling_radius, ee_sq, marker='o', ls='none',
-                         mfc='#1b9e77', mec='#1b9e77', label=None)
-
-            self.ax.legend(loc='lower right', shadow=False, fancybox=False,
-                           prop={'size': 8}, labelspacing=0.2)
-            self.draw()
-        except Exception as e:
-            self.logger.error("Error making EE plot: %s" % (str(e)))
+        self.set_titles(title=title, xtitle='Radius [pixels]', ytitle='EE')
+        self.ax.set_xlim(-0.1, x_max)
+        self.ax.legend(loc='lower right', shadow=False, fancybox=False,
+                       prop={'size': 8}, labelspacing=0.2)
+        self.draw()
 
 
 class SurfacePlot(Plot):

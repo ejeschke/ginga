@@ -1280,12 +1280,13 @@ class Pick(GingaPlugin.LocalPlugin):
     def clear_radial(self):
         self.radial_plot.clear()
 
-    def plot_ee(self, qs, image):
+    def plot_ee(self, qs):
         # Make a EE plot
         try:
-            self.ee_plot.plot_ee(qs.encircled_energy_array,
-                                 qs.ensquared_energy_array,
-                                 self.ee_sampling_radius)
+            self.ee_plot.plot_ee(
+                encircled_energy_function=qs.encircled_energy_fn,
+                ensquared_energy_function=qs.ensquared_energy_fn,
+                sampling_radius=self.ee_sampling_radius)
         except Exception as e:
             self.logger.error("Error making EE plot: %s" % (str(e)))
 
@@ -1520,19 +1521,10 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # EE at sampling radius
             try:
-                from scipy.interpolate import interp1d
-                ee_circ_fn = interp1d(
-                    list(range(len(qs.encircled_energy_array))),
-                    qs.encircled_energy_array,
-                    kind='cubic', bounds_error=False)
-                ee_sq_fn = interp1d(
-                    list(range(len(qs.ensquared_energy_array))),
-                    qs.ensquared_energy_array,
-                    kind='cubic', bounds_error=False)
-                ee_circ = ee_circ_fn(self.ee_sampling_radius)
-                ee_sq = ee_sq_fn(self.ee_sampling_radius)
+                ee_circ = qs.encircled_energy_fn(self.ee_sampling_radius)
+                ee_sq = qs.ensquared_energy_fn(self.ee_sampling_radius)
             except Exception as e:
-                self.logger.warning("Couldn't calculate EE: %s" % (str(e)))
+                self.logger.warning("Couldn't calculate EE at %.2f: %s" % (self.ee_sampling_radius, str(e)))
                 ee_circ = 0
                 ee_sq = 0
 
@@ -1652,7 +1644,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.plot_contours(vip_img)
                 self.plot_fwhm(qs, vip_img)
                 self.plot_radial(qs, vip_img)
-                self.plot_ee(qs, vip_img)
+                self.plot_ee(qs)
 
         except Exception as e:
             errmsg = "Error calculating quality metrics: %s" % (
