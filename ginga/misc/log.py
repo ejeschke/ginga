@@ -100,6 +100,12 @@ def get_logger(name='ginga', level=None, null=False,
         stderrHdlr.setFormatter(fmt)
         logger.addHandler(stderrHdlr)
 
+    if ((options is not None) and hasattr(options, 'pidfile') and
+                options.pidfile is not None):
+        # user specified a path to a pid file
+        with open(options.pidfile, 'w') as pid_f:
+            pid_f.write("{}\n".format(os.getpid()))
+
     return logger
 
 
@@ -125,12 +131,11 @@ def addlogopts(parser):
     add_argument("--logbackups", dest="logbackups", metavar="NUM",
                  type=int, default=log_backups,
                  help="Set maximum number of backups to NUM")
+    add_argument("--pidfile", dest="pidfile", metavar="FILE",
+                 help="Write pid of process to FILE")
     add_argument("--rmlog", dest="rmlog", default=False,
                  action="store_true",
                  help="Remove log if present (don't append)")
     add_argument("--stderr", dest="logstderr", default=False,
                  action="store_true",
                  help="Copy logging also to stderr")
-
-
-#END
