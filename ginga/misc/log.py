@@ -101,7 +101,7 @@ def get_logger(name='ginga', level=None, null=False,
         logger.addHandler(stderrHdlr)
 
     if ((options is not None) and hasattr(options, 'pidfile') and
-                options.pidfile is not None):
+        options.pidfile is not None):
         # user specified a path to a pid file
         with open(options.pidfile, 'w') as pid_f:
             pid_f.write("{}\n".format(os.getpid()))
