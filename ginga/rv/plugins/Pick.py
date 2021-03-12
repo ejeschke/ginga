@@ -318,6 +318,8 @@ from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga.util import wcs, contour
 from ginga import GingaPlugin, colors, cmap, trcalc
+from ginga.canvas.types import plots as gplots
+from ginga.util.plotview import PlotView
 
 try:
     from ginga.gw import Plot
@@ -425,9 +427,9 @@ class Pick(GingaPlugin.LocalPlugin):
         # quick cross marker
         # these colors form the crosshair marking the cuts in canvas
         # and also the cuts plot
-        cname1 = self.settings.get('quick_h_cross_color', 'magenta2')
+        cname1 = self.settings.get('quick_h_cross_color', '#7570b3')
         color1 = colors.lookup_color(cname1, format='hash')
-        cname2 = self.settings.get('quick_v_cross_color', 'sienna3')
+        cname2 = self.settings.get('quick_v_cross_color', '#1b9e77')
         color2 = colors.lookup_color(cname2, format='hash')
         self.cross = self.dc.CompoundObject(
             self.dc.Line(0, 10, 20, 10, color=color1),
@@ -651,14 +653,41 @@ class Pick(GingaPlugin.LocalPlugin):
             pw.resize(width, height)
             nb.add_widget(pw, title="EE")
 
-            # Cuts profile plot
-            self.cuts_plot = plots.CutsPlot(logger=self.logger,
-                                            width=width, height=height)
-            pw = Plot.PlotWidget(self.cuts_plot)
-            pw.resize(width, height)
-            ax = self.cuts_plot.add_axis()
-            ax.grid(True)
-            nb.add_widget(pw, title="Cuts")
+        # Cuts profile plot
+        ci = Viewers.CanvasView(logger=self.logger)
+        width, height = 400, 300
+        ci.set_desired_size(width, height)
+        ci.set_background('white')
+        ci.set_foreground('black')
+        # for debugging
+        ci.set_name('cuts_plot')
+
+        self.cuts_plot = PlotView(ci)
+        #self.cuts_plot.do.autopan_x = False
+
+        bg = gplots.PlotBG(self.cuts_plot, linewidth=2)
+        self.cuts_plot.add_plot_etc(bg)
+
+        x_axis = gplots.XAxis(self.cuts_plot, num_labels=4)
+        self.cuts_plot.add_plot_etc(x_axis)
+
+        y_axis = gplots.YAxis(self.cuts_plot, num_labels=4)
+        self.cuts_plot.add_plot_etc(y_axis)
+
+        title = gplots.PlotTitle(self.cuts_plot, title='Cuts')
+        self.cuts_plot.add_plot_etc(title)
+
+        self.cuts_xsrc = gplots.DataSource(name='X')
+        self.cuts_ysrc = gplots.DataSource(name='Y')
+        cname1 = self.settings.get('quick_h_cross_color', '#7570b3')
+        self.cuts_plot.add_source(gplots.PlotSource('X', cname1, self.cuts_xsrc))
+        cname2 = self.settings.get('quick_v_cross_color', '#1b9e77')
+        self.cuts_plot.add_source(gplots.PlotSource('Y', cname2, self.cuts_ysrc))
+
+        ciw = Viewers.GingaViewerWidget(viewer=ci)
+        ciw.resize(width, height)
+
+        nb.add_widget(ciw, title="Cuts")
 
         fr = Widgets.Frame(self._textlabel)
 
@@ -1719,7 +1748,7 @@ class Pick(GingaPlugin.LocalPlugin):
     def redo_quick(self):
         vip_img = self.fitsimage.get_vip()
 
-        self.cuts_plot.clear()
+        #self.cuts_plot.clear()
 
         obj = self.pick_obj
         if obj is None:
@@ -1749,17 +1778,15 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # plot horizontal cut
         xpts = np.arange(len(xarr))
-        self.cuts_plot.plot(xpts, xarr, color=hl.color,
-                            xtitle="Line Index", ytitle="Pixel Value",
-                            title=None, rtitle="Cuts",
-                            alpha=1.0, linewidth=1.0, linestyle='-',
-                            marker='x', label='X')
+        points = np.array((xpts, xarr)).T
+        self.cuts_xsrc.set_points(points)
 
         # plot vertical cut
         ypts = np.arange(len(yarr))
-        self.cuts_plot.plot(ypts, yarr, show_legend=True, color=vl.color,
-                            alpha=1.0, linewidth=1.0, linestyle='--',
-                            marker='s', mfc='none', label='Y')
+        points = np.array((ypts, yarr)).T
+        self.cuts_ysrc.set_points(points)
+
+        self.cuts_plot.update_plot()
 
     def calc_quick(self):
         if self.pick_data is None:
