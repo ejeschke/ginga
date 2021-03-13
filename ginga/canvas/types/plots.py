@@ -7,8 +7,14 @@
 import time
 
 import numpy as np
-# NOTE: $ pip install numpy-indexed
-import numpy_indexed as npi
+have_npi = False
+try:
+    # NOTE: $ pip install numpy-indexed
+    import numpy_indexed as npi
+    have_npi = True
+
+except ImportError:
+    pass
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        register_canvas_types,
@@ -41,16 +47,16 @@ class XYPlot(CanvasObjectBase):
         ]
 
     def __init__(self, points, color='black', linewidth=1, linestyle='solid',
-                 alpha=1.0, x_acc=None, y_acc=None, **kwdargs):
+                 alpha=1.0, x_acc=None, y_acc=None, **kwargs):
         super(XYPlot, self).__init__(color=color, linewidth=linewidth,
                                      linestyle=linestyle, alpha=alpha,
-                                     **kwdargs)
+                                     **kwargs)
         self.kind = 'xyplot'
         self.points = points
-        if x_acc is None:
-            x_acc = np.mean
+        self.x_func = None
         nul_arr = np.array([])
-        self.x_func = lambda arr: nul_arr if arr.size == 0 else x_acc(arr)
+        if x_acc is not None:
+            self.x_func = lambda arr: nul_arr if arr.size == 0 else x_acc(arr)
         if y_acc is None:
             y_acc = np.mean
         self.y_func = lambda arr: nul_arr if arr.size == 0 else y_acc(arr)
@@ -75,6 +81,7 @@ class XYPlot(CanvasObjectBase):
         self._calc_limits(points)
 
     def _calc_limits(self, points):
+        # TODO: what should limits be if there are no points?
         if len(points) > 0:
             x_data, y_data = points.T
             self.limits = np.array([(x_data.min(), y_data.min()),
@@ -89,39 +96,33 @@ class XYPlot(CanvasObjectBase):
         if len(points) == 0:
             self.path.points = points
             return
-        x, y = points.T
+        x_data, y_data = points.T
 
         # if we can determine the visible region shown on the plot
         # limit the points to those within the region
         if np.all(np.isfinite([start_x, stop_x])):
-            idx = np.logical_and(x >= start_x, x <= stop_x)
+            idx = np.logical_and(x_data >= start_x, x_data <= stop_x)
             points = points[idx]
-            x, y = points.T
 
-        # now find all points position in canvas X coord
-        cpoints = self.path.get_cpoints(viewer, points=points)
-        cx, cy = cpoints.T
+        if have_npi and self.x_func is not None:
+            # now find all points position in canvas X coord
+            cpoints = self.path.get_cpoints(viewer, points=points)
+            cx, cy = cpoints.T
 
-        # Reduce each group of Y points that map to a unique X via a
-        # function that reduces to a single value.  The desirable function
-        # will depend on the function of the plot, but mean() would be a
-        # reliable default
-        #x_uniq, idx = np.unique(cx, return_index=True)
-        gr = npi.group_by(cx)
-        gr_pts = gr.split(points)
-        ## points = np.array([(self.x_func(a.T[0]), self.y_func(a.T[1]))
-        ##                    for a in gr_pts])
-        #x_data, y_data = points.T
-        x_data = np.array([self.x_func(a.T[0]) for a in gr_pts])
-        y_data = np.array([self.y_func(a.T[1]) for a in gr_pts])
-        assert len(x_data) == len(y_data)
+            # Reduce each group of Y points that map to a unique X via a
+            # function that reduces to a single value.  The desirable function
+            # will depend on the function of the plot, but mean() would be a
+            # reliable default
+            #x_uniq, idx = np.unique(cx, return_index=True)
+            gr = npi.group_by(cx)
+            gr_pts = gr.split(points)
+            x_data = np.array([self.x_func(a.T[0]) for a in gr_pts])
+            y_data = np.array([self.y_func(a.T[1]) for a in gr_pts])
+            assert len(x_data) == len(y_data)
 
-        points = np.array((x_data, y_data)).T
-        if len(points) == 0:
-            self.path.points = points
-            return
+            points = np.array((x_data, y_data)).T
 
-        if x_data.size > 0 and y_data.size > 0:
+        if len(points) > 0:
             self._calc_limits(points)
 
         self.path.points = points
@@ -129,6 +130,7 @@ class XYPlot(CanvasObjectBase):
     def draw(self, viewer):
         self.path.crdmap = self.crdmap
 
+        # TODO: only recalculate if the pan or scale has changed
         self.recalc(viewer)
 
         if len(self.path.points) > 0:
@@ -175,7 +177,7 @@ class XAxis(CompoundObject):
             self.objects.append(self.x_lbls[i])
 
     def format_value(self, v):
-        return "%.2f" % v
+        return "%.4g" % v
 
     def update_elements(self, viewer):
         wd, ht = viewer.get_window_size()
@@ -275,7 +277,7 @@ class YAxis(CompoundObject):
             self.objects.append(self.y_lbls[i])
 
     def format_value(self, v):
-        return "%.2f" % v
+        return "%.4g" % v
 
     def update_elements(self, viewer):
         # set Y labels/grid as needed
@@ -454,7 +456,7 @@ class PlotTitle(CompoundObject):
                 lbl.x, lbl.y = cx, cy
             else:
                 text = plot_src.name
-                color = plot_src.color
+                color = plot_src.plot_kwargs['color']
                 Text = self.lbls[0].__class__
                 lbl = Text(cx, cy, text=text, color=color,
                            font=self.font,
@@ -477,19 +479,18 @@ class PlotSource(CompoundObject):
     """A Ginga canvas object which can contain several segments of a plot,
     segments separated by outages of the source.
     """
-    def __init__(self, name, color, data_src):
+    def __init__(self, data_src, **plot_kwargs):
         super(PlotSource, self).__init__()
-        self.name = name
-        self.color = color
-        self.linewidth = 2.0
         self.data_src = data_src
+        self.name = self.data_src.name
+        self.plot_kwargs = dict(color='blue')
+        self.plot_kwargs.update(plot_kwargs)
 
     def plot(self):
         arr_l = self.data_src.get_arrays()
         self.objects = []
         for points in arr_l:
-            plot = XYPlot(points, color=self.color, linewidth=self.linewidth,
-                          y_acc=np.nanmax)
+            plot = XYPlot(points, **self.plot_kwargs)
             plot.crdmap = self.crdmap
             self.objects.append(plot)
             plot.plot(points)

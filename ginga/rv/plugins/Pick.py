@@ -319,7 +319,7 @@ from ginga.misc import Bunch
 from ginga.util import wcs, contour
 from ginga import GingaPlugin, colors, cmap, trcalc
 from ginga.canvas.types import plots as gplots
-from ginga.util.plotview import PlotView
+from ginga.util.plotaide import PlotAide
 
 try:
     from ginga.gw import Plot
@@ -418,7 +418,7 @@ class Pick(GingaPlugin.LocalPlugin):
         canvas.set_callback('edit-event', self.edit_cb)
         canvas.add_draw_mode('move', down=self.btn_down,
                              move=self.btn_drag, up=self.btn_up,
-                             hover=self.hover_cb)
+                             hover=self.hover_cb, key=self.key_down)
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_draw_mode('move')
@@ -451,7 +451,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.quick_update_interval = self.settings.get('quick_update_interval',
                                                        0.25)
         self.from_peak = self.settings.get('quick_from_peak', True)
-        self.drag_only = self.settings.get('quick_drag_only', True)
+        self.drag_only = self.settings.get('quick_drag_only', False)
 
         # Peak finding parameters and selection criteria
         self.max_side = self.settings.get('max_side', 1024)
@@ -662,8 +662,7 @@ class Pick(GingaPlugin.LocalPlugin):
         # for debugging
         ci.set_name('cuts_plot')
 
-        self.cuts_plot = PlotView(ci)
-        #self.cuts_plot.do.autopan_x = False
+        self.cuts_plot = PlotAide(ci)
 
         bg = gplots.PlotBG(self.cuts_plot, linewidth=2)
         self.cuts_plot.add_plot_etc(bg)
@@ -679,10 +678,16 @@ class Pick(GingaPlugin.LocalPlugin):
 
         self.cuts_xsrc = gplots.DataSource(name='X')
         self.cuts_ysrc = gplots.DataSource(name='Y')
+        x_acc = np.mean if gplots.have_npi else None
+        y_acc = np.nanmax if x_acc else None
         cname1 = self.settings.get('quick_h_cross_color', '#7570b3')
-        self.cuts_plot.add_source(gplots.PlotSource('X', cname1, self.cuts_xsrc))
+        self.cuts_plot.add_source(gplots.PlotSource(self.cuts_xsrc,
+                                                    color=cname1, linewidth=2,
+                                                    x_acc=x_acc, y_acc=y_acc))
         cname2 = self.settings.get('quick_v_cross_color', '#1b9e77')
-        self.cuts_plot.add_source(gplots.PlotSource('Y', cname2, self.cuts_ysrc))
+        self.cuts_plot.add_source(gplots.PlotSource(self.cuts_ysrc,
+                                                    color=cname2, linewidth=2,
+                                                    x_acc=x_acc, y_acc=y_acc))
 
         ciw = Viewers.GingaViewerWidget(viewer=ci)
         ciw.resize(width, height)
@@ -2079,6 +2084,7 @@ class Pick(GingaPlugin.LocalPlugin):
             shape.linestyle = 'dash'
             point = obj.objects[1]
             point.color = 'red'
+            point.move_to(data_x, data_y)
 
             shape.move_to(data_x, data_y)
             self.canvas.update_canvas()
@@ -2135,21 +2141,20 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def hover_cb(self, canvas, event, data_x, data_y, viewer):
 
-        if self.quick_mode and (not self.drag_only):
+        if self.quick_mode:
             if self.pick_obj is None:
                 return False
             shape = self.pick_obj.objects[0]
             shape.color = 'cyan'
             shape.linestyle = 'dash'
-            point = self.pick_obj.objects[1]
-            point.color = 'red'
-
             shape.move_to(data_x, data_y)
+
             self.canvas.update_canvas()
 
             self.redo_quick()
-            # set timer
-            self.tmr_quick.set(self.quick_update_interval)
+            if self.drag_only:
+                # set timer
+                self.tmr_quick.set(self.quick_update_interval)
 
             return True
 
@@ -2157,6 +2162,45 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def quick_timer_cb(self, timer):
         self.calc_quick()
+
+    def key_down(self, canvas, event, data_x, data_y, viewer):
+
+        if event.key != 'r':
+            return False
+
+        if self.pick_obj is not None:
+            if not canvas.has_object(self.pick_obj):
+                self.canvas.add(self.pick_obj)
+
+            obj = self.pick_obj
+            shape = obj.objects[0]
+            shape.color = 'cyan'
+            shape.linestyle = 'dash'
+            shape.move_to(data_x, data_y)
+            point = obj.objects[1]
+            point.color = 'red'
+            point.move_to(data_x, data_y)
+
+            self.canvas.update_canvas()
+
+        else:
+            # No object yet? Add a default one.
+            self.set_drawtype('box')
+            rd_x, rd_y = self.dx // 2, self.dy // 2
+            x1, y1 = data_x - rd_x, data_y - rd_y
+            x2, y2 = data_x + rd_x, data_y + rd_y
+
+            Box = self.canvas.get_draw_class('box')
+            tag = self.canvas.add(Box(data_x, data_y, rd_x, rd_y,
+                                      color=self.pickcolor))
+
+            self.draw_cb(self.canvas, tag)
+
+        if self.quick_mode:
+            self.redo_quick()
+            self.calc_quick()
+
+        return True
 
     def set_mode_cb(self, mode, tf):
         if tf:

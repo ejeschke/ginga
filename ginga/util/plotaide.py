@@ -1,5 +1,5 @@
 #
-# plotview.py -- Utility functions for plotting using Ginga widgets.
+# plotaide.py -- Utility functions for plotting using Ginga widgets.
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
@@ -12,20 +12,19 @@ import numpy as np
 from ginga.misc import Bunch, Callback
 
 
-class PlotView(Callback.Callbacks):
+class PlotAide(Callback.Callbacks):
     """
     TODO:
     [X] command to set X pan position to use full range of window
     [X] autoscroll (keep up with new points)
     [ ] show gaps in status
     [X] get it to start in "plot" keyboard mode
-    [ ] start off showing a reasonable view
-    [ ] Key
-    [ ] Ability to gang plot controls or synchronize all plots
+    [X] start off showing a reasonable view
+    [X] Ability to gang plot controls or synchronize all plots
     """
 
     def __init__(self, viewer, share_cb=None):
-        super(PlotView, self).__init__()
+        super(PlotAide, self).__init__()
 
         self.logger = viewer.get_logger()
         if share_cb is None:
@@ -315,15 +314,6 @@ class PlotView(Callback.Callbacks):
         _t, y = self.viewer.get_pan()[:2]
         self.viewer.set_pan(t, y)
         self.adjust_view()
-
-    ## def _pan_cb(self, settings, pan_pos):
-    ##     """Called when the user pans our particular plot viewer."""
-    ##     self.adjust_view()
-    ##     if self._panning_x:
-    ##         return
-    ##     self._panning_x = True
-    ##     self.make_callback('pan', pan_pos)
-    ##     self._panning_x = False
 
     def _pan_cb(self, settings, pan_pos):
         """Called when the user pans our particular plot viewer."""
