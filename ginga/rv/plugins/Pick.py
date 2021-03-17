@@ -460,6 +460,7 @@ class Pick(GingaPlugin.LocalPlugin):
                    ("X", 'x'), ("Y", 'y'), ("FWHM", 'fwhm'),
                    ("FWHM_X", 'fwhm_x'), ("FWHM_Y", 'fwhm_y'),
                    ("EE_circ", 'encircled_energy'), ("EE_sq", 'ensquared_energy'),
+                   ("EE_r", 'ee_sampling_radius'),
                    ("Star Size", 'starsize'),
                    ("Ellip", 'ellipse'), ("Background", 'background'),
                    ("Sky Level", 'skylevel'), ("Brightness", 'brightness'),
@@ -1481,9 +1482,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fv.gui_do(self.update_pick, serialnum, results, qs,
                            x1, y1, wd, ht, data, pickobj, msg)
 
-    def _make_report_header(self):
-        return self.rpt_header + '\n'
-
     def _make_report(self, vip_img, qs):
         d = Bunch.Bunch()
         try:
@@ -1539,6 +1537,7 @@ class Pick(GingaPlugin.LocalPlugin):
                       ellipse=qs.elipse, background=qs.background,
                       skylevel=qs.skylevel, brightness=qs.brightness,
                       encircled_energy=ee_circ, ensquared_energy=ee_sq,
+                      ee_sampling_radius=self.ee_sampling_radius,
                       starsize=starsize,
                       time_local=time.strftime("%Y-%m-%d %H:%M:%S",
                                                time.localtime()),
