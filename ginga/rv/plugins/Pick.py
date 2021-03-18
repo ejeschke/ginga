@@ -1,7 +1,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-"""
-Perform quick astronomical stellar analysis.
+"""Perform quick astronomical stellar analysis.
 
 **Plugin Type: Local**
 
@@ -97,10 +96,11 @@ scroll wheel (mouse button 2) to set the pan position in the plot.
    "FWHM" tab of ``Pick`` area.
 
 The "FWHM" tab will show a FWHM plot.
-The blue lines show measurements in the X direction and the green lines
+The purple lines show measurements in the X direction and the green lines
 show measurements in the Y direction.  The solid lines indicate actual
 pixel values and the dotted lines indicate the fitted 1D function.
-The shaded green and blue regions indicate the FWHM measurements.
+The shaded purple and green regions indicate the FWHM measurements for the
+respective axes.
 
 .. figure:: figures/pick-radial.png
    :width: 400px
@@ -110,15 +110,36 @@ The shaded green and blue regions indicate the FWHM measurements.
    "Radial" tab of ``Pick`` area.
 
 The "Radial" tab contains a radial profile plot.
-Plotted points in blue are data values, and a line is fitted to the
+Plotted points in purple are data values, and a line is fitted to the
 data.
+
+.. figure:: figures/pick-ee.png
+   :width: 600px
+   :align: center
+   :alt: EE tab of Pick area
+
+   "EE" tab of ``Pick`` area.
+
+The "EE" tab contains a plot of fractional encircled and ensquared energies
+(EE) in purple and green, respectively, for the chosen target. Simple
+background subtraction is done in a way that is consistent with FWHM
+calculations before EE values are measured. The sampling and total radii,
+shown as black dashed lines, can be set in the "Settings" tab; when these are
+changed, click "Redo Pick" to update the plot and measurements.
+The measured EE values at the given sampling radius are also displayed in the
+"Readout" tab. When reporting is requested, the EE values at the given sampling
+radius and the radius itself will be recorded under "Report" table, along with
+other information.
+
+When "Show Candidates" is active, the candidates near the edges of the bounding
+box will not have EE values (set to 0).
 
 .. figure:: figures/pick-cuts.png
    :width: 800px
    :align: center
    :alt: Cut tab of Pick area
 
-   "Cut" tab of ``Pick`` area.
+   "Cuts" tab of ``Pick`` area.
 
 The "Cuts" tab contains a profile plot for the vertical and horizontal
 cuts represented by the crosshairs present in "Quick Mode" ON.  This plot
@@ -144,7 +165,7 @@ There are two buttons and three check boxes in this tab:
 * The "From Peak" check box changes the behavior of "Quick Mode" slightly
   as described above.
 * If "Center on pick" is checked, the shape will be recentered on the
-  located center, if found (i.e. the shape "tracks" the pick)
+  located center, if found (i.e., the shape "tracks" the pick).
 
 .. figure:: figures/pick-controls.png
    :width: 400px
@@ -184,7 +205,7 @@ candidate is added to the table.  If the "Record Picks automatically"
 checkbox is checked, then any candidates are added to the table
 automatically.
 
-.. note:: If the "Show candidates" checkbox in the "Settings" tab is
+.. note:: If the "Show Candidates" checkbox in the "Settings" tab is
           checked, then *all* objects found in the region (according to
           the settings) will be added to the table instead of just the
           selected candidate.
@@ -234,7 +255,7 @@ All the other plots will be cleared.
 
 The "Settings" tab controls aspects of the search within the pick area:
 
-* The "Show candidates" checkbox controls whether all detected sources
+* The "Show Candidates" checkbox controls whether all detected sources
   are marked or not (as shown in the figure below).  Additionally, if
   checked, then all the found objects are added to the pick log table
   when using the "Report" controls.
@@ -265,17 +286,22 @@ The "Settings" tab controls aspects of the search within the pick area:
   in ``~/.ginga/plugin_Pick.cfg``.
 * The "Contour Interpolation" parameter is used to set the interpolation
   method used in rendering the background image in the "Contour" plot.
+* The "EE total radius" defines the radius (for encircled energy) and box
+  half-width (for ensquared energy) in pixels where EE fraction is expected to
+  be 1 (i.e., all the flux for a point-spread function is contained within).
+* The "EE sampling radius" is the radius in pixel used to sample the measured
+  EE curves for reporting.
 
-The "Redo Pick" button will redo the search operation.  It's convenient
+The "Redo Pick" button will redo the search operation.  It is convenient
 if you have changed some parameters and want to see the effect based on the
 current pick area without disturbing it.
 
 .. figure:: figures/pick-candidates.png
    :width: 800px
    :align: center
-   :alt: The channel viewer when "Show candidates" is checked.
+   :alt: The channel viewer when "Show Candidates" is checked.
 
-   The channel viewer when "Show candidates" is checked.
+   The channel viewer when "Show Candidates" is checked.
 
 **User Configuration**
 
@@ -1726,12 +1752,14 @@ class Pick(GingaPlugin.LocalPlugin):
         self.cuts_plot.plot(xpts, xarr, color=hl.color,
                             xtitle="Line Index", ytitle="Pixel Value",
                             title=None, rtitle="Cuts",
-                            alpha=1.0, linewidth=1.0, linestyle='-')
+                            alpha=1.0, linewidth=1.0, linestyle='-',
+                            marker='x', label='X')
 
         # plot vertical cut
         ypts = np.arange(len(yarr))
-        self.cuts_plot.plot(ypts, yarr, color=vl.color,
-                            alpha=1.0, linewidth=1.0, linestyle='-')
+        self.cuts_plot.plot(ypts, yarr, show_legend=True, color=vl.color,
+                            alpha=1.0, linewidth=1.0, linestyle='--',
+                            marker='s', mfc='none', label='Y')
 
     def calc_quick(self):
         if self.pick_data is None:

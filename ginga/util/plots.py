@@ -97,7 +97,7 @@ class Plot(Callback.Callbacks):
         self.make_callback('draw-canvas')
 
     def plot(self, xarr, yarr, xtitle=None, ytitle=None, title=None,
-             rtitle=None, **kwdargs):
+             rtitle=None, show_legend=False, **kwdargs):
 
         if self.ax is None:
             self.add_axis()
@@ -122,6 +122,9 @@ class Plot(Callback.Callbacks):
         lbls = self.ax.xaxis.get_ticklabels()
         for lbl in lbls:
             lbl.set(rotation=45, horizontalalignment='right')
+
+        if show_legend:
+            self.ax.legend()
 
         self.draw()
         return lines
@@ -254,7 +257,7 @@ class CutsPlot(Plot):
 
         self.plot(x, y, color=color, drawstyle='steps-mid',
                   xtitle=xtitle, ytitle=ytitle, title=title, rtitle=rtitle,
-                  alpha=1.0, linewidth=1.0, linestyle='-')
+                  alpha=1.0, linewidth=1.0)
 
 
 class ContourPlot(Plot):
