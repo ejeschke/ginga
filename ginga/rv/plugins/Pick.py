@@ -76,7 +76,7 @@ also be marked with a point centered on the object and additionally the
 pan position will be set to the found center.
 
 .. figure:: figures/pick-contour.png
-   :width: 400px
+   :width: 300px
    :align: center
    :alt: Contour tab of Pick area
 
@@ -135,7 +135,7 @@ When "Show Candidates" is active, the candidates near the edges of the bounding
 box will not have EE values (set to 0).
 
 .. figure:: figures/pick-cuts.png
-   :width: 800px
+   :width: 600px
    :align: center
    :alt: Cut tab of Pick area
 
@@ -297,7 +297,7 @@ if you have changed some parameters and want to see the effect based on the
 current pick area without disturbing it.
 
 .. figure:: figures/pick-candidates.png
-   :width: 800px
+   :width: 600px
    :align: center
    :alt: The channel viewer when "Show Candidates" is checked.
 
