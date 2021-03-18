@@ -257,7 +257,7 @@ class CutsPlot(Plot):
 
         self.plot(x, y, color=color, drawstyle='steps-mid',
                   xtitle=xtitle, ytitle=ytitle, title=title, rtitle=rtitle,
-                  alpha=1.0, linewidth=1.0)
+                  alpha=1.0, linewidth=1.0, linestyle='-')
 
 
 class ContourPlot(Plot):
