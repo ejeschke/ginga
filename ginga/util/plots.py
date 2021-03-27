@@ -97,7 +97,7 @@ class Plot(Callback.Callbacks):
         self.make_callback('draw-canvas')
 
     def plot(self, xarr, yarr, xtitle=None, ytitle=None, title=None,
-             rtitle=None, **kwdargs):
+             rtitle=None, show_legend=False, **kwdargs):
 
         if self.ax is None:
             self.add_axis()
@@ -122,6 +122,9 @@ class Plot(Callback.Callbacks):
         lbls = self.ax.xaxis.get_ticklabels()
         for lbl in lbls:
             lbl.set(rotation=45, horizontalalignment='right')
+
+        if show_legend:
+            self.ax.legend()
 
         self.draw()
         return lines
@@ -479,6 +482,76 @@ class FWHMPlot(Plot):
         except Exception as e:
             self.logger.error("Error making fwhm plot: %s" % (
                 str(e)))
+
+
+class EEPlot(Plot):
+    """Class to handle plotting of encircled and ensquared energy (EE) values."""
+
+    def plot_ee(self, encircled_energy_function=None,
+                ensquared_energy_function=None, sampling_radius=None,
+                total_radius=None):
+        """
+        Parameters
+        ----------
+        encircled_energy_function, ensquared_energy_function : obj or `None`
+            Interpolation function from ``scipy.interpolate.interp1d`` for
+            encircled and ensquared energy (EE) values, respectively.
+            If not given, will skip plotting but at least one needs to be given.
+
+        sampling_radius : float or `None`
+            Show radius for sampling of EE, if desired.
+
+        total_radius : float or `None`
+            Show radius where EE is expected to be 1, if desired.
+
+        """
+        if (encircled_energy_function is None and
+                ensquared_energy_function is None):
+            raise ValueError('At least one EE function must be provided')
+
+        self.ax.cla()
+        self.ax.grid(True)
+
+        x_max = 0
+        title = ''
+        d = {}
+
+        if encircled_energy_function:
+            d['Encircled Energy'] = {'func': encircled_energy_function,
+                                     'color': '#7570b3',
+                                     'marker': 's',
+                                     'title_pfx': 'EE(circ)'}
+        if ensquared_energy_function:
+            d['Ensquared Energy'] = {'func': ensquared_energy_function,
+                                     'color': '#1b9e77',
+                                     'marker': 'x',
+                                     'title_pfx': 'EE(sq)'}
+
+        for key, val in d.items():
+            func = val['func']
+            color = val['color']
+            x = func.x
+            y = func.y
+            x_max = max(x.max(), x_max)
+            self.ax.plot(x, y, color=color, marker=val['marker'], mfc='none',
+                         mec=color, label=key)
+            if total_radius and not title:
+                self.ax.axvline(total_radius, color='k', ls='--')
+            if sampling_radius:
+                if title:
+                    title += ', '
+                else:
+                    self.ax.axvline(sampling_radius, color='k', ls='--')
+                ys = func(sampling_radius)
+                title += f"{val['title_pfx']}={ys:.3f}"
+                self.ax.plot(sampling_radius, ys, marker='o', ls='none',
+                             mfc=color, mec=color, label=None)
+
+        self.set_titles(title=title, xtitle='Radius [pixels]', ytitle='EE')
+        self.ax.set_xlim(-0.1, x_max)
+        self.ax.legend(loc='lower right', shadow=False, fancybox=False,
+                       prop={'size': 8}, labelspacing=0.2)
+        self.draw()
 
 
 class SurfacePlot(Plot):

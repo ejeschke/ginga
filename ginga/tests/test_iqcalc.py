@@ -69,6 +69,54 @@ class TestIQCalcNoInherit:
     def test_brightness(self):
         assert_allclose(self.iqcalc.brightness(5, 4, 3, 0, self.data), 66)
 
+    @pytest.mark.skipif('not have_scipy')
+    def test_ee_odd(self):
+        data = np.ma.array(
+            [[0, 0, 0, 0, 0, 0, 0],
+             [0, 1, 1, 1, 1, 1, 0],
+             [0, 1, 1, 10, 1, 1, 0],
+             [0, 1, 2, 3, 2, 1, 0],
+             [0, 1, 1, 1, 1, 1, 0],
+             [0, 1, 1, 1, 1, 1, 0],
+             [0, 0, 0, 100, 0, 0, 0]],
+            mask=[[False, False, False, False, False, False, False],
+                  [False, False, False, False, False, False, False],
+                  [False, False, False, True, False, False, False],
+                  [False, False, False, False, False, False, False],
+                  [False, False, False, False, False, False, False],
+                  [False, False, False, False, False, False, False],
+                  [False, False, False, True, False, False, False]])
+        for fn in (self.iqcalc.ensquared_energy, self.iqcalc.encircled_energy):
+            interp_fn = fn(data)
+            assert_allclose(interp_fn.x, [0, 1, 2, 3])
+            assert_allclose(interp_fn.y, [0.10714286, 0.42857143, 1, 1])
+
+    @pytest.mark.skipif('not have_scipy')
+    def test_ee_even(self):
+        data = np.ma.array(
+            [[0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 1, 1, 1, 1, 1, 1, 0],
+             [0, 1, 2, 2, 2, 2, 1, 0],
+             [0, 1, 2, 3, 10, 2, 1, 0],
+             [0, 1, 2, 3, 3, 2, 1, 0],
+             [0, 1, 2, 2, 2, 2, 1, 0],
+             [0, 1, 1, 1, 1, 1, 1, 0],
+             [0, 0, 0, 100, 0, 0, 0, 0]],
+            mask=[[False, False, False, False, False, False, False, False],
+                  [False, False, False, False, False, False, False, False],
+                  [False, False, False, False, False, False, False, False],
+                  [False, False, False, False, True, False, False, False],
+                  [False, False, False, False, False, False, False, False],
+                  [False, False, False, False, False, False, False, False],
+                  [False, False, False, False, False, False, False, False],
+                  [False, False, False, True, False, False, False, False]])
+        fn_sq = self.iqcalc.ensquared_energy(data)
+        assert_allclose(fn_sq.x, [0, 1, 2, 3])
+        assert_allclose(fn_sq.y, [0.16981132, 0.62264151, 1, 1])
+        fn_circ = self.iqcalc.encircled_energy(data)
+        assert_allclose(fn_circ.x, [0, 1, 2, 3])
+        assert_allclose(fn_circ.y, [0.16981132, 0.47169811, 0.9245283, 1])
+
 
 @pytest.mark.skipif('not have_scipy')
 class TestIQCalcPhot:
@@ -130,14 +178,17 @@ class TestIQCalcPhot:
         assert_allclose(y_res['sdev'], 0.8726658729188976, rtol=2e-7)
 
     def test_photometry(self):
-        objlist = self.iqcalc.evaluate_peaks([(5, 4)], self.data, fwhm_radius=1.5)
+        objlist = self.iqcalc.evaluate_peaks(
+            [(5, 4)], self.data, fwhm_radius=1.5, ee_total_radius=3)
         assert len(objlist) == 1
         result_1 = objlist[0]
 
-        result_2 = self.iqcalc.pick_field(self.data, fwhm_radius=1.5)
+        result_2 = self.iqcalc.pick_field(
+            self.data, fwhm_radius=1.5, ee_total_radius=3)
 
         astroim = AstroImage(data_np=self.data, logger=self.iqcalc.logger)
-        result_3 = self.iqcalc.qualsize(astroim, fwhm_radius=1.5)
+        result_3 = self.iqcalc.qualsize(
+            astroim, fwhm_radius=1.5, ee_total_radius=3)
 
         # Relax tolerance for TestIQCalcPhotAstropy
         for res in (result_1, result_2, result_3):
@@ -156,6 +207,8 @@ class TestIQCalcPhot:
             assert res.y == 4
             assert_allclose(res.skylevel, 4033.15)
             assert_allclose(res.background, 3803)
+            assert_allclose(res.encircled_energy_fn(1.5), 0.88921253)
+            assert_allclose(res.ensquared_energy_fn(1.5), 0.88976561)
 
         result_4 = self.iqcalc.qualsize(astroim, x1=1, y1=1, x2=10, y2=10, fwhm_radius=1.5, minfwhm=1.8)
 
@@ -176,6 +229,8 @@ class TestIQCalcPhot:
         assert result_4.y == 4
         assert_allclose(result_4.skylevel, 4199.05)
         assert_allclose(result_4.background, 3961)
+        assert result_4.encircled_energy_fn is None
+        assert result_4.ensquared_energy_fn is None
 
         result = self.iqcalc.objlist_select(
             objlist, self.data.shape[1], self.data.shape[0])

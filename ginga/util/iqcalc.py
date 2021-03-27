@@ -16,6 +16,7 @@ try:
     import scipy.optimize as optimize
     import scipy.ndimage as ndimage
     import scipy.ndimage.filters as filters
+    from scipy.interpolate import interp1d
     have_scipy = True
 except ImportError:
     have_scipy = False
@@ -630,10 +631,97 @@ class IQCalc(object):
         """Equivalent to :meth:`get_fwhm`."""
         return self.get_fwhm(x, y, radius, data, method_name=method_name)
 
+    # Encircled and ensquared energies (EE)
+
+    def ensquared_energy(self, data):
+        """Return a function of ensquared energy across pixel indices.
+
+        Ideally, data is already a masked array and is assumed to be centered.
+
+        """
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
+
+        tot = data.sum()
+        ny, nx = data.shape
+        cen_x = int(nx // 2)
+        cen_y = int(ny // 2)
+        ee = []
+
+        if ny > nx:
+            n_max = ny
+            cen = cen_y
+        else:
+            n_max = nx
+            cen = cen_x
+
+        if n_max % 2 == 0:  # Even
+            delta_i1 = -1
+        else:  # Odd
+            delta_i1 = 0
+
+        xr = range(n_max - cen)
+
+        for i in xr:
+            ix1 = cen_x - i + delta_i1
+            if ix1 < 0:
+                ix1 = 0
+            ix2 = cen_x + i + 1
+            if ix2 > nx:
+                ix2 = nx
+            iy1 = cen_y - i + delta_i1
+            if iy1 < 0:
+                iy1 = 0
+            iy2 = cen_y + i + 1
+            if iy2 > ny:
+                iy2 = ny
+            ee.append(data[iy1:iy2, ix1:ix2].sum() / tot)
+
+        return interp1d(xr, ee, kind='cubic', bounds_error=False,
+                        assume_sorted=True)
+
+    # This is adapted from poppy package. See licenses/POPPY_LICENSE.md .
+    def encircled_energy(self, data):
+        """Return a function of encircled energy across pixel indices.
+
+        Ideally, data is already a masked array and is assumed to be centered.
+
+        """
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
+
+        y, x = np.indices(data.shape, dtype=float)
+        cen = tuple((i - 1) * 0.5 for i in data.shape[::-1])
+        x -= cen[0]
+        y -= cen[1]
+        r = np.sqrt(x * x + y * y)
+
+        ind = np.argsort(r.flat)
+        sorted_r = r.flat[ind]
+        sorted_data = data.flat[ind]
+
+        # data is already masked
+        csim = sorted_data.cumsum(dtype=float)
+
+        sorted_r_int = sorted_r.astype(int)
+        deltar = sorted_r_int[1:] - sorted_r_int[:-1]  # assume all radii represented
+        rind = np.where(deltar)[0]
+
+        ee = csim[rind] / sorted_data.sum()  # Normalize
+        if isinstance(ee, np.ma.MaskedArray):
+            ee.set_fill_value(0)
+            ee = ee.filled()
+
+        return interp1d(range(ee.size), ee, kind='cubic', bounds_error=False,
+                        assume_sorted=True)
+
     # EVALUATION ON A FIELD
 
     def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=15,
-                       fwhm_method='gaussian', cb_fn=None, ev_intr=None):
+                       fwhm_method='gaussian', ee_total_radius=10,
+                       cb_fn=None, ev_intr=None):
         """Evaluate photometry for given peaks in data array.
 
         Parameters
@@ -649,6 +737,10 @@ class IQCalc(object):
 
         fwhm_radius, fwhm_method
             See :meth:`get_fwhm`.
+
+        ee_total_radius : float
+            Radius, in pixels, where encircled and ensquared energy fractions
+            are defined as 1.
 
         cb_fn : func or `None`
             If applicable, provide a callback function that takes a
@@ -676,6 +768,8 @@ class IQCalc(object):
             * ``skylevel``: Sky level estimated from median of data array and
               ``skylevel_magnification`` and ``skylevel_offset`` attributes.
             * ``background``: Median of the input array.
+            * ``ensquared_energy_fn``: Function of ensquared energy for different pixel radii.
+            * ``encircled_energy_fn``: Function of encircled energy for different pixel radii.
 
         """
         height, width = data.shape
@@ -744,13 +838,36 @@ class IQCalc(object):
             else:
                 pos = 1.0 - dy2
 
+            # EE on background subtracted image
+            ee_sq_fn = None
+            ee_circ_fn = None
+            iy1 = int(ctr_y - ee_total_radius)
+            iy2 = int(ctr_y + ee_total_radius) + 1
+            ix1 = int(ctr_x - ee_total_radius)
+            ix2 = int(ctr_x + ee_total_radius) + 1
+
+            if iy1 < 0 or iy2 > height or ix1 < 0 or ix2 > width:
+                self.logger.debug("Error calculating EE on object at %.2f,%.2f: Box out of range with radius=%.2f" % (x, y, ee_total_radius))
+            else:
+                ee_data = data[iy1:iy2, ix1:ix2] - median
+                try:
+                    ee_sq_fn = self.ensquared_energy(ee_data)
+                except Exception as e:
+                    self.logger.debug("Error calculating ensquared energy on object at %.2f,%.2f: %s" % (x, y, str(e)))
+                try:
+                    ee_circ_fn = self.encircled_energy(ee_data)
+                except Exception as e:
+                    self.logger.debug("Error calculating encircled energy on object at %.2f,%.2f: %s" % (x, y, str(e)))
+
             obj = Bunch.Bunch(objx=ctr_x, objy=ctr_y, pos=pos,
                               oid_x=oid_x, oid_y=oid_y,
                               fwhm_x=fwhm_x, fwhm_y=fwhm_y,
                               fwhm=fwhm, fwhm_radius=fwhm_radius,
                               brightness=bright, elipse=elipse,
                               x=int(x), y=int(y),
-                              skylevel=skylevel, background=median)
+                              skylevel=skylevel, background=median,
+                              ensquared_energy_fn=ee_sq_fn,
+                              encircled_energy_fn=ee_circ_fn)
             objlist.append(obj)
 
             if cb_fn is not None:
@@ -814,7 +931,7 @@ class IQCalc(object):
     def pick_field(self, data, peak_radius=5, bright_radius=2, fwhm_radius=15,
                    threshold=None,
                    minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
-                   edgew=0.01):
+                   edgew=0.01, ee_total_radius=10):
         """Pick the first good object within the given field.
 
         Parameters
@@ -825,7 +942,7 @@ class IQCalc(object):
         peak_radius, threshold
             See :meth:`find_bright_peaks`.
 
-        bright_radius, fwhm_radius
+        bright_radius, fwhm_radius, ee_total_radius
             See :meth:`evaluate_peaks`.
 
         minfwhm, maxfwhm, minelipse, edgew
@@ -855,7 +972,8 @@ class IQCalc(object):
         # Evaluate those peaks
         objlist = self.evaluate_peaks(peaks, data,
                                       bright_radius=bright_radius,
-                                      fwhm_radius=fwhm_radius)
+                                      fwhm_radius=fwhm_radius,
+                                      ee_total_radius=ee_total_radius)
         if len(objlist) == 0:
             raise IQCalcError("Error evaluating bright peaks")
 
@@ -870,7 +988,7 @@ class IQCalc(object):
     def qualsize(self, image, x1=None, y1=None, x2=None, y2=None,
                  radius=5, bright_radius=2, fwhm_radius=15, threshold=None,
                  minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
-                 edgew=0.01):
+                 edgew=0.01, ee_total_radius=10):
         """Run :meth:`pick_field` on the given image.
 
         Parameters
@@ -884,7 +1002,7 @@ class IQCalc(object):
         radius, threshold
             See :meth:`find_bright_peaks`.
 
-        bright_radius, fwhm_radius
+        bright_radius, fwhm_radius, ee_total_radius
             See :meth:`evaluate_peaks`.
 
         minfwhm, maxfwhm, minelipse, edgew
@@ -914,7 +1032,8 @@ class IQCalc(object):
                              fwhm_radius=fwhm_radius,
                              threshold=threshold,
                              minfwhm=minfwhm, maxfwhm=maxfwhm,
-                             minelipse=minelipse, edgew=edgew)
+                             minelipse=minelipse, edgew=edgew,
+                             ee_total_radius=ee_total_radius)
 
         # Add back in offsets into image to get correct values with respect
         # to the entire image

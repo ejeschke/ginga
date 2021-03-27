@@ -1,7 +1,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-"""
-Perform quick astronomical stellar analysis.
+"""Perform quick astronomical stellar analysis.
 
 **Plugin Type: Local**
 
@@ -77,7 +76,7 @@ also be marked with a point centered on the object and additionally the
 pan position will be set to the found center.
 
 .. figure:: figures/pick-contour.png
-   :width: 400px
+   :width: 300px
    :align: center
    :alt: Contour tab of Pick area
 
@@ -97,10 +96,11 @@ scroll wheel (mouse button 2) to set the pan position in the plot.
    "FWHM" tab of ``Pick`` area.
 
 The "FWHM" tab will show a FWHM plot.
-The blue lines show measurements in the X direction and the green lines
+The purple lines show measurements in the X direction and the green lines
 show measurements in the Y direction.  The solid lines indicate actual
 pixel values and the dotted lines indicate the fitted 1D function.
-The shaded green and blue regions indicate the FWHM measurements.
+The shaded purple and green regions indicate the FWHM measurements for the
+respective axes.
 
 .. figure:: figures/pick-radial.png
    :width: 400px
@@ -110,15 +110,36 @@ The shaded green and blue regions indicate the FWHM measurements.
    "Radial" tab of ``Pick`` area.
 
 The "Radial" tab contains a radial profile plot.
-Plotted points in blue are data values, and a line is fitted to the
+Plotted points in purple are data values, and a line is fitted to the
 data.
 
+.. figure:: figures/pick-ee.png
+   :width: 600px
+   :align: center
+   :alt: EE tab of Pick area
+
+   "EE" tab of ``Pick`` area.
+
+The "EE" tab contains a plot of fractional encircled and ensquared energies
+(EE) in purple and green, respectively, for the chosen target. Simple
+background subtraction is done in a way that is consistent with FWHM
+calculations before EE values are measured. The sampling and total radii,
+shown as black dashed lines, can be set in the "Settings" tab; when these are
+changed, click "Redo Pick" to update the plot and measurements.
+The measured EE values at the given sampling radius are also displayed in the
+"Readout" tab. When reporting is requested, the EE values at the given sampling
+radius and the radius itself will be recorded under "Report" table, along with
+other information.
+
+When "Show Candidates" is active, the candidates near the edges of the bounding
+box will not have EE values (set to 0).
+
 .. figure:: figures/pick-cuts.png
-   :width: 800px
+   :width: 600px
    :align: center
    :alt: Cut tab of Pick area
 
-   "Cut" tab of ``Pick`` area.
+   "Cuts" tab of ``Pick`` area.
 
 The "Cuts" tab contains a profile plot for the vertical and horizontal
 cuts represented by the crosshairs present in "Quick Mode" ON.  This plot
@@ -144,7 +165,7 @@ There are two buttons and three check boxes in this tab:
 * The "From Peak" check box changes the behavior of "Quick Mode" slightly
   as described above.
 * If "Center on pick" is checked, the shape will be recentered on the
-  located center, if found (i.e. the shape "tracks" the pick)
+  located center, if found (i.e., the shape "tracks" the pick).
 
 .. figure:: figures/pick-controls.png
    :width: 400px
@@ -184,7 +205,7 @@ candidate is added to the table.  If the "Record Picks automatically"
 checkbox is checked, then any candidates are added to the table
 automatically.
 
-.. note:: If the "Show candidates" checkbox in the "Settings" tab is
+.. note:: If the "Show Candidates" checkbox in the "Settings" tab is
           checked, then *all* objects found in the region (according to
           the settings) will be added to the table instead of just the
           selected candidate.
@@ -234,7 +255,7 @@ All the other plots will be cleared.
 
 The "Settings" tab controls aspects of the search within the pick area:
 
-* The "Show candidates" checkbox controls whether all detected sources
+* The "Show Candidates" checkbox controls whether all detected sources
   are marked or not (as shown in the figure below).  Additionally, if
   checked, then all the found objects are added to the pick log table
   when using the "Report" controls.
@@ -265,17 +286,22 @@ The "Settings" tab controls aspects of the search within the pick area:
   in ``~/.ginga/plugin_Pick.cfg``.
 * The "Contour Interpolation" parameter is used to set the interpolation
   method used in rendering the background image in the "Contour" plot.
+* The "EE total radius" defines the radius (for encircled energy) and box
+  half-width (for ensquared energy) in pixels where EE fraction is expected to
+  be 1 (i.e., all the flux for a point-spread function is contained within).
+* The "EE sampling radius" is the radius in pixel used to sample the measured
+  EE curves for reporting.
 
-The "Redo Pick" button will redo the search operation.  It's convenient
+The "Redo Pick" button will redo the search operation.  It is convenient
 if you have changed some parameters and want to see the effect based on the
 current pick area without disturbing it.
 
 .. figure:: figures/pick-candidates.png
-   :width: 800px
+   :width: 600px
    :align: center
-   :alt: The channel viewer when "Show candidates" is checked.
+   :alt: The channel viewer when "Show Candidates" is checked.
 
-   The channel viewer when "Show candidates" is checked.
+   The channel viewer when "Show Candidates" is checked.
 
 **User Configuration**
 
@@ -428,6 +454,8 @@ class Pick(GingaPlugin.LocalPlugin):
         # Peak finding parameters and selection criteria
         self.max_side = self.settings.get('max_side', 1024)
         self.radius = self.settings.get('radius', 10)
+        self.ee_total_radius = self.settings.get('ee_total_radius', 10.0)
+        self.ee_sampling_radius = self.settings.get('ee_sampling_radius', 2.5)
         self.threshold = self.settings.get('threshold', None)
         self.min_fwhm = self.settings.get('min_fwhm', 1.5)
         self.max_fwhm = self.settings.get('max_fwhm', 50.0)
@@ -457,6 +485,8 @@ class Pick(GingaPlugin.LocalPlugin):
         columns = [("RA", 'ra_txt'), ("DEC", 'dec_txt'), ("Equinox", 'equinox'),
                    ("X", 'x'), ("Y", 'y'), ("FWHM", 'fwhm'),
                    ("FWHM_X", 'fwhm_x'), ("FWHM_Y", 'fwhm_y'),
+                   ("EE_circ", 'encircled_energy'), ("EE_sq", 'ensquared_energy'),
+                   ("EE_r", 'ee_sampling_radius'),
                    ("Star Size", 'starsize'),
                    ("Ellip", 'ellipse'), ("Background", 'background'),
                    ("Sky Level", 'skylevel'), ("Brightness", 'brightness'),
@@ -613,6 +643,14 @@ class Pick(GingaPlugin.LocalPlugin):
             pw.resize(width, height)
             nb.add_widget(pw, title="Radial")
 
+            # EE profile plot
+            self.ee_plot = plots.EEPlot(logger=self.logger,
+                                        width=width, height=height)
+            self.ee_plot.add_axis(facecolor='white')
+            pw = Plot.PlotWidget(self.ee_plot)
+            pw.resize(width, height)
+            nb.add_widget(pw, title="EE")
+
             # Cuts profile plot
             self.cuts_plot = plots.CutsPlot(logger=self.logger,
                                             width=width, height=height)
@@ -641,6 +679,8 @@ class Pick(GingaPlugin.LocalPlugin):
                      'FWHM Y:', 'label', 'FWHM Y', 'llabel'),
                     ('FWHM:', 'label', 'FWHM', 'llabel',
                      'Star Size:', 'label', 'Star Size', 'llabel'),
+                    ('EE (circ):', 'label', 'Encircled energy', 'llabel',
+                     'EE (sq):', 'label', 'Ensquared energy', 'llabel'),
                     ('Sample Area:', 'label', 'Sample Area', 'llabel',
                      'Default Region', 'button', 'Pan to pick', 'button'),
                     ('Quick Mode', 'checkbutton', 'From Peak', 'checkbutton',
@@ -651,6 +691,8 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.update(b)
         b.zoom.set_text(self.fv.scale2text(di.get_scale()))
         self.wdetail = b
+        b.encircled_energy.set_tooltip("Encircled energy")
+        b.ensquared_energy.set_tooltip("Ensquared energy")
         b.default_region.add_callback('activated',
                                       lambda w: self.reset_region())
         b.default_region.set_tooltip("Reset region size to default")
@@ -739,6 +781,10 @@ class Pick(GingaPlugin.LocalPlugin):
                      "FWHM fitting", 'combobox'),
                     ('Contour Interpolation:', 'label', 'xlbl_cinterp', 'label',
                      'Contour Interpolation', 'combobox'),
+                    ('EE total radius:', 'label', 'xlbl_ee_total_radius', 'label',
+                     'EE total radius', 'spinfloat'),
+                    ('EE sampling radius:', 'label', 'xlbl_ee_radius', 'label',
+                     'EE sampling radius', 'spinfloat')
                     )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -755,6 +801,8 @@ class Pick(GingaPlugin.LocalPlugin):
         b.calc_center.set_tooltip("How to calculate the center of object")
         b.fwhm_fitting.set_tooltip("Function for fitting the FWHM")
         b.contour_interpolation.set_tooltip("Interpolation for use in contour plot")
+        b.ee_total_radius.set_tooltip("Radius where EE fraction is 1")
+        b.ee_sampling_radius.set_tooltip("Radius for EE sampling")
 
         def chg_pickshape(w, idx):
             pickshape = self.drawtypes[idx]
@@ -780,6 +828,28 @@ class Pick(GingaPlugin.LocalPlugin):
             return True
         b.xlbl_radius.set_text(str(self.radius))
         b.radius.add_callback('value-changed', chg_radius)
+
+        # EE total radius control
+        b.ee_total_radius.set_limits(0.1, 200.0, incr_value=0.1)
+        b.ee_total_radius.set_value(self.ee_total_radius)
+
+        def chg_ee_total_radius(w, val):
+            self.ee_total_radius = float(val)
+            self.w.xlbl_ee_total_radius.set_text(str(self.ee_total_radius))
+            return True
+        b.xlbl_ee_total_radius.set_text(str(self.ee_total_radius))
+        b.ee_total_radius.add_callback('value-changed', chg_ee_total_radius)
+
+        # EE sampling radius control
+        b.ee_sampling_radius.set_limits(0.1, 200.0, incr_value=0.1)
+        b.ee_sampling_radius.set_value(self.ee_sampling_radius)
+
+        def chg_ee_sampling_radius(w, val):
+            self.ee_sampling_radius = float(val)
+            self.w.xlbl_ee_radius.set_text(str(self.ee_sampling_radius))
+            return True
+        b.xlbl_ee_radius.set_text(str(self.ee_sampling_radius))
+        b.ee_sampling_radius.add_callback('value-changed', chg_ee_sampling_radius)
 
         # threshold control
         def chg_threshold(w):
@@ -1237,6 +1307,20 @@ class Pick(GingaPlugin.LocalPlugin):
     def clear_radial(self):
         self.radial_plot.clear()
 
+    def plot_ee(self, qs):
+        # Make a EE plot
+        try:
+            self.ee_plot.plot_ee(
+                encircled_energy_function=qs.encircled_energy_fn,
+                ensquared_energy_function=qs.ensquared_energy_fn,
+                sampling_radius=self.ee_sampling_radius,
+                total_radius=self.ee_total_radius)
+        except Exception as e:
+            self.logger.error("Error making EE plot: %s" % (str(e)))
+
+    def clear_ee(self):
+        self.ee_plot.clear()
+
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         return True
@@ -1378,11 +1462,13 @@ class Pick(GingaPlugin.LocalPlugin):
                 # Evaluate those peaks
                 self.update_status("Evaluating %d bright peaks..." % (
                     num_peaks))
-                objlist = self.iqcalc.evaluate_peaks(peaks, data,
-                                                     fwhm_radius=self.radius,
-                                                     cb_fn=cb_fn,
-                                                     ev_intr=self.ev_intr,
-                                                     fwhm_method=self.fwhm_alg)
+                objlist = self.iqcalc.evaluate_peaks(
+                    peaks, data,
+                    fwhm_radius=self.radius,
+                    cb_fn=cb_fn,
+                    ev_intr=self.ev_intr,
+                    fwhm_method=self.fwhm_alg,
+                    ee_total_radius=self.ee_total_radius)
 
                 num_candidates = len(objlist)
                 if num_candidates == 0:
@@ -1422,9 +1508,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fv.gui_do(self.update_pick, serialnum, results, qs,
                            x1, y1, wd, ht, data, pickobj, msg)
 
-    def _make_report_header(self):
-        return self.rpt_header + '\n'
-
     def _make_report(self, vip_img, qs):
         d = Bunch.Bunch()
         try:
@@ -1461,6 +1544,15 @@ class Pick(GingaPlugin.LocalPlugin):
             rpt_x = x + self.pixel_coords_offset
             rpt_y = y + self.pixel_coords_offset
 
+            # EE at sampling radius
+            try:
+                ee_circ = qs.encircled_energy_fn(self.ee_sampling_radius)
+                ee_sq = qs.ensquared_energy_fn(self.ee_sampling_radius)
+            except Exception as e:
+                self.logger.warning("Couldn't calculate EE at %.2f: %s" % (self.ee_sampling_radius, str(e)))
+                ee_circ = 0
+                ee_sq = 0
+
             # make a report in the form of a dictionary
             d.setvals(x=rpt_x, y=rpt_y,
                       ra_deg=ra_deg, dec_deg=dec_deg,
@@ -1470,6 +1562,8 @@ class Pick(GingaPlugin.LocalPlugin):
                       fwhm_x=qs.fwhm_x, fwhm_y=qs.fwhm_y,
                       ellipse=qs.elipse, background=qs.background,
                       skylevel=qs.skylevel, brightness=qs.brightness,
+                      encircled_energy=ee_circ, ensquared_energy=ee_sq,
+                      ee_sampling_radius=self.ee_sampling_radius,
                       starsize=starsize,
                       time_local=time.strftime("%Y-%m-%d %H:%M:%S",
                                                time.localtime()),
@@ -1539,11 +1633,13 @@ class Pick(GingaPlugin.LocalPlugin):
             self.wdetail.fwhm_x.set_text('%.3f' % fwhm_x)
             self.wdetail.fwhm_y.set_text('%.3f' % fwhm_y)
             self.wdetail.fwhm.set_text('%.3f' % fwhm)
-            self.wdetail.object_x.set_text('%.3f' % (d.x))
-            self.wdetail.object_y.set_text('%.3f' % (d.y))
+            self.wdetail.object_x.set_text('%.3f' % d.x)
+            self.wdetail.object_y.set_text('%.3f' % d.y)
             self.wdetail.sky_level.set_text('%.3f' % qs.skylevel)
             self.wdetail.background.set_text('%.3f' % qs.background)
             self.wdetail.brightness.set_text('%.3f' % qs.brightness)
+            self.wdetail.encircled_energy.set_text('%.3f' % d.encircled_energy)
+            self.wdetail.ensquared_energy.set_text('%.3f' % d.ensquared_energy)
             self.wdetail.ra.set_text(d.ra_txt)
             self.wdetail.dec.set_text(d.dec_txt)
             self.wdetail.equinox.set_text(str(d.equinox))
@@ -1574,6 +1670,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.plot_contours(vip_img)
                 self.plot_fwhm(qs, vip_img)
                 self.plot_radial(qs, vip_img)
+                self.plot_ee(qs)
 
         except Exception as e:
             errmsg = "Error calculating quality metrics: %s" % (
@@ -1589,7 +1686,8 @@ class Pick(GingaPlugin.LocalPlugin):
             #self.update_status("Error")
             for key in ('sky_level', 'background', 'brightness',
                         'star_size', 'fwhm_x', 'fwhm_y',
-                        'ra', 'dec', 'object_x', 'object_y'):
+                        'ra', 'dec', 'object_x', 'object_y',
+                        'encircled_energy', 'ensquared_energy'):
                 self.wdetail[key].set_text('')
             self.wdetail.fwhm.set_text('Failed')
             self.w.btn_bg_cut.set_enabled(False)
@@ -1606,6 +1704,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 # TODO: could calc background based on numpy calc
                 self.clear_fwhm()
                 self.clear_radial()
+                self.clear_ee()
 
         self.w.btn_intr_eval.set_enabled(False)
         self.pickimage.redraw(whence=3)
@@ -1653,12 +1752,14 @@ class Pick(GingaPlugin.LocalPlugin):
         self.cuts_plot.plot(xpts, xarr, color=hl.color,
                             xtitle="Line Index", ytitle="Pixel Value",
                             title=None, rtitle="Cuts",
-                            alpha=1.0, linewidth=1.0, linestyle='-')
+                            alpha=1.0, linewidth=1.0, linestyle='-',
+                            marker='x', label='X')
 
         # plot vertical cut
         ypts = np.arange(len(yarr))
-        self.cuts_plot.plot(ypts, yarr, color=vl.color,
-                            alpha=1.0, linewidth=1.0, linestyle='-')
+        self.cuts_plot.plot(ypts, yarr, show_legend=True, color=vl.color,
+                            alpha=1.0, linewidth=1.0, linestyle='--',
+                            marker='s', mfc='none', label='Y')
 
     def calc_quick(self):
         if self.pick_data is None:
