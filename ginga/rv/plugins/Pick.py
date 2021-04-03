@@ -461,6 +461,8 @@ class Pick(GingaPlugin.LocalPlugin):
         self.max_fwhm = self.settings.get('max_fwhm', 50.0)
         self.min_ellipse = self.settings.get('min_ellipse', 0.5)
         self.edgew = self.settings.get('edge_width', 0.01)
+        self.coadds_kw = self.settings.get('coadds_keyword', 'COADDS')
+        self.ndr_kw = self.settings.get('ndr_keyword', 'NDR')
         self.show_candidates = self.settings.get('show_candidates', False)
         # Report in 0- or 1-based coordinates
         coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
@@ -1394,7 +1396,13 @@ class Pick(GingaPlugin.LocalPlugin):
         text.x, text.y = x1, y2
 
         try:
-            image = self.fitsimage.get_vip()
+            vip_img = self.fitsimage.get_vip()
+
+            # get header for image under the center of the pick area
+            image, pt = vip_img.get_image_at_pt((ctr_x, ctr_y))
+            header = None
+            if image is not None:
+                header = image.get_header()
 
             # sanity check on size of region
             width, height = abs(x2 - x1), abs(y2 - y1)
@@ -1407,7 +1415,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # Extract image in pick window
             self.logger.debug("bbox %f,%f %f,%f" % (x1, y1, x2, y2))
-            x1, y1, x2, y2, data = self.cutdetail(image, shape)
+            x1, y1, x2, y2, data = self.cutdetail(vip_img, shape)
             self.logger.debug("cut box %d,%d %d,%d" % (x1, y1, x2, y2))
 
             # calculate center of pick image
@@ -1425,7 +1433,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             # Offload this task to another thread so that GUI remains
             # responsive
-            self.fv.nongui_do(self.search, serialnum, data,
+            self.fv.nongui_do(self.search, serialnum, data, header,
                               x1, y1, wd, ht, pickobj)
 
         except Exception as e:
@@ -1433,7 +1441,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 str(e)))
             return True
 
-    def search(self, serialnum, data, x1, y1, wd, ht, pickobj):
+    def search(self, serialnum, data, header, x1, y1, wd, ht, pickobj):
 
         with self.lock2:
             if serialnum != self.get_serial():
@@ -1442,6 +1450,24 @@ class Pick(GingaPlugin.LocalPlugin):
             self.pgs_cnt = 0
             self.ev_intr.clear()
             self.fv.gui_call(self.init_progress)
+
+            cdelt, coadds, ndr = None, 1, 1
+            if header is not None:
+                # try extracting the pixel pitch of the detector from the
+                # header, so that we can calculate obj size
+                try:
+                    ((xrot, yrot),
+                     cdelt) = wcs.get_xy_rotation_and_scale(header)
+
+                except Exception as e:
+                    self.logger.debug("Couldn't extract pixel pitch: {}".format(e))
+
+                # extract coadds and readouts / coadd, if available
+                if self.coadds_kw is not None and self.coadds_kw in header:
+                    coadds = int(header[self.coadds_kw])
+
+                if self.ndr_kw is not None and self.ndr_kw in header:
+                    ndr = int(header[self.ndr_kw])
 
             msg, results, qs = None, None, None
             try:
@@ -1464,7 +1490,10 @@ class Pick(GingaPlugin.LocalPlugin):
                     num_peaks))
                 objlist = self.iqcalc.evaluate_peaks(
                     peaks, data,
+                    cdelt=cdelt,
                     fwhm_radius=self.radius,
+                    coadds=coadds,
+                    ndr=ndr,
                     cb_fn=cb_fn,
                     ev_intr=self.ev_intr,
                     fwhm_method=self.fwhm_alg,
@@ -1528,19 +1557,6 @@ class Pick(GingaPlugin.LocalPlugin):
                 ra_deg, dec_deg = 0.0, 0.0
                 ra_txt = dec_txt = 'BAD WCS'
 
-            # Calculate star size from pixel pitch
-            try:
-                header = image.get_header()
-                ((xrot, yrot),
-                 (cdelt1, cdelt2)) = wcs.get_xy_rotation_and_scale(header)
-
-                starsize = self.iqcalc.starsize(qs.fwhm_x, cdelt1,
-                                                qs.fwhm_y, cdelt2)
-            except Exception as e:
-                self.logger.warning(
-                    "Couldn't calculate star size: %s" % (str(e)))
-                starsize = 0.0
-
             rpt_x = x + self.pixel_coords_offset
             rpt_y = y + self.pixel_coords_offset
 
@@ -1564,7 +1580,7 @@ class Pick(GingaPlugin.LocalPlugin):
                       skylevel=qs.skylevel, brightness=qs.brightness,
                       encircled_energy=ee_circ, ensquared_energy=ee_sq,
                       ee_sampling_radius=self.ee_sampling_radius,
-                      starsize=starsize,
+                      starsize=qs.starsize,
                       time_local=time.strftime("%Y-%m-%d %H:%M:%S",
                                                time.localtime()),
                       time_ut=time.strftime("%Y-%m-%d %H:%M:%S",

@@ -719,8 +719,10 @@ class IQCalc(object):
 
     # EVALUATION ON A FIELD
 
-    def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=15,
+    def evaluate_peaks(self, peaks, data,
+                       bright_radius=2, fwhm_radius=15,
                        fwhm_method='gaussian', ee_total_radius=10,
+                       cdelt=None, coadds=1, ndr=1,
                        cb_fn=None, ev_intr=None):
         """Evaluate photometry for given peaks in data array.
 
@@ -742,6 +744,17 @@ class IQCalc(object):
             Radius, in pixels, where encircled and ensquared energy fractions
             are defined as 1.
 
+        cdelt : None or tuple of (cdelt1, cdelt2)
+            Pixel pitch of detector in X and Y respectively
+
+        coadds : int
+            Number of coadds in the image, defaults to 1
+            Used to scale the background, sky level and brightness values
+
+        ndr : int
+            Number of data readouts per coadd, defaults to 1
+            Used to scale the background, sky level and brightness values
+
         cb_fn : func or `None`
             If applicable, provide a callback function that takes a
             `ginga.misc.Bunch.Bunch` containing the result for each peak.
@@ -762,6 +775,7 @@ class IQCalc(object):
             * ``fwhm_x``, ``fwhm_y``: Fitted FWHM from :meth:`get_fwhm`.
             * ``fwhm``: Overall measure of fwhm as a single value.
             * ``fwhm_radius``: Input FWHM radius.
+            * ``starsize``: Calculated size of object adjusting for pixel pitch (if available in header).
             * ``brightness``: Average peak value based on :meth:`get_fwhm` fits.
             * ``elipse``: A measure of ellipticity.
             * ``x``, ``y``: Input indices of the peak.
@@ -782,9 +796,16 @@ class IQCalc(object):
 
         # Find the median (sky/background) level
         median = float(get_median(data))
+        background = median
         #skylevel = median
         # Old SOSS qualsize() applied this calculation to skylevel
         skylevel = median * self.skylevel_magnification + self.skylevel_offset
+
+        field_divisor = 1.0
+        if coadds > 1 or ndr > 1:
+            field_divisor = float(coadds * ndr)
+            background /= field_divisor
+            skylevel /= field_divisor
 
         # Form a list of objects and their characteristics
         objlist = []
@@ -802,7 +823,7 @@ class IQCalc(object):
                                   (ctr_x,) + tuple(x_res.fit_args[1:]))
                 by = y_res.fit_fn(round(ctr_y),
                                   (ctr_y,) + tuple(y_res.fit_args[1:]))
-                bright = float((bx + by) / 2.0)
+                bright = float((bx + by) / 2.0) / field_divisor
 
             except Exception as e:
                 # Error doing FWHM, skip this object
@@ -838,6 +859,15 @@ class IQCalc(object):
             else:
                 pos = 1.0 - dy2
 
+            # calculate star size from pixel pitch, if known
+            starsize = 0
+            if cdelt is not None:
+                try:
+                    starsize = self.starsize(fwhm_x, cdelt[0],
+                                             fwhm_y, cdelt[1])
+                except Exception as e:
+                    self.logger.debug("Couldn't calculate star size: {}".format(e))
+
             # EE on background subtracted image
             ee_sq_fn = None
             ee_circ_fn = None
@@ -863,9 +893,11 @@ class IQCalc(object):
                               oid_x=oid_x, oid_y=oid_y,
                               fwhm_x=fwhm_x, fwhm_y=fwhm_y,
                               fwhm=fwhm, fwhm_radius=fwhm_radius,
+                              starsize=starsize,
                               brightness=bright, elipse=elipse,
+                              field_divisor=field_divisor,
                               x=int(x), y=int(y),
-                              skylevel=skylevel, background=median,
+                              skylevel=skylevel, background=background,
                               ensquared_energy_fn=ee_sq_fn,
                               encircled_energy_fn=ee_circ_fn)
             objlist.append(obj)
