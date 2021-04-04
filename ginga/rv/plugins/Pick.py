@@ -351,7 +351,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.contour_plot = None
         self.fwhm_plot = None
         self.radial_plot = None
-        self.cuts_plot = None
+        self.cuts_view = None
         self.contour_interp_methods = trcalc.interpolation_methods
 
         # types of pick shapes that can be drawn
@@ -662,32 +662,25 @@ class Pick(GingaPlugin.LocalPlugin):
         # for debugging
         ci.set_name('cuts_plot')
 
-        self.cuts_plot = PlotAide(ci)
+        # prepare this viewer as a plot viewer
+        self.cuts_view = PlotAide(ci)
+        self.cuts_view.setup_standard_frame(title="Cuts",
+                                            warn_y=None, alert_y=None)
+        title = self.cuts_view.get_plot_etc('plot_title')
+        title.format_label = self._format_cuts_label
 
-        bg = gplots.PlotBG(self.cuts_plot, linewidth=2)
-        self.cuts_plot.add_plot_etc(bg)
-
-        x_axis = gplots.XAxis(self.cuts_plot, num_labels=4)
-        self.cuts_plot.add_plot_etc(x_axis)
-
-        y_axis = gplots.YAxis(self.cuts_plot, num_labels=4)
-        self.cuts_plot.add_plot_etc(y_axis)
-
-        title = gplots.PlotTitle(self.cuts_plot, title='Cuts')
-        self.cuts_plot.add_plot_etc(title)
-
-        self.cuts_xsrc = gplots.DataSource(name='X')
-        self.cuts_ysrc = gplots.DataSource(name='Y')
+        # add X and Y data sources. Hereafter, we can just update the data
+        # sources and call update_plots() whenever we have new X and Y arms
         x_acc = np.mean if gplots.have_npi else None
         y_acc = np.nanmax if x_acc else None
         cname1 = self.settings.get('quick_h_cross_color', '#7570b3')
-        self.cuts_plot.add_source(gplots.PlotSource(self.cuts_xsrc,
-                                                    color=cname1, linewidth=2,
-                                                    x_acc=x_acc, y_acc=y_acc))
+        self.cuts_xsrc = gplots.XYPlot(name='X', color=cname1, linewidth=2,
+                                       x_acc=x_acc, y_acc=y_acc)
         cname2 = self.settings.get('quick_v_cross_color', '#1b9e77')
-        self.cuts_plot.add_source(gplots.PlotSource(self.cuts_ysrc,
-                                                    color=cname2, linewidth=2,
-                                                    x_acc=x_acc, y_acc=y_acc))
+        self.cuts_ysrc = gplots.XYPlot(name='Y', color=cname2, linewidth=2,
+                                       x_acc=x_acc, y_acc=y_acc)
+        self.cuts_view.add_plot(self.cuts_xsrc)
+        self.cuts_view.add_plot(self.cuts_ysrc)
 
         ciw = Viewers.GingaViewerWidget(viewer=ci)
         ciw.resize(width, height)
@@ -1036,11 +1029,15 @@ class Pick(GingaPlugin.LocalPlugin):
         vbox3 = Widgets.VBox()
         captions = (
             ('Bg cut', 'button', 'Delta bg:', 'label',
-             'xlbl_delta_bg', 'label', 'Delta bg', 'entry'),
+             'xlbl_delta_bg', 'label', 'Delta bg', 'entryset'),
             ('Sky cut', 'button', 'Delta sky:', 'label',
-             'xlbl_delta_sky', 'label', 'Delta sky', 'entry'),
+             'xlbl_delta_sky', 'label', 'Delta sky', 'entryset'),
             ('Bright cut', 'button', 'Delta bright:', 'label',
-             'xlbl_delta_bright', 'label', 'Delta bright', 'entry'),
+             'xlbl_delta_bright', 'label', 'Delta bright', 'entryset'),
+            ('s1', 'spacer', 'Warning Y:', 'label',
+             'xlbl_warning_y', 'label', 'Warning Y', 'entryset'),
+            ('s2', 'spacer', 'Alert Y:', 'label',
+             'xlbl_alert_y', 'label', 'Alert Y', 'entryset'),
         )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -1051,6 +1048,8 @@ class Pick(GingaPlugin.LocalPlugin):
         b.delta_sky.set_tooltip("Delta to apply to this cut")
         b.bright_cut.set_tooltip("Set image high cut to Sky Level+Brightness")
         b.delta_bright.set_tooltip("Delta to apply to this cut")
+        b.warning_y.set_tooltip("Y warning level for quick mode cuts")
+        b.alert_y.set_tooltip("Y alert level for quick mode cuts")
 
         b.bg_cut.set_enabled(False)
         self.w.btn_bg_cut = b.bg_cut
@@ -1106,6 +1105,11 @@ class Pick(GingaPlugin.LocalPlugin):
             return True
 
         b.delta_bright.add_callback('activated', chg_delta_bright)
+
+        b.warning_y.set_text('')
+        b.xlbl_warning_y.set_text('')
+        b.alert_y.set_text('')
+        b.xlbl_alert_y.set_text('')
 
         vbox3.add_widget(w, stretch=0)
         vbox3.add_widget(Widgets.Label(''), stretch=1)
@@ -1753,7 +1757,7 @@ class Pick(GingaPlugin.LocalPlugin):
     def redo_quick(self):
         vip_img = self.fitsimage.get_vip()
 
-        #self.cuts_plot.clear()
+        #self.cuts_view.clear()
 
         obj = self.pick_obj
         if obj is None:
@@ -1784,14 +1788,19 @@ class Pick(GingaPlugin.LocalPlugin):
         # plot horizontal cut
         xpts = np.arange(len(xarr))
         points = np.array((xpts, xarr)).T
-        self.cuts_xsrc.set_points(points)
+        self.cuts_xsrc.plot(points)
 
         # plot vertical cut
         ypts = np.arange(len(yarr))
         points = np.array((ypts, yarr)).T
-        self.cuts_ysrc.set_points(points)
+        self.cuts_ysrc.plot(points)
 
-        self.cuts_plot.update_plot()
+        self.cuts_view.update_plots()
+
+    def _format_cuts_label(self, lbl, plot_src):
+        lim = plot_src.get_limits('data')
+        y_max = lim[1][1]
+        lbl.text = "{0:}: {1: .4g}".format(plot_src.name, y_max)
 
     def calc_quick(self):
         if self.pick_data is None:
