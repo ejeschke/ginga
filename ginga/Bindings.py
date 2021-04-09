@@ -128,6 +128,8 @@ class ImageViewBindings(object):
             kp_pan_px_center=['shift+home'],
             kp_center=['c', 'pan+c', 'freepan+c'],
             kp_cut_255=['cuts+A'],
+            kp_cut_lo=['cuts+l'],
+            kp_cut_hi=['cuts+h'],
             kp_cut_minmax=['cuts+S'],
             kp_cut_auto=['a', 'cuts+a'],
             kp_autocuts_alg_prev=['cuts+up', 'cuts+b'],
@@ -1307,6 +1309,22 @@ class ImageViewBindings(object):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
             viewer.cut_levels(0.0, 255.0, no_reset=True)
+        return True
+
+    def kp_cut_lo(self, viewer, event, data_x, data_y, msg=True):
+        if self.cancut:
+            msg = self.settings.get('msg_cuts', msg)
+            _, hi = viewer.get_cut_levels()
+            lo = viewer.get_data(data_x, data_y)
+            viewer.cut_levels(lo, hi, no_reset=True)
+        return True
+
+    def kp_cut_hi(self, viewer, event, data_x, data_y, msg=True):
+        if self.cancut:
+            msg = self.settings.get('msg_cuts', msg)
+            lo, _ = viewer.get_cut_levels()
+            hi = viewer.get_data(data_x, data_y)
+            viewer.cut_levels(lo, hi, no_reset=True)
         return True
 
     def kp_cut_minmax(self, viewer, event, data_x, data_y, msg=True):
