@@ -45,7 +45,8 @@ class Plot(Callback.Callbacks):
         self.can = Bunch.Bunch(zoom=False, pan=False)
 
         # For callbacks
-        for name in ['draw-canvas', 'limits-set']:
+        for name in ['draw-canvas', 'limits-set', 'motion',
+                     'button-press', 'key-press', 'scroll']:
             self.enable_callback(name)
 
     def get_figure(self):
@@ -144,15 +145,40 @@ class Plot(Callback.Callbacks):
     def connect_ui(self):
         canvas = self.fig.canvas
         connect = canvas.mpl_connect
-        # This one is not ready for prime time...
-        # connect("motion_notify_event", self.plot_motion_notify)
-        connect("button_press_event", self.plot_button_press)
-        connect("scroll_event", self.plot_scroll)
+        connect("motion_notify_event", self._plot_motion_notify)
+        connect("button_press_event", self._plot_button_press)
+        connect("scroll_event", self._plot_scroll)
+        connect("key_press_event", self._plot_key_press)
 
-    def enable(self, **kwargs):
-        self.can.update(kwargs)
+    def enable(self, pan=False, zoom=False):
+        """If `pan` is True, enable interactive panning in the plot by a
+        middle click.  If `zoom` is True , enable interactive zooming in
+        the plot by scrolling.
+        """
+        self.can.update(dict(pan=pan, zoom=zoom))
+        if pan or zoom:
+            self.connect_ui()
+            if pan:
+                self.add_callback('button-press', self.plot_do_pan)
+            if zoom:
+                self.add_callback('scroll', self.plot_do_zoom)
 
-    def plot_scroll(self, event):
+    def _plot_scroll(self, event):
+        self.make_callback('scroll', event)
+
+    def _plot_button_press(self, event):
+        self.make_callback('button-press', event)
+
+    def _plot_motion_notify(self, event):
+        self.make_callback('motion', event)
+
+    def _plot_key_press(self, event):
+        self.make_callback('key-press', event)
+
+    def plot_do_zoom(self, cb_obj, event):
+        """Can be set as the callback function for the 'scroll'
+        event to zoom the plot.
+        """
         if not self.can.zoom:
             return
         # Matplotlib only gives us the number of steps of the scroll,
@@ -186,23 +212,16 @@ class Plot(Callback.Callbacks):
         height *= self.fig.dpi
         return (width, height)
 
-    def plot_button_press(self, event):
-        if event.button == 1:
-            self.plot_x, self.plot_y = event.xdata, event.ydata
-
-        elif event.button == 2:
+    def plot_do_pan(self, cb_obj, event):
+        """Can be set as the callback function for the 'button-press'
+        event to pan the plot with middle-click.
+        """
+        if event.button == 2:
             if not self.can.pan:
                 return
             self.pan_plot(event.xdata, event.ydata)
 
         return True
-
-    def plot_motion_notify(self, event):
-        if event.button == 1:
-            xdelta = self.plot_x - event.xdata
-            ydelta = self.plot_y - event.ydata
-            pan_x, pan_y = self.plot_x + xdelta, self.plot_y + ydelta
-            self.pan_plot(pan_x, pan_y)
 
     def pan_plot(self, xnew, ynew):
 

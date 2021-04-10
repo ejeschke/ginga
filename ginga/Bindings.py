@@ -829,7 +829,7 @@ class ImageViewBindings(object):
                 loval, hival))
         viewer.cut_levels(loval, hival)
 
-    def _cut_pct(self, viewer, pct, msg=True):
+    def cut_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
         loval, hival = viewer.get_cut_levels()
         spread = hival - loval
@@ -843,9 +843,9 @@ class ImageViewBindings(object):
     def _adjust_cuts(self, viewer, direction, pct, msg=True):
         direction = self.get_direction(direction)
         if direction == 'up':
-            self._cut_pct(viewer, pct, msg=msg)
+            self.cut_pct(viewer, pct, msg=msg)
         elif direction == 'down':
-            self._cut_pct(viewer, -pct, msg=msg)
+            self.cut_pct(viewer, -pct, msg=msg)
 
     def _scale_image(self, viewer, direction, factor, msg=True):
         msg = self.settings.get('msg_zoom', msg)

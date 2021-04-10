@@ -49,6 +49,18 @@ controls are provided in the UI for setting the low and high cut levels
 in the image, as well as for performing an auto cut levels, according to
 the auto cut levels settings in the channel preferences.
 
+You can set cut levels by clicking in the histogram plot:
+
+* left click: set low cut
+* middle click: reset (auto cut levels)
+* right click: set high cut
+
+In addition, you can dynamically adjust the gap between low and high cuts
+by scrolling the wheel in the plot (i.e. the "width" of the histogram plot
+curve).  This has the effect of increasing or decreasing the contrast
+within the image.  The amount that is changed for each wheel click is set
+by the plugin configuration file setting ``scroll_pct``.  The default is 10%.
+
 **User Configuration**
 
 """
@@ -85,13 +97,15 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.settings = prefs.create_category('plugin_Histogram')
         self.settings.add_defaults(draw_then_move=True, num_bins=2048,
                                    hist_color='aquamarine', show_stats=True,
-                                   maxdigits=7)
+                                   maxdigits=7, scroll_pct=0.10)
         self.settings.load(onError='silent')
 
         # Set up histogram control parameters
         self.histcolor = self.settings.get('hist_color', 'aquamarine')
         self.numbins = self.settings.get('num_bins', 2048)
         self.autocuts = AutoCuts.Histogram(self.logger)
+        # percentage to adjust cuts gap when scrolling in histogram
+        self.scroll_pct = self.settings.get('scroll_pct', 0.10)
 
         # for formatting statistics line
         self.show_stats = self.settings.get('show_stats', True)
@@ -140,7 +154,10 @@ class Histogram(GingaPlugin.LocalPlugin):
                                width=400, height=400)
         ax = self.plot.add_axis()
         ax.grid(True)
+        self.plot.add_callback('button-press', self.set_cut_by_click)
+        self.plot.add_callback('scroll', self.adjust_cuts_scroll)
         w = Plot.PlotWidget(self.plot)
+        self.plot.connect_ui()
         w.resize(400, 400)
         paned.add_widget(Widgets.hadjust(w, orientation))
 
@@ -550,6 +567,32 @@ class Histogram(GingaPlugin.LocalPlugin):
 
     def auto_levels(self):
         self.fitsimage.auto_levels()
+
+    def set_cut_by_click(self, plot, event):
+        """Set cut levels by a mouse click in the histogram plot:
+        left: set low cut
+        middle: reset (auto cuts)
+        right: set high cut
+        """
+        data_x = event.xdata
+        lo, hi = self.fitsimage.get_cut_levels()
+        if event.button == 1:
+            lo = data_x
+            self.fitsimage.cut_levels(lo, hi)
+        elif event.button == 2:
+            self.fitsimage.auto_levels()
+        elif event.button == 3:
+            hi = data_x
+            self.fitsimage.cut_levels(lo, hi)
+
+    def adjust_cuts_scroll(self, plot, event):
+        """Adjust the width of the histogram by scrolling.
+        """
+        bm = self.fitsimage.get_bindings()
+        pct = -self.scroll_pct
+        if event.step > 0:
+            pct = -pct
+        bm.cut_pct(self.fitsimage, pct)
 
     def cutset_ext_cb(self, setting, value, fitsimage):
         if not self.gui_up:
