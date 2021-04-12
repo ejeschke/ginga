@@ -90,6 +90,8 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.histtag = None
         # If True, limits X axis to lo/hi cut levels
         self.xlimbycuts = True
+        # percentage to adjust plotting X limits when xlimbycuts is True
+        self.lim_adj_pct = 0.03
         self._split_sizes = [400, 500]
 
         # get Histogram preferences
@@ -390,11 +392,15 @@ class Histogram(GingaPlugin.LocalPlugin):
         # show cut levels
         loval, hival = self.fitsimage.get_cut_levels()
         self.loline = self.plot.ax.axvline(loval, 0.0, 0.99,
-                                           linestyle='-', color='red')
+                                           linestyle='-', color='brown')
         self.hiline = self.plot.ax.axvline(hival, 0.0, 0.99,
                                            linestyle='-', color='green')
         if self.xlimbycuts:
-            self.plot.ax.set_xlim(loval, hival)
+            # user wants "plot by cuts"--adjust plot limits to show only area
+            # between locut and high cut "plus a little" so that lo and hi cut
+            # markers are shown
+            incr = np.log10(np.fabs(self.lim_adj_pct * (hival - loval))) * 10.0
+            self.plot.ax.set_xlim(loval - incr, hival + incr)
 
         # Make x axis labels a little more readable
         ## lbls = self.plot.ax.xaxis.get_ticklabels()
