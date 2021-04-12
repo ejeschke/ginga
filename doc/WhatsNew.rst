@@ -33,6 +33,8 @@ Ver 3.2.0 (unreleased)
 - Fixed an issue where Thumbs plugin might not show initial thumb(s)
   when main window is enlarged to certain sizes
 - Added "orientation" setting to orientable plugins
+- Enhancements to Histogram plugin: ability to click in plot to set low
+  and high cuts levels, scroll plot to expand or contract cuts width
 
 Ver 3.1.0 (2020-07-20)
 ======================
