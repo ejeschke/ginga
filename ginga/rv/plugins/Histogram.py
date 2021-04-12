@@ -399,7 +399,7 @@ class Histogram(GingaPlugin.LocalPlugin):
             # user wants "plot by cuts"--adjust plot limits to show only area
             # between locut and high cut "plus a little" so that lo and hi cut
             # markers are shown
-            incr = np.log10(np.fabs(self.lim_adj_pct * (hival - loval))) * 10.0
+            incr = np.fabs(self.lim_adj_pct * (hival - loval))
             self.plot.ax.set_xlim(loval - incr, hival + incr)
 
         # Make x axis labels a little more readable
