@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import sys
 import numpy as np
 have_npi = False
 try:
@@ -426,7 +427,8 @@ class YAxis(CompoundObject):
             t = Text(0, 0, text=self.title if self.title is not None else '555.55',
                      fontsize=self.fontsize, font=self.font)
             self.title_wd, self.txt_ht = viewer.renderer.get_dimensions(t)
-            t.text = self.format_value(10000000000.123456789)
+            # TODO: not sure this will give us the maximum length of number
+            t.text = self.format_value(sys.float_info.max)
             self.txt_wd, _ = viewer.renderer.get_dimensions(t)
 
         if self.title is not None:

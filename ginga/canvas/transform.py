@@ -676,15 +676,9 @@ class ScaleOffsetTransform(BaseTransform):
 
     def to_(self, ntv_pts):
         ntv_pts = np.asarray(ntv_pts)
-        has_z = (ntv_pts.shape[-1] > 2)
 
-        mpy_pt = [self.x_scale, self.y_scale]
-        if has_z:
-            mpy_pt.append(1.0)
-
-        add_pt = [self.x_offset, self.y_offset]
-        if has_z:
-            add_pt.append(0.0)
+        mpy_pt = np.array([self.x_scale, self.y_scale])
+        add_pt = np.array([self.x_offset, self.y_offset])
 
         ntv_pts = np.add(np.multiply(ntv_pts, mpy_pt), add_pt).astype(np.int)
 
@@ -692,15 +686,9 @@ class ScaleOffsetTransform(BaseTransform):
 
     def from_(self, ntv_pts):
         ntv_pts = np.asarray(ntv_pts)
-        has_z = (ntv_pts.shape[-1] > 2)
 
-        add_pt = [-self.x_offset, -self.y_offset]
-        if has_z:
-            add_pt.append(0.0)
-
-        mpy_pt = [1.0 / self.x_scale, 1.0 / self.y_scale]
-        if has_z:
-            mpy_pt.append(1.0)
+        add_pt = np.array([-self.x_offset, -self.y_offset])
+        mpy_pt = np.array([1.0 / self.x_scale, 1.0 / self.y_scale])
 
         ntv_pts = np.multiply(np.add(ntv_pts, add_pt), mpy_pt)
 
@@ -711,6 +699,36 @@ class ScaleOffsetTransform(BaseTransform):
         self.y_scale = y_scale
         self.x_offset = x_offset
         self.y_offset = y_offset
+
+
+class ClipWindowTransform(BaseTransform):
+    """
+    Clip points to low and high limits.
+    """
+
+    def __init__(self):
+        super(ClipWindowTransform, self).__init__()
+        self.x_lo = 0
+        self.y_lo = 0
+        self.x_hi = 0
+        self.y_hi = 0
+
+    def to_(self, ntv_pts):
+        x_arr, y_arr = np.asarray(ntv_pts).T
+
+        return np.array((x_arr.clip(self.x_lo, self.x_hi),
+                         y_arr.clip(self.y_lo, self.y_hi))).T
+
+    def from_(self, ntv_pts):
+        # it's impossible to reverse a clip transform
+        # just return array as is
+        return ntv_pts
+
+    def set_clip_window(self, x_lo, y_lo, x_hi, y_hi):
+        self.x_lo = x_lo
+        self.y_lo = y_lo
+        self.x_hi = x_hi
+        self.y_hi = y_hi
 
 
 def get_catalog():

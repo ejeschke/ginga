@@ -57,14 +57,17 @@ class PlotAide(Callback.Callbacks):
         vi = viewer
         vi.set_background(self.norm_bg)
 
-        # turn off sanity check on scaling, since it can get wacky with plots
+        # turn off sanity check on scaling, since scaling can get
+        # wild with plots
         t_ = vi.get_settings()
         t_.set(sanity_check_scale=False)
 
         # add special plot transform
         self.plot_tr = transform.ScaleOffsetTransform()
         self.plot_tr.set_plot_scaling(1.0, 1.0, 0, 0)
-        vi.tform['data_to_plot'] = (vi.tform['data_to_native'] + self.plot_tr)
+        self.clip_tr = transform.ClipWindowTransform()
+        vi.tform['data_to_plot'] = (vi.tform['data_to_native'] + self.plot_tr
+                                    + self.clip_tr)
 
         vi.enable_autozoom('off')
         vi.ui_set_active(True)
@@ -173,8 +176,8 @@ class PlotAide(Callback.Callbacks):
         for plotable in self.plot_etc_l:
             plotable.update_elements(self.viewer)
 
-        # for plotable in self.plots.values():
-        #     plotable.recalc(self.viewer)
+        ## for plotable in self.plots.values():
+        ##     plotable.recalc(self.viewer)
 
         self.viewer.redraw(whence=3)
 
@@ -205,7 +208,7 @@ class PlotAide(Callback.Callbacks):
                 plot_src.update_resize(self.viewer, dims)
 
             # finally, redraw everything
-            self.viewer.redraw(whence=0)
+            self.viewer.redraw(whence=3)
 
     def update_plot_bbox(self, x_lo=None, x_hi=None, y_lo=None, y_hi=None):
         _x_lo, _x_hi = self.bbox.T[0].min(), self.bbox.T[0].max()
@@ -232,6 +235,7 @@ class PlotAide(Callback.Callbacks):
         y_lo, y_hi = self.bbox.T[1].min(), self.bbox.T[1].max()
 
         wd, ht = dims[:2]
+        self.clip_tr.set_clip_window(x_lo, y_lo, x_hi, y_hi)
 
         x_pct = (x_hi - x_lo) / wd
         y_pct = (y_hi - y_lo) / ht
@@ -448,6 +452,7 @@ class PlotAide(Callback.Callbacks):
                 self.autoscale_y()
 
             self.update_elements()
+
         return True
 
     def plot_zoom_y_cb(self, plot, direction):
@@ -468,6 +473,7 @@ class PlotAide(Callback.Callbacks):
             self.settings['autoaxis_y'] = 'off'
 
             self.update_elements()
+
         return True
 
     def get_limits(self, lim_type):
