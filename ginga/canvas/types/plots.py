@@ -173,7 +173,7 @@ class XYPlot(CanvasObjectBase):
 
         return viewer.tform['data_to_plot'].to_(points)
 
-    def update_resize(self, viewer):
+    def update_resize(self, viewer, dims):
         """Called when the viewer is resized."""
         self.recalc(viewer)
 
@@ -198,10 +198,10 @@ class XYPlot(CanvasObjectBase):
 
         # plot limits
         self.path.crdmap = self.crdmap
-        try:
+        if len(self.path.points) > 0:
             llur = self.path.get_llur()
             llur = [llur[0:2], llur[2:4]]
-        except IndexError:
+        else:
             llur = [(0.0, 0.0), (0.0, 0.0)]
         return np.asarray(llur)
 
@@ -226,18 +226,21 @@ class XAxis(CompoundObject):
     """
     Plotable object that defines X axis labels and grid lines.
     """
-    def __init__(self, aide, num_labels=4, font='sans', fontsize=10.0):
+    def __init__(self, aide, title=None, num_labels=4, font='sans',
+                 fontsize=10.0):
         super(XAxis, self).__init__()
 
+        self.aide = aide
         self.num_labels = num_labels
+        self.title = title
+        self.kind = 'axis_x'
         self.font = font
         self.fontsize = fontsize
-        self.txt_ht = None
+        self.txt_ht = 0
+        self.title_wd = 0
         self.grid_alpha = 1.0
-        self.axis_alpha = 1.0
-        self.axis_bg_alpha = 0.8
-        self.kind = 'axis_x'
         self.format_value = self._format_value
+        self.pad_px = 5
 
         # add X grid
         self.x_grid = Bunch.Bunch()
@@ -248,22 +251,19 @@ class XAxis(CompoundObject):
                                           coord='window')
             self.objects.append(self.x_grid[i])
 
-        # add X (time) labels
-        self.x_axis_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
-                                           alpha=self.axis_bg_alpha,
-                                           fill=True, fillcolor=aide.axis_bg,
-                                           fillalpha=self.axis_bg_alpha,
-                                           coord='window')
-        self.objects.append(self.x_axis_bg)
-
         self.x_lbls = Bunch.Bunch()
         for i in range(self.num_labels):
             self.x_lbls[i] = aide.dc.Text(0, 0, text='', color='black',
                                           font=self.font,
                                           fontsize=self.fontsize,
-                                          alpha=self.axis_alpha,
                                           coord='window')
             self.objects.append(self.x_lbls[i])
+
+        if self.title is not None:
+            self.x_title = aide.dc.Text(0, 0, text=self.title, color='black',
+                                        font=self.font, fontsize=self.fontsize,
+                                        coord='window')
+            self.objects.append(self.x_title)
 
     def _format_value(self, v):
         """Default formatter for XAxis labels.
@@ -276,47 +276,64 @@ class XAxis(CompoundObject):
 
         Update the XAxis labels to reflect the new values and/or pan/scale.
         """
-        wd, ht = viewer.get_window_size()
-        a = wd // (self.num_labels + 1)
-
         for i in range(self.num_labels):
             lbl = self.x_lbls[i]
-            # calculate evenly spaced interval on X axis in window coords
-            cx, cy = i * a + a, 0
             # get data coord equivalents
-            x, y = self.get_data_xy(viewer, (cx, cy))
+            x, y = self.get_data_xy(viewer, (lbl.x, lbl.y))
             # format according to user's preference
             lbl.text = self.format_value(x)
 
-    def update_resize(self, viewer):
+    def update_bbox(self, viewer, dims):
         """This method is called if the viewer's window is resized.
 
         Update all the XAxis elements to reflect the new dimensions.
         """
-        wd, ht = viewer.get_window_size()
-        if self.txt_ht is None:
+        wd, ht = dims[:2]
+        if self.txt_ht == 0:
             Text = self.x_lbls[0].__class__
-            t = Text(0, 0, text='555.55',
+            t = Text(0, 0, text=self.title if self.title is not None else '555.55',
                      fontsize=self.fontsize, font=self.font)
-            _, self.txt_ht = viewer.renderer.get_dimensions(t)
-        # set X labels/grid as needed
-        a = wd // (self.num_labels + 1)
+            self.title_wd, self.txt_ht = viewer.renderer.get_dimensions(t)
 
+        y_hi = ht
+        if self.title is not None:
+            # remove Y space for X axis title
+            y_hi -= self.txt_ht + 4
+        # remove Y space for X axis labels
+        y_hi -= self.txt_ht + self.pad_px
+
+        self.aide.update_plot_bbox(y_hi=y_hi)
+
+    def update_resize(self, viewer, dims, xy_lim):
+        """This method is called if the viewer's window is resized.
+
+        Update all the XAxis elements to reflect the new dimensions.
+        """
+        x_lo, y_lo, x_hi, y_hi = xy_lim
+        wd, ht = dims[:2]
+
+        # position axis title
+        cx, cy = wd // 2 - self.title_wd // 2, ht - 4
+        if self.title is not None:
+            self.x_title.x = cx
+            self.x_title.y = cy
+            cy = cy - self.txt_ht
+
+        # set X labels/grid as needed
+        # calculate evenly spaced interval on X axis in window coords
+        a = (x_hi - x_lo) // self.num_labels
+        cx = x_lo
         for i in range(self.num_labels):
             lbl = self.x_lbls[i]
-            # calculate evenly spaced interval on Y axis in window coords
-            cx, cy = i * a + a, ht - 4
             lbl.x, lbl.y = cx, cy
             # get data coord equivalents
             x, y = self.get_data_xy(viewer, (cx, cy))
-            # convert to human-understandable time label
+            # convert to formatted label
             lbl.text = self.format_value(x)
             grid = self.x_grid[i]
             grid.x1 = grid.x2 = cx
-            grid.y1, grid.y2 = 0, ht
-
-        self.x_axis_bg.x1, self.x_axis_bg.x2 = 0, wd
-        self.x_axis_bg.y1, self.x_axis_bg.y2 = (ht - self.txt_ht - 4, ht)
+            grid.y1, grid.y2 = y_lo, y_hi
+            cx += a
 
     def set_grid_alpha(self, alpha):
         """Set the transparency (alpha) of the XAxis grid lines.
@@ -326,43 +343,32 @@ class XAxis(CompoundObject):
             grid = self.x_grid[i]
             grid.alpha = alpha
 
-    def set_axis_alpha(self, alpha, bg_alpha=None):
-        """Set the transparency (alpha) of the XAxis labels and background.
-        `alpha` and `bg_alpha` should be between 0.0 and 1.0
-        """
-        if bg_alpha is None:
-            bg_alpha = alpha
-        for i in range(self.num_labels):
-            lbl = self.x_lbls[i]
-            lbl.alpha = alpha
-        self.x_axis_bg.alpha = bg_alpha
-        self.x_axis_bg.fillalpha = bg_alpha
-
     def get_data_xy(self, viewer, pt):
         arr_pts = np.asarray(pt)
         return viewer.tform['data_to_plot'].from_(arr_pts).T[:2]
-
-    @property
-    def height(self):
-        return 0 if self.txt_ht is None else self.txt_ht
 
 
 class YAxis(CompoundObject):
     """
     Plotable object that defines Y axis labels and grid lines.
     """
-    def __init__(self, aide, num_labels=4, font='sans', fontsize=10.0):
+    def __init__(self, aide, title=None, side='right', num_labels=4,
+                 font='sans', fontsize=10.0):
         super(YAxis, self).__init__()
 
-        self.kind = 'axis_y'
+        self.aide = aide
+        self.title = title
+        self.side = side
         self.num_labels = num_labels
+        self.kind = 'axis_y'
         self.font = font
         self.fontsize = fontsize
-        self.txt_wd = None
+        self.title_wd = 0
+        self.txt_wd = 0
+        self.txt_ht = 0
         self.grid_alpha = 1.0
-        self.axis_alpha = 1.0
-        self.axis_bg_alpha = 0.8
         self.format_value = self._format_value
+        self.pad_px = 4
 
         # add Y grid
         self.y_grid = Bunch.Bunch()
@@ -373,22 +379,23 @@ class YAxis(CompoundObject):
                                           coord='window')
             self.objects.append(self.y_grid[i])
 
-        # add Y axis
-        self.y_axis_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
-                                           alpha=self.axis_bg_alpha,
-                                           fill=True, fillcolor=aide.axis_bg,
-                                           fillalpha=self.axis_bg_alpha,
-                                           coord='window')
-        self.objects.append(self.y_axis_bg)
-
+        # Y grid (tick) labels
         self.y_lbls = Bunch.Bunch()
         for i in range(self.num_labels):
             self.y_lbls[i] = aide.dc.Text(0, 0, text='', color='black',
                                           font=self.font,
                                           fontsize=self.fontsize,
-                                          alpha=self.axis_alpha,
                                           coord='window')
             self.objects.append(self.y_lbls[i])
+
+        # Y title
+        if self.title is not None:
+            self.y_title = aide.dc.Text(0, 0, text=self.title, color='black',
+                                        font=self.font,
+                                        fontsize=self.fontsize,
+                                        rot_deg=90.0,
+                                        coord='window')
+            self.objects.append(self.y_title)
 
     def _format_value(self, v):
         """Default formatter for YAxis labels.
@@ -402,63 +409,76 @@ class YAxis(CompoundObject):
         Update the YAxis labels to reflect the new values and/or pan/scale.
         """
         # set Y labels/grid as needed
-        wd, ht = viewer.get_window_size()
-        a = ht // (self.num_labels + 1)
-
         for i in range(self.num_labels):
             lbl = self.y_lbls[i]
-            # calculate evenly spaced interval on Y axis in window coords
-            cx, cy = 0, i * a + a
             # get data coord equivalents
-            t, y = self.get_data_xy(viewer, (cx, cy))
-            # now round data Y to nearest int
-            ## y = round(y)
-            ## # and convert back to canvas coord--that is our line/label cx/cy
-            ## _, cy = viewer.get_canvas_xy(0, y)
-            #lbl.text = "%.0f%%" % y
-            lbl.text = "%.2f" % y
+            x, y = self.get_data_xy(viewer, (lbl.x, lbl.y))
+            lbl.text = self.format_value(y)
 
-    def update_resize(self, viewer):
+    def update_bbox(self, viewer, dims):
         """This method is called if the viewer's window is resized.
 
         Update all the YAxis elements to reflect the new dimensions.
         """
-        wd, ht = viewer.get_window_size()
-        if self.txt_wd is None:
+        wd, ht = dims[:2]
+        if self.txt_wd == 0:
             Text = self.y_lbls[0].__class__
-            t = Text(0, 0, text='555.55',
+            t = Text(0, 0, text=self.title if self.title is not None else '555.55',
                      fontsize=self.fontsize, font=self.font)
+            self.title_wd, self.txt_ht = viewer.renderer.get_dimensions(t)
+            t.text = self.format_value(10000000000.123456789)
             self.txt_wd, _ = viewer.renderer.get_dimensions(t)
-        # set Y labels/grid as needed
-        a = ht // (self.num_labels + 1)
 
+        if self.title is not None:
+            x_lo = self.txt_ht + 2 + self.pad_px
+        else:
+            x_lo = 0
+        x_hi = wd - (self.txt_wd + 4) - self.pad_px
+
+        self.aide.update_plot_bbox(x_lo=x_lo, x_hi=x_hi)
+
+    def update_resize(self, viewer, dims, xy_lim):
+        """This method is called if the viewer's window is resized.
+
+        Update all the YAxis elements to reflect the new dimensions.
+        """
+        x_lo, y_lo, x_hi, y_hi = xy_lim
+        wd, ht = dims[:2]
+
+        # position axis title
+        cx = self.txt_ht + 2
+        cy = ht // 2 + self.title_wd // 2
+        if self.title is not None:
+            self.y_title.x = cx
+            self.y_title.y = cy
+
+        cx = x_hi + self.pad_px
+        cy = y_hi
+        # set Y labels/grid as needed
+        a = (y_hi - y_lo) // self.num_labels
         for i in range(self.num_labels):
             lbl = self.y_lbls[i]
             # calculate evenly spaced interval on Y axis in window coords
-            cx, cy = wd - self.txt_wd, i * a + a
+            lbl.x, lbl.y = cx, cy
             # get data coord equivalents
             x, y = self.get_data_xy(viewer, (cx, cy))
-            # now round data Y to nearest int
-            ## y = round(y)
-            ## # and convert back to canvas coord--that is our line/label cx/cy
-            ## _, cy = viewer.get_canvas_xy(0, y)
-            lbl.x, lbl.y = cx, cy
-            #lbl.text = "%.0f%%" % y
             lbl.text = self.format_value(y)
             grid = self.y_grid[i]
-            grid.x1, grid.x2 = 0, wd
+            grid.x1, grid.x2 = x_lo, x_hi
             grid.y1 = grid.y2 = cy
+            cy -= a
 
-        self.y_axis_bg.x1, self.y_axis_bg.x2 = wd - self.txt_wd, wd
-        self.y_axis_bg.y1, self.y_axis_bg.y2 = 0, ht
+    def set_grid_alpha(self, alpha):
+        """Set the transparency (alpha) of the XAxis grid lines.
+        `alpha` should be between 0.0 and 1.0
+        """
+        for i in range(self.num_labels):
+            grid = self.y_grid[i]
+            grid.alpha = alpha
 
     def get_data_xy(self, viewer, pt):
         arr_pts = np.asarray(pt)
         return viewer.tform['data_to_plot'].from_(arr_pts).T[:2]
-
-    @property
-    def width(self):
-        return 0 if self.txt_wd is None else self.txt_wd
 
 
 class PlotBG(CompoundObject):
@@ -484,7 +504,6 @@ class PlotBG(CompoundObject):
         self.norm_bg = 'white'
         self.warn_bg = 'lightyellow'
         self.alert_bg = 'mistyrose2'
-        self.fudge_px = 5
         self.kind = 'plot_bg'
 
         # add a backdrop that we can change color for visual warnings
@@ -538,48 +557,55 @@ class PlotBG(CompoundObject):
 
         Update the XAxis labels to reflect the new values and/or pan/scale.
         """
+        y_lo, y_hi = self.aide.bbox.T[1].min(), self.aide.bbox.T[1].max()
         # adjust warning/alert lines
         if self.warn_y is not None:
             x, y = self.get_canvas_xy(viewer, (0, self.warn_y))
+            if y_lo <= y <= y_hi:
+                self.ln_warn.alpha = 1.0
+            else:
+                # y out of range of plot area, so make it invisible
+                self.ln_warn.alpha = 0.0
+
             self.ln_warn.y1 = self.ln_warn.y2 = y
 
         if self.alert_y is not None:
             x, y = self.get_canvas_xy(viewer, (0, self.alert_y))
+            if y_lo <= y <= y_hi:
+                self.ln_alert.alpha = 1.0
+            else:
+                # y out of range of plot area, so make it invisible
+                self.ln_alert.alpha = 0.0
+
             self.ln_alert.y1 = self.ln_alert.y2 = y
 
         self.check_warning()
 
-    def update_resize(self, viewer):
+    def update_bbox(self, viewer, dims):
+        # this object does not adjust the plot bbox at all
+        pass
+
+    def update_resize(self, viewer, dims, xy_lim):
         """This method is called if the viewer's window is resized.
 
         Update all the PlotBG elements to reflect the new dimensions.
         """
         # adjust bg to window size, in case it changed
-        wd, ht = viewer.get_window_size()
-        title = self.aide.plot_etc_d.get('plot_title', None)
-        y_lo = 0 if title is None else title.height
-        y_lo += self.fudge_px
-        x_axis = self.aide.plot_etc_d.get('axis_x', None)
-        y_hi = ht if x_axis is None else ht - x_axis.height
-        y_hi -= self.fudge_px
-        y_pct = (y_hi - y_lo) / ht
-        y_axis = self.aide.plot_etc_d.get('axis_y', None)
-        x_hi = wd if y_axis is None else wd - y_axis.width
-        x_pct = x_hi / wd
-        self.aide.plot_tr.set_plot_scaling(x_pct, y_pct, 0, y_lo)
+        x_lo, y_lo, x_hi, y_hi = xy_lim
+        wd, ht = dims[:2]
 
-        self.bg.x1, self.bg.y1 = 0, y_lo
+        self.bg.x1, self.bg.y1 = x_lo, y_lo
         self.bg.x2, self.bg.y2 = x_hi, y_hi
 
         # adjust warning/alert lines
         if self.warn_y is not None:
             x, y = self.get_canvas_xy(viewer, (0, self.warn_y))
-            self.ln_warn.x1, self.ln_warn.x2 = 0, wd
+            self.ln_warn.x1, self.ln_warn.x2 = x_lo, x_hi
             self.ln_warn.y1 = self.ln_warn.y2 = y
 
         if self.alert_y is not None:
             x, y = self.get_canvas_xy(viewer, (0, self.alert_y))
-            self.ln_alert.x1, self.ln_alert.x2 = 0, wd
+            self.ln_alert.x1, self.ln_alert.x2 = x_lo, x_hi
             self.ln_alert.y1 = self.ln_alert.y2 = y
 
     def get_canvas_xy(self, viewer, pt):
@@ -598,25 +624,15 @@ class PlotTitle(CompoundObject):
         self.font = font
         self.fontsize = fontsize
         self.title = title
-        self.txt_ht = None
-        self.title_alpha = 1.0
-        self.title_bg_alpha = 1.0
+        self.txt_ht = 0
         self.kind = 'plot_title'
         self.format_label = self._format_label
-
-        # add X (time) labels
-        self.title_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
-                                          alpha=self.title_bg_alpha,
-                                          fill=True, fillcolor=aide.axis_bg,
-                                          fillalpha=self.title_bg_alpha,
-                                          coord='window')
-        self.objects.append(self.title_bg)
+        self.pad_px = 5
 
         self.lbls = Bunch.Bunch()
         self.lbls[0] = aide.dc.Text(0, 0, text=title, color='black',
                                     font=self.font,
                                     fontsize=self.fontsize,
-                                    alpha=self.title_alpha,
                                     coord='window')
         self.objects.append(self.lbls[0])
 
@@ -637,19 +653,30 @@ class PlotTitle(CompoundObject):
                 lbl = self.lbls[j]
                 self.format_label(lbl, plot_src)
 
-    def update_resize(self, viewer):
+    def update_bbox(self, viewer, dims):
         """This method is called if the viewer's window is resized.
 
         Update all the PlotTitle elements to reflect the new dimensions.
         """
-        if self.txt_ht is None:
+        wd, ht = dims[:2]
+        if self.txt_ht == 0:
             _, self.txt_ht = viewer.renderer.get_dimensions(self.lbls[0])
-            #self.title.x, self.title.y = 20, 10 + self.txt_ht
+
+        y_lo = self.txt_ht + self.pad_px
+
+        self.aide.update_plot_bbox(y_lo=y_lo)
+
+    def update_resize(self, viewer, dims, xy_lim):
+        """This method is called if the viewer's window is resized.
+
+        Update all the PlotTitle elements to reflect the new dimensions.
+        """
+        x_lo, y_lo, x_hi, y_hi = xy_lim
+        wd, ht = dims[:2]
 
         nplots = len(list(self.aide.plots.keys())) + 1
-        wd, ht = viewer.get_window_size()
 
-        # set X labels/grid as needed
+        # set title labels as needed
         a = wd // (nplots + 1)
 
         cx, cy = 4, self.txt_ht
@@ -657,8 +684,8 @@ class PlotTitle(CompoundObject):
         lbl.x, lbl.y = cx, cy
 
         for i, plot_src in enumerate(self.aide.plots.values()):
+            cx += a
             j = i + 1
-            cx, cy = j * a + 4, self.txt_ht
             if j in self.lbls:
                 lbl = self.lbls[j]
                 lbl.x, lbl.y = cx, cy
@@ -669,18 +696,10 @@ class PlotTitle(CompoundObject):
                 lbl = Text(cx, cy, text=text, color=color,
                            font=self.font,
                            fontsize=self.fontsize,
-                           alpha=self.title_alpha,
                            coord='window')
                 self.lbls[j] = lbl
                 self.objects.append(lbl)
                 lbl.crdmap = self.lbls[0].crdmap
-
-        self.title_bg.x1, self.title_bg.x2 = 0, wd
-        self.title_bg.y1, self.title_bg.y2 = (0, self.txt_ht + 4)
-
-    @property
-    def height(self):
-        return 0 if self.txt_ht is None else self.txt_ht
 
 
 class CalcPlot(XYPlot):

@@ -665,6 +665,8 @@ class Pick(GingaPlugin.LocalPlugin):
         # prepare this viewer as a plot viewer
         self.cuts_view = PlotAide(ci)
         self.cuts_view.setup_standard_frame(title="Cuts",
+                                            x_title="Pixel Index",
+                                            y_title="Pixel Value",
                                             warn_y=None, alert_y=None)
         title = self.cuts_view.get_plot_etc('plot_title')
         title.format_label = self._format_cuts_label

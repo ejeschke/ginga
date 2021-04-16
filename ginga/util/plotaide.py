@@ -38,6 +38,7 @@ class PlotAide(Callback.Callbacks):
         self.norm_fg = viewer.get_fg()
         self.axis_bg = 'gray90'
         self.grid_fg = 'gray30'
+        self.bbox = np.array([(0, 0), (0, 0), (0, 0), (0, 0)])
 
         if settings is None:
             settings = Settings.SettingGroup()
@@ -61,7 +62,7 @@ class PlotAide(Callback.Callbacks):
         t_.set(sanity_check_scale=False)
 
         # add special plot transform
-        self.plot_tr = ScaleOffsetTransform(vi)
+        self.plot_tr = transform.ScaleOffsetTransform()
         self.plot_tr.set_plot_scaling(1.0, 1.0, 0, 0)
         vi.tform['data_to_plot'] = (vi.tform['data_to_native'] + self.plot_tr)
 
@@ -148,6 +149,14 @@ class PlotAide(Callback.Callbacks):
 
         self.viewer.set_limits(limits)
         self.viewer.set_pan((x1 + x2) * 0.5, (y1 + y2) * 0.5)
+        self.update_plots()
+
+    def delete_plot(self, plot):
+        name = plot.name
+        del self.plots[name]
+
+        self.canvas.delete_object_by_tag(name)
+        self.update_plots()
 
     def get_plot(self, name):
         return self.plots[name]
@@ -164,16 +173,72 @@ class PlotAide(Callback.Callbacks):
         for plotable in self.plot_etc_l:
             plotable.update_elements(self.viewer)
 
+        # for plotable in self.plots.values():
+        #     plotable.recalc(self.viewer)
+
         self.viewer.redraw(whence=3)
 
     def update_resize(self):
-        for plotable in self.plot_etc_l:
-            plotable.update_resize(self.viewer)
+        # upon a resize, at first we redefine the plot bbox to encompass
+        # the entire viewer area
+        dims = self.viewer.get_window_size()
+        wd, ht = dims[:2]
+        # bbox is (LL, LR, UR, UL) in typical window coordinates
+        self.bbox = np.array([(0, ht), (wd, ht), (wd, 0), (0, 0)])
 
-        for plot_src in self.plots.values():
-            plot_src.update_resize(self.viewer)
+        with self.viewer.suppress_redraw:
+            # update all non-plot elements: axes, title, bg, etc
+            # after this the plot bbox will have been redefined
+            for plotable in self.plot_etc_l:
+                plotable.update_bbox(self.viewer, dims)
 
-        self.viewer.redraw(whence=0)
+            # update the plot transform based on the new plot bbox
+            xy_lim = self.recalc_transform(dims)
+
+            # second pass to allow non-plot elements to position their
+            # components now that plox bbox is known
+            for plotable in self.plot_etc_l:
+                plotable.update_resize(self.viewer, dims, xy_lim)
+
+            # now update all plots, due to the new transform
+            for plot_src in self.plots.values():
+                plot_src.update_resize(self.viewer, dims)
+
+            # finally, redraw everything
+            self.viewer.redraw(whence=0)
+
+    def update_plot_bbox(self, x_lo=None, x_hi=None, y_lo=None, y_hi=None):
+        _x_lo, _x_hi = self.bbox.T[0].min(), self.bbox.T[0].max()
+        _y_lo, _y_hi = self.bbox.T[1].min(), self.bbox.T[1].max()
+
+        if x_lo is not None:
+            _x_lo = x_lo
+        if x_hi is not None:
+            _x_hi = x_hi
+        if y_lo is not None:
+            _y_lo = y_lo
+        if y_hi is not None:
+            _y_hi = y_hi
+
+        # just in case caller got any of these mixed up
+        x_lo, x_hi = min(_x_lo, _x_hi), max(_x_lo, _x_hi)
+        y_lo, y_hi = min(_y_lo, _y_hi), max(_y_lo, _y_hi)
+
+        self.bbox = np.array([(_x_lo, _y_hi), (_x_hi, _y_hi),
+                              (_x_hi, _y_lo), (_x_lo, _y_lo)])
+
+    def recalc_transform(self, dims):
+        x_lo, x_hi = self.bbox.T[0].min(), self.bbox.T[0].max()
+        y_lo, y_hi = self.bbox.T[1].min(), self.bbox.T[1].max()
+
+        wd, ht = dims[:2]
+
+        x_pct = (x_hi - x_lo) / wd
+        y_pct = (y_hi - y_lo) / ht
+
+        self.plot_tr.set_plot_scaling(x_pct, y_pct, x_lo, y_lo)
+
+        return (x_lo, y_lo, x_hi, y_hi)
 
     def set_limits(self, limits):
         self.viewer.set_limits(limits)
@@ -414,73 +479,25 @@ class PlotAide(Callback.Callbacks):
             y_vals.append(limits.T[1])
         x_vals = np.array(x_vals).flatten()
         y_vals = np.array(y_vals).flatten()
+        if len(x_vals) == 0:
+            return np.array([(0.0, 0.0), (0.0, 0.0)])
+
         return np.array([(x_vals.min(), y_vals.min()),
                          (x_vals.max(), y_vals.max())])
 
-    def setup_standard_frame(self, title='', num_x_labels=4, num_y_labels=4,
+    def setup_standard_frame(self, title='', x_title=None, y_title=None,
+                             num_x_labels=4, num_y_labels=4,
                              warn_y=None, alert_y=None):
         from ginga.canvas.types import plots as gplots
 
         p_bg = gplots.PlotBG(self, linewidth=2, warn_y=warn_y, alert_y=alert_y)
         self.add_plot_etc(p_bg)
 
-        p_title = gplots.PlotTitle(self, title=title)
-        self.add_plot_etc(p_title)
-
-        p_x_axis = gplots.XAxis(self, num_labels=num_x_labels)
+        p_x_axis = gplots.XAxis(self, title=x_title, num_labels=num_x_labels)
         self.add_plot_etc(p_x_axis)
 
-        p_y_axis = gplots.YAxis(self, num_labels=num_y_labels)
+        p_y_axis = gplots.YAxis(self, title=y_title, num_labels=num_y_labels)
         self.add_plot_etc(p_y_axis)
 
-
-class ScaleOffsetTransform(transform.BaseTransform):
-    """
-    A custom transform used for ginga.canvas.types.plots canvas objects .
-    """
-
-    def __init__(self, viewer):
-        super(ScaleOffsetTransform, self).__init__()
-        self.viewer = viewer
-        self.x_scale = 1.0
-        self.y_scale = 1.0
-        self.x_offset = 0
-        self.y_offset = 0
-
-    def to_(self, ntv_pts):
-        ntv_pts = np.asarray(ntv_pts)
-        has_z = (ntv_pts.shape[-1] > 2)
-
-        mpy_pt = [self.x_scale, self.y_scale]
-        if has_z:
-            mpy_pt.append(1.0)
-
-        add_pt = [self.x_offset, self.y_offset]
-        if has_z:
-            add_pt.append(0.0)
-
-        ntv_pts = np.add(np.multiply(ntv_pts, mpy_pt), add_pt).astype(np.int)
-
-        return ntv_pts
-
-    def from_(self, ntv_pts):
-        ntv_pts = np.asarray(ntv_pts)
-        has_z = (ntv_pts.shape[-1] > 2)
-
-        add_pt = [-self.x_offset, -self.y_offset]
-        if has_z:
-            add_pt.append(0.0)
-
-        mpy_pt = [1.0 / self.x_scale, 1.0 / self.y_scale]
-        if has_z:
-            mpy_pt.append(1.0)
-
-        ntv_pts = np.multiply(np.add(ntv_pts, add_pt), mpy_pt)
-
-        return ntv_pts
-
-    def set_plot_scaling(self, x_scale, y_scale, x_offset, y_offset):
-        self.x_scale = x_scale
-        self.y_scale = y_scale
-        self.x_offset = x_offset
-        self.y_offset = y_offset
+        p_title = gplots.PlotTitle(self, title=title)
+        self.add_plot_etc(p_title)
