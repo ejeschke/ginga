@@ -38,6 +38,9 @@ class PlotAide(Callback.Callbacks):
         self.norm_fg = viewer.get_fg()
         self.axis_bg = 'gray90'
         self.grid_fg = 'gray30'
+        # bbox for the plot area (a subset of the ginga viewer window)
+        # is (LL, LR, UR, UL) in typical window coordinates. This will
+        # be adjusted later in the resize callbacks
         self.bbox = np.array([(0, 0), (0, 0), (0, 0), (0, 0)])
 
         if settings is None:
@@ -65,9 +68,9 @@ class PlotAide(Callback.Callbacks):
         # add special plot transform
         self.plot_tr = transform.ScaleOffsetTransform()
         self.plot_tr.set_plot_scaling(1.0, 1.0, 0, 0)
-        self.clip_tr = transform.ClipWindowTransform()
-        vi.tform['data_to_plot'] = (vi.tform['data_to_native'] + self.plot_tr
-                                    + self.clip_tr)
+        #self.clip_tr = transform.ClipWindowTransform()
+        vi.tform['data_to_plot'] = (vi.tform['data_to_native'] + self.plot_tr)
+                                    #+ self.clip_tr)
 
         vi.enable_autozoom('off')
         vi.ui_set_active(True)
@@ -170,7 +173,7 @@ class PlotAide(Callback.Callbacks):
         self.adjust_view()
 
         et = time.time()
-        self.logger.debug("%.5f sec to update plot" % (et - st))
+        self.logger.info("%.5f sec to update plot" % (et - st))
 
     def update_elements(self):
         for plotable in self.plot_etc_l:
@@ -235,7 +238,7 @@ class PlotAide(Callback.Callbacks):
         y_lo, y_hi = self.bbox.T[1].min(), self.bbox.T[1].max()
 
         wd, ht = dims[:2]
-        self.clip_tr.set_clip_window(x_lo, y_lo, x_hi, y_hi)
+        #self.clip_tr.set_clip_window(x_lo, y_lo, x_hi, y_hi)
 
         x_pct = (x_hi - x_lo) / wd
         y_pct = (y_hi - y_lo) / ht
@@ -385,11 +388,17 @@ class PlotAide(Callback.Callbacks):
         self.adjust_view()
 
     def adjust_view(self):
+        limits = self.get_limits('data')
+
         with self.viewer.suppress_redraw:
+            self.viewer.set_limits(limits)
+
             if not self._scaling_x and self.settings['autoaxis_x'] == 'on':
                 self.autoscale_x()
-            elif not self._panning_x and self.settings['autopan_x'] == 'on':
-                self.autopan_x()
+            else:
+                if not self._panning_x and self.settings['autopan_x'] == 'on':
+                    self.autopan_x()
+
             if not self._scaling_y and self.settings['autoaxis_y'] == 'on':
                 self.autoscale_y()
 

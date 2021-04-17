@@ -120,7 +120,6 @@ class XYPlot(CanvasObjectBase):
         """Called when recalculating our path's points.
         """
         bbox = viewer.get_pan_rect()
-        #bbox = self.get_visible_bbox(bbox)
         if bbox is None:
             self.path.points = []
             return
@@ -252,6 +251,11 @@ class XAxis(CompoundObject):
                                           coord='window')
             self.objects.append(self.x_grid[i])
 
+        self.x_axis_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
+                                           fill=True, fillcolor=aide.axis_bg,
+                                           coord='window')
+        self.objects.append(self.x_axis_bg)
+
         self.x_lbls = Bunch.Bunch()
         for i in range(self.num_labels):
             self.x_lbls[i] = aide.dc.Text(0, 0, text='', color='black',
@@ -336,6 +340,9 @@ class XAxis(CompoundObject):
             grid.y1, grid.y2 = y_lo, y_hi
             cx += a
 
+        self.x_axis_bg.x1, self.x_axis_bg.x2 = 0, wd
+        self.x_axis_bg.y1, self.x_axis_bg.y2 = y_hi, ht
+
     def set_grid_alpha(self, alpha):
         """Set the transparency (alpha) of the XAxis grid lines.
         `alpha` should be between 0.0 and 1.0
@@ -379,6 +386,18 @@ class YAxis(CompoundObject):
                                           alpha=self.grid_alpha,
                                           coord='window')
             self.objects.append(self.y_grid[i])
+
+        # bg for RHS Y axis labels
+        self.y_axis_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
+                                           fill=True, fillcolor=aide.axis_bg,
+                                           coord='window')
+        self.objects.append(self.y_axis_bg)
+
+        # bg for LHS Y axis title
+        self.y_axis_bg2 = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
+                                            fill=True, fillcolor=aide.axis_bg,
+                                            coord='window')
+        self.objects.append(self.y_axis_bg2)
 
         # Y grid (tick) labels
         self.y_lbls = Bunch.Bunch()
@@ -469,6 +488,11 @@ class YAxis(CompoundObject):
             grid.x1, grid.x2 = x_lo, x_hi
             grid.y1 = grid.y2 = cy
             cy -= a
+
+        self.y_axis_bg.x1, self.y_axis_bg.x2 = x_hi, wd
+        self.y_axis_bg.y1, self.y_axis_bg.y2 = y_lo, y_hi
+        self.y_axis_bg2.x1, self.y_axis_bg2.x2 = 0, x_lo
+        self.y_axis_bg2.y1, self.y_axis_bg2.y2 = y_lo, y_hi
 
     def set_grid_alpha(self, alpha):
         """Set the transparency (alpha) of the XAxis grid lines.
@@ -631,6 +655,11 @@ class PlotTitle(CompoundObject):
         self.format_label = self._format_label
         self.pad_px = 5
 
+        self.title_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
+                                          fill=True, fillcolor=aide.axis_bg,
+                                          coord='window')
+        self.objects.append(self.title_bg)
+
         self.lbls = Bunch.Bunch()
         self.lbls[0] = aide.dc.Text(0, 0, text=title, color='black',
                                     font=self.font,
@@ -703,6 +732,8 @@ class PlotTitle(CompoundObject):
                 self.objects.append(lbl)
                 lbl.crdmap = self.lbls[0].crdmap
 
+        self.title_bg.x1, self.title_bg.x2 = 0, wd
+        self.title_bg.y1, self.title_bg.y2 = 0, y_lo
 
 class CalcPlot(XYPlot):
 
