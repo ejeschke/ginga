@@ -42,6 +42,7 @@ class PlotAide(Callback.Callbacks):
         # is (LL, LR, UR, UL) in typical window coordinates. This will
         # be adjusted later in the resize callbacks
         self.bbox = np.array([(0, 0), (0, 0), (0, 0), (0, 0)])
+        self.llur = (0, 0, 0, 0)
 
         if settings is None:
             settings = Settings.SettingGroup()
@@ -54,6 +55,7 @@ class PlotAide(Callback.Callbacks):
         self._panning_x = False
         self._scaling_y = False
         self._scaling_x = False
+        self._adjusting = False
 
         self.viewer = viewer
         # configure the ginga viewer for a plot
@@ -68,9 +70,7 @@ class PlotAide(Callback.Callbacks):
         # add special plot transform
         self.plot_tr = transform.ScaleOffsetTransform()
         self.plot_tr.set_plot_scaling(1.0, 1.0, 0, 0)
-        #self.clip_tr = transform.ClipWindowTransform()
         vi.tform['data_to_plot'] = (vi.tform['data_to_native'] + self.plot_tr)
-                                    #+ self.clip_tr)
 
         vi.enable_autozoom('off')
         vi.ui_set_active(True)
@@ -149,12 +149,16 @@ class PlotAide(Callback.Callbacks):
         plot_bg = self.plot_etc_d.get('plot_bg', None)
         self.canvas.raise_object(plot, aboveThis=plot_bg)
 
+        for plotable in self.plot_etc_l:
+            plotable.add_plot(self.viewer, plot)
+
         limits = self.get_limits('data')
         x1, y1 = limits[0][:2]
         x2, y2 = limits[1][:2]
 
         self.viewer.set_limits(limits)
         self.viewer.set_pan((x1 + x2) * 0.5, (y1 + y2) * 0.5)
+
         self.update_plots()
 
     def delete_plot(self, plot):
@@ -162,6 +166,10 @@ class PlotAide(Callback.Callbacks):
         del self.plots[name]
 
         self.canvas.delete_object_by_tag(name)
+
+        for plotable in self.plot_etc_l:
+            plotable.delete_plot(self.viewer, plot)
+
         self.update_plots()
 
     def get_plot(self, name):
@@ -173,16 +181,14 @@ class PlotAide(Callback.Callbacks):
         self.adjust_view()
 
         et = time.time()
-        self.logger.info("%.5f sec to update plot" % (et - st))
+        self.logger.debug("%.5f sec to update plot" % (et - st))
 
     def update_elements(self):
-        for plotable in self.plot_etc_l:
-            plotable.update_elements(self.viewer)
+        with self.viewer.suppress_redraw:
+            for plotable in self.plot_etc_l:
+                plotable.update_elements(self.viewer)
 
-        ## for plotable in self.plots.values():
-        ##     plotable.recalc(self.viewer)
-
-        self.viewer.redraw(whence=3)
+            self.viewer.redraw(whence=3)
 
     def update_resize(self):
         # upon a resize, at first we redefine the plot bbox to encompass
@@ -244,11 +250,16 @@ class PlotAide(Callback.Callbacks):
         y_pct = (y_hi - y_lo) / ht
 
         self.plot_tr.set_plot_scaling(x_pct, y_pct, x_lo, y_lo)
+        self.llur = (x_lo, y_lo, x_hi, y_hi)
 
-        return (x_lo, y_lo, x_hi, y_hi)
+        return self.llur
 
     def set_limits(self, limits):
         self.viewer.set_limits(limits)
+
+    def get_pan_rect(self):
+        #return self.viewer.tform['data_to_plot'].from_(self.bbox)
+        return self.viewer.get_pan_rect()
 
     def scale_y(self, y_lo, y_hi):
         """Scale the plot in the Y direction so that `y_lo` and `y_hi`
@@ -268,7 +279,8 @@ class PlotAide(Callback.Callbacks):
 
     def autoscale_y(self):
         # establish range of current Y plot
-        pl = self.get_limits(self.settings['autoaxis_y_mode'])
+        mode = self.settings['autoaxis_y_mode']
+        pl = self.get_limits(mode)
 
         y_lo, y_hi = pl[0][1], pl[1][1]
 
@@ -388,21 +400,42 @@ class PlotAide(Callback.Callbacks):
         self.adjust_view()
 
     def adjust_view(self):
-        limits = self.get_limits('data')
+        if self._adjusting:
+            return
+        self._adjusting = True
+        try:
+            limits = self.get_limits('data')
 
-        with self.viewer.suppress_redraw:
-            self.viewer.set_limits(limits)
+            with self.viewer.suppress_redraw:
+                # set limits to combined data limits of all plots in this
+                # viewer
+                self.viewer.set_limits(limits)
 
-            if not self._scaling_x and self.settings['autoaxis_x'] == 'on':
-                self.autoscale_x()
-            else:
-                if not self._panning_x and self.settings['autopan_x'] == 'on':
-                    self.autopan_x()
+                # X limits may be adjusted by autoscaling X axis or
+                # autopanning to most recent data
+                if not self._scaling_x and self.settings['autoaxis_x'] == 'on':
+                    self.autoscale_x()
+                else:
+                    if not self._panning_x and self.settings['autopan_x'] == 'on':
+                        self.autopan_x()
 
-            if not self._scaling_y and self.settings['autoaxis_y'] == 'on':
-                self.autoscale_y()
+                # recalculate plot points based on new X limits
+                #lim = self.viewer.get_limits()
+                rect = self.get_pan_rect()
+                x_lo, x_hi = rect[0][0], rect[2][0]
 
-            self.update_elements()
+                for plot_src in self.plots.values():
+                    plot_src.calc_points(self.viewer, x_lo, x_hi)
+
+                # Y limits may be adjusted by autoscaling Y axis
+                if not self._scaling_y and self.settings['autoaxis_y'] == 'on':
+                    self.autoscale_y()
+
+                # finally, update plot elements to match adjustments
+                self.update_elements()
+
+        finally:
+            self._adjusting = False
 
     def adjust_resize(self):
         with self.viewer.suppress_redraw:
@@ -420,7 +453,9 @@ class PlotAide(Callback.Callbacks):
 
     def _pan_cb(self, settings, pan_pos):
         """Called when the user pans our particular plot viewer."""
-        self.adjust_view()
+        if not (self._panning_x or self._scaling_x or self._scaling_y or
+                self._adjusting):
+            self.adjust_view()
 
     def scroll_cb(self, viewer, event):
         direction = self.bd.get_direction(event.direction)
@@ -455,12 +490,7 @@ class PlotAide(Callback.Callbacks):
                 self.viewer.onscreen_message("Autoscale X OFF", delay=1.0)
             self.settings['autoaxis_x'] = 'off'
 
-            if self.settings['autopan_x'] == 'on':
-                self.autopan_x()
-            if self.settings['autoaxis_y'] != 'off':
-                self.autoscale_y()
-
-            self.update_elements()
+            self.adjust_view()
 
         return True
 
@@ -481,7 +511,7 @@ class PlotAide(Callback.Callbacks):
                 self.viewer.onscreen_message("Autoscale Y OFF", delay=1.0)
             self.settings['autoaxis_y'] = 'off'
 
-            self.update_elements()
+            self.adjust_view()
 
         return True
 

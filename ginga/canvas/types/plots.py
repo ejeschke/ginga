@@ -68,6 +68,7 @@ class XYPlot(CanvasObjectBase):
 
         self.points = np.copy(nul_arr)
         self.limits = np.array([(0.0, 0.0), (0.0, 0.0)])
+        self.plot_xlim = (None, None)
 
         self.path = Path([], color=color, linewidth=linewidth,
                          linestyle=linestyle, alpha=alpha, coord='data')
@@ -93,10 +94,11 @@ class XYPlot(CanvasObjectBase):
         Limits will be calculated if not passed in.
         """
         self.points = np.asarray(points)
+        self.plot_xlim = (None, None)
 
         # path starts out by default with the full set of data points
         # corresponding to the plotted X/Y data
-        self.path.points = self.get_data_points(points=self.points)
+        #self.path.points = self.get_data_points(points=self.points)
 
         # set or calculate limits
         if limits is not None:
@@ -116,24 +118,25 @@ class XYPlot(CanvasObjectBase):
             self.limits = np.array([(x_vals.min(), y_vals.min()),
                                     (x_vals.max(), y_vals.max())])
 
-    def recalc(self, viewer):
+    def calc_points(self, viewer, start_x, stop_x):
         """Called when recalculating our path's points.
         """
-        bbox = viewer.get_pan_rect()
-        if bbox is None:
-            self.path.points = []
+        # in case X axis is flipped
+        start_x, stop_x = min(start_x, stop_x), max(start_x, stop_x)
+
+        new_xlim = (start_x, stop_x)
+        if new_xlim == self.plot_xlim:
+            # X limits are the same, no need to recalculate points
             return
 
-        start_x, stop_x = bbox[0][0], bbox[2][0]
+        self.plot_xlim = new_xlim
 
-        # select only points within range of the current pan/zoom
         points = self.get_data_points(points=self.points)
         if len(points) == 0:
             self.path.points = points
             return
+
         x_data, y_data = points.T
-        # in case X axis is flipped
-        start_x, stop_x = min(start_x, stop_x), max(start_x, stop_x)
 
         # if we can determine the visible region shown on the plot
         # limit the points to those within the region
@@ -158,10 +161,20 @@ class XYPlot(CanvasObjectBase):
 
             points = np.array((x_data, y_data)).T
 
-        ## if len(points) > 0:
-        ##     self._calc_limits(points)
-
         self.path.points = points
+
+    def recalc(self, viewer):
+        """Called when recalculating our path's points.
+        """
+        # select only points within range of the current pan/zoom
+        bbox = viewer.get_pan_rect()
+        if bbox is None:
+            self.path.points = []
+            return
+
+        start_x, stop_x = bbox[0][0], bbox[2][0]
+
+        self.calc_points(viewer, start_x, stop_x)
 
     def get_cpoints(self, viewer, points=None, no_rotate=False):
         """Mostly internal routine used to calculate the native positions
@@ -176,6 +189,13 @@ class XYPlot(CanvasObjectBase):
     def update_resize(self, viewer, dims):
         """Called when the viewer is resized."""
         self.recalc(viewer)
+
+    def update_elements(self, viewer):
+        """This method is called if the plot is set with new points,
+        or is scaled or panned with existing points.
+        """
+        #self.recalc(viewer)
+        pass
 
     def get_latest(self):
         """Get the latest (last) point on the plot.  Returns None if there
@@ -205,17 +225,12 @@ class XYPlot(CanvasObjectBase):
             llur = [(0.0, 0.0), (0.0, 0.0)]
         return np.asarray(llur)
 
-    def get_data_x_limits(self):
-        return self.get_limits('data').T[0]
-
     def draw(self, viewer):
         """Draw the plot.  Normally not called by the user, but by the viewer
         as needed.
         """
         self.path.crdmap = self.crdmap
 
-        # TODO: only recalculate if the pan, scale or viewer limits
-        #  have changed
         self.recalc(viewer)
 
         if len(self.path.points) > 0:
@@ -342,6 +357,12 @@ class XAxis(CompoundObject):
 
         self.x_axis_bg.x1, self.x_axis_bg.x2 = 0, wd
         self.x_axis_bg.y1, self.x_axis_bg.y2 = y_hi, ht
+
+    def add_plot(self, viewer, plot_src):
+        pass
+
+    def delete_plot(self, viewer, plot_src):
+        pass
 
     def set_grid_alpha(self, alpha):
         """Set the transparency (alpha) of the XAxis grid lines.
@@ -494,6 +515,12 @@ class YAxis(CompoundObject):
         self.y_axis_bg2.x1, self.y_axis_bg2.x2 = 0, x_lo
         self.y_axis_bg2.y1, self.y_axis_bg2.y2 = y_lo, y_hi
 
+    def add_plot(self, viewer, plot_src):
+        pass
+
+    def delete_plot(self, viewer, plot_src):
+        pass
+
     def set_grid_alpha(self, alpha):
         """Set the transparency (alpha) of the XAxis grid lines.
         `alpha` should be between 0.0 and 1.0
@@ -634,6 +661,12 @@ class PlotBG(CompoundObject):
             self.ln_alert.x1, self.ln_alert.x2 = x_lo, x_hi
             self.ln_alert.y1 = self.ln_alert.y2 = y
 
+    def add_plot(self, viewer, plot_src):
+        pass
+
+    def delete_plot(self, viewer, plot_src):
+        pass
+
     def get_canvas_xy(self, viewer, pt):
         arr_pts = np.asarray(pt)
         return viewer.tform['data_to_plot'].to_(arr_pts).T[:2]
@@ -660,7 +693,7 @@ class PlotTitle(CompoundObject):
                                           coord='window')
         self.objects.append(self.title_bg)
 
-        self.lbls = Bunch.Bunch()
+        self.lbls = dict()
         self.lbls[0] = aide.dc.Text(0, 0, text=title, color='black',
                                     font=self.font,
                                     fontsize=self.fontsize,
@@ -679,10 +712,8 @@ class PlotTitle(CompoundObject):
         Update the PlotTitle labels to reflect the new values.
         """
         for i, plot_src in enumerate(self.aide.plots.values()):
-            j = i + 1
-            if j in self.lbls:
-                lbl = self.lbls[j]
-                self.format_label(lbl, plot_src)
+            lbl = self.lbls[plot_src]
+            self.format_label(lbl, plot_src)
 
     def update_bbox(self, viewer, dims):
         """This method is called if the viewer's window is resized.
@@ -716,24 +747,38 @@ class PlotTitle(CompoundObject):
 
         for i, plot_src in enumerate(self.aide.plots.values()):
             cx += a
-            j = i + 1
-            if j in self.lbls:
-                lbl = self.lbls[j]
-                lbl.x, lbl.y = cx, cy
-            else:
-                text = plot_src.name
-                color = plot_src.color
-                Text = self.lbls[0].__class__
-                lbl = Text(cx, cy, text=text, color=color,
-                           font=self.font,
-                           fontsize=self.fontsize,
-                           coord='window')
-                self.lbls[j] = lbl
-                self.objects.append(lbl)
-                lbl.crdmap = self.lbls[0].crdmap
+            lbl = self.lbls[plot_src]
+            lbl.x, lbl.y = cx, cy
+            self.format_label(lbl, plot_src)
 
         self.title_bg.x1, self.title_bg.x2 = 0, wd
         self.title_bg.y1, self.title_bg.y2 = 0, y_lo
+
+    def add_plot(self, viewer, plot_src):
+        text = plot_src.name
+        color = plot_src.color
+        Text = self.lbls[0].__class__
+        lbl = Text(0, 0, text=text, color=color,
+                   font=self.font,
+                   fontsize=self.fontsize,
+                   coord='window')
+        self.lbls[plot_src] = lbl
+        self.objects.append(lbl)
+        lbl.crdmap = self.lbls[0].crdmap
+        self.format_label(lbl, plot_src)
+
+        # reorder and place labels
+        dims = viewer.get_window_size()
+        self.update_resize(viewer, dims, self.aide.llur)
+
+    def delete_plot(self, viewer, plot_src):
+        lbl = self.lbls[plot_src]
+        del self.lbls[plot_src]
+        self.objects.remove(lbl)
+
+        # reorder and place labels
+        dims = viewer.get_window_size()
+        self.update_resize(viewer, dims, self.aide.llur)
 
 class CalcPlot(XYPlot):
 
