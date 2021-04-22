@@ -237,58 +237,95 @@ class XYPlot(CanvasObjectBase):
             self.path.draw(viewer)
 
 
-class XAxis(CompoundObject):
+class Axis(CompoundObject):
     """
-    Plotable object that defines X axis labels and grid lines.
+    Base class for axis plotables.
     """
     def __init__(self, aide, title=None, num_labels=4, font='sans',
                  fontsize=10.0):
-        super(XAxis, self).__init__()
+        super(Axis, self).__init__()
 
         self.aide = aide
         self.num_labels = num_labels
         self.title = title
-        self.kind = 'axis_x'
         self.font = font
         self.fontsize = fontsize
-        self.txt_ht = 0
-        self.title_wd = 0
         self.grid_alpha = 1.0
         self.format_value = self._format_value
-        self.pad_px = 5
-
-        # add X grid
-        self.x_grid = Bunch.Bunch()
-        for i in range(self.num_labels):
-            self.x_grid[i] = aide.dc.Line(0, 0, 0, 0, color=aide.grid_fg,
-                                          linestyle='dash', linewidth=1,
-                                          alpha=self.grid_alpha,
-                                          coord='window')
-            self.objects.append(self.x_grid[i])
-
-        self.x_axis_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
-                                           fill=True, fillcolor=aide.axis_bg,
-                                           coord='window')
-        self.objects.append(self.x_axis_bg)
-
-        self.x_lbls = Bunch.Bunch()
-        for i in range(self.num_labels):
-            self.x_lbls[i] = aide.dc.Text(0, 0, text='', color='black',
-                                          font=self.font,
-                                          fontsize=self.fontsize,
-                                          coord='window')
-            self.objects.append(self.x_lbls[i])
-
-        if self.title is not None:
-            self.x_title = aide.dc.Text(0, 0, text=self.title, color='black',
-                                        font=self.font, fontsize=self.fontsize,
-                                        coord='window')
-            self.objects.append(self.x_title)
 
     def _format_value(self, v):
         """Default formatter for XAxis labels.
         """
         return "%.4g" % v
+
+    def set_grid_alpha(self, alpha):
+        """Set the transparency (alpha) of the XAxis grid lines.
+        `alpha` should be between 0.0 and 1.0
+        """
+        for i in range(self.num_labels):
+            grid = self.grid[i]
+            grid.alpha = alpha
+
+    def get_data_xy(self, viewer, pt):
+        arr_pts = np.asarray(pt)
+        x, y = viewer.tform['data_to_plot'].from_(arr_pts).T[:2]
+        flips = viewer.get_transforms()
+        if flips[2]:
+            x, y = y, x
+        return (x, y)
+
+    def get_title(self):
+        titles_d = self.aide.get_axes_titles()
+        return titles_d[self.kind]
+
+    def add_plot(self, viewer, plot_src):
+        pass
+
+    def delete_plot(self, viewer, plot_src):
+        pass
+
+
+class XAxis(Axis):
+    """
+    Plotable object that defines X axis labels and grid lines.
+    """
+    def __init__(self, aide, title=None, num_labels=4, font='sans',
+                 fontsize=10.0):
+        super(XAxis, self).__init__(aide, title=title, num_labels=num_labels,
+                                    font=font, fontsize=fontsize)
+
+        self.kind = 'axis_x'
+        self.txt_ht = 0
+        self.title_wd = 0
+        self.pad_px = 5
+
+        # add X grid
+        self.grid = Bunch.Bunch()
+        for i in range(self.num_labels):
+            self.grid[i] = aide.dc.Line(0, 0, 0, 0, color=aide.grid_fg,
+                                        linestyle='dash', linewidth=1,
+                                        alpha=self.grid_alpha,
+                                        coord='window')
+            self.objects.append(self.grid[i])
+
+        self.axis_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
+                                         fill=True, fillcolor=aide.axis_bg,
+                                         coord='window')
+        self.objects.append(self.axis_bg)
+
+        self.lbls = Bunch.Bunch()
+        for i in range(self.num_labels):
+            self.lbls[i] = aide.dc.Text(0, 0, text='', color='black',
+                                        font=self.font,
+                                        fontsize=self.fontsize,
+                                        coord='window')
+            self.objects.append(self.lbls[i])
+
+        self._title = aide.dc.Text(0, 0, text='', color='black',
+                                   font=self.font, fontsize=self.fontsize,
+                                   alpha=0.0,
+                                   coord='window')
+        self.objects.append(self._title)
 
     def update_elements(self, viewer):
         """This method is called if the plot is set with new points,
@@ -297,7 +334,7 @@ class XAxis(CompoundObject):
         Update the XAxis labels to reflect the new values and/or pan/scale.
         """
         for i in range(self.num_labels):
-            lbl = self.x_lbls[i]
+            lbl = self.lbls[i]
             # get data coord equivalents
             x, y = self.get_data_xy(viewer, (lbl.x, lbl.y))
             # format according to user's preference
@@ -308,15 +345,13 @@ class XAxis(CompoundObject):
 
         Update all the XAxis elements to reflect the new dimensions.
         """
-        wd, ht = dims[:2]
-        if self.txt_ht == 0:
-            Text = self.x_lbls[0].__class__
-            t = Text(0, 0, text=self.title if self.title is not None else '555.55',
-                     fontsize=self.fontsize, font=self.font)
-            self.title_wd, self.txt_ht = viewer.renderer.get_dimensions(t)
+        title = self.get_title()
+        self._title.text = title if title is not None else '555.55'
+        self.title_wd, self.txt_ht = viewer.renderer.get_dimensions(self._title)
 
+        wd, ht = dims[:2]
         y_hi = ht
-        if self.title is not None:
+        if title is not None:
             # remove Y space for X axis title
             y_hi -= self.txt_ht + 4
         # remove Y space for X axis labels
@@ -333,115 +368,89 @@ class XAxis(CompoundObject):
         wd, ht = dims[:2]
 
         # position axis title
+        title = self.get_title()
         cx, cy = wd // 2 - self.title_wd // 2, ht - 4
-        if self.title is not None:
-            self.x_title.x = cx
-            self.x_title.y = cy
+        if title is not None:
+            self._title.x = cx
+            self._title.y = cy
+            self._title.alpha = 1.0
             cy = cy - self.txt_ht
+        else:
+            self._title.alpha = 0.0
 
         # set X labels/grid as needed
         # calculate evenly spaced interval on X axis in window coords
         a = (x_hi - x_lo) // self.num_labels
         cx = x_lo
         for i in range(self.num_labels):
-            lbl = self.x_lbls[i]
+            lbl = self.lbls[i]
             lbl.x, lbl.y = cx, cy
             # get data coord equivalents
             x, y = self.get_data_xy(viewer, (cx, cy))
             # convert to formatted label
             lbl.text = self.format_value(x)
-            grid = self.x_grid[i]
+            grid = self.grid[i]
             grid.x1 = grid.x2 = cx
             grid.y1, grid.y2 = y_lo, y_hi
             cx += a
 
-        self.x_axis_bg.x1, self.x_axis_bg.x2 = 0, wd
-        self.x_axis_bg.y1, self.x_axis_bg.y2 = y_hi, ht
-
-    def add_plot(self, viewer, plot_src):
-        pass
-
-    def delete_plot(self, viewer, plot_src):
-        pass
-
-    def set_grid_alpha(self, alpha):
-        """Set the transparency (alpha) of the XAxis grid lines.
-        `alpha` should be between 0.0 and 1.0
-        """
-        for i in range(self.num_labels):
-            grid = self.x_grid[i]
-            grid.alpha = alpha
-
-    def get_data_xy(self, viewer, pt):
-        arr_pts = np.asarray(pt)
-        return viewer.tform['data_to_plot'].from_(arr_pts).T[:2]
+        self.axis_bg.x1, self.axis_bg.x2 = 0, wd
+        self.axis_bg.y1, self.axis_bg.y2 = y_hi, ht
 
 
-class YAxis(CompoundObject):
+class YAxis(Axis):
     """
     Plotable object that defines Y axis labels and grid lines.
     """
-    def __init__(self, aide, title=None, side='right', num_labels=4,
+    def __init__(self, aide, title=None, num_labels=4,
                  font='sans', fontsize=10.0):
-        super(YAxis, self).__init__()
+        super(YAxis, self).__init__(aide, title=title, num_labels=num_labels,
+                                    font=font, fontsize=fontsize)
 
-        self.aide = aide
-        self.title = title
-        self.side = side
-        self.num_labels = num_labels
         self.kind = 'axis_y'
-        self.font = font
-        self.fontsize = fontsize
         self.title_wd = 0
         self.txt_wd = 0
         self.txt_ht = 0
-        self.grid_alpha = 1.0
-        self.format_value = self._format_value
         self.pad_px = 4
 
         # add Y grid
-        self.y_grid = Bunch.Bunch()
+        self.grid = Bunch.Bunch()
         for i in range(self.num_labels):
-            self.y_grid[i] = aide.dc.Line(0, 0, 0, 0, color=aide.grid_fg,
-                                          linestyle='dash', linewidth=1,
-                                          alpha=self.grid_alpha,
-                                          coord='window')
-            self.objects.append(self.y_grid[i])
+            self.grid[i] = aide.dc.Line(0, 0, 0, 0, color=aide.grid_fg,
+                                        linestyle='dash', linewidth=1,
+                                        alpha=self.grid_alpha,
+                                        coord='window')
+            self.objects.append(self.grid[i])
 
         # bg for RHS Y axis labels
-        self.y_axis_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
-                                           fill=True, fillcolor=aide.axis_bg,
-                                           coord='window')
-        self.objects.append(self.y_axis_bg)
+        self.axis_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
+                                         fill=True, fillcolor=aide.axis_bg,
+                                         coord='window')
+        self.objects.append(self.axis_bg)
 
         # bg for LHS Y axis title
-        self.y_axis_bg2 = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
-                                            fill=True, fillcolor=aide.axis_bg,
-                                            coord='window')
-        self.objects.append(self.y_axis_bg2)
+        self.axis_bg2 = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
+                                          fill=True, fillcolor=aide.axis_bg,
+                                          coord='window')
+        self.objects.append(self.axis_bg2)
 
         # Y grid (tick) labels
-        self.y_lbls = Bunch.Bunch()
+        self.lbls = Bunch.Bunch()
         for i in range(self.num_labels):
-            self.y_lbls[i] = aide.dc.Text(0, 0, text='', color='black',
-                                          font=self.font,
-                                          fontsize=self.fontsize,
-                                          coord='window')
-            self.objects.append(self.y_lbls[i])
-
-        # Y title
-        if self.title is not None:
-            self.y_title = aide.dc.Text(0, 0, text=self.title, color='black',
+            self.lbls[i] = aide.dc.Text(0, 0, text='', color='black',
                                         font=self.font,
                                         fontsize=self.fontsize,
-                                        rot_deg=90.0,
                                         coord='window')
-            self.objects.append(self.y_title)
+            self.objects.append(self.lbls[i])
 
-    def _format_value(self, v):
-        """Default formatter for YAxis labels.
-        """
-        return "%.4g" % v
+        # Y title
+        self._title = aide.dc.Text(0, 0, text=self.title, color='black',
+                                   font=self.font,
+                                   fontsize=self.fontsize,
+                                   alpha=0.0,
+                                   rot_deg=90.0,
+                                   coord='window')
+        self.objects.append(self._title)
 
     def update_elements(self, viewer):
         """This method is called if the plot is set with new points,
@@ -451,7 +460,7 @@ class YAxis(CompoundObject):
         """
         # set Y labels/grid as needed
         for i in range(self.num_labels):
-            lbl = self.y_lbls[i]
+            lbl = self.lbls[i]
             # get data coord equivalents
             x, y = self.get_data_xy(viewer, (lbl.x, lbl.y))
             lbl.text = self.format_value(y)
@@ -461,17 +470,18 @@ class YAxis(CompoundObject):
 
         Update all the YAxis elements to reflect the new dimensions.
         """
-        wd, ht = dims[:2]
-        if self.txt_wd == 0:
-            Text = self.y_lbls[0].__class__
-            t = Text(0, 0, text=self.title if self.title is not None else '555.55',
-                     fontsize=self.fontsize, font=self.font)
-            self.title_wd, self.txt_ht = viewer.renderer.get_dimensions(t)
-            # TODO: not sure this will give us the maximum length of number
-            t.text = self.format_value(sys.float_info.max)
-            self.txt_wd, _ = viewer.renderer.get_dimensions(t)
+        title = self.get_title()
+        self._title.text = title if title is not None else '555.55'
 
-        if self.title is not None:
+        wd, ht = dims[:2]
+        self.title_wd, self.txt_ht = viewer.renderer.get_dimensions(self._title)
+        # TODO: not sure this will give us the maximum length of number
+        text = self.format_value(sys.float_info.max)
+        t = self.aide.dc.Text(0, 0, text=text,
+                              fontsize=self.fontsize, font=self.font)
+        self.txt_wd, _ = viewer.renderer.get_dimensions(t)
+
+        if title is not None:
             x_lo = self.txt_ht + 2 + self.pad_px
         else:
             x_lo = 0
@@ -488,50 +498,36 @@ class YAxis(CompoundObject):
         wd, ht = dims[:2]
 
         # position axis title
+        title = self.get_title()
         cx = self.txt_ht + 2
         cy = ht // 2 + self.title_wd // 2
-        if self.title is not None:
-            self.y_title.x = cx
-            self.y_title.y = cy
+        if title is not None:
+            self._title.x = cx
+            self._title.y = cy
+            self._title.alpha = 1.0
+        else:
+            self._title.alpha = 0.0
 
         cx = x_hi + self.pad_px
         cy = y_hi
         # set Y labels/grid as needed
         a = (y_hi - y_lo) // self.num_labels
         for i in range(self.num_labels):
-            lbl = self.y_lbls[i]
+            lbl = self.lbls[i]
             # calculate evenly spaced interval on Y axis in window coords
             lbl.x, lbl.y = cx, cy
             # get data coord equivalents
             x, y = self.get_data_xy(viewer, (cx, cy))
             lbl.text = self.format_value(y)
-            grid = self.y_grid[i]
+            grid = self.grid[i]
             grid.x1, grid.x2 = x_lo, x_hi
             grid.y1 = grid.y2 = cy
             cy -= a
 
-        self.y_axis_bg.x1, self.y_axis_bg.x2 = x_hi, wd
-        self.y_axis_bg.y1, self.y_axis_bg.y2 = y_lo, y_hi
-        self.y_axis_bg2.x1, self.y_axis_bg2.x2 = 0, x_lo
-        self.y_axis_bg2.y1, self.y_axis_bg2.y2 = y_lo, y_hi
-
-    def add_plot(self, viewer, plot_src):
-        pass
-
-    def delete_plot(self, viewer, plot_src):
-        pass
-
-    def set_grid_alpha(self, alpha):
-        """Set the transparency (alpha) of the XAxis grid lines.
-        `alpha` should be between 0.0 and 1.0
-        """
-        for i in range(self.num_labels):
-            grid = self.y_grid[i]
-            grid.alpha = alpha
-
-    def get_data_xy(self, viewer, pt):
-        arr_pts = np.asarray(pt)
-        return viewer.tform['data_to_plot'].from_(arr_pts).T[:2]
+        self.axis_bg.x1, self.axis_bg.x2 = x_hi, wd
+        self.axis_bg.y1, self.axis_bg.y2 = y_lo, y_hi
+        self.axis_bg2.x1, self.axis_bg2.x2 = 0, x_lo
+        self.axis_bg2.y1, self.axis_bg2.y2 = y_lo, y_hi
 
 
 class PlotBG(CompoundObject):
@@ -757,11 +753,10 @@ class PlotTitle(CompoundObject):
     def add_plot(self, viewer, plot_src):
         text = plot_src.name
         color = plot_src.color
-        Text = self.lbls[0].__class__
-        lbl = Text(0, 0, text=text, color=color,
-                   font=self.font,
-                   fontsize=self.fontsize,
-                   coord='window')
+        lbl = self.aide.dc.Text(0, 0, text=text, color=color,
+                                font=self.font,
+                                fontsize=self.fontsize,
+                                coord='window')
         self.lbls[plot_src] = lbl
         self.objects.append(lbl)
         lbl.crdmap = self.lbls[0].crdmap
@@ -780,6 +775,7 @@ class PlotTitle(CompoundObject):
         dims = viewer.get_window_size()
         self.update_resize(viewer, dims, self.aide.llur)
 
+
 class CalcPlot(XYPlot):
 
     def __init__(self, name=None, fn=np.sin, color='black',
@@ -794,9 +790,23 @@ class CalcPlot(XYPlot):
     def plot(self, points):
         pass
 
-    def calc_points(self, xpts):
-        ypts = self.fn(xpts)
-        return np.array((xpts, ypts)).T
+    def calc_points(self, viewer, start_x, stop_x):
+        # in case X axis is flipped
+        start_x, stop_x = min(start_x, stop_x), max(start_x, stop_x)
+
+        new_xlim = (start_x, stop_x)
+        if new_xlim == self.plot_xlim:
+            # X limits are the same, no need to recalculate points
+            return
+
+        self.plot_xlim = new_xlim
+
+        wd, ht = self.viewer.get_window_size()
+
+        x_pts = np.linspace(start_x, stop_x, wd, dtype=np.float)
+        y_pts = self.fn(x_pts)
+        points = np.array((x_pts, y_pts)).T
+        self.path.points = points
 
     def get_limits(self, lim_type):
         try:
@@ -805,13 +815,6 @@ class CalcPlot(XYPlot):
             return np.array(limits)
         except Exception:
             return np.array(((0.0, 0.0), (0.0, 0.0)))
-
-    def recalc(self, viewer):
-        bbox = viewer.get_pan_rect()
-        start_x, stop_x = bbox[0][0], bbox[2][0]
-        wd, ht = viewer.get_window_size()
-        xpts = np.linspace(start_x, stop_x, wd, dtype=np.float)
-        self.path.points = self.calc_points(xpts)
 
 
 # register our types

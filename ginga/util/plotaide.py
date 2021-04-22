@@ -129,6 +129,7 @@ class PlotAide(Callback.Callbacks):
         # holds other plot elements like PlotBG, XAxis, YAxis, PlotTitle, etc.
         self.plot_etc_l = []
         self.plot_etc_d = {}
+        self.titles = [None, None]
 
     def get_widget(self):
         return self.viewer.get_widget()
@@ -535,6 +536,8 @@ class PlotAide(Callback.Callbacks):
                              warn_y=None, alert_y=None):
         from ginga.canvas.types import plots as gplots
 
+        self.titles = [x_title, y_title]
+
         p_bg = gplots.PlotBG(self, linewidth=2, warn_y=warn_y, alert_y=alert_y)
         self.add_plot_etc(p_bg)
 
@@ -546,3 +549,10 @@ class PlotAide(Callback.Callbacks):
 
         p_title = gplots.PlotTitle(self, title=title)
         self.add_plot_etc(p_title)
+
+    def get_axes_titles(self):
+        x, y = 0, 1
+        flip = self.viewer.get_transforms()
+        if flip[2]:
+            x, y = y, x
+        return dict(axis_x=self.titles[x], axis_y=self.titles[y])

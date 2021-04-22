@@ -105,7 +105,7 @@ the new cut independently.
 import numpy as np
 
 from ginga.gw import Widgets, Viewers
-from ginga import GingaPlugin, colors
+from ginga import GingaPlugin
 from ginga.canvas.coordmap import OffsetMapper
 
 from ginga.canvas.types import plots as gplots
