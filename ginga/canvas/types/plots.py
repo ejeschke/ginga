@@ -380,7 +380,7 @@ class XAxis(Axis):
 
         # set X labels/grid as needed
         # calculate evenly spaced interval on X axis in window coords
-        a = (x_hi - x_lo) // self.num_labels
+        a = (x_hi - x_lo) // (self.num_labels - 1)
         cx = x_lo
         for i in range(self.num_labels):
             lbl = self.lbls[i]
@@ -511,7 +511,7 @@ class YAxis(Axis):
         cx = x_hi + self.pad_px
         cy = y_hi
         # set Y labels/grid as needed
-        a = (y_hi - y_lo) // self.num_labels
+        a = (y_hi - y_lo) // (self.num_labels - 1)
         for i in range(self.num_labels):
             lbl = self.lbls[i]
             # calculate evenly spaced interval on Y axis in window coords

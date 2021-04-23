@@ -16,6 +16,8 @@ class PlotAide(Callback.Callbacks):
     """
     PlotAide is a class to use a Ginga viewer as a high-performance
     interactive X/Y line plot viewer.
+
+
     """
 
     def __init__(self, viewer, settings=None):
@@ -75,8 +77,8 @@ class PlotAide(Callback.Callbacks):
         vi.enable_autozoom('off')
         vi.ui_set_active(True)
         vi.set_enter_focus(True)
-        vi.add_callback('configure', lambda *args: self.adjust_resize())
-        vi.add_callback('transform', lambda *args: self.adjust_resize())
+        vi.add_callback('configure', lambda *args: self.adjust_resize_cb())
+        vi.add_callback('transform', lambda *args: self.adjust_resize_cb())
 
         # disable normal user interaction, except flip
         bd = vi.get_bindings()
@@ -105,15 +107,18 @@ class PlotAide(Callback.Callbacks):
         bm.map_event('plot', [], 'kp_p', 'plot-position-x')
         vi.set_callback('keydown-plot-position-x', self._p_press_cb)
 
-        for name in ['plot-zoom-x', 'plot-zoom-y', 'pan',
-                     'autopan-x', 'autoaxis-x', 'autoaxis-y']:
+        for name in ['plot-zoom-x', 'plot-zoom-y', 'pan']:
             self.enable_callback(name)
         self.add_callback('plot-zoom-x', self.plot_zoom_x_cb)
         self.add_callback('plot-zoom-y', self.plot_zoom_y_cb)
-        self.add_callback('autopan-x', self.toggle_autopan_x_cb)
-        self.add_callback('autoaxis-x', self.toggle_autoaxis_x_cb)
-        self.add_callback('autoaxis-y', self.toggle_autoaxis_y_cb)
         self.add_callback('pan', self.pan_cb)
+
+        self.settings.get_setting('autoaxis_x').add_callback('set',
+                                                             self._autoaxis_x_cb)
+        self.settings.get_setting('autoaxis_y').add_callback('set',
+                                                             self._autoaxis_y_cb)
+        self.settings.get_setting('autopan_x').add_callback('set',
+                                                            self._autopan_x_cb)
 
         settings = vi.get_settings()
         settings.get_setting('pan').add_callback('set', self._pan_cb)
@@ -135,14 +140,40 @@ class PlotAide(Callback.Callbacks):
         return self.viewer.get_widget()
 
     def add_plot_etc(self, plotable):
+        """Add a "plot accessory" (PlotBG, PlotTitle, XAxis, YAxis, etc)
+
+        Parameters
+        ----------
+        plotable : `~ginga.canvas.types.plots.CompoundObject` instance
+            A plot accessory like a PlotBG, PlotTitle, XAxis, YAxis, etc.
+        """
         self.plot_etc_d[plotable.kind] = plotable
         self.plot_etc_l.append(plotable)
         self.canvas.add(plotable)
 
     def get_plot_etc(self, kind):
+        """Get a "plot accessory"
+
+        Parameters
+        ----------
+        kind : str
+            One of ('axis_x', 'axis_y', 'plot_bg', 'plot_title')
+
+        Returns
+        -------
+        plotable : `~ginga.canvas.types.layer.CompoundObject` instance
+            The plot accessory
+        """
         return self.plot_etc_d[kind]
 
     def add_plot(self, plot):
+        """Add a XY plot
+
+        Parameters
+        ----------
+        plot : `~ginga.canvas.types.plots.XYPlot` instance
+            A plot to add to the viewer
+        """
         name = plot.name
         self.plots[name] = plot
 
@@ -163,6 +194,13 @@ class PlotAide(Callback.Callbacks):
         self.update_plots()
 
     def delete_plot(self, plot):
+        """Delete a XY plot
+
+        Parameters
+        ----------
+        plot : `~ginga.canvas.types.plots.XYPlot` instance
+            The plot to delete from the viewer
+        """
         name = plot.name
         del self.plots[name]
 
@@ -174,9 +212,26 @@ class PlotAide(Callback.Callbacks):
         self.update_plots()
 
     def get_plot(self, name):
+        """Get a XY plot
+
+        Raises a `KeyError` if the requested plot is not present.
+
+        Parameters
+        ----------
+        name : `str`
+            The name of the plot
+
+        Returns
+        -------
+        plot : `~ginga.canvas.types.plots.XYPlot` instance
+            The requested plot
+        """
         return self.plots[name]
 
     def update_plots(self):
+        """Update the plots visibly after some activity, like plotting
+        new data, or changing the data of a plot.
+        """
         st = time.time()
 
         self.adjust_view()
@@ -185,6 +240,9 @@ class PlotAide(Callback.Callbacks):
         self.logger.debug("%.5f sec to update plot" % (et - st))
 
     def update_elements(self):
+        """Mostly internal routine used to update the plot accessories
+        after changes in region shown or data updates.
+        """
         with self.viewer.suppress_redraw:
             for plotable in self.plot_etc_l:
                 plotable.update_elements(self.viewer)
@@ -192,6 +250,9 @@ class PlotAide(Callback.Callbacks):
             self.viewer.redraw(whence=3)
 
     def update_resize(self):
+        """Mostly internal routine called after the viewer's window size
+        has changed.
+        """
         # upon a resize, at first we redefine the plot bbox to encompass
         # the entire viewer area
         dims = self.viewer.get_window_size()
@@ -221,6 +282,9 @@ class PlotAide(Callback.Callbacks):
             self.viewer.redraw(whence=3)
 
     def update_plot_bbox(self, x_lo=None, x_hi=None, y_lo=None, y_hi=None):
+        """Mostly internal routine called by plot accessories to iteratively
+        define the bounding box of the plot within the viewer plane.
+        """
         _x_lo, _x_hi = self.bbox.T[0].min(), self.bbox.T[0].max()
         _y_lo, _y_hi = self.bbox.T[1].min(), self.bbox.T[1].max()
 
@@ -241,11 +305,13 @@ class PlotAide(Callback.Callbacks):
                               (_x_hi, _y_lo), (_x_lo, _y_lo)])
 
     def recalc_transform(self, dims):
+        """Mostly internal routine used to redefine the special transform
+        that maps the data to the plot area.
+        """
         x_lo, x_hi = self.bbox.T[0].min(), self.bbox.T[0].max()
         y_lo, y_hi = self.bbox.T[1].min(), self.bbox.T[1].max()
 
         wd, ht = dims[:2]
-        #self.clip_tr.set_clip_window(x_lo, y_lo, x_hi, y_hi)
 
         x_pct = (x_hi - x_lo) / wd
         y_pct = (y_hi - y_lo) / ht
@@ -258,13 +324,140 @@ class PlotAide(Callback.Callbacks):
     def set_limits(self, limits):
         self.viewer.set_limits(limits)
 
-    def get_pan_rect(self):
-        #return self.viewer.tform['data_to_plot'].from_(self.bbox)
-        return self.viewer.get_pan_rect()
+    def get_limits(self, lim_type):
+        """Return the limits of this plot.
+
+        Parameters
+        ----------
+        lim_type : str
+            'data' or 'plot'
+
+        Returns
+        -------
+        limits : array of [(x_min, y_min), (x_max, y_max)]
+            Limits of full data or visible part of plot, depending on `lim_type`
+
+        """
+        x_vals = []
+        y_vals = []
+        for key, src in self.plots.items():
+            limits = src.get_limits(lim_type)
+            x_vals.append(limits.T[0])
+            y_vals.append(limits.T[1])
+        x_vals = np.array(x_vals).flatten()
+        y_vals = np.array(y_vals).flatten()
+        if len(x_vals) == 0:
+            return np.array([(0.0, 0.0), (0.0, 0.0)])
+
+        return np.array([(x_vals.min(), y_vals.min()),
+                         (x_vals.max(), y_vals.max())])
+
+    def setup_standard_frame(self, title='', x_title=None, y_title=None,
+                             num_x_labels=4, num_y_labels=4,
+                             warn_y=None, alert_y=None):
+        """A convenience function for setting up a typical plot.
+
+        This includes a plot background, a title bar with keys, and X and Y
+        axes.
+        """
+        from ginga.canvas.types import plots as gplots
+
+        self.titles = [x_title, y_title]
+
+        p_bg = gplots.PlotBG(self, linewidth=2, warn_y=warn_y, alert_y=alert_y)
+        self.add_plot_etc(p_bg)
+
+        p_title = gplots.PlotTitle(self, title=title)
+        self.add_plot_etc(p_title)
+
+        p_x_axis = gplots.XAxis(self, title=x_title, num_labels=num_x_labels)
+        self.add_plot_etc(p_x_axis)
+
+        p_y_axis = gplots.YAxis(self, title=y_title, num_labels=num_y_labels)
+        self.add_plot_etc(p_y_axis)
+
+    def get_axes_titles(self):
+        """A function used by Axis subclasses to find their title.
+        (title can shift depending on whether the viewer has swapped axes)
+        """
+        x, y = 0, 1
+        flip = self.viewer.get_transforms()
+        if flip[2]:
+            x, y = y, x
+        return dict(axis_x=self.titles[x], axis_y=self.titles[y])
+
+    def configure_scrollbars(self, sw):
+        """If a scroll widget is used with this plot viewer, then the
+        widget can be passed to this method to configure the scrollbars
+        to turn on and off as necessary depending on auto axis adjustments.
+        """
+        self.settings.get_setting('autoaxis_x').add_callback('set',
+                                                             self.update_horz_scrollbar_cb, sw)
+        self.settings.get_setting('autoaxis_y').add_callback('set',
+                                                             self.update_vert_scrollbar_cb, sw)
+        self.settings.get_setting('autopan_x').add_callback('set',
+                                                            self.update_horz_scrollbar_cb, sw)
+
+        if (self.settings['autoaxis_x'] == 'on' or
+            self.settings['autopan_x'] == 'on'):
+            horz = 'off'
+        else:
+            horz = 'on'
+        vert = 'off' if self.settings['autoaxis_y'] == 'on' else 'off'
+        sw.scroll_bars(horizontal=horz, vertical=vert)
+
+    def adjust_view(self):
+        """Called after a pan, zoom or change of data, in order to
+        autoscale X or Y axes, autopan the X axis and update the non-plot
+        accessories (axes tick labels, etc).
+        """
+        if self._adjusting:
+            return
+        self._adjusting = True
+        try:
+            limits = self.get_limits('data')
+
+            with self.viewer.suppress_redraw:
+                # set limits to combined data limits of all plots in this
+                # viewer
+                self.viewer.set_limits(limits)
+
+                # X limits may be adjusted by autoscaling X axis or
+                # autopanning to most recent data
+                if not self._scaling_x and self.settings['autoaxis_x'] == 'on':
+                    self.autoscale_x()
+                else:
+                    if not self._panning_x and self.settings['autopan_x'] == 'on':
+                        self.autopan_x()
+
+                # recalculate plots based on new X limits
+                rect = self.viewer.get_pan_rect()
+                x_lo, x_hi = rect[0][0], rect[2][0]
+
+                for plot_src in self.plots.values():
+                    plot_src.calc_points(self.viewer, x_lo, x_hi)
+
+                # Y limits may be adjusted by autoscaling Y axis
+                if not self._scaling_y and self.settings['autoaxis_y'] == 'on':
+                    self.autoscale_y()
+
+                # finally, update plot elements to match adjustments
+                self.update_elements()
+
+        finally:
+            self._adjusting = False
 
     def scale_y(self, y_lo, y_hi):
         """Scale the plot in the Y direction so that `y_lo` and `y_hi`
         are both visible.
+
+        Parameters
+        ----------
+        y_lo : `float` or `int`
+            Low point of Y plot to show
+
+        y_hi : `float` or `int`
+            High point of Y plot to show
         """
         self._scaling_y = True
         try:
@@ -279,6 +472,9 @@ class PlotAide(Callback.Callbacks):
             self._scaling_y = False
 
     def autoscale_y(self):
+        """Scale the plot in the Y axis so that the plot takes up as
+        much room vertically as shown in the visible area.
+        """
         # establish range of current Y plot
         mode = self.settings['autoaxis_y_mode']
         pl = self.get_limits(mode)
@@ -288,6 +484,9 @@ class PlotAide(Callback.Callbacks):
         self.scale_y(y_lo, y_hi)
 
     def scale_y_full(self):
+        """Scale the plot in the Y axis so that the plot takes up as
+        much room vertically as there is in the range of Y data.
+        """
         # establish full range of Y
         limits = self.get_limits('data')
         y_lo, y_hi = limits[0][1], limits[1][1]
@@ -297,6 +496,14 @@ class PlotAide(Callback.Callbacks):
     def scale_x(self, x_lo, x_hi):
         """Scale the plot in the X direction so that `x_lo` and `x_hi`
         are both visible.
+
+        Parameters
+        ----------
+        x_lo : `float` or `int`
+            Low point of X plot to show
+
+        x_hi : `float` or `int`
+            High point of X plot to show
         """
         self._scaling_x = True
         try:
@@ -311,12 +518,10 @@ class PlotAide(Callback.Callbacks):
             self._scaling_x = False
 
     def autoscale_x(self):
-        # establish range of current X plot
-        pl = self.get_limits('data')
-        #pl = self.get_limits('plot')
-        x_lo, x_hi = pl[0][0], pl[1][0]
-
-        self.scale_x(x_lo, x_hi)
+        """Scale the plot in the X axis so that the plot takes up as
+        much room horizontally as there is in the range of X data.
+        """
+        self.scale_x_full()
 
     def scale_x_full(self):
         # establish full range of X
@@ -343,102 +548,38 @@ class PlotAide(Callback.Callbacks):
         finally:
             self._panning_x = False
 
-    def _y_press_cb(self, *args):
-        """Called when the user presses 'y'.
-        """
-        autoscale_y = self.settings['autoaxis_y'] == 'off'
-        self.make_callback('autoaxis-y', autoscale_y)
-
-    def toggle_autoaxis_x_cb(self, plot, autoaxis_x):
+    def _autoaxis_x_cb(self, setting, autoaxis_x):
         """Called when the user toggles the 'autoscale X' feature on or off.
         """
-        self.settings['autoaxis_x'] = 'on' if autoaxis_x else 'off'
-        if self.settings['autoaxis_x'] == 'off':
-            msg = "Autoscale X OFF"
-        else:
-            msg = "Autoscale X ON"
+        msg = "Autoscale X ON" if autoaxis_x == 'on' else "Autoscale X OFF"
         self.viewer.onscreen_message(msg, delay=1.0)
         self.adjust_view()
 
-    def toggle_autoaxis_y_cb(self, plot, autoaxis_y):
+    def _autoaxis_y_cb(self, setting, autoaxis_y):
         """Called when the user toggles the 'autoscale Y' feature on or off.
         """
-        self.settings['autoaxis_y'] = 'on' if autoaxis_y else 'off'
-        if self.settings['autoaxis_y'] == 'off':
-            msg = "Autoscale Y OFF"
-        else:
-            msg = "Autoscale Y ON"
+        msg = "Autoscale Y ON" if autoaxis_y == 'on' else "Autoscale Y OFF"
         self.viewer.onscreen_message(msg, delay=1.0)
         self.adjust_view()
 
     def scale_y_full_cb(self, *args):
+        """A callback called when the user has chosen to scale the Y axis
+        to the full range of the Y data.
+        """
         self.settings['autoaxis_y'] = 'off'
         self.scale_y_full()
         self.viewer.onscreen_message("Autoscale Y OFF", delay=1.0)
         self.adjust_view()
 
-    def _x_press_cb(self, *args):
-        """Called when the user presses 'x'.
-        """
-        autoscale_x = self.settings['autoaxis_x'] == 'off'
-        self.make_callback('autoaxis-x', autoscale_x)
-
-    def _p_press_cb(self, *args):
-        """Called when the user presses 'p'.
-        """
-        autopan_x = self.settings['autopan_x'] == 'off'
-        self.make_callback('autopan-x', autopan_x)
-
-    def toggle_autopan_x_cb(self, plot, autopan_x):
+    def _autopan_x_cb(self, setting, autopan_x):
         """Called when the user toggles the 'autopan X' feature on or off.
         """
-        self.settings['autopan_x'] = 'on' if autopan_x else 'off'
-        if self.settings['autopan_x'] == 'off':
-            msg = "Autopan X OFF"
-        else:
-            msg = "Autopan X ON"
+        msg = "Autopan X ON" if autopan_x == 'on' else "Autopan X OFF"
         self.viewer.onscreen_message(msg, delay=1.0)
         self.adjust_view()
 
-    def adjust_view(self):
-        if self._adjusting:
-            return
-        self._adjusting = True
-        try:
-            limits = self.get_limits('data')
-
-            with self.viewer.suppress_redraw:
-                # set limits to combined data limits of all plots in this
-                # viewer
-                self.viewer.set_limits(limits)
-
-                # X limits may be adjusted by autoscaling X axis or
-                # autopanning to most recent data
-                if not self._scaling_x and self.settings['autoaxis_x'] == 'on':
-                    self.autoscale_x()
-                else:
-                    if not self._panning_x and self.settings['autopan_x'] == 'on':
-                        self.autopan_x()
-
-                # recalculate plot points based on new X limits
-                #lim = self.viewer.get_limits()
-                rect = self.get_pan_rect()
-                x_lo, x_hi = rect[0][0], rect[2][0]
-
-                for plot_src in self.plots.values():
-                    plot_src.calc_points(self.viewer, x_lo, x_hi)
-
-                # Y limits may be adjusted by autoscaling Y axis
-                if not self._scaling_y and self.settings['autoaxis_y'] == 'on':
-                    self.autoscale_y()
-
-                # finally, update plot elements to match adjustments
-                self.update_elements()
-
-        finally:
-            self._adjusting = False
-
-    def adjust_resize(self):
+    def adjust_resize_cb(self):
+        """Callback that is called when the viewer window is resized."""
         with self.viewer.suppress_redraw:
             self.update_resize()
             self.adjust_view()
@@ -452,21 +593,23 @@ class PlotAide(Callback.Callbacks):
         self.viewer.set_pan(t, y)
         self.adjust_view()
 
-    def _pan_cb(self, settings, pan_pos):
-        """Called when the user pans our particular plot viewer."""
-        if not (self._panning_x or self._scaling_x or self._scaling_y or
-                self._adjusting):
-            self.adjust_view()
-
     def scroll_cb(self, viewer, event):
+        """Callback called when the user scrolls in the viewer window.
+        From this we generate a 'plot-zoom-x' or a 'plot-zoom-y' event.
+        """
         direction = self.bd.get_direction(event.direction)
         zoom_direction = 'in' if direction == 'up' else 'out'
+        # default is to zoom the X axis unless CTRL is held down
         zoom_axis = 'y' if 'ctrl' in event.modifiers else 'x'
         event = 'plot-zoom-{}'.format(zoom_axis)
+        # turn this into a zoom event for any callbacks registered for it
         self.make_callback(event, zoom_direction)
         return True
 
     def scroll_by_pan_cb(self, viewer, event):
+        """Callback called when the user pans in the viewer window
+        (i.e. touchpad pan event); we turn this into a zoom event.
+        """
         bd = self.viewer.get_bindings()
         event = bd._pa_synth_scroll_event(event)
         if event.state != 'move':
@@ -475,6 +618,7 @@ class PlotAide(Callback.Callbacks):
         return True
 
     def plot_zoom_x_cb(self, plot, direction):
+        """Default callback called when the user zooms the plot in X."""
         scale_x, scale_y = self.viewer.get_scale_xy()
         zoomrate = self.viewer.get_zoomrate()
 
@@ -489,13 +633,14 @@ class PlotAide(Callback.Callbacks):
             # turn off X autoscaling, since user overrode it
             if self.settings['autoaxis_x'] != 'off':
                 self.viewer.onscreen_message("Autoscale X OFF", delay=1.0)
-            self.settings['autoaxis_x'] = 'off'
+                self.settings['autoaxis_x'] = 'off'
 
             self.adjust_view()
 
         return True
 
     def plot_zoom_y_cb(self, plot, direction):
+        """Default callback called when the user zooms the plot in Y."""
         scale_x, scale_y = self.viewer.get_scale_xy()
         zoomrate = self.viewer.get_zoomrate()
 
@@ -510,49 +655,48 @@ class PlotAide(Callback.Callbacks):
             # turn off Y autoscaling, since user overrode it
             if self.settings['autoaxis_y'] != 'off':
                 self.viewer.onscreen_message("Autoscale Y OFF", delay=1.0)
-            self.settings['autoaxis_y'] = 'off'
+                self.settings['autoaxis_y'] = 'off'
 
             self.adjust_view()
 
         return True
 
-    def get_limits(self, lim_type):
-        x_vals = []
-        y_vals = []
-        for key, src in self.plots.items():
-            limits = src.get_limits(lim_type)
-            x_vals.append(limits.T[0])
-            y_vals.append(limits.T[1])
-        x_vals = np.array(x_vals).flatten()
-        y_vals = np.array(y_vals).flatten()
-        if len(x_vals) == 0:
-            return np.array([(0.0, 0.0), (0.0, 0.0)])
+    def _y_press_cb(self, *args):
+        """Callback invoked when the user presses 'y' in the viewer window.
+        """
+        autoaxis_y = self.settings['autoaxis_y'] == 'on'
+        self.settings['autoaxis_y'] = 'off' if autoaxis_y else 'on'
 
-        return np.array([(x_vals.min(), y_vals.min()),
-                         (x_vals.max(), y_vals.max())])
+    def _x_press_cb(self, *args):
+        """Callback invoked when the user presses 'x' in the viewer window.
+        """
+        autoaxis_x = self.settings['autoaxis_x'] == 'on'
+        self.settings['autoaxis_x'] = 'off' if autoaxis_x else 'on'
 
-    def setup_standard_frame(self, title='', x_title=None, y_title=None,
-                             num_x_labels=4, num_y_labels=4,
-                             warn_y=None, alert_y=None):
-        from ginga.canvas.types import plots as gplots
+    def _p_press_cb(self, *args):
+        """Callback invoked when the user presses 'p' in the viewer window.
+        """
+        autopan_x = self.settings['autopan_x'] == 'on'
+        self.settings['autopan_x'] = 'off' if autopan_x else 'on'
 
-        self.titles = [x_title, y_title]
+    def _pan_cb(self, settings, pan_pos):
+        """Callback invoked by the viewer when a pan happens pans in our
+        particular plot viewer. We use this to adjust the view if the pan is
+        not a byproduct of an internal adjustment.
+        """
+        # check to avoid circular callback situation
+        if not (self._panning_x or self._scaling_x or self._scaling_y or
+                self._adjusting):
+            self.adjust_view()
 
-        p_bg = gplots.PlotBG(self, linewidth=2, warn_y=warn_y, alert_y=alert_y)
-        self.add_plot_etc(p_bg)
+    def update_horz_scrollbar_cb(self, setting, autopan_x, sw):
+        h = 'off' if autopan_x == 'on' else 'on'
+        d = sw.get_scroll_bars_status()
+        v = d['vertical']
+        sw.scroll_bars(horizontal=h, vertical=v)
 
-        p_x_axis = gplots.XAxis(self, title=x_title, num_labels=num_x_labels)
-        self.add_plot_etc(p_x_axis)
-
-        p_y_axis = gplots.YAxis(self, title=y_title, num_labels=num_y_labels)
-        self.add_plot_etc(p_y_axis)
-
-        p_title = gplots.PlotTitle(self, title=title)
-        self.add_plot_etc(p_title)
-
-    def get_axes_titles(self):
-        x, y = 0, 1
-        flip = self.viewer.get_transforms()
-        if flip[2]:
-            x, y = y, x
-        return dict(axis_x=self.titles[x], axis_y=self.titles[y])
+    def update_vert_scrollbar_cb(self, setting, autoscale_y, sw):
+        d = sw.get_scroll_bars_status()
+        h = d['horizontal']
+        v = 'off' if autoscale_y == 'on' else 'on'
+        sw.scroll_bars(horizontal=h, vertical=v)
