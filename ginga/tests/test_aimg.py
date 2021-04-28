@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from astropy import nddata
 from astropy.io import fits
@@ -11,7 +10,6 @@ from ginga.util import wcs, wcsmod
 wcsmod.use('astropy')
 
 
-@pytest.mark.filterwarnings("ignore:'datfix' made the change")
 class TestAstroImage(object):
     def setup_class(self):
         self.logger = log.get_logger("TestAstroImage", null=True)
