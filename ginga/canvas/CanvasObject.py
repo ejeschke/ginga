@@ -527,6 +527,10 @@ class CanvasObjectBase(Callback.Callbacks):
         else:
             return trcalc.strip_z(trcalc.get_bounds(points))
 
+    def get_llur(self):
+        a, b = trcalc.get_bounds(self.get_data_points())
+        return (a[0], a[1], b[0], b[1])
+
     # --- TO BE DEPRECATED METHODS ---
 
     def move_delta(self, xoff, yoff):

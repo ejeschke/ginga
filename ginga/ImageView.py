@@ -113,7 +113,7 @@ class ImageViewBase(Callback.Callbacks):
         rgbmap.add_callback('changed', self.rgbmap_cb)
 
         # for scale
-        self.t_.add_defaults(scale=(1.0, 1.0))
+        self.t_.add_defaults(scale=(1.0, 1.0), sanity_check_scale=True)
         for name in ['scale']:
             self.t_.get_setting(name).add_callback('set', self.scale_cb)
 
@@ -1694,9 +1694,10 @@ class ImageViewBase(Callback.Callbacks):
         sx = float(win_wd) / scale_x
         sy = float(win_ht) / scale_y
         if (sx < 1.0) or (sy < 1.0):
-            raise ValueError(
-                "resulting scale (%f, %f) would result in pixel size "
-                "approaching window size" % (scale_x, scale_y))
+            if self.settings.get('sanity_check_scale', True):
+                raise ValueError(
+                    "resulting scale (%f, %f) would result in pixel size "
+                    "approaching window size" % (scale_x, scale_y))
 
     def _reset_bbox(self):
         """This function should only be called internally.  It resets

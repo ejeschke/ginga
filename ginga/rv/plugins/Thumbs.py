@@ -878,6 +878,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             rect.x1 -= off
             rect.x2 -= off
             point.x -= off
+        if rect.y1 < y3:
+            off = y3 - rect.y1
+            rect.y1 += off
+            rect.y2 += off
+            point.y += off
+        if rect.y2 > y4:
+            off = rect.y2 - y4
+            rect.y1 -= off
+            rect.y2 -= off
+            point.y -= off
 
         return obj
 

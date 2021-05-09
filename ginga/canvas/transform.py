@@ -15,7 +15,7 @@ __all__ = ['TransformError', 'BaseTransform', 'ComposedTransform',
            'CartesianNativeTransform', 'AsIntegerTransform',
            'RotationTransform', 'ScaleTransform',
            'DataCartesianTransform', 'OffsetDataTransform',
-           'WCSDataTransform', 'get_catalog'
+           'WCSDataTransform', 'ScaleOffsetTransform', 'get_catalog'
            ]
 
 
@@ -660,6 +660,57 @@ class WCSDataTransform(BaseTransform):
         if unpack:
             return res[0]
         return res
+
+
+class ScaleOffsetTransform(BaseTransform):
+    """
+    A custom transform used for ginga.canvas.types.plots canvas objects.
+    """
+
+    def __init__(self):
+        super(ScaleOffsetTransform, self).__init__()
+        self.x_scale = 1.0
+        self.y_scale = 1.0
+        self.x_offset = 0
+        self.y_offset = 0
+
+    def to_(self, ntv_pts):
+        ntv_pts = np.asarray(ntv_pts)
+        has_z = (ntv_pts.shape[-1] > 2)
+
+        mpy_pt = [self.x_scale, self.y_scale]
+        if has_z:
+            mpy_pt.append(1.0)
+
+        add_pt = [self.x_offset, self.y_offset]
+        if has_z:
+            add_pt.append(0.0)
+
+        ntv_pts = np.add(np.multiply(ntv_pts, mpy_pt), add_pt).astype(np.int)
+
+        return ntv_pts
+
+    def from_(self, ntv_pts):
+        ntv_pts = np.asarray(ntv_pts)
+        has_z = (ntv_pts.shape[-1] > 2)
+
+        add_pt = [-self.x_offset, -self.y_offset]
+        if has_z:
+            add_pt.append(0.0)
+
+        mpy_pt = [1.0 / self.x_scale, 1.0 / self.y_scale]
+        if has_z:
+            mpy_pt.append(1.0)
+
+        ntv_pts = np.multiply(np.add(ntv_pts, add_pt), mpy_pt)
+
+        return ntv_pts
+
+    def set_plot_scaling(self, x_scale, y_scale, x_offset, y_offset):
+        self.x_scale = x_scale
+        self.y_scale = y_scale
+        self.x_offset = x_offset
+        self.y_offset = y_offset
 
 
 def get_catalog():

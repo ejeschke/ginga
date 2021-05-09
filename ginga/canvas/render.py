@@ -497,8 +497,8 @@ class StandardPixelRenderer(RendererBase):
         sx = float(win_wd) / scale_x
         sy = float(win_ht) / scale_y
         if (sx < 1.0) or (sy < 1.0):
-            #self.logger.warning("new scale would exceed max/min; scale unchanged")
-            raise RenderError("new scale would exceed pixel max; scale unchanged")
+            if self.viewer.settings.get('sanity_check_scale', True):
+                raise RenderError("new scale would exceed pixel max; scale unchanged")
 
         # record location of pan position pixel
         self._org_x, self._org_y = pan_x - data_off, pan_y - data_off

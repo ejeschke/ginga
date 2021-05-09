@@ -650,13 +650,14 @@ class ImageViewBindings(object):
 
         viewer.panset_xy(pan_x, pan_y)
 
-    def pan_omni(self, viewer, direction, amount, msg=False):
+    def pan_omni(self, viewer, direction, amount, msg=False,
+                 lock_x=False, lock_y=False):
         # calculate current pan pct
         res = self.calc_pan_pct(viewer, pad=0)
 
         ang_rad = math.radians(90.0 - direction)
-        amt_x = math.cos(ang_rad) * amount
-        amt_y = math.sin(ang_rad) * amount
+        amt_x = 0 if lock_x else math.cos(ang_rad) * amount
+        amt_y = 0 if lock_y else math.sin(ang_rad) * amount
 
         # modify the pct, as per the params
         pct_page_x = res.vis_x / res.rng_x
