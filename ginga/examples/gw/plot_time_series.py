@@ -39,7 +39,7 @@ import threading
 import numpy as np
 
 import ginga.toolkit as ginga_toolkit
-from ginga.misc import log, Bunch, Timer
+from ginga.misc import log, Bunch
 from ginga.plot.plotaide import PlotAide
 import ginga.plot.data_source as dsp
 
