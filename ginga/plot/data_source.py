@@ -166,7 +166,7 @@ class XYDataSource:
         """Get the entire set of data points as an `ndarray`.
         """
         n = len(self)
-        arr = np.zeros((n, 2), dtype=np.float)
+        arr = np.zeros((n, 2), dtype=float)
         if n == 0:
             return arr
         if self.front >= self.rear:
