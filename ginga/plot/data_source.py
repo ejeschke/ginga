@@ -189,6 +189,7 @@ class XYDataSource:
         else:
             return self.length - self.rear + self.front + 1
 
+
 class SlidingWindowMinMax:
     """Class to efficiently keep track of the minmax values of a changing
     data set.

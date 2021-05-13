@@ -156,7 +156,6 @@ class PlotAide(Callback.Callbacks):
             plotable.set_callback('pick-move', self.show_tt_cb, 'move')
             plotable.set_callback('pick-up', self.show_tt_cb, 'up')
 
-
     def get_plot_decor(self, kind):
         """Get a "plot accessory"
 
