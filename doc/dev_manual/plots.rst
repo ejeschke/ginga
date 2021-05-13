@@ -15,7 +15,7 @@ data.
 Graphs are shown in a Ginga viewer and managed mostly by a separate
 ``PlotAide`` object, which manipulates the viewer and its main canvas.
 The plot aide is like a coordinator or intermediary between the
-components of the plot.  It initializes the viewer so for special user
+components of the plot.  It initializes the viewer for special user
 plot interaction and provides some coordination between XY plots and
 other "plot decor" like plot title and key, axis titles, axis grids and
 markers, etc.  
@@ -32,8 +32,8 @@ thereof) form the individual plot lines within the graph.
 In typical use, the plot aide provides a convenience method
 (``setup_standard_frame``) that can automatically add and configure the
 plot decor, so that the user then simply needs to instantiate
-``XYPlot``s and add them to the plot via the plot aide's ``add_plot``
-method.
+``XYPlot`` objects and add them to the plot via the plot aide's
+``add_plot`` method.
 
 Assuming that we have created and configured a ``CanvasView`` viewer
 (``v``) with an associated ``ScrolledView`` widget (``sw``), we can

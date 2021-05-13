@@ -1112,6 +1112,8 @@ class Pick(GingaPlugin.LocalPlugin):
         b.xlbl_warning_y.set_text('')
         b.alert_y.set_text('')
         b.xlbl_alert_y.set_text('')
+        b.warning_y.add_callback('activated', self.set_quick_warn_cb)
+        b.alert_y.add_callback('activated', self.set_quick_alert_cb)
 
         vbox3.add_widget(w, stretch=0)
         vbox3.add_widget(Widgets.Label(''), stretch=1)
@@ -2239,6 +2241,18 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def drag_only_cb(self, w, tf):
         self.drag_only = tf
+        return True
+
+    def set_quick_warn_cb(self, w):
+        bg = self.cuts_view.get_plot_decor('plot_bg')
+        val_s = w.get_text().strip()
+        bg.warn_y = None if len(val_s) == 0 else float(val_s)
+        return True
+
+    def set_quick_alert_cb(self, w):
+        bg = self.cuts_view.get_plot_decor('plot_bg')
+        val_s = w.get_text().strip()
+        bg.alert_y = None if len(val_s) == 0 else float(val_s)
         return True
 
     def __str__(self):

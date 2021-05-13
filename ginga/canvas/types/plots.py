@@ -576,17 +576,15 @@ class PlotBG(CompoundObject):
         self.objects.append(self.bg)
 
         # add warning and alert lines
-        if self.warn_y is not None:
-            self.ln_warn = aide.dc.Line(0, self.warn_y, 1, self.warn_y,
-                                        color='gold3', linewidth=self.linewidth,
-                                        coord='window')
-            self.objects.append(self.ln_warn)
+        self.ln_warn = aide.dc.Line(0, self.warn_y, 1, self.warn_y,
+                                    color='gold3', linewidth=self.linewidth,
+                                    alpha=0.0, coord='window')
+        self.objects.append(self.ln_warn)
 
-        if self.alert_y is not None:
-            self.ln_alert = aide.dc.Line(0, self.alert_y, 1, self.alert_y,
-                                         color='red', linewidth=self.linewidth,
-                                         coord='window')
-            self.objects.append(self.ln_alert)
+        self.ln_alert = aide.dc.Line(0, self.alert_y, 1, self.alert_y,
+                                     color='red', linewidth=self.linewidth,
+                                     alpha=0.0, coord='window')
+        self.objects.append(self.ln_alert)
 
     def warning(self):
         self.bg.fillcolor = self.warn_bg
