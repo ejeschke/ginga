@@ -190,6 +190,8 @@ class ImageViewBindings(object):
             sc_naxis=['naxis+scroll'],
 
             scroll_pan_acceleration=1.0,
+            scroll_pan_lock_x=False,
+            scroll_pan_lock_y=False,
             # 1.0 is appropriate for a mouse, 0.1 for most trackpads
             scroll_zoom_acceleration=1.0,
             #scroll_zoom_acceleration=0.1,
@@ -2034,7 +2036,10 @@ class ImageViewBindings(object):
         scr_pan_adj_factor = 1.4142135623730951
         amount = (event.amount * scr_pan_adj_factor * pan_accel) / 360.0
 
-        self.pan_omni(viewer, direction, amount)
+        lock_x = self.settings.get('scroll_pan_lock_x', False)
+        lock_y = self.settings.get('scroll_pan_lock_y', False)
+
+        self.pan_omni(viewer, direction, amount, lock_x=lock_x, lock_y=lock_y)
         return True
 
     def sc_pan_coarse(self, viewer, event, msg=True):

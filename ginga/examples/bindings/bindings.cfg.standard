@@ -156,6 +156,9 @@ sc_naxis = ['naxis+scroll']
 # This controls how fast panning occurs with the sc_pan* functions.
 # Increase to speed up panning
 scroll_pan_acceleration = 1.0
+# Lock X or Y pan scrolling
+scroll_pan_lock_x = False
+scroll_pan_lock_y = False
 # For trackpads you can adjust this down if it seems too sensitive.
 # 1.0 is appropriate for a mouse, 0.1 for most trackpads
 scroll_zoom_acceleration = 1.0

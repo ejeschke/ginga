@@ -189,6 +189,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         bd.enable_pan(True)
         bd.enable_zoom(False)
         bd.enable_cmap(False)
+        bd.get_settings().set(scroll_pan_lock_x=True)
 
         # remap some bindings for pan mode into no mode needed
         bm = c_v.get_bindmap()
