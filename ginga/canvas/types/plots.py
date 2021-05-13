@@ -241,17 +241,20 @@ class Axis(CompoundObject):
     """
     Base class for axis plotables.
     """
-    def __init__(self, aide, title=None, num_labels=4, font='sans',
+    def __init__(self, title=None, num_labels=4, font='sans',
                  fontsize=10.0):
         super(Axis, self).__init__()
 
-        self.aide = aide
+        self.aide = None
         self.num_labels = num_labels
         self.title = title
         self.font = font
         self.fontsize = fontsize
         self.grid_alpha = 1.0
         self.format_value = self._format_value
+
+    def register_decor(self, aide):
+        self.aide = aide
 
     def _format_value(self, v):
         """Default formatter for XAxis labels.
@@ -289,15 +292,18 @@ class XAxis(Axis):
     """
     Plotable object that defines X axis labels and grid lines.
     """
-    def __init__(self, aide, title=None, num_labels=4, font='sans',
+    def __init__(self, title=None, num_labels=4, font='sans',
                  fontsize=10.0):
-        super(XAxis, self).__init__(aide, title=title, num_labels=num_labels,
+        super(XAxis, self).__init__(title=title, num_labels=num_labels,
                                     font=font, fontsize=fontsize)
 
         self.kind = 'axis_x'
         self.txt_ht = 0
         self.title_wd = 0
         self.pad_px = 5
+
+    def register_decor(self, aide):
+        self.aide = aide
 
         # add X grid
         self.grid = Bunch.Bunch()
@@ -402,9 +408,8 @@ class YAxis(Axis):
     """
     Plotable object that defines Y axis labels and grid lines.
     """
-    def __init__(self, aide, title=None, num_labels=4,
-                 font='sans', fontsize=10.0):
-        super(YAxis, self).__init__(aide, title=title, num_labels=num_labels,
+    def __init__(self, title=None, num_labels=4, font='sans', fontsize=10.0):
+        super(YAxis, self).__init__(title=title, num_labels=num_labels,
                                     font=font, fontsize=fontsize)
 
         self.kind = 'axis_y'
@@ -412,6 +417,9 @@ class YAxis(Axis):
         self.txt_wd = 0
         self.txt_ht = 0
         self.pad_px = 4
+
+    def register_decor(self, aide):
+        self.aide = aide
 
         # add Y grid
         self.grid = Bunch.Bunch()
@@ -540,13 +548,13 @@ class PlotBG(CompoundObject):
     a warning if a certain threshold is crossed and an alert if the
     detector has saturated (alerts are higher than warnings).
     """
-    def __init__(self, aide, warn_y=None, alert_y=None, linewidth=1):
+    def __init__(self, warn_y=None, alert_y=None, linewidth=1):
         super(PlotBG, self).__init__()
 
-        self.aide = aide
         self.y_lbl_info = [warn_y, alert_y]
         self.warn_y = warn_y
         self.alert_y = alert_y
+        self.linewidth = linewidth
         # default warning check
         self.check_warning = self._check_warning
 
@@ -554,6 +562,11 @@ class PlotBG(CompoundObject):
         self.warn_bg = 'lightyellow'
         self.alert_bg = 'mistyrose2'
         self.kind = 'plot_bg'
+        self.pickable = True
+        self.opaque = True
+
+    def register_decor(self, aide):
+        self.aide = aide
 
         # add a backdrop that we can change color for visual warnings
         self.bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
@@ -565,13 +578,13 @@ class PlotBG(CompoundObject):
         # add warning and alert lines
         if self.warn_y is not None:
             self.ln_warn = aide.dc.Line(0, self.warn_y, 1, self.warn_y,
-                                        color='gold3', linewidth=linewidth,
+                                        color='gold3', linewidth=self.linewidth,
                                         coord='window')
             self.objects.append(self.ln_warn)
 
         if self.alert_y is not None:
             self.ln_alert = aide.dc.Line(0, self.alert_y, 1, self.alert_y,
-                                         color='red', linewidth=linewidth,
+                                         color='red', linewidth=self.linewidth,
                                          coord='window')
             self.objects.append(self.ln_alert)
 
@@ -672,10 +685,9 @@ class PlotTitle(CompoundObject):
     """
     Plotable object that defines the plot title and keys.
     """
-    def __init__(self, aide, title='', font='sans', fontsize=12.0):
+    def __init__(self, title='', font='sans', fontsize=12.0):
         super(PlotTitle, self).__init__()
 
-        self.aide = aide
         self.font = font
         self.fontsize = fontsize
         self.title = title
@@ -684,13 +696,16 @@ class PlotTitle(CompoundObject):
         self.format_label = self._format_label
         self.pad_px = 5
 
+    def register_decor(self, aide):
+        self.aide = aide
+
         self.title_bg = aide.dc.Rectangle(0, 0, 100, 100, color=aide.norm_bg,
                                           fill=True, fillcolor=aide.axis_bg,
                                           coord='window')
         self.objects.append(self.title_bg)
 
         self.lbls = dict()
-        self.lbls[0] = aide.dc.Text(0, 0, text=title, color='black',
+        self.lbls[0] = aide.dc.Text(0, 0, text=self.title, color='black',
                                     font=self.font,
                                     fontsize=self.fontsize,
                                     coord='window')
@@ -778,17 +793,25 @@ class PlotTitle(CompoundObject):
 
 class CalcPlot(XYPlot):
 
-    def __init__(self, name=None, fn=np.sin, color='black',
+    def __init__(self, name=None, x_fn=None, y_fn=None, color='black',
                  linewidth=1, linestyle='solid', alpha=1.0, **kwdargs):
         super(CalcPlot, self).__init__(name=name,
                                        color=color, linewidth=linewidth,
                                        linestyle=linestyle, alpha=alpha,
                                        **kwdargs)
         self.kind = 'calcplot'
-        self.fn = fn
+        if x_fn is None:
+            x_fn = lambda x: x   # noqa
+        self.x_fn = x_fn
+        if y_fn is None:
+            y_fn = lambda y: y   # noqa
+        self.y_fn = y_fn
 
-    def plot(self, points):
-        pass
+    def plot(self, y_fn, x_fn=None):
+        if x_fn is not None:
+            self.x_fn = x_fn
+        self.y_fn = y_fn
+        self.plot_xlim = (None, None)
 
     def calc_points(self, viewer, start_x, stop_x):
         # in case X axis is flipped
@@ -803,8 +826,8 @@ class CalcPlot(XYPlot):
 
         wd, ht = self.viewer.get_window_size()
 
-        x_pts = np.linspace(start_x, stop_x, wd, dtype=np.float)
-        y_pts = self.fn(x_pts)
+        x_pts = self.x_fn(np.linspace(start_x, stop_x, wd, dtype=np.float))
+        y_pts = self.y_fn(x_pts)
         points = np.array((x_pts, y_pts)).T
         self.path.points = points
 

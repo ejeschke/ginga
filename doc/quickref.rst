@@ -427,6 +427,37 @@ Cmap mode
 | Y                    | Restore the color map to default ('gray').        |
 +----------------------+---------------------------------------------------+
 
+.. _plot_mode:
+
+Plot mode
+=========
+
+Plot mode is only valid when the viewer is used with a ``PlotAide``
+object to display a graph.
+
++----------------------+---------------------------------------------------+
+| Commmand             | Description                                       |
++======================+===================================================+
+| scroll               | Zoom the X axis.                                  |
+|                      | (Sets `autoaxis_x` to `off`, if it was `on`)      |
++----------------------+---------------------------------------------------+
+| Ctrl + scroll        | Zoom the Y axis. (Sets `autoaxis_y` to `off`)     |
++----------------------+---------------------------------------------------+
+| x                    | Toggle `autoaxis_x` between `on` and `off`.       |
++----------------------+---------------------------------------------------+
+| p                    | Toggle `autoaxis_x` between `pan` and `off`.      |
++----------------------+---------------------------------------------------+
+| y                    | Toggle `autoaxis_y` between `on` and `off`.       |
++----------------------+---------------------------------------------------+
+| v                    | Toggle `autoaxis_y` between `vis` and `off`.      |
++----------------------+---------------------------------------------------+
+
+The graph can be flipped in X or Y and the axes swapped, using the keystroke
+commands found in the transform section above (:ref:`transform_commands`).
+
+To understand the role of the `autoaxis_x` and `autoaxis_y` settings, please
+see the chapter on plots (:ref:`ch-plots`).
+
 .. _autozoom_setting:
 
 Autozoom setting

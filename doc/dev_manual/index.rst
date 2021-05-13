@@ -13,6 +13,7 @@ Ginga as a visualization solution for their own software.
    image_wrappers
    image_viewer
    canvas
+   plots
    developers
    viewer
    jupnotebooks

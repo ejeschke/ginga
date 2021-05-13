@@ -14,10 +14,8 @@ from ginga.canvas import transform
 
 class PlotAide(Callback.Callbacks):
     """
-    PlotAide is a class to use a Ginga viewer as a high-performance
-    interactive X/Y line plot viewer.
-
-
+    PlotAide is a class to use a Ginga viewer as a speedy, interactive
+    X/Y line plot viewer.
     """
 
     def __init__(self, viewer, settings=None):
@@ -47,11 +45,10 @@ class PlotAide(Callback.Callbacks):
         self.llur = (0, 0, 0, 0)
 
         if settings is None:
-            settings = Settings.SettingGroup()
+            settings = Settings.SettingGroup(name='plotaide',
+                                             logger=self.logger)
         self.settings = settings
-        self.settings.set_defaults(autoaxis_x='on', autoaxis_y='on',
-                                   autopan_x='off',
-                                   autoaxis_y_mode='data')
+        self.settings.set_defaults(autoaxis_x='on', autoaxis_y='on')
 
         # internal flags used for synchronization
         self._panning_x = False
@@ -69,7 +66,7 @@ class PlotAide(Callback.Callbacks):
         t_ = vi.get_settings()
         t_.set(sanity_check_scale=False)
 
-        # add special plot transform
+        # add special plot transform, used for the plot area
         self.plot_tr = transform.ScaleOffsetTransform()
         self.plot_tr.set_plot_scaling(1.0, 1.0, 0, 0)
         vi.tform['data_to_plot'] = (vi.tform['data_to_native'] + self.plot_tr)
@@ -100,8 +97,8 @@ class PlotAide(Callback.Callbacks):
 
         bm.map_event('plot', [], 'kp_y', 'plot-autoaxis-y')
         vi.set_callback('keydown-plot-autoaxis-y', self._y_press_cb)
-        bm.map_event('plot', [], 'kp_f', 'plot-fullscale-y')
-        vi.set_callback('keydown-plot-fullscale-y', self.scale_y_full_cb)
+        bm.map_event('plot', [], 'kp_v', 'plot-visible-y')
+        vi.set_callback('keydown-plot-visible-y', self._v_press_cb)
         bm.map_event('plot', [], 'kp_x', 'plot-autoaxis-x')
         vi.set_callback('keydown-plot-autoaxis-x', self._x_press_cb)
         bm.map_event('plot', [], 'kp_p', 'plot-position-x')
@@ -117,8 +114,6 @@ class PlotAide(Callback.Callbacks):
                                                              self._autoaxis_x_cb)
         self.settings.get_setting('autoaxis_y').add_callback('set',
                                                              self._autoaxis_y_cb)
-        self.settings.get_setting('autopan_x').add_callback('set',
-                                                            self._autopan_x_cb)
 
         settings = vi.get_settings()
         settings.get_setting('pan').add_callback('set', self._pan_cb)
@@ -128,30 +123,41 @@ class PlotAide(Callback.Callbacks):
         self.dc = canvas.get_draw_classes()
         self.canvas = self.dc.DrawingCanvas()
         canvas.add(self.canvas)
+        self.canvas.register_for_cursor_drawing(vi)
+        self.canvas.set_draw_mode('pick')
+        self.canvas.ui_set_active(True, viewer=vi)
 
         # holds our individual XY plots
         self.plots = Bunch.Bunch()
         # holds other plot elements like PlotBG, XAxis, YAxis, PlotTitle, etc.
-        self.plot_etc_l = []
-        self.plot_etc_d = {}
+        self.plot_decor_l = []
+        self.plot_decor_d = {}
         self.titles = [None, None]
 
-    def get_widget(self):
-        return self.viewer.get_widget()
+    def get_settings(self):
+        return self.settings
 
-    def add_plot_etc(self, plotable):
-        """Add a "plot accessory" (PlotBG, PlotTitle, XAxis, YAxis, etc)
+    def add_plot_decor(self, plotable):
+        """Add a "plot accessory" (``PlotBG``, ``PlotTitle``, ``XAxis``, etc)
 
         Parameters
         ----------
         plotable : `~ginga.canvas.types.plots.CompoundObject` instance
             A plot accessory like a PlotBG, PlotTitle, XAxis, YAxis, etc.
         """
-        self.plot_etc_d[plotable.kind] = plotable
-        self.plot_etc_l.append(plotable)
+        plotable.register_decor(self)
+        self.plot_decor_d[plotable.kind] = plotable
+        self.plot_decor_l.append(plotable)
         self.canvas.add(plotable)
 
-    def get_plot_etc(self, kind):
+        # set callbacks for tool tips
+        if plotable.kind == 'plot_bg':
+            plotable.set_callback('pick-down', self.show_tt_cb, 'down')
+            plotable.set_callback('pick-move', self.show_tt_cb, 'move')
+            plotable.set_callback('pick-up', self.show_tt_cb, 'up')
+
+
+    def get_plot_decor(self, kind):
         """Get a "plot accessory"
 
         Parameters
@@ -164,7 +170,7 @@ class PlotAide(Callback.Callbacks):
         plotable : `~ginga.canvas.types.layer.CompoundObject` instance
             The plot accessory
         """
-        return self.plot_etc_d[kind]
+        return self.plot_decor_d[kind]
 
     def add_plot(self, plot):
         """Add a XY plot
@@ -178,10 +184,10 @@ class PlotAide(Callback.Callbacks):
         self.plots[name] = plot
 
         self.canvas.add(plot, tag=name)
-        plot_bg = self.plot_etc_d.get('plot_bg', None)
+        plot_bg = self.plot_decor_d.get('plot_bg', None)
         self.canvas.raise_object(plot, aboveThis=plot_bg)
 
-        for plotable in self.plot_etc_l:
+        for plotable in self.plot_decor_l:
             plotable.add_plot(self.viewer, plot)
 
         limits = self.get_limits('data')
@@ -206,7 +212,7 @@ class PlotAide(Callback.Callbacks):
 
         self.canvas.delete_object_by_tag(name)
 
-        for plotable in self.plot_etc_l:
+        for plotable in self.plot_decor_l:
             plotable.delete_plot(self.viewer, plot)
 
         self.update_plots()
@@ -244,7 +250,7 @@ class PlotAide(Callback.Callbacks):
         after changes in region shown or data updates.
         """
         with self.viewer.suppress_redraw:
-            for plotable in self.plot_etc_l:
+            for plotable in self.plot_decor_l:
                 plotable.update_elements(self.viewer)
 
             self.viewer.redraw(whence=3)
@@ -263,7 +269,7 @@ class PlotAide(Callback.Callbacks):
         with self.viewer.suppress_redraw:
             # update all non-plot elements: axes, title, bg, etc
             # after this the plot bbox will have been redefined
-            for plotable in self.plot_etc_l:
+            for plotable in self.plot_decor_l:
                 plotable.update_bbox(self.viewer, dims)
 
             # update the plot transform based on the new plot bbox
@@ -271,7 +277,7 @@ class PlotAide(Callback.Callbacks):
 
             # second pass to allow non-plot elements to position their
             # components now that plox bbox is known
-            for plotable in self.plot_etc_l:
+            for plotable in self.plot_decor_l:
                 plotable.update_resize(self.viewer, dims, xy_lim)
 
             # now update all plots, due to the new transform
@@ -364,17 +370,17 @@ class PlotAide(Callback.Callbacks):
 
         self.titles = [x_title, y_title]
 
-        p_bg = gplots.PlotBG(self, linewidth=2, warn_y=warn_y, alert_y=alert_y)
-        self.add_plot_etc(p_bg)
+        p_bg = gplots.PlotBG(linewidth=2, warn_y=warn_y, alert_y=alert_y)
+        self.add_plot_decor(p_bg)
 
-        p_title = gplots.PlotTitle(self, title=title)
-        self.add_plot_etc(p_title)
+        p_title = gplots.PlotTitle(title=title)
+        self.add_plot_decor(p_title)
 
-        p_x_axis = gplots.XAxis(self, title=x_title, num_labels=num_x_labels)
-        self.add_plot_etc(p_x_axis)
+        p_x_axis = gplots.XAxis(title=x_title, num_labels=num_x_labels)
+        self.add_plot_decor(p_x_axis)
 
-        p_y_axis = gplots.YAxis(self, title=y_title, num_labels=num_y_labels)
-        self.add_plot_etc(p_y_axis)
+        p_y_axis = gplots.YAxis(title=y_title, num_labels=num_y_labels)
+        self.add_plot_decor(p_y_axis)
 
     def get_axes_titles(self):
         """A function used by Axis subclasses to find their title.
@@ -395,11 +401,8 @@ class PlotAide(Callback.Callbacks):
                                                              self.update_horz_scrollbar_cb, sw)
         self.settings.get_setting('autoaxis_y').add_callback('set',
                                                              self.update_vert_scrollbar_cb, sw)
-        self.settings.get_setting('autopan_x').add_callback('set',
-                                                            self.update_horz_scrollbar_cb, sw)
 
-        if (self.settings['autoaxis_x'] == 'on' or
-            self.settings['autopan_x'] == 'on'):
+        if self.settings['autoaxis_x'] in ('on', 'pan'):
             horz = 'off'
         else:
             horz = 'on'
@@ -425,9 +428,9 @@ class PlotAide(Callback.Callbacks):
                 # X limits may be adjusted by autoscaling X axis or
                 # autopanning to most recent data
                 if not self._scaling_x and self.settings['autoaxis_x'] == 'on':
-                    self.autoscale_x()
+                    self.zoom_fit_x()
                 else:
-                    if not self._panning_x and self.settings['autopan_x'] == 'on':
+                    if not self._panning_x and self.settings['autoaxis_x'] == 'pan':
                         self.autopan_x()
 
                 # recalculate plots based on new X limits
@@ -438,8 +441,8 @@ class PlotAide(Callback.Callbacks):
                     plot_src.calc_points(self.viewer, x_lo, x_hi)
 
                 # Y limits may be adjusted by autoscaling Y axis
-                if not self._scaling_y and self.settings['autoaxis_y'] == 'on':
-                    self.autoscale_y()
+                if not self._scaling_y and self.settings['autoaxis_y'] != 'off':
+                    self.zoom_fit_y()
 
                 # finally, update plot elements to match adjustments
                 self.update_elements()
@@ -447,7 +450,7 @@ class PlotAide(Callback.Callbacks):
         finally:
             self._adjusting = False
 
-    def scale_y(self, y_lo, y_hi):
+    def zoom_limit_y(self, y_lo, y_hi):
         """Scale the plot in the Y direction so that `y_lo` and `y_hi`
         are both visible.
 
@@ -471,19 +474,21 @@ class PlotAide(Callback.Callbacks):
         finally:
             self._scaling_y = False
 
-    def autoscale_y(self):
+    def zoom_fit_y(self):
         """Scale the plot in the Y axis so that the plot takes up as
         much room vertically as shown in the visible area.
         """
         # establish range of current Y plot
-        mode = self.settings['autoaxis_y_mode']
-        pl = self.get_limits(mode)
+        mode = self.settings['autoaxis_y']
+        if mode == 'on':
+            limits = self.get_limits('data')
+        else:
+            limits = self.get_limits('plot')
 
-        y_lo, y_hi = pl[0][1], pl[1][1]
+        y_lo, y_hi = limits[0][1], limits[1][1]
+        self.zoom_limit_y(y_lo, y_hi)
 
-        self.scale_y(y_lo, y_hi)
-
-    def scale_y_full(self):
+    def zoom_fit_y_full(self):
         """Scale the plot in the Y axis so that the plot takes up as
         much room vertically as there is in the range of Y data.
         """
@@ -491,9 +496,9 @@ class PlotAide(Callback.Callbacks):
         limits = self.get_limits('data')
         y_lo, y_hi = limits[0][1], limits[1][1]
 
-        self.scale_y(y_lo, y_hi)
+        self.zoom_limit_y(y_lo, y_hi)
 
-    def scale_x(self, x_lo, x_hi):
+    def zoom_limit_x(self, x_lo, x_hi):
         """Scale the plot in the X direction so that `x_lo` and `x_hi`
         are both visible.
 
@@ -517,18 +522,15 @@ class PlotAide(Callback.Callbacks):
         finally:
             self._scaling_x = False
 
-    def autoscale_x(self):
+    def zoom_fit_x(self):
         """Scale the plot in the X axis so that the plot takes up as
         much room horizontally as there is in the range of X data.
         """
-        self.scale_x_full()
-
-    def scale_x_full(self):
         # establish full range of X
         limits = self.get_limits('data')
         x_lo, x_hi = limits[0][0], limits[1][0]
 
-        self.scale_x(x_lo, x_hi)
+        self.zoom_limit_x(x_lo, x_hi)
 
     def autopan_x(self):
         """Pan the plot so that the most recent data is visible at
@@ -537,11 +539,12 @@ class PlotAide(Callback.Callbacks):
         self._panning_x = True
         try:
             wd, ht = self.viewer.get_window_size()
-            cx, cy = wd, ht // 2
 
             pl = self.get_limits('data')
             x_lo, x_hi = pl[0][0], pl[1][0]
-            _, pan_y = self.viewer.get_pan()[:2]
+            pan_x, pan_y = self.viewer.get_pan()[:2]
+            _, cy = self.viewer.get_canvas_xy(pan_x, pan_y)
+            cx = wd
 
             self.viewer.position_at_canvas_xy((x_hi, pan_y), (cx, cy))
 
@@ -549,32 +552,42 @@ class PlotAide(Callback.Callbacks):
             self._panning_x = False
 
     def _autoaxis_x_cb(self, setting, autoaxis_x):
-        """Called when the user toggles the 'autoscale X' feature on or off.
+        """Called when the user toggles the 'autoaxis X' feature on or off.
         """
-        msg = "Autoscale X ON" if autoaxis_x == 'on' else "Autoscale X OFF"
+        if autoaxis_x == 'on':
+            msg = "Autoaxis X ON"
+        elif autoaxis_x == 'pan':
+            msg = "Autoaxis X PAN"
+        else:
+            msg = "Autoaxis X OFF"
         self.viewer.onscreen_message(msg, delay=1.0)
         self.adjust_view()
 
     def _autoaxis_y_cb(self, setting, autoaxis_y):
-        """Called when the user toggles the 'autoscale Y' feature on or off.
+        """Called when the user toggles the 'autoaxis Y' feature on or off.
         """
-        msg = "Autoscale Y ON" if autoaxis_y == 'on' else "Autoscale Y OFF"
+        if autoaxis_y == 'on':
+            msg = "Autoaxis Y ON"
+        elif autoaxis_y == 'vis':
+            msg = "Autoaxis Y VIS"
+        else:
+            msg = "Autoaxis Y OFF"
         self.viewer.onscreen_message(msg, delay=1.0)
         self.adjust_view()
 
-    def scale_y_full_cb(self, *args):
-        """A callback called when the user has chosen to scale the Y axis
-        to the full range of the Y data.
-        """
-        self.settings['autoaxis_y'] = 'off'
-        self.scale_y_full()
-        self.viewer.onscreen_message("Autoscale Y OFF", delay=1.0)
-        self.adjust_view()
+    ## def zoom_y_full_cb(self, *args):
+    ##     """A callback called when the user has chosen to scale the Y axis
+    ##     to the full range of the Y data.
+    ##     """
+    ##     if self.settings['autoaxis_y'] != 'off':
+    ##         self.settings['autoaxis_y'] = 'off'
+    ##     self.zoom_fit_y_full()
+    ##     self.adjust_view()
 
     def _autopan_x_cb(self, setting, autopan_x):
         """Called when the user toggles the 'autopan X' feature on or off.
         """
-        msg = "Autopan X ON" if autopan_x == 'on' else "Autopan X OFF"
+        msg = "Autoaxis X PAN" if autopan_x == 'pan' else "Autoaxis X OFF"
         self.viewer.onscreen_message(msg, delay=1.0)
         self.adjust_view()
 
@@ -631,8 +644,7 @@ class PlotAide(Callback.Callbacks):
 
             self.viewer.scale_to(scale_x, scale_y)
             # turn off X autoscaling, since user overrode it
-            if self.settings['autoaxis_x'] != 'off':
-                self.viewer.onscreen_message("Autoscale X OFF", delay=1.0)
+            if self.settings['autoaxis_x'] == 'on':
                 self.settings['autoaxis_x'] = 'off'
 
             self.adjust_view()
@@ -654,7 +666,6 @@ class PlotAide(Callback.Callbacks):
             self.viewer.scale_to(scale_x, scale_y)
             # turn off Y autoscaling, since user overrode it
             if self.settings['autoaxis_y'] != 'off':
-                self.viewer.onscreen_message("Autoscale Y OFF", delay=1.0)
                 self.settings['autoaxis_y'] = 'off'
 
             self.adjust_view()
@@ -667,6 +678,12 @@ class PlotAide(Callback.Callbacks):
         autoaxis_y = self.settings['autoaxis_y'] == 'on'
         self.settings['autoaxis_y'] = 'off' if autoaxis_y else 'on'
 
+    def _v_press_cb(self, *args):
+        """Callback invoked when the user presses 'v' in the viewer window.
+        """
+        autoaxis_y = self.settings['autoaxis_y'] == 'vis'
+        self.settings['autoaxis_y'] = 'off' if autoaxis_y else 'vis'
+
     def _x_press_cb(self, *args):
         """Callback invoked when the user presses 'x' in the viewer window.
         """
@@ -676,8 +693,8 @@ class PlotAide(Callback.Callbacks):
     def _p_press_cb(self, *args):
         """Callback invoked when the user presses 'p' in the viewer window.
         """
-        autopan_x = self.settings['autopan_x'] == 'on'
-        self.settings['autopan_x'] = 'off' if autopan_x else 'on'
+        autopan_x = self.settings['autoaxis_x'] == 'pan'
+        self.settings['autoaxis_x'] = 'off' if autopan_x else 'pan'
 
     def _pan_cb(self, settings, pan_pos):
         """Callback invoked by the viewer when a pan happens pans in our
@@ -689,14 +706,106 @@ class PlotAide(Callback.Callbacks):
                 self._adjusting):
             self.adjust_view()
 
-    def update_horz_scrollbar_cb(self, setting, autopan_x, sw):
-        h = 'off' if autopan_x == 'on' else 'on'
+    def update_horz_scrollbar_cb(self, setting, autoaxis_x, sw):
+        h = 'off' if autoaxis_x != 'off' else 'on'
         d = sw.get_scroll_bars_status()
         v = d['vertical']
         sw.scroll_bars(horizontal=h, vertical=v)
 
-    def update_vert_scrollbar_cb(self, setting, autoscale_y, sw):
+    def update_vert_scrollbar_cb(self, setting, autoaxis_y, sw):
         d = sw.get_scroll_bars_status()
         h = d['horizontal']
-        v = 'off' if autoscale_y == 'on' else 'on'
+        v = 'off' if autoaxis_y != 'off' else 'on'
         sw.scroll_bars(horizontal=h, vertical=v)
+
+    def make_tt(self, canvas, lines, pt, fontsize=10):
+        # create the canvas object representing the tooltip
+        # a Rectangle with some Text objects inside
+        rect = canvas.dc.Rectangle(0, 0, 0, 0, color='black', fill=True,
+                                   fillcolor='lightyellow', coord='window')
+
+        l = [rect]
+        for line in lines:
+            text = canvas.dc.Text(0, 0, text=line, color='black',
+                                  font='sans condensed', fontsize=fontsize,
+                                  coord='window')
+            l.append(text)
+
+        tt_obj = canvas.dc.CompoundObject(*l)
+        return tt_obj
+
+    def update_tt(self, tt_obj, lines, pt, fontsize=10):
+        # Determine pop-up position on canvas, offset a little from cursor.
+        x, y = pt[:2]
+        x, y = x + 15, y + 10
+        mxwd = 0
+
+        # quick check to make sure TT doesn't go out of plot area in Y
+        text = tt_obj.objects[1]
+        text.text = lines[0]
+        txt_wd, txt_ht = self.viewer.renderer.get_dimensions(text)
+        y_end = y + len(lines) * (txt_ht + 1)
+        y_diff = y_end - self.llur[3]
+        if y_diff > 0:
+            y -= y_diff
+
+        # assign background rect coords
+        rect = tt_obj.objects[0]
+        rect.x1, rect.y1 = x, y
+
+        # assign text coords
+        a, b = x + 2, y
+        for i, text in enumerate(tt_obj.objects[1:]):
+            text.x = a
+            text.text = lines[i]
+            txt_wd, txt_ht = self.viewer.renderer.get_dimensions(text)
+            b += txt_ht + 1
+            text.y = b
+            mxwd = max(mxwd, txt_wd)
+        rect.x2 = x + mxwd + 4
+        rect.y2 = b + 4
+
+    def show_tt_cb(self, plot_bg, canvas, event, pt, state, fontsize=10):
+        """Internal callback routine to pop up a tooltip-like reading of
+        X/Y values at the cursor.
+        """
+        # determine plot coordinates of cursor
+        # double conversion needed because plot transform is different
+        # from default data transform
+        win_pt = self.viewer.tform['data_to_window'].to_(pt)
+        plot_x, plot_y = self.viewer.tform['data_to_plot'].from_(win_pt)
+
+        # format these values according to the axes formatters
+        x_axis = self.get_plot_decor('axis_x')
+        x_text = x_axis.format_value(plot_x)
+        y_axis = self.get_plot_decor('axis_y')
+        y_text = y_axis.format_value(plot_y)
+        text = "X: {0:}\nY: {1:}".format(x_text, y_text)
+        lines = text.split('\n')
+
+        tag = '_$tooltip'
+        if state == 'down':
+            # pressed down, create and pop up tooltip with X/Y value
+            # at point
+            try:
+                canvas.delete_object_by_tag(tag, redraw=False)
+            except KeyError:
+                pass
+            tt = self.make_tt(canvas, lines, win_pt)
+            canvas.add(tt, tag=tag, redraw=False)
+            self.update_tt(tt, lines, win_pt, fontsize=fontsize)
+
+        elif state == 'move':
+            # cursor moved while pressed down; update the tooltip value
+            tt = canvas.get_object_by_tag(tag)
+            self.update_tt(tt, lines, win_pt)
+
+        else:
+            # up, or anything else, remove the tooltip
+            try:
+                canvas.delete_object_by_tag(tag, redraw=False)
+            except KeyError:
+                pass
+
+        canvas.update_canvas()
+        return True

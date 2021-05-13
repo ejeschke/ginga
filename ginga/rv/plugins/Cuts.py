@@ -104,12 +104,10 @@ the new cut independently.
 """
 import numpy as np
 
-from ginga.gw import Widgets, Viewers
-from ginga import GingaPlugin
+from ginga.gw import Widgets
+from ginga import GingaPlugin, colors
 from ginga.canvas.coordmap import OffsetMapper
 
-from ginga.canvas.types import plots as gplots
-from ginga.util.plotaide import PlotAide
 try:
     from ginga.gw import Plot
     from ginga.util import plots
@@ -120,7 +118,7 @@ except ImportError:
 __all__ = ['Cuts']
 
 # default cut colors
-cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'brown', 'pink',
+cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
               'burlywood2', 'yellow3', 'turquoise', 'coral1', 'mediumpurple2']
 
 
@@ -155,7 +153,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.settings = prefs.create_category('plugin_Cuts')
         self.settings.add_defaults(select_new_cut=True, draw_then_move=True,
                                    label_cuts=True, colors=cut_colors,
-                                   drag_update=True,
+                                   drag_update=False,
                                    show_cuts_legend=False, enable_slit=False)
         self.settings.load(onError='silent')
         self.colors = self.settings.get('colors', cut_colors)
@@ -200,33 +198,12 @@ class Cuts(GingaPlugin.LocalPlugin):
         nb = Widgets.TabWidget(tabpos='top')
         paned.add_widget(Widgets.hadjust(nb, orientation))
 
-        ## self.cuts_plot = plots.CutsPlot(logger=self.logger,
-        ##                                 width=400, height=400)
-        ## self.plot = Plot.PlotWidget(self.cuts_plot)
-        ## self.plot.resize(400, 400)
-        ## ax = self.cuts_plot.add_axis()
-        ## ax.grid(True)
-        # Cuts profile plot
-        ci = Viewers.CanvasView(logger=self.logger)
-        width, height = 400, 400
-        ci.set_desired_size(width, height)
-        ci.set_background('white')
-        ci.set_foreground('black')
-        # for debugging
-        ci.set_name('cuts_plot')
-
-        # prepare this viewer as a plot viewer
-        self.cuts_view = PlotAide(ci)
-        self.cuts_view.setup_standard_frame(title="Cuts",
-                                            x_title="Line Index",
-                                            y_title="Pixel Value",
-                                            warn_y=None, alert_y=None)
-        title = self.cuts_view.get_plot_etc('plot_title')
-        #title.format_label = self._format_cuts_label
-
-        ciw = Viewers.GingaViewerWidget(viewer=ci)
-        ciw.resize(width, height)
-        self.plot = ciw
+        self.cuts_plot = plots.CutsPlot(logger=self.logger,
+                                        width=400, height=400)
+        self.plot = Plot.PlotWidget(self.cuts_plot)
+        self.plot.resize(400, 400)
+        ax = self.cuts_plot.add_axis()
+        ax.grid(True)
 
         self.slit_plot = plots.Plot(logger=self.logger,
                                     width=400, height=400)
@@ -476,27 +453,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cuttype = self.cuttypes[index]
         self.canvas.set_drawtype(self.cuttype, color='cyan', linestyle='dash')
 
-    def _add_cuts_plot(self, obj):
-        x_acc = np.mean if gplots.have_npi else None
-        y_acc = np.nanmax if x_acc else None
-        color = obj.objects[0].color
-        name = obj.objects[1].text
-        try:
-            plot = self.cuts_view.get_plot(name)
-            plot.color = color
-
-        except KeyError:
-            plot = gplots.XYPlot(name=name, color=color, linewidth=2,
-                                 x_acc=x_acc, y_acc=y_acc)
-            self.cuts_view.add_plot(plot)
-
-        obj.set_data(plot=plot)
-        return plot
-
-    def _del_cuts_plot(self, obj):
-        plot = obj.get_data('plot')
-        self.cuts_view.delete_plot(plot)
-
     def copy_cut_cb(self, w):
         old_tag = self.cutstag
         if old_tag == self._new_cut:  # Can only copy existing cut
@@ -508,7 +464,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         new_tag = "cuts{}".format(new_index)
         new_obj = old_obj.objects[0].copy()
         new_obj.move_delta_pt((20, 20))
-        new_cut = self._create_cut_obj(new_index, new_obj)
+        new_cut = self._create_cut_obj(new_index, new_obj, color='cyan')
         new_cut.set_data(count=new_index)
         self._update_tines(new_cut)
 
@@ -517,14 +473,14 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.add_cuts_tag(new_tag)
 
         self.logger.debug("redoing cut plots")
-        return self.replot(new_tag)
+        return self.replot_all()
 
-    def delete_cut(self, tag):
+    def delete_cut_cb(self, w):
+        tag = self.cutstag
         if tag == self._new_cut:
             return
-        cut = self.canvas.get_object_by_tag(tag)
+        index = self.tags.index(tag)  # noqa
         self.canvas.delete_object_by_tag(tag)
-        self._del_cuts_plot(cut)
         self.w.cuts.delete_alpha(tag)
         self.tags.remove(tag)
         idx = len(self.tags) - 1
@@ -534,19 +490,21 @@ class Cuts(GingaPlugin.LocalPlugin):
             self.save_cuts.set_enabled(False)
             if self.use_slit and self.gui_up:
                 self.save_slit.set_enabled(False)
-        # plot cleared in replot() if no more cuts
-        self.replot(tag)
-
-    def delete_cut_cb(self, w):
-        tag = self.cutstag
-        self.delete_cut(tag)
+        # plot cleared in replot_all() if no more cuts
+        self.replot_all()
 
     def delete_all_cb(self, w):
-        tags = list(self.tags)
-        tags.remove(self._new_cut)
+        self.canvas.delete_all_objects()
+        self.w.cuts.clear()
+        self.tags = [self._new_cut]
         self.cutstag = self._new_cut
-        for tag in tags:
-            self.delete_cut(tag)
+        self.w.cuts.append_text(self._new_cut)
+        self.select_cut(self._new_cut)
+        self.save_cuts.set_enabled(False)
+        if self.use_slit and self.gui_up:
+            self.save_slit.set_enabled(False)
+        # plot cleared in replot_all() if no more cuts
+        self.replot_all()
 
     def add_cuts_tag(self, tag):
         if tag not in self.tags:
@@ -567,7 +525,9 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def start(self):
         # start line cuts operation
-        self.drag_update = self.settings.get('drag_update', True)
+        self.cuts_plot.set_titles(rtitle="Cuts")
+
+        self.drag_update = self.settings.get('drag_update', False)
 
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
@@ -590,7 +550,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         self.canvas.ui_set_active(True, viewer=self.fitsimage)
         self.fv.show_status("Draw a line with the right mouse button")
-        #self.replot_all()
+        self.replot_all()
         if self.use_slit:
             self.cuts_image = self.fitsimage.get_image()
 
@@ -645,7 +605,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                                           int(x2), int(y2))
         return np.array(values)
 
-    def _get_points(self, obj):
+    def _plotpoints(self, obj, color):
 
         image = self.fitsimage.get_vip()
 
@@ -679,9 +639,14 @@ class Cuts(GingaPlugin.LocalPlugin):
         elif obj.kind == 'beziercurve':
             points = image.get_pixels_on_curve(obj)
 
-        points = np.asarray(points)
+        points = np.array(points)
 
-        return points
+        rgb = colors.lookup_color(color)
+        self.cuts_plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
+                            color=rgb)
+
+        if self.settings.get('show_cuts_legend', False):
+            self.add_legend()
 
     def add_legend(self):
         """Add or update Cuts plot legend."""
@@ -777,28 +742,8 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         return True
 
-    def replot(self, tag):
-        if tag == self._new_cut:
-            return
-        obj = self.canvas.get_object_by_tag(tag)
-        if obj.kind != 'compound':
-            return
-
-        y_pts = self._get_points(obj.objects[0])
-        x_pts = np.arange(len(y_pts))
-
-        plot = obj.get_data('plot')
-        #plot.color = obj.objects[0].color
-        plot.plot_xy(x_pts, y_pts)
-
-        if self.settings.get('show_cuts_legend', False):
-            #self.add_legend()
-            pass
-
-        self.cuts_view.update_plots()
-
     def replot_all(self):
-        #self.cuts_plot.clear()
+        self.cuts_plot.clear()
         self.w.delete_all.set_enabled(False)
         self.save_cuts.set_enabled(False)
         if self.use_slit and self.gui_up:
@@ -833,18 +778,15 @@ class Cuts(GingaPlugin.LocalPlugin):
                     self.save_slit.set_enabled(True)
 
         # force mpl redraw
-        #self.cuts_plot.draw()
-        self.cuts_view.update_plots()
+        self.cuts_plot.draw()
 
         self.canvas.redraw(whence=3)
         self.fv.show_status(
             "Click or drag left mouse button to reposition cuts")
         return True
 
-    def _create_cut(self, x, y, count, x1, y1, x2, y2, color=None):
+    def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
         text = "cuts%d" % (count)
-        if color is None:
-            color = self.colors[count % len(self.colors)]
         if not self.settings.get('label_cuts', False):
             text = ''
         line_obj = self.dc.Line(x1, y1, x2, y2, color=color,
@@ -887,14 +829,14 @@ class Cuts(GingaPlugin.LocalPlugin):
             aline.editable = False
             obj.objects.append(aline)
 
-    def _create_cut_obj(self, count, cuts_obj):
+    def _create_cut_obj(self, count, cuts_obj, color='cyan'):
         text = "cuts%d" % (count)
         if not self.settings.get('label_cuts', False):
             text = ''
         cuts_obj.showcap = False
         cuts_obj.linestyle = 'solid'
-        color = self.colors[count % len(self.colors)]
-        cuts_obj.color = color
+        #cuts_obj.color = color
+        color = cuts_obj.color
         args = [cuts_obj]
         text_obj = self.dc.Text(0, 0, text, color=color, coord='offset',
                                 ref_obj=cuts_obj)
@@ -902,7 +844,6 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         obj = self.dc.CompoundObject(*args)
         obj.set_data(cuts=True)
-        self._add_cuts_plot(obj)
 
         if (self.widthtype != 'none') and (self.width_radius > 0):
             self._update_tines(obj)
@@ -943,7 +884,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         canvas.redraw(whence=3)
 
         if self.drag_update:
-            self.replot(self.cutstag)
+            self.replot_all()
         return True
 
     def buttonup_cb(self, canvas, event, data_x, data_y, viewer):
@@ -954,7 +895,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         obj = obj.objects[0]
         obj.move_to(data_x, data_y)
 
-        self.replot(self.cutstag)
+        self.replot_all()
         return True
 
     def keydown(self, canvas, event, data_x, data_y, viewer):
@@ -1027,7 +968,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             dh = ht // 2
             x, y = x1 + dw + 4, y1 + dh + 4
 
-            cut = self._create_cut(x, y, count, x1, y1, x2, y2)
+            cut = self._create_cut(x, y, count, x1, y1, x2, y2, color='cyan')
             self._update_tines(cut)
             cuts.append(cut)
 
@@ -1043,7 +984,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.add_cuts_tag(tag)
 
         self.logger.debug("redoing cut plots")
-        return self.replot(tag)
+        return self.replot_all()
 
     def draw_cb(self, canvas, tag):
         obj = canvas.get_object_by_tag(tag)
@@ -1055,15 +996,16 @@ class Cuts(GingaPlugin.LocalPlugin):
         count = self._get_cut_index()
         tag = "cuts%d" % (count)
 
-        cut = self._create_cut_obj(count, obj)
+        cut = self._create_cut_obj(count, obj, color='cyan')
         cut.set_data(count=count)
         self._update_tines(cut)
 
+        canvas.delete_object_by_tag(tag)
         self.canvas.add(cut, tag=tag)
         self.add_cuts_tag(tag)
 
         self.logger.debug("redoing cut plots")
-        return self.replot(tag)
+        return self.replot_all()
 
     def edit_cb(self, canvas, obj):
         self.redraw_cuts()
@@ -1111,13 +1053,13 @@ class Cuts(GingaPlugin.LocalPlugin):
         """Callback executed when the Width radius is changed."""
         self.width_radius = val
         self.redraw_cuts()
-        self.replot(self.cutstag)
+        self.replot_all()
         return True
 
     def set_width_type_cb(self, widget, idx):
         self.widthtype = self.widthtypes[idx]
         self.redraw_cuts()
-        self.replot(self.cutstag)
+        self.replot_all()
         return True
 
     def save_cb(self, mode):

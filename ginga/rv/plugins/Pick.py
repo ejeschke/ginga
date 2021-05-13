@@ -319,7 +319,7 @@ from ginga.misc import Bunch
 from ginga.util import wcs, contour
 from ginga import GingaPlugin, colors, cmap, trcalc
 from ginga.canvas.types import plots as gplots
-from ginga.util.plotaide import PlotAide
+from ginga.plot.plotaide import PlotAide
 
 try:
     from ginga.gw import Plot
@@ -665,8 +665,10 @@ class Pick(GingaPlugin.LocalPlugin):
         # prepare this viewer as a plot viewer
         self.cuts_view = PlotAide(ci)
         self.cuts_view.setup_standard_frame(title="Cuts",
+                                            x_title="Line index",
+                                            y_title="Pixel value",
                                             warn_y=None, alert_y=None)
-        title = self.cuts_view.get_plot_etc('plot_title')
+        title = self.cuts_view.get_plot_decor('plot_title')
         title.format_label = self._format_cuts_label
 
         # add X and Y data sources. Hereafter, we can just update the data

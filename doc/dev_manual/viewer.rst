@@ -100,12 +100,12 @@ the "Open File" button.
             w.resize(512, 512)
 
             # add scrollbar interface around this viewer
-            si = ScrolledView(fi)
+            sw = ScrolledView(fi)
 
             vbox = QtGui.QVBoxLayout()
             vbox.setContentsMargins(QtCore.QMargins(2, 2, 2, 2))
             vbox.setSpacing(1)
-            vbox.addWidget(si, stretch=1)
+            vbox.addWidget(sw, stretch=1)
 
             hbox = QtGui.QHBoxLayout()
             hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
