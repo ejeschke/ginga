@@ -1761,7 +1761,6 @@ class Pick(GingaPlugin.LocalPlugin):
     def redo_quick(self):
         vip_img = self.fitsimage.get_vip()
 
-
         obj = self.pick_obj
         if obj is None:
             return

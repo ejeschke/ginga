@@ -574,15 +574,6 @@ class PlotAide(Callback.Callbacks):
         self.viewer.onscreen_message(msg, delay=1.0)
         self.adjust_view()
 
-    ## def zoom_y_full_cb(self, *args):
-    ##     """A callback called when the user has chosen to scale the Y axis
-    ##     to the full range of the Y data.
-    ##     """
-    ##     if self.settings['autoaxis_y'] != 'off':
-    ##         self.settings['autoaxis_y'] = 'off'
-    ##     self.zoom_fit_y_full()
-    ##     self.adjust_view()
-
     def _autopan_x_cb(self, setting, autopan_x):
         """Called when the user toggles the 'autopan X' feature on or off.
         """

@@ -4,6 +4,11 @@
 Plots
 +++++
 
+.. note:: Ginga's graph plotting features are new, and the API should be 
+          considered somewhat experimental.  In the future, some
+          elements of ``PlotAide`` might be merged into existing
+          components of the viewer or action bindings classes.
+
 Ginga has some basic facilities for graphing interactive XY line plots.
 Ginga plots may be useful in cases where good interactive performance in
 a line plot is desirable (e.g. plotting an XY line repeatedly at speed),
@@ -237,11 +242,3 @@ For more detail on time series plots, see the example
    Quick Reference link above.
 
 
-=======
-Caveats
-=======
-
-Ginga's graph plotting features are new, and the API should be
-considered somewhat experimental.  In the future, some elements of
-``PlotAide`` might be merged into existing components of the viewer or
-action bindings classes.

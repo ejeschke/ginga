@@ -21,6 +21,16 @@ class XYDataSource:
         ----------
         arr_src : ndarray
             (x, y) points to initialize the data source with
+
+        points : array, list, tuple or sequence-like (optional)
+            An array of points to initialize the data source with
+
+        overwrite : bool (optional)
+            If ``True`` the buffer will eventually overwrite old entries
+
+        none_for_empty : bool (optional)
+            If ``True`` then don't raise a ValueError for an empty buffer
+
         """
         self.buf = arr_src
         self.length = len(arr_src)
