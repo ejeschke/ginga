@@ -6,14 +6,6 @@
 #
 import sys
 import numpy as np
-have_npi = False
-try:
-    # NOTE: $ pip install numpy-indexed
-    import numpy_indexed as npi
-    have_npi = True
-
-except ImportError:
-    pass
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _color,
                                        register_canvas_types,
@@ -96,10 +88,6 @@ class XYPlot(CanvasObjectBase):
         self.points = np.asarray(points)
         self.plot_xlim = (None, None)
 
-        # path starts out by default with the full set of data points
-        # corresponding to the plotted X/Y data
-        #self.path.points = self.get_data_points(points=self.points)
-
         # set or calculate limits
         if limits is not None:
             # passing limits saves costly min/max calculation
@@ -144,7 +132,7 @@ class XYPlot(CanvasObjectBase):
             idx = np.logical_and(x_data >= start_x, x_data <= stop_x)
             points = points[idx]
 
-        if have_npi and self.x_func is not None:
+        if self.x_func is not None:
             # now find all points position in canvas X coord
             cpoints = self.get_cpoints(viewer, points=points)
             cx, cy = cpoints.T
@@ -153,10 +141,12 @@ class XYPlot(CanvasObjectBase):
             # function that reduces to a single value.  The desirable function
             # will depend on the function of the plot, but mean() would be a
             # sensible default
-            gr = npi.group_by(cx)
-            gr_pts = gr.split(points)
-            x_data = np.array([self.x_func(a.T[0]) for a in gr_pts])
-            y_data = np.array([self.y_func(a.T[1]) for a in gr_pts])
+            _, i = np.unique(cx, return_index=True)
+            gr_pts = np.split(points, i)
+            x_data = np.array([self.x_func(a.T[0]) for a in gr_pts
+                               if len(a) > 0])
+            y_data = np.array([self.y_func(a.T[1]) for a in gr_pts
+                               if len(a) > 0])
             assert len(x_data) == len(y_data)
 
             points = np.array((x_data, y_data)).T
