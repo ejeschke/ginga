@@ -245,9 +245,3 @@ Ginga's graph plotting features are new, and the API should be
 considered somewhat experimental.  In the future, some elements of
 ``PlotAide`` might be merged into existing components of the viewer or
 action bindings classes.
-
-
-
-
-
-

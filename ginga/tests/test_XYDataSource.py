@@ -7,7 +7,7 @@ from numpy.testing import assert_allclose
 from ginga.plot.data_source import XYDataSource
 
 
-class TestXYDataSource(object):
+class TestXYDataSource:
 
     def test_initialize_points(self):
         n = 7
