@@ -12,7 +12,7 @@ class TestXYDataSource:
     def setup_class(self):
         self.n = 7
         self.test_pts = [(x, x**2) for x in range(0, self.n)]
-        self.test_arr = np.array(self.test_pts, dtype=np.int)
+        self.test_arr = np.array(self.test_pts, dtype=int)
 
     def test_initialize_points(self):
         expected = self.test_arr
