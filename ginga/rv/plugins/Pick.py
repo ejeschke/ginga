@@ -318,6 +318,8 @@ from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga.util import wcs, contour
 from ginga import GingaPlugin, colors, cmap, trcalc
+from ginga.canvas.types import plots as gplots
+from ginga.plot.plotaide import PlotAide
 
 try:
     from ginga.gw import Plot
@@ -349,7 +351,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.contour_plot = None
         self.fwhm_plot = None
         self.radial_plot = None
-        self.cuts_plot = None
+        self.cuts_view = None
         self.contour_interp_methods = trcalc.interpolation_methods
 
         # types of pick shapes that can be drawn
@@ -416,7 +418,7 @@ class Pick(GingaPlugin.LocalPlugin):
         canvas.set_callback('edit-event', self.edit_cb)
         canvas.add_draw_mode('move', down=self.btn_down,
                              move=self.btn_drag, up=self.btn_up,
-                             hover=self.hover_cb)
+                             hover=self.hover_cb, key=self.key_down)
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_draw_mode('move')
@@ -425,9 +427,9 @@ class Pick(GingaPlugin.LocalPlugin):
         # quick cross marker
         # these colors form the crosshair marking the cuts in canvas
         # and also the cuts plot
-        cname1 = self.settings.get('quick_h_cross_color', 'magenta2')
+        cname1 = self.settings.get('quick_h_cross_color', '#7570b3')
         color1 = colors.lookup_color(cname1, format='hash')
-        cname2 = self.settings.get('quick_v_cross_color', 'sienna3')
+        cname2 = self.settings.get('quick_v_cross_color', '#1b9e77')
         color2 = colors.lookup_color(cname2, format='hash')
         self.cross = self.dc.CompoundObject(
             self.dc.Line(0, 10, 20, 10, color=color1),
@@ -449,7 +451,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.quick_update_interval = self.settings.get('quick_update_interval',
                                                        0.25)
         self.from_peak = self.settings.get('quick_from_peak', True)
-        self.drag_only = self.settings.get('quick_drag_only', True)
+        self.drag_only = self.settings.get('quick_drag_only', False)
 
         # Peak finding parameters and selection criteria
         self.max_side = self.settings.get('max_side', 1024)
@@ -651,14 +653,41 @@ class Pick(GingaPlugin.LocalPlugin):
             pw.resize(width, height)
             nb.add_widget(pw, title="EE")
 
-            # Cuts profile plot
-            self.cuts_plot = plots.CutsPlot(logger=self.logger,
-                                            width=width, height=height)
-            pw = Plot.PlotWidget(self.cuts_plot)
-            pw.resize(width, height)
-            ax = self.cuts_plot.add_axis()
-            ax.grid(True)
-            nb.add_widget(pw, title="Cuts")
+        # Cuts profile plot
+        ci = Viewers.CanvasView(logger=self.logger)
+        width, height = 400, 300
+        ci.set_desired_size(width, height)
+        ci.set_background('white')
+        ci.set_foreground('black')
+        # for debugging
+        ci.set_name('cuts_plot')
+
+        # prepare this viewer as a plot viewer
+        self.cuts_view = PlotAide(ci)
+        self.cuts_view.setup_standard_frame(title="Cuts",
+                                            x_title="Line index",
+                                            y_title="Pixel value",
+                                            warn_y=None, alert_y=None)
+        title = self.cuts_view.get_plot_decor('plot_title')
+        title.format_label = self._format_cuts_label
+
+        # add X and Y data sources. Hereafter, we can just update the data
+        # sources and call update_plots() whenever we have new X and Y arms
+        x_acc = np.mean if gplots.have_npi else None
+        y_acc = np.nanmax if x_acc else None
+        cname1 = self.settings.get('quick_h_cross_color', '#7570b3')
+        self.cuts_xsrc = gplots.XYPlot(name='X', color=cname1, linewidth=2,
+                                       x_acc=x_acc, y_acc=y_acc)
+        cname2 = self.settings.get('quick_v_cross_color', '#1b9e77')
+        self.cuts_ysrc = gplots.XYPlot(name='Y', color=cname2, linewidth=2,
+                                       x_acc=x_acc, y_acc=y_acc)
+        self.cuts_view.add_plot(self.cuts_xsrc)
+        self.cuts_view.add_plot(self.cuts_ysrc)
+
+        ciw = Viewers.GingaViewerWidget(viewer=ci)
+        ciw.resize(width, height)
+
+        nb.add_widget(ciw, title="Cuts")
 
         fr = Widgets.Frame(self._textlabel)
 
@@ -1002,11 +1031,15 @@ class Pick(GingaPlugin.LocalPlugin):
         vbox3 = Widgets.VBox()
         captions = (
             ('Bg cut', 'button', 'Delta bg:', 'label',
-             'xlbl_delta_bg', 'label', 'Delta bg', 'entry'),
+             'xlbl_delta_bg', 'label', 'Delta bg', 'entryset'),
             ('Sky cut', 'button', 'Delta sky:', 'label',
-             'xlbl_delta_sky', 'label', 'Delta sky', 'entry'),
+             'xlbl_delta_sky', 'label', 'Delta sky', 'entryset'),
             ('Bright cut', 'button', 'Delta bright:', 'label',
-             'xlbl_delta_bright', 'label', 'Delta bright', 'entry'),
+             'xlbl_delta_bright', 'label', 'Delta bright', 'entryset'),
+            ('s1', 'spacer', 'Warning Y:', 'label',
+             'xlbl_warning_y', 'label', 'Warning Y', 'entryset'),
+            ('s2', 'spacer', 'Alert Y:', 'label',
+             'xlbl_alert_y', 'label', 'Alert Y', 'entryset'),
         )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -1017,6 +1050,8 @@ class Pick(GingaPlugin.LocalPlugin):
         b.delta_sky.set_tooltip("Delta to apply to this cut")
         b.bright_cut.set_tooltip("Set image high cut to Sky Level+Brightness")
         b.delta_bright.set_tooltip("Delta to apply to this cut")
+        b.warning_y.set_tooltip("Y warning level for quick mode cuts")
+        b.alert_y.set_tooltip("Y alert level for quick mode cuts")
 
         b.bg_cut.set_enabled(False)
         self.w.btn_bg_cut = b.bg_cut
@@ -1072,6 +1107,13 @@ class Pick(GingaPlugin.LocalPlugin):
             return True
 
         b.delta_bright.add_callback('activated', chg_delta_bright)
+
+        b.warning_y.set_text('')
+        b.xlbl_warning_y.set_text('')
+        b.alert_y.set_text('')
+        b.xlbl_alert_y.set_text('')
+        b.warning_y.add_callback('activated', self.set_quick_warn_cb)
+        b.alert_y.add_callback('activated', self.set_quick_alert_cb)
 
         vbox3.add_widget(w, stretch=0)
         vbox3.add_widget(Widgets.Label(''), stretch=1)
@@ -1719,8 +1761,6 @@ class Pick(GingaPlugin.LocalPlugin):
     def redo_quick(self):
         vip_img = self.fitsimage.get_vip()
 
-        self.cuts_plot.clear()
-
         obj = self.pick_obj
         if obj is None:
             return
@@ -1749,17 +1789,20 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # plot horizontal cut
         xpts = np.arange(len(xarr))
-        self.cuts_plot.plot(xpts, xarr, color=hl.color,
-                            xtitle="Line Index", ytitle="Pixel Value",
-                            title=None, rtitle="Cuts",
-                            alpha=1.0, linewidth=1.0, linestyle='-',
-                            marker='x', label='X')
+        points = np.array((xpts, xarr)).T
+        self.cuts_xsrc.plot(points)
 
         # plot vertical cut
         ypts = np.arange(len(yarr))
-        self.cuts_plot.plot(ypts, yarr, show_legend=True, color=vl.color,
-                            alpha=1.0, linewidth=1.0, linestyle='--',
-                            marker='s', mfc='none', label='Y')
+        points = np.array((ypts, yarr)).T
+        self.cuts_ysrc.plot(points)
+
+        self.cuts_view.update_plots()
+
+    def _format_cuts_label(self, lbl, plot_src):
+        lim = plot_src.get_limits('data')
+        y_max = lim[1][1]
+        lbl.text = "{0:}: {1: .4g}".format(plot_src.name, y_max)
 
     def calc_quick(self):
         if self.pick_data is None:
@@ -2052,6 +2095,7 @@ class Pick(GingaPlugin.LocalPlugin):
             shape.linestyle = 'dash'
             point = obj.objects[1]
             point.color = 'red'
+            point.move_to(data_x, data_y)
 
             shape.move_to(data_x, data_y)
             self.canvas.update_canvas()
@@ -2108,21 +2152,20 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def hover_cb(self, canvas, event, data_x, data_y, viewer):
 
-        if self.quick_mode and (not self.drag_only):
+        if self.quick_mode:
             if self.pick_obj is None:
                 return False
             shape = self.pick_obj.objects[0]
             shape.color = 'cyan'
             shape.linestyle = 'dash'
-            point = self.pick_obj.objects[1]
-            point.color = 'red'
-
             shape.move_to(data_x, data_y)
+
             self.canvas.update_canvas()
 
             self.redo_quick()
-            # set timer
-            self.tmr_quick.set(self.quick_update_interval)
+            if self.drag_only:
+                # set timer
+                self.tmr_quick.set(self.quick_update_interval)
 
             return True
 
@@ -2130,6 +2173,45 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def quick_timer_cb(self, timer):
         self.calc_quick()
+
+    def key_down(self, canvas, event, data_x, data_y, viewer):
+
+        if event.key != 'r':
+            return False
+
+        if self.pick_obj is not None:
+            if not canvas.has_object(self.pick_obj):
+                self.canvas.add(self.pick_obj)
+
+            obj = self.pick_obj
+            shape = obj.objects[0]
+            shape.color = 'cyan'
+            shape.linestyle = 'dash'
+            shape.move_to(data_x, data_y)
+            point = obj.objects[1]
+            point.color = 'red'
+            point.move_to(data_x, data_y)
+
+            self.canvas.update_canvas()
+
+        else:
+            # No object yet? Add a default one.
+            self.set_drawtype('box')
+            rd_x, rd_y = self.dx // 2, self.dy // 2
+            x1, y1 = data_x - rd_x, data_y - rd_y
+            x2, y2 = data_x + rd_x, data_y + rd_y
+
+            Box = self.canvas.get_draw_class('box')
+            tag = self.canvas.add(Box(data_x, data_y, rd_x, rd_y,
+                                      color=self.pickcolor))
+
+            self.draw_cb(self.canvas, tag)
+
+        if self.quick_mode:
+            self.redo_quick()
+            self.calc_quick()
+
+        return True
 
     def set_mode_cb(self, mode, tf):
         if tf:
@@ -2157,6 +2239,18 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def drag_only_cb(self, w, tf):
         self.drag_only = tf
+        return True
+
+    def set_quick_warn_cb(self, w):
+        bg = self.cuts_view.get_plot_decor('plot_bg')
+        val_s = w.get_text().strip()
+        bg.warn_y = None if len(val_s) == 0 else float(val_s)
+        return True
+
+    def set_quick_alert_cb(self, w):
+        bg = self.cuts_view.get_plot_decor('plot_bg')
+        val_s = w.get_text().strip()
+        bg.alert_y = None if len(val_s) == 0 else float(val_s)
         return True
 
     def __str__(self):
