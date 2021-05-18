@@ -180,13 +180,6 @@ class XYPlot(CanvasObjectBase):
         """Called when the viewer is resized."""
         self.recalc(viewer)
 
-    def update_elements(self, viewer):
-        """This method is called if the plot is set with new points,
-        or is scaled or panned with existing points.
-        """
-        #self.recalc(viewer)
-        pass
-
     def get_latest(self):
         """Get the latest (last) point on the plot.  Returns None if there
         are no points.
@@ -272,9 +265,13 @@ class Axis(CompoundObject):
         return titles_d[self.kind]
 
     def add_plot(self, viewer, plot_src):
+        # Axis objects typically do not need to do anything when a
+        # plot is added--they recalcuate labels in update_elements()
         pass
 
     def delete_plot(self, viewer, plot_src):
+        # Axis objects typically do not need to do anything when a
+        # plot is deleted--they recalcuate labels in update_elements()
         pass
 
 
