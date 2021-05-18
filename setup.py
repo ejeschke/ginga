@@ -20,7 +20,7 @@ if 'test' in sys.argv:
 DOCS_HELP = """
 Note: building the documentation is no longer done using
 'python setup.py build_docs'. Instead you will need to run:
-    cd docs
+    cd doc
     make html
 For more information, see:
   https://docs.astropy.org/en/latest/install.html#builddocs
