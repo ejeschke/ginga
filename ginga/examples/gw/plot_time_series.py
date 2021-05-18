@@ -9,7 +9,7 @@ $ python3 plot_time_series.py --loglevel=20 --stderr
 
 Plots add new data every second, and update on screen every 5 sec.
 24 hours of data is kept.  Each plot starts out in "autoaxis X PAN"
-and "autoaxis Y PLOT".
+and "autoaxis Y VIS".
 
 Things you can do in a plot:
 
@@ -17,11 +17,13 @@ Things you can do in a plot:
 
 2) Hold CTRL and scroll the mouse wheel to zoom the Y axis.
 
-3) Press 'f' to autozoom the Y axis to the full range of the Y data.
-
-4) Press 'y' to autozoom the Y axis to the range of the *visible* data shown
+3) Press 'y' to autozoom the Y axis to the full range of the Y data.
    (The message "Autoaxis Y ON" should appear briefly).
    Press 'y' again to toggle off this behavior.
+
+4) Press 'v' to autozoom the Y axis to the range of the *visible* data shown
+   (The message "Autoaxis Y VIS" should appear briefly).
+   Press 'v' again to toggle off this behavior.
 
 5) Press 'x' to autozoom the X axis to the full range of the X data
    (The message "Autoaxis X ON" should appear briefly).
