@@ -266,12 +266,12 @@ class Axis(CompoundObject):
 
     def add_plot(self, viewer, plot_src):
         # Axis objects typically do not need to do anything when a
-        # plot is added--they recalcuate labels in update_elements()
+        # plot is added--they recalculate labels in update_elements()
         pass
 
     def delete_plot(self, viewer, plot_src):
         # Axis objects typically do not need to do anything when a
-        # plot is deleted--they recalcuate labels in update_elements()
+        # plot is deleted--they recalculate labels in update_elements()
         pass
 
 
