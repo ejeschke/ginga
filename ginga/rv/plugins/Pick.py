@@ -673,14 +673,12 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # add X and Y data sources. Hereafter, we can just update the data
         # sources and call update_plots() whenever we have new X and Y arms
-        x_acc = np.mean if gplots.have_npi else None
-        y_acc = np.nanmax if x_acc else None
         cname1 = self.settings.get('quick_h_cross_color', '#7570b3')
         self.cuts_xsrc = gplots.XYPlot(name='X', color=cname1, linewidth=2,
-                                       x_acc=x_acc, y_acc=y_acc)
+                                       x_acc=np.mean, y_acc=np.nanmax)
         cname2 = self.settings.get('quick_v_cross_color', '#1b9e77')
         self.cuts_ysrc = gplots.XYPlot(name='Y', color=cname2, linewidth=2,
-                                       x_acc=x_acc, y_acc=y_acc)
+                                       x_acc=np.mean, y_acc=np.nanmax)
         self.cuts_view.add_plot(self.cuts_xsrc)
         self.cuts_view.add_plot(self.cuts_ysrc)
 
