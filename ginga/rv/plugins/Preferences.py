@@ -674,7 +674,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.stretch_factor.set_enabled(zoomalg != 'step')
 
         zoomrate = self.t_.get('zoom_rate', math.sqrt(2.0))
-        b.zoom_rate.set_limits(1.1, 3.0, incr_value=0.1)
+        b.zoom_rate.set_limits(1.01, 10.0, incr_value=0.1)
         b.zoom_rate.set_value(zoomrate)
         b.zoom_rate.set_decimals(8)
         b.zoom_rate.set_enabled(zoomalg != 'step')
