@@ -134,18 +134,6 @@ other information.
 When "Show Candidates" is active, the candidates near the edges of the bounding
 box will not have EE values (set to 0).
 
-.. figure:: figures/pick-cuts.png
-   :width: 600px
-   :align: center
-   :alt: Cut tab of Pick area
-
-   "Cuts" tab of ``Pick`` area.
-
-The "Cuts" tab contains a profile plot for the vertical and horizontal
-cuts represented by the crosshairs present in "Quick Mode" ON.  This plot
-is updated in real time as the pick area is moved.  In "Quick Mode" OFF,
-this plot is not updated.
-
 .. figure:: figures/pick-readout.png
    :width: 400px
    :align: center
@@ -349,7 +337,6 @@ class Pick(GingaPlugin.LocalPlugin):
         self.contour_plot = None
         self.fwhm_plot = None
         self.radial_plot = None
-        self.cuts_plot = None
         self.contour_interp_methods = trcalc.interpolation_methods
 
         # types of pick shapes that can be drawn
@@ -376,8 +363,6 @@ class Pick(GingaPlugin.LocalPlugin):
         self.lock = threading.RLock()
         self.lock2 = threading.RLock()
         self.ev_intr = threading.Event()
-        self.tmr_quick = fv.get_timer()
-        self.tmr_quick.set_callback('expired', self.quick_timer_cb)
         self._wd, self._ht = 400, 300
         self._split_sizes = [self._ht, self._ht]
 
@@ -422,19 +407,6 @@ class Pick(GingaPlugin.LocalPlugin):
         canvas.set_draw_mode('move')
         self.canvas = canvas
 
-        # quick cross marker
-        # these colors form the crosshair marking the cuts in canvas
-        # and also the cuts plot
-        cname1 = self.settings.get('quick_h_cross_color', 'magenta2')
-        color1 = colors.lookup_color(cname1, format='hash')
-        cname2 = self.settings.get('quick_v_cross_color', 'sienna3')
-        color2 = colors.lookup_color(cname2, format='hash')
-        self.cross = self.dc.CompoundObject(
-            self.dc.Line(0, 10, 20, 10, color=color1),
-            self.dc.Line(10, 0, 10, 20, color=color2))
-        if self.quick_mode:
-            self.canvas.add(self.cross)
-
         self.have_mpl = have_mpl
         self.gui_up = False
 
@@ -446,10 +418,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.pickshape = 'box'
         self.candidate_color = self.settings.get('color_candidate', 'orange')
         self.quick_mode = self.settings.get('quick_mode', False)
-        self.quick_update_interval = self.settings.get('quick_update_interval',
-                                                       0.25)
         self.from_peak = self.settings.get('quick_from_peak', True)
-        self.drag_only = self.settings.get('quick_drag_only', True)
 
         # Peak finding parameters and selection criteria
         self.max_side = self.settings.get('max_side', 1024)
@@ -650,15 +619,6 @@ class Pick(GingaPlugin.LocalPlugin):
             pw = Plot.PlotWidget(self.ee_plot)
             pw.resize(width, height)
             nb.add_widget(pw, title="EE")
-
-            # Cuts profile plot
-            self.cuts_plot = plots.CutsPlot(logger=self.logger,
-                                            width=width, height=height)
-            pw = Plot.PlotWidget(self.cuts_plot)
-            pw.resize(width, height)
-            ax = self.cuts_plot.add_axis()
-            ax.grid(True)
-            nb.add_widget(pw, title="Cuts")
 
         fr = Widgets.Frame(self._textlabel)
 
@@ -1719,8 +1679,6 @@ class Pick(GingaPlugin.LocalPlugin):
     def redo_quick(self):
         vip_img = self.fitsimage.get_vip()
 
-        self.cuts_plot.clear()
-
         obj = self.pick_obj
         if obj is None:
             return
@@ -1729,37 +1687,6 @@ class Pick(GingaPlugin.LocalPlugin):
         x1, y1, x2, y2, data = self.cutdetail(vip_img, shape)
         self.pick_x1, self.pick_y1 = x1, y1
         self.pick_data = data
-
-        #ht, wd = data.shape[:2]
-        #x, y = wd // 2, ht // 2
-        x, y = shape.get_center_pt()[:2]
-        x, y = x - x1, y - y1
-        radius = min(x, y)
-
-        # update cross lines
-        hl = self.cross.objects[0]
-        hl.x1, hl.y1, hl.x2, hl.y2 = (x1 + x - radius, y1 + y,
-                                      x1 + x + radius, y1 + y)
-        vl = self.cross.objects[1]
-        vl.x1, vl.y1, vl.x2, vl.y2 = (x1 + x, y1 + y - radius,
-                                      x1 + x, y1 + y + radius)
-
-        # Get points on the lines
-        x0, y0, xarr, yarr = self.iqcalc.cut_cross(x, y, radius, data)
-
-        # plot horizontal cut
-        xpts = np.arange(len(xarr))
-        self.cuts_plot.plot(xpts, xarr, color=hl.color,
-                            xtitle="Line Index", ytitle="Pixel Value",
-                            title=None, rtitle="Cuts",
-                            alpha=1.0, linewidth=1.0, linestyle='-',
-                            marker='x', label='X')
-
-        # plot vertical cut
-        ypts = np.arange(len(yarr))
-        self.cuts_plot.plot(ypts, yarr, show_legend=True, color=vl.color,
-                            alpha=1.0, linewidth=1.0, linestyle='--',
-                            marker='s', mfc='none', label='Y')
 
     def calc_quick(self):
         if self.pick_data is None:
@@ -2107,29 +2034,7 @@ class Pick(GingaPlugin.LocalPlugin):
         return True
 
     def hover_cb(self, canvas, event, data_x, data_y, viewer):
-
-        if self.quick_mode and (not self.drag_only):
-            if self.pick_obj is None:
-                return False
-            shape = self.pick_obj.objects[0]
-            shape.color = 'cyan'
-            shape.linestyle = 'dash'
-            point = self.pick_obj.objects[1]
-            point.color = 'red'
-
-            shape.move_to(data_x, data_y)
-            self.canvas.update_canvas()
-
-            self.redo_quick()
-            # set timer
-            self.tmr_quick.set(self.quick_update_interval)
-
-            return True
-
         return False
-
-    def quick_timer_cb(self, timer):
-        self.calc_quick()
 
     def set_mode_cb(self, mode, tf):
         if tf:
@@ -2140,11 +2045,6 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def quick_mode_cb(self, w, tf):
         self.quick_mode = tf
-        if self.quick_mode:
-            self.canvas.add(self.cross)
-            self.redo_quick()
-        else:
-            self.canvas.delete_object(self.cross)
         return True
 
     def from_peak_cb(self, w, tf):

@@ -136,7 +136,7 @@ plugins = [
           ptype='local'),
     Bunch(module='Catalogs', workspace='dialogs', category='Utils',
           ptype='local'),
-    Bunch(module='Crosshair', workspace='dialogs', category='Utils',
+    Bunch(module='Crosshair', workspace='left', category='Utils',
           ptype='local'),
     Bunch(module='Drawing', workspace='dialogs', category='Utils',
           ptype='local'),
