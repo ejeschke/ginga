@@ -181,7 +181,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
                     ('Drag only', 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
-        self.w = b
+        self.w.update(b)
 
         combobox = b.format
         for name in self.formats:
