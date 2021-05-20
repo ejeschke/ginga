@@ -305,7 +305,7 @@ import numpy as np
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga.util import wcs, contour
-from ginga import GingaPlugin, colors, cmap, trcalc
+from ginga import GingaPlugin, cmap, trcalc
 
 try:
     from ginga.gw import Plot
