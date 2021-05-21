@@ -20,13 +20,6 @@ If "Drag only" is checked, then the crosshair is only updated when the
 cursor is clicked or dragged in the window.  If unchecked the crosshair
 is positioned by simply moving the cursor around the channel viewer window.
 
-.. figure:: figures/crosshair-cuts.png
-   :width: 600px
-   :align: center
-   :alt: Cuts tab of Crosshair plugin
-
-   "Cuts" tab.
-
 The "Cuts" tab contains a profile plot for the vertical and horizontal
 cuts represented by the visible box boundary present when "Quick Cuts"
 is checked.  This plot is updated in real time as the crosshair is moved.
@@ -36,18 +29,30 @@ The size of the box is determined by the "radius" parameter.
 
 The "Warn Level" control can be used to set a flux level above which a
 warning is indicated in the Cuts plot by a yellow line and the background
-turning yellow.
+turning yellow.  The warning is triggered if any value along either
+the X or Y cut exceeds the warn level threshold.
 
 The "Alert Level" control is similar, but represented by a red line and the
-background turning pink.  Alert takes precedence over warning.
+background turning pink.  The warning is triggered if any value along either
+the X or Y cut exceeds the alert level threshold.  Alerts take precedence
+over warnings.
 
 Both the "Warn" and "Alert" features can be turned off by simply setting
 a blank value.  They are turned off by default.
 
+The cuts plot is interactive, but it really only makes sense to use that
+if "Drag only" is checked.  You can press 'x' or 'y' in the plot window
+to toggle on and off the autoaxis scaling feature for either axis, and
+scroll in the plot to zoom in the X axis (hold Ctrl down while scrolling
+to zoom the Y axis).
+
 Crosshair provides a Pick plugin interaction feature: when the crosshair
-is over an object you can press 'r' to have the Pick plugin invoked on that
-particular location.  If a Pick is not open on that channel, it will be
-opened first.
+is over an object you can press 'r' in the channel viewer window to have
+the Pick plugin invoked on that particular location.  If a Pick is not
+open already on that channel, it will be opened first.
+
+**User Configuration**
+
 """
 import numpy as np
 
@@ -174,8 +179,9 @@ class Crosshair(GingaPlugin.LocalPlugin):
         self.cuts_view.add_plot(self.cuts_xsrc)
         self.cuts_view.add_plot(self.cuts_ysrc)
 
-        ciw = Viewers.GingaViewerWidget(viewer=ci)
+        ciw = Viewers.GingaScrolledViewerWidget(viewer=ci)
         ciw.resize(width, height)
+        self.cuts_view.configure_scrollbars(ciw)
 
         nb.add_widget(ciw, title="Cuts")
 
@@ -405,4 +411,8 @@ class Crosshair(GingaPlugin.LocalPlugin):
     def __str__(self):
         return 'crosshair'
 
-# END
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_Crosshair', package='ginga')

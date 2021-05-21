@@ -220,8 +220,7 @@ The image cutout will be taken from this central area and so the "Image"
 tab will still have content.  It will also be marked with a central red
 "X".
 
-The contour plot will still be produced from the cutout, and the cuts
-plot will be updated in "Quick Mode".
+The contour plot will still be produced from the cutout.
 
 .. figure:: figures/pick-contour-no-candidate.png
    :width: 400px
