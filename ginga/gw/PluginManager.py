@@ -220,6 +220,9 @@ class PluginManager(Callback.Callbacks):
         self.focus.add(lname)
         self.make_callback('focus-plugin', bnch)
 
+        self.raise_plugin(p_info)
+
+    def raise_plugin(self, p_info):
         if p_info.widget is not None:
             self.logger.debug("raising plugin tab %s" % (p_info.tabname))
             if p_info.is_toplevel:
@@ -359,11 +362,15 @@ class PluginManager(Callback.Callbacks):
             self.finish_gui(p_info, vbox)
 
             self.activate(p_info)
+            # focusing plugin will also raise plugin and associated
+            # channel viewer
             self.set_focus(p_info.name)
+
         else:
             self.activate(p_info)
-            # If this is a local plugin, raise the channel associated with the
-            # plug in
+
+            # If this is a local plugin, raise the channel viewer
+            # associated with the plug in
             if p_info.chinfo is not None:
                 itab = p_info.chinfo.name
                 self.ds.raise_tab(itab)

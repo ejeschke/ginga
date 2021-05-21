@@ -35,6 +35,8 @@ Ver 3.2.0 (unreleased)
 - Added "orientation" setting to orientable plugins
 - Enhancements to Histogram plugin: ability to click in plot to set low
   and high cuts levels, scroll plot to expand or contract cuts width
+- Crosshair plugin enhanced to have fast X/Y cuts plot feature;
+  cuts plot removed from Pick plugin
 
 Ver 3.1.0 (2020-07-20)
 ======================

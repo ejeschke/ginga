@@ -292,7 +292,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
         self.canvas.ui_set_active(False)
         self.fv.show_status("")
 
-    def redo_quick(self, data_x, data_y, radius):
+    def cuts_quick(self, data_x, data_y, radius):
         vip_img = self.fitsimage.get_vip()
 
         # Get points on the lines
@@ -311,7 +311,8 @@ class Crosshair(GingaPlugin.LocalPlugin):
         self.cuts_view.update_plots()
 
     def redo(self):
-        pass
+        data_x, data_y = self.fitsimage.get_last_data_xy()
+        self.cuts_quick(data_x, data_y, self.cuts_radius)
 
     def move_crosshair(self, viewer, data_x, data_y):
         self.logger.debug("move crosshair data x,y=%f,%f" % (data_x, data_y))
@@ -319,7 +320,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
 
         if self.quick_cuts:
             self.cuts_box.move_to(data_x, data_y)
-            self.redo_quick(data_x, data_y, self.cuts_radius)
+            self.cuts_quick(data_x, data_y, self.cuts_radius)
 
         self.canvas.update_canvas(whence=3)
 
@@ -338,12 +339,14 @@ class Crosshair(GingaPlugin.LocalPlugin):
         if event.key != 'r':
             return False
 
+        # start Pick plugin on this channel if it hasn't been yet
         opmon = self.channel.opmon
         opname = 'Pick'
         obj = opmon.get_plugin(opname)
         if not opmon.is_active(opname):
             opmon.start_plugin(self.chname, opname)
 
+        # simulate a button down/up in Pick
         self.fv.gui_do(obj.btn_down, canvas, event, data_x, data_y, viewer)
         self.fv.gui_do(obj.btn_up, canvas, event, data_x, data_y, viewer)
         return True
