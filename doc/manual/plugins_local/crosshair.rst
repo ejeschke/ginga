@@ -4,7 +4,7 @@ Crosshair
 =========
 
 .. image:: figures/crosshair-plugin.png
-   :width: 400px
+   :width: 800px
    :align: center
    :alt: Crosshair plugin
 

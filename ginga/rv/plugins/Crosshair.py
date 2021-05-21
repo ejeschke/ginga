@@ -44,6 +44,10 @@ background turning pink.  Alert takes precedence over warning.
 Both the "Warn" and "Alert" features can be turned off by simply setting
 a blank value.  They are turned off by default.
 
+Crosshair provides a Pick plugin interaction feature: when the crosshair
+is over an object you can press 'r' to have the Pick plugin invoked on that
+particular location.  If a Pick is not open on that channel, it will be
+opened first.
 """
 import numpy as np
 
@@ -341,6 +345,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
             opmon.start_plugin(self.chname, opname)
 
         self.fv.gui_do(obj.btn_down, canvas, event, data_x, data_y, viewer)
+        self.fv.gui_do(obj.btn_up, canvas, event, data_x, data_y, viewer)
         return True
 
     def draw_cb(self, canvas, tag):

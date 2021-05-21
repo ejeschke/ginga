@@ -400,8 +400,7 @@ class Pick(GingaPlugin.LocalPlugin):
         canvas.set_callback('draw-event', self.draw_cb)
         canvas.set_callback('edit-event', self.edit_cb)
         canvas.add_draw_mode('move', down=self.btn_down,
-                             move=self.btn_drag, up=self.btn_up,
-                             hover=self.hover_cb)
+                             move=self.btn_drag, up=self.btn_up)
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.set_surface(self.fitsimage)
         canvas.set_draw_mode('move')
@@ -2032,9 +2031,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.redo_manual()
 
         return True
-
-    def hover_cb(self, canvas, event, data_x, data_y, viewer):
-        return False
 
     def set_mode_cb(self, mode, tf):
         if tf:
