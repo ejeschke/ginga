@@ -95,10 +95,8 @@ class Crosshair(GingaPlugin.LocalPlugin):
         canvas = self.dc.DrawingCanvas()
         canvas.name = 'crosshair-canvas'
         canvas.enable_draw(True)
-        canvas.enable_edit(True)
         canvas.set_drawtype('squarebox', color='cyan', linestyle='dash')
         canvas.set_callback('draw-event', self.draw_cb)
-        canvas.set_callback('edit-event', self.edit_cb)
         canvas.add_draw_mode('move', down=self.cur_down,
                              move=self.cur_drag, up=self.cur_drag,
                              hover=self.cur_hover, key=self.key_down)
@@ -363,10 +361,9 @@ class Crosshair(GingaPlugin.LocalPlugin):
 
         self.cuts_radius = int(round(obj.radius))
         self.cuts_box.radius = self.cuts_radius
+        # set entry widget to match drawn radius
+        self.w.radius.set_text(str(self.cuts_radius))
 
-        self.move_crosshair(self.fitsimage, obj.x, obj.y)
-
-    def edit_cb(self, canvas, obj):
         self.move_crosshair(self.fitsimage, obj.x, obj.y)
 
     def drag_only_cb(self, w, tf):
