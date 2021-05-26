@@ -585,8 +585,7 @@ class PlotBG(CompoundObject):
     def _check_warning(self):
         max_y = None
         for i, plot_src in enumerate(self.aide.plots.values()):
-            # Hmmm...should this be 'data' limits?
-            limits = plot_src.get_limits('plot')
+            limits = plot_src.get_limits('data')
             y = limits[1][1]
             max_y = y if max_y is None else max(max_y, y)
 
