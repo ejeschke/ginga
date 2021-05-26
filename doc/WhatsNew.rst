@@ -37,6 +37,8 @@ Ver 3.2.0 (unreleased)
   and high cuts levels, scroll plot to expand or contract cuts width
 - Crosshair plugin enhanced to have fast X/Y cuts plot feature;
   cuts plot removed from Pick plugin
+- Fixed an issue where the Pick plugin would not start due to a change
+  to matplotlib canvas initialization
 
 Ver 3.1.0 (2020-07-20)
 ======================

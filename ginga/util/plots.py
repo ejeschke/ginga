@@ -144,6 +144,8 @@ class Plot(Callback.Callbacks):
 
     def connect_ui(self):
         canvas = self.fig.canvas
+        if canvas is None:
+            raise ValueError("matplotlib canvas is not yet created")
         connect = canvas.mpl_connect
         connect("motion_notify_event", self._plot_motion_notify)
         connect("button_press_event", self._plot_button_press)

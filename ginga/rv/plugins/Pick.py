@@ -582,10 +582,9 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.contour_plot = plots.ContourPlot(
                     logger=self.logger, width=width, height=height)
                 self.contour_plot.add_axis(facecolor='black')
-                self.contour_plot.enable(pan=True, zoom=True)
                 pw = Plot.PlotWidget(self.contour_plot)
                 pw.resize(width, height)
-                self.contour_plot.connect_ui()
+                self.contour_plot.enable(pan=True, zoom=True)
 
                 self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
                 if self.contour_interpolation not in self.contour_interp_methods:
