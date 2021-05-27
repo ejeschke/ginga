@@ -185,10 +185,10 @@ class RenderContext(render.RenderContextBase):
         self.cr.drawLines(pts)
 
 
-class CanvasRenderer(render.StandardPixelRenderer):
+class CanvasRenderer(render.StandardPipelineRenderer):
 
     def __init__(self, viewer, surface_type='qimage'):
-        render.StandardPixelRenderer.__init__(self, viewer)
+        render.StandardPipelineRenderer.__init__(self, viewer)
 
         self.kind = 'qt'
         # Qt needs this to be in BGRA

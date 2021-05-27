@@ -119,10 +119,10 @@ class RenderContext(render.RenderContextBase):
         self.cr.path(cpoints, self.pen)
 
 
-class CanvasRenderer(render.StandardPixelRenderer):
+class CanvasRenderer(render.StandardPipelineRenderer):
 
     def __init__(self, viewer):
-        render.StandardPixelRenderer.__init__(self, viewer)
+        render.StandardPipelineRenderer.__init__(self, viewer)
 
         self.kind = 'opencv'
         # According to OpenCV documentation:

@@ -163,10 +163,10 @@ class RenderContext(render.RenderContextBase):
         self.cr.canvas.path(path, self.pen, self.brush)
 
 
-class CanvasRenderer(render.StandardPixelRenderer):
+class CanvasRenderer(render.StandardPipelineRenderer):
 
     def __init__(self, viewer):
-        render.StandardPixelRenderer.__init__(self, viewer)
+        render.StandardPipelineRenderer.__init__(self, viewer)
 
         self.kind = 'agg'
         self.rgb_order = 'RGBA'
