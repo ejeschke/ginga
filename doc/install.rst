@@ -24,7 +24,7 @@ REQUIRED
 * numpy  (v. 1.14 or higher)
 * astropy
 
-Highly recommended, because some features will not be available without it:
+Strongly recommended, because some features will not be available without it:
 
 * scipy
 * pillow
@@ -75,6 +75,7 @@ will not work without the following packages:
 * matplotlib (required by: Pick, Cuts, Histogram, LineProfile)
 * scipy (required by: Pick, some built-in
   :ref:`auto cuts algorithms <autoset_cut_levels>` used when you load an image)
+* astroquery (required by Catalogs)
 
 To save a movie:
 
@@ -84,7 +85,8 @@ Helpful, but not necessary (may optimize or speed up certain operations):
 
 * opencv-python (speeds up rotation, mosaicing and some transformations)
 * pyopencl (speeds up rotation, mosaicing and some transformations)
-* pyopengl (for using OpenGL features)
+* pyopengl + pycairo (for using OpenGL features; very useful for 4K or larger
+  monitors)
 * numexpr (speeds up rotation a little)
 * filemagic (aids in identifying files when opening them)
 * Pillow (useful for various RGB file manipulations)

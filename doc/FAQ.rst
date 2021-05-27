@@ -196,4 +196,4 @@ histogram and keyword "density".
 
 .. note:: You need a newer version of NumPy.
 
-          I recommend getting NumPy v1.9 or later.
+          I recommend getting NumPy v1.14 or later.
