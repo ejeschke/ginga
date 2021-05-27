@@ -39,7 +39,14 @@ Ver 3.2.0 (unreleased)
   cuts plot removed from Pick plugin
 - Fixed an issue where the Pick plugin would not start due to a change
   to matplotlib canvas initialization
+- Updates to Catalogs plugin:
 
+  - new astronomical object lookup section for SIMBAD or NED
+  - new ability to specify some astroquery catalog and image sources
+    in the `plugins_Catalogs.cfg` configuration file
+  - *API not compatible with previous releases, including configuration
+    via `ginga_config.py`*
+  
 Ver 3.1.0 (2020-07-20)
 ======================
 - Zoom and Pan plugins refactored. Now shows graphical overlays.
