@@ -8,40 +8,61 @@ A plugin for plotting object locations from a catalog on an image.
 ``Catalogs`` is a local plugin, which means it is associated with a
 channel.  An instance can be opened for each channel.
 
+.. note:: To use ``Catalogs``, it is necessary to install the ``astroquery``
+          package.
+
+.. warning:: Configuration of ``Catalogs`` via ``ginga_config.py`` technique in Ginga 3.2 or later
+          is not officially supported and may not work as in previous
+          releases.  See the new user configuration instructions below.
+
 **Usage**
 
-Before ``Catalogs`` can be used, you need to define at least one catalog or
-image server to be queried in ``ginga_config.py``. Here is an example for
-defining three cone search catalogs for guide stars::
+**Fetching an image**
 
-        def pre_gui_config(ginga):
-            from ginga.util.catalog import AstroPyCatalogServer
+* By name resolver: Using the Name Server box, choose a server and type a
+  name into the "Name" field.  Press "Search name".  If the name is resolved,
+  the "ra" and "dec" fields in the Image Server box will be populated.
+  Select a server, adjust width and/or height, and press "Get Image".
+* By existing image in the channel: Draw a shape on the displayed image
+  ("rectangle" or "circle" can be chosen at the bottom of the plugin GUI)
+  and adjust search parameters as desired.  When you are ready, press
+  "Get Image" to perform the search.
 
-            # Add Cone Search services
-            catalogs = [
-                ('The HST Guide Star Catalog, Version 1.2 (Lasker+ 1996) 1',
-                 'GSC_1.2'),
-                ('The PMM USNO-A1.0 Catalogue (Monet 1997) 1', 'USNO_A1'),
-                ('The USNO-A2.0 Catalogue (Monet+ 1998) 1', 'USNO_A2'),
-            ]
-            bank = ginga.get_ServerBank()
-            for longname, shortname in catalogs:
-                obj = AstroPyCatalogServer(
-                    ginga.logger, longname, shortname, '', shortname)
-                bank.addCatalogServer(obj)
+.. note:: It can take some time for the image download to finish, depending
+          on the size of the field, network conditions, etc. Normally,
+          if the search or download fails then an error will be popped up
+          in the Errors plugin.
 
-        def post_gui_config(ginga):
-            pass
+If the image is downloaded successfully it should appear in the channel
+viewer.
 
-Then, start Ginga and then start the ``Catalogs`` local plugin from the
-channel you want to perform searchs on. You will see the catalogs listed
-in a drop-down menu on the plugin GUI.
+**Fetching and plotting objects from catalogs**
 
-Draw a shape on the displayed image and adjust search parameters as desired.
-When you are ready, press on the button to perform the search.
+To plot objects, the Catalogs plugin needs an image with a valid WCS loaded
+into the channel.  You can either load your own image or fetch one from an
+image server as described in "Fetching an image" above.
+
+Choosing a center:
+
+* By name resolver: Using the Name Server box, choose a server and type a
+  name into the "Name" field.  Press "Search name".  If the name is resolved,
+  the "ra" and "dec" fields in the Catalog Server box will be populated.
+  Select a server, adjust width and/or height, and press "Search catalog".
+* By existing image in the channel: Draw a shape on the displayed image
+  ("rectangle" or "circle" can be chosen at the bottom of the plugin GUI)
+  and adjust search parameters as desired.  When you are ready, press
+  "Search catalog" to perform the search.
+
+.. note:: It can take some time for the search result to finish, depending
+          on the size of the field, network conditions, etc. Normally,
+          if the search fails then an error will be popped up in the Errors
+          plugin.
+
 When search results are available, they will be displayed on the image and
 also listed in a table on the plugin GUI. You can click on either the table
 or the image to highlight selection.
+
+**User Configuration**
 
 """
 import os
@@ -53,8 +74,9 @@ import numpy as np
 from ginga.misc import Bunch
 from ginga import GingaPlugin
 from ginga import cmap, imap
-from ginga.util import wcs
+from ginga.util import wcs, catalog
 from ginga.gw import ColorBar, Widgets
+from ginga.misc import ParamSet
 
 __all__ = ['Catalogs']
 
@@ -69,12 +91,15 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.settings.add_defaults(draw_type='circle',
                                    select_color='skyblue',
                                    color_outline='aquamarine',
-                                   click_radius=10)
+                                   click_radius=10,
+                                   image_channel='',
+                                   name_sources=catalog.default_name_sources,
+                                   catalog_sources=catalog.default_catalog_sources,
+                                   image_sources=catalog.default_image_sources)
         self.settings.load(onError='silent')
 
         self.limit_stars_to_area = False
         self.pan_to_selected = False
-        self.use_dss_channel = False
         self.dsscnt = 0
         self.plot_max = 500
         self.plot_limit = 100
@@ -92,9 +117,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         self.image_server_options = []
         self.image_server_params = None
+        self.image_params = Bunch.Bunch(dict(ra='', dec='', width=1, height=1))
 
         self.catalog_server_options = []
         self.catalog_server_params = None
+        self.catalog_params = Bunch.Bunch(dict(ra='', dec='', radius=1))
 
         self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
@@ -111,6 +138,69 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.color_selected = self.settings.get('select_color', 'skyblue')
         self.hilite = None
         self.gui_up = False
+
+        bank = self.fv.get_ServerBank()
+
+        # add name services found in configuration file
+        name_sources = self.settings.get('name_sources', [])
+        for d in name_sources:
+            typ = d.get('type', None)
+            obj = None
+            if typ == 'astroquery.names':
+                if catalog.have_astroquery:
+                    obj = catalog.AstroqueryNameServer(self.logger,
+                                                       d['fullname'],
+                                                       d['shortname'], None,
+                                                       d['fullname'])
+            else:
+                self.logger.debug("Unknown type ({}) specified for catalog source--skipping".format(typ))
+
+            if obj is not None:
+                bank.add_name_server(obj)
+
+        # add catalogs found in configuration file
+        catalog_sources = self.settings.get('catalog_sources', [])
+        for d in catalog_sources:
+            typ = d.get('type', None)
+            obj = None
+            if typ == 'astroquery.vo_conesearch':
+                if catalog.have_astroquery:
+                    obj = catalog.AstroqueryVOCatalogServer(self.logger,
+                                                            d['fullname'],
+                                                            d['shortname'],
+                                                            d['mapping'],
+                                                            d['fullname'])
+            elif typ == 'astroquery.catalog':
+                if catalog.have_astroquery:
+                    obj = catalog.AstroqueryCatalogServer(self.logger,
+                                                          d['fullname'],
+                                                          d['shortname'],
+                                                          d['source'],
+                                                          d['mapping'],
+                                                          description=d['fullname'])
+            else:
+                self.logger.debug("Unknown type ({}) specified for catalog source--skipping".format(typ))
+
+            if obj is not None:
+                bank.add_catalog_server(obj)
+
+        # add image servers found in configuration file
+        image_sources = self.settings.get('image_sources', [])
+        for d in image_sources:
+            typ = d.get('type', None)
+            obj = None
+            if typ == 'astroquery.image':
+                if catalog.have_astroquery:
+                    obj = catalog.AstroqueryImageServer(self.logger,
+                                                        d['fullname'],
+                                                        d['shortname'],
+                                                        d['source'],
+                                                        d['fullname'])
+            else:
+                self.logger.debug("Unknown type ({}) specified for image source--skipping".format(typ))
+
+            if obj is not None:
+                bank.add_image_server(obj)
 
     def build_gui(self, container, future=None):
         vbox1 = Widgets.VBox()
@@ -132,15 +222,16 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         captions = (('Server:', 'llabel'),
                     ('Server', 'combobox'),
-                    ('Use DSS channel', 'checkbutton'),
+                    ('To channel:', 'llabel'),
+                    ('channel', 'entry'),
                     ('Get Image', 'button'))
         w, b = Widgets.build_info(captions)
         self.w.update(b)
         self.w.get_image.add_callback('activated',
                                       lambda w: self.getimage_cb())
-        self.w.use_dss_channel.set_state(self.use_dss_channel)
-        self.w.use_dss_channel.add_callback(
-            'activated', self.use_dss_channel_cb)
+        chname = self.settings.get('image_channel', '')
+        b.channel.set_text(chname)
+        b.channel.set_tooltip("Optional channel for result")
 
         vbox.add_widget(w, stretch=0)
 
@@ -157,6 +248,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated',
                               lambda w, idx: self.setup_params_image(idx))
+        combobox.set_tooltip("Choose the image source")
         if len(self.image_server_options) > 0:
             self.setup_params_image(index, redo=False)
 
@@ -168,13 +260,14 @@ class Catalogs(GingaPlugin.LocalPlugin):
         captions = (('Server:', 'llabel'),
                     ('Server', 'combobox'),
                     ('Limit stars to area', 'checkbutton'),
-                    ('Search', 'button'))
+                    ('Search catalog', 'button'))
         w, self.w2 = Widgets.build_info(captions)
-        self.w2.search.add_callback('activated',
-                                    lambda w: self.getcatalog_cb())
+        self.w2.search_catalog.add_callback('activated',
+                                            lambda w: self.getcatalog_cb())
         self.w2.limit_stars_to_area.set_state(self.limit_stars_to_area)
         self.w2.limit_stars_to_area.add_callback('activated',
                                                  self.limit_area_cb)
+        self.w2.limit_stars_to_area.set_tooltip("Filter out objects objects outside the shape")
 
         vbox.add_widget(w, stretch=0)
 
@@ -192,8 +285,33 @@ class Catalogs(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated',
                               lambda w, idx: self.setup_params_catalog(idx))
+        combobox.set_tooltip("Choose the catalog source")
         if len(self.catalog_server_options) > 0:
             self.setup_params_catalog(index, redo=False)
+
+        # name resolver
+        vbox = Widgets.VBox()
+        fr = Widgets.Frame(" Name Server ")
+        fr.set_widget(vbox)
+
+        captions = (('Server:', 'llabel', 'server', 'combobox',
+                     '_x1', 'spacer'),
+                    ('Name:', 'llabel', 'Name', 'entry',
+                     'Search name', 'button')
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w3 = b
+        b.search_name.add_callback('activated', lambda w: self.getname_cb())
+        b.search_name.set_tooltip("Lookup name and populate ra/dec coordinates")
+        vbox.add_widget(w, stretch=0)
+
+        combobox = b.server
+        for name in ['SIMBAD', 'NED']:
+            combobox.append_text(name)
+        combobox.set_index(0)
+        combobox.set_tooltip("Choose the object name resolver")
+
+        vbox0.add_widget(fr, stretch=0)
 
         # stretch
         vbox0.add_widget(Widgets.Label(''), stretch=1)
@@ -556,17 +674,16 @@ class Catalogs(GingaPlugin.LocalPlugin):
         return self.redo()
 
     def getimage_cb(self):
-        params = self.get_params(self.image_server_params)
+        params = self.get_params(self.image_params)
 
         index = self._get_cbidx(self.w.server)
         server = self.image_server_options[index]
 
-        self.clear_all()
+        #self.clear_all()
 
-        if self.use_dss_channel:
-            chname = 'DSS'
-            if not self.fv.has_channel(chname):
-                self.fv.add_channel(chname)
+        chname = self.w.channel.get_text().strip()
+        if len(chname) > 0:
+            self.fv.get_channel_on_demand(chname)
         else:
             chname = self.chname
 
@@ -579,9 +696,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def get_sky_image(self, servername, params):
 
         srvbank = self.fv.get_server_bank()
-        #filename = 'sky-' + str(time.time()).replace('.', '-') + '.fits'
         filename = 'sky-' + str(self.dsscnt) + '.fits'
-        self.dsscnt = (self.dsscnt + 1) % 5
+        # keep only the last N files
+        N = 5
+        self.dsscnt = (self.dsscnt + 1) % N
         filepath = os.path.join(self.fv.tmpdir, filename)
         try:
             os.remove(filepath)
@@ -589,7 +707,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
             self.logger.error("failed to remove tmp file '%s': %s" % (
                 filepath, str(e)))
         try:
-            dstpath = srvbank.getImage(servername, filepath, **params)
+            dstpath = srvbank.get_image(servername, filepath, **params)
             return dstpath
 
         except Exception as e:
@@ -607,17 +725,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
             self.fv.gui_do(self.fv.show_error, errmsg)
             return
 
-        self.fv.load_file(fitspath, chname=chname)
-
-        # Update the GUI
-        def getimage_update():
-            self.setfromimage()
-            self.redo()
-
-        self.fv.gui_do(getimage_update)
+        self.logger.debug("result found and it is '{}'".format(fitspath))
+        self.fv.gui_do(self.fv.open_uris, [fitspath], chname=chname)
 
     def getcatalog_cb(self):
-        params = self.get_params(self.catalog_server_params)
+        params = self.get_params(self.catalog_params)
 
         index = self._get_cbidx(self.w2.server)
         server = self.catalog_server_options[index]
@@ -640,7 +752,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
     def _get_catalog(self, srvbank, key, params):
         try:
-            starlist, info = srvbank.getCatalog(key, None, **params)
+            starlist, info = srvbank.get_catalog(key, None, **params)
             return starlist, info
 
         except Exception as e:
@@ -696,6 +808,31 @@ class Catalogs(GingaPlugin.LocalPlugin):
             starlist = list(stars)
 
         return starlist
+
+    def getname_cb(self):
+        name = self.w3.name.get_text().strip()
+        server = self.w3.server.get_text()
+
+        try:
+            srvbank = self.fv.get_server_bank()
+            namesvc = srvbank.get_name_server(server)
+            self.logger.info("looking up name '{}' at {}".format(name, server))
+
+            ra_str, dec_str = namesvc.search(name)
+
+            # populate the image server UI coordinate
+            self.image_params.update(dict(ra=ra_str, dec=dec_str))
+            self.image_server_params.params_to_widgets()
+
+            # populate the catalog server UI coordinate
+            self.catalog_params.update(dict(ra=ra_str, dec=dec_str))
+            self.catalog_server_params.params_to_widgets()
+
+        except Exception as e:
+            errmsg = "Name service query exception: %s" % (str(e))
+            self.logger.error(errmsg, exc_info=True)
+            # pop up the error in the GUI under "Errors" tab
+            self.fv.gui_do(self.fv.show_error, errmsg)
 
     def clear(self):
         objects = self.canvas.get_objects_by_tag_pfx('star')
@@ -801,10 +938,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.limit_stars_to_area = tf
         return True
 
-    def use_dss_channel_cb(self, w, tf):
-        self.use_dss_channel = tf
-        return True
-
     def plot_pct_cb(self, widget, val):
         #val = self.w.plotgrp.value()
         self.plot_start = int(val)
@@ -838,34 +971,29 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def _get_cbidx(self, w):
         return w.get_index()
 
-    def _setup_params(self, obj, container):
-        params = obj.getParams()
-        captions = []
-        paramList = sorted(params.values(), key=lambda b: b.order)
-        for bnch in paramList:
-            text = bnch.name
-            if 'label' in bnch:
-                text = bnch.label
-            #captions.append((text, 'entry'))
-            captions.append((text + ':', 'label', bnch.name, 'entry'))
+    def _setup_params(self, obj, params, container):
+        # Build up a set of control widgets for the parameters
+        paramlst = obj.get_params_metadata()
 
-        # TODO: put RA/DEC first, and other stuff not in random orders
-        w, b = Widgets.build_info(captions)
+        b = ParamSet.ParamSet(self.logger, params)
+        w = b.build_params(paramlst, orientation='vertical')
 
         # remove old widgets
         container.remove_all()
 
         # add new widgets
         container.add_widget(w)
+        b.params_to_widgets()
         return b
 
     def setup_params_image(self, index, redo=True):
         key = self.image_server_options[index]
 
         # Get the parameter list and adjust the widget
-        obj = self.fv.imgsrv.getImageServer(key)
-        b = self._setup_params(obj, self.w.img_params)
+        obj = self.fv.imgsrv.get_image_server(key)
+        b = self._setup_params(obj, self.image_params, self.w.img_params)
         self.image_server_params = b
+        b.add_callback('changed', self.params_changed_cb)
 
         if redo:
             self.redo()
@@ -874,26 +1002,29 @@ class Catalogs(GingaPlugin.LocalPlugin):
         key = self.catalog_server_options[index]
 
         # Get the parameter list and adjust the widget
-        obj = self.fv.imgsrv.getCatalogServer(key)
-        b = self._setup_params(obj, self.w2.cat_params)
+        obj = self.fv.imgsrv.get_catalog_server(key)
+        b = self._setup_params(obj, self.catalog_params, self.w2.cat_params)
         self.catalog_server_params = b
+        b.add_callback('changed', self.params_changed_cb)
 
         if redo:
             self.redo()
 
     def _update_widgets(self, d):
-        for bnch in (self.image_server_params,
-                     self.catalog_server_params):
-            if bnch is not None:
-                for key in list(bnch.keys()):
-                    if key in d:
-                        bnch[key].set_text(str(d[key]))
+        for bnch in (self.image_params, self.catalog_params):
+            for key in list(bnch.keys()):
+                if key in d:
+                    bnch[key] = d[key]
+        self.image_server_params.params_to_widgets()
+        self.catalog_server_params.params_to_widgets()
 
     def get_params(self, bnch):
         params = {}
-        for key in list(bnch.keys()):
-            params[key] = str(bnch[key].get_text())
+        params.update(bnch)
         return params
+
+    def params_changed_cb(self, paramset):
+        paramset.widgets_to_params()
 
     def set_drawtype_cb(self, tf, drawtype):
         if tf:

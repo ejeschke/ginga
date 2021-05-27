@@ -1,5 +1,5 @@
 #
-# catalog.py -- DSS and star catalog interfaces for the Ginga reference viewer
+# catalog.py -- image and star catalog interfaces for Ginga
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
@@ -15,29 +15,25 @@ from urllib.error import URLError, HTTPError
 from ginga.misc import Bunch
 from ginga.util import wcs
 
-# star_attrs = ('name', 'ra', 'dec', 'ra_deg', 'dec_deg', 'mag', 'preference',
-#               'priority', 'flag', 'b_r', 'dst', 'description')
+from astropy import coordinates, units
 
 # Do we have astroquery >=0.3.5 installed?
 have_astroquery = False
 try:
-    from astropy import coordinates, units
     from astroquery.vo_conesearch import conesearch
+
     have_astroquery = True
 except ImportError:
-    try:  # Backward-compatibility for astropy < 2.0
-        from astropy import coordinates, units
-        from astropy.vo.client import conesearch
-        have_astroquery = True
-    except ImportError:
-        pass
+    pass
 
-# How about pyvo?
-have_pyvo = False
-try:
-    import pyvo
-    have_pyvo = True
-except ImportError:
+# these are modifed at bottom of this module
+default_image_sources = []
+default_catalog_sources = []
+default_name_sources = []
+
+
+class SourceError(Exception):
+    """For exceptions raised by the `~ginga.util.catalog` module."""
     pass
 
 
@@ -45,8 +41,6 @@ class Star(object):
     def __init__(self, **kwdargs):
         starInfo = {}
         starInfo.update(kwdargs)
-        # for attrname in star_attrs:
-        #     starInfo[attrname] = kwdargs.get(attrname)
         self.starInfo = starInfo
 
     def __getitem__(self, key):
@@ -63,32 +57,40 @@ class Star(object):
         return key in self.starInfo
 
 
-# TODO: Deprecate this class name and replace with something that reflects
-#       Cone Search in Astroquery.
-class AstroPyCatalogServer(object):
+class AstroqueryCatalogServer(object):
+    """For queries using the ``astroquery.catalog`` function."""
 
-    def __init__(self, logger, full_name, key, url, description):
+    kind = 'astroquery.catalog'
+
+    @classmethod
+    def get_params_metadata(cls):
+        from ginga.misc.ParamSet import Param
+        return [
+            Param(name='ra', type=str, widget='entry',
+                  description="Right ascension component of center"),
+            Param(name='dec', type=str, widget='entry',
+                  description="Declination component of center"),
+            Param(name='r', type=float, default=5.0, widget='entry',
+                  description="Radius from center in arcmin"),
+        ]
+
+    def __init__(self, logger, full_name, key, querymod, mapping,
+                 description=None):
+        super(AstroqueryCatalogServer, self).__init__()
         if not have_astroquery:
-            raise ImportError('astroquery or astropy.vo (deprecated) not found, '
-                              'please install astroquery')
+            raise ImportError("'astroquery' not found, please install it")
 
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
+        self.mapping = mapping
+        self.querymod = querymod
+        if description is None:
+            description = full_name
         self.description = description
-        self.kind = 'astropy.vo-catalog'
-        self.url = url
-
-        # For compatibility with URL catalog servers
-        self.params = {}
-        count = 0
-        for label, key in (('RA', 'ra'), ('DEC', 'dec'), ('Radius', 'r')):
-            self.params[key] = Bunch.Bunch(name=key, convert=str,
-                                           label=label, order=count)
-            count += 1
 
     def getParams(self):
-        return self.params
+        return self.get_params_metadata()
 
     def toStar(self, data, ext, magfield):
         try:
@@ -108,6 +110,14 @@ class AstroPyCatalogServer(object):
         data['ra'] = wcs.raDegToString(data['ra_deg'])
         data['dec'] = wcs.decDegToString(data['dec_deg'])
         return Star(**data)
+
+    def _search(self, center, radius, catalog, **kwargs):
+        results = self.querymod.query_region(center, radius,
+                                             catalog=catalog,
+                                             **kwargs)
+        if results is None:
+            return results
+        return results[0]
 
     def search(self, **params):
         """
@@ -137,29 +147,33 @@ class AstroPyCatalogServer(object):
         time_start = time.time()
         with warnings.catch_warnings():  # Ignore VO warnings
             warnings.simplefilter('ignore')
-            results = conesearch.conesearch(
-                c, radius_deg * units.degree, catalog_db=self.full_name,
-                verbose=False)
+            results = self._search(c, radius_deg * units.degree,
+                                   self.full_name)
+
         time_elapsed = time.time() - time_start
-        numsources = results.array.size
-        self.logger.info("Found %d sources in %.2f sec" % (
-            numsources, time_elapsed))
+        if results is None:
+            self.logger.info("Null result in %.2f sec" % (
+                time_elapsed))
+            raise SourceError("Null result from query")
+        else:
+            numsources = len(results)
+            self.logger.info("Found %d sources in %.2f sec" % (
+                numsources, time_elapsed))
 
         # Scan the returned fields to find ones we need to extract
         # particulars from (ra, dec, id, magnitude)
         mags = []
         ext = {}
-        fields = results.array.dtype.names
+        fields = results.colnames
+        #print("fields are", fields)
         for name in fields:
-            ucd = results.get_field_by_id(name).ucd
-            ucd = str(ucd).lower()
-            if ucd == 'id_main':
+            if name == self.mapping['id']:
                 ext['id'] = name
-            elif ucd == 'pos_eq_ra_main':
+            elif name == self.mapping['ra']:
                 ext['ra'] = name
-            elif ucd == 'pos_eq_dec_main':
+            elif name == self.mapping['dec']:
                 ext['dec'] = name
-            if ('phot_' in ucd) or ('phot.' in ucd):
+            if name in self.mapping.get('mag', []):
                 mags.append(name)
         self.logger.debug("possible magnitude fields: %s" % str(mags))
         if len(mags) > 0:
@@ -169,9 +183,8 @@ class AstroPyCatalogServer(object):
 
         # prepare the result list
         starlist = []
-        arr = results.array
         for i in range(numsources):
-            source = dict(zip(fields, arr[i]))
+            source = dict(zip(fields, results[i]))
             starlist.append(self.toStar(source, ext, magfield))
 
         # metadata about the list
@@ -184,8 +197,6 @@ class AstroPyCatalogServer(object):
                    ('Description', 'description'),
                    ]
         # Append extra columns returned by search to table header
-        # TODO: what if not all sources have same record structure?
-        # is this possible with VO?
         cols = list(fields)
         cols.remove(ext['ra'])
         cols.remove(ext['dec'])
@@ -199,30 +210,71 @@ class AstroPyCatalogServer(object):
         return starlist, info
 
 
-class AstroQueryImageServer(object):
+class AstroqueryVOCatalogServer(AstroqueryCatalogServer):
+    """For queries using the `astroquery.vo.conesearch` function."""
 
-    def __init__(self, logger, full_name, key, querymod, description):
+    kind = 'astroquery.vo_conesearch'
+
+    def __init__(self, logger, full_name, key, mapping, description=None):
+        super(AstroqueryVOCatalogServer, self).__init__(logger, full_name,
+                                                        key, None, mapping,
+                                                        description=description)
+
+    def _search(self, center, radius, catalog):
+        # override this methid to pass some special kwargs to the search
+        results = conesearch.conesearch(center, radius, catalog_db=catalog,
+                                        verbose=False,
+                                        return_astropy_table=True,
+                                        use_names_over_ids=False)
+        return results
+
+
+class AstroqueryImageServer(object):
+    """For queries using the ``astroquery.vo_conesearch`` function."""
+
+    kind = 'astroquery.image'
+
+    @classmethod
+    def get_params_metadata(cls):
+        from ginga.misc.ParamSet import Param
+        return [
+            Param(name='ra', type=str, default='', widget='entry',
+                  description="Right ascension component of center"),
+            Param(name='dec', type=str, widget='entry',
+                  description="Declination component of center"),
+            Param(name='width', type=float, default=1, widget='entry',
+                  description="Width of box in degrees"),
+            Param(name='height', type=float, default=1, widget='entry',
+                  description="Height of box in degrees"),
+        ]
+
+    def __init__(self, logger, full_name, key, querymod, description=None):
+        super(AstroqueryImageServer, self).__init__()
         if not have_astroquery:
             raise ImportError('astroquery not found, please install astroquery')
 
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
+        if isinstance(querymod, str) and querymod.lower() == 'skyview':
+            from astroquery.skyview import SkyView
+            self.querymod = SkyView
+        else:
+            self.querymod = querymod
+        if description is None:
+            description = full_name
         self.description = description
-        self.kind = 'astroquery-image'
-        self.querymod = querymod
-
-        # For compatibility with other Ginga catalog servers
-        self.params = {}
-        count = 0
-        for label, key in (('RA', 'ra'), ('DEC', 'dec'),
-                           ('Width', 'width'), ('Height', 'height')):
-            self.params[key] = Bunch.Bunch(name=key, convert=str,
-                                           label=label, order=count)
-            count += 1
 
     def getParams(self):
-        return self.params
+        return self.get_params_metadata()
+
+    def _search(self, center, wd_deg, ht_deg):
+        survey = [self.short_name]
+
+        results = self.querymod.get_image_list(center, survey,
+                                               width=wd_deg * units.degree,
+                                               height=ht_deg * units.degree)
+        return results
 
     # TODO: dstpath provides the pathname for storing the image
     def search(self, dstpath, **params):
@@ -249,243 +301,89 @@ class AstroQueryImageServer(object):
         c = coordinates.SkyCoord(ra_deg * units.degree,
                                  dec_deg * units.degree,
                                  frame='icrs')
-        self.logger.info("Querying catalog: %s" % (self.full_name))
-        # time_start = time.time()
-        results = self.querymod.get_image_list(
-            c, image_width=wd_deg * units.degree,
-            image_height=ht_deg * units.degree)
-        # time_elapsed = time.time() - time_start
+        self.logger.info("Querying image source: %s" % (self.full_name))
+        time_start = time.time()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            results = self._search(c, wd_deg, ht_deg)
 
-        if len(results) > 0:
-            self.logger.info("Found %d images" % len(results))
-        else:
-            self.logger.warning("Found no images in this area" % len(results))
+        time_elapsed = time.time() - time_start
+        if results is None:
+            self.logger.info("Null result in %.2f sec" % (
+                time_elapsed))
             return None
+        else:
+            numsources = len(results)
+            self.logger.info("Found %d images in %.2f sec" % (
+                numsources, time_elapsed))
+            if numsources == 0:
+                self.logger.warning("Found no images in this area" % len(results))
+                return None
 
         # For now, we pick the first one found
-        url = results[0]
+        urls = list(results)
         # fitspath = results[0].make_dataset_filename(dir=tempfile.gettempdir())
 
-        # TODO: download file
-        fitspath = url
+        # file will be downloaded
+        fitspath = urls[0]
 
         # explicit return
         return fitspath
 
 
-class PyVOCatalogServer(object):
+class AstroqueryNameServer(object):
+    """For object name lookups using `astroquery`"""
 
-    def __init__(self, logger, full_name, key, url, description):
-        if not have_pyvo:
-            raise ImportError('pyvo not found, please install pyvo')
+    kind = 'astroquery.names'
 
-        self.logger = logger
-        self.full_name = full_name
-        self.short_name = key
-        self.description = description
-        self.kind = 'pyvo-catalog'
-        self.url = url
-
-        # For compatibility with URL catalog servers
-        self.params = {}
-        count = 0
-        for label, key in (('RA', 'ra'), ('DEC', 'dec'), ('Radius', 'r')):
-            self.params[key] = Bunch.Bunch(name=key, convert=str,
-                                           label=label, order=count)
-            count += 1
-
-    def getParams(self):
-        return self.params
-
-    def toStar(self, data, ext, magfield):
-        try:
-            mag = float(data[magfield])
-        except Exception:
-            mag = 0.0
-
-        # Make sure we have at least these Ginga standard fields defined
-        d = {'name': data[ext['id']],
-             'ra_deg': float(data[ext['ra']]),
-             'dec_deg': float(data[ext['dec']]),
-             'mag': mag,
-             'preference': 0.0,
-             'priority': 0,
-             'description': 'fake magnitude'}
-        data.update(d)
-        data['ra'] = wcs.raDegToString(data['ra_deg'])
-        data['dec'] = wcs.decDegToString(data['dec_deg'])
-        return Star(**data)
-
-    def search(self, **params):
-        """
-        For compatibility with generic star catalog search.
-        """
-
-        self.logger.debug("search params=%s" % (str(params)))
-        ra, dec = params['ra'], params['dec']
-        if not (':' in ra):
-            # Assume RA and DEC are in degrees
-            ra_deg = float(ra)
-            dec_deg = float(dec)
-        else:
-            # Assume RA and DEC are in standard string notation
-            ra_deg = wcs.hmsStrToDeg(ra)
-            dec_deg = wcs.dmsStrToDeg(dec)
-
-        # Convert to degrees for search radius
-        radius_deg = float(params['r']) / 60.0
-        # radius_deg = float(params['r'])
-
-        # initialize our query object with the service's base URL
-        query = pyvo.scs.SCSQuery(self.url)
-        query.ra = ra_deg
-        query.dec = dec_deg
-        query.radius = radius_deg
-        self.logger.info("Will query: %s" % query.getqueryurl(True))
-
-        time_start = time.time()
-        results = query.execute()
-        time_elapsed = time.time() - time_start
-
-        numsources = len(results)
-        self.logger.info("Found %d sources in %.2f sec" % (
-            numsources, time_elapsed))
-
-        # Scan the returned fields to find ones we need to extract
-        # particulars from (ra, dec, id, magnitude)
-        mags = []
-        ext = {}
-        fields = results.fielddesc()
-        for field in fields:
-            ucd = str(field.ucd).lower()
-            if ucd == 'id_main':
-                ext['id'] = field.name
-            elif ucd == 'pos_eq_ra_main':
-                ext['ra'] = field.name
-            elif ucd == 'pos_eq_dec_main':
-                ext['dec'] = field.name
-            if ('phot_' in ucd) or ('phot.' in ucd):
-                mags.append(field.name)
-        self.logger.debug("possible magnitude fields: %s" % str(mags))
-        if len(mags) > 0:
-            magfield = mags[0]
-        else:
-            magfield = None
-
-        self.logger.info("Found %d sources" % len(results))
-
-        starlist = []
-        for source in results:
-            data = dict(source.items())
-            starlist.append(self.toStar(data, ext, magfield))
-
-        # metadata about the list
-        columns = [('Name', 'name'),
-                   ('RA', 'ra'),
-                   ('DEC', 'dec'),
-                   ('Mag', 'mag'),
-                   ('Preference', 'preference'),
-                   ('Priority', 'priority'),
-                   ('Description', 'description'),
-                   ]
-        # Append extra columns returned by search to table header
-        cols = list(source.keys())
-        cols.remove(ext['ra'])
-        cols.remove(ext['dec'])
-        cols.remove(ext['id'])
-        columns.extend(zip(cols, cols))
-
-        # which column is the likely one to color source circles
-        colorCode = 'Mag'
-
-        info = Bunch.Bunch(columns=columns, color=colorCode)
-        return starlist, info
-
-    def get_catalogs(self):
-        return conesearch.list_catalogs()
-
-
-class PyVOImageServer(object):
-
-    def __init__(self, logger, full_name, key, url, description):
-        if not have_pyvo:
-            raise ImportError('pyvo not found, please install pyvo')
+    def __init__(self, logger, full_name, key, mapping, description=None):
+        super(AstroqueryNameServer, self).__init__()
+        if not have_astroquery:
+            raise ImportError("'astroquery' not found, please install it")
 
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
+        self.mapping = mapping
+        if description is None:
+            description = full_name
         self.description = description
-        self.kind = 'pyvo-image'
-        self.url = url
 
-        # For compatibility with other Ginga catalog servers
-        self.params = {}
-        count = 0
-        for label, key in (('RA', 'ra'), ('DEC', 'dec'),
-                           ('Width', 'width'), ('Height', 'height')):
-            self.params[key] = Bunch.Bunch(name=key, convert=str,
-                                           label=label, order=count)
-            count += 1
+    def search(self, name, **kwargs):
+        if self.short_name == 'SIMBAD':
+            from astroquery.simbad import Simbad
+            results = Simbad.query_object(name, **kwargs)
+            if results is None:
+                raise SourceError("No results found for name '{}'".format(name))
 
-    def getParams(self):
-        return self.params
+            # from SIMBAD, coords come formatted as a string
+            ra = ':'.join(results['RA'][0].split())
+            dec = ':'.join(results['DEC'][0].split())
 
-    # TODO: dstpath provides the pathname for storing the image
-    def search(self, dstpath, **params):
-        """
-        For compatibility with generic image catalog search.
-        """
+        elif self.short_name == 'NED':
+            from astroquery.ned import Ned
+            results = Ned.query_object(name, **kwargs)
+            if results is None:
+                # Ned usually returns an exception for non-found objects
+                # but lets put this test just in case
+                raise SourceError("No results found for name '{}'".format(name))
 
-        self.logger.debug("search params=%s" % (str(params)))
-        ra, dec = params['ra'], params['dec']
-        if not (':' in ra):
-            # Assume RA and DEC are in degrees
-            ra_deg = float(ra)
-            dec_deg = float(dec)
+            # from NED, coords come as degrees in float
+            ra = wcs.raDegToString(results['RA'][0])
+            dec = wcs.decDegToString(results['DEC'][0])
+
         else:
-            # Assume RA and DEC are in standard string notation
-            ra_deg = wcs.hmsStrToDeg(ra)
-            dec_deg = wcs.dmsStrToDeg(dec)
+            raise SourceError("Don't know how to query source '{}'".format(self.short_name))
 
-        # Convert to degrees for search
-        wd_deg = float(params['width']) / 60.0
-        ht_deg = float(params['height']) / 60.0
-        # wd_deg = float(params['width'])
-        # ht_deg = float(params['height'])
-
-        # initialize our query object with the service's base URL
-        query = pyvo.sia.SIAQuery(self.url)
-        query.ra = ra_deg
-        query.dec = dec_deg
-        query.size = (wd_deg, ht_deg)
-        query.format = 'image/fits'
-        self.logger.info("Will query: %s" % query.getqueryurl(True))
-
-        results = query.execute()
-        if len(results) > 0:
-            self.logger.info("Found %d images" % len(results))
-        else:
-            self.logger.warning("Found no images in this area" % len(results))
-            return None
-
-        # For now, we pick the first one found
-
-        # REQUIRES FIX IN PYVO:
-        # imfile = results[0].cachedataset(dir=tempfile.gettempdir())
-        #
-        # Workaround:
-        fitspath = results[0].make_dataset_filename(dir=tempfile.gettempdir())
-        results[0].cachedataset(fitspath)
-
-        # explicit return
-        return fitspath
+        return ra, dec
 
 
 class URLServer(object):
 
+    kind = 'url'
+
     def __init__(self, logger, full_name, key, url, description):
         self.logger = logger
-        self.kind = 'url'
         self.full_name = full_name
         self.short_name = key
         self.base_url = url
@@ -585,21 +483,6 @@ class URLServer(object):
             return in_f.read()
 
     def search(self, filepath, **params):
-
-        # values = urllib.urlencode(params)
-        # if self.reqtype == 'get':
-        #     url = self.base_url + '?' + values
-        #     req = Request(url)
-
-        # elif self.reqtype == 'post':
-        #     url = self.base_url
-        #     req = Request(self.base_url, values)
-
-        # else:
-        #     raise Exception(
-        #         "Don't know how to handle a request of type '%s'" % (
-        #             self.reqtype))
-
         url = self.base_url % params
 
         self.fetch(url, filepath=filepath)
@@ -608,18 +491,48 @@ class URLServer(object):
 
 class ImageServer(URLServer):
 
+    kind = 'ginga.image'
+
+    @classmethod
+    def get_params_metadata(cls):
+        from ginga.misc.ParamSet import Param
+        return [
+            Param(name='ra', type=str, default='', widget='entry',
+                  description="Right ascension component of center"),
+            Param(name='dec', type=str, widget='entry',
+                  description="Declination component of center"),
+            Param(name='width', type=float, default=1, widget='entry',
+                  description="Width of box in degrees"),
+            Param(name='height', type=float, default=1, widget='entry',
+                  description="Height of box in degrees"),
+        ]
+
     def __init__(self, logger, full_name, key, url, description):
         super(ImageServer, self).__init__(logger, full_name, key, url,
                                           description)
-        self.kind = 'image'
 
 
 class CatalogServer(URLServer):
 
+    kind = 'ginga.catalog'
+
+    @classmethod
+    def get_params_metadata(cls):
+        from ginga.misc.ParamSet import Param
+        return [
+            Param(name='ra', type=str, widget='entry',
+                  description="Right ascension component of center"),
+            Param(name='dec', type=str, widget='entry',
+                  description="Declination component of center"),
+            Param(name='r', type=float, default=1.0, widget='entry',
+                  description="Radius from center in arcmin"),
+            Param(name='r2', type=float, default=2.0, widget='entry',
+                  description="Outer radius from center in arcmin"),
+        ]
+
     def __init__(self, logger, full_name, key, url, description):
         super(CatalogServer, self).__init__(logger, full_name, key, url,
                                             description)
-        self.kind = 'catalog'
         self.index = {'name': 0, 'ra': 1, 'dec': 2, 'mag': 10}
         self.format = 'str'
         self.equinox = 2000.0
@@ -712,38 +625,115 @@ class ServerBank(object):
 
     def __init__(self, logger):
         self.logger = logger
+
+        self.clear()
+
+    def clear(self):
         self.imbank = {}
         self.ctbank = {}
+        self.nmbank = {}
 
-    def addImageServer(self, srvobj):
+    def add_image_server(self, srvobj):
         self.imbank[srvobj.short_name] = srvobj
 
-    def addCatalogServer(self, srvobj):
+    def add_catalog_server(self, srvobj):
         self.ctbank[srvobj.short_name] = srvobj
 
-    def getImageServer(self, key):
+    def add_name_server(self, srvobj):
+        self.nmbank[srvobj.short_name] = srvobj
+
+    def get_image_server(self, key):
         return self.imbank[key]
 
-    def getCatalogServer(self, key):
+    def get_catalog_server(self, key):
         return self.ctbank[key]
 
-    def getServerNames(self, kind='image'):
+    def get_name_server(self, key):
+        return self.nmbank[key]
+
+    def get_server_names(self, kind='image'):
         if kind == 'image':
             keys = self.imbank.keys()
+        elif kind == 'name':
+            keys = self.nmbank.keys()
         else:
             keys = self.ctbank.keys()
         keys = list(keys)
         keys.sort()
         return keys
 
-    def getImage(self, key, filepath, **params):
+    def get_image(self, key, filepath, **params):
         obj = self.imbank[key]
 
         return obj.search(filepath, **params)
 
-    def getCatalog(self, key, filepath, **params):
+    def get_catalog(self, key, filepath, **params):
         obj = self.ctbank[key]
 
         return obj.search(**params)
 
-# END
+    # TO BE DEPRECATED
+    addImageServer = add_image_server
+    addCatalogServer = add_catalog_server
+    getImageServer = get_image_server
+    getCatalogServer = get_catalog_server
+    getServerNames = get_server_names
+    getImage = get_image
+    getCatalog = get_catalog
+
+
+# ---- SET UP DEFAULT SOURCES ----
+
+if have_astroquery:
+    # set up default name sources, catalog sources and image sources
+
+    default_name_sources.extend([
+        {'shortname': "SIMBAD", 'fullname': "SIMBAD",
+         'type': 'astroquery.names'},
+        {'shortname': "NED", 'fullname': "NED",
+         'type': 'astroquery.names'},
+    ])
+
+    default_catalog_sources.extend([
+        {'shortname': "GSC 2.3",
+         'fullname': "Guide Star Catalog 2.3 Cone Search 1",
+         'type': 'astroquery.vo_conesearch',
+         'mapping': {'id': 'objID', 'ra': 'ra', 'dec': 'dec', 'mag': ['Mag']}},
+        {'shortname': "USNO-A2.0 1",
+         'fullname': "The USNO-A2.0 Catalogue (Monet+ 1998) 1",
+         'type': 'astroquery.vo_conesearch',
+         'mapping': {'id': 'USNO-A2.0', 'ra': 'RAJ2000', 'dec': 'DEJ2000',
+                     'mag': ['Bmag', 'Rmag']}},
+        {'shortname': "2MASS 1",
+         'fullname': "Two Micron All Sky Survey (2MASS) 1",
+         'type': 'astroquery.vo_conesearch',
+         'mapping': {'id': 'htmID', 'ra': 'ra', 'dec': 'dec',
+                     'mag': ['h_m', 'j_m', 'k_m']}},
+    ])
+
+    default_image_sources.extend([
+        {'shortname': "DSS",
+         'fullname': "Digital Sky Survey 1",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+        {'shortname': "DSS1 Blue",
+         'fullname': "Digital Sky Survey 1 Blue",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+        {'shortname': "DSS1 Red",
+         'fullname': "Digital Sky Survey 1 Red",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+        {'shortname': "DSS2 Red",
+         'fullname': "Digital Sky Survey 2 Red",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+        {'shortname': "DSS2 Blue",
+         'fullname': "Digital Sky Survey 2 Blue",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+        {'shortname': "DSS2 IR",
+         'fullname': "Digital Sky Survey 2 Infrared",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+    ])
