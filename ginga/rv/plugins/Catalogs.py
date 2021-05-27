@@ -8,10 +8,10 @@ A plugin for plotting object locations from a catalog on an image.
 ``Catalogs`` is a local plugin, which means it is associated with a
 channel.  An instance can be opened for each channel.
 
-.. note:: to use ``Catalogs`` it is necessary to install the `astroquery`
+.. note:: To use ``Catalogs``, it is necessary to install the ``astroquery``
           package.
 
-.. note:: configuration of ``Catalogs`` via `ginga_config.py` technique
+.. warning:: Configuration of ``Catalogs`` via ``ginga_config.py`` technique in Ginga 3.2 or later
           is not officially supported and may not work as in previous
           releases.  See the new user configuration instructions below.
 
