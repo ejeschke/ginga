@@ -8,6 +8,9 @@ A plugin for plotting object locations from a catalog on an image.
 ``Catalogs`` is a local plugin, which means it is associated with a
 channel.  An instance can be opened for each channel.
 
+.. note:: to use ``Catalogs`` it is necessary to install the `astroquery`
+          package.
+
 **Usage**
 
 **Fetching an image**
@@ -55,27 +58,7 @@ When search results are available, they will be displayed on the image and
 also listed in a table on the plugin GUI. You can click on either the table
 or the image to highlight selection.
 
-**Defining catalogs**
-
-You can customize the catalogs used by copying the ``plugin_Catalogs.cfg``
-from the example configurations directory to your ``$HOME/.ginga`` directory and
-modifying the ``catalog_sources`` table defined inside.
-
-The format of this option is a list of dicts, where each dict defines a
-source and has the following fields:
-
-* ``shortname``: str, the short name appearing in the control for selecting
-  a source in the plugin.  This is the name that will appear in the
-  drop-down menu in the catalogs control area of the GUI
-* ``fullname``: str, the full name, should correspond *exactly* with the
-  name required by the ``astroquery.vo_conesearch`` ``catalog`` parameter
-* ``type``: str, should be "astroquery.vo_conesearch" for an
-  ``astroquery.vo_conesearch`` function
-* ``mapping``: dict, a nested dict providing the mapping for the return results
-  to the GUI, in terms of field name to Ginga table.  In each source dict,
-  there must be keys for 'id', 'ra', and 'dec'. 'mag', if present, can be a
-  list of field names that define magnitudes of the elements in various
-  wavelengths.
+**User Configuration**
 
 """
 import os

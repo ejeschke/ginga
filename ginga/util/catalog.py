@@ -256,7 +256,11 @@ class AstroqueryImageServer(object):
         self.logger = logger
         self.full_name = full_name
         self.short_name = key
-        self.querymod = querymod
+        if isinstance(querymod, str) and querymod.lower() == 'skyview':
+            from astroquery.skyview import SkyView
+            self.querymod = SkyView
+        else:
+            self.querymod = querymod
         if description is None:
             description = full_name
         self.description = description
@@ -678,30 +682,6 @@ class ServerBank(object):
     getCatalog = get_catalog
 
 
-class AstroPyCatalogServer(AstroqueryVOCatalogServer):
-    """NOTE: this class is for backward-compatibility.  IT WILL BE DEPRECATED!
-    Do not use in new code and consider migrating to
-    `~ginga.util.catalog.AstroqueryVOCatalogServer` or
-    `~ginga.util.catalog.AstroqueryCatalogServer`.
-    """
-    def __init__(self, logger, full_name, key, url, description, mapping=None):
-        if mapping is None:
-            mapping = dict(id='htmID', ra='ra', dec='dec', mag=[])
-        super(AstroPyCatalogServer, self).__init__(logger, full_name, key,
-                                                   mapping, description=description)
-
-
-class AstroQueryImageServer(AstroqueryImageServer):
-    """NOTE: this class is for backward-compatibility.  IT WILL BE DEPRECATED!
-    Do not use in new code and consider migrating to
-    `~ginga.util.catalog.AstroqueryImageServer`.
-    """
-    def __init__(self, logger, full_name, key, querymod, description):
-        super(AstroQueryImageServer, self).__init__(logger, full_name, key,
-                                                    querymod,
-                                                    description=description)
-
-
 # ---- SET UP DEFAULT SOURCES ----
 
 if have_astroquery:
@@ -727,16 +707,33 @@ if have_astroquery:
         {'shortname': "2MASS 1",
          'fullname': "Two Micron All Sky Survey (2MASS) 1",
          'type': 'astroquery.vo_conesearch',
-         'mapping': {'id': 'htmID', 'ra': 'ra', 'dec': 'dec', 'mag': []}},
+         'mapping': {'id': 'htmID', 'ra': 'ra', 'dec': 'dec',
+                     'mag': ['h_m', 'j_m', 'k_m']}},
     ])
 
-    from astroquery.skyview import SkyView
-    sd = SkyView.survey_dict
-    for key in sd:
-        val = sd[key]
-        if isinstance(val, list):
-            for name in val:
-                d = dict(shortname=name,
-                         fullname="SkyView [{}]: {}".format(key, name),
-                         type='astroquery.image', source=SkyView)
-                default_image_sources.append(d)
+    default_image_sources.extend([
+        {'shortname': "DSS",
+         'fullname': "Digital Sky Survey 1",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+        {'shortname': "DSS1 Blue",
+         'fullname': "Digital Sky Survey 1 Blue",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+        {'shortname': "DSS1 Red",
+         'fullname': "Digital Sky Survey 1 Red",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+        {'shortname': "DSS2 Red",
+         'fullname': "Digital Sky Survey 2 Red",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+        {'shortname': "DSS2 Blue",
+         'fullname': "Digital Sky Survey 2 Blue",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+        {'shortname': "DSS2 IR",
+         'fullname': "Digital Sky Survey 2 Infrared",
+         'type': 'astroquery.image',
+         'source': 'skyview'},
+    ])
