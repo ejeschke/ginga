@@ -11,6 +11,10 @@ channel.  An instance can be opened for each channel.
 .. note:: to use ``Catalogs`` it is necessary to install the `astroquery`
           package.
 
+.. note:: configuration of ``Catalogs`` via `ginga_config.py` technique
+          is not officially supported and may not work as in previous
+          releases.  See the new user configuration instructions below.
+
 **Usage**
 
 **Fetching an image**
