@@ -275,14 +275,6 @@ def main(options, args):
 
     logger = log.get_logger("example2", options=options)
 
-    # Check whether user wants to use OpenCL
-    if options.opencl:
-        from ginga import trcalc
-        try:
-            trcalc.use('opencl')
-        except Exception as e:
-            logger.warning("failed to set OpenCL preference: %s" % (str(e)))
-
     w = FitsViewer(logger, render=options.render)
     w.resize(524, 540)
     w.show()
@@ -306,9 +298,6 @@ if __name__ == "__main__":
     argprs.add_argument("--debug", dest="debug", default=False,
                         action="store_true",
                         help="Enter the pdb debugger on main()")
-    argprs.add_argument("--opencl", dest="opencl", default=False,
-                        action="store_true",
-                        help="Use OpenCL acceleration")
     argprs.add_argument("-r", "--render", dest="render", default='widget',
                         help="Set render type {widget|scene|opengl}")
     argprs.add_argument("--profile", dest="profile", action="store_true",

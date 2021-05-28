@@ -266,13 +266,6 @@ def main(options, args):
 
     logger = log.get_logger("example2", options=options)
 
-    if options.use_opencl:
-        from ginga import trcalc
-        try:
-            trcalc.use('opencl')
-        except Exception as e:
-            logger.warning("Error using OpenCL: %s" % str(e))
-
     #base_url = "http://%s:%d/app" % (options.host, options.port)
 
     # establish our widget application
@@ -323,9 +316,6 @@ if __name__ == "__main__":
     argprs.add_argument("--loglevel", dest="loglevel", metavar="LEVEL",
                         type=int, default=logging.INFO,
                         help="Set logging level to LEVEL")
-    argprs.add_argument("--opencl", dest="use_opencl", default=False,
-                        action="store_true",
-                        help="Use OpenCL acceleration")
     argprs.add_argument("--port", dest="port", metavar="PORT",
                         type=int, default=9909,
                         help="Listen on PORT for connections")
