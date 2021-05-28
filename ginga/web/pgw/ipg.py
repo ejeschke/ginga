@@ -461,18 +461,14 @@ class WebServer(object):
 
 def make_server(logger=None, basedir='.', numthreads=5,
                 host='localhost', port=9909, viewer_class=None,
-                use_opencv=False):
+                use_opencv=None):
 
     if logger is None:
         logger = log.get_logger("ipg", null=True)
     ev_quit = threading.Event()
 
-    if use_opencv:
-        from ginga import trcalc
-        try:
-            trcalc.use('opencv')
-        except Exception as e:
-            logger.warning("Error using opencv: %s" % str(e))
+    if use_opencv is not None:
+        logger.warning("use_opencv parameter is deprecated")
 
     thread_pool = Task.ThreadPool(numthreads, logger,
                                   ev_quit=ev_quit)
@@ -495,7 +491,7 @@ def main(options, args):
 
     server = make_server(logger=logger, basedir=options.basedir,
                          numthreads=options.numthreads, host=options.host,
-                         port=options.port, use_opencv=options.use_opencv)
+                         port=options.port)
     viewer = server.get_viewer('v1')
 
     logger.info("Starting server with one viewer, connect at %s" % viewer.url)
@@ -535,9 +531,6 @@ if __name__ == "__main__":
     argprs.add_argument("--stderr", dest="logstderr", default=False,
                         action="store_true",
                         help="Copy logging also to stderr")
-    argprs.add_argument("--opencv", dest="use_opencv", default=False,
-                        action="store_true",
-                        help="Use OpenCv acceleration")
     argprs.add_argument("-p", "--port", dest="port",
                         type=int, default=9909, metavar="PORT",
                         help="Default PORT to use for the web socket")
