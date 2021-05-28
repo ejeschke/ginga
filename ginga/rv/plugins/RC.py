@@ -202,10 +202,17 @@ class RC(GingaPlugin.GlobalPlugin):
         # superclass defines some variables for us, like logger
         super(RC, self).__init__(fv)
 
+        # get RC preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_RC')
+        self.settings.add_defaults(bind_host='localhost',
+                                   bind_port=9000)
+        self.settings.load(onError='silent')
+
         # What port to listen for requests
-        self.port = 9000
+        self.port = self.settings.get('bind_port', 9000)
         # If blank, listens on all interfaces
-        self.host = 'localhost'
+        self.host = self.settings.get('bind_host', 'localhost')
 
         # this will hold the remote object
         self.robj = None
