@@ -468,7 +468,7 @@ def make_server(logger=None, basedir='.', numthreads=5,
     ev_quit = threading.Event()
 
     if use_opencv is not None:
-        logger.warning("use_opencv parameter is deprecated")
+        logger.warning("use_opencv parameter is deprecated, OpenCv will be used if installed")
 
     thread_pool = Task.ThreadPool(numthreads, logger,
                                   ev_quit=ev_quit)
