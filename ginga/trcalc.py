@@ -16,13 +16,7 @@ def use(pkgname):
     global have_opencl, trcalc_cl
     global _use
 
-    if pkgname == 'opencv':
-        _use = 'opencv'
-
-    elif pkgname == 'pillow':
-        _use = 'pillow'
-
-    elif pkgname == 'opencl':
+    if pkgname == 'opencl':
         try:
             from ginga.opencl import CL
             have_opencl = True

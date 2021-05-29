@@ -51,9 +51,6 @@ except ImportError:
     print("You need to install the OpenCV python module to run this example")
     sys.exit(1)
 
-from ginga import trcalc
-# this should be the default if OpenCv is installed anyway
-trcalc.use('opencv')
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 

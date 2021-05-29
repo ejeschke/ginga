@@ -278,16 +278,8 @@ def main(options, args):
 
     logger = log.get_logger("example2", options=options)
 
-    # Check whether user wants to use OpenCv
-    if options.opencv:
-        from ginga import trcalc
-        try:
-            trcalc.use('opencv')
-        except Exception as e:
-            logger.warning("failed to set OpenCv preference: %s" % (str(e)))
-
     # Check whether user wants to use OpenCL
-    elif options.opencl:
+    if options.opencl:
         from ginga import trcalc
         try:
             trcalc.use('opencl')
@@ -317,9 +309,6 @@ if __name__ == "__main__":
     argprs.add_argument("--debug", dest="debug", default=False,
                         action="store_true",
                         help="Enter the pdb debugger on main()")
-    argprs.add_argument("--opencv", dest="opencv", default=False,
-                        action="store_true",
-                        help="Use OpenCv acceleration")
     argprs.add_argument("--opencl", dest="opencl", default=False,
                         action="store_true",
                         help="Use OpenCL acceleration")

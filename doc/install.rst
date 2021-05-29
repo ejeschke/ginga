@@ -125,7 +125,7 @@ Tk
 ==
 
 Ginga's Tk support is limited to the viewing widget itself.  For
-overplotting (graphics) support, you will also need:
+overplotting (graphics) support, you will also need one of:
 
 * Pillow
 * opencv-python

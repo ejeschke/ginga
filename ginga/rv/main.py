@@ -439,15 +439,10 @@ class ReferenceViewer(object):
             logger.warning(
                 "failed to set FITS package preference: %s" % (str(e)))
 
-        # Check whether user wants to use OpenCv
-        use_opencv = settings.get('use_opencv', False)
-        if use_opencv or options.opencv:
-            from ginga import trcalc
-            try:
-                trcalc.use('opencv')
-            except Exception as e:
-                logger.warning(
-                    "failed to set OpenCv preference: %s" % (str(e)))
+        # Check whether user specified deprecated --opencv option
+        if options.opencv:
+            logger.warning("--opencv switch is deprecated; "
+                           "OpenCv will be used by default if installed")
 
         # Check whether user wants to use OpenCL
         use_opencl = settings.get('use_opencl', False)

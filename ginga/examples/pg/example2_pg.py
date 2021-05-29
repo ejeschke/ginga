@@ -266,13 +266,6 @@ def main(options, args):
 
     logger = log.get_logger("example2", options=options)
 
-    if options.use_opencv:
-        from ginga import trcalc
-        try:
-            trcalc.use('opencv')
-        except Exception as e:
-            logger.warning("Error using OpenCv: %s" % str(e))
-
     if options.use_opencl:
         from ginga import trcalc
         try:
@@ -330,9 +323,6 @@ if __name__ == "__main__":
     argprs.add_argument("--loglevel", dest="loglevel", metavar="LEVEL",
                         type=int, default=logging.INFO,
                         help="Set logging level to LEVEL")
-    argprs.add_argument("--opencv", dest="use_opencv", default=False,
-                        action="store_true",
-                        help="Use OpenCv acceleration")
     argprs.add_argument("--opencl", dest="use_opencl", default=False,
                         action="store_true",
                         help="Use OpenCL acceleration")

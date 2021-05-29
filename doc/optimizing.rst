@@ -48,24 +48,10 @@ Alternatively, you can add the following line to your Ginga general options conf
 OpenCv Acceleration
 -------------------
 Ginga includes support for OpenCv accelerated operations (e.g. rotation
-and rescaling).  *This support is not enabled by default*.
+and rescaling).  *This support is used by default if the package is installed*.
 
 To enable OpenCv support, install the python `opencv` module (you can
 find it `here <https://pypi.python.org/pypi/opencv-python>`_).
-
-If you are building your own program using a ginga viewer widget, simply
-enable the support by::
-
-    from ginga import trcalc
-    trcalc.use('opencv')
-
-If you are using the reference viewer, you can add the command line
-option `--opencv` to enable support.
-
-Alternatively, you can add the following line to your Ginga general options configuration file
-(`$HOME/.ginga/general.cfg`)::
-
-    use_opencv = True
 
 
 numexpr Acceleration
