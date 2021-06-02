@@ -7,14 +7,15 @@ the long-term plans for this package.
 *Note: As a caveat, this is a living document, and
 will evolve as priorities grow and shift.*
 
-Last updated: Feb 2020
+Last updated: Jun 2021
 
 Short-Term Goals
 ----------------
 
 Things that might happen in the next release or two:
 
-* Improve support for ASDF and GWCS.
+* Replace ``astropy_wcs`` with ``astropy_wcs_ape14`` and deprecate the latter
+  module. [#959]
 
 Mid-Term Goals
 --------------
@@ -23,6 +24,7 @@ Things that might happen in 1-1.5 years:
 
 * Improve vector types support (e.g., efficient rendering of many
   objects of a single type).
+* Python 3.10 support.
 
 Long-Term Goals
 ---------------
