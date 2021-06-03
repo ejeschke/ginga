@@ -779,7 +779,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
             # Save a thumbnail for future browsing
             if save_thumb and info.path is not None:
-                self._save_thumb(thumb_image, bnch)
+                try:
+                    self._save_thumb(thumb_image, bnch)
+                except Exception as e:
+                    # if we can't persist the thumbnail, don't let that
+                    # stop everything
+                    self.logger.error("Couldn't persist thumbnail: {}".format(e))
 
             self.update_thumbnail(thumbkey, thumb_image, metadata)
 
