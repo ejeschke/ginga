@@ -1,10 +1,13 @@
 """
 Skeleton example of a Ginga local plugin called 'MyLocalPlugin'
 
-To enable it, run ginga with the command
+To enable it, copy it to your $HOME/.ginga/plugins folder (create it first
+if it does not already exist), then run ginga with the command:
+
     $ ginga --plugins=MyLocalPlugin
 
-it will then be available from the "Operations" button.
+From the "Operations" menu you should be able to select
+Custom->MyLocalPlugin; it should become active under the "Dialogs" tab.
 
 """
 
@@ -53,18 +56,6 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        # Take a text widget to show some instructions
-        self.msg_font = self.fv.get_font("sans", 12)
-        tw = Widgets.TextArea(wrap=True, editable=False)
-        tw.set_font(self.msg_font)
-        self.tw = tw
-
-        # Frame for instructions and add the text widget with another
-        # blank widget to stretch as needed to fill emp
-        fr = Widgets.Expander("Instructions")
-        fr.set_widget(tw)
-        vbox.add_widget(fr, stretch=0)
-
         # Add a spacer to stretch the rest of the way to the end of the
         # plugin space
         spacer = Widgets.Label('')
@@ -80,6 +71,11 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
         # Add a close button for the convenience of the user
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        # help() method is built into our parent class--it works as long
+        # as we have a module docstring defined
+        btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
@@ -109,7 +105,6 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
         opened and closed for modal operations.  This method may be omitted
         in many cases.
         """
-        self.tw.set_text("""This plugin doesn't do anything interesting.""")
         self.resume()
 
     def pause(self):

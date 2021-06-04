@@ -1,9 +1,13 @@
 """
 Skeleton example of a Ginga global plugin called 'MyGlobalPlugin'
 
-To enable it, run ginga with the command
+To enable it, copy it to your $HOME/.ginga/plugins folder (create it first
+if it does not already exist), then run ginga with the command:
+
     $ ginga --modules=MyLocalPlugin
 
+From the "Operations" menu you should be able to select
+Custom->MyGlobalPlugin [G];
 it should become active in the right panel.
 """
 
@@ -90,6 +94,11 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
         # Add a close button for the convenience of the user
         btn = Widgets.Button("Close")
         btn.add_callback('activated', lambda w: self.close())
+        btns.add_widget(btn, stretch=0)
+        btn = Widgets.Button("Help")
+        # help() method is built into our parent class--it works as long
+        # as we have a module docstring defined
+        btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)
