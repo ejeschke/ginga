@@ -174,11 +174,6 @@ class SaveImage(GlobalPlugin):
         # Generate initial listing
         self.update_channels()
 
-    def instructions(self):
-        self.tw.set_text("""Enter output directory and suffix, if different than default. Left click to select image name to save. Multiple images can be selected using click with Shift or CTRL key. Click Save to save the selected image(s).
-
-Output image will have the filename of <inputname>_<suffix>.fits.""")
-
     def redo(self, *args):
         """Generate listing of images that user can save."""
         if not self.gui_up:
