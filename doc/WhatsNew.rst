@@ -2,6 +2,9 @@
 What's New
 ++++++++++
 
+Ver 3.3.0 (unreleased)
+======================
+
 Ver 3.2.0 (2021-06-07)
 ======================
 - Minimum supported Python version is now 3.7
