@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 3.2.0 (unreleased)
+Ver 3.2.0 (2021-06-07)
 ======================
 - Minimum supported Python version is now 3.7
 - Fixed some numpy deprecation warnings with numpy 1.19.0
