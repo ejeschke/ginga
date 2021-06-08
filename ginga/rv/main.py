@@ -15,6 +15,12 @@ import logging.handlers
 import threading
 import traceback
 
+if sys.version_info < (3, 10):
+    # Python 3.7-3.9
+    from importlib_metadata import entry_points
+else:
+    from importlib.metadata import entry_points
+
 # Local application imports
 from ginga.misc.Bunch import Bunch
 from ginga.misc import Task, ModuleManager, Settings, log
@@ -199,12 +205,12 @@ class ReferenceViewer(object):
                 self.add_plugin_spec(spec)
 
     def add_separately_distributed_plugins(self):
-        from pkg_resources import iter_entry_points
         groups = ['ginga.rv.plugins']
         available_methods = []
 
         for group in groups:
-            for entry_point in iter_entry_points(group=group, name=None):
+            discovered_plugins = entry_points(group=group)
+            for entry_point in discovered_plugins:
                 try:
                     method = entry_point.load()
                     available_methods.append(method)
