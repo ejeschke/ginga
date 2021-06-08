@@ -54,15 +54,3 @@ To enable OpenCv support, install the python `opencv` module (you can
 find it `here <https://pypi.python.org/pypi/opencv-python>`_).
 
 
-numexpr Acceleration
---------------------
-Ginga can use the `numexpr` package to speed up rotations.  However,
-this is only used if the OpenCL and OpenCv optimizations are not being
-used and the performance gain is not nearly as dramatic as with the
-latter.
-
-To enable `numexpr` acceleration, simply install the package, e.g.::
-
-    pip install numexpr
-
-It will be automatically detected and used when appropriate.

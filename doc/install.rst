@@ -87,7 +87,6 @@ Helpful, but not necessary (may optimize or speed up certain operations):
 * pyopencl (speeds up rotation, mosaicing and some transformations)
 * pyopengl + pycairo (for using OpenGL features; very useful for 4K or larger
   monitors)
-* numexpr (speeds up rotation a little)
 * filemagic (aids in identifying files when opening them)
 * Pillow (useful for various RGB file manipulations)
 

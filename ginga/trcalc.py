@@ -84,18 +84,7 @@ try:
 except ImportError:
     pass
 
-have_numexpr = False
-try:
-    # optional numexpr package speeds up certain combined numpy array
-    # operations, useful to have
-    import numexpr as ne
-    have_numexpr = True
-
-except ImportError:
-    pass
-
 # For testing
-#have_numexpr = False
 #have_opencv = False
 #have_opencl = False
 #have_pillow = False
@@ -219,12 +208,8 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         cos_t = np.cos(np.radians(theta_deg))
         sin_t = np.sin(np.radians(theta_deg))
 
-        if have_numexpr:
-            ap = ne.evaluate("(xi * cos_t) - (yi * sin_t) + rotctr_x")
-            bp = ne.evaluate("(xi * sin_t) + (yi * cos_t) + rotctr_y")
-        else:
-            ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
-            bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
+        ap = (xi * cos_t) - (yi * sin_t) + rotctr_x
+        bp = (xi * sin_t) + (yi * cos_t) + rotctr_y
 
         #ap = np.rint(ap).clip(0, wd-1).astype(int)
         #bp = np.rint(bp).clip(0, ht-1).astype(int)
@@ -821,10 +806,7 @@ def overlay_image_2d_np(dstarr, pos, srcarr, dst_order='RGBA',
     else:
         # calculate alpha blending
         #   Co = CaAa + CbAb(1 - Aa)
-        if have_numexpr:
-            _dst[:, :, :] = ne.evaluate("(alpha * _src) + (1.0 - alpha) * _dst")
-        else:
-            _dst[:, :, :] = (alpha * _src) + (1.0 - alpha) * _dst
+        _dst[:, :, :] = (alpha * _src) + (1.0 - alpha) * _dst
 
     return dstarr
 
@@ -952,10 +934,7 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     else:
         # calculate alpha blending
         #   Co = CaAa + CbAb(1 - Aa)
-        if have_numexpr:
-            _dst[:, :, :, :] = ne.evaluate("(alpha * _src) + (1.0 - alpha) * _dst")
-        else:
-            _dst[:, :, :, :] = (alpha * _src) + (1.0 - alpha) * _dst
+        _dst[:, :, :, :] = (alpha * _src) + (1.0 - alpha) * _dst
 
     return dstarr
 
