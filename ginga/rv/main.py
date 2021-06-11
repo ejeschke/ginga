@@ -15,8 +15,8 @@ import logging.handlers
 import threading
 import traceback
 
-if sys.version_info < (3, 10):
-    # Python 3.7-3.9
+if sys.version_info < (3, 8):
+    # Python 3.7
     from importlib_metadata import entry_points
 else:
     from importlib.metadata import entry_points
