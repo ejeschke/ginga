@@ -363,7 +363,7 @@ class Preferences(GingaPlugin.LocalPlugin):
             'set', self.autocenter_changed_ext_cb)
         self.t_.get_setting('autocuts').add_callback(
             'set', self.autocuts_changed_ext_cb)
-        for key in ['switchnew', 'raisenew', 'genthumb']:
+        for key in ['switchnew', 'raisenew', 'genthumb', 'auto_orient']:
             self.t_.get_setting(key).add_callback(
                 'set', self.set_chprefs_ext_cb)
 
@@ -772,7 +772,8 @@ class Preferences(GingaPlugin.LocalPlugin):
                     ('Zoom New:', 'label', 'Zoom New', 'combobox'),
                     ('Center New:', 'label', 'Center New', 'combobox'),
                     ('Follow New', 'checkbutton', 'Raise New', 'checkbutton'),
-                    ('Create thumbnail', 'checkbutton'),
+                    ('Create thumbnail', 'checkbutton',
+                     'Auto Orient', 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -817,6 +818,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.follow_new.set_tooltip("View new images as they arrive")
         b.raise_new.set_tooltip("Raise and focus tab for new images")
         b.create_thumbnail.set_tooltip("Create thumbnail for new images")
+        b.auto_orient.set_tooltip("Auto orient new images")
 
         self.w.follow_new.set_state(True)
         self.w.follow_new.add_callback('activated', self.set_chprefs_cb)
@@ -824,6 +826,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.raise_new.add_callback('activated', self.set_chprefs_cb)
         self.w.create_thumbnail.set_state(True)
         self.w.create_thumbnail.add_callback('activated', self.set_chprefs_cb)
+        self.w.auto_orient.set_state(True)
+        self.w.auto_orient.add_callback('activated', self.set_chprefs_cb)
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -1438,14 +1442,16 @@ class Preferences(GingaPlugin.LocalPlugin):
         switchnew = (self.w.follow_new.get_state() != 0)
         raisenew = (self.w.raise_new.get_state() != 0)
         genthumb = (self.w.create_thumbnail.get_state() != 0)
+        auto_orient = (self.w.auto_orient.get_state() != 0)
         self.t_.set(switchnew=switchnew, raisenew=raisenew,
-                    genthumb=genthumb)
+                    genthumb=genthumb, auto_orient=auto_orient)
 
     def set_chprefs_ext_cb(self, *args):
         if self.gui_up:
             self.w.follow_new.set_state(self.t_['switchnew'])
             self.w.raise_new.set_state(self.t_['raisenew'])
             self.w.create_thumbnail.set_state(self.t_['genthumb'])
+            self.w.auto_orient.set_state(self.t_['auto_orient'])
 
     def set_profile_cb(self, *args):
         restore_scale = (self.w.restore_scale.get_state() != 0)
@@ -1583,6 +1589,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.raise_new.set_state(prefs['raisenew'])
         prefs.setdefault('genthumb', True)
         self.w.create_thumbnail.set_state(prefs['genthumb'])
+        prefs.setdefault('auto_orient', True)
+        self.w.auto_orient.set_state(prefs['auto_orient'])
 
         num_images = prefs.get('numImages', 0)
         self.w.num_images.set_text(str(num_images))
