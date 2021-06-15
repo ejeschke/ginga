@@ -159,7 +159,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
         if logger is not None:
             logger.debug("rotating with OpenCv")
         # opencv is fastest
-        M = cv2.getRotationMatrix2D((rotctr_y, rotctr_x), theta_deg, 1)
+        M = cv2.getRotationMatrix2D((rotctr_x, rotctr_y), theta_deg, 1)
 
         newdata = cv2.warpAffine(data_np, M, (wd, ht))
         new_ht, new_wd = newdata.shape[:2]

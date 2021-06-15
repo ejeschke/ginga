@@ -4,6 +4,7 @@ What's New
 
 Ver 3.3.0 (unreleased)
 ======================
+- Fixed an issue with image rotation when OpenCv is installed
 
 Ver 3.2.0 (2021-06-07)
 ======================
