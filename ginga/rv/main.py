@@ -209,7 +209,7 @@ class ReferenceViewer(object):
         available_methods = []
 
         for group in groups:
-            discovered_plugins = entry_points(group=group)
+            discovered_plugins = entry_points().get(group, [])
             for entry_point in discovered_plugins:
                 try:
                     method = entry_point.load()
