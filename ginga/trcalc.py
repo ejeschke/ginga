@@ -13,18 +13,13 @@ _use = None
 
 
 def use(pkgname):
-    global have_opencl, trcalc_cl
     global _use
 
-    if pkgname == 'opencl':
-        try:
-            from ginga.opencl import CL
-            have_opencl = True
-            _use = 'opencl'
+    if pkgname == 'opencv':
+        _use = 'opencv'
 
-            trcalc_cl = CL.CL('trcalc.cl')
-        except Exception as e:
-            raise ImportError(e)
+    elif pkgname == 'pillow':
+        _use = 'pillow'
 
 
 have_opencv = False
@@ -45,20 +40,6 @@ try:
         interpolation_methods = list(set(['basic'] +
                                          list(cv2_resize.keys())))
         interpolation_methods.sort()
-
-except ImportError:
-    pass
-
-have_opencl = False
-trcalc_cl = None
-try:
-    # optional opencl package speeds up certain operations, especially
-    # rotation
-    # TEMP: pyopencl prompts users if it can't determine which device
-    #       to use for acceleration.
-    # --> temporarily disable, can enable using use() function above
-    #use('opencl')
-    pass
 
 except ImportError:
     pass
@@ -86,7 +67,6 @@ except ImportError:
 
 # For testing
 #have_opencv = False
-#have_opencl = False
 #have_pillow = False
 
 
@@ -185,20 +165,6 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             Exception("rotated cutout is %dx%d original=%dx%d" % (
                 new_wd, new_ht, wd, ht))
 
-    elif dtype == np.uint8 and have_opencl and _use in (None, 'opencl'):
-        if logger is not None:
-            logger.debug("rotating with OpenCL")
-        # opencl is very close, sometimes better, sometimes worse
-        if (data_np.dtype == np.uint8) and (len(data_np.shape) == 3):
-            # special case for 3D RGB images
-            newdata = trcalc_cl.rotate_clip_uint32(data_np, theta_deg,
-                                                   rotctr_x, rotctr_y,
-                                                   out=out)
-        else:
-            newdata = trcalc_cl.rotate_clip(data_np, theta_deg,
-                                            rotctr_x, rotctr_y,
-                                            out=out)
-
     else:
         if logger is not None:
             logger.debug("rotating with numpy")
@@ -253,31 +219,19 @@ def rotate(data_np, theta_deg, rotctr_x=None, rotctr_y=None, pad=20,
     # Find center of new data array
     ncx, ncy = new_wd // 2, new_ht // 2
 
-    if have_opencl and _use == 'opencl':
-        if logger is not None:
-            logger.debug("rotating with OpenCL")
-        # find offsets of old image in new image
-        dx, dy = ncx - ocx, ncy - ocy
+    # Overlay the old image on the new (blank) image
+    ldx, rdx = min(ocx, ncx), min(wd - ocx, ncx)
+    bdy, tdy = min(ocy, ncy), min(ht - ocy, ncy)
 
-        newdata = trcalc_cl.rotate(data_np, theta_deg,
-                                   rotctr_x=rotctr_x, rotctr_y=rotctr_y,
-                                   clip_val=0, out=None,
-                                   out_wd=new_wd, out_ht=new_ht,
-                                   out_dx=dx, out_dy=dy)
-    else:
-        # Overlay the old image on the new (blank) image
-        ldx, rdx = min(ocx, ncx), min(wd - ocx, ncx)
-        bdy, tdy = min(ocy, ncy), min(ht - ocy, ncy)
+    # TODO: fill with a different value?
+    newdata = np.zeros(dims, dtype=data_np.dtype)
+    newdata[ncy - bdy:ncy + tdy, ncx - ldx:ncx + rdx] = \
+        data_np[ocy - bdy:ocy + tdy, ocx - ldx:ocx + rdx]
 
-        # TODO: fill with a different value?
-        newdata = np.zeros(dims, dtype=data_np.dtype)
-        newdata[ncy - bdy:ncy + tdy, ncx - ldx:ncx + rdx] = \
-            data_np[ocy - bdy:ocy + tdy, ocx - ldx:ocx + rdx]
-
-        # Now rotate with clip as usual
-        newdata = rotate_clip(newdata, theta_deg,
-                              rotctr_x=rotctr_x, rotctr_y=rotctr_y,
-                              out=newdata)
+    # Now rotate with clip as usual
+    newdata = rotate_clip(newdata, theta_deg,
+                          rotctr_x=rotctr_x, rotctr_y=rotctr_y,
+                          out=newdata)
     return newdata
 
 
@@ -451,20 +405,6 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif (data_np.dtype == np.uint8 and have_opencl and
-            interpolation in ('basic', 'nearest') and
-            open_cl_ok and _use in (None, 'opencl')):
-        # opencl is almost as fast or sometimes faster, but currently
-        # we only support nearest neighbor
-        if logger is not None:
-            logger.debug("resizing with OpenCL")
-        old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
-        scale_x, scale_y = float(new_wd) / old_wd, float(new_ht) / old_ht
-
-        newdata, (scale_x, scale_y) = trcalc_cl.get_scaled_cutout_basic(data_np,
-                                                                        x1, y1, x2, y2,
-                                                                        scale_x, scale_y)
-
     elif interpolation not in ('basic', 'nearest'):
         raise ValueError("Interpolation method not supported: '%s'" % (
             interpolation))
@@ -561,13 +501,6 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
 
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
-
-    elif (have_opencl and interpolation in ('basic', 'nearest') and
-            open_cl_ok and _use in (None, 'opencl')):
-        if logger is not None:
-            logger.debug("resizing with OpenCL")
-        newdata, (scale_x, scale_y) = trcalc_cl.get_scaled_cutout_basic(
-            data_np, x1, y1, x2, y2, scale_x, scale_y)
 
     elif interpolation not in ('basic', 'nearest'):
         raise ValueError("Interpolation method not supported: '%s'" % (

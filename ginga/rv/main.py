@@ -275,9 +275,6 @@ class ReferenceViewer(object):
         add_argument("--opencv", dest="opencv", default=False,
                      action="store_true",
                      help="Use OpenCv acceleration")
-        add_argument("--opencl", dest="opencl", default=False,
-                     action="store_true",
-                     help="Use OpenCL acceleration")
         add_argument("--opengl", dest="opengl", default=False,
                      action="store_true",
                      help="Use OpenGL acceleration")
@@ -449,16 +446,6 @@ class ReferenceViewer(object):
         if options.opencv:
             logger.warning("--opencv switch is deprecated; "
                            "OpenCv will be used by default if installed")
-
-        # Check whether user wants to use OpenCL
-        use_opencl = settings.get('use_opencl', False)
-        if use_opencl or options.opencl:
-            from ginga import trcalc
-            try:
-                trcalc.use('opencl')
-            except Exception as e:
-                logger.warning(
-                    "failed to set OpenCL preference: %s" % (str(e)))
 
         if options.opengl:
             settings.set(use_opengl=True)

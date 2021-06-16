@@ -84,7 +84,6 @@ To save a movie:
 Helpful, but not necessary (may optimize or speed up certain operations):
 
 * opencv-python (speeds up rotation, mosaicing and some transformations)
-* pyopencl (speeds up rotation, mosaicing and some transformations)
 * pyopengl + pycairo (for using OpenGL features; very useful for 4K or larger
   monitors)
 * filemagic (aids in identifying files when opening them)
