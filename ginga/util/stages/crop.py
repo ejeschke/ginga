@@ -6,9 +6,8 @@ import numpy as np
 from ginga.canvas.CanvasObject import get_canvas_types
 #from ginga import trcalc
 from ginga.gw import Widgets
-from ginga.util import action
 
-from .base import Stage
+from .base import Stage, StageAction
 
 
 class Crop(Stage):
@@ -16,11 +15,10 @@ class Crop(Stage):
     _stagename = 'crop-image'
 
     def __init__(self):
-        super(Crop, self).__init__()
+        super().__init__()
 
         self.dc = get_canvas_types()
         self.cropcolor = 'yellow'
-        self.layertag = 'crop-layer'
         self._crop_rect = (0.0, 0.0, 1.0, 1.0)
         self._aspect = None
         self._img_dims = (1, 1)
@@ -99,12 +97,8 @@ class Crop(Stage):
     def resume(self):
         # insert canvas, if not already
         p_canvas = self.viewer.get_canvas()
-        try:
-            p_canvas.get_object_by_tag(self.layertag)
-
-        except KeyError:
-            # Add ruler layer
-            p_canvas.add(self.canvas, tag=self.layertag)
+        if not p_canvas.has_object(self.canvas):
+            p_canvas.add(self.canvas)
 
         if not self.canvas.has_object(self.crop_obj):
             self.canvas.add(self.crop_obj)
@@ -117,7 +111,7 @@ class Crop(Stage):
         # remove the canvas from the image
         p_canvas = self.viewer.get_canvas()
         try:
-            p_canvas.delete_object_by_tag(self.layertag)
+            p_canvas.delete_object(self.canvas)
         except Exception:
             pass
 
@@ -129,8 +123,8 @@ class Crop(Stage):
         old = self._get_state()
         self._update_crop_rect(x1, y1, x2, y2)
         new = self._get_state()
-        self.pipeline.push(action.AttrAction(self, old, new,
-                                             descr="change crop"))
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="change crop"))
         self.pipeline.run_from(self)
 
     def _update_crop_rect(self, x1, y1, x2, y2):
@@ -179,8 +173,8 @@ class Crop(Stage):
         old = self._get_state()
         self._set_aspect(asp_s)
         new = self._get_state()
-        self.pipeline.push(action.AttrAction(self, old, new,
-                                             descr="set aspect ratio"))
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="set aspect ratio"))
         self.pipeline.run_from(self)
 
     def _enforce_aspect(self, x1, y1, x2, y2):
@@ -235,11 +229,11 @@ class Crop(Stage):
         self.pipeline.send(res_np=res_np)
 
     def export_as_dict(self):
-        d = super(Crop, self).export_as_dict()
+        d = super().export_as_dict()
         d.update(self._get_state())
         return d
 
     def import_from_dict(self, d):
-        super(Crop, self).import_from_dict(d)
+        super().import_from_dict(d)
         self.crop_rect = d['crop_rect']
         self.aspect = d['aspect']

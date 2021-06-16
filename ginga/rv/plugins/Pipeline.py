@@ -12,10 +12,9 @@ An instance can be opened for each channel.
 
 """
 import os.path
-import tempfile
 
 from ginga import GingaPlugin
-from ginga.util import pipeline
+from ginga.util import pipeline, paths
 from ginga.gw import Widgets
 
 from ginga.util.stages.stage_info import get_stage_catalog
@@ -29,9 +28,6 @@ class Pipeline(GingaPlugin.LocalPlugin):
         # superclass defines some variables for us, like logger
         super(Pipeline, self).__init__(fv, fitsimage)
 
-        # TEMP: make user selectable
-        self.save_file = "pipeline.yml"
-
         # Load preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Pipeline')
@@ -43,7 +39,9 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.stage_names = list(self.stage_dict.keys())
         self.stage_names.sort()
 
-        stages = [self.stage_dict['input'](), self.stage_dict['output']()]
+        stages = [self.stage_dict['input'](),
+                  self.stage_dict['preview'](),
+                  self.stage_dict['output']()]
         self.pipeline = pipeline.Pipeline(self.logger, stages)
         self.pipeline.add_callback('stage-executing', self.stage_status, 'X')
         self.pipeline.add_callback('stage-done', self.stage_status, 'D')
@@ -172,6 +170,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         xpd = Widgets.Expander(title=str(stage), notoggle=True)
         tbar = Widgets.Toolbar(orientation='horizontal')
         chk = tbar.add_action('B', toggle=True)
+        chk.set_state(stage._bypass)
         chk.add_callback('activated', self.bypass_stage_cb, stage)
         chk.set_tooltip("Bypass this stage")
         chk = tbar.add_action('S', toggle=True)
@@ -227,7 +226,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.pipeline.name = name
         if len(name) > 20:
             name = name[:20] + '...'
-        self.w.gui_fr.set_text(name)
+        self.w.gui_fr.set_text("Pipeline: {}".format(name))
 
     def bypass_stage_cb(self, widget, tf, stage):
         idx = self.pipeline.index(stage)
@@ -356,20 +355,34 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.pipeline.redo()
 
     def save_pipeline(self, path):
-        import yaml
-        d = self.pipeline.save()
-        with open(path, 'w') as out_f:
-            out_f.write(yaml.dump(d))
+        try:
+            d = self.pipeline.save()
+        except Exception as e:
+            self.logger.error(f"error collecting pipeline configuration: {e}",
+                              exc_info=True)
+            return
+        try:
+            import yaml
+            with open(path, 'w') as out_f:
+                out_f.write(yaml.dump(d))
+        except Exception as e:
+            self.logger.error(f"error writing pipeline configuration to {path}: {e}",
+                              exc_info=True)
 
     def load_pipeline(self, path):
-        import yaml
         self.pipelist.remove_all(delete=True)
         self.pipelist.add_widget(Widgets.Label(''), stretch=1)
 
-        with open(path, 'r') as in_f:
-            s = in_f.read()
-        d = yaml.safe_load(s)
-        self.pipeline.load(d, self.stage_dict)
+        try:
+            import yaml
+            with open(path, 'r') as in_f:
+                s = in_f.read()
+            d = yaml.safe_load(s)
+            self.pipeline.load(d, self.stage_dict)
+        except Exception as e:
+            self.logger.error(f"error reading pipeline configuration from {path}: {e}",
+                              exc_info=True)
+            return
 
         self.pipeline.set(fv=self.fv, viewer=self.fitsimage)
 
@@ -384,11 +397,13 @@ class Pipeline(GingaPlugin.LocalPlugin):
         self.w.gui_fr.set_text(name)
 
     def save_pipeline_cb(self, widget):
-        save_file = os.path.join(tempfile.gettempdir(), self.save_file)
+        fname = self.pipeline.name + '.yml'
+        save_file = os.path.join(paths.ginga_home, 'pipelines', fname)
         self.save_pipeline(save_file)
 
     def load_pipeline_cb(self, widget):
-        save_file = os.path.join(tempfile.gettempdir(), self.save_file)
+        fname = self.w.pipeline_name.get_text() + '.yml'
+        save_file = os.path.join(paths.ginga_home, 'pipelines', fname)
         self.load_pipeline(save_file)
 
     def redo(self):

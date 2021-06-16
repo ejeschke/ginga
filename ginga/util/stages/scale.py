@@ -5,9 +5,8 @@ import numpy as np
 
 from ginga import trcalc
 from ginga.gw import Widgets
-from ginga.util import action
 
-from .base import Stage
+from .base import Stage, StageAction
 
 
 class Scale(Stage):
@@ -28,7 +27,7 @@ class Scale(Stage):
     _stagename = 'scale'
 
     def __init__(self):
-        super(Scale, self).__init__()
+        super().__init__()
 
         self._longside = None
         self._scale = 1.0
@@ -129,8 +128,8 @@ class Scale(Stage):
         self.scale = scale
         self.longside = None
         new = self._get_state()
-        self.pipeline.push(action.AttrAction(self, old, new,
-                                             descr="set scale factor"))
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="set scale factor"))
         self.pipeline.run_from(self)
 
     def set_scale_cb(self, widget):
@@ -141,8 +140,8 @@ class Scale(Stage):
         old = self._get_state()
         self.longside = longside
         new = self._get_state()
-        self.pipeline.push(action.AttrAction(self, old, new,
-                                             descr="set scale longside"))
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="set scale longside"))
         self.pipeline.run_from(self)
 
     def set_longside_cb(self, widget):
@@ -157,8 +156,8 @@ class Scale(Stage):
         old = self._get_state()
         self.interp = trcalc.interpolation_methods[idx]
         new = self._get_state()
-        self.pipeline.push(action.AttrAction(self, old, new,
-                                             descr="set scale interpolation"))
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="set scale interpolation"))
         self.pipeline.run_from(self)
 
     def copy_from_viewer_cb(self, widget):
@@ -210,3 +209,14 @@ class Scale(Stage):
             self.w.size.set_text("{}x{}".format(_wd, _ht))
 
         self.pipeline.send(res_np=res_np)
+
+    def export_as_dict(self):
+        d = super().export_as_dict()
+        d.update(self._get_state())
+        return d
+
+    def import_from_dict(self, d):
+        super().import_from_dict(d)
+        self.scale = d['scale']
+        self.longside = d['longside']
+        self.interp = d['interp']

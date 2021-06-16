@@ -14,7 +14,7 @@ __all__ = ['ActionStack', 'Action', 'AttrAction']
 class ActionStack:
 
     def __init__(self):
-        super(ActionStack, self).__init__()
+        super().__init__()
 
         # TODO; add optional limit on stack size
         self._undo = deque()
@@ -60,7 +60,7 @@ class AttrAction(Action):
     def __init__(self, obj, old, new, descr=None):
         """old and new are dicts mapping attribute names to values.
         """
-        super(AttrAction, self).__init__(descr=descr)
+        super().__init__(descr=descr)
 
         self.obj = obj
         self.old = old
