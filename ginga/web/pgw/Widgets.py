@@ -1287,6 +1287,10 @@ class TreeView(WidgetBase):
             app = self.get_app()
             app.do_operation('scroll_to_path', id=self.id, index=item['rowid'])
 
+    def scroll_to_end(self):
+        # TODO
+        pass
+
     def sort_on_column(self, i):
         colTitle, fieldName = self.columns[i]
         if self._rendered:

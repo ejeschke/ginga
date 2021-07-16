@@ -950,12 +950,14 @@ class TreeView(WidgetBase):
             item.setFont(i, font)
 
     def scroll_to_path(self, path):
-        # TODO: this doesn't give an error, but does not seem to be
-        # working as the API indicates
         item = self._path_to_item(path)
-        row = self.widget.indexOfTopLevelItem(item)
-        midx = self.widget.indexAt(QtCore.QPoint(row, 0))
+        midx = self.widget.indexFromItem(item, 0)
         self.widget.scrollTo(midx, QtGui.QAbstractItemView.PositionAtCenter)
+
+    def scroll_to_end(self):
+        model = self.widget.model()
+        midx = model.index(model.rowCount() - 1, 0)
+        self.widget.scrollTo(midx, QtGui.QAbstractItemView.PositionAtBottom)
 
     def sort_on_column(self, i):
         self.widget.sortByColumn(i, QtCore.Qt.AscendingOrder)

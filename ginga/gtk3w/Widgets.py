@@ -1039,6 +1039,13 @@ class TreeView(WidgetBase):
         treepath = model.get_path(item)
         self.tv.scroll_to_cell(treepath, use_align=True, row_align=0.5)
 
+    def scroll_to_end(self):
+        model = self.tv.get_model()
+        num_rows = model.iter_n_children()
+        item = model.iter_nth_child(None, num_rows - 1)
+        treepath = model.get_path(item)
+        self.tv.scroll_to_cell(treepath, use_align=True, row_align=0.5)
+
     def sort_on_column(self, i):
         model = self.tv.get_model()
         model.set_sort_column_id(i, Gtk.SortType.ASCENDING)
