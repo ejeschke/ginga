@@ -315,7 +315,7 @@ class Crosshair(GingaPlugin.LocalPlugin):
         self.cuts_view.update_plots()
 
     def redo(self):
-        data_x, data_y = self.fitsimage.get_last_data_xy()
+        data_x, data_y = self.xh.x, self.xh.y
         self.cuts_quick(data_x, data_y, self.cuts_radius)
 
     def move_crosshair(self, viewer, data_x, data_y):
