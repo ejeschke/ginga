@@ -275,6 +275,16 @@ def get_icon(iconpath, size=None, format='png'):
     return icon
 
 
+def get_native_image(imgpath, format='png'):
+    print('image path', imgpath)
+    image = io_rgb.PILimage.open(imgpath)
+
+    img_buf = BytesIO()
+    image.save(img_buf, format=format)
+
+    return img_buf.getvalue()
+
+
 def font_info(font_str):
     """Extract font information from a font string, such as supplied to the
     'font' argument to a widget.

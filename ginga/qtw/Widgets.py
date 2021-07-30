@@ -341,6 +341,10 @@ class Label(WidgetBase):
         self.widget.setStyleSheet(
             "QLabel { background-color: %s; color: %s; }" % (bg, fg))
 
+    def set_halign(self, align):
+        # TODO: set horizontal alignment of text
+        pass
+
 
 class Button(WidgetBase):
     def __init__(self, text=''):
@@ -350,6 +354,12 @@ class Button(WidgetBase):
         self.widget.clicked.connect(self._cb_redirect)
 
         self.enable_callback('activated')
+
+    def set_text(self, text):
+        self.widget.setText(text)
+
+    def get_text(self):
+        return self.widget.text()
 
     def _cb_redirect(self, *args):
         self.make_callback('activated')
@@ -575,8 +585,15 @@ class ScrollBar(WidgetBase):
 
         self.enable_callback('activated')
 
+    def set_value(self, value):
+        int_val = int(round(value * 100.0))
+        self.widget.setValue(int_val)
+
+    def get_value(self):
+        return self.widget.value() / 100.0
+
     def _cb_redirect(self):
-        val = self.widget.value()
+        val = self.widget.value() / 100.0
         self.make_callback('activated', val)
 
 
@@ -1580,6 +1597,18 @@ class GridBox(ContainerBase):
         self.widget.layout().addWidget(w, row, col)
         self.make_callback('widget-added', child)
 
+    def insert_cell(self, row, col):
+        raise NotImplementedError("insert_cell needs to be implemented!")
+
+    def insert_row(self, index):
+        raise NotImplementedError("insert_row needs to be implemented!")
+
+    def append_row(self):
+        raise NotImplementedError("append_row needs to be implemented!")
+
+    def delete_row(self, index):
+        raise NotImplementedError("delete_row needs to be implemented!")
+
 
 class ToolbarAction(WidgetBase):
     def __init__(self):
@@ -2193,6 +2222,8 @@ def make_widget(title, wtype):
         w = ProgressBar()
     elif wtype == 'menubar':
         w = Menubar()
+    elif wtype == 'dial':
+        w = Dial()
     else:
         raise ValueError("Bad wtype=%s" % wtype)
     return w

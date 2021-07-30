@@ -27,7 +27,14 @@ class FitsViewer(object):
 
         self.app = Widgets.Application(logger=logger)
         self.app.add_callback('shutdown', self.quit)
-        self.top = self.app.make_window("Ginga example2")
+        if hasattr(Widgets, 'Page'):
+            self.page = Widgets.Page("Ginga example2")
+            self.app.add_window(self.page)
+            self.top = Widgets.TopLevel("Ginga example2")
+            self.page.add_dialog(self.top)
+        else:
+            self.top = Widgets.TopLevel("Ginga example2")
+            self.app.add_window(self.top)
         self.top.add_callback('close', self.closed)
 
         vbox = Widgets.VBox()
@@ -275,6 +282,13 @@ def main(options, args):
     # decide our toolkit, then import
     ginga_toolkit.use(options.toolkit)
 
+    if options.use_opencl:
+        from ginga import trcalc
+        try:
+            trcalc.use('opencl')
+        except Exception as e:
+            logger.warning("Error using OpenCL: %s" % str(e))
+
     rw = 'opengl' if options.renderer == 'opengl' else 'widget'
     viewer = FitsViewer(logger, render=rw)
 
@@ -313,6 +327,9 @@ if __name__ == "__main__":
     argprs.add_argument("-t", "--toolkit", dest="toolkit", metavar="NAME",
                         default='qt',
                         help="Choose GUI toolkit (gtk|qt)")
+    argprs.add_argument("--opencl", dest="use_opencl", default=False,
+                        action="store_true",
+                        help="Use OpenCL acceleration")
     argprs.add_argument("--profile", dest="profile", action="store_true",
                         default=False,
                         help="Run the profiler on main()")

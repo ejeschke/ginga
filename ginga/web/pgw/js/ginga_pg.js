@@ -49,8 +49,12 @@ ginga_make_application = function (ws_url, debug_flag) {
                     elt.selectedIndex = message.value;
                 }
                 else if (message.operation == "update_html") {
-                    // update widget content
+                    // update widget content for inner html
                     elt.innerHTML = message.value;
+                }
+                else if (message.operation == "update_ohtml") {
+                    // update widget content for outer html
+                    elt.outerHTML = message.value;
                 }
                 else if (message.operation == "append_child") {
                     // update widget content
