@@ -796,18 +796,15 @@ class IQCalc(object):
             oid_x, oid_y = None, None
             try:
                 oid_x, oid_y = self.centroid(data, x, y, fwhm_radius)
-                _x, _y = int(round(oid_x)), int(round(oid_y))
 
             except Exception as e:
                 # Error doing centroid
-                _x, _y = x, y
                 self.logger.debug("Error doing centroid on object at %.2f,%.2f: %s" % (
                     x, y, str(e)))
 
-            # Find the fwhm in x and y, using rounded centroid center, if
-            # known, otherwise using the local peak
+            # Find the fwhm in x and y, using local peak
             try:
-                res = self.fwhm_data(_x, _y, data, radius=fwhm_radius,
+                res = self.fwhm_data(x, y, data, radius=fwhm_radius,
                                      method_name=fwhm_method)
                 fwhm_x, fwhm_y, ctr_x, ctr_y, x_res, y_res = res
 

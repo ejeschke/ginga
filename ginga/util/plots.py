@@ -504,6 +504,49 @@ class FWHMPlot(Plot):
             self.logger.error("Error making fwhm plot: %s" % (
                 str(e)))
 
+    def plot_fwhm_data(self, x, y, radius, arr_data,
+                       iqcalc=None, fwhm_method='gaussian'):
+
+        x, y, radius = int(round(x)), int(round(y)), int(round(radius))
+
+        if iqcalc is None:
+            iqcalc = self.iqcalc
+
+        x0, y0, xarr, yarr = iqcalc.cut_cross(x, y, radius, arr_data)
+
+        self.ax.cla()
+
+        self.set_titles(ytitle='Brightness', xtitle='Pixels', title='FWHM')
+        self.ax.grid(True)
+
+        # Make a FWHM plot
+        try:
+            # get median value from the cutout area
+            skybg = np.ma.median(arr_data)
+            self.logger.debug("cutting x=%d y=%d r=%d med=%f" % (
+                x, y, radius, skybg))
+
+            self.logger.debug("xarr=%s" % (str(xarr)))
+            fwhm_x = self._plot_fwhm_axis(xarr, iqcalc, skybg,
+                                          '#7570b3', '#7570b3', 'purple',
+                                          fwhm_method=fwhm_method)
+
+            self.logger.debug("yarr=%s" % (str(yarr)))
+            fwhm_y = self._plot_fwhm_axis(yarr, iqcalc, skybg,
+                                          '#1b9e77', '#1b9e77', 'seagreen',
+                                          fwhm_method=fwhm_method)
+
+            falg = fwhm_method
+            self.ax.legend(('data x', '%s x' % falg, 'data y', '%s y' % falg),
+                           loc='upper right', shadow=False, fancybox=False,
+                           prop={'size': 8}, labelspacing=0.2)
+            self.set_titles(title="FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
+
+            self.draw()
+
+        except Exception as e:
+            self.logger.error("Error making fwhm plot: {}".format(e))
+
 
 class EEPlot(Plot):
     """Class to handle plotting of encircled and ensquared energy (EE) values."""
