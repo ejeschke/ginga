@@ -1235,13 +1235,13 @@ class Pick(GingaPlugin.LocalPlugin):
 
     def plot_fwhm(self, qs, image):
         # Make a FWHM plot
-        x, y, radius = qs.x, qs.y, qs.fwhm_radius
+        x, y = qs.x - self.pick_x1, qs.y - self.pick_y1
+        radius = qs.fwhm_radius
 
         try:
-            self.fwhm_plot.plot_fwhm(x, y, radius, image,
-                                     cutout_data=self.pick_data,
-                                     iqcalc=self.iqcalc,
-                                     fwhm_method=self.fwhm_alg)
+            self.fwhm_plot.plot_fwhm_data(x, y, radius, self.pick_data,
+                                          iqcalc=self.iqcalc,
+                                          fwhm_method=self.fwhm_alg)
 
         except Exception as e:
             self.logger.error("Error making fwhm plot: %s" % (
