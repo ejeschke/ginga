@@ -649,9 +649,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             # no image has the focus
             new_highlight = set([])
 
+        nothumb = (image.get('nothumb', False) or
+                   not channel.settings.get('genthumb', True))
+
         with self.thumblock:
             #if not self.have_thumbnail(channel.fitsimage, image):
-            if thumbkey not in self.thumb_dict:
+            if thumbkey not in self.thumb_dict and not nothumb:
                 # No memory of this thumbnail, so regenerate it
                 if not self._add_image(self.fv, chname, image, None):
                     return

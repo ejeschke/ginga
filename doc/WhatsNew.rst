@@ -5,6 +5,11 @@ What's New
 Ver 3.3.0 (unreleased)
 ======================
 - Fixed an issue with image rotation when OpenCv is installed
+- Removed support for OpenCL
+- Fixed Crosshair plugin to update the plot when image changes in
+  channel
+- Fixed an issue where a thumbnail could be generated even if the
+  channel was configured not to generate thumbs
 
 Ver 3.2.0 (2021-06-07)
 ======================
