@@ -277,7 +277,9 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.logger.debug("name=%s" % (name))
 
         if image is not None:
-            nothumb = image.get('nothumb', False)
+            channel = self.fv.get_channel(chname)
+            nothumb = (image.get('nothumb', False) or
+                       not channel.settings.get('genthumb', True))
             if nothumb:
                 return
 
@@ -313,6 +315,9 @@ class Contents(GingaPlugin.GlobalPlugin):
         """Almost the same as add_image_cb(), except that the image
         may not be loaded in memory.
         """
+        if not channel.settings.get('genthumb', True):
+            return
+
         chname = channel.name
         name = image_info.name
         self.logger.debug("name=%s" % (name))
@@ -365,6 +370,9 @@ class Contents(GingaPlugin.GlobalPlugin):
     def add_channel_cb(self, viewer, channel):
         """Called when a channel is added from the main interface.
         Parameter is a channel (a Channel object)."""
+        if not channel.settings.get('genthumb', True):
+            return
+
         chname = channel.name
 
         # add old highlight set to channel external data
@@ -386,6 +394,9 @@ class Contents(GingaPlugin.GlobalPlugin):
     def delete_channel_cb(self, viewer, channel):
         """Called when a channel is deleted from the main interface.
         Parameter is a channel (a Channel object)."""
+        if not channel.settings.get('genthumb', True):
+            return
+
         chname = channel.name
         del self.name_dict[chname]
 
@@ -447,6 +458,8 @@ class Contents(GingaPlugin.GlobalPlugin):
 
     def redo(self, channel, image):
         """This method is called when an image is set in a channel."""
+        if not channel.settings.get('genthumb', True):
+            return
 
         imname = image.get('name', 'none')
         chname = channel.name
@@ -504,8 +517,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.fv.show_error("Please select some images first")
             return
 
-        l_img = list(map(lambda tup: "%s/%s" % (tup[0], tup[1].imname),
-                         images))
+        l_img = ["%s/%s" % (tup[0], tup[1].imname) for tup in images]
 
         verb = action.capitalize()
         l_img.insert(0, "%s images\n" % (verb))
