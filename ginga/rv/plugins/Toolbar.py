@@ -191,44 +191,46 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         return True
 
     def center_image_cb(self, w):
-        view, bd = self._get_view()
-        bd.kp_center(view, 'x', 0.0, 0.0)
+        view = self._get_viewer()
+        view.center_image()
         return True
 
     def reset_contrast_cb(self, w):
-        view, bd = self._get_view()
-        bd.kp_contrast_restore(view, 'x', 0.0, 0.0)
+        view, mode = self._get_mode('contrast')
+        mode.kp_contrast_restore(view, 'x', 0.0, 0.0)
         return True
 
     def auto_levels_cb(self, w):
-        view, bd = self._get_view()
-        bd.kp_cut_auto(view, 'x', 0.0, 0.0)
+        view = self._get_viewer()
+        view.auto_levels()
         return True
 
     def rot90_cb(self, w):
-        view, bd = self._get_view()
-        bd.kp_rotate_inc90(view, 'x', 0.0, 0.0)
+        view = self._get_viewer()
+        view.rotate_delta(90.0)
         return True
 
     def rotn90_cb(self, w):
-        view, bd = self._get_view()
-        bd.kp_rotate_dec90(view, 'x', 0.0, 0.0)
+        view = self._get_viewer()
+        view.rotate_delta(-90.0)
         return True
 
     def orient_lh_cb(self, w):
-        view, bd = self._get_view()
-        bd.kp_orient_lh(view, 'x', 0.0, 0.0)
+        view, mode = self._get_mode('rotate')
+        mode.kp_orient_lh(view, 'x', 0.0, 0.0)
         return True
 
     def orient_rh_cb(self, w):
-        view, bd = self._get_view()
-        bd.kp_orient_rh(view, 'x', 0.0, 0.0)
+        view, mode = self._get_mode('rotate')
+        mode.kp_orient_rh(view, 'x', 0.0, 0.0)
         return True
 
     def reset_all_transforms_cb(self, w):
-        view, bd = self._get_view()
-        bd.kp_rotate_reset(view, 'x', 0.0, 0.0)
-        bd.kp_transform_reset(view, 'x', 0.0, 0.0)
+        view = self._get_viewer()
+        with view.suppress_redraw:
+            view.rotate(0.0)
+            view.transform(False, False, False)
+
         return True
 
     def start_plugin_cb(self, name):
@@ -240,21 +242,21 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         return True
 
     def flipx_cb(self, w, tf):
-        view, bd = self._get_view()
+        view = self._get_viewer()
         flip_x, flip_y, swap_xy = view.get_transforms()
         flip_x = tf
         view.transform(flip_x, flip_y, swap_xy)
         return True
 
     def flipy_cb(self, w, tf):
-        view, bd = self._get_view()
+        view = self._get_viewer()
         flip_x, flip_y, swap_xy = view.get_transforms()
         flip_y = tf
         view.transform(flip_x, flip_y, swap_xy)
         return True
 
     def swapxy_cb(self, w, tf):
-        view, bd = self._get_view()
+        view = self._get_viewer()
         flip_x, flip_y, swap_xy = view.get_transforms()
         swap_xy = tf
         view.transform(flip_x, flip_y, swap_xy)
@@ -262,7 +264,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
     def mode_cb(self, tf, modename):
         if self.active is None:
-            self.active, bd = self._get_view()
+            self.active = self._get_viewer()
         fitsimage = self.active
         if fitsimage is None:
             return
@@ -280,7 +282,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         # called whenever the user interaction mode is changed
         # in the viewer
         if self.active is None:
-            self.active, bd = self._get_view()
+            self.active = self._get_viewer()
         if fitsimage != self.active:
             return True
         self._update_toolbar_state(fitsimage)
@@ -290,7 +292,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         # called whenever the transform (flip x/y, swap axes) is done
         # in the viewer
         if self.active is None:
-            self.active, bd = self._get_view()
+            self.active = self._get_viewer()
         if fitsimage != self.active:
             return True
         self._update_toolbar_state(fitsimage)
@@ -306,7 +308,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         else:
             modetype = 'oneshot'
         if self.active is None:
-            self.active, bd = self._get_view()
+            self.active = self._get_viewer()
         fitsimage = self.active
         if fitsimage is None:
             return
@@ -327,10 +329,16 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
     # LOGIC
 
-    def _get_view(self):
+    def _get_viewer(self):
+        channel = self.fv.get_channel_info()
+        return channel.fitsimage
+
+    def _get_mode(self, mode_name):
         channel = self.fv.get_channel_info()
         view = channel.fitsimage
-        return (view, view.get_bindings())
+        bd = view.get_bindings()
+        mode = bd.get_mode_obj(mode_name)
+        return view, mode
 
     def _ch_image_added_cb(self, shell, channel, info):
         if channel != shell.get_current_channel():

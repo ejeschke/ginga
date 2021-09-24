@@ -773,8 +773,7 @@ class ScrolledView(Gtk.Table):
         # flag that suppresses a cyclical callback
         self._adjusting = True
         try:
-            bd = self.viewer.get_bindings()
-            res = bd.calc_pan_pct(self.viewer, pad=self.pad)
+            res = self.viewer.calc_pan_pct(pad=self.pad)
             if res is None:
                 return
 
@@ -812,8 +811,7 @@ class ScrolledView(Gtk.Table):
             # invert Y pct because of orientation of scrollbar
             pct_y = 1.0 - (pos_y / float(self.rng_y))
 
-            bd = self.viewer.get_bindings()
-            bd.pan_by_pct(self.viewer, pct_x, pct_y, pad=self.pad)
+            self.viewer.pan_by_pct(pct_x, pct_y, pad=self.pad)
 
             # This shouldn't be necessary, but seems to be
             self.viewer.redraw(whence=0)
