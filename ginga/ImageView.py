@@ -18,7 +18,7 @@ import uuid
 
 import numpy as np
 
-from ginga.misc import Callback, Settings
+from ginga.misc import Callback, Settings, Bunch
 from ginga import BaseImage, AstroImage
 from ginga import RGBMap, AutoCuts, ColorDist, zoom
 from ginga import colors, trcalc
@@ -2242,6 +2242,31 @@ class ImageViewBase(Callback.Callbacks):
 
         self.set_pan(pan_x, pan_y, coord=pan_coord, no_reset=no_reset)
 
+    def pan_delta_px(self, x_delta_px, y_delta_px):
+        """Pan by a delta in X and Y specified in pixels.
+
+        Parameters
+        ----------
+        x_delta_px : float
+            Delta pixels in X
+
+        y_delta_px : float
+            Delta pixels in Y
+
+        """
+        pan_x, pan_y = self.get_pan(coord='data')[:2]
+        pan_x += x_delta_px
+        pan_y += y_delta_px
+        self.panset_xy(pan_x, pan_y)
+
+    def pan_center_px(self):
+        """Pan to the center of the current pixel under the cursor."""
+        data_x, data_y = self.get_last_data_xy()
+        ndata_x = float(int(data_x + self.data_off))
+        ndata_y = float(int(data_y + self.data_off))
+        x_px, y_px = ndata_x - data_x, ndata_y - data_y
+        self.pan_delta_px(viewer, x_px, y_px)
+
     def panset_pct(self, pct_x, pct_y):
         """Similar to :meth:`set_pan`, except that pan positions
         are determined by multiplying data dimensions with the given
@@ -2254,6 +2279,219 @@ class ImageViewBase(Callback.Callbacks):
         data_y = (xy_mn[1] + xy_mx[1]) * pct_y
 
         self.panset_xy(data_x, data_y)
+
+    def calc_pan_pct(self, pad=0, min_pct=0.0, max_pct=0.9):
+        """Calculate values for vertical/horizontal panning by percentages
+        from the current pan position.  Mostly used by scrollbar callbacks.
+
+        Parameters
+        ----------
+        pad : int (optional, defaults to 0)
+            a padding amount in pixels to add to the limits when calculating
+
+        min_pct : float (optional, range 0.0:1.0, defaults to 0.0)
+        max_pct : float (optional, range 0.0:1.0, defaults to 0.9)
+
+        Returns
+        -------
+        res : `~ginga.misc.Bunch.Bunch`
+            calculation results, which include the following attributes:
+            - rng_x : the range of X of the limits (including padding)
+            - rng_y : the range of Y of the limits (including padding)
+            - vis_x : the visually shown range of X in the viewer
+            - vis_y : the visually shown range of Y in the viewer
+            - thm_pct_x : the length of a X scrollbar arm as a ratio
+            - thm_pct_y : the length of a Y scrollbar arm as a ratio
+            - pan_pct_x : the pan position of X as a ratio
+            - pan_pct_y : the pan position of Y as a ratio
+
+        """
+        limits = self.get_limits()
+
+        tr = self.tform['data_to_scrollbar']
+
+        # calculate the corners of the entire image in unscaled cartesian
+        mxwd, mxht = limits[1][:2]
+        mxwd, mxht = mxwd + pad, mxht + pad
+        mnwd, mnht = limits[0][:2]
+        mnwd, mnht = mnwd - pad, mnht - pad
+
+        arr = np.array([(mnwd, mnht), (mxwd, mnht),
+                        (mxwd, mxht), (mnwd, mxht)],
+                       dtype=float)
+        x, y = tr.to_(arr).T
+
+        rx1, rx2 = np.min(x), np.max(x)
+        ry1, ry2 = np.min(y), np.max(y)
+
+        rect = self.get_pan_rect()
+        arr = np.array(rect, dtype=float)
+        x, y = tr.to_(arr).T
+
+        qx1, qx2 = np.min(x), np.max(x)
+        qy1, qy2 = np.min(y), np.max(y)
+
+        # this is the range of X and Y of the entire image
+        # in the viewer (unscaled)
+        rng_x, rng_y = abs(rx2 - rx1), abs(ry2 - ry1)
+
+        # this is the *visually shown* range of X and Y
+        abs_x, abs_y = abs(qx2 - qx1), abs(qy2 - qy1)
+
+        # calculate the length of the slider arms as a ratio
+        ## min_pct = self.settings.get('pan_min_scroll_thumb_pct', 0.0)
+        ## max_pct = self.settings.get('pan_max_scroll_thumb_pct', 0.9)
+        xthm_pct = max(min_pct, min(abs_x / (rx2 - rx1), max_pct))
+        ythm_pct = max(min_pct, min(abs_y / (ry2 - ry1), max_pct))
+
+        # calculate the pan position as a ratio
+        pct_x = min(max(0.0, abs(0.0 - rx1) / rng_x), 1.0)
+        pct_y = min(max(0.0, abs(0.0 - ry1) / rng_y), 1.0)
+
+        bnch = Bunch.Bunch(rng_x=rng_x, rng_y=rng_y, vis_x=abs_x, vis_y=abs_y,
+                           thm_pct_x=xthm_pct, thm_pct_y=ythm_pct,
+                           pan_pct_x=pct_x, pan_pct_y=pct_y)
+        return bnch
+
+    def pan_by_pct(self, pct_x, pct_y, pad=0):
+        """Pan by a percentage of the data space. This method is designed
+        to be called by scrollbar callbacks.
+
+        Parameters
+        ----------
+        pct_x : float (range 0.0 : 1.0)
+            Percentage in the X range to pan
+
+        pct_y : float (range 0.0 : 1.0)
+            Percentage in the Y range to pan
+
+        pad : int (optional, defaults to 0)
+            a padding amount in pixels to add to the limits when calculating
+
+        min_pct : float (optional, range 0.0:1.0, defaults to 0.0)
+        max_pct : float (optional, range 0.0:1.0, defaults to 0.9)
+
+        """
+        # Sanity check on inputs
+        pct_x = np.clip(pct_x, 0.0, 1.0)
+        pct_y = np.clip(pct_y, 0.0, 1.0)
+
+        limits = self.get_limits()
+
+        tr = self.tform['data_to_scrollbar']
+
+        mxwd, mxht = limits[1][:2]
+        mxwd, mxht = mxwd + pad, mxht + pad
+        mnwd, mnht = limits[0][:2]
+        mnwd, mnht = mnwd - pad, mnht - pad
+
+        arr = np.array([(mnwd, mnht), (mxwd, mnht),
+                        (mxwd, mxht), (mnwd, mxht)],
+                       dtype=float)
+        x, y = tr.to_(arr).T
+
+        rx1, rx2 = np.min(x), np.max(x)
+        ry1, ry2 = np.min(y), np.max(y)
+
+        crd_x = rx1 + (pct_x * (rx2 - rx1))
+        crd_y = ry1 + (pct_y * (ry2 - ry1))
+
+        pan_x, pan_y = tr.from_((crd_x, crd_y))
+        self.logger.debug("crd=%f,%f pan=%f,%f" % (
+            crd_x, crd_y, pan_x, pan_y))
+
+        self.panset_xy(pan_x, pan_y)
+
+    def pan_omni(self, direction_deg, amount, lock_x=False, lock_y=False):
+        """Pan in a direction defined in degrees by an amount specified
+        as a percentage.
+
+        Parameters
+        ----------
+        direction_deg : float (range 0.0 : 360.0)
+            Direction in which to pan, where 0.0 is defined as
+
+        amount : float (range 0.0 : 1.0)
+            Amount to distribute to X and Y according to direction
+
+        lock_x : bool (optional, defaults to False)
+            If True, do not allow any panning in the X direction
+
+        lock_y : bool (optional, defaults to False)
+            If True, do not allow any panning in the Y direction
+
+        """
+        print(f"direction is {direction_deg}; amount is {amount}")
+        if not (lock_x or lock_y):
+            # nothing to do
+            return
+
+        # calculate current pan pct
+        res = self.calc_pan_pct(pad=0)
+
+        ang_rad = math.radians(90.0 - direction_deg)
+        amt_x = 0 if lock_x else math.cos(ang_rad) * amount
+        amt_y = 0 if lock_y else math.sin(ang_rad) * amount
+
+        # modify the pct, as per the params
+        pct_page_x = res.vis_x / res.rng_x
+        amt_x = amt_x * pct_page_x
+        pct_page_y = res.vis_y / res.rng_y
+        amt_y = amt_y * pct_page_y
+
+        pct_x = res.pan_pct_x + amt_x
+        pct_y = res.pan_pct_y + amt_y
+
+        # update the pan position by pct
+        self.pan_by_pct(pct_x, pct_y)
+
+    def pan_lr(self, pct_vw, sign):
+        """Pan left/right by an amount specified as a percentage of the
+        visible width.
+
+        Parameters
+        ----------
+        pct_vw : float (range 0.0 : 1.0)
+            Percent of visible width to pan
+
+        sign : int (1 or -1)
+            -1 for left, 1 for right
+
+        """
+        # calculate current pan pct
+        res = self.calc_pan_pct(pad=0)
+
+        pct_page = res.vis_x / res.rng_x
+        # modify the pct, as per the params
+        amt = sign * pct_vw * pct_page
+        pct_x = res.pan_pct_x + amt
+
+        # update the pan position by pct
+        self.pan_by_pct(pct_x, res.pan_pct_y)
+
+    def pan_ud(self, pct_vh, sign, msg=False):
+        """Pan up/down by an amount specified as a percentage of the
+        visible height.
+
+        Parameters
+        ----------
+        pct_vh : float (range 0.0 : 1.0)
+            Percent of visible height to pan
+
+        sign : int (1 or -1)
+            -1 for up, 1 for down
+
+        """
+        # calculate current pan pct
+        res = self.calc_pan_pct(pad=0)
+
+        pct_page = res.vis_y / res.rng_y
+        # modify the pct, as per the params
+        amt = sign * pct_vh * pct_page
+        pct_y = res.pan_pct_y + amt
+
+        # update the pan position by pct
+        self.pan_by_pct(res.pan_pct_x, pct_y)
 
     def position_at_canvas_xy(self, data_pt, canvas_pt, no_reset=False):
         """Position a data point at a certain canvas position.
@@ -2337,17 +2575,6 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         return self.autocenter_options
-
-    def get_transforms(self):
-        """Get transformations behavior.
-
-        Returns
-        -------
-        transforms : tuple
-            Selected options for ``flip_x``, ``flip_y``, and ``swap_xy``.
-
-        """
-        return (self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy'])
 
     def get_cut_levels(self):
         """Get cut levels.
@@ -2502,6 +2729,17 @@ class ImageViewBase(Callback.Callbacks):
         """
         self.autocuts = autocuts
 
+    def get_transforms(self):
+        """Get transformations behavior.
+
+        Returns
+        -------
+        transforms : tuple
+            Selected options for ``flip_x``, ``flip_y``, and ``swap_xy``.
+
+        """
+        return (self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy'])
+
     def transform(self, flip_x, flip_y, swap_xy):
         """Transform view of the image.
 
@@ -2524,6 +2762,21 @@ class ImageViewBase(Callback.Callbacks):
 
         with self.suppress_redraw:
             self.t_.set(flip_x=flip_x, flip_y=flip_y, swap_xy=swap_xy)
+
+    def flip_x(self):
+        """Transform view of the image by flipping the X axis."""
+        flip_x, flip_y, swap_xy = self.get_transforms()
+        self.transform(not flip_x, flip_y, swap_xy)
+
+    def flip_y(self):
+        """Transform view of the image by flipping the Y axis."""
+        flip_x, flip_y, swap_xy = self.get_transforms()
+        self.transform(flip_x, not flip_y, swap_xy)
+
+    def swap_xy(self):
+        """Transform view of the image by swapping the X and Y axes."""
+        flip_x, flip_y, swap_xy = self.get_transforms()
+        self.transform(flip_x, flip_y, not swap_xy)
 
     def transform_cb(self, setting, value):
         """Handle callback related to changes in transformations."""
@@ -2641,6 +2894,24 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.t_.set(rot_deg=deg)
+
+    def rotate_delta(self, delta_deg):
+        """Rotate the view of an image in a channel by a delta.
+
+        .. note::
+
+            Transforming the image is generally faster than rotating,
+            if rotating in 90 degree increments. Also see :meth:`transform`.
+
+        Parameters
+        ----------
+        delta_deg : float
+            Incremental rotation angle in degrees.
+
+        """
+        cur_rot_deg = self.get_rotation()
+        rot_deg = math.fmod(cur_rot_deg + delta_deg, 360.0)
+        self.rotate(rot_deg)
 
     def rotation_change_cb(self, setting, value):
         """Handle callback related to changes in rotation angle."""

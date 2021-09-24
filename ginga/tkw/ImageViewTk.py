@@ -17,7 +17,6 @@ except ImportError:
 from ginga import ImageView, Mixins, Bindings  # noqa
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin  # noqa
 from ginga.canvas import render
-from ginga.util.toolbox import ModeIndicator  # noqa
 
 from . import TkHelp  # noqa
 
