@@ -27,6 +27,22 @@ This plugin is not usually configured to be closeable, but the user can
 make it so by setting the "closeable" setting to True in the configuration
 file--then Close and Help buttons will be added to the bottom of the UI.
 
+** Excluding images from Thumbs **
+
+Although the default behavior is for every image that is loaded into the
+reference viewer to show up in ``Thumbs``, there may be cases where this
+is undesirable (e.g. when there are many images being loaded at a
+periodic rate by some automated process).  In such cases there are two
+mechanisms for suppressing certain images from showing up in ``Thumbs``:
+
+* Assigning the "genthumb" setting to False in a channel's settings
+  (for example from the ``Preferences`` plugin, under the "General"
+  settings) will exclude the channel itself and any of its images.
+* Setting the "nothumb" keyword in the metadata of an image wrapper
+  (not the FITS header, but by e.g. ``image.set(nothumb=True)``)
+  will exclude that particular image from ``Thumbs``, even if the
+  "genthumb" setting is True for that channel.
+
 """
 import os
 import math
