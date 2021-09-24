@@ -39,6 +39,24 @@ This plugin is not usually configured to be closeable, but the user can
 make it so by setting the "closeable" setting to True in the configuration
 file--then Close and Help buttons will be added to the bottom of the UI.
 
+**Excluding images from Contents**
+
+.. note:: This also controls the behavior of ``Thumbs``.
+
+Although the default behavior is for every image that is loaded into the
+reference viewer to show up in ``Contents``, there may be cases where this
+is undesirable (e.g., when there are many images being loaded at a
+periodic rate by some automated process).  In such cases there are two
+mechanisms for suppressing certain images from showing up in ``Contents``:
+
+* Assigning the "genthumb" setting to False in a channel's settings
+  (for example from the ``Preferences`` plugin, under the "General"
+  settings) will exclude the channel itself and any of its images.
+* Setting the "nothumb" keyword in the metadata of an image wrapper
+  (not the FITS header, but by e.g., ``image.set(nothumb=True)``)
+  will exclude that particular image from ``Contents``, even if the
+  "genthumb" setting is True for that channel.
+
 """
 from ginga import GingaPlugin
 from ginga.misc import Bunch
@@ -277,7 +295,9 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.logger.debug("name=%s" % (name))
 
         if image is not None:
-            nothumb = image.get('nothumb', False)
+            channel = self.fv.get_channel(chname)
+            nothumb = (image.get('nothumb', False) or
+                       not channel.settings.get('genthumb', True))
             if nothumb:
                 return
 
@@ -313,6 +333,9 @@ class Contents(GingaPlugin.GlobalPlugin):
         """Almost the same as add_image_cb(), except that the image
         may not be loaded in memory.
         """
+        if not channel.settings.get('genthumb', True):
+            return
+
         chname = channel.name
         name = image_info.name
         self.logger.debug("name=%s" % (name))
@@ -365,6 +388,9 @@ class Contents(GingaPlugin.GlobalPlugin):
     def add_channel_cb(self, viewer, channel):
         """Called when a channel is added from the main interface.
         Parameter is a channel (a Channel object)."""
+        if not channel.settings.get('genthumb', True):
+            return
+
         chname = channel.name
 
         # add old highlight set to channel external data
@@ -386,6 +412,9 @@ class Contents(GingaPlugin.GlobalPlugin):
     def delete_channel_cb(self, viewer, channel):
         """Called when a channel is deleted from the main interface.
         Parameter is a channel (a Channel object)."""
+        if not channel.settings.get('genthumb', True):
+            return
+
         chname = channel.name
         del self.name_dict[chname]
 
@@ -447,6 +476,8 @@ class Contents(GingaPlugin.GlobalPlugin):
 
     def redo(self, channel, image):
         """This method is called when an image is set in a channel."""
+        if not channel.settings.get('genthumb', True):
+            return
 
         imname = image.get('name', 'none')
         chname = channel.name
@@ -504,8 +535,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.fv.show_error("Please select some images first")
             return
 
-        l_img = list(map(lambda tup: "%s/%s" % (tup[0], tup[1].imname),
-                         images))
+        l_img = ["%s/%s" % (tup[0], tup[1].imname) for tup in images]
 
         verb = action.capitalize()
         l_img.insert(0, "%s images\n" % (verb))
