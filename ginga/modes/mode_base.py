@@ -16,6 +16,7 @@ class Mode:
             #settings = Settings.SettingGroup()
             settings = viewer.get_settings()
         self.settings = settings
+        self.actions = dict()
 
         self._start_x = None
         self._start_y = None

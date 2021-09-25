@@ -13,7 +13,9 @@ class CMapMode(Mode):
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
-        actions = dict(
+        self.actions = dict(
+            dmod_cmap=['__y', None, None],
+
             kp_cmap_reset=['Y', 'cmap+Y'],
             kp_cmap_restore=['cmap+r'],
             kp_cmap_invert=['I', 'cmap+I'],
@@ -31,13 +33,10 @@ class CMapMode(Mode):
             ms_cmap_restore=['cmap+right'],
             )
 
-        bm = viewer.get_bindmap()
-        bm.add_mode('__y', str(self), mode_type='locked', msg=None)
-
-        bd = viewer.get_bindings()
-        bd.merge_actions(self.viewer, bm, self, actions.items())
-
         self.cancmap = True
+
+    def __str__(self):
+        return 'cmap'
 
     def start(self):
         pass
@@ -226,6 +225,3 @@ class CMapMode(Mode):
         if self.cancmap and (event.state == 'down'):
             self.restore_colormap(viewer, msg)
         return True
-
-    def __str__(self):
-        return 'cmap'

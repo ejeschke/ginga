@@ -12,7 +12,9 @@ class CutsMode(Mode):
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
-        actions = dict(
+        self.actions = dict(
+            dmod_cuts=['__s', None, None],
+
             kp_cut_255=['cuts+A'],
             kp_cut_lo=['cuts+l'],
             kp_cut_hi=['cuts+h'],
@@ -33,21 +35,21 @@ class CutsMode(Mode):
             ms_cut_auto=['cuts+right'],
             )
 
-        bm = viewer.get_bindmap()
-        bm.add_mode('__s', str(self), mode_type='locked', msg=None)
-
-        bd = viewer.get_bindings()
-        bd.merge_actions(self.viewer, bm, self, actions.items())
-
         self.cancut = True
         self._hival = 0.0
         self._loval = 0.0
+
+    def __str__(self):
+        return 'cuts'
 
     def start(self):
         pass
 
     def stop(self):
         self.onscreen_message(None)
+
+    #####  Help methods #####
+    # Methods used by the callbacks to do actions.
 
     def _cycle_cuts_alg(self, viewer, msg, direction='down'):
         if self.cancut:
@@ -206,7 +208,7 @@ class CutsMode(Mode):
             msg = self.settings.get('msg_cuts', msg)
             viewer.enable_autocuts('override')
             if msg:
-                self.onscreen_message('Autocuts Override', delay=1.0)
+                self.onscreen_message('Autocuts override', delay=1.0)
         return True
 
     def kp_autocuts_alg_prev(self, viewer, event, data_x, data_y, msg=True):
@@ -309,6 +311,3 @@ class CutsMode(Mode):
     def ms_cut_auto(self, viewer, event, data_x, data_y, msg=True):
         return self.kp_cut_auto(viewer, event, data_x, data_y,
                                 msg=msg)
-
-    def __str__(self):
-        return 'cuts'

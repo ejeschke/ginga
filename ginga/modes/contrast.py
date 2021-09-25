@@ -12,20 +12,19 @@ class ContrastMode(Mode):
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
-        actions = dict(
+        self.actions = dict(
+            dmod_contrast=['__t', None, None],
+
             kp_contrast_restore=['T', 'contrast+t', 'contrast+T'],
 
             ms_contrast=['contrast+left', 'ctrl+right'],
             ms_contrast_restore=['contrast+right', 'ctrl+middle'],
             )
 
-        bm = viewer.get_bindmap()
-        bm.add_mode('__t', str(self), mode_type='locked', msg=None)
-
-        bd = viewer.get_bindings()
-        bd.merge_actions(self.viewer, bm, self, actions.items())
-
         self.cancmap = True
+
+    def __str__(self):
+        return 'contrast'
 
     def start(self):
         pass
@@ -101,6 +100,3 @@ class ContrastMode(Mode):
         if self.cancmap and (event.state == 'down'):
             self.restore_contrast(viewer, msg=msg)
         return True
-
-    def __str__(self):
-        return 'contrast'

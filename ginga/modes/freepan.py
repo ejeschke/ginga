@@ -4,17 +4,17 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import math
-
-from ginga.modes.panzoom_base import PanZoomMode
+from ginga.modes.pan import PanMode
 
 
-class FreePanMode(PanZoomMode):
+class FreePanMode(PanMode):
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
-        actions = dict(
+        self.actions = dict(
+            dmod_freepan=['__w', None, 'pan'],
+
             ms_freepan=['freepan+middle'],
             ms_zoom_in=['freepan+left'],
             ms_zoom_out=['freepan+right', 'freepan+ctrl+left'],
@@ -22,15 +22,6 @@ class FreePanMode(PanZoomMode):
             pa_zoom=['freepan+pan'],
             pa_zoom_origin=['freepan+shift+pan'],
             )
-
-        bm = viewer.get_bindmap()
-        bm.add_mode('__w', str(self), mode_type='locked', msg=None)
-
-        bd = viewer.get_bindings()
-        bd.merge_actions(self.viewer, bm, self, actions.items())
-
-        self.canpan = True
-        self.canzoom = True
 
     def __str__(self):
         return 'freepan'
@@ -126,3 +117,25 @@ class FreePanMode(PanZoomMode):
         return True
 
     ##### GESTURE ACTION CALLBACKS #####
+
+    def pa_zoom(self, viewer, event, msg=True):
+        """Interactively zoom the image by a pan gesture.
+        (the back end must support gestures)
+        """
+        event = self._pa_synth_scroll_event(event)
+        if event.state != 'move':
+            return False
+        self._sc_zoom(viewer, event, msg=msg, origin=None)
+        return True
+
+    def pa_zoom_origin(self, viewer, event, msg=True):
+        """Like pa_zoom(), but pans the image as well to keep the
+        coordinate under the cursor in that same position relative
+        to the window.
+        """
+        event = self._pa_synth_scroll_event(event)
+        if event.state != 'move':
+            return False
+        origin = (event.data_x, event.data_y)
+        self._sc_zoom(viewer, event, msg=msg, origin=origin)
+        return True
