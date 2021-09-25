@@ -12,7 +12,9 @@ class CameraMode(Mode):
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
-        actions = dict(
+        self.actions = dict(
+            dmod_camera=['__c', None, 'pan'],
+
             kp_camera_save=['camera+s'],
             kp_camera_reset=['camera+r'],
             kp_camera_toggle3d=['camera+3'],
@@ -23,11 +25,8 @@ class CameraMode(Mode):
             ms_camera_pan_delta=['camera+right'],
             )
 
-        bm = viewer.get_bindmap()
-        bm.add_mode('__c', str(self), mode_type='locked', msg=None)
-
-        bd = viewer.get_bindings()
-        bd.merge_actions(self.viewer, bm, self, actions.items())
+    def __str__(self):
+        return 'camera'
 
     def start(self):
         pass
@@ -159,6 +158,3 @@ class CameraMode(Mode):
 
         viewer.update_widget()
         return True
-
-    def __str__(self):
-        return 'camera'

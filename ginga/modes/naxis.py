@@ -12,19 +12,15 @@ class NaxisMode(Mode):
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
-        actions = dict(
+        self.actions = dict(
+            dmod_naxis=['__n', None, None],
+
             sc_naxis=['naxis+scroll'],
 
             ms_naxis=['naxis+left'],
 
             pa_naxis=['naxis+pan'],
             )
-
-        bm = viewer.get_bindmap()
-        bm.add_mode('__n', str(self), mode_type='locked', msg=None)
-
-        bd = viewer.get_bindings()
-        bd.merge_actions(self.viewer, bm, self, actions.items())
 
     def __str__(self):
         return 'naxis'

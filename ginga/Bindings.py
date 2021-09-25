@@ -41,7 +41,7 @@ class ImageViewBindings(object):
             # No settings passed.  Set up defaults.
             settings = Settings.SettingGroup(name='bindings',
                                              logger=self.logger)
-            self.initialize_settings(settings)
+            #self.initialize_settings(settings)
         self.settings = settings
 
         self.features = dict(
@@ -77,15 +77,6 @@ class ImageViewBindings(object):
             # mode.
             dmod_meta=['space', None, None],
             dmod_draw=['__b', None, None],
-            ## dmod_cmap=['__y', None, None],
-            ## dmod_cuts=['__s', None, None],
-            ## dmod_dist=['__d', None, None],
-            ## dmod_contrast=['__t', None, None],
-            ## dmod_rotate=['__r', None, None],
-            ## dmod_pan=['__q', None, 'pan'],
-            ## dmod_freepan=['__w', None, 'pan'],
-            ## dmod_camera=['__c', None, 'pan'],
-            ## dmod_naxis=['__n', None, None],
 
             default_mode_type='locked',
             default_lock_mode_type='softlock',
@@ -128,11 +119,6 @@ class ImageViewBindings(object):
 
         # Set up bindings
         self.setup_settings_events(viewer, bindmap)
-
-        from ginga.modes.modeinfo import available_modes
-        for klass in available_modes:
-            mode_obj = klass(viewer, settings=self.settings)
-            self._modes[str(mode_obj)] = mode_obj
 
     def set_mode(self, viewer, name, mode_type='oneshot'):
         bindmap = viewer.get_bindmap()
@@ -197,10 +183,16 @@ class ImageViewBindings(object):
 
     def setup_settings_events(self, viewer, bindmap):
 
+        self.initialize_settings(self.settings)
+
+        from ginga.modes.modeinfo import available_modes
+        for klass in available_modes:
+            mode_obj = klass(viewer, settings=self.settings)
+            self.settings.add_defaults(**mode_obj.actions)
+            self._modes[str(mode_obj)] = mode_obj
+
+        # Now settings should have all available modes defined
         d = self.settings.get_dict()
-        if len(d) == 0:
-            self.initialize_settings(self.settings)
-            d = self.settings.get_dict()
 
         # First scan settings for buttons and modes
         bindmap.clear_button_map()
@@ -236,6 +228,13 @@ class ImageViewBindings(object):
                     self.cursor_map[mode_name] = curname
 
         self.merge_actions(viewer, bindmap, self, d.items())
+
+        # merge in specific actions for each mode
+        for mode_obj in self._modes.values():
+            actions = mode_obj.actions
+            d = {key: self.settings.get(key, actions[key])
+                 for key in actions.keys()}
+            self.merge_actions(viewer, bindmap, mode_obj, d.items())
 
     def merge_actions(self, viewer, bindmap, obj, tups):
 

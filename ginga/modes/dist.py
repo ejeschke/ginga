@@ -12,7 +12,9 @@ class DistMode(Mode):
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
-        actions = dict(
+        self.actions = dict(
+            dmod_dist=['__d', None, None],
+
             kp_dist_reset=['D', 'dist+d', 'dist+D'],
             kp_dist_prev=['dist+up', 'dist+b'],
             kp_dist_next=['dist+down', 'dist+n'],
@@ -20,13 +22,10 @@ class DistMode(Mode):
             sc_dist=['dist+scroll'],
             )
 
-        bm = viewer.get_bindmap()
-        bm.add_mode('__d', str(self), mode_type='locked', msg=None)
-
-        bd = viewer.get_bindings()
-        bd.merge_actions(self.viewer, bm, self, actions.items())
-
         self.cancmap = True
+
+    def __str__(self):
+        return 'dist'
 
     def start(self):
         pass
@@ -92,6 +91,3 @@ class DistMode(Mode):
         return True
 
     #####  MOUSE ACTION CALLBACKS #####
-
-    def __str__(self):
-        return 'dist'

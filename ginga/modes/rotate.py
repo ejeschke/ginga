@@ -16,7 +16,9 @@ class RotateMode(Mode):
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
-        actions = dict(
+        self.actions = dict(
+            dmod_rotate=['__r', None, None],
+
             kp_flip_x=['[', '{', 'rotate+[', 'rotate+{'],
             kp_flip_y=[']', '}', 'rotate+]', 'rotate+}'],
             kp_swap_xy=['backslash', '|', 'rotate+backslash', 'rotate+|'],
@@ -34,15 +36,12 @@ class RotateMode(Mode):
             pinch_rotate_acceleration=1.0,
             )
 
-        bm = viewer.get_bindmap()
-        bm.add_mode('__r', str(self), mode_type='locked', msg=None)
-
-        bd = viewer.get_bindings()
-        bd.merge_actions(self.viewer, bm, self, actions.items())
-
         self.canflip = True
         self.canrotate = True
         self._start_rot = 0
+
+    def __str__(self):
+        return 'rotate'
 
     def start(self):
         pass
@@ -231,6 +230,3 @@ class RotateMode(Mode):
             if msg and (msg_str is not None):
                 self.onscreen_message(msg_str, delay=0.4)
         return True
-
-    def __str__(self):
-        return 'rotate'
