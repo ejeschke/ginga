@@ -94,10 +94,17 @@ class PanMode(Mode):
         self._start_scale_x = 0
         self._start_scale_y = 0
 
-        self.canpan = True
-        self.canzoom = True
-
         self._save = {}
+
+    @property
+    def canpan(self):
+        bd = self.viewer.get_bindings()
+        return bd.get_feature_allow('pan')
+
+    @property
+    def canzoom(self):
+        bd = self.viewer.get_bindings()
+        return bd.get_feature_allow('zoom')
 
     def __str__(self):
         return 'pan'

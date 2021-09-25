@@ -36,12 +36,20 @@ class RotateMode(Mode):
             pinch_rotate_acceleration=1.0,
             )
 
-        self.canflip = True
-        self.canrotate = True
         self._start_rot = 0
 
     def __str__(self):
         return 'rotate'
+
+    @property
+    def canflip(self):
+        bd = self.viewer.get_bindings()
+        return bd.get_feature_allow('flip')
+
+    @property
+    def canrotate(self):
+        bd = self.viewer.get_bindings()
+        return bd.get_feature_allow('rotate')
 
     def start(self):
         pass
