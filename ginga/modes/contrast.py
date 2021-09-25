@@ -21,10 +21,13 @@ class ContrastMode(Mode):
             ms_contrast_restore=['contrast+right', 'ctrl+middle'],
             )
 
-        self.cancmap = True
-
     def __str__(self):
         return 'contrast'
+
+    @property
+    def cancmap(self):
+        bd = self.viewer.get_bindings()
+        return bd.get_feature_allow('cmap')
 
     def start(self):
         pass

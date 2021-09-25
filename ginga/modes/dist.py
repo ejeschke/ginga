@@ -22,10 +22,13 @@ class DistMode(Mode):
             sc_dist=['dist+scroll'],
             )
 
-        self.cancmap = True
-
     def __str__(self):
         return 'dist'
+
+    @property
+    def cancmap(self):
+        bd = self.viewer.get_bindings()
+        return bd.get_feature_allow('cmap')
 
     def start(self):
         pass

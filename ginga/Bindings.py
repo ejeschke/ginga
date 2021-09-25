@@ -3,17 +3,12 @@
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
-
-import math
+#
 import os.path
 import itertools
-import numpy as np
 
 from ginga.misc import Bunch, Settings, Callback
-from ginga import trcalc
-from ginga import cmap, imap
 from ginga.util.paths import icondir
-from ginga.util import wcs
 
 
 class ImageViewBindings(object):
@@ -27,16 +22,6 @@ class ImageViewBindings(object):
 
         self.logger = logger
 
-        self.canpan = False
-        self.canzoom = False
-        self.cancut = False
-        self.cancmap = False
-        self.canflip = False
-        self.canrotate = False
-
-        self._modes = {}
-        self._cur_mode = None
-
         if settings is None:
             # No settings passed.  Set up defaults.
             settings = Settings.SettingGroup(name='bindings',
@@ -44,11 +29,11 @@ class ImageViewBindings(object):
             #self.initialize_settings(settings)
         self.settings = settings
 
-        self.features = dict(
-            # name, attr pairs
-            pan='canpan', zoom='canzoom', cuts='cancut', cmap='cancmap',
-            flip='canflip', rotate='canrotate')
+        self.features = dict(pan=False, zoom=False, cut=False, cmap=False,
+                             flip=False, rotate=False)
         self.cursor_map = {}
+        self._modes = {}
+        self._cur_mode = None
 
     def initialize_settings(self, settings):
         settings.add_settings(
@@ -78,7 +63,8 @@ class ImageViewBindings(object):
             dmod_meta=['space', None, None],
             dmod_draw=['__b', None, None],
 
-            default_mode_type='locked',
+            #default_mode_type='locked',
+            default_mode_type='oneshot',
             default_lock_mode_type='softlock',
 
             # KEYBOARD
@@ -333,27 +319,27 @@ class ImageViewBindings(object):
 
     def enable_pan(self, tf):
         """Enable the image to be panned interactively (True/False)."""
-        self.canpan = tf
+        self.features['pan'] = tf
 
     def enable_zoom(self, tf):
         """Enable the image to be zoomed interactively (True/False)."""
-        self.canzoom = tf
+        self.features['zoom'] = tf
 
     def enable_cuts(self, tf):
         """Enable the cuts levels to be set interactively (True/False)."""
-        self.cancut = tf
+        self.features['cut'] = tf
 
     def enable_cmap(self, tf):
         """Enable the color map to be warped interactively (True/False)."""
-        self.cancmap = tf
+        self.features['cmap'] = tf
 
     def enable_flip(self, tf):
         """Enable the image to be flipped interactively (True/False)."""
-        self.canflip = tf
+        self.features['flip'] = tf
 
     def enable_rotate(self, tf):
         """Enable the image to be rotated interactively (True/False)."""
-        self.canrotate = tf
+        self.features['rotate'] = tf
 
     def enable(self, **kwdargs):
         """
@@ -365,17 +351,16 @@ class ImageViewBindings(object):
             feat = feat.lower()
             if feat not in self.features:
                 raise ValueError("'%s' is not a feature. Must be one of %s" % (
-                    feat, str(self.features)))
+                    feat, str(list(self.features.keys()))))
 
-            attr = self.features[feat]
-            setattr(self, attr, bool(value))
+            self.features[feat] = bool(value)
 
     def enable_all(self, tf):
-        for feat, attr in self.features.items():
-            setattr(self, attr, bool(tf))
+        for feat in list(self.features.keys()):
+            self.features[feat] = tf
 
-    #####  Help methods #####
-    # Methods used by the callbacks to do actions.
+    def get_feature_allow(self, feat_name):
+        return self.features[feat_name]
 
     #####  SCROLL ACTION CALLBACKS #####
 
@@ -1071,6 +1056,3 @@ class BindingMapper(Callback.Callbacks):
                 emap = self.eventmap[idx]
                 cbname = '%s-pan' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event)
-
-
-#END

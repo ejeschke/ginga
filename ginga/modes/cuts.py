@@ -35,12 +35,16 @@ class CutsMode(Mode):
             ms_cut_auto=['cuts+right'],
             )
 
-        self.cancut = True
         self._hival = 0.0
         self._loval = 0.0
 
     def __str__(self):
         return 'cuts'
+
+    @property
+    def cancut(self):
+        bd = self.viewer.get_bindings()
+        return bd.get_feature_allow('cut')
 
     def start(self):
         pass
