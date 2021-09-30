@@ -10,6 +10,9 @@ Ver 3.3.0 (unreleased)
   channel
 - Fixed an issue where a thumbnail could be generated even if the
   channel was configured not to generate thumbs
+- Fixed an issue where wcs_world2pix() was called instead of all_world2pix()
+  if wcs_astropy was used.  This may have affected graphic overlays
+  plotted in ra/dec instead of pixels.
 
 Ver 3.2.0 (2021-06-07)
 ======================

@@ -121,7 +121,7 @@ class AstropyWCS(common.BaseWCS):
         skycrd = np.array([args], np.float_)
 
         try:
-            pix = self.wcs.wcs_world2pix(skycrd, origin)
+            pix = self.wcs.all_world2pix(skycrd, origin)
 
         except Exception as e:
             self.logger.error("Error calculating radectopix: %s" % (str(e)))
