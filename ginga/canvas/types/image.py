@@ -158,6 +158,8 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         self.make_callback('image-set', image)
 
     def get_scaled_wdht(self):
+        if self.image is None:
+            return (0, 0)
         width = self.image.width * self.scale_x
         height = self.image.height * self.scale_y
         return (width, height)
