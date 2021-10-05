@@ -13,6 +13,7 @@ Ver 3.3.0 (unreleased)
 - Fixed an issue where wcs_world2pix() was called instead of all_world2pix()
   if wcs_astropy was used.  This may have affected graphic overlays
   plotted in ra/dec instead of pixels.
+- Closing the reference viewer now stops all plugins first
 
 Ver 3.2.0 (2021-06-07)
 ======================
