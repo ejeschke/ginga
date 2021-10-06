@@ -9,8 +9,8 @@ import sys
 
 from ginga.tkw.ImageViewTk import CanvasView
 from ginga.misc import log
-from ginga.util.loader import load_data
 from ginga.canvas.CanvasObject import get_canvas_types
+from ginga.util.loader import load_data
 
 import tkinter as Tkinter
 from tkinter.filedialog import askopenfilename
@@ -24,6 +24,7 @@ class FitsViewer(object):
 
         self.logger = logger
         self.drawcolors = ['white', 'black', 'red', 'yellow', 'blue', 'green']
+        self.dc = get_canvas_types()
 
         root = Tkinter.Tk()
         root.title("ImageViewTk Example")
@@ -58,15 +59,15 @@ class FitsViewer(object):
         bd.enable_all(True)
 
         # canvas that we will draw on
-        self.dc = get_canvas_types()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         #canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='blue')
-        canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
         fi.set_canvas(canvas)
+        canvas.register_for_cursor_drawing(fi)
+        canvas.set_draw_mode('draw')
         canvas.ui_set_active(True)
 
         fi.configure(512, 512)
@@ -77,7 +78,7 @@ class FitsViewer(object):
         self.readout = Tkinter.Label(root, text='')
         self.readout.pack(side=Tkinter.BOTTOM, fill=Tkinter.X, expand=0)
 
-        self.drawtypes = canvas.get_drawtypes()
+        self.drawtypes = self.canvas.get_drawtypes()
         ## wdrawtype = ttk.Combobox(root, values=self.drawtypes,
         ##                          command=self.set_drawparams)
         ## index = self.drawtypes.index('ruler')

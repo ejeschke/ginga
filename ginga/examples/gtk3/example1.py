@@ -33,6 +33,7 @@ class FitsViewer(object):
 
         # create the ginga viewer and configure it
         fi = CanvasView(logger)
+        fi.set_enter_focus(True)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')

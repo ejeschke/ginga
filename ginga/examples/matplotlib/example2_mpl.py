@@ -48,6 +48,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_callback('drag-drop', self.drop_file_cb)
         fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
+        fi.show_mode_indicator(True, corner='ur')
         fi.ui_set_active(True)
         fi.show_mode_indicator(True, corner='ur')
         self.fitsimage = fi
@@ -84,7 +85,7 @@ class FitsViewer(QtGui.QMainWindow):
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
         wdrawtype = QtGui.QComboBox()
-        self.drawtypes = canvas.get_drawtypes()
+        self.drawtypes = self.canvas.get_drawtypes()
         for name in self.drawtypes:
             wdrawtype.addItem(name)
         index = self.drawtypes.index('rectangle')
