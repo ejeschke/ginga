@@ -183,10 +183,10 @@ class RenderContext(render.RenderContextBase):
                                     self.brush, self.pen)
 
 
-class CanvasRenderer(vec.VectorRenderMixin, render.StandardPixelRenderer):
+class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
 
     def __init__(self, viewer):
-        render.StandardPixelRenderer.__init__(self, viewer)
+        render.StandardPipelineRenderer.__init__(self, viewer)
         vec.VectorRenderMixin.__init__(self)
 
         self.kind = 'opengl'

@@ -100,10 +100,10 @@ class RenderContext(render.RenderContextBase):
         pass
 
 
-class CanvasRenderer(render.StandardPixelRenderer):
+class CanvasRenderer(render.StandardPipelineRenderer):
 
     def __init__(self, viewer):
-        render.StandardPixelRenderer.__init__(self, viewer)
+        render.StandardPipelineRenderer.__init__(self, viewer)
 
         self.kind = 'mock'
         self.rgb_order = 'RGBA'

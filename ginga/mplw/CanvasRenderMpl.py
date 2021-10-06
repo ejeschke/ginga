@@ -171,10 +171,10 @@ class RenderContext(render.RenderContextBase):
         self.cr.axes.add_patch(p)
 
 
-class CanvasRenderer(render.StandardPixelRenderer):
+class CanvasRenderer(render.StandardPipelineRenderer):
 
     def __init__(self, viewer):
-        render.StandardPixelRenderer.__init__(self, viewer)
+        render.StandardPipelineRenderer.__init__(self, viewer)
 
         self.kind = 'mpl'
         self.rgb_order = viewer.rgb_order
