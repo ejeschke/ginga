@@ -7,9 +7,7 @@
 #
 
 from ginga import ImageView, Mixins, Bindings
-from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin
 from ginga.canvas import render
-from ginga.util.toolbox import ModeIndicator
 
 
 default_html_fmt = 'jpeg'
