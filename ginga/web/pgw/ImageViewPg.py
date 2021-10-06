@@ -649,26 +649,3 @@ class CanvasView(ImageViewZoom):
                                            private_canvas=private_canvas)
 
         self.objects[0] = self.private_canvas
-
-
-class ImageViewCanvas(ImageViewZoom,
-                      DrawingMixin, CanvasMixin, CompoundMixin):
-
-    def __init__(self, logger=None, rgbmap=None, settings=None,
-                 render='widget', bindmap=None, bindings=None):
-        ImageViewZoom.__init__(self, logger=logger,
-                               rgbmap=rgbmap,
-                               settings=settings, render=render,
-                               bindmap=bindmap,
-                               bindings=bindings)
-        CompoundMixin.__init__(self)
-        CanvasMixin.__init__(self)
-        DrawingMixin.__init__(self)
-
-        # we are both a viewer and a canvas
-        self.set_canvas(self, private_canvas=self)
-
-        self._mi = ModeIndicator(self)
-
-
-#END

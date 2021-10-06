@@ -1950,7 +1950,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def build_viewpane(self, settings, rgbmap=None, size=(1, 1)):
         # instantiate bindings loaded with users preferences
-        bclass = Viewers.ImageViewCanvas.bindingsClass
+        bclass = Viewers.CanvasView.bindingsClass
         bindprefs = self.prefs.create_category('bindings')
         bd = bclass(self.logger, settings=bindprefs)
 
@@ -1958,11 +1958,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if self.settings.get('use_opengl', False):
             wtype = 'opengl'
 
-        fi = Viewers.ImageViewCanvas(logger=self.logger,
-                                     rgbmap=rgbmap,
-                                     settings=settings,
-                                     render=wtype,
-                                     bindings=bd)
+        fi = Viewers.CanvasView(logger=self.logger,
+                                rgbmap=rgbmap,
+                                settings=settings,
+                                render=wtype,
+                                bindings=bd)
         fi.set_desired_size(size[0], size[1])
 
         canvas = DrawingCanvas()
@@ -1983,7 +1983,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         fi.add_callback('cursor-changed', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
-        fi.add_callback('key-down-none', self.keypress)
+        fi.set_callback('key-down-none', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
         fi.ui_set_active(True, viewer=fi)
 
