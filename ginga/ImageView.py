@@ -263,16 +263,6 @@ class ImageViewBase(Callback.Callbacks):
             8: (False, False, True),
         }
 
-        # our canvas
-        self.canvas = DrawingCanvas()
-        self.canvas.initialize(None, self, self.logger)
-        self.canvas.add_callback('modified', self.canvas_changed_cb)
-        self.canvas.set_surface(self)
-        self.canvas.ui_set_active(True, viewer=self)
-
-        # private canvas for drawing
-        self.private_canvas = self.canvas
-
         # handle to image object on the image canvas
         self._imgobj = None
         self._canvas_img_tag = '__image'
@@ -310,6 +300,22 @@ class ImageViewBase(Callback.Callbacks):
         for name in ('transform', 'image-set', 'image-unset', 'configure',
                      'redraw', 'limits-set', 'cursor-changed'):
             self.enable_callback(name)
+
+        # private canvas for drawing
+        self.private_canvas = DrawingCanvas()
+        self.private_canvas.initialize(None, self, self.logger)
+        self.private_canvas.add_callback('modified', self.canvas_changed_cb)
+        self.private_canvas.set_surface(self)
+        self.private_canvas.ui_set_active(True, viewer=self)
+
+        # our public facing canvas
+        self.canvas = DrawingCanvas()
+        self.canvas.initialize(None, self, self.logger)
+        self.canvas.add_callback('modified', self.canvas_changed_cb)
+        self.canvas.set_surface(self)
+        self.canvas.ui_set_active(True, viewer=self)
+
+        self.private_canvas.add(self.canvas, redraw=False)
 
         # for timed refresh
         self.rf_fps = 1
@@ -470,6 +476,9 @@ class ImageViewBase(Callback.Callbacks):
             Canvas.
 
         """
+        if self.canvas is None:
+            self.set_canvas(DrawingCanvas())
+
         return self.canvas
 
     def set_canvas(self, canvas, private_canvas=None):
@@ -487,7 +496,9 @@ class ImageViewBase(Callback.Callbacks):
         self.canvas = canvas
         canvas.initialize(None, self, self.logger)
         canvas.add_callback('modified', self.canvas_changed_cb)
+        # necessary for right-button drawing
         canvas.set_surface(self)
+        # necessary to activate UI on this canvas
         canvas.ui_set_active(True, viewer=self)
 
         self._imgobj = None
@@ -498,15 +509,10 @@ class ImageViewBase(Callback.Callbacks):
             self.initialize_private_canvas(self.private_canvas)
 
             if private_canvas != canvas:
+                private_canvas.initialize(None, self, self.logger)
                 private_canvas.set_surface(self)
                 private_canvas.ui_set_active(True, viewer=self)
                 private_canvas.add_callback('modified', self.canvas_changed_cb)
-
-        # sanity check that we have a private canvas, and if not,
-        # set it to the "advertised" canvas
-        if self.private_canvas is None:
-            self.private_canvas = canvas
-            self.initialize_private_canvas(self.private_canvas)
 
         # make sure private canvas has our non-private one added
         if (self.private_canvas != self.canvas) and (
@@ -532,6 +538,9 @@ class ImageViewBase(Callback.Callbacks):
 
         if self.t_.get('show_focus_indicator', False):
             self.show_focus_indicator(True)
+
+        if self.t_.get('show_mode_indicator', False):
+            self.show_mode_indicator(True, corner='lr')
 
     def set_color_map(self, cmap_name):
         """Set the color map.

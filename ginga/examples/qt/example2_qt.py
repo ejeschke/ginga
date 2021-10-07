@@ -33,7 +33,6 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_zoom_algorithm('rate')
         fi.set_zoomrate(1.4)
         fi.show_pan_mark(True)
-        #fi.enable_draw(False)
         fi.add_callback('drag-drop', self.drop_file_cb)
         fi.add_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
@@ -48,16 +47,15 @@ class FitsViewer(QtGui.QMainWindow):
         canvas.enable_draw(True)
         canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='lightblue')
-        canvas.set_surface(fi)
-        self.canvas = canvas
-        # add canvas to view
-        #fi.add(canvas)
-        private_canvas = fi.get_canvas()
-        private_canvas.add(canvas)
         canvas.register_for_cursor_drawing(fi)
         canvas.add_callback('draw-event', self.draw_cb)
         canvas.set_draw_mode('draw')
+        canvas.set_surface(fi)
         canvas.ui_set_active(True)
+        self.canvas = canvas
+
+        # add our new canvas to viewers default canvas
+        fi.get_canvas().add(canvas)
 
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()

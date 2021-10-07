@@ -24,7 +24,6 @@ from ginga.misc import Bunch, Timer, Future
 from ginga.util import catalog, iohelper, loader, toolbox
 from ginga.util import viewer as gviewer
 from ginga.canvas.CanvasObject import drawCatalog
-from ginga.canvas.types.layer import DrawingCanvas
 
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager
@@ -1965,10 +1964,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                 bindings=bd)
         fi.set_desired_size(size[0], size[1])
 
-        canvas = DrawingCanvas()
-        canvas.enable_draw(False)
-        fi.set_canvas(canvas)
-
         # check general settings for default value of enter_focus
         enter_focus = settings.get('enter_focus', None)
         if enter_focus is None:
@@ -1979,6 +1974,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if focus_ind is None:
             focus_ind = self.settings.get('show_focus_indicator', False)
         fi.show_focus_indicator(focus_ind)
+        fi.show_mode_indicator(True, corner='lr')
         fi.use_image_profile = True
 
         fi.add_callback('cursor-changed', self.motion_cb)
