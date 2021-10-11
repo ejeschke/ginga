@@ -2387,10 +2387,21 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Quit the application.
         """
         self.logger.info("Attempting to shut down the application...")
-        if self.layout_file is not None and self.save_layout:
-            self.error_wrap(self.ds.write_layout_conf, self.layout_file)
 
         self.stop()
+
+        # stop plugins in every channel
+        for chname in self.get_channel_names():
+            channel = self.get_channel(chname)
+            opmon = channel.opmon
+            opmon.stop_all_plugins()
+
+        # stop all global plugins
+        self.gpmon.stop_all_plugins()
+
+        # write out our current layout
+        if self.layout_file is not None and self.save_layout:
+            self.error_wrap(self.ds.write_layout_conf, self.layout_file)
 
         self.w.root = None
         while len(self.ds.toplevels) > 0:

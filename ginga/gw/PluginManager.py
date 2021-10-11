@@ -67,16 +67,8 @@ class PluginManager(Callback.Callbacks):
             self.logger.info("Plugin '%s' loaded." % name)
 
         except Exception as e:
-            self.logger.error("Failed to load plugin '%s': %s" % (
-                name, str(e)))
-            try:
-                (type, value, tb) = sys.exc_info()
-                tb_str = "\n".join(traceback.format_tb(tb))
-                self.logger.error("Traceback:\n%s" % (tb_str))
-
-            except Exception as e:
-                tb_str = "Traceback information unavailable."
-                self.logger.error(tb_str)
+            self.logger.error("Failed to load plugin '{}': {}".format(
+                name, e), exc_info=True)
             #raise PluginManagerError(e)
 
     def reload_plugin(self, plname, chinfo=None):
@@ -318,8 +310,7 @@ class PluginManager(Callback.Callbacks):
                     p_info.obj.build_gui(vbox)
 
         except Exception as e:
-            errstr = "Plugin UI failed to initialize: %s" % (
-                str(e))
+            errstr = "Plugin UI failed to initialize: {}".format(e)
             self.logger.error(errstr)
             try:
                 (type, value, tb) = sys.exc_info()
@@ -342,8 +333,7 @@ class PluginManager(Callback.Callbacks):
                 p_info.obj.start()
 
         except Exception as e:
-            errstr = "Plugin failed to start correctly: %s" % (
-                str(e))
+            errstr = "Plugin failed to start correctly: {}".format(e)
             self.logger.error(errstr)
             try:
                 (type, value, tb) = sys.exc_info()
@@ -384,15 +374,8 @@ class PluginManager(Callback.Callbacks):
 
         except Exception as e:
             wasError = True
-            self.logger.error("Plugin failed to stop correctly: %s" % (
-                str(e)))
-            try:
-                (type, value, tb) = sys.exc_info()
-                tb_str = "".join(traceback.format_tb(tb))
-                self.logger.error("Traceback:\n%s" % (tb_str))
-
-            except Exception:
-                self.logger.error("Traceback information unavailable.")
+            self.logger.error("Plugin '{}' failed to stop correctly: {}".format(p_info.name, e),
+                              exc_info=True)
 
         if p_info.widget is not None:
             self.dispose_gui(p_info)
@@ -402,11 +385,13 @@ class PluginManager(Callback.Callbacks):
             raise PluginManagerError(e)
 
     def stop_all_plugins(self):
-        for plugin_name in self.plugin:
+        for plugin_name in self.get_active():
             try:
-                self.stop_plugin(plugin_name)
+                p_info = self.get_plugin_info(plugin_name)
+                self.stop_plugin(p_info)
             except Exception as e:
-                self.logger.error('Exception while calling stop for plugin %s: %s' % (plugin_name, str(e)))
+                self.logger.error("Exception while calling stop for plugin '{}': {}".format(plugin_name, e),
+                                  exc_info=True)
         return True
 
     def plugin_build_error(self, box, text):
