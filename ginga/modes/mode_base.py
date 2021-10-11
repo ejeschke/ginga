@@ -1,10 +1,19 @@
+#
+# mode_base.py -- base class for defining modes
+#
+# This is open-source software licensed under a BSD license.
+# Please see the file LICENSE.txt for details.
+
 import math
 
 from ginga.Bindings import ScrollEvent
 
 
 class Mode:
+    """Base class for defining a mode
+    """
 
+    # this should match that given in ~ginga.util.addons.show_mode_indicator()
     tag = '_$mode_indicator'
 
     def __init__(self, viewer, settings=None):
@@ -27,18 +36,19 @@ class Mode:
         return self.viewer.get_settings()
 
     def start(self):
+        """This method is called when the mode is explicitly invoked
+        by the user.
+        """
         raise NotImplementedError("subclass should implement this method")
 
     def stop(self):
+        """This method is called when the mode is explicitly changed
+        to a different mode (after having been started) by the user.
+        """
         raise NotImplementedError("subclass should implement this method")
 
     def onscreen_message(self, msg, delay=None):
-        #self.viewer.onscreen_message(msg, delay=delay)
-        indic = self.get_mode_line()
-        if msg is None:
-            msg = ''
-        indic.set_text(msg)
-        self.viewer.redraw(whence=3)
+        self.viewer.onscreen_message(msg, delay=delay)
 
     def get_mode_line(self):
         canvas = self.viewer.get_private_canvas()
