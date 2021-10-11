@@ -304,7 +304,9 @@ Modes have an associated *mode type* which can be set to one of:
 * ``locked``: The mode is locked until the mode key is pressed again (or `Esc`)
 * ``softlock``: The mode is locked until another mode key is pressed (or `Esc`)
 
-By default most modes are activated in "locked" type.
+By default most modes are activated in "locked" type, unless the mode
+lock is toggled.  The mode lock is typically toggled in and out of
+softlock by the ``l`` (lowercase letter l) key and "locked" with ``L``.
 
 Modes are usually indicated by a small black rectangle with the mode
 name and mode type in one corner of the viewer, usually in the lower

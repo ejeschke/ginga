@@ -63,8 +63,7 @@ class ImageViewBindings(object):
             dmod_meta=['space', None, None],
             dmod_draw=['__b', None, None],
 
-            #default_mode_type='locked',
-            default_mode_type='oneshot',
+            default_mode_type='locked',
             default_lock_mode_type='softlock',
 
             # KEYBOARD

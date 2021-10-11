@@ -450,12 +450,7 @@ class ModeIndicator(CanvasObjectBase):
         self.kind = 'modeindicator'
         self.xpad = 8
         self.ypad = 4
-        self._text = ''
-        self.bg = 'navyblue'
         self.modetbl = dict(locked='L', softlock='S', held='H', oneshot='O')
-
-    def set_text(self, text):
-        self._text = text
 
     def draw(self, viewer):
 
@@ -473,7 +468,6 @@ class ModeIndicator(CanvasObjectBase):
         text = mode
         if mode_type in self.modetbl:
             text += ' [%s]' % self.modetbl[mode_type]
-        text += ' %s' % self._text
 
         color = 'cyan' if mode == 'meta' else self.color
 
@@ -482,11 +476,18 @@ class ModeIndicator(CanvasObjectBase):
         txt_wd, txt_ht = cr.text_extents(text)
 
         # draw bg
-        box_wd, box_ht = win_wd, 2 * self.ypad + txt_ht
-        x_base, y_base = self.offset, win_ht - self.offset - box_ht
+        box_wd, box_ht = 2 * self.xpad + txt_wd, 2 * self.ypad + txt_ht
+        if self.corner == 'lr':
+            x_base, y_base = win_wd - self.offset - box_wd, win_ht - self.offset - box_ht
+        elif self.corner == 'll':
+            x_base, y_base = self.offset, win_ht - self.offset - box_ht
+        if self.corner == 'ur':
+            x_base, y_base = win_wd - self.offset - box_wd, self.offset
+        if self.corner == 'ul':
+            x_base, y_base = self.offset, self.offset
 
-        cr.set_line(self.bg, linewidth=0)
-        cr.set_fill(self.bg, alpha=self.fillalpha)
+        cr.set_line('black', linewidth=0)
+        cr.set_fill('black', alpha=self.fillalpha)
 
         cx1, cy1, cx2, cy2 = x_base, y_base, x_base + box_wd, y_base + box_ht
         cr.draw_polygon(tr.to_(((cx1, cy1), (cx2, cy1),
