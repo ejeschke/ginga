@@ -2,7 +2,7 @@
 # Please see the file LICENSE.txt for details.
 #
 """
-These pipeline stages are used in creating the StandardPixelRenderer,
+These pipeline stages are used in creating the StandardPipelineRenderer,
 the default renderer for standard widget backends.
 
 [createbg] => [overlays] => [iccprof] => [flipswap] => [rotate] => [output]

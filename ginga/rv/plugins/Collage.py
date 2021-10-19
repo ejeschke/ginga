@@ -317,6 +317,11 @@ class Collage(GingaPlugin.LocalPlugin):
                                 # skip images without 2 dimensions
                                 continue
 
+                            wd, ht = image.get_size()
+                            if wd == 0 or ht == 0:
+                                # or size 0 in either dimension
+                                continue
+
                             image.set(name='hdu%d' % (i))
 
                             image = self.preprocess(image)
