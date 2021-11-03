@@ -121,7 +121,11 @@ class AstropyWCS(common.BaseWCS):
         skycrd = np.array([args], np.float_)
 
         try:
-            pix = self.wcs.all_world2pix(skycrd, origin)
+            pix = self.wcs.all_world2pix(skycrd, origin, maxiter=20,
+                                         detect_divergence=True, quiet=False)
+
+        except pywcs.NoConvergence as e:
+            pix = e.best_solution
 
         except Exception as e:
             self.logger.error("Error calculating radectopix: %s" % (str(e)))
@@ -192,7 +196,12 @@ class AstropyWCS(common.BaseWCS):
             if n > 0:
                 wcspt = np.hstack((wcspt, np.zeros((len(wcspt), n))))
         try:
-            datapt = self.wcs.all_world2pix(wcspt, origin)
+            datapt = self.wcs.all_world2pix(wcspt, origin, maxiter=20,
+                                            detect_divergence=True, quiet=False)
+
+        except pywcs.NoConvergence as e:
+            datapt = e.best_solution
+
         except Exception as e:
             self.logger.error(
                 "Error calculating wcspt_to_datapt: %s" % (str(e)))
