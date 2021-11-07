@@ -40,6 +40,8 @@ class AutoCutsBase(object):
         self.logger = logger
         self.kind = 'base'
         self.crop_radius = 512
+        self.max_sample = 1000
+        self.pct_sample = 0.02
 
     def update_params(self, **param_dict):
         # TODO: find a cleaner way to update these
@@ -73,6 +75,56 @@ class AutoCutsBase(object):
         (data, x1, y1, x2, y2) = trcalc.cutout_radius(data, wd // 2, ht // 2,
                                                       crop_radius)
         return data
+
+    def get_full(self, image):
+        """Return the full data array from the passed image."""
+        wd, ht = image.get_size()
+        data = image.cutout_data(0, 0, wd, ht)
+        return data
+
+    def get_sample(self, image, num_points=None):
+        """Return a sample from the full data array of the passed image."""
+        wd, ht = image.get_size()
+        total_points = wd * ht
+        if num_points is None:
+            num_points = min(int(total_points * self.pct_sample),
+                             self.max_sample)
+        num_points = min(num_points, total_points)
+        if num_points == 0:
+            return np.zeros((0, 0))
+
+        # sample the data
+        xmax = wd - 1
+        ymax = ht - 1
+        # evenly spaced sampling over rows and cols
+        xskip = int(max(1.0, np.sqrt(xmax * ymax / float(num_points))))
+        yskip = xskip
+
+        cutout = image.cutout_data(0, 0, xmax, ymax,
+                                   xstep=xskip, ystep=yskip)
+        return cutout
+
+    def get_sample_data(self, data, num_points=None):
+        """Return a sample from the full data array."""
+        ht, wd = data.shape[:2]
+        total_points = wd * ht
+        if num_points is None:
+            num_points = min(int(total_points * self.pct_sample),
+                             self.max_sample)
+        num_points = min(num_points, total_points)
+        if num_points == 0:
+            return np.zeros((0, 0))
+
+        # sample the data
+        xmax = wd - 1
+        ymax = ht - 1
+        # evenly spaced sampling over rows and cols
+        xskip = int(max(1.0, np.sqrt(xmax * ymax / float(num_points))))
+        yskip = xskip
+
+        cutout = trcalc.cutout_data(data, 0, 0, xmax, ymax,
+                                    xstep=xskip, ystep=yskip)
+        return cutout
 
     def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
         loval, hival = float(loval), float(hival)
@@ -128,8 +180,11 @@ class Minmax(AutoCutsBase):
         return (float(loval), float(hival))
 
     def calc_cut_levels_data(self, data_np):
-        loval = np.nanmin(data_np)
-        hival = np.nanmax(data_np)
+        data = data_np[np.isfinite(data_np)]
+        if data.size == 0:
+            return (0, 0)
+        loval = np.min(data)
+        hival = np.max(data)
 
         return (float(loval), float(hival))
 
@@ -142,7 +197,10 @@ class Histogram(AutoCutsBase):
             Param(name='usecrop', type=_bool,
                   valid=[True, False],
                   default=True,
-                  description="Use center crop of image for speed"),
+                  description="Use samples from image for speed"),
+            Param(name='num_points', type=int,
+                  default=None, allow_none=True,
+                  description="Number of points to sample (for usecrop)"),
             Param(name='pct', type=float,
                   widget='spinfloat', incr=0.001,
                   min=0.0, max=1.0, default=0.999,
@@ -152,21 +210,29 @@ class Histogram(AutoCutsBase):
                   description="Number of bins for the histogram"),
         ]
 
-    def __init__(self, logger, usecrop=True, pct=0.999, numbins=2048):
+    def __init__(self, logger, usecrop=True, num_points=None,
+                 pct=0.999, numbins=2048):
         super(Histogram, self).__init__(logger)
 
         self.kind = 'histogram'
         self.usecrop = usecrop
+        self.num_points = num_points
         self.pct = pct
         self.numbins = numbins
 
     def calc_cut_levels(self, image):
-        data = image.get_data()
-        return self.calc_cut_levels_data(data)
+        if self.usecrop:
+            data = self.get_sample(image)
+        else:
+            data = self.get_full(image)
+
+        bnch = self.calc_histogram(data, pct=self.pct, numbins=self.numbins)
+        loval, hival = bnch.loval, bnch.hival
+        return loval, hival
 
     def calc_cut_levels_data(self, data_np):
         if self.usecrop:
-            data = self.get_crop_data(data_np)
+            data = self.get_sample_data(data_np)
             count = np.count_nonzero(np.isfinite(data))
             if count < (self.crop_radius ** 2.0) * 0.50:
                 # if we have less than 50% finite pixels then fall back
@@ -189,28 +255,11 @@ class Histogram(AutoCutsBase):
         self.logger.debug("Median analysis array is %dx%d" % (
             width, height))
 
-        total_px = width * height
-        dsum = np.sum(data)
-        if np.isnan(dsum) or np.isinf(dsum):
-            # Oh crap, the array has a NaN or Inf value.
-            # We have to workaround this by making a copy of the array
-            # and substituting for the problem values, otherwise numpy's
-            # histogram() cannot handle it
-            self.logger.warning("NaN's found in data, using workaround for histogram")
-            data = data.copy()
-            # TODO: calculate a reasonable replacement value
-            data[np.isinf(data)] = 0.0
-            minval = np.nanmin(data)
-            maxval = np.nanmax(data)
-            substval = (minval + maxval) / 2.0
-            data[np.isnan(data)] = substval
-            data[np.isinf(data)] = substval
-
-            dist, bins = np.histogram(data, bins=numbins,
-                                      density=False)
-        else:
-            dist, bins = np.histogram(data, bins=numbins,
-                                      density=False)
+        data = data[np.isfinite(data)]
+        total_px = len(data.flat)
+        if total_px == 0:
+            return Bunch.Bunch(loval=0, hival=0)
+        dist, bins = np.histogram(data, bins=numbins, density=False)
 
         cutoff = int((float(total_px) * (1.0 - pct)) / 2.0)
         top = len(dist) - 1
@@ -282,30 +331,41 @@ class StdDev(AutoCutsBase):
             Param(name='usecrop', type=_bool,
                   valid=[True, False],
                   default=True,
-                  description="Use center crop of image for speed"),
-            ## Param(name='hensa_lo', type=float, default=35.0,
-            ##             description="Low subtraction factor"),
-            ## Param(name='hensa_hi', type=float, default=90.0,
-            ##             description="High subtraction factor"),
+                  description="Use samples from image for speed"),
+            Param(name='num_points', type=int,
+                  default=None, allow_none=True,
+                  description="Number of points to sample"),
+            Param(name='hensa_lo', type=float, default=35.0,
+                  description="Low subtraction factor"),
+            Param(name='hensa_hi', type=float, default=90.0,
+                  description="High subtraction factor"),
         ]
 
-    def __init__(self, logger, usecrop=True):
+    def __init__(self, logger, usecrop=True, num_points=None,
+                 hensa_lo=35.0, hensa_hi=90.0):
         super(StdDev, self).__init__(logger)
 
         self.kind = 'stddev'
+        self.usecrop = usecrop
+        self.num_points = num_points
         # Constants used to calculate the lo and hi cut levels using the
         # "stddev" algorithm (from the old SOSS fits viewer)
-        self.usecrop = usecrop
-        self.hensa_lo = 35.0
-        self.hensa_hi = 90.0
+        self.hensa_lo = hensa_lo
+        self.hensa_hi = hensa_hi
 
     def calc_cut_levels(self, image):
-        data = image.get_data()
-        return self.calc_cut_levels_data(data)
+        if self.usecrop:
+            data = self.get_sample(image)
+        else:
+            data = self.get_full(image)
+
+        loval, hival = self.calc_stddev(data, hensa_lo=self.hensa_lo,
+                                        hensa_hi=self.hensa_hi)
+        return loval, hival
 
     def calc_cut_levels_data(self, data_np):
         if self.usecrop:
-            data = self.get_crop_data(data_np)
+            data = self.get_sample_data(data_np)
             count = np.count_nonzero(np.isfinite(data))
             if count < (self.crop_radius ** 2.0) * 0.50:
                 # if we have less than 50% finite pixels then fall back
@@ -316,16 +376,20 @@ class StdDev(AutoCutsBase):
         else:
             data = data_np
 
-        loval, hival = self.calc_stddev(data_np, hensa_lo=self.hensa_lo,
+        if data.size == 0:
+            return (0, 0)
+        loval, hival = self.calc_stddev(data, hensa_lo=self.hensa_lo,
                                         hensa_hi=self.hensa_hi)
         return loval, hival
 
     def calc_stddev(self, data, hensa_lo=35.0, hensa_hi=90.0):
         # This is the method used in the old SOSS fits viewer
-        mdata = np.ma.masked_array(data, np.isnan(data))
-        mean = np.mean(mdata)
-        sdev = np.std(mdata)
-        self.logger.debug("mean=%f std=%f" % (mean, sdev))
+        data = data[np.isfinite(data)]
+        if data.size == 0:
+            return (0, 0)
+        mean = np.mean(data)
+        sdev = np.std(data)
+        self.logger.debug(f"mean={mean} std={sdev}")
 
         hensa_lo_factor = (hensa_lo - 50.0) / 10.0
         hensa_hi_factor = (hensa_hi - 50.0) / 10.0
@@ -352,7 +416,7 @@ class MedianFilter(AutoCutsBase):
                   description="Median kernel length"),
         ]
 
-    def __init__(self, logger, num_points=2000, length=5):
+    def __init__(self, logger, num_points=None, length=5):
         super(MedianFilter, self).__init__(logger)
 
         self.kind = 'median'
@@ -360,8 +424,10 @@ class MedianFilter(AutoCutsBase):
         self.length = length
 
     def calc_cut_levels(self, image):
-        data = image.get_data()
-        return self.calc_cut_levels_data(data)
+        cutout = self.get_sample(image, self.num_points)
+
+        loval, hival = self.calc_medianfilter(cutout, length=self.length)
+        return loval, hival
 
     def calc_cut_levels_data(self, data_np):
         ht, wd = data_np.shape[:2]
@@ -386,9 +452,12 @@ class MedianFilter(AutoCutsBase):
         if length is None:
             length = 5
 
+        data = data[np.isfinite(data)]
+        if data.size == 0:
+            return (0, 0)
         xout = scipy.ndimage.filters.median_filter(data, size=length)
-        loval = np.nanmin(xout)
-        hival = np.nanmax(xout)
+        loval = np.min(xout)
+        hival = np.max(xout)
 
         return loval, hival
 
@@ -409,7 +478,7 @@ class ZScale(AutoCutsBase):
                   description="Number of points to sample"),
         ]
 
-    def __init__(self, logger, contrast=0.25, num_points=1000):
+    def __init__(self, logger, contrast=0.25, num_points=None):
         super(ZScale, self).__init__(logger)
 
         self.kind = 'zscale'
@@ -417,34 +486,14 @@ class ZScale(AutoCutsBase):
         self.num_points = num_points
 
     def calc_cut_levels(self, image):
-        data = image.get_data()
-        return self.calc_cut_levels_data(data)
+        cutout = self.get_sample(image)
+
+        loval, hival = self.calc_zscale(cutout, contrast=self.contrast,
+                                        num_points=self.num_points)
+        return loval, hival
 
     def calc_cut_levels_data(self, data_np):
-        ht, wd = data_np.shape[:2]
-
-        # calculate num_points parameter, if omitted
-        total_points = wd * ht
-        if total_points == 0:
-            self.logger.debug('total_points is 0, setting cut levels to 0')
-            return 0, 0
-        num_points = self.num_points
-        if num_points is None:
-            num_points = max(int(total_points * 0.0002), 1000)
-        num_points = min(num_points, total_points)
-
-        assert (0 < num_points <= total_points), \
-            AutoCutsError("num_points not in range 0-%d" % (total_points))
-
-        # sample the data
-        xmax = wd - 1
-        ymax = ht - 1
-        # evenly spaced sampling over rows and cols
-        xskip = int(max(1.0, np.sqrt(xmax * ymax / float(num_points))))
-        yskip = xskip
-
-        cutout = trcalc.cutout_data(data_np, 0, 0, xmax, ymax,
-                                    xstep=xskip, ystep=yskip)
+        cutout = self.get_sample_data(data_np)
 
         loval, hival = self.calc_zscale(cutout, contrast=self.contrast,
                                         num_points=self.num_points)
@@ -468,6 +517,8 @@ class ZScale(AutoCutsBase):
         samples = data[np.isfinite(data)].flatten()
         samples = samples[:num_points]
 
+        if samples.size == 0:
+            return (0, 0)
         loval, hival = zscale.zscale_samples(samples, contrast=contrast)
         return loval, hival
 

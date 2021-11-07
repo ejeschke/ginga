@@ -1849,7 +1849,7 @@ class ImageViewBindings(object):
 
         elif event.state == 'down':
             self._start_x, self._start_y = x, y
-            image = viewer.get_image()
+            image = viewer.get_vip()
             #self._loval, self._hival = viewer.get_cut_levels()
             self._loval, self._hival = viewer.autocuts.calc_cut_levels(image)
 

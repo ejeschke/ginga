@@ -2385,7 +2385,7 @@ class ImageViewBase(Callback.Callbacks):
         if autocuts is None:
             autocuts = self.autocuts
 
-        image = self.get_image()
+        image = self.get_vip()
         if image is None:
             #image = self.vip
             return
