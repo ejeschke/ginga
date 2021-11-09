@@ -772,7 +772,7 @@ class ImageViewBindings(object):
 
     def _cutlow_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        image = viewer.get_image()
+        image = viewer.get_vip()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = viewer.get_cut_levels()
@@ -785,7 +785,7 @@ class ImageViewBindings(object):
         msg = self.settings.get('msg_cuts', msg)
         win_wd, win_ht = viewer.get_window_size()
         pct = float(x) / float(win_wd)
-        image = viewer.get_image()
+        image = viewer.get_vip()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = viewer.get_cut_levels()
@@ -796,7 +796,7 @@ class ImageViewBindings(object):
 
     def _cuthigh_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        image = viewer.get_image()
+        image = viewer.get_vip()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = viewer.get_cut_levels()
@@ -809,7 +809,7 @@ class ImageViewBindings(object):
         msg = self.settings.get('msg_cuts', msg)
         win_wd, win_ht = viewer.get_window_size()
         pct = 1.0 - (float(x) / float(win_wd))
-        image = viewer.get_image()
+        image = viewer.get_vip()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = viewer.get_cut_levels()
@@ -1333,7 +1333,7 @@ class ImageViewBindings(object):
     def kp_cut_minmax(self, viewer, event, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
-            image = viewer.get_image()
+            image = viewer.get_vip()
             mn, mx = image.get_minmax(noinf=True)
             viewer.cut_levels(mn, mx, no_reset=True)
         return True

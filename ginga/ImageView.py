@@ -760,18 +760,19 @@ class ImageViewBase(Callback.Callbacks):
                        float(ht - self.data_off)))
             self.t_.set(limits=limits)
 
-            # this line should force the callback of _image_set_cb()
-            canvas_img.set_image(image)
-
             if add_to_canvas:
                 try:
                     self.canvas.get_object_by_tag(self._canvas_img_tag)
 
                 except KeyError:
-                    self.canvas.add(canvas_img, tag=self._canvas_img_tag)
+                    self.canvas.add(canvas_img, tag=self._canvas_img_tag,
+                                    redraw=False)
 
                 # move image to bottom of layers
                 self.canvas.lower_object(canvas_img)
+
+            # this line should force the callback of _image_set_cb()
+            canvas_img.set_image(image)
 
             self.canvas.update_canvas(whence=0)
 
@@ -784,15 +785,8 @@ class ImageViewBase(Callback.Callbacks):
             self.apply_profile_or_settings(image)
 
         except Exception as e:
-            self.logger.error("Failed to initialize image: %s" % (str(e)))
-            try:
-                # log traceback, if possible
-                (type, value, tb) = sys.exc_info()
-                tb_str = "".join(traceback.format_tb(tb))
-                self.logger.error("Traceback:\n%s" % (tb_str))
-            except Exception:
-                tb_str = "Traceback information unavailable."
-                self.logger.error(tb_str)
+            self.logger.error("Failed to initialize image: {}".format(e),
+                              exc_info=True)
 
         # update our display if the image changes underneath us
         image.add_callback('modified', self._image_modified_cb)
