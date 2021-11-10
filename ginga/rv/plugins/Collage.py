@@ -105,7 +105,7 @@ class Collage(GingaPlugin.LocalPlugin):
         self.settings.load(onError='silent')
 
         # hook to allow special processing before inlining
-        self.preprocess = lambda x: x
+        self.preprocess = None
 
         self.gui_up = False
 
@@ -209,8 +209,6 @@ class Collage(GingaPlugin.LocalPlugin):
         self.gui_up = True
 
     def set_preprocess(self, fn):
-        if fn is None:
-            fn = lambda x: x  # noqa
         self.preprocess = fn
 
     def close(self):
@@ -275,12 +273,13 @@ class Collage(GingaPlugin.LocalPlugin):
     def annotate_cb(self, widget, tf):
         self.settings.set(annotate_images=tf)
 
-    def load_tiles(self, paths, image_loader=None):
-        # NOTE: this runs in a gui thread
+    def load_tiles(self, paths, image_loader=None, preprocess=None):
         self.fv.assert_nongui_thread()
 
         if image_loader is None:
             image_loader = self.fv.load_image
+        if preprocess is None:
+            preprocess = self.preprocess
 
         try:
             for url in paths:
@@ -324,7 +323,8 @@ class Collage(GingaPlugin.LocalPlugin):
 
                             image.set(name='hdu%d' % (i))
 
-                            image = self.preprocess(image)
+                            if preprocess is not None:
+                                image = preprocess(image)
 
                             with self.lock:
                                 self.images.append(image)
@@ -336,7 +336,8 @@ class Collage(GingaPlugin.LocalPlugin):
                 else:
                     image = image_loader(url)
 
-                    image = self.preprocess(image)
+                    if preprocess is not None:
+                        image = preprocess(image)
 
                     with self.lock:
                         self.images.append(image)
@@ -349,13 +350,23 @@ class Collage(GingaPlugin.LocalPlugin):
             with self.lock:
                 self.num_groups -= 1
                 if self.num_groups <= 0:
-                    self.fv.gui_do(self.finish_collage)
+                    images, self.images = self.images, []
+                    self.fv.gui_do(self.finish_collage, images)
 
-    def collage(self, paths, image_loader=None):
-        if image_loader is None:
-            image_loader = self.fv.load_image
+    def collage(self, paths, image_loader=None, preprocess=None,
+                new_collage=False):
+        """Collage images obtained by loading ``paths`` using optional
+        ``image_loader`` and ``proprocess`` (post-load, pre-collage)
+        functions.  A new collage is started if ``new_collage`` is True
+        otherwise an existing collage is built on.
+        """
 
         self.fv.assert_gui_thread()
+
+        if new_collage:
+            self.mosaicer.reset()
+            self.canvas.delete_all_objects()
+            self.fitsimage.clear()
 
         self.ingest_count = 0
         self.total_files = len(paths)
@@ -376,13 +387,12 @@ class Collage(GingaPlugin.LocalPlugin):
 
         for group in groups:
             self.fv.nongui_do(self.load_tiles, group,
-                              image_loader=image_loader)
+                              image_loader=image_loader, preprocess=preprocess)
 
-    def finish_collage(self):
+    def finish_collage(self, images):
         self.fv.assert_gui_thread()
 
         self.load_time = time.time() - self.start_time
-        images, self.images = self.images, []
         self.logger.info("num images={}".format(len(images)))
 
         if self.ev_intr.is_set():
@@ -397,7 +407,7 @@ class Collage(GingaPlugin.LocalPlugin):
         self.mosaicer.annotate = self.settings.get('annotate_images', False)
         self.mosaicer.match_bg = self.settings.get('match_bg', False)
 
-        self.mosaicer.mosaic(self.fitsimage, images, canvas=self.canvas,)
+        self.mosaicer.mosaic(self.fitsimage, images, canvas=self.canvas)
 
     def match_bg_cb(self, w, tf):
         self.settings.set(match_bg=tf)
