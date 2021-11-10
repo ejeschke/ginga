@@ -47,6 +47,7 @@ class ViewerImageProxy:
     * get_size
     * get_depth
     * get_center
+    * get_minmax
     * get_data_xy
     * info_xy
     * pixtoradec
@@ -237,7 +238,7 @@ class ViewerImageProxy:
         data_np = np.full((y_len, x_len), fill_value, dtype=astype)
 
         # calculate pixel containment indexes in cutout bbox
-        yi, xi = np.mgrid[y1:y2, x1:x2]
+        yi, xi = np.mgrid[y1:y2:ystep, x1:x2:xstep]
         pts = np.asarray((xi, yi)).T
 
         canvas = self.viewer.get_canvas()
@@ -495,6 +496,17 @@ class ViewerImageProxy:
         if len(shape) > 2:
             return shape[-1]
         return 1
+
+    def get_minmax(self, noinf=False):
+        canvas = self.viewer.get_canvas()
+        cvs_imgs = list(self.get_images([], canvas))
+        if len(cvs_imgs) == 0:
+            return (0, 0)
+        mn, mx = cvs_imgs[0].get_image().get_minmax(noinf=noinf)
+        for cvs_img in cvs_imgs[1:]:
+            _mn, _mx = cvs_img.get_image().get_minmax(noinf=noinf)
+            mn, mx = min(mn, _mn), max(mx, _mx)
+        return (mn, mx)
 
     def get_shape(self):
         return self.shape
