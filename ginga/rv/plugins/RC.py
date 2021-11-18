@@ -228,7 +228,7 @@ class RC(GingaPlugin.GlobalPlugin):
 
         captions = [
             ("Addr:", 'label', "Addr", 'llabel', 'Restart', 'button'),
-            ("Set Addr:", 'label', "Set Addr", 'entry')]
+            ("Set Addr:", 'label', "Set Addr", 'entryset')]
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
@@ -270,14 +270,23 @@ class RC(GingaPlugin.GlobalPlugin):
                                        host=self.host, port=self.port,
                                        ev_quit=self.fv.ev_quit,
                                        logger=self.logger)
-        self.server.start(thread_pool=self.fv.get_threadPool())
+        try:
+            self.server.start(thread_pool=self.fv.get_threadPool())
+
+        except Exception as e:
+            self.server = None
+            errmsg = f"RC plugin: remote server failed to start: {e}"
+            self.fv.show_error(errmsg, raisetab=True)
+            self.logger.error(errmsg, exc_info=True)
 
     def stop(self):
-        self.server.stop()
+        if self.server is not None:
+            self.server.stop()
 
     def restart_cb(self, w):
         # restart server
-        self.server.stop()
+        if self.server is not None:
+            self.server.stop()
         self.start()
 
     def set_addr_cb(self, w):

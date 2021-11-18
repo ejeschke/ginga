@@ -14,6 +14,8 @@ Ver 3.3.0 (unreleased)
   if wcs_astropy was used.  This may have affected graphic overlays
   plotted in ra/dec instead of pixels.
 - Closing the reference viewer now stops all plugins first
+- Fix to RC plugin for better error handling if another process is using
+  the port
 
 Ver 3.2.0 (2021-06-07)
 ======================
