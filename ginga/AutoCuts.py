@@ -76,9 +76,16 @@ class AutoCutsBase(object):
                                                       crop_radius)
         return data
 
-    def get_full(self, image):
+    def get_full(self, image, px_limit=None):
         """Return the full data array from the passed image."""
         wd, ht = image.get_size()
+        num_px = wd * ht
+
+        if px_limit is not None and num_px > px_limit:
+            self.logger.info(f"size ({num_px}) > px limit ({px_limit}); "
+                             "falling back to crop")
+            return self.get_crop(image)
+
         data = image.cutout_data(0, 0, wd, ht)
         return data
 
@@ -194,13 +201,16 @@ class Histogram(AutoCutsBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='usecrop', type=_bool,
-                  valid=[True, False],
-                  default=True,
-                  description="Use samples from image for speed"),
+            Param(name='sample', type=str,
+                  valid=['crop', 'grid', 'full'],
+                  default='crop',
+                  description="How to access data for calculation"),
+            Param(name='full_px_limit', type=int,
+                  default=1 * 1024 * 1024, allow_none=True,
+                  description="For sample=full, fall back to crop if num_px > limit"),
             Param(name='num_points', type=int,
                   default=None, allow_none=True,
-                  description="Number of points to sample (for usecrop)"),
+                  description="Number of points to sample (for sample=grid); 'None' for calculated default"),
             Param(name='pct', type=float,
                   widget='spinfloat', incr=0.001,
                   min=0.0, max=1.0, default=0.999,
@@ -210,36 +220,37 @@ class Histogram(AutoCutsBase):
                   description="Number of bins for the histogram"),
         ]
 
-    def __init__(self, logger, usecrop=True, num_points=None,
+    # NOTE: `usecrop` kwarg to be deprecated--accepted but not used
+    # for backward compatibility with saved older settings
+    def __init__(self, logger, usecrop=False, sample='crop',
+                 full_px_limit=None, num_points=None,
                  pct=0.999, numbins=2048):
         super(Histogram, self).__init__(logger)
 
         self.kind = 'histogram'
-        self.usecrop = usecrop
+        self.sample = sample
+        self.full_px_limit = full_px_limit
         self.num_points = num_points
         self.pct = pct
         self.numbins = numbins
 
     def calc_cut_levels(self, image):
-        if self.usecrop:
-            data = self.get_sample(image)
+        if self.sample == 'crop':
+            data = self.get_crop(image)
+        elif self.sample == 'grid':
+            data = self.get_sample(image, num_points=self.num_points)
         else:
-            data = self.get_full(image)
+            data = self.get_full(image, px_limit=self.full_px_limit)
 
         bnch = self.calc_histogram(data, pct=self.pct, numbins=self.numbins)
         loval, hival = bnch.loval, bnch.hival
         return loval, hival
 
     def calc_cut_levels_data(self, data_np):
-        if self.usecrop:
-            data = self.get_sample_data(data_np)
-            count = np.count_nonzero(np.isfinite(data))
-            if count < (self.crop_radius ** 2.0) * 0.50:
-                # if we have less than 50% finite pixels then fall back
-                # to using the whole array
-                self.logger.debug("too many non-finite values in crop--"
-                                  "falling back to full image data")
-                data = data_np
+        if self.sample == 'crop':
+            data = self.get_crop_data(data_np)
+        elif self.sample == 'grid':
+            data = self.get_sample_data(data_np, num_points=self.num_points)
         else:
             data = data_np
 
@@ -328,25 +339,32 @@ class StdDev(AutoCutsBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='usecrop', type=_bool,
-                  valid=[True, False],
-                  default=True,
-                  description="Use samples from image for speed"),
+            Param(name='sample', type=str,
+                  valid=['crop', 'grid', 'full'],
+                  default='grid',
+                  description="How to access data for calculation"),
+            Param(name='full_px_limit', type=int,
+                  default=1 * 1024 * 1024, allow_none=True,
+                  description="For sample=full, fall back to crop if num_px > limit"),
             Param(name='num_points', type=int,
                   default=None, allow_none=True,
-                  description="Number of points to sample"),
+                  description="Number of points to sample (for sample=grid); 'None' for calculated default"),
             Param(name='hensa_lo', type=float, default=35.0,
                   description="Low subtraction factor"),
             Param(name='hensa_hi', type=float, default=90.0,
                   description="High subtraction factor"),
         ]
 
-    def __init__(self, logger, usecrop=True, num_points=None,
+    # NOTE: `usecrop` kwarg to be deprecated--accepted but not used
+    # for backward compatibility with saved older settings
+    def __init__(self, logger, usecrop=False, sample='grid',
+                 full_px_limit=None, num_points=None,
                  hensa_lo=35.0, hensa_hi=90.0):
         super(StdDev, self).__init__(logger)
 
         self.kind = 'stddev'
-        self.usecrop = usecrop
+        self.sample = sample
+        self.full_px_limit = full_px_limit
         self.num_points = num_points
         # Constants used to calculate the lo and hi cut levels using the
         # "stddev" algorithm (from the old SOSS fits viewer)
@@ -354,25 +372,22 @@ class StdDev(AutoCutsBase):
         self.hensa_hi = hensa_hi
 
     def calc_cut_levels(self, image):
-        if self.usecrop:
-            data = self.get_sample(image)
+        if self.sample == 'crop':
+            data = self.get_crop(image)
+        elif self.sample == 'grid':
+            data = self.get_sample(image, num_points=self.num_points)
         else:
-            data = self.get_full(image)
+            data = self.get_full(image, px_limit=self.full_px_limit)
 
         loval, hival = self.calc_stddev(data, hensa_lo=self.hensa_lo,
                                         hensa_hi=self.hensa_hi)
         return loval, hival
 
     def calc_cut_levels_data(self, data_np):
-        if self.usecrop:
-            data = self.get_sample_data(data_np)
-            count = np.count_nonzero(np.isfinite(data))
-            if count < (self.crop_radius ** 2.0) * 0.50:
-                # if we have less than 50% finite pixels then fall back
-                # to using the whole array
-                self.logger.info("too many non-finite values in crop--"
-                                 "falling back to full image data")
-                data = data_np
+        if self.sample == 'crop':
+            data = self.get_crop_data(data_np)
+        elif self.sample == 'grid':
+            data = self.get_sample_data(data_np, num_points=self.num_points)
         else:
             data = data_np
 
@@ -405,18 +420,14 @@ class MedianFilter(AutoCutsBase):
     @classmethod
     def get_params_metadata(cls):
         return [
-            ## Param(name='usecrop', type=_bool,
-            ##             valid=set([True, False]),
-            ##             default=True,
-            ##             description="Use center crop of image for speed"),
             Param(name='num_points', type=int,
                   default=2000, allow_none=True,
-                  description="Number of points to sample"),
+                  description="Number of points to sample; 'None' for calculated default"),
             Param(name='length', type=int, default=5,
                   description="Median kernel length"),
         ]
 
-    def __init__(self, logger, num_points=None, length=5):
+    def __init__(self, logger, num_points=2000, length=5):
         super(MedianFilter, self).__init__(logger)
 
         self.kind = 'median'
@@ -424,25 +435,15 @@ class MedianFilter(AutoCutsBase):
         self.length = length
 
     def calc_cut_levels(self, image):
-        cutout = self.get_sample(image, self.num_points)
+        data = self.get_sample(image, num_points=self.num_points)
 
-        loval, hival = self.calc_medianfilter(cutout, length=self.length)
+        loval, hival = self.calc_medianfilter(data, length=self.length)
         return loval, hival
 
     def calc_cut_levels_data(self, data_np):
-        ht, wd = data_np.shape[:2]
+        data = self.get_sample_data(data_np, num_points=self.num_points)
 
-        # sample the data
-        xmax = wd - 1
-        ymax = ht - 1
-        # evenly spaced sampling over rows and cols
-        xskip = int(max(1.0, np.sqrt(xmax * ymax / float(self.num_points))))
-        yskip = xskip
-
-        cutout = trcalc.cutout_data(data_np, 0, 0, xmax, ymax,
-                                    xstep=xskip, ystep=yskip)
-
-        loval, hival = self.calc_medianfilter(cutout, length=self.length)
+        loval, hival = self.calc_medianfilter(data, length=self.length)
         return loval, hival
 
     def calc_medianfilter(self, data, length=5):
@@ -452,12 +453,9 @@ class MedianFilter(AutoCutsBase):
         if length is None:
             length = 5
 
-        data = data[np.isfinite(data)]
-        if data.size == 0:
-            return (0, 0)
         xout = scipy.ndimage.filters.median_filter(data, size=length)
-        loval = np.min(xout)
-        hival = np.max(xout)
+        loval = np.nanmin(xout)
+        hival = np.nanmax(xout)
 
         return loval, hival
 
@@ -475,7 +473,7 @@ class ZScale(AutoCutsBase):
                   description="Contrast"),
             Param(name='num_points', type=int,
                   default=1000, allow_none=True,
-                  description="Number of points to sample"),
+                  description="Number of points to sample; 'None' for calculated default"),
         ]
 
     def __init__(self, logger, contrast=0.25, num_points=None):
@@ -486,9 +484,9 @@ class ZScale(AutoCutsBase):
         self.num_points = num_points
 
     def calc_cut_levels(self, image):
-        cutout = self.get_sample(image)
+        data = self.get_sample(image, num_points=self.num_points)
 
-        loval, hival = self.calc_zscale(cutout, contrast=self.contrast,
+        loval, hival = self.calc_zscale(data, contrast=self.contrast,
                                         num_points=self.num_points)
         return loval, hival
 
