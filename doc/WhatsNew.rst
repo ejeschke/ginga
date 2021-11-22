@@ -16,6 +16,8 @@ Ver 3.3.0 (unreleased)
 - Closing the reference viewer now stops all plugins first
 - Fix to RC plugin for better error handling if another process is using
   the port
+- Fixed a bug where using the fitsio loader the primary header was not
+  set correctly in some instances
 
 Ver 3.2.0 (2021-06-07)
 ======================

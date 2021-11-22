@@ -622,6 +622,13 @@ class Header(dict):
         except KeyError:
             return alt
 
+    def merge(self, hdr):
+        if not isinstance(hdr, Header):
+            raise ValueError("need to pass a compatible header for merge")
+        for key in hdr.keys():
+            card = hdr.get_card(key)
+            self.set_card(key, card.value, comment=card.comment)
+
     def update(self, map_kind):
         for key, value in map_kind.items():
             self.__setitem__(key, value)

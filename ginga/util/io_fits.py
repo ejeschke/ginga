@@ -514,19 +514,30 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         if typ == 'image':
             # <-- data is an image
-            ahdr = AstroHeader()
-            self.fromHDU(hdu, ahdr)
+            if dstobj is None:
+                dstobj = AstroImage(logger=self.logger)
 
+            inherit_primary_header = (dstobj.inherit_primary_header or
+                                      kwargs.get('inherit_primary_header',
+                                                 False))
+            ahdr = AstroHeader()
+            if dstobj.save_primary_header or inherit_primary_header:
+                if self.fits_f is not None:
+                    primary_hdr = AstroHeader()
+                    if dstobj.save_primary_header:
+                        dstobj._primary_hdr = primary_hdr
+                    # load primary header
+                    self.fromHDU(self.fits_f[0], primary_hdr)
+
+                    if inherit_primary_header:
+                        ahdr.merge(primary_hdr)
+
+            self.fromHDU(hdu, ahdr)
             metadata = dict(header=ahdr)
 
             data = hdu.read()
 
-            if dstobj is None:
-                dstobj = AstroImage(logger=self.logger)
-                dstobj.load_data(data, metadata=metadata)
-
-            else:
-                dstobj.load_data(data, metadata=metadata)
+            dstobj.load_data(data, metadata=metadata)
 
         elif typ == 'table':
             # <-- data is a table
