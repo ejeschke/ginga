@@ -31,6 +31,7 @@ fitsLoaderClass = None
 
 try:
     from astropy.io import fits as pyfits
+    from astropy.table import Table
     have_astropy = True
 except ImportError:
     have_astropy = False
@@ -219,7 +220,10 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         super(PyFitsFileHandler, self).__init__(logger)
         self.kind = 'pyfits'
 
-    def fromHDU(self, hdu, ahdr):
+    def copy_header(self, hdu, ahdr):
+        """Copy a FITS header from an astropy.io.fits.PrimaryHDU object
+        into a ginga.AstroImage.AstroHeader object.
+        """
         header = hdu.header
         if hasattr(header, 'cards'):
             # newer astropy.io.fits don't have ascardlist()
@@ -246,18 +250,47 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
         return None
 
-    def load_hdu(self, hdu, dstobj=None, **kwargs):
+    def load_hdu(self, hdu, dstobj=None, fobj=None, naxispath=None,
+                 save_primary_header=True, **kwargs):
+        if fobj is None:
+            fobj = self.fits_f
+
+        # Set PRIMARY header
+        if save_primary_header and fobj is not None:
+            primary_hdr = AstroHeader()
+            self.copy_header(fobj[0], primary_hdr)
+        else:
+            primary_hdr = None
 
         typ = self.get_hdu_type(hdu)
         if typ == 'image':
 
             if dstobj is None:
                 dstobj = AstroImage(logger=self.logger)
-                dstobj.load_hdu(hdu, **kwargs)
-
             else:
-                # TODO: migrate code from AstroImage to here
-                dstobj.load_hdu(hdu, **kwargs)
+                if not isinstance(dstobj, AstroImage):
+                    raise ValueError("dstobj needs to be a type of AstroImage")
+                dstobj.clear_metadata()
+
+            # this seems to be necessary now for some fits files...
+            try:
+                hdu.verify('fix')
+
+            except Exception as e:
+                # Let's hope for the best!
+                self.logger.warning("Problem verifying fits HDU: {}".format(e))
+
+            # collect HDU header
+            ahdr = dstobj.get_header()
+            self.copy_header(hdu, ahdr)
+            dstobj.set(primary_header=primary_hdr)
+
+            dstobj.setup_data(hdu.data, naxispath=naxispath)
+
+            # Try to make a wcs object on the header
+            wcs = getattr(dstobj, 'wcs', None)
+            if wcs is not None:
+                wcs.load_header(hdu.header, fobj=fobj)
 
         elif typ == 'table':
             # <-- data may be a table
@@ -274,11 +307,30 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
             if dstobj is None:
                 dstobj = AstroTable(logger=self.logger)
+            else:
+                if not isinstance(dstobj, AstroTable):
+                    raise ValueError("dstobj needs to be a type of AstroTable")
+                dstobj.clear_metadata()
+
+            dstobj.kind = 'table-astropy'
 
             self.logger.debug('Attempting to load table from FITS')
 
-            # TODO: migrate code from AstroTable to here
-            dstobj.load_hdu(hdu, **kwargs)
+            ahdr = dstobj.get_header()
+            self.copy_header(hdu, ahdr)
+            dstobj.set(primary_header=primary_hdr)
+
+            if 'format' not in kwargs:
+                kwargs['format'] = 'fits'
+
+            try:
+                data = Table.read(hdu, **kwargs)
+                dstobj.set_data(data)
+                dstobj.colnames = list(data.colnames)
+
+            except Exception as e:
+                self.logger.error("Error reading table from hdu: {0}".format(e),
+                                  exc_info=True)
 
         else:
             raise FITSError("I don't know how to read this HDU")
@@ -288,14 +340,13 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         return dstobj
 
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
-                  **kwargs):
-        inherit_primary_header = kwargs.pop('inherit_primary_header', False)
+                  save_primary_header=True, **kwargs):
         opener = self.get_factory()
         opener.open_file(filespec, memmap=memmap, **kwargs)
         try:
             return opener.get_hdu(
                 numhdu, dstobj=dstobj,
-                inherit_primary_header=inherit_primary_header)
+                save_primary_header=save_primary_header)
         finally:
             opener.close()
 
@@ -491,7 +542,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         self.hdu_info = []
         self.hdu_db = {}
 
-    def fromHDU(self, hdu, ahdr):
+    def copy_header(self, hdu, ahdr):
         header = hdu.read_header()
         for d in header.records():
             if len(d['name']) == 0:
@@ -509,54 +560,74 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
         return None
 
-    def load_hdu(self, hdu, dstobj=None, **kwargs):
+    def load_hdu(self, hdu, dstobj=None, fobj=None, naxispath=None,
+                 save_primary_header=True, **kwargs):
+        if fobj is None:
+            fobj = self.fits_f
+
+        # Set PRIMARY header
+        if save_primary_header and fobj is not None:
+            primary_hdr = AstroHeader()
+            self.copy_header(fobj[0], primary_hdr)
+        else:
+            primary_hdr = None
+
         typ = self.get_hdu_type(hdu)
 
         if typ == 'image':
             # <-- data is an image
             if dstobj is None:
                 dstobj = AstroImage(logger=self.logger)
+            else:
+                if not isinstance(dstobj, AstroImage):
+                    raise ValueError("dstobj needs to be a type of AstroImage")
+                dstobj.clear_metadata()
 
-            inherit_primary_header = (dstobj.inherit_primary_header or
-                                      kwargs.get('inherit_primary_header',
-                                                 False))
-            ahdr = AstroHeader()
-            if dstobj.save_primary_header or inherit_primary_header:
-                if self.fits_f is not None:
-                    primary_hdr = AstroHeader()
-                    if dstobj.save_primary_header:
-                        dstobj._primary_hdr = primary_hdr
-                    # load primary header
-                    self.fromHDU(self.fits_f[0], primary_hdr)
-
-                    if inherit_primary_header:
-                        ahdr.merge(primary_hdr)
-
-            self.fromHDU(hdu, ahdr)
-            metadata = dict(header=ahdr)
+            ahdr = dstobj.get_header()
+            self.copy_header(hdu, ahdr)
+            dstobj.set(primary_header=primary_hdr)
 
             data = hdu.read()
 
-            dstobj.load_data(data, metadata=metadata)
+            dstobj.setup_data(data, naxispath=naxispath)
+
+            # Try to make a wcs object on the header
+            wcs = getattr(dstobj, 'wcs', None)
+            if wcs is not None:
+                # NOTE: WCS packages don't know what to do with fitsio objects
+                wcs.load_header(ahdr.asdict(), fobj=None)
 
         elif typ == 'table':
             # <-- data is a table
-            raise FITSError(
-                "FITS tables are not yet readable using ginga/fitsio")
+            if dstobj is None:
+                dstobj = AstroTable(logger=self.logger)
+            else:
+                if not isinstance(dstobj, AstroTable):
+                    raise ValueError("dstobj needs to be a type of AstroTable")
+                dstobj.clear_metadata()
+
+            ahdr = dstobj.get_header()
+            self.copy_header(hdu, ahdr)
+            dstobj.set(primary_header=primary_hdr)
+
+            dstobj.kind = 'table-fitsio'
+
+            data = hdu.read()
+            dstobj.colnames = list(data.dtype.fields)
+            dstobj.set_data(data)
 
         dstobj.io = self
 
         return dstobj
 
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
-                  **kwargs):
-        inherit_primary_header = kwargs.pop('inherit_primary_header', False)
+                  save_primary_header=True, **kwargs):
         opener = self.get_factory()
         opener.open_file(filespec, memmap=memmap, **kwargs)
         try:
             return opener.get_hdu(
                 numhdu, dstobj=dstobj,
-                inherit_primary_header=inherit_primary_header)
+                save_primary_header=save_primary_header)
         finally:
             opener.close()
 

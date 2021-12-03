@@ -38,8 +38,7 @@ class AstroImage(BaseImage):
         cls.ioClass = klass
 
     def __init__(self, data_np=None, metadata=None, logger=None,
-                 name=None, wcsclass=None, ioclass=None,
-                 inherit_primary_header=False, save_primary_header=True):
+                 name=None, wcsclass=None, ioclass=None):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger, name=name)
@@ -61,14 +60,6 @@ class AstroImage(BaseImage):
                 ioclass = self.ioClass
 
         self.io = ioclass(self.logger)
-
-        self.inherit_primary_header = inherit_primary_header
-        self.save_primary_header = inherit_primary_header or save_primary_header
-        if self.save_primary_header:
-            # User wants to save/inherit from primary header--this will hold it
-            self._primary_hdr = AstroHeader()
-        else:
-            self._primary_hdr = None
 
         if metadata is not None:
             header = self.get_header()
@@ -105,43 +96,13 @@ class AstroImage(BaseImage):
 
         self.set_naxispath(naxispath)
 
-    def load_hdu(self, hdu, fobj=None, naxispath=None,
-                 inherit_primary_header=None):
+    def load_hdu(self, hdu, fobj=None, naxispath=None):
         """NOTE: this is for astropy.io.fits HDUs only."""
 
-        # this seems to be necessary now for some fits files...
-        try:
-            hdu.verify('fix')
+        if self.io is None:
+            raise ImageError("No IO loader defined")
 
-        except Exception as e:
-            # Let's hope for the best!
-            self.logger.warning("Problem verifying fits HDU: {}".format(e))
-
-        self.clear_metadata()
-
-        # collect HDU header
-        ahdr = self.get_header()
-        self._copy_hdu_header(hdu, ahdr)
-
-        # Set PRIMARY header
-        if inherit_primary_header is None:
-            inherit_primary_header = self.inherit_primary_header
-        else:  # This ensures get_header() is consistent
-            self.inherit_primary_header = inherit_primary_header
-
-        save_primary_header = (self.save_primary_header or
-                               inherit_primary_header)
-        if save_primary_header and (fobj is not None):
-            if self._primary_hdr is None:
-                self._primary_hdr = AstroHeader()
-
-            self._copy_hdu_header(fobj[0], self._primary_hdr)
-
-        self.setup_data(hdu.data, naxispath=naxispath)
-
-        # Try to make a wcs object on the header
-        if hasattr(self, 'wcs') and self.wcs is not None:
-            self.wcs.load_header(hdu.header, fobj=fobj)
+        self.io.load_hdu(hdu, fobj=fobj, naxispath=naxispath)
 
     def load_nddata(self, ndd, naxispath=None):
         """Load from an astropy.nddata.NDData object.
@@ -222,27 +183,19 @@ class AstroImage(BaseImage):
     def get_data_size(self):
         return self.get_size()
 
-    def get_header(self, create=True, include_primary_header=None):
+    def get_header(self, create=True, include_primary_header=False):
+
         try:
             # By convention, the fits header is stored in a dictionary
             # under the metadata keyword 'header'
             hdr = self.metadata['header']
 
-            if include_primary_header is None:
-                include_primary_header = self.inherit_primary_header
-
-            if include_primary_header and self._primary_hdr is not None:
+            primary_hdr = self.metadata.get('primary_header', None)
+            if include_primary_header and primary_hdr is not None:
                 # Inherit PRIMARY header for display but keep metadata intact
                 displayhdr = AstroHeader()
-                for key in hdr.keyorder:
-                    card = hdr.get_card(key)
-                    bnch = displayhdr.__setitem__(card.key, card.value)
-                    bnch.comment = card.comment
-                for key in self._primary_hdr.keyorder:
-                    if key not in hdr:
-                        card = self._primary_hdr.get_card(key)
-                        bnch = displayhdr.__setitem__(card.key, card.value)
-                        bnch.comment = card.comment
+                displayhdr.merge(hdr)
+                displayhdr.merge(primary_hdr)
             else:
                 # Normal, separate header
                 displayhdr = hdr
@@ -307,7 +260,8 @@ class AstroImage(BaseImage):
             self.wcs.load_header(header)
 
     def has_primary_header(self):
-        return self._primary_hdr is not None
+        primary_hdr = self.metadata.get('primary_header', None)
+        return primary_hdr is not None
 
     def clear_all(self):
         # clear metadata and data
@@ -357,16 +311,6 @@ class AstroImage(BaseImage):
 
         hdu = fits.PrimaryHDU(data=data, header=header)
         return hdu
-
-    def _copy_hdu_header(self, hdu, ahdr):
-        """Copy a FITS header from an astropy.io.fits.PrimaryHDU object
-        into a ginga.AstroImage.AstroHeader object.
-        """
-        header = hdu.header
-        for card in header.cards:
-            if len(card.keyword) == 0:
-                continue
-            ahdr.set_card(card.keyword, card.value, comment=card.comment)
 
     def astype(self, type_name):
         """Convert AstroImage object to some other kind of object.
