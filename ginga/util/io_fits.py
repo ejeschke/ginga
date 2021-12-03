@@ -56,8 +56,8 @@ def use(fitspkg, raise_err=True):
             return True
 
         elif raise_err:
-            raise("Error importing 'astropy.io.fits'; "
-                  "please check installation")
+            raise ImportError("Error importing 'astropy.io.fits'; "
+                              "please check installation")
 
         return False
 
@@ -68,8 +68,8 @@ def use(fitspkg, raise_err=True):
             return True
 
         elif raise_err:
-            raise("Error importing 'fitsio'; "
-                  "please check installation")
+            raise ImportError("Error importing 'fitsio'; "
+                              "please check installation")
 
         return False
 

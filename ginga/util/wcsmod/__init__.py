@@ -70,7 +70,9 @@ def use(wcspkg, raise_err=True):
         path = os.path.join(wcs_home, '%s.py' % (modname))
         try:
             my_import(modname, path)
-        except ImportError:
+        except ImportError as e:
+            if raise_err:
+                raise e
             return False
 
     if wcspkg in common.custom_wcs:

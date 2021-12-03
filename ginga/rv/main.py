@@ -421,7 +421,7 @@ class ReferenceViewer(object):
                 assert wcsmod.use(wcspkg) is True
         except Exception as e:
             logger.warning(
-                "failed to set WCS package preference: %s" % (str(e)))
+                "failed to set WCS package preference '{}': {}".format(wcspkg, e))
 
         # User wants to customize the FITS package?
         if options.fitspkg:
@@ -440,7 +440,7 @@ class ReferenceViewer(object):
 
         except Exception as e:
             logger.warning(
-                "failed to set FITS package preference: %s" % (str(e)))
+                "failed to set FITS package preference '{}': {}".format(fitspkg, e))
 
         # Check whether user specified deprecated --opencv option
         if options.opencv:
