@@ -102,7 +102,8 @@ class AstroImage(BaseImage):
         if self.io is None:
             raise ImageError("No IO loader defined")
 
-        self.io.load_hdu(hdu, fobj=fobj, naxispath=naxispath)
+        self.io.load_hdu(hdu, dstobj=self, fobj=fobj, naxispath=naxispath,
+                         save_primary_header=False)
 
     def load_nddata(self, ndd, naxispath=None):
         """Load from an astropy.nddata.NDData object.
