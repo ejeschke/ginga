@@ -406,6 +406,11 @@ class ImageViewBase(Callback.Callbacks):
         """Get the first two dimensions of Numpy array data.
         Data may have more dimensions, but they are not reported.
 
+        Parameter
+        ---------
+        data : ndarray
+            A numpy array with at least two dimensions
+
         Returns
         -------
         dims : tuple

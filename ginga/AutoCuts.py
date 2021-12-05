@@ -29,6 +29,7 @@ class AutoCutsError(Exception):
 
 
 class AutoCutsBase(object):
+    """Base class for auto cuts algorithms."""
 
     @classmethod
     def get_params_metadata(cls):
@@ -48,13 +49,38 @@ class AutoCutsBase(object):
         self.__dict__.update(param_dict)
 
     def get_algorithms(self):
+        """Return the list of autocuts algorithms.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        names: tuple of str
+            The names of the autocut algorithms
+        """
         return autocut_methods
 
-    def get_autocut_levels(self, image):
-        loval, hival = self.calc_cut_levels(image)
-        return loval, hival
-
     def get_crop(self, image, crop_radius=None):
+        """Get a cropped region of data from an image.
+
+        Parameters
+        ----------
+        image : subclass of `~ginga.BaseImage.BaseImage`
+            Image object from which the cut levels should be calculated
+
+        crop_radius : int (optional, default `None`)
+            The radius of a crop region to extract from the image.
+            If `None`, then the radius will default to the `crop_radius`
+            attribute.
+
+        Returns
+        -------
+        result : ndarray
+            The cropped data
+
+        """
         # Even with numpy, it's kind of slow for some of the autocut
         # methods on a large image, so in those cases we can optionally
         # take a crop of size (radius*2)x(radius*2) from the center of
@@ -68,6 +94,24 @@ class AutoCutsBase(object):
         return data
 
     def get_crop_data(self, data, crop_radius=None):
+        """Get a cropped region of data from a ndarray.
+
+        Parameters
+        ----------
+        data : ndarray
+            Image data from which the data should be cropped
+
+        crop_radius : int (optional, default `None`)
+            The radius of a crop region to extract from the image data.
+            If `None`, then the radius will default to the `crop_radius`
+            attribute.
+
+        Returns
+        -------
+        result : ndarray
+            The cropped data
+
+        """
         if crop_radius is None:
             crop_radius = self.crop_radius
 
@@ -77,7 +121,24 @@ class AutoCutsBase(object):
         return data
 
     def get_full(self, image, px_limit=None):
-        """Return the full data array from the passed image."""
+        """Get the full (or cropped) array of data from an image.
+
+        Parameters
+        ----------
+        image : subclass of `~ginga.BaseImage.BaseImage`
+            Image object from which the cut levels should be calculated
+
+        px_limit : int (optional, default `None`)
+            The limit for extracting the full image data.  If the number
+            of pixels in the data is larger than this value, a crop from
+            the data will be used instead.
+
+        Returns
+        -------
+        result : ndarray
+            The (possibly cropped) data
+
+        """
         wd, ht = image.get_size()
         num_px = wd * ht
 
@@ -90,7 +151,23 @@ class AutoCutsBase(object):
         return data
 
     def get_sample(self, image, num_points=None):
-        """Return a sample from the full data array of the passed image."""
+        """Return a sample from the full data array of the passed image.
+
+        Parameters
+        ----------
+        image : subclass of `~ginga.BaseImage.BaseImage`
+            Image object from which the cut levels should be calculated
+
+        num_points : int (optional, default `None`)
+            Specifies the number of points to sample.  If `None`, the number
+            pixels will be calculated to a "reasonable representative sample".
+
+        Returns
+        -------
+        result : ndarray
+            The sampled data
+
+        """
         wd, ht = image.get_size()
         total_points = wd * ht
         if num_points is None:
@@ -112,7 +189,23 @@ class AutoCutsBase(object):
         return cutout
 
     def get_sample_data(self, data, num_points=None):
-        """Return a sample from the full data array."""
+        """Return a sample from a data array.
+
+        Parameters
+        ----------
+        data : ndarray
+            Image data from which the data should be sampled
+
+        num_points : int (optional, default `None`)
+            Specifies the number of points to sample.  If `None`, the number
+            pixels will be calculated to a "reasonable representative sample".
+
+        Returns
+        -------
+        result : ndarray
+            The sampled data
+
+        """
         ht, wd = data.shape[:2]
         total_points = wd * ht
         if num_points is None:
@@ -133,20 +226,78 @@ class AutoCutsBase(object):
                                     xstep=xskip, ystep=yskip)
         return cutout
 
-    def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
+    def calc_cut_levels(self, image):
+        """Calculate the cut levels of an image according to the parameters.
+
+        Parameters
+        ----------
+        image : subclass of `~ginga.BaseImage.BaseImage`
+            Image object from which the cut levels should be calculated
+
+        Returns
+        -------
+        cut_levels : tuple of float (loval, hival)
+            The cut levels that were calculated
+        """
+        self.logger.warning("Subclass should override this abstract method!")
+
+    get_autocut_levels = calc_cut_levels
+
+    def calc_cut_levels_data(self, data_np):
+        """Calculate the cut levels of a ndarray according to the parameters.
+
+        Parameters
+        ----------
+        data_np : ndarray
+            A numpy array of data from which the cut levels should be
+            calculated
+
+        Returns
+        -------
+        cut_levels : tuple of float (loval, hival)
+            The cut levels that were calculated
+        """
+        self.logger.warning("Subclass should override this abstract method!")
+
+    def cut_levels(self, data_np, loval, hival, vmin=0.0, vmax=255.0):
+        """Apply the cut levels to data.
+
+        Parameters
+        ----------
+        data_np : ndarray
+            A numpy array of data to which the cut levels should be applied
+
+        loval : float
+            The low cut level
+
+        hival : float
+            The high cut level
+
+        vmin : float (optional, default 0.0)
+            The floor of the range which is the output of the cut levels
+
+        vmax : float (optional, default 255.0)
+            The ceiling of the range which is the output of the cut levels
+
+        Returns
+        -------
+        result : ndarray
+            The result of applying the cut levels to the input array
+
+        """
         loval, hival = float(loval), float(hival)
         # ensure hival >= loval
         hival = max(loval, hival)
         self.logger.debug("loval=%.2f hival=%.2f" % (loval, hival))
         delta = hival - loval
         if delta > 0.0:
-            f = (((data - loval) / delta) * vmax)
+            f = (((data_np - loval) / delta) * vmax)
             # NOTE: optimization using in-place outputs for speed
-            f.clip(0.0, vmax, out=f)
+            f.clip(vmin, vmax, out=f)
             return f
 
         # hival == loval, so thresholding operation
-        f = (data - loval).clip(0.0, vmax)
+        f = (data_np - loval).clip(vmin, vmax)
         f[f > 0.0] = vmax
         return f
 
@@ -176,17 +327,31 @@ class Clip(AutoCutsBase):
 
 
 class Minmax(AutoCutsBase):
+    """Calculate the cut levels as the minimum and maximum of the data.
+
+    The calculation is:
+        loval = min(sample_data)
+        hival = max(sample_data)
+
+    Parameters
+    ----------
+    logger : :py:class:`~logging.Logger`
+        Logger for tracing and debugging.
+
+    """
 
     def __init__(self, logger):
         super(Minmax, self).__init__(logger)
         self.kind = 'minmax'
 
     def calc_cut_levels(self, image):
+        """See subclass documentation."""
         loval, hival = image.get_minmax()
 
         return (float(loval), float(hival))
 
     def calc_cut_levels_data(self, data_np):
+        """See subclass documentation."""
         data = data_np[np.isfinite(data_np)]
         if data.size == 0:
             return (0, 0)
@@ -197,7 +362,37 @@ class Minmax(AutoCutsBase):
 
 
 class Histogram(AutoCutsBase):
+    """Calculate the cut levels based on a histogram analysis of the data.
 
+    Parameters
+    ----------
+    logger : :py:class:`~logging.Logger`
+        Logger for tracing and debugging.
+
+    sample : str (optional, 'crop', 'grid', or 'full', default: 'crop')
+        Specifies how to access the image for calculation:
+        - crop: crop an area from the middle of the image
+        - grid: sample data in a grid pattern across the image
+        - full: use the full image data
+
+    full_px_limit : int (optional, defaults to 1M)
+        Specifies the limit for using the full data if sample == 'full'.
+        If the number of pixels in the image is larger than this, then
+        the image will fall back to using a crop.
+
+    num_points : int (optional, defaults to None)
+        Specifies the number of points in the grid if sample == 'grid',
+        or the diameter of the crop, if sample == 'crop' (or 'full' and
+        number of pixels exceeds `full_px_limit`).  If None, the number
+        pixels will be calculated to a "reasonable representative sample".
+
+    pct : float (optional, range: 0.0 - 1.0, defaults to 0.999)
+        Specifies the percentage of the histogram bins to retain
+
+    numbins : int (optional, defaults to 2048)
+        Specifies the number of bins used in calculating the histogram
+
+    """
     @classmethod
     def get_params_metadata(cls):
         return [
@@ -235,8 +430,13 @@ class Histogram(AutoCutsBase):
         self.numbins = numbins
 
     def calc_cut_levels(self, image):
+        """See subclass documentation."""
         if self.sample == 'crop':
-            data = self.get_crop(image)
+            if self.num_points is None:
+                crop_radius = self.crop_radius
+            else:
+                crop_radius = int(self.num_points // 2)
+            data = self.get_crop(image, crop_radius=crop_radius)
         elif self.sample == 'grid':
             data = self.get_sample(image, num_points=self.num_points)
         else:
@@ -247,8 +447,13 @@ class Histogram(AutoCutsBase):
         return loval, hival
 
     def calc_cut_levels_data(self, data_np):
+        """See subclass documentation."""
         if self.sample == 'crop':
-            data = self.get_crop_data(data_np)
+            if self.num_points is None:
+                crop_radius = self.crop_radius
+            else:
+                crop_radius = int(self.num_points // 2)
+            data = self.get_crop_data(data_np, crop_radius=crop_radius)
         elif self.sample == 'grid':
             data = self.get_sample_data(data_np, num_points=self.num_points)
         else:
@@ -259,6 +464,7 @@ class Histogram(AutoCutsBase):
         return loval, hival
 
     def calc_histogram(self, data, pct=1.0, numbins=2048):
+        """Internal function used by this class."""
 
         self.logger.debug("Computing histogram, pct=%.4f numbins=%d" % (
             pct, numbins))
@@ -335,7 +541,44 @@ class Histogram(AutoCutsBase):
 
 
 class StdDev(AutoCutsBase):
+    """Calculate the cut levels based on a standard deviation analysis of
+    the data.
 
+    The calculation is:
+        loval = hensa_lo * sdev(sample_data) + mean(sample_data)
+        hival = hensa_hi * sdev(sample_data) + mean(sample_data)
+
+    Parameters
+    ----------
+    logger : :py:class:`~logging.Logger`
+        Logger for tracing and debugging.
+
+    sample : str (optional, 'crop', 'grid', or 'full', default: 'crop')
+        Specifies how to access the image for calculation:
+        - crop: crop an area from the middle of the image
+        - grid: sample data in a grid pattern across the image
+        - full: use the full image data
+
+    full_px_limit : int (optional, defaults to 1M)
+        Specifies the limit for using the full data if sample == 'full'.
+        If the number of pixels in the image is larger than this, then
+        the image will fall back to using a crop.
+
+    num_points : int (optional, defaults to None)
+        Specifies the number of points in the grid if sample == 'grid',
+        or the diameter of the crop, if sample == 'crop' (or 'full' and
+        number of pixels exceeds `full_px_limit`).  If None, the number
+        pixels will be calculated to a "reasonable representative sample".
+
+    hensa_lo : float (optional, defaults to -1.5)
+        Specifies the low cut multiplication factor to apply to the
+        standard deviation before adding the median (usually < 0)
+
+    hensa_hi : float (optional, defaults to 4.0)
+        Specifies the low cut multiplication factor to apply to the
+        standard deviation before adding the median (usually > 0)
+
+    """
     @classmethod
     def get_params_metadata(cls):
         return [
@@ -349,17 +592,17 @@ class StdDev(AutoCutsBase):
             Param(name='num_points', type=int,
                   default=None, allow_none=True,
                   description="Number of points to sample (for sample=grid); 'None' for calculated default"),
-            Param(name='hensa_lo', type=float, default=35.0,
-                  description="Low subtraction factor"),
-            Param(name='hensa_hi', type=float, default=90.0,
-                  description="High subtraction factor"),
+            Param(name='hensa_lo', type=float, default=-1.5,
+                  description="Low cut sdev multiplication factor"),
+            Param(name='hensa_hi', type=float, default=4.0,
+                  description="High cut sdev multiplication factor"),
         ]
 
     # NOTE: `usecrop` kwarg to be deprecated--accepted but not used
     # for backward compatibility with saved older settings
     def __init__(self, logger, usecrop=False, sample='grid',
                  full_px_limit=None, num_points=None,
-                 hensa_lo=35.0, hensa_hi=90.0):
+                 hensa_lo=-1.5, hensa_hi=4.0):
         super(StdDev, self).__init__(logger)
 
         self.kind = 'stddev'
@@ -372,8 +615,13 @@ class StdDev(AutoCutsBase):
         self.hensa_hi = hensa_hi
 
     def calc_cut_levels(self, image):
+        """See subclass documentation."""
         if self.sample == 'crop':
-            data = self.get_crop(image)
+            if self.num_points is None:
+                crop_radius = self.crop_radius
+            else:
+                crop_radius = int(self.num_points // 2)
+            data = self.get_crop(image, crop_radius=crop_radius)
         elif self.sample == 'grid':
             data = self.get_sample(image, num_points=self.num_points)
         else:
@@ -384,8 +632,13 @@ class StdDev(AutoCutsBase):
         return loval, hival
 
     def calc_cut_levels_data(self, data_np):
+        """See subclass documentation."""
         if self.sample == 'crop':
-            data = self.get_crop_data(data_np)
+            if self.num_points is None:
+                crop_radius = self.crop_radius
+            else:
+                crop_radius = int(self.num_points // 2)
+            data = self.get_crop(image, crop_radius=crop_radius)
         elif self.sample == 'grid':
             data = self.get_sample_data(data_np, num_points=self.num_points)
         else:
@@ -397,8 +650,8 @@ class StdDev(AutoCutsBase):
                                         hensa_hi=self.hensa_hi)
         return loval, hival
 
-    def calc_stddev(self, data, hensa_lo=35.0, hensa_hi=90.0):
-        # This is the method used in the old SOSS fits viewer
+    def calc_stddev(self, data, hensa_lo=-1.5, hensa_hi=4.0):
+        """Internal function used by this class."""
         data = data[np.isfinite(data)]
         if data.size == 0:
             return (0, 0)
@@ -406,17 +659,34 @@ class StdDev(AutoCutsBase):
         sdev = np.std(data)
         self.logger.debug(f"mean={mean} std={sdev}")
 
-        hensa_lo_factor = (hensa_lo - 50.0) / 10.0
-        hensa_hi_factor = (hensa_hi - 50.0) / 10.0
-
-        loval = hensa_lo_factor * sdev + mean
-        hival = hensa_hi_factor * sdev + mean
+        loval = hensa_lo * sdev + mean
+        hival = hensa_hi * sdev + mean
 
         return loval, hival
 
 
 class MedianFilter(AutoCutsBase):
+    """Calculate the cut levels based on a median filtering analysis of
+    the data.
 
+    The calculation is:
+        out = median_filter(sample_data, size=length)
+        loval, hival = min(out), max(out)
+
+    Parameters
+    ----------
+    logger : :py:class:`~logging.Logger`
+        Logger for tracing and debugging.
+
+    num_points : int (optional, defaults to None)
+        Specifies the number of points to sample making up the grid.
+        If None, the number of points will be calculated to a
+        "reasonable representative sample".
+
+    length : int (optional, defaults to 5)
+        Specifies the size of the median filter to apply to the data
+
+    """
     @classmethod
     def get_params_metadata(cls):
         return [
@@ -435,18 +705,21 @@ class MedianFilter(AutoCutsBase):
         self.length = length
 
     def calc_cut_levels(self, image):
+        """See subclass documentation."""
         data = self.get_sample(image, num_points=self.num_points)
 
         loval, hival = self.calc_medianfilter(data, length=self.length)
         return loval, hival
 
     def calc_cut_levels_data(self, data_np):
+        """See subclass documentation."""
         data = self.get_sample_data(data_np, num_points=self.num_points)
 
         loval, hival = self.calc_medianfilter(data, length=self.length)
         return loval, hival
 
     def calc_medianfilter(self, data, length=5):
+        """Internal function used by this class."""
 
         assert len(data.shape) >= 2, \
             AutoCutsError("input data should be 2D or greater")
@@ -461,10 +734,28 @@ class MedianFilter(AutoCutsBase):
 
 
 class ZScale(AutoCutsBase):
-    """
-    Based on STScI's numdisplay implementation of IRAF's ZScale.
-    """
+    """Calculate the cut levels based on a median filtering analysis of
+    the data.
 
+    Based on STScI's numdisplay implementation of IRAF's ZScale.
+
+    The calculation is:
+        local, hival = zscale(sample_data, contrast)
+
+    Parameters
+    ----------
+    logger : :py:class:`~logging.Logger`
+        Logger for tracing and debugging.
+
+    contrast : float (optional, range: 0.0 - 1.0, defaults to 0.25)
+        Specifies the contrast parameter to use in the zscale calculation
+
+    num_points : int (optional, defaults to None)
+        Specifies the number of points to sample making up the grid.
+        If None, the number of points will be calculated to a
+        "reasonable representative sample".
+
+    """
     @classmethod
     def get_params_metadata(cls):
         return [
@@ -484,6 +775,7 @@ class ZScale(AutoCutsBase):
         self.num_points = num_points
 
     def calc_cut_levels(self, image):
+        """See subclass documentation."""
         data = self.get_sample(image, num_points=self.num_points)
 
         loval, hival = self.calc_zscale(data, contrast=self.contrast,
@@ -491,6 +783,7 @@ class ZScale(AutoCutsBase):
         return loval, hival
 
     def calc_cut_levels_data(self, data_np):
+        """See subclass documentation."""
         cutout = self.get_sample_data(data_np)
 
         loval, hival = self.calc_zscale(cutout, contrast=self.contrast,
@@ -498,6 +791,7 @@ class ZScale(AutoCutsBase):
         return loval, hival
 
     def calc_zscale(self, data, contrast=0.25, num_points=1000):
+        """Internal function used by this class."""
         # NOTE: num_per_row is ignored in this implementation
 
         assert len(data.shape) >= 2, \
@@ -535,6 +829,19 @@ autocuts_table = {
 
 
 def get_autocuts(name):
+    """Return the class object used to implement an autocuts algorithm.
+
+    Parameters
+    ----------
+    name : str
+        The name of the algorithm
+
+    Returns
+    -------
+    klass : subclass of `~ginga.AutoCuts.AutoCutsBase`
+            A class implementing the auto cut levels algorithm
+
+    """
     if name not in autocut_methods:
         raise AutoCutsError("Method '%s' is not supported" % (name))
 
@@ -542,8 +849,14 @@ def get_autocuts(name):
 
 
 def get_autocuts_names():
+    """Return the list of algorithm names for the available autocuts methods.
+
+    Returns
+    -------
+    names : list of str
+        A list of the known auto cut levels algorithm names
+
+    """
     l = list(autocuts_table.keys())
     l.sort()
     return l
-
-# END
