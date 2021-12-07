@@ -410,6 +410,12 @@ class Button(WidgetBase):
 
         self.enable_callback('activated')
 
+    def set_text(self, text):
+        self.widget.set_label(text)
+
+    def get_text(self):
+        return self.widget.get_label()
+
     def _cb_redirect(self, *args):
         self.make_callback('activated')
 
@@ -619,12 +625,20 @@ class ScrollBar(WidgetBase):
             self.widget = Gtk.HScrollbar()
         else:
             self.widget = Gtk.VScrollbar()
+        self.widget.set_range(0.0, 100.0)
         self.widget.connect('value-changed', self._cb_redirect)
 
         self.enable_callback('activated')
 
+    def set_value(self, value):
+        flt_val = value * 100.0
+        self.widget.set_value(flt_val)
+
+    def get_value(self):
+        return self.widget.get_value() / 100.0
+
     def _cb_redirect(self, range):
-        val = range.get_value()
+        val = range.get_value() / 100.0
         self.make_callback('activated', val)
 
 
@@ -2456,6 +2470,8 @@ def make_widget(title, wtype):
         w = ProgressBar()
     elif wtype == 'menubar':
         w = Menubar()
+    elif wtype == 'dial':
+        w = Dial()
     else:
         raise ValueError("Bad wtype=%s" % wtype)
     return w

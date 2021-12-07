@@ -27,7 +27,14 @@ class FitsViewer(object):
 
         self.app = Widgets.Application(logger=logger)
         self.app.add_callback('shutdown', self.quit)
-        self.top = self.app.make_window("Ginga example2")
+        if hasattr(Widgets, 'Page'):
+            self.page = Widgets.Page("Ginga example2")
+            self.app.add_window(self.page)
+            self.top = Widgets.TopLevel("Ginga example2")
+            self.page.add_dialog(self.top)
+        else:
+            self.top = Widgets.TopLevel("Ginga example2")
+            self.app.add_window(self.top)
         self.top.add_callback('close', self.closed)
 
         vbox = Widgets.VBox()
@@ -307,15 +314,9 @@ if __name__ == "__main__":
 
     argprs = ArgumentParser()
 
-    argprs.add_argument("--debug", dest="debug", default=False,
-                        action="store_true",
-                        help="Enter the pdb debugger on main()")
     argprs.add_argument("-t", "--toolkit", dest="toolkit", metavar="NAME",
                         default='qt',
                         help="Choose GUI toolkit (gtk|qt)")
-    argprs.add_argument("--profile", dest="profile", action="store_true",
-                        default=False,
-                        help="Run the profiler on main()")
     argprs.add_argument("-r", "--renderer", dest="renderer", metavar="NAME",
                         default=None,
                         help="Choose renderer (pil|agg|opencv|cairo|qt)")
@@ -323,20 +324,4 @@ if __name__ == "__main__":
 
     (options, args) = argprs.parse_known_args(sys.argv[1:])
 
-    # Are we debugging this?
-    if options.debug:
-        import pdb
-
-        pdb.run('main(options, args)')
-
-    # Are we profiling this?
-    elif options.profile:
-        import profile
-
-        print(("%s profile:" % sys.argv[0]))
-        profile.run('main(options, args)')
-
-    else:
-        main(options, args)
-
-# END
+    main(options, args)
