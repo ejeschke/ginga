@@ -18,6 +18,8 @@ Ver 3.3.0 (unreleased)
   the port
 - Fixed a bug where using the fitsio loader the primary header was not
   set correctly in some instances
+- Additions to the "pg" backend to add functionality already in the Qt
+  and Gtk backends
 
 Ver 3.2.0 (2021-06-07)
 ======================

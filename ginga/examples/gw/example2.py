@@ -282,13 +282,6 @@ def main(options, args):
     # decide our toolkit, then import
     ginga_toolkit.use(options.toolkit)
 
-    if options.use_opencl:
-        from ginga import trcalc
-        try:
-            trcalc.use('opencl')
-        except Exception as e:
-            logger.warning("Error using OpenCL: %s" % str(e))
-
     rw = 'opengl' if options.renderer == 'opengl' else 'widget'
     viewer = FitsViewer(logger, render=rw)
 
@@ -321,18 +314,9 @@ if __name__ == "__main__":
 
     argprs = ArgumentParser()
 
-    argprs.add_argument("--debug", dest="debug", default=False,
-                        action="store_true",
-                        help="Enter the pdb debugger on main()")
     argprs.add_argument("-t", "--toolkit", dest="toolkit", metavar="NAME",
                         default='qt',
                         help="Choose GUI toolkit (gtk|qt)")
-    argprs.add_argument("--opencl", dest="use_opencl", default=False,
-                        action="store_true",
-                        help="Use OpenCL acceleration")
-    argprs.add_argument("--profile", dest="profile", action="store_true",
-                        default=False,
-                        help="Run the profiler on main()")
     argprs.add_argument("-r", "--renderer", dest="renderer", metavar="NAME",
                         default=None,
                         help="Choose renderer (pil|agg|opencv|cairo|qt)")
@@ -340,20 +324,4 @@ if __name__ == "__main__":
 
     (options, args) = argprs.parse_known_args(sys.argv[1:])
 
-    # Are we debugging this?
-    if options.debug:
-        import pdb
-
-        pdb.run('main(options, args)')
-
-    # Are we profiling this?
-    elif options.profile:
-        import profile
-
-        print(("%s profile:" % sys.argv[0]))
-        profile.run('main(options, args)')
-
-    else:
-        main(options, args)
-
-# END
+    main(options, args)
