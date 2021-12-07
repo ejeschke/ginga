@@ -638,7 +638,7 @@ class StdDev(AutoCutsBase):
                 crop_radius = self.crop_radius
             else:
                 crop_radius = int(self.num_points // 2)
-            data = self.get_crop(image, crop_radius=crop_radius)
+            data = self.get_crop_data(data_np, crop_radius=crop_radius)
         elif self.sample == 'grid':
             data = self.get_sample_data(data_np, num_points=self.num_points)
         else:
