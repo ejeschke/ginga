@@ -251,7 +251,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         return None
 
     def load_hdu(self, hdu, dstobj=None, fobj=None, naxispath=None,
-                 save_primary_header=True, **kwargs):
+                 save_primary_header=False, **kwargs):
         if fobj is None:
             fobj = self.fits_f
 
@@ -341,7 +341,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         return dstobj
 
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
-                  save_primary_header=True, **kwargs):
+                  save_primary_header=False, **kwargs):
         opener = self.get_factory()
         opener.open_file(filespec, memmap=memmap, **kwargs)
         try:

@@ -93,8 +93,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                               numImages=10,
                               # Offset to add to numpy-based coords
                               pixel_coords_offset=1.0,
-                              # inherit from primary header
-                              inherit_primary_header=False,
+                              # save primary header when loading files
+                              inherit_primary_header=True,
                               cursor_interval=0.050,
                               download_folder=None,
                               save_layout=False,
@@ -572,12 +572,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         -------
         data_obj : data object named by filespec
         """
-        inherit_prihdr = self.settings.get('inherit_primary_header',
-                                           False)
+        save_prihdr = self.settings.get('inherit_primary_header', False)
         try:
             data_obj = loader.load_data(filespec, logger=self.logger,
                                         idx=idx,
-                                        inherit_primary_header=inherit_prihdr)
+                                        save_primary_header=save_prihdr)
         except Exception as e:
             errmsg = "Failed to load file '%s': %s" % (
                 filespec, str(e))
@@ -789,9 +788,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         def _open_file(opener_class):
             # kwd args to pass to opener
             kwargs = dict()
-            inherit_prihdr = self.settings.get('inherit_primary_header',
-                                               False)
-            kwargs['inherit_primary_header'] = inherit_prihdr
+            save_prihdr = self.settings.get('inherit_primary_header',
+                                            False)
+            kwargs['save_primary_header'] = save_prihdr
 
             # open the file and load the items named by the index
             opener = opener_class(self.logger)
