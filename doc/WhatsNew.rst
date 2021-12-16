@@ -20,6 +20,7 @@ Ver 3.3.0 (unreleased)
   set correctly in some instances
 - Additions to the "pg" backend to add functionality already in the Qt
   and Gtk backends
+- Fixed a bug with writing FITS files when using fitsio wrapper
 
 Ver 3.2.0 (2021-06-07)
 ======================

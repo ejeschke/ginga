@@ -698,22 +698,18 @@ class FitsioFileHandler(BaseFitsFileHandler):
         return dstobj
 
     def create_fits(self, data, header):
-        fits_f = pyfits.HDUList()
-        hdu = pyfits.PrimaryHDU()
-        hdu.data = data
-
-        for kwd in header.keys():
-            card = header.get_card(kwd)
-            hdu.header.update(card.key, card.value, comment=card.comment)
-
-        fits_f.append(hdu)
-        return fits_f
+        raise NotImplementedError("This function is not implemented for the 'fitsio' wrapper")
 
     def write_fits(self, path, data, header):
         fits_f = fitsio.FITS(path, 'rw')
 
-        fits_f = self.create_fits(data, header)
-        fits_f.writeto(path, output_verify='fix')
+        hlist = []
+        for key in header.keys():
+            card = header.get_card(key)
+            hlist.append(dict(name=key, value=card.value,
+                              comment=card.comment))
+
+        fits_f.write(data, header=hlist)
         fits_f.close()
 
     def save_as_file(self, filepath, data, header, **kwargs):
