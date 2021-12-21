@@ -21,6 +21,8 @@ Ver 3.3.0 (unreleased)
 - Additions to the "pg" backend to add functionality already in the Qt
   and Gtk backends
 - Fixed a bug with writing FITS files when using fitsio wrapper
+- Fixed a bug where creating a new workspace did not set the correct
+  workspace type that was selected in the drop down menu
 
 Ver 3.2.0 (2021-06-07)
 ======================

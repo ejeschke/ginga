@@ -1089,7 +1089,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             # make up a channel name
             chpfx = self.settings.get('channel_prefix', "Image")
             chpfx = ws.extdata.get('chpfx', chpfx)
-            chname = self.make_channel_name(chpfx)
+            chname = chpfx
+
+        if self.has_channel(chname):
+            chname = self.make_channel_name(chname)
 
         try:
             self.get_channel(chname)
@@ -2554,7 +2557,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             entry = Widgets.TextEntry()
             entry.set_length(8)
-            entry.set_tooltip("Name for a new channel")
+            chpfx = self.settings.get('channel_prefix', "Image")
+            entry.set_text(chpfx)
+            entry.set_tooltip("Name or prefix for a new channel")
             ws.extdata.w_chname = entry
             btn = tb.add_widget(entry)
 
@@ -2576,7 +2581,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def add_ws_cb(self, w, rsp, b, names):
         try:
             wsname = str(b.workspace_name.get_text())
-            idx = b.workspace_type.get_index()
+            wstype = b.workspace_type.get_text().lower()
             if rsp != 1:
                 self.ds.remove_dialog(w)
                 return
@@ -2592,10 +2597,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             except KeyError:
                 pass
 
-            d = {0: 'grid', 1: 'tabs', 2: 'mdi', 3: 'stack'}
-            wstype = d[idx]
-            idx = b.workspace.get_index()
-            in_space = names[idx]
+            in_space = b.workspace.get_text()
 
             chpfx = b.channel_prefix.get_text().strip()
             num = int(b.num_channels.get_value())
