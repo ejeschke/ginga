@@ -6,12 +6,14 @@ General Operation
 
 This chapter describes the general manipulations of images using Ginga.
 
-For the most part these manipulations apply both to Ginga ImageView classes that can be embedded in a Python application, as well as to the reference viewer
-distributed with Ginga.
+For the most part these manipulations apply both to Ginga ImageView
+classes that can be embedded in a Python application, as well as to the
+reference viewer distributed with Ginga.
 
 .. note::
 
-  In cases where we are referring to something that is only available in the reference viewer these will be prefixed by the notation ``[RV]``.
+  In cases where we are referring to something that is only available in
+  the reference viewer these will be prefixed by the notation ``[RV]``. 
 
 ----
 
@@ -19,7 +21,8 @@ distributed with Ginga.
 Keyboard and mouse operations
 =============================
 
-In this documentation we will use the following terms to describe the operations performed with the mouse:
+In this documentation we will use the following terms to describe the
+operations performed with the mouse: 
 
 * *Click* or *Left-click* means to click on an item with
   the left mouse button;
@@ -51,13 +54,15 @@ drag operation).
 
 .. note::
 
-  We describe the standard key and mouse bindings here. However these bindings can be changed completely by the user. For more information on changing the bindings, see Section :ref:`sec-bindings`.
+  We describe the standard key and mouse bindings here. However these
+  bindings can be changed completely by the user. For more information
+  on changing the bindings, see Section :ref:`sec-bindings`. 
 
 ----
 
-=========================
-Loading a FITS image file
-=========================
+================================
+Loading a FITS or RGB image file
+================================
 
 There are several ways to load a file into Ginga:
 
@@ -68,10 +73,12 @@ There are several ways to load a file into Ginga:
 * ``[RV]`` Another way is to invoke the ``FBrowser`` plugin, which opens in the
   *Dialogs* tab. The plugin pane shows file and folder contents and allows
   navigation up and down the filesystem hierarchy by double-clicking on
-  folder names. Simply navigate to the location of the FITS file and
+  folder names. Simply navigate to the location of the file and
   double-click on the file name to load it, or drag it onto the image pane.
 
-* ``[RV]`` Use the *Load Image* entry from the `File` menu on the main menu bar at the top of the window. This opens a standard file dialog popup window where you can navigate to the file you wish to load.
+* ``[RV]`` Use the *Load Image* entry from the `File` menu on the main
+  menu bar at the top of the window. This opens a standard file dialog
+  popup window where you can navigate to the file you wish to load. 
 
 .. _zooming-and-panning:
 
