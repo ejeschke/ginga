@@ -7,6 +7,7 @@ from astropy import coordinates
 from astropy import units as u
 from astropy import wcs
 from astropy.io import fits
+from astropy.wcs import NoConvergence
 
 from ginga.util.wcsmod import common
 
@@ -127,6 +128,18 @@ class AstropyWCS(common.BaseWCS):
 
         try:
             xy = self.wcs.world_to_pixel_values(*args)[:2]
+        except NoConvergence:  # Fall back to pre-APE 14 calculations
+            if coords == 'data':
+                origin = 0
+            else:
+                origin = 1
+            try:
+                pix = self.wcs.wcs_world2pix(np.array([args], np.float_), origin)
+            except Exception as e:
+                self.logger.error(
+                    "Error calculating radectopix: {}".format(str(e)))
+                raise common.WCSError(e)
+            xy = float(pix[0, 0]), float(pix[0, 1])
         except Exception as e:
             self.logger.error(
                 "Error calculating radectopix: {}".format(str(e)))
