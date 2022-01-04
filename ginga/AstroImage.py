@@ -107,6 +107,7 @@ class AstroImage(BaseImage):
 
     def load_hdu(self, hdu, fobj=None, naxispath=None,
                  inherit_primary_header=None):
+        """NOTE: this is for astropy.io.fits HDUs only."""
 
         # this seems to be necessary now for some fits files...
         try:

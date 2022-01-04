@@ -163,7 +163,7 @@ def make_plot(logger, dims, sources, y_rng, y_acc=np.mean,
         psrc = gplots.XYPlot(name=src.name, color=colors[i % len(colors)],
                              x_acc=np.mean, y_acc=y_acc,
                              linewidth=2.0, coord='data')
-        buf = np.zeros((src.num_pts, 2), dtype=np.float)
+        buf = np.zeros((src.num_pts, 2), dtype=float)
         dsrc = dsp.XYDataSource(buf, none_for_empty=True, overwrite=True)
         dsrc.plot = psrc
         src.init_points(dsrc)

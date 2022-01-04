@@ -263,7 +263,7 @@ class CanvasRenderer(render.StandardPipelineRenderer):
         in the pixel space.
         *** internal method-- do not use ***
         """
-        self.logger.debug("redraw surface=%s" % (self.surface))
+        self.logger.debug("redraw surface")
         if self.surface is None:
             return
         self.logger.debug("drawing to surface")

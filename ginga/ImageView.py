@@ -1788,8 +1788,9 @@ class ImageViewBase(Callback.Callbacks):
             self.logger.warning("Error in scaling: %s" % (str(e)))
             return
 
-        self.t_.set(scale=(scale_x, scale_y))
-        self._reset_bbox()
+        with self.suppress_redraw:
+            self.t_.set(scale=(scale_x, scale_y))
+            self._reset_bbox()
 
         # If user specified "override" or "once" for auto zoom, then turn off
         # auto zoom now that they have set the zoom manually
