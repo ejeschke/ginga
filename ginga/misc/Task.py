@@ -7,7 +7,6 @@
 import sys
 import time
 import threading
-import traceback
 
 import _thread as thread
 import queue as Queue
@@ -342,15 +341,7 @@ class FuncTask(Task):
         except Exception as e:
             if self.logger:
                 self.logger.error("Task '%s' terminated with exception: %s" %
-                                  (str(self), str(e)))
-                try:
-                    (type, value, tb) = sys.exc_info()
-                    self.logger.error("Traceback:\n%s" %
-                                      "".join(traceback.format_tb(tb)))
-
-                    tb = None
-                except Exception:
-                    self.logger.error("Traceback information unavailable.")
+                                  (str(self), str(e)), exc_info=True)
             self.done(e)
 
 
@@ -775,20 +766,7 @@ class QueueTaskset(Task):
                                           (str(task), str(res))))
                 except Exception as e:
                     self.logger.error("Task '%s' terminated with exception: %s" %
-                                      (str(task), str(e)))
-                    try:
-                        (type, value, tb) = sys.exc_info()
-                        self.logger.debug("Traceback:\n%s" %
-                                          "".join(traceback.format_tb(tb)))
-
-                        # NOTE: to avoid creating a cycle that might cause
-                        # problems for GC--see Python library doc for sys
-                        # module
-                        tb = None
-
-                    except Exception as e:
-                        self.logger.debug("Traceback information unavailable.")
-
+                                      (str(task), str(e)), exc_info=True)
                     # If task raised exception then it didn't call done,
                     task.done(e, noraise=True)
 
@@ -886,20 +864,8 @@ class WorkerThread(object):
 
             except Exception as e:
                 self.logger.error("Task '%s' raised exception: %s" %
-                                  (str(task), str(e)))
+                                  (str(task), str(e)), exc_info=True)
                 res = e
-                try:
-                    (type, value, tb) = sys.exc_info()
-                    self.logger.debug("Traceback:\n%s" %
-                                      "".join(traceback.format_tb(tb)))
-
-                    # NOTE: to avoid creating a cycle that might cause
-                    # problems for GC--see Python library doc for sys
-                    # module
-                    tb = None
-
-                except Exception as e:
-                    self.logger.debug("Traceback information unavailable.")
 
         finally:
             self.logger.debug("done executing task '%s'" % str(task))

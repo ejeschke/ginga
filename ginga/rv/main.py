@@ -683,8 +683,7 @@ class ReferenceViewer(object):
                 # if there is a network component, start it
                 if hasattr(ginga_shell, 'start'):
                     logger.info("starting network interface...")
-                    task = Task.FuncTask2(ginga_shell.start)
-                    thread_pool.addTask(task)
+                    ginga_shell.start()
 
                 # Main loop to handle GUI events
                 logger.info("entering mainloop...")

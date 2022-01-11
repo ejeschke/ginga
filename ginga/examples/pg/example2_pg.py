@@ -292,7 +292,7 @@ def main(options, args):
     #window.raise_()
 
     try:
-        app.start()
+        app.mainloop()
 
     except KeyboardInterrupt:
         logger.info("Terminating viewer...")
