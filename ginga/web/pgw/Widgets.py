@@ -8,6 +8,7 @@ import os.path
 import threading
 import time
 import json
+import asyncio
 from functools import reduce
 
 from ginga.misc import Callback, Bunch, Settings, LineHistory
@@ -3186,6 +3187,7 @@ class Application(Callback.Callbacks):
 
         self._timer_lock = threading.RLock()
         self._timers = []
+        self.t_ioloop = None
 
         self.host = self.settings.get('host', 'localhost')
         self.port = self.settings.get('port', 9909)
@@ -3207,7 +3209,11 @@ class Application(Callback.Callbacks):
         return (self.screen_wd, self.screen_ht)
 
     def process_events(self):
-        pass
+        if self.t_ioloop is None:
+            raise Exception("No event loop was started for this thread")
+
+        tasks = asyncio.all_tasks(self.t_ioloop)
+        self.t_ioloop.run_until_complete(asyncio.gather(*tasks))
 
     def process_end(self):
         pass
@@ -3330,7 +3336,6 @@ class Application(Callback.Callbacks):
     def start(self, no_ioloop=False):
 
         import tornado.web
-        import tornado.ioloop
         from ginga.web.pgw import PgHelp, js
 
         js_path = os.path.dirname(js.__file__)
@@ -3348,15 +3353,23 @@ class Application(Callback.Callbacks):
              dict(name='ApplicationSocketInterface', app=self)),
         ], app=self, logger=self.logger)
 
+        self.t_ioloop = None
+        try:
+            # NOTE: tornado now uses the asyncio event loop
+            self.t_ioloop = asyncio.get_running_loop()
+
+        except RuntimeError as ex:
+            if no_ioloop:
+                raise ex
+
+            # TODO: really just want to check for this exception:
+            #  "There is no current event loop in thread ..."
+            self.t_ioloop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.t_ioloop)
+
         self.server.listen(self.port, self.host)
 
         self.logger.info("ginga web now running at " + self.base_url)
-
-        if no_ioloop:
-            self.t_ioloop = None
-        else:
-            self.t_ioloop = tornado.ioloop.IOLoop.instance()
-            self.t_ioloop.start()
 
     def stop(self):
         # how to stop tornado server?
@@ -3367,6 +3380,12 @@ class Application(Callback.Callbacks):
 
     def mainloop(self, no_ioloop=False):
         self.start(no_ioloop=no_ioloop)
+
+        if self.t_ioloop is None:
+            raise Exception("No event loop was started for this thread")
+
+        while not self.t_ioloop.is_closed():
+            self.t_ioloop.run_forever()
 
     def quit(self):
         self.stop()

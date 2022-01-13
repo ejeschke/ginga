@@ -23,6 +23,7 @@ Ver 3.3.0 (unreleased)
 - Fixed a bug with writing FITS files when using fitsio wrapper
 - Fixed a bug where creating a new workspace did not set the correct
   workspace type that was selected in the drop down menu
+- Updated pg widgets web backend due to changes to Tornado asyncio handling
 
 Ver 3.2.0 (2021-06-07)
 ======================

@@ -23,13 +23,13 @@ import sys
 import os
 import logging
 import threading
+import asyncio
 
 import tornado.web
-import tornado.ioloop
 
 from ginga import AstroImage
 from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.misc import log, Task, Bunch
+from ginga.misc import log, Bunch
 from ginga.Bindings import ImageViewBindings
 from ginga.misc.Settings import SettingGroup
 from ginga.util.paths import ginga_home
@@ -240,24 +240,19 @@ class ViewerFactory(object):
     The most important method of interest is get_viewer().
     """
 
-    def __init__(self, logger, app, thread_pool):
+    def __init__(self, logger, app):
         """
         Parameters
         ----------
         logger : python compatible logger
             a logging-module compatible logger object
         app : ginga pgw web application object
-        thread_pool : a ginga thread pool
         """
         self.logger = logger
         self.app = app
-        self.thread_pool = thread_pool
         self.dc = get_canvas_types()
         # dict of viewers
         self.viewers = {}
-
-    def get_threadpool(self):
-        return self.thread_pool
 
     def make_viewer(self, window, viewer_class=None,
                     width=512, height=512):
@@ -388,7 +383,7 @@ class FileHandler(tornado.web.RequestHandler):
 
 class WebServer(object):
 
-    def __init__(self, app, thread_pool, factory,
+    def __init__(self, app, factory,
                  host='localhost', port=9909, ev_quit=None,
                  viewer_class=None):
 
@@ -396,7 +391,6 @@ class WebServer(object):
         self.port = port
         self.app = app
         self.logger = app.logger
-        self.thread_pool = thread_pool
         self.factory = factory
         if ev_quit is None:
             ev_quit = threading.Event()
@@ -407,7 +401,6 @@ class WebServer(object):
         self.http_server = None
 
     def start(self, use_thread=True, no_ioloop=False):
-        self.thread_pool.startall()
 
         js_path = os.path.dirname(js.__file__)
 
@@ -427,19 +420,19 @@ class WebServer(object):
         if no_ioloop:
             self.t_ioloop = None
         else:
-            self.t_ioloop = tornado.ioloop.IOLoop.instance()
-            if use_thread:
-                task = Task.FuncTask2(self.t_ioloop.start)
-                self.thread_pool.addTask(task)
-            else:
-                self.t_ioloop.start()
+            try:
+                # NOTE: tornado now uses the asyncio event loop
+                self.t_ioloop = asyncio.get_running_loop()
+
+            except RuntimeError as ex:
+                self.t_ioloop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.t_ioloop)
 
     def stop(self):
         # how to stop tornado server?
         if self.t_ioloop is not None:
             self.t_ioloop.stop()
 
-        self.thread_pool.stopall()
         self.ev_quit.set()
         # stop and dereference the tornado server
         if self.http_server is not None:
@@ -470,16 +463,13 @@ def make_server(logger=None, basedir='.', numthreads=5,
     if use_opencv is not None:
         logger.warning("use_opencv parameter is deprecated, OpenCv will be used if installed")
 
-    thread_pool = Task.ThreadPool(numthreads, logger,
-                                  ev_quit=ev_quit)
-
     base_url = "http://%s:%d/app" % (host, port)
     app = Widgets.Application(logger=logger, base_url=base_url,
                               host=host, port=port)
 
-    factory = ViewerFactory(logger, app, thread_pool)
+    factory = ViewerFactory(logger, app)
 
-    server = WebServer(app, thread_pool, factory,
+    server = WebServer(app, factory,
                        host=host, port=port, viewer_class=viewer_class)
 
     return server
