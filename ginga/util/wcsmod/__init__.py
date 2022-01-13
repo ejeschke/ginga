@@ -40,6 +40,8 @@ from ginga.misc.ModuleManager import my_import
 
 from . import common
 
+__all__ = ['get_wcs_class']
+
 # Module variables that get configured at module load time
 # or when use() is called
 wcs_configured = False
