@@ -8,7 +8,6 @@ import sys
 import time
 import threading
 
-import _thread as thread
 import queue as Queue
 
 # NOTE: See http://bugs.python.org/issue7946
@@ -447,111 +446,14 @@ class SequentialTaskset(Task):
         self.tasklist.append(task)
 
 
-class oldConcurrentAndTaskset(Task):
+class ConcurrentAndTaskset(Task):
     """Compound task that runs a set of tasks concurrently, and does not
     return until they all terminate.
     """
 
     def __init__(self, taskseq):
 
-        super(oldConcurrentAndTaskset, self).__init__()
-
-        self.taskseq = taskseq
-        self.ev_intr = threading.Event()
-        # Used to synchronize compound task termination
-        self.regcond = threading.Condition()
-
-    def execute(self):
-        """Run all child tasks concurrently in separate threads.
-        Return 0 after all child tasks have completed execution.
-        """
-        self.count = 0
-        self.taskset = []
-        self.results = {}
-        self.totaltime = time.time()
-
-        # Register termination callbacks for all my child tasks.
-        for task in list(self.taskseq):
-            self.taskset.append(task)
-            task.add_callback('resolved', self.child_done, self.count)
-            self.count += 1
-
-        self.numtasks = self.count
-
-        # Now start each child task.
-        with self.regcond:
-            for task in list(self.taskset):
-                task.initialize(self)
-
-                task.start()
-
-            # Account for time needed to start subtasks
-            self.totaltime = time.time() - self.totaltime
-
-            # Now give up the critical section and wait for last child
-            # task to terminate.
-            while self.count > 0:
-                self.regcond.wait()
-
-        # Scan results for errors (exceptions) and raise the first one we find
-        for key in self.results.keys():
-            value = self.results[key]
-            if isinstance(value, Exception):
-                (count, task) = key
-                self.logger.error("Child task %s terminated with exception: %s" % (
-                    task.tag, str(value)))
-                raise value
-
-        return 0
-
-    def child_done(self, task, result, count):
-        """Acquire the condition variable for the compound task object.
-        Decrement the thread count.  If we are the last thread to
-        finish, release compound task thread, which is blocked in execute().
-        """
-        with self.regcond:
-            self.logger.debug('Concurrent task %d/%d has completed' % (
-                self.count, self.numtasks))
-            self.count -= 1
-            self.taskset.remove(task)
-            self.totaltime += task.getExecutionTime()
-            self.results[(count, task)] = result
-            if self.count <= 0:
-                self.regcond.notifyAll()
-
-    def stop(self):
-        """Call stop() on all child tasks, and ignore TaskError exceptions.
-        Behavior depends on what the child tasks' stop() method does."""
-        for task in self.taskset:
-            try:
-                task.stop()
-
-            except TaskError as e:
-                # Task does not have a way to stop it.
-                # TODO: notify who?
-                pass
-
-    def addTask(self, task):
-        """Add a task to the task set.
-        """
-        with self.regcond:
-            self.taskset.append(task)
-            task.add_callback('resolved', self.child_done, self.numtasks)
-            self.numtasks += 1
-            self.count += 1
-
-        task.initialize(self)
-        task.start()
-
-
-class newConcurrentAndTaskset(Task):
-    """Compound task that runs a set of tasks concurrently, and does not
-    return until they all terminate.
-    """
-
-    def __init__(self, taskseq):
-
-        super(newConcurrentAndTaskset, self).__init__()
+        super(ConcurrentAndTaskset, self).__init__()
 
         self.taskseq = taskseq
         # tuning value for polling inefficiency
@@ -672,10 +574,6 @@ class newConcurrentAndTaskset(Task):
             return len(self.taskset)
 
 
-class ConcurrentAndTaskset(newConcurrentAndTaskset):
-    pass
-
-
 class QueueTaskset(Task):
     """Compound task that runs a set of tasks that it reads from a queue
     concurrently.  If _waitflag_ is True, then it will run each task to
@@ -767,6 +665,7 @@ class QueueTaskset(Task):
                 except Exception as e:
                     self.logger.error("Task '%s' terminated with exception: %s" %
                                       (str(task), str(e)), exc_info=True)
+
                     # If task raised exception then it didn't call done,
                     task.done(e, noraise=True)
 
@@ -1085,7 +984,7 @@ class ThreadPool(object):
         """
         with self.regcond:
             self.runningcount += 1
-            tid = thread.get_ident()
+            tid = threading.get_ident()
             self.tids.append(tid)
             self.logger.debug("register_up: (%d) count is %d" %
                               (tid, self.runningcount))
@@ -1102,7 +1001,7 @@ class ThreadPool(object):
         """
         with self.regcond:
             self.runningcount -= 1
-            tid = thread.get_ident()
+            tid = threading.get_ident()
             self.tids.remove(tid)
             self.logger.debug("register_dn: count_dn is %d" % self.runningcount)
             self.logger.debug("register_dn: remaining: %s" % str(self.tids))
