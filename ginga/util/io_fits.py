@@ -18,6 +18,7 @@ any images.  Otherwise Ginga will try to pick one for you.
 """
 import re
 import numpy as np
+import warnings
 
 from ginga.AstroImage import AstroImage, AstroHeader
 from ginga.table.AstroTable import AstroTable
@@ -342,6 +343,12 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
                   save_primary_header=False, **kwargs):
+        if 'inherit_primary_header' in kwargs:
+            warnings.warn("inherit_primary_header kwarg will be deprecated in the next release--use save_primary_header instead",
+                          PendingDeprecationWarning)
+            save_primary_header = kwargs.pop('inherit_primary_header',
+                                             save_primary_header)
+
         opener = self.get_factory()
         opener.open_file(filespec, memmap=memmap, **kwargs)
         try:
@@ -524,6 +531,12 @@ class PyFitsFileHandler(BaseFitsFileHandler):
     def save_as_file(self, filepath, data, header, **kwargs):
         self.write_fits(filepath, data, header, **kwargs)
 
+    def fromHDU(self, hdu, ahdr):
+        warnings.warn("fromHDU will be deprecated in the next release--"
+                      "use copy_header instead",
+                      PendingDeprecationWarning)
+        return self.copy_header(hdu, ahdr)
+
 
 class FitsioFileHandler(BaseFitsFileHandler):
 
@@ -623,6 +636,11 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
                   save_primary_header=True, **kwargs):
+        if 'inherit_primary_header' in kwargs:
+            warnings.warn("inherit_primary_header kwarg will be deprecated in the next release--use save_primary_header instead",
+                          PendingDeprecationWarning)
+            save_primary_header = kwargs.pop('inherit_primary_header',
+                                             save_primary_header)
         opener = self.get_factory()
         opener.open_file(filespec, memmap=memmap, **kwargs)
         try:
@@ -787,6 +805,12 @@ class FitsioFileHandler(BaseFitsFileHandler):
     def save_as_file(self, filepath, data, header, **kwargs):
         self.write_fits(filepath, data, header, **kwargs)
 
+    def fromHDU(self, hdu, ahdr):
+        warnings.warn("fromHDU will be deprecated in the next release--"
+                      "use copy_header instead",
+                      PendingDeprecationWarning)
+        return self.copy_header(hdu, ahdr)
+
 
 if not fits_configured:
     if have_astropy:
@@ -814,6 +838,3 @@ def load_file(filepath, idx=None, logger=None, **kwargs):
     """
     opener = get_fitsloader(logger=logger)
     return opener.load_file(filepath, numhdu=idx, **kwargs)
-
-
-# END

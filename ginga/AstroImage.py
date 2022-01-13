@@ -38,7 +38,8 @@ class AstroImage(BaseImage):
         cls.ioClass = klass
 
     def __init__(self, data_np=None, metadata=None, logger=None,
-                 name=None, wcsclass=None, ioclass=None):
+                 name=None, wcsclass=None, ioclass=None,
+                 inherit_primary_header=False, save_primary_header=True):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger, name=name)
@@ -60,6 +61,9 @@ class AstroImage(BaseImage):
                 ioclass = self.ioClass
 
         self.io = ioclass(self.logger)
+
+        self.inherit_primary_header = inherit_primary_header
+        self.save_primary_header = inherit_primary_header or save_primary_header
 
         if metadata is not None:
             header = self.get_header()
@@ -96,14 +100,23 @@ class AstroImage(BaseImage):
 
         self.set_naxispath(naxispath)
 
-    def load_hdu(self, hdu, fobj=None, naxispath=None):
+    def load_hdu(self, hdu, fobj=None, naxispath=None,
+                 inherit_primary_header=None):
         """NOTE: this is for astropy.io.fits HDUs only."""
 
         if self.io is None:
             raise ImageError("No IO loader defined")
 
+        if inherit_primary_header is None:
+            inherit_primary_header = self.inherit_primary_header
+        else:  # This ensures get_header() is consistent
+            self.inherit_primary_header = inherit_primary_header
+
+        save_primary_header = (self.save_primary_header or
+                               inherit_primary_header)
+
         self.io.load_hdu(hdu, dstobj=self, fobj=fobj, naxispath=naxispath,
-                         save_primary_header=False)
+                         save_primary_header=save_primary_header)
 
     def load_nddata(self, ndd, naxispath=None):
         """Load from an astropy.nddata.NDData object.
@@ -184,28 +197,30 @@ class AstroImage(BaseImage):
     def get_data_size(self):
         return self.get_size()
 
-    def get_header(self, create=True, include_primary_header=False):
-
-        try:
-            # By convention, the fits header is stored in a dictionary
-            # under the metadata keyword 'header'
-            hdr = self.metadata['header']
-
-            primary_hdr = self.metadata.get('primary_header', None)
-            if include_primary_header and primary_hdr is not None:
-                # Inherit PRIMARY header for display but keep metadata intact
-                displayhdr = AstroHeader()
-                displayhdr.merge(hdr)
-                displayhdr.merge(primary_hdr)
-            else:
-                # Normal, separate header
-                displayhdr = hdr
-
-        except KeyError as e:
+    def get_header(self, create=True, include_primary_header=None):
+        # By convention, the fits header is stored in a dictionary
+        # under the metadata keyword 'header'
+        if 'header' not in self.metadata:
             if not create:
-                raise e
+                # TODO: change to ValueError("No header found")
+                raise KeyError('header')
+
             hdr = AstroHeader()
             self.metadata['header'] = hdr
+        else:
+            hdr = self.metadata['header']
+
+        if include_primary_header is None:
+            include_primary_header = self.inherit_primary_header
+
+        primary_hdr = self.metadata.get('primary_header', None)
+        if include_primary_header and primary_hdr is not None:
+            # Inherit PRIMARY header for display but keep metadata intact
+            displayhdr = AstroHeader()
+            displayhdr.merge(hdr)
+            displayhdr.merge(primary_hdr, override_keywords=False)
+        else:
+            # Normal, separate header
             displayhdr = hdr
 
         return displayhdr
