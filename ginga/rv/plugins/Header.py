@@ -54,12 +54,12 @@ class Header(GingaPlugin.GlobalPlugin):
         self.settings.add_defaults(sortable=False,
                                    color_alternate_rows=True,
                                    max_rows_for_col_resize=5000,
+                                   include_primary_header=False,
                                    closeable=not spec.get('hidden', False))
         self.settings.load(onError='silent')
 
         self.flg_sort = self.settings.get('sortable', False)
-        prihdr = self.fv.settings.get('inherit_primary_header', False)
-        self.flg_prihdr = self.settings.get('include_primary_header', prihdr)
+        self.flg_prihdr = self.settings.get('include_primary_header', False)
         fv.add_callback('add-channel', self.add_channel)
         fv.add_callback('delete-channel', self.delete_channel)
         fv.add_callback('channel-change', self.focus_cb)
