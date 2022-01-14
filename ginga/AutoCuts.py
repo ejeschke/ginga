@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import numpy as np
+import warnings
 
 from ginga import trcalc
 from ginga.misc import Bunch
@@ -18,6 +19,10 @@ try:
 except ImportError:
     have_scipy = False
     autocut_methods = ('minmax', 'histogram', 'stddev', 'zscale')
+
+
+__all__ = ['AutoCutsBase', 'Minmax', 'Histogram', 'StdDev', 'MedianFilter',
+           'ZScale', 'get_autocuts', 'get_autocuts_names']
 
 
 class Param(Bunch.Bunch):
@@ -417,7 +422,7 @@ class Histogram(AutoCutsBase):
 
     # NOTE: `usecrop` kwarg to be deprecated--accepted but not used
     # for backward compatibility with saved older settings
-    def __init__(self, logger, usecrop=False, sample='crop',
+    def __init__(self, logger, usecrop=None, sample='crop',
                  full_px_limit=None, num_points=None,
                  pct=0.999, numbins=2048):
         super(Histogram, self).__init__(logger)
@@ -428,6 +433,11 @@ class Histogram(AutoCutsBase):
         self.num_points = num_points
         self.pct = pct
         self.numbins = numbins
+
+        if usecrop is not None:
+            warnings.warn("The usecrop parameter has been deprecated--"
+                          "use sample=crop inst",
+                          PendingDeprecationWarning)
 
     def calc_cut_levels(self, image):
         """See subclass documentation."""
@@ -600,7 +610,7 @@ class StdDev(AutoCutsBase):
 
     # NOTE: `usecrop` kwarg to be deprecated--accepted but not used
     # for backward compatibility with saved older settings
-    def __init__(self, logger, usecrop=False, sample='grid',
+    def __init__(self, logger, usecrop=None, sample='grid',
                  full_px_limit=None, num_points=None,
                  hensa_lo=-1.5, hensa_hi=4.0):
         super(StdDev, self).__init__(logger)
@@ -613,6 +623,11 @@ class StdDev(AutoCutsBase):
         # "stddev" algorithm (from the old SOSS fits viewer)
         self.hensa_lo = hensa_lo
         self.hensa_hi = hensa_hi
+
+        if usecrop is not None:
+            warnings.warn("The usecrop parameter has been deprecated--"
+                          "use sample=crop instead",
+                          PendingDeprecationWarning)
 
     def calc_cut_levels(self, image):
         """See subclass documentation."""
