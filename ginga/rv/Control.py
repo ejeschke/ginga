@@ -18,9 +18,6 @@ import shutil
 import inspect
 from collections import deque, OrderedDict
 
-import _thread as thread  # noqa
-import queue as Queue  # noqa
-
 # Local application imports
 from ginga import cmap, imap
 from ginga.misc import Bunch, Timer, Future

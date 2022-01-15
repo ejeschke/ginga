@@ -13,7 +13,6 @@ import time
 from ginga.misc import Task, Future, Callback
 from collections import deque
 
-import _thread as thread
 import queue as Queue
 
 
@@ -42,8 +41,7 @@ class GwMain(Callback.Callbacks):
 
         self.app = app
         # Mark our thread id
-        #self.gui_thread_id = None
-        self.gui_thread_id = thread.get_ident()
+        self.gui_thread_id = threading.get_ident()
 
         self.threadPool = thread_pool
         # For asynchronous tasks on the thread pool
@@ -154,7 +152,7 @@ class GwMain(Callback.Callbacks):
         future.freeze(method, *args, **kwdargs)
         self.priority_gui_queue.put(future)
 
-        my_id = thread.get_ident()
+        my_id = threading.get_ident()
         if my_id != self.gui_thread_id:
             return future
 
@@ -163,7 +161,7 @@ class GwMain(Callback.Callbacks):
         future.freeze(method, *args, **kwdargs)
         self.gui_queue.put(future)
 
-        my_id = thread.get_ident()
+        my_id = threading.get_ident()
         if my_id != self.gui_thread_id:
             return future
 
@@ -171,7 +169,7 @@ class GwMain(Callback.Callbacks):
         """General method for synchronously calling into the GUI.
         This waits until the method has completed before returning.
         """
-        my_id = thread.get_ident()
+        my_id = threading.get_ident()
         if my_id == self.gui_thread_id:
             return method(*args, **kwdargs)
         else:
@@ -192,7 +190,7 @@ class GwMain(Callback.Callbacks):
         future.freeze(method, *args, **kwdargs)
         deq.append(future)
 
-        my_id = thread.get_ident()
+        my_id = threading.get_ident()
         if my_id != self.gui_thread_id:
             return future
 
@@ -218,24 +216,24 @@ class GwMain(Callback.Callbacks):
             raise(e)
 
     def is_gui_thread(self):
-        my_id = thread.get_ident()
+        my_id = threading.get_ident()
         return my_id == self.gui_thread_id
 
     def assert_gui_thread(self):
-        my_id = thread.get_ident()
+        my_id = threading.get_ident()
         assert my_id == self.gui_thread_id, \
-            Exception("Non-GUI thread (%d) is executing GUI code!" % (
-                my_id))
+            Exception("Non-GUI thread (%d) is executing GUI (%d) code!" % (
+                my_id, self.gui_thread_id))
 
     def assert_nongui_thread(self):
-        my_id = thread.get_ident()
+        my_id = threading.get_ident()
         assert my_id != self.gui_thread_id, \
             Exception("GUI thread (%d) is executing non-GUI code!" % (
                 my_id))
 
     def mainloop(self, timeout=0.001):
         # Mark our thread id
-        self.gui_thread_id = thread.get_ident()
+        self.gui_thread_id = threading.get_ident()
 
         while not self.ev_quit.is_set():
 
