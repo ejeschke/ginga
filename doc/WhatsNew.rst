@@ -24,6 +24,9 @@ Ver 3.3.0 (unreleased)
 - Fixed a bug where creating a new workspace did not set the correct
   workspace type that was selected in the drop down menu
 - Updated pg widgets web backend due to changes to Tornado asyncio handling
+- Changes to 'histogram' and 'stddev' autocuts algorithms:
+  - choice of sampling by grid now; useful for mosaics and collages
+  - for previous parameter of usecrop=True, use sample=crop
 
 Ver 3.2.0 (2021-06-07)
 ======================
