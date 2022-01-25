@@ -26,6 +26,7 @@ Ver 3.3.0 (unreleased)
 - Updated pg widgets web backend due to changes to Tornado asyncio handling
 - Changes to 'histogram' and 'stddev' autocuts algorithms:
   - choice of sampling by grid now; useful for mosaics and collages
+  - for previous parameter of usecrop=True, use sample=crop
 
 Ver 3.2.0 (2021-06-07)
 ======================
