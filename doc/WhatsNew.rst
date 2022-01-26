@@ -25,8 +25,10 @@ Ver 3.3.0 (unreleased)
   workspace type that was selected in the drop down menu
 - Updated pg widgets web backend due to changes to Tornado asyncio handling
 - Changes to 'histogram' and 'stddev' autocuts algorithms:
+  
   - choice of sampling by grid now; useful for mosaics and collages
   - for previous parameter of usecrop=True, use sample=crop
+    
 - Moved loading of FITS HDUs from AstroImage to io_fits module,
   encapsulating the details of this file format into the module
   responsible for loading those files:
