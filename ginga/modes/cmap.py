@@ -30,8 +30,7 @@ class CMapMode(Mode):
             sc_imap=['cmap+ctrl+scroll'],
 
             ms_cmap_rotate=['cmap+left'],
-            ms_cmap_restore=['cmap+right'],
-            )
+            ms_cmap_restore=['cmap+right'])
 
     def __str__(self):
         return 'cmap'
@@ -88,7 +87,7 @@ class CMapMode(Mode):
             viewer.set_color_map(cmapname)
             if msg:
                 self.onscreen_message("Color map: %s" % (cmapname),
-                                        delay=1.0)
+                                      delay=1.0)
 
     def _reset_cmap(self, viewer, msg):
         if self.cancmap:
@@ -98,7 +97,7 @@ class CMapMode(Mode):
             viewer.set_color_map(cmapname)
             if msg:
                 self.onscreen_message("Color map: %s" % (cmapname),
-                                        delay=1.0)
+                                      delay=1.0)
 
     def _invert_cmap(self, viewer, msg):
         if self.cancmap:
@@ -107,7 +106,7 @@ class CMapMode(Mode):
             rgbmap.invert_cmap()
             if msg:
                 self.onscreen_message("Inverted color map",
-                                        delay=1.0)
+                                      delay=1.0)
 
     def _cycle_imap(self, viewer, msg, direction='down'):
         if self.cancmap:
@@ -127,7 +126,7 @@ class CMapMode(Mode):
             viewer.set_intensity_map(imapname)
             if msg:
                 self.onscreen_message("Intensity map: %s" % (imapname),
-                                        delay=1.0)
+                                      delay=1.0)
 
     def _reset_imap(self, viewer, msg):
         if self.cancmap:
@@ -137,7 +136,7 @@ class CMapMode(Mode):
             viewer.set_intensity_map(imapname)
             if msg:
                 self.onscreen_message("Intensity map: %s" % (imapname),
-                                        delay=1.0)
+                                      delay=1.0)
 
     #####  KEYBOARD ACTION CALLBACKS #####
 

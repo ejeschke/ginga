@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import math
-import numpy as np
 
 from ginga.modes.mode_base import Mode
 
@@ -82,8 +81,7 @@ class PanMode(Mode):
             key_pan_px_delta=1.0,
 
             # No messages for following operations:
-            msg_panset=False,
-            )
+            msg_panset=False)
 
         # TODO: define pan cursor
 

@@ -33,8 +33,7 @@ class RotateMode(Mode):
             ms_rotate_reset=['rotate+right'],
 
             mouse_rotate_acceleration=0.75,
-            pinch_rotate_acceleration=1.0,
-            )
+            pinch_rotate_acceleration=1.0)
 
         self._start_rot = 0
 

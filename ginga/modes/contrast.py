@@ -18,8 +18,7 @@ class ContrastMode(Mode):
             kp_contrast_restore=['T', 'contrast+t', 'contrast+T'],
 
             ms_contrast=['contrast+left', 'ctrl+right'],
-            ms_contrast_restore=['contrast+right', 'ctrl+middle'],
-            )
+            ms_contrast_restore=['contrast+right', 'ctrl+middle'])
 
     def __str__(self):
         return 'contrast'

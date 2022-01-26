@@ -22,8 +22,7 @@ class CameraMode(Mode):
             sc_camera_track=['camera+scroll'],
 
             ms_camera_orbit=['camera+left'],
-            ms_camera_pan_delta=['camera+right'],
-            )
+            ms_camera_pan_delta=['camera+right'])
 
     def __str__(self):
         return 'camera'
