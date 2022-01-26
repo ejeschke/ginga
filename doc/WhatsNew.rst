@@ -29,7 +29,8 @@ Ver 3.3.0 (unreleased)
   - for previous parameter of usecrop=True, use sample=crop
 - Moved loading of FITS HDUs from AstroImage to io_fits module,
   encapsulating the details of this file format into the module
-  responsible for loading those files
+  responsible for loading those files:
+
   - added loading of FITS tables via the fitsio package in io_fits
   - TableView can now view tables loaded with either astropy or fitsio
   - inherit_primary_header in general.cfg now defaults to True and

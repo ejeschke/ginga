@@ -277,7 +277,7 @@ class AstroImage(BaseImage):
 
     def has_primary_header(self):
         primary_hdr = self.metadata.get('primary_header', None)
-        return primary_hdr is not None
+        return isinstance(primary_hdr, AstroHeader)
 
     def clear_all(self):
         # clear metadata and data
