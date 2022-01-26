@@ -19,8 +19,7 @@ class DistMode(Mode):
             kp_dist_prev=['dist+up', 'dist+b'],
             kp_dist_next=['dist+down', 'dist+n'],
 
-            sc_dist=['dist+scroll'],
-            )
+            sc_dist=['dist+scroll'])
 
     def __str__(self):
         return 'dist'

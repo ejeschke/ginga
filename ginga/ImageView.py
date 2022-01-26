@@ -2244,7 +2244,7 @@ class ImageViewBase(Callback.Callbacks):
         ndata_x = float(int(data_x + self.data_off))
         ndata_y = float(int(data_y + self.data_off))
         x_px, y_px = ndata_x - data_x, ndata_y - data_y
-        self.pan_delta_px(viewer, x_px, y_px)
+        self.pan_delta_px(x_px, y_px)
 
     def panset_pct(self, pct_x, pct_y):
         """Similar to :meth:`set_pan`, except that pan positions

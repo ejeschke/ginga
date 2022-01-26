@@ -19,8 +19,7 @@ class NaxisMode(Mode):
 
             ms_naxis=['naxis+left'],
 
-            pa_naxis=['naxis+pan'],
-            )
+            pa_naxis=['naxis+pan'])
 
     def __str__(self):
         return 'naxis'

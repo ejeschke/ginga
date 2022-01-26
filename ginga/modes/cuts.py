@@ -32,8 +32,7 @@ class CutsMode(Mode):
             ms_cutlo=['cuts+shift+left'],
             ms_cuthi=['cuts+ctrl+left'],
             ms_cutall=['cuts+left'],
-            ms_cut_auto=['cuts+right'],
-            )
+            ms_cut_auto=['cuts+right'])
 
         self._hival = 0.0
         self._loval = 0.0
@@ -72,7 +71,7 @@ class CutsMode(Mode):
             viewer.set_autocut_params(algname)
             if msg:
                 self.onscreen_message("Autocuts alg: %s" % (algname),
-                                        delay=1.0)
+                                      delay=1.0)
 
     def _adjust_cuts(self, viewer, direction, pct, msg=True):
         direction = self.get_direction(direction)
@@ -83,7 +82,7 @@ class CutsMode(Mode):
 
     def _cutlow_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        image = viewer.get_image()
+        image = viewer.get_vip()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = viewer.get_cut_levels()
@@ -96,7 +95,7 @@ class CutsMode(Mode):
         msg = self.settings.get('msg_cuts', msg)
         win_wd, win_ht = viewer.get_window_size()
         pct = float(x) / float(win_wd)
-        image = viewer.get_image()
+        image = viewer.get_vip()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = viewer.get_cut_levels()
@@ -107,7 +106,7 @@ class CutsMode(Mode):
 
     def _cuthigh_pct(self, viewer, pct, msg=True):
         msg = self.settings.get('msg_cuts', msg)
-        image = viewer.get_image()
+        image = viewer.get_vip()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = viewer.get_cut_levels()
@@ -120,7 +119,7 @@ class CutsMode(Mode):
         msg = self.settings.get('msg_cuts', msg)
         win_wd, win_ht = viewer.get_window_size()
         pct = 1.0 - (float(x) / float(win_wd))
-        image = viewer.get_image()
+        image = viewer.get_vip()
         minval, maxval = image.get_minmax()
         spread = maxval - minval
         loval, hival = viewer.get_cut_levels()
@@ -181,7 +180,7 @@ class CutsMode(Mode):
     def kp_cut_minmax(self, viewer, event, data_x, data_y, msg=True):
         if self.cancut:
             msg = self.settings.get('msg_cuts', msg)
-            image = viewer.get_image()
+            image = viewer.get_vip()
             mn, mx = image.get_minmax(noinf=True)
             viewer.cut_levels(mn, mx, no_reset=True)
         return True
@@ -304,7 +303,7 @@ class CutsMode(Mode):
 
         elif event.state == 'down':
             self._start_x, self._start_y = x, y
-            image = viewer.get_image()
+            image = viewer.get_vip()
             #self._loval, self._hival = viewer.get_cut_levels()
             self._loval, self._hival = viewer.autocuts.calc_cut_levels(image)
 

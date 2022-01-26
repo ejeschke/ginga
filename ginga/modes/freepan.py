@@ -20,8 +20,7 @@ class FreePanMode(PanMode):
             ms_zoom_out=['freepan+right', 'freepan+ctrl+left'],
 
             pa_zoom=['freepan+pan'],
-            pa_zoom_origin=['freepan+shift+pan'],
-            )
+            pa_zoom_origin=['freepan+shift+pan'])
 
     def __str__(self):
         return 'freepan'
