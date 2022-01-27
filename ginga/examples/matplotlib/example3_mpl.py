@@ -20,12 +20,12 @@ The right pane has two buttons under it: pressing each button sets up a
 different kind of plot in the mpl pane based on the current state of the
 ginga pane.
 
-You need Qt4 with python bindings (or pyside) installed to run this example.
+You need Qt5 with python bindings (or pyside) installed to run this example.
 """
 import sys
 
 import matplotlib
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
 from ginga.qtw.QtHelp import QtGui, QtCore
@@ -165,8 +165,8 @@ class FitsViewer(QtGui.QMainWindow):
 
         w = QtGui.QWidget()
         layout = QtGui.QHBoxLayout()
-        layout.addWidget(vbox1, stretch=1.0)
-        layout.addWidget(vbox2, stretch=1.0)
+        layout.addWidget(vbox1, stretch=1)
+        layout.addWidget(vbox2, stretch=1)
         w.setLayout(layout)
 
         vbox.addWidget(w, stretch=1)

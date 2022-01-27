@@ -36,7 +36,6 @@ rc['keymap.save'] = 'ctrl+s'     # saving current figure
 rc['keymap.grid'] = 'ctrl+g'     # switching on/off a grid in current axes
 rc['keymap.yscale'] = []         # toggle scaling of y-axes ('log'/'linear')
 rc['keymap.xscale'] = []         # toggle scaling of x-axes ('log'/'linear')
-rc['keymap.all_axes'] = []       # enable all axes
 
 
 MPL_V1 = matplotlib.__version__.startswith('1')
