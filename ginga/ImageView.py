@@ -2421,7 +2421,6 @@ class ImageViewBase(Callback.Callbacks):
             If True, do not allow any panning in the Y direction
 
         """
-        print(f"direction is {direction_deg}; amount is {amount}")
         if not (lock_x or lock_y):
             # nothing to do
             return

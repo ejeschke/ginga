@@ -7,6 +7,9 @@ from ginga.modes.camera import CameraMode
 from ginga.modes.naxis import NaxisMode
 from ginga.modes.pan import PanMode
 from ginga.modes.freepan import FreePanMode
+#from ginga.modes.draw import DrawMode
 
 available_modes = [CutsMode, ContrastMode, RotateMode, CMapMode,
-                   DistMode, CameraMode, NaxisMode, PanMode, FreePanMode]
+                   DistMode, CameraMode, NaxisMode, PanMode, FreePanMode,
+                   #DrawMode
+                   ]

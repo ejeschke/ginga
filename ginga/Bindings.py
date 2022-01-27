@@ -361,9 +361,38 @@ class ImageViewBindings(object):
     def get_feature_allow(self, feat_name):
         return self.features[feat_name]
 
-    #####  SCROLL ACTION CALLBACKS #####
+    def kp_reset(self, viewer, event, data_x, data_y):
+        self.reset(viewer)
+        return True
 
-    ##### GESTURE ACTION CALLBACKS #####
+    def _toggle_lock(self, viewer, mode_type):
+        bm = viewer.get_bindmap()
+        # toggle default mode type to locked/oneshot
+        dfl_modetype = bm.get_default_mode_type()
+        # get current mode
+        mode_name, cur_modetype = bm.current_mode()
+
+        if dfl_modetype in ('locked', 'softlock'):
+            if mode_type == dfl_modetype:
+                mode_type = 'oneshot'
+
+        # install the lock type
+        bm.set_default_mode_type(mode_type)
+        bm.set_mode(mode_name, mode_type=mode_type)
+
+    def kp_lock(self, viewer, event, data_x, data_y):
+        self._toggle_lock(viewer, 'locked')
+        return True
+
+    def kp_softlock(self, viewer, event, data_x, data_y):
+        self._toggle_lock(viewer, 'softlock')
+        return True
+
+    def kp_save_profile(self, viewer, event, data_x, data_y, msg=True):
+        viewer.checkpoint_profile()
+        if msg:
+            viewer.onscreen_message("Profile saved", delay=0.5)
+        return True
 
 
 class UIEvent:
