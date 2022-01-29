@@ -46,6 +46,8 @@ Ver 3.3.0 (unreleased)
 
 - Fixed an issue where the Catalogs plugin would not start correctly if
   astroquery was not installed
+- Begin deprecation of kwargs save_primary_header and
+  inherit_primary_header in the AstroImage class
 
 Ver 3.2.0 (2021-06-07)
 ======================
