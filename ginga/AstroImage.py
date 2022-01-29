@@ -38,8 +38,7 @@ class AstroImage(BaseImage):
         cls.ioClass = klass
 
     def __init__(self, data_np=None, metadata=None, logger=None,
-                 name=None, wcsclass=None, ioclass=None,
-                 inherit_primary_header=False, save_primary_header=True):
+                 name=None, wcsclass=None, ioclass=None, **kwargs):
 
         BaseImage.__init__(self, data_np=data_np, metadata=metadata,
                            logger=logger, name=name)
@@ -62,7 +61,21 @@ class AstroImage(BaseImage):
 
         self.io = ioclass(self.logger)
 
+        # these attributes to be removed--DO NOT USE!!!
+        inherit_primary_header = False
+        if 'inherit_primary_header' in kwargs:
+            warnings.warn("inherit_primary_header kwarg has been deprecated--"
+                          "use save_primary_header when loading image",
+                          PendingDeprecationWarning)
+            inherit_primary_header = kwargs['inherit_primary_header']
         self.inherit_primary_header = inherit_primary_header
+
+        save_primary_header = True
+        if 'save_primary_header' in kwargs:
+            warnings.warn("save_primary_header kwarg has been deprecated--"
+                          "use save_primary_header when loading image",
+                          PendingDeprecationWarning)
+            save_primary_header = kwargs['save_primary_header']
         self.save_primary_header = inherit_primary_header or save_primary_header
 
         if metadata is not None:
@@ -101,19 +114,23 @@ class AstroImage(BaseImage):
         self.set_naxispath(naxispath)
 
     def load_hdu(self, hdu, fobj=None, naxispath=None,
-                 inherit_primary_header=None):
+                 save_primary_header=None, **kwargs):
         """NOTE: this is for astropy.io.fits HDUs only."""
 
         if self.io is None:
             raise ImageError("No IO loader defined")
 
-        if inherit_primary_header is None:
-            inherit_primary_header = self.inherit_primary_header
-        else:  # This ensures get_header() is consistent
-            self.inherit_primary_header = inherit_primary_header
+        inherit_primary_header = False
+        if 'inherit_primary_header' in kwargs:
+            warnings.warn("inherit_primary_header kwarg has been deprecated--"
+                          "use save_primary_header instead",
+                          PendingDeprecationWarning)
+            inherit_primary_header = kwargs['inherit_primary_header']
 
-        save_primary_header = (self.save_primary_header or
-                               inherit_primary_header)
+        save_primary_header = save_primary_header or inherit_primary_header
+        if save_primary_header is None:
+            save_primary_header = (self.inherit_primary_header or
+                                   self.save_primary_header)
 
         self.io.load_hdu(hdu, dstobj=self, fobj=fobj, naxispath=naxispath,
                          save_primary_header=save_primary_header)
@@ -213,11 +230,13 @@ class AstroImage(BaseImage):
         if include_primary_header is None:
             include_primary_header = self.inherit_primary_header
 
-        primary_hdr = self.metadata.get('primary_header', None)
-        if include_primary_header and primary_hdr is not None:
+        # If it was saved during loading, by convention, the primary fits
+        # header is stored in a dictionary under the keyword 'primary_header'
+        if include_primary_header and self.has_primary_header():
             # Inherit PRIMARY header for display but keep metadata intact
             displayhdr = AstroHeader()
             displayhdr.merge(hdr)
+            primary_hdr = self.metadata['primary_header']
             displayhdr.merge(primary_hdr, override_keywords=False)
         else:
             # Normal, separate header
@@ -368,86 +387,6 @@ class AstroImage(BaseImage):
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords,
                                    naxispath=self.revnaxis)
 
-    # -----> TODO:
-    #   This section has been merged into ginga.util.wcs or
-    #   ginga.util.mosaic .  Deprecate it here.
-    #
-    def get_starsep_XY(self, x1, y1, x2, y2):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      PendingDeprecationWarning)
-        return wcs.get_starsep_XY(self, x1, y1, x2, y2)
-
-    def calc_radius_xy(self, x, y, radius_deg):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      PendingDeprecationWarning)
-        return wcs.calc_radius_xy(self, x, y, radius_deg)
-
-    def calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
-                            equinox=None):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      PendingDeprecationWarning)
-        return wcs.calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
-                                       equinox=equinox)
-
-    def add_offset_xy(self, x, y, delta_deg_x, delta_deg_y):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      PendingDeprecationWarning)
-        return wcs.add_offset_xy(self, x, y, delta_deg_x, delta_deg_y)
-
-    def calc_radius_center(self, delta_deg):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      PendingDeprecationWarning)
-        return wcs.calc_radius_center(self, delta_deg)
-
-    def calc_compass(self, x, y, len_deg_e, len_deg_n):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      PendingDeprecationWarning)
-        return wcs.calc_compass(self, x, y, len_deg_e, len_deg_n)
-
-    def calc_compass_radius(self, x, y, radius_px):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      PendingDeprecationWarning)
-        return wcs.calc_compass_radius(self, x, y, radius_px)
-
-    def calc_compass_center(self):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      PendingDeprecationWarning)
-        return wcs.calc_compass_center(self)
-
-    def get_wcs_rotation_deg(self):
-        warnings.warn("This function has been deprecated--"
-                      "use get_rotation_and_scale in ginga.util.wcs",
-                      PendingDeprecationWarning)
-        header = self.get_header()
-        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
-        return rot
-
-    def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None,
-                      merge=False, allow_expand=True, expand_pad_deg=0.01,
-                      max_expand_pct=None,
-                      update_minmax=True, suppress_callback=False):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.mosaic",
-                      PendingDeprecationWarning)
-        from ginga.util import mosaic
-        return mosaic.mosaic_inline(self, imagelist, bg_ref=bg_ref,
-                                    trim_px=trim_px, merge=merge,
-                                    allow_expand=allow_expand,
-                                    expand_pad_deg=expand_pad_deg,
-                                    max_expand_pct=max_expand_pct,
-                                    update_minmax=update_minmax,
-                                    suppress_callback=suppress_callback)
-    #
-    # <----- TODO: deprecate
-
     def info_xy(self, data_x, data_y, settings):
         info = super(AstroImage, self).info_xy(data_x, data_y, settings)
 
@@ -530,5 +469,3 @@ class AstroImage(BaseImage):
         info.update(dict(itype='astro', ra_txt=ra_txt, dec_txt=dec_txt,
                          ra_lbl=ra_lbl, dec_lbl=dec_lbl))
         return info
-
-# END
