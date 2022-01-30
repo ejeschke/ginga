@@ -8,6 +8,21 @@ from ginga.modes.mode_base import Mode
 
 
 class ContrastMode(Mode):
+    """Contrast Mode enables bindings that can adjust the contrast of
+    an image in a Ginga image viewer.
+
+    Default bindings in mode
+    ------------------------
+    T : restore contrast to defaults
+
+    left drag : adjust contrast
+        Interactive shift/stretch colormap (aka contrast and bias).
+        Moving left/right controls shift, up/down controls stretch.
+        Release button when satisfied with the contrast.
+
+    right click : restore contrast to defaults
+
+    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

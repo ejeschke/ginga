@@ -2421,7 +2421,7 @@ class ImageViewBase(Callback.Callbacks):
             If True, do not allow any panning in the Y direction
 
         """
-        if not (lock_x or lock_y):
+        if lock_x and lock_y:
             # nothing to do
             return
 
