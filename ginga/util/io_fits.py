@@ -291,7 +291,6 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             # Try to make a wcs object on the header
             wcs = getattr(dstobj, 'wcs', None)
             if wcs is not None:
-                print('loading header into WCS')
                 wcs.load_header(hdu.header, fobj=fobj)
 
         elif typ == 'table':
