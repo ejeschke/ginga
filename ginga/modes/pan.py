@@ -10,6 +10,53 @@ from ginga.modes.mode_base import Mode
 
 
 class PanMode(Mode):
+    """Pan Mode enables bindings that can set the pan position (the center
+    pixel) in a Ginga image viewer.
+
+    Default bindings in mode
+    ------------------------
+    '+', '=' : zoom in one zoom level
+
+    '-', '_' : zoom out one zoom level
+
+    0-9 : zoom to level N (0 is 10)
+
+    Shift + 0-9 : zoom to level -N (0 is -10)
+
+    backquote : fit image to window size
+
+    '"' : toggle auto fit for new images 'on' or 'off' in this viewer
+
+    "'" : set auto fit for new images to 'override' in this viewer
+
+    p : pan to the position under the cursor
+
+    c : pan to the center of the image
+
+    z : save pan (and zoom) position
+
+    1 : restore saved pan (and zoom) position
+
+    left/right/up/down arrow : pan left/right/up/down by a small percentage
+
+    Shift + left/right/up/down arrow : pan left/right/up/down by a
+        very small percentage
+
+    pageup (pagedown) : pan up (down) by a large percentage of the screen
+
+    home (end) : pan towards the top (bottom) of the image
+
+    '?' : toggle auto center for new images 'on' or 'off' in this viewer
+
+    '/' : set auto center for new images to 'override' in this viewer
+
+    scroll : zoom (scale) the image
+
+    left drag : camera orbit the view
+
+    right drag : camera pan the view
+
+    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
@@ -413,25 +460,47 @@ class PanMode(Mode):
         if not self.canpan:
             return False
         amt = self._get_key_pan_pct(event)
-        viewer.pan_ud(amt, 1.0)
+        pct = 1.0
+        if 'ctrl' in event.modifiers:
+            # adjust X axis
+            viewer.pan_lr(amt, pct)
+        else:
+            # adjust Y axis
+            viewer.pan_ud(amt, pct)
         return True
 
     def kp_pan_page_down(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
         amt = self._get_key_pan_pct(event)
-        viewer.pan_ud(amt, -1.0)
+        pct = -1.0
+        if 'ctrl' in event.modifiers:
+            # adjust X axis
+            viewer.pan_lr(amt, pct)
+        else:
+            # adjust Y axis
+            viewer.pan_ud(amt, pct)
         return True
 
     def kp_pan_home(self, viewer, event, data_x, data_y, msg=True):
         res = viewer.calc_pan_pct(pad=0)
-        # 1.0 == max Y
-        viewer.pan_by_pct(res.pan_pct_x, 1.0)
+        # 1.0 == max
+        if 'ctrl' in event.modifiers:
+            # adjust X axis
+            viewer.pan_by_pct(1.0, res.pan_pct_y)
+        else:
+            # adjust Y axis
+            viewer.pan_by_pct(res.pan_pct_x, 1.0)
 
     def kp_pan_end(self, viewer, event, data_x, data_y, msg=True):
         res = viewer.calc_pan_pct(pad=0)
-        # 0.0 == min Y
-        viewer.pan_by_pct(res.pan_pct_x, 0.0)
+        # 0.0 == min
+        if 'ctrl' in event.modifiers:
+            # adjust X axis
+            viewer.pan_by_pct(0.0, res.pan_pct_y)
+        else:
+            # adjust Y axis
+            viewer.pan_by_pct(res.pan_pct_x, 0.0)
 
     def kp_pan_px_xminus(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:

@@ -8,6 +8,16 @@ from ginga.modes.mode_base import Mode
 
 
 class NaxisMode(Mode):
+    """Naxis Mode enables bindings that can move through the slices in an
+    image stack in a Ginga image viewer.
+
+    Default bindings in mode
+    ------------------------
+    scroll : select previous or next slice of selected axis
+
+    left drag : select previous or next slice of selected axis
+
+    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

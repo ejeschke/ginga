@@ -8,6 +8,27 @@ from ginga.modes.mode_base import Mode
 
 
 class CameraMode(Mode):
+    """Camera Mode enables bindings that can manipulate the camera in
+    a Ginga image viewer operating with a OpenGL backend.
+
+    .. note:: Camera Mode does not work unless the viewer is using an
+              OpenGL backend.
+
+    Default bindings in mode
+    ------------------------
+    s : save the current camera settings, to restore later
+
+    r : reset to the saved camera settings
+
+    3 : change the camera view into 3D mode
+
+    scroll : track camera (dolly in and out)
+
+    left drag : camera orbit the view
+
+    right drag : camera pan the view
+
+    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

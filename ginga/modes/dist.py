@@ -8,6 +8,23 @@ from ginga.modes.mode_base import Mode
 
 
 class DistMode(Mode):
+    """Dist Mode enables bindings that can adjust the color distribution
+    of an image in a Ginga image viewer.
+
+    These algorithms are similar to "curves" type profiles: 'linear',
+    'log', 'power', 'sqrt', 'squared', 'asinh', 'sinh', 'histeq'
+
+    Default bindings in mode
+    ------------------------
+    D : reset the color distribution algorithm to 'linear'
+
+    b, up arrow : select the previous distribution algorithm in the list
+
+    n, down arrow : select the next distribution algorithm in the list
+
+    scroll : select the color distribution algorithm by scrolling
+
+    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

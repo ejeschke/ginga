@@ -70,6 +70,9 @@ class FitsViewer(QtGui.QMainWindow):
         canvas.register_for_cursor_drawing(fi)
         canvas.add_callback('draw-event', self.draw_cb)
 
+        # add little mode indicator that shows keyboard modal states
+        fi.show_mode_indicator(True, corner='ur')
+
         w.resize(512, 512)
 
         vbox = QtGui.QVBoxLayout()

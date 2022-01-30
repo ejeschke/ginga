@@ -12,6 +12,35 @@ from ginga.modes.mode_base import Mode
 
 
 class RotateMode(Mode):
+    """Rotate Mode enables bindings that can flip or swap the axes of an
+    image, or rotate it, in a Ginga image viewer.
+
+    Default bindings in mode
+    ------------------------
+    '[', '{' : flip the image in the X axis
+
+    ']', '}' : flip the image in the Y axis
+
+    backslash, '|' : swap the X and Y axes
+
+    R : reset rotation to 0 deg
+        Does not reset any flips or swaps
+
+    t : resets any flips or swaps
+
+    '.' : rotate image incrementally by +90 deg
+
+    ',' : rotate image by incrementally -90 deg
+
+    'o' : orient the image so that North points up and East points left
+
+    'O' : orient the image so that North points up and East points right
+
+    left drag : rotate the image interactively
+
+    right click : reset the rotation to 0 deg (same as R)
+
+    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
