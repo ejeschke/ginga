@@ -387,6 +387,86 @@ class AstroImage(BaseImage):
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords,
                                    naxispath=self.revnaxis)
 
+    # -----> TODO:
+    #   This section has been merged into ginga.util.wcs or
+    #   ginga.util.mosaic .  Deprecate it here.
+    #
+    def get_starsep_XY(self, x1, y1, x2, y2):
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      DeprecationWarning)
+        return wcs.get_starsep_XY(self, x1, y1, x2, y2)
+
+    def calc_radius_xy(self, x, y, radius_deg):
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      DeprecationWarning)
+        return wcs.calc_radius_xy(self, x, y, radius_deg)
+
+    def calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
+                            equinox=None):
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      DeprecationWarning)
+        return wcs.calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
+                                       equinox=equinox)
+
+    def add_offset_xy(self, x, y, delta_deg_x, delta_deg_y):
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      DeprecationWarning)
+        return wcs.add_offset_xy(self, x, y, delta_deg_x, delta_deg_y)
+
+    def calc_radius_center(self, delta_deg):
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      DeprecationWarning)
+        return wcs.calc_radius_center(self, delta_deg)
+
+    def calc_compass(self, x, y, len_deg_e, len_deg_n):
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      DeprecationWarning)
+        return wcs.calc_compass(self, x, y, len_deg_e, len_deg_n)
+
+    def calc_compass_radius(self, x, y, radius_px):
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      DeprecationWarning)
+        return wcs.calc_compass_radius(self, x, y, radius_px)
+
+    def calc_compass_center(self):
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.wcs",
+                      DeprecationWarning)
+        return wcs.calc_compass_center(self)
+
+    def get_wcs_rotation_deg(self):
+        warnings.warn("This function has been deprecated--"
+                      "use get_rotation_and_scale in ginga.util.wcs",
+                      DeprecationWarning)
+        header = self.get_header()
+        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
+        return rot
+
+    def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None,
+                      merge=False, allow_expand=True, expand_pad_deg=0.01,
+                      max_expand_pct=None,
+                      update_minmax=True, suppress_callback=False):
+        warnings.warn("This function has been deprecated--"
+                      "use the version in ginga.util.mosaic",
+                      DeprecationWarning)
+        from ginga.util import mosaic
+        return mosaic.mosaic_inline(self, imagelist, bg_ref=bg_ref,
+                                    trim_px=trim_px, merge=merge,
+                                    allow_expand=allow_expand,
+                                    expand_pad_deg=expand_pad_deg,
+                                    max_expand_pct=max_expand_pct,
+                                    update_minmax=update_minmax,
+                                    suppress_callback=suppress_callback)
+    #
+    # <----- TODO: deprecate
+
     def info_xy(self, data_x, data_y, settings):
         info = super(AstroImage, self).info_xy(data_x, data_y, settings)
 
