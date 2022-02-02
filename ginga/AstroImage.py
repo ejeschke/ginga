@@ -66,7 +66,7 @@ class AstroImage(BaseImage):
         if 'inherit_primary_header' in kwargs:
             warnings.warn("inherit_primary_header kwarg has been deprecated--"
                           "use save_primary_header in load_hdu() or load_file()",
-                          PendingDeprecationWarning)
+                          DeprecationWarning)
             inherit_primary_header = kwargs['inherit_primary_header']
         self.inherit_primary_header = inherit_primary_header
 
@@ -74,7 +74,7 @@ class AstroImage(BaseImage):
         if 'save_primary_header' in kwargs:
             warnings.warn("save_primary_header kwarg has been deprecated--"
                           "use save_primary_header in load_hdu() or load_file()",
-                          PendingDeprecationWarning)
+                          DeprecationWarning)
             save_primary_header = kwargs['save_primary_header']
         self.save_primary_header = inherit_primary_header or save_primary_header
 
@@ -124,7 +124,7 @@ class AstroImage(BaseImage):
         if 'inherit_primary_header' in kwargs:
             warnings.warn("inherit_primary_header kwarg has been deprecated--"
                           "use save_primary_header instead",
-                          PendingDeprecationWarning)
+                          DeprecationWarning)
             inherit_primary_header = kwargs['inherit_primary_header']
 
         save_primary_header = save_primary_header or inherit_primary_header
