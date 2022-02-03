@@ -482,17 +482,24 @@ class AstroImage(BaseImage):
                     if system in ('galactic', 'ecliptic'):
                         sign, deg, min, sec = wcs.degToDms(lon_deg,
                                                            isLatitude=False)
-                        ra_txt = '+%03d:%02d:%06.3f' % (deg, min, sec)
+                        ra_fmt = '+%03d:%02d:%02d.%03d'
                     else:
                         deg, min, sec = wcs.degToHms(lon_deg)
-                        ra_txt = '%02d:%02d:%06.3f' % (deg, min, sec)
+                        ra_fmt = '%02d:%02d:%02d.%03d'
+
+                    frac_sec, sec = np.modf(sec)
+                    frac_sec = int(frac_sec * 1000)
+                    ra_txt = ra_fmt % (deg, min, sec, frac_sec)
 
                     sign, deg, min, sec = wcs.degToDms(lat_deg)
                     if sign < 0:
                         sign = '-'
                     else:
                         sign = '+'
-                    dec_txt = '%s%02d:%02d:%06.3f' % (sign, deg, min, sec)
+                    frac_sec, sec = np.modf(sec)
+                    frac_sec = int(frac_sec * 1000)
+                    dec_txt = '%s%02d:%02d:%02d.%03d' % (sign, deg, min, sec,
+                                                         frac_sec)
 
                 else:
                     ra_txt = '%+10.7f' % (lon_deg)

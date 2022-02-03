@@ -107,8 +107,8 @@ class AstroqueryCatalogServer(object):
              'priority': 0,
              'description': 'fake magnitude'}
         data.update(d)
-        data['ra'] = wcs.raDegToString(data['ra_deg'])
-        data['dec'] = wcs.decDegToString(data['dec_deg'])
+        data['ra'] = wcs.ra_deg_to_str(data['ra_deg'])
+        data['dec'] = wcs.dec_deg_to_str(data['dec_deg'])
         return Star(**data)
 
     def _search(self, center, radius, catalog, **kwargs):
@@ -369,8 +369,8 @@ class AstroqueryNameServer(object):
                 raise SourceError("No results found for name '{}'".format(name))
 
             # from NED, coords come as degrees in float
-            ra = wcs.raDegToString(results['RA'][0])
-            dec = wcs.decDegToString(results['DEC'][0])
+            ra = wcs.ra_deg_to_str(results['RA'][0])
+            dec = wcs.dec_deg_to_str(results['DEC'][0])
 
         else:
             raise SourceError("Don't know how to query source '{}'".format(self.short_name))
@@ -592,9 +592,8 @@ class CatalogServer(URLServer):
                     ra_deg, dec_deg = wcs.eqToEq2000(ra_deg, dec_deg,
                                                      self.equinox)
 
-                ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
-                dec_txt = wcs.decDegToString(dec_deg,
-                                             format='%s%02d:%02d:%05.2f')
+                ra_txt = wcs.ra_deg_to_str(ra_deg)
+                dec_txt = wcs.dec_deg_to_str(dec_deg)
                 self.logger.debug("STAR %s AT ra=%s dec=%s mag=%f" % (
                     name, ra_txt, dec_txt, mag))
 

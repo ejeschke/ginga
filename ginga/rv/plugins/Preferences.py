@@ -1402,12 +1402,13 @@ class Preferences(GingaPlugin.LocalPlugin):
     def _update_pan_coords(self):
         pan_coord = self.t_.get('pan_coord', 'data')
         pan_x, pan_y = self.fitsimage.get_pan(coord=pan_coord)
-        #self.logger.debug("updating pan coords (%s) %f %f" % (pan_coord, pan_x, pan_y))
         if pan_coord == 'wcs':
             use_sex = self.w.wcs_sexagesimal.get_state()
             if use_sex:
-                pan_x = wcs.raDegToString(pan_x, format='%02d:%02d:%010.7f')
-                pan_y = wcs.decDegToString(pan_y, format='%s%02d:%02d:%09.7f')
+                pan_x = wcs.ra_deg_to_str(pan_x, precision=7,
+                                          format='%02d:%02d:%02d.%07d')
+                pan_y = wcs.dec_deg_to_str(pan_y, precision=7,
+                                           format='%s%02d:%02d:%02d.%07d')
         else:
             coord_offset = self.fv.settings.get('pixel_coords_offset', 0.0)
             pan_x += coord_offset

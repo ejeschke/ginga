@@ -16,7 +16,7 @@ from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
 from ginga.misc.ParamSet import Param
 from ginga.misc import Bunch
 from ginga.util import wcs
-from ginga.util.wcs import raDegToString, decDegToString
+from ginga.util.wcs import ra_deg_to_str, dec_deg_to_str
 
 from .mixins import (OnePointMixin, TwoPointMixin, OnePointOneRadiusMixin,
                      OnePointTwoRadiusMixin)
@@ -137,10 +137,10 @@ class RulerP(TwoPointMixin, CanvasObjectBase):
                 text.h = self.get_arcmin(res.dh_deg)
                 text.x = self.get_arcmin(res.dx_deg)
                 text.y = self.get_arcmin(res.dy_deg)
-                text.b = ("%s, %s" % (wcs.raDegToString(res.ra_org),
-                                      wcs.decDegToString(res.dec_org)))
-                text.e = ("%s, %s" % (wcs.raDegToString(res.ra_dst),
-                                      wcs.decDegToString(res.dec_dst)))
+                text.b = ("%s, %s" % (wcs.ra_deg_to_str(res.ra_org),
+                                      wcs.dec_deg_to_str(res.dec_org)))
+                text.e = ("%s, %s" % (wcs.ra_deg_to_str(res.ra_dst),
+                                      wcs.dec_deg_to_str(res.dec_dst)))
 
             elif mode == 'degrees':
                 text.h = ("%.8f" % res.dh_deg)
@@ -1142,12 +1142,12 @@ class WCSAxes(CompoundObject):
         for cur_ra in ra_arr:
             crds = [[cur_ra, cur_dec] for cur_dec in
                     np.arange(dec_min, dec_max + d_dec_step, d_dec_step)]
-            lbl = raDegToString(cur_ra)
+            lbl = ra_deg_to_str(cur_ra)
             objs += self._get_path(viewer, image, crds, lbl, 1)
         for cur_dec in dec_arr:
             crds = [[cur_ra, cur_dec] for cur_ra in
                     np.arange(ra_min, ra_max + d_ra_step, d_ra_step)]
-            lbl = decDegToString(cur_dec)
+            lbl = dec_deg_to_str(cur_dec)
             objs += self._get_path(viewer, image, crds, lbl, 0)
 
         return objs

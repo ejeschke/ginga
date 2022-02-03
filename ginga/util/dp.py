@@ -47,8 +47,8 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
                        mmap_path=None, mmap_mode='w+'):
 
     # ra and dec in traditional format
-    ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
-    dec_txt = wcs.decDegToString(dec_deg, format='%s%02d:%02d:%05.2f')
+    ra_txt = wcs.ra_deg_to_str(ra_deg)
+    dec_txt = wcs.dec_deg_to_str(dec_deg)
 
     if np.isscalar(px_scale):
         px_wd_scale, px_ht_scale = (px_scale, px_scale)
@@ -112,8 +112,8 @@ def recycle_image(image, ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
                   cdbase=[1, 1], logger=None, pfx='dp'):
 
     # ra and dec in traditional format
-    ra_txt = wcs.raDegToString(ra_deg, format='%02d:%02d:%06.3f')
-    dec_txt = wcs.decDegToString(dec_deg, format='%s%02d:%02d:%05.2f')
+    ra_txt = wcs.ra_deg_to_str(ra_deg)
+    dec_txt = wcs.dec_deg_to_str(dec_deg)
 
     header = image.get_header()
     pointing = OrderedDict((('RA', ra_txt),

@@ -6,6 +6,7 @@
 #
 """This module handles calculations based on world coordinate system."""
 import math
+import warnings
 from collections import OrderedDict
 
 import numpy as np
@@ -13,12 +14,13 @@ import numpy as np
 from ginga.misc import Bunch
 
 __all__ = ['hmsToDeg', 'dmsToDeg', 'decTimeToDeg', 'degToHms', 'degToDms',
-           'arcsecToDeg', 'hmsStrToDeg', 'dmsStrToDeg', 'raDegToString',
-           'decDegToString', 'trans_coeff', 'eqToEq2000',
+           'arcsecToDeg', 'hmsStrToDeg', 'dmsStrToDeg', 'ra_deg_to_str',
+           'dec_deg_to_str', 'trans_coeff', 'eqToEq2000',
            'get_xy_rotation_and_scale', 'get_rotation_and_scale',
            'get_relative_orientation', 'simple_wcs', 'deg2fmt', 'dispos',
            'deltaStarsRaDecDeg1', 'deltaStarsRaDecDeg2', 'get_starsep_RaDecDeg',
            'add_offset_radec', 'get_RaDecOffsets', 'lon_to_deg', 'lat_to_deg',
+           'raDegToString', 'decDegToString',
            ]
 
 
@@ -87,12 +89,6 @@ def degToDms(dec, isLatitude=True):
         sign = 1.0
     dec = dec * sign
 
-    #mnt = (dec % 1.0) * 60.0
-    #sec = (dec % (1.0/60.0)) * 3600.0
-    # this calculation with return values produces conversion problem.
-    # e.g. dec +311600.00 -> 31.2666666667 degree
-    # deg=31 min=15 sec=60 instead deg=31 min=16 sec=0.0
-    # bug fixed
     mnt, sec = divmod(dec * 3600, 60)
     deg, mnt = divmod(mnt, 60)
 
@@ -125,21 +121,26 @@ def dmsStrToDeg(dec):
     return dec_deg
 
 
-def raDegToString(ra_deg, format='%02d:%02d:%06.3f'):
+def ra_deg_to_str(ra_deg, precision=3, format='%02d:%02d:%02d.%03d'):
     if ra_deg > 360.0:
         ra_deg = math.fmod(ra_deg, 360.0)
-
     ra_hour, ra_min, ra_sec = degToHms(ra_deg)
-    return format % (ra_hour, ra_min, ra_sec)
+
+    frac_sec, ra_sec = math.modf(ra_sec)
+    frac_sec = int(frac_sec * 10 ** precision)
+    return format % (ra_hour, ra_min, ra_sec, frac_sec)
 
 
-def decDegToString(dec_deg, format='%s%02d:%02d:%05.2f'):
+def dec_deg_to_str(dec_deg, precision=2, format='%s%02d:%02d:%02d.%02d'):
     sign, dec_degree, dec_min, dec_sec = degToDms(dec_deg)
     if sign > 0:
         sign_sym = '+'
     else:
         sign_sym = '-'
-    return format % (sign_sym, int(dec_degree), int(dec_min), dec_sec)
+    frac_sec, dec_sec = math.modf(dec_sec)
+    frac_s = int(frac_sec * 10 ** precision)
+    return format % (sign_sym, int(dec_degree), int(dec_min), dec_sec,
+                     frac_sec)
 
 
 def trans_coeff(eq, x, y, z):
@@ -454,14 +455,16 @@ def deg2fmt(ra_deg, dec_deg, format):
         return rhr, rmn, rsec, dsgn, ddeg, dmn, dsec
 
     elif format == 'str':
-        #ra_txt = '%02d:%02d:%06.3f' % (rhr, rmn, rsec)
-        ra_txt = '%d:%02d:%06.3f' % (rhr, rmn, rsec)
+        frac_sec, rsec = math.modf(rsec)
+        frac_sec = int(frac_sec * 1000)
+        ra_txt = '%d:%02d:%02d.%03d' % (rhr, rmn, rsec, frac_sec)
         if dsgn < 0:
             dsgn = '-'
         else:
             dsgn = '+'
-        #dec_txt = '%s%02d:%02d:%05.2f' % (dsgn, ddeg, dmn, dsec)
-        dec_txt = '%s%d:%02d:%05.2f' % (dsgn, ddeg, dmn, dsec)
+        frac_sec, dsec = math.modf(dsec)
+        frac_s = int(frac_sec * 100)
+        dec_txt = '%s%d:%02d:%02d.%02d' % (dsgn, ddeg, dmn, dsec, frac_sec)
         return ra_txt, dec_txt
 
 
@@ -785,4 +788,28 @@ def calc_compass_center(image):
     return calc_compass_radius(image, x, y, radius_px)
 
 
-# END
+# TO BE DEPRECATED
+
+def raDegToString(ra_deg, format=None):
+    warnings.warn("This function has been deprecated--"
+                  "use ra_deg_to_str instead", DeprecationWarning)
+    if format is None:
+        return ra_deg_to_str(ra_deg)
+    if ra_deg > 360.0:
+        ra_deg = math.fmod(ra_deg, 360.0)
+
+    ra_hour, ra_min, ra_sec = degToHms(ra_deg)
+    return format % (ra_hour, ra_min, ra_sec)
+
+
+def decDegToString(dec_deg, format=None):
+    warnings.warn("This function has been deprecated--"
+                  "use dec_deg_to_str instead", DeprecationWarning)
+    if format is None:
+        return dec_deg_to_str(dec_deg)
+    sign, dec_degree, dec_min, dec_sec = degToDms(dec_deg)
+    if sign > 0:
+        sign_sym = '+'
+    else:
+        sign_sym = '-'
+    return format % (sign_sym, int(dec_degree), int(dec_min), dec_sec)

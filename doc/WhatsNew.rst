@@ -39,6 +39,11 @@ Ver 3.3.0 (unreleased)
     actually controls the behavior of always saving the primary header
     if set to False
 
+- Fixed a rounding bug in displaying sexagesimal formatted coordinates:
+
+  - deprecated ginga.util.wcs.{raDegToString,decDegToString}
+  - use ginga.util.wcs.{ra_deg_to_str,dec_deg_to_str} instead
+
 Ver 3.2.0 (2021-06-07)
 ======================
 - Minimum supported Python version is now 3.7
