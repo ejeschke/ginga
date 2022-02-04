@@ -123,6 +123,8 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.catalog_server_params = None
         self.catalog_params = Bunch.Bunch(dict(ra='', dec='', radius=1))
 
+        self.name_server_options = []
+
         self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
@@ -240,12 +242,14 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         combobox = self.w.server
         index = 0
-        self.image_server_options = self.fv.imgsrv.getServerNames(kind='image')
+        self.image_server_options = list(self.fv.imgsrv.get_server_names(
+            kind='image'))
         for name in self.image_server_options:
             combobox.append_text(name)
             index += 1
         index = 0
-        combobox.set_index(index)
+        if len(self.image_server_options) > 0:
+            combobox.set_index(index)
         combobox.add_callback('activated',
                               lambda w, idx: self.setup_params_image(idx))
         combobox.set_tooltip("Choose the image source")
@@ -276,13 +280,14 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         combobox = self.w2.server
         index = 0
-        self.catalog_server_options = self.fv.imgsrv.getServerNames(
-            kind='catalog')
+        self.catalog_server_options = list(self.fv.imgsrv.get_server_names(
+            kind='catalog'))
         for name in self.catalog_server_options:
             combobox.append_text(name)
             index += 1
         index = 0
-        combobox.set_index(index)
+        if len(self.catalog_server_options) > 0:
+            combobox.set_index(index)
         combobox.add_callback('activated',
                               lambda w, idx: self.setup_params_catalog(idx))
         combobox.set_tooltip("Choose the catalog source")
@@ -306,9 +311,15 @@ class Catalogs(GingaPlugin.LocalPlugin):
         vbox.add_widget(w, stretch=0)
 
         combobox = b.server
-        for name in ['SIMBAD', 'NED']:
+        index = 0
+        self.name_server_options = list(self.fv.imgsrv.get_server_names(
+            kind='name'))
+        for name in self.name_server_options:
             combobox.append_text(name)
-        combobox.set_index(0)
+            index += 1
+        index = 0
+        if len(self.name_server_options) > 0:
+            combobox.set_index(index)
         combobox.set_tooltip("Choose the object name resolver")
 
         vbox0.add_widget(fr, stretch=0)
@@ -822,11 +833,13 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
             # populate the image server UI coordinate
             self.image_params.update(dict(ra=ra_str, dec=dec_str))
-            self.image_server_params.params_to_widgets()
+            if self.image_server_params is not None:
+                self.image_server_params.params_to_widgets()
 
             # populate the catalog server UI coordinate
             self.catalog_params.update(dict(ra=ra_str, dec=dec_str))
-            self.catalog_server_params.params_to_widgets()
+            if self.catalog_server_params is not None:
+                self.catalog_server_params.params_to_widgets()
 
         except Exception as e:
             errmsg = "Name service query exception: %s" % (str(e))
@@ -1015,8 +1028,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
             for key in list(bnch.keys()):
                 if key in d:
                     bnch[key] = d[key]
-        self.image_server_params.params_to_widgets()
-        self.catalog_server_params.params_to_widgets()
+        if self.image_server_params is not None:
+            self.image_server_params.params_to_widgets()
+        if self.catalog_server_params is not None:
+            self.catalog_server_params.params_to_widgets()
 
     def get_params(self, bnch):
         params = {}

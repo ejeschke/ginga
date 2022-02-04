@@ -699,7 +699,7 @@ if have_astroquery:
          'type': 'astroquery.vo_conesearch',
          'mapping': {'id': 'objID', 'ra': 'ra', 'dec': 'dec', 'mag': ['Mag']}},
         {'shortname': "USNO-A2.0 1",
-         'fullname': "The USNO-A2.0 Catalogue (Monet+ 1998) 1",
+         'fullname': "The USNO-A2.0 Catalogue 1",
          'type': 'astroquery.vo_conesearch',
          'mapping': {'id': 'USNO-A2.0', 'ra': 'RAJ2000', 'dec': 'DEJ2000',
                      'mag': ['Bmag', 'Rmag']}},

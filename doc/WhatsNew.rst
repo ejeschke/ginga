@@ -44,6 +44,9 @@ Ver 3.3.0 (unreleased)
   - deprecated ginga.util.wcs.{raDegToString,decDegToString}
   - use ginga.util.wcs.{ra_deg_to_str,dec_deg_to_str} instead
 
+- Fixed an issue where the Catalogs plugin would not start correctly if
+  astroquery was not installed
+
 Ver 3.2.0 (2021-06-07)
 ======================
 - Minimum supported Python version is now 3.7
