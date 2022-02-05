@@ -46,8 +46,10 @@ Ver 3.3.0 (unreleased)
 
 - Fixed an issue where the Catalogs plugin would not start correctly if
   astroquery was not installed
-- Begin deprecation of kwargs save_primary_header and
-  inherit_primary_header in the AstroImage class
+- The keywords ``save_primary_header`` and ``inherit_primary_header`` in the ``AstroImage``
+  constructor are deprecated. Use ``save_primary_header`` keyword in ``AstroImage.load_hdu()``
+  or ``AstroImage.load_file()`` methods instead. Several other methods in ``AstroImage`` are
+  deprecated as well; they were previously pending deprecation.
 
 Ver 3.2.0 (2021-06-07)
 ======================
