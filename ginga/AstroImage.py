@@ -162,6 +162,9 @@ class AstroImage(BaseImage):
         if self.io is None:
             raise ImageError("No IO loader defined")
 
+        if 'save_primary_header' not in kwargs:
+            kwargs['save_primary_header'] = self.save_primary_header
+
         self.io.load_file(filespec, dstobj=self, **kwargs)
 
     def load_data(self, data_np, naxispath=None, metadata=None):
