@@ -15,7 +15,7 @@ import numpy as np
 try:
     import scipy.optimize as optimize
     import scipy.ndimage as ndimage
-    import scipy.ndimage.filters as filters
+    from scipy.ndimage import maximum_filter
     from scipy.interpolate import interp1d
     have_scipy = True
 except ImportError:
@@ -508,7 +508,7 @@ class IQCalc(object):
                 threshold, sigma))
 
         #self.logger.debug("filtering")
-        data_max = filters.maximum_filter(data, radius)
+        data_max = maximum_filter(data, radius)
         maxima = (data == data_max)
         diff = data_max > threshold
         maxima[diff == 0] = 0
