@@ -1789,7 +1789,6 @@ class ImageViewBase(Callback.Callbacks):
 
         with self.suppress_redraw:
             self.t_.set(scale=(scale_x, scale_y))
-            self._reset_bbox()
 
         # If user specified "override" or "once" for auto zoom, then turn off
         # auto zoom now that they have set the zoom manually
@@ -1798,6 +1797,7 @@ class ImageViewBase(Callback.Callbacks):
 
     def scale_cb(self, setting, value):
         """Handle callback related to image scaling."""
+        self._reset_bbox()
         zoomlevel = self.zoom.calc_level(value)
         self.t_.set(zoomlevel=zoomlevel)
 
@@ -2164,7 +2164,6 @@ class ImageViewBase(Callback.Callbacks):
 
         with self.suppress_redraw:
             self.t_.set(pan=pan_pos, pan_coord=coord)
-            self._reset_bbox()
 
         # If user specified "override" or "once" for auto center, then turn off
         # auto center now that they have set the pan manually
@@ -2173,6 +2172,7 @@ class ImageViewBase(Callback.Callbacks):
 
     def pan_cb(self, setting, value):
         """Handle callback related to changes in pan."""
+        self._reset_bbox()
         pan_x, pan_y = value[:2]
 
         self.logger.debug("pan set to %.2f,%.2f" % (pan_x, pan_y))

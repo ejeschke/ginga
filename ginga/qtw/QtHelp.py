@@ -498,5 +498,6 @@ def set_default_opengl_context():
     fmt.setVersion(req.major, req.minor)
     fmt.setProfile(QSurfaceFormat.CoreProfile)
     fmt.setDefaultFormat(fmt)
+    QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_ShareOpenGLContexts)
 
 # END

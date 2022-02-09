@@ -98,6 +98,9 @@ class WidgetBase(Callback.Callbacks):
     def hide(self):
         self.widget.hide()
 
+    def is_visible(self):
+        return self.widget.isVisible()
+
     def get_font(self, font_family, point_size):
         font = QtHelp.get_font(font_family, point_size)
         return font
@@ -1847,6 +1850,9 @@ class TopLevelMixin(object):
 
     def unmaximize(self):
         self.widget.showNormal()
+
+    def is_maximized(self):
+        return self.widget.isMaximized()
 
     def fullscreen(self):
         self.widget.showFullScreen()

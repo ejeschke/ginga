@@ -118,6 +118,9 @@ class WidgetBase(Callback.Callbacks):
     def hide(self):
         self.widget.hide()
 
+    def is_visible(self):
+        return self.widget.get_visible()
+
     def focus(self):
         self.widget.grab_focus()
 
@@ -2148,6 +2151,11 @@ class TopLevelMixin(object):
         window = self.widget.get_window()
         if window is not None:
             window.unmaximize()
+
+    def is_maximized(self):
+        window = self.widget.get_window()
+        mask = Gdk.WindowState.MAXIMIZED
+        return window.get_state() & mask != 0
 
     def fullscreen(self):
         window = self.widget.get_window()

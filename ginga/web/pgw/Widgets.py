@@ -116,6 +116,9 @@ class WidgetBase(Callback.Callbacks):
     def hide(self):
         pass
 
+    def is_visible(self):
+        return getattr(self, '_rendered', True)
+
     def get_font(self, font, size):
         if PgHelp.font_regex.match(font) is None:
             font = PgHelp.font_info('%s %d' % (font, size))
@@ -3089,11 +3092,17 @@ class TopLevel(ContainerBase):
     def unmaximize(self):
         pass
 
+    def is_maximized(self):
+        return False
+
     def fullscreen(self):
         pass
 
     def unfullscreen(self):
         pass
+
+    def is_fullscreen(self):
+        return False
 
     def iconify(self):
         pass

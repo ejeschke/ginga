@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import uuid
+import weakref
 import numpy as np
 
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
@@ -83,7 +84,7 @@ class ImageP(OnePointMixin, CanvasObjectBase):
 
         # The cache holds intermediate step results by viewer.
         # Depending on value of `whence` they may not need to be recomputed.
-        self._cache = {}
+        self._cache = weakref.WeakKeyDictionary()
         self.image_id = str(uuid.uuid4())
         # images are not editable by default
         self.editable = False

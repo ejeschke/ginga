@@ -6,6 +6,7 @@
 #
 import os
 import tempfile
+from functools import partial
 
 import numpy as np
 
@@ -41,6 +42,7 @@ class RenderGraphicsView(QtGui.QGraphicsView):
         super(RenderGraphicsView, self).__init__(*args, **kwdargs)
 
         self.viewer = None
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
 
     def drawBackground(self, painter, rect):
         """When an area of the window is exposed, we just copy out of the
@@ -78,6 +80,7 @@ class RenderWidget(QtGui.QWidget):
         super(RenderWidget, self).__init__(*args, **kwdargs)
 
         self.viewer = None
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
 
     def paintEvent(self, event):
@@ -119,10 +122,19 @@ class RenderWidget(QtGui.QWidget):
 
 class RenderGLWidget(QOpenGLWidget):
 
+    @staticmethod
+    def _on_destroyed(d):
+        viewer, d['viewer'] = d['viewer'], None
+        viewer.imgwin = None
+
     def __init__(self, *args, **kwdargs):
         QOpenGLWidget.__init__(self, *args, **kwdargs)
 
         self.viewer = None
+
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+        self.destroyed.connect(partial(RenderGLWidget._on_destroyed,
+                                       self.__dict__))
 
         # ensure we are using correct version of opengl
         fmt = QSurfaceFormat()

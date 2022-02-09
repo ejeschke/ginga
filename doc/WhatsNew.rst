@@ -46,10 +46,14 @@ Ver 3.3.0 (unreleased)
 
 - Fixed an issue where the Catalogs plugin would not start correctly if
   astroquery was not installed
-- The keywords ``save_primary_header`` and ``inherit_primary_header`` in the ``AstroImage``
-  constructor are deprecated. Use ``save_primary_header`` keyword in ``AstroImage.load_hdu()``
-  or ``AstroImage.load_file()`` methods instead. Several other methods in ``AstroImage`` are
-  deprecated as well; they were previously pending deprecation.
+- The keywords ``save_primary_header`` and ``inherit_primary_header`` in
+  the ``AstroImage`` constructor are deprecated. Use
+  ``save_primary_header`` keyword in ``AstroImage.load_hdu()``
+  or ``AstroImage.load_file()`` methods instead. Several other methods
+  in ``AstroImage`` are deprecated as well; they were previously pending
+  deprecation.
+- Fixed an issue where image might not be redrawn properly if scale or
+  pan is set directly via a viewer's settings object (not the usual case)
 
 Ver 3.2.0 (2021-06-07)
 ======================

@@ -188,6 +188,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.menubar = None
         self.gui_dialog_lock = threading.RLock()
         self.gui_dialog_list = []
+        self.w.root = None
+        # fullscreen viewer and top-level widget
+        self.fs_viewer = None
+        self.w.fscreen = None
 
         gviewer.register_viewer(Viewers.CanvasView)
         gviewer.register_viewer(Viewers.TableViewGw)
@@ -1833,55 +1837,93 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         holder.add_widget(self.w.status, stretch=1)
 
     def fullscreen(self):
+        self._fullscreen_off()
         self.w.root.fullscreen()
 
     def normalsize(self):
+        self._fullscreen_off()
         self.w.root.unfullscreen()
 
     def maximize(self):
-        self.w.root.maximize()
+        self._fullscreen_off()
+
+        if self.w.root.is_maximized():
+            self.w.root.unmaximize()
+        else:
+            self.w.root.maximize()
 
     def toggle_fullscreen(self):
+        self._fullscreen_off()
+
         if not self.w.root.is_fullscreen():
             self.w.root.fullscreen()
         else:
             self.w.root.unfullscreen()
 
     def build_fullscreen(self):
-        w = self.w.fscreen
-        self.w.fscreen = None
-        if w is not None:
-            w.delete()
-            return
+        if self.w.fscreen is None:
+            self.build_fullscreen_viewer()
+        else:
+            # viewer has been built already. If visible, toggle it
+            if self.w.fscreen.is_visible():
+                self._fullscreen_off()
+                return
+
+        self.w.fscreen.show()
+        self.w.fscreen.fullscreen()
+        self.w.fscreen.raise_()
 
         # Get image from current focused channel
         channel = self.get_current_channel()
         viewer = channel.fitsimage
-        settings = viewer.get_settings()
-        rgbmap = viewer.get_rgbmap()
 
+        # Get canvas from current focused channel
+        canvas = viewer.get_canvas()
+        if canvas is None:
+            return
+        fi = self.fs_viewer
+
+        with fi.suppress_redraw:
+            if canvas is not fi.get_canvas():
+                fi.set_canvas(canvas)
+            # Copy attributes of the channel viewer to the full screen one
+            copy_attrs = ['autocuts',
+                          'limits', 'transforms',
+                          'rotation', 'cutlevels', 'rgbmap', 'icc',
+                          'interpolation', 'pan', 'zoom'
+                          ]
+            viewer.copy_attributes(fi, copy_attrs)
+
+    def _fullscreen_off(self):
+        if self.w.fscreen is not None:
+            self.w.fscreen.hide()
+            # TODO: needed for Qt--can't recover the OpenGL context after
+            # re-show; workaround is to rebuild the viewer every time
+            self.fs_viewer.imgwin = None
+            self.w.fscreen.delete()
+            self.w.fscreen = None
+            self.fs_viewer = None
+
+    def build_fullscreen_viewer(self):
+        """Builds a full screen single channel borderless viewer.
+        """
         root = Widgets.TopLevel()
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
         vbox.set_spacing(0)
         root.set_widget(vbox)
 
-        fi = self.build_viewpane(settings, rgbmap=rgbmap)
+        settings = self.prefs.create_category('fullscreen')
+        settings.set(autocuts='off', autozoom='off', autocenter='off',
+                     sanity_check_scale=False)
+        fi = self.build_viewpane(settings)
+        self.fs_viewer = fi
 
         iw = Viewers.GingaViewerWidget(viewer=fi)
         vbox.add_widget(iw, stretch=1)
 
-        # Get image from current focused channel
-        image = viewer.get_image()
-        if image is None:
-            return
-        fi.set_image(image)
-
-        # Copy attributes of the frame
-        viewer.copy_attributes(fi, ['rgbmap'])  # 'transforms', 'cutlevels'
-
-        root.fullscreen()
         self.w.fscreen = root
+        root.hide()
 
     def make_viewer(self, vinfo, channel):
         """Make a viewer whose salient info is in `vinfo` and add it to
