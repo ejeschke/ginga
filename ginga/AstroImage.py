@@ -65,7 +65,7 @@ class AstroImage(BaseImage):
         inherit_primary_header = False
         if 'inherit_primary_header' in kwargs:
             warnings.warn("inherit_primary_header kwarg has been deprecated--"
-                          "use save_primary_header in load_hdu() or load_file()",
+                          "use inherit_primary_header in load_hdu() or load_file()",
                           DeprecationWarning)
             inherit_primary_header = kwargs['inherit_primary_header']
         self.inherit_primary_header = inherit_primary_header
@@ -76,7 +76,7 @@ class AstroImage(BaseImage):
                           "use save_primary_header in load_hdu() or load_file()",
                           DeprecationWarning)
             save_primary_header = kwargs['save_primary_header']
-        self.save_primary_header = inherit_primary_header or save_primary_header
+        self.save_primary_header = save_primary_header
 
         if metadata is not None:
             header = self.get_header()
@@ -114,26 +114,23 @@ class AstroImage(BaseImage):
         self.set_naxispath(naxispath)
 
     def load_hdu(self, hdu, fobj=None, naxispath=None,
-                 save_primary_header=None, **kwargs):
+                 save_primary_header=None, inherit_primary_header=None,
+                 **kwargs):
         """NOTE: this is for astropy.io.fits HDUs only."""
 
         if self.io is None:
             raise ImageError("No IO loader defined")
 
-        inherit_primary_header = False
-        if 'inherit_primary_header' in kwargs:
-            warnings.warn("inherit_primary_header kwarg has been deprecated--"
-                          "use save_primary_header instead",
-                          DeprecationWarning)
-            inherit_primary_header = kwargs['inherit_primary_header']
-
-        save_primary_header = save_primary_header or inherit_primary_header
+        # TO BE DEPRECATED--will just pass kwargs on through
         if save_primary_header is None:
-            save_primary_header = (self.inherit_primary_header or
-                                   self.save_primary_header)
+            save_primary_header = self.save_primary_header
+        if inherit_primary_header is None:
+            inherit_primary_header = self.inherit_primary_header
 
         self.io.load_hdu(hdu, dstobj=self, fobj=fobj, naxispath=naxispath,
-                         save_primary_header=save_primary_header)
+                         save_primary_header=save_primary_header,
+                         inherit_primary_header=inherit_primary_header,
+                         **kwargs)
 
     def load_nddata(self, ndd, naxispath=None):
         """Load from an astropy.nddata.NDData object.
@@ -162,8 +159,11 @@ class AstroImage(BaseImage):
         if self.io is None:
             raise ImageError("No IO loader defined")
 
+        # TO BE DEPRECATED--will just pass kwargs on through
         if 'save_primary_header' not in kwargs:
             kwargs['save_primary_header'] = self.save_primary_header
+        if 'inherit_primary_header' not in kwargs:
+            kwargs['inherit_primary_header'] = self.inherit_primary_header
 
         self.io.load_file(filespec, dstobj=self, **kwargs)
 
@@ -220,18 +220,20 @@ class AstroImage(BaseImage):
     def get_header(self, create=True, include_primary_header=None):
         # By convention, the fits header is stored in a dictionary
         # under the metadata keyword 'header'
-        if 'header' not in self.metadata:
+        if 'header' not in self:
             if not create:
                 # TODO: change to ValueError("No header found")
                 raise KeyError('header')
 
             hdr = AstroHeader()
-            self.metadata['header'] = hdr
+            self.set(header=hdr)
         else:
-            hdr = self.metadata['header']
+            hdr = self['header']
 
         if include_primary_header is None:
-            include_primary_header = self.inherit_primary_header
+            include_primary_header = (self.get('inherit_primary_header', False) or
+                                      # TO BE DEPRECATED
+                                      self.inherit_primary_header)
 
         # If it was saved during loading, by convention, the primary fits
         # header is stored in a dictionary under the keyword 'primary_header'
@@ -239,7 +241,7 @@ class AstroImage(BaseImage):
             # Inherit PRIMARY header for display but keep metadata intact
             displayhdr = AstroHeader()
             displayhdr.merge(hdr)
-            primary_hdr = self.metadata['primary_header']
+            primary_hdr = self['primary_header']
             displayhdr.merge(primary_hdr, override_keywords=False)
         else:
             # Normal, separate header
@@ -289,8 +291,7 @@ class AstroImage(BaseImage):
                       astype=astype)
 
     def update_metadata(self, key_dict):
-        for key, val in key_dict.items():
-            self.metadata[key] = val
+        self.update(key_dict)
 
         # refresh the WCS
         if hasattr(self, 'wcs') and self.wcs is not None:
@@ -298,7 +299,7 @@ class AstroImage(BaseImage):
             self.wcs.load_header(header)
 
     def has_primary_header(self):
-        primary_hdr = self.metadata.get('primary_header', None)
+        primary_hdr = self.get('primary_header', None)
         return isinstance(primary_hdr, AstroHeader)
 
     def clear_all(self):

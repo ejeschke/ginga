@@ -252,10 +252,12 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         return None
 
     def load_hdu(self, hdu, dstobj=None, fobj=None, naxispath=None,
-                 save_primary_header=False, **kwargs):
+                 save_primary_header=False, inherit_primary_header=False,
+                 **kwargs):
         if fobj is None:
             fobj = self.fits_f
 
+        save_primary_header = save_primary_header or inherit_primary_header
         # Set PRIMARY header
         if save_primary_header and fobj is not None:
             primary_hdr = AstroHeader()
@@ -284,7 +286,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             # collect HDU header
             ahdr = dstobj.get_header()
             self.copy_header(hdu, ahdr)
-            dstobj.set(primary_header=primary_hdr)
+            dstobj.set(primary_header=primary_hdr,
+                       inherit_primary_header=inherit_primary_header)
 
             dstobj.setup_data(hdu.data, naxispath=naxispath)
 
@@ -319,7 +322,8 @@ class PyFitsFileHandler(BaseFitsFileHandler):
 
             ahdr = dstobj.get_header()
             self.copy_header(hdu, ahdr)
-            dstobj.set(primary_header=primary_hdr)
+            dstobj.set(primary_header=primary_hdr,
+                       inherit_primary_header=inherit_primary_header)
 
             if 'format' not in kwargs:
                 kwargs['format'] = 'fits'
@@ -341,19 +345,16 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         return dstobj
 
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
-                  save_primary_header=False, **kwargs):
-        if 'inherit_primary_header' in kwargs:
-            warnings.warn("inherit_primary_header kwarg will be deprecated in the next release--use save_primary_header instead",
-                          PendingDeprecationWarning)
-            save_primary_header = kwargs.pop('inherit_primary_header',
-                                             save_primary_header)
+                  save_primary_header=False, inherit_primary_header=False,
+                  **kwargs):
 
         opener = self.get_factory()
         opener.open_file(filespec, memmap=memmap, **kwargs)
         try:
             return opener.get_hdu(
                 numhdu, dstobj=dstobj,
-                save_primary_header=save_primary_header)
+                save_primary_header=save_primary_header,
+                inherit_primary_header=inherit_primary_header)
         finally:
             opener.close()
 
@@ -533,7 +534,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
     def fromHDU(self, hdu, ahdr):
         warnings.warn("fromHDU will be deprecated in the next release--"
                       "use copy_header instead",
-                      PendingDeprecationWarning)
+                      DeprecationWarning)
         return self.copy_header(hdu, ahdr)
 
 
@@ -574,10 +575,12 @@ class FitsioFileHandler(BaseFitsFileHandler):
         return None
 
     def load_hdu(self, hdu, dstobj=None, fobj=None, naxispath=None,
-                 save_primary_header=True, **kwargs):
+                 save_primary_header=False, inherit_primary_header=False,
+                 **kwargs):
         if fobj is None:
             fobj = self.fits_f
 
+        save_primary_header = save_primary_header or inherit_primary_header
         # Set PRIMARY header
         if save_primary_header and fobj is not None:
             primary_hdr = AstroHeader()
@@ -598,7 +601,8 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
             ahdr = dstobj.get_header()
             self.copy_header(hdu, ahdr)
-            dstobj.set(primary_header=primary_hdr)
+            dstobj.set(primary_header=primary_hdr,
+                       inherit_primary_header=inherit_primary_header)
 
             data = hdu.read()
 
@@ -621,7 +625,8 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
             ahdr = dstobj.get_header()
             self.copy_header(hdu, ahdr)
-            dstobj.set(primary_header=primary_hdr)
+            dstobj.set(primary_header=primary_hdr,
+                       inherit_primary_header=inherit_primary_header)
 
             dstobj.kind = 'table-fitsio'
 
@@ -634,18 +639,16 @@ class FitsioFileHandler(BaseFitsFileHandler):
         return dstobj
 
     def load_file(self, filespec, numhdu=None, dstobj=None, memmap=None,
-                  save_primary_header=True, **kwargs):
-        if 'inherit_primary_header' in kwargs:
-            warnings.warn("inherit_primary_header kwarg will be deprecated in the next release--use save_primary_header instead",
-                          PendingDeprecationWarning)
-            save_primary_header = kwargs.pop('inherit_primary_header',
-                                             save_primary_header)
+                  save_primary_header=False, inherit_primary_header=False,
+                  **kwargs):
+
         opener = self.get_factory()
         opener.open_file(filespec, memmap=memmap, **kwargs)
         try:
             return opener.get_hdu(
                 numhdu, dstobj=dstobj,
-                save_primary_header=save_primary_header)
+                save_primary_header=save_primary_header,
+                inherit_primary_header=inherit_primary_header)
         finally:
             opener.close()
 
@@ -807,7 +810,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
     def fromHDU(self, hdu, ahdr):
         warnings.warn("fromHDU will be deprecated in the next release--"
                       "use copy_header instead",
-                      PendingDeprecationWarning)
+                      DeprecationWarning)
         return self.copy_header(hdu, ahdr)
 
 

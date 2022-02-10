@@ -68,6 +68,9 @@ class ViewerObjectBase(Callback.Callbacks):
     def __getitem__(self, kwd):
         return self.metadata[kwd]
 
+    def __contains__(self, kwd):
+        return kwd in self.metadata
+
     def update(self, kwds):
         self.metadata.update(kwds)
 

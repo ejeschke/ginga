@@ -77,19 +77,39 @@ class AstroTable(ViewerObjectBase):
     def _get_data(self):
         return self._data
 
-    def get_header(self, create=True, **kwargs):
-        try:
-            # By convention, the fits header is stored in a dictionary
-            # under the metadata keyword 'header'
-            displayhdr = self.metadata['header']
-
-        except KeyError as e:
+    def get_header(self, create=True, include_primary_header=None):
+        # By convention, the fits header is stored in a dictionary
+        # under the metadata keyword 'header'
+        if 'header' not in self:
             if not create:
-                raise e
+                # TODO: change to ValueError("No header found")
+                raise KeyError('header')
+
+            hdr = AstroTableHeader()
+            self.set(header=hdr)
+        else:
+            hdr = self['header']
+
+        if include_primary_header is None:
+            include_primary_header = self.get('inherit_primary_header', False)
+
+        # If it was saved during loading, by convention, the primary fits
+        # header is stored in a dictionary under the keyword 'primary_header'
+        if include_primary_header and self.has_primary_header():
+            # Inherit PRIMARY header for display but keep metadata intact
             displayhdr = AstroTableHeader()
-            self.metadata['header'] = displayhdr
+            displayhdr.merge(hdr)
+            primary_hdr = self['primary_header']
+            displayhdr.merge(primary_hdr, override_keywords=False)
+        else:
+            # Normal, separate header
+            displayhdr = hdr
 
         return displayhdr
+
+    def has_primary_header(self):
+        primary_hdr = self.get('primary_header', None)
+        return isinstance(primary_hdr, AstroTableHeader)
 
     def set_data(self, data_ap, metadata=None):
         """Use this method to SHARE (not copy) the incoming table.
