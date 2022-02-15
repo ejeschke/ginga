@@ -100,7 +100,7 @@ class Info(GingaPlugin.GlobalPlugin):
         container.add_widget(vbox, stretch=1)
         self.gui_up = True
 
-    def _create_info_window(self, channel):
+    def _create_info_window(self):
         sw = Widgets.ScrollArea()
 
         vbox = Widgets.VBox()
@@ -152,16 +152,11 @@ class Info(GingaPlugin.GlobalPlugin):
         w, b2 = Widgets.build_info(captions)
         b.update(b2)
         b.cut_levels.set_tooltip("Set cut levels manually")
-        loval, hival = channel.fitsimage.get_cut_levels()
         b.auto_levels.set_tooltip("Set cut levels by algorithm")
         b.cut_low.set_tooltip("Set low cut level (press Enter)")
         b.cut_low.set_length(9)
-        b.cut_low.set_text(str(loval))
-        b.cut_low_value.set_text(str(loval))
         b.cut_high.set_tooltip("Set high cut level (press Enter)")
         b.cut_high.set_length(9)
-        b.cut_high.set_text(str(hival))
-        b.cut_high_value.set_text(str(hival))
 
         combobox = b.cut_new
         index = 0

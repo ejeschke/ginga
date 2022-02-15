@@ -150,34 +150,25 @@ class Pan(GingaPlugin.GlobalPlugin):
         self.logger.debug("channel '%s' added." % (channel.name))
 
     def redo(self, channel, image):
-        if not self.gui_up:
+        if not self.gui_up or self.active is not channel:
             return
         self.logger.debug("redo")
 
-        if (image is None) or not self.panimage.viewable(image):
-            self.logger.debug("no main image--clearing Pan viewer")
-            self.panimage.clear()
-            return
-
-        self.set_image(channel, image)
+        self.update_panviewer(channel)
 
     def blank(self, channel):
-        self.panimage.clear()
+        if not self.gui_up or self.active is not channel:
+            return
+
+        self.update_panviewer(channel)
 
     def focus_cb(self, viewer, channel):
         if not self.gui_up:
             return
 
-        self.update_panviewer(channel)
-
         # If the active widget has changed, then update our panwidget
         if self.active is not channel:
-            self.active = channel
-            image = channel.fitsimage.get_image()
-            p_image = self.panimage.get_image()
-            if image != p_image:
-                self.logger.debug("pan viewer seems to be missing image--calling redo()")
-                self.redo(channel, image)
+            self.update_panviewer(channel)
 
     def reconfigure(self, panimage, width, height):
         self.logger.debug("new pan image dimensions are %dx%d" % (
@@ -190,87 +181,77 @@ class Pan(GingaPlugin.GlobalPlugin):
     def redraw_cb(self, fitsimage, whence, channel):
         if not self.gui_up:
             return
-        self.update_panviewer(channel)
+        #self.update_panviewer(channel)
         if whence == 0:
             self.panset(channel.fitsimage, channel)
         return True
 
     # LOGIC
 
-    def clear(self):
-        self.panimage.clear()
-
     def update_panviewer(self, channel):
         """Update the pan viewer to look like the channel viewer."""
-        fitsimage = channel.fitsimage
-        # Reflect transforms, colormap, etc.
-        fitsimage.copy_attributes(self.panimage, self.copy_attrs)
+        self.active = channel
 
-    def set_image(self, channel, image):
-        if image is None or not self.panimage.viewable(image):
-            self.logger.debug("no main image--clearing Pan viewer")
-            self.panimage.clear()
-            return
+        viewer = channel.fitsimage
+        with viewer.suppress_redraw:
+            canvas = viewer.get_canvas()
+            self.panimage.set_canvas(canvas)
 
-        if not self.use_shared_canvas:
-            self.logger.debug("setting Pan viewer image")
-            self.panimage.set_image(image)
-        else:
+            # Reflect transforms, colormap, etc.
+            viewer.copy_attributes(self.panimage, self.copy_attrs)
+
+            p_canvas = self.panimage.get_private_canvas()
+            # remove old compasses
+            try:
+                p_canvas.delete_object_by_tag(self.paninfo.compass_wcs)
+            except Exception:
+                pass
+            try:
+                p_canvas.delete_object_by_tag(self.paninfo.compass_xy)
+            except Exception:
+                pass
+
+            x, y = 0.5, 0.5
+            radius = 0.1
+
+            self.paninfo.compass_xy = p_canvas.add(self.dc.Compass(
+                x, y, radius,
+                color=self.settings.get('xy_compass_color', 'yellow'),
+                fontsize=14, ctype='pixel', coord='percentage'))
+
+            # create compass
+            image = viewer.get_image()
+            if image is not None and image.has_valid_wcs():
+                try:
+                    x, y = 0.5, 0.5
+                    # HACK: force a wcs error here if one is going to happen
+                    wcs.add_offset_xy(image, x, y, 1.0, 1.0)
+
+                    radius = 0.2
+                    self.paninfo.compass_wcs = p_canvas.add(self.dc.Compass(
+                        x, y, radius,
+                        color=self.settings.get('compass_color', 'skyblue'),
+                        fontsize=14, ctype='wcs', coord='percentage'))
+
+                except Exception as e:
+                    self.paninfo.compass_wcs = None
+                    self.logger.warning("Can't calculate wcs compass: %s" % (
+                        str(e)))
+                    try:
+                        # log traceback, if possible
+                        (type_, value_, tb) = sys.exc_info()
+                        tb_str = "".join(traceback.format_tb(tb))
+                        self.logger.debug("Traceback:\n%s" % (tb_str))
+                    except Exception:
+                        tb_str = "Traceback information unavailable."
+                        self.logger.debug(tb_str)
+
             self.panimage.zoom_fit()
 
-        p_canvas = self.panimage.get_private_canvas()
-        # remove old compasses
-        try:
-            p_canvas.delete_object_by_tag(self.paninfo.compass_wcs)
-        except Exception:
-            pass
-        try:
-            p_canvas.delete_object_by_tag(self.paninfo.compass_xy)
-        except Exception:
-            pass
-
-        x, y = 0.5, 0.5
-        radius = 0.1
-
-        self.paninfo.compass_xy = p_canvas.add(self.dc.Compass(
-            x, y, radius,
-            color=self.settings.get('xy_compass_color', 'yellow'),
-            fontsize=14, ctype='pixel', coord='percentage'))
-
-        # create compass
-        if image.has_valid_wcs():
-            try:
-                x, y = 0.5, 0.5
-                # HACK: force a wcs error here if one is going to happen
-                wcs.add_offset_xy(image, x, y, 1.0, 1.0)
-
-                radius = 0.2
-                self.paninfo.compass_wcs = p_canvas.add(self.dc.Compass(
-                    x, y, radius,
-                    color=self.settings.get('compass_color', 'skyblue'),
-                    fontsize=14, ctype='wcs', coord='percentage'))
-
-            except Exception as e:
-                self.paninfo.compass_wcs = None
-                self.logger.warning("Can't calculate wcs compass: %s" % (
-                    str(e)))
-                try:
-                    # log traceback, if possible
-                    (type_, value_, tb) = sys.exc_info()
-                    tb_str = "".join(traceback.format_tb(tb))
-                    self.logger.debug("Traceback:\n%s" % (tb_str))
-                except Exception:
-                    tb_str = "Traceback information unavailable."
-                    self.logger.debug(tb_str)
-
-        self.panset(channel.fitsimage, channel)
+            self.panset(channel.fitsimage, channel)
 
     def panset(self, fitsimage, channel):
         if not self.gui_up:
-            return
-        image = fitsimage.get_image()
-        if image is None or not self.panimage.viewable(image):
-            self.panimage.clear()
             return
 
         x, y = fitsimage.get_pan()
@@ -295,7 +276,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             bbox.points = points
             p_canvas.update_canvas(whence=3)
 
-        except KeyError:
+        except AttributeError:
             self.paninfo.panrect = p_canvas.add(self.dc.CompoundObject(
                 self.dc.Point(
                     x, y, radius, style='plus',
