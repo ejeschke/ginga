@@ -539,7 +539,7 @@ def get_scaled_cutout_basic2(data_np, p1, p2, scales,
                                                 p1, p2, scales)
     newdata = np.asarray(fancy_index(data_np, view))
 
-    return newdata, oscales
+    return newdata, scales
 
 
 def transform(data_np, flip_x=False, flip_y=False, swap_xy=False):
