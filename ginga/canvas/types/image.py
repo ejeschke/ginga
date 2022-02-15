@@ -1,5 +1,5 @@
 #
-# images.py -- classes for images drawn on ginga canvases.
+# image.py -- classes for images drawn on Ginga canvases.
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
@@ -19,7 +19,7 @@ from .mixins import OnePointMixin
 
 
 class ImageP(OnePointMixin, CanvasObjectBase):
-    """Draws an image on a ImageViewCanvas.
+    """Draws an image on a Ginga canvas.
     Parameters are:
     x, y: 0-based coordinates of one corner in the data space
     image: the image, which must be an RGBImage object
@@ -262,7 +262,7 @@ class Image(ImageP):
 
 
 class NormImageP(ImageP):
-    """Draws an image on a ImageViewCanvas.
+    """Draws an image on a Ginga canvas.
 
     Parameters are:
     x, y: 0-based coordinates of one corner in the data space

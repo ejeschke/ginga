@@ -39,7 +39,7 @@ if len(macos_ver) > 0:
     matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
 
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.mplw.ImageViewMpl import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
 from ginga.util.loader import load_data
@@ -52,11 +52,12 @@ class MyGingaFigure(object):
     def __init__(self, logger, fig):
         self.logger = logger
         # create a ginga object and tell it about the figure
-        fi = ImageViewCanvas(logger=logger)
+        fi = CanvasView(logger=logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.add_callback('key-press', self.key_press_ginga)
         fi.set_figure(fig)
+        fi.show_mode_indicator(True, corner='ur')
         self.fitsimage = fi
 
         self.dc = get_canvas_types()

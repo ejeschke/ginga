@@ -45,7 +45,7 @@ class CanvasObjectError(Exception):
 
 class CanvasObjectBase(Callback.Callbacks):
     """This is the abstract base class for a CanvasObject.  A CanvasObject
-    is an item that can be placed on a ImageViewCanvas.
+    is an item that can be placed on a Ginga canvas.
 
     This class defines common methods used by all such objects.
     """

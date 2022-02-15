@@ -17,7 +17,7 @@ import sys
 from matplotlib.figure import Figure
 
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.mplw.ImageViewMpl import CanvasView
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
 from ginga import colors
@@ -36,15 +36,15 @@ class FitsViewer(QtGui.QMainWindow):
         fig = Figure()
         w = FigureCanvas(fig)
 
-        fi = ImageViewCanvas(logger=logger)
+        fi = CanvasView(logger=logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
-        fi.enable_draw(False)
         fi.set_callback('drag-drop', self.drop_file_cb)
         fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
+        fi.show_mode_indicator(True, corner='ur')
         self.fitsimage = fi
         fi.set_figure(fig)
 
@@ -79,7 +79,7 @@ class FitsViewer(QtGui.QMainWindow):
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
         wdrawtype = QtGui.QComboBox()
-        self.drawtypes = fi.get_drawtypes()
+        self.drawtypes = canvas.get_drawtypes()
         for name in self.drawtypes:
             wdrawtype.addItem(name)
         index = self.drawtypes.index('rectangle')

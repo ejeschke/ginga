@@ -17,7 +17,7 @@ __all__ = ['DrawingMixin']
 class DrawingMixin(object):
     """The DrawingMixin is a mixin class that adds drawing capability for
     some of the basic CanvasObject-derived types.  The set_surface method is
-    used to associate a ImageViewCanvas object for layering on.
+    used to associate a CanvasView object for layering on.
     """
 
     def __init__(self):

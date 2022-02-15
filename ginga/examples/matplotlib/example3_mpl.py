@@ -27,7 +27,7 @@ import sys
 import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas
+from ginga.qtw.ImageViewQt import CanvasView
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga import cmap, imap
 from ginga.misc import log
@@ -67,17 +67,17 @@ class FitsViewer(QtGui.QMainWindow):
         wd, ht = 500, 500
 
         # Create a Ginga widget
-        fi = ImageViewCanvas(logger, render='widget')
+        fi = CanvasView(logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
-        fi.enable_draw(False)
         fi.set_callback('drag-drop', self.drop_file_cb)
         fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
         self.fitsimage = fi
 
+        fi.show_mode_indicator(True, corner='ur')
         fi.show_color_bar(True)
 
         # enable various key and mouse controlled actions
