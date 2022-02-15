@@ -313,11 +313,11 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
             iscale_z = float(old_dp) / float(new_dp)
 
         xi = np.clip(x1 + np.arange(0, new_wd) * iscale_x,
-                     0, max_x).astype(np.int, copy=False)
+                     0, max_x).astype(int, copy=False)
         yi = np.clip(y1 + np.arange(0, new_ht) * iscale_y,
-                     0, max_y).astype(np.int, copy=False)
+                     0, max_y).astype(int, copy=False)
         zi = np.clip(z1 + np.arange(0, new_dp) * iscale_z,
-                     0, max_z).astype(np.int, copy=False)
+                     0, max_z).astype(int, copy=False)
         wd, ht, dp = xi.size, yi.size, zi.size
 
         # bounds check against shape (to protect future data access)
