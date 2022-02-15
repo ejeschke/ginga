@@ -25,7 +25,7 @@ class TestNumpy:
         data_np = trcalc.fancy_index(arr_np, view)
         assert isinstance(data_np, np.ndarray)
         assert data_np.shape == (86, 163)
-        assert isinstance(data_np[0, 0], int)
+        assert isinstance(data_np[0, 0], np.integer)
         res = '177e1ed261ea24df277511078631ec0f95dfc3e781ac15b2d200f0f0040282ae'
         m = hashlib.sha256()
         m.update(str(data_np.tolist()).encode())
@@ -42,7 +42,7 @@ class TestNumpy:
         data_np = aimg._slice(view)
         assert isinstance(data_np, np.ndarray)
         assert data_np.shape == (70, 99)
-        assert isinstance(data_np[0, 0], int)
+        assert isinstance(data_np[0, 0], np.integer)
         res = 'd6f0e61dc54f0c888c8f79d94ead85f8d3c4736efede289ff9946e0091960524'
         m = hashlib.sha256()
         m.update(str(data_np.tolist()).encode())
@@ -72,7 +72,7 @@ class TestNumpy:
                                                           logger=self.logger)
         assert isinstance(data_np, np.ndarray)
         assert data_np.shape == new_dims
-        assert isinstance(data_np[0, 0, 0], int)
+        assert isinstance(data_np[0, 0, 0], np.integer)
         res = '4d6bb43463f435d76d226c38314fa22a5ba540b7db785b1ccfd2c75d84063fc4'
         m = hashlib.sha256()
         m.update(str(data_np.tolist()).encode())
