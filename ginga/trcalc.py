@@ -1113,7 +1113,7 @@ def cutout_data(data, x1, y1, x2, y2, xstep=1, ystep=1, z=None,
     cutout region, similar to slicing parameters in Python.
     """
     view = np.s_[y1:y2:ystep, x1:x2:xstep]
-    data_np = data[view]
+    data_np = fancy_index(data, view)
     if z is not None and len(data_np.shape) > 2:
         data_np = data_np[..., z]
     if astype:
