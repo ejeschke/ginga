@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 3.3.0 (unreleased)
+Ver 3.3.0 (2022-02-16)
 ======================
 - Fixed an issue with image rotation when OpenCv is installed
 - Removed support for OpenCL
