@@ -86,6 +86,10 @@ class ImageViewBindings(object):
     def get_settings(self):
         return self.settings
 
+    def add_mode_obj(self, mode_obj):
+        self.settings.add_defaults(**mode_obj.actions)
+        self._modes[str(mode_obj)] = mode_obj
+
     def get_mode_obj(self, mode_name):
         return self._modes[mode_name]
 
@@ -111,8 +115,6 @@ class ImageViewBindings(object):
 
     def mode_set_cb(self, bm, mode, mode_type, viewer):
         self.logger.info(f'mode change to {mode}')
-        ## cursor_name = self.cursor_map.get(mode, 'pick')
-        ## viewer.switch_cursor(cursor_name)
 
         if mode != self._cur_mode:
             if self._cur_mode not in ('meta', None):
@@ -171,10 +173,9 @@ class ImageViewBindings(object):
         self.initialize_settings(self.settings)
 
         from ginga.modes.modeinfo import available_modes
-        for klass in available_modes:
-            mode_obj = klass(viewer, settings=self.settings)
-            self.settings.add_defaults(**mode_obj.actions)
-            self._modes[str(mode_obj)] = mode_obj
+        for mode_class in available_modes:
+            mode_obj = mode_class(viewer, settings=self.settings)
+            self.add_mode_obj(mode_obj)
 
         # Now settings should have all available modes defined
         d = self.settings.get_dict()

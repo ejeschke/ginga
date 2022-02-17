@@ -13,3 +13,7 @@ available_modes = [CutsMode, ContrastMode, RotateMode, CMapMode,
                    DistMode, CameraMode, NaxisMode, PanMode, FreePanMode,
                    #DrawMode
                    ]
+
+
+def add_mode(mode_class):
+    available_modes.append(mode_class)

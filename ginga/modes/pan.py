@@ -11,7 +11,7 @@ from ginga.modes.mode_base import Mode
 
 class PanMode(Mode):
     """Pan Mode enables bindings that can set the pan position (the center
-    pixel) in a Ginga image viewer.
+    pixel) and zoom level (scale) in a Ginga image viewer.
 
     Default bindings in mode
     ------------------------
@@ -52,7 +52,7 @@ class PanMode(Mode):
 
     scroll : zoom (scale) the image
 
-    left drag : camera orbit the view
+    left drag : pan the view
 
     right drag : camera pan the view
 
