@@ -8,12 +8,46 @@ from ginga.modes.pan import PanMode
 
 
 class FreePanMode(PanMode):
+    """FreePan Mode enables bindings that can set the pan position
+    (the center pixel) and zoom level (scale) in a Ginga image viewer.
+
+    It differs from Pan mode in the types of scrolling and panning
+    controls.
+
+    Default bindings in mode
+    ------------------------
+    middle drag : freely pan around the image
+
+    left click : set pan under the cursor and zoom in
+    right click : zoom out
+
+    pan gesture : zoom in/out of the image
+    Shift + pan gesture : zoom in/out of the image with origin set
+
+    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
         self.actions = dict(
             dmod_freepan=['__w', None, 'pan'],
+
+            kp_zoom_fit=['freepan+backquote'],
+            kp_pan_set=['freepan+p'],
+            kp_pan_zoom_set=['freepan+1'],
+            kp_pan_zoom_save=['freepan+z'],
+            kp_pan_left=['freepan+*+left'],
+            kp_pan_right=['freepan+*+right'],
+            kp_pan_up=['freepan+*+up'],
+            kp_pan_down=['freepan+*+down'],
+            kp_pan_home=['freepan+*+home'],
+            kp_pan_end=['freepan+*+end'],
+            kp_pan_page_up=['freepan+*+page_up'],
+            kp_pan_page_down=['freepan+*+page_down'],
+            kp_center=['freepan+c'],
+
+            sc_zoom=['freepan+scroll'],
+            sc_zoom_origin=['freepan+shift+scroll'],
 
             ms_freepan=['freepan+middle'],
             ms_zoom_in=['freepan+left'],

@@ -40,6 +40,7 @@ class RotateMode(Mode):
 
     right click : reset the rotation to 0 deg (same as R)
 
+    rotation gesture : rotate the image interactively
     """
 
     def __init__(self, viewer, settings=None):
