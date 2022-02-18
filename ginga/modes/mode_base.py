@@ -68,6 +68,7 @@ class Mode:
         """
         Translate a direction in compass degrees into 'up' or 'down'.
         """
+        # TODO: merge with the one in Bindings
         if (direction < 90.0) or (direction >= 270.0):
             if not rev:
                 return 'up'

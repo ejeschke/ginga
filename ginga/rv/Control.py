@@ -1985,6 +1985,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi.show_mode_indicator(True, corner='lr')
         fi.use_image_profile = True
 
+        fi.add_callback('cursor-down', self.force_focus_cb)
         fi.add_callback('drag-drop', self.dragdrop)
         fi.ui_set_active(True, viewer=fi)
 
@@ -2877,7 +2878,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                       "use force_focus() instead",
                       DeprecationWarning)
         chname = self.get_channel_name(viewer)
-        self.force_focus(chname)
+        if chname is not None:
+            self.force_focus(chname)
         return True
 
     def focus_cb(self, viewer, tf, name):

@@ -156,14 +156,15 @@ class GingaAxes(Axes):
 
         """
         bd = self.viewer.get_bindings()
+        mode = bd.get_mode_obj('pan')
         data_x, data_y = self.viewer.get_data_xy(x, y)
         event = PointEvent(button=button, state='down',
                            data_x=data_x, data_y=data_y,
                            viewer=self.viewer)
         if button == 1:
-            bd.ms_pan(self.viewer, event, data_x, data_y)
+            mode.ms_pan(self.viewer, event, data_x, data_y)
         elif button == 3:
-            bd.ms_zoom(self.viewer, event, data_x, data_y)
+            mode.ms_zoom(self.viewer, event, data_x, data_y)
 
     def end_pan(self):
         """
@@ -197,14 +198,15 @@ class GingaAxes(Axes):
 
         """
         bd = self.viewer.get_bindings()
+        mode = bd.get_mode_obj('pan')
         data_x, data_y = self.viewer.get_data_xy(x, y)
         event = PointEvent(button=button, state='move',
                            data_x=data_x, data_y=data_y,
                            viewer=self.viewer)
         if button == 1:
-            bd.ms_pan(self.viewer, event, data_x, data_y)
+            mode.ms_pan(self.viewer, event, data_x, data_y)
         elif button == 3:
-            bd.ms_zoom(self.viewer, event, data_x, data_y)
+            mode.ms_zoom(self.viewer, event, data_x, data_y)
 
     # Now, the transforms themselves.
 

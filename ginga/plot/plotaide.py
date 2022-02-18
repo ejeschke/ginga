@@ -614,7 +614,8 @@ class PlotAide(Callback.Callbacks):
         (i.e. touchpad pan event); we turn this into a zoom event.
         """
         bd = self.viewer.get_bindings()
-        event = bd._pa_synth_scroll_event(event)
+        mode = bd.get_mode_obj('pan')  # any mode will do
+        event = mode._pa_synth_scroll_event(event)
         if event.state != 'move':
             return False
         self.scroll_cb(viewer, event)
