@@ -319,35 +319,35 @@ class ImageViewBindings(object):
 
     def enable_pan(self, tf):
         """Enable the image to be panned interactively (True/False)."""
-        self.features['pan'] = tf
+        self.enable(pan=tf)
 
     def enable_zoom(self, tf):
         """Enable the image to be zoomed interactively (True/False)."""
-        self.features['zoom'] = tf
+        self.enable(zoom=tf)
 
     def enable_cuts(self, tf):
         """Enable the cuts levels to be set interactively (True/False)."""
-        self.features['cut'] = tf
+        self.enable(cut=tf)
 
     def enable_cmap(self, tf):
         """Enable the color map to be warped interactively (True/False)."""
-        self.features['cmap'] = tf
+        self.enable(cmap=tf)
 
     def enable_flip(self, tf):
         """Enable the image to be flipped interactively (True/False)."""
-        self.features['flip'] = tf
+        self.enable(flip=tf)
 
     def enable_rotate(self, tf):
         """Enable the image to be rotated interactively (True/False)."""
-        self.features['rotate'] = tf
+        self.enable(rotate=tf)
 
-    def enable(self, **kwdargs):
+    def enable(self, **kwargs):
         """
         General enable function encompassing all user interface features.
         Usage (e.g.):
             viewer.enable(rotate=False, flip=True)
         """
-        for feat, value in kwdargs:
+        for feat, value in kwargs.items():
             feat = feat.lower()
             if feat not in self.features:
                 raise ValueError("'%s' is not a feature. Must be one of %s" % (
@@ -394,6 +394,24 @@ class ImageViewBindings(object):
         if msg:
             viewer.onscreen_message("Profile saved", delay=0.5)
         return True
+
+    def get_direction(self, direction, rev=False):
+        """
+        Translate a direction in compass degrees into 'up' or 'down'.
+        """
+        # TODO: merge with the one in mode_base
+        if (direction < 90.0) or (direction >= 270.0):
+            if not rev:
+                return 'up'
+            else:
+                return 'down'
+        elif (90.0 <= direction < 270.0):
+            if not rev:
+                return 'down'
+            else:
+                return 'up'
+        else:
+            return 'none'
 
 
 class UIEvent:

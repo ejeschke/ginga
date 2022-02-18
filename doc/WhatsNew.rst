@@ -20,6 +20,14 @@ Ver 4.0.0 (unreleased)
 - Fixed an issue with setting the scale manually in the Preferences plugin
 - Fixed a bug that can cause an incorrect cropping of image when the window
   is resized
+- Refactor modes from Bindings module into separate modules:
+
+  - modes can now be written and understood as having a very similar
+    structure to a plugin.
+  - mode docstrings can be written and maintained better to document the
+    modes and the code implementing a mode is much easier to understand
+    since it is encapsulated rather than all mixed together in one huge
+    file.
 
 Ver 3.4.0 (2022-06-28)
 ======================

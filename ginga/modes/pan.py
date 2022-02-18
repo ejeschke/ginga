@@ -10,8 +10,9 @@ from ginga.modes.mode_base import Mode
 
 
 class PanMode(Mode):
-    """Pan Mode enables bindings that can set the pan position (the center
-    pixel) and zoom level (scale) in a Ginga image viewer.
+    """Pan Mode enables bindings that can set the pan position (the
+    position under the center pixel) and zoom level (scale) in a Ginga
+    image viewer.
 
     Default bindings in mode
     ------------------------
@@ -19,9 +20,9 @@ class PanMode(Mode):
 
     '-', '_' : zoom out one zoom level
 
-    0-9 : zoom to level N (0 is 10)
+    1-9,0 : zoom to level N (0 is 10)
 
-    Shift + 0-9 : zoom to level -N (0 is -10)
+    Shift + 1-9,0 : zoom to level -N (0 is -10)
 
     backquote : fit image to window size
 

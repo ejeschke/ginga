@@ -74,7 +74,8 @@ class RVMode(Mode):
             kp_next_channel_in_workspace=['n', 'right'],
 
             ms_showxy=['nobtn'],
-            ms_focus_viewer=['left'])
+            #ms_focus_viewer=['left']
+            )
 
     def __str__(self):
         return 'rvmode'
@@ -173,11 +174,11 @@ class RVMode(Mode):
         self.fv.showxy(viewer, data_x, data_y)
         return True
 
-    def ms_focus_viewer(self, viewer, event, data_x, data_y, msg=True):
-        if event.state == 'down':
-            chname = self.fv.get_channel_name(viewer)
-            self.fv.force_focus(chname)
-            return True
-        return False
+    # def ms_focus_viewer(self, viewer, event, data_x, data_y, msg=True):
+    #     if event.state == 'down':
+    #         chname = self.fv.get_channel_name(viewer)
+    #         if chname is not None:
+    #             self.fv.force_focus(chname)
+    #     return True
 
     ##### GESTURE ACTION CALLBACKS #####

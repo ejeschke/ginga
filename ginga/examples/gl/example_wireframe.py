@@ -152,7 +152,8 @@ bm.set_mode('camera', mode_type='locked')
 
 # toggle 3D view
 bd = v.vw.get_bindings()
-bd.kp_camera_toggle3d(v.vw, None, 0, 0)
+mode = bd.get_mode_obj('camera')
+mode.kp_camera_toggle3d(v.vw, None, 0, 0)
 
 r = 100
 plot_octahedron(v, r)
