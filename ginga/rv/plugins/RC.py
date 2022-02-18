@@ -134,8 +134,8 @@ From within Python, connect with a ``RemoteClient`` object as
 follows::
 
         from ginga.util import grc
-        host='localhost'
-        port=9000
+        host = 'localhost'
+        port = 9000
         viewer = grc.RemoteClient(host, port)
 
 This viewer object is now linked to the Ginga using ``RC``.
@@ -206,7 +206,8 @@ class RC(GingaPlugin.GlobalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_RC')
         self.settings.add_defaults(bind_host='localhost',
-                                   bind_port=9000)
+                                   bind_port=9000,
+                                   start_server=True)
         self.settings.load(onError='silent')
 
         # What port to listen for requests
@@ -263,7 +264,7 @@ class RC(GingaPlugin.GlobalPlugin):
 
         container.add_widget(vbox, stretch=1)
 
-    def start(self):
+    def start_server(self):
         self.robj = GingaWrapper(self.fv, self.logger)
 
         self.server = grc.RemoteServer(self.robj,
@@ -279,15 +280,20 @@ class RC(GingaPlugin.GlobalPlugin):
             self.fv.show_error(errmsg, raisetab=True)
             self.logger.error(errmsg, exc_info=True)
 
+    def start(self):
+        if self.settings.get('start_server', False):
+            self.start_server()
+
     def stop(self):
         if self.server is not None:
             self.server.stop()
+        self.server = None
 
     def restart_cb(self, w):
         # restart server
         if self.server is not None:
             self.server.stop()
-        self.start()
+        self.start_server()
 
     def set_addr_cb(self, w):
         # get and parse address
@@ -380,7 +386,7 @@ class GingaWrapper(object):
 
         * Get array dims: data.shape
         * Get array dtype: str(data.dtype)
-        * Make a string from a numpy array: buf = data.tostring()
+        * Make a string from a numpy array: buf = data.tobytes()
         * Compress the buffer: buf = bz2.compress(buf)
 
         """
