@@ -4,7 +4,7 @@ Tests of Ginga canvas objects.
 """
 import logging
 
-from ginga.mockw.ImageViewMock import CanvasView
+from ginga.pilw.ImageViewPil import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
 
 

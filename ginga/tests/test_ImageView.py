@@ -3,7 +3,7 @@ import logging
 import numpy as np
 
 from ginga import AstroImage
-from ginga.mockw.ImageViewMock import CanvasView
+from ginga.pilw.ImageViewPil import CanvasView
 
 
 class TestImageView(object):
