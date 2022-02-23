@@ -994,6 +994,9 @@ class TreeView(WidgetBase):
         for i in range(len(self.columns)):
             self.widget.resizeColumnToContents(i)
 
+    def get_column_widths(self):
+        return [self.widget.columnWidth(i) for i in range(len(self.columns))]
+
     def _start_drag(self, event):
         res_dict = self.get_selected()
         drag_pkg = DragPackage(self.widget)

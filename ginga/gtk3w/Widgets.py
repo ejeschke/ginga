@@ -1079,6 +1079,13 @@ class TreeView(WidgetBase):
     def set_optimal_column_widths(self):
         self.tv.columns_autosize()
 
+    def get_column_widths(self):
+        res = []
+        for i, _ in enumerate(self.columns):
+            col = self.tv.get_column(i)
+            res.append(col.get_width())
+        return res
+
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()
         model = treeview.get_model()

@@ -1647,6 +1647,9 @@ class TreeView(WidgetBase):
         for i in range(len(self.columns)):
             pass
 
+    def get_column_widths(self):
+        return list(self.columnWidths)
+
     def columns_to_js(self):
         col_arr = []
         for i, colTuple in enumerate(self.columns):
