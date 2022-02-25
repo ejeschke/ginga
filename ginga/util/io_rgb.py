@@ -306,7 +306,8 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         # OpenCv supports high-bit depth multiband images if you read like
         # this
         data_np = cv2.imread(filepath,
-                             cv2.IMREAD_ANYDEPTH + cv2.IMREAD_ANYCOLOR)
+                             cv2.IMREAD_ANYDEPTH + cv2.IMREAD_ANYCOLOR +
+                             cv2.IMREAD_IGNORE_ORIENTATION)
 
         return self._process_opencv_array(data_np, metadata, filepath)
 
@@ -331,13 +332,6 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         # OpenCv doesn't "do" image metadata, so we punt to piexif
         # library (if installed)
         self.piexif_getexif(filepath, kwds)
-
-        # OpenCv added a feature to do auto-orientation when loading
-        # (see https://github.com/opencv/opencv/issues/4344)
-        # So reset these values to prevent auto-orientation from
-        # happening later
-        kwds['Orientation'] = 1
-        kwds['Image Orientation'] = 1
 
         # convert to working color profile, if can
         if self.clr_mgr.can_profile():

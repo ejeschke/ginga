@@ -7,6 +7,7 @@ Ver 3.4.0 (unreleased)
 - Added start_server option to RC plugin configuration; can configure
   whether ginga should start the remote control server when the plugin
   starts or not
+- fixed an error with auto-orientation of RGB images loaded with OpenCv
 
 Ver 3.3.0 (2022-02-16)
 ======================
