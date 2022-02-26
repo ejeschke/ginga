@@ -108,8 +108,6 @@ class AstroImage(BaseImage):
             raise ImageError("No IO loader defined")
 
         self.io.load_hdu(hdu, dstobj=self, fobj=fobj, naxispath=naxispath,
-                         save_primary_header=save_primary_header,
-                         inherit_primary_header=inherit_primary_header,
                          **kwargs)
 
     def load_nddata(self, ndd, naxispath=None):
