@@ -80,12 +80,6 @@ def use(fitspkg, raise_err=True):
 
 class BaseFitsFileHandler(io_base.BaseIOHandler):
 
-    # TODO: remove in a future version
-    @classmethod
-    def register_type(cls, name, klass):
-        raise Exception("This method has been deprecated;"
-                        "you don't need to call it anymore.")
-
     def __init__(self, logger):
         super(BaseFitsFileHandler, self).__init__(logger)
 
@@ -531,16 +525,6 @@ class AstropyFitsFileHandler(BaseFitsFileHandler):
     def save_as_file(self, filepath, data, header, **kwargs):
         self.write_fits(filepath, data, header, **kwargs)
 
-    def fromHDU(self, hdu, ahdr):
-        warnings.warn("fromHDU will be deprecated in the next release--"
-                      "use copy_header instead",
-                      DeprecationWarning)
-        return self.copy_header(hdu, ahdr)
-
-
-# TO BE DEPRECATED
-PyFitsFileHandler = AstropyFitsFileHandler
-
 
 class FitsioFileHandler(BaseFitsFileHandler):
 
@@ -813,12 +797,6 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
     def save_as_file(self, filepath, data, header, **kwargs):
         self.write_fits(filepath, data, header, **kwargs)
-
-    def fromHDU(self, hdu, ahdr):
-        warnings.warn("fromHDU will be deprecated in the next release--"
-                      "use copy_header instead",
-                      DeprecationWarning)
-        return self.copy_header(hdu, ahdr)
 
 
 if not fits_configured:

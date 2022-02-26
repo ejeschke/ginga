@@ -453,15 +453,11 @@ class WebServer(object):
 
 
 def make_server(logger=None, basedir='.', numthreads=5,
-                host='localhost', port=9909, viewer_class=None,
-                use_opencv=None):
+                host='localhost', port=9909, viewer_class=None):
 
     if logger is None:
         logger = log.get_logger("ipg", null=True)
     ev_quit = threading.Event()
-
-    if use_opencv is not None:
-        logger.warning("use_opencv parameter is deprecated, OpenCv will be used if installed")
 
     base_url = "http://%s:%d/app" % (host, port)
     app = Widgets.Application(logger=logger, base_url=base_url,

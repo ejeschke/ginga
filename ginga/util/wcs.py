@@ -786,30 +786,3 @@ def calc_compass_center(image):
     radius_px = float(min(image.width, image.height)) / 4.0
 
     return calc_compass_radius(image, x, y, radius_px)
-
-
-# TO BE DEPRECATED
-
-def raDegToString(ra_deg, format=None):
-    warnings.warn("This function has been deprecated--"
-                  "use ra_deg_to_str instead", DeprecationWarning)
-    if format is None:
-        return ra_deg_to_str(ra_deg)
-    if ra_deg > 360.0:
-        ra_deg = math.fmod(ra_deg, 360.0)
-
-    ra_hour, ra_min, ra_sec = degToHms(ra_deg)
-    return format % (ra_hour, ra_min, ra_sec)
-
-
-def decDegToString(dec_deg, format=None):
-    warnings.warn("This function has been deprecated--"
-                  "use dec_deg_to_str instead", DeprecationWarning)
-    if format is None:
-        return dec_deg_to_str(dec_deg)
-    sign, dec_degree, dec_min, dec_sec = degToDms(dec_deg)
-    if sign > 0:
-        sign_sym = '+'
-    else:
-        sign_sym = '-'
-    return format % (sign_sym, int(dec_degree), int(dec_min), dec_sec)

@@ -93,10 +93,6 @@ class TableViewBase(Callback.Callbacks):
     def get_table(self):
         return self._table
 
-    # TO BE DEPRECATED
-    get_image = get_table
-    set_image = set_table
-
     # for compatibility with other Ginga viewers
     get_dataobj = get_table
     set_dataobj = set_table

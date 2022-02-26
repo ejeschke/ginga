@@ -150,20 +150,3 @@ class CanvasMixin(object):
 
         if redraw:
             self.update_canvas(whence=3)
-
-    ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
-
-    deleteObjectsByTag = delete_objects_by_tag
-    deleteObjectByTag = delete_object_by_tag
-    getObjectByTag = get_object_by_tag
-    getTagsByTagpfx = get_tags_by_tag_pfx
-    getObjectsByTagpfx = get_objects_by_tag_pfx
-    getObjectsByTagpfx = get_objects_by_tag_pfx
-    deleteAllObjects = delete_all_objects
-    deleteObjects = delete_objects
-    deleteObject = delete_object
-    raiseObjectByTag = raise_object_by_tag
-    lowerObjectByTag = lower_object_by_tag
-
-
-# END

@@ -86,9 +86,3 @@ class UIMixin(object):
                 num -= 1
 
         return super(UIMixin, self).make_callback(name, *args, **kwargs)
-
-    ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
-    ui_isActive = ui_is_active
-    ui_setActive = ui_set_active
-
-# END

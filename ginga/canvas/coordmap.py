@@ -22,9 +22,6 @@ class BaseMapper(object):
     def __init__(self):
         super(BaseMapper, self).__init__()
 
-    def to_canvas(self, canvas_x, canvas_y):
-        raise CoordMapError("this method is deprecated")
-
     def to_data(self, pts):
         raise CoordMapError("subclass should override this method")
 
