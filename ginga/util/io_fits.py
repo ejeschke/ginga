@@ -53,7 +53,7 @@ def use(fitspkg, raise_err=True):
 
     if fitspkg == 'astropy':
         if have_astropy:
-            fitsLoaderClass = PyFitsFileHandler
+            fitsLoaderClass = AstropyFitsFileHandler
             fits_configured = True
             return True
 
@@ -209,7 +209,7 @@ class BaseFitsFileHandler(io_base.BaseIOHandler):
         return self.hdu_db[idx]
 
 
-class PyFitsFileHandler(BaseFitsFileHandler):
+class AstropyFitsFileHandler(BaseFitsFileHandler):
 
     name = 'astropy.fits'
 
@@ -218,7 +218,7 @@ class PyFitsFileHandler(BaseFitsFileHandler):
             raise FITSError(
                 "Need astropy module installed to use this file handler")
 
-        super(PyFitsFileHandler, self).__init__(logger)
+        super(AstropyFitsFileHandler, self).__init__(logger)
         self.kind = 'pyfits'
 
     def copy_header(self, hdu, ahdr):
@@ -538,6 +538,10 @@ class PyFitsFileHandler(BaseFitsFileHandler):
         return self.copy_header(hdu, ahdr)
 
 
+# TO BE DEPRECATED
+PyFitsFileHandler = AstropyFitsFileHandler
+
+
 class FitsioFileHandler(BaseFitsFileHandler):
 
     name = 'fitsio'
@@ -557,6 +561,9 @@ class FitsioFileHandler(BaseFitsFileHandler):
         self.hdu_db = {}
 
     def copy_header(self, hdu, ahdr):
+        """Copy a FITS header from an fitsio.hdu object
+        into a ginga.AstroImage.AstroHeader object.
+        """
         header = hdu.read_header()
         for d in header.records():
             if len(d['name']) == 0:
@@ -817,7 +824,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
 if not fits_configured:
     if have_astropy:
         # default
-        fitsLoaderClass = PyFitsFileHandler
+        fitsLoaderClass = AstropyFitsFileHandler
 
     elif have_fitsio:
         fitsLoaderClass = FitsioFileHandler
@@ -828,7 +835,7 @@ def get_fitsloader(kind=None, logger=None):
         if kind == 'fitsio':
             return FitsioFileHandler(logger)
         else:
-            return PyFitsFileHandler(logger)
+            return AstropyFitsFileHandler(logger)
 
     return fitsLoaderClass(logger)
 

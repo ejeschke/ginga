@@ -116,7 +116,11 @@ class AstroImage(BaseImage):
     def load_hdu(self, hdu, fobj=None, naxispath=None,
                  save_primary_header=None, inherit_primary_header=None,
                  **kwargs):
-        """NOTE: this is for astropy.io.fits HDUs only."""
+        """NOTE: hdu type must be compatible with ioclass set in this
+        AstroImage; for example:
+        - astropy loaded HDU with AstropyFitsFileHandler, or
+        - fitsio loaded HDU with FitsioFileHandler
+        """
 
         if self.io is None:
             raise ImageError("No IO loader defined")

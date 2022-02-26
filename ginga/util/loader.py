@@ -151,7 +151,7 @@ def get_all_openers():
 # command line --fitspkg option
 mimetypes = ['image/fits', 'image/x-fits']
 if io_fits.have_astropy:
-    add_opener(io_fits.PyFitsFileHandler, mimetypes, priority=0,
+    add_opener(io_fits.AstropyFitsFileHandler, mimetypes, priority=0,
                note="For loading FITS (Flexible Image Transport System) "
                "data files")
 if io_fits.have_fitsio:
