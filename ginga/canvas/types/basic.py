@@ -228,7 +228,7 @@ class Polygon(PolygonMixin, CanvasObjectBase):
         if len(points) < 3:
             # we need at least 3 points for a polygon, so
             # revert to a line if we haven't got enough
-            klass = canvas.getDrawClass('line')
+            klass = canvas.get_draw_class('line')
             return klass(cxt.start_x, cxt.start_y, cxt.x, cxt.y,
                          **cxt.drawparams)
         else:

@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga.misc import log
+from ginga.canvas.CanvasObject import get_canvas_type
 from ginga.AstroImage import AstroImage
 from ginga import cmap
 # add matplotlib colormaps to ginga's own set
@@ -29,7 +30,7 @@ class CustomMplViewer(ImageViewCanvas):
 
     def add_canvas(self, tag=None):
         # add a canvas to the view
-        DrawingCanvas = self.getDrawClass('drawingcanvas')
+        DrawingCanvas = get_canvas_type('drawingcanvas')
         canvas = DrawingCanvas()
         # enable drawing on the canvas
         canvas.enable_draw(True)

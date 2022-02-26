@@ -9,6 +9,7 @@ import sys
 
 from ginga.tkw.ImageViewTk import ImageViewCanvas
 from ginga.misc import log
+from ginga.canvas.CanvasObject import get_canvas_type
 from ginga.util.loader import load_data
 
 import tkinter as Tkinter
@@ -57,7 +58,7 @@ class FitsViewer(object):
         bd.enable_all(True)
 
         # canvas that we will draw on
-        DrawingCanvas = fi.getDrawClass('drawingcanvas')
+        DrawingCanvas = get_canvas_type('drawingcanvas')
         canvas = DrawingCanvas()
         canvas.enable_draw(True)
         #canvas.enable_edit(True)
@@ -135,7 +136,7 @@ class FitsViewer(object):
         self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
 
     def load_file(self, filepath):
         image = load_data(filepath, logger=self.logger)

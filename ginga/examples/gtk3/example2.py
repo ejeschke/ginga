@@ -155,7 +155,7 @@ class FitsViewer(object):
         self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self, w):
-        self.canvas.deleteAllObjects()
+        self.canvas.delete_all_objects()
 
     def load_file(self, filepath):
         image = load_data(filepath, logger=self.logger)

@@ -141,7 +141,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.hilite = None
         self.gui_up = False
 
-        bank = self.fv.get_ServerBank()
+        bank = self.fv.get_server_bank()
 
         # add name services found in configuration file
         name_sources = self.settings.get('name_sources', [])

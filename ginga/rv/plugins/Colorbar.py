@@ -135,7 +135,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         if not self.gui_up:
             return
         fitsimage = channel.fitsimage
-        if fitsimage != self.fv.getfocus_fitsimage():
+        if fitsimage != self.fv.getfocus_viewer():
             return False
         self.change_cbar(self.fv, channel)
 
