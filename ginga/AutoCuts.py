@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import numpy as np
-import warnings
 
 from ginga import trcalc
 from ginga.misc import Bunch

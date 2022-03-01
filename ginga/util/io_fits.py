@@ -18,7 +18,6 @@ any images.  Otherwise Ginga will try to pick one for you.
 """
 import re
 import numpy as np
-import warnings
 
 from ginga.AstroImage import AstroImage, AstroHeader
 from ginga.table.AstroTable import AstroTable

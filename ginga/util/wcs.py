@@ -6,7 +6,6 @@
 #
 """This module handles calculations based on world coordinate system."""
 import math
-import warnings
 from collections import OrderedDict
 
 import numpy as np
@@ -20,7 +19,7 @@ __all__ = ['hmsToDeg', 'dmsToDeg', 'decTimeToDeg', 'degToHms', 'degToDms',
            'get_relative_orientation', 'simple_wcs', 'deg2fmt', 'dispos',
            'deltaStarsRaDecDeg1', 'deltaStarsRaDecDeg2', 'get_starsep_RaDecDeg',
            'add_offset_radec', 'get_RaDecOffsets', 'lon_to_deg', 'lat_to_deg',
-           'raDegToString', 'decDegToString',
+           'ra_deg_to_str', 'dec_deg_to_str',
            ]
 
 
