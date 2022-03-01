@@ -9,7 +9,6 @@ import sys
 
 from ginga.tkw.ImageViewTk import CanvasView
 from ginga.misc import log
-from ginga.canvas.CanvasObject import get_canvas_type
 from ginga.util.loader import load_data
 from ginga.canvas.CanvasObject import get_canvas_types
 

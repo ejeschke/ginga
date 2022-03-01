@@ -270,14 +270,18 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         if idx is None:
             idx = 0
 
-        self.rgb_f.set(cv2.CAP_PROP_POS_FRAMES, idx)
-        okay, data_np = self.rgb_f.read()
-        if not okay:
-            raise ValueError("Error reading index {}".format(idx))
-
         metadata = {}
-        data_np = self._process_opencv_array(data_np, metadata,
-                                             self.fileinfo.filepath)
+        if idx == 0:
+            data_np = self.imload(self.fileinfo.filepath, metadata)
+
+        else:
+            self.rgb_f.set(cv2.CAP_PROP_POS_FRAMES, idx)
+            okay, data_np = self.rgb_f.read()
+            if not okay:
+                raise ValueError("Error reading index {}".format(idx))
+
+            data_np = self._process_opencv_array(data_np, metadata,
+                                                 self.fileinfo.filepath)
 
         from ginga.RGBImage import RGBImage
         data_obj = RGBImage(data_np=data_np, logger=self.logger,
@@ -305,16 +309,17 @@ class OpenCvFileHandler(BaseRGBFileHandler):
 
         # OpenCv supports high-bit depth multiband images if you read like
         # this
+        ## data_np = cv2.imread(filepath,
+        ##                      cv2.IMREAD_ANYDEPTH + cv2.IMREAD_ANYCOLOR +
+        ##                      cv2.IMREAD_IGNORE_ORIENTATION)
         data_np = cv2.imread(filepath,
-                             cv2.IMREAD_ANYDEPTH + cv2.IMREAD_ANYCOLOR +
-                             cv2.IMREAD_IGNORE_ORIENTATION)
+                             cv2.IMREAD_UNCHANGED + cv2.IMREAD_IGNORE_ORIENTATION)
 
         return self._process_opencv_array(data_np, metadata, filepath)
 
     def _process_opencv_array(self, data_np, metadata, filepath):
         # opencv returns BGR images, whereas PIL and others return RGB
         if len(data_np.shape) >= 3 and data_np.shape[2] >= 3:
-            #data_np = data_np[..., :: -1]
             if data_np.shape[2] == 3:
                 order = 'BGR'
                 dst_order = 'RGB'
@@ -523,14 +528,12 @@ def open_ppm(filepath):
         depth = 1
     elif ptype == b'P6':
         depth = 3
-    #print header
 
     # Get image dimensions
     header = infile.readline().strip()
     while header.startswith(b'#') or len(header) == 0:
         header = infile.readline().strip()
 
-    #print(header)
     width, height = [int(x) for x in header.split()]
     header = infile.readline()
 
@@ -540,7 +543,6 @@ def open_ppm(filepath):
         dtype = np.uint8
     elif maxval <= 65535:
         dtype = np.uint16
-    #print width, height, maxval
 
     # read image
     if depth > 1:

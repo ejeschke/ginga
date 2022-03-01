@@ -85,12 +85,10 @@ class ColorManager(object):
 
                 # Write out embedded profile (if needed)
                 prof_md5 = hashlib.md5(buf_profile).hexdigest()  # nosec
-                icc_f, in_profile = tempfile.mkstemp(suffix=".icc",
-                                                     prefix="_image_{}_".format(prof_md5))
-                try:
+                _fd, in_profile = tempfile.mkstemp(suffix=".icc",
+                                                   prefix="_image_{}_".format(prof_md5))
+                with os.fdopen(_fd, 'wb') as icc_f:
                     icc_f.write(buf_profile)
-                finally:
-                    icc_f.close()
 
             # see if there is any EXIF tag about the colorspace
             elif 'ColorSpace' in kwds:
@@ -114,6 +112,15 @@ class ColorManager(object):
             # if we have a valid profile, try the conversion
             tr_key = get_transform_key(in_profile, out_profile, intent,
                                        None, None, 0)
+
+            # check if image has an alpha channel; if so we need to remove
+            # it before ICC transform and tack it back on afterwards
+            alpha = None
+            if 'a' in image.mode.lower():
+                channels = image.split()
+                alpha = channels[-1]
+                image = Image.merge("RGB", channels[:-1])
+
             if tr_key in icc_transform:
                 # We have an in-core transform already for this (faster)
                 image = convert_profile_pil_transform(image,
@@ -127,6 +134,12 @@ class ColorManager(object):
                                             profile[out_profile].path,
                                             intent)
 
+            # reattach alpha channel if there was one
+            if alpha is not None:
+                channels = list(image.split())
+                channels.append(alpha)
+                image = Image.merge("RGBA", channels)
+
             self.logger.info("converted from profile (%s) to profile (%s)" % (
                 in_profile, profile[out_profile].name))
 
@@ -138,6 +151,11 @@ class ColorManager(object):
         return image
 
     def profile_to_working_numpy(self, image_np, kwds, intent=None):
+
+        if image_np.dtype != np.uint8:
+            self.logger.info(
+                "Cannot profile >8 bpp images; leaving image unprofiled.")
+            return image_np
 
         image_in = to_image(image_np)
         image_out = self.profile_to_working_pil(image_in, kwds,
