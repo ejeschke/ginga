@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.mplw.ImageViewMpl import CanvasView
 from ginga.misc import log
 from ginga.canvas.CanvasObject import get_canvas_type
 from ginga.AstroImage import AstroImage
@@ -12,7 +12,7 @@ cmap.add_matplotlib_cmaps()
 ## from io import BytesIO
 
 
-class CustomMplViewer(ImageViewCanvas):
+class CustomMplViewer(CanvasView):
 
     def get_nb_image(self):
         return AstroImage(

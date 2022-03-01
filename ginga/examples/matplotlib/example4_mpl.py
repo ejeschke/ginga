@@ -47,7 +47,7 @@ if len(macos_ver) > 0:
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.mplw.ImageViewMpl import CanvasView
 from ginga.misc import log
 from ginga import cmap
 from ginga.util.loader import load_data
@@ -64,11 +64,12 @@ fig = plt.figure()
 
 # create a ginga object, initialize some defaults and
 # tell it about the figure
-fi = ImageViewCanvas(logger=logger)
+fi = CanvasView(logger=logger)
 fi.enable_autocuts('on')
 fi.set_autocut_params('zscale')
 #fi.set_cmap(cmap.get_cmap('rainbow3'))
 fi.set_figure(fig)
+fi.show_mode_indicator(True, corner='ur')
 
 # enable all interactive ginga features
 fi.get_bindings().enable_all(True)

@@ -16,7 +16,7 @@ import sys
 from matplotlib.figure import Figure
 
 from ginga.qtw.QtHelp import QtGui, QtCore
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.mplw.ImageViewMpl import CanvasView
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
 from ginga.util.loader import load_data
@@ -31,7 +31,7 @@ class FitsViewer(QtGui.QMainWindow):
         fig = Figure()
         w = FigureCanvas(fig)
 
-        fi = ImageViewCanvas(logger=self.logger)
+        fi = CanvasView(logger=self.logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_auto_orient(True)
@@ -41,6 +41,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
         fi.set_figure(fig)
+        fi.show_mode_indicator(True, corner='ur')
         self.fitsimage = fi
 
         fi.get_bindings().enable_all(True)

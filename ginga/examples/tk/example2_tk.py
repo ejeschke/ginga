@@ -7,10 +7,11 @@
 #
 import sys
 
-from ginga.tkw.ImageViewTk import ImageViewCanvas
+from ginga.tkw.ImageViewTk import CanvasView
 from ginga.misc import log
 from ginga.canvas.CanvasObject import get_canvas_type
 from ginga.util.loader import load_data
+from ginga.canvas.CanvasObject import get_canvas_types
 
 import tkinter as Tkinter
 from tkinter.filedialog import askopenfilename
@@ -39,34 +40,34 @@ class FitsViewer(object):
         canvas = Tkinter.Canvas(vbox, bg="grey", height=512, width=512)
         canvas.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
-        fi = ImageViewCanvas(logger)
+        fi = CanvasView(logger)
         fi.set_widget(canvas)
         #fi.set_redraw_lag(0.0)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
-        fi.enable_draw(False)
         # tk seems to not take focus with a click
         fi.set_enter_focus(True)
         fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
         fi.show_pan_mark(True)
+        fi.show_mode_indicator(True, corner='ur')
         self.fitsimage = fi
 
         bd = fi.get_bindings()
         bd.enable_all(True)
 
         # canvas that we will draw on
-        DrawingCanvas = get_canvas_type('drawingcanvas')
-        canvas = DrawingCanvas()
+        self.dc = get_canvas_types()
+        canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         #canvas.enable_edit(True)
         canvas.set_drawtype('rectangle', color='blue')
         canvas.set_surface(fi)
         self.canvas = canvas
         # add canvas to view
-        fi.add(canvas)
+        fi.set_canvas(canvas)
         canvas.ui_set_active(True)
 
         fi.configure(512, 512)
@@ -77,7 +78,7 @@ class FitsViewer(object):
         self.readout = Tkinter.Label(root, text='')
         self.readout.pack(side=Tkinter.BOTTOM, fill=Tkinter.X, expand=0)
 
-        self.drawtypes = fi.get_drawtypes()
+        self.drawtypes = canvas.get_drawtypes()
         ## wdrawtype = ttk.Combobox(root, values=self.drawtypes,
         ##                          command=self.set_drawparams)
         ## index = self.drawtypes.index('ruler')

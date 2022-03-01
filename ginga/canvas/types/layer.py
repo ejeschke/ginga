@@ -18,7 +18,7 @@ __all__ = ['CompoundObject', 'Canvas', 'DrawingCanvas']
 
 
 class CompoundObject(CompoundMixin, CanvasObjectBase):
-    """Compound object on a ImageViewCanvas.
+    """Compound object on a Ginga canvas.
     Parameters are the child objects making up the compound object.
     Objects are drawn in the order listed. Example:
 

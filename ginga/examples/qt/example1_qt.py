@@ -25,6 +25,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
         fi.enable_auto_orient(True)
+        fi.show_mode_indicator(True, corner='ur')
         self.fitsimage = fi
 
         # enable some user interaction

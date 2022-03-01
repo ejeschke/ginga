@@ -23,7 +23,7 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
         """
         This method is called when the plugin is loaded for the  first
         time.  ``fv`` is a reference to the Ginga (reference viewer) shell
-        and ``fitsimage`` is a reference to the specific ImageViewCanvas
+        and ``fitsimage`` is a reference to the specific CanvasView
         object associated with the channel on which the plugin is being
         invoked.
         You need to call the superclass initializer and then do any local

@@ -8,7 +8,7 @@
 import sys
 import logging
 
-from ginga.tkw.ImageViewTk import ImageViewCanvas
+from ginga.tkw.ImageViewTk import CanvasView
 from ginga.util.loader import load_data
 
 import tkinter as Tkinter
@@ -32,7 +32,7 @@ class FitsViewer(object):
         canvas = Tkinter.Canvas(vbox, bg="grey", height=512, width=512)
         canvas.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=1)
 
-        fi = ImageViewCanvas(logger)
+        fi = CanvasView(logger)
         fi.set_widget(canvas)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
@@ -43,6 +43,7 @@ class FitsViewer(object):
         # tk seems to not take focus with a click
         fi.set_enter_focus(True)
         fi.show_pan_mark(True)
+        fi.show_mode_indicator(True, corner='ur')
         self.fitsimage = fi
 
         bd = fi.get_bindings()
