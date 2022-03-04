@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import PIL.Image as PILimage
+from PIL import Image
 
 have_pil_imagetk = False
 try:
@@ -113,7 +113,7 @@ class ImageViewTk(ImageView.ImageViewBase):
         if have_pil_imagetk:
             # Get surface as a numpy array
             arr8 = self.renderer.get_surface_as_array(order='RGB')
-            image = PILimage.fromarray(arr8)
+            image = Image.fromarray(arr8)
             photo = PhotoImage(image)
 
         else:

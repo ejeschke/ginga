@@ -15,10 +15,10 @@ from ginga.misc import Bunch
 
 from . import paths
 
+from PIL import Image
 # How about color management (ICC profile) support?
 try:
     import PIL.ImageCms as ImageCms
-    from PIL import Image
     have_cms = True
 except ImportError:
     have_cms = False

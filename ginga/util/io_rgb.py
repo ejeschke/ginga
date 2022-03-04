@@ -10,6 +10,8 @@ import mimetypes
 from io import BytesIO
 
 import numpy as np
+from PIL import Image
+from PIL.ExifTags import TAGS
 
 from ginga.BaseImage import Header, ImageError
 from ginga.util import iohelper, rgb_cms
@@ -24,23 +26,14 @@ try:
 except ImportError:
     have_opencv = False
 
+# exifread library for getting metadata, in case we are using OpenCv
 try:
-    # do we have Python Imaging Library available?
-    import PIL.Image as PILimage
-    from PIL.ExifTags import TAGS
-    have_pil = True
-except ImportError:
-    have_pil = False
-
-# piexif library for getting metadata, in the case that we don't have PIL
-try:
-    import piexif
+    import exifread
     have_exif = True
 except ImportError:
     have_exif = False
 
 # For testing...
-#have_pil = False
 #have_exif = False
 #have_opencv = False
 
@@ -156,48 +149,44 @@ class BaseRGBFileHandler(io_base.BaseIOHandler):
         return newdata
 
     def get_thumb(self, filepath):
-        if not have_pil:
-            raise Exception("Install PIL to use this method")
         if not have_exif:
-            raise Exception("Install piexif to use this method")
+            raise Exception("Install exifread to use this method")
 
         try:
-            info = piexif.load(filepath)
-            buf = info['thumbnail']
+            with open(filepath, 'rb') as in_f:
+                info = exifread.process_file(in_f)
+            buf = info['JPEGThumbnail']
 
         except Exception as e:
             return None
 
-        image = PILimage.open(BytesIO(buf))
+        image = Image.open(BytesIO(buf))
         data_np = np.array(image)
         return data_np
 
-    def piexif_getexif(self, filepath, kwds):
+    def _getexif(self, filepath, kwds):
         if have_exif:
             try:
-                info = piexif.load(filepath)
+                with open(filepath, 'rb') as in_f:
+                    info = exifread.process_file(in_f, details=False)
                 if info is not None:
-                    # TODO: is there a more efficient way to do this than
-                    # iterating in python?
-                    for ifd in ["0th", "Exif", "GPS", "Interop", "1st"]:
-                        if ifd in info:
-                            for tag, value in info[ifd].items():
-                                kwd = piexif.TAGS[ifd][tag].get('name', tag)
-                                kwds[kwd] = value
+                    kwds.update(info)
+                    o_tag = 'Image Orientation'
+                    if o_tag in info:
+                        val = info[o_tag].values[0]
+                        kwds[o_tag] = val
 
             except Exception as e:
                 self.logger.warning("Failed to get image metadata: %s" % (str(e)))
 
         else:
-            self.logger.warning("Please install 'piexif' module to get image metadata")
+            self.logger.warning("Please install 'exifread' module to get image metadata")
 
     def get_buffer(self, data_np, header, format, output=None):
         """Get image as a buffer in (format).
         Format should be 'jpeg', 'png', etc.
         """
-        if not have_pil:
-            raise Exception("Install PIL to use this method")
-        image = PILimage.fromarray(data_np)
+        image = Image.fromarray(data_np)
         buf = output
         if buf is None:
             buf = BytesIO()
@@ -296,8 +285,7 @@ class OpenCvFileHandler(BaseRGBFileHandler):
     def save_file_as(self, filepath, data_np, header):
         # TODO: save keyword metadata!
         if not have_opencv:
-            raise ImageError("Install 'opencv' to be able "
-                             "to save images")
+            raise ImageError("Install 'opencv' to be able to save images")
 
         # First choice is OpenCv, because it supports high-bit depth
         # multiband images
@@ -307,11 +295,13 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         if not have_opencv:
             raise ImageError("Install 'opencv' to be able to load images")
 
-        # OpenCv supports high-bit depth multiband images if you read like
-        # this
         ## data_np = cv2.imread(filepath,
         ##                      cv2.IMREAD_ANYDEPTH + cv2.IMREAD_ANYCOLOR +
         ##                      cv2.IMREAD_IGNORE_ORIENTATION)
+        #
+        # OpenCv supports high-bit depth multiband images if you read like
+        # this
+        # NOTE: IMREAD_IGNORE_ORIENTATION does not seem to be obeyed here!
         data_np = cv2.imread(filepath,
                              cv2.IMREAD_UNCHANGED + cv2.IMREAD_IGNORE_ORIENTATION)
 
@@ -334,9 +324,18 @@ class OpenCvFileHandler(BaseRGBFileHandler):
             kwds = Header()
             metadata['header'] = kwds
 
-        # OpenCv doesn't "do" image metadata, so we punt to piexif
+        # OpenCv doesn't "do" image metadata, so we punt to exifread
         # library (if installed)
-        self.piexif_getexif(filepath, kwds)
+        self._getexif(filepath, kwds)
+
+        # OpenCv added a feature to do auto-orientation when loading
+        # (see https://github.com/opencv/opencv/issues/4344)
+        # So reset these values to prevent auto-orientation from
+        # happening later
+        # NOTE: this is only needed if IMREAD_IGNORE_ORIENTATION is not
+        # working
+        kwds['Orientation'] = 1
+        kwds['Image Orientation'] = 1
 
         # convert to working color profile, if can
         if self.clr_mgr.can_profile():
@@ -347,8 +346,7 @@ class OpenCvFileHandler(BaseRGBFileHandler):
     def _imresize(self, data, new_wd, new_ht, method='bilinear'):
         # TODO: take into account the method parameter
         if not have_opencv:
-            raise ImageError("Install 'opencv' to be able "
-                             "to resize RGB images")
+            raise ImageError("Install 'opencv' to be able to resize RGB images")
 
         # First choice is OpenCv, because it supports high-bit depth
         # multiband images
@@ -373,7 +371,7 @@ class PillowFileHandler(BaseRGBFileHandler):
         filepath = info.filepath
 
         self._path = filepath
-        self.rgb_f = PILimage.open(filepath)
+        self.rgb_f = Image.open(filepath)
 
         idx = 0
         extver_db = {}
@@ -410,11 +408,7 @@ class PillowFileHandler(BaseRGBFileHandler):
 
     def save_file_as(self, filepath, data_np, header):
         # TODO: save keyword metadata!
-        if not have_pil:
-            raise ImageError("Install 'pillow' to be able "
-                             "to save images")
-
-        img = PILimage.fromarray(data_np)
+        img = Image.fromarray(data_np)
 
         # pillow is not happy saving images to JPG with an alpha channel
         img = img.convert('RGB')
@@ -463,18 +457,11 @@ class PillowFileHandler(BaseRGBFileHandler):
                     kwd = TAGS.get(tag, tag)
                     kwds[kwd] = value
 
-        elif have_exif:
-            self.piexif_getexif(image.info["exif"], kwds)
-
         else:
-            raise Exception("Please install 'piexif' module to get image metadata")
+            self.logger.warning("can't get EXIF data; no _getexif() method")
 
     def _imload(self, filepath, metadata):
-        if not have_pil:
-            raise ImageError("Install 'pillow' to be able "
-                             "to load RGB images")
-
-        image = PILimage.open(filepath)
+        image = Image.open(filepath)
 
         kwds = metadata.get('header', None)
         if kwds is None:
@@ -498,12 +485,8 @@ class PillowFileHandler(BaseRGBFileHandler):
     def _imresize(self, data, new_wd, new_ht, method='bilinear'):
         # TODO: take into account the method parameter
 
-        if not have_pil:
-            raise ImageError("Install 'pillow' to be able "
-                             "to resize RGB images")
-
-        img = PILimage.fromarray(data)
-        img = img.resize((new_wd, new_ht), PILimage.BICUBIC)
+        img = Image.fromarray(data)
+        img = img.resize((new_wd, new_ht), Image.BICUBIC)
         newdata = np.array(img)
 
         return newdata
