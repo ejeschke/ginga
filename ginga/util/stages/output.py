@@ -3,6 +3,8 @@
 #
 import os.path
 
+from PIL import Image
+
 from ginga.gw import Widgets
 from ginga.util.paths import ginga_home
 
@@ -159,8 +161,6 @@ class Output(Stage):
         self._save_as(path, data)
 
     def _save_as(self, path, data, format='jpeg', quality=90):
-        from PIL import Image
-
         # TEMP: need to get the color profile passed through the pipeline
         profile_file = os.path.join(ginga_home, "profiles", "AdobeRGB.icc")
         with open(profile_file, 'rb') as in_f:

@@ -8,7 +8,6 @@ import sys
 import math
 import numpy as np
 
-interpolation_methods = ['basic']
 _use = None
 
 
@@ -22,52 +21,35 @@ def use(pkgname):
         _use = 'pillow'
 
 
+# Python Imaging Library
+from PIL import Image
+pil_resize = dict(nearest=Image.NEAREST,
+                  linear=Image.BILINEAR,
+                  area=Image.HAMMING,
+                  bicubic=Image.BICUBIC,
+                  lanczos=Image.LANCZOS)
+
+interpolation_methods = sorted(set(['basic'] + list(pil_resize.keys())))
+
 have_opencv = False
 try:
     # optional opencv package speeds up certain operations, especially
     # rotation
     import cv2
-    cv2_resize = {
-        'nearest': cv2.INTER_NEAREST,
-        'linear': cv2.INTER_LINEAR,
-        'area': cv2.INTER_AREA,
-        'bicubic': cv2.INTER_CUBIC,
-        'lanczos': cv2.INTER_LANCZOS4,
-    }
+    cv2_resize = dict(nearest=cv2.INTER_NEAREST,
+                      linear=cv2.INTER_LINEAR,
+                      area=cv2.INTER_AREA,
+                      bicubic=cv2.INTER_CUBIC,
+                      lanczos=cv2.INTER_LANCZOS4)
     have_opencv = True
 
-    if 'nearest' not in interpolation_methods:
-        interpolation_methods = list(set(['basic'] +
-                                         list(cv2_resize.keys())))
-        interpolation_methods.sort()
-
-except ImportError:
-    pass
-
-have_pillow = False
-try:
-    # do we have Python Imaging Library available?
-    import PIL.Image as PILimage
-    pil_resize = {
-        'nearest': PILimage.NEAREST,
-        'linear': PILimage.BILINEAR,
-        'area': PILimage.HAMMING,
-        'bicubic': PILimage.BICUBIC,
-        'lanczos': PILimage.LANCZOS,
-    }
-    have_pillow = True
-
-    if 'nearest' not in interpolation_methods:
-        interpolation_methods = list(set(['basic'] +
-                                         list(pil_resize.keys())))
-        interpolation_methods.sort()
+    interpolation_methods = sorted(set(['basic'] + list(cv2_resize.keys())))
 
 except ImportError:
     pass
 
 # For testing
 #have_opencv = False
-#have_pillow = False
 
 
 def get_center(data_np):
@@ -153,10 +135,10 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             out[:, :, ...] = newdata
             newdata = out
 
-    elif dtype == np.uint8 and have_pillow and _use in (None, 'pillow'):
+    elif dtype == np.uint8 and _use in (None, 'pillow'):
         if logger is not None:
             logger.debug("rotating with pillow")
-        img = PILimage.fromarray(data_np)
+        img = Image.fromarray(data_np)
         img_rot = img.rotate(theta_deg, resample=False, expand=False,
                              center=(rotctr_x, rotctr_y))
         newdata = np.array(img_rot, dtype=data_np.dtype)
@@ -391,13 +373,13 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif data_np.dtype == np.uint8 and have_pillow and _use in (None, 'pillow'):
+    elif data_np.dtype == np.uint8 and _use in (None, 'pillow'):
         if logger is not None:
             logger.info("resizing with pillow")
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = pil_resize[interpolation]
-        img = PILimage.fromarray(data_np[y1:y2 + 1, x1:x2 + 1])
+        img = Image.fromarray(data_np[y1:y2 + 1, x1:x2 + 1])
         img_siz = img.resize((new_wd, new_ht), resample=method)
         newdata = np.array(img_siz, dtype=dtype)
 
@@ -487,13 +469,13 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif data_np.dtype == np.uint8 and have_pillow and _use in (None, 'pillow'):
+    elif data_np.dtype == np.uint8 and _use in (None, 'pillow'):
         if logger is not None:
             logger.info("resizing with pillow")
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = pil_resize[interpolation]
-        img = PILimage.fromarray(data_np[y1:y2 + 1, x1:x2 + 1])
+        img = Image.fromarray(data_np[y1:y2 + 1, x1:x2 + 1])
         old_wd, old_ht = max(x2 - x1 + 1, 1), max(y2 - y1 + 1, 1)
         new_wd, new_ht = int(scale_x * old_wd), int(scale_y * old_ht)
         img_siz = img.resize((new_wd, new_ht), resample=method)
@@ -630,8 +612,8 @@ def overlay_image_2d_pil(dstarr, pos, srcarr, dst_order='RGBA',
 
     if dst_order != src_order:
         srcarr = reorder_image(dst_order, srcarr, src_order)
-    img_dst = PILimage.fromarray(dstarr)
-    img_src = PILimage.fromarray(srcarr)
+    img_dst = Image.fromarray(dstarr)
+    img_src = Image.fromarray(srcarr)
 
     mask = img_src
     if 'A' not in src_order:
@@ -748,10 +730,9 @@ def overlay_image_2d(dstarr, pos, srcarr, dst_order='RGBA',
                      src_order='RGBA',
                      alpha=1.0, copy=False, fill=False, flipy=False):
     # NOTE: not tested yet thoroughly enough to use
-    # if have_pillow:
-    #     return overlay_image_2d_pil(dstarr, pos, srcarr, dst_order=dst_order,
-    #                                 src_order=src_order, alpha=alpha,
-    #                                 copy=copy, fill=fill, flipy=flipy)
+    # return overlay_image_2d_pil(dstarr, pos, srcarr, dst_order=dst_order,
+    #                             src_order=src_order, alpha=alpha,
+    #                             copy=copy, fill=fill, flipy=flipy)
 
     return overlay_image_2d_np(dstarr, pos, srcarr, dst_order=dst_order,
                                src_order=src_order, alpha=alpha,

@@ -170,9 +170,8 @@ if io_asdf.have_asdf:
 # because it supports higher bit depths.
 mimetypes = ['image/jpeg', 'image/png', 'image/tiff', 'image/gif',
              'image/ppm', 'image/pnm', 'image/pbm']
+add_opener(io_rgb.PillowFileHandler, mimetypes, priority=1,
+           note="For loading common RGB image formats (e.g. JPEG, etc)")
 if io_rgb.have_opencv:
     add_opener(io_rgb.OpenCvFileHandler, mimetypes, priority=0,
-               note="For loading common RGB image formats (e.g. JPEG, etc)")
-if io_rgb.have_pil:
-    add_opener(io_rgb.PillowFileHandler, mimetypes, priority=1,
                note="For loading common RGB image formats (e.g. JPEG, etc)")

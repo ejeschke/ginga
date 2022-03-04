@@ -23,14 +23,14 @@ REQUIRED
 * setuptools-scm
 * numpy  (v. 1.14 or higher)
 * astropy
+* pillow
 
 Strongly recommended, because some features will not be available without it:
 
 * scipy
-* pillow
 * opencv-python (also distributed as opencv or python-opencv,
   depending on where you get it from)
-* piexif
+* exifread
 * beautifulsoup4
 * docutils (to display help for plugins)
 

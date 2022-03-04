@@ -85,11 +85,7 @@ from ginga.misc import Bunch
 from ginga import RGBImage, LayerImage, AstroImage
 from ginga import GingaPlugin
 
-try:
-    from PIL import Image
-    have_PIL = True
-except ImportError:
-    have_PIL = False
+from PIL import Image
 
 __all__ = ['Compose']
 
@@ -392,9 +388,6 @@ class Compose(GingaPlugin.LocalPlugin):
         fimage.save_as_file(path)
 
     def save_rgb_as_file(self, path):
-        if not have_PIL:
-            raise Exception("You need to install PIL or pillow to save images")
-
         fimage = self.create_image()
         data = fimage.get_data()
         # Save image using PIL

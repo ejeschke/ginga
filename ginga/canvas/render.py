@@ -7,14 +7,7 @@
 from io import BytesIO
 
 import numpy as np
-
-
-try:
-    import PIL.Image as PILimage
-    have_PIL = True
-
-except ImportError:
-    have_PIL = False
+from PIL import Image
 
 from ginga import trcalc, RGBMap
 from ginga.fonts import font_asst
@@ -138,9 +131,6 @@ class RendererBase(object):
 
     def get_surface_as_rgb_format_buffer(self, output=None, format='png',
                                          quality=90):
-        if not have_PIL:
-            raise RenderError("Please install PIL to use this method")
-
         if self.surface is None:
             raise RenderError("No surface defined")
 
@@ -154,7 +144,7 @@ class RendererBase(object):
             obuf = BytesIO()
 
         # make a PIL image
-        image = PILimage.fromarray(arr8)
+        image = Image.fromarray(arr8)
 
         image.save(obuf, format=format, quality=quality)
         if output is not None:
@@ -168,9 +158,6 @@ class RendererBase(object):
 
     def save_surface_as_rgb_format_file(self, filepath, format='png',
                                         quality=90):
-        if not have_PIL:
-            raise RenderError("Please install PIL to use this method")
-
         if self.surface is None:
             raise RenderError("No surface defined")
 
