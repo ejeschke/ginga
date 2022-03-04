@@ -29,8 +29,7 @@ pil_resize = dict(nearest=Image.NEAREST,
                   bicubic=Image.BICUBIC,
                   lanczos=Image.LANCZOS)
 
-interpolation_methods = list(set(['basic'] + list(pil_resize.keys())))
-interpolation_methods.sort()
+interpolation_methods = sorted(set(['basic'] + list(pil_resize.keys())))
 
 have_opencv = False
 try:
@@ -44,8 +43,7 @@ try:
                       lanczos=cv2.INTER_LANCZOS4)
     have_opencv = True
 
-    interpolation_methods = list(set(['basic'] + list(cv2_resize.keys())))
-    interpolation_methods.sort()
+    interpolation_methods = sorted(set(['basic'] + list(cv2_resize.keys())))
 
 except ImportError:
     pass
