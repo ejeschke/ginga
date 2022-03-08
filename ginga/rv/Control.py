@@ -2945,6 +2945,40 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             channel = self.get_channel(name)
             channel.fitsimage.onscreen_message(name, delay=2.5)
 
+    ########################################################
+    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
+
+    def name_image_from_path(self, path, idx=None):
+        self.logger.warning("This function has moved to the"
+                            " 'ginga.util.iohelper' module,"
+                            " and will be deprecated soon.")
+        return iohelper.name_image_from_path(path, idx=idx)
+
+    def get_fileinfo(self, filespec, dldir=None):
+        self.logger.warning("This function has moved to the"
+                            " 'ginga.util.iohelper' module,"
+                            " and will be deprecated soon.")
+        return iohelper.get_fileinfo(filespec, cache_dir=dldir)
+
+    def stop_operation_channel(self, chname, opname):
+        self.logger.warning(
+            "Do not use this method name--it will be deprecated!")
+        return self.stop_local_plugin(chname, opname)
+
+    getDrawClass = get_draw_class
+    getDrawClasses = get_draw_classes
+    get_channelName = get_channel_name
+    get_channelInfo = get_channel_info
+    get_channelNames = get_channel_names
+    followFocus = follow_focus
+    showStatus = show_status
+    getfocus_fitsimage = getfocus_viewer
+    get_fitsimage = get_viewer
+    get_ServerBank = get_server_bank
+    getFont = get_font
+    getPluginManager = get_plugin_manager
+    statusMsg = status_msg
+
 
 class GuiLogHandler(logging.Handler):
     """Logs to a pane in the GUI."""
