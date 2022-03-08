@@ -8,6 +8,8 @@ Ver 3.4.0 (unreleased)
   whether ginga should start the remote control server when the plugin
   starts or not
 - fixed an error with auto-orientation of RGB images loaded with OpenCv
+- fixed a bug where get_channel_on_demand() would throw an error if the
+  channel already exists
 
 Ver 3.3.0 (2022-02-16)
 ======================

@@ -128,7 +128,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.timer_factory.wind()
 
         self.lock = threading.RLock()
-        self.channel = {}
+        self.channel = Bunch.caselessDict()
         self.channel_names = []
         self.cur_channel = None
         self.wscount = 0
@@ -1326,16 +1326,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         return True
 
     def has_channel(self, chname):
-        name = chname.lower()
         with self.lock:
-            return name in self.channel
+            return chname in self.channel
 
     def get_channel(self, chname):
         with self.lock:
             if chname is None:
                 return self.cur_channel
-            name = chname.lower()
-            return self.channel[name]
+            return self.channel[chname]
 
     def get_channel_info(self, chname=None):
         # TO BE DEPRECATED--please use get_channel() or get_current_channel()
