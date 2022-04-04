@@ -23,11 +23,11 @@ def use(pkgname):
 
 # Python Imaging Library
 from PIL import Image
-pil_resize = dict(nearest=Image.NEAREST,
-                  linear=Image.BILINEAR,
-                  area=Image.HAMMING,
-                  bicubic=Image.BICUBIC,
-                  lanczos=Image.LANCZOS)
+pil_resize = dict(nearest=Image.Resampling.NEAREST,
+                  linear=Image.Resampling.BILINEAR,
+                  area=Image.Resampling.HAMMING,
+                  bicubic=Image.Resampling.BICUBIC,
+                  lanczos=Image.Resampling.LANCZOS)
 
 interpolation_methods = sorted(set(['basic'] + list(pil_resize.keys())))
 

@@ -331,10 +331,10 @@ for path in glob.glob(glob_pat):
                                     path=os.path.abspath(path))
 
 if have_cms:
-    d = dict(absolute_colorimetric=ImageCms.INTENT_ABSOLUTE_COLORIMETRIC,
-             perceptual=ImageCms.INTENT_PERCEPTUAL,
-             relative_colorimetric=ImageCms.INTENT_RELATIVE_COLORIMETRIC,
-             saturation=ImageCms.INTENT_SATURATION)
+    d = dict(absolute_colorimetric=ImageCms.Intent.ABSOLUTE_COLORIMETRIC,
+             perceptual=ImageCms.Intent.PERCEPTUAL,
+             relative_colorimetric=ImageCms.Intent.RELATIVE_COLORIMETRIC,
+             saturation=ImageCms.Intent.SATURATION)
     intents.update(d)
 
     # Build transforms for profile conversions for which we have profiles
