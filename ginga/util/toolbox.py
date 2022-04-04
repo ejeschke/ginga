@@ -12,18 +12,22 @@ import warnings
 
 # THIRD-PARTY
 import astropy
+import PIL
 from astropy.utils.exceptions import AstropyUserWarning
 from astropy.utils.introspection import minversion
 
 ASTROPY_LT_4_3 = not minversion(astropy, '4.3')
+PIL_LT_9_1 = not minversion(PIL, '9.1')
 
 if ASTROPY_LT_4_3:
     from astropy.utils.data import _find_pkg_data_path as get_pkg_data_path
 else:
     from astropy.utils.data import get_pkg_data_path
 
+__all__ = ['ModeIndicator', 'trim_prefix', 'generate_cfg_example', 'ASTROPY_LT_4_3', 'PIL_LT_9_1']
 
-class ModeIndicator(object):
+
+class ModeIndicator:
     """
     This class adds a mode status indicator to a viewer's lower right-hand
     corner.
