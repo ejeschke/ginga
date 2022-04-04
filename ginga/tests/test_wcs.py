@@ -4,7 +4,6 @@ import warnings
 import astropy
 import numpy as np
 import pytest
-from astropy.utils.introspection import minversion
 from numpy.testing import assert_allclose
 
 from ginga import AstroImage
@@ -231,15 +230,8 @@ def setup_module():
     """Create objects once and re-use throughout this module."""
     global img_dict
 
-    if minversion(astropy, '3.1'):
-        USE_APE14 = True
-    else:
-        USE_APE14 = False
-
     img_dict = {}
     for modname in _wcsmods:
-        if modname == 'astropy_ape14' and not USE_APE14:
-            continue
         if not wcsmod.use(modname, raise_err=False):
             continue
         img_dict[modname] = {}
