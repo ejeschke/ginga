@@ -781,23 +781,31 @@ class StatusBar(WidgetBase):
         self.widget = sbar
         self.statustask = None
 
-    def _clear_message(self):
+    def clear_message(self):
         self.statustask = None
-        self.widget.remove_all(self.ctx_id)
+        if self.ctx_id is not None:
+            try:
+                self.widget.remove_all(self.ctx_id)
+            except Exception:
+                pass
+            self.ctx_id = None
 
     def set_message(self, msg_str, duration=10.0):
         try:
-            self.widget.remove_all(self.ctx_id)
+            if self.ctx_id is not None:
+                self.widget.remove_all(self.ctx_id)
         except Exception:
             pass
         self.ctx_id = self.widget.get_context_id('status')
         self.widget.push(self.ctx_id, msg_str)
 
-        # remove message in about 10 seconds
+        # remove message in about `duration` seconds
         if self.statustask is not None:
             GObject.source_remove(self.statustask)
-        self.statustask = GObject.timeout_add(int(1000 * duration),
-                                              self._clear_message)
+            self.statustask = None
+        if duration > 0.0:
+            self.statustask = GObject.timeout_add(int(1000 * duration),
+                                                  self.clear_message)
 
 
 class TreeView(WidgetBase):
@@ -2463,11 +2471,11 @@ def make_widget(title, wtype):
         w = VBox()
     elif wtype == 'hbox':
         w = HBox()
-    elif wtype == 'hscale':
+    elif wtype in ('hslider', 'hscale'):
         w = Slider(orientation='horizontal')
-    elif wtype == 'vscale':
+    elif wtype in ('vslider', 'vscale'):
         w = Slider(orientation='vertical')
-    elif wtype == 'checkbutton':
+    elif wtype in ('checkbox', 'checkbutton'):
         w = CheckBox(title)
     elif wtype == 'radiobutton':
         w = RadioButton(title)

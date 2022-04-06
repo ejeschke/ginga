@@ -578,7 +578,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.restore.set_tooltip("Clear any transforms and center image")
         b.restore.add_callback('activated', self.restore_cb)
 
-        b.rotate.set_limits(0.00, 359.99999999, incr_value=10.0)
+        b.rotate.set_limits(-359.99999999, 359.99999999, incr_value=10.0)
         b.rotate.set_value(0.00)
         b.rotate.set_decimals(8)
         b.rotate.add_callback('value-changed', self.rotate_cb)

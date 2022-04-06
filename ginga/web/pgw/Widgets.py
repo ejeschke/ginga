@@ -1317,6 +1317,9 @@ class StatusBar(Label):
     def __init__(self):
         super(StatusBar, self).__init__()
 
+    def clear_message(self):
+        self.set_text('')
+
     def set_message(self, msg_str, duration=10.0):
         # TODO: remove message in about `duration` seconds
         self.set_text(msg_str)
@@ -3604,11 +3607,11 @@ def make_widget(title, wtype):
         w = VBox()
     elif wtype == 'hbox':
         w = HBox()
-    elif wtype == 'hscale':
+    elif wtype in ('hslider', 'hscale'):
         w = Slider(orientation='horizontal')
-    elif wtype == 'vscale':
+    elif wtype in ('vslider', 'vscale'):
         w = Slider(orientation='vertical')
-    elif wtype == 'checkbutton':
+    elif wtype in ('checkbox', 'checkbutton'):
         w = CheckBox(title)
     elif wtype == 'radiobutton':
         w = RadioButton(title)
