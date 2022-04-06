@@ -9,7 +9,7 @@ import pathlib
 from functools import reduce
 
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
-                              QImage, QCursor, QFont, have_pyqt4)
+                              QImage, QCursor, QFont)
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch, Settings, LineHistory
@@ -309,7 +309,7 @@ class Label(WidgetBase):
             menu_w = menu.get_widget()
 
             def on_context_menu(point):
-                menu_w.exec_(lbl.mapToGlobal(point))
+                menu_w.exec(lbl.mapToGlobal(point))
 
             lbl.customContextMenuRequested.connect(on_context_menu)
 
@@ -690,7 +690,7 @@ class Image(WidgetBase):
             menu_w = menu.get_widget()
 
             def on_context_menu(point):
-                menu_w.exec_(lbl.mapToGlobal(point))
+                menu_w.exec(lbl.mapToGlobal(point))
 
             lbl.customContextMenuRequested.connect(on_context_menu)
 
@@ -1769,10 +1769,10 @@ class Menu(ContainerBase):
             w = widget.get_widget()
             if w.isEnabled():
                 # self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
-                self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
+                self.widget.exec(w.mapToGlobal(QtCore.QPoint(0, 0)))
         else:
             if self.widget.isEnabled():
-                self.widget.exec_(QCursor.pos())
+                self.widget.exec(QCursor.pos())
 
     def get_menu(self, name):
         return self.menus[name]
@@ -1996,7 +1996,6 @@ class Application(Callback.Callbacks):
         self.window_list = []
         self.window_dict = {}
         self.wincnt = 0
-
         if self.settings.get('use_opengl', False):
             # ensure we are using correct version of opengl
             # NOTE: On MacOSX w/Qt it is necessary to set the default OpenGL
@@ -2004,23 +2003,21 @@ class Application(Callback.Callbacks):
             # shares the OpenGL context
             QtHelp.set_default_opengl_context()
 
-        if have_pyqt4:
-            QtGui.QApplication.setGraphicsSystem('raster')
         app = QtGui.QApplication([])
         # app.lastWindowClosed.connect(lambda *args: self._quit())
         self._qtapp = app
         _app = self
 
         # Get screen size
-        desktop = self._qtapp.desktop()
-        rect = desktop.availableGeometry()
+        screen = app.primaryScreen()
+        rect = screen.availableGeometry()
         size = rect.size()
         self.screen_wd = size.width()
         self.screen_ht = size.height()
 
         # Get screen resolution
-        xdpi = desktop.physicalDpiX()
-        ydpi = desktop.physicalDpiY()
+        xdpi = screen.physicalDotsPerInchX()
+        ydpi = screen.physicalDotsPerInchY()
         self.screen_res = max(xdpi, ydpi)
 
         for name in ('shutdown', ):
@@ -2063,7 +2060,7 @@ class Application(Callback.Callbacks):
         return QtHelp.Timer()
 
     def mainloop(self):
-        self._qtapp.exec_()
+        self._qtapp.exec()
 
     def quit(self):
         self._qtapp.quit()
@@ -2155,10 +2152,7 @@ class DragPackage(object):
         self._data.setText(text)
 
     def start_drag(self):
-        if QtHelp.have_pyqt5:
-            self._drag.exec_(QtCore.Qt.MoveAction)
-        else:
-            self._drag.start(QtCore.Qt.MoveAction)
+        self._drag.exec(QtCore.Qt.MoveAction)
 
 
 # MODULE FUNCTIONS

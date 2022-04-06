@@ -28,7 +28,7 @@ def use(name):
         family = 'qt'
         if name == 'qt':
             name = 'qt5'
-        if name not in ('qt4', 'pyside', 'qt5', 'pyside2'):
+        if name not in ('qt5', 'pyside2', 'qt6', 'pyside6'):
             raise ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('gtk'):

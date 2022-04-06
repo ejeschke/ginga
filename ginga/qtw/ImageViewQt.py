@@ -583,10 +583,9 @@ class QtEventMixin(object):
         return self.make_callback('focus', hasFocus)
 
     def enter_notify_event(self, widget, event):
-        if hasattr(event, 'x'):
-            # only Qt5 apparently?
-            self.last_win_x, self.last_win_y = event.x(), event.y()
-            self.check_cursor_location()
+        pos = event.position()
+        self.last_win_x, self.last_win_y = pos.x(), pos.y()
+        self.check_cursor_location()
 
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
@@ -613,13 +612,14 @@ class QtEventMixin(object):
 
     def button_press_event(self, widget, event):
         buttons = event.buttons()
-        x, y = event.x(), event.y()
+        pos = event.position()
+        x, y = pos.x(), pos.y()
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
         if buttons & QtCore.Qt.LeftButton:
             button |= 0x1
-        if buttons & QtCore.Qt.MidButton:
+        if buttons & QtCore.Qt.MiddleButton:
             button |= 0x2
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
@@ -637,13 +637,14 @@ class QtEventMixin(object):
     def button_release_event(self, widget, event):
         # note: for mouseRelease this needs to be button(), not buttons()!
         buttons = event.button()
-        x, y = event.x(), event.y()
+        pos = event.position()
+        x, y = pos.x(), pos.y()
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
         if buttons & QtCore.Qt.LeftButton:
             button |= 0x1
-        if buttons & QtCore.Qt.MidButton:
+        if buttons & QtCore.Qt.MiddleButton:
             button |= 0x2
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
@@ -669,13 +670,14 @@ class QtEventMixin(object):
             return True
 
         buttons = event.buttons()
-        x, y = event.x(), event.y()
+        pos = event.position()
+        x, y = pos.x(), pos.y()
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
         if buttons & QtCore.Qt.LeftButton:
             button |= 0x1
-        if buttons & QtCore.Qt.MidButton:
+        if buttons & QtCore.Qt.MiddleButton:
             button |= 0x2
         if buttons & QtCore.Qt.RightButton:
             button |= 0x4
@@ -686,7 +688,8 @@ class QtEventMixin(object):
                                             data_x, data_y)
 
     def scroll_event(self, widget, event):
-        x, y = event.x(), event.y()
+        pos = event.position()
+        x, y = pos.x(), pos.y()
         # accept event here so it doesn't get propagated to parent
         event.accept()
         self.last_win_x, self.last_win_y = x, y
