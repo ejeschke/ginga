@@ -10,6 +10,7 @@ Ver 3.4.0 (unreleased)
 - fixed an error with auto-orientation of RGB images loaded with OpenCv
 - fixed a bug where get_channel_on_demand() would throw an error if the
   channel already exists
+- fixed a bug in ingesting the metadata (header) of RGB images
 
 Ver 3.3.0 (2022-02-16)
 ======================

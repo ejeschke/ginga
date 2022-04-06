@@ -259,7 +259,7 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         if idx is None:
             idx = 0
 
-        metadata = {}
+        metadata = dict()
         if idx == 0:
             data_np = self.imload(self.fileinfo.filepath, metadata)
 
@@ -273,8 +273,8 @@ class OpenCvFileHandler(BaseRGBFileHandler):
                                                  self.fileinfo.filepath)
 
         from ginga.RGBImage import RGBImage
-        data_obj = RGBImage(data_np=data_np, logger=self.logger,
-                            order=metadata['order'], metadata=metadata)
+        data_obj = RGBImage(data_np=data_np, metadata=metadata,
+                            logger=self.logger, order=metadata['order'])
         data_obj.io = self
 
         name = self.fileinfo.name + '[{}]'.format(idx)
@@ -424,12 +424,13 @@ class PillowFileHandler(BaseRGBFileHandler):
         #self.rgb_f.seek(idx)
         image = self.rgb_f
 
-        kwds = {}
+        kwds = Header()
+        metadata = dict(header=kwds)
+
         try:
             self._get_header(image, kwds)
         except Exception as e:
             self.logger.warning("Failed to get image metadata: %s" % (str(e)))
-        metadata = dict(header=kwds)
 
         # convert to working color profile, if can
         if self.clr_mgr.can_profile():
@@ -439,8 +440,8 @@ class PillowFileHandler(BaseRGBFileHandler):
         data_np = np.array(image)
 
         from ginga.RGBImage import RGBImage
-        data_obj = RGBImage(data_np=data_np, logger=self.logger,
-                            order=image.mode)
+        data_obj = RGBImage(data_np=data_np, metadata=metadata,
+                            logger=self.logger, order=image.mode)
         data_obj.io = self
 
         name = self.fileinfo.name + '[{}]'.format(idx)
@@ -459,6 +460,10 @@ class PillowFileHandler(BaseRGBFileHandler):
 
         else:
             self.logger.warning("can't get EXIF data; no _getexif() method")
+
+        # is there an embedded color profile?
+        if 'icc_profile' in image.info:
+            kwds['icc_profile'] = image.info['icc_profile']
 
     def _imload(self, filepath, metadata):
         image = Image.open(filepath)

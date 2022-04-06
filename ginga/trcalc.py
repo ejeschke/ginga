@@ -984,9 +984,48 @@ def make_filled_array(shp, dtype, order, r, g, b, a):
     return np.full(shp, bgtup, dtype=dtype)
 
 
+def remove_alpha(arr):
+    """Takes an array and removes an alpha layer from it if it has one.
+
+    Parameters
+    ----------
+    arr : ndarray
+        The input array
+
+    Returns
+    -------
+    new_arr, alpha_arr : both ndarray
+        The input array with the alpha layer removed, and the alpha array
+        None is returned for the alpha array if there was none.
+    """
+    if len(arr.shape) == 2:
+        return arr, None
+
+    if arr.shape[2] in (2, 4):
+        alpha = arr[..., -1]
+        arr = arr[..., 0:-1]
+        return arr, alpha
+
+    return arr, None
+
+
 def add_alpha(arr, alpha=None):
     """Takes an array and adds an alpha layer to it if it doesn't already
-    exist."""
+    exist.
+
+    Parameters
+    ----------
+    arr : ndarray
+        The input array
+
+    alpha : int, float, ndarray or None (optional)
+        A single value or array of values for the alpha layer to be added
+
+    Returns
+    -------
+    new_arr : ndarray
+        The input array with the alpha layer added.
+    """
     if len(arr.shape) == 2:
         arr = arr[..., np.newaxis]
 
