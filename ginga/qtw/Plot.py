@@ -9,10 +9,10 @@
 from ginga.qtw import Widgets
 from ginga.toolkit import toolkit
 
-if toolkit == 'qt5':
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+if toolkit in ('qt6', 'pyside6'):
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 else:
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
 class PlotWidget(Widgets.WidgetBase):
