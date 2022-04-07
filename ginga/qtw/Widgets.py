@@ -2003,6 +2003,12 @@ class Application(Callback.Callbacks):
             # shares the OpenGL context
             QtHelp.set_default_opengl_context()
 
+        # NOTE: the default value of "PassThrough" allows odd scaling
+        # factors that can make text and icon rendering look terrible
+        # on some platforms
+        QtGui.QApplication.setHighDpiScaleFactorRoundingPolicy(
+            QtCore.Qt.HighDpiScaleFactorRoundingPolicy.Floor)
+
         app = QtGui.QApplication([])
         # app.lastWindowClosed.connect(lambda *args: self._quit())
         self._qtapp = app

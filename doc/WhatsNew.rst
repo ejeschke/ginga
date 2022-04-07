@@ -11,6 +11,8 @@ Ver 3.4.0 (unreleased)
 - fixed a bug where get_channel_on_demand() would throw an error if the
   channel already exists
 - fixed a bug in ingesting the metadata (header) of RGB images
+- added support for backends pyqt6 and pyside6; removed support for
+  pyqt4 and pyside
 
 Ver 3.3.0 (2022-02-16)
 ======================
