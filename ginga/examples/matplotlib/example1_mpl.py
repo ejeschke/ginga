@@ -9,6 +9,9 @@
 """
 Usage:
    example1_mpl.py [fits file]
+
+You need Qt5 or Qt6 with pyqt bindings (or pyside) installed to run this
+example.
 """
 
 import sys
@@ -16,6 +19,7 @@ import sys
 from matplotlib.figure import Figure
 
 from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw import QtHelp
 from ginga.mplw.ImageViewMpl import CanvasView
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
@@ -135,7 +139,9 @@ class FitsViewer(QtGui.QMainWindow):
 
 def main(options, args):
 
-    #QtGui.QApplication.setGraphicsSystem('raster')
+    if QtHelp.have_pyqt6 or QtHelp.have_pyside6:
+        QtGui.QApplication.setHighDpiScaleFactorRoundingPolicy(
+            QtCore.Qt.HighDpiScaleFactorRoundingPolicy.Floor)
     app = QtGui.QApplication(args)
 
     logger = log.get_logger(name="example1", options=options)

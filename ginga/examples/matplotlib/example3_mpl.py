@@ -20,7 +20,8 @@ The right pane has two buttons under it: pressing each button sets up a
 different kind of plot in the mpl pane based on the current state of the
 ginga pane.
 
-You need Qt5 with python bindings (or pyside) installed to run this example.
+You need Qt5/Qt6 with pyqt bindings (or pyside) installed to run this
+example.
 """
 import sys
 
@@ -29,6 +30,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from ginga.qtw.ImageViewQt import CanvasView
 from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw import QtHelp
 from ginga import cmap, imap
 from ginga.misc import log
 from ginga.util.loader import load_data
@@ -191,7 +193,8 @@ class FitsViewer(QtGui.QMainWindow):
         self.fitsimage.set_imap(self.im)
 
     def clear_canvas(self):
-        self.fitsimage.delete_all_objects()
+        canvas = self.fitsimage.get_canvas()
+        canvas.delete_all_objects()
 
     def load_file(self, filepath):
         image = load_data(filepath, logger=self.logger)
@@ -201,7 +204,8 @@ class FitsViewer(QtGui.QMainWindow):
         # create compass
         try:
             try:
-                self.fitsimage.delete_object_by_tag(self.cp_tag)
+                canvas = self.fitsimage.get_canvas()
+                canvas.delete_object_by_tag(self.cp_tag)
             except KeyError:
                 pass
 
@@ -210,9 +214,10 @@ class FitsViewer(QtGui.QMainWindow):
             # radius we want the arms to be (approx 1/4 the largest dimension)
             radius = float(max(width, height)) / 4.0
 
-            Compass = self.fitsimage.get_draw_class('compass')
-            self.fitsimage.add(Compass(x, y, radius, color='skyblue',
-                                       fontsize=14), tag=self.cp_tag)
+            canvas = self.fitsimage.get_canvas()
+            Compass = canvas.get_draw_class('compass')
+            canvas.add(Compass(x, y, radius, color='skyblue',
+                               fontsize=14), tag=self.cp_tag)
         except Exception as e:
             self.logger.warning("Can't calculate compass: %s" % (
                 str(e)))
@@ -375,6 +380,9 @@ class FitsViewer(QtGui.QMainWindow):
 
 def main(options, args):
 
+    if QtHelp.have_pyqt6 or QtHelp.have_pyside6:
+        QtGui.QApplication.setHighDpiScaleFactorRoundingPolicy(
+            QtCore.Qt.HighDpiScaleFactorRoundingPolicy.Floor)
     app = QtGui.QApplication(args)
 
     logger = log.get_logger(name="example3", options=options)
