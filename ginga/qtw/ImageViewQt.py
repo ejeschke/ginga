@@ -582,9 +582,16 @@ class QtEventMixin(object):
     def focus_event(self, widget, event, hasFocus):
         return self.make_callback('focus', hasFocus)
 
+    def _get_pos(self, event):
+        if hasattr(event, 'position'):
+            pos = event.position()
+            return pos.x(), pos.y()
+        else:
+            pos = event.pos()
+            return pos.x(), pos.y()
+
     def enter_notify_event(self, widget, event):
-        pos = event.position()
-        self.last_win_x, self.last_win_y = pos.x(), pos.y()
+        self.last_win_x, self.last_win_y = self._get_pos(event)
         self.check_cursor_location()
 
         enter_focus = self.t_.get('enter_focus', False)
@@ -612,8 +619,7 @@ class QtEventMixin(object):
 
     def button_press_event(self, widget, event):
         buttons = event.buttons()
-        pos = event.position()
-        x, y = pos.x(), pos.y()
+        x, y = self._get_pos(event)
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -637,8 +643,7 @@ class QtEventMixin(object):
     def button_release_event(self, widget, event):
         # note: for mouseRelease this needs to be button(), not buttons()!
         buttons = event.button()
-        pos = event.position()
-        x, y = pos.x(), pos.y()
+        x, y = self._get_pos(event)
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -670,8 +675,7 @@ class QtEventMixin(object):
             return True
 
         buttons = event.buttons()
-        pos = event.position()
-        x, y = pos.x(), pos.y()
+        x, y = self._get_pos(event)
         self.last_win_x, self.last_win_y = x, y
 
         button = 0
@@ -688,8 +692,7 @@ class QtEventMixin(object):
                                             data_x, data_y)
 
     def scroll_event(self, widget, event):
-        pos = event.position()
-        x, y = pos.x(), pos.y()
+        x, y = self._get_pos(event)
         # accept event here so it doesn't get propagated to parent
         event.accept()
         self.last_win_x, self.last_win_y = x, y

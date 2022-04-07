@@ -2006,8 +2006,9 @@ class Application(Callback.Callbacks):
         # NOTE: the default value of "PassThrough" allows odd scaling
         # factors that can make text and icon rendering look terrible
         # on some platforms
-        QtGui.QApplication.setHighDpiScaleFactorRoundingPolicy(
-            QtCore.Qt.HighDpiScaleFactorRoundingPolicy.Floor)
+        if QtHelp.have_pyqt6 or QtHelp.have_pyside6:
+            QtGui.QApplication.setHighDpiScaleFactorRoundingPolicy(
+                QtCore.Qt.HighDpiScaleFactorRoundingPolicy.Floor)
 
         app = QtGui.QApplication([])
         # app.lastWindowClosed.connect(lambda *args: self._quit())
