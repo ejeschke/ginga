@@ -25,7 +25,7 @@ import sys
 import os
 import platform
 # just in case you want to use qt
-os.environ['QT_API'] = 'pyqt'
+os.environ['QT_API'] = 'pyqt5'
 
 import matplotlib
 options = ['Qt4Agg', 'GTK', 'GTKAgg', 'MacOSX', 'GTKCairo', 'WXAgg',

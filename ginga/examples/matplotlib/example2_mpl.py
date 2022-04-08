@@ -10,13 +10,18 @@
 Usage:
    example2_mpl.py [fits file]
 
-You need Qt4 with python bindings (or pyside) installed to run this example.
+You need Qt5 or Qt6 with pyqt bindings (or pyside) installed to run this
+example.
 """
 import sys
+
+from ginga import toolkit
+toolkit.use('qt')
 
 from matplotlib.figure import Figure
 
 from ginga.qtw.QtHelp import QtGui, QtCore
+from ginga.qtw import QtHelp
 from ginga.mplw.ImageViewMpl import CanvasView
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
@@ -257,6 +262,9 @@ class FitsViewer(QtGui.QMainWindow):
 
 def main(options, args):
 
+    if QtHelp.have_pyqt6 or QtHelp.have_pyside6:
+        QtGui.QApplication.setHighDpiScaleFactorRoundingPolicy(
+            QtCore.Qt.HighDpiScaleFactorRoundingPolicy.Floor)
     app = QtGui.QApplication(args)
 
     logger = log.get_logger(name="example2", options=options)

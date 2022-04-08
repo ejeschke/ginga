@@ -20,22 +20,22 @@ configured = False
 toolkit = ginga.toolkit.toolkit
 
 # if user wants to force a toolkit
-if toolkit == 'qt5':
+if toolkit == 'qt6':
+    os.environ['QT_API'] = 'pyqt6'
+
+elif toolkit == 'qt5':
     os.environ['QT_API'] = 'pyqt5'
 
-elif toolkit == 'qt4':
-    os.environ['QT_API'] = 'pyqt'
+elif toolkit == 'pyside6':
+    os.environ['QT_API'] = 'pyside6'
 
 elif toolkit == 'pyside2':
     os.environ['QT_API'] = 'pyside2'
 
-elif toolkit == 'pyside':
-    os.environ['QT_API'] = 'pyside'
-
-have_pyqt4 = False
 have_pyqt5 = False
-have_pyside = False
+have_pyqt6 = False
 have_pyside2 = False
+have_pyside6 = False
 qtpy_import_error = ""
 
 try:
@@ -54,11 +54,11 @@ try:
         pass
 
     # Let's see what qtpy configured for us...
-    from qtpy import PYQT4, PYQT5, PYSIDE, PYSIDE2
-    have_pyqt4 = PYQT4
+    from qtpy import PYQT5, PYQT6, PYSIDE2, PYSIDE6
     have_pyqt5 = PYQT5
-    have_pyside = PYSIDE
+    have_pyqt6 = PYQT6
     have_pyside2 = PYSIDE2
+    have_pyside6 = PYSIDE6
 
     configured = True
 except ImportError as e:
@@ -66,20 +66,20 @@ except ImportError as e:
     # for debugging purposes, uncomment this to get full traceback
     #raise e
 
-if have_pyqt5:
+if have_pyqt6:
+    ginga.toolkit.use('qt6')
+    os.environ['QT_API'] = 'pyqt6'
+elif have_pyqt5:
     ginga.toolkit.use('qt5')
     os.environ['QT_API'] = 'pyqt5'
-elif have_pyqt4:
-    ginga.toolkit.use('qt4')
-    os.environ['QT_API'] = 'pyqt'
+elif have_pyside6:
+    ginga.toolkit.use('pyside6')
+    os.environ['QT_API'] = 'pyside6'
 elif have_pyside2:
     ginga.toolkit.use('pyside2')
     os.environ['QT_API'] = 'pyside2'
-elif have_pyside:
-    ginga.toolkit.use('pyside')
-    os.environ['QT_API'] = 'pyside'
 else:
-    raise ImportError("Failed to configure qt4, qt5, pyside or pyside2. "
+    raise ImportError("Failed to configure qt5, qt6, pyside2 or pyside6. "
                       "Is the 'qtpy' package installed? (%s)" % (
                           qtpy_import_error))
 
@@ -196,8 +196,7 @@ class FileSelection(object):
 
         # Special handling for PyQt5, see
         # https://www.reddit.com/r/learnpython/comments/2xhagb/pyqt5_trouble_with_openinggetting_the_name_of_the/
-        if ginga.toolkit.get_toolkit() == 'qt5':
-            filenames = filenames[0]
+        filenames = filenames[0]
 
         all_paths = []
         for filename in filenames:
@@ -359,34 +358,16 @@ def get_scroll_info(event):
     """
 
     # 15 deg is standard 1-click turn for a wheel mouse
-    # delta() usually returns 120
-    if have_pyqt5:
-        # TODO: use pixelDelta() for better handling on hi-res devices?
-        point = event.angleDelta()
-        dx, dy = point.x(), point.y()
-        delta = math.sqrt(dx ** 2 + dy ** 2)
-        if dy < 0:
-            delta = -delta
+    # TODO: use pixelDelta() for better handling on hi-res devices?
+    point = event.angleDelta()
+    dx, dy = point.x(), point.y()
+    delta = math.sqrt(dx ** 2 + dy ** 2)
+    if dy < 0:
+        delta = -delta
 
-        ang_rad = math.atan2(dy, dx)
-        direction = math.degrees(ang_rad) - 90.0
-        direction = math.fmod(direction + 360.0, 360.0)
-
-    else:
-        delta = event.delta()
-        orientation = event.orientation()
-
-        direction = None
-        if orientation == QtCore.Qt.Horizontal:
-            if delta > 0:
-                direction = 270.0
-            elif delta < 0:
-                direction = 90.0
-        else:
-            if delta > 0:
-                direction = 0.0
-            elif delta < 0:
-                direction = 180.0
+    ang_rad = math.atan2(dy, dx)
+    direction = math.degrees(ang_rad) - 90.0
+    direction = math.fmod(direction + 360.0, 360.0)
 
     num_degrees = abs(delta) / 8.0
 
@@ -416,6 +397,7 @@ def get_cached_font(font_name, font_size):
         info = font_asst.get_font_info(font_name, subst_ok=False)
         font_family = load_font(font_name, info.font_path)
         font = QFont(font_family, font_size)
+        font.setStyleStrategy(QFont.PreferAntialias)
         font_asst.add_cache(key, font)
 
     except KeyError:
@@ -434,6 +416,7 @@ def get_cached_font(font_name, font_size):
     info = font_asst.get_font_info(font_name, subst_ok=True)
     font_family = load_font(font_name, info.font_path)
     font = QFont(font_family, font_size)
+    font.setStyleStrategy(QFont.PreferAntialias)
     font_asst.add_cache(key, font)
 
     return font

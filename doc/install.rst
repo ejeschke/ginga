@@ -57,8 +57,8 @@ do), you will need at least one of the following:
 
 .. TODO: This can be broken down in a clearer way.
 
-* QtPy (PyQt4 or PyQt5)
-* PySide (Qt4/Qt5 alternative)
+* QtPy (PyQt5 or PyQt6)
+* PySide (pyside2 or pyside6)
 * pygobject (gi) **AND** pycairo (GTK 3)
 * `tkinter <https://docs.python.org/3/library/tk.html>`_
 * matplotlib
@@ -87,7 +87,6 @@ Helpful, but not necessary (may optimize or speed up certain operations):
 * pyopengl + pycairo (for using OpenGL features; very useful for 4K or larger
   monitors)
 * filemagic (aids in identifying files when opening them)
-* Pillow (useful for various RGB file manipulations)
 
 ==============================
 Notes on Supported Widget Sets
@@ -104,8 +103,8 @@ full reference viewer, which includes many plugins (``ginga``).
 Qt/PySide
 =========
 
-Ginga can use either PyQt or PySide, version 4 or 5.  It will auto-detect
-which one is installed, using the ``qtpy`` compatibility package.
+Ginga can use either PyQt or PySide, for Qt version 5 or 6.  It will
+auto-detect which one is installed, using the ``qtpy`` compatibility package.
 There is support for both the basic widget and the full reference viewer.
 
 .. note:: If you have both installed and you want to use a specific one

@@ -7,10 +7,10 @@
 
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.toolkit import toolkit
-if toolkit == 'qt5':
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as QtFigureCanvas
+if toolkit in ('qt6', 'pyside6'):
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as QtFigureCanvas
 else:
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as QtFigureCanvas
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as QtFigureCanvas
 
 
 def setup_Qt(widget, viewer):
