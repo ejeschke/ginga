@@ -105,9 +105,20 @@ class WidgetBase(Callback.Callbacks):
         font = QtHelp.get_font(font_family, point_size)
         return font
 
-    def cfg_expand(self, horizontal=0, vertical=0):
-        h_policy = QtGui.QSizePolicy.Policy(horizontal)
-        v_policy = QtGui.QSizePolicy.Policy(vertical)
+    def cfg_expand(self, horizontal='fixed', vertical='fixed'):
+        """WARNING: this call has specific effects dependent on the back
+        end. It is not recommended to use it unless you cannot achieve the
+        proper layout without it.
+        """
+        policy_dict = dict(fixed=QtGui.QSizePolicy.Fixed,
+                           minimum=QtGui.QSizePolicy.Minimum,
+                           maximum=QtGui.QSizePolicy.Maximum,
+                           preferred=QtGui.QSizePolicy.Preferred,
+                           expanding=QtGui.QSizePolicy.Expanding,
+                           minimumexpanding=QtGui.QSizePolicy.MinimumExpanding,
+                           ignored=QtGui.QSizePolicy.Ignored)
+        h_policy = QtGui.QSizePolicy.Policy(policy_dict[horizontal])
+        v_policy = QtGui.QSizePolicy.Policy(policy_dict[vertical])
         self.widget.setSizePolicy(QtGui.QSizePolicy(h_policy, v_policy))
 
 
@@ -227,7 +238,7 @@ class GrowingTextEdit(QtGui.QTextEdit):
         # add some margin to prevent auto scrollbars
         docHeight += 20
         if self.heightMin <= docHeight <= self.heightMax:
-            self.setMaximumHeight(docHeight)
+            self.setMaximumHeight(int(docHeight))
 
 
 class TextArea(WidgetBase):
@@ -1116,13 +1127,13 @@ class Box(ContainerBase):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.widget.setLayout(self.layout)
 
-    def insert_widget(self, idx, child, stretch=0.0):
+    def insert_widget(self, idx, child, stretch=0):
         self.add_ref(child)
         child_w = child.get_widget()
         self.layout.insertWidget(idx, child_w, stretch=stretch)
         self.make_callback('widget-added', child)
 
-    def add_widget(self, child, stretch=0.0):
+    def add_widget(self, child, stretch=0):
         self.add_ref(child)
         child_w = child.get_widget()
         self.layout.addWidget(child_w, stretch=stretch)

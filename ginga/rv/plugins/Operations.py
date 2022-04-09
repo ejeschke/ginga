@@ -228,7 +228,7 @@ class Operations(GingaPlugin.GlobalPlugin):
                             menu=menu)
         lbl.set_tooltip("Right click for menu")
         # don't let this widget expand to fill the bar
-        lbl.cfg_expand(0x0, 0x4)
+        lbl.cfg_expand(horizontal='fixed', vertical='expanding')
         self.w.optray.remove(self.spacer)
         self.w.optray.add_widget(lbl, stretch=0)
         self.w.optray.add_widget(self.spacer, stretch=1)

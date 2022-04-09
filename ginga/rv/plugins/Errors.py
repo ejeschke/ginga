@@ -111,7 +111,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
         # special hack for Qt
-        vbox.cfg_expand(horizontal=1)
+        vbox.cfg_expand(horizontal='minimum')
 
         self.msg_list.add_widget(vbox, stretch=0)
         # TODO: force scroll to bottom

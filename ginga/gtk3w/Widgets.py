@@ -136,7 +136,7 @@ class WidgetBase(Callback.Callbacks):
         font = GtkHelp.get_font(font_family, point_size)
         return font
 
-    def cfg_expand(self, horizontal=0, vertical=0):
+    def cfg_expand(self, horizontal='fixed', vertical='fixed'):
         # this is for compatibility with Qt widgets
         pass
 
