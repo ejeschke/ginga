@@ -780,7 +780,7 @@ class AnnulusP(AnnulusMixin, OnePointOneRadiusMixin, CompoundObject):
 
         d = dict(points=self.points, radius=self.radius, color=self.color,
                  linewidth=self.linewidth, linestyle=self.linestyle,
-                 alpha=self.alpha)
+                 alpha=self.alpha, coord=self.coord, crdmap=self.crdmap)
 
         # update inner object
         self.objects[0].__dict__.update(d)
@@ -1003,7 +1003,8 @@ class Annulus2RP(AnnulusMixin, OnePointTwoRadiusMixin, CompoundObject):
         d = dict(points=self.points, xradius=self.xradius,
                  yradius=self.yradius, color=self.color,
                  linewidth=self.linewidth, linestyle=self.linestyle,
-                 alpha=self.alpha, rot_deg=self.rot_deg)
+                 alpha=self.alpha, rot_deg=self.rot_deg,
+                 coord=self.coord, crdmap=self.crdmap)
 
         # update inner object
         self.objects[0].__dict__.update(d)

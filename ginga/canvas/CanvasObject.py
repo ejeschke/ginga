@@ -380,6 +380,24 @@ class CanvasObjectBase(Callback.Callbacks):
             self.xradius = np.fabs(pts[1][0] - pts[0][0])
             self.yradius = np.fabs(pts[1][1] - pts[0][1])
 
+        # mild hack to convert width on objects that have them
+        if hasattr(self, 'width'):
+            # get coordinates of a point 'width' unit away from center
+            # under current coordmap
+            x0, y0 = frommap.offset_pt((self.x, self.y), (self.width, 0))
+            pts = frommap.to_data(((self.x, self.y), (x0, y0)))
+            pts = tomap.data_to(pts)
+            self.width = np.fabs(pts[1][0] - pts[0][0])
+
+        elif hasattr(self, 'xwidth'):
+            # similar to above case, but there are 2 widths, for X and Y
+            x0, y0 = frommap.offset_pt((self.x, self.y), (self.xwidth,
+                                                          self.ywidth))
+            pts = frommap.to_data(((self.x, self.y), (x0, y0)))
+            pts = tomap.data_to(pts)
+            self.xwidth = np.fabs(pts[1][0] - pts[0][0])
+            self.ywidth = np.fabs(pts[1][1] - pts[0][1])
+
         data_pts = self.get_data_points()
 
         # set our map to the new map

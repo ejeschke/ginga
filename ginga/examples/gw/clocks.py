@@ -244,7 +244,7 @@ class ClockApp(object):
 
         clock = Clock(self.app, self.logger, timezone, color=color,
                       font=self.options.font, show_seconds=show_seconds)
-        clock.widget.cfg_expand(0x7, 0x7)
+        clock.widget.cfg_expand(horizontal='expanding', vertical='expanding')
 
         num_clocks = len(self.clocks)
         cols = self.settings.get('columns')
