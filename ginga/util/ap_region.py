@@ -12,10 +12,11 @@ import numpy as np
 
 from ginga.canvas.CanvasObject import get_canvas_types
 
-from astropy import units as u
-
 HAVE_REGIONS = False
 try:
+    from astropy import units as u
+    from astropy.coordinates import SkyCoord
+
     import regions
     HAVE_REGIONS = True
 except ImportError:
@@ -27,7 +28,7 @@ __all__ = ['astropy_region_to_ginga_canvas_object', 'add_region',
 
 
 # mappings of point styles
-pt_ginga = dict(square='*', cross='x', plus='+', diamond='D')
+pt_ginga = {'*': 'square', 'x': 'cross', '+': 'plus', 'D': 'diamond'}
 pt_regions = {v: k for k, v in pt_ginga.items()}
 
 
@@ -54,9 +55,19 @@ def astropy_region_to_ginga_canvas_object(r):
     if isinstance(r, (regions.CirclePixelRegion,)):
         obj = dc.Circle(r.center.x, r.center.y, r.radius)
 
+    elif isinstance(r, (regions.CircleSkyRegion,)):
+        obj = dc.Circle(r.center.ra.deg, r.center.dec.deg,
+                        r.radius.to(u.deg).value, coord='wcs')
+
     elif isinstance(r, (regions.EllipsePixelRegion,)):
-        obj = dc.Ellipse(r.center.x, r.center.y, r.width / 2, r.height / 2.,
+        obj = dc.Ellipse(r.center.x, r.center.y, r.width * 0.5, r.height * 0.5,
                          rot_deg=r.angle.to(u.deg).value)
+
+    elif isinstance(r, (regions.EllipseSkyRegion,)):
+        obj = dc.Ellipse(r.center.ra.deg, r.center.dec.deg,
+                         (r.width * 0.5).to(u.deg).value,
+                         (r.height * 0.5).to(u.deg).value,
+                         rot_deg=r.angle.to(u.deg).value, coord='wcs')
 
     # NOTE: need to check for Text before Point, because Text seems to be
     # a subclass of Point in regions
@@ -66,26 +77,59 @@ def astropy_region_to_ginga_canvas_object(r):
         obj = dc.Text(r.center.x, r.center.y, text=r.text, font='sans',
                       rot_deg=float(r.visual.get('textangle', 0.0)))
 
+    elif isinstance(r, (regions.TextSkyRegion,)):
+        # NOTE: font needed here, but will be overridden later if specified
+        # in the region's visuals
+        obj = dc.Text(r.center.ra.deg, r.center.dec.deg, text=r.text,
+                      font='sans',
+                      rot_deg=float(r.visual.get('textangle', 0.0)),
+                      coord='wcs')
+
     elif isinstance(r, (regions.PointPixelRegion,)):
         # what is a reasonable default radius?
-        radius = 15
+        radius = 15   # pixels
 
-        style = r.visual.get('symbol', '*')
-        style = pt_regions.get(style, 'square')
+        style = r.visual.get('marker', '*')
+        style = pt_regions.get(style, 'diamond')
         obj = dc.Point(r.center.x, r.center.y, radius, style=style)
+
+    elif isinstance(r, (regions.PointSkyRegion,)):
+        # what is a reasonable default radius?
+        radius = 0.001   # degrees
+
+        style = r.visual.get('marker', '*')
+        style = pt_regions.get(style, 'diamond')
+        obj = dc.Point(r.center.ra.deg, r.center.dec.deg, radius, style=style,
+                       coord='wcs')
 
     elif isinstance(r, (regions.LinePixelRegion,)):
         obj = dc.Line(r.start.x, r.start.y, r.end.x, r.end.y)
         if r.meta.get('line', '0') == '1':
             obj.arrow = 'both'
 
+    elif isinstance(r, (regions.LineSkyRegion,)):
+        obj = dc.Line(r.start.ra.deg, r.start.dec.deg,
+                      r.end.ra.deg, r.end.dec.deg, coord='wcs')
+        if r.meta.get('line', '0') == '1':
+            obj.arrow = 'both'
+
     elif isinstance(r, (regions.RectanglePixelRegion,)):
-        obj = dc.Box(r.center.x, r.center.y, r.width / 2, r.height / 2.,
+        obj = dc.Box(r.center.x, r.center.y, r.width * 0.5, r.height * 0.5,
                      rot_deg=r.angle.to(u.deg).value)
+
+    elif isinstance(r, (regions.RectangleSkyRegion,)):
+        obj = dc.Box(r.center.ra.deg, r.center.dec.deg,
+                     (r.width * 0.5).to(u.deg).value,
+                     (r.height * 0.5).to(u.deg).value,
+                     rot_deg=r.angle.to(u.deg).value, coord='wcs')
 
     elif isinstance(r, (regions.PolygonPixelRegion,)):
         points = np.array(r.vertices.xy).T
         obj = dc.Polygon(points)
+
+    elif isinstance(r, (regions.PolygonSkyRegion,)):
+        points = np.array((r.vertices.ra.deg, r.vertices.dec.deg)).T
+        obj = dc.Polygon(points, coord='wcs')
 
     elif isinstance(r, (regions.CircleAnnulusPixelRegion,)):
         rin = r.inner_radius
@@ -94,31 +138,58 @@ def astropy_region_to_ginga_canvas_object(r):
         obj = dc.Annulus(r.center.x, r.center.y, rin, width=wd,
                          atype='circle')
 
+    elif isinstance(r, (regions.CircleAnnulusSkyRegion,)):
+        rin = r.inner_radius.to(u.deg).value
+        rout = r.outer_radius.to(u.deg).value
+        wd = rout - rin
+        obj = dc.Annulus(r.center.ra.deg, r.center.dec.deg, rin, width=wd,
+                         atype='circle', coord='wcs')
+
     elif isinstance(r, (regions.EllipseAnnulusPixelRegion,)):
-        xwd = (r.outer_width - r.inner_width) / 2.0
-        ywd = (r.outer_height - r.inner_height) / 2.0
+        xwd = (r.outer_width - r.inner_width) * 0.5
+        ywd = (r.outer_height - r.inner_height) * 0.5
         obj = dc.Annulus2R(r.center.x, r.center.y,
-                           r.inner_width / 2.0, r.inner_height / 2.0,
+                           r.inner_width * 0.5, r.inner_height * 0.5,
                            xwidth=xwd, ywidth=ywd,
                            atype='ellipse',
                            rot_deg=r.angle.to(u.deg).value)
 
+    elif isinstance(r, (regions.EllipseAnnulusSkyRegion,)):
+        xwd = ((r.outer_width - r.inner_width) * 0.5).to(u.deg).value,
+        ywd = ((r.outer_height - r.inner_height) * 0.5).to(u.deg).value,
+        obj = dc.Annulus2R(r.center.ra.deg, r.center.dec.deg,
+                           (r.inner_width * 0.5).to(u.deg).value,
+                           (r.inner_height * 0.5).to(u.deg).value,
+                           xwidth=xwd, ywidth=ywd,
+                           atype='ellipse',
+                           rot_deg=r.angle.to(u.deg).value, coord='wcs')
+
     elif isinstance(r, (regions.RectangleAnnulusPixelRegion,)):
-        xwd = (r.outer_width - r.inner_width) / 2.0
-        ywd = (r.outer_height - r.inner_height) / 2.0
+        xwd = (r.outer_width - r.inner_width) * 0.5
+        ywd = (r.outer_height - r.inner_height) * 0.5
         obj = dc.Annulus2R(r.center.x, r.center.y,
-                           r.inner_width / 2.0, r.inner_height / 2.0,
+                           r.inner_width * 0.5, r.inner_height * 0.5,
                            xwidth=xwd, ywidth=ywd,
                            atype='box',
                            rot_deg=r.angle.to(u.deg).value)
 
+    elif isinstance(r, (regions.RectangleAnnulusSkyRegion,)):
+        xwd = ((r.outer_width - r.inner_width) * 0.5).to(u.deg).value,
+        ywd = ((r.outer_height - r.inner_height) * 0.5).to(u.deg).value,
+        obj = dc.Annulus2R(r.center.ra.deg, r.center.dec.deg,
+                           (r.inner_width * 0.5).to(u.deg).value,
+                           (r.inner_height * 0.5).to(u.deg).value,
+                           xwidth=xwd, ywidth=ywd,
+                           atype='box',
+                           rot_deg=r.angle.to(u.deg).value, coord='wcs')
+
     else:
-        raise ValueError("Don't know how to convert this object")
+        raise ValueError("Don't know how to convert this object of type: {}".format(str(type(r))))
 
     # Set visual styling attributes
-    obj.color = r.visual.get('color', 'green')
+    obj.color = r.visual.get('edgecolor', r.visual.get('color', 'green'))
     if hasattr(obj, 'font'):
-        obj.font = r.visual.get('font', 'Sans')
+        obj.font = r.visual.get('fontname', 'Sans')
         if 'fontsize' in r.visual:
             obj.fontsize = int(r.visual['fontsize'])
 
@@ -127,6 +198,7 @@ def astropy_region_to_ginga_canvas_object(r):
 
     if hasattr(obj, 'fill'):
         obj.fill = r.visual.get('fill', False)
+        obj.fillcolor = r.visual.get('facecolor', obj.color)
 
     # Limited support for other metadata
     obj.editable = r.meta.get('edit', True)
@@ -167,19 +239,19 @@ def add_region(canvas, r, tag=None, redraw=True):
         return obj
 
 
-def ginga_canvas_object_to_astropy_region(obj):
+def ginga_canvas_object_to_astropy_region(obj, frame='fk5'):
     """
-    Convert a Ginga canvas object to an AstroPy region object.
+    Convert a Ginga canvas object to an Astropy region object.
 
     Parameters
     ----------
-    obj : subclass of `~ginga.canvas.CanvasObject`
+    obj : subclass of `~ginga.canvas.CanvasObject.CanvasObjectBase`
         The Ginga canvas object to be converted
 
     Returns
     -------
-    r : subclass of `~regions.PixelRegion`
-        The corresponding AstroPy region object
+    r : subclass of `~regions.PixelRegion` or `~regions.SkyRegion`
+        The corresponding Astropy region object
 
     """
     if not HAVE_REGIONS:
@@ -189,74 +261,144 @@ def ginga_canvas_object_to_astropy_region(obj):
     r = None
 
     if isinstance(obj, (dc.Circle,)):
-        r = regions.CirclePixelRegion(center=regions.PixCoord(x=obj.x, y=obj.y),
-                                      radius=obj.radius)
+        if obj.coord == 'data':
+            center = regions.PixCoord(x=obj.x, y=obj.y)
+            r = regions.CirclePixelRegion(center=center,
+                                          radius=obj.radius)
+        elif obj.coord == 'wcs':
+            center = SkyCoord(obj.x, obj.y, unit='deg', frame=frame)
+            r = regions.CircleSkyRegion(center=center,
+                                        radius=obj.radius * u.deg)
 
     elif isinstance(obj, (dc.Ellipse,)):
-        r = regions.EllipsePixelRegion(center=regions.PixCoord(x=obj.x, y=obj.y),
-                                       width=obj.xradius * 2,
-                                       height=obj.yradius * 2,
-                                       angle=obj.rot_deg * u.deg)
+        if obj.coord == 'data':
+            center = regions.PixCoord(x=obj.x, y=obj.y)
+            r = regions.EllipsePixelRegion(center=center,
+                                           width=obj.xradius * 2,
+                                           height=obj.yradius * 2,
+                                           angle=obj.rot_deg * u.deg)
+        elif obj.coord == 'wcs':
+            center = SkyCoord(obj.x, obj.y, unit='deg', frame=frame)
+            r = regions.EllipseSkyRegion(center=center,
+                                         width=obj.xradius * 2 * u.deg,
+                                         height=obj.yradius * 2 * u.deg,
+                                         angle=obj.rot_deg * u.deg)
 
     elif isinstance(obj, (dc.Text,)):
-        r = regions.TextPixelRegion(center=regions.PixCoord(x=obj.x, y=obj.y),
-                                    text=obj.text)
-        r.visual['textangle'] = str(obj.rot_deg)
+        if obj.coord == 'data':
+            center = regions.PixCoord(x=obj.x, y=obj.y)
+            r = regions.TextPixelRegion(center=center, text=obj.text)
+            r.visual['textangle'] = str(obj.rot_deg)
+        elif obj.coord == 'wcs':
+            center = SkyCoord(obj.x, obj.y, unit='deg', frame=frame)
+            r = regions.TextSkyRegion(center=center, text=obj.text)
+            r.visual['textangle'] = str(obj.rot_deg)
 
     elif isinstance(obj, (dc.Point,)):
-        r = regions.PointPixelRegion(center=regions.PixCoord(x=obj.x, y=obj.y))
         style = pt_ginga.get(obj.style, '*')
-        r.visual['symbol'] = style
+        if obj.coord == 'data':
+            center = regions.PixCoord(x=obj.x, y=obj.y)
+            r = regions.PointPixelRegion(center=center)
+            r.visual['symbol'] = style
+        elif obj.coord == 'wcs':
+            center = SkyCoord(obj.x, obj.y, unit='deg', frame=frame)
+            r = regions.PointSkyRegion(center=center)
+            r.visual['symbol'] = style
 
     elif isinstance(obj, (dc.Line,)):
-        r = regions.LinePixelRegion(start=regions.PixCoord(x=obj.x1, y=obj.y1),
-                                    end=regions.PixCoord(x=obj.x2, y=obj.y2))
+        if obj.coord == 'data':
+            start = regions.PixCoord(x=obj.x1, y=obj.y1)
+            end = regions.PixCoord(x=obj.x2, y=obj.y2)
+            r = regions.LinePixelRegion(start=start, end=end)
+        elif obj.coord == 'wcs':
+            start = SkyCoord(obj.x1, obj.y1, unit='deg', frame=frame)
+            end = SkyCoord(obj.x2, obj.y2, unit='deg', frame=frame)
+            r = regions.LineSkyRegion(start=start, end=end)
 
     elif isinstance(obj, (dc.Box,)):
-        r = regions.RectanglePixelRegion(center=regions.PixCoord(x=obj.x,
-                                                                 y=obj.y),
-                                         width=obj.xradius * 2,
-                                         height=obj.yradius * 2,
-                                         angle=obj.rot_deg * u.deg)
+        if obj.coord == 'data':
+            center = regions.PixCoord(x=obj.x, y=obj.y)
+            r = regions.RectanglePixelRegion(center=center,
+                                             width=obj.xradius * 2,
+                                             height=obj.yradius * 2,
+                                             angle=obj.rot_deg * u.deg)
+        elif obj.coord == 'wcs':
+            center = SkyCoord(obj.x, obj.y, unit='deg', frame=frame)
+            r = regions.RectangleSkyRegion(center=center,
+                                           width=obj.xradius * 2 * u.deg,
+                                           height=obj.yradius * 2 * u.deg,
+                                           angle=obj.rot_deg * u.deg)
 
     elif isinstance(obj, (dc.Polygon,)):
         x, y = np.asarray(obj.points).T
-        r = regions.PolygonPixelRegion(vertices=regions.PixCoord(x=x, y=y))
+        if obj.coord == 'data':
+            vertices = regions.PixCoord(x=x, y=y)
+            r = regions.PolygonPixelRegion(vertices=vertices)
+        elif obj.coord == 'wcs':
+            vertices = SkyCoord(x, y, unit='deg', frame=frame)
+            r = regions.PolygonSkyRegion(vertices=vertices)
 
     elif isinstance(obj, (dc.Annulus,)) and obj.atype == 'circle':
-        rin = obj.radius
-        rout = rin + obj.width
-        r = regions.CircleAnnulusPixelRegion(center=regions.PixCoord(x=obj.x,
-                                                                     y=obj.y),
-                                             inner_radius=rin,
-                                             outer_radius=rout)
+        if obj.coord == 'data':
+            rin = obj.radius
+            rout = rin + obj.width
+            center = regions.PixCoord(x=obj.x, y=obj.y)
+            r = regions.CircleAnnulusPixelRegion(center=center,
+                                                 inner_radius=rin,
+                                                 outer_radius=rout)
+        elif obj.coord == 'wcs':
+            rin = obj.radius * u.deg
+            rout = rin + obj.width * u.deg
+            center = SkyCoord(obj.x, obj.y, unit='deg', frame=frame)
+            r = regions.CircleAnnulusSkyRegion(center=center,
+                                               inner_radius=rin,
+                                               outer_radius=rout)
 
     elif isinstance(obj, (dc.Annulus2R,)) and obj.atype == 'ellipse':
-        r = regions.EllipseAnnulusPixelRegion(center=regions.PixCoord(x=obj.x,
-                                                                      y=obj.y),
-                                              inner_width=obj.xradius * 2,
-                                              inner_height=obj.yradius * 2,
-                                              outer_width=obj.xradius * 2 + obj.xwidth * 2,
-                                              outer_height=obj.yradius * 2 + obj.ywidth * 2,
-                                              angle=obj.rot_deg * u.deg)
-
-    elif isinstance(obj, (dc.Annulus2R,)) and obj.atype == 'box':
-        r = regions.RectangleAnnulusPixelRegion(center=regions.PixCoord(x=obj.x,
-                                                                        y=obj.y),
-                                                inner_width=obj.xradius * 2,
-                                                inner_height=obj.yradius * 2,
-                                                outer_width=obj.xradius * 2 + obj.xwidth * 2,
-                                                outer_height=obj.yradius * 2 + obj.ywidth * 2,
+        if obj.coord == 'data':
+            center = regions.PixCoord(x=obj.x, y=obj.y)
+            r = regions.EllipseAnnulusPixelRegion(center=center,
+                                                  inner_width=obj.xradius * 2,
+                                                  inner_height=obj.yradius * 2,
+                                                  outer_width=obj.xradius * 2 + obj.xwidth * 2,
+                                                  outer_height=obj.yradius * 2 + obj.ywidth * 2,
+                                                  angle=obj.rot_deg * u.deg)
+        elif obj.coord == 'wcs':
+            center = SkyCoord(obj.x, obj.y, unit='deg', frame=frame)
+            r = regions.EllipseAnnulusSkyRegion(center=center,
+                                                inner_width=obj.xradius * 2 * u.deg,
+                                                inner_height=obj.yradius * 2 * u.deg,
+                                                outer_width=obj.xradius * 2 * u.deg + obj.xwidth * 2 * u.deg,
+                                                outer_height=obj.yradius * 2 * u.deg + obj.ywidth * 2 * u.deg,
                                                 angle=obj.rot_deg * u.deg)
 
+    elif isinstance(obj, (dc.Annulus2R,)) and obj.atype == 'box':
+        if obj.coord == 'data':
+            center = regions.PixCoord(x=obj.x, y=obj.y)
+            r = regions.RectangleAnnulusPixelRegion(center=center,
+                                                    inner_width=obj.xradius * 2,
+                                                    inner_height=obj.yradius * 2,
+                                                    outer_width=obj.xradius * 2 + obj.xwidth * 2,
+                                                    outer_height=obj.yradius * 2 + obj.ywidth * 2,
+                                                    angle=obj.rot_deg * u.deg)
+        elif obj.coord == 'wcs':
+            center = SkyCoord(obj.x, obj.y, unit='deg', frame=frame)
+            r = regions.RectangleAnnulusSkyRegion(center=center,
+                                                  inner_width=obj.xradius * 2 * u.deg,
+                                                  inner_height=obj.yradius * 2 * u.deg,
+                                                  outer_width=obj.xradius * 2 * u.deg + obj.xwidth * 2 * u.deg,
+                                                  outer_height=obj.yradius * 2 * u.deg + obj.ywidth * 2 * u.deg,
+                                                  angle=obj.rot_deg * u.deg)
+
     else:
-        raise ValueError("Don't know how to convert this object")
+        raise ValueError("Don't know how to convert this kind of object: {}".format(obj.kind))
 
     # Set visual styling attributes
     r.visual['color'] = obj.color
+    r.visual['edgecolor'] = obj.color
 
     if hasattr(obj, 'font'):
-        r.visual['font'] = obj.font
+        r.visual['fontname'] = obj.font
         if obj.fontsize is not None:
             r.visual['fontsize'] = str(obj.fontsize)
 
@@ -264,7 +406,8 @@ def ginga_canvas_object_to_astropy_region(obj):
         r.visual['linewidth'] = obj.linewidth
 
     if hasattr(obj, 'fill'):
-        r.visual['fill'] = obj.fill = r.visual.get('fill', False)
+        r.visual['fill'] = 1 if obj.fill else 0
+        r.visual['facecolor'] = obj.fillcolor
 
     # Limited support for other metadata
     r.meta['edit'] = 1 if obj.editable else 0
@@ -291,7 +434,34 @@ def import_ds9_regions(ds9_file):
         Returns a list of Ginga canvas objects that can be added
         to a Ginga canvas
     """
-    regs = regions.read_ds9(ds9_file)
+    regs = regions.Regions.read(ds9_file, format='ds9')
 
     return [astropy_region_to_ginga_canvas_object(r)
             for r in regs]
+
+
+def export_regions(objs):
+    """
+    Convenience function to convert a sequence of Ginga canvas objects
+    to a ds9 file containing regions and
+    return a list of matching .
+
+    Parameters
+    ----------
+    objs : seq of subclasses of `~ginga.canvas.CanvasObject.CanvasObjectBase`
+        Sequence of Ginga canvas objects compatible with Regions
+
+    Returns
+    -------
+    regions : `~regions.Regions` object
+        Returns an astropy regions Regions object
+    """
+    regs = regions.Regions(map(ginga_canvas_object_to_astropy_region, objs))
+    return regs
+
+
+def export_regions_canvas(canvas):
+    # TODO: support nested canvases, etc?
+    objs = canvas.objects
+    regs = regions.Regions(map(ginga_canvas_object_to_astropy_region, objs))
+    return regs
