@@ -157,7 +157,7 @@ class Drawing(GingaPlugin.LocalPlugin):
                      "Scale By:", 'label', 'Scale By', 'entry'),
                     ("Delete Obj", 'button', "Copy Obj", 'button',
                      "Create mask", 'button', "Clear canvas", 'button'),
-                    ("Load regions", 'button', "Save as regions", 'button'),
+                    ("Import regions", 'button', "Export regions", 'button'),
                     )
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -184,12 +184,12 @@ class Drawing(GingaPlugin.LocalPlugin):
         b.clear_canvas.add_callback('activated', lambda w: self.clear_canvas())
         b.clear_canvas.set_tooltip("Delete all drawing objects")
 
-        b.load_regions.add_callback('activated', self.load_regions_cb)
-        b.load_regions.set_tooltip("Load a regions file")
-        b.load_regions.set_enabled(ap_region.HAVE_REGIONS)
-        b.save_as_regions.add_callback('activated', self.save_regions_cb)
-        b.save_as_regions.set_tooltip("Save a regions file")
-        b.save_as_regions.set_enabled(ap_region.HAVE_REGIONS)
+        b.import_regions.add_callback('activated', self.import_regions_cb)
+        b.import_regions.set_tooltip("Load a regions file")
+        b.import_regions.set_enabled(ap_region.HAVE_REGIONS)
+        b.export_regions.add_callback('activated', self.export_regions_cb)
+        b.export_regions.set_tooltip("Save a regions file")
+        b.export_regions.set_enabled(ap_region.HAVE_REGIONS)
 
         vbox.add_widget(w, stretch=0)
 
@@ -474,18 +474,18 @@ class Drawing(GingaPlugin.LocalPlugin):
         delta = float(w.get_text())
         self.canvas.edit_scale(delta, delta, self.fitsimage)
 
-    def load_regions_cb(self, w):
+    def import_regions_cb(self, w):
         if not ap_region.HAVE_REGIONS:
             self.fv.show_error("Please install astropy regions to use this",
                                raisetab=True)
             return
         from ginga.gw.GwHelp import FileSelection
         fs = FileSelection(w.get_widget(), all_at_once=True)
-        fs.popup('Load regions file', self._load_regions_files,
+        fs.popup('Load regions file', self._import_regions_files,
                  initialdir='.',
                  filename='Region files (*.reg)')
 
-    def _load_regions_files(self, paths):
+    def _import_regions_files(self, paths):
         for path in paths:
             objs = ap_region.import_ds9_regions(path)
             for obj in objs:
@@ -493,7 +493,7 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         self.canvas.update_canvas()
 
-    def save_regions_cb(self, w):
+    def export_regions_cb(self, w):
         if not ap_region.HAVE_REGIONS:
             self.fv.show_error("Please install astropy regions to use this",
                                raisetab=True)
@@ -505,8 +505,12 @@ class Drawing(GingaPlugin.LocalPlugin):
             return
 
         regs = ap_region.export_regions_canvas(self.canvas)
+
+        # TODO: allow other export formats that regions allows
+        format = 'ds9'
+
         # dialogs confirms if they want to overwrite
-        regs.write(path, format='ds9', overwrite=True)
+        regs.write(path, format=format, overwrite=True)
 
     def __str__(self):
         return 'drawing'
