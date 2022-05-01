@@ -79,20 +79,11 @@ class ICCProf(Stage):
         t_ = self.viewer.get_settings()
         output_profile = t_.get('icc_output_profile', None)
 
-        if self._bypass or None in [working_profile, output_profile]:
+        if (self._bypass or not rgb_cms.have_cms or
+            None in [working_profile, output_profile]):
             self.pipeline.set(icc_output_profile=working_profile)
             self.pipeline.send(res_np=data)
             return
-
-        # color profiling will not work with other types
-        data = data.astype(np.uint8)
-
-        alpha = None
-        ht, wd, dp = data.shape
-        if dp > 3:
-            # color profile conversion does not handle an alpha layer
-            alpha = data[:, :, 3]
-            data = data[:, :, 0:3]
 
         # get rest of necessary conversion parameters
         to_intent = t_.get('icc_output_intent', 'perceptual')
@@ -116,9 +107,6 @@ class ICCProf(Stage):
             self.logger.warning("Error converting output from working profile: %s" % (str(e)))
             # TODO: maybe should have a traceback here
             self.logger.info("Output left unprofiled")
-
-        if alpha is not None:
-            data = trcalc.add_alpha(data, alpha)
 
         self.pipeline.set(icc_output_profile=output_profile)
         self.pipeline.send(res_np=data)
@@ -215,9 +203,10 @@ class Output(Stage):
     def run(self, prev_stage):
         data = self.pipeline.get_data(prev_stage)
 
-        ## assert (len(data.shape) == 3 and data.dtype == np.uint8 and
-        ##         data.shape[2] in [3, 4]), \
-        ##         StageError("Expecting a RGB[A] image in final stage")
+        ## assert (len(data.shape) == 3
+        ##         and data.dtype == np.dtype(np.uint8)
+        ##         and data.shape[2] in [3, 4]), \
+        ##     StageError("Expecting a RGB[A] image in final stage")
         self.verify_2d(data)
 
         state = self.pipeline.get('state')
@@ -372,7 +361,10 @@ class Overlays(Stage):
         if cache.cutout is None:
             return
 
-        cache.rgbarr = cache.cutout
+        rgbarr = cache.cutout
+        if rgbarr.dtype != dstarr.dtype:
+            rgbarr = trcalc.array_convert(rgbarr, dstarr.dtype)
+        cache.rgbarr = rgbarr
 
         t2 = time.time()
         state = self.pipeline.get('state')
@@ -420,10 +412,9 @@ class Overlays(Stage):
                 cache.alpha = None
             else:
                 # normalize alpha array to the final output range
-                mn, mx = trcalc.get_minmax_dtype(img_arr.dtype)
                 a_idx = image_order.index('A')
-                cache.alpha = (img_arr[..., a_idx] / mx *
-                               rgbmap.maxc).astype(rgbmap.dtype)
+                cache.alpha = trcalc.array_convert(img_arr[..., a_idx],
+                                                   rgbmap.dtype)
                 cache.cutout = img_arr[..., 0:a_idx]
 
         if (whence <= 1.0) or (cache.prergb is None) or (not cvs_img.optimize):
@@ -677,10 +668,8 @@ class Clip(Stage):
             # this saves us having to deal with an alpha band in the
             # cuts leveling and RGB mapping routines
             # normalize alpha array to the final output range
-            mn, mx = trcalc.get_minmax_dtype(data.dtype)
             a_idx = image_order.index('A')
-            alpha = (data[..., a_idx] / mx *
-                     rgbmap.maxc).astype(rgbmap.dtype)
+            alpha = trcalc.array_convert(data[..., a_idx], rgbmap.dtype)
             data = data[..., 0:a_idx]
             ht, wd, dp = data.shape
             if dp == 1:
@@ -813,7 +802,7 @@ class RGBMap(Stage):
             rgbmap = self.viewer.get_rgbmap()
 
         # See NOTE in Cuts
-        ## if not np.issubdtype(data.dtype, np.uint):
+        ## if not np.issubdtype(data.dtype, np.dtype(np.uint)):
         ##     data = data.astype(np.uint)
 
         # get RGB mapped array
