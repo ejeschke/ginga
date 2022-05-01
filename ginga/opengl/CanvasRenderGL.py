@@ -684,7 +684,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
                                     gl.GL_RGBA, gl.GL_UNSIGNED_SHORT, img_arr)
                     self.logger.debug("uploaded 16 bpp RGBA as texture {}".format(tex_id))
             else:
-                raise ValueError(f"unknown image type")
+                raise ValueError("unknown image type: {}".format(hex(image_type)))
 
             self.logger.debug("uploaded rgbarr as texture {}".format(tex_id))
 
@@ -715,7 +715,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
                 self.logger.debug("uploaded RGBA as texture {}".format(tex_id))
 
             else:
-                raise ValueError(f"unknown image type")
+                raise ValueError("unknown image type: {}".format(hex(image_type)))
 
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
