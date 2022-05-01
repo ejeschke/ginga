@@ -60,6 +60,9 @@ except ImportError:
 # For testing
 #have_opencv = False
 
+_dtype_uint8 = np.dtype(np.uint8)
+_dtype_uint16 = np.dtype(np.uint16)
+
 
 def get_center(data_np):
     ht, wd = data_np.shape[:2]
@@ -126,7 +129,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     if rotctr_y is None:
         rotctr_y = ht // 2
 
-    if dtype == np.uint8 and have_opencv and _use in (None, 'opencv'):
+    if dtype == _dtype_uint8 and have_opencv and _use in (None, 'opencv'):
         if logger is not None:
             logger.debug("rotating with OpenCv")
         # opencv is fastest
@@ -144,7 +147,7 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
             out[:, :, ...] = newdata
             newdata = out
 
-    elif dtype == np.uint8 and _use in (None, 'pillow'):
+    elif dtype == _dtype_uint8 and _use in (None, 'pillow'):
         if logger is not None:
             logger.debug("rotating with pillow")
         img = Image.fromarray(data_np)
@@ -371,7 +374,7 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         method = cv2_resize[interpolation]
 
         cutout = data_np[y1:y2 + 1, x1:x2 + 1]
-        if cutout.dtype not in (np.uint8, np.uint16):
+        if cutout.dtype not in (_dtype_uint8, _dtype_uint16):
             # special hack for OpenCv resize on certain numpy array types
             cutout = cutout.astype(np.float64)
 
@@ -382,7 +385,7 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif data_np.dtype == np.uint8 and _use in (None, 'pillow'):
+    elif data_np.dtype == _dtype_uint8 and _use in (None, 'pillow'):
         if logger is not None:
             logger.info("resizing with pillow")
         if interpolation == 'basic':
@@ -467,7 +470,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         cutout = data_np[y1:y2 + 1, x1:x2 + 1]
 
-        if cutout.dtype not in (np.uint8, np.uint16):
+        if cutout.dtype not in (_dtype_uint8, _dtype_uint16):
             # special hack for OpenCv resize on certain numpy array types
             cutout = cutout.astype(np.float64)
         newdata = cv2.resize(cutout, None,
@@ -478,7 +481,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif data_np.dtype == np.uint8 and _use in (None, 'pillow'):
+    elif data_np.dtype == _dtype_uint8 and _use in (None, 'pillow'):
         if logger is not None:
             logger.info("resizing with pillow")
         if interpolation == 'basic':
@@ -954,7 +957,7 @@ def fill_array(dstarr, order, r, g, b, a):
     bgval = dict(A=int(maxv * a), R=int(maxv * r), G=int(maxv * g),
                  B=int(maxv * b))
     bgtup = tuple([bgval[order[i]] for i in range(len(order))])
-    if dtype == np.uint8 and len(bgtup) == 4:
+    if dtype == _dtype_uint8 and len(bgtup) == 4:
         # optimiztion
         bgtup = np.array(bgtup, dtype=dtype).view(np.uint32)[0]
         dstarr = dstarr.view(np.uint32)
@@ -974,7 +977,7 @@ def make_filled_array(shp, dtype, order, r, g, b, a):
     bgval = dict(A=int(maxv * a), R=int(maxv * r), G=int(maxv * g),
                  B=int(maxv * b))
     bgtup = tuple([bgval[order[i]] for i in range(len(order))])
-    if dtype == np.uint8 and len(bgtup) == 4:
+    if dtype == _dtype_uint8 and len(bgtup) == 4:
         # optimization when dealing with 32-bit RGBA arrays
         fill_val = np.array(bgtup, dtype=dtype).view(np.uint32)
         rgba = np.zeros(shp, dtype=dtype)
@@ -1045,6 +1048,31 @@ def get_minmax_dtype(dtype):
         info = np.finfo(dtype)
 
     return info.min, info.max
+
+
+def array_convert(arr_np, to_dtype):
+    """Convert an array from one datatype to another, preserving relative value.
+
+    Parameters
+    ----------
+    arr_np : ndarray
+        A numpy array of data
+
+    to_dtype : numpy dtype (e.g. np.dtype(np.uint16))
+        the ndarray data type to convert to
+
+    Returns
+    -------
+    res_np : ndarray
+       The converted array
+    """
+    if arr_np.dtype == to_dtype:
+        # we are already in the desired datatype--no action
+        return arr_np
+    mn_f, mx_f = get_minmax_dtype(arr_np.dtype)
+    mn_t, mx_t = get_minmax_dtype(to_dtype)
+    arr_np = (arr_np / mx_f * mx_t).astype(to_dtype)
+    return arr_np
 
 
 def check_native_byteorder(data_np):

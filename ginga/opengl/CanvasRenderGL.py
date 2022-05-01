@@ -380,34 +380,42 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         image_order = image.get_order()
 
         if whence <= 0.1 or cache.rgbarr is None:
+            rgbarr = cache.cutout
+
             # convert to output ICC profile, if one is specified
             working_profile = rgb_cms.working_profile
             output_profile = self.viewer.t_.get('icc_output_profile', None)
 
             if working_profile is not None and output_profile is not None:
-                rgbarr = np.copy(cache.cutout)
+                if rgbarr is cache.cutout:
+                    rgbarr = np.copy(rgbarr)
                 self.convert_via_profile(rgbarr, image_order,
                                          working_profile, output_profile)
             else:
-                rgbarr = self.reorder(self.rgb_order, cache.cutout,
-                                      image_order)
-            cache.rgbarr = rgbarr
+                rgbarr = self.reorder(self.rgb_order, rgbarr, image_order)
 
-            depth = cache.rgbarr.shape[2]
-            if depth < 4:
-                # add an alpha channel if missing
-                cache.rgbarr = trcalc.add_alpha(cache.rgbarr, alpha=255)
+            ## depth = rgbarr.shape[2]
+            ## if depth < 4:
+            ##     # add an alpha channel if missing
+            ##     _mn, _mx = trcalc.get_minmax_dtype(rgbarr.dtype)
+            ##     rgbarr = trcalc.add_alpha(rgbarr, alpha=_mx)
+            ## cache.image_type |= 0x2
 
             # array needs to be contiguous to transfer properly as buffer
             # to OpenGL
-            cache.rgbarr = np.ascontiguousarray(cache.rgbarr, dtype=np.uint8)
+            cache.rgbarr = np.ascontiguousarray(rgbarr, dtype=rgbarr.dtype)
 
     def _prepare_image(self, cvs_img, cache, whence):
         self._common_draw(cvs_img, cache, whence)
 
+        cache.image_type = 0x0     # no RGB mapping
         self._prep_rgb_image(cvs_img, cache, whence)
 
-        cache.image_type = 0
+        if (whence <= 0.1) or (not cvs_img.optimize):
+            # we can upload either 8 bpp or 16 bpp images
+            if cache.rgbarr.dtype != np.dtype(np.uint8):
+                cache.rgbarr = cache.rgbarr.astype(np.uint16)
+
         cache.drawn = True
 
     def _prepare_norm_image(self, cvs_img, cache, whence):
@@ -424,28 +432,28 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         else:
             rgbmap = self.viewer.get_rgbmap()
 
+        cache.image_type = 0x1     # use RGB mapping
         image = cvs_img.get_image()
         image_order = image.get_order()
 
-        if (whence <= 0.0) or (cache.rgbarr is None) or (not cvs_img.optimize):
+        if (whence <= 0.1) or (cache.rgbarr is None) or (not cvs_img.optimize):
 
             img_arr = cache.cutout
 
             if len(img_arr.shape) == 2:
                 # <-- monochrome image with no alpha
                 cache.rgbarr = img_arr.astype(np.float32)
-                cache.image_type = 2
 
             elif img_arr.shape[2] < 3:
-                cache.image_type = 3
                 # <-- monochrome image with alpha
+                cache.image_type |= 0x2
                 cache.rgbarr = img_arr.astype(np.float32)
 
             else:
-                cache.image_type = 1
-
-        if cache.image_type == 1:
-            self._prep_rgb_image(cvs_img, cache, whence)
+                # <-- RGB[A] image
+                self._prep_rgb_image(cvs_img, cache, whence)
+                cache.image_type |= 0x4
+                cache.rgbarr = cache.rgbarr.astype(np.float32)
 
         cache.drawn = True
         t5 = time.time()
@@ -463,8 +471,6 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
             raise render.RenderError("I don't know how to render canvas type '{}'".format(cvs_img.kind))
 
         img_arr = cache.rgbarr
-        #tex_id = self.get_texture_id(cvs_img.image_id)
-        #self.gl_set_image(tex_id, img_arr, cache.image_type)
         self.image_uploads.append((cvs_img.image_id, img_arr, cache.image_type))
 
     def convert_via_profile(self, data_np, order, inprof_name, outprof_name):
@@ -648,23 +654,68 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T,
                            gl.GL_CLAMP_TO_EDGE)
 
-        if image_type in (0, 1):
-            gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
-            gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
-                            gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_arr)
+        # see image_type in image fragment shader
+        if image_type & 0x1 == 0:
+            # "native" image colors--3 color image, no RGBMAP
+            if img_arr.dtype == np.dtype(np.uint8):
+                if img_arr.shape[2] == 3:
+                    # 8bpp RGB
+                    gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+                    gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, wd, ht, 0,
+                                    gl.GL_RGB, gl.GL_UNSIGNED_BYTE, img_arr)
+                    self.logger.debug("uploaded 8 bpp RGB as texture {}".format(tex_id))
+                elif img_arr.shape[2] == 4:
+                    # 8bpp RGBA
+                    gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+                    gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, wd, ht, 0,
+                                    gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_arr)
+                    self.logger.debug("uploaded 8 bpp RGBA as texture {}".format(tex_id))
+            elif img_arr.dtype == np.dtype(np.uint16):
+                if img_arr.shape[2] == 3:
+                    # 16bpp RGB
+                    gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 2)
+                    gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB16, wd, ht, 0,
+                                    gl.GL_RGB, gl.GL_UNSIGNED_SHORT, img_arr)
+                    self.logger.debug("uploaded 16 bpp RGB as texture {}".format(tex_id))
+                elif img_arr.shape[2] == 4:
+                    # 16bpp RGBA
+                    gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 2)
+                    gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA16, wd, ht, 0,
+                                    gl.GL_RGBA, gl.GL_UNSIGNED_SHORT, img_arr)
+                    self.logger.debug("uploaded 16 bpp RGBA as texture {}".format(tex_id))
+            else:
+                raise ValueError(f"unknown image type")
+
             self.logger.debug("uploaded rgbarr as texture {}".format(tex_id))
 
-        elif image_type == 2:
-            gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
-            gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, wd, ht, 0,
-                            gl.GL_RED, gl.GL_FLOAT, img_arr)
-            self.logger.debug("uploaded mono as texture {}".format(tex_id))
-
         else:
-            gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
-            gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RG32F, wd, ht, 0,
-                            gl.GL_RG, gl.GL_FLOAT, img_arr)
-            self.logger.debug("uploaded mono w/alpha as texture {}".format(tex_id))
+            if len(img_arr.shape) < 3 or img_arr.shape[2] == 1:
+                # mono, no alpha
+                gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
+                gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_R32F, wd, ht, 0,
+                                gl.GL_RED, gl.GL_FLOAT, img_arr)
+                self.logger.debug("uploaded mono as texture {}".format(tex_id))
+            elif len(img_arr.shape) == 3 and img_arr.shape[2] == 2:
+                # mono, with alpha
+                gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
+                gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RG32F, wd, ht, 0,
+                                gl.GL_RG, gl.GL_FLOAT, img_arr)
+                self.logger.debug("uploaded mono w/alpha as texture {}".format(tex_id))
+            elif len(img_arr.shape) == 3 and img_arr.shape[2] == 3:
+                # RGB, no alpha
+                gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
+                gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGB32F, wd, ht, 0,
+                                gl.GL_RGB, gl.GL_FLOAT, img_arr)
+                self.logger.debug("uploaded RGB as texture {}".format(tex_id))
+            elif len(img_arr.shape) == 3 and img_arr.shape[2] == 4:
+                # RGBA
+                gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 4)
+                gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA32F, wd, ht, 0,
+                                gl.GL_RGBA, gl.GL_FLOAT, img_arr)
+                self.logger.debug("uploaded RGBA as texture {}".format(tex_id))
+
+            else:
+                raise ValueError(f"unknown image type")
 
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 

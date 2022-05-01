@@ -144,55 +144,60 @@ void main()
     int clen = textureSize(color_map);
     float vmax = clen - 1;
     
-    if (image_type == 0)
+    if ((image_type & 0x1) == 0)
     {
         // RGBA traditional image, no interactive RGB map
         color = interpolate(img_texture, o_tex_coord);
     }
-    else if (image_type == 1)
-    {
-        // color image to be colored
-        vec4 value = interpolate(img_texture, o_tex_coord);
+    else
+    {   // employ interactive RGB map
+        if ((image_type & 0x4) != 0)
+        {   // RGB[A] image to be colored
+            vec4 value = interpolate(img_texture, o_tex_coord);
 
-        // cut levels
-        // RGBA textures are normalized to 0..1 when unpacked
-        int idx_r = int(cut_levels(value.r * vmax, vmax));
-        int idx_g = int(cut_levels(value.g * vmax, vmax));
-        int idx_b = int(cut_levels(value.b * vmax, vmax));
+            // cut levels
+            // RGB[A] mapped textures are NOT normalized to 0..1
+            // but sent as float
+            int idx_r = int(cut_levels(value.r, vmax));
+            int idx_g = int(cut_levels(value.g, vmax));
+            int idx_b = int(cut_levels(value.b, vmax));
         
-        // apply RGB mapping
-        float r = texelFetch(color_map, idx_r).r / vmax;
-        float g = texelFetch(color_map, idx_g).g / vmax;
-        float b = texelFetch(color_map, idx_b).b / vmax;
-        color = vec4(r, g, b, value.a);
-    }
-    else if (image_type == 2)
-    {
-        // monochrome image to be colored
-        // get source value, passed in single red channel
-        float value = interpolate(img_texture, o_tex_coord).r;
+            // apply RGB mapping
+            float r = texelFetch(color_map, idx_r).r / vmax;
+            float g = texelFetch(color_map, idx_g).g / vmax;
+            float b = texelFetch(color_map, idx_b).b / vmax;
+            color = vec4(r, g, b, value.a);
+        }
+        else
+        {   // monochrome image to be colored
+            if ((image_type & 0x2) == 0)
+            {   // no alpha channel
+                // get source value, passed in single red channel
+                // a float and *not normalized*
+                float value = interpolate(img_texture, o_tex_coord).r;
 
-        // cut levels
-        int idx = int(cut_levels(value, vmax));
+                // cut levels
+                int idx = int(cut_levels(value, vmax));
 
-        // apply RGB mapping
-        uvec4 clr = texelFetch(color_map, idx);
-        color = vec4(clr.r / vmax, clr.g / vmax, clr.b / vmax,
-                     clr.a / vmax);
-    }
-    else if (image_type == 3)
-    {
-        // monochrome image to be colored
-        // get source and alpha value, passed in red and green channels
-        vec2 value = interpolate(img_texture, o_tex_coord).rg;
+                // apply RGB mapping
+                uvec4 clr = texelFetch(color_map, idx);
+                color = vec4(clr.r / vmax, clr.g / vmax, clr.b / vmax,
+                             clr.a / vmax);
+            }
+            else
+            {   // get source and alpha value, passed in red and green channels
+                // both floats and *not normalized*
+                vec2 value = interpolate(img_texture, o_tex_coord).rg;
 
-        // cut levels
-        int idx = int(cut_levels(value.r, vmax));
+                // cut levels
+                int idx = int(cut_levels(value.r, vmax));
 
-        // apply RGB mapping
-        uvec4 clr = texelFetch(color_map, idx);
-        color = vec4(clr.r / vmax, clr.g / vmax, clr.b / vmax,
-                     value.g);
+                // apply RGB mapping
+                uvec4 clr = texelFetch(color_map, idx);
+                color = vec4(clr.r / vmax, clr.g / vmax, clr.b / vmax,
+                             value.g);
+            }
+        }
     }
     outputColor = color;
 }

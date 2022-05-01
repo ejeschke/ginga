@@ -172,11 +172,11 @@ class RGBMapper(Callback.Callbacks):
 
     def _set_dtype(self):
         if self.bpp <= 8:
-            self.dtype = np.uint8
+            self.dtype = np.dtype(np.uint8)
         elif self.bpp <= 16:
-            self.dtype = np.uint16
+            self.dtype = np.dtype(np.uint16)
         else:
-            self.dtype = np.uint32
+            self.dtype = np.dtype(np.uint32)
 
     def set_bpp(self, bpp):
         """
@@ -644,7 +644,7 @@ class PassThruRGBMapper(RGBMapper):
         # but clip as a precaution
         # See NOTE [A]: idx is always an array calculated in the caller and
         #    discarded afterwards
-        #idx.clip(0, self.maxc, out=idx)
+        ## idx.clip(0, self.maxc, out=idx)
 
         # bypass the shift array and skip color mapping,
         # index is the final data
