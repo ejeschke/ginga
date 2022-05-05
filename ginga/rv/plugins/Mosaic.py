@@ -32,6 +32,7 @@ the other tiles.
 
 The "Method" control is used to choose a method for mosaicing the images in
 the collage.  It has two values: 'simple' and 'warp':
+
 - 'simple' will attempt to rotate and flip the images according to the WCS.
   It is a fast method, at the expense of accuracy.  It will not handle
   distortions near the edge of the field that should skew the image.
