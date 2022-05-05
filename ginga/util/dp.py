@@ -44,7 +44,8 @@ def make_image(data_np, oldimage, header, pfx='dp'):
 
 def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
                        cdbase=[1, 1], dtype=None, logger=None, pfx='dp',
-                       mmap_path=None, mmap_mode='w+'):
+                       mmap_path=None, mmap_mode='w+', fill=0,
+                       alpha=None):
 
     # ra and dec in traditional format
     ra_txt = wcs.ra_deg_to_str(ra_deg)
@@ -69,14 +70,18 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
     if height % 2 != 0:
         height += 1
 
+    shape = (height, width)
+    if alpha is not None:
+        shape = (height, width, 2)
     if dtype is None:
         dtype = np.float32
     if mmap_path is None:
-        data = np.zeros((height, width), dtype=dtype)
-
+        data = np.full(shape, fill, dtype=dtype)
+        if alpha is not None:
+            data[..., 1].fill(alpha)
     else:
         data = np.memmap(mmap_path, dtype=dtype, mode=mmap_mode,
-                         shape=(height, width))
+                         shape=shape)
 
     crpix1 = float(width // 2)
     crpix2 = float(height // 2)
@@ -101,6 +106,9 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
 
     # Create image container
     image = AstroImage.AstroImage(data, logger=logger)
+    if alpha is not None:
+        image.set(ignore_alpha=True)
+
     image.update_keywords(header)
     # give the image a name
     get_image_name(image, pfx=pfx)
@@ -109,7 +117,8 @@ def create_blank_image(ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
 
 
 def recycle_image(image, ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
-                  cdbase=[1, 1], logger=None, pfx='dp'):
+                  cdbase=[1, 1], logger=None, pfx='dp', fill=0,
+                  alpha=None):
 
     # ra and dec in traditional format
     ra_txt = wcs.ra_deg_to_str(ra_deg)
@@ -133,16 +142,14 @@ def recycle_image(image, ra_deg, dec_deg, fov_deg, px_scale, rot_deg,
 
     # zero out data array
     data = image.get_data()
-    data.fill(0)
+    if len(data.shape) <= 2:
+        data.fill(fill)
+    else:
+        data[..., 0].fill(fill)
+    if alpha is not None:
+        data[..., 1].fill(alpha)
 
-    ## # Create new image container sharing same data
-    ## new_image = AstroImage.AstroImage(data, logger=logger)
-    ## new_image.update_keywords(header)
-    ## # give the image a name
-    ## get_image_name(new_image, pfx=pfx)
-    new_image = image
-
-    return new_image
+    return image
 
 
 def make_flat(imglist, bias=None):

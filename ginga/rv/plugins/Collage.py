@@ -29,6 +29,17 @@ files.
 
 **Controls**
 
+The "Method" control is used to choose a method for mosaicing the images in
+the collage.  It has two values: 'simple' and 'warp':
+- 'simple' will attempt to rotate and flip the images according to the WCS.
+  It is a fast method, at the expense of accuracy.  It will not handle
+  distortions near the edge of the field that should skew the image.
+- 'warp' will use the WCS to completely move each pixel in the image
+  according to the reference image's WCS.  This may leave empty pixels in
+  the image that are filled in by sampling from surrounding pixels.
+  This will be slower than the simple method, and the time increases
+  linearly with the size of the images.
+
 Check the "Collage HDUs" button to have `Collage` attempt to plot all the
 image HDUs in a dragged file instead of just the first found one.
 
@@ -70,7 +81,20 @@ class Collage(GingaPlugin.LocalPlugin):
         # superclass defines some variables for us, like logger
         super(Collage, self).__init__(fv, fitsimage)
 
-        self.mosaicer = CanvasMosaicer(self.logger)
+        # Load plugin preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('plugin_Collage')
+        self.settings.set_defaults(annotate_images=False,
+                                   annotate_color='pink',
+                                   annotate_fontsize=10.0,
+                                   match_bg=False,
+                                   num_threads=4,
+                                   collage_hdus=False,
+                                   collage_method='simple',
+                                   center_image=True)
+        self.settings.load(onError='silent')
+
+        self.mosaicer = CanvasMosaicer(self.logger, settings=self.settings)
         self.mosaicer.add_callback('progress', self._plot_progress_cb)
         self.mosaicer.add_callback('finished', self._plot_finished_cb)
 
@@ -95,15 +119,6 @@ class Collage(GingaPlugin.LocalPlugin):
         self.canvas = canvas
         self.layertag = 'collage-canvas'
 
-        # Load plugin preferences
-        prefs = self.fv.get_preferences()
-        self.settings = prefs.create_category('plugin_Collage')
-        self.settings.set_defaults(annotate_images=False,
-                                   match_bg=False,
-                                   num_threads=4,
-                                   collage_hdus=False)
-        self.settings.load(onError='silent')
-
         # hook to allow special processing before inlining
         self.preprocess = None
 
@@ -121,16 +136,25 @@ class Collage(GingaPlugin.LocalPlugin):
         fr = Widgets.Frame("Collage")
 
         captions = [
-            ("New Collage", 'button'),
+            ("New Collage", 'button', "Method:", 'label', 'method', 'combobox'),
             ("Collage HDUs", 'checkbutton', "Label images", 'checkbutton',
              "Match bg", 'checkbutton'),
             ("Num Threads:", 'label', 'Num Threads', 'llabel',
-             'set_num_threads', 'entry'),
+             'set_num_threads', 'entryset'),
         ]
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
         b.new_collage.add_callback('activated', lambda w: self.new_collage_cb())
+
+        combobox = b.method
+        options = ['simple', 'warp']
+        for name in options:
+            combobox.append_text(name)
+        method = self.settings.get('collage_method', 'simple')
+        combobox.set_text(method)
+        combobox.add_callback('activated', self.set_collage_method_cb)
+        combobox.set_tooltip("Choose collage method: %s" % ','.join(options))
 
         collage_hdus = self.settings.get('collage_hdus', False)
         b.collage_hdus.set_tooltip("Collage data HDUs in each file")
@@ -173,7 +197,7 @@ class Collage(GingaPlugin.LocalPlugin):
         hbox.set_spacing(4)
         hbox.set_border_width(4)
         btn = Widgets.Button("Stop")
-        btn.add_callback('activated', lambda w: self.eval_intr())
+        btn.add_callback('activated', lambda w: self.stop_cb())
         btn.set_enabled(False)
         self.w.btn_intr_eval = btn
         hbox.add_widget(btn, stretch=0)
@@ -235,6 +259,7 @@ class Collage(GingaPlugin.LocalPlugin):
             self.mosaicer.prepare_mosaic(ref_image)
         else:
             self.mosaicer.reset()
+
         self.resume()
 
     def stop(self):
@@ -293,6 +318,8 @@ class Collage(GingaPlugin.LocalPlugin):
                     opener.open_file(url, memmap=False)
                     try:
                         for i in range(len(opener)):
+                            if self.ev_intr.is_set():
+                                break
                             self.logger.debug("ingesting hdu #%d" % (i))
                             try:
                                 image = opener.load_idx(i)
@@ -353,6 +380,23 @@ class Collage(GingaPlugin.LocalPlugin):
                     images, self.images = self.images, []
                     self.fv.gui_do(self.finish_collage, images)
 
+    def finish_collage(self, images):
+        self.fv.assert_gui_thread()
+
+        self.load_time = time.time() - self.start_time
+        self.logger.info("num images={}".format(len(images)))
+
+        if self.ev_intr.is_set():
+            self.update_status("collage cancelled!")
+            self.end_progress()
+            return
+
+        self.w.eval_pgs.set_value(0.0)
+
+        self.mosaicer.mosaic(self.fitsimage, images, canvas=self.canvas,
+                             ev_intr=self.ev_intr)
+        self.w.btn_intr_eval.set_enabled(False)
+
     def collage(self, paths, image_loader=None, preprocess=None,
                 new_collage=False):
         """Collage images obtained by loading ``paths`` using optional
@@ -360,7 +404,6 @@ class Collage(GingaPlugin.LocalPlugin):
         functions.  A new collage is started if ``new_collage`` is True
         otherwise an existing collage is built on.
         """
-
         self.fv.assert_gui_thread()
 
         if new_collage:
@@ -389,31 +432,15 @@ class Collage(GingaPlugin.LocalPlugin):
             self.fv.nongui_do(self.load_tiles, group,
                               image_loader=image_loader, preprocess=preprocess)
 
-    def finish_collage(self, images):
-        self.fv.assert_gui_thread()
-
-        self.load_time = time.time() - self.start_time
-        self.logger.info("num images={}".format(len(images)))
-
-        if self.ev_intr.is_set():
-            self.update_status("collage cancelled!")
-            self.end_progress()
-            return
-
-        self.w.eval_pgs.set_value(0.0)
-        self.w.btn_intr_eval.set_enabled(False)
-
-        # set options
-        self.mosaicer.annotate = self.settings.get('annotate_images', False)
-        self.mosaicer.match_bg = self.settings.get('match_bg', False)
-
-        self.mosaicer.mosaic(self.fitsimage, images, canvas=self.canvas)
-
     def match_bg_cb(self, w, tf):
         self.settings.set(match_bg=tf)
 
     def collage_hdus_cb(self, w, tf):
         self.settings.set(collage_hdus=tf)
+
+    def set_collage_method_cb(self, w, idx):
+        method = w.get_text()
+        self.settings.set(collage_method=method)
 
     def set_num_threads_cb(self, w):
         num_threads = int(w.get_text())
@@ -426,8 +453,9 @@ class Collage(GingaPlugin.LocalPlugin):
             self.fv.gui_do(self.fv.update_pending)
 
     def _plot_progress_cb(self, mosaicer, category, pct):
-        self.w.eval_status.set_text(category + '...')
-        self.w.eval_pgs.set_value(pct)
+        if self.gui_up:
+            self.w.eval_status.set_text(category + '...')
+            self.w.eval_pgs.set_value(pct)
 
     def _plot_finished_cb(self, mosaicer, t_sec):
         total = self.load_time + t_sec
@@ -452,7 +480,7 @@ class Collage(GingaPlugin.LocalPlugin):
         if self.gui_up:
             self.fv.gui_do(self.w.btn_intr_eval.set_enabled, False)
 
-    def eval_intr(self):
+    def stop_cb(self):
         self.ev_intr.set()
 
     def __str__(self):
