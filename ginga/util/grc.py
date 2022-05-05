@@ -227,10 +227,15 @@ class RemoteServer(object):
 
     def stop(self):
         self.server.shutdown()
+        # TODO: unfortunate that we have to reach inside the implementation
+        # of socketserver.  It appears that when you shut down the server it
+        # does *not* close the socket.
+        self.server.socket.close()
+        self.server = None
 
     def restart(self):
         # restart server
-        self.server.shutdown()
+        self.stop()
         self.start()
 
     def monitor_shutdown(self):
@@ -238,7 +243,7 @@ class RemoteServer(object):
         # is exiting and then shuts down the XML-RPC server which is
         # running in a different thread
         self.ev_quit.wait()
-        self.server.shutdown()
+        self.stop()
 
     def dispatch_call(self, method_name, p_args, p_kwdargs):
         if hasattr(self.robj, method_name):
