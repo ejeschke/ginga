@@ -40,6 +40,7 @@ image will be used to create the reprojection WCS.  To use this feature the
 WCS must contain SIP distortion information.
 """
 import os.path
+import tempfile
 import copy
 import numpy as np
 #np.set_printoptions(threshold=np.inf)
@@ -85,7 +86,7 @@ class Reproject(GingaPlugin.LocalPlugin):
         self._split_sizes = [_sz, _sz]
 
         self.count = 1
-        self.cache_dir = "/tmp"
+        self.cache_dir = tempfile.gettempdir()
         self.img_out = None
         self._proj_types = list(_choose.keys())
         self._proj_types.sort()
