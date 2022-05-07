@@ -656,8 +656,9 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.fv.gui_do(self.w.eval_pgs.set_value, pct)
 
     def _mosaic_finished_cb(self, mosaicer, t_sec):
+        # a redraw shouldn't be necessary if the modified callback
+        # is forcing a correct redraw at whence=0
         self.fv.gui_do(self.mosaicer.baseimage.make_callback, 'modified')
-        #self.fv.gui_do(self.fitsimage.redraw, whence=0)
 
         total = self.load_time + t_sec
         msg = "done. load: %.4f mosaic: %.4f total: %.4f sec" % (
