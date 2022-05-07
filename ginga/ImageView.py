@@ -974,7 +974,7 @@ class ImageViewBase(Callback.Callbacks):
                     tb_str = "Traceback information unavailable."
                     self.logger.error(tb_str)
 
-            self.canvas.update_canvas(whence=1)
+            self.canvas.update_canvas(whence=0)
 
     def set_data(self, data, metadata=None):
         """Set an image to be displayed by providing raw data.

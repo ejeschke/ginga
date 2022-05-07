@@ -39,8 +39,8 @@ def get_warp_indexes(shape_in, wcs_in, wcs_out):
     arrays are Nx2
     """
     ht, wd = shape_in[:2]
-    idx = np.mgrid[0:wd, 0:ht]
-    old_pts = np.array((idx[0].flatten(), idx[1].flatten())).T
+    yi, xi = np.mgrid[0:ht, 0:wd]
+    old_pts = np.array((xi.ravel(), yi.ravel())).T
 
     # convert data coords of pixels as sky coords
     coords = wcs_in.datapt_to_wcspt(old_pts)
