@@ -84,7 +84,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                    allow_expand=True, expand_pad_deg=0.01,
                                    max_center_deg_delta=2.0,
                                    make_thumbs=True, reuse_image=False,
-                                   warp_by_wcs=False)
+                                   warp_by_wcs=False, ann_fits_kwd=None)
         self.settings.load(onError='silent')
 
         self.mosaicer = ImageMosaicer(self.logger, settings=self.settings)
@@ -106,7 +106,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.num_groups = 0
         # can set this to annotate images with a specific
         # value drawn from the FITS kwd
-        self.ann_fits_kwd = None
+        self.ann_fits_kwd = self.settings.get('ann_fits_kwd', None)
 
         self.dc = self.fv.get_draw_classes()
 
@@ -516,19 +516,21 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.fv.update_image_info(self.mosaicer.baseimage, info)
 
         # annotate ingested image with its name?
-        ## annotate = self.settings['annotate_images']
-        ## if self.settings['annotate_images'] and not self.settings['allow_expand']:
-        ##     for i, image in enumerate(images):
-        ##         (xlo, ylo, xhi, yhi) = loc[i]
-        ##         header = image.get_header()
-        ##         if self.ann_fits_kwd is not None:
-        ##             imname = str(header[self.ann_fits_kwd])
-        ##         else:
-        ##             imname = image.get('name', 'noname')
+        annotate = self.settings['annotate_images']
+        if self.settings['annotate_images']:
+            for image in images:
+                wd, ht = image.get_size()
+                ctr_x, ctr_y = wd * 0.5, ht * 0.5
+                ctr_ra, ctr_dec = image.pixtoradec(ctr_x, ctr_y)
+                if self.ann_fits_kwd is not None:
+                    header = image.get_header()
+                    imname = str(header[self.ann_fits_kwd])
+                else:
+                    imname = image.get('name', 'noname')
 
-        ##         x, y = (xlo + xhi) / 2., (ylo + yhi) / 2.
-        ##         self.canvas.add(self.dc.Text(x, y, imname, color='red'),
-        ##                         redraw=False)
+                self.canvas.add(self.dc.Text(ctr_ra, ctr_dec, imname,
+                                             color='red', coord='wcs'),
+                                redraw=False)
 
     def mosaic(self, paths, image_loader=None, preprocess=None,
                new_mosaic=False, name=None):
