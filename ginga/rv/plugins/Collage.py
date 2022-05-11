@@ -298,6 +298,7 @@ class Collage(GingaPlugin.LocalPlugin):
 
     def annotate_cb(self, widget, tf):
         self.settings.set(annotate_images=tf)
+        self.mosaicer.annotate_images(self.canvas)
 
     def load_tiles(self, paths, image_loader=None, preprocess=None):
         self.fv.assert_nongui_thread()

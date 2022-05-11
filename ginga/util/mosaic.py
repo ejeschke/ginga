@@ -455,6 +455,7 @@ class ImageMosaicer(Callback.Callbacks):
         self.ingest_count = 0
         # holds processed images to be inserted into mosaic image
         self.total_images = 0
+        self.image_list = []
 
         # options
         if settings is None:
@@ -466,7 +467,10 @@ class ImageMosaicer(Callback.Callbacks):
                              mosaic_hdus=False, skew_limit=0.1,
                              allow_expand=True, expand_pad_deg=0.01,
                              reuse_image=False, mosaic_method='simple',
-                             update_minmax=True, max_expand_pct=None)
+                             update_minmax=True, max_expand_pct=None,
+                             annotate_images=False, annotate_color='pink',
+                             annotate_fontsize=10.0, ann_fits_kwd=None,
+                             ann_tag_pfx='ann_')
 
         # these are updated in prepare_mosaic() and represent measurements
         # on the reference image
@@ -570,6 +574,7 @@ class ImageMosaicer(Callback.Callbacks):
         # Calculate sky position at the center of the piece
         ctr_x, ctr_y = trcalc.get_center(data_np)
         ra, dec = image.pixtoradec(ctr_x, ctr_y, coords='data')
+        self.image_list.append((name, ra, dec))
 
         # User specified a trim?  If so, trim edge pixels from each
         # side of the array
@@ -801,6 +806,26 @@ class ImageMosaicer(Callback.Callbacks):
         The next call to ```mosaic`` will create a new mosaic.
         """
         self.baseimage = None
+        self.image_list = []
+        self.ingest_count = 0
+        self.total_images = 0
+
+    def annotate_images(self, canvas):
+        tagpfx = self.t_['ann_tag_pfx']
+        tags = canvas.get_tags_by_tag_pfx(tagpfx)
+        canvas.delete_objects_by_tag(tags, redraw=False)
+
+        if self.t_['annotate_images']:
+            dc = canvas.get_draw_classes()
+            for name, ra, dec in self.image_list:
+                text = dc.Text(ra, dec, name,
+                               color=self.t_['annotate_color'],
+                               fontsize=self.t_['annotate_fontsize'],
+                               fontscale=True, coord='wcs')
+                tag = tagpfx + name
+                canvas.add(text, tag=tag, redraw=False)
+
+        canvas.update_canvas(whence=3)
 
     def mosaic(self, images, ev_intr=None):
         """Create a mosaic of ``images``.
@@ -865,7 +890,8 @@ class CanvasMosaicer(Callback.Callbacks):
         # options
         self.t_ = settings
         self.t_.set_defaults(annotate_images=False, annotate_color='pink',
-                             annotate_fontsize=10.0,
+                             annotate_fontsize=10.0, ann_fits_kwd=None,
+                             ann_tag_pfx='ann_',
                              match_bg=False, collage_method='simple',
                              center_image=False)
 
@@ -882,6 +908,7 @@ class CanvasMosaicer(Callback.Callbacks):
         self.scale_y = 1.0
         self.limits = None
         self.ref_image = None
+        self.image_list = []
 
         for name in ['progress', 'finished']:
             self.enable_callback(name)
@@ -920,7 +947,14 @@ class CanvasMosaicer(Callback.Callbacks):
     def _get_name_tag(self, image):
         self.ingest_count += 1
         tag = 'image{}'.format(self.ingest_count)
-        name = image.get('name', tag)
+
+        ann_fits_kwd = self.t_['ann_fits_kwd']
+        if ann_fits_kwd is not None:
+            header = image.get_header()
+            name = str(header[ann_fits_kwd])
+        else:
+            name = image.get('name', tag)
+
         tag = image.get('tag', tag)
         return (name, tag)
 
@@ -949,6 +983,7 @@ class CanvasMosaicer(Callback.Callbacks):
         # Calculate sky position at the center of the piece
         ctr_x, ctr_y = trcalc.get_center(data_np)
         ra, dec = image.pixtoradec(ctr_x, ctr_y, coords='data')
+        self.image_list.append((name, ra, dec))
 
         # Get rotation and scale of piece
         header = image.get_header()
@@ -1069,18 +1104,22 @@ class CanvasMosaicer(Callback.Callbacks):
 
         return new_image
 
-    def _annotate(self, canvas, image, xpos, ypos, name, tag):
-        if self.t_['annotate_images']:
+    def annotate_images(self, canvas):
+        tagpfx = self.t_['ann_tag_pfx']
+        tags = canvas.get_tags_by_tag_pfx(tagpfx)
+        canvas.delete_objects_by_tag(tags, redraw=False)
 
-            wd, ht = image.get_size()
+        if self.t_['annotate_images']:
             dc = canvas.get_draw_classes()
-            text = dc.Text(xpos + 10, ypos + ht * 0.5, name,
-                           color=self.t_['annotate_color'],
-                           fontsize=self.t_['annotate_fontsize'],
-                           fontscale=True)
-            if tag is not None:
-                tag = tag + '_label'
-            canvas.add(text, tag=tag, redraw=False)
+            for name, ra, dec in self.image_list:
+                text = dc.Text(ra, dec, name,
+                               color=self.t_['annotate_color'],
+                               fontsize=self.t_['annotate_fontsize'],
+                               fontscale=True, coord='wcs')
+                tag = tagpfx + name
+                canvas.add(text, tag=tag, redraw=False)
+
+        canvas.update_canvas(whence=3)
 
     def plot_image(self, canvas, image):
         """Plot a new image created by ``transform_image()`` on ``canvas``.
@@ -1094,8 +1133,6 @@ class CanvasMosaicer(Callback.Callbacks):
         img.is_data = True
         canvas.add(img, tag=tag, redraw=False)
 
-        self._annotate(canvas, image, xpos, ypos, name, tag)
-
     def reset(self):
         """Prepare for a new mosaic.
         The next call to ```mosaic`` will create a new mosaic.
@@ -1103,6 +1140,7 @@ class CanvasMosaicer(Callback.Callbacks):
         self.ref_image = None
         self.ingest_count = 0
         self.total_images = 0
+        self.image_list = []
 
     def ingest_one(self, canvas, image):
         """Plot ``image`` in the right place on the ``canvas``.
@@ -1143,7 +1181,12 @@ class CanvasMosaicer(Callback.Callbacks):
                 viewer.set_image(ref_image)
                 self.limits = viewer.get_limits()
 
-                self._annotate(canvas, ref_image, 0, 0, name, tag)
+                # save position of reference image for annotation
+                name, tag = self._get_name_tag(ref_image)
+                wd, ht = ref_image.get_size()
+                ctr_x, ctr_y = wd * 0.5, ht * 0.5
+                ctr_ra, ctr_dec = ref_image.pixtoradec(ctr_x, ctr_y)
+                self.image_list.append((name, ctr_ra, ctr_dec))
 
             self.logger.info("fitting tiles...")
 
@@ -1154,6 +1197,7 @@ class CanvasMosaicer(Callback.Callbacks):
                 self.ingest_one(canvas, image)
 
             self.logger.info("finishing...")
+            self.annotate_images(canvas)
             self.make_callback('progress', 'finishing', 0.0)
 
             viewer.set_limits(self.limits)
