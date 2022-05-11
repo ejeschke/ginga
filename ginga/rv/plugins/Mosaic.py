@@ -398,8 +398,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.canvas.ui_set_active(True)
 
     def new_mosaic_cb(self):
-        self.mosaicer.reset()
-        self.fitsimage.clear()
+        self.reset()
         self.fitsimage.onscreen_message("Drag new files...",
                                         delay=2.0)
 
@@ -412,6 +411,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
     def annotate_cb(self, widget, tf):
         self.settings.set(annotate_images=tf)
+        self.mosaicer.annotate_images(self.canvas)
 
     def allow_expand_cb(self, widget, tf):
         self.settings.set(allow_expand=tf)
@@ -515,22 +515,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
             ','.join([im.get('name') for im in images])))
         self.fv.update_image_info(self.mosaicer.baseimage, info)
 
-        # annotate ingested image with its name?
-        annotate = self.settings['annotate_images']
-        if self.settings['annotate_images']:
-            for image in images:
-                wd, ht = image.get_size()
-                ctr_x, ctr_y = wd * 0.5, ht * 0.5
-                ctr_ra, ctr_dec = image.pixtoradec(ctr_x, ctr_y)
-                if self.ann_fits_kwd is not None:
-                    header = image.get_header()
-                    imname = str(header[self.ann_fits_kwd])
-                else:
-                    imname = image.get('name', 'noname')
-
-                self.canvas.add(self.dc.Text(ctr_ra, ctr_dec, imname,
-                                             color='red', coord='wcs'),
-                                redraw=False)
+    def reset(self):
+        self.canvas.delete_all_objects()
+        self.mosaicer.reset()
+        self.fitsimage.clear()
 
     def mosaic(self, paths, image_loader=None, preprocess=None,
                new_mosaic=False, name=None):
@@ -545,9 +533,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
             image_loader = self.fv.load_image
 
         if new_mosaic:
-            self.mosaicer.reset()
-            self.canvas.delete_all_objects()
-            self.fitsimage.clear()
+            self.reset()
 
         # Initialize progress bar
         self.total_files = len(paths)
@@ -585,6 +571,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                           ra2_deg, dec2_deg)
             # if distance is greater than trip setting, start a new mosaic
             if dist > max_center_deg_delta:
+                self.reset()
                 self.prepare_mosaic(image, name=name)
 
         self.update_status("Loading images...")
@@ -658,9 +645,14 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.fv.gui_do(self.w.eval_pgs.set_value, pct)
 
     def _mosaic_finished_cb(self, mosaicer, t_sec):
-        # a redraw shouldn't be necessary if the modified callback
-        # is forcing a correct redraw at whence=0
-        self.fv.gui_do(self.mosaicer.baseimage.make_callback, 'modified')
+        def final_gui_action():
+            self.mosaicer.annotate_images(self.canvas)
+
+            # a redraw shouldn't be necessary if the modified callback
+            # is forcing a correct redraw at whence=0
+            self.mosaicer.baseimage.make_callback('modified')
+
+        self.fv.gui_do(final_gui_action)
 
         total = self.load_time + t_sec
         msg = "done. load: %.4f mosaic: %.4f total: %.4f sec" % (
