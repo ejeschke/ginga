@@ -464,8 +464,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                 # or size 0 in either dimension
                                 continue
 
-                            image.set(name='hdu%d' % (i))
-
                             if preprocess is not None:
                                 image = preprocess(image)
 
