@@ -818,10 +818,11 @@ class ImageMosaicer(Callback.Callbacks):
         if self.t_['annotate_images']:
             dc = canvas.get_draw_classes()
             for name, ra, dec in self.image_list:
-                text = dc.Text(ra, dec, name,
+                x, y = self.baseimage.radectopix(ra, dec)
+                text = dc.Text(x, y, name,
                                color=self.t_['annotate_color'],
                                fontsize=self.t_['annotate_fontsize'],
-                               fontscale=True, coord='wcs')
+                               fontscale=True)
                 tag = tagpfx + name
                 canvas.add(text, tag=tag, redraw=False)
 
@@ -983,7 +984,7 @@ class CanvasMosaicer(Callback.Callbacks):
         # Calculate sky position at the center of the piece
         ctr_x, ctr_y = trcalc.get_center(data_np)
         ra, dec = image.pixtoradec(ctr_x, ctr_y, coords='data')
-        self.image_list.append((name, ra, dec))
+        self.image_list.append((name, tag, ra, dec))
 
         # Get rotation and scale of piece
         header = image.get_header()
@@ -1111,12 +1112,13 @@ class CanvasMosaicer(Callback.Callbacks):
 
         if self.t_['annotate_images']:
             dc = canvas.get_draw_classes()
-            for name, ra, dec in self.image_list:
-                text = dc.Text(ra, dec, name,
+            for name, tag, ra, dec in self.image_list:
+                x, y = self.ref_image.radectopix(ra, dec)
+                text = dc.Text(x, y, name,
                                color=self.t_['annotate_color'],
                                fontsize=self.t_['annotate_fontsize'],
-                               fontscale=True, coord='wcs')
-                tag = tagpfx + name
+                               fontscale=True)
+                tag = tagpfx + tag
                 canvas.add(text, tag=tag, redraw=False)
 
         canvas.update_canvas(whence=3)
@@ -1158,6 +1160,7 @@ class CanvasMosaicer(Callback.Callbacks):
         """Plot a mosaic of ``images`` in ``viewer`` on ``canvas``.
         If ``canvas`` is `None` the viewer's default canvas is used.
         """
+        images = list(images)    # because we might pop(0)
         num_images = len(images)
         if num_images == 0:
             return
@@ -1176,6 +1179,7 @@ class CanvasMosaicer(Callback.Callbacks):
                 name, tag = self._get_name_tag(ref_image)
                 self.prepare_mosaic(ref_image)
 
+                # TODO: delete only items we may have added
                 canvas.delete_all_objects(redraw=False)
                 # first image is loaded in the usual way
                 viewer.set_image(ref_image)
@@ -1186,7 +1190,7 @@ class CanvasMosaicer(Callback.Callbacks):
                 wd, ht = ref_image.get_size()
                 ctr_x, ctr_y = wd * 0.5, ht * 0.5
                 ctr_ra, ctr_dec = ref_image.pixtoradec(ctr_x, ctr_y)
-                self.image_list.append((name, ctr_ra, ctr_dec))
+                self.image_list.append((name, tag, ctr_ra, ctr_dec))
 
             self.logger.info("fitting tiles...")
 
