@@ -6,6 +6,7 @@
 #
 import math
 import time
+import warnings
 
 import numpy as np
 
@@ -135,7 +136,12 @@ def warp_image(data_in, wcs_in, wcs_out, fill=None, pixel_radius=1):
                  for _x, _y in [((x + offsets[i][0]).clip(0, new_wd - 1),
                                  (y + offsets[i][1]).clip(0, new_ht - 1))
                                 for i in range(len(offsets))]]
-        vals = np.nanmedian(np.dstack(_arrs), axis=2)
+
+        with warnings.catch_warnings():
+            # we can get a "RuntimeWarning: All-NaN slice encountered"
+            # which is ok as we simply let this resolve to NaN
+            warnings.simplefilter("ignore")
+            vals = np.nanmedian(np.dstack(_arrs), axis=2)
         _arrs = None   # deref arrays
         data_out[y, x] = vals
 
@@ -564,7 +570,8 @@ class ImageMosaicer(Callback.Callbacks):
         """
         self.ingest_count += 1
         count = self.ingest_count
-        name = image.get('name', 'image{}'.format(count))
+        tag = 'image{}'.format(count)
+        name = image.get('name', tag)
 
         data_np = image._get_data()
         if 0 in data_np.shape:
@@ -574,7 +581,7 @@ class ImageMosaicer(Callback.Callbacks):
         # Calculate sky position at the center of the piece
         ctr_x, ctr_y = trcalc.get_center(data_np)
         ra, dec = image.pixtoradec(ctr_x, ctr_y, coords='data')
-        self.image_list.append((name, ra, dec))
+        self.image_list.append((name, tag, ra, dec))
 
         # User specified a trim?  If so, trim edge pixels from each
         # side of the array
@@ -817,13 +824,13 @@ class ImageMosaicer(Callback.Callbacks):
 
         if self.t_['annotate_images']:
             dc = canvas.get_draw_classes()
-            for name, ra, dec in self.image_list:
+            for name, tag, ra, dec in self.image_list:
                 x, y = self.baseimage.radectopix(ra, dec)
                 text = dc.Text(x, y, name,
                                color=self.t_['annotate_color'],
                                fontsize=self.t_['annotate_fontsize'],
                                fontscale=True)
-                tag = tagpfx + name
+                tag = tagpfx + tag
                 canvas.add(text, tag=tag, redraw=False)
 
         canvas.update_canvas(whence=3)
@@ -833,10 +840,10 @@ class ImageMosaicer(Callback.Callbacks):
 
         Returns a `~ginga.AstroImage.AstroImage`
         """
-        self.total_images = len(images)
-        self.ingest_count = 0
-        if self.total_images == 0:
+        num_images = len(images)
+        if num_images == 0:
             return
+        self.total_images += num_images
 
         self.make_callback('progress', 'fitting', 0.0)
         t1 = time.time()
