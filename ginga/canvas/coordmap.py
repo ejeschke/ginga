@@ -244,7 +244,8 @@ class WCSMapper(BaseMapper):
 
     def offset_pt(self, pts, offset):
         x, y = np.transpose(pts)
-        xoff, yoff = np.transpose(offset)
+        #xoff, yoff = np.transpose(offset)
+        xoff, yoff = offset
         res_arr = wcs.add_offset_radec(x, y, xoff, yoff)
         return np.transpose(res_arr)
 
