@@ -48,12 +48,14 @@ class FITSError(Exception):
     pass
 
 
-def use(fitspkg, raise_err=True):
+def use(fitspkg, raise_err=True, suppress_verify_warnings=False):
     global fits_configured, fitsLoaderClass
 
     if fitspkg == 'astropy':
         if have_astropy:
             fitsLoaderClass = AstropyFitsFileHandler
+            if suppress_verify_warnings:
+                warnings.simplefilter('ignore', pyfits.verify.VerifyWarning)
             fits_configured = True
             return True
 

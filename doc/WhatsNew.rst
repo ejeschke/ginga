@@ -18,6 +18,8 @@ Ver 3.4.0 (unreleased)
   mosaicing using the 'warp' method
 - fixed an issue with numpy floats and drawing lines and ploygons with
   the Qt backend
+- add option for suppressing FITS verify warnings when opening files
+  using astropy.io.fits
 
 Ver 3.3.0 (2022-02-16)
 ======================
