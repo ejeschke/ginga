@@ -6,7 +6,7 @@
 #
 import numpy as np
 
-from ginga.qtw.QtHelp import (QtCore, QPen, QPolygon, QColor, QFontMetrics,
+from ginga.qtw.QtHelp import (QtCore, QPen, QPolygonF, QColor, QFontMetrics,
                               QPainterPath, QImage, QPixmap, get_font,
                               get_painter)
 
@@ -142,10 +142,10 @@ class RenderContext(render.RenderContextBase):
 
     def draw_polygon(self, cpoints):
         ## cpoints = trcalc.strip_z(cpoints)
-        qpoints = [QtCore.QPoint(p[0], p[1]) for p in cpoints]
+        qpoints = [QtCore.QPointF(p[0], p[1]) for p in cpoints]
         p = cpoints[0]
-        qpoints.append(QtCore.QPoint(p[0], p[1]))
-        qpoly = QPolygon(qpoints)
+        qpoints.append(QtCore.QPointF(p[0], p[1]))
+        qpoly = QPolygonF(qpoints)
 
         self.cr.drawPolygon(qpoly)
 
@@ -174,7 +174,8 @@ class RenderContext(render.RenderContextBase):
 
     def draw_line(self, cx1, cy1, cx2, cy2):
         self.cr.pen().setCapStyle(QtCore.Qt.RoundCap)
-        self.cr.drawLine(cx1, cy1, cx2, cy2)
+        self.cr.drawLine(QtCore.QLineF(QtCore.QPointF(cx1, cy1),
+                                       QtCore.QPointF(cx2, cy2)))
 
     def draw_path(self, cp):
         ## cp = trcalc.strip_z(cp)

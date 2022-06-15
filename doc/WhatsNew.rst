@@ -16,6 +16,8 @@ Ver 3.4.0 (unreleased)
 - fix for a bug in ICC profiling with temp file creation
 - new option in Collage plugin to select more accurate (but slower)
   mosaicing using the 'warp' method
+- fixed an issue with numpy floats and drawing lines and ploygons with
+  the Qt backend
 
 Ver 3.3.0 (2022-02-16)
 ======================
