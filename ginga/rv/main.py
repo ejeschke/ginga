@@ -302,7 +302,7 @@ class ReferenceViewer(object):
         """
         Main routine for running the reference viewer.
 
-        `options` is a OptionParser object that has been populated with
+        `options` is a ArgumentParser object that has been populated with
         values from parsing the command line.  It should at least include
         the options from add_default_options()
 
@@ -438,6 +438,10 @@ class ReferenceViewer(object):
             supp_warn = options.suppress_fits_warnings
         else:
             supp_warn = settings.get('suppress_fits_warnings', False)
+        if supp_warn:
+            import warnings
+            from astropy.io import fits
+            warnings.simplefilter('ignore', fits.verify.VerifyWarning)
 
         try:
             from ginga.util import io_fits, loader
