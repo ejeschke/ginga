@@ -25,7 +25,7 @@ take the size of the displayed image. Therefore, to create masks for
 different image dimensions, you need to repeat the steps multiple times.
 
 Shapes drawn on the canvas can be loaded and/or saved in astropy-regions
-(compatible with ds9 regions) format.  To use that you need to have
+(compatible with DS9 regions) format.  To use that you need to have
 installed the astropy-regions package.  Simply draw objects on the canvas,
 with coords as "data" (pixel) or "wcs".  Note that not all Ginga canvas
 objects can be converted to regions shapes and some attributes may not
@@ -487,7 +487,7 @@ class Drawing(GingaPlugin.LocalPlugin):
 
     def _import_regions_files(self, paths):
         for path in paths:
-            objs = ap_region.import_ds9_regions(path)
+            objs = ap_region.import_regions(path, format='ds9')
             for obj in objs:
                 self.canvas.add(obj, redraw=False)
 

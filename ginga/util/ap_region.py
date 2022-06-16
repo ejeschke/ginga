@@ -1,22 +1,22 @@
 #
-# ap_region.py -- AstroPy regions support
+# ap_region.py -- astropy-regions support
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 """
 This module provides Ginga support for DS9 type region files and objects via
-the Astropy ``regions`` module.
+the ``astropy-regions`` package.
 """
 import numpy as np
+
+from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 from ginga.canvas.CanvasObject import get_canvas_types
 
 HAVE_REGIONS = False
 try:
-    from astropy import units as u
-    from astropy.coordinates import SkyCoord
-
     import regions
     HAVE_REGIONS = True
 except ImportError:
@@ -34,7 +34,7 @@ pt_regions = {v: k for k, v in pt_ginga.items()}
 
 def astropy_region_to_ginga_canvas_object(r):
     """
-    Convert an Astropy region object to a Ginga canvas object.
+    Convert an astropy-region object to a Ginga canvas object.
 
     Parameters
     ----------
@@ -89,6 +89,9 @@ def astropy_region_to_ginga_canvas_object(r):
         # what is a reasonable default radius?
         radius = 15   # pixels
 
+        # convert the regions-encoded style for a point into the
+        # corresponding ginga style for a point, defaulting to "diamond"
+        # if there is no direct match.
         style = r.visual.get('marker', '*')
         style = pt_regions.get(style, 'diamond')
         obj = dc.Point(r.center.x, r.center.y, radius, style=style)
@@ -97,6 +100,7 @@ def astropy_region_to_ginga_canvas_object(r):
         # what is a reasonable default radius?
         radius = 0.001   # degrees
 
+        # see comment for PointPixelRegion
         style = r.visual.get('marker', '*')
         style = pt_regions.get(style, 'diamond')
         obj = dc.Point(r.center.ra.deg, r.center.dec.deg, radius, style=style,
@@ -212,7 +216,7 @@ def astropy_region_to_ginga_canvas_object(r):
 
 def add_region(canvas, r, tag=None, redraw=True):
     """
-    Convenience function to plot an Astropy regions object on a Ginga
+    Convenience function to plot an astropy-regions object on a Ginga
     canvas.
 
     Parameters
@@ -241,7 +245,7 @@ def add_region(canvas, r, tag=None, redraw=True):
 
 def ginga_canvas_object_to_astropy_region(obj, frame='fk5'):
     """
-    Convert a Ginga canvas object to an Astropy region object.
+    Convert a Ginga canvas object to an astropy-region object.
 
     Parameters
     ----------
@@ -251,7 +255,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='fk5'):
     Returns
     -------
     r : subclass of `~regions.PixelRegion` or `~regions.SkyRegion`
-        The corresponding Astropy region object
+        The corresponding astropy-region object
 
     """
     if not HAVE_REGIONS:
@@ -418,15 +422,18 @@ def ginga_canvas_object_to_astropy_region(obj, frame='fk5'):
     return r
 
 
-def import_ds9_regions(ds9_file):
+def import_regions(regions_file, format='ds9'):
     """
-    Convenience function to read a ds9 file containing regions and
+    Convenience function to read a file containing regions and
     return a list of matching Ginga canvas objects.
 
     Parameters
     ----------
-    ds9_file : str
-        Path of a ds9 like regions file
+    regions_file : str
+        Path of a astropy-regions compatible file
+
+    format : str (optional, default: 'ds9')
+        Format of the astropy-regions compatible file
 
     Returns
     -------
@@ -434,7 +441,7 @@ def import_ds9_regions(ds9_file):
         Returns a list of Ginga canvas objects that can be added
         to a Ginga canvas
     """
-    regs = regions.Regions.read(ds9_file, format='ds9')
+    regs = regions.Regions.read(regions_file, format=format)
 
     return [astropy_region_to_ginga_canvas_object(r)
             for r in regs]
@@ -443,8 +450,8 @@ def import_ds9_regions(ds9_file):
 def export_regions(objs):
     """
     Convenience function to convert a sequence of Ginga canvas objects
-    to a ds9 file containing regions and
-    return a list of matching .
+    to a ds9 file containing regions and return a list of matching
+    astropy-regions shapes.
 
     Parameters
     ----------
@@ -454,13 +461,28 @@ def export_regions(objs):
     Returns
     -------
     regions : `~regions.Regions` object
-        Returns an astropy regions Regions object
+        Returns an astropy-regions object
     """
     regs = regions.Regions(map(ginga_canvas_object_to_astropy_region, objs))
     return regs
 
 
 def export_regions_canvas(canvas):
+    """
+    Convenience function to convert a Ginga canvas's collection of objects
+    to a ds9 file containing regions and return a list of matching
+    astropy-regions shapes.
+
+    Parameters
+    ----------
+    canvas : a `~ginga.canvas.types.layer.Canvas` object or subclass thereof
+        a Ginga canvas object
+
+    Returns
+    -------
+    regions : `~regions.Regions` object
+        Returns an astropy-regions object
+    """
     # TODO: support nested canvases, etc?
     objs = canvas.objects
     regs = regions.Regions(map(ginga_canvas_object_to_astropy_region, objs))
