@@ -286,6 +286,10 @@ class ReferenceViewer(object):
         add_argument("--sep", dest="separate_channels", default=False,
                      action="store_true",
                      help="Load files in separate channels")
+        add_argument("--suppress-fits-warnings",
+                     dest="suppress_fits_warnings", default=False,
+                     action="store_true",
+                     help="Suppress FITS verify warnings")
         add_argument("-t", "--toolkit", dest="toolkit", metavar="NAME",
                      default=None,
                      help="Prefer GUI toolkit (gtk|qt)")
@@ -298,7 +302,7 @@ class ReferenceViewer(object):
         """
         Main routine for running the reference viewer.
 
-        `options` is a OptionParser object that has been populated with
+        `options` is a ArgumentParser object that has been populated with
         values from parsing the command line.  It should at least include
         the options from add_default_options()
 
@@ -329,6 +333,7 @@ class ReferenceViewer(object):
         settings.set_defaults(useMatplotlibColormaps=False,
                               widgetSet='choose',
                               WCSpkg='choose', FITSpkg='choose',
+                              suppress_fits_warnings=False,
                               recursion_limit=2000,
                               icc_working_profile=None,
                               font_scaling_factor=None,
@@ -429,10 +434,20 @@ class ReferenceViewer(object):
         else:
             fitspkg = settings.get('FITSpkg', 'choose')
 
+        if options.suppress_fits_warnings:
+            supp_warn = options.suppress_fits_warnings
+        else:
+            supp_warn = settings.get('suppress_fits_warnings', False)
+        if supp_warn:
+            import warnings
+            from astropy.io import fits
+            warnings.simplefilter('ignore', fits.verify.VerifyWarning)
+
         try:
             from ginga.util import io_fits, loader
             if fitspkg != 'choose':
-                assert io_fits.use(fitspkg) is True
+                assert io_fits.use(fitspkg,
+                                   suppress_verify_warnings=supp_warn) is True
                 # opener name is not necessarily the same
                 opener = loader.get_opener(io_fits.fitsLoaderClass.name)
                 # set this opener as the priority one
