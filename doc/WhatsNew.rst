@@ -20,6 +20,8 @@ Ver 3.4.0 (unreleased)
   the Qt backend
 - add option for suppressing FITS verify warnings when opening files
   using astropy.io.fits
+- worked around a bug in recent versions of aggdraw (for "agg" backend)
+  that caused problems for drawing ellipses
 
 Ver 3.3.0 (2022-02-16)
 ======================
