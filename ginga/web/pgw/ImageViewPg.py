@@ -43,7 +43,7 @@ class ImageViewPg(ImageView.ImageViewBase):
 
         self.renderer = None
         # Pick a renderer that can work with us
-        renderers = ['cairo', 'agg', 'pil', 'opencv']
+        renderers = ['cairo', 'pil', 'opencv', 'agg']
         preferred = self.t_['renderer']
         if preferred in renderers:
             renderers.remove(preferred)
