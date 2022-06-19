@@ -157,7 +157,6 @@ class Drawing(GingaPlugin.LocalPlugin):
                      "Scale By:", 'label', 'Scale By', 'entry'),
                     ("Delete Obj", 'button', "Copy Obj", 'button',
                      "Create mask", 'button', "Clear canvas", 'button'),
-                    ("Import regions", 'button', "Export regions", 'button'),
                     )
         w, b = Widgets.build_info(captions)
         self.w.update(b)
@@ -184,12 +183,26 @@ class Drawing(GingaPlugin.LocalPlugin):
         b.clear_canvas.add_callback('activated', lambda w: self.clear_canvas())
         b.clear_canvas.set_tooltip("Delete all drawing objects")
 
+        vbox.add_widget(w, stretch=0)
+
+        captions = (("Import regions", 'button', "Export regions", 'button',
+                     'reg_format', 'combobox'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
         b.import_regions.add_callback('activated', self.import_regions_cb)
         b.import_regions.set_tooltip("Load a regions file")
         b.import_regions.set_enabled(ap_region.HAVE_REGIONS)
         b.export_regions.add_callback('activated', self.export_regions_cb)
         b.export_regions.set_tooltip("Save a regions file")
         b.export_regions.set_enabled(ap_region.HAVE_REGIONS)
+
+        if ap_region.HAVE_REGIONS:
+            for fmt in ap_region.regions.Regions.get_formats()['Format']:
+                b.reg_format.append_text(fmt)
+        else:
+            b.reg_format.set_enabled(False)
+        b.reg_format.set_tooltip("Select format for regions output file")
 
         vbox.add_widget(w, stretch=0)
 
@@ -483,11 +496,11 @@ class Drawing(GingaPlugin.LocalPlugin):
         fs = FileSelection(w.get_widget(), all_at_once=True)
         fs.popup('Load regions file', self._import_regions_files,
                  initialdir='.',
-                 filename='Region files (*.reg)')
+                 filename='Region files (*.reg *.ds9 *.crtf *.fits)')
 
     def _import_regions_files(self, paths):
         for path in paths:
-            objs = ap_region.import_regions(path, format='ds9')
+            objs = ap_region.import_regions(path)
             for obj in objs:
                 self.canvas.add(obj, redraw=False)
 
@@ -498,7 +511,9 @@ class Drawing(GingaPlugin.LocalPlugin):
             self.fv.show_error("Please install astropy regions to use this",
                                raisetab=True)
             return
-        fs = Widgets.SaveDialog('Save Regions', selectedfilter='*.reg')
+
+        fs = Widgets.SaveDialog('Save Regions',
+                                selectedfilter='*.reg *.ds9 *.crtf *.fits')
         path = fs.get_path()
         if path is None:
             # cancelled
@@ -506,10 +521,10 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         regs = ap_region.export_regions_canvas(self.canvas)
 
-        # TODO: allow other export formats that regions allows
-        format = 'ds9'
+        format = self.w.reg_format.get_text()
 
-        # dialogs confirms if they want to overwrite
+        # dialog above confirms if they want to overwrite, so we can
+        # simply use overwrite=True
         regs.write(path, format=format, overwrite=True)
 
     def __str__(self):

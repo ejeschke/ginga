@@ -92,8 +92,8 @@ def astropy_region_to_ginga_canvas_object(r):
         # convert the regions-encoded style for a point into the
         # corresponding ginga style for a point, defaulting to "diamond"
         # if there is no direct match.
-        style = r.visual.get('marker', '*')
-        style = pt_regions.get(style, 'diamond')
+        style = r.visual.get('symbol', '*')
+        style = pt_ginga.get(style, 'diamond')
         obj = dc.Point(r.center.x, r.center.y, radius, style=style)
 
     elif isinstance(r, (regions.PointSkyRegion,)):
@@ -101,8 +101,8 @@ def astropy_region_to_ginga_canvas_object(r):
         radius = 0.001   # degrees
 
         # see comment for PointPixelRegion
-        style = r.visual.get('marker', '*')
-        style = pt_regions.get(style, 'diamond')
+        style = r.visual.get('symbol', '*')
+        style = pt_ginga.get(style, 'diamond')
         obj = dc.Point(r.center.ra.deg, r.center.dec.deg, radius, style=style,
                        coord='wcs')
 
@@ -159,8 +159,8 @@ def astropy_region_to_ginga_canvas_object(r):
                            rot_deg=r.angle.to(u.deg).value)
 
     elif isinstance(r, (regions.EllipseAnnulusSkyRegion,)):
-        xwd = ((r.outer_width - r.inner_width) * 0.5).to(u.deg).value,
-        ywd = ((r.outer_height - r.inner_height) * 0.5).to(u.deg).value,
+        xwd = ((r.outer_width - r.inner_width) * 0.5).to(u.deg).value
+        ywd = ((r.outer_height - r.inner_height) * 0.5).to(u.deg).value
         obj = dc.Annulus2R(r.center.ra.deg, r.center.dec.deg,
                            (r.inner_width * 0.5).to(u.deg).value,
                            (r.inner_height * 0.5).to(u.deg).value,
@@ -178,8 +178,8 @@ def astropy_region_to_ginga_canvas_object(r):
                            rot_deg=r.angle.to(u.deg).value)
 
     elif isinstance(r, (regions.RectangleAnnulusSkyRegion,)):
-        xwd = ((r.outer_width - r.inner_width) * 0.5).to(u.deg).value,
-        ywd = ((r.outer_height - r.inner_height) * 0.5).to(u.deg).value,
+        xwd = ((r.outer_width - r.inner_width) * 0.5).to(u.deg).value
+        ywd = ((r.outer_height - r.inner_height) * 0.5).to(u.deg).value
         obj = dc.Annulus2R(r.center.ra.deg, r.center.dec.deg,
                            (r.inner_width * 0.5).to(u.deg).value,
                            (r.inner_height * 0.5).to(u.deg).value,
@@ -299,15 +299,14 @@ def ginga_canvas_object_to_astropy_region(obj, frame='fk5'):
             r.visual['textangle'] = str(obj.rot_deg)
 
     elif isinstance(obj, (dc.Point,)):
-        style = pt_ginga.get(obj.style, '*')
+        style = pt_regions.get(obj.style, '*')
         if obj.coord == 'data':
             center = regions.PixCoord(x=obj.x, y=obj.y)
             r = regions.PointPixelRegion(center=center)
-            r.visual['symbol'] = style
         elif obj.coord == 'wcs':
             center = SkyCoord(obj.x, obj.y, unit='deg', frame=frame)
             r = regions.PointSkyRegion(center=center)
-            r.visual['symbol'] = style
+        r.visual['symbol'] = style
 
     elif isinstance(obj, (dc.Line,)):
         if obj.coord == 'data':
@@ -318,6 +317,8 @@ def ginga_canvas_object_to_astropy_region(obj, frame='fk5'):
             start = SkyCoord(obj.x1, obj.y1, unit='deg', frame=frame)
             end = SkyCoord(obj.x2, obj.y2, unit='deg', frame=frame)
             r = regions.LineSkyRegion(start=start, end=end)
+        r.visual['line'] = "[{} {}]".format(1 if obj.arrow in ('start', 'both') else 0,
+                                            1 if obj.arrow in ('end', 'both') else 0)
 
     elif isinstance(obj, (dc.Box,)):
         if obj.coord == 'data':
