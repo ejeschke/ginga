@@ -37,7 +37,7 @@ class Test_R2G(object):
                                      visual=regions.RegionVisual(symbol='*'))
         o = r2g(r)
         assert isinstance(o, dc.Point) and o.style == 'square' and \
-               o.coord == 'data'
+            o.coord == 'data'
 
     def test_point_sky1(self):
         r = regions.PointSkyRegion(center=SkyCoord(12.0, 10.0, unit='deg',
@@ -45,7 +45,7 @@ class Test_R2G(object):
                                    visual=regions.RegionVisual(symbol='*'))
         o = r2g(r)
         assert isinstance(o, dc.Point) and o.style == 'square' and \
-               o.coord == 'wcs'
+            o.coord == 'wcs'
 
     def test_text_pix1(self):
         r = regions.TextPixelRegion(center=regions.PixCoord(x=42, y=43),
@@ -77,9 +77,9 @@ class Test_R2G(object):
 
     def test_line_sky1(self):
         r = regions.LineSkyRegion(start=SkyCoord(12.0, 10.0, unit='deg',
-                                                  frame='fk5'),
+                                                 frame='fk5'),
                                   end=SkyCoord(12.5, 9.3, unit='deg',
-                                                  frame='fk5'))
+                                               frame='fk5'))
         o = r2g(r)
         assert isinstance(o, dc.Line) and o.coord == 'wcs'
         assert np.all(np.isclose((o.x1, o.y1, o.x2, o.y2),
@@ -98,7 +98,7 @@ class Test_R2G(object):
 
     def test_rectangle_sky1(self):
         r = regions.RectangleSkyRegion(center=SkyCoord(12.0, 10.0, unit='deg',
-                                                  frame='fk5'),
+                                                       frame='fk5'),
                                        width=0.2 * u.deg, height=0.4 * u.deg,
                                        angle=5 * u.deg)
         o = r2g(r)
@@ -143,7 +143,7 @@ class Test_R2G(object):
 
     def test_ellipse_sky1(self):
         r = regions.EllipseSkyRegion(center=SkyCoord(12.0, 10.0, unit='deg',
-                                                    frame='fk5'),
+                                                     frame='fk5'),
                                      height=0.4 * u.deg, width=0.2 * u.deg,
                                      angle=5 * u.deg)
         o = r2g(r)
@@ -212,7 +212,7 @@ class Test_R2G(object):
                                             angle=5 * u.deg)
         o = r2g(r)
         assert isinstance(o, dc.Annulus2R) and o.atype == 'ellipse' \
-               and o.coord == 'wcs'
+            and o.coord == 'wcs'
         assert np.all(np.isclose((o.x, o.y, o.xradius, o.yradius,
                                   o.xradius + o.xwidth,
                                   o.yradius + o.ywidth, o.rot_deg),
@@ -338,7 +338,7 @@ class Test_G2R(object):
         r = g2r(o)
         assert isinstance(r, regions.RectangleSkyRegion)
         assert r.visual['color'] == 'green'
-        assert r.visual['fill'] == True
+        assert r.visual['fill'] is True
         assert np.all(np.isclose((o.x, o.y, o.xradius, o.yradius),
                                  (r.center.ra.deg, r.center.dec.deg,
                                   r.width.value * 0.5, r.height.value * 0.5)))
@@ -384,7 +384,7 @@ class Test_G2R(object):
         o2 = r2g(r)
         assert isinstance(o2, dc.Polygon) and o2.coord == 'data'
         assert o2.color == o2.color and o2.linewidth == o.linewidth and \
-               o2.fill == o.fill
+            o2.fill == o.fill
         assert np.all(np.isclose(o.points, o2.points))
 
     def test_polygon_sky1(self):
