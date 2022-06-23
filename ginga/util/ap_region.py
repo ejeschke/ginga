@@ -34,6 +34,7 @@ pt_regions = {v: k for k, v in pt_ginga.items()}
 arr_ginga = {'0 0': 'none', '1 0': 'start', '0 1': 'end', '1 1': 'both'}
 arr_regions = {v: k for k, v in arr_ginga.items()}
 
+
 def astropy_region_to_ginga_canvas_object(r):
     """
     Convert an astropy-region object to a Ginga canvas object.
