@@ -30,7 +30,9 @@ __all__ = ['astropy_region_to_ginga_canvas_object', 'add_region',
 # mappings of point styles
 pt_ginga = {'*': 'square', 'x': 'cross', '+': 'plus', 'D': 'diamond'}
 pt_regions = {v: k for k, v in pt_ginga.items()}
-
+# mappings of arrow styles
+arr_ginga = {'0 0': 'none', '1 0': 'start', '0 1': 'end', '1 1': 'both'}
+arr_regions = {v: k for k, v in arr_ginga.items()}
 
 def astropy_region_to_ginga_canvas_object(r):
     """
@@ -108,14 +110,12 @@ def astropy_region_to_ginga_canvas_object(r):
 
     elif isinstance(r, (regions.LinePixelRegion,)):
         obj = dc.Line(r.start.x, r.start.y, r.end.x, r.end.y)
-        if r.meta.get('line', '0') == '1':
-            obj.arrow = 'both'
+        obj.arrow = arr_ginga[r.meta.get('line', '0 0')]
 
     elif isinstance(r, (regions.LineSkyRegion,)):
         obj = dc.Line(r.start.ra.deg, r.start.dec.deg,
                       r.end.ra.deg, r.end.dec.deg, coord='wcs')
-        if r.meta.get('line', '0') == '1':
-            obj.arrow = 'both'
+        obj.arrow = arr_ginga[r.meta.get('line', '0 0')]
 
     elif isinstance(r, (regions.RectanglePixelRegion,)):
         obj = dc.Box(r.center.x, r.center.y, r.width * 0.5, r.height * 0.5,
@@ -317,8 +317,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='fk5'):
             start = SkyCoord(obj.x1, obj.y1, unit='deg', frame=frame)
             end = SkyCoord(obj.x2, obj.y2, unit='deg', frame=frame)
             r = regions.LineSkyRegion(start=start, end=end)
-        r.visual['line'] = "[{} {}]".format(1 if obj.arrow in ('start', 'both') else 0,
-                                            1 if obj.arrow in ('end', 'both') else 0)
+        r.meta['line'] = arr_regions.get(obj.arrow, '0 0')
 
     elif isinstance(obj, (dc.Box,)):
         if obj.coord == 'data':

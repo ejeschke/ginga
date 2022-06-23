@@ -467,7 +467,8 @@ class Drawing(GingaPlugin.LocalPlugin):
 
     def delete_object(self):
         tag = self.canvas.lookup_object_tag(self.canvas._edit_obj)
-        self._drawn_tags.remove(tag)
+        if tag in self._drawn_tags:
+            self._drawn_tags.remove(tag)
         self.toggle_create_button()
         self.canvas.edit_delete()
         self.canvas.redraw(whence=2)
