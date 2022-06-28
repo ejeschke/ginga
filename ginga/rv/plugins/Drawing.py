@@ -501,7 +501,7 @@ class Drawing(GingaPlugin.LocalPlugin):
 
     def _import_regions_files(self, paths):
         for path in paths:
-            objs = ap_region.import_regions(path)
+            objs = ap_region.import_regions(path, logger=self.logger)
             for obj in objs:
                 self.canvas.add(obj, redraw=False)
 
@@ -514,13 +514,13 @@ class Drawing(GingaPlugin.LocalPlugin):
             return
 
         fs = Widgets.SaveDialog('Save Regions',
-                                selectedfilter='*.reg *.ds9 *.crtf *.fits')
+                                selectedfilter='*.reg')
         path = fs.get_path()
         if path is None:
             # cancelled
             return
 
-        regs = ap_region.export_regions_canvas(self.canvas)
+        regs = ap_region.export_regions_canvas(self.canvas, logger=self.logger)
 
         format = self.w.reg_format.get_text()
 

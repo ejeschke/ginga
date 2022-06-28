@@ -448,7 +448,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='fk5', logger=None):
     return r
 
 
-def import_regions(regions_file, format='ds9'):
+def import_regions(regions_file, format='ds9', logger=None):
     """
     Convenience function to read a file containing regions and
     return a list of matching Ginga canvas objects.
@@ -461,6 +461,9 @@ def import_regions(regions_file, format='ds9'):
     format : str (optional, default: 'ds9')
         Format of the astropy-regions compatible file
 
+    logger : a Python logger (optional, default: None)
+        A logger to which errors will be written
+
     Returns
     -------
     objs : list
@@ -469,11 +472,11 @@ def import_regions(regions_file, format='ds9'):
     """
     regs = regions.Regions.read(regions_file, format=format)
 
-    return [astropy_region_to_ginga_canvas_object(r)
+    return [astropy_region_to_ginga_canvas_object(r, logger=logger)
             for r in regs]
 
 
-def export_regions(objs):
+def export_regions(objs, logger=None):
     """
     Convenience function to convert a sequence of Ginga canvas objects
     to a ds9 file containing regions and return a list of matching
@@ -484,16 +487,21 @@ def export_regions(objs):
     objs : seq of subclasses of `~ginga.canvas.CanvasObject.CanvasObjectBase`
         Sequence of Ginga canvas objects compatible with Regions
 
+    logger : a Python logger (optional, default: None)
+        A logger to which errors will be written
+
     Returns
     -------
     regions : `~regions.Regions` object
         Returns an astropy-regions object
     """
-    regs = regions.Regions(map(ginga_canvas_object_to_astropy_region, objs))
+    def _g2r(obj):
+        return ginga_canvas_object_to_astropy_region(obj, logger=logger)
+    regs = regions.Regions(map(_g2r, objs))
     return regs
 
 
-def export_regions_canvas(canvas):
+def export_regions_canvas(canvas, logger=None):
     """
     Convenience function to convert a Ginga canvas's collection of objects
     to a ds9 file containing regions and return a list of matching
@@ -504,12 +512,16 @@ def export_regions_canvas(canvas):
     canvas : a `~ginga.canvas.types.layer.Canvas` object or subclass thereof
         a Ginga canvas object
 
+    logger : a Python logger (optional, default: None)
+        A logger to which errors will be written
+
     Returns
     -------
     regions : `~regions.Regions` object
         Returns an astropy-regions object
     """
     # TODO: support nested canvases, etc?
+    def _g2r(obj):
+        return ginga_canvas_object_to_astropy_region(obj, logger=logger)
     objs = canvas.objects
-    regs = regions.Regions(map(ginga_canvas_object_to_astropy_region, objs))
-    return regs
+    return regions.Regions(map(_g2r, objs))
