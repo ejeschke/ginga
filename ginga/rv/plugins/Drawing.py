@@ -24,6 +24,13 @@ plugin to save it out as single-extension FITS. Note that the mask will
 take the size of the displayed image. Therefore, to create masks for
 different image dimensions, you need to repeat the steps multiple times.
 
+Shapes drawn on the canvas can be loaded and/or saved in astropy-regions
+(compatible with DS9 regions) format.  To use that you need to have
+installed the astropy-regions package.  Simply draw objects on the canvas,
+with coords as "data" (pixel) or "wcs".  Note that not all Ginga canvas
+objects can be converted to regions shapes and some attributes may not
+be saved, may be ignored or may cause errors trying to load the regions
+shapes in other software.
 """
 from datetime import datetime
 
@@ -31,7 +38,7 @@ from ginga import GingaPlugin
 from ginga import colors
 from ginga.gw import Widgets
 from ginga.misc import ParamSet, Bunch
-from ginga.util import dp
+from ginga.util import dp, ap_region
 from ginga.canvas.CanvasObject import coord_names
 
 __all__ = ['Drawing']
@@ -156,21 +163,46 @@ class Drawing(GingaPlugin.LocalPlugin):
         b.delete_obj.add_callback('activated', lambda w: self.delete_object())
         b.delete_obj.set_tooltip("Delete selected object in edit mode")
         b.delete_obj.set_enabled(False)
+
         b.copy_obj.add_callback('activated', lambda w: self.copy_object())
         b.copy_obj.set_tooltip("Copy selected object in edit mode")
         b.copy_obj.set_enabled(False)
+
         b.scale_by.add_callback('activated', self.scale_object)
         b.scale_by.set_text('0.9')
         b.scale_by.set_tooltip("Scale selected object in edit mode")
         b.scale_by.set_enabled(False)
+
         b.rotate_by.add_callback('activated', self.rotate_object)
         b.rotate_by.set_text('90.0')
         b.rotate_by.set_tooltip("Rotate selected object in edit mode")
         b.rotate_by.set_enabled(False)
+
         b.create_mask.add_callback('activated', lambda w: self.create_mask())
         b.create_mask.set_tooltip("Create boolean mask from drawing")
         b.clear_canvas.add_callback('activated', lambda w: self.clear_canvas())
         b.clear_canvas.set_tooltip("Delete all drawing objects")
+
+        vbox.add_widget(w, stretch=0)
+
+        captions = (("Import regions", 'button', "Export regions", 'button',
+                     'reg_format', 'combobox'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+        b.import_regions.add_callback('activated', self.import_regions_cb)
+        b.import_regions.set_tooltip("Load a regions file")
+        b.import_regions.set_enabled(ap_region.HAVE_REGIONS)
+        b.export_regions.add_callback('activated', self.export_regions_cb)
+        b.export_regions.set_tooltip("Save a regions file")
+        b.export_regions.set_enabled(ap_region.HAVE_REGIONS)
+
+        if ap_region.HAVE_REGIONS:
+            for fmt in ap_region.regions.Regions.get_formats()['Format']:
+                b.reg_format.append_text(fmt)
+        else:
+            b.reg_format.set_enabled(False)
+        b.reg_format.set_tooltip("Select format for regions output file")
 
         vbox.add_widget(w, stretch=0)
 
@@ -435,7 +467,8 @@ class Drawing(GingaPlugin.LocalPlugin):
 
     def delete_object(self):
         tag = self.canvas.lookup_object_tag(self.canvas._edit_obj)
-        self._drawn_tags.remove(tag)
+        if tag in self._drawn_tags:
+            self._drawn_tags.remove(tag)
         self.toggle_create_button()
         self.canvas.edit_delete()
         self.canvas.redraw(whence=2)
@@ -454,6 +487,46 @@ class Drawing(GingaPlugin.LocalPlugin):
     def scale_object(self, w):
         delta = float(w.get_text())
         self.canvas.edit_scale(delta, delta, self.fitsimage)
+
+    def import_regions_cb(self, w):
+        if not ap_region.HAVE_REGIONS:
+            self.fv.show_error("Please install astropy regions to use this",
+                               raisetab=True)
+            return
+        from ginga.gw.GwHelp import FileSelection
+        fs = FileSelection(w.get_widget(), all_at_once=True)
+        fs.popup('Load regions file', self._import_regions_files,
+                 initialdir='.',
+                 filename='Region files (*.reg *.ds9 *.crtf *.fits)')
+
+    def _import_regions_files(self, paths):
+        for path in paths:
+            objs = ap_region.import_regions(path, logger=self.logger)
+            for obj in objs:
+                self.canvas.add(obj, redraw=False)
+
+        self.canvas.update_canvas()
+
+    def export_regions_cb(self, w):
+        if not ap_region.HAVE_REGIONS:
+            self.fv.show_error("Please install astropy regions to use this",
+                               raisetab=True)
+            return
+
+        fs = Widgets.SaveDialog('Save Regions',
+                                selectedfilter='*.reg')
+        path = fs.get_path()
+        if path is None:
+            # cancelled
+            return
+
+        regs = ap_region.export_regions_canvas(self.canvas, logger=self.logger)
+
+        format = self.w.reg_format.get_text()
+
+        # dialog above confirms if they want to overwrite, so we can
+        # simply use overwrite=True
+        regs.write(path, format=format, overwrite=True)
 
     def __str__(self):
         return 'drawing'

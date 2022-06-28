@@ -22,6 +22,8 @@ Ver 3.4.0 (unreleased)
   using astropy.io.fits
 - worked around a bug in recent versions of aggdraw (for "agg" backend)
   that caused problems for drawing ellipses
+- added ability to read and write astropy-regions shapes in the Drawing
+  plugin
 
 Ver 3.3.0 (2022-02-16)
 ======================
