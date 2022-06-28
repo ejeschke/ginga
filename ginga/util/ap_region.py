@@ -35,7 +35,7 @@ arr_ginga = {'0 0': 'none', '1 0': 'start', '0 1': 'end', '1 1': 'both'}
 arr_regions = {v: k for k, v in arr_ginga.items()}
 
 
-def astropy_region_to_ginga_canvas_object(r):
+def astropy_region_to_ginga_canvas_object(r, logger=None):
     """
     Convert an astropy-region object to a Ginga canvas object.
 
@@ -43,6 +43,9 @@ def astropy_region_to_ginga_canvas_object(r):
     ----------
     r : subclass of `~regions.PixelRegion`
         The region object to be converted
+
+    logger : a Python logger (optional, default: None)
+        A logger to which errors will be written
 
     Returns
     -------
@@ -189,7 +192,14 @@ def astropy_region_to_ginga_canvas_object(r):
                            rot_deg=r.angle.to(u.deg).value, coord='wcs')
 
     else:
-        raise ValueError("Don't know how to convert this object of type: {}".format(str(type(r))))
+        errmsg = "Don't know how to convert this object of type: {}".format(str(type(r)))
+        if logger is not None:
+            # if a logger is passed, simply note the error message in the
+            # log and convert the object to a Text with the error message
+            logger.error(errmsg, exc_info=True)
+            obj = dc.Text(0, 0, text=errmsg, font='sans')
+        else:
+            raise ValueError(errmsg)
 
     # Set visual styling attributes
     obj.color = r.visual.get('edgecolor', r.visual.get('color', 'green'))
@@ -244,7 +254,7 @@ def add_region(canvas, r, tag=None, redraw=True):
         return obj
 
 
-def ginga_canvas_object_to_astropy_region(obj, frame='fk5'):
+def ginga_canvas_object_to_astropy_region(obj, frame='fk5', logger=None):
     """
     Convert a Ginga canvas object to an astropy-region object.
 
@@ -252,6 +262,12 @@ def ginga_canvas_object_to_astropy_region(obj, frame='fk5'):
     ----------
     obj : subclass of `~ginga.canvas.CanvasObject.CanvasObjectBase`
         The Ginga canvas object to be converted
+
+    frame : str (optional, default: 'fk5')
+        The type of astropy frame that should be generated for Sky regions
+
+    logger : a Python logger (optional, default: None)
+        A logger to which errors will be written
 
     Returns
     -------
@@ -396,7 +412,16 @@ def ginga_canvas_object_to_astropy_region(obj, frame='fk5'):
                                                   angle=obj.rot_deg * u.deg)
 
     else:
-        raise ValueError("Don't know how to convert this kind of object: {}".format(obj.kind))
+        errmsg = "Don't know how to convert this kind of object: {}".format(obj.kind)
+        if logger is not None:
+            # if a logger is passed, simply note the error message in the
+            # log and convert the object to a TextPixelRegion with the
+            # error message
+            logger.error(errmsg, exc_info=True)
+            r = regions.TextPixelRegion(center=regions.PixCoord(x=0, y=0),
+                                        text=errmsg)
+        else:
+            raise ValueError(errmsg)
 
     # Set visual styling attributes
     r.visual['color'] = obj.color

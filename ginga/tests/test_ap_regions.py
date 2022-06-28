@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+import logging
 
 regions = pytest.importorskip('regions')
 
@@ -309,7 +310,9 @@ class Test_G2R(object):
         r = g2r(o)
         assert isinstance(r, regions.LinePixelRegion)
         assert r.visual['color'] == 'red'
-        assert r.visual['line'] == '[0 1]'
+        # lines ends (arrows) not supported yet, but from documentation
+        # looks like they could be in the future?
+        #assert r.visual['line'] == '[0 1]'
         assert np.all(np.isclose((o.x1, o.y1, o.x2, o.y2),
                                  (r.start.x, r.start.y, r.end.x, r.end.y)))
 
@@ -320,6 +323,7 @@ class Test_G2R(object):
         assert isinstance(r, regions.LineSkyRegion)
         assert r.visual['color'] == 'blue'
         assert r.visual['linewidth'] == 2
+        # ditto: dashed line
         #assert r.visual['dash'] == 1
         assert np.all(np.isclose((o.x1, o.y1, o.x2, o.y2),
                                  (r.start.ra.deg, r.start.dec.deg,
@@ -338,7 +342,7 @@ class Test_G2R(object):
         r = g2r(o)
         assert isinstance(r, regions.RectangleSkyRegion)
         assert r.visual['color'] == 'green'
-        assert r.visual['fill'] is True
+        assert r.visual['fill'] == 1
         assert np.all(np.isclose((o.x, o.y, o.xradius, o.yradius),
                                  (r.center.ra.deg, r.center.dec.deg,
                                   r.width.value * 0.5, r.height.value * 0.5)))
@@ -456,3 +460,10 @@ class Test_G2R(object):
                                   r.outer_width.value * 0.5,
                                   r.outer_height.value * 0.5,
                                   r.angle.to(u.deg).value)))
+
+    def test_skip_error(self):
+        logger = logging.getLogger("test_ap_regions")
+        o = dc.Crosshair(0, 0)
+        r = g2r(o, logger=logger)
+        assert isinstance(r, regions.TextPixelRegion)
+        assert np.all(np.isclose((o.x, o.y), (r.center.x, r.center.y)))
