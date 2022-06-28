@@ -254,7 +254,7 @@ def add_region(canvas, r, tag=None, redraw=True):
         return obj
 
 
-def ginga_canvas_object_to_astropy_region(obj, frame='fk5', logger=None):
+def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
     """
     Convert a Ginga canvas object to an astropy-region object.
 
@@ -263,7 +263,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='fk5', logger=None):
     obj : subclass of `~ginga.canvas.CanvasObject.CanvasObjectBase`
         The Ginga canvas object to be converted
 
-    frame : str (optional, default: 'fk5')
+    frame : str (optional, default: 'icrs')
         The type of astropy frame that should be generated for Sky regions
 
     logger : a Python logger (optional, default: None)
