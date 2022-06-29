@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 3.4.0 (unreleased)
+Ver 3.4.0 (2022-06-28)
 ======================
 - Added start_server option to RC plugin configuration; can configure
   whether ginga should start the remote control server when the plugin
