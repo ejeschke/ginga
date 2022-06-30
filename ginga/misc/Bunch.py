@@ -196,20 +196,25 @@ class Bunch(object):
         return self.tbl[key]
 
     def __setitem__(self, key, value):
-        """Maps dictionary keys to values for assignment.  Called for dictionary style
-        access with assignment.
+        """Maps dictionary keys to values for assignment.
+        Called for dictionary style access with assignment.
         """
         self.tbl[key] = value
 
     def __delitem__(self, key):
         del self.tbl[key]
 
-    def __getattr__(self, attr):
+    def __getattr__(self, *args):
         """Maps values to attributes.
-        Only called if there *isn't* an attribute with this name.  Called for attribute
-        style access of this object.
+        Only called if there *isn't* an attribute with this name.
+        Called for attribute style access of this object.
         """
-        return self.tbl[attr]
+        attr = args[0]
+        if attr in self.tbl:
+            return self.tbl[attr]
+        elif len(args) > 1:
+            return args[1]
+        raise AttributeError(attr)
 
     def __setattr__(self, attr, value):
         """Maps attributes to values for assignment.  Called for attribute style access
