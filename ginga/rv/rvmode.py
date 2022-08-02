@@ -73,9 +73,8 @@ class RVMode(Mode):
             kp_previous_channel_in_workspace=['left'],
             kp_next_channel_in_workspace=['n', 'right'],
 
-            ms_showxy=['nobtn'],
-            #ms_focus_viewer=['left']
-            )
+            #ms_focus_viewer=['left'],
+            ms_showxy=['nobtn'])
 
     def __str__(self):
         return 'rvmode'
