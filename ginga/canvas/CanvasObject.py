@@ -286,7 +286,7 @@ class CanvasObjectBase(Callback.Callbacks):
         self.move_delta_pt(off_pt)
 
     def get_num_points(self):
-        return(len(self.points))
+        return len(self.points)
 
     def set_point_by_index(self, i, pt):
         #self.points[i] = self.crdmap.data_to(pt)

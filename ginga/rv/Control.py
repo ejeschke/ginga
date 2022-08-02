@@ -2859,47 +2859,67 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         #   the desktop object
         if keyname == 'Z':
             self.ds.raise_tab('Zoom')
+            return True
         ## elif keyname == 'T':
         ##     self.ds.raise_tab('Thumbs')
         elif keyname == 'I':
             self.ds.raise_tab('Info')
+            return True
         elif keyname == 'H':
             self.ds.raise_tab('Header')
+            return True
         elif keyname == 'C':
             self.ds.raise_tab('Contents')
+            return True
         elif keyname == 'D':
             self.ds.raise_tab('Dialogs')
+            return True
         elif keyname == 'F':
             self.build_fullscreen()
+            return True
         elif keyname == 'f':
             self.toggle_fullscreen()
+            return True
         elif keyname == 'm':
             self.maximize()
+            return True
         elif keyname == '<':
             self.collapse_pane('left')
+            return True
         elif keyname == '>':
             self.collapse_pane('right')
+            return True
         elif keyname == 'n':
             self.next_channel()
+            return True
         elif keyname == 'J':
             self.cycle_workspace_type()
+            return True
         elif keyname == 'k':
             self.add_channel_auto()
+            return True
         elif keyname == 'K':
             self.remove_channel_auto()
+            return True
         elif keyname == 'f1':
             self.show_channel_names()
+            return True
         ## elif keyname == 'escape':
         ##     self.reset_viewer()
         elif keyname in ('up',):
             self.prev_img()
+            return True
         elif keyname in ('down',):
             self.next_img()
+            return True
         elif keyname in ('left',):
             self.prev_channel()
+            return True
         elif keyname in ('right',):
             self.next_channel()
-        return True
+            return True
+
+        return False
 
     def dragdrop(self, chviewer, uris):
         """Called when a drop operation is performed on a channel viewer.

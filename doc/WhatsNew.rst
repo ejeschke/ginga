@@ -6,6 +6,13 @@ Ver 4.0.0 (unreleased)
 ======================
 - fixed getattr functionality in Bunch
 - removed the "mock" backend; use "pil" backend for similar purposes
+- fixed a longstanding issue where events registered on a canvas could
+  be masked by default key/cursor bindings (not associated with a mode).
+  This meant, for example, that only certain keystrokes could be
+  captured by an event handler registered on a ginga canvas, because any
+  keystrokes that had a default binding would take precedence.
+  Now such bindings are only executed if the event is not handled by any
+  active canvas bindings.
 
 Ver 3.4.0 (2022-06-28)
 ======================

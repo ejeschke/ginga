@@ -2311,8 +2311,8 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         option = option.lower()
-        assert(option in self.autocenter_options), \
-            ImageViewError("Bad autocenter option '%s': must be one of %s" % (
+        if option not in self.autocenter_options:
+            raise ImageViewError("Bad autocenter option '%s': must be one of %s" % (
                 str(self.autocenter_options)))
         self.t_.set(autocenter=option)
 
@@ -2439,8 +2439,8 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         option = option.lower()
-        assert(option in self.autocuts_options), \
-            ImageViewError("Bad autocuts option '%s': must be one of %s" % (
+        if option not in self.autocuts_options:
+            raise ImageViewError("Bad autocuts option '%s': must be one of %s" % (
                 str(self.autocuts_options)))
         self.t_.set(autocuts=option)
 

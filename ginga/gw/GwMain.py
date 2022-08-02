@@ -213,7 +213,7 @@ class GwMain(Callback.Callbacks):
             return task
         except Exception as e:
             self.logger.error("Error starting task: %s" % (str(e)))
-            raise(e)
+            raise e
 
     def is_gui_thread(self):
         my_id = threading.get_ident()
