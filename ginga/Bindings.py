@@ -2431,14 +2431,22 @@ class ImageViewBindings(object):
         return True
 
 
-class UIEvent(object):
-    pass
+class UIEvent:
+
+    def __init__(self):
+        self.handled = False
+
+    def accept(self):
+        self.handled = True
+
+    def was_handled(self):
+        return self.handled
 
 
 class KeyEvent(UIEvent):
     def __init__(self, key=None, state=None, mode=None, modifiers=None,
                  data_x=None, data_y=None, viewer=None):
-        super(KeyEvent, self).__init__()
+        super().__init__()
         self.key = key
         self.state = state
         self.mode = mode
@@ -2451,7 +2459,7 @@ class KeyEvent(UIEvent):
 class PointEvent(UIEvent):
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
                  data_x=None, data_y=None, viewer=None):
-        super(PointEvent, self).__init__()
+        super().__init__()
         self.button = button
         self.state = state
         self.mode = mode
@@ -2465,7 +2473,7 @@ class ScrollEvent(UIEvent):
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
                  direction=None, amount=None, data_x=None, data_y=None,
                  viewer=None):
-        super(ScrollEvent, self).__init__()
+        super().__init__()
         self.button = button
         self.state = state
         self.mode = mode
@@ -2481,7 +2489,7 @@ class PinchEvent(UIEvent):
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
                  rot_deg=None, scale=None, data_x=None, data_y=None,
                  viewer=None):
-        super(PinchEvent, self).__init__()
+        super().__init__()
         self.button = button
         self.state = state
         self.mode = mode
@@ -2497,7 +2505,7 @@ class PanEvent(UIEvent):
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
                  delta_x=None, delta_y=None, data_x=None, data_y=None,
                  viewer=None):
-        super(PanEvent, self).__init__()
+        super().__init__()
         self.button = button
         self.state = state
         self.mode = mode
@@ -2799,39 +2807,45 @@ class BindingMapper(Callback.Callbacks):
             return True
 
         trigger = 'kp_' + keyname
-        try:
-            if keyname == 'escape':
-                idx = (None, self._empty_set, trigger)
-            else:
-                idx = (self._kbdmode, self._modifiers, trigger)
-            emap = self.eventmap[idx]
-            cbname = 'keydown-%s' % (emap.name)
-
-        except KeyError:
-            try:
-                # TEMP: hack to get around the issue of how keynames
-                # are generated--shifted characters with no modifiers
-                idx = (self._kbdmode, self._empty_set, trigger)
-                emap = self.eventmap[idx]
-                cbname = 'keydown-%s' % (emap.name)
-
-            except KeyError:
-                # no entry for this mode, try non-mode entry
-                try:
-                    idx = (None, self._empty_set, trigger)
-                    emap = self.eventmap[idx]
-                    cbname = 'keydown-%s' % (emap.name)
-
-                except KeyError:
-                    cbname = 'key-down-%s' % str(self._kbdmode).lower()
-
-        self.logger.debug("idx=%s" % (str(idx)))
         last_x, last_y = viewer.get_last_data_xy()
 
         event = KeyEvent(key=keyname, state='down', mode=self._kbdmode,
                          modifiers=self._modifiers, viewer=viewer,
                          data_x=last_x, data_y=last_y)
-        return viewer.make_ui_callback_viewer(viewer, cbname, event, last_x, last_y)
+
+        if self._kbdmode is None:
+            cbname = 'key-down-none'
+
+        else:
+            if keyname == 'escape':
+                idx = (None, self._empty_set, trigger)
+            else:
+                idx = (self._kbdmode, self._modifiers, trigger)
+
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = 'keydown-%s' % (emap.name)
+            else:
+                idx = (self._kbdmode, self._empty_set, trigger)
+                if idx in self.eventmap:
+                    # TEMP: hack to get around the issue of how keynames
+                    # are generated--shifted characters with no modifiers
+                    emap = self.eventmap[idx]
+                    cbname = 'keydown-%s' % (emap.name)
+                else:
+                    cbname = 'key-down-%s' % str(self._kbdmode).lower()
+
+        res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                             last_x, last_y)
+
+        if not event.was_handled() and not res:
+            # no response for this canvas or mode, try non-mode entry
+            idx = (None, self._empty_set, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = 'keydown-%s' % (emap.name)
+                viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                               last_x, last_y)
 
     def window_key_release(self, viewer, keyname):
         self.logger.debug("keyname=%s" % (keyname))
@@ -2846,33 +2860,41 @@ class BindingMapper(Callback.Callbacks):
             return True
 
         trigger = 'kp_' + keyname
-        try:
-            idx = (self._kbdmode, self._modifiers, trigger)
-            emap = self.eventmap[idx]
-            cbname = 'keyup-%s' % (emap.name)
-
-        except KeyError:
-            try:
-                idx = (self._kbdmode, self._empty_set, trigger)
-                emap = self.eventmap[idx]
-                cbname = 'keyup-%s' % (emap.name)
-
-            except KeyError:
-                try:
-                    idx = (None, self._empty_set, trigger)
-                    emap = self.eventmap[idx]
-                    cbname = 'keyup-%s' % (emap.name)
-
-                except KeyError:
-                    cbname = 'key-up-%s' % str(self._kbdmode).lower()
-
         last_x, last_y = viewer.get_last_data_xy()
 
         event = KeyEvent(key=keyname, state='up', mode=self._kbdmode,
                          modifiers=self._modifiers, viewer=viewer,
                          data_x=last_x, data_y=last_y)
 
-        return viewer.make_ui_callback_viewer(viewer, cbname, event, last_x, last_y)
+        if self._kbdmode is None:
+            cbname = 'key-up-none'
+
+        else:
+            idx = (self._kbdmode, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = 'keyup-%s' % (emap.name)
+
+            else:
+                idx = (self._kbdmode, self._empty_set, trigger)
+                if idx in self.eventmap:
+                    emap = self.eventmap[idx]
+                    cbname = 'keyup-%s' % (emap.name)
+
+                else:
+                    cbname = 'key-up-%s' % str(self._kbdmode).lower()
+
+        res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                                 last_x, last_y)
+
+        if not event.was_handled() and not res:
+            # no response for this canvas or mode, try non-mode entry
+            idx = (None, self._empty_set, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = 'keyup-%s' % (emap.name)
+                viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                               last_x, last_y)
 
     def window_button_press(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d btncode=%s" % (data_x, data_y,
@@ -2882,31 +2904,38 @@ class BindingMapper(Callback.Callbacks):
         if button is None:
             self.logger.error("unrecognized button code (%x)" % (btncode))
             return False
+
         trigger = 'ms_' + button
-        try:
-            idx = (self._kbdmode, self._modifiers, trigger)
-            emap = self.eventmap[idx]
-            cbname = '%s-down' % (emap.name)
-
-        except KeyError:
-            # no entry for this mode, try non-mode entry
-            try:
-                idx = (None, self._modifiers, trigger)
-                emap = self.eventmap[idx]
-                cbname = '%s-down' % (emap.name)
-
-            except KeyError:
-                idx = None
-                cbname = 'btn-down-%s' % str(self._kbdmode).lower()
-
-        #self.logger.debug("Event map for %s" % (str(idx)))
-        self.logger.debug("making callback for %s (mode=%s)" % (
-            cbname, self._kbdmode))
-
         event = PointEvent(button=button, state='down', mode=self._kbdmode,
                            modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
-        return viewer.make_ui_callback_viewer(viewer, cbname, event, data_x, data_y)
+
+        if self._kbdmode is None:
+            cbname = 'btn-down-none'
+
+        else:
+            idx = (self._kbdmode, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = '%s-down' % (emap.name)
+
+            else:
+                cbname = 'btn-down-%s' % str(self._kbdmode).lower()
+
+        self.logger.debug("making callback for %s (mode=%s)" % (
+            cbname, self._kbdmode))
+
+        res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                             data_x, data_y)
+
+        if not event.was_handled() and not res:
+            # no entry for this mode, try non-mode entry
+            idx = (None, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = '%s-down' % (emap.name)
+                viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                               data_x, data_y)
 
     def window_motion(self, viewer, btncode, data_x, data_y):
 
@@ -2914,30 +2943,37 @@ class BindingMapper(Callback.Callbacks):
         if button is None:
             self.logger.error("unrecognized button code (%x)" % (btncode))
             return False
-        trigger = 'ms_' + button
-        try:
-            idx = (self._kbdmode, self._modifiers, trigger)
-            emap = self.eventmap[idx]
-            cbname = '%s-move' % (emap.name)
 
-        except KeyError:
-            # no entry for this mode, try non-mode entry
-            try:
-                idx = (None, self._modifiers, trigger)
+        trigger = 'ms_' + button
+        event = PointEvent(button=button, state='move', mode=self._kbdmode,
+                           modifiers=self._modifiers, viewer=viewer,
+                           data_x=data_x, data_y=data_y)
+
+        if self._kbdmode is None:
+            cbname = 'btn-move-none'
+
+        else:
+            idx = (self._kbdmode, self._modifiers, trigger)
+            if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = '%s-move' % (emap.name)
 
-            except KeyError:
-                idx = None
+            else:
                 cbname = 'btn-move-%s' % str(self._kbdmode).lower()
 
         ## self.logger.debug("making callback for %s (mode=%s)" % (
         ##     cbname, self._kbdmode))
+        res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                             data_x, data_y)
 
-        event = PointEvent(button=button, state='move', mode=self._kbdmode,
-                           modifiers=self._modifiers, viewer=viewer,
-                           data_x=data_x, data_y=data_y)
-        return viewer.make_ui_callback_viewer(viewer, cbname, event, data_x, data_y)
+        if not event.was_handled() and not res:
+            # no entry for this mode, try non-mode entry
+            idx = (None, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = '%s-move' % (emap.name)
+                viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                               data_x, data_y)
 
     def window_button_release(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d button=%s" % (data_x, data_y,
@@ -2947,53 +2983,67 @@ class BindingMapper(Callback.Callbacks):
         if button is None:
             self.logger.error("unrecognized button code (%x)" % (btncode))
             return False
+
         trigger = 'ms_' + button
-        try:
-            idx = (self._kbdmode, self._modifiers, trigger)
-            # release mode if this is a oneshot mode
-            if (self._kbdmode_type == 'oneshot') or (self._delayed_reset):
-                self.reset_mode(viewer)
-            emap = self.eventmap[idx]
-            cbname = '%s-up' % (emap.name)
-
-        except KeyError:
-            # no entry for this mode, try non-mode entry
-            try:
-                idx = (None, self._modifiers, trigger)
-                emap = self.eventmap[idx]
-                cbname = '%s-up' % (emap.name)
-
-            except KeyError:
-                idx = None
-                cbname = 'btn-up-%s' % str(self._kbdmode).lower()
-
         event = PointEvent(button=button, state='up', mode=self._kbdmode,
                            modifiers=self._modifiers, viewer=viewer,
                            data_x=data_x, data_y=data_y)
-        return viewer.make_ui_callback_viewer(viewer, cbname, event, data_x, data_y)
+
+        if self._kbdmode is None:
+            cbname = 'btn-up-none'
+
+        else:
+            idx = (self._kbdmode, self._modifiers, trigger)
+            if idx in self.eventmap:
+                # release mode if this is a oneshot mode
+                if (self._kbdmode_type == 'oneshot') or (self._delayed_reset):
+                    self.reset_mode(viewer)
+                emap = self.eventmap[idx]
+                cbname = '%s-up' % (emap.name)
+
+            else:
+                cbname = 'btn-up-%s' % str(self._kbdmode).lower()
+
+        res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                             data_x, data_y)
+
+        if not event.was_handled() and not res:
+            # no entry for this mode, try non-mode entry
+            idx = (None, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = '%s-up' % (emap.name)
+                viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                               data_x, data_y)
 
     def window_scroll(self, viewer, direction, amount, data_x, data_y):
-        try:
-            idx = (self._kbdmode, self._modifiers, 'sc_scroll')
-            emap = self.eventmap[idx]
-            cbname = '%s-scroll' % (emap.name)
-
-        except KeyError:
-            # no entry for this mode, try non-mode entry
-            try:
-                idx = (None, self._modifiers, 'sc_scroll')
-                emap = self.eventmap[idx]
-                cbname = '%s-scroll' % (emap.name)
-
-            except KeyError:
-                idx = None
-                cbname = 'scroll-%s' % str(self._kbdmode).lower()
-
+        trigger = 'sc_scroll'
         event = ScrollEvent(button='scroll', state='scroll', mode=self._kbdmode,
                             modifiers=self._modifiers, viewer=viewer,
                             direction=direction, amount=amount,
                             data_x=data_x, data_y=data_y)
-        return viewer.make_ui_callback_viewer(viewer, cbname, event)
+
+        if self._kbdmode is None:
+            cbname = 'scroll-none'
+
+        else:
+            idx = (self._kbdmode, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = '%s-scroll' % (emap.name)
+
+            else:
+                cbname = 'scroll-%s' % str(self._kbdmode).lower()
+
+        res = viewer.make_ui_callback_viewer(viewer, cbname, event)
+
+        if not event.was_handled() and not res:
+            # no entry for this mode, try non-mode entry
+            idx = (None, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = '%s-scroll' % (emap.name)
+                viewer.make_ui_callback_viewer(viewer, cbname, event)
 
     def window_pinch(self, viewer, state, rot_deg, scale):
         btncode = 0
@@ -3001,32 +3051,37 @@ class BindingMapper(Callback.Callbacks):
         if button is None:
             self.logger.error("unrecognized button code (%x)" % (btncode))
             return False
+
         trigger = 'pi_pinch'
-        try:
-            idx = (self._kbdmode, self._modifiers, trigger)
-            emap = self.eventmap[idx]
-            cbname = '%s-pinch' % (emap.name)
-
-        except KeyError:
-            # no entry for this mode, try non-mode entry
-            try:
-                idx = (None, self._modifiers, trigger)
-                emap = self.eventmap[idx]
-                cbname = '%s-pinch' % (emap.name)
-
-            except KeyError:
-                idx = None
-                cbname = 'pinch-%s' % (str(self._kbdmode).lower())
-
         last_x, last_y = viewer.get_last_data_xy()
         event = PinchEvent(button=button, state=state, mode=self._kbdmode,
                            modifiers=self._modifiers, viewer=viewer,
                            rot_deg=rot_deg, scale=scale,
                            data_x=last_x, data_y=last_y)
 
+        if self._kbdmode is None:
+            cbname = 'pinch-none'
+
+        else:
+            idx = (self._kbdmode, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = '%s-pinch' % (emap.name)
+
+            else:
+                cbname = 'pinch-%s' % (str(self._kbdmode).lower())
+
         self.logger.debug("making callback for %s (mode=%s)" % (
             cbname, self._kbdmode))
-        return viewer.make_ui_callback_viewer(viewer, cbname, event)
+        res = viewer.make_ui_callback_viewer(viewer, cbname, event)
+
+        if not event.was_handled() and not res:
+            # no entry for this mode, try non-mode entry
+            idx = (None, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = '%s-pinch' % (emap.name)
+                viewer.make_ui_callback_viewer(viewer, cbname, event)
 
     def window_pan(self, viewer, state, delta_x, delta_y):
         btncode = 0
@@ -3034,32 +3089,37 @@ class BindingMapper(Callback.Callbacks):
         if button is None:
             self.logger.error("unrecognized button code (%x)" % (btncode))
             return False
+
         trigger = 'pa_pan'
-        try:
-            idx = (self._kbdmode, self._modifiers, trigger)
-            emap = self.eventmap[idx]
-            cbname = '%s-pan' % (emap.name)
-
-        except KeyError:
-            # no entry for this mode, try non-mode entry
-            try:
-                idx = (None, self._modifiers, trigger)
-                emap = self.eventmap[idx]
-                cbname = '%s-pan' % (emap.name)
-
-            except KeyError:
-                idx = None
-                cbname = 'pan-%s' % (str(self._kbdmode).lower())
-
         last_x, last_y = viewer.get_last_data_xy()
         event = PanEvent(button=button, state=state, mode=self._kbdmode,
                          modifiers=self._modifiers, viewer=viewer,
                          delta_x=delta_x, delta_y=delta_y,
                          data_x=last_x, data_y=last_y)
 
+        if self._kbdmode is None:
+            cbname = 'pan-none'
+
+        else:
+            idx = (self._kbdmode, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = '%s-pan' % (emap.name)
+
+            else:
+                cbname = 'pan-%s' % (str(self._kbdmode).lower())
+
         self.logger.debug("making callback for %s (mode=%s)" % (
             cbname, self._kbdmode))
-        return viewer.make_ui_callback_viewer(viewer, cbname, event)
+        res = viewer.make_ui_callback_viewer(viewer, cbname, event)
+
+        if not event.was_handled() and not res:
+            # no entry for this mode, try non-mode entry
+            idx = (None, self._modifiers, trigger)
+            if idx in self.eventmap:
+                emap = self.eventmap[idx]
+                cbname = '%s-pan' % (emap.name)
+                viewer.make_ui_callback_viewer(viewer, cbname, event)
 
 
 #END

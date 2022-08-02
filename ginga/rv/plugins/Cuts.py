@@ -905,7 +905,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         elif event.key == 'h':
             self.cut_at('horizontal')
             return True
-        elif event.key == 'j':
+        elif event.key in ('j', 'v'):
             self.cut_at('vertical')
             return True
         return False
