@@ -65,7 +65,7 @@ class FitsViewer(object):
         canvas.set_drawtype('rectangle', color='blue')
         self.canvas = canvas
         # add canvas to view
-        fi.set_canvas(canvas)
+        fi.get_canvas().add(canvas)
         canvas.register_for_cursor_drawing(fi)
         canvas.set_draw_mode('draw')
         canvas.ui_set_active(True)

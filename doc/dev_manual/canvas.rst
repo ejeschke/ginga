@@ -92,6 +92,183 @@ The various subclasses of ``ImageView`` are designed to render into a
 different widget set's "native" canvas using a ``CanvasRenderer``
 customized for that target. 
 
+Using Canvases
+==============
+The recommended way of using canvases is to create your own
+``DrawingCanvas`` and add (or remove) it to/from the existing (default)
+viewer canvas.
+
+Creating a Ginga Canvas
+-----------------------
+Assuming we have created a viewer (``view``):
+
+.. code-block:: python
+
+    v_canvas = view.get_canvas()
+    DrawingCanvas = v_canvas.get_draw_class('drawingcanvas')
+    mycanvas = DrawingCanvas()
+    v_canvas.add(mycanvas)
+
+You can create several different canvases and add them or remove them as
+needed from the default viewer canvas.  The items added to individual
+canvases stay on those canvases, allowing a good deal of control in
+managing canvas overlays on top of images, which appear under those
+canvases.
+
+Enabling User Interaction on a Canvas
+-------------------------------------
+To enable user interaction on a canvas, use the following methods on it:
+
+.. code-block:: python
+
+    mycanvas.set_surface(view)     # associate the canvas with a viewer
+    mycanvas.ui_set_active(True)   # enable user interaction on this canvas
+
+User Drawing on a Canvas
+------------------------
+To enable user drawing on the canvas, enable user interaction as
+described above, then use the following methods:
+
+.. code-block:: python
+
+    mycanvas.enable_draw(True)     # enable user drawing on this canvas
+    mycanvas.set_draw_mode('draw')
+
+    # without this call, you can only draw with the right mouse button
+    # using the default user interface bindings
+    mycanvas.register_for_cursor_drawing(view)
+
+If you want to get a callback after something has been drawn:
+
+.. code-block:: python
+
+    # the callback function gets the canvas and the tag of the drawn
+    # object as parameters
+    #
+    def draw_cb(canvas, tag):
+        obj = canvas.get_object_by_tag(tag)
+        # do something with ``obj``
+        ...
+
+    mycanvas.add_callback('draw-event', draw_cb)
+
+Set Drawing Parameters
+----------------------
+To set the drawing parameters (what will be drawn by the user):
+
+.. code-block:: python
+
+    mycanvas.set_drawtype('box', color='red')
+
+To see the kinds of objects that can be drawn on a Ginga canvas, refer
+to the section above on "Canvases and Canvas Objects".
+With the ``set_drawtype`` call, most drawing types are specified in all
+lower case with no spaces (e.g. "righttriangle").
+Various object attributes (line and fill, etc) are set by keyword
+parameters:
+
+.. code-block:: python
+
+    mycanvas.set_drawtype('polygon', color='lightblue', linewidth=2,
+                          fill=True, fillcolor='yellow', fillalpha=0.4)
+
+Editing Objects on a Canvas
+---------------------------
+``DrawingCanvas``es have a built in editor that can handle basic editing
+of drawn (or programatically) added items.
+
+To enable user editing on a canvas, add the following calls in the setup
+of the canvas:
+
+.. code-block:: python
+
+    mycanvas.enable_edit(True)     # enable user editing on this canvas
+
+To set the mode on a canvas from drawing to editing:
+
+.. code-block:: python
+
+    mycanvas.set_draw_mode('edit')
+
+If you want to get a callback after an object has been edited on a canvas:
+
+.. code-block:: python
+
+    # the callback function gets the canvas and the object reference
+    # of the edited object as parameters
+    #
+    def edit_cb(canvas, obj):
+        # do something with ``obj``
+        ...
+
+    mycanvas.add_callback('edit-event', edit_cb)
+
+It is also possible to set a direct edit callback on the object itself.
+Assuming we have a handle to an object (``obj``) that has been added to
+a canvas (drawn or added programatically):
+
+.. code-block:: python
+
+    # the callback function gets the object reference of the edited
+    # object as a parameter
+    #
+    def obj_edit_cb(obj):
+        # do something with ``obj``
+        print("object of type '{}' has been edited".format(obj.kind))
+
+    obj.add_callback('edited', obj_edit_cb)
+
+"Pick" Callbacks
+----------------
+There are a group of actions under the umbrella term of "pick callbacks"
+that can be registered for objects on a ``DrawingCanvas``.
+
+To set the canvas mode from "draw" or "edit" to "pick":
+
+.. code-block:: python
+
+    mycanvas.set_draw_mode('pick')
+
+NOTE: Canvas objects are not "pickable" by default.  To make an object
+"pickable", set it's "pickable" attribute to `True`.  This can be done
+before or after it has been drawn or placed on a canvas:
+
+.. code-block:: python
+
+    obj.pickable = True
+    obj.add_callback('pick-down', pick_cb, 'down')
+    obj.add_callback('pick-up', pick_cb, 'up')
+    obj.add_callback('pick-move', pick_cb, 'move')
+    obj.add_callback('pick-hover', pick_cb, 'hover')
+    obj.add_callback('pick-enter', pick_cb, 'enter')
+    obj.add_callback('pick-leave', pick_cb, 'leave')
+    obj.add_callback('pick-key', pick_cb, 'key')
+
+From the above example you can see all the possible callbacks for
+"pick".  In setting up the callback, we append a "pick type" string to
+the callback signature so that we can easily distinguish the pick action
+in the callback (you could also just define different callback functions):
+
+.. code-block:: python
+
+    # callback parameters are: the object, the canvas, the event, a
+    # point (in data coordinates) and the pick "type"
+
+    def pick_cb(obj, canvas, event, pt, ptype):
+        print("pick event '%s' with obj %s at (%.2f, %.2f)" % (
+            ptype, obj.kind, pt[0], pt[1]))
+        return True
+
+The pick type (``ptype`` in the above example) will be one of:
+
+* "enter": cursor entered the area of the object,
+* "hover": cursor is hovering over the object,
+* "leave": cursor as exited the area of the object,
+* "down": cursor was pressed down inside the object,
+* "move": cursor is being moved while pressed,
+* "up": cursor was released,
+* "key": a key was pressed while the cursor was inside the object
+
 
 Support for Astropy regions
 ===========================
