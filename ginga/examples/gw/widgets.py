@@ -265,7 +265,7 @@ def show_example(cbox, top, logger):
         _vbox.add_widget(value_label)
         # Test set_tracking
         b = Widgets.Button("Tracking on/off")
-        b.add_callback('activated', lambda r: w.set_tracking(not(w.track)))
+        b.add_callback('activated', lambda r: w.set_tracking(not w.track))
         _vbox.add_widget(b)
         # Test set_value dynamically
         hbox = Widgets.HBox()

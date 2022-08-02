@@ -71,7 +71,7 @@ class caselessDict(object):
     def __iter__(self):
         self.iterPosition = 0
         self.keyList = list(self.dict.keys())
-        return(self)
+        return self
 
     def __next__(self):
         if self.iterPosition >= len(self.keyList):

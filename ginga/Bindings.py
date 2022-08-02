@@ -2885,7 +2885,7 @@ class BindingMapper(Callback.Callbacks):
                     cbname = 'key-up-%s' % str(self._kbdmode).lower()
 
         res = viewer.make_ui_callback_viewer(viewer, cbname, event,
-                                                 last_x, last_y)
+                                             last_x, last_y)
 
         if not event.was_handled() and not res:
             # no response for this canvas or mode, try non-mode entry
