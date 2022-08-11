@@ -4,48 +4,39 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+"""CMap Mode enables bindings that can adjust the color and intensity
+maps of an image in a Ginga image viewer.
+
+Enter the mode by
+-----------------
+* Space, then "y"
+
+Exit the mode by
+----------------
+* Esc
+
+Default bindings in mode
+------------------------
+* Y : reset colormap to default (gray)
+* r : restore color map (undo any color map inversion, rotation or stretch)
+* I : invert current color map (preserving any rotation or stretch)
+* up arrow : set previous colormap in list (preserves any rotation or stretch)
+* down arrow : set next colormap in list (preserves any rotation or stretch)
+* c : overlay a visible colormap on the image
+* i : restore the default intensity map to "ramp", the default
+* j, left arrow : set previous intensity map in list
+* k, right arrow : set next intensity map in list
+* scroll : choose color map from list
+* Ctrl + scroll : choose intensity map from list
+* left drag : rotate current color map
+* right click : restore color map (same as "r")
+
+"""
 from ginga import cmap, imap
 from ginga.modes.mode_base import Mode
 
 
 class CMapMode(Mode):
-    """CMap Mode enables bindings that can adjust the color and intensity
-    maps of an image in a Ginga image viewer.
-
-    Default bindings in mode
-    ------------------------
-    Y : reset colormap to default (gray)
-
-    r : restore color map
-        Undo any color map inversion, rotation or stretch
-
-    I : invert current color map
-        Invert the current color map, preserving any rotation or stretch
-
-    up arrow : set previous colormap in list
-        But preserves any rotation or stretch
-
-    down arrow : set next colormap in list
-        But preserves any rotation or stretch
-
-    c : overlay a visible colormap on the image
-
-    i : restore the default intensity map
-        To 'ramp', the default
-
-    j, left arrow : set previous intensity map in list
-
-    k, right arrow : set next intensity map in list
-
-    scroll : choose color map from list
-
-    Ctrl + scroll : choose intensity map from list
-
-    left drag : rotate current color map
-
-    right click : restore color map (same as 'r')
-
-    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

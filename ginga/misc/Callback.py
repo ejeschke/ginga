@@ -27,8 +27,6 @@ class Callbacks(object):
             self.cb[name] = []
         self._cb_block[name] = dict(count=0, defer_list=[], defer_type=None)
 
-    # TODO: Should this call clear_callback()? Should create empty list here
-    # only
     def enable_callback(self, name):
         if not self.has_callback(name):
             self.clear_callback(name)

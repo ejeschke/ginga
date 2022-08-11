@@ -48,6 +48,8 @@ class FitsViewer(object):
         fi.set_zoom_algorithm('rate')
         fi.set_zoomrate(1.4)
         fi.show_pan_mark(True)
+        fi.show_focus_indicator(True)
+        fi.set_enter_focus(True)
         fi.set_callback('drag-drop', self.drop_file_cb)
         fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)

@@ -3,57 +3,49 @@
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+"""Cuts Mode enables bindings that can adjust the low and high cut
+levels of an image in a Ginga image viewer.
 
+Enter the mode by
+-----------------
+* Space, then "s"
+
+Exit the mode by
+----------------
+* Esc
+
+Default bindings in mode
+------------------------
+* l : set low cut level to the value of the pixel under the cursor
+* h : set high cut level to the value of the pixel under the cursor
+* S : set the the low and high cut levels to the min/max values in
+  the image
+* A : set the low and high cut levels to 0, 255;
+  useful for standard RGB images, mostly
+* a : perform an auto cut levels using the currently selected auto cuts
+  algorithm and parameters
+* b, up arrow : select the previous auto cuts algorithm in the list
+* n, down arrow : select the next auto cuts algorithm in the list
+* colon : toggle auto cuts for new images "on" or "off" in this viewer
+* semicolon : set auto cuts for new images to "override" in this viewer
+* scroll : adjust contrast by squeezing or stretching levels;
+  one direction squeezes, the other stretches
+* Ctrl + scroll : adjust micro contrast by squeezing or stretching levels;
+  similar to scroll, but amount of stretch/squeeze is reduced
+* Shift + scroll : change current auto cuts algorithm
+* left drag : adjust levels by moving cursor;
+  moving left/right adjusts high level, up/down adjusts low level
+* Shift + left drag : adjust low level by moving cursor;
+  moving left/right adjusts low level
+* Ctrl + left drag : adjust high level by moving cursor;
+  moving left/right adjusts high level
+* right click : perform an auto levels (same as "a")
+
+"""
 from ginga.modes.mode_base import Mode
 
 
 class CutsMode(Mode):
-    """Cuts Mode enables bindings that can adjust the low and high cut
-    levels of an image in a Ginga image viewer.
-
-    Default bindings in mode
-    ------------------------
-    l : set low cut level to the value of the pixel under the cursor
-
-    h : set high cut level to the value of the pixel under the cursor
-
-    S : set the the low and high cut levels to the min/max values in
-        the image
-
-    A : set the low and high cut levels to 0, 255
-        Useful for standard RGB images, mostly
-
-    a : perform an auto cut levels using the currently selected auto cuts
-        algorithm and parameters
-
-    b, up arrow : select the previous auto cuts algorithm in the list
-
-    n, down arrow : select the next auto cuts algorithm in the list
-
-    ':' : toggle auto cuts for new images 'on' or 'off' in this viewer
-
-    ';' : set auto cuts for new images to 'override' in this viewer
-
-    scroll : adjust contrast by squeezing or stretching levels
-        one direction squeezes, the other stretches
-
-    Ctrl + scroll : adjust micro contrast by squeezing or stretching levels
-        similar to scroll, but amount of stretch/squeeze is reduced
-
-    Shift + scroll : change current auto cuts algorithm
-
-    left drag : adjust levels by moving cursor
-        moving left/right adjusts high level, up/down adjusts low level
-
-    Shift + left drag : adjust low level by moving cursor
-        moving left/right adjusts low level
-
-    Ctrl + left drag : adjust high level by moving cursor
-        moving left/right adjusts high level
-
-    right click : perform an auto levels (same as 'a')
-
-    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
