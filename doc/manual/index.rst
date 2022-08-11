@@ -27,5 +27,6 @@ A relatively complete set of standard plugins is provided for features that we e
    introduction
    concepts
    operation
+   modes
    plugins
    customizing

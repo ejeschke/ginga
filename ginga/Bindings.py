@@ -13,9 +13,10 @@ from ginga.util.paths import icondir
 
 class ImageViewBindings(object):
     """
-    Mouse Operation and Bindings
+    Cursor (Mouse/Trackpad/etc) and Keyboard Bindings
 
     """
+    action_prefixes = ['kp_', 'ms_', 'sc_', 'gs_', 'pi_', 'pa_']
 
     def __init__(self, logger, settings=None):
         super(ImageViewBindings, self).__init__()
@@ -45,49 +46,25 @@ class ImageViewBindings(object):
             btn_back=0x8,
             btn_forward=0x10,
 
-            # define our cursors
-            ## cur_pick = 'thinCrossCursor',
-            ## cur_pan = 'openHandCursor',
-
             # Set up our standard modifiers
             mod_shift=['shift_l', 'shift_r'],
             mod_ctrl=['control_l', 'control_r'],
             mod_win=['meta_right'],
 
-            # Define our modes
-            # Mode 'meta' is special: it is an intermediate mode that
-            # is used primarily to launch other modes
-            # If the mode initiation character is preceeded by a double
-            # underscore, then the mode must be initiated from the "meta"
-            # mode.
-            dmod_meta=['space', None, None],
-            dmod_draw=['__b', None, None],
-
             default_mode_type='locked',
-            default_lock_mode_type='softlock',
-
-            # KEYBOARD
-            kp_save_profile=['S'],
-            kp_poly_add=['v', 'draw+v'],
-            kp_poly_del=['z', 'draw+z'],
-            kp_edit_del=['draw+x'],
-            kp_reset=['escape'],
-            kp_lock=['L', 'meta+L'],
-            kp_softlock=['l', 'meta+l'],
+            default_lock_mode_type='locked',
 
             # MOUSE/BUTTON
             ms_none=['nobtn'],
             ms_cursor=['left'],
             ms_wheel=[],
-            ms_draw=['draw+left', 'win+left', 'right'],
-            #ms_draw=['win+left', 'right'],
         )
 
     def get_settings(self):
         return self.settings
 
     def add_mode_obj(self, mode_obj):
-        self.settings.add_defaults(**mode_obj.actions)
+        #self.settings.add_defaults(**mode_obj.actions)
         self._modes[str(mode_obj)] = mode_obj
 
     def get_mode_obj(self, mode_name):
@@ -172,10 +149,25 @@ class ImageViewBindings(object):
 
         self.initialize_settings(self.settings)
 
+        # merge in all default settings from various modes, being
+        # careful not to override any user preferences
+        act_d = dict()
         from ginga.modes.modeinfo import available_modes
         for mode_class in available_modes:
             mode_obj = mode_class(viewer, settings=self.settings)
+            for name, value in mode_obj.actions.items():
+                pfx = name[:3]
+                if pfx not in self.action_prefixes:
+                    act_d.setdefault(name, value)
+                    continue
+                # a binding
+                act_l = act_d.setdefault(name, [])
+                for trigger in value:
+                    if trigger not in act_l:
+                        act_l.append(trigger)
             self.add_mode_obj(mode_obj)
+
+        self.settings.add_defaults(**act_d)
 
         # Now settings should have all available modes defined
         d = self.settings.get_dict()
@@ -218,8 +210,8 @@ class ImageViewBindings(object):
         # merge in specific actions for each mode
         for mode_obj in self._modes.values():
             actions = mode_obj.actions
-            d = {key: self.settings.get(key, actions[key])
-                 for key in actions.keys()}
+            d = {key: self.settings[key]
+                 for key in actions.keys() if key in self.settings}
             self.merge_actions(viewer, bindmap, mode_obj, d.items())
 
     def merge_actions(self, viewer, bindmap, obj, tups):
@@ -233,7 +225,7 @@ class ImageViewBindings(object):
                 continue
 
             pfx = name[:3]
-            if pfx not in ('kp_', 'ms_', 'sc_', 'gs_', 'pi_', 'pa_'):
+            if pfx not in self.action_prefixes:
                 continue
 
             evname = name[3:]
@@ -264,7 +256,7 @@ class ImageViewBindings(object):
                 # keyboard event
                 event = 'keydown-%s' % (evname)
                 viewer.enable_callback(event)
-                if cb_method:
+                if cb_method is not None:
                     viewer.add_callback(event, cb_method)
 
             elif pfx == 'ms_':
@@ -272,35 +264,36 @@ class ImageViewBindings(object):
                 for action in ('down', 'move', 'up'):
                     event = '%s-%s' % (evname, action)
                     viewer.enable_callback(event)
-                    if cb_method:
+                    if cb_method is not None:
                         viewer.add_callback(event, cb_method)
 
             elif pfx == 'sc_':
                 # scrolling event
                 event = '%s-scroll' % evname
                 viewer.enable_callback(event)
-                if cb_method:
+                if cb_method is not None:
                     viewer.add_callback(event, cb_method)
 
             elif pfx == 'pi_':
                 # pinch event
                 event = '%s-pinch' % evname
                 viewer.enable_callback(event)
-                if cb_method:
+                if cb_method is not None:
                     viewer.add_callback(event, cb_method)
 
             elif pfx == 'pa_':
                 # pan event
                 event = '%s-pan' % evname
                 viewer.enable_callback(event)
-                if cb_method:
+                if cb_method is not None:
                     viewer.add_callback(event, cb_method)
 
             elif pfx == 'gs_':
                 # for backward compatibility
                 self.logger.warning("'gs_' bindings will be deprecated in a future "
                                     "version--please update your bindings.cfg")
-                viewer.set_callback(evname, cb_method)
+                if cb_method is not None:
+                    viewer.set_callback(evname, cb_method)
 
     def reset(self, viewer):
         bindmap = viewer.get_bindmap()
@@ -361,39 +354,6 @@ class ImageViewBindings(object):
 
     def get_feature_allow(self, feat_name):
         return self.features[feat_name]
-
-    def kp_reset(self, viewer, event, data_x, data_y):
-        self.reset(viewer)
-        return True
-
-    def _toggle_lock(self, viewer, mode_type):
-        bm = viewer.get_bindmap()
-        # toggle default mode type to locked/oneshot
-        dfl_modetype = bm.get_default_mode_type()
-        # get current mode
-        mode_name, cur_modetype = bm.current_mode()
-
-        if dfl_modetype in ('locked', 'softlock'):
-            if mode_type == dfl_modetype:
-                mode_type = 'oneshot'
-
-        # install the lock type
-        bm.set_default_mode_type(mode_type)
-        bm.set_mode(mode_name, mode_type=mode_type)
-
-    def kp_lock(self, viewer, event, data_x, data_y):
-        self._toggle_lock(viewer, 'locked')
-        return True
-
-    def kp_softlock(self, viewer, event, data_x, data_y):
-        self._toggle_lock(viewer, 'softlock')
-        return True
-
-    def kp_save_profile(self, viewer, event, data_x, data_y, msg=True):
-        viewer.checkpoint_profile()
-        if msg:
-            viewer.onscreen_message("Profile saved", delay=0.5)
-        return True
 
     def get_direction(self, direction, rev=False):
         """
@@ -524,9 +484,9 @@ class BindingMapper(Callback.Callbacks):
         self.eventmap = {}
 
         self._kbdmode = None
-        self._kbdmode_types = ('held', 'oneshot', 'locked', 'softlock')
+        self._kbdmode_types = ('held', 'oneshot', 'locked')
         self._kbdmode_type = 'held'
-        self._kbdmode_type_default = 'softlock'
+        self._kbdmode_type_default = 'locked'
         self._delayed_reset = False
         self._modifiers = frozenset([])
 
@@ -595,8 +555,8 @@ class BindingMapper(Callback.Callbacks):
 
     def add_mode(self, keyname, mode_name, mode_type='held', msg=None):
         if mode_type is not None:
-            assert mode_type in self._kbdmode_types, \
-                ValueError("Bad mode type '%s': must be one of %s" % (
+            if mode_type not in self._kbdmode_types:
+                raise ValueError("Bad mode type '%s': must be one of %s" % (
                     mode_type, self._kbdmode_types))
 
         bnch = Bunch.Bunch(name=mode_name, type=mode_type, msg=msg)
@@ -612,8 +572,8 @@ class BindingMapper(Callback.Callbacks):
     def set_mode(self, name, mode_type=None):
         if mode_type is None:
             mode_type = self._kbdmode_type_default
-        assert mode_type in self._kbdmode_types, \
-            ValueError("Bad mode type '%s': must be one of %s" % (
+        if mode_type not in self._kbdmode_types:
+            raise ValueError("Bad mode type '%s': must be one of %s" % (
                 mode_type, self._kbdmode_types))
         self._kbdmode = name
         if name is None:
@@ -625,8 +585,8 @@ class BindingMapper(Callback.Callbacks):
         self.make_callback('mode-set', self._kbdmode, self._kbdmode_type)
 
     def set_default_mode_type(self, mode_type):
-        assert mode_type in self._kbdmode_types, \
-            ValueError("Bad mode type '%s': must be one of %s" % (
+        if mode_type not in self._kbdmode_types:
+            raise ValueError("Bad mode type '%s': must be one of %s" % (
                 mode_type, self._kbdmode_types))
         self._kbdmode_type_default = mode_type
 
@@ -697,7 +657,7 @@ class BindingMapper(Callback.Callbacks):
         """
         # Is this a mode key?
         if keyname not in self.mode_map:
-            if (keyname not in self.mode_tbl) or (self._kbdmode != 'meta'):
+            if (self._kbdmode != 'meta') or (keyname not in self.mode_tbl):
                 # No
                 return False
             bnch = self.mode_tbl[keyname]
@@ -707,13 +667,6 @@ class BindingMapper(Callback.Callbacks):
         mode_name = bnch.name
         self.logger.debug("cur mode='%s' mode pressed='%s'" % (
             self._kbdmode, mode_name))
-
-        if mode_name == self._kbdmode:
-            # <== same key was pressed that started the mode we're in
-            # standard handling is to close the mode when we press the
-            # key again that started that mode
-            self.reset_mode(viewer)
-            return True
 
         if self._delayed_reset:
             # <== this shouldn't happen, but put here to reset handling

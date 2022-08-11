@@ -4,60 +4,49 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+"""Pan Mode enables bindings that can set the pan position (the
+position under the center pixel) and zoom level (scale) in a Ginga
+image viewer.
+
+Enter the mode by
+-----------------
+* Space, then "q"
+
+Exit the mode by
+----------------
+* Esc
+
+Default bindings in mode
+------------------------
+* plus, equals : zoom in one zoom level
+* minus, underscore : zoom out one zoom level
+* 1-9,0 : zoom to level N (0 is 10)
+* Shift + 1-9,0 : zoom to level -N (0 is -10)
+* backquote : fit image to window size
+* doublequote : toggle auto fit for new images "on" or "off" in this viewer
+* singlequote : set auto fit for new images to "override" in this viewer
+* p : pan to the position under the cursor
+* c : pan to the center of the image
+* z : save pan (and zoom) position
+* 1 : restore saved pan (and zoom) position
+* left/right/up/down arrow : pan left/right/up/down by a small percentage
+* Shift + left/right/up/down arrow : pan left/right/up/down by a
+  very small percentage
+* pageup (pagedown) : pan up (down) by a large percentage of the screen
+* home (end) : pan towards the top (bottom) of the image
+* "?" : toggle auto center for new images "on" or "off" in this viewer
+* "/" : set auto center for new images to "override" in this viewer
+* scroll : zoom (scale) the image
+* left drag : pan the view
+* right drag : camera pan the view
+
+"""
 import math
 
 from ginga.modes.mode_base import Mode
 
 
 class PanMode(Mode):
-    """Pan Mode enables bindings that can set the pan position (the
-    position under the center pixel) and zoom level (scale) in a Ginga
-    image viewer.
-
-    Default bindings in mode
-    ------------------------
-    '+', '=' : zoom in one zoom level
-
-    '-', '_' : zoom out one zoom level
-
-    1-9,0 : zoom to level N (0 is 10)
-
-    Shift + 1-9,0 : zoom to level -N (0 is -10)
-
-    backquote : fit image to window size
-
-    '"' : toggle auto fit for new images 'on' or 'off' in this viewer
-
-    "'" : set auto fit for new images to 'override' in this viewer
-
-    p : pan to the position under the cursor
-
-    c : pan to the center of the image
-
-    z : save pan (and zoom) position
-
-    1 : restore saved pan (and zoom) position
-
-    left/right/up/down arrow : pan left/right/up/down by a small percentage
-
-    Shift + left/right/up/down arrow : pan left/right/up/down by a
-        very small percentage
-
-    pageup (pagedown) : pan up (down) by a large percentage of the screen
-
-    home (end) : pan towards the top (bottom) of the image
-
-    '?' : toggle auto center for new images 'on' or 'off' in this viewer
-
-    '/' : set auto center for new images to 'override' in this viewer
-
-    scroll : zoom (scale) the image
-
-    left drag : pan the view
-
-    right drag : camera pan the view
-
-    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
@@ -69,36 +58,36 @@ class PanMode(Mode):
             kp_zoom_out=['-', '_'],
             kp_zoom=['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
             kp_zoom_inv=['!', '@', '#', '$', '%', '^', '&', '*', '(', ')'],
-            kp_zoom_fit=['backquote', 'pan+backquote', 'freepan+backquote'],
+            kp_zoom_fit=['backquote', 'pan+backquote'],
             kp_autozoom_toggle=['doublequote', 'pan+doublequote'],
             kp_autozoom_override=['singlequote', 'pan+singlequote'],
-            kp_pan_set=['p', 'pan+p', 'freepan+p'],
-            kp_pan_zoom_set=['pan+1', 'freepan+1'],
-            kp_pan_zoom_save=['pan+z', 'freepan+z'],
-            kp_pan_left=['pan+*+left', 'freepan+*+left'],
-            kp_pan_right=['pan+*+right', 'freepan+*+right'],
-            kp_pan_up=['pan+*+up', 'freepan+*+up'],
-            kp_pan_down=['pan+*+down', 'freepan+*+down'],
-            kp_pan_home=['pan+*+home', 'freepan+*+home'],
-            kp_pan_end=['pan+*+end', 'freepan+*+end'],
-            kp_pan_page_up=['pan+*+page_up', 'freepan+*+page_up'],
-            kp_pan_page_down=['pan+*+page_down', 'freepan+*+page_down'],
+            kp_pan_set=['p', 'pan+p'],
+            kp_pan_zoom_set=['pan+1'],
+            kp_pan_zoom_save=['pan+z'],
+            kp_pan_left=['pan+*+left'],
+            kp_pan_right=['pan+*+right'],
+            kp_pan_up=['pan+*+up'],
+            kp_pan_down=['pan+*+down'],
+            kp_pan_home=['pan+*+home'],
+            kp_pan_end=['pan+*+end'],
+            kp_pan_page_up=['pan+*+page_up'],
+            kp_pan_page_down=['pan+*+page_down'],
             kp_pan_px_xminus=['shift+left'],
             kp_pan_px_xplus=['shift+right'],
             kp_pan_px_yminus=['shift+down'],
             kp_pan_px_yplus=['shift+up'],
             kp_pan_px_center=['shift+home'],
-            kp_center=['c', 'pan+c', 'freepan+c'],
+            kp_center=['c', 'pan+c'],
             kp_autocenter_toggle=['?', 'pan+?'],
             kp_autocenter_override=['/', 'pan+/'],
 
             sc_pan=['ctrl+scroll'],
             sc_pan_fine=['pan+shift+scroll'],
             sc_pan_coarse=['pan+ctrl+scroll'],
-            sc_zoom=['scroll', 'freepan+scroll'],
+            sc_zoom=['scroll'],
             sc_zoom_fine=[],
             sc_zoom_coarse=[],
-            sc_zoom_origin=['shift+scroll', 'freepan+shift+scroll'],
+            sc_zoom_origin=['shift+scroll'],
 
             ms_pan=['pan+left', 'ctrl+left'],
             ms_zoom=['pan+right'],

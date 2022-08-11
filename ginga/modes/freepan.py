@@ -4,27 +4,33 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+"""FreePan Mode enables bindings that can set the pan position
+(the center pixel) and zoom level (scale) in a Ginga image viewer.
+
+It differs from Pan mode in the types of scrolling and panning
+controls.
+
+Enter the mode by
+-----------------
+* Space, then "w"
+
+Exit the mode by
+----------------
+* Esc
+
+Default bindings in mode
+------------------------
+* middle drag : freely pan around the image
+* left click : set pan under the cursor and zoom in
+* right click : zoom out
+* pan gesture : zoom in/out of the image
+* Shift + pan gesture : zoom in/out of the image with origin set
+
+"""
 from ginga.modes.pan import PanMode
 
 
 class FreePanMode(PanMode):
-    """FreePan Mode enables bindings that can set the pan position
-    (the center pixel) and zoom level (scale) in a Ginga image viewer.
-
-    It differs from Pan mode in the types of scrolling and panning
-    controls.
-
-    Default bindings in mode
-    ------------------------
-    middle drag : freely pan around the image
-
-    left click : set pan under the cursor and zoom in
-    right click : zoom out
-
-    pan gesture : zoom in/out of the image
-    Shift + pan gesture : zoom in/out of the image with origin set
-
-    """
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
