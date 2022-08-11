@@ -17,6 +17,7 @@ def add_mode(mode_class):
     if mode_class not in available_modes:
         available_modes.append(mode_class)
 
+
 def discover_modes():
     group = 'ginga_modes'
     discovered_modes = entry_points().get(group, [])
