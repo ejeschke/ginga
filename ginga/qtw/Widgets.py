@@ -81,8 +81,9 @@ class WidgetBase(Callback.Callbacks):
         return _app
 
     def delete(self):
-        self.widget.deleteLater()
-        self.widget = None
+        w, self.widget = self.widget, None
+        QtHelp.delete_widget(w)
+        #w.deleteLater()
 
     def focus(self):
         self.widget.activateWindow()
@@ -390,7 +391,7 @@ class ComboBox(WidgetBase):
 
         self.enable_callback('activated')
 
-    def _cb_redirect(self):
+    def _cb_redirect(self, *args):
         idx = self.widget.currentIndex()
         self.make_callback('activated', idx)
 
