@@ -14,6 +14,7 @@ from ginga.qtw.ImageViewQt import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
 from ginga.util.loader import load_data
+from ginga.locale.localize import _
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -98,7 +99,7 @@ class FitsViewer(QtGui.QMainWindow):
         wdrawcolor.activated.connect(self.set_drawparams)
         self.wdrawcolor = wdrawcolor
 
-        wfill = QtGui.QCheckBox("Fill")
+        wfill = QtGui.QCheckBox(_("Fill"))
         wfill.stateChanged.connect(self.set_drawparams)
         self.wfill = wfill
 
@@ -109,16 +110,16 @@ class FitsViewer(QtGui.QMainWindow):
         walpha.valueChanged.connect(self.set_drawparams)
         self.walpha = walpha
 
-        wclear = QtGui.QPushButton("Clear Canvas")
+        wclear = QtGui.QPushButton(_("Clear Canvas"))
         wclear.clicked.connect(self.clear_canvas)
-        wopen = QtGui.QPushButton("Open File")
+        wopen = QtGui.QPushButton(_("Open File"))
         wopen.clicked.connect(self.open_file)
-        wquit = QtGui.QPushButton("Quit")
+        wquit = QtGui.QPushButton(_("Quit"))
         wquit.clicked.connect(self.quit)
 
         hbox.addStretch(1)
         for w in (wopen, wdrawtype, wdrawcolor, wfill,
-                  QtGui.QLabel('Alpha:'), walpha, wclear, wquit):
+                  QtGui.QLabel(_('Alpha') + ':'), walpha, wclear, wquit):
             hbox.addWidget(w, stretch=0)
 
         hw = QtGui.QWidget()
@@ -129,22 +130,22 @@ class FitsViewer(QtGui.QMainWindow):
         hbox = QtGui.QHBoxLayout()
         hbox.setContentsMargins(QtCore.QMargins(4, 2, 4, 2))
 
-        btn1 = QtGui.QRadioButton("Draw")
+        btn1 = QtGui.QRadioButton(_("Draw"))
         btn1.setChecked(mode == 'draw')
         btn1.toggled.connect(lambda val: self.set_mode_cb('draw', val))
-        btn1.setToolTip("Choose this to draw on the canvas")
+        btn1.setToolTip(_("Choose this to draw on the canvas"))
         hbox.addWidget(btn1)
 
-        btn2 = QtGui.QRadioButton("Edit")
+        btn2 = QtGui.QRadioButton(_("Edit"))
         btn2.setChecked(mode == 'edit')
         btn2.toggled.connect(lambda val: self.set_mode_cb('edit', val))
-        btn2.setToolTip("Choose this to edit things on the canvas")
+        btn2.setToolTip(_("Choose this to edit things on the canvas"))
         hbox.addWidget(btn2)
 
-        btn3 = QtGui.QRadioButton("Pick")
+        btn3 = QtGui.QRadioButton(_("Pick"))
         btn3.setChecked(mode == 'pick')
         btn3.toggled.connect(lambda val: self.set_mode_cb('pick', val))
-        btn3.setToolTip("Choose this to pick things on the canvas")
+        btn3.setToolTip(_("Choose this to pick things on the canvas"))
         hbox.addWidget(btn3)
 
         hbox.addWidget(QtGui.QLabel(''), stretch=1)
@@ -183,7 +184,7 @@ class FitsViewer(QtGui.QMainWindow):
         self.setWindowTitle(filepath)
 
     def open_file(self):
-        res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
+        res = QtGui.QFileDialog.getOpenFileName(self, _("Open FITS file"),
                                                 ".", "FITS files (*.fits)")
         if isinstance(res, tuple):
             fileName = res[0]
@@ -224,8 +225,8 @@ class FitsViewer(QtGui.QMainWindow):
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
-            ra_txt = 'BAD WCS'
-            dec_txt = 'BAD WCS'
+            ra_txt = _('BAD WCS')
+            dec_txt = _('BAD WCS')
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)

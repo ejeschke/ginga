@@ -15,6 +15,8 @@ Ver 4.0.0 (unreleased)
   active canvas bindings.
 - Removed the "Quick Mode" and "From Peak" options in the Pick plugin
   to simplify operation.
+- added an internationalization framework (see "Internationalization"
+  chapter in the Ginga manual).
 
 Ver 3.4.0 (2022-06-28)
 ======================
