@@ -17,10 +17,14 @@ Exit the mode by
 
 Default bindings in mode
 ------------------------
-* scroll : select previous or next slice of selected axis
-* left drag : select previous or next slice of selected axis
+* scroll : select previous or next slice of current axis
+* Ctrl + scroll : select previous or next axis as current axis
+* left drag : select slice as a function of percentage of cursor/window width
+* up/down arrow : select previous or next axis as current axis
 
 """
+import numpy as np
+
 from ginga.modes.mode_base import Mode
 
 
@@ -32,11 +36,15 @@ class NaxisMode(Mode):
         self.actions = dict(
             dmod_naxis=['__n', None, None],
 
-            sc_naxis=['naxis+scroll'],
-
+            kp_naxis_up=['naxis+up', 'naxis+b'],
+            kp_naxis_dn=['naxis+down', 'naxis+n'],
+            sc_naxis_slice=['naxis+scroll'],
+            sc_naxis_axis=['naxis+ctrl+scroll'],
             ms_naxis=['naxis+left'],
-
             pa_naxis=['naxis+pan'])
+
+        # the axis being examined
+        self.axis = 3
 
     def __str__(self):
         return 'naxis'
@@ -53,11 +61,13 @@ class NaxisMode(Mode):
         """
         image = viewer.get_image()
         if image is None:
+            self.onscreen_message("No image", delay=1.0)
+            return
+        if axis < 3 or axis > len(image.axisdim):
+            # attempting to access a non-existent axis
+            self.onscreen_message("Bad axis: %d" % (self.axis), delay=1.0)
             return
         _axis = len(image.axisdim) - axis
-        if _axis < 0:
-            # attempting to access a non-existant axis
-            return
 
         axis_lim = image.axisdim[_axis]
         naxispath = list(image.naxispath)
@@ -66,52 +76,77 @@ class NaxisMode(Mode):
         idx = naxispath[m]
         if direction == 'down':
             idx = (idx + 1) % axis_lim
-        else:
+        elif direction == 'up':
             idx = idx - 1
             if idx < 0:
                 idx = axis_lim - 1
+        else:
+            # no change, except possibly axis
+            pass
 
         naxispath[m] = idx
         image.set_naxispath(naxispath)
         if msg:
-            self.onscreen_message("slice: %d" % (idx),
+            self.onscreen_message("axis: %d  slice: %d" % (axis, idx),
                                   delay=1.0)
 
     #####  KEYBOARD ACTION CALLBACKS #####
 
+    def kp_naxis_up(self, viewer, event, data_x, data_y, msg=True):
+        self.axis += 1
+        self._nav_naxis(viewer, self.axis, 'same', msg=msg)
+        return True
+
+    def kp_naxis_dn(self, viewer, event, data_x, data_y, msg=True):
+        self.axis -= 1
+        self._nav_naxis(viewer, self.axis, 'same', msg=msg)
+        return True
+
     #####  SCROLL ACTION CALLBACKS #####
 
-    def sc_naxis(self, viewer, event, msg=True):
+    def sc_naxis_slice(self, viewer, event, msg=True):
         """Interactively change the slice of the image in a data cube
         by scrolling.
         """
-        # TODO: be able to pick axis
-        axis = 3
         direction = self.get_direction(event.direction)
 
-        return self._nav_naxis(viewer, axis, direction, msg=msg)
+        self._nav_naxis(viewer, self.axis, direction, msg=msg)
+        return True
+
+    def sc_naxis_axis(self, viewer, event, msg=True):
+        """Interactively change the slice of the image in a data cube
+        by scrolling.
+        """
+        direction = self.get_direction(event.direction)
+        if direction == 'up':
+            self.axis += 1
+        elif direction == 'down':
+            self.axis -= 1
+
+        self._nav_naxis(viewer, self.axis, 'same', msg=msg)
+        return True
 
     #####  MOUSE ACTION CALLBACKS #####
 
     def ms_naxis(self, viewer, event, data_x, data_y, msg=True):
 
-        # which axis (in FITS NAXIS terminology)
-        # TODO: be able to pick axis
-        axis = 3
         x, y = self.get_win_xy(viewer)
 
         image = viewer.get_image()
         if image is None:
-            return
+            self.onscreen_message("No image", delay=1.0)
+            return True
 
-        _axis = len(image.axisdim) - axis
-        if _axis < 0:
+        # which axis (in FITS NAXIS terminology)
+        if self.axis < 3 or self.axis > len(image.axisdim):
             # attempting to access a non-existant axis
-            return
+            self.onscreen_message("Bad axis: %d" % (self.axis), delay=1.0)
+            return True
 
+        _axis = len(image.axisdim) - self.axis
         axis_lim = image.axisdim[_axis]
         naxispath = list(image.naxispath)
-        m = axis - 3
+        m = self.axis - 3
 
         if event.state in ('down', 'move'):
             win_wd, win_ht = viewer.get_window_size()
@@ -120,7 +155,7 @@ class NaxisMode(Mode):
             naxispath[m] = idx
             image.set_naxispath(naxispath)
             if msg:
-                self.onscreen_message("slice: %d" % (idx),
+                self.onscreen_message("axis: %d  slice: %d" % (self.axis, idx),
                                       delay=1.0)
 
         return True
@@ -133,10 +168,10 @@ class NaxisMode(Mode):
         """
         event = self._pa_synth_scroll_event(event)
         if event.state != 'move':
-            return False
+            return True
 
         # TODO: be able to pick axis
-        axis = 3
         direction = self.get_direction(event.direction)
 
-        return self._nav_naxis(viewer, axis, direction, msg=msg)
+        self._nav_naxis(viewer, self.axis, direction, msg=msg)
+        return True

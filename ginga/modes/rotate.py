@@ -59,6 +59,7 @@ class RotateMode(Mode):
 
             ms_rotate=['rotate+left'],
             ms_rotate_reset=['rotate+right'],
+            pi_rotate=['pinch'],
 
             mouse_rotate_acceleration=0.75,
             pinch_rotate_acceleration=1.0)
@@ -248,7 +249,12 @@ class RotateMode(Mode):
 
     ##### GESTURE ACTION CALLBACKS #####
 
-    def gs_rotate(self, viewer, state, rot_deg, msg=True):
+    # NOTE: rotation is currently handled by default in the pinch
+    # gesture handler in the "pan" mode.  This function is here
+    # in case one wanted to make a binding to only rotate and not
+    # zoom as well via pinch.  There is no default binding for it.
+    #
+    def pi_rotate(self, viewer, state, rot_deg, msg=True):
         if state == 'start':
             self._start_rot = viewer.get_rotation()
         else:
