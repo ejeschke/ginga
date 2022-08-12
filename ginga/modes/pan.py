@@ -764,12 +764,16 @@ class PanMode(Mode):
 
     ##### GESTURE ACTION CALLBACKS #####
 
-    def gs_pan(self, viewer, state, dx, dy, msg=True):
+    def pa_pan(self, viewer, event, msg=True):
+        """Interactively pan the image by a pan gesture.
+        (the back end must support gestures)
+        """
         if not self.canpan:
             return True
 
         method = 1
         x, y = viewer.get_last_win_xy()
+        dx, dy = event.delta_x, event.delta_y
 
         # User has "Pan Reverse" preference set?
         rev = self.settings.get('pan_reverse', False)
@@ -830,9 +834,6 @@ class PanMode(Mode):
 
         return True
 
-    def gs_pinch(self, viewer, state, rot_deg, scale, msg=True):
-        return self._pinch_zoom_rotate(viewer, state, rot_deg, scale, msg=msg)
-
     def pi_zoom(self, viewer, event, msg=True):
         """Zoom and/or rotate the viewer by a pinch gesture.
         (the back end must support gestures)
@@ -848,10 +849,3 @@ class PanMode(Mode):
         origin = (event.data_x, event.data_y)
         return self._pinch_zoom_rotate(viewer, event.state, event.rot_deg,
                                        event.scale, msg=msg, origin=origin)
-
-    def pa_pan(self, viewer, event, msg=True):
-        """Interactively pan the image by a pan gesture.
-        (the back end must support gestures)
-        """
-        return self.gs_pan(viewer, event.state,
-                           event.delta_x, event.delta_y, msg=msg)

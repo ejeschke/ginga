@@ -69,13 +69,13 @@ Basically, this boils down to the following practical advice:
 * If some default modeless binding doesn't seem to be working, it may be
   because an active canvas has registered for that binding. In such a
   case, you can invoke a mode to do the operation and then exit the mode
-  to get back to working with the canvas.
+  to get back to working with the canvas, or close the plugin that has
+  installed the active canvas.
 
 
 Mode Types
 ==========
 
-.. note:: 
 The mode switching system has a *mode type* which can be set to one of:
 
 * ``oneshot``: The mode is exited by initiating and finishing a cursor drag,

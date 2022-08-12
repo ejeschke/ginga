@@ -12,11 +12,13 @@ from ginga.util.paths import icondir
 
 
 class ImageViewBindings(object):
-    """
-    Cursor (Mouse/Trackpad/etc) and Keyboard Bindings
+    """Configurable event handling (bindings) for UI events.
 
+    This module handles the mapping of user interface events (keyboard,
+    mouse, trackpad, gestures) to operations on a Ginga viewer.
     """
-    action_prefixes = ['kp_', 'ms_', 'sc_', 'gs_', 'pi_', 'pa_']
+
+    action_prefixes = ['kp_', 'ms_', 'sc_', 'pi_', 'pa_']
 
     def __init__(self, logger, settings=None):
         super(ImageViewBindings, self).__init__()
@@ -288,13 +290,6 @@ class ImageViewBindings(object):
                 if cb_method is not None:
                     viewer.add_callback(event, cb_method)
 
-            elif pfx == 'gs_':
-                # for backward compatibility
-                self.logger.warning("'gs_' bindings will be deprecated in a future "
-                                    "version--please update your bindings.cfg")
-                if cb_method is not None:
-                    viewer.set_callback(evname, cb_method)
-
     def reset(self, viewer):
         bindmap = viewer.get_bindmap()
         bindmap.reset_mode(viewer)
@@ -335,10 +330,8 @@ class ImageViewBindings(object):
         self.enable(rotate=tf)
 
     def enable(self, **kwargs):
-        """
-        General enable function encompassing all user interface features.
-        Usage (e.g.):
-            viewer.enable(rotate=False, flip=True)
+        """General enable function encompassing all user interface features.
+        Usage (e.g.): viewer.enable(rotate=False, flip=True)
         """
         for feat, value in kwargs.items():
             feat = feat.lower()
@@ -356,9 +349,7 @@ class ImageViewBindings(object):
         return self.features[feat_name]
 
     def get_direction(self, direction, rev=False):
-        """
-        Translate a direction in compass degrees into 'up' or 'down'.
-        """
+        """Translate a direction in compass degrees into 'up' or 'down'."""
         # TODO: merge with the one in mode_base
         if (direction < 90.0) or (direction >= 270.0):
             if not rev:
@@ -375,8 +366,9 @@ class ImageViewBindings(object):
 
 
 class UIEvent:
-
-    def __init__(self):
+    """Base class for user interface events."""
+    def __init__(self, viewer=None):
+        self.viewer = viewer
         self.handled = False
 
     def accept(self):
@@ -387,36 +379,115 @@ class UIEvent:
 
 
 class KeyEvent(UIEvent):
+    """A key press or release event in a Ginga viewer.
+
+    Attributes
+    ----------
+    key : str
+        The key as it is known to Ginga
+
+    state: str
+        'down' if a key press, 'up' if a key release
+
+    mode : str
+        The mode name of the mode that was active when the event happened
+
+    modifiers : set of str
+        A set of names of modifier keys that were pressed at the time
+
+    data_x : float
+        X part of the data coordinates of the viewer under the cursor
+
+    data_y : float
+        Y part of the data coordinates of the viewer under the cursor
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
     def __init__(self, key=None, state=None, mode=None, modifiers=None,
                  data_x=None, data_y=None, viewer=None):
-        super().__init__()
+        super().__init__(viewer=viewer)
         self.key = key
         self.state = state
         self.mode = mode
         self.modifiers = modifiers
         self.data_x = data_x
         self.data_y = data_y
-        self.viewer = viewer
 
 
 class PointEvent(UIEvent):
+    """A mouse/pointer/cursor event in a Ginga viewer.
+
+    Attributes
+    ----------
+    button : str
+        The name of the button as set up in the configuration
+
+    state: str
+        'down' if a press, 'move' if being dragged, 'up' if a release
+
+    mode : str
+        The mode name of the mode that was active when the event happened
+
+    modifiers : set of str
+        A set of names of modifier keys that were pressed at the time
+
+    data_x : float
+        X part of the data coordinates of the viewer under the cursor
+
+    data_y : float
+        Y part of the data coordinates of the viewer under the cursor
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
                  data_x=None, data_y=None, viewer=None):
-        super().__init__()
+        super().__init__(viewer=viewer)
         self.button = button
         self.state = state
         self.mode = mode
         self.modifiers = modifiers
         self.data_x = data_x
         self.data_y = data_y
-        self.viewer = viewer
 
 
 class ScrollEvent(UIEvent):
+    """A mouse or trackpad scroll event in a Ginga viewer.
+
+    Attributes
+    ----------
+    button : str
+        The name of the button as set up in the configuration
+
+    state: str
+        Always 'scroll'
+
+    mode : str
+        The mode name of the mode that was active when the event happened
+
+    modifiers : set of str
+        A set of names of modifier keys that were pressed at the time
+
+    direction : float
+        A direction in compass degrees of the scroll
+
+    amount : float
+        The amount of the scroll
+
+    data_x : float
+        X part of the data coordinates of the viewer under the cursor
+
+    data_y : float
+        Y part of the data coordinates of the viewer under the cursor
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
                  direction=None, amount=None, data_x=None, data_y=None,
                  viewer=None):
-        super().__init__()
+        super().__init__(viewer=viewer)
         self.button = button
         self.state = state
         self.mode = mode
@@ -425,14 +496,44 @@ class ScrollEvent(UIEvent):
         self.amount = amount
         self.data_x = data_x
         self.data_y = data_y
-        self.viewer = viewer
 
 
 class PinchEvent(UIEvent):
+    """A pinch event in a Ginga viewer.
+
+    Attributes
+    ----------
+    button : str
+        The name of the button as set up in the configuration
+
+    state: str
+        'start' (gesture starting), 'move' (in action) or 'stop' (done)
+
+    mode : str
+        The mode name of the mode that was active when the event happened
+
+    modifiers : set of str
+        A set of names of modifier keys that were pressed at the time
+
+    rot_deg : float
+        Amount of rotation in degrees
+
+    scale : float
+        Scale of the pinch shrink or enlargement
+
+    data_x : float
+        X part of the data coordinates of the viewer under the cursor
+
+    data_y : float
+        Y part of the data coordinates of the viewer under the cursor
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
                  rot_deg=None, scale=None, data_x=None, data_y=None,
                  viewer=None):
-        super().__init__()
+        super().__init__(viewer=viewer)
         self.button = button
         self.state = state
         self.mode = mode
@@ -441,14 +542,44 @@ class PinchEvent(UIEvent):
         self.scale = scale
         self.data_x = data_x
         self.data_y = data_y
-        self.viewer = viewer
 
 
 class PanEvent(UIEvent):
+    """A pinch event in a Ginga viewer.
+
+    Attributes
+    ----------
+    button : str
+        The name of the button as set up in the configuration
+
+    state: str
+        'start' (gesture starting), 'move' (in action) or 'stop' (done)
+
+    mode : str
+        The mode name of the mode that was active when the event happened
+
+    modifiers : set of str
+        A set of names of modifier keys that were pressed at the time
+
+    delta_x : float
+        Amount of scroll movement in the X direction
+
+    delta_y : float
+        Amount of scroll movement in the Y direction
+
+    data_x : float
+        X part of the data coordinates of the viewer under the cursor
+
+    data_y : float
+        Y part of the data coordinates of the viewer under the cursor
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
     def __init__(self, button=None, state=None, mode=None, modifiers=None,
                  delta_x=None, delta_y=None, data_x=None, data_y=None,
                  viewer=None):
-        super().__init__()
+        super().__init__(viewer=viewer)
         self.button = button
         self.state = state
         self.mode = mode
@@ -457,7 +588,6 @@ class PanEvent(UIEvent):
         self.delta_y = delta_y
         self.data_x = data_x
         self.data_y = data_y
-        self.viewer = viewer
 
 
 class BindingMapError(Exception):
@@ -465,7 +595,9 @@ class BindingMapError(Exception):
 
 
 class BindingMapper(Callback.Callbacks):
-    """The BindingMapper class maps physical events (key presses, button
+    """Map physical events to logical events.
+
+    The BindingMapper class maps physical events (key presses, button
     clicks, mouse movement, etc) into logical events.  By registering for
     logical events, plugins and other event handling code doesn't need to
     care about the physical controls bindings.  The bindings can be changed
