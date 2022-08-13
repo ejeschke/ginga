@@ -174,7 +174,7 @@ parameters:
 
 Editing Objects on a Canvas
 ---------------------------
-``DrawingCanvas``es have a built in editor that can handle basic editing
+DrawingCanvases have a built in editor that can handle basic editing
 of drawn (or programatically) added items.
 
 To enable user editing on a canvas, add the following calls in the setup
