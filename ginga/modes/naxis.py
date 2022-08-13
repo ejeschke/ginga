@@ -23,8 +23,6 @@ Default bindings in mode
 * up/down arrow : select previous or next axis as current axis
 
 """
-import numpy as np
-
 from ginga.modes.mode_base import Mode
 
 

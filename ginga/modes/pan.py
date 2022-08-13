@@ -780,7 +780,7 @@ class PanMode(Mode):
         if rev:
             dx, dy = -dx, -dy
 
-        if state == 'move':
+        if event.state == 'move':
             # Internal factor to adjust the panning speed so that user-adjustable
             # pan_pan_acceleration is normalized to 1.0 for "normal" speed
             pan_pan_adj_factor = 1.0
@@ -823,7 +823,7 @@ class PanMode(Mode):
                 data_x, data_y = viewer.get_data_xy(x, y)
                 viewer.panset_xy(data_x, data_y)
 
-        elif state == 'start':
+        elif event.state == 'start':
             #self._start_panx, self._start_pany = viewer.get_pan()
             data_x, data_y = viewer.get_last_data_xy()
             self.pan_set_origin(viewer, x, y, data_x, data_y)
