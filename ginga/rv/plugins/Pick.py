@@ -45,6 +45,9 @@ for all peaks and evaluate the peaks based on the criteria in the
 "Settings" tab of the UI (see "The Settings Tab" below) and try to locate
 the best candidate matching the settings.
 
+.. note:: the "Quick Mode" and "From Peak" checkboxes were removed in
+          Ginga release v4.0.
+
 **If a candidate is found**
 
 The candidate will be marked with a point (usually an "X") in the
