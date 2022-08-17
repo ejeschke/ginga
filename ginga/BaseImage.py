@@ -410,6 +410,7 @@ class BaseImage(ViewerObjectBase):
             wd, ht = self.get_size()
             x1, x2 = max(0, x1), min(x2, wd - 1)
             y1, y2 = max(0, y1), min(y2, ht - 1)
+            x1, y1, x2, y2 = [int(np.round(n)) for n in (x1, y1, x2, y2)]
 
         # calculate pixel containment mask in bbox
         xi, yi = np.meshgrid(range(x1, x2 + 1), range(y1, y2 + 1))

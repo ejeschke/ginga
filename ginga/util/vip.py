@@ -378,6 +378,7 @@ class ViewerImageProxy:
             xy_mn, xy_mx = self.viewer.get_limits()
             x1, x2 = max(xy_mn[0], x1), min(x2, xy_mx[0] - 1)
             y1, y2 = max(xy_mn[1], y1), min(y2, xy_mx[1] - 1)
+            x1, y1, x2, y2 = [int(np.round(n)) for n in (x1, y1, x2, y2)]
 
         # calculate pixel containment mask in bbox
         xi, yi = np.meshgrid(range(x1, x2 + 1), range(y1, y2 + 1))
