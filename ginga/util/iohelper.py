@@ -13,6 +13,18 @@ import urllib.parse
 import tempfile
 
 from ginga.misc import Bunch
+from ginga.util.paths import ginga_home, ginga_pkgdir
+
+# load local mime types overrides, if present
+ginga_mimetypes = os.path.join(ginga_pkgdir,
+                               "examples", "configs", "mime.types")
+if os.path.exists(ginga_mimetypes):
+    mimetypes.init(files=[ginga_mimetypes])
+
+local_mimetypes = os.path.join(ginga_home, "mime.types")
+if os.path.exists(local_mimetypes):
+    mimetypes.init(files=[local_mimetypes])
+
 
 magic_tester = None
 try:
@@ -29,40 +41,12 @@ except (ImportError, Exception):
     have_magic = False
 
 
-# NOTE: this is a shortcut list of extensions in which we trust the
-# extension over the mimetype that might be returned by the Python
-# 'mimetypes' module.  You can add an extension here if the loaders
-# can reliably load it and it is not recognized properly by 'mimetypes'
-known_types = {
-    '.fit': 'image/fits',
-    '.fits': 'image/fits',
-    '.fits.gz': 'image/fits',
-    '.fits.fz': 'image/fits',
-    '.asdf': 'image/asdf',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.tiff': 'image/tiff',
-    '.gif': 'image/gif',
-    '.png': 'image/png',
-    '.ppm': 'image/ppm',
-    '.pnm': 'image/pnm',
-    '.pbm': 'image/pbm',
-}
-
-
 def guess_filetype(filepath):
     """Guess the type of a file."""
     # If we have python-magic, use it to determine file type
     typ = None
 
-    # Some specific checks for known file suffixes
-    _fn = filepath.lower()
-    for key, mimetype in known_types.items():
-        if _fn.endswith(key):
-            typ = mimetype
-            break
-
-    if typ is None and have_magic:
+    if have_magic:
         try:
             # it seems there are conflicting versions of a 'magic'
             # module for python floating around...*sigh*

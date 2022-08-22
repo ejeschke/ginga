@@ -55,7 +55,7 @@ class AstroTable(ViewerObjectBase):
 
         # ioclass specifies a pluggable IO module
         if ioclass is None:
-            from ginga.util import io_fits
+            from ginga.util.io import io_fits
             ioclass = io_fits.fitsLoaderClass
         self.io = ioclass(self.logger)
 

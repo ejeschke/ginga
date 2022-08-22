@@ -444,7 +444,8 @@ class ReferenceViewer(object):
             warnings.simplefilter('ignore', fits.verify.VerifyWarning)
 
         try:
-            from ginga.util import io_fits, loader
+            from ginga.util.io import io_fits
+            from ginga.util import loader
             if fitspkg != 'choose':
                 assert io_fits.use(fitspkg) is True
                 # opener name is not necessarily the same

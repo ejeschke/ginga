@@ -67,7 +67,8 @@ import time
 import threading
 
 from ginga.AstroImage import AstroImage
-from ginga.util import dp, io_fits
+from ginga.util import dp
+from ginga.util.io import io_fits
 from ginga.util.mosaic import CanvasMosaicer
 from ginga import GingaPlugin
 from ginga.gw import Widgets

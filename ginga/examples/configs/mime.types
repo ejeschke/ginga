@@ -1,0 +1,14 @@
+#
+# Put this in your $HOME/.ginga folder and add customized entries
+# if needed
+#
+image/fits                     fit fits fits.gz fits.fz
+image/asdf                     asdf
+image/jpeg                     jpg jpeg
+image/tiff                     tif tiff
+image/gif                      gif
+image/png                      png
+image/x-portable-pixmap        ppm
+image/x-portable-anymap        pnm
+image/x-portable-bitmap        pbm
+image/x-portable-graymap       pgm

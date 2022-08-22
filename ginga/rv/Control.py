@@ -2523,7 +2523,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if mimetype != '*':
                 # loader is not registered for this mimetype, so go ahead
                 # and do it
-                loader.add_opener(mimetype, bnch.opener,
+                loader.add_opener(bnch.opener, [mimetype],
                                   priority=bnch.priority, note=bnch.note)
             else:
                 # multiple loaders for the same mimetype--
