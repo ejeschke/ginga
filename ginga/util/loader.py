@@ -4,10 +4,23 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import sys
+if sys.version_info < (3, 8):
+    # Python 3.7
+    from importlib_metadata import entry_points
+else:
+    from importlib.metadata import entry_points
+
 from ginga.misc import Bunch
-from ginga.util import iohelper, io_fits, io_rgb
-# new I/O handlers go in ginga.util.io
-from ginga.util.io import io_asdf
+from ginga.util import iohelper
+
+
+# Holds all openers keyed by name
+loader_registry = dict()
+
+
+# Holds all openers keyed by MIME type
+loader_by_mimetype = dict()
 
 
 def load_data(filespec, idx=None, logger=None, **kwargs):
@@ -74,14 +87,6 @@ def load_data(filespec, idx=None, logger=None, **kwargs):
 load_file = load_data
 
 
-# Holds all openers keyed by name
-loader_registry = {}
-
-
-# Holds all openers keyed by MIME type
-loader_by_mimetype = {}
-
-
 def add_opener(opener, mimetypes, priority=0, note=''):
     """Add an opener to the registry of file openers.
 
@@ -103,16 +108,19 @@ def add_opener(opener, mimetypes, priority=0, note=''):
         in GUIs
     """
     global loader_by_mimetype, loader_registry
-    loader_rec = Bunch.Bunch(name=opener.name, opener=opener,
-                             mimetypes=mimetypes, priority=priority,
-                             note=note)
-    if opener.name not in loader_registry:
+    if opener.name in loader_registry:
+        loader_rec = loader_registry[opener.name]
+    else:
+        loader_rec = Bunch.Bunch(name=opener.name, opener=opener,
+                                 mimetypes=mimetypes, priority=priority,
+                                 note=note)
         loader_registry[opener.name] = loader_rec
 
     for mimetype in mimetypes:
         bnchs = loader_by_mimetype.setdefault(mimetype, [])
-        bnchs.append(loader_rec)
-    bnchs.sort(key=lambda bnch: bnch.priority)
+        if loader_rec not in bnchs:
+            bnchs.append(loader_rec)
+            bnchs.sort(key=lambda bnch: bnch.priority)
 
 
 def get_opener(name):
@@ -143,35 +151,24 @@ def get_all_openers():
     return loader_registry.values()
 
 
-# built ins
+def discover_loaders():
+    group = 'ginga_loaders'
+    discovered_loaders = entry_points().get(group, [])
+    for entry_point in discovered_loaders:
+        try:
+            opener_class = entry_point.load()
+            try:
+                opener_class.check_availability()
+            except Exception as e:
+                continue
 
-# ### FITS ###
-# NOTE: if astropy.io.fits is available, its loader has default higher
-# priority.  Override using setting for FITSpkg in general.cfg or using
-# command line --fitspkg option
-mimetypes = ['image/fits', 'image/x-fits']
-if io_fits.have_astropy:
-    add_opener(io_fits.AstropyFitsFileHandler, mimetypes, priority=0,
-               note="For loading FITS (Flexible Image Transport System) "
-               "data files")
-if io_fits.have_fitsio:
-    add_opener(io_fits.FitsioFileHandler, mimetypes, priority=1,
-               note="For loading FITS (Flexible Image Transport System) "
-               "data files")
+            add_opener(opener_class, opener_class.mimetypes,
+                       note=opener_class.__doc__)
 
-# ### ASDF ###
-mimetypes = ['image/asdf']
-if io_asdf.have_asdf:
-    add_opener(io_asdf.ASDFFileHandler, mimetypes,
-               note="For loading ASDF data files")
+        except Exception as e:
+            print("Error trying to load entry point %s: %s" % (
+                str(entry_point), str(e)))
 
-# ### RGB ###
-# NOTE: if opencv is available, its loader has default higher priority,
-# because it supports higher bit depths.
-mimetypes = ['image/jpeg', 'image/png', 'image/tiff', 'image/gif',
-             'image/ppm', 'image/pnm', 'image/pbm']
-add_opener(io_rgb.PillowFileHandler, mimetypes, priority=1,
-           note="For loading common RGB image formats (e.g. JPEG, etc)")
-if io_rgb.have_opencv:
-    add_opener(io_rgb.OpenCvFileHandler, mimetypes, priority=0,
-               note="For loading common RGB image formats (e.g. JPEG, etc)")
+
+if len(loader_registry) == 0:
+    discover_loaders()

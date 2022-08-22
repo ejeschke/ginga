@@ -6,7 +6,7 @@
 #
 import numpy as np
 
-from ginga.util import io_rgb
+from ginga.util.io import io_rgb
 from ginga.BaseImage import BaseImage, ImageError
 
 

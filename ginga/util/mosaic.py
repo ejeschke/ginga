@@ -12,7 +12,7 @@ import numpy as np
 
 from ginga import AstroImage, trcalc
 from ginga.util import wcs, loader, dp, iqcalc
-from ginga.util import io_fits
+from ginga.util.io import io_fits
 from ginga.misc import Callback, Settings
 
 
