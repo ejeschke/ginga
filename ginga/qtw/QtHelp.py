@@ -48,7 +48,10 @@ try:
     from qtpy.QtWidgets import QOpenGLWidget  # noqa
     from qtpy.QtCore import QItemSelectionModel  # noqa
     from qtpy.QtWidgets import QApplication  # noqa
-    import sip
+    ## try:
+    ##     from qtpy import sip
+    ## except ImportError as e:
+    ##     import sip
     try:
         from qtpy.QtWebEngineWidgets import QWebEngineView as QWebView  # noqa
     except ImportError as e:
@@ -486,7 +489,8 @@ def set_default_opengl_context():
 
 
 def delete_widget(w):
-    sip.delete(w)
+    ## sip.delete(w)
+    w.deleteLater()
 
 
 # END
