@@ -85,10 +85,11 @@ class ContrastMode(Mode):
     #####  KEYBOARD ACTION CALLBACKS #####
 
     def kp_contrast_restore(self, viewer, event, data_x, data_y, msg=True):
-        if self.cancmap:
-            msg = self.settings.get('msg_cmap', msg)
-            self.restore_contrast(viewer, msg=msg)
-        return True
+        if not self.cancmap:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_cmap', msg)
+        self.restore_contrast(viewer, msg=msg)
 
     #####  SCROLL ACTION CALLBACKS #####
 
@@ -99,7 +100,8 @@ class ContrastMode(Mode):
         Stretch the colormap by dragging the cursor up or down.
         """
         if not self.cancmap:
-            return True
+            return False
+        event.accept()
         msg = self.settings.get('msg_contrast', msg)
 
         x, y = self.get_win_xy(viewer)
@@ -114,12 +116,13 @@ class ContrastMode(Mode):
                     "Shift and stretch colormap (drag mouse)", delay=1.0)
         else:
             self.onscreen_message(None)
-        return True
 
     def ms_contrast_restore(self, viewer, event, data_x, data_y, msg=True):
         """An interactive way to restore the colormap contrast settings after
         a warp operation.
         """
-        if self.cancmap and (event.state == 'down'):
+        if not self.cancmap:
+            return False
+        event.accept()
+        if event.state == 'down':
             self.restore_contrast(viewer, msg=msg)
-        return True

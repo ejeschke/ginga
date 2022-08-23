@@ -84,7 +84,8 @@ class FreePanMode(PanMode):
         pannable by dragging towards each corner of the window.
         """
         if not self.canpan:
-            return True
+            return False
+        event.accept()
 
         x, y = viewer.get_last_win_xy()
         if event.state == 'move':
@@ -97,16 +98,16 @@ class FreePanMode(PanMode):
 
         else:
             self.pan_stop(viewer)
-        return True
 
     def ms_zoom_in(self, viewer, event, data_x, data_y, msg=False):
         """Zoom in one level by a mouse click.
         """
         if not self.canzoom:
-            return True
+            return False
+        event.accept()
 
         if not (event.state == 'down'):
-            return True
+            return
 
         with viewer.suppress_redraw:
             viewer.panset_xy(data_x, data_y)
@@ -124,16 +125,16 @@ class FreePanMode(PanMode):
             if msg:
                 self.onscreen_message(viewer.get_scale_text(),
                                       delay=1.0)
-        return True
 
     def ms_zoom_out(self, viewer, event, data_x, data_y, msg=False):
         """Zoom out one level by a mouse click.
         """
         if not self.canzoom:
-            return True
+            return False
+        event.accept()
 
         if not (event.state == 'down'):
-            return True
+            return
 
         with viewer.suppress_redraw:
             # TODO: think about whether it is the correct behavior to
@@ -161,20 +162,22 @@ class FreePanMode(PanMode):
         """Interactively zoom the image by a pan gesture.
         (the back end must support gestures)
         """
-        event = self._pa_synth_scroll_event(event)
-        if event.state != 'move':
+        if not self.canzoom:
             return False
-        self._sc_zoom(viewer, event, msg=msg, origin=None)
-        return True
+        event.accept()
+        event = self._pa_synth_scroll_event(event)
+        if event.state == 'move':
+            self._sc_zoom(viewer, event, msg=msg, origin=None)
 
     def pa_zoom_origin(self, viewer, event, msg=True):
         """Like pa_zoom(), but pans the image as well to keep the
         coordinate under the cursor in that same position relative
         to the window.
         """
-        event = self._pa_synth_scroll_event(event)
-        if event.state != 'move':
+        if not self.canzoom:
             return False
-        origin = (event.data_x, event.data_y)
-        self._sc_zoom(viewer, event, msg=msg, origin=origin)
-        return True
+        event.accept()
+        event = self._pa_synth_scroll_event(event)
+        if event.state == 'move':
+            origin = (event.data_x, event.data_y)
+            self._sc_zoom(viewer, event, msg=msg, origin=origin)

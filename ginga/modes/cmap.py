@@ -98,97 +98,108 @@ class CMapMode(Mode):
             rgbmap.rotate_cmap(num)
 
     def _cycle_cmap(self, viewer, msg, direction='down'):
-        if self.cancmap:
-            msg = self.settings.get('msg_cmap', msg)
-            rgbmap = viewer.get_rgbmap()
-            cm = rgbmap.get_cmap()
-            cmapname = cm.name
-            cmapnames = cmap.get_names()
-            idx = cmapnames.index(cmapname)
-            if direction == 'down':
-                idx = (idx + 1) % len(cmapnames)
-            else:
-                idx = idx - 1
-                if idx < 0:
-                    idx = len(cmapnames) - 1
-            cmapname = cmapnames[idx]
-            viewer.set_color_map(cmapname)
-            if msg:
-                self.onscreen_message("Color map: %s" % (cmapname),
-                                      delay=1.0)
+        msg = self.settings.get('msg_cmap', msg)
+        rgbmap = viewer.get_rgbmap()
+        cm = rgbmap.get_cmap()
+        cmapname = cm.name
+        cmapnames = cmap.get_names()
+        idx = cmapnames.index(cmapname)
+        if direction == 'down':
+            idx = (idx + 1) % len(cmapnames)
+        else:
+            idx = idx - 1
+            if idx < 0:
+                idx = len(cmapnames) - 1
+        cmapname = cmapnames[idx]
+        viewer.set_color_map(cmapname)
+        if msg:
+            self.onscreen_message("Color map: %s" % (cmapname),
+                                  delay=1.0)
 
     def _reset_cmap(self, viewer, msg):
-        if self.cancmap:
-            msg = self.settings.get('msg_cmap', msg)
-            # default
-            cmapname = 'gray'
-            viewer.set_color_map(cmapname)
-            if msg:
-                self.onscreen_message("Color map: %s" % (cmapname),
-                                      delay=1.0)
+        msg = self.settings.get('msg_cmap', msg)
+        # default
+        cmapname = 'gray'
+        viewer.set_color_map(cmapname)
+        if msg:
+            self.onscreen_message("Color map: %s" % (cmapname),
+                                  delay=1.0)
 
     def _invert_cmap(self, viewer, msg):
-        if self.cancmap:
-            msg = self.settings.get('msg_cmap', msg)
-            rgbmap = viewer.get_rgbmap()
-            rgbmap.invert_cmap()
-            if msg:
-                self.onscreen_message("Inverted color map",
-                                      delay=1.0)
+        msg = self.settings.get('msg_cmap', msg)
+        rgbmap = viewer.get_rgbmap()
+        rgbmap.invert_cmap()
+        if msg:
+            self.onscreen_message("Inverted color map", delay=1.0)
 
     def _cycle_imap(self, viewer, msg, direction='down'):
-        if self.cancmap:
-            msg = self.settings.get('msg_imap', msg)
-            rgbmap = viewer.get_rgbmap()
-            im = rgbmap.get_imap()
-            imapname = im.name
-            imapnames = imap.get_names()
-            idx = imapnames.index(imapname)
-            if direction == 'down':
-                idx = (idx + 1) % len(imapnames)
-            else:
-                idx = idx - 1
-                if idx < 0:
-                    idx = len(imapnames) - 1
-            imapname = imapnames[idx]
-            viewer.set_intensity_map(imapname)
-            if msg:
-                self.onscreen_message("Intensity map: %s" % (imapname),
-                                      delay=1.0)
+        msg = self.settings.get('msg_imap', msg)
+        rgbmap = viewer.get_rgbmap()
+        im = rgbmap.get_imap()
+        imapname = im.name
+        imapnames = imap.get_names()
+        idx = imapnames.index(imapname)
+        if direction == 'down':
+            idx = (idx + 1) % len(imapnames)
+        else:
+            idx = idx - 1
+            if idx < 0:
+                idx = len(imapnames) - 1
+        imapname = imapnames[idx]
+        viewer.set_intensity_map(imapname)
+        if msg:
+            self.onscreen_message("Intensity map: %s" % (imapname),
+                                  delay=1.0)
 
     def _reset_imap(self, viewer, msg):
-        if self.cancmap:
-            msg = self.settings.get('msg_imap', msg)
-            # default
-            imapname = 'ramp'
-            viewer.set_intensity_map(imapname)
-            if msg:
-                self.onscreen_message("Intensity map: %s" % (imapname),
-                                      delay=1.0)
+        msg = self.settings.get('msg_imap', msg)
+        # default
+        imapname = 'ramp'
+        viewer.set_intensity_map(imapname)
+        if msg:
+            self.onscreen_message("Intensity map: %s" % (imapname),
+                                  delay=1.0)
 
     #####  KEYBOARD ACTION CALLBACKS #####
 
     def kp_cmap_reset(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._reset_cmap(viewer, msg)
-        return True
 
     def kp_cmap_restore(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self.restore_colormap(viewer, msg)
         return True
 
     def kp_cmap_invert(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._invert_cmap(viewer, msg)
         return True
 
     def kp_cmap_prev(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._cycle_cmap(viewer, msg, direction='up')
         return True
 
     def kp_cmap_next(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._cycle_cmap(viewer, msg, direction='down')
         return True
 
     def kp_toggle_cbar(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         canvas = viewer.get_private_canvas()
         # canvas already has a color bar?
         objs = list(canvas.get_objects_by_kinds(('colorbar', 'drawablecolorbar')))
@@ -197,14 +208,23 @@ class CMapMode(Mode):
         return True
 
     def kp_imap_reset(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._reset_imap(viewer, msg)
         return True
 
     def kp_imap_prev(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._cycle_imap(viewer, msg, direction='up')
         return True
 
     def kp_imap_next(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._cycle_imap(viewer, msg, direction='down')
         return True
 
@@ -213,16 +233,20 @@ class CMapMode(Mode):
     def sc_cmap(self, viewer, event, msg=True):
         """Interactively change the color map by scrolling.
         """
+        if not self.cancmap:
+            return False
+        event.accept()
         direction = self.get_direction(event.direction)
         self._cycle_cmap(viewer, msg, direction=direction)
-        return True
 
     def sc_imap(self, viewer, event, msg=True):
         """Interactively change the intensity map by scrolling.
         """
+        if not self.cancmap:
+            return False
+        event.accept()
         direction = self.get_direction(event.direction)
         self._cycle_imap(viewer, msg, direction=direction)
-        return True
 
     #####  MOUSE ACTION CALLBACKS #####
 
@@ -231,7 +255,8 @@ class CMapMode(Mode):
         Stretch the colormap by dragging the cursor up or down.
         """
         if not self.cancmap:
-            return True
+            return False
+        event.accept()
         msg = self.settings.get('msg_cmap', msg)
 
         x, y = self.get_win_xy(viewer)
@@ -246,12 +271,13 @@ class CMapMode(Mode):
                                       delay=1.0)
         else:
             self.onscreen_message(None)
-        return True
 
     def ms_cmap_restore(self, viewer, event, data_x, data_y, msg=True):
         """An interactive way to restore the colormap settings after
         a rotate or invert operation.
         """
-        if self.cancmap and (event.state == 'down'):
+        if not self.cancmap:
+            return False
+        event.accept()
+        if event.state == 'down':
             self.restore_colormap(viewer, msg)
-        return True

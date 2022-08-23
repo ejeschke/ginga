@@ -66,6 +66,7 @@ class CameraMode(Mode):
     #####  KEYBOARD ACTION CALLBACKS #####
 
     def kp_camera_reset(self, viewer, event, data_x, data_y):
+        event.accept()
         camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
@@ -75,9 +76,9 @@ class CameraMode(Mode):
         camera.calc_gl_transform()
         self.onscreen_message("Reset camera", delay=0.5)
         viewer.update_widget()
-        return True
 
     def kp_camera_save(self, viewer, event, data_x, data_y):
+        event.accept()
         camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
@@ -85,9 +86,9 @@ class CameraMode(Mode):
 
         camera.save_positions()
         self.onscreen_message("Saved camera position", delay=0.5)
-        return True
 
     def kp_camera_toggle3d(self, viewer, event, data_x, data_y):
+        event.accept()
         camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
@@ -96,7 +97,6 @@ class CameraMode(Mode):
         renderer = viewer.renderer
         renderer.mode3d = not renderer.mode3d
         viewer.update_widget()
-        return True
 
     #####  SCROLL ACTION CALLBACKS #####
 
@@ -104,7 +104,8 @@ class CameraMode(Mode):
         camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
-            return
+            return False
+        event.accept()
 
         zoom_accel = self.settings.get('scroll_zoom_acceleration', 6.0)
         delta = event.amount * zoom_accel
@@ -120,7 +121,6 @@ class CameraMode(Mode):
         # TODO: need to set scale in viewer settings, without triggering a
         # scale operation on this viewer
         viewer.update_widget()
-        return True
 
     #####  MOUSE ACTION CALLBACKS #####
 
@@ -129,6 +129,7 @@ class CameraMode(Mode):
         if camera is None:
             # this viewer doesn't have a camera
             return False
+        event.accept()
 
         x, y = self.get_win_xy(viewer)
 
@@ -149,13 +150,13 @@ class CameraMode(Mode):
         ##     self.onscreen_message(None)
 
         viewer.update_widget()
-        return True
 
     def ms_camera_pan_delta(self, viewer, event, data_x, data_y, msg=True):
         camera = self.get_camera(viewer)
         if camera is None:
             # this viewer doesn't have a camera
             return False
+        event.accept()
 
         x, y = self.get_win_xy(viewer)
 
@@ -180,4 +181,3 @@ class CameraMode(Mode):
         data_x, data_y = viewer.tform['data_to_native'].from_(tup[:2])
 
         viewer.update_widget()
-        return True
