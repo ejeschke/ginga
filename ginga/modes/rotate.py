@@ -59,7 +59,7 @@ class RotateMode(Mode):
 
             ms_rotate=['rotate+left'],
             ms_rotate_reset=['rotate+right'],
-            pi_rotate=['pinch'],
+            pi_rotate=['rotate+pinch'],
 
             mouse_rotate_acceleration=0.75,
             pinch_rotate_acceleration=1.0)
@@ -262,22 +262,21 @@ class RotateMode(Mode):
     # in case one wanted to make a binding to only rotate and not
     # zoom as well via pinch.  There is no default binding for it.
     #
-    def pi_rotate(self, viewer, state, rot_deg, msg=True):
+    def pi_rotate(self, viewer, event, msg=True):
         if not self.canrotate:
             return False
         event.accept()
-        if state == 'start':
+        if event.state == 'start':
             self._start_rot = viewer.get_rotation()
         else:
             msg_str = None
-            if self.canrotate:
-                deg = self._start_rot - rot_deg
-                rotate_accel = self.settings.get('pinch_rotate_acceleration', 1.0)
-                deg = rotate_accel * deg
-                viewer.rotate(deg)
-                if msg_str is None:
-                    msg_str = "Rotate: %.2f" % (deg)
-                    msg = self.settings.get('msg_rotate', msg)
+            deg = self._start_rot - event.rot_deg
+            rotate_accel = self.settings.get('pinch_rotate_acceleration', 1.0)
+            deg = rotate_accel * deg
+            viewer.rotate(deg)
+            if msg_str is None:
+                msg_str = "Rotate: %.2f" % (deg)
+                msg = self.settings.get('msg_rotate', msg)
 
-            if msg and (msg_str is not None):
+            if msg and msg_str is not None:
                 self.onscreen_message(msg_str, delay=0.4)

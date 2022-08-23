@@ -97,6 +97,8 @@ class PanMode(Mode):
             pi_zoom_origin=['shift+pinch'],
             pa_pan=['pan'],
 
+            # can be list of any of: 'zoom', 'rotate'
+            pinch_actions=['zoom'],
             scroll_pan_acceleration=1.0,
             scroll_pan_lock_x=False,
             scroll_pan_lock_y=False,
@@ -140,6 +142,11 @@ class PanMode(Mode):
     def canzoom(self):
         bd = self.viewer.get_bindings()
         return bd.get_feature_allow('zoom')
+
+    @property
+    def canrotate(self):
+        bd = self.viewer.get_bindings()
+        return bd.get_feature_allow('rotate')
 
     def __str__(self):
         return 'pan'
@@ -351,7 +358,7 @@ class PanMode(Mode):
                 viewer.set_pan(data_x, data_y)
 
             msg_str = None
-            if self.canzoom and ('zoom' in pinch_actions):
+            if self.canzoom and 'zoom' in pinch_actions:
                 # scale by the desired means
                 scale_accel = self.settings.get('pinch_zoom_acceleration', 1.0)
                 scale = scale * scale_accel
@@ -368,7 +375,7 @@ class PanMode(Mode):
                 msg_str = viewer.get_scale_text()
                 msg = self.settings.get('msg_zoom', True)
 
-            if self.canrotate and ('rotate' in pinch_actions):
+            if self.canrotate and 'rotate' in pinch_actions:
                 deg = self._start_rot - rot_deg
                 rotate_accel = self.settings.get('pinch_rotate_acceleration', 1.0)
                 deg = rotate_accel * deg
