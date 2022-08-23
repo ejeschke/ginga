@@ -40,86 +40,113 @@ images such as JPEG, TIFF, PNG, etc.  AstroImage is the subclass used to
 represent astronomical images and its organization is shown in
 Figure :ref:`fig-astroimage`.  It has two delegate objects devoted to
 handling World Coordinate System transformations and file IO.
-There is also a mixin class, ``LayerImage`` that can be used to create
-layered images with alpha compositing on each layer.
 
 New models can be created, subclassing from BaseImage or AstroImage.
 As long as the model
 `duck types <http://en.wikipedia.org/wiki/Duck_typing>`_ like a BaseImage
 it can be loaded into a view object with the ``set_image()`` method.
-AstroImage provides convenience methods for accessing WCS information
-that may be necessary when using the model in canvas subclasses of a
-View that allow graphics drawing.
+AstroImage provides a few convenience methods for accessing WCS information
+from the attached "wcs" attribute.
 
 The View
 --------
 
-.. _fig-imageviewzoom:
+.. _fig-imageviewer:
 .. figure:: figures/class_structure_viewer.png
    :scale: 100%
    :figclass: h
 
    Class structure of Ginga basic widget viewer
 
-Figure :ref:`fig-imageviewzoom` shows the class inheritance of the
-ImageViewZoom class, which is a typical end class to use in a program if
-one is not planning to do any graphical overplotting.  The figure key
-indicates the base class verses the widget specific classes.
+Figure :ref:`fig-imageviewer` shows the class inheritance of the
+``CanvasView`` class, which is the prototypical viewer class to use in a
+program.
+The viewer is rooted in the base class ``ImageViewBase``, which
+contains the settings that control the view, such as scale (zoom),
+pan position, rotation, transformation, etc along with a large number of
+methods to manipulate the viewer.
+Ginga supports "backends" for different widget sets (Qt, Gtk, Tk,
+etc.) through various subclasses of this base class, which provide an
+native window or canvas widget that can be painted with the resulting
+RGB[A] image produced by a renderer.  A ``CanvasView`` viewer can be
+created for any supported back end.
 
-The View classes are rooted in the base class ``ImageView``, which
-handles image display, scaling (zooming), panning, manual cut levels,
-auto cut levels, color mapping, transformations, and rotation.
-The ImageView is quite powerful compared to base classes in most
-inheritance designs, as it actually renders the view all the way out to
-RGB image planes in the appropriate sizes for the widget target window.
-Ginga supports "backends" for different widget sets (Gtk, Qt, Tk,
-etc.) through various subclasses of this base class, which do the actual
-painting of the resulting RGB image into a widget in the native widget set.
-
-In this example, ``ImageViewXYZ`` is a class that renders to a native
-widget in the "XYZ" toolkit.  ``ImageViewEvent`` adds event handlers for
-various pointing and keyboard events, but without connecting them to any
-particular handling scheme.  Finally, ``ImageViewZoom`` provides a
-concrete implementation of event handling by connecting the handlers in
-the ImageViewEvent class with the logic in the ``BindingMapper`` and
-``Bindings`` delegate objects as will as some logic in the ``UIMixin``
-class.  This event handling scheme is described in more detail in the
-section on the Controller.  With this layered class construction, it is
-possible to minimize the widget specific code and reuse a large amount
-of code across widget sets and platforms.
-Because the vast majority of work is done in the base class, and the
-outer classes simply inherit the widget-specific ones and mix in the
-others, it is a fairly simple matter to port the basic Ginga
-functionality to a new widget set.  All that is required is that the new
-widget set have some kind of native widget that supports painting an RGB
-image (like a canvas or image widget) and a way to register for user
-interaction events on that widget.
+Every viewer has a dedicated renderer as a delegate object.
+Renderers are also arranged in a hierarchical class structure.
+The base renderer class is ``RenderBase``, which specifies an abstract
+base class that should be implemented to render a Ginga canvas onto a
+back end-specific viewer.
 
 The Controller
 --------------
 
 The control interface is a combination of methods on the view object and
 a pluggable ``Bindings`` class which handles the mapping of user input
-events such as mouse, gesture and keystrokes into commands on the view.
+events such as mouse, gesture and keystrokes into methods in the viewer.
 There are many callback functions that can be registered,
 allowing the user to create their own custom user interface for
 manipulating the view.
+
+``CanvasView`` connects various user interface events (mouse/cursor,
+keystrokes, etc.) with methods in the ``BindingMapper`` and ``Bindings``
+delegate objects to implement most of the user event handling logic.
+With this layered class construction combined with appropriate delegate
+objects, it is possible to minimize the widget specific code and reuse a
+large amount of code across widget sets and platforms.
+This architecture makes it a fairly simple process to port the basic Ginga
+functionality to a new widget set.  All that is required is that the new
+widget set have some kind of native widget that supports painting an RGB
+image (like a canvas or image widget) and a way to register for user
+interaction events on that widget.
 
 
 Graphics on Ginga
 =================
 
-.. _fig_imageviewcanvas:
+.. _fig-drawingcanvas:
 .. figure:: figures/class_structure_drawingcanvas.png
    :scale: 100%
    :figclass: h
 
    Class structure of Ginga ``DrawingCanvas`` class.
 
-Ginga's graphics are all rendered from objects placed on a
-``DrawingCanvas``.  All objects that can be put on a ``DrawingCanvas``
-are rooted in the ``CanvasObject`` type (including ``DrawingCanvas``
-itself).
+Ginga's graphics are all rendered from objects placed on a Ginga canvas,
+including images.
+A Ginga canvas is a bit different from other types of canvases used in
+other graphics programs. For one thing, it has no inherent color or
+scale in any type of unit; it acts as a container for other graphics
+objects that are stacked in a particular order.  A canvas itself is an
+object that can be placed on a canvas and so it is quite straightforward
+to have canvases nested in canvases or several canvases stacked together
+on one canvas, etc.
+The type of canvas that you will see used most frequently (primarily for
+its flexibility) is the ``DrawingCanvas``, so named because it not only
+allows all the typical objects to be placed on it, but it also has
+methods that allow the user to draw or edit objects interactively on it.
+The relationship of a viewer to a canvas is that the viewer displays
+a canvas with a certain scale, rotation, transformations, color-mapping,
+pan position, etc.  A canvas might be shared with another viewer which
+has different settings for those things.
+
+All objects that can be drawn by Ginga (e.g. placed in a canvas) are
+decended from the ``CanvasObjectBase`` type, and made by using
+subclasses or composing with mixin classes to derive new object types.
+We will use the general term "Ginga canvas objects" to describe these
+various entities.
+In Figure :ref:`fig-drawingcanvas` we can see that a ``DrawingCanvas``
+is a composite of a ``UIMixin`` (user-interface mixin), a
+``DrawingMixin`` and a ``Canvas``.  A ``Canvas`` in turn is a composite
+of a ``CanvasMixin`` and a ``CompoundObject``. A ``CompoundObject``
+is a composite of a ``CompoundMixin`` and a ``CanvasObjectBase``.
+
+Other Ginga canvas objects have a simpler pedigree. For example, a
+``Box`` is a composite of a ``OnePointTwoRadiusMixin`` and a
+``CanvasObjectBase``--so is an ``Ellipse``.  The use of these mixin
+classes allows common functionality and attributes to be shared where
+the similarities allow.
+
+For more information on canvases and canvas objects, refer to
+Chapter:ref:`_ch-canvas_graphics`.
 
 
 Miscellaneous Topics
@@ -267,6 +294,22 @@ The best place is probably by implementing ``pre_gui_config`` and
 registering it as shown above in that function.
 Once your loader is registered, you will be able to drag and drop files
 and use the reference viewers regular loading facilities to load your data.
+
+Changes to Ginga API in v4.0.0
+------------------------------
+Prior to Ginga v4.0.0, it was possible to use a *combination* viewer and
+canvas--a viewer object that acts also like a ginga canvas.  These were
+accessible via the `ImageViewCanvas*` classes.
+
+In Ginga v4.0.0 these "dual entity" classes have been removed, to
+simplify the code and clearly delineate the use of each kind of object:
+a viewer shows the contents of a canvas for some backend, whereas a
+canvas contains the items to be viewed (and can be shared by viewers).
+
+If you have legacy code that is making canvas API calls on the viewer,
+you simply need to use the `get_canvas()` method on the viewer to get the
+canvas object and then make the canvas API call on that.
+
 
 Porting Ginga to a New Widget Set
 ---------------------------------

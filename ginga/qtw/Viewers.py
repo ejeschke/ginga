@@ -1,5 +1,4 @@
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
-from ginga.qtw.ImageViewCanvasQt import ImageViewCanvas  # noqa
 from ginga.qtw import Widgets
 
 

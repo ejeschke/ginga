@@ -1,7 +1,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.web.pgw.ImageViewPg import CanvasView, ImageViewCanvas  # noqa
+from ginga.web.pgw.ImageViewPg import CanvasView
 from ginga.web.pgw import Widgets
 
 

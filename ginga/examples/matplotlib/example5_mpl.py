@@ -67,6 +67,7 @@ class MyGingaFigure(object):
 
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
+        canvas.set_draw_mode('draw')
         canvas.set_callback('button-press', self.btn_down)
         canvas.set_callback('button-release', self.btn_up)
         canvas.set_drawtype('point', color='cyan')

@@ -8,7 +8,6 @@ import sys
 from ginga import colors
 import ginga.toolkit as ginga_toolkit
 from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.util.toolbox import ModeIndicator
 from ginga.misc import log
 from ginga.util.loader import load_data
 
@@ -47,8 +46,8 @@ class FitsViewer(object):
         v1.set_bg(0.2, 0.2, 0.2)
         v1.ui_set_active(True)
         v1.set_name('tweedledee')
+        v1.show_mode_indicator(True)
         self.viewer1 = v1
-        self._mi1 = ModeIndicator(v1)
 
         bd = v1.get_bindings()
         bd.enable_all(True)
@@ -74,9 +73,9 @@ class FitsViewer(object):
         v2.set_callback('none-move', self.motion)
         v2.set_bg(0.2, 0.2, 0.2)
         v2.ui_set_active(True)
-        v1.set_name('tweedledum')
+        v2.set_name('tweedledum')
+        v2.show_mode_indicator(True)
         self.viewer2 = v2
-        self._mi2 = ModeIndicator(v2)
 
         # Tell viewer2 to use this same canvas
         v2.set_canvas(shcanvas)

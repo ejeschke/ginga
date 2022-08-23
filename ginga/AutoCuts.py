@@ -311,6 +311,18 @@ class AutoCutsBase(object):
 
 
 class Clip(AutoCutsBase):
+    """Calculate the cut levels as the minimum and maximum of the data.
+
+    The calculation is:
+        loval = min(sample_data)
+        hival = max(sample_data)
+
+    Parameters
+    ----------
+    logger : :py:class:`~logging.Logger`
+        Logger for tracing and debugging.
+
+    """
 
     def __init__(self, logger):
         super(Clip, self).__init__(logger)

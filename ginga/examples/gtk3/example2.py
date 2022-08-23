@@ -38,7 +38,7 @@ class FitsViewer(object):
 
         fi = CanvasView(logger, render=render)
         fi.enable_autocuts('on')
-        fi.set_autocut_params('histogram')
+        fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.set_zoom_algorithm('rate')
         fi.set_zoomrate(1.4)
@@ -57,13 +57,15 @@ class FitsViewer(object):
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_drawtype('rectangle', color='lightblue')
+        canvas.register_for_cursor_drawing(fi)
+        canvas.set_draw_mode('draw')
         canvas.set_surface(fi)
-        self.canvas = canvas
-        # add canvas to view
-        private_canvas = fi.get_canvas()
-        private_canvas.register_for_cursor_drawing(fi)
-        private_canvas.add(canvas)
         canvas.ui_set_active(True)
+        self.canvas = canvas
+
+        # add our new canvas to viewers default canvas
+        fi.get_canvas().add(canvas)
+
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 

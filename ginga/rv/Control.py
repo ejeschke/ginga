@@ -24,7 +24,6 @@ from ginga.misc import Bunch, Timer, Future
 from ginga.util import catalog, iohelper, loader, toolbox
 from ginga.util import viewer as gviewer
 from ginga.canvas.CanvasObject import drawCatalog
-from ginga.canvas.types.layer import DrawingCanvas
 
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager
@@ -1950,7 +1949,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def build_viewpane(self, settings, rgbmap=None, size=(1, 1)):
         # instantiate bindings loaded with users preferences
-        bclass = Viewers.ImageViewCanvas.bindingsClass
+        bclass = Viewers.CanvasView.bindingsClass
         bindprefs = self.prefs.create_category('bindings')
         bd = bclass(self.logger, settings=bindprefs)
 
@@ -1958,16 +1957,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if self.settings.get('use_opengl', False):
             wtype = 'opengl'
 
-        fi = Viewers.ImageViewCanvas(logger=self.logger,
-                                     rgbmap=rgbmap,
-                                     settings=settings,
-                                     render=wtype,
-                                     bindings=bd)
+        fi = Viewers.CanvasView(logger=self.logger,
+                                rgbmap=rgbmap,
+                                settings=settings,
+                                render=wtype,
+                                bindings=bd)
         fi.set_desired_size(size[0], size[1])
-
-        canvas = DrawingCanvas()
-        canvas.enable_draw(False)
-        fi.set_canvas(canvas)
 
         # check general settings for default value of enter_focus
         enter_focus = settings.get('enter_focus', None)
@@ -1979,11 +1974,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if focus_ind is None:
             focus_ind = self.settings.get('show_focus_indicator', False)
         fi.show_focus_indicator(focus_ind)
+        fi.show_mode_indicator(True, corner='lr')
         fi.use_image_profile = True
 
         fi.add_callback('cursor-changed', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
-        fi.add_callback('key-down-none', self.keypress)
+        fi.set_callback('key-down-none', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
         fi.ui_set_active(True, viewer=fi)
 

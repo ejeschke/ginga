@@ -43,6 +43,7 @@ class FitsViewer(QtGui.QMainWindow):
         #fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
+        fi.show_mode_indicator(True, corner='ur')
         fi.ui_set_active(True)
         fi.set_figure(fig)
         fi.show_mode_indicator(True, corner='ur')
