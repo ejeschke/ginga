@@ -58,51 +58,57 @@ class DistMode(Mode):
         self.onscreen_message(None)
 
     def _cycle_dist(self, viewer, msg, direction='down'):
-        if self.cancmap:
-            msg = self.settings.get('msg_dist', msg)
-            rgbmap = viewer.get_rgbmap()
-            algs = rgbmap.get_hash_algorithms()
-            algname = rgbmap.get_hash_algorithm()
-            idx = algs.index(algname)
-            if direction == 'down':
-                idx = (idx + 1) % len(algs)
-            else:
-                idx = idx - 1
-                if idx < 0:
-                    idx = len(algs) - 1
-            algname = algs[idx]
-            rgbmap.set_hash_algorithm(algname)
-            if msg:
-                self.onscreen_message("Color dist: %s" % (algname),
-                                      delay=1.0)
+        msg = self.settings.get('msg_dist', msg)
+        rgbmap = viewer.get_rgbmap()
+        algs = rgbmap.get_hash_algorithms()
+        algname = rgbmap.get_hash_algorithm()
+        idx = algs.index(algname)
+        if direction == 'down':
+            idx = (idx + 1) % len(algs)
+        else:
+            idx = idx - 1
+            if idx < 0:
+                idx = len(algs) - 1
+        algname = algs[idx]
+        rgbmap.set_hash_algorithm(algname)
+        if msg:
+            self.onscreen_message("Color dist: %s" % (algname),
+                                  delay=1.0)
 
     def _reset_dist(self, viewer, msg):
-        if self.cancmap:
-            msg = self.settings.get('msg_dist', msg)
-            rgbmap = viewer.get_rgbmap()
-            algname = 'linear'
-            rgbmap.set_hash_algorithm(algname)
-            if msg:
-                self.onscreen_message("Color dist: %s" % (algname),
-                                      delay=1.0)
+        msg = self.settings.get('msg_dist', msg)
+        rgbmap = viewer.get_rgbmap()
+        algname = 'linear'
+        rgbmap.set_hash_algorithm(algname)
+        if msg:
+            self.onscreen_message("Color dist: %s" % (algname),
+                                  delay=1.0)
 
     #####  KEYBOARD ACTION CALLBACKS #####
 
     def kp_dist(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._cycle_dist(viewer, msg)
-        return True
 
     def kp_dist_reset(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._reset_dist(viewer, msg)
-        return True
 
     def kp_dist_prev(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._cycle_dist(viewer, msg, direction='up')
-        return True
 
     def kp_dist_next(self, viewer, event, data_x, data_y, msg=True):
+        if not self.cancmap:
+            return False
+        event.accept()
         self._cycle_dist(viewer, msg, direction='down')
-        return True
 
     #####  SCROLL ACTION CALLBACKS #####
 
@@ -110,8 +116,10 @@ class DistMode(Mode):
         """Interactively change the color distribution algorithm
         by scrolling.
         """
+        if not self.cancmap:
+            return False
+        event.accept()
         direction = self.get_direction(event.direction)
         self._cycle_dist(viewer, msg, direction=direction)
-        return True
 
     #####  MOUSE ACTION CALLBACKS #####

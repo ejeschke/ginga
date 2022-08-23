@@ -325,13 +325,12 @@ class PanMode(Mode):
 
     def _sc_zoom(self, viewer, event, msg=True, origin=None):
         if not self.canzoom:
-            return True
+            return
 
         msg = self.settings.get('msg_zoom', msg)
 
         self.zoom_step(viewer, event, msg=msg, origin=origin,
                        adjust=1.5)
-        return True
 
     def _pinch_zoom_rotate(self, viewer, state, rot_deg, scale, msg=True,
                            origin=None):
@@ -342,7 +341,7 @@ class PanMode(Mode):
             if state == 'start':
                 self._start_scale_x, self._start_scale_y = viewer.get_scale_xy()
                 self._start_rot = viewer.get_rotation()
-                return True
+                return
 
             if origin is not None:
                 # get cartesian canvas coords of data item under cursor
@@ -387,68 +386,71 @@ class PanMode(Mode):
             if msg and (msg_str is not None):
                 self.onscreen_message(msg_str, delay=0.4)
 
-        return True
-
     #####  KEYBOARD ACTION CALLBACKS #####
 
     def kp_pan_set(self, viewer, event, data_x, data_y, msg=True):
         """Sets the pan position under the cursor."""
-        if self.canpan:
-            self._panset(viewer, data_x, data_y, msg=msg)
-        return True
+        if not self.canpan:
+            return False
+        event.accept()
+        self._panset(viewer, data_x, data_y, msg=msg)
 
     def kp_pan_zoom_set(self, viewer, event, data_x, data_y, msg=True):
         """Sets the pan position under the cursor."""
-        if self.canpan:
-            reg = 1
-            with viewer.suppress_redraw:
-                viewer.panset_xy(data_x, data_y)
-                scale_x, scale_y = self._save.get((viewer, 'scale', reg),
-                                                  (1.0, 1.0))
-                viewer.scale_to(scale_x, scale_y)
-        return True
+        if not self.canpan:
+            return False
+        event.accept()
+        reg = 1
+        with viewer.suppress_redraw:
+            viewer.panset_xy(data_x, data_y)
+            scale_x, scale_y = self._save.get((viewer, 'scale', reg),
+                                              (1.0, 1.0))
+            viewer.scale_to(scale_x, scale_y)
 
     def kp_pan_zoom_save(self, viewer, event, data_x, data_y, msg=True):
         """Save the current viewer scale for future use with
         kp_pan_zoom_set()."""
+        if not self.canpan:
+            return False
+        event.accept()
         reg = 1
         scale = viewer.get_scale_xy()
         self._save[(viewer, 'scale', reg)] = scale
         if msg:
             self.onscreen_message("Saved current scale", delay=0.5)
-        return True
 
     def kp_pan_left(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
+        event.accept()
         amt = self._get_key_pan_pct(event)
         viewer.pan_lr(amt, -0.1)
-        return True
 
     def kp_pan_right(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
+        event.accept()
         amt = self._get_key_pan_pct(event)
         viewer.pan_lr(amt, 0.1)
-        return True
 
     def kp_pan_up(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
+        event.accept()
         amt = self._get_key_pan_pct(event)
         viewer.pan_ud(amt, 0.1)
-        return True
 
     def kp_pan_down(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
+        event.accept()
         amt = self._get_key_pan_pct(event)
         viewer.pan_ud(amt, -0.1)
-        return True
 
     def kp_pan_page_up(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
+        event.accept()
         amt = self._get_key_pan_pct(event)
         pct = 1.0
         if 'ctrl' in event.modifiers:
@@ -457,11 +459,11 @@ class PanMode(Mode):
         else:
             # adjust Y axis
             viewer.pan_ud(amt, pct)
-        return True
 
     def kp_pan_page_down(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
+        event.accept()
         amt = self._get_key_pan_pct(event)
         pct = -1.0
         if 'ctrl' in event.modifiers:
@@ -470,9 +472,11 @@ class PanMode(Mode):
         else:
             # adjust Y axis
             viewer.pan_ud(amt, pct)
-        return True
 
     def kp_pan_home(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        event.accept()
         res = viewer.calc_pan_pct(pad=0)
         # 1.0 == max
         if 'ctrl' in event.modifiers:
@@ -483,6 +487,9 @@ class PanMode(Mode):
             viewer.pan_by_pct(res.pan_pct_x, 1.0)
 
     def kp_pan_end(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canpan:
+            return False
+        event.accept()
         res = viewer.calc_pan_pct(pad=0)
         # 0.0 == min
         if 'ctrl' in event.modifiers:
@@ -495,140 +502,145 @@ class PanMode(Mode):
     def kp_pan_px_xminus(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
+        event.accept()
         px_amt = self.settings.get('key_pan_px_delta', 1.0)
         viewer.pan_delta_px(-px_amt, 0.0)
-        return True
 
     def kp_pan_px_xplus(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
+        event.accept()
         px_amt = self.settings.get('key_pan_px_delta', 1.0)
         viewer.pan_delta_px(px_amt, 0.0)
-        return True
 
     def kp_pan_px_yminus(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
+        event.accept()
         px_amt = self.settings.get('key_pan_px_delta', 1.0)
         viewer.pan_delta_px(0.0, -px_amt)
-        return True
 
     def kp_pan_px_yplus(self, viewer, event, data_x, data_y, msg=True):
         if not self.canpan:
             return False
+        event.accept()
         px_amt = self.settings.get('key_pan_px_delta', 1.0)
         viewer.pan_delta_px(0.0, px_amt)
-        return True
 
     def kp_pan_px_center(self, viewer, event, data_x, data_y, msg=True):
         """This pans so that the cursor is over the center of the
         current pixel."""
         if not self.canpan:
             return False
+        event.accept()
         viewer.pan_center_px()
-        return True
 
     def kp_center(self, viewer, event, data_x, data_y):
-        if self.canpan:
-            viewer.center_image()
-        return True
+        if not self.canpan:
+            return False
+        event.accept()
+        viewer.center_image()
 
     def kp_zoom_out(self, viewer, event, data_x, data_y, msg=True):
-        if self.canzoom:
-            msg = self.settings.get('msg_zoom', msg)
-            viewer.zoom_out()
-            if msg:
-                self.onscreen_message(viewer.get_scale_text(),
-                                      delay=1.0)
-        return True
+        if not self.canzoom:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_zoom', msg)
+        viewer.zoom_out()
+        if msg:
+            self.onscreen_message(viewer.get_scale_text(), delay=1.0)
 
     def kp_zoom_in(self, viewer, event, data_x, data_y, msg=True):
-        if self.canzoom:
-            msg = self.settings.get('msg_zoom', msg)
-            viewer.zoom_in()
-            if msg:
-                self.onscreen_message(viewer.get_scale_text(),
-                                      delay=1.0)
-        return True
+        if not self.canzoom:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_zoom', msg)
+        viewer.zoom_in()
+        if msg:
+            self.onscreen_message(viewer.get_scale_text(), delay=1.0)
 
     def kp_zoom(self, viewer, event, data_x, data_y, msg=True):
-        if self.canzoom:
-            msg = self.settings.get('msg_zoom', msg)
-            keylist = self.settings.get('kp_zoom')
-            try:
-                zoomval = (keylist.index(event.key))
-            except IndexError:
-                return False
-            viewer.zoom_to(zoomval)
-            if msg:
-                self.onscreen_message(viewer.get_scale_text(),
-                                      delay=1.0)
-        return True
+        if not self.canzoom:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_zoom', msg)
+        keylist = self.settings.get('kp_zoom')
+        try:
+            zoomval = (keylist.index(event.key))
+        except IndexError:
+            return
+        viewer.zoom_to(zoomval)
+        if msg:
+            self.onscreen_message(viewer.get_scale_text(), delay=1.0)
 
     def kp_zoom_inv(self, viewer, event, data_x, data_y, msg=True):
-        if self.canzoom:
-            msg = self.settings.get('msg_zoom', msg)
-            keylist = self.settings.get('kp_zoom_inv')
-            try:
-                zoomval = - (keylist.index(event.key))
-            except IndexError:
-                return False
-            viewer.zoom_to(zoomval)
-            if msg:
-                self.onscreen_message(viewer.get_scale_text(),
-                                      delay=1.0)
-        return True
+        if not self.canzoom:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_zoom', msg)
+        keylist = self.settings.get('kp_zoom_inv')
+        try:
+            zoomval = - (keylist.index(event.key))
+        except IndexError:
+            return
+        viewer.zoom_to(zoomval)
+        if msg:
+            self.onscreen_message(viewer.get_scale_text(), delay=1.0)
 
     def kp_zoom_fit(self, viewer, event, data_x, data_y, msg=True):
-        if self.canzoom:
-            msg = self.settings.get('msg_zoom', msg)
-            viewer.zoom_fit()
-            if msg:
-                self.onscreen_message(viewer.get_scale_text(),
-                                      delay=1.0)
-        return True
+        if not self.canzoom:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_zoom', msg)
+        viewer.zoom_fit()
+        if msg:
+            self.onscreen_message(viewer.get_scale_text(), delay=1.0)
 
     def kp_autozoom_toggle(self, viewer, event, data_x, data_y, msg=True):
-        if self.canzoom:
-            msg = self.settings.get('msg_zoom', msg)
-            val = viewer.get_settings().get('autozoom')
-            if val == 'off':
-                val = 'on'
-            else:
-                val = 'off'
-            viewer.enable_autozoom(val)
-            if msg:
-                self.onscreen_message('Autozoom %s' % val, delay=1.0)
-        return True
+        if not self.canzoom:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_zoom', msg)
+        val = viewer.get_settings().get('autozoom')
+        if val == 'off':
+            val = 'on'
+        else:
+            val = 'off'
+        viewer.enable_autozoom(val)
+        if msg:
+            self.onscreen_message('Autozoom %s' % val, delay=1.0)
 
     def kp_autozoom_override(self, viewer, event, data_x, data_y, msg=True):
-        if self.canzoom:
-            msg = self.settings.get('msg_zoom', msg)
-            viewer.enable_autozoom('override')
-            if msg:
-                self.onscreen_message('Autozoom Override', delay=1.0)
-        return True
+        if not self.canzoom:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_zoom', msg)
+        viewer.enable_autozoom('override')
+        if msg:
+            self.onscreen_message('Autozoom Override', delay=1.0)
 
     def kp_autocenter_toggle(self, viewer, event, data_x, data_y, msg=True):
-        if self.canpan:
-            msg = self.settings.get('msg_pan', msg)
-            val = viewer.get_settings().get('autocenter')
-            if val == 'off':
-                val = 'on'
-            else:
-                val = 'off'
-            viewer.set_autocenter(val)
-            if msg:
-                self.onscreen_message('Autocenter %s' % val, delay=1.0)
-        return True
+        if not self.canpan:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_pan', msg)
+        val = viewer.get_settings().get('autocenter')
+        if val == 'off':
+            val = 'on'
+        else:
+            val = 'off'
+        viewer.set_autocenter(val)
+        if msg:
+            self.onscreen_message('Autocenter %s' % val, delay=1.0)
 
     def kp_autocenter_override(self, viewer, event, data_x, data_y, msg=True):
-        if self.canpan:
-            msg = self.settings.get('msg_pan', msg)
-            viewer.set_autocenter('override')
-            if msg:
-                self.onscreen_message('Autocenter Override', delay=1.0)
-        return True
+        if not self.canpan:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_pan', msg)
+        viewer.set_autocenter('override')
+        if msg:
+            self.onscreen_message('Autocenter Override', delay=1.0)
 
     #####  SCROLL ACTION CALLBACKS #####
 
@@ -636,49 +648,50 @@ class PanMode(Mode):
         """Interactively zoom the image by scrolling motion.
         This zooms by the zoom steps configured under Preferences.
         """
+        event.accept()
         self._sc_zoom(viewer, event, msg=msg, origin=None)
-        return True
 
     def sc_zoom_origin(self, viewer, event, msg=True):
         """Like sc_zoom(), but pans the image as well to keep the
         coordinate under the cursor in that same position relative
         to the window.
         """
+        event.accept()
         origin = (event.data_x, event.data_y)
         self._sc_zoom(viewer, event, msg=msg, origin=origin)
-        return True
 
     def sc_zoom_coarse(self, viewer, event, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
         """
         if not self.canzoom:
-            return True
+            return False
+        event.accept()
 
         zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
         # change scale by 20%
         amount = self._scale_adjust(1.2, event.amount, zoom_accel, max_limit=4.0)
         self._scale_image(viewer, event.direction, amount, msg=msg)
-        return True
 
     def sc_zoom_fine(self, viewer, event, msg=True):
         """Interactively zoom the image by scrolling motion.
         This zooms by adjusting the scale in x and y coarsely.
         """
         if not self.canzoom:
-            return True
+            return False
+        event.accept()
 
         zoom_accel = self.settings.get('scroll_zoom_acceleration', 1.0)
         # change scale by 5%
         amount = self._scale_adjust(1.05, event.amount, zoom_accel, max_limit=4.0)
         self._scale_image(viewer, event.direction, amount, msg=msg)
-        return True
 
     def sc_pan(self, viewer, event, msg=True):
         """Interactively pan the image by scrolling motion.
         """
         if not self.canpan:
-            return True
+            return False
+        event.accept()
 
         # User has "Pan Reverse" preference set?
         rev = self.settings.get('pan_reverse', False)
@@ -697,15 +710,20 @@ class PanMode(Mode):
         lock_y = self.settings.get('scroll_pan_lock_y', False)
 
         viewer.pan_omni(direction, amount, lock_x=lock_x, lock_y=lock_y)
-        return True
 
     def sc_pan_coarse(self, viewer, event, msg=True):
+        if not self.canpan:
+            return False
+        event.accept()
         event.amount = event.amount / 2.0
-        return self.sc_pan(viewer, event, msg=msg)
+        self.sc_pan(viewer, event, msg=msg)
 
     def sc_pan_fine(self, viewer, event, msg=True):
+        if not self.canpan:
+            return False
+        event.accept()
         event.amount = event.amount / 5.0
-        return self.sc_pan(viewer, event, msg=msg)
+        self.sc_pan(viewer, event, msg=msg)
 
     #####  MOUSE ACTION CALLBACKS #####
 
@@ -713,7 +731,8 @@ class PanMode(Mode):
         """Zoom the image by dragging the cursor left or right.
         """
         if not self.canzoom:
-            return True
+            return False
+        event.accept()
         msg = self.settings.get('msg_zoom', msg)
 
         x, y = self.get_win_xy(viewer)
@@ -729,7 +748,6 @@ class PanMode(Mode):
 
         else:
             self.onscreen_message(None)
-        return True
 
     def ms_pan(self, viewer, event, data_x, data_y):
         """A 'drag' or proportional pan, where the image is panned by
@@ -737,7 +755,8 @@ class PanMode(Mode):
         proportionate to the length of the drag.
         """
         if not self.canpan:
-            return True
+            return False
+        event.accept()
 
         x, y = viewer.get_last_win_xy()
         if event.state == 'move':
@@ -751,16 +770,17 @@ class PanMode(Mode):
 
         else:
             self.pan_stop(viewer)
-        return True
 
     def ms_panset(self, viewer, event, data_x, data_y,
                   msg=True):
         """An interactive way to set the pan position.  The location
         (data_x, data_y) will be centered in the window.
         """
-        if self.canpan and (event.state == 'down'):
+        if not self.canpan:
+            return False
+        event.accept()
+        if event.state == 'down':
             self._panset(viewer, data_x, data_y, msg=msg)
-        return True
 
     ##### GESTURE ACTION CALLBACKS #####
 
@@ -769,7 +789,8 @@ class PanMode(Mode):
         (the back end must support gestures)
         """
         if not self.canpan:
-            return True
+            return False
+        event.accept()
 
         method = 1
         x, y = viewer.get_last_win_xy()
@@ -832,20 +853,24 @@ class PanMode(Mode):
         else:
             self.pan_stop(viewer)
 
-        return True
-
     def pi_zoom(self, viewer, event, msg=True):
         """Zoom and/or rotate the viewer by a pinch gesture.
         (the back end must support gestures)
         """
-        return self._pinch_zoom_rotate(viewer, event.state, event.rot_deg,
-                                       event.scale, msg=msg)
+        if not self.canzoom:
+            return False
+        event.accept()
+        self._pinch_zoom_rotate(viewer, event.state, event.rot_deg,
+                                event.scale, msg=msg)
 
     def pi_zoom_origin(self, viewer, event, msg=True):
         """Like pi_zoom(), but pans the image as well to keep the
         coordinate under the cursor in that same position relative
         to the window.
         """
+        if not self.canzoom:
+            return False
+        event.accept()
         origin = (event.data_x, event.data_y)
-        return self._pinch_zoom_rotate(viewer, event.state, event.rot_deg,
-                                       event.scale, msg=msg, origin=origin)
+        self._pinch_zoom_rotate(viewer, event.state, event.rot_deg,
+                                event.scale, msg=msg, origin=origin)

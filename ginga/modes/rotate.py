@@ -140,75 +140,83 @@ class RotateMode(Mode):
     #####  KEYBOARD ACTION CALLBACKS #####
 
     def kp_flip_x(self, viewer, event, data_x, data_y, msg=True):
-        if self.canflip:
-            msg = self.settings.get('msg_transform', msg)
-            flipX, flipY, swapXY = viewer.get_transforms()
-            if event.key == '[':
-                flipx = not flipX
-            else:
-                flipx = False
-            viewer.transform(flipx, flipY, swapXY)
-            if msg:
-                self.onscreen_message("Flip X=%s" % flipx, delay=1.0)
-        return True
+        if not self.canflip:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_transform', msg)
+        flipX, flipY, swapXY = viewer.get_transforms()
+        if event.key == '[':
+            flipx = not flipX
+        else:
+            flipx = False
+        viewer.transform(flipx, flipY, swapXY)
+        if msg:
+            self.onscreen_message("Flip X=%s" % flipx, delay=1.0)
 
     def kp_flip_y(self, viewer, event, data_x, data_y, msg=True):
-        if self.canflip:
-            msg = self.settings.get('msg_transform', msg)
-            flipX, flipY, swapXY = viewer.get_transforms()
-            if event.key == ']':
-                flipy = not flipY
-            else:
-                flipy = False
-            viewer.transform(flipX, flipy, swapXY)
-            if msg:
-                self.onscreen_message("Flip Y=%s" % flipy, delay=1.0)
-        return True
+        if not self.canflip:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_transform', msg)
+        flipX, flipY, swapXY = viewer.get_transforms()
+        if event.key == ']':
+            flipy = not flipY
+        else:
+            flipy = False
+        viewer.transform(flipX, flipy, swapXY)
+        if msg:
+            self.onscreen_message("Flip Y=%s" % flipy, delay=1.0)
 
     def kp_swap_xy(self, viewer, event, data_x, data_y, msg=True):
-        if self.canflip:
-            msg = self.settings.get('msg_transform', msg)
-            flipX, flipY, swapXY = viewer.get_transforms()
-            if event.key == 'backslash':
-                swapxy = not swapXY
-            else:
-                swapxy = False
-            viewer.transform(flipX, flipY, swapxy)
-            if msg:
-                self.onscreen_message("Swap XY=%s" % swapxy, delay=1.0)
-        return True
+        if not self.canflip:
+            return False
+        event.accept()
+        msg = self.settings.get('msg_transform', msg)
+        flipX, flipY, swapXY = viewer.get_transforms()
+        if event.key == 'backslash':
+            swapxy = not swapXY
+        else:
+            swapxy = False
+        viewer.transform(flipX, flipY, swapxy)
+        if msg:
+            self.onscreen_message("Swap XY=%s" % swapxy, delay=1.0)
 
     def kp_transform_reset(self, viewer, event, data_x, data_y):
-        if self.canflip:
-            viewer.transform(False, False, False)
-            self.onscreen_message("Flips/swaps reset", delay=0.5)
-        return True
+        if not self.canflip:
+            return False
+        event.accept()
+        viewer.transform(False, False, False)
+        self.onscreen_message("Flips/swaps reset", delay=0.5)
 
     def kp_rotate_reset(self, viewer, event, data_x, data_y):
-        if self.canrotate:
-            viewer.rotate(0.0)
-        return True
+        if not self.canrotate:
+            return False
+        event.accept()
+        viewer.rotate(0.0)
 
     def kp_rotate_inc90(self, viewer, event, data_x, data_y, msg=True):
-        if self.canrotate:
-            self._rotate_inc(viewer, 90.0, msg=msg)
-        return True
+        if not self.canrotate:
+            return False
+        event.accept()
+        self._rotate_inc(viewer, 90.0, msg=msg)
 
     def kp_rotate_dec90(self, viewer, event, data_x, data_y, msg=True):
-        if self.canrotate:
-            self._rotate_inc(viewer, -90.0, msg=msg)
-        return True
+        if not self.canrotate:
+            return False
+        event.accept()
+        self._rotate_inc(viewer, -90.0, msg=msg)
 
     def kp_orient_lh(self, viewer, event, data_x, data_y, msg=True):
-        if self.canrotate:
-            self._orient(viewer, righthand=False, msg=msg)
-        return True
+        if not self.canrotate:
+            return False
+        event.accept()
+        self._orient(viewer, righthand=False, msg=msg)
 
-    def kp_orient_rh(self, viewer, event, data_x, data_y,
-                     msg=True):
-        if self.canrotate:
-            self._orient(viewer, righthand=True, msg=msg)
-        return True
+    def kp_orient_rh(self, viewer, event, data_x, data_y, msg=True):
+        if not self.canrotate:
+            return False
+        event.accept()
+        self._orient(viewer, righthand=True, msg=msg)
 
     #####  SCROLL ACTION CALLBACKS #####
 
@@ -218,7 +226,8 @@ class RotateMode(Mode):
         """Rotate the image by dragging the cursor left or right.
         """
         if not self.canrotate:
-            return True
+            return False
+        event.accept()
         msg = self.settings.get('msg_rotate', msg)
 
         x, y = self.get_win_xy(viewer)
@@ -235,17 +244,16 @@ class RotateMode(Mode):
 
         else:
             self.onscreen_message(None)
-        return True
 
     def ms_rotate_reset(self, viewer, event, data_x, data_y, msg=True):
         if not self.canrotate:
-            return True
+            return False
+        event.accept()
         msg = self.settings.get('msg_rotate', msg)
 
         if event.state == 'down':
             viewer.rotate(0.0)
             self.onscreen_message("Rotation reset", delay=0.5)
-        return True
 
     ##### GESTURE ACTION CALLBACKS #####
 
@@ -255,6 +263,9 @@ class RotateMode(Mode):
     # zoom as well via pinch.  There is no default binding for it.
     #
     def pi_rotate(self, viewer, state, rot_deg, msg=True):
+        if not self.canrotate:
+            return False
+        event.accept()
         if state == 'start':
             self._start_rot = viewer.get_rotation()
         else:
@@ -270,4 +281,3 @@ class RotateMode(Mode):
 
             if msg and (msg_str is not None):
                 self.onscreen_message(msg_str, delay=0.4)
-        return True

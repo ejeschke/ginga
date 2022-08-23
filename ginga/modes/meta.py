@@ -54,6 +54,7 @@ class MetaMode(Mode):
         self.onscreen_message(None)
 
     def kp_reset(self, viewer, event, data_x, data_y):
+        event.accept()
         bm = viewer.get_bindmap()
         bm.reset_mode(viewer)
         viewer.onscreen_message(None)
@@ -75,11 +76,11 @@ class MetaMode(Mode):
         bm.set_mode(mode_name, mode_type=mode_type)
 
     def kp_lock(self, viewer, event, data_x, data_y):
+        event.accept()
         self._toggle_lock(viewer, 'locked')
-        return True
 
     def kp_save_profile(self, viewer, event, data_x, data_y, msg=True):
+        event.accept()
         viewer.checkpoint_profile()
         if msg:
             viewer.onscreen_message("Profile saved", delay=0.5)
-        return True

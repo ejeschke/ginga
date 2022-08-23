@@ -258,7 +258,7 @@ class ImageViewBindings(object):
                 # keyboard event
                 event = 'keydown-%s' % (evname)
                 viewer.enable_callback(event)
-                if cb_method is not None:
+                if cb_method is not None and viewer.num_callbacks(event) == 0:
                     viewer.add_callback(event, cb_method)
 
             elif pfx == 'ms_':
@@ -266,28 +266,28 @@ class ImageViewBindings(object):
                 for action in ('down', 'move', 'up'):
                     event = '%s-%s' % (evname, action)
                     viewer.enable_callback(event)
-                    if cb_method is not None:
+                    if cb_method is not None and viewer.num_callbacks(event) == 0:
                         viewer.add_callback(event, cb_method)
 
             elif pfx == 'sc_':
                 # scrolling event
                 event = '%s-scroll' % evname
                 viewer.enable_callback(event)
-                if cb_method is not None:
+                if cb_method is not None and viewer.num_callbacks(event) == 0:
                     viewer.add_callback(event, cb_method)
 
             elif pfx == 'pi_':
                 # pinch event
                 event = '%s-pinch' % evname
                 viewer.enable_callback(event)
-                if cb_method is not None:
+                if cb_method is not None and viewer.num_callbacks(event) == 0:
                     viewer.add_callback(event, cb_method)
 
             elif pfx == 'pa_':
                 # pan event
                 event = '%s-pan' % evname
                 viewer.enable_callback(event)
-                if cb_method is not None:
+                if cb_method is not None and viewer.num_callbacks(event) == 0:
                     viewer.add_callback(event, cb_method)
 
     def reset(self, viewer):
@@ -908,12 +908,13 @@ class BindingMapper(Callback.Callbacks):
 
         if not event.was_handled() and not res:
             # no response for this canvas or mode, try non-mode entry
-            idx = (None, self._empty_set, trigger)
+            idx = (None, self._modifiers, trigger)
             if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = 'keydown-%s' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event,
                                                last_x, last_y)
+        return True
 
     def window_key_release(self, viewer, keyname):
         self.logger.debug("keyname=%s" % (keyname))
@@ -946,6 +947,8 @@ class BindingMapper(Callback.Callbacks):
             else:
                 idx = (self._kbdmode, self._empty_set, trigger)
                 if idx in self.eventmap:
+                    # TEMP: hack to get around the issue of how keynames
+                    # are generated--shifted characters with no modifiers
                     emap = self.eventmap[idx]
                     cbname = 'keyup-%s' % (emap.name)
 
@@ -957,12 +960,13 @@ class BindingMapper(Callback.Callbacks):
 
         if not event.was_handled() and not res:
             # no response for this canvas or mode, try non-mode entry
-            idx = (None, self._empty_set, trigger)
+            idx = (None, self._modifiers, trigger)
             if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = 'keyup-%s' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event,
                                                last_x, last_y)
+        return True
 
     def window_button_press(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d btncode=%s" % (data_x, data_y,
@@ -1004,6 +1008,7 @@ class BindingMapper(Callback.Callbacks):
                 cbname = '%s-down' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event,
                                                data_x, data_y)
+        return True
 
     def window_motion(self, viewer, btncode, data_x, data_y):
 
@@ -1042,6 +1047,7 @@ class BindingMapper(Callback.Callbacks):
                 cbname = '%s-move' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event,
                                                data_x, data_y)
+        return True
 
     def window_button_release(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d button=%s" % (data_x, data_y,
@@ -1083,6 +1089,7 @@ class BindingMapper(Callback.Callbacks):
                 cbname = '%s-up' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event,
                                                data_x, data_y)
+        return True
 
     def window_scroll(self, viewer, direction, amount, data_x, data_y):
         trigger = 'sc_scroll'
@@ -1112,6 +1119,7 @@ class BindingMapper(Callback.Callbacks):
                 emap = self.eventmap[idx]
                 cbname = '%s-scroll' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event)
+        return True
 
     def window_pinch(self, viewer, state, rot_deg, scale):
         btncode = 0
@@ -1150,6 +1158,7 @@ class BindingMapper(Callback.Callbacks):
                 emap = self.eventmap[idx]
                 cbname = '%s-pinch' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event)
+        return True
 
     def window_pan(self, viewer, state, delta_x, delta_y):
         btncode = 0
@@ -1188,3 +1197,4 @@ class BindingMapper(Callback.Callbacks):
                 emap = self.eventmap[idx]
                 cbname = '%s-pan' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event)
+        return True

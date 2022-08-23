@@ -91,14 +91,14 @@ class NaxisMode(Mode):
     #####  KEYBOARD ACTION CALLBACKS #####
 
     def kp_naxis_up(self, viewer, event, data_x, data_y, msg=True):
+        event.accept()
         self.axis += 1
         self._nav_naxis(viewer, self.axis, 'same', msg=msg)
-        return True
 
     def kp_naxis_dn(self, viewer, event, data_x, data_y, msg=True):
+        event.accept()
         self.axis -= 1
         self._nav_naxis(viewer, self.axis, 'same', msg=msg)
-        return True
 
     #####  SCROLL ACTION CALLBACKS #####
 
@@ -106,15 +106,16 @@ class NaxisMode(Mode):
         """Interactively change the slice of the image in a data cube
         by scrolling.
         """
+        event.accept()
         direction = self.get_direction(event.direction)
 
         self._nav_naxis(viewer, self.axis, direction, msg=msg)
-        return True
 
     def sc_naxis_axis(self, viewer, event, msg=True):
         """Interactively change the slice of the image in a data cube
         by scrolling.
         """
+        event.accept()
         direction = self.get_direction(event.direction)
         if direction == 'up':
             self.axis += 1
@@ -122,24 +123,24 @@ class NaxisMode(Mode):
             self.axis -= 1
 
         self._nav_naxis(viewer, self.axis, 'same', msg=msg)
-        return True
 
     #####  MOUSE ACTION CALLBACKS #####
 
     def ms_naxis(self, viewer, event, data_x, data_y, msg=True):
 
+        event.accept()
         x, y = self.get_win_xy(viewer)
 
         image = viewer.get_image()
         if image is None:
             self.onscreen_message("No image", delay=1.0)
-            return True
+            return
 
         # which axis (in FITS NAXIS terminology)
         if self.axis < 3 or self.axis > len(image.axisdim):
             # attempting to access a non-existant axis
             self.onscreen_message("Bad axis: %d" % (self.axis), delay=1.0)
-            return True
+            return
 
         _axis = len(image.axisdim) - self.axis
         axis_lim = image.axisdim[_axis]
@@ -156,20 +157,18 @@ class NaxisMode(Mode):
                 self.onscreen_message("axis: %d  slice: %d" % (self.axis, idx),
                                       delay=1.0)
 
-        return True
-
     ##### GESTURE ACTION CALLBACKS #####
 
     def pa_naxis(self, viewer, event, msg=True):
         """Interactively change the slice of the image in a data cube
         by pan gesture.
         """
+        event.accept()
         event = self._pa_synth_scroll_event(event)
         if event.state != 'move':
-            return True
+            return
 
         # TODO: be able to pick axis
         direction = self.get_direction(event.direction)
 
         self._nav_naxis(viewer, self.axis, direction, msg=msg)
-        return True
