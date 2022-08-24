@@ -894,10 +894,10 @@ class BindingMapper(Callback.Callbacks):
                 emap = self.eventmap[idx]
                 cbname = 'keydown-%s' % (emap.name)
             else:
+                # TEMP: hack to get around the issue of how keynames
+                # are generated--shifted characters with no modifiers
                 idx = (self._kbdmode, self._empty_set, trigger)
                 if idx in self.eventmap:
-                    # TEMP: hack to get around the issue of how keynames
-                    # are generated--shifted characters with no modifiers
                     emap = self.eventmap[idx]
                     cbname = 'keydown-%s' % (emap.name)
                 else:
@@ -914,6 +914,16 @@ class BindingMapper(Callback.Callbacks):
                 cbname = 'keydown-%s' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event,
                                                last_x, last_y)
+            else:
+                # TEMP: hack to get around the issue of how keynames
+                # are generated--shifted characters with no modifiers
+                idx = (None, self._empty_set, trigger)
+                if idx in self.eventmap:
+                    emap = self.eventmap[idx]
+                    cbname = 'keydown-%s' % (emap.name)
+                    viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                                   last_x, last_y)
+
         return True
 
     def window_key_release(self, viewer, keyname):
@@ -945,10 +955,10 @@ class BindingMapper(Callback.Callbacks):
                 cbname = 'keyup-%s' % (emap.name)
 
             else:
+                # TEMP: hack to get around the issue of how keynames
+                # are generated--shifted characters with no modifiers
                 idx = (self._kbdmode, self._empty_set, trigger)
                 if idx in self.eventmap:
-                    # TEMP: hack to get around the issue of how keynames
-                    # are generated--shifted characters with no modifiers
                     emap = self.eventmap[idx]
                     cbname = 'keyup-%s' % (emap.name)
 
@@ -966,6 +976,15 @@ class BindingMapper(Callback.Callbacks):
                 cbname = 'keyup-%s' % (emap.name)
                 viewer.make_ui_callback_viewer(viewer, cbname, event,
                                                last_x, last_y)
+            else:
+                # TEMP: hack to get around the issue of how keynames
+                # are generated--shifted characters with no modifiers
+                idx = (None, self._empty_set, trigger)
+                if idx in self.eventmap:
+                    emap = self.eventmap[idx]
+                    cbname = 'keyup-%s' % (emap.name)
+                    viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                                   last_x, last_y)
         return True
 
     def window_button_press(self, viewer, btncode, data_x, data_y):

@@ -27,8 +27,8 @@ Default bindings in mode
 * singlequote : set auto fit for new images to "override" in this viewer
 * p : pan to the position under the cursor
 * c : pan to the center of the image
-* z : save pan (and zoom) position
-* 1 : restore saved pan (and zoom) position
+* z : save zoom level (scale)
+* r : pan to cursor and zoom to saved scale level
 * left/right/up/down arrow : pan left/right/up/down by a small percentage
 * Shift + left/right/up/down arrow : pan left/right/up/down by a
   very small percentage
@@ -62,7 +62,7 @@ class PanMode(Mode):
             kp_autozoom_toggle=['doublequote', 'pan+doublequote'],
             kp_autozoom_override=['singlequote', 'pan+singlequote'],
             kp_pan_set=['p', 'pan+p'],
-            kp_pan_zoom_set=['pan+1'],
+            kp_pan_zoom_set=['pan+r'],
             kp_pan_zoom_save=['pan+z'],
             kp_pan_left=['pan+*+left'],
             kp_pan_right=['pan+*+right'],

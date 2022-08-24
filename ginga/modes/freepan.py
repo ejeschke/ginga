@@ -40,7 +40,7 @@ class FreePanMode(PanMode):
 
             kp_zoom_fit=['freepan+backquote'],
             kp_pan_set=['freepan+p'],
-            kp_pan_zoom_set=['freepan+1'],
+            kp_pan_zoom_set=['freepan+r'],
             kp_pan_zoom_save=['freepan+z'],
             kp_pan_left=['freepan+*+left'],
             kp_pan_right=['freepan+*+right'],
