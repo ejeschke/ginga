@@ -17,11 +17,13 @@ Exit the mode by
 
 Default bindings in mode
 ------------------------
-* "[", "{" : flip the image in the X axis
-* "]", "}" : flip the image in the Y axis
-* backslash, "|" : swap the X and Y axes
-* R : reset rotation to 0 deg
-  Does not reset any flips or swaps
+* "[" : (toggle) flip the image in the X axis
+* "{" : Restore the X axis
+* "]" : (toggle) flip the image in the Y axis
+* "}" : Restore the Y axis
+* backslash : (toggle) swap the X and Y axes
+* "|" : Restore the swapped axes to normal
+* R : reset rotation to 0 deg (does not reset any flips or swaps)
 * t : resets any flips or swaps
 * period : rotate image incrementally by +90 deg
 * comma : rotate image by incrementally -90 deg

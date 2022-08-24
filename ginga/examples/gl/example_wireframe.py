@@ -24,7 +24,7 @@ from ginga.qtw.ImageViewQt import CanvasView  # noqa
 from ginga.canvas.CanvasObject import get_canvas_types  # noqa
 from ginga.canvas import transform  # noqa
 from ginga.misc import log  # noqa
-from ginga.Bindings import KeyEvent
+
 
 class Viewer(object):
 
