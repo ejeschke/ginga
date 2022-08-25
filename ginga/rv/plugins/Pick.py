@@ -40,19 +40,13 @@ determine what operation is being done to the pick area:
 * If "edit" is selected, then you can edit the pick area by dragging its
   control points, or moving it by dragging in the bounding box.
 
-After the area is moved, drawn or edited, ``Pick`` will perform one of three
-actions:
+After the area is moved, drawn or edited, ``Pick`` will search the area
+for all peaks and evaluate the peaks based on the criteria in the
+"Settings" tab of the UI (see "The Settings Tab" below) and try to locate
+the best candidate matching the settings.
 
-1. In "Quick Mode" ON, with "From Peak" OFF, it will simply attempt to
-   perform a calculation based on the coordinate under the crosshair in
-   the center of the pick area.
-2. In "Quick Mode" ON, with "From Peak" ON, it will perform a quick
-   detection of peaks in the pick area and perform a calculation on the
-   first one found, using the peak's coordinates.
-3. In "Quick Mode" OFF, it will search the area for all peaks and
-   evaluate the peaks based on the criteria in the "Settings" tab of the UI
-   (see "The Settings Tab" below) and try to locate the best candidate
-   matching the settings.
+.. note:: the "Quick Mode" and "From Peak" checkboxes were removed in
+          Ginga release v4.0.
 
 **If a candidate is found**
 
@@ -148,10 +142,6 @@ There are two buttons and three check boxes in this tab:
   shape and size.
 * The "Pan to pick" button will pan the channel viewer to the
   located center.
-* The "Quick Mode" check box toggles "Quick Mode" on and off.
-  This affects the behavior of the pick region as described above.
-* The "From Peak" check box changes the behavior of "Quick Mode" slightly
-  as described above.
 * If "Center on pick" is checked, the shape will be recentered on the
   located center, if found (i.e., the shape "tracks" the pick).
 
@@ -415,8 +405,6 @@ class Pick(GingaPlugin.LocalPlugin):
         if self.pickshape not in self.drawtypes:
             self.pickshape = 'box'
         self.candidate_color = self.settings.get('color_candidate', 'orange')
-        self.quick_mode = self.settings.get('quick_mode', False)
-        self.from_peak = self.settings.get('quick_from_peak', True)
 
         # Peak finding parameters and selection criteria
         self.max_side = self.settings.get('max_side', 1024)
@@ -624,8 +612,8 @@ class Pick(GingaPlugin.LocalPlugin):
 
         # Build report panel
         captions = (('Zoom:', 'label', 'Zoom', 'llabel'),
-                    ('Object_X', 'label', 'Object_X', 'llabel',
-                     'Object_Y', 'label', 'Object_Y', 'llabel'),
+                    ('Object_X:', 'label', 'Object_X', 'llabel',
+                     'Object_Y:', 'label', 'Object_Y', 'llabel'),
                     ('RA:', 'label', 'RA', 'llabel',
                      'DEC:', 'label', 'DEC', 'llabel'),
                     ('Equinox:', 'label', 'Equinox', 'llabel',
@@ -640,7 +628,7 @@ class Pick(GingaPlugin.LocalPlugin):
                      'EE (sq):', 'label', 'Ensquared energy', 'llabel'),
                     ('Sample Area:', 'label', 'Sample Area', 'llabel',
                      'Default Region', 'button', 'Pan to pick', 'button'),
-                    ('Quick Mode', 'checkbutton', 'From Peak', 'checkbutton',
+                    ('_c1', 'spacer', '_c2', 'spacer',
                      'Center on pick', 'checkbutton'),
                     )
 
@@ -656,23 +644,6 @@ class Pick(GingaPlugin.LocalPlugin):
         b.pan_to_pick.add_callback('activated',
                                    lambda w: self.pan_to_pick_cb())
         b.pan_to_pick.set_tooltip("Pan image to pick center")
-        b.quick_mode.set_tooltip("Turn Quick Mode on or off.\n"
-                                 "ON: Pick object manually ('From Peak' off)\n"
-                                 "or simply evaluate first peak found\n"
-                                 "in pick region ('From Peak' on).\n"
-                                 "OFF: Compare all peaks against selection\n"
-                                 "criteria (Settings) to avoid objects\n"
-                                 "and/or find 'best' peak.")
-        b.quick_mode.add_callback('activated', self.quick_mode_cb)
-        b.quick_mode.set_state(self.quick_mode)
-        b.from_peak.set_tooltip("In quick mode, calculate from any peak\n"
-                                "found (on), or simply calculate from the\n"
-                                "center of pick shape (off).")
-        b.from_peak.add_callback('activated', self.from_peak_cb)
-        b.from_peak.set_state(self.from_peak)
-        ## b.drag_only.set_tooltip("In quick mode, require cursor press or follow cursor")
-        ## b.drag_only.add_callback('activated', self.drag_only_cb)
-        ## b.drag_only.set_state(self.drag_only)
         b.center_on_pick.add_callback('activated', self.center_on_pick_cb)
         b.center_on_pick.set_state(self.center_on_pick)
         b.center_on_pick.set_tooltip("When peak is found, center shape\n"
@@ -1321,13 +1292,9 @@ class Pick(GingaPlugin.LocalPlugin):
         self.fv.show_status("")
 
     def redo_manual(self):
-        if self.quick_mode:
-            self.redo_quick()
-            self.calc_quick()
-        else:
-            serialnum = self.bump_serial()
-            self.ev_intr.set()
-            self._redo(serialnum)
+        serialnum = self.bump_serial()
+        self.ev_intr.set()
+        self._redo(serialnum)
 
     def redo(self):
         serialnum = self.bump_serial()
@@ -1673,76 +1640,6 @@ class Pick(GingaPlugin.LocalPlugin):
     def eval_intr(self):
         self.ev_intr.set()
 
-    def redo_quick(self):
-        vip_img = self.fitsimage.get_vip()
-
-        obj = self.pick_obj
-        if obj is None:
-            return
-        shape = obj.objects[0]
-
-        x1, y1, x2, y2, data = self.cutdetail(vip_img, shape)
-        self.pick_x1, self.pick_y1 = x1, y1
-        self.pick_data = data
-
-    def calc_quick(self):
-        if self.pick_data is None:
-            return
-
-        # examine cut area
-        data, x1, y1 = self.pick_data, self.pick_x1, self.pick_y1
-        ht, wd = data.shape[:2]
-        xc, yc = wd // 2, ht // 2
-        radius = min(xc, yc)
-        peaks = [(xc, yc)]
-
-        with_peak = self.w.from_peak.get_state()
-        if with_peak:
-            # find the peak in the area, if possible, and calc from that
-            try:
-                peaks = self.iqcalc.find_bright_peaks(data,
-                                                      threshold=self.threshold,
-                                                      radius=radius)
-            except Exception as e:
-                self.logger.debug("no peaks found in data--using center")
-
-            if len(peaks) > 0:
-                xc, yc = peaks[0]
-
-        self.pickcenter.x = xc
-        self.pickcenter.y = yc
-        self.pickcenter.color = 'red'
-        msg = qs = None
-
-        try:
-            radius = int(round(radius))
-            objlist = self.iqcalc.evaluate_peaks(peaks, data,
-                                                 fwhm_radius=radius,
-                                                 fwhm_method=self.fwhm_alg)
-
-            num_candidates = len(objlist)
-            if num_candidates == 0:
-                raise Exception("Error calculating image quality")
-
-            # Add back in offsets into image to get correct values with
-            # respect to the entire image
-            qs = objlist[0]
-            qs.x += x1
-            qs.y += y1
-            if qs.objx is not None:
-                qs.objx += x1
-                qs.objy += y1
-            if qs.oid_x is not None:
-                qs.oid_x += x1
-                qs.oid_y += y1
-
-        except Exception as e:
-            msg = str(e)
-            self.update_status(msg)
-
-        self.fv.gui_do(self.update_pick, 0, objlist, qs,
-                       x1, y1, wd, ht, data, self.pick_obj, msg)
-
     def draw_cb(self, canvas, tag):
         obj = canvas.get_object_by_tag(tag)
         canvas.delete_object_by_tag(tag)
@@ -1980,9 +1877,6 @@ class Pick(GingaPlugin.LocalPlugin):
             shape.move_to(data_x, data_y)
             self.canvas.update_canvas()
 
-            if self.quick_mode:
-                self.redo_quick()
-
         else:
             # No object yet? Add a default one.
             self.set_drawtype('box')
@@ -2008,9 +1902,6 @@ class Pick(GingaPlugin.LocalPlugin):
             shape = obj.objects[0]
             shape.move_to(data_x, data_y)
             self.canvas.update_canvas()
-
-            if self.quick_mode:
-                self.redo_quick()
             return True
 
         return False
@@ -2035,14 +1926,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.canvas.set_draw_mode(mode)
             if mode == 'edit':
                 self.edit_select_pick()
-        return True
-
-    def quick_mode_cb(self, w, tf):
-        self.quick_mode = tf
-        return True
-
-    def from_peak_cb(self, w, tf):
-        self.from_peak = tf
         return True
 
     def center_on_pick_cb(self, w, tf):

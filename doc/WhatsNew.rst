@@ -13,6 +13,8 @@ Ver 4.0.0 (unreleased)
   keystrokes that had a default binding would take precedence.
   Now such bindings are only executed if the event is not handled by any
   active canvas bindings.
+- Removed the "Quick Mode" and "From Peak" options in the Pick plugin
+  to simplify operation.
 
 Ver 3.4.0 (2022-06-28)
 ======================
