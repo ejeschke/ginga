@@ -14,7 +14,7 @@ import numpy as np
 
 from ginga.misc import Bunch, Callback
 from ginga.fonts import font_asst
-import ginga.icons
+from ginga.util.paths import icondir
 import ginga.toolkit
 
 import gi
@@ -27,9 +27,6 @@ from gi.repository import Pango  # noqa
 import cairo
 
 ginga.toolkit.use('gtk3')
-
-# path to our icons
-icondir = os.path.split(ginga.icons.__file__)[0]
 
 DND_TARGET_TYPE_TEXT = 0
 DND_TARGET_TYPE_URIS = 1

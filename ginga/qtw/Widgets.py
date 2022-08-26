@@ -13,7 +13,7 @@ from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch, Settings, LineHistory
-import ginga.icons
+from ginga.util.paths import icondir
 
 has_webkit = False
 try:
@@ -33,9 +33,6 @@ __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'Dialog', 'SaveDialog', 'DragPackage',
            'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
            'has_webkit']
-
-# path to our icons
-icondir = os.path.split(ginga.icons.__file__)[0]
 
 
 class WidgetError(Exception):
@@ -1900,8 +1897,9 @@ class MDIWindow(TopLevelMixin, WidgetBase):
         WidgetBase.__init__(self)
         self.parent = parent
         w = QtGui.QMdiSubWindow(parent.get_widget())
-        # remove Qt logo from subwindow
-        w.setWindowIcon(QIcon(QPixmap(1, 1)))
+        # replace Qt logo from subwindow
+        ginga_icon = os.path.join(icondir, "ginga.svg")
+        w.setWindowIcon(QIcon(ginga_icon))
         self.widget = w
 
         child_w = child.get_widget()
@@ -1979,6 +1977,8 @@ class TopLevel(TopLevelMixin, ContainerBase):
         ContainerBase.__init__(self)
 
         widget = QtHelp.TopLevel()
+        ginga_icon = os.path.join(icondir, "ginga.svg")
+        widget.setWindowIcon(QIcon(ginga_icon))
         self.widget = widget
         box = QtGui.QVBoxLayout()
         box.setContentsMargins(0, 0, 0, 0)
