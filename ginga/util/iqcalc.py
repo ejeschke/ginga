@@ -719,7 +719,7 @@ class IQCalc(object):
 
     # EVALUATION ON A FIELD
 
-    def evaluate_peaks(self, peaks, data, bright_radius=2, fwhm_radius=15,
+    def evaluate_peaks(self, peaks, data, fwhm_radius=15,
                        fwhm_method='gaussian', ee_total_radius=10,
                        cb_fn=None, ev_intr=None):
         """Evaluate photometry for given peaks in data array.
@@ -731,9 +731,6 @@ class IQCalc(object):
 
         data : array-like
             Data array that goes with the given peaks.
-
-        bright_radius : int
-            **This is not used.**
 
         fwhm_radius, fwhm_method
             See :meth:`get_fwhm`.
@@ -749,6 +746,9 @@ class IQCalc(object):
 
         ev_intr : :py:class:`threading.Event` or `None`
             For threading, if applicable.
+
+        .. note:: unused parameter `bright_radius` was removed in
+                  release 4.0
 
         Returns
         -------
@@ -929,7 +929,7 @@ class IQCalc(object):
         results.sort(key=self._sortkey, reverse=True)
         return results
 
-    def pick_field(self, data, peak_radius=5, bright_radius=2, fwhm_radius=15,
+    def pick_field(self, data, peak_radius=5, fwhm_radius=15,
                    threshold=None,
                    minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
                    edgew=0.01, ee_total_radius=10):
@@ -943,11 +943,14 @@ class IQCalc(object):
         peak_radius, threshold
             See :meth:`find_bright_peaks`.
 
-        bright_radius, fwhm_radius, ee_total_radius
+        fwhm_radius, ee_total_radius
             See :meth:`evaluate_peaks`.
 
         minfwhm, maxfwhm, minelipse, edgew
             See :meth:`objlist_select`.
+
+        .. note:: unused parameter `bright_radius` was removed in
+                  release 4.0
 
         Returns
         -------
@@ -972,7 +975,6 @@ class IQCalc(object):
 
         # Evaluate those peaks
         objlist = self.evaluate_peaks(peaks, data,
-                                      bright_radius=bright_radius,
                                       fwhm_radius=fwhm_radius,
                                       ee_total_radius=ee_total_radius)
         if len(objlist) == 0:
@@ -987,7 +989,7 @@ class IQCalc(object):
         return results[0]
 
     def qualsize(self, image, x1=None, y1=None, x2=None, y2=None,
-                 radius=5, bright_radius=2, fwhm_radius=15, threshold=None,
+                 radius=5, fwhm_radius=15, threshold=None,
                  minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
                  edgew=0.01, ee_total_radius=10):
         """Run :meth:`pick_field` on the given image.
@@ -1003,11 +1005,14 @@ class IQCalc(object):
         radius, threshold
             See :meth:`find_bright_peaks`.
 
-        bright_radius, fwhm_radius, ee_total_radius
+        fwhm_radius, ee_total_radius
             See :meth:`evaluate_peaks`.
 
         minfwhm, maxfwhm, minelipse, edgew
             See :meth:`objlist_select`.
+
+        .. note:: unused parameter `bright_radius` was removed in
+                  release 4.0
 
         Returns
         -------
@@ -1029,7 +1034,6 @@ class IQCalc(object):
         data = image.cutout_data(x1, y1, x2, y2, astype=float)
 
         qs = self.pick_field(data, peak_radius=radius,
-                             bright_radius=bright_radius,
                              fwhm_radius=fwhm_radius,
                              threshold=threshold,
                              minfwhm=minfwhm, maxfwhm=maxfwhm,
