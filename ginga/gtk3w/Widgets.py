@@ -2207,6 +2207,8 @@ class TopLevel(TopLevelMixin, ContainerBase):
         self._fullscreen = False
 
         widget = GtkHelp.TopLevel()
+        ginga_icon = os.path.join(icondir, "ginga.svg")
+        widget.set_icon(GtkHelp.get_icon(ginga_icon))
         self.widget = widget
         widget.set_border_width(0)
 
