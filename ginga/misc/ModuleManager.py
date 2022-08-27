@@ -84,11 +84,3 @@ class ModuleManager(object):
 
         except KeyError:
             return sys.modules[module_name]
-
-    ########################################################
-    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
-
-    loadModule = load_module
-    getModule = get_module
-
-# END

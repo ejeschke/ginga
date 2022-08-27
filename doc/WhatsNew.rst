@@ -15,6 +15,8 @@ Ver 4.0.0 (unreleased)
   active canvas bindings.
 - Removed the "Quick Mode" and "From Peak" options in the Pick plugin
   to simplify operation.
+- Many deprecated camelcase (non-PEP8) methods were removed. Use the
+  "snake-case" names instead.
 
 Ver 3.4.0 (2022-06-28)
 ======================

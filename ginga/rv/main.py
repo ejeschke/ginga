@@ -272,9 +272,6 @@ class ReferenceViewer(object):
         add_argument("--numthreads", dest="numthreads", type=int,
                      default=30, metavar="NUM",
                      help="Start NUM threads in thread pool")
-        add_argument("--opencv", dest="opencv", default=False,
-                     action="store_true",
-                     help="Use OpenCv acceleration")
         add_argument("--opengl", dest="opengl", default=False,
                      action="store_true",
                      help="Use OpenGL acceleration")
@@ -455,11 +452,6 @@ class ReferenceViewer(object):
         except Exception as e:
             logger.warning(
                 "failed to set FITS package preference '{}': {}".format(fitspkg, e))
-
-        # Check whether user specified deprecated --opencv option
-        if options.opencv:
-            logger.warning("--opencv switch is deprecated; "
-                           "OpenCv will be used by default if installed")
 
         if options.opengl:
             settings.set(use_opengl=True)
@@ -711,32 +703,6 @@ class ReferenceViewer(object):
             ev_quit.set()
 
         sys.exit(0)
-
-    # TO BE DEPRECATED-- DO NOT USE!!!
-
-    def add_global_plugin_spec(self, spec):
-        if 'ptype' not in spec:
-            spec['ptype'] = 'global'
-        self.plugins.append(spec)
-
-    def add_local_plugin_spec(self, spec):
-        if 'ptype' not in spec:
-            spec['ptype'] = 'local'
-        self.plugins.append(spec)
-
-    def add_local_plugin(self, module_name, ws_name,
-                         path=None, klass=None, pfx=None, category=None):
-        self.add_plugin_spec(
-            Bunch(module=module_name, workspace=ws_name, category=category,
-                  ptype='local', path=path, klass=klass, pfx=pfx))
-
-    def add_global_plugin(self, module_name, ws_name,
-                          path=None, klass=None, category='Global',
-                          tab_name=None, start_plugin=True, pfx=None):
-        self.add_plugin_spec(
-            Bunch(module=module_name, workspace=ws_name, tab=tab_name,
-                  path=path, klass=klass, category=category,
-                  ptype='global', start=start_plugin, pfx=pfx))
 
 
 def reference_viewer(sys_argv):

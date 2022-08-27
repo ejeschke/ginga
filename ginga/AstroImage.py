@@ -6,7 +6,6 @@
 #
 import sys
 import traceback
-import warnings
 from collections import OrderedDict
 
 import numpy as np
@@ -61,23 +60,6 @@ class AstroImage(BaseImage):
 
         self.io = ioclass(self.logger)
 
-        # these attributes to be removed--DO NOT USE!!!
-        inherit_primary_header = False
-        if 'inherit_primary_header' in kwargs:
-            warnings.warn("inherit_primary_header kwarg has been deprecated--"
-                          "use inherit_primary_header in load_hdu() or load_file()",
-                          DeprecationWarning)
-            inherit_primary_header = kwargs['inherit_primary_header']
-        self.inherit_primary_header = inherit_primary_header
-
-        save_primary_header = True
-        if 'save_primary_header' in kwargs:
-            warnings.warn("save_primary_header kwarg has been deprecated--"
-                          "use save_primary_header in load_hdu() or load_file()",
-                          DeprecationWarning)
-            save_primary_header = kwargs['save_primary_header']
-        self.save_primary_header = save_primary_header
-
         if metadata is not None:
             header = self.get_header()
             self.wcs.load_header(header)
@@ -114,7 +96,6 @@ class AstroImage(BaseImage):
         self.set_naxispath(naxispath)
 
     def load_hdu(self, hdu, fobj=None, naxispath=None,
-                 save_primary_header=None, inherit_primary_header=None,
                  **kwargs):
         """NOTE: hdu type must be compatible with ioclass set in this
         AstroImage; for example:
@@ -125,15 +106,7 @@ class AstroImage(BaseImage):
         if self.io is None:
             raise ImageError("No IO loader defined")
 
-        # TO BE DEPRECATED--will just pass kwargs on through
-        if save_primary_header is None:
-            save_primary_header = self.save_primary_header
-        if inherit_primary_header is None:
-            inherit_primary_header = self.inherit_primary_header
-
         self.io.load_hdu(hdu, dstobj=self, fobj=fobj, naxispath=naxispath,
-                         save_primary_header=save_primary_header,
-                         inherit_primary_header=inherit_primary_header,
                          **kwargs)
 
     def load_nddata(self, ndd, naxispath=None):
@@ -162,12 +135,6 @@ class AstroImage(BaseImage):
 
         if self.io is None:
             raise ImageError("No IO loader defined")
-
-        # TO BE DEPRECATED--will just pass kwargs on through
-        if 'save_primary_header' not in kwargs:
-            kwargs['save_primary_header'] = self.save_primary_header
-        if 'inherit_primary_header' not in kwargs:
-            kwargs['inherit_primary_header'] = self.inherit_primary_header
 
         self.io.load_file(filespec, dstobj=self, **kwargs)
 
@@ -235,9 +202,7 @@ class AstroImage(BaseImage):
             hdr = self['header']
 
         if include_primary_header is None:
-            include_primary_header = (self.get('inherit_primary_header', False) or
-                                      # TO BE DEPRECATED
-                                      self.inherit_primary_header)
+            include_primary_header = self.get('inherit_primary_header', False)
 
         # If it was saved during loading, by convention, the primary fits
         # header is stored in a dictionary under the keyword 'primary_header'
@@ -287,12 +252,6 @@ class AstroImage(BaseImage):
     def set_keywords(self, **kwds):
         """Set an item in the fits header, if any."""
         return self.update_keywords(kwds)
-
-    def update_data(self, data_np, metadata=None, astype=None):
-        """DO NOT USE: this method will be deprecated!
-        """
-        self.set_data(data_np.copy(), metadata=metadata,
-                      astype=astype)
 
     def update_metadata(self, key_dict):
         self.update(key_dict)
@@ -394,86 +353,6 @@ class AstroImage(BaseImage):
             dec_deg = wcs.lat_to_deg(dec_deg)
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords,
                                    naxispath=self.revnaxis)
-
-    # -----> TODO:
-    #   This section has been merged into ginga.util.wcs or
-    #   ginga.util.mosaic .  Deprecate it here.
-    #
-    def get_starsep_XY(self, x1, y1, x2, y2):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      DeprecationWarning)
-        return wcs.get_starsep_XY(self, x1, y1, x2, y2)
-
-    def calc_radius_xy(self, x, y, radius_deg):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      DeprecationWarning)
-        return wcs.calc_radius_xy(self, x, y, radius_deg)
-
-    def calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
-                            equinox=None):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      DeprecationWarning)
-        return wcs.calc_radius_deg2pix(self, ra_deg, dec_deg, delta_deg,
-                                       equinox=equinox)
-
-    def add_offset_xy(self, x, y, delta_deg_x, delta_deg_y):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      DeprecationWarning)
-        return wcs.add_offset_xy(self, x, y, delta_deg_x, delta_deg_y)
-
-    def calc_radius_center(self, delta_deg):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      DeprecationWarning)
-        return wcs.calc_radius_center(self, delta_deg)
-
-    def calc_compass(self, x, y, len_deg_e, len_deg_n):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      DeprecationWarning)
-        return wcs.calc_compass(self, x, y, len_deg_e, len_deg_n)
-
-    def calc_compass_radius(self, x, y, radius_px):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      DeprecationWarning)
-        return wcs.calc_compass_radius(self, x, y, radius_px)
-
-    def calc_compass_center(self):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.wcs",
-                      DeprecationWarning)
-        return wcs.calc_compass_center(self)
-
-    def get_wcs_rotation_deg(self):
-        warnings.warn("This function has been deprecated--"
-                      "use get_rotation_and_scale in ginga.util.wcs",
-                      DeprecationWarning)
-        header = self.get_header()
-        (rot, cdelt1, cdelt2) = wcs.get_rotation_and_scale(header)
-        return rot
-
-    def mosaic_inline(self, imagelist, bg_ref=None, trim_px=None,
-                      merge=False, allow_expand=True, expand_pad_deg=0.01,
-                      max_expand_pct=None,
-                      update_minmax=True, suppress_callback=False):
-        warnings.warn("This function has been deprecated--"
-                      "use the version in ginga.util.mosaic",
-                      DeprecationWarning)
-        from ginga.util import mosaic
-        return mosaic.mosaic_inline(self, imagelist, bg_ref=bg_ref,
-                                    trim_px=trim_px, merge=merge,
-                                    allow_expand=allow_expand,
-                                    expand_pad_deg=expand_pad_deg,
-                                    max_expand_pct=max_expand_pct,
-                                    update_minmax=update_minmax,
-                                    suppress_callback=suppress_callback)
-    #
-    # <----- TODO: deprecate
 
     def info_xy(self, data_x, data_y, settings):
         info = super(AstroImage, self).info_xy(data_x, data_y, settings)

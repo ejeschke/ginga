@@ -495,14 +495,3 @@ class PluginManager(Callback.Callbacks):
         p_info.widget = None
         vbox.hide()
         vbox.delete()
-
-    ########################################################
-    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
-
-    loadPlugin = load_plugin
-    reloadPlugin = reload_plugin
-    getPluginInfo = get_plugin_info
-    getPlugin = get_plugin
-    getNames = get_names
-
-# END

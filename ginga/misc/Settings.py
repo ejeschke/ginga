@@ -277,18 +277,6 @@ class SettingGroup(object):
             errmsg = "Error writing settings output: %s" % (str(e))
             self.logger.error(errmsg)
 
-    ########################################################
-    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
-
-    addSettings = add_settings
-    getSetting = get_setting
-    shareSettings = share_settings
-    copySettings = copy_settings
-    addDefaults = add_defaults
-    setDefaults = set_defaults
-    getDict = get_dict
-    setDict = set_dict
-
 
 class Preferences(object):
 
@@ -324,15 +312,6 @@ class Preferences(object):
     def get_dict(self):
         return dict([[name, self.settings[name].get_dict()] for name in
                      self.settings.keys()])
-
-    ########################################################
-    ### NON-PEP8 PREDECESSORS: TO BE DEPRECATED
-
-    setDefaults = set_defaults
-    getSettings = get_settings
-    createCategory = create_category
-    get_baseFolder = get_base_folder
-    getDict = get_dict
 
 
 def strip_comments(lines):

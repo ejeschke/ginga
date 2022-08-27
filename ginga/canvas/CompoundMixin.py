@@ -250,17 +250,3 @@ class CompoundMixin(object):
         for obj in self.objects:
             res.extend(list(obj.get_points()))
         return res
-
-    ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
-
-    getItemsAt = get_items_at
-    getObjects = get_objects
-    deleteObject = delete_object
-    deleteObjects = delete_objects
-    deleteAllObjects = delete_all_objects
-    setAttrAll = set_attr_all
-    addObject = add_object
-    raiseObject = raise_object
-    lowerObject = lower_object
-
-# END

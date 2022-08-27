@@ -117,11 +117,7 @@ class CanvasObjectBase(Callback.Callbacks):
     def use_coordmap(self, mapobj):
         self.crdmap = mapobj
 
-    def canvascoords(self, viewer, data_x, data_y, center=None):
-        if center is not None:
-            self.logger.warn(
-                "`center` keyword is ignored and will be deprecated")
-
+    def canvascoords(self, viewer, data_x, data_y):
         return viewer.get_canvas_xy(data_x, data_y)
 
     def is_compound(self):

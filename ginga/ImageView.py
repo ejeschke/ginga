@@ -1453,7 +1453,7 @@ class ImageViewBase(Callback.Callbacks):
         """
         return self.tform['mouse_to_data'].to_(win_pt)
 
-    def get_data_xy(self, win_x, win_y, center=None):
+    def get_data_xy(self, win_x, win_y):
         """Get the closest coordinates in the data array to those
         reported on the window.
 
@@ -1462,25 +1462,16 @@ class ImageViewBase(Callback.Callbacks):
         win_x, win_y : float or ndarray
             Window coordinates.
 
-        center : bool
-            If `True`, then the coordinates are mapped such that the
-            pixel is centered on the square when the image is zoomed in past
-            1X. This is the specification of the FITS image standard,
-            that the pixel is centered on the integer row/column.
-
         Returns
         -------
         coord : tuple
             Data coordinates in the form of ``(x, y)``.
 
         """
-        if center is not None:
-            self.logger.warning("`center` keyword is ignored and will be deprecated")
-
         arr_pts = np.asarray((win_x, win_y)).T
         return self.tform['mouse_to_data'].to_(arr_pts).T[:2]
 
-    def offset_to_data(self, off_x, off_y, center=None):
+    def offset_to_data(self, off_x, off_y):
         """Get the closest coordinates in the data array to those
         in cartesian fixed (non-scaled) canvas coordinates.
 
@@ -1495,9 +1486,6 @@ class ImageViewBase(Callback.Callbacks):
             Data coordinates in the form of ``(x, y)``.
 
         """
-        if center is not None:
-            self.logger.warning("`center` keyword is ignored and will be deprecated")
-
         arr_pts = np.asarray((off_x, off_y)).T
         return self.tform['data_to_cartesian'].from_(arr_pts).T[:2]
 
@@ -1508,23 +1496,17 @@ class ImageViewBase(Callback.Callbacks):
         """
         return self.tform['data_to_native'].to_(data_pt)
 
-    def get_canvas_xy(self, data_x, data_y, center=None):
+    def get_canvas_xy(self, data_x, data_y):
         """Reverse of :meth:`get_data_xy`.
 
         """
-        if center is not None:
-            self.logger.warning("`center` keyword is ignored and will be deprecated")
-
         arr_pts = np.asarray((data_x, data_y)).T
         return self.tform['data_to_native'].to_(arr_pts).T[:2]
 
-    def data_to_offset(self, data_x, data_y, center=None):
+    def data_to_offset(self, data_x, data_y):
         """Reverse of :meth:`offset_to_data`.
 
         """
-        if center is not None:
-            self.logger.warning("`center` keyword is ignored and will be deprecated")
-
         arr_pts = np.asarray((data_x, data_y)).T
         return self.tform['data_to_cartesian'].to_(arr_pts).T[:2]
 
@@ -1550,13 +1532,10 @@ class ImageViewBase(Callback.Callbacks):
         arr_pts = np.asarray((win_x, win_y)).T
         return self.tform['cartesian_to_native'].from_(arr_pts).T[:2]
 
-    def canvascoords(self, data_x, data_y, center=None):
+    def canvascoords(self, data_x, data_y):
         """Same as :meth:`get_canvas_xy`.
 
         """
-        if center is not None:
-            self.logger.warning("`center` keyword is ignored and will be deprecated")
-
         # data->canvas space coordinate conversion
         arr_pts = np.asarray((data_x, data_y)).T
         return self.tform['data_to_native'].to_(arr_pts).T[:2]
@@ -2952,10 +2931,6 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         self.logger.warning("Subclass should override this abstract method!")
-
-    # TO BE DEPRECATED--please use update_widget
-    def update_image(self):
-        return self.update_widget()
 
     def reschedule_redraw(self, time_sec):
         """Reschedule redraw event.

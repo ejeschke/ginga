@@ -671,15 +671,6 @@ class ServerBank(object):
 
         return obj.search(**params)
 
-    # TO BE DEPRECATED
-    addImageServer = add_image_server
-    addCatalogServer = add_catalog_server
-    getImageServer = get_image_server
-    getCatalogServer = get_catalog_server
-    getServerNames = get_server_names
-    getImage = get_image
-    getCatalog = get_catalog
-
 
 # ---- SET UP DEFAULT SOURCES ----
 

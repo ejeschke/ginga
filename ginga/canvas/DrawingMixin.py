@@ -731,11 +731,3 @@ class DrawingMixin(object):
             for obj in selected:
                 cr = viewer.renderer.setup_cr(obj)
                 obj.draw_edit(cr, viewer)
-
-    ### NON-PEP8 EQUIVALENTS -- TO BE DEPRECATED ###
-
-    setSurface = set_surface
-    getDrawClass = get_draw_class
-
-
-# END

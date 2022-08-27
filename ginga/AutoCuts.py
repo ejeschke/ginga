@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import numpy as np
-import warnings
 
 from ginga import trcalc
 from ginga.misc import Bunch
@@ -446,11 +445,6 @@ class Histogram(AutoCutsBase):
         self.pct = pct
         self.numbins = numbins
 
-        if usecrop is not None:
-            warnings.warn("The usecrop parameter has been deprecated--"
-                          "use sample=crop inst",
-                          PendingDeprecationWarning)
-
     def calc_cut_levels(self, image):
         """See subclass documentation."""
         if self.sample == 'crop':
@@ -635,11 +629,6 @@ class StdDev(AutoCutsBase):
         # "stddev" algorithm (from the old SOSS fits viewer)
         self.hensa_lo = hensa_lo
         self.hensa_hi = hensa_hi
-
-        if usecrop is not None:
-            warnings.warn("The usecrop parameter has been deprecated--"
-                          "use sample=crop instead",
-                          PendingDeprecationWarning)
 
     def calc_cut_levels(self, image):
         """See subclass documentation."""
