@@ -18,3 +18,4 @@ Ginga as a visualization solution for their own software.
    viewer
    jupnotebooks
    internals
+   internationalization

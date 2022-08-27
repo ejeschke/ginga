@@ -17,6 +17,8 @@ Ver 4.0.0 (unreleased)
   to simplify operation.
 - Many deprecated camelcase (non-PEP8) methods were removed. Use the
   "snake-case" names instead.
+- added an internationalization framework (see "Internationalization"
+  chapter in the Ginga manual).
 
 Ver 3.4.0 (2022-06-28)
 ======================

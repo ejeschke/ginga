@@ -1,0 +1,80 @@
+# Translations template for ginga.
+# Copyright (C) 2022 ORGANIZATION
+# This file is distributed under the same license as the ginga project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: ginga 3.1.1.dev259+g6215efd9.d20220809\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2022-08-09 12:54-1000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.10.3\n"
+
+#: ginga/examples/gw/example2.py:32 ginga/examples/gw/example2.py:34
+#: ginga/examples/gw/example2.py:37
+msgid "Ginga example2"
+msgstr "Ginga example2"
+
+#: ginga/examples/gw/example2.py:115
+msgid "Fill"
+msgstr "Fill"
+
+#: ginga/examples/gw/example2.py:126
+msgid "Clear Canvas"
+msgstr "Clear Canvas"
+
+#: ginga/examples/gw/example2.py:128
+msgid "Open File"
+msgstr "Open File"
+
+#: ginga/examples/gw/example2.py:130
+msgid "Quit"
+msgstr "Quit"
+
+#: ginga/examples/gw/example2.py:135
+msgid "Alpha"
+msgstr "Alpha"
+
+#: ginga/examples/gw/example2.py:143
+msgid "Draw"
+msgstr "Draw"
+
+#: ginga/examples/gw/example2.py:146
+msgid "Choose this to draw on the canvas"
+msgstr "Choose this to draw on the canvas"
+
+#: ginga/examples/gw/example2.py:149
+msgid "Edit"
+msgstr "Edit"
+
+#: ginga/examples/gw/example2.py:152
+msgid "Choose this to edit things on the canvas"
+msgstr "Choose this to edit things on the canvas"
+
+#: ginga/examples/gw/example2.py:155
+msgid "Pick"
+msgstr "Pick"
+
+#: ginga/examples/gw/example2.py:158
+msgid "Choose this to pick things on the canvas"
+msgstr "Choose this to pick things on the canvas"
+
+#: ginga/examples/gw/example2.py:196
+msgid "Open FITS file"
+msgstr "Open FITS file"
+
+#: ginga/examples/gw/example2.py:228
+msgid "Bad coordinate conversion"
+msgstr "Bad coordinate conversion"
+
+#: ginga/examples/gw/example2.py:230 ginga/examples/gw/example2.py:231
+msgid "BAD WCS"
+msgstr "BAD WCS"
+
