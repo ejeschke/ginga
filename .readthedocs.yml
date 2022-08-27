@@ -24,5 +24,6 @@ python:
         - docs
         - recommended
 
-# Do not build other formats
-formats: []
+# Build PDF
+formats:
+  - pdf
