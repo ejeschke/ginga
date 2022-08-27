@@ -59,7 +59,7 @@ from ginga.util import iohelper
 from ginga.gw import Widgets, Viewers
 from ginga.util.paths import icondir
 from ginga.pilw.ImageViewPil import CanvasView
-from ginga.util import io_rgb
+from ginga.util.io import io_rgb
 
 __all__ = ['Thumbs']
 

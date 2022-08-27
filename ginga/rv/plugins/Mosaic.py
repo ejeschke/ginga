@@ -44,7 +44,8 @@ import threading
 import numpy as np
 
 from ginga.AstroImage import AstroImage
-from ginga.util import wcs, iqcalc, dp, io_fits, mosaic
+from ginga.util import wcs, iqcalc, dp, mosaic
+from ginga.util.io import io_fits
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 
