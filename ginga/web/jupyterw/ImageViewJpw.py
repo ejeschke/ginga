@@ -49,7 +49,6 @@ from ipyevents import Event as EventListener
 from ginga import ImageView, AstroImage
 from ginga import Mixins, Bindings
 from ginga.canvas import render
-from ginga.util.toolbox import ModeIndicator
 from ginga.util import loader
 
 from ginga.web.jupyterw import JpHelp
@@ -421,8 +420,6 @@ class CanvasView(ImageViewZoom):
 
         # Needed for UIMixin to propagate events correctly
         self.objects = [self.private_canvas]
-
-        self._mi = ModeIndicator(self)
 
     def set_canvas(self, canvas, private_canvas=None):
         super(CanvasView, self).set_canvas(canvas,

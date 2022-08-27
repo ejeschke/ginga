@@ -71,6 +71,8 @@ class FitsViewer(object):
         canvas.ui_set_active(True)
 
         fi.configure(512, 512)
+        # add little mode indicator that shows keyboard modal states
+        fi.show_mode_indicator(True, corner='ur')
 
         hbox = Tkinter.Frame(root)
         hbox.pack(side=Tkinter.BOTTOM, fill=Tkinter.X, expand=0)

@@ -30,12 +30,10 @@ Modes additionally have a *mode type* which can be set to one of the following:
 * `oneshot`: mode is released by initiating and finishing a cursor drag
   or when `Esc` is pressed, if no cursor drag is performed
 * `locked`: mode is locked until the mode key is pressed again (or `Esc`)
-* `softlock`: mode is locked until another mode key is pressed (or `Esc`)
 
-By default, most modes are activated in "oneshot" type, unless the mode
-lock is toggled.  The mode type is indicated in the brackets after the
-mode name in the mode indicator.  The following keys are important for
-initiating a mode:
+By default, most modes are activated in "locked" type.  The mode type is
+indicated in the brackets after the mode name in the mode indicator.
+The following keys are important for initiating a mode:
 
 +----------------------+--------------------------------------------------+
 | Commmand             | Description                                      |
@@ -43,13 +41,7 @@ initiating a mode:
 | Space                | Enter "meta" mode. Next keystroke will trigger   |
 |                      | a particular mode.                               |
 +----------------------+--------------------------------------------------+
-| Esc                  | Exit any mode. Does not toggle the lock.         |
-+----------------------+--------------------------------------------------+
-| l                    | Toggle the soft lock to the current mode or any  |
-|                      | future modes.                                    |
-+----------------------+--------------------------------------------------+
-| L                    | Toggle the normal lock to the current mode or    |
-|                      | any future modes.                                |
+| Esc                  | Exit any mode.                                   |
 +----------------------+--------------------------------------------------+
 
 .. _meta_mode:
@@ -70,27 +62,27 @@ triggered from meta mode.
 +----------------------+--------------------------------------------------+
 | b                    | Enter draw mode (canvas must be enabled to draw).|
 +----------------------+--------------------------------------------------+
-| q                    | Enter pan mode.                                  |
+| q                    | Enter :ref:`Pan mode <pan_mode>`.                |
 +----------------------+--------------------------------------------------+
-| w                    | Enter freepan mode.                              |
+| w                    | Enter :ref:`Freepan mode <freepan_mode>`.        |
 +----------------------+--------------------------------------------------+
-| r                    | Enter rotate mode.                               |
+| r                    | Enter :ref:`Rotate mode <rotate_mode>`.          |
 +----------------------+--------------------------------------------------+
-| t                    | Enter contrast mode.                             |
+| t                    | Enter :ref:`Contrast mode <contrast_mode>`.      |
 +----------------------+--------------------------------------------------+
-| y                    | Enter cmap (color map) mode.                     |
+| y                    | Enter :ref:`CMap (color map) mode <cmap_mode>`.  |
 +----------------------+--------------------------------------------------+
-| s                    | Enter cuts mode.                                 |
+| s                    | Enter :ref:`Cuts mode <cuts_mode>`.              |
 +----------------------+--------------------------------------------------+
-| d                    | Enter dist (distribution) mode.                  |
+| d                    | Enter Color Distribution ("dist") mode.          |
+|                      | See :ref:`Dist mode <dist_mode>`.                |
 +----------------------+--------------------------------------------------+
-
-.. note:: For modes initiated from meta mode, the locked and softlock
-          mode types work the same way, which is slightly different
-          from that described above: you press the meta mode key to
-          switch back to meta mode, from which you can enter another
-          mode by pressing its key.  You can always press `Esc` in any
-          mode (including meta mode) to exit the mode.
+| n                    | Enter naxis (cube axis navigation) mode.         |
+|                      | See :ref:`Naxis mode <naxis_mode>`.              |
++----------------------+--------------------------------------------------+
+| L                    | Toggle the normal lock to the current mode or    |
+|                      | any future modes.                                |
++----------------------+--------------------------------------------------+
 
 
 .. _panning_zooming_commands:
@@ -132,10 +124,6 @@ Panning and zooming commands
 +----------------------+--------------------------------------------------+
 | c                    | Set pan position to the center of the image.     |
 +----------------------+--------------------------------------------------+
-| q                    | Enter :ref:`Pan mode <pan_mode>`.                |
-+----------------------+--------------------------------------------------+
-| w                    | Free :ref:`Freepan mode <freepan_mode>`.         |
-+----------------------+--------------------------------------------------+
 | Ctrl + left-drag     | Proportional pan (press and drag left mouse      |
 |                      | button.                                          |
 +----------------------+--------------------------------------------------+
@@ -158,19 +146,10 @@ Cut levels and colormap commands
 +======================+==================================================+
 | a                    | Auto cut levels.                                 |
 +----------------------+--------------------------------------------------+
-| d                    | Enter Color Distribution ("dist") mode.          |
-|                      | See :ref:`Dist mode <dist_mode>`.                |
-+----------------------+--------------------------------------------------+
 | D                    | Reset color distribution algorithm to "linear".  |
-+----------------------+--------------------------------------------------+
-| s                    | Enter :ref:`Cuts mode <cuts_mode>`.              |
-+----------------------+--------------------------------------------------+
-| t                    | Enter :ref:`Contrast mode <contrast_mode>`.      |
 +----------------------+--------------------------------------------------+
 | T                    | Restore the contrast (via colormap) to its       |
 |                      | original (unstretched, unshifted) state.         |
-+----------------------+--------------------------------------------------+
-| y                    | Enter :ref:`CMap (color map) mode <cmap_mode>`.  |
 +----------------------+--------------------------------------------------+
 | Y                    | Restore the color map to default (gray).         |
 +----------------------+--------------------------------------------------+
@@ -200,8 +179,6 @@ Transform commands
 | Backslash (\\)       | Swap X and Y axes.                               |
 +----------------------+--------------------------------------------------+
 | Vertical bar (|)     | Reset to no swap of X and Y axes.                |
-+----------------------+--------------------------------------------------+
-| r                    | Enter :ref:`Rotate mode <rotate_mode>`.          |
 +----------------------+--------------------------------------------------+
 | R                    | Restore rotation to 0 degrees and additionally   |
 |                      | undo any flip/swap transformations.              |
@@ -240,7 +217,7 @@ Pan mode
 +----------------------+--------------------------------------------------+
 | backquote (`)        | Zoom to fit window and center.                   |
 +----------------------+--------------------------------------------------+
-| 1                    | Pan to cursor and zoom to saved scale level      |
+| r                    | Pan to cursor and zoom to saved scale level      |
 |                      | (or 1:1 if no scale level saved).                |
 +----------------------+--------------------------------------------------+
 | c                    | Set pan position to the center of the image.     |
@@ -273,7 +250,7 @@ Freepan mode
 | middle-drag          | Pans freely over entire image in proportion       |
 |                      | to cursor position versus window.                 |
 +----------------------+---------------------------------------------------+
-| p, z, backquote, 1,  | (Same as for :ref:`Pan mode <pan_mode>`.)         |
+| p, z, backquote, r,  | (Same as for :ref:`Pan mode <pan_mode>`.)         |
 | c, arrow keys        |                                                   |
 +----------------------+---------------------------------------------------+
 
@@ -343,8 +320,8 @@ Contrast mode
 | Commmand             | Description                                      |
 +======================+==================================================+
 | left-drag            | Interactive shift/stretch colormap (AKA contrast |
-|                      | and bias). L/R controls shift, U/D controls      |
-|                      | stretch.                                         |
+|                      | and bias). Left/Right controls shift, Up/Down    |
+|                      | controls stretch.                                |
 +----------------------+--------------------------------------------------+
 | right-click          | Restore the contrast (via colormap) to its       |
 |                      | original (unstretched, unshifted) state.         |
@@ -425,6 +402,29 @@ Cmap mode
 | c                    | Toggle a color bar overlay on the image.          |
 +----------------------+---------------------------------------------------+
 | Y                    | Restore the color map to default ('gray').        |
++----------------------+---------------------------------------------------+
+
+.. _naxis_mode:
+
+Naxis mode
+==========
+
+.. note:: Naxis mode is used when viewing data that has more than 2
+          dimensions (e.g. data cubes).
+
++----------------------+---------------------------------------------------+
+| Commmand             | Description                                       |
++======================+===================================================+
+| scroll               | Select previous or next slice of current axis.    |
++----------------------+---------------------------------------------------+
+| Ctrl + scroll        | Select previous or next axis as current axis.     |
++----------------------+---------------------------------------------------+
+| left drag            | select slice as a function of percentage of       |
+|                      | cursor/window width.                              |
++----------------------+---------------------------------------------------+
+| up-arrow             | Select prev axis as current axis.                 |
++----------------------+---------------------------------------------------+
+| down-arrow           | Select next axis as current axis.                 |
 +----------------------+---------------------------------------------------+
 
 .. _plot_mode:
@@ -525,9 +525,11 @@ Reference Viewer Only
 +----------------------+--------------------------------------------------+
 | Commmand             | Description                                      |
 +======================+==================================================+
-| H                    | Raise **Header** tab.                            |
+| H                    | Raise **Header** tab (if Header plugin has been  |
+|                      | started).                                        |
 +----------------------+--------------------------------------------------+
-| Z                    | Raise **Zoom** tab.                              |
+| Z                    | Raise **Zoom** tab (if Zoom plugin has been      |
+|                      | started).                                        |
 +----------------------+--------------------------------------------------+
 | D                    | Raise **Dialogs** tab.                           |
 +----------------------+--------------------------------------------------+

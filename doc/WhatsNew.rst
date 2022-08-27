@@ -19,6 +19,14 @@ Ver 4.0.0 (unreleased)
   "snake-case" names instead.
 - added an internationalization framework (see "Internationalization"
   chapter in the Ginga manual).
+- Refactor modes from Bindings module into separate modules:
+
+  - modes can now be written and understood as having a very similar
+    structure to a plugin.
+  - mode docstrings can be written and maintained better to document the
+    modes and the code implementing a mode is much easier to understand
+    since it is encapsulated rather than all mixed together in one huge
+    file.
 
 Ver 3.4.0 (2022-06-28)
 ======================

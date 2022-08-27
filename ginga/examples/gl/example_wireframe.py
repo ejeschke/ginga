@@ -151,12 +151,13 @@ bm = v.vw.get_bindmap()
 bm.set_mode('camera', mode_type='locked')
 
 # toggle 3D view
-bd = v.vw.get_bindings()
-bd.kp_camera_toggle3d(v.vw, None, 0, 0)
+v.vw.renderer.mode3d = True
+v.vw.update_widget()
 
 r = 100
 plot_octahedron(v, r)
 plot_sphere(v, r)
+v.vw.zoom_fit()
 
 app.mainloop()
 

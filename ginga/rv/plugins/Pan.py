@@ -392,10 +392,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         chviewer = self.fv.getfocus_viewer()
         bd = chviewer.get_bindings()
 
-        if hasattr(bd, 'sc_zoom'):
-            return bd.sc_zoom(chviewer, event)
-
-        return False
+        mode = bd.get_mode_obj('pan')
+        return mode.sc_zoom(chviewer, event)
 
     def zoom_pinch_cb(self, fitsimage, event):
         """Pinch event in the pan window.  Just zoom the channel viewer.
@@ -403,10 +401,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         chviewer = self.fv.getfocus_viewer()
         bd = chviewer.get_bindings()
 
-        if hasattr(bd, 'pi_zoom'):
-            return bd.pi_zoom(chviewer, event)
-
-        return False
+        mode = bd.get_mode_obj('pan')
+        return mode.pi_zoom(chviewer, event)
 
     def pan_pan_cb(self, fitsimage, event):
         """Pan event in the pan window.  Just pan the channel viewer.
@@ -414,10 +410,8 @@ class Pan(GingaPlugin.GlobalPlugin):
         chviewer = self.fv.getfocus_viewer()
         bd = chviewer.get_bindings()
 
-        if hasattr(bd, 'pa_pan'):
-            return bd.pa_pan(chviewer, event)
-
-        return False
+        mode = bd.get_mode_obj('pan')
+        return mode.pa_pan(chviewer, event)
 
     def draw_cb(self, canvas, tag):
         # Get and delete the drawn object
