@@ -320,10 +320,10 @@ class Crosshair(GingaPlugin.LocalPlugin):
 
     def move_crosshair(self, viewer, data_x, data_y):
         self.logger.debug("move crosshair data x,y=%f,%f" % (data_x, data_y))
-        self.xh.move_to(data_x, data_y)
+        self.xh.move_to_pt((data_x, data_y))
 
         if self.quick_cuts:
-            self.cuts_box.move_to(data_x, data_y)
+            self.cuts_box.move_to_pt((data_x, data_y))
             self.cuts_quick(data_x, data_y, self.cuts_radius)
 
         self.canvas.update_canvas(whence=3)

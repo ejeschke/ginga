@@ -604,7 +604,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         m_obj = self.canvas.get_object_by_tag(self.mark_selected)
         p_obj = m_obj.objects[0]
-        p_obj.move_to(data_x, data_y)
+        p_obj.move_to_pt((data_x, data_y))
         self.lastx, self.lasty = data_x, data_y
         self.canvas.update_canvas()
         return True

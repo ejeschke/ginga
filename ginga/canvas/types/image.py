@@ -235,6 +235,10 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         self.scale_y *= scale_y
         self.reset_optimize()
 
+    def scale_by(self, scale_x, scale_y):
+        # TO BE DEPRECATED--use scale_by_factors instead
+        self.scale_by_factors((scale_x, scale_y))
+
     def set_scale(self, scale_x, scale_y):
         self.scale_x = scale_x
         self.scale_y = scale_y
@@ -336,11 +340,6 @@ class NormImageP(ImageP):
         cache.setvals(cutout=None, alpha=None, prergb=None, rgbarr=None,
                       drawn=False, cvs_pos=(0, 0))
         return cache
-
-    def scale_by(self, scale_x, scale_y):
-        self.scale_x *= scale_x
-        self.scale_y *= scale_y
-        self.reset_optimize()
 
 
 class NormImage(NormImageP):

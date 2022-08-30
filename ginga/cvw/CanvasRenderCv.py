@@ -30,7 +30,8 @@ class RenderContext(render.RenderContextBase):
     def set_line_from_shape(self, shape):
         # TODO: support line width and style
         alpha = getattr(shape, 'alpha', 1.0)
-        self.pen = self.cr.get_pen(shape.color, alpha=alpha)
+        color = getattr(shape, 'color', 'black')
+        self.pen = self.cr.get_pen(color, alpha=alpha)
 
     def set_fill_from_shape(self, shape):
         fill = getattr(shape, 'fill', False)

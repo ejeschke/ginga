@@ -33,7 +33,8 @@ class RenderContext(render.RenderContextBase):
         # TODO: support style
         alpha = getattr(shape, 'alpha', 1.0)
         linewidth = getattr(shape, 'linewidth', 1.0)
-        self.pen = self.cr.get_pen(shape.color, linewidth=linewidth,
+        color = getattr(shape, 'color', 'black')
+        self.pen = self.cr.get_pen(color, linewidth=linewidth,
                                    alpha=alpha)
 
     def set_fill_from_shape(self, shape):

@@ -7,6 +7,7 @@
 import sys
 import traceback
 from functools import reduce
+import warnings
 
 import numpy as np
 
@@ -223,8 +224,14 @@ class CompoundMixin(object):
             self.objects.insert(index, obj)
 
     def rotate(self, theta, xoff=0, yoff=0):
+        warnings.warn("rotate(theta_deg) has been deprecated--"
+                      "use rotate_deg([theta_deg]) instead",
+                      DeprecationWarning)
+        self.rotate_deg([theta], (xoff, yoff))
+
+    def rotate_deg(self, thetas, offset):
         for obj in self.objects:
-            obj.rotate(theta, xoff=xoff, yoff=yoff)
+            obj.rotate_deg(thetas, offset)
 
     def move_delta_pt(self, off_pt):
         for obj in self.objects:
@@ -250,3 +257,20 @@ class CompoundMixin(object):
         for obj in self.objects:
             res.extend(list(obj.get_points()))
         return res
+
+    def setup_edit(self, detail):
+        detail.center_pos = self.get_center_pt()
+
+    def get_edit_points(self, viewer):
+        move_pt, scale_pt, rotate_pt = self.get_move_scale_rotate_pts(viewer)
+        # currently only move_pt is supported for compound objects
+        return [move_pt]
+
+    def set_edit_point(self, i, pt, detail):
+        if i == 0:
+            # move control point
+            ctr_x, ctr_y = self.get_reference_pt()
+            delta_pt = (pt[0] - ctr_x, pt[1] - ctr_y)
+            self.move_delta_pt(delta_pt)
+        else:
+            raise ValueError("No point corresponding to index %d" % (i))

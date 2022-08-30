@@ -1874,7 +1874,7 @@ class Pick(GingaPlugin.LocalPlugin):
             point = obj.objects[1]
             point.color = 'red'
 
-            shape.move_to(data_x, data_y)
+            shape.move_to_pt((data_x, data_y))
             self.canvas.update_canvas()
 
         else:
@@ -1900,7 +1900,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 return False
 
             shape = obj.objects[0]
-            shape.move_to(data_x, data_y)
+            shape.move_to_pt((data_x, data_y))
             self.canvas.update_canvas()
             return True
 
@@ -1914,7 +1914,7 @@ class Pick(GingaPlugin.LocalPlugin):
                 return False
 
             shape = obj.objects[0]
-            shape.move_to(data_x, data_y)
+            shape.move_to_pt((data_x, data_y))
             self.canvas.update_canvas()
 
             self.redo_manual()

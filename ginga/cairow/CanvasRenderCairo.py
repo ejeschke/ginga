@@ -49,7 +49,8 @@ class RenderContext(render.RenderContextBase):
 
     def set_line_from_shape(self, shape):
         alpha = getattr(shape, 'alpha', 1.0)
-        self._set_color(shape.color, alpha=alpha)
+        color = getattr(shape, 'color', 'black')
+        self._set_color(color, alpha=alpha)
 
         linewidth = getattr(shape, 'linewidth', 1)
         self.cr.set_line_width(linewidth)

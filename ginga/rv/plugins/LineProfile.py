@@ -461,7 +461,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         obj = self.canvas.get_object_by_tag(self.mark_selected)
         # Assume first element of this compound object is the reference obj
         obj = obj.objects[0]
-        obj.move_to(data_x, data_y)
+        obj.move_to_pt((data_x, data_y))
         canvas.redraw(whence=3)
 
         # self.redraw_mark()  # Uncomment if you want drag_update
@@ -474,7 +474,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         obj = self.canvas.get_object_by_tag(self.mark_selected)
         # Assume first element of this compound object is the reference obj
         obj = obj.objects[0]
-        obj.move_to(data_x, data_y)
+        obj.move_to_pt((data_x, data_y))
 
         self.redraw_mark()
         return True

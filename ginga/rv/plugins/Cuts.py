@@ -880,7 +880,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         obj = self.canvas.get_object_by_tag(self.cutstag)
         # Assume first element of this compound object is the reference obj
         obj = obj.objects[0]
-        obj.move_to(data_x, data_y)
+        obj.move_to_pt((data_x, data_y))
         canvas.redraw(whence=3)
 
         if self.drag_update:
@@ -893,7 +893,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         obj = self.canvas.get_object_by_tag(self.cutstag)
         # Assume first element of this compound object is the reference obj
         obj = obj.objects[0]
-        obj.move_to(data_x, data_y)
+        obj.move_to_pt((data_x, data_y))
 
         self.replot_all()
         return True

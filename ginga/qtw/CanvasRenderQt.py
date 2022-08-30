@@ -43,7 +43,8 @@ class RenderContext(render.RenderContextBase):
                 pen.setDashOffset(5.0)
 
         alpha = getattr(shape, 'alpha', 1.0)
-        color = self.__get_color(shape.color, alpha)
+        color = getattr(shape, 'color', 'black')
+        color = self.__get_color(color, alpha)
         pen.setColor(color)
         self.cr.setPen(pen)
 

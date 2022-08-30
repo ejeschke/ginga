@@ -63,6 +63,7 @@ class OnePointMixin(object):
         pass
 
     def scale_by(self, scale_x, scale_y):
+        # TO BE DEPRECATED--use scale_by_factors instead
         pass
 
 
@@ -200,6 +201,7 @@ class OnePointOneRadiusMixin(OnePointMixin):
         self.radius *= np.asarray(factors).max()
 
     def scale_by(self, scale_x, scale_y):
+        # TO BE DEPRECATED--use scale_by_factors instead
         self.radius *= max(scale_x, scale_y)
 
 
@@ -261,7 +263,12 @@ class OnePointTwoRadiusMixin(OnePointMixin):
         self.rot_deg = new_rot
         return new_rot
 
+    def scale_by_factors(self, factors):
+        self.xradius *= factors[0]
+        self.yradius *= factors[1]
+
     def scale_by(self, scale_x, scale_y):
+        # TO BE DEPRECATED--use scale_by_factors instead
         self.xradius *= scale_x
         self.yradius *= scale_y
 
@@ -356,7 +363,7 @@ class PolygonMixin(object):
             self.set_point_by_index(i - 1, pt)
         elif i == num_points + 1:
             scalef = self.calc_scale_from_pt(pt, detail)
-            self.rescale_by(scalef, scalef, detail)
+            self.rescale_by_factors((scalef, scalef), detail)
         elif i == num_points + 2:
             delta_deg = self.calc_rotation_from_pt(pt, detail)
             self.rerotate_by_deg([delta_deg], detail)
