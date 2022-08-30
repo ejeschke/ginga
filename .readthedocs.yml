@@ -24,7 +24,6 @@ python:
         - docs
         - recommended
 
-# Build PDF & ePub
+# Build PDF
 formats:
-  - epub
   - pdf
