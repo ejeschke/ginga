@@ -628,7 +628,8 @@ class TVMark(LocalPlugin):
             return
 
         # Find markings inside box
-        mask = cobj.contains_arr(self._xarr, self._yarr)
+        pts = np.asarray((self._xarr, self._yarr)).T
+        mask = cobj.contains_pts(pts)
 
         for hlpath in self._treepaths[mask]:
             self._highlight_path(hlpath)
