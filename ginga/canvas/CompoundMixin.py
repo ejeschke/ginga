@@ -52,10 +52,6 @@ class CompoundMixin(object):
         x2, y2 = t_[2].max(), t_[3].max()
         return (x1, y1, x2, y2)
 
-    def get_edit_points(self, viewer):
-        x1, y1, x2, y2 = self.get_llur()
-        return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
-
     def contains_pts(self, pts):
         if len(self.objects) == 0:
             x_arr, y_arr = np.asarray(pts).T
