@@ -13,8 +13,8 @@ import numpy as np
 from ginga.misc import Bunch
 
 __all__ = ['hmsToDeg', 'dmsToDeg', 'decTimeToDeg', 'degToHms', 'degToDms',
-           'arcsecToDeg', 'hmsStrToDeg', 'dmsStrToDeg', 'ra_deg_to_str',
-           'dec_deg_to_str', 'trans_coeff', 'eqToEq2000',
+           'arcsecToDeg', 'hmsStrToDeg', 'dmsStrToDeg',
+           'trans_coeff', 'eqToEq2000',
            'get_xy_rotation_and_scale', 'get_rotation_and_scale',
            'get_relative_orientation', 'simple_wcs', 'deg2fmt', 'dispos',
            'deltaStarsRaDecDeg1', 'deltaStarsRaDecDeg2', 'get_starsep_RaDecDeg',
