@@ -274,7 +274,7 @@ class AstroImage(BaseImage):
 
     def transfer(self, other, astype=None):
         data = self._get_data()
-        other.update_data(data, astype=astype)
+        other.set_data(data.copy(), astype=astype)
         other.update_metadata(self.metadata)
 
     def copy(self, astype=None):
