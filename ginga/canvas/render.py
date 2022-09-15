@@ -987,8 +987,8 @@ class StandardPipelineRenderer(RendererBase):
         self.rgb_order = 'RGBA'
         self.std_order = 'RGBA'
         self.dims = (0, 0)
-        self.state = Bunch.Bunch(org_scale=(1.0, 1.0),
-                                 org_pan=(0.0, 0.0),
+        self.state = Bunch.Bunch(org_scale=(1.0, 1.0, 1.0),
+                                 org_pan=(0.0, 0.0, 0.0),
                                  ctr=(0, 0),
                                  win_dim=(0, 0),
                                  order=self.std_order)

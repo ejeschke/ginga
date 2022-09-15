@@ -453,9 +453,6 @@ class ReferenceViewer(object):
             logger.warning(
                 "failed to set FITS package preference '{}': {}".format(fitspkg, e))
 
-        if options.opengl:
-            settings.set(use_opengl=True)
-
         # Create the dynamic module manager
         mm = ModuleManager.ModuleManager(logger)
 
@@ -468,6 +465,9 @@ class ReferenceViewer(object):
         # Create the Ginga main object
         ginga_shell = GingaShell(logger, thread_pool, mm, prefs,
                                  ev_quit=ev_quit)
+
+        if options.opengl:
+            settings.set(use_opengl=True)
 
         layout_file = os.path.join(basedir, settings.get('layout_file',
                                                          'layout'))
