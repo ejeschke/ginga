@@ -58,7 +58,7 @@ class CanvasObjectBase(Callback.Callbacks):
         self.cap_radius = 4
         self.editable = True
         self.pickable = False
-        self.coord = 'data'
+        self.coord = None
         self.ref_obj = None
         self.__dict__.update(kwdargs)
         self.data = None
@@ -81,13 +81,18 @@ class CanvasObjectBase(Callback.Callbacks):
         self.logger = logger
         if self.crdmap is None:
             if self.coord is None:
-                # default mapping is to data coordinates
-                self.coord = 'data'
-
-            if self.coord == 'offset':
-                self.crdmap = coordmap.OffsetMapper(viewer, self.ref_obj)
+                if canvas is not None and canvas.crdmap is not None:
+                    # inherit crdmap of canvas/compound obj if there is one
+                    self.crdmap = canvas.crdmap
+                else:
+                    # default mapping is to data coordinates
+                    self.crdmap = coordmap.DataMapper(viewer)
             else:
-                self.crdmap = viewer.get_coordmap(self.coord)
+                #<-- named coordinate scheme
+                if self.coord == 'offset':
+                    self.crdmap = coordmap.OffsetMapper(viewer, self.ref_obj)
+                else:
+                    self.crdmap = viewer.get_coordmap(self.coord)
 
     def sync_state(self):
         """This method called when changes are made to the parameters.

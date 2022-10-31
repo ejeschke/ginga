@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import sys
-import traceback
 from functools import reduce
 import warnings
 
@@ -99,35 +98,17 @@ class CompoundMixin(object):
                     # custom test
                     res.append(obj)
         except Exception as e:
-            #print("error selecting objects: %s" % (str(e)))
-            try:
-                # log traceback, if possible
-                (type, value, tb) = sys.exc_info()
-                tb_str = "".join(traceback.format_tb(tb))
-                self.logger.error("Traceback:\n%s" % (tb_str))
-            except Exception:
-                tb_str = "Traceback information unavailable."
-                self.logger.error(tb_str)
+            self.logger.error("error selecting object(s): {}".format(e),
+                              exc_info=True)
             res = []
         return res
 
     def initialize(self, canvas, viewer, logger):
-        # TODO: this needs to be merged with the code in CanvasObject
-        self.viewer = viewer
-        self.logger = logger
-        if self.crdmap is None:
-            if self.coord == 'offset':
-                self.crdmap = coordmap.OffsetMapper(viewer, self.ref_obj)
-            else:
-                try:
-                    self.crdmap = viewer.get_coordmap(self.coord)
-                except Exception as e:
-                    # last best effort--a generic data mapper
-                    self.crdmap = coordmap.DataMapper(viewer)
+        super().initialize(canvas, viewer, logger)
 
         # initialize children
         for obj in self.objects:
-            obj.initialize(canvas, viewer, logger)
+            obj.initialize(self, viewer, logger)
 
     def inherit_from(self, obj):
         self.crdmap = obj.crdmap
@@ -138,6 +119,8 @@ class CompoundMixin(object):
         return True
 
     def use_coordmap(self, mapobj):
+        super().use_coordmap(mapobj)
+
         for obj in self.objects:
             obj.use_coordmap(mapobj)
 
@@ -152,7 +135,7 @@ class CompoundMixin(object):
         return obj in self.objects
 
     def copy(self, share=[]):
-        obj = super(CompoundMixin, self).copy(share=share)
+        obj = super().copy(share=share)
         obj.objects = [obj.copy(share=share) for obj in self.objects]
         return obj
 

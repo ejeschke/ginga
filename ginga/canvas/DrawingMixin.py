@@ -362,12 +362,10 @@ class DrawingMixin(object):
         return is_inside and obj.editable
 
     def _prepare_to_move(self, obj, data_x, data_y):
-        #print(("moving an object", obj.editable))
         self.edit_select(obj)
         self._cp_index = -1
         ref_x, ref_y = self._edit_obj.get_reference_pt()
         self._start_x, self._start_y = data_x - ref_x, data_y - ref_y
-        #print(("end moving an object", obj.editable))
 
     def edit_start(self, canvas, event, data_x, data_y, viewer):
         if not self.canedit:
@@ -382,15 +380,11 @@ class DrawingMixin(object):
 
         selects = self.get_selected()
         if len(selects) == 0:
-            #print("no objects already selected")
             # <-- no objects already selected
 
             # check for objects at this location
-            #print("getting items")
             objs = canvas.select_items_at(viewer, (data_x, data_y),
                                           test=self._is_editable)
-            #print("items: %s" % (str(objs)))
-
             if len(objs) == 0:
                 # <-- no objects under cursor
                 return False
@@ -406,14 +400,11 @@ class DrawingMixin(object):
             # for a match
             contains = []
             for obj in selects:
-                #print("editing: checking for cp")
                 edit_pts = obj.get_edit_points(viewer)
-                #print((self._edit_obj, edit_pts))
                 idx = obj.get_pt(viewer, edit_pts, (data_x, data_y),
                                  obj.cap_radius)
                 if len(idx) > 0:
                     i = idx[0]
-                    #print("editing cp #%d" % (i))
                     # editing a control point from an existing object
                     self._edit_obj = obj
                     self._cp_index = i
@@ -458,13 +449,10 @@ class DrawingMixin(object):
                 # see now if there is an unselected item at this location
                 objs = canvas.select_items_at(viewer, (data_x, data_y),
                                               test=self._is_editable)
-                #print("new items: %s" % (str(objs)))
                 if len(objs) > 0:
                     # pick top object
                     obj = objs[-1]
-                    #print(("top object", obj))
                     if self.num_selected() > 0:
-                        #print("there are previously selected items")
                         # if there are already some selected items, then
                         # add this object to the selection, make a compound
                         # object
@@ -475,7 +463,6 @@ class DrawingMixin(object):
                         self._prepare_to_move(c_obj, data_x, data_y)
                     else:
                         # otherwise just start over with this new object
-                        #print(("starting over"))
                         self._prepare_to_move(obj, data_x, data_y)
 
         self.process_drawing()
@@ -489,7 +476,6 @@ class DrawingMixin(object):
                 (self._edit_obj is not None) and
                 (self._edit_status != self.is_selected(self._edit_obj))):
             # <-- editing status has changed
-            #print("making edit-select callback")
             self.make_callback('edit-select', self._edit_obj)
 
         if (self._edit_obj is not None) and (self._cp_index is not None):
