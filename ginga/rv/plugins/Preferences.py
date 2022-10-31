@@ -1128,7 +1128,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.autocenter_options.index(option)
         self.w.center_new.set_index(index)
 
-    def set_scale_cb(self, w, val):
+    def set_scale_cb(self, w):
         scale_x = float(self.w.scale_x.get_text())
         scale_y = float(self.w.scale_y.get_text())
         self.fitsimage.scale_to(scale_x, scale_y)

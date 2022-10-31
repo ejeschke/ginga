@@ -17,6 +17,7 @@ Ver 4.0.0 (unreleased)
   to simplify operation.
 - Many deprecated camelcase (non-PEP8) methods were removed. Use the
   "snake-case" names instead.
+- Fixed an issue with setting the scale manually in the Preferences plugin
 
 Ver 3.4.0 (2022-06-28)
 ======================
