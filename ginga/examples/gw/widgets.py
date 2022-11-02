@@ -264,8 +264,8 @@ def show_example(cbox, top, logger):
         w.add_callback('value-changed', lambda r, val: value_label.set_text("Value: {}".format(val)))
         _vbox.add_widget(value_label)
         # Test set_tracking
-        b = Widgets.Button("Tracking on/off")
-        b.add_callback('activated', lambda r: w.set_tracking(not(w.track)))
+        b = Widgets.CheckBox("Tracking on/off")
+        b.add_callback('activated', lambda wd, tf: w.set_tracking(tf))
         _vbox.add_widget(b)
         # Test set_value dynamically
         hbox = Widgets.HBox()
