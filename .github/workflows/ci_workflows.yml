@@ -22,7 +22,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: '3.x'
     - name: Lint with flake8
@@ -51,7 +51,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: '3.8'
     - name: Install and build
@@ -72,7 +72,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: '3.7'
     - name: Install and build
@@ -93,7 +93,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: '3.x'
     - name: Install and build
@@ -115,7 +115,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: '3.x'
     - name: Install and build
