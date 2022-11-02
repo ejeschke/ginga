@@ -2,10 +2,14 @@
 What's New
 ++++++++++
 
-Ver 3.4.1 (unreleased)
+Ver 3.4.1 (2022-11-02)
 ======================
-- Fixed a bug that can cause an incorrect cropping of image when the window
-  is resized
+- A few backports from dev branch:
+
+  - Fixed a bug that can cause an incorrect cropping of image when the window
+    is initially drawn or resized
+  - Fixed a small issue with a callback method in the Preferences plugin
+  - Fix for a matplotlib deprecation warning
 
 Ver 3.4.0 (2022-06-28)
 ======================
