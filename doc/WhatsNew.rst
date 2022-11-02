@@ -18,6 +18,8 @@ Ver 4.0.0 (unreleased)
 - Many deprecated camelcase (non-PEP8) methods were removed. Use the
   "snake-case" names instead.
 - Fixed an issue with setting the scale manually in the Preferences plugin
+- Fixed a bug that can cause an incorrect cropping of image when the window
+  is resized
 
 Ver 3.4.0 (2022-06-28)
 ======================
