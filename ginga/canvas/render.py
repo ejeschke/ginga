@@ -196,7 +196,7 @@ class RendererBase(object):
         self.viewer.redraw(whence=1)
 
     def bg_change(self, bg):
-        self.viewer.redraw(whence=3)
+        self.viewer.redraw(whence=0)
 
     def fg_change(self, fg):
         self.viewer.redraw(whence=3)
@@ -490,7 +490,7 @@ class StandardPixelRenderer(RendererBase):
         # record location of pan position pixel
         self._org_x, self._org_y = pan_x - data_off, pan_y - data_off
         self._org_scale_x, self._org_scale_y = scale_x, scale_y
-        self._org_scale_z = (scale_x + scale_y) / 2.0
+        self._org_scale_z = (scale_x + scale_y) * 0.5
 
     def _apply_transforms(self, data):
         """Apply transformations to the given data.
@@ -679,8 +679,8 @@ class StandardPixelRenderer(RendererBase):
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
             ht, wd, dp = dstarr.shape
-            cvs_x = int(np.round(wd / 2.0 + off_x))
-            cvs_y = int(np.round(ht / 2.0 + off_y))
+            cvs_x = int(np.round(wd * 0.5 + off_x))
+            cvs_y = int(np.round(ht * 0.5 + off_y))
             cache.cvs_pos = (cvs_x, cvs_y)
 
     def _prepare_image(self, cvs_img, cache, whence):
@@ -974,7 +974,7 @@ class StandardPipelineRenderer(RendererBase):
                                            self.stage.flipswap,
                                            self.stage.rotate,
                                            self.stage.output],
-                                          name='standard-pixel-renderer')
+                                          name='standard-pipeline-renderer')
 
         # A table of (threshold, stage) tuples. See render_whence()
         self.tbl = [(2.0, self.stage.overlays),
@@ -987,8 +987,8 @@ class StandardPipelineRenderer(RendererBase):
         self.rgb_order = 'RGBA'
         self.std_order = 'RGBA'
         self.dims = (0, 0)
-        self.state = Bunch.Bunch(org_scale=(1.0, 1.0),
-                                 org_pan=(0.0, 0.0),
+        self.state = Bunch.Bunch(org_scale=(1.0, 1.0, 1.0),
+                                 org_pan=(0.0, 0.0, 0.0),
                                  ctr=(0, 0),
                                  win_dim=(0, 0),
                                  order=self.std_order)
@@ -1074,19 +1074,40 @@ class StandardPipelineRenderer(RendererBase):
 
     def resize(self, dims):
         self._resize(dims)
+        #self.pipeline.invalidate()
         self.pipeline.run_stage_idx(0)
         self.viewer.redraw(whence=0)
 
     def calc_const_len(self, clen):
-        # For standard pixel renderer, pixel size is constant
+        # For standard pipeline renderer, pixel size is constant
         return clen
 
     def _resize(self, dims):
         self.dims = dims
+        # update window size and center in pipeline
         wd, ht = dims[:2]
         ctr = (wd // 2, ht // 2)
         self.state.setvals(win_dim=dims[:2], ctr=ctr,
                            order=self.std_order)
+
+        # update pan and scale values in pipeline
+        pan_x, pan_y = self.viewer.get_pan(coord='data')[:2]
+        scale_x, scale_y = self.viewer.get_scale_xy()
+        self._update_pan_and_scale(scale_x, scale_y,
+                                   pan_x, pan_y, wd, ht)
+
+    def _update_pan_and_scale(self, scale_x, scale_y, pan_x, pan_y,
+                              win_wd, win_ht):
+        data_off = self.viewer.data_off
+
+        # record location of pan position pixel
+        org_x, org_y = pan_x - data_off, pan_y - data_off
+
+        org_scale_x, org_scale_y = scale_x, scale_y
+        org_scale_z = (scale_x + scale_y) * 0.5
+
+        self.state.setvals(org_pan=(org_x, org_y, 0.0),
+                           org_scale=(org_scale_x, org_scale_y, org_scale_z))
 
     def _confirm_pan_and_scale(self, scale_x, scale_y, pan_x, pan_y,
                                win_wd, win_ht):
@@ -1097,16 +1118,8 @@ class StandardPipelineRenderer(RendererBase):
             if self.viewer.settings.get('sanity_check_scale', True):
                 raise RenderError("new scale would exceed pixel max; scale unchanged")
 
-        data_off = self.viewer.data_off
-
-        # record location of pan position pixel
-        org_x, org_y = pan_x - data_off, pan_y - data_off
-
-        org_scale_x, org_scale_y = scale_x, scale_y
-        org_scale_z = (scale_x + scale_y) / 2.0
-
-        self.state.setvals(org_pan=(org_x, org_y, 0.0),
-                           org_scale=(org_scale_x, org_scale_y, org_scale_z))
+        self._update_pan_and_scale(scale_x, scale_y, pan_x, pan_y,
+                                   win_wd, win_ht)
 
     def scale_fontsize(self, fontsize):
         return font_asst.scale_fontsize(self.kind, fontsize)

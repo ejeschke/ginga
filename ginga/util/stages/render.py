@@ -345,8 +345,8 @@ class Overlays(Stage):
             # dst position in the pre-transformed array should be calculated
             # from the center of the array plus offsets
             ht, wd, dp = dstarr.shape
-            cvs_x = int(np.round(wd / 2.0 + off_x))
-            cvs_y = int(np.round(ht / 2.0 + off_y))
+            cvs_x = int(np.round(wd * 0.5 + off_x))
+            cvs_y = int(np.round(ht * 0.5 + off_y))
             cache.cvs_pos = (cvs_x, cvs_y)
 
     def _prepare_image(self, cvs_img, cache, whence):
@@ -704,8 +704,8 @@ class Merge(Stage):
         # dst position in the pre-transformed array should be calculated
         # from the center of the array plus offsets
         ht, wd, dp = dstarr.shape
-        cvs_x = int(np.round(wd / 2.0 + off_x))
-        cvs_y = int(np.round(ht / 2.0 + off_y))
+        cvs_x = int(np.round(wd * 0.5 + off_x))
+        cvs_y = int(np.round(ht * 0.5 + off_y))
         cvs_pos = (cvs_x, cvs_y)
 
         dst_order = state.order

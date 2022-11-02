@@ -2,6 +2,11 @@
 What's New
 ++++++++++
 
+Ver 3.4.1 (unreleased)
+======================
+- Fixed a bug that can cause an incorrect cropping of image when the window
+  is resized
+
 Ver 3.4.0 (2022-06-28)
 ======================
 - Added start_server option to RC plugin configuration; can configure
