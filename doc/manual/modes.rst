@@ -8,7 +8,7 @@ As discussed in the Concepts section on :ref:`concepts-modes`,
 modes are a mechanism that allow Ginga to accommodate many key and
 pointer bindings for a large number of possible operations.  
 Modes are associated with the basic Ginga viewer widget and so can be
-used even with the widget standalone in your own programs (i.e. apart
+used even with the widget standalone in your own programs (i.e., apart
 from the Reference Viewer; see :ref:`ch-programming-ginga` for details).
 
 Invoking Modes
@@ -31,7 +31,7 @@ mode is active:
    :width: 800px
    :align: center
 
-To exit a mode, simply press the Esc (escape) key.
+To exit a mode, press the Esc (escape) key.
 
 .. note::
    In the Reference Viewer, you can also enter and exit certain modes
@@ -79,28 +79,28 @@ Mode Types
 The mode switching system has a *mode type* which can be set to one of:
 
 * ``oneshot``: The mode is exited by initiating and finishing a cursor drag,
-  or when `Esc` is pressed (if no cursor drag is performed)
+  or when ``Esc`` is pressed (if no cursor drag is performed)
 * ``locked``: The mode is locked until the meta mode key is pressed
-  again (or `Esc`)
+  again (or ``Esc``)
 
 By default most modes are activated in "locked" type.
 
 .. note::
 
-   When the lock is active it is signified by an additional "[L]"
-   (locked) appearing in the mode indicator.  Oneshot mode is
+   When the lock is active, it is signified by an additional "[L]"
+   (locked) appearing in the mode indicator; oneshot mode is
    indicated by "[O]". In the figure above, you can see the mode
    indicator showing that the viewer is in "contrast" mode, with the
    mode type as "Lock". In the Reference Viewer, the same information
    can be seen in the Toolbar plugin, where the lock icon shows
-   the state of the mode type (engaged == 'Lock').
+   the state of the mode type (``engaged == 'Lock'``).
 
 
 ==============
 Standard Modes
 ==============
 These are the set of modes that come with Ginga.  Those interested in
-writing their own custom mode should refer to Chapter
+writing their own custom mode should refer to 
 :ref:`ch-dev-modes` in the developers manual.
 
 .. note::

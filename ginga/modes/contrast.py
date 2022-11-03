@@ -19,9 +19,9 @@ Default bindings in mode
 ------------------------
 * T : restore contrast to defaults
 * left drag : adjust contrast
-    Interactive shift/stretch colormap (aka contrast and bias).
-    Moving left/right controls shift, up/down controls stretch.
-    Release button when satisfied with the contrast.
+  * Interactive shift/stretch colormap (aka contrast and bias).
+  * Moving left/right controls shift, up/down controls stretch.
+  * Release button when satisfied with the contrast.
 * right click : restore contrast to defaults
 
 """

@@ -26,7 +26,7 @@ that they register.
 
 Methods of a mode
 =================
-A mode is a subclass derived from ``~ginga.modes.mode_base.Mode``.
+A mode is a subclass derived from `~ginga.modes.mode_base.Mode`.
 As far as the class structure goes, the following methods are required
 and explained below.
 
@@ -34,25 +34,25 @@ __init__
 --------
 The constructor is called when the mode is first instantiated for a
 viewer; it should at a minimum call the superclass, and define an
-attribute named `actions` that is assigned a dictionary of bindings.
+attribute named ``actions`` that is assigned a dictionary of bindings.
 
 start
 -----
-`start()` is called when the mode is activated by the user.
+``start()`` is called when the mode is activated by the user.
 It should do any initialization necessary since the constructor or the
-last call to `stop()`.  For many cases, this may be nothing, since the
+last call to ``stop()``.  For many cases, this may be nothing, since the
 purpose of most modes is simply to enable the new bindings for the
 duration of the mode.
 
 stop
 -----
-`stop()` is called when a mode is deactivated.  It does any cleanup
+``stop()`` is called when a mode is deactivated.  It does any cleanup
 necessary and puts the mode in a state where it will be ready for a
-future call to `start()`.
+future call to ``start()``.
 
 __str__
 -------
-The `__str__` method should be set to return a unique, lower-case string
+The ``__str__`` method should be set to return a unique, lower-case string
 that is used to identify the mode and indicate the mode in the viewer
 mode indicator.
 
@@ -69,7 +69,7 @@ Ginga actions for binding cursor and key events is specified as a kind
 of Domain Specific Language that is compatible with the format for Ginga
 settings files.
 This is to allow the user to customize the bindings completely by
-providing a `bindings.cfg` file in their `$HOME/.ginga` folder.
+providing a ``bindings.cfg`` file in their ``$HOME/.ginga`` folder.
 In the modes, this takes the form of a dictionary defined in the
 constructor and assigned to the attribute ``actions``.
 
@@ -101,32 +101,32 @@ the purpose of the callback known.
 
 Triggers
 ========
-Triggers are spelled out as a string of the form: <mode>+<modifier>+<action>
-where either of the <mode> and <modifier> are optional (if omitted,
-then the following plus sign is also omitted).
+Triggers are spelled out as a string of the form: ``<mode>+<modifier>+<action>``
+where either of the ``<mode>`` and ``<modifier>`` are optional (if omitted,
+then the preceding plus sign is also omitted).
 
-<mode> is simply the name of the mode for which the binding should be
+``<mode>`` is simply the name of the mode for which the binding should be
 active.  This will match the name returned by the ``__str__`` method in
-the class implementation.  If <mode> is omitted, the binding is assigned
+the class implementation.  If ``<mode>`` is omitted, the binding is assigned
 to the "modeless" operation, which means that it can be activated if no
 mode is currently activated and the event is not handled by some active
 canvas.  This is mechanism by which "default" actions are handled by a
 mode for certain events even when no mode is currently active.
 
-<modifier> stands for a keyboard modifier key.  The usual defined ones
+``<modifier>`` stands for a keyboard modifier key.  The usual defined ones
 are "shift" and "ctrl".  An asterisk can be used as a wildcard in this
 position to indicate that the event should be bound for any combination
 of modifiers or lack of a modifier.
 
-The <action> describes what is happening in combination with the <mode>
-and <modifier> to trigger the event.  It is a key symbol, the name of a
-mouse button (usually "left",  "middle" or "right"), "scroll" for the
+The ``<action>`` describes what is happening in combination with the ``<mode>``
+and ``<modifier>`` to trigger the event.  It is a key symbol, the name of a
+mouse button (usually "left",  "middle", or "right"), "scroll" for the
 scroll action, and "pinch" or "pan" for the two gestures, respectively.
 
 Examples
 ========
-Assume that these are part of a `dict()` being defined, or in a user's
-`bindings.cfg`.
+Assume that these are part of a :py:obj:`dict` being defined, or in a user's
+``bindings.cfg``.
 
 kp_pan_page_up=['pan+*+page_up']
 
@@ -162,7 +162,7 @@ Keyboard and cursor events both have the same callback method signature:
     def kp_handler(self, viewer, event, data_x, data_y)
     def ms_handler(self, viewer, event, data_x, data_y)
 
-These are class methods, as evidenced by the presence of ``self``.
+These are instance methods, as evidenced by the presence of ``self``.
 The other parameters in the callback are:
 
 * ``viewer`` : the viewer in which the action happened
@@ -175,7 +175,7 @@ The other parameters in the callback are:
           may be removed from the callback in a future version.
           Instead, use the values found in the ``event`` object.
 
-Scroll, pinch and pan events have a slightly different method signature:
+Scroll, pinch, and pan events have a slightly different method signature:
 
 .. code-block:: python
 
@@ -187,7 +187,6 @@ These just receive the ``viewer`` and the ``event`` which precipitated the
 callback.
 
 .. note:: To see what attributes are available in each event, see the
-          ``KeyEvent``, ``PointEvent``, ``ScrollEvent``, ``PanEvent`` and
-          ``PinchEvent`` in the :ref:`api` (look under "ginga.Bindings").
-
+          ``KeyEvent``, ``PointEvent``, ``ScrollEvent``, ``PanEvent``, and
+          ``PinchEvent`` in the :ref:`api` (look under `ginga.Bindings`).
 

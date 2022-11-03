@@ -410,7 +410,7 @@ Naxis mode
 ==========
 
 .. note:: Naxis mode is used when viewing data that has more than 2
-          dimensions (e.g. data cubes).
+          dimensions (e.g., data cubes).
 
 +----------------------+---------------------------------------------------+
 | Commmand             | Description                                       |
