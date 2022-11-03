@@ -93,7 +93,7 @@ class ImageViewBindings(object):
         bindmap.set_mode(name, mode_type=mode_type)
 
     def mode_set_cb(self, bm, mode, mode_type, viewer):
-        self.logger.info(f'mode change to {mode}')
+        self.logger.debug(f'mode change to {mode}')
 
         if mode != self._cur_mode:
             if self._cur_mode not in ('meta', None):
