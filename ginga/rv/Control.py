@@ -16,6 +16,7 @@ import platform
 import atexit
 import shutil
 import inspect
+import warnings
 from collections import deque, OrderedDict
 
 # Local application imports
@@ -24,6 +25,7 @@ from ginga.misc import Bunch, Timer, Future
 from ginga.util import catalog, iohelper, loader, toolbox
 from ginga.util import viewer as gviewer
 from ginga.canvas.CanvasObject import drawCatalog
+from ginga.modes import modeinfo
 
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager
@@ -36,6 +38,7 @@ from ginga import __version__
 
 # Reference viewer
 from ginga.rv.Channel import Channel
+from ginga.rv.rvmode import RVMode
 
 have_docutils = False
 try:
@@ -193,6 +196,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.fs_viewer = None
         self.w.fscreen = None
 
+        # enables reference-viewer specific bindings
+        RVMode.set_shell_ref(self)
+        modeinfo.add_mode(RVMode)
+
+        # register viewers
         gviewer.register_viewer(Viewers.CanvasView)
         gviewer.register_viewer(Viewers.TableViewGw)
         gviewer.register_viewer(Viewers.PlotViewGw)
@@ -1977,9 +1985,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         fi.show_mode_indicator(True, corner='lr')
         fi.use_image_profile = True
 
-        fi.add_callback('cursor-changed', self.motion_cb)
         fi.add_callback('cursor-down', self.force_focus_cb)
-        fi.set_callback('key-down-none', self.keypress)
         fi.add_callback('drag-drop', self.dragdrop)
         fi.ui_set_active(True, viewer=fi)
 
@@ -2842,80 +2848,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """Motion event in the channel viewer window.  Show the pointing
         information under the cursor.
         """
+        warnings.warn("This function has been deprecated--"
+                      "use showxy() instead",
+                      DeprecationWarning)
         self.showxy(viewer, data_x, data_y)
         return True
-
-    def keypress(self, viewer, event, data_x, data_y):
-        """Key press event in a channel window."""
-        keyname = event.key
-        chname = self.get_channel_name(viewer)
-        self.logger.debug("key press (%s) in channel %s" % (
-            keyname, chname))
-        # TODO: keyboard accelerators to raise tabs need to be integrated into
-        #   the desktop object
-        if keyname == 'Z':
-            self.ds.raise_tab('Zoom')
-            return True
-        ## elif keyname == 'T':
-        ##     self.ds.raise_tab('Thumbs')
-        elif keyname == 'I':
-            self.ds.raise_tab('Info')
-            return True
-        elif keyname == 'H':
-            self.ds.raise_tab('Header')
-            return True
-        elif keyname == 'C':
-            self.ds.raise_tab('Contents')
-            return True
-        elif keyname == 'D':
-            self.ds.raise_tab('Dialogs')
-            return True
-        elif keyname == 'F':
-            self.build_fullscreen()
-            return True
-        elif keyname == 'f':
-            self.toggle_fullscreen()
-            return True
-        elif keyname == 'm':
-            self.maximize()
-            return True
-        elif keyname == '<':
-            self.collapse_pane('left')
-            return True
-        elif keyname == '>':
-            self.collapse_pane('right')
-            return True
-        elif keyname == 'n':
-            self.next_channel()
-            return True
-        elif keyname == 'J':
-            self.cycle_workspace_type()
-            return True
-        elif keyname == 'k':
-            self.add_channel_auto()
-            return True
-        elif keyname == 'K':
-            self.remove_channel_auto()
-            return True
-        elif keyname == 'f1':
-            self.show_channel_names()
-            return True
-        ## elif keyname == 'escape':
-        ##     self.reset_viewer()
-        elif keyname in ('up',):
-            self.prev_img()
-            return True
-        elif keyname in ('down',):
-            self.next_img()
-            return True
-        elif keyname in ('left',):
-            self.prev_channel()
-            return True
-        elif keyname in ('right',):
-            self.next_channel()
-            return True
-
-        return False
 
     def dragdrop(self, chviewer, uris):
         """Called when a drop operation is performed on a channel viewer.
@@ -2927,15 +2864,22 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.open_uris(uris, chname=chname)
         return True
 
-    def force_focus_cb(self, viewer, event, data_x, data_y):
-        chname = self.get_channel_name(viewer)
+    def force_focus(self, chname):
+        if not self.settings.get('channel_follows_focus', False):
+            self.change_channel(chname, raisew=True)
+
         channel = self.get_channel(chname)
         v = channel.viewer
         if hasattr(v, 'take_focus'):
             v.take_focus()
 
-        if not self.settings.get('channel_follows_focus', False):
-            self.change_channel(chname, raisew=True)
+    def force_focus_cb(self, viewer, event, data_x, data_y):
+        warnings.warn("This function has been deprecated--"
+                      "use force_focus() instead",
+                      DeprecationWarning)
+        chname = self.get_channel_name(viewer)
+        if chname is not None:
+            self.force_focus(chname)
         return True
 
     def focus_cb(self, viewer, tf, name):

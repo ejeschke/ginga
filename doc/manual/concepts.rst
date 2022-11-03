@@ -294,34 +294,6 @@ or no mode.
 .. note::
 
    If a mode does not override a particular binding, the default binding
-   will still be active.   
-
-Modes have an associated *mode type* which can be set to one of:
-
-* ``held``: The mode is active while the activating key is held down
-* ``oneshot``: The mode is released by initiating and finishing a cursor drag,
-  or when `Esc` is pressed, if no cursor drag is performed
-* ``locked``: The mode is locked until the mode key is pressed again (or `Esc`)
-* ``softlock``: The mode is locked until another mode key is pressed (or `Esc`)
-
-By default most modes are activated in "locked" type.
-
-Modes are usually indicated by a small black rectangle with the mode
-name and mode type in one corner of the viewer, usually in the lower
-right corner of the viewer. 
-
-.. note::
-
-   When the lock is active it is signified by an additional "[L]"
-   (locked) appearing in the mode indicator.  Soft locked mode is
-   indicated by "[SL]" and oneshot by "[O]".
-
-.. image:: figures/mode_indicator.png
-   :width: 800px
-   :align: center
-
-In the above figure, you can see the mode indicator showing that
-the viewer is in "contrast" mode, with the lock on. The same
-information can be seen in the Toolbar plugin. On the Toolbar plugin
-you can click to set the mode and toggle the lock on/off.
+   will still be active, unless an active canvas being shown in the
+   viewer has registered for the same binding.   
 

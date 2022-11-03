@@ -117,7 +117,7 @@ on Github.
 Ginga has a logging facility, and it would be most helpful if you can
 invoke Ginga with the logging options to capture any logged errors::
 
-    ginga --loglevel=20 --log=ginga.log
+    ginga --loglevel=20 --log=ginga.log --stderr
 
 If the difficulty is with non-display or non-working `World Coordinate System (WCS)`__ for a
 particular image file please be ready to supply the file for our aid in
