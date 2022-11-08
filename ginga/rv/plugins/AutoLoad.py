@@ -202,3 +202,9 @@ class AutoLoad(GingaPlugin.LocalPlugin):
 
     def __str__(self):
         return 'autoload'
+
+
+# Append module docstring with config doc for auto insert by Sphinx.
+from ginga.util.toolbox import generate_cfg_example  # noqa
+if __doc__ is not None:
+    __doc__ += generate_cfg_example('plugin_AutoLoad', package='ginga')
