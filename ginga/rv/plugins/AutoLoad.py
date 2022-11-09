@@ -74,6 +74,7 @@ class AutoLoad(GingaPlugin.LocalPlugin):
         if not have_watchdog:
             raise ImportError("Install 'watchdog' to use this plugin")
 
+        container.set_border_width(2)
         top = Widgets.VBox()
         top.set_border_width(4)
 
@@ -101,8 +102,12 @@ class AutoLoad(GingaPlugin.LocalPlugin):
         b.pause.add_callback('activated', self.set_pause_cb)
 
         top.add_widget(w, stretch=0)
+        # for customization by subclasses
+        self.w.vbox = top
 
-        top.add_widget(Widgets.Label(''), stretch=1)
+        container.add_widget(top, stretch=0)
+
+        container.add_widget(Widgets.Label(''), stretch=1)
 
         btns = Widgets.HBox()
         btns.set_spacing(3)
@@ -114,9 +119,7 @@ class AutoLoad(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
-        top.add_widget(btns, stretch=0)
-
-        container.add_widget(top, stretch=1)
+        container.add_widget(btns, stretch=0)
 
         self.gui_up = True
 
@@ -135,8 +138,7 @@ class AutoLoad(GingaPlugin.LocalPlugin):
             return
         # add new watch folder
         event_handler = FileSystemEventHandler()
-        #event_handler.on_created = self.file_detected_cb
-        event_handler.on_closed = self.file_detected_cb
+        event_handler.on_closed = self._file_detected_cb
         self._watch = self.observer.schedule(event_handler, data_dir,
                                              recursive=False)
         self.data_dir = data_dir
@@ -183,18 +185,31 @@ class AutoLoad(GingaPlugin.LocalPlugin):
         self.observer.join()
         self.gui_up = False
 
-    def file_detected_cb(self, event):
+    def _file_detected_cb(self, event):
         if self.pause_flag:
             return
         filepath = event.src_path
         self.logger.info(f"new file detected: {filepath}")
+
+        if self.check_file(filepath):
+            self.load_file(filepath)
+
+    def check_file(self, filepath):
+        """Check path and return True if we should load it.
+        Subclass can override this to add different checks.
+        """
         if self.regex is not None:
             fname = os.path.basename(filepath)
             match = self.regex_c.match(fname)
             if not match:
                 self.logger.info(f"filename {fname} did not match regex")
-                return
+                return False
 
+        # file did not fail any checks we set for it
+        return True
+
+    def load_file(self, filepath):
+        """Subclass can override to change behavior."""
         self.fv.nongui_do(self.fv.load_file, filepath)
 
     def redo(self):
