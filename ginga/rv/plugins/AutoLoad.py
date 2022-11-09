@@ -72,7 +72,7 @@ class AutoLoad(GingaPlugin.LocalPlugin):
 
     def build_gui(self, container):
         if not have_watchdog:
-            raise ValueError("Install 'watchdog' to use this plugin")
+            raise ImportError("Install 'watchdog' to use this plugin")
 
         top = Widgets.VBox()
         top.set_border_width(4)
