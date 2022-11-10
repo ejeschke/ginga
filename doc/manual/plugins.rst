@@ -90,3 +90,4 @@ is the graphical way to start an operation.
    plugins_local/plottable
    plugins_local/pipeline
    plugins_local/screenshot
+   plugins_local/autoload

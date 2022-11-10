@@ -29,6 +29,9 @@ Ver 4.0.0 (unreleased)
     since it is encapsulated rather than all mixed together in one huge
     file.
 
+- Added an AutoLoad plugin that can monitor a folder for new files and
+  load them.
+
 Ver 3.4.0 (2022-06-28)
 ======================
 - Added start_server option to RC plugin configuration; can configure
