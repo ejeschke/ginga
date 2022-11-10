@@ -534,12 +534,13 @@ class ViewerImageProxy:
         if ld_image is not None:
             info = ld_image.info_xy(data_x, data_y, settings)
 
-            if image is not None and image is not ld_image:
-                info.image_x, info.image_y = pt
-                _b_x, _b_y = pt[:2]
-                _d_x, _d_y = (int(np.floor(_b_x + data_off)),
-                              int(np.floor(_b_y + data_off)))
-                info.value = image.get_data_xy(_d_x, _d_y)
+            # TEMP: fix for RGBA overlays
+            # if image is not None and image is not ld_image:
+            #     info.image_x, info.image_y = pt
+            #     _b_x, _b_y = pt[:2]
+            #     _d_x, _d_y = (int(np.floor(_b_x + data_off)),
+            #                   int(np.floor(_b_y + data_off)))
+            #     info.value = image.get_data_xy(_d_x, _d_y)
 
         elif image is not None:
             info = image.info_xy(pt[0], pt[1], settings)
