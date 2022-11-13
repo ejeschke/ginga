@@ -31,6 +31,8 @@ Ver 4.0.0 (unreleased)
 
 - Added an AutoLoad plugin that can monitor a folder for new files and
   load them.
+- Fixed a bug in the Overlays plugin where the overlay value was
+  reported as the value under the cursor rather than the data value
 
 Ver 3.4.0 (2022-06-28)
 ======================
