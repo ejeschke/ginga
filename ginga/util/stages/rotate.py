@@ -6,21 +6,30 @@ import numpy as np
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga import trcalc
 from ginga.gw import Widgets
-from ginga.util import action
 
-from .base import Stage
+from .base import Stage, StageAction
 
 
 class Rotate(Stage):
+    """
+    Rotate a 2D image.
+
+    'Rotate' (`rot_deg`) gives the angle of rotation for the image.
+
+    'Clip' (`clip`) tells whether to clip the image at its existing size,
+    or change size as needed to contain the entire image.
+
+    'Add alpha' (`add_alpha`) will add an alpha channel to keep the
+    parts of the expanded rotated image invisible.
+    """
 
     _stagename = 'rotate'
 
     def __init__(self):
-        super(Rotate, self).__init__()
+        super().__init__()
 
         self.dc = get_canvas_types()
         self.cropcolor = 'limegreen'
-        self.layertag = 'rotate-layer'
         self._rot_deg = 0.0
         self._clip = True
         self._add_alpha = False
@@ -88,10 +97,10 @@ class Rotate(Stage):
 
     def _set_rotation(self, rot_deg):
         old_rot_deg, self.rot_deg = self._rot_deg, rot_deg
-        self.pipeline.push(action.AttrAction(self,
-                                             dict(rot_deg=old_rot_deg),
-                                             dict(rot_deg=self._rot_deg),
-                                             descr="rotate angle"))
+        self.pipeline.push(StageAction(self,
+                                       dict(rot_deg=old_rot_deg),
+                                       dict(rot_deg=self._rot_deg),
+                                       descr="rotate angle"))
         self.pipeline.run_from(self)
 
     @property
@@ -106,10 +115,10 @@ class Rotate(Stage):
 
     def _set_clip(self, tf):
         old_clip, self.clip = self._clip, tf
-        self.pipeline.push(action.AttrAction(self,
-                                             dict(clip=old_clip),
-                                             dict(clip=self._clip),
-                                             descr="change rotation clip"))
+        self.pipeline.push(StageAction(self,
+                                       dict(clip=old_clip),
+                                       dict(clip=self._clip),
+                                       descr="change rotation clip"))
         self.pipeline.run_from(self)
 
     @property
@@ -124,10 +133,10 @@ class Rotate(Stage):
 
     def _set_add_alpha(self, tf):
         old_add_alpha, self._add_alpha = self._add_alpha, tf
-        self.pipeline.push(action.AttrAction(self,
-                                             dict(add_alpha=old_add_alpha),
-                                             dict(add_alpha=self._add_alpha),
-                                             descr="change rotation alpha"))
+        self.pipeline.push(StageAction(self,
+                                       dict(add_alpha=old_add_alpha),
+                                       dict(add_alpha=self._add_alpha),
+                                       descr="change rotation alpha"))
         self.pipeline.run_from(self)
 
     def _get_state(self):
@@ -151,12 +160,8 @@ class Rotate(Stage):
     def resume(self):
         # insert canvas, if not already
         p_canvas = self.viewer.get_canvas()
-        try:
-            p_canvas.get_object_by_tag(self.layertag)
-
-        except KeyError:
-            # Add ruler layer
-            p_canvas.add(self.canvas, tag=self.layertag)
+        if not p_canvas.has_object(self.canvas):
+            p_canvas.add(self.canvas)
 
         if not self.canvas.has_object(self.rot_obj):
             self.canvas.add(self.rot_obj)
@@ -169,7 +174,7 @@ class Rotate(Stage):
         # remove the canvas from the image
         p_canvas = self.viewer.get_canvas()
         try:
-            p_canvas.delete_object_by_tag(self.layertag)
+            p_canvas.delete_object(self.canvas)
         except Exception:
             pass
 
@@ -195,12 +200,12 @@ class Rotate(Stage):
         self.pipeline.send(res_np=res_np)
 
     def export_as_dict(self):
-        d = super(Rotate, self).export_as_dict()
+        d = super().export_as_dict()
         d.update(self._get_state())
         return d
 
     def import_from_dict(self, d):
-        super(Rotate, self).import_from_dict(d)
+        super().import_from_dict(d)
         self.rot_deg = d['rot_deg']
         self.clip = d['clip']
         self.add_alpha = d['add_alpha']

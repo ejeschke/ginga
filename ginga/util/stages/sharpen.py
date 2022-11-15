@@ -10,7 +10,7 @@ import cv2
 from ginga import trcalc
 from ginga.gw import Widgets
 
-from .base import Stage
+from .base import Stage, StageAction
 
 
 class Sharpen(Stage):
@@ -22,10 +22,10 @@ class Sharpen(Stage):
     _stagename = 'sharpen'
 
     def __init__(self):
-        super(Sharpen, self).__init__()
+        super().__init__()
 
-        self.radius = 2
-        self.strength = 1.0
+        self._radius = 2
+        self._strength = 1.0
 
     def build_gui(self, container):
         fr = Widgets.Frame("Sharpen")
@@ -36,11 +36,11 @@ class Sharpen(Stage):
         w, b = Widgets.build_info(captions, orientation='vertical')
 
         b.radius.set_tooltip("Set the radius of the sharpening in pixels")
-        b.radius.set_text(str(self.radius))
+        b.radius.set_text(str(self._radius))
         b.radius.add_callback('activated', self.set_radius_cb)
 
         b.strength.set_tooltip("Set the strength of the sharpening")
-        b.strength.set_text(str(self.strength))
+        b.strength.set_text(str(self._strength))
         b.strength.add_callback('activated', self.set_strength_cb)
 
         self.w.update(b)
@@ -48,13 +48,52 @@ class Sharpen(Stage):
 
         container.set_widget(fr)
 
-    def set_radius_cb(self, widget):
-        self.radius = int(widget.get_text().strip())
+    @property
+    def radius(self):
+        return self._radius
+
+    @radius.setter
+    def radius(self, val):
+        self._radius = val
+        if self.gui_up:
+            self.w.radius.set_text(str(self._radius))
+
+    def _set_radius(self, radius):
+        old_radius, self.radius = self._radius, radius
+        self.pipeline.push(StageAction(self,
+                                       dict(radius=old_radius),
+                                       dict(radius=self._radius),
+                                       descr="sharpen radius"))
         self.pipeline.run_from(self)
 
-    def set_strength_cb(self, widget):
-        self.strength = float(widget.get_text().strip())
+    @property
+    def strength(self):
+        return self._strength
+
+    @strength.setter
+    def strength(self, val):
+        self._strength = val
+        if self.gui_up:
+            self.w.strength.set_text(str(self._strength))
+
+    def _set_strength(self, strength):
+        old_strength, self.strength = self._strength, strength
+        self.pipeline.push(StageAction(self,
+                                       dict(strength=old_strength),
+                                       dict(strength=self._strength),
+                                       descr="sharpen strength"))
         self.pipeline.run_from(self)
+
+    def _get_state(self):
+        return dict(radius=self._radius, strength=self._strength)
+
+    def set_radius_cb(self, widget):
+        radius = int(widget.get_text().strip())
+        self._set_radius(radius)
+
+    def set_strength_cb(self, widget):
+        strength = float(widget.get_text().strip())
+        self._set_strength(strength)
 
     def run(self, prev_stage):
         data = self.pipeline.get_data(prev_stage)
@@ -75,6 +114,16 @@ class Sharpen(Stage):
         res_np = unsharpen(data, self.radius, self.strength)
 
         self.pipeline.send(res_np=res_np)
+
+    def export_as_dict(self):
+        d = super().export_as_dict()
+        d.update(self._get_state())
+        return d
+
+    def import_from_dict(self, d):
+        super().import_from_dict(d)
+        self.radius = d['radius']
+        self.strength = d['strength']
 
 
 def unsharp(imarr, sigma, strength, minmax=None):

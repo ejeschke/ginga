@@ -137,7 +137,7 @@ class Pipeline(Callback.Callbacks):
         self.run_from(act.obj)
 
     def save(self):
-        dd = dict(name=self.name)
+        dd = dict(name=self.name, enabled=self.enabled)
         d = dict(pipeline=dd)
         l = [stage.export_as_dict() for stage in self.pipeline]
         dd['stages'] = l
@@ -152,6 +152,7 @@ class Pipeline(Callback.Callbacks):
 
         dd = d['pipeline']
         self.name = dd['name']
+        self.enabled = dd.get('enabled', True)
         l = []
         for sd in dd['stages']:
             # instantiate stage

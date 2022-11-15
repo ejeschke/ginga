@@ -17,6 +17,9 @@ from .base import Stage, StageError
 
 
 class CreateBg(Stage):
+    """Create the background RGB image, sized to fit the area that needs to
+    be painted in the viewer, and big enough so there is room to rotate it.
+    """
 
     _stagename = 'viewer-createbg'
 
@@ -59,8 +62,8 @@ class CreateBg(Stage):
 
 
 class ICCProf(Stage):
-    """Convert the given RGB data from the input ICC profile
-    to the output ICC profile.
+    """Convert the given RGB data from the input ICC profile to the
+    output ICC profile registered for the viewer.
     """
     _stagename = 'viewer-icc-profiler'
 
@@ -113,6 +116,8 @@ class ICCProf(Stage):
 
 
 class FlipSwap(Stage):
+    """Flip or swap axes according the viewer settings.
+    """
 
     _stagename = 'viewer-flipswap'
 
@@ -146,6 +151,8 @@ class FlipSwap(Stage):
 
 
 class Rotate(Stage):
+    """Rotate the image according the viewer settings.
+    """
 
     _stagename = 'viewer-rotate'
 
@@ -192,6 +199,9 @@ class Rotate(Stage):
 
 
 class Output(Stage):
+    """Create the output image by trimming height and width and reordering
+    channels according to viewer settings.
+    """
 
     _stagename = 'viewer-output'
 
@@ -476,6 +486,19 @@ class Overlays(Stage):
 ##########################
 
 class Overlays2(Stage):
+    """The Overlays stage constructs an embedded pipeline to process each
+    canvas into a RGBA image.  A pipeline is run for each image that
+    needs to be processed. The pipeline run depends on the type of image
+    on the canvas:
+
+    ginga.canvas.types.image.Image:
+
+    [scale] => [merge]
+
+    ginga.canvas.types.image.NormImage:
+
+    [scale] => [cuts] => [rgbmap] => [merge]
+    """
 
     _stagename = 'viewer-image-overlays'
 
@@ -512,7 +535,7 @@ class Overlays2(Stage):
         from ginga.util import pipeline
         pipe = cache.get('minipipe', None)
         if pipe is None:
-            stages = [Clip(self.viewer),
+            stages = [Scale(self.viewer),
                       Merge(self.viewer)]
             pipe = pipeline.Pipeline(self.logger, stages)
             pipe.name = 'image-overlays'
@@ -532,7 +555,7 @@ class Overlays2(Stage):
         from ginga.util import pipeline
         pipe = cache.get('minipipe', None)
         if pipe is None:
-            stages = [Clip(self.viewer),
+            stages = [Scale(self.viewer),
                       Cuts(self.viewer),
                       RGBMap(self.viewer),
                       Merge(self.viewer)]
@@ -556,17 +579,20 @@ class Overlays2(Stage):
             pipe.run_from(pipe[3])
 
 
-class Clip(Stage):
+class Scale(Stage):
+    """Scale the image according to the viewers scale settings.  Only the
+    portions of the image that will be visible are copied and then scaled.
+    """
 
-    _stagename = 'viewer-clip'
+    _stagename = 'viewer-scale'
 
     def __init__(self, viewer):
-        super(Clip, self).__init__()
+        super(Scale, self).__init__()
 
         self.viewer = viewer
 
     def run(self, prev_stage):
-        #assert prev_stage is None, StageError("'viewclip' in wrong location")
+        #assert prev_stage is None, StageError("'viewscale' in wrong location")
         cvs_img = self.pipeline.get('cvs_img')
         cache = cvs_img.get_cache(self.viewer)
 
@@ -681,6 +707,9 @@ class Clip(Stage):
 
 
 class Merge(Stage):
+    """Merge the processed image into the result of our stage at the
+    appropriate offset and with the appropriate alpha blending.
+    """
 
     _stagename = 'viewer-merge-overlay'
 
@@ -730,6 +759,13 @@ class Merge(Stage):
 
 
 class Cuts(Stage):
+    """Process the cut levels (loval, hival) for the image.
+
+    This has the effect of mapping every input value between loval and
+    hival to the range specified by the output values (vmin, vmax).
+    Input values lower than loval are mapped to loval and values higher
+    than hival are mapped to hival.
+    """
 
     _stagename = 'viewer-cut-levels'
 
@@ -778,6 +814,11 @@ class Cuts(Stage):
 
 
 class RGBMap(Stage):
+    """Color map an image using a RGBMap.
+
+    This color-maps an image according to the settings in the RGBMap
+    of the image (if it has one), or the viewer (if not).
+    """
 
     _stagename = 'viewer-rgb-mapper'
 

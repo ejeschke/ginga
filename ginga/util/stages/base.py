@@ -1,12 +1,13 @@
 #
-# stage.py -- Classes for pipeline stages
+# stage.py -- Base classes for pipeline stages
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 from ginga.misc import Bunch
+from ginga.util.action import AttrAction
 
-#__all__ = ['Pipeline']
+__all__ = ['Stage', 'StageError']
 
 
 class StageError(Exception):
@@ -19,7 +20,7 @@ class Stage(object):
     _stagename = 'generic'
 
     def __init__(self):
-        super(Stage, self).__init__()
+        super().__init__()
 
         # default name, until user changes it
         self.name = str(self)
@@ -73,3 +74,19 @@ class Stage(object):
 
     def __str__(self):
         return self._stagename
+
+
+class StageAction(AttrAction):
+
+    def __init__(self, obj, old, new, descr=None):
+        super().__init__(obj, old, new, descr=descr)
+
+    def undo(self):
+        super().undo()
+
+        self.obj.pipeline.run_from(self.obj)
+
+    def redo(self):
+        super().redo()
+
+        self.obj.pipeline.run_from(self.obj)

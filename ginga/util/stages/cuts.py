@@ -5,7 +5,7 @@ from ginga.misc import ParamSet, Bunch
 from ginga import AutoCuts
 from ginga.gw import Widgets
 
-from .base import Stage
+from .base import Stage, StageAction
 
 
 class Cuts(Stage):
@@ -13,16 +13,16 @@ class Cuts(Stage):
     _stagename = 'cut-levels'
 
     def __init__(self):
-        super(Cuts, self).__init__()
+        super().__init__()
 
         self.autocuts = None
         self.autocuts_cache = {}
         self.autocuts_methods = []
-        self.auto = True
-        self.locut = 0.0
-        self.hicut = 0.0
-        self.vmin = 0
-        self.vmax = 255
+        self._auto = True
+        self._locut = 0.0
+        self._hicut = 0.0
+        self._vmin = 0
+        self._vmax = 255
         self.__varlist = ['auto', 'locut', 'hicut', 'vmin', 'vmax']
 
     def build_gui(self, container):
@@ -41,12 +41,12 @@ class Cuts(Stage):
         w, b = Widgets.build_info(captions, orientation='vertical')
 
         b.auto.set_tooltip("Auto calculate cut levels")
-        b.auto.set_state(self.auto)
+        b.auto.set_state(self._auto)
         b.auto.add_callback('activated', self.auto_cb)
-        b.locut.set_text(str(self.locut))
+        b.locut.set_text(str(self._locut))
         b.locut.set_tooltip("Set low cut level")
         b.locut.add_callback('activated', self.manual_cuts_cb)
-        b.hicut.set_text(str(self.hicut))
+        b.hicut.set_text(str(self._hicut))
         b.hicut.set_tooltip("Set high cut level")
         b.hicut.add_callback('activated', self.manual_cuts_cb)
 
@@ -162,28 +162,93 @@ class Cuts(Stage):
         self._config_autocuts(str(self.autocuts), params)
 
     def manual_cuts_cb(self, widget):
-        self.locut = float(self.w.locut.get_text().strip())
-        self.hicut = float(self.w.hicut.get_text().strip())
+        old = dict(locut=self._locut, hicut=self._hicut, auto=self._auto)
+        self._locut = float(self.w.locut.get_text().strip())
+        self._hicut = float(self.w.hicut.get_text().strip())
         self.auto = False
-        self.w.auto.set_state(self.auto)
+        new = dict(locut=self._locut, hicut=self._hicut, auto=self._auto)
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="cuts"))
         self.pipeline.run_from(self)
 
     def manual_output_cb(self, widget):
-        self.vmin = float(self.w.vmin.get_text().strip())
-        self.vmax = float(self.w.vmax.get_text().strip())
+        old = dict(vmin=self._vmin, vmax=self._vmax)
+        self._vmin = float(self.w.vmin.get_text().strip())
+        self._vmax = float(self.w.vmax.get_text().strip())
+        new = dict(vmin=self._vmin, vmax=self._vmax)
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="cuts / vmin,vmax"))
         self.pipeline.run_from(self)
 
     def auto_cb(self, widget, tf):
-        self.auto = tf
-        self.w.auto.set_state(self.auto)
+        old = dict(locut=self._locut, hicut=self._hicut, auto=self._auto)
+        self._auto = tf
+        new = dict(locut=self._locut, hicut=self._hicut, auto=self._auto)
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="cuts"))
         self.pipeline.run_from(self)
 
     def copy_from_viewer_cb(self, widget):
+        old = dict(locut=self._locut, hicut=self._hicut)
         self.locut, self.hicut = self.viewer.get_cut_levels()
-        self.w.locut.set_text(str(self.locut))
-        self.w.hicut.set_text(str(self.hicut))
-
+        new = dict(locut=self._locut, hicut=self._hicut)
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="cuts"))
         self.pipeline.run_from(self)
+
+    @property
+    def locut(self):
+        return self._locut
+
+    @locut.setter
+    def locut(self, val):
+        self._locut = val
+        if self.gui_up:
+            self.w.locut.set_text(str(val))
+
+    @property
+    def hicut(self):
+        return self._hicut
+
+    @hicut.setter
+    def hicut(self, val):
+        self._hicut = val
+        if self.gui_up:
+            self.w.hicut.set_text(str(val))
+
+    @property
+    def auto(self):
+        return self._auto
+
+    @auto.setter
+    def auto(self, tf):
+        self._auto = tf
+        if self.gui_up:
+            self.w.auto.set_state(tf)
+
+    @property
+    def vmin(self):
+        return self._vmin
+
+    @vmin.setter
+    def vmin(self, val):
+        self._vmin = val
+        if self.gui_up:
+            self.w.vmin.set_text(str(val))
+
+    @property
+    def vmax(self):
+        return self._vmax
+
+    @vmax.setter
+    def vmax(self, val):
+        self._vmax = val
+        if self.gui_up:
+            self.w.vmax.set_text(str(val))
+
+    def _get_state(self):
+        return dict(locut=self._locut, hicut=self._hicut, auto=self._auto,
+                    vmin=self._vmin, vmax=self._vmax)
 
     def run(self, prev_stage):
         data = self.pipeline.get_data(prev_stage)
@@ -195,10 +260,20 @@ class Cuts(Stage):
 
         if self.auto:
             self.locut, self.hicut = self.autocuts.calc_cut_levels_data(data)
-            if self.gui_up:
-                self.w.locut.set_text(str(self.locut))
-                self.w.hicut.set_text(str(self.hicut))
 
         res_np = self.autocuts.cut_levels(data, self.locut, self.hicut,
                                           vmin=self.vmin, vmax=self.vmax)
         self.pipeline.send(res_np=res_np)
+
+    def export_as_dict(self):
+        d = super().export_as_dict()
+        d.update(self._get_state())
+        return d
+
+    def import_from_dict(self, d):
+        super().import_from_dict(d)
+        self.vmin = d['vmin']
+        self.vmax = d['vmax']
+        self.auto = d['auto']
+        self.locut = d['locut']
+        self.hicut = d['hicut']

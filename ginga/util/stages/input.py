@@ -14,7 +14,7 @@ class Input(Stage):
     _stagename = 'input'
 
     def __init__(self):
-        super(Input, self).__init__()
+        super().__init__()
 
         self.image = None
         self._path = ""
@@ -78,12 +78,11 @@ class Input(Stage):
         return dict(path=self._path)
 
     def export_as_dict(self):
-        d = super(Input, self).export_as_dict()
+        d = super().export_as_dict()
         d.update(self._get_state())
         return d
 
     def import_from_dict(self, d):
-        super(Input, self).import_from_dict(d)
-        self._set_path(d['path'])
+        super().import_from_dict(d)
 
-        # TODO: load image into channel?
+        self.path = d['path']

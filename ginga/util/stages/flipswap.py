@@ -3,9 +3,8 @@
 #
 from ginga import trcalc
 from ginga.gw import Widgets
-from ginga.util import action
 
-from .base import Stage
+from .base import Stage, StageAction
 
 
 class FlipSwap(Stage):
@@ -13,7 +12,7 @@ class FlipSwap(Stage):
     _stagename = 'flip-swap'
 
     def __init__(self):
-        super(FlipSwap, self).__init__()
+        super().__init__()
 
         self._flip_x = False
         self._flip_y = False
@@ -95,16 +94,16 @@ class FlipSwap(Stage):
         self._flip_y = self.w.flip_y.get_state()
         self._swap_xy = self.w.swap_xy.get_state()
         new = self._get_state()
-        self.pipeline.push(action.AttrAction(self, old, new,
-                                             descr="flip / swap"))
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="flip / swap"))
         self.pipeline.run_from(self)
 
     def copy_from_viewer_cb(self, widget):
         old = self._get_state()
         self.flip_x, self.flip_y, self.swap_xy = self.viewer.get_transforms()
         new = self._get_state()
-        self.pipeline.push(action.AttrAction(self, old, new,
-                                             descr="flip / swap"))
+        self.pipeline.push(StageAction(self, old, new,
+                                       descr="flip / swap"))
         self.pipeline.run_from(self)
 
     def run(self, prev_stage):
@@ -121,12 +120,12 @@ class FlipSwap(Stage):
         self.pipeline.send(res_np=res_np)
 
     def export_as_dict(self):
-        d = super(FlipSwap, self).export_as_dict()
+        d = super().export_as_dict()
         d.update(self._get_state())
         return d
 
     def import_from_dict(self, d):
-        super(FlipSwap, self).import_from_dict(d)
+        super().import_from_dict(d)
         self.flip_x = d['flip_x']
         self.flip_y = d['flip_y']
         self.swap_xy = d['swap_xy']
