@@ -274,7 +274,7 @@ class OpenCvFileHandler(BaseRGBFileHandler):
 
         from ginga.RGBImage import RGBImage
         data_obj = RGBImage(data_np=data_np, metadata=metadata,
-                            logger=self.logger, order=metadata['order'])
+                            logger=self.logger)
         data_obj.io = self
 
         name = self.fileinfo.name + '[{}]'.format(idx)
