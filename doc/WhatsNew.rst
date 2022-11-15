@@ -2,6 +2,11 @@
 What's New
 ++++++++++
 
+Ver 3.4.2 (unreleased)
+======================
+  - Fixed a bug in the Overlays plugin where the overlay value was
+    reported as the value under the cursor rather than the data value
+
 Ver 3.4.1 (2022-11-02)
 ======================
 - A few backports from dev branch:

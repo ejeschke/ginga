@@ -256,6 +256,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         if self.canvas_img is None:
             self.logger.debug("Adding image to canvas")
             self.canvas_img = self.dc.Image(x1, y1, self.rgbobj)
+            self.canvas_img.is_data = False
             self.canvas.add(self.canvas_img)
         else:
             self.logger.debug("Updating canvas image")
