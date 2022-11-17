@@ -11,8 +11,6 @@ from io import BytesIO
 import math
 import logging
 import threading
-import sys
-import traceback
 import time
 import uuid
 
@@ -336,6 +334,9 @@ class ImageViewBase(Callback.Callbacks):
         if self.rf_timer is not None:
             self.rf_timer.add_callback('expired', self.refresh_timer_cb,
                                        self.rf_flags)
+
+    def __str__(self):
+        return self.name
 
     def set_window_size(self, width, height):
         """Report the size of the window to display the image.
@@ -973,15 +974,8 @@ class ImageViewBase(Callback.Callbacks):
                     self.auto_levels()
 
             except Exception as e:
-                self.logger.error("Failed to initialize image: %s" % (str(e)))
-                try:
-                    # log traceback, if possible
-                    (type, value, tb) = sys.exc_info()
-                    tb_str = "".join(traceback.format_tb(tb))
-                    self.logger.error("Traceback:\n%s" % (tb_str))
-                except Exception:
-                    tb_str = "Traceback information unavailable."
-                    self.logger.error(tb_str)
+                self.logger.error("Failed to initialize image: %s" % (str(e)),
+                                  exc_info=True)
 
             self.canvas.update_canvas(whence=0)
 
@@ -1302,15 +1296,8 @@ class ImageViewBase(Callback.Callbacks):
                     self.name, whence, time_delta, time_elapsed))
 
         except Exception as e:
-            self.logger.error("Error redrawing image: %s" % (str(e)))
-            try:
-                # log traceback, if possible
-                (type, value, tb) = sys.exc_info()
-                tb_str = "".join(traceback.format_tb(tb))
-                self.logger.error("Traceback:\n%s" % (tb_str))
-            except Exception:
-                tb_str = "Traceback information unavailable."
-                self.logger.error(tb_str)
+            self.logger.error("Error redrawing image: %s" % (str(e)),
+                              exc_info=True)
 
     def redraw_data(self, whence=0):
         """Render image from RGB map and redraw private canvas.

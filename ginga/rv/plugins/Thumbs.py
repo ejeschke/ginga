@@ -107,7 +107,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    autoload_interval=0.25,
                                    update_interval=0.25,
                                    closeable=not spec.get('hidden', False),
-                                   transfer_attrs=['transforms', 'autocuts',
+                                   transfer_attrs=['transforms',
                                                    'cutlevels', 'rgbmap',
                                                    'icc', 'interpolation'])
         self.settings.load(onError='silent')
@@ -125,6 +125,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # Build our thumb generator
         self.thumb_generator = self.get_thumb_generator()
+        self.thumb_generator.name = 'thumb-generator'
 
         # a timer that controls how fast we attempt to update a thumbnail
         # after its associated full image has been modified
@@ -953,9 +954,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         tg.set_image(image)
         if viewer is not None:
             # if a viewer was passed, and there is an image loaded there,
-            # then copy the viewer attributes to teh thumbnail generator
+            # then copy the viewer attributes to the thumbnail generator
             v_img = viewer.get_image()
             if v_img is not None:
+                # this should force thumb generator to redraw as needed
                 viewer.copy_attributes(tg, self.transfer_attrs)
 
         order = tg.rgb_order

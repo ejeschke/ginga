@@ -34,6 +34,9 @@ Ver 4.0.0 (unreleased)
 - Fixed a bug in the Overlays plugin where the overlay value was
   reported as the value under the cursor rather than the data value
 - Fixed an issue with loading RGB images with opencv-python
+- Fixed an issue where manual cut levels changes weren't reflected in
+  the Thumbs icon
+- ScreenShot now correctly captures the background color of the viewer
 
 Ver 3.4.0 (2022-06-28)
 ======================

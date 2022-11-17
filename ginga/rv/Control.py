@@ -1891,22 +1891,19 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if canvas is not fi.get_canvas():
                 fi.set_canvas(canvas)
             # Copy attributes of the channel viewer to the full screen one
-            copy_attrs = ['autocuts',
-                          'limits', 'transforms',
+            # NOTE: hack to get around issue of if autocuts is put in with
+            #  all the rest, then actual cuts values don't get applied
+            copy_attrs = ['autocuts']
+            viewer.copy_attributes(fi, copy_attrs)
+            copy_attrs = ['limits', 'transforms',
                           'rotation', 'cutlevels', 'rgbmap', 'icc',
-                          'interpolation', 'pan', 'zoom'
+                          'interpolation', 'pan', 'zoom',
                           ]
             viewer.copy_attributes(fi, copy_attrs)
 
     def _fullscreen_off(self):
         if self.w.fscreen is not None:
             self.w.fscreen.hide()
-            # TODO: needed for Qt--can't recover the OpenGL context after
-            # re-show; workaround is to rebuild the viewer every time
-            self.fs_viewer.imgwin = None
-            self.w.fscreen.delete()
-            self.w.fscreen = None
-            self.fs_viewer = None
 
     def build_fullscreen_viewer(self):
         """Builds a full screen single channel borderless viewer.

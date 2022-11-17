@@ -74,7 +74,8 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         sg.defer_redraw = False
         t_ = self.fitsimage.get_settings()
         sg.t_.set(interpolation=t_.get('interpolation'))
-        sg.set_bg(0.7, 0.7, 0.7)
+        r, g, b = self.fitsimage.get_bg()[:3]
+        sg.set_bg(r, g, b)
         self.shot_generator = sg
         self.fitsimage.add_callback('configure', self._configure_cb)
 
