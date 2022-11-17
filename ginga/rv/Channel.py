@@ -401,23 +401,6 @@ class Channel(Callback.Callbacks):
 
         self.fv.channel_image_updated(self, dataobj)
 
-        # Check for preloading any dataobjs into memory
-        preload = self.settings.get('preload_images', False)
-        if not preload:
-            return
-
-        # queue next and previous files for preloading
-        index = self.cursor
-        if index < len(self.history) - 1:
-            info = self.history[index + 1]
-            if info.path is not None:
-                self.fv.add_preload(self.name, info)
-
-        if index > 0:
-            info = self.history[index - 1]
-            if info.path is not None:
-                self.fv.add_preload(self.name, info)
-
     def switch_image(self, image):
 
         curimage = self.get_current_image()

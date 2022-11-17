@@ -135,8 +135,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.cur_channel = None
         self.wscount = 0
         self.statustask = None
-        self.preload_lock = threading.RLock()
-        self.preload_list = deque([], 4)
 
         # Load bindings preferences
         bindprefs = self.prefs.create_category('bindings')
@@ -912,41 +910,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.open_uri_cont(uri, load_file_bulk)
             self.update_pending()
 
-    def add_preload(self, chname, image_info):
-        bnch = Bunch.Bunch(chname=chname, info=image_info)
-        with self.preload_lock:
-            self.preload_list.append(bnch)
-        self.nongui_do(self.preload_scan)
-
-    def preload_scan(self):
-        # preload any pending files
-        # TODO: do we need any throttling of loading here?
-        with self.preload_lock:
-            while len(self.preload_list) > 0:
-                bnch = self.preload_list.pop()
-                self.nongui_do(self.preload_file, bnch.chname,
-                               bnch.info.name, bnch.info.path,
-                               image_future=bnch.info.image_future)
-
-    def preload_file(self, chname, imname, path, image_future=None):
-        # sanity check to see if the file is already in memory
-        self.logger.debug("preload: checking %s in %s" % (imname, chname))
-        channel = self.get_channel(chname)
-
-        if imname not in channel.datasrc:
-            # not there--load image in a non-gui thread, then have the
-            # gui add it to the channel silently
-            self.logger.info("preloading image %s" % (path))
-            if image_future is None:
-                # TODO: need index info?
-                image = self.load_image(path)
-            else:
-                image = image_future.thaw()
-
-            self.gui_do(self.add_image, imname, image,
-                        chname=chname, silent=True)
-        self.logger.debug("end preload")
-
     def zoom_in(self):
         """Zoom the view in one zoom step.
         """
@@ -1451,7 +1414,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             settings.set_defaults(switchnew=True, numImages=num_images,
                                   raisenew=True, genthumb=True,
                                   focus_indicator=False,
-                                  preload_images=False, sort_order='loadtime')
+                                  sort_order='loadtime')
 
             self.logger.debug("Adding channel '%s'" % (chname))
             channel = Channel(chname, self, datasrc=None,
