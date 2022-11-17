@@ -17,7 +17,7 @@ import atexit
 import shutil
 import inspect
 import warnings
-from collections import deque, OrderedDict
+from collections import OrderedDict
 
 # Local application imports
 from ginga import cmap, imap

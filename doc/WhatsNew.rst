@@ -13,6 +13,7 @@ Ver 4.1.0 (unreleased)
   samples when the image size is very small
 - removed old, deprecated StandardPixelRenderer
 - RGB mapping has been refactored to use a pipeline
+- Removed deprecated preload feature
 
 Ver 4.0.1 (2022-12-27)
 ======================
