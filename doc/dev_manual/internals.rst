@@ -256,8 +256,8 @@ Adding a new kind of file opener
 
 Ginga's general file loading facility breaks the loading down into two
 phases: first, the file is identified by its ``magic`` signature
-(requires the optional Python module ``python-magic`` be installed), MIME
-type, or filename extension.  Once the general category of file is known,
+(requires the optional Python module ``python-magic`` be installed) or MIME
+type.  Once the general category of file is known,
 methods in the specific I/O module devoted to that type are called to
 load the file data.
 

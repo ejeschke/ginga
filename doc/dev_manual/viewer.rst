@@ -26,7 +26,7 @@ Ginga supports backends for different widget sets through various
 subclasses of this class. 
 
 Typically, a developer picks a GUI toolkit that has a supported backend
-(Gtk 3, Qt 4/5, Tk, matplotlib, HTML5 canvas) and writes a GUI program
+(Gtk 3, Qt 5/6, Tk, matplotlib, HTML5 canvas) and writes a GUI program
 using that widget set with the typical Python toolkit bindings and API.
 Where they want a image view pane they instantiate the appropriate
 subclass of ``ImageView`` (usually a ``CanvasView``), and using the

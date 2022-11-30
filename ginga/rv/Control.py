@@ -2242,8 +2242,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         wgts.table.set_tree(tree_dict)
         # highlight first choice
-        path = [openers[0].name]
-        wgts.table.select_path(path)
+        if len(openers) > 0:
+            path = [openers[0].name]
+            wgts.table.select_path(path)
 
         dialog = Widgets.Dialog(title="Choose File Opener",
                                 flags=0,
