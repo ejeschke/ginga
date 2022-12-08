@@ -2,8 +2,6 @@ name: rc-testing
 
 on:
   workflow_dispatch:
-  # REMOVE ME BEFORE MERGE
-  pull_request:
 
 # Cancel duplicate builds
 concurrency:
