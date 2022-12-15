@@ -41,6 +41,7 @@ Ver 4.0.0 (unreleased)
 - File loaders are now discoverable under the "ginga_loaders" entry point.
   Loaders can be registered for MIME types and a ``mime.types`` file can be
   added to your ``$HOME/.ginga`` to identify types by file extension.
+- ColorMapPicker plugin can now be launched as a local or global plugin
 
 Ver 3.4.0 (2022-06-28)
 ======================

@@ -4,18 +4,20 @@
 The ``ColorMapPicker`` plugin is used to graphically browse and select a
 colormap for a channel image viewer.
 
-**Plugin Type: Global**
+**Plugin Type: Global or Local**
 
-``ColorMapPicker`` is a global plugin.  Only one instance can be opened.
+``ColorMapPicker`` is a hybrid global/local plugin, which means it can
+be invoked in either fashion.  If invoked as a local plugin then it is
+associated with a channel, and an instance can be opened for each channel.
+It can also be opened as a global plugin.
 
 **Usage**
 
 Operation of the plugin is very simple: the colormaps are displayed in
 the form of colorbars and labels in the main view pane of the plugin.
-Click on any one of the bars to set the colormap of the currently
-active channel in the viewer.
-
-Change the channel to set the colormap on a different channel.
+Click on any one of the bars to set the colormap of the associated
+channel (if invoked as a local plugin) or the currently active channel
+(if invoked as a global plugin).
 
 You can scroll vertically or use the scroll bars to move through the
 colorbar samples.
@@ -36,11 +38,19 @@ from ginga import cmap, RGBMap, RGBImage
 __all__ = ['ColorMapPicker']
 
 
-class ColorMapPicker(GingaPlugin.GlobalPlugin):
+class ColorMapPicker(GingaPlugin.LocalPlugin):
 
-    def __init__(self, fv):
+    # this will be a shared image of all the colormaps, shared by all
+    # instances
+    cmaps_rgb_image = None
+    max_y = 0
+
+    def __init__(self, *args):
         # superclass defines some variables for us, like logger
-        super(ColorMapPicker, self).__init__(fv)
+        if len(args) == 2:
+            super().__init__(*args)
+        else:
+            super().__init__(args[0], None)
 
         # read preferences for this plugin
         prefs = self.fv.get_preferences()
@@ -55,25 +65,11 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         self._cmxoff = 20
         self._wd = 300
         self._ht = 400
-        self._max_y = 0
-
-        # create a PIL viewer that we use to construct an RGB image
-        # containing all the possible color bars and their labels
-        self.p_view = CanvasView(logger=self.logger)
-        p_v = self.p_view
-        p_v.configure_surface(self._wd, self._ht)
-        p_v.enable_autozoom('off')
-        p_v.enable_autocuts('off')
-        p_v.set_scale_limits(1.0, 1.0)
-        p_v.set_pan(0, 0)
-        p_v.scale_to(1, 1)
-        p_v.cut_levels(0, 255)
-        p_v.set_bg(0.4, 0.4, 0.4)
 
         # this will hold the resulting RGB image
         self.r_image = RGBImage.RGBImage(logger=self.logger)
         self.c_view = None
-        self.cm_names = []
+        self.cm_names = list(cmap.get_names())
 
     def build_gui(self, container):
 
@@ -142,11 +138,16 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
             msg = "cmap => '%s'" % (name)
             self.logger.info(msg)
 
-            channel = self.fv.get_channel_info()
-            if channel is not None:
-                viewer = channel.fitsimage
-                #viewer.onscreen_message(msg, delay=0.5)
-                viewer.set_color_map(name)
+            if self.fitsimage is not None:
+                # local plugin
+                #self.fitsimage.onscreen_message(msg, delay=0.5)
+                self.fitsimage.set_color_map(name)
+            else:
+                channel = self.fv.get_channel_info()
+                if channel is not None:
+                    viewer = channel.fitsimage
+                    #viewer.onscreen_message(msg, delay=0.5)
+                    viewer.set_color_map(name)
 
     def scroll_cb(self, viewer, direction, amt, data_x, data_y):
         """Called when the user scrolls in the color bar viewer.
@@ -161,37 +162,43 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         else:
             pan_y += qty
 
-        pan_y = min(max(pan_y, 0), self._max_y)
+        pan_y = min(max(pan_y, 0), ColorMapPicker._max_y)
 
         viewer.set_pan(pan_x, pan_y)
 
-    def rebuild_cmaps(self):
+    def rebuild_cmaps(self, cm_names):
         """Builds a color RGB image containing color bars of all the
         possible color maps and their labels.
         """
         self.logger.info("building color maps image")
         ht, wd, sep = self._cmht, self._cmwd, self._cmsep
-        viewer = self.p_view
+        # create a PIL viewer that we use to construct an RGB image
+        # containing all the possible color bars and their labels
+        p_v = CanvasView(logger=self.logger)
+        p_v.configure_surface(self._wd, self._ht)
+        p_v.enable_autozoom('off')
+        p_v.enable_autocuts('off')
+        p_v.set_scale_limits(1.0, 1.0)
+        p_v.set_pan(0, 0)
+        p_v.scale_to(1, 1)
+        p_v.cut_levels(0, 255)
+        p_v.set_bg(0.4, 0.4, 0.4)
 
-        # put the canvas into pick mode
-        canvas = viewer.get_canvas()
+        canvas = p_v.get_canvas()
         canvas.delete_all_objects()
 
         # get the list of color maps
-        cm_names = self.cm_names
         num_cmaps = len(cm_names)
-        viewer.configure_surface(500, (ht + sep) * num_cmaps)
+        p_v.configure_surface(500, (ht + sep) * num_cmaps)
 
         # create a bunch of color bars and make one large compound object
         # with callbacks for clicking on individual color bars
         l2 = []
         ColorBar = canvas.get_draw_class('drawablecolorbar')
         Text = canvas.get_draw_class('text')
-        #ch_rgbmap = chviewer.get_rgbmap()
-        #dist = ch_rgbmap.get_dist()
         dist = None
         #imap = ch_rgbmap.get_imap()
-        logger = viewer.get_logger()
+        logger = p_v.get_logger()
 
         for i, name in enumerate(cm_names):
             rgbmap = RGBMap.RGBMapper(logger, dist=dist)
@@ -209,24 +216,36 @@ class ColorMapPicker(GingaPlugin.GlobalPlugin):
         obj = Compound(*l2)
         canvas.add(obj)
 
-        self._max_y = y2
-
-        rgb_img = self.p_view.get_image_as_array()
-        self.r_image.set_data(rgb_img)
+        # set class vars used by all instances
+        ColorMapPicker._max_y = y2
+        ColorMapPicker.cmaps_rgb_image = p_v.get_image_as_array()
 
     # CALLBACKS
 
     def start(self):
-        if len(self.cm_names) == 0:
-            self.cm_names = list(cmap.get_names())
-            self.c_view.onscreen_message("building color maps...")
-            self.fv.update_pending()
-            self.rebuild_cmaps()
-            self.c_view.onscreen_message(None)
+        if self.fitsimage is None:
+            channel = self.fv.get_channel_info()
+            if channel is not None:
+                viewer = channel.fitsimage
+            else:
+                viewer = self.c_view
+        else:
+            viewer = self.fitsimage
+        if ColorMapPicker.cmaps_rgb_image is None:
+            try:
+                viewer.onscreen_message("building color maps...")
+                self.fv.update_pending()
+                self.rebuild_cmaps(self.cm_names)
+            finally:
+                viewer.onscreen_message(None)
+        self.r_image.set_data(ColorMapPicker.cmaps_rgb_image)
         self.c_view.set_image(self.r_image)
 
     def close(self):
-        self.fv.stop_global_plugin(str(self))
+        if self.fitsimage is None:
+            self.fv.stop_global_plugin(str(self))
+        else:
+            self.fv.stop_local_plugin(self.chname, str(self))
         return True
 
     def __str__(self):
