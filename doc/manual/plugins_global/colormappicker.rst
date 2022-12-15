@@ -3,5 +3,11 @@
 ColorMapPicker
 ==============
 
-This brings up :ref:`sec-plugins-colormappicker` hybrid plugin as a
-global plugin.
+.. image:: figures/colormappicker.png
+   :width: 400px
+   :align: center
+   :alt: ColorMapPicker plugin
+
+.. automodapi:: ginga.rv.plugins.ColorMapPicker
+   :no-heading:
+   :skip: ColorMapPicker
