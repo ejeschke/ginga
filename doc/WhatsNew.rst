@@ -37,6 +37,7 @@ Ver 4.0.0 (unreleased)
 - Fixed an issue where manual cut levels changes weren't reflected in
   the Thumbs icon
 - ScreenShot now correctly captures the background color of the viewer
+- Fixed a DeprecationWarning related to use of entry points
 
 Ver 3.4.0 (2022-06-28)
 ======================
