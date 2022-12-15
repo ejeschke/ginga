@@ -15,18 +15,12 @@ import logging.handlers
 import threading
 import traceback
 
-if sys.version_info < (3, 8):
-    # Python 3.7
-    from importlib_metadata import entry_points
-else:
-    from importlib.metadata import entry_points
-
 # Local application imports
 from ginga.misc.Bunch import Bunch
 from ginga.misc import Task, ModuleManager, Settings, log
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
-from ginga.util import paths, rgb_cms, json
+from ginga.util import paths, rgb_cms, json, compat
 
 # Catch warnings
 logging.captureWarnings(True)
@@ -211,7 +205,7 @@ class ReferenceViewer(object):
         available_methods = []
 
         for group in groups:
-            discovered_plugins = entry_points().get(group, [])
+            discovered_plugins = compat.ep_get(group)
             for entry_point in discovered_plugins:
                 try:
                     method = entry_point.load()
