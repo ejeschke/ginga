@@ -4,15 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import sys
-if sys.version_info < (3, 8):
-    # Python 3.7
-    from importlib_metadata import entry_points
-else:
-    from importlib.metadata import entry_points
-
 from ginga.misc import Bunch
-from ginga.util import iohelper
+from ginga.util import iohelper, compat
 
 
 # Holds all openers keyed by name
@@ -153,7 +146,7 @@ def get_all_openers():
 
 def discover_loaders():
     group = 'ginga_loaders'
-    discovered_loaders = entry_points().get(group, [])
+    discovered_loaders = compat.ep_get(group)
     for entry_point in discovered_loaders:
         try:
             opener_class = entry_point.load()
