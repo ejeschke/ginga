@@ -53,7 +53,7 @@ class AstroImage(BaseImage):
         # ioclass specifies a pluggable IO module
         if ioclass is None:
             if self.ioClass is None:
-                from ginga.util import io_fits
+                from ginga.util.io import io_fits
                 ioclass = io_fits.fitsLoaderClass
             else:
                 ioclass = self.ioClass

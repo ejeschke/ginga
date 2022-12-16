@@ -142,8 +142,15 @@ def load_file(filepath, idx=None, logger=None, **kwargs):
 
 
 class ASDFFileHandler(io_base.BaseIOHandler):
-
+    """For loading ASDF data files.
+    """
     name = 'asdf'
+    mimetypes = ['image/asdf']
+
+    @classmethod
+    def check_availability(cls):
+        if not have_asdf:
+            raise ValueError("Install 'asdf' to use this opener")
 
     def __init__(self, logger):
         super(ASDFFileHandler, self).__init__(logger)

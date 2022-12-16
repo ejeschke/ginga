@@ -42,7 +42,7 @@ import tempfile
 from ginga import GingaPlugin, trcalc
 from ginga.gw import Widgets, Viewers
 from ginga.pilw.ImageViewPil import CanvasView
-from ginga.util import io_rgb
+from ginga.util.io import io_rgb
 
 __all__ = ['ScreenShot']
 

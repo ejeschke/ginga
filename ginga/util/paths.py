@@ -7,6 +7,9 @@
 import os
 
 import ginga.icons
+from ginga import __file__ as _pkgf
+
+ginga_pkgdir = os.path.dirname(_pkgf)
 
 ginga_home = None
 # this is supposedly the canonical method to get home directory

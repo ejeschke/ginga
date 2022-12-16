@@ -2,10 +2,6 @@
 # Please see the file LICENSE.txt for details.
 """
 Module wrapper for loading HDF5 files.
-
-.. note:: The API for this module is currently unstable
-          and may change in a future release.
-
 """
 import re
 from collections import OrderedDict
@@ -18,6 +14,7 @@ except ImportError:
     have_h5py = False
 
 from ginga.util import iohelper
+from ginga.util.io import io_base
 
 __all__ = ['have_h5py', 'load_file', 'HDF5FileHandler']
 
@@ -33,19 +30,26 @@ def load_file(filepath, idx=None, logger=None, **kwargs):
         return opener.load_idx(idx, **kwargs)
 
 
-class HDF5FileHandler(object):
+class HDF5FileHandler(io_base.BaseIOHandler):
+    """For loading HDF5 image files.
+    """
 
     name = 'h5py'
+    mimetypes = ['application/x-hdf']
+
+    @classmethod
+    def check_availability(cls):
+        if not have_h5py:
+            raise ValueError("Install 'h5py' to use this opener")
 
     def __init__(self, logger):
         if not have_h5py:
             raise ValueError(
                 "Need 'h5py' module installed to use this file handler")
 
-        super(HDF5FileHandler, self).__init__()
+        super().__init__(logger)
         self.kind = 'hdf5'
 
-        self.logger = logger
         self._f = None
 
     def get_indexes(self):
@@ -75,11 +79,11 @@ class HDF5FileHandler(object):
             from ginga import AstroImage, RGBImage
 
             header = self.get_header(idx)
-            data_np = np.copy(self._f[idx].value)
+            data_np = np.copy(self._f[idx][()])
 
             if 'PALETTE' in header:
                 p_idx = header['PALETTE']
-                p_data = self._f[p_idx].value
+                p_data = self._f[p_idx][()]
                 data_np = p_data[data_np]
                 image = RGBImage.RGBImage(logger=self.logger)
             else:

@@ -38,6 +38,9 @@ Ver 4.0.0 (unreleased)
   the Thumbs icon
 - ScreenShot now correctly captures the background color of the viewer
 - Fixed a DeprecationWarning related to use of entry points
+- File loaders are now discoverable under the "ginga_loaders" entry point.
+  Loaders can be registered for MIME types and a ``mime.types`` file can be
+  added to your ``$HOME/.ginga`` to identify types by file extension.
 
 Ver 3.4.0 (2022-06-28)
 ======================

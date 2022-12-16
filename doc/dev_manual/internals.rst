@@ -263,9 +263,7 @@ load the file data.
 
 The `ginga.util.loader` module is used to register file openers. An
 opener is a class that understand how to load data objects from a
-particular kind of file format.  You'll want to start by examining this
-module and especially looking at the examples at the bottom of that file
-for how openers are registered. 
+particular kind of file format.
 
 For implementing your own special opener, take a look at the
 ``BaseIOHandler`` class in `ginga.util.io.io_base`. This is the base
@@ -279,7 +277,7 @@ Here is an example opener class for HDF5 standard image files:
 .. literalinclude:: code/io_hdf5.py
 
 Once you have created your opener class (e.g. ``HDF5FileHandler``), you
-register it as follows:
+can register it by:
 
 .. code-block:: python
 

@@ -19,7 +19,7 @@ import tornado.template
 from tornado.ioloop import IOLoop
 
 from ginga.misc import Bunch, Callback
-from ginga.util import io_rgb
+from ginga.util.io import io_rgb
 from ginga.fonts import font_asst
 
 font_regex = re.compile(r'^(.+)\s+(\d+)$')
@@ -276,7 +276,6 @@ def get_icon(iconpath, size=None, format='png'):
 
 
 def get_native_image(imgpath, format='png'):
-    print('image path', imgpath)
     image = io_rgb.PILimage.open(imgpath)
 
     img_buf = BytesIO()
