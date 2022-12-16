@@ -1,4 +1,4 @@
-.. _sec-plugins-colormappicker:
+.. _sec-plugins-global-colormappicker:
 
 ColorMapPicker
 ==============

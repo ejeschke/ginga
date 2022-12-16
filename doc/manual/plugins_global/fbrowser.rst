@@ -3,5 +3,4 @@
 FBrowser (Open File)
 ====================
 
-This brings up :ref:`plugins-fbrowser` local plugin from the global menu
-for convenience.
+This brings up :ref:`plugins-fbrowser` hybrid plugin as a global plugin.
