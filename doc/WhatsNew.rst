@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 3.4.2 (unreleased)
+Ver 3.4.2 (2022-12-19)
 ======================
 - A few backports from dev branch:
 
@@ -12,7 +12,6 @@ Ver 3.4.2 (unreleased)
   - Fixed an issue where manual cut levels changes weren't reflected in
     the Thumbs icon
   - ScreenShot now correctly captures the background color of the viewer
-
 
 Ver 3.4.1 (2022-11-02)
 ======================
