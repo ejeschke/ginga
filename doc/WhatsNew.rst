@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 4.0.0 (unreleased)
+Ver 4.0.0 (2022-12-20)
 ======================
 - fixed getattr functionality in Bunch
 - removed the "mock" backend; use "pil" backend for similar purposes

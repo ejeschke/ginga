@@ -213,7 +213,7 @@ class AstropyFitsFileHandler(BaseFitsFileHandler):
     """For loading FITS (Flexible Image Transport System) data files.
     """
 
-    name = 'astropy.fits'
+    name = 'astropy.io.fits'
     mimetypes = ['image/fits', 'image/x-fits']
 
     @classmethod
