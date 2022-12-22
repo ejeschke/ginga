@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 4.1.0 (unreleased)
+======================
+- fixed a DeprecationWarning with jupyterw back end
+
 Ver 4.0.0 (2022-12-20)
 ======================
 - fixed getattr functionality in Bunch

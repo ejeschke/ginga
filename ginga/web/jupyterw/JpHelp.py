@@ -9,9 +9,8 @@ import random
 import datetime
 import threading
 
-from tornado.ioloop import IOLoop
-
 from ginga.misc import Bunch, Callback, log
+from ginga.util.evloop import get_ioloop
 
 default_timer_interval_msec = 10
 
@@ -40,7 +39,7 @@ class TimerFactory(object):
         # expiring at the same time
         interval = random.randint(1, self.base_interval_msec)  # nosec
         delta = datetime.timedelta(milliseconds=interval)
-        self._timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+        self._timeout = get_ioloop().add_timeout(delta, self.timer_tick)
 
     def timer_tick(self):
         """Callback executed every self.base_interval_msec to check timer
@@ -50,7 +49,7 @@ class TimerFactory(object):
         self.process_timers()
 
         delta = datetime.timedelta(milliseconds=self.base_interval_msec)
-        self._timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+        self._timeout = get_ioloop().add_timeout(delta, self.timer_tick)
 
     def process_timers(self):
         self.logger.debug("check timers")
