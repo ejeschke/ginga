@@ -16,10 +16,10 @@ from io import BytesIO
 import tornado.web
 import tornado.websocket
 import tornado.template
-from tornado.ioloop import IOLoop
 
 from ginga.misc import Bunch, Callback
 from ginga.util.io import io_rgb
+from ginga.util.evloop import get_ioloop
 from ginga.fonts import font_asst
 
 font_regex = re.compile(r'^(.+)\s+(\d+)$')
@@ -92,7 +92,7 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
         # expiring at the same time
         interval = random.randint(1, self.interval)  # nosec
         delta = datetime.timedelta(milliseconds=interval)
-        self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+        self.timeout = get_ioloop().add_timeout(delta, self.timer_tick)
 
     def add_event_type(self, msg_type, event_class):
         self.event_callbacks[msg_type] = event_class
@@ -101,7 +101,7 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
         self.set_nodelay(True)
 
     def on_close(self):
-        IOLoop.current().remove_timeout(self.timeout)
+        get_ioloop().remove_timeout(self.timeout)
 
     def on_message(self, raw_message):
         message = json.loads(raw_message)
@@ -128,7 +128,7 @@ class ApplicationHandler(tornado.websocket.WebSocketHandler):
         self.app.widget_event(event)
 
         delta = datetime.timedelta(milliseconds=self.interval)
-        self.timeout = IOLoop.current().add_timeout(delta, self.timer_tick)
+        self.timeout = get_ioloop().add_timeout(delta, self.timer_tick)
 
 
 class WindowHandler(tornado.web.RequestHandler):
