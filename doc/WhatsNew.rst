@@ -2,9 +2,11 @@
 What's New
 ++++++++++
 
-Ver 4.1.0 (unreleased)
+Ver 4.0.1 (unreleased)
 ======================
 - fixed a DeprecationWarning with jupyterw back end
+- fixed a bug for Toolbar plugin that prevented N-E and N-W orientation
+  from working as well as contrast restore
 
 Ver 4.0.0 (2022-12-20)
 ======================
