@@ -17,6 +17,7 @@ import os.path
 
 from ginga.gw import Widgets
 from ginga.misc import Bunch
+from ginga.Bindings import KeyEvent
 from ginga import GingaPlugin
 
 __all__ = ['Toolbar']
@@ -197,7 +198,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
     def reset_contrast_cb(self, w):
         view, mode = self._get_mode('contrast')
-        mode.kp_contrast_restore(view, 'x', 0.0, 0.0)
+        event = KeyEvent()
+        mode.kp_contrast_restore(view, event, 'x', 0.0, 0.0)
         return True
 
     def auto_levels_cb(self, w):
@@ -217,12 +219,14 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
     def orient_lh_cb(self, w):
         view, mode = self._get_mode('rotate')
-        mode.kp_orient_lh(view, 'x', 0.0, 0.0)
+        event = KeyEvent()
+        mode.kp_orient_lh(view, event, 'x', 0.0, 0.0)
         return True
 
     def orient_rh_cb(self, w):
         view, mode = self._get_mode('rotate')
-        mode.kp_orient_rh(view, 'x', 0.0, 0.0)
+        event = KeyEvent()
+        mode.kp_orient_rh(view, event, 'x', 0.0, 0.0)
         return True
 
     def reset_all_transforms_cb(self, w):
