@@ -7,6 +7,8 @@ Ver 4.0.1 (unreleased)
 - fixed a DeprecationWarning with jupyterw back end
 - fixed a bug for Toolbar plugin that prevented N-E and N-W orientation
   from working as well as contrast restore
+- fixes a bug in exporting ginga canvas objects to astropy regions objects
+  and the test suite for it
 
 Ver 4.0.0 (2022-12-20)
 ======================

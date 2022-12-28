@@ -38,7 +38,7 @@ class Test_R2G(object):
                                      visual=regions.RegionVisual(symbol='*'))
         o = r2g(r)
         assert isinstance(o, dc.Point) and o.style == 'square' and \
-            o.coord == 'data'
+            o.coord in ('data', None)
 
     def test_point_sky1(self):
         r = regions.PointSkyRegion(center=SkyCoord(12.0, 10.0, unit='deg',
@@ -53,7 +53,7 @@ class Test_R2G(object):
                                     text='Foo',
                                     visual=regions.RegionVisual(textangle='45'))
         o = r2g(r)
-        assert isinstance(o, dc.Text) and o.text == 'Foo' and o.coord == 'data'
+        assert isinstance(o, dc.Text) and o.text == 'Foo' and o.coord in ('data', None)
         assert np.all(np.isclose((o.x, o.y, o.rot_deg),
                                  (r.center.x, r.center.y, float(r.visual['textangle']))))
 
@@ -72,7 +72,7 @@ class Test_R2G(object):
         r = regions.LinePixelRegion(start=regions.PixCoord(x=42, y=43),
                                     end=regions.PixCoord(x=42, y=43))
         o = r2g(r)
-        assert isinstance(o, dc.Line) and o.coord == 'data'
+        assert isinstance(o, dc.Line) and o.coord in ('data', None)
         assert np.all(np.isclose((o.x1, o.y1, o.x2, o.y2),
                                  (r.start.x, r.start.y, r.end.x, r.end.y)))
 
@@ -386,7 +386,7 @@ class Test_G2R(object):
 
         # round-trip test
         o2 = r2g(r)
-        assert isinstance(o2, dc.Polygon) and o2.coord == 'data'
+        assert isinstance(o2, dc.Polygon) and o2.coord in ('data', None)
         assert o2.color == o2.color and o2.linewidth == o.linewidth and \
             o2.fill == o.fill
         assert np.all(np.isclose(o.points, o2.points))

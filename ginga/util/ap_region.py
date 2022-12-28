@@ -282,7 +282,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
     r = None
 
     if isinstance(obj, (dc.Circle,)):
-        if obj.coord == 'data':
+        if obj.coord in ('data', None):
             center = regions.PixCoord(x=obj.x, y=obj.y)
             r = regions.CirclePixelRegion(center=center,
                                           radius=obj.radius)
@@ -292,7 +292,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
                                         radius=obj.radius * u.deg)
 
     elif isinstance(obj, (dc.Ellipse,)):
-        if obj.coord == 'data':
+        if obj.coord in ('data', None):
             center = regions.PixCoord(x=obj.x, y=obj.y)
             r = regions.EllipsePixelRegion(center=center,
                                            width=obj.xradius * 2,
@@ -306,7 +306,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
                                          angle=obj.rot_deg * u.deg)
 
     elif isinstance(obj, (dc.Text,)):
-        if obj.coord == 'data':
+        if obj.coord in ('data', None):
             center = regions.PixCoord(x=obj.x, y=obj.y)
             r = regions.TextPixelRegion(center=center, text=obj.text)
             r.visual['textangle'] = str(obj.rot_deg)
@@ -317,7 +317,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
 
     elif isinstance(obj, (dc.Point,)):
         style = pt_regions.get(obj.style, '*')
-        if obj.coord == 'data':
+        if obj.coord in ('data', None):
             center = regions.PixCoord(x=obj.x, y=obj.y)
             r = regions.PointPixelRegion(center=center)
         elif obj.coord == 'wcs':
@@ -326,7 +326,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
         r.visual['symbol'] = style
 
     elif isinstance(obj, (dc.Line,)):
-        if obj.coord == 'data':
+        if obj.coord in ('data', None):
             start = regions.PixCoord(x=obj.x1, y=obj.y1)
             end = regions.PixCoord(x=obj.x2, y=obj.y2)
             r = regions.LinePixelRegion(start=start, end=end)
@@ -337,7 +337,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
         r.meta['line'] = arr_regions.get(obj.arrow, '0 0')
 
     elif isinstance(obj, (dc.Box,)):
-        if obj.coord == 'data':
+        if obj.coord in ('data', None):
             center = regions.PixCoord(x=obj.x, y=obj.y)
             r = regions.RectanglePixelRegion(center=center,
                                              width=obj.xradius * 2,
@@ -352,7 +352,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
 
     elif isinstance(obj, (dc.Polygon,)):
         x, y = np.asarray(obj.points).T
-        if obj.coord == 'data':
+        if obj.coord in ('data', None):
             vertices = regions.PixCoord(x=x, y=y)
             r = regions.PolygonPixelRegion(vertices=vertices)
         elif obj.coord == 'wcs':
@@ -360,7 +360,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
             r = regions.PolygonSkyRegion(vertices=vertices)
 
     elif isinstance(obj, (dc.Annulus,)) and obj.atype == 'circle':
-        if obj.coord == 'data':
+        if obj.coord in ('data', None):
             rin = obj.radius
             rout = rin + obj.width
             center = regions.PixCoord(x=obj.x, y=obj.y)
@@ -376,7 +376,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
                                                outer_radius=rout)
 
     elif isinstance(obj, (dc.Annulus2R,)) and obj.atype == 'ellipse':
-        if obj.coord == 'data':
+        if obj.coord in ('data', None):
             center = regions.PixCoord(x=obj.x, y=obj.y)
             r = regions.EllipseAnnulusPixelRegion(center=center,
                                                   inner_width=obj.xradius * 2,
@@ -394,7 +394,7 @@ def ginga_canvas_object_to_astropy_region(obj, frame='icrs', logger=None):
                                                 angle=obj.rot_deg * u.deg)
 
     elif isinstance(obj, (dc.Annulus2R,)) and obj.atype == 'box':
-        if obj.coord == 'data':
+        if obj.coord in ('data', None):
             center = regions.PixCoord(x=obj.x, y=obj.y)
             r = regions.RectangleAnnulusPixelRegion(center=center,
                                                     inner_width=obj.xradius * 2,
