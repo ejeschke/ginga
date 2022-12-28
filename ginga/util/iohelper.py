@@ -32,13 +32,35 @@ try:
     have_magic = True
     # it seems there are conflicting versions of a 'magic'
     # module for python floating around...*sigh*
+    # (python-magic vs. filemagic)
     if not hasattr(magic, 'from_file'):
-        # TODO: do this at program start only
-        magic_tester = magic.open(magic.DEFAULT_MODE)
+        # filemagic
+        magic_tester = magic.open(magic.MAGIC_MIME)
         magic_tester.load()
 
 except (ImportError, Exception):
     have_magic = False
+
+# NOTE: this is a shortcut list of extensions in which we trust the
+# extension over the mimetype that might be returned by the Python
+# 'mimetypes' module.  You can add an extension here if the loaders
+# can reliably load it and it is not recognized properly by 'mimetypes'
+known_types = {
+    '.fit': 'image/fits',
+    '.fits': 'image/fits',
+    '.fits.gz': 'image/fits',
+    '.fits.fz': 'image/fits',
+    '.asdf': 'image/asdf',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.tif': 'image/tiff',
+    '.tiff': 'image/tiff',
+    '.gif': 'image/gif',
+    '.png': 'image/png',
+    '.ppm': 'image/ppm',
+    '.pnm': 'image/pnm',
+    '.pbm': 'image/pbm',
+}
 
 
 def guess_filetype(filepath):
@@ -46,20 +68,30 @@ def guess_filetype(filepath):
     # If we have python-magic, use it to determine file type
     typ = None
 
-    if have_magic:
+    # Some specific checks for known file suffixes
+    _fn = filepath.lower()
+    for key, mimetype in known_types.items():
+        if _fn.endswith(key):
+            typ = mimetype
+            break
+
+    if typ is None and have_magic:
         try:
             # it seems there are conflicting versions of a 'magic'
             # module for python floating around...*sigh*
             if hasattr(magic, 'from_file'):
+                # python-magic
                 typ = magic.from_file(filepath, mime=True)
 
             elif magic_tester is not None:
-                descrip = magic_tester.file(filepath)
-                if descrip.startswith("FITS image data"):
-                    return ('image', 'fits')
+                # filemagic
+                typ = magic_tester.file(filepath)
+
+            if isinstance(typ, str) and ';' in typ:
+                typ, enc = typ.split(';')
 
         except Exception as e:
-            pass
+            typ = None
 
     if typ is None:
         # if no magic, or magic fails, fall back to mimetypes
