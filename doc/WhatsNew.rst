@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 4.0.1 (unreleased)
+Ver 4.0.1 (2022-12-27)
 ======================
 - fixed a DeprecationWarning with jupyterw back end
 - fixed a bug for Toolbar plugin that prevented N-E and N-W orientation
