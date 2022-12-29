@@ -1543,25 +1543,38 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             text = '1/%.2fx' % (1.0 / scalefactor)
         return text
 
-    def banner(self, raiseTab=False):
+    def banner(self, raiseTab=False):  # noqa
+        # NOTE: raiseTab kwarg ignored and will be deprecated
+        # load banner image
         banner_file = os.path.join(self.iconpath, 'ginga-splash.ppm')
-        chname = 'Ginga'
-        channel = self.get_channel_on_demand(chname)
-        viewer = channel.viewer
+        image = self.load_image(banner_file)
+        wd, ht = image.get_size()
+
+        # create dialog for banner
+        title = f"Ginga v{__version__}"
+        top = Widgets.Dialog(title=title, buttons=[["Close", 0]], modal=True)
+
+        def _close_banner(*args):
+            top.delete()
+
+        top.add_callback('activated', _close_banner)
+        vbox = top.get_content_area()
+        viewer = Viewers.CanvasView(logger=self.logger)
         viewer.enable_autocuts('off')
         viewer.enable_autozoom('off')
         viewer.enable_autocenter('on')
         viewer.cut_levels(0, 255)
         viewer.scale_to(1, 1)
+        viewer.set_desired_size(wd, ht)
+        t_ = viewer.get_settings()
+        t_.set(auto_orient=True)
 
-        image = self.load_file(banner_file, chname=chname, wait=True)
+        w = Viewers.GingaViewerWidget(viewer=viewer)
+        w.resize(wd, ht)
+        vbox.add_widget(w, stretch=1)
 
-        # Insert Ginga version info
-        header = image.get_header()
-        header['VERSION'] = __version__
-
-        if raiseTab:
-            self.change_channel(chname)
+        viewer.set_image(image)
+        top.show()
 
     def remove_image_by_name(self, chname, imname, impath=None):
         channel = self.get_channel(chname)

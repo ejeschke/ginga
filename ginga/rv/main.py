@@ -649,7 +649,7 @@ class ReferenceViewer(object):
                 settings.save()
 
         if (not options.nosplash) and (len(args) == 0) and show_banner:
-            ginga_shell.banner(raiseTab=True)
+            ginga_shell.banner()
 
         # Handle inputs like "*.fits[ext]" that sys cmd cannot auto expand.
         expanded_args = []

@@ -2,6 +2,11 @@
 What's New
 ++++++++++
 
+Ver 4.1.0 (unreleased)
+======================
+- change implementation of splash banner to a pop-up modal dialog
+  with version string
+
 Ver 4.0.1 (2022-12-27)
 ======================
 - fixed a DeprecationWarning with jupyterw back end
