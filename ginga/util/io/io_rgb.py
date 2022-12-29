@@ -210,9 +210,13 @@ class OpenCvFileHandler(BaseRGBFileHandler):
                  'image/tiff',
                  'image/gif',
                  'image/x-portable-pixmap',
+                 'image/ppm',
                  'image/x-portable-anymap',
+                 'image/pnm',
                  'image/x-portable-bitmap',
-                 'image/x-portable-graymap']
+                 'image/pbm',
+                 'image/x-portable-graymap',
+                 'image/pgm']
 
     @classmethod
     def check_availability(cls):
@@ -379,9 +383,13 @@ class PillowFileHandler(BaseRGBFileHandler):
                  'image/tiff',
                  'image/gif',
                  'image/x-portable-pixmap',
+                 'image/ppm',
                  'image/x-portable-anymap',
+                 'image/pnm',
                  'image/x-portable-bitmap',
-                 'image/x-portable-graymap']
+                 'image/pbm',
+                 'image/x-portable-graymap',
+                 'image/pgm']
 
     @classmethod
     def check_availability(cls):
