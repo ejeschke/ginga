@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import os.path
+import platform
 import pathlib
 from functools import reduce
 
@@ -1792,8 +1793,9 @@ class Menubar(ContainerBase):
         super(Menubar, self).__init__()
 
         self.widget = QtGui.QMenuBar()
-        if hasattr(self.widget, 'setNativeMenuBar'):
-            self.widget.setNativeMenuBar(False)
+        macos_ver = platform.mac_ver()[0]
+        if len(macos_ver) > 0:
+            self.widget.setNativeMenuBar(True)
         self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child, name):

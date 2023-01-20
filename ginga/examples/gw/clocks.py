@@ -171,14 +171,14 @@ class ClockApp(object):
         hbox = Widgets.HBox()
 
         self.timezone_label = Widgets.Label('TimeZone')
-        self.county_timezone = Widgets.ComboBox(editable=True)
+        self.country_timezone = Widgets.ComboBox(editable=True)
 
         # make a giant list of time zones
         zones = [timezone for timezones in pytz.country_timezones.values()
                  for timezone in timezones]
         zones.sort()
         for timezone in zones:
-            self.county_timezone.append_text(timezone)
+            self.country_timezone.append_text(timezone)
 
         # also let user set timezone by UTC offset
         self.location_label = Widgets.Label('Location')
@@ -199,7 +199,7 @@ class ClockApp(object):
                                         self.more_clock_by_offset)
 
         hbox.add_widget(self.timezone_label, stretch=0)
-        hbox.add_widget(self.county_timezone, stretch=0)
+        hbox.add_widget(self.country_timezone, stretch=0)
         hbox.add_widget(self.timezone_button, stretch=0)
         hbox.add_widget(Widgets.Label(''), stretch=1)
 
@@ -229,7 +229,7 @@ class ClockApp(object):
         self.add_clock(timezone=timezone, color=color)
 
     def more_clock_by_timezone(self, w):
-        timezone = self.county_timezone.get_text()
+        timezone = self.country_timezone.get_text()
         color = self.colors[self.color_index % len(self.colors)]
         self.color_index += 1
 
