@@ -148,17 +148,25 @@ class Pan(GingaPlugin.GlobalPlugin):
         x, y = 0.5, 0.5
         radius = 0.1
 
-        compass_xy = p_canvas.add(self.dc.Compass(
-            x, y, radius,
-            color=self.settings.get('xy_compass_color', 'yellow'),
-            fontsize=14, ctype='pixel', coord='percentage'))
+        compass_xy = self.dc.Compass(x, y, radius,
+                                     color=self.settings.get('xy_compass_color',
+                                                             'yellow'),
+                                     fontsize=14, ctype='pixel',
+                                     coord='percentage')
+        p_canvas.add_object(compass_xy)
+
+        compass_wcs = self.dc.Compass(x, y, radius * 2.0,
+                                      color=self.settings.get('compass_color',
+                                                              'skyblue'),
+                                      fontsize=14, ctype='wcs',
+                                      coord='percentage')
 
         iw = Viewers.GingaViewerWidget(panimage)
         iw.resize(self._wd, self._ht)
         self.nb.add_widget(iw)
         #index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,
-                              compass_wcs=None, compass_xy=compass_xy,
+                              compass_wcs=compass_wcs, compass_xy=compass_xy,
                               panrect=None)
         channel.extdata._pan_info = paninfo
 
@@ -297,9 +305,9 @@ class Pan(GingaPlugin.GlobalPlugin):
         paninfo.panimage.zoom_fit()
 
         p_canvas = paninfo.panimage.get_private_canvas()
-        # remove old compasses
+        # remove old WCS compass
         try:
-            p_canvas.delete_object_by_tag(paninfo.compass_wcs)
+            p_canvas.delete_object(paninfo.compass_wcs)
         except Exception:
             pass
 
@@ -310,14 +318,8 @@ class Pan(GingaPlugin.GlobalPlugin):
                 # HACK: force a wcs error here if one is going to happen
                 wcs.add_offset_xy(image, x, y, 1.0, 1.0)
 
-                radius = 0.2
-                paninfo.compass_wcs = p_canvas.add(self.dc.Compass(
-                    x, y, radius,
-                    color=self.settings.get('compass_color', 'skyblue'),
-                    fontsize=14, ctype='wcs', coord='percentage'))
-
+                p_canvas.add_object(paninfo.compass_wcs)
             except Exception as e:
-                paninfo.compass_wcs = None
                 self.logger.warning("Can't calculate wcs compass: {}".format(e))
                 try:
                     # log traceback, if possible
@@ -345,26 +347,24 @@ class Pan(GingaPlugin.GlobalPlugin):
         radius = int(0.015 * edgew)
 
         # Mark pan rectangle and pan position
+        self.logger.debug("starting panset")
         p_canvas = paninfo.panimage.get_private_canvas()
-        try:
-            obj = p_canvas.get_object_by_tag(paninfo.panrect)
-            if obj.kind != 'compound':
-                return False
-            point, bbox = obj.objects
-            self.logger.debug("starting panset")
-            point.x, point.y = x, y
-            point.radius = radius
-            bbox.points = points
-            p_canvas.update_canvas(whence=3)
-
-        except KeyError:
-            paninfo.panrect = p_canvas.add(self.dc.CompoundObject(
+        if paninfo.panrect is None:
+            paninfo.panrect = self.dc.CompoundObject(
                 self.dc.Point(
                     x, y, radius, style='plus',
                     color=self.settings.get('pan_position_color', 'yellow')),
                 self.dc.Polygon(
                     points,
-                    color=self.settings.get('pan_rectangle_color', 'red'))))
+                    color=self.settings.get('pan_rectangle_color', 'red')))
+            p_canvas.add_object(paninfo.panrect)
+        else:
+            point, bbox = paninfo.panrect.objects
+            point.x, point.y = x, y
+            point.radius = radius
+            bbox.points = points
+
+        p_canvas.update_canvas(whence=3)
 
         #paninfo.panimage.zoom_fit()
         return True

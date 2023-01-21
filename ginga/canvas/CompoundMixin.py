@@ -144,7 +144,7 @@ class CompoundMixin(object):
             self.delete_object(obj)
 
     def delete_all_objects(self):
-        self.objects[:] = []
+        self.objects.clear()
 
     def roll_objects(self, n):
         num = len(self.objects)
@@ -166,6 +166,9 @@ class CompoundMixin(object):
                     setattr(obj, attrname, val)
 
     def add_object(self, obj, belowThis=None):
+
+        if obj in self.objects:
+            raise ValueError("object is already in this compound object")
 
         obj.initialize(self, self.viewer, self.logger)
 

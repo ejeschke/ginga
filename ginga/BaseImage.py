@@ -247,7 +247,8 @@ class BaseImage(ViewerObjectBase):
             self.order = trcalc.guess_order(self.shape)
 
     def has_valid_wcs(self):
-        return hasattr(self, 'wcs') and self.wcs.has_valid_wcs()
+        return (getattr(self, 'wcs', None) is not None and
+                self.wcs.has_valid_wcs())
 
     def _set_minmax(self):
         data = self._get_fast_data()
