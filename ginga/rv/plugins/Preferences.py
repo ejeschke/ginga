@@ -294,21 +294,53 @@ their own setting preference for ordering).
 The "Use scrollbars" check box controls whether the channel viewer will
 show scroll bars around the edge of the viewer frame.
 
-**Remember Preferences**
+**Remember (Image) Preferences**
 
 When an image is loaded, a profile is created and attached to the image
 metadata in the channel.  These profiles are continuously updated with
 viewer state as the image is manipulated.  The "Remember" preferences
 control which parts of these profiles are restored to the viewer state
-when the image is navigated to in the channel:
+when the image is navigated (back) to in the channel:
 
-* "Restore Scale" will restore the zoom (scale) level
-* "Restore Pan" will restore the pan position
-* "Restore Transform" will restore any flip or swap axes transforms
-* "Restore Rotation" will restore any rotation of the image
-* "Restore Cuts" will restore any cut levels for the image
-* "Restore Scale" will restore any coloring adjustments made (including
-  color map, color distribution, contrast/stretch, etc.)
+* "Remember Scale" will restore the zoom (scale) level of the image
+* "Remember Pan" will restore the pan position in the image
+* "Remember Transform" will restore any flip or swap axes transforms
+* "Remember Rotation" will restore any rotation of the image
+* "Remember Cuts" will restore any cut levels for the image
+* "Remember Distribution" will restore any color distribution (linear,log,etc)
+* "Remember Contrast" will restore any contrast/bias adjustment
+* "Remember Color Map" will restore any color map choices made
+
+.. note:: These items will be set BEFORE any auto (cut/zoom/center new)
+          adjustments are made. If a remembered item is set, it will override
+          any auto adjustment setting for the channel.
+
+.. tip:: If you use this feature you may also want to set "Reset (Viewer)
+         Preferences" (see below).
+
+**Reset (Viewer) Preferences**
+
+Between images, the viewer can be reset to a "default" state by saving
+a default viewer profile and checking boxes for the attributes to be reset.
+Set your viewer state as you prefer (scale, rotation, color map, etc) then
+click the "Save Viewer Profile" button to save that as the default profile.
+Now check which items should be reset to those values between images.
+
+.. note:: These items will be reset BEFORE any items remembered (see above)
+          with the image are set, or any auto (levels, zoom, center)
+          adjustments are made
+
+* "Reset Scale" will reset the zoom (scale) level to the viewer profile
+* "Reset Pan" will reset the pan position to the viewer profile
+* "Reset Transform" will reset any flip/swap transforms to the viewer profile
+* "Reset Rotation" will reset any rotation to the viewer profile
+* "Reset Cuts" will reset any cut levels to the viewer profile
+* "Reset Distribution" will reset any color distribution to the viewer profile
+* "Reset Contrast" will reset any contrast/bias to the viewer profile
+* "Reset Color Map" will reset any color map settings to the viewer profile
+
+.. tip:: If you use this feature you may also want to set "Remember (Image)
+         Preferences" (see above).
 
 """
 import math
@@ -861,42 +893,115 @@ class Preferences(GingaPlugin.LocalPlugin):
         exp.set_widget(fr)
         vbox.add_widget(exp, stretch=0)
 
-        exp = Widgets.Expander("Remember")
+        exp = Widgets.Expander("Remember (Image)")
 
-        captions = (('Restore Scale', 'checkbutton',
-                     'Restore Pan', 'checkbutton'),
-                    ('Restore Transform', 'checkbutton',
-                    'Restore Rotation', 'checkbutton'),
-                    ('Restore Cuts', 'checkbutton',
-                     'Restore Color Map', 'checkbutton'),
+        captions = (('Remember Scale', 'checkbutton',
+                     'Remember Pan', 'checkbutton'),
+                    ('Remember Transform', 'checkbutton',
+                    'Remember Rotation', 'checkbutton'),
+                    ('Remember Cuts', 'checkbutton',
+                     'Remember Distribution', 'checkbutton'),
+                    ('Remember Contrast', 'checkbutton',
+                     'Remember Color Map', 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        self.w.restore_scale.set_state(self.t_.get('profile_use_scale', False))
-        self.w.restore_scale.add_callback('activated', self.set_profile_cb)
-        self.w.restore_scale.set_tooltip("Remember scale with image")
-        self.w.restore_pan.set_state(self.t_.get('profile_use_pan', False))
-        self.w.restore_pan.add_callback('activated', self.set_profile_cb)
-        self.w.restore_pan.set_tooltip("Remember pan position with image")
-        self.w.restore_transform.set_state(
+        self.w.remember_scale.set_state(self.t_.get('profile_use_scale', False))
+        self.w.remember_scale.add_callback('activated', self.set_profile_cb)
+        self.w.remember_scale.set_tooltip("Remember scale with image")
+        self.w.remember_pan.set_state(self.t_.get('profile_use_pan', False))
+        self.w.remember_pan.add_callback('activated', self.set_profile_cb)
+        self.w.remember_pan.set_tooltip("Remember pan position with image")
+        self.w.remember_transform.set_state(
             self.t_.get('profile_use_transform', False))
-        self.w.restore_transform.add_callback('activated', self.set_profile_cb)
-        self.w.restore_transform.set_tooltip("Remember transform with image")
-        self.w.restore_rotation.set_state(
+        self.w.remember_transform.add_callback('activated', self.set_profile_cb)
+        self.w.remember_transform.set_tooltip("Remember transform with image")
+        self.w.remember_rotation.set_state(
             self.t_.get('profile_use_rotation', False))
-        self.w.restore_rotation.add_callback('activated', self.set_profile_cb)
-        self.w.restore_rotation.set_tooltip("Remember rotation with image")
-        self.w.restore_cuts.set_state(self.t_.get('profile_use_cuts', False))
-        self.w.restore_cuts.add_callback('activated', self.set_profile_cb)
-        self.w.restore_cuts.set_tooltip("Remember cut levels with image")
-        self.w.restore_color_map.set_state(
+        self.w.remember_rotation.add_callback('activated', self.set_profile_cb)
+        self.w.remember_rotation.set_tooltip("Remember rotation with image")
+        self.w.remember_cuts.set_state(self.t_.get('profile_use_cuts', False))
+        self.w.remember_cuts.add_callback('activated', self.set_profile_cb)
+        self.w.remember_cuts.set_tooltip("Remember cut levels with image")
+        self.w.remember_distribution.set_state(
+            self.t_.get('profile_use_distribution', False))
+        self.w.remember_distribution.add_callback('activated', self.set_profile_cb)
+        self.w.remember_distribution.set_tooltip("Remember color distribution algorithm with image")
+        self.w.remember_contrast.set_state(
+            self.t_.get('profile_use_contrast', False))
+        self.w.remember_contrast.add_callback('activated', self.set_profile_cb)
+        self.w.remember_contrast.set_tooltip("Remember contrast/bias with image")
+        self.w.remember_color_map.set_state(
             self.t_.get('profile_use_color_map', False))
-        self.w.restore_color_map.add_callback('activated', self.set_profile_cb)
-        self.w.restore_color_map.set_tooltip("Remember color map with image")
+        self.w.remember_color_map.add_callback('activated', self.set_profile_cb)
+        self.w.remember_color_map.set_tooltip("Remember color map with image")
 
         fr = Widgets.Frame()
-        fr.set_widget(w)
+        vb2 = Widgets.VBox()
+        txt_w = Widgets.TextArea(wrap=True, editable=False)
+        txt_w.set_text("Check items you want remembered with each image and restored to the viewer when each image is viewed again. Note that these override auto cut/zoom/center new settings.")
+        vb2.add_widget(txt_w, stretch=0)
+        vb2.add_widget(w, stretch=1)
+        fr.set_widget(vb2)
+        exp.set_widget(fr)
+        vbox.add_widget(exp, stretch=0)
+
+        exp = Widgets.Expander("Reset (Viewer)")
+
+        captions = (('Reset Scale', 'checkbutton',
+                     'Reset Pan', 'checkbutton'),
+                    ('Reset Transform', 'checkbutton',
+                    'Reset Rotation', 'checkbutton'),
+                    ('Reset Cuts', 'checkbutton',
+                     'Reset Distribution', 'checkbutton'),
+                    ('Reset Contrast', 'checkbutton',
+                     'Reset Color Map', 'checkbutton'),
+                    ("Save Viewer Profile", 'button'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+
+        self.w.reset_scale.set_state(self.t_.get('viewer_restore_scale', False))
+        self.w.reset_scale.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_scale.set_tooltip("Reset scale between images")
+        self.w.reset_pan.set_state(self.t_.get('viewer_restore_pan', False))
+        self.w.reset_pan.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_pan.set_tooltip("Reset pan position between images")
+        self.w.reset_transform.set_state(
+            self.t_.get('viewer_restore_transform', False))
+        self.w.reset_transform.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_transform.set_tooltip("Reset transform between images")
+        self.w.reset_rotation.set_state(
+            self.t_.get('viewer_restore_rotation', False))
+        self.w.reset_rotation.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_rotation.set_tooltip("Reset rotation between images")
+        self.w.reset_cuts.set_state(self.t_.get('viewer_restore_cuts', False))
+        self.w.reset_cuts.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_cuts.set_tooltip("Reset cut levels between images")
+        self.w.reset_distribution.set_state(
+            self.t_.get('viewer_restore_distribution', False))
+        self.w.reset_distribution.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_distribution.set_tooltip("Reset color distribution between images")
+        self.w.reset_contrast.set_state(
+            self.t_.get('viewer_restore_contrast', False))
+        self.w.reset_contrast.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_contrast.set_tooltip("Reset contrast/bias between images")
+        self.w.reset_color_map.set_state(
+            self.t_.get('viewer_restore_color_map', False))
+        self.w.reset_color_map.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_color_map.set_tooltip("Reset color map between images")
+        self.w.save_viewer_profile.add_callback('activated',
+                                                self.set_viewer_profile_cb)
+        self.w.save_viewer_profile.set_tooltip("Saves all current settings as default viewer profile")
+
+        fr = Widgets.Frame()
+        vb2 = Widgets.VBox()
+        txt_w = Widgets.TextArea(wrap=True, editable=False)
+        txt_w.set_text("Check items you want to be reset from the default viewer profile between images. This happens BEFORE any items remembered with image are set.")
+        vb2.add_widget(txt_w, stretch=0)
+        vb2.add_widget(w, stretch=1)
+        fr.set_widget(vb2)
         exp.set_widget(fr)
         vbox.add_widget(exp, stretch=0)
 
@@ -1434,17 +1539,43 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.w.auto_orient.set_state(self.t_['auto_orient'])
 
     def set_profile_cb(self, *args):
-        restore_scale = (self.w.restore_scale.get_state() != 0)
-        restore_pan = (self.w.restore_pan.get_state() != 0)
-        restore_cuts = (self.w.restore_cuts.get_state() != 0)
-        restore_transform = (self.w.restore_transform.get_state() != 0)
-        restore_rotation = (self.w.restore_rotation.get_state() != 0)
-        restore_color_map = (self.w.restore_color_map.get_state() != 0)
-        self.t_.set(profile_use_scale=restore_scale, profile_use_pan=restore_pan,
-                    profile_use_cuts=restore_cuts,
-                    profile_use_transform=restore_transform,
-                    profile_use_rotation=restore_rotation,
-                    profile_use_color_map=restore_color_map)
+        remember_scale = (self.w.remember_scale.get_state() != 0)
+        remember_pan = (self.w.remember_pan.get_state() != 0)
+        remember_cuts = (self.w.remember_cuts.get_state() != 0)
+        remember_transform = (self.w.remember_transform.get_state() != 0)
+        remember_rotation = (self.w.remember_rotation.get_state() != 0)
+        remember_distribution = (self.w.remember_distribution.get_state() != 0)
+        remember_contrast = (self.w.remember_contrast.get_state() != 0)
+        remember_color_map = (self.w.remember_color_map.get_state() != 0)
+        self.t_.set(profile_use_scale=remember_scale,
+                    profile_use_pan=remember_pan,
+                    profile_use_cuts=remember_cuts,
+                    profile_use_transform=remember_transform,
+                    profile_use_rotation=remember_rotation,
+                    profile_use_distribution=remember_distribution,
+                    profile_use_contrast=remember_contrast,
+                    profile_use_color_map=remember_color_map)
+
+    def reset_viewer_cb(self, *args):
+        reset_scale = (self.w.reset_scale.get_state() != 0)
+        reset_pan = (self.w.reset_pan.get_state() != 0)
+        reset_cuts = (self.w.reset_cuts.get_state() != 0)
+        reset_transform = (self.w.reset_transform.get_state() != 0)
+        reset_rotation = (self.w.reset_rotation.get_state() != 0)
+        reset_distribution = (self.w.reset_distribution.get_state() != 0)
+        reset_contrast = (self.w.reset_contrast.get_state() != 0)
+        reset_color_map = (self.w.reset_color_map.get_state() != 0)
+        self.t_.set(viewer_restore_scale=reset_scale,
+                    viewer_restore_pan=reset_pan,
+                    viewer_restore_cuts=reset_cuts,
+                    viewer_restore_transform=reset_transform,
+                    viewer_restore_rotation=reset_rotation,
+                    viewer_restore_distributioin=reset_distribution,
+                    viewer_restore_contrast=reset_contrast,
+                    viewer_restore_color_map=reset_color_map)
+
+    def set_viewer_profile_cb(self, *args):
+        self.fitsimage.capture_default_viewer_profile()
 
     def set_buffer_cb(self, *args):
         num_images = int(self.w.num_images.get_text())
@@ -1575,19 +1706,33 @@ class Preferences(GingaPlugin.LocalPlugin):
         num_images = prefs.get('numImages', 0)
         self.w.num_images.set_text(str(num_images))
 
-        # profile settings
+        # remember settings
         prefs.setdefault('profile_use_scale', False)
-        self.w.restore_scale.set_state(prefs['profile_use_scale'])
+        self.w.remember_scale.set_state(prefs['profile_use_scale'])
         prefs.setdefault('profile_use_pan', False)
-        self.w.restore_pan.set_state(prefs['profile_use_pan'])
+        self.w.remember_pan.set_state(prefs['profile_use_pan'])
         prefs.setdefault('profile_use_cuts', False)
-        self.w.restore_cuts.set_state(prefs['profile_use_cuts'])
+        self.w.remember_cuts.set_state(prefs['profile_use_cuts'])
         prefs.setdefault('profile_use_transform', False)
-        self.w.restore_transform.set_state(prefs['profile_use_transform'])
+        self.w.remember_transform.set_state(prefs['profile_use_transform'])
         prefs.setdefault('profile_use_rotation', False)
-        self.w.restore_rotation.set_state(prefs['profile_use_rotation'])
+        self.w.remember_rotation.set_state(prefs['profile_use_rotation'])
         prefs.setdefault('profile_use_color_map', False)
-        self.w.restore_color_map.set_state(prefs['profile_use_color_map'])
+        self.w.remember_color_map.set_state(prefs['profile_use_color_map'])
+
+        # viewer profile settings
+        prefs.setdefault('viewer_restore_scale', False)
+        self.w.reset_scale.set_state(prefs['viewer_restore_scale'])
+        prefs.setdefault('viewer_restore_pan', False)
+        self.w.reset_pan.set_state(prefs['viewer_restore_pan'])
+        prefs.setdefault('viewer_restore_cuts', False)
+        self.w.reset_cuts.set_state(prefs['viewer_restore_cuts'])
+        prefs.setdefault('viewer_restore_transform', False)
+        self.w.reset_transform.set_state(prefs['viewer_restore_transform'])
+        prefs.setdefault('viewer_restore_rotation', False)
+        self.w.reset_rotation.set_state(prefs['viewer_restore_rotation'])
+        prefs.setdefault('viewer_restore_color_map', False)
+        self.w.reset_color_map.set_state(prefs['viewer_restore_color_map'])
 
     def save_preferences(self):
         self.t_.save()
