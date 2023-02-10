@@ -170,21 +170,21 @@ class Info(GingaPlugin.GlobalPlugin):
         for name in self.autocut_options:
             combobox.append_text(name)
             index += 1
-        b.cut_new.set_tooltip("Automatically set cut levels for new images")
+        b.cut_new.set_tooltip("Automatically set cut levels when switching images")
 
         combobox = b.zoom_new
         index = 0
         for name in self.autozoom_options:
             combobox.append_text(name)
             index += 1
-        b.zoom_new.set_tooltip("Automatically fit new images to window")
+        b.zoom_new.set_tooltip("Automatically fit image to window when switching images")
 
         combobox = b.center_new
         index = 0
         for name in self.autocenter_options:
             combobox.append_text(name)
             index += 1
-        b.center_new.set_tooltip("Automatically center new images in window")
+        b.center_new.set_tooltip("Automatically center image in window when switching images")
 
         b.follow_new.set_tooltip("Automatically switch to new images in channel")
         b.raise_new.set_tooltip("Automatically raise channel viewer for new images")

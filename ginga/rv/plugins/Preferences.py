@@ -67,6 +67,78 @@ more, you can add custom ones or, if ``matplotlib`` is installed, you
 can load all the ones that it has.
 See "Customizing Ginga" for details.
 
+**Auto Cuts Preferences**
+
+.. figure:: figures/autocuts-prefs.png
+   :align: center
+   :alt: Auto Cuts Preferences
+
+   "Auto Cuts" preferences.
+
+The "Auto Cuts" preferences control the calculation of cut levels for
+the view when the auto cut levels button or key is pressed, or when
+loading a new image with auto cuts enabled.  You can also set the cut
+levels manually from here.
+
+The "Cut Low" and "Cut High" fields can be used to manually specify lower
+and upper cut levels.  Pressing "Cut Levels" will set the levels to these
+values manually. If a value is missing, it is assumed to default to the
+whatever the current value is.
+
+Pressing "Auto Levels" will calculate the levels according to an algorithm.
+The "Auto Method" control is used to choose which auto cuts algorithm
+used: "minmax" (minimum maximum values), "median" (based on median
+filtering), "histogram" (based on an image histogram), "stddev" (based on
+the standard deviation of pixel values), or "zscale" (based on the ZSCALE
+algorithm popularized by IRAF).
+As the algorithm is changed, the boxes under it may also change to
+allow changes to parameters particular to each algorithm.
+
+**Transform Preferences**
+
+.. figure:: figures/transform-prefs.png
+   :align: center
+   :alt: Transform Preferences
+
+   "Transform" preferences.
+
+The "Transform" preferences provide for transforming the view of the image
+by flipping the view in X or Y, swapping the X and Y axes, or rotating
+the image in arbitrary amounts.
+
+The "Flip X" and "Flip Y" checkboxes cause the image view to be
+flipped in the corresponding axis.
+
+The "Swap XY" checkbox causes the image view to be altered by swapping
+the X and Y axes.  This can be combined with "Flip X" and "Flip Y" to rotate
+the image in 90 degree increments.  These views will render more quickly
+than arbitrary rotations using the "Rotate" control.
+
+The "Rotate" control will rotate the image view the specified amount.
+The value should be specified in degrees.  "Rotate" can be specified in
+conjunction with flipping and swapping.
+
+The "Restore" button will restore the view to the default view, which
+is unflipped, unswapped, and unrotated.
+
+**WCS Preferences**
+
+.. figure:: figures/wcs-prefs.png
+   :align: center
+   :alt: WCS Preferences
+
+   "WCS" preferences.
+
+The "WCS" preferences control the display preferences for the World
+Coordinate System (WCS) calculations used to report the cursor position in the
+image.
+
+The "WCS Coords" control is used to select the coordinate system in
+which to display the result.
+
+The "WCS Display" control is used to select a sexagesimal (``H:M:S``)
+readout or a decimal degrees readout.
+
 **Zoom Preferences**
 
 .. figure:: figures/zoom-prefs.png
@@ -111,6 +183,18 @@ values change as the image is zoomed.
 The "Scale Min" and "Scale Max" controls can be used to place a
 limit on how much the image can be scaled.
 
+The "Interpolation" control allows you to choose how the image will be
+interpolated.  Depending on which support packages are installed, the
+following choices can be made:
+
+* "basic" is nearest-neighbor using a built in algorithm, this is always
+  available, is reasonably fast, and is the default.
+* "area"
+* "bicubic"
+* "lanczos"
+* "linear"
+* "nearest" is nearest-neighbor (using support package)
+
 The "Zoom Defaults" button will restore the controls to the Ginga
 default values.
 
@@ -127,6 +211,15 @@ The "Pan" preferences control Ginga's panning behavior.
 The "Pan X" and "Pan Y" controls offer direct access to set the pan
 position in the image (the part of the image located at the center of
 the window) -- you can see them change as you pan around the image.
+You can set these values and then press "Apply Pan" to pan to that exact
+position.
+
+If the "Pan Coord" control is set to "data" then panning is controlled by
+data coordinates in the image; if set to "WCS" then the values shown in
+the "Pan X" and "Pan Y" controls will be WCS coordinates (assuming a valid
+WCS is in the image).  In the latter case, the "WCS sexagesimal" control
+can be left unchecked to show/set the coordinates in degrees, or checked to
+show/set the values in standard sexigesimal notation.
 
 The "Center Image" button sets the pan position to the center of the
 image, as calculated by halving the dimensions in X and Y.
@@ -135,77 +228,95 @@ The "Mark Center" check box, when checked, will cause Ginga to draw a
 small reticle in the center of the image.  This is useful for knowing
 the pan position and for debugging.
 
-**Transform Preferences**
+**General Preferences**
 
-.. figure:: figures/transform-prefs.png
+.. figure:: figures/general-prefs.png
    :align: center
-   :alt: Transform Preferences
+   :alt: General Preferences
 
-   "Transform" preferences.
+   "General" preferences.
 
-The "Transform" preferences provide for transforming the view of the image
-by flipping the view in X or Y, swapping the X and Y axes, or rotating
-the image in arbitrary amounts.
+The "Num Images" setting specifies how many images can be retained in
+buffers in this channel before being ejected.  A value of zero (0) means
+unlimited--images will never be ejected.  If an image was loaded from
+some accessible storage and it is ejected, it will automatically be
+reloaded if the image is revisited by navigating the channel.
 
-The "Flip X" and "Flip Y" checkboxes cause the image view to be
-flipped in the corresponding axis.
+The "Sort Order" setting determines whether images are sorted in the
+channel alphabetically by name or by the time when they were loaded.
+This principally affects the order in which images are cycled when using
+the up/down "arrow" keys or buttons, and not necessarily how they are
+displayed in plugins like "Contents" or "Thumbs" (which generally have
+their own setting preference for ordering).
 
-The "Swap XY" checkbox causes the image view to be altered by swapping
-the X and Y axes.  This can be combined with "Flip X" and "Flip Y" to rotate
-the image in 90 degree increments.  These views will render more quickly
-than arbitrary rotations using the "Rotate" control.
+The "Use scrollbars" check box controls whether the channel viewer will
+show scroll bars around the edge of the viewer frame.
 
-The "Rotate" control will rotate the image view the specified amount.
-The value should be specified in degrees.  "Rotate" can be specified in
-conjunction with flipping and swapping.
+**Reset (Viewer) Preferences**
 
-The "Restore" button will restore the view to the default view, which
-is unflipped, unswapped, and unrotated.
-
-**Auto Cuts Preferences**
-
-.. figure:: figures/autocuts-prefs.png
+.. figure:: figures/reset-prefs.png
    :align: center
-   :alt: Auto Cuts Preferences
+   :alt: Reset (Viewer) Preferences
 
-   "Auto Cuts" preferences.
+   "Reset" (Viewer) preferences.
 
-The "Auto Cuts" preferences control the calculation of cut levels for
-the view when the auto cut levels button or key is pressed, or when
-loading a new image with auto cuts enabled.  You can also set the cut
-levels manually from here.
+When switching between images, the viewer can be reset to a "default"
+state by saving a default viewer profile and checking boxes for the
+attributes to be reset.
+Set your viewer state as you prefer (scale, rotation, color map, etc) then
+click the "Update Viewer Profile" button.  Now check which items should be
+reset to those values between images. Finally, click the "Save Settings"
+button at the bottom if you want these settings to be persistent across
+Ginga restarts.
 
-The "Cut Low" and "Cut High" fields can be used to manually specify lower
-and upper cut levels.  Pressing "Cut Levels" will set the levels to these
-values manually. If a value is missing, it is assumed to default to the
-whatever the current value is.
+* "Reset Scale" will reset the zoom (scale) level to the viewer profile
+* "Reset Pan" will reset the pan position to the viewer profile
+* "Reset Transform" will reset any flip/swap transforms to the viewer profile
+* "Reset Rotation" will reset any rotation to the viewer profile
+* "Reset Cuts" will reset any cut levels to the viewer profile
+* "Reset Distribution" will reset any color distribution to the viewer profile
+* "Reset Contrast" will reset any contrast/bias to the viewer profile
+* "Reset Color Map" will reset any color map settings to the viewer profile
 
-Pressing "Auto Levels" will calculate the levels according to an algorithm.
-The "Auto Method" control is used to choose which auto cuts algorithm
-used: "minmax" (minimum maximum values), "median" (based on median
-filtering), "histogram" (based on an image histogram), "stddev" (based on
-the standard deviation of pixel values), or "zscale" (based on the ZSCALE
-algorithm popularized by IRAF).
-As the algorithm is changed, the boxes under it may also change to
-allow changes to parameters particular to each algorithm.
+.. tip:: If you use this feature you may also want to set "Remember (Image)
+         Preferences" (see below).
 
-**WCS Preferences**
+.. note:: The complete order of adjustments is:
 
-.. figure:: figures/wcs-prefs.png
+          * any reset items from the default viewer profile, if any
+          * any remembered items from the image profile are applied, if any
+          * any auto adjustments (cuts/zoom/center) are applied, if they were
+            not overridden by a remembered setting
+
+**Remember (Image) Preferences**
+
+.. figure:: figures/remember-prefs.png
    :align: center
-   :alt: WCS Preferences
+   :alt: Remember (Image) Preferences
 
-   "WCS" preferences.
+   "Remember" (Image) preferences.
 
-The "WCS" preferences control the display preferences for the World
-Coordinate System (WCS) calculations used to report the cursor position in the
-image.
+When an image is loaded, an image profile is created and attached to the
+image metadata in the channel.  These profiles are continuously updated with
+viewer state as the image is manipulated.  The "Remember" preferences
+control which parts of these profiles are restored to the viewer state
+when the image is navigated (back) to in the channel:
 
-The "WCS Coords" control is used to select the coordinate system in
-which to display the result.
+* "Remember Scale" will restore the zoom (scale) level of the image
+* "Remember Pan" will restore the pan position in the image
+* "Remember Transform" will restore any flip or swap axes transforms
+* "Remember Rotation" will restore any rotation of the image
+* "Remember Cuts" will restore any cut levels for the image
+* "Remember Distribution" will restore any color distribution (linear,log,etc)
+* "Remember Contrast" will restore any contrast/bias adjustment
+* "Remember Color Map" will restore any color map choices made
 
-The "WCS Display" control is used to select a sexagesimal (``H:M:S``)
-readout or a decimal degrees readout.
+.. note:: These items will be set BEFORE any auto (cut/zoom/center new)
+          adjustments are made. If a remembered item is set, it will override
+          any auto adjustment setting for the channel.
+
+.. tip:: If you use this feature you may also want to set "Reset (Viewer)
+         Preferences" (see above).
 
 **New Image Preferences**
 
@@ -216,34 +327,37 @@ readout or a decimal degrees readout.
    "New Image" preferences.
 
 The "New Images" preferences determine how Ginga reacts when a new image
-is loaded into the channel.  This includes when an older image is
-revisited by clicking on its thumbnail in the ``Thumbs`` plugin pane.
+is loaded into the channel.  *This includes when an older image is
+revisited by clicking on its thumbnail in the ``Thumbs`` plugin or
+double-clicking on it's name in the ``Contents`` plugin*.
 
 The "Cut New" setting controls whether an automatic cut-level
 calculation should be performed on the new image, or whether the
 currently set cut levels should be applied.  The possible settings are:
 
-* "on": calculate a new cut levels always;
+* "off": always use the currently set cut levels;
+* "once": calculate a new cut levels for the first image visited,
+  then turn "off";
 * "override": calculate a new cut levels until the user overrides
   it by manually setting a cut levels, then turn "off"; or
-* "off": always use the currently set cut levels.
+* "on": calculate a new cut levels always.
 
 .. tip:: The "override" setting is provided for the convenience of
          having automatic cut levels, while preventing a manually set
          cuts from being overridden when a new image is ingested.  When
          typed in the image window, the semicolon key can be used to
          toggle the mode back to override (from "off"), while colon will
-         set the preference to "on".  The ``Info`` panel shows
-         the state of this setting.
+         set the preference to "on".  The ``Info`` (tab: Synopsis) plugin
+         shows the state of this setting.
 
-The "Zoom New" setting controls whether a newly visited image should
-be zoomed to fit the window.  There are three possible values: on,
-override, and off:
+The "Zoom New" setting controls whether visiting an image should set the
+zoom level to fit the image to the window.  The possible settings are:
 
-* "on": the new image is always zoomed to fit;
+* "off": always use the currently set zoom levels;
+* "once": fit the first image to the window, then turn to "off";
 * "override": images are automatically fitted until the zoom level is
   changed manually, then the mode automatically changes to "off", or
-* "off": always use the currently set zoom levels.
+* "on": the new image is always zoomed to fit.
 
 .. tip:: The "override" setting is provided for the convenience of
          having an automatic zoom, while preventing a manually set zoom
@@ -251,12 +365,18 @@ override, and off:
          typed in the image window,  the apostrophe (a.k.a. "single quote")
          key can be used to toggle the mode back to "override" (from
          "off"), while quote (a.k.a. double quote) will set the preference
-         to "on".  The global plugin ``Info`` panel shows the state of this
-         setting.
+         to "on".  The ``Info`` (tab: Synopsis) plugin shows the state of
+         this setting.
 
-The "Center New" box, if checked, will cause newly visited images to
-always have the pan position reset to the center of the image.  If
-unchecked, the pan position is unchanged from the previous image.
+The "Center New" setting controls whether visiting an image should cause
+the pan position to be reset to the center of the image.   The possible
+settings are:
+
+* "off": leave the current pan position as is;
+* "once": center the first image visited, then turn to "off";
+* "override": images are automatically centered until the pan position is
+  changed manually, then the mode automatically changes to "off", or
+* "on": the new image is always centered.
 
 The "Follow New" setting is used to control whether Ginga will change
 the display if a new image is loaded into the channel.  If unchecked,
@@ -276,71 +396,50 @@ thumbnail for images loaded into that channel.  In cases where many
 images are being loaded into a channel frequently (e.g., a low frequency
 video feed), it may be undesirable to create thumbnails for all of them.
 
-**General Preferences**
+The "Auto Orient" setting controls whether Ginga should attempt to orient
+images by default according to image metadata. This is currently only useful
+for RGB (e.g. JPEG) images that contain such metadata. It does not auto
+orient by WCS, at present.
 
-The "Num Images" setting specifies how many images can be retained in
-buffers in this channel before being ejected.  A value of zero (0) means
-unlimited--images will never be ejected.  If an image was loaded from
-some accessible storage and it is ejected, it will automatically be
-reloaded if the image is revisited by navigating the channel.
+**ICC Profiles Preferences**
 
-The "Sort Order" setting determines whether images are sorted in the
-channel alphabetically by name or by the time when they were loaded.
-This principally affects the order in which images are cycled when using
-the up/down "arrow" keys or buttons, and not necessarily how they are
-displayed in plugins like "Contents" or "Thumbs" (which generally have
-their own setting preference for ordering).
+.. figure:: figures/icc-prefs.png
+   :align: center
+   :alt: ICC Profiles Preferences
 
-The "Use scrollbars" check box controls whether the channel viewer will
-show scroll bars around the edge of the viewer frame.
+   "ICC Profiles" preferences.
 
-**Remember (Image) Preferences**
+Ginga can make use of ICC (color management) profiles in the rendering
+chain using the LittleCMS library.
 
-When an image is loaded, a profile is created and attached to the image
-metadata in the channel.  These profiles are continuously updated with
-viewer state as the image is manipulated.  The "Remember" preferences
-control which parts of these profiles are restored to the viewer state
-when the image is navigated (back) to in the channel:
+.. note:: To make use of ICC profiles, create a "profiles" folder in the
+          Ginga "home" (usually $HOME/.ginga) and put any necessary profiles
+          there.  A working profile should be set by adding a value for
+          "icc_working_profile" in your $HOME/.ginga/general.cfg file--
+          do not include any leading path, just the filename of an ICC file
+          in the profiles folder.  This will be used to convert any RGB files
+          containing a profile to the working profile.
 
-* "Remember Scale" will restore the zoom (scale) level of the image
-* "Remember Pan" will restore the pan position in the image
-* "Remember Transform" will restore any flip or swap axes transforms
-* "Remember Rotation" will restore any rotation of the image
-* "Remember Cuts" will restore any cut levels for the image
-* "Remember Distribution" will restore any color distribution (linear,log,etc)
-* "Remember Contrast" will restore any contrast/bias adjustment
-* "Remember Color Map" will restore any color map choices made
+You can set the output profiles for any channel in this section of the
+Preferences plugin.
 
-.. note:: These items will be set BEFORE any auto (cut/zoom/center new)
-          adjustments are made. If a remembered item is set, it will override
-          any auto adjustment setting for the channel.
+The "Output ICC profile" control selects which profile to use for the
+output rendering to the display.  The choices are from your profile files
+in $HOME/.ginga/profiles.  Normally this should be a display profile.
 
-.. tip:: If you use this feature you may also want to set "Reset (Viewer)
-         Preferences" (see below).
+The "Rendering intent" control chooses the algorithm used to render the
+color in the ICC conversion process.  The choices are:
 
-**Reset (Viewer) Preferences**
+* absolute_colorimetric
+* perceptual
+* relative_colorimetric
+* saturation
 
-Between images, the viewer can be reset to a "default" state by saving
-a default viewer profile and checking boxes for the attributes to be reset.
-Set your viewer state as you prefer (scale, rotation, color map, etc) then
-click the "Save Viewer Profile" button to save that as the default profile.
-Now check which items should be reset to those values between images.
+The "Proof ICC profile" and "Proof intent" are similarly chosen for proofing.
 
-.. note:: These items will be reset BEFORE any items remembered (see above)
-          with the image are set, or any auto (levels, zoom, center)
-          adjustments are made
-
-* "Reset Scale" will reset the zoom (scale) level to the viewer profile
-* "Reset Pan" will reset the pan position to the viewer profile
-* "Reset Transform" will reset any flip/swap transforms to the viewer profile
-* "Reset Rotation" will reset any rotation to the viewer profile
-* "Reset Cuts" will reset any cut levels to the viewer profile
-* "Reset Distribution" will reset any color distribution to the viewer profile
-* "Reset Contrast" will reset any contrast/bias to the viewer profile
-* "Reset Color Map" will reset any color map settings to the viewer profile
-
-.. tip:: If you use this feature you may also want to set "Remember (Image)
-         Preferences" (see above).
+The "Black point compensation" checkbox turns on or off this feature in the
+color conversion process.  See the documentation for LittleCMS or ICC color
+management in general for details on these choices.
 
 """
 import math
@@ -791,72 +890,6 @@ class Preferences(GingaPlugin.LocalPlugin):
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
-        fr = Widgets.Frame("New Images")
-
-        captions = (('Cut New:', 'label', 'Cut New', 'combobox'),
-                    ('Zoom New:', 'label', 'Zoom New', 'combobox'),
-                    ('Center New:', 'label', 'Center New', 'combobox'),
-                    ('Follow New', 'checkbutton', 'Raise New', 'checkbutton'),
-                    ('Create thumbnail', 'checkbutton',
-                     'Auto Orient', 'checkbutton'),
-                    )
-        w, b = Widgets.build_info(captions, orientation=orientation)
-        self.w.update(b)
-
-        combobox = b.cut_new
-        index = 0
-        for name in self.autocut_options:
-            combobox.append_text(name)
-            index += 1
-        option = self.t_.get('autocuts', "off")
-        index = self.autocut_options.index(option)
-        combobox.set_index(index)
-        combobox.add_callback('activated', self.set_autocuts_cb)
-        b.cut_new.set_tooltip("Automatically set cut levels for new images")
-
-        combobox = b.zoom_new
-        index = 0
-        for name in self.autozoom_options:
-            combobox.append_text(name)
-            index += 1
-        option = self.t_.get('autozoom', "off")
-        index = self.autozoom_options.index(option)
-        combobox.set_index(index)
-        combobox.add_callback('activated', self.set_autozoom_cb)
-        b.zoom_new.set_tooltip("Automatically fit new images to window")
-
-        combobox = b.center_new
-        index = 0
-        for name in self.autocenter_options:
-            combobox.append_text(name)
-            index += 1
-        option = self.t_.get('autocenter', "off")
-        # Hack to convert old values that used to be T/F
-        if isinstance(option, bool):
-            choice = {True: 'on', False: 'off'}
-            option = choice[option]
-        index = self.autocenter_options.index(option)
-        combobox.set_index(index)
-        combobox.add_callback('activated', self.set_autocenter_cb)
-        b.center_new.set_tooltip("Automatically center new images in window")
-
-        b.follow_new.set_tooltip("View new images as they arrive")
-        b.raise_new.set_tooltip("Raise and focus tab for new images")
-        b.create_thumbnail.set_tooltip("Create thumbnail for new images")
-        b.auto_orient.set_tooltip("Auto orient new images")
-
-        self.w.follow_new.set_state(True)
-        self.w.follow_new.add_callback('activated', self.set_chprefs_cb)
-        self.w.raise_new.set_state(True)
-        self.w.raise_new.add_callback('activated', self.set_chprefs_cb)
-        self.w.create_thumbnail.set_state(True)
-        self.w.create_thumbnail.add_callback('activated', self.set_chprefs_cb)
-        self.w.auto_orient.set_state(True)
-        self.w.auto_orient.add_callback('activated', self.set_chprefs_cb)
-
-        fr.set_widget(w)
-        vbox.add_widget(fr, stretch=0)
-
         exp = Widgets.Expander("General")
 
         captions = (('Num Images:', 'label', 'Num Images', 'entryset'),
@@ -890,6 +923,64 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         fr = Widgets.Frame()
         fr.set_widget(w)
+        exp.set_widget(fr)
+        vbox.add_widget(exp, stretch=0)
+
+        exp = Widgets.Expander("Reset (Viewer)")
+
+        captions = (('Reset Scale', 'checkbutton',
+                     'Reset Pan', 'checkbutton'),
+                    ('Reset Transform', 'checkbutton',
+                    'Reset Rotation', 'checkbutton'),
+                    ('Reset Cuts', 'checkbutton',
+                     'Reset Distribution', 'checkbutton'),
+                    ('Reset Contrast', 'checkbutton',
+                     'Reset Color Map', 'checkbutton'),
+                    ("Update Viewer Profile", 'button'),
+                    )
+        w, b = Widgets.build_info(captions, orientation=orientation)
+        self.w.update(b)
+
+        self.w.reset_scale.set_state(self.t_.get('viewer_restore_scale', False))
+        self.w.reset_scale.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_scale.set_tooltip("Reset scale between images")
+        self.w.reset_pan.set_state(self.t_.get('viewer_restore_pan', False))
+        self.w.reset_pan.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_pan.set_tooltip("Reset pan position between images")
+        self.w.reset_transform.set_state(
+            self.t_.get('viewer_restore_transform', False))
+        self.w.reset_transform.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_transform.set_tooltip("Reset transform between images")
+        self.w.reset_rotation.set_state(
+            self.t_.get('viewer_restore_rotation', False))
+        self.w.reset_rotation.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_rotation.set_tooltip("Reset rotation between images")
+        self.w.reset_cuts.set_state(self.t_.get('viewer_restore_cuts', False))
+        self.w.reset_cuts.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_cuts.set_tooltip("Reset cut levels between images")
+        self.w.reset_distribution.set_state(
+            self.t_.get('viewer_restore_distribution', False))
+        self.w.reset_distribution.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_distribution.set_tooltip("Reset color distribution between images")
+        self.w.reset_contrast.set_state(
+            self.t_.get('viewer_restore_contrast', False))
+        self.w.reset_contrast.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_contrast.set_tooltip("Reset contrast/bias between images")
+        self.w.reset_color_map.set_state(
+            self.t_.get('viewer_restore_color_map', False))
+        self.w.reset_color_map.add_callback('activated', self.reset_viewer_cb)
+        self.w.reset_color_map.set_tooltip("Reset color map between images")
+        self.w.update_viewer_profile.add_callback('activated',
+                                                  self.update_viewer_profile_cb)
+        self.w.update_viewer_profile.set_tooltip("Update viewer profile from current settings (click 'Save Settings' to make persistent)")
+
+        fr = Widgets.Frame()
+        vb2 = Widgets.VBox()
+        txt_w = Widgets.TextArea(wrap=True, editable=False)
+        txt_w.set_text("Check items you want to be reset from the default viewer profile when switching between images. This happens BEFORE any items remembered with image are set.")
+        vb2.add_widget(txt_w, stretch=0)
+        vb2.add_widget(w, stretch=1)
+        fr.set_widget(vb2)
         exp.set_widget(fr)
         vbox.add_widget(exp, stretch=0)
 
@@ -947,61 +1038,71 @@ class Preferences(GingaPlugin.LocalPlugin):
         exp.set_widget(fr)
         vbox.add_widget(exp, stretch=0)
 
-        exp = Widgets.Expander("Reset (Viewer)")
+        exp = Widgets.Expander("New Images")
 
-        captions = (('Reset Scale', 'checkbutton',
-                     'Reset Pan', 'checkbutton'),
-                    ('Reset Transform', 'checkbutton',
-                    'Reset Rotation', 'checkbutton'),
-                    ('Reset Cuts', 'checkbutton',
-                     'Reset Distribution', 'checkbutton'),
-                    ('Reset Contrast', 'checkbutton',
-                     'Reset Color Map', 'checkbutton'),
-                    ("Save Viewer Profile", 'button'),
+        captions = (('Cut New:', 'label', 'Cut New', 'combobox'),
+                    ('Zoom New:', 'label', 'Zoom New', 'combobox'),
+                    ('Center New:', 'label', 'Center New', 'combobox'),
+                    ('Follow New', 'checkbutton', 'Raise New', 'checkbutton'),
+                    ('Create thumbnail', 'checkbutton',
+                     'Auto Orient', 'checkbutton'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        self.w.reset_scale.set_state(self.t_.get('viewer_restore_scale', False))
-        self.w.reset_scale.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_scale.set_tooltip("Reset scale between images")
-        self.w.reset_pan.set_state(self.t_.get('viewer_restore_pan', False))
-        self.w.reset_pan.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_pan.set_tooltip("Reset pan position between images")
-        self.w.reset_transform.set_state(
-            self.t_.get('viewer_restore_transform', False))
-        self.w.reset_transform.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_transform.set_tooltip("Reset transform between images")
-        self.w.reset_rotation.set_state(
-            self.t_.get('viewer_restore_rotation', False))
-        self.w.reset_rotation.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_rotation.set_tooltip("Reset rotation between images")
-        self.w.reset_cuts.set_state(self.t_.get('viewer_restore_cuts', False))
-        self.w.reset_cuts.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_cuts.set_tooltip("Reset cut levels between images")
-        self.w.reset_distribution.set_state(
-            self.t_.get('viewer_restore_distribution', False))
-        self.w.reset_distribution.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_distribution.set_tooltip("Reset color distribution between images")
-        self.w.reset_contrast.set_state(
-            self.t_.get('viewer_restore_contrast', False))
-        self.w.reset_contrast.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_contrast.set_tooltip("Reset contrast/bias between images")
-        self.w.reset_color_map.set_state(
-            self.t_.get('viewer_restore_color_map', False))
-        self.w.reset_color_map.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_color_map.set_tooltip("Reset color map between images")
-        self.w.save_viewer_profile.add_callback('activated',
-                                                self.set_viewer_profile_cb)
-        self.w.save_viewer_profile.set_tooltip("Saves all current settings as default viewer profile")
+        combobox = b.cut_new
+        index = 0
+        for name in self.autocut_options:
+            combobox.append_text(name)
+            index += 1
+        option = self.t_.get('autocuts', "off")
+        index = self.autocut_options.index(option)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_autocuts_cb)
+        b.cut_new.set_tooltip("Automatically set cut levels when switching images")
+
+        combobox = b.zoom_new
+        index = 0
+        for name in self.autozoom_options:
+            combobox.append_text(name)
+            index += 1
+        option = self.t_.get('autozoom', "off")
+        index = self.autozoom_options.index(option)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_autozoom_cb)
+        b.zoom_new.set_tooltip("Automatically fit image to window when switching images")
+
+        combobox = b.center_new
+        index = 0
+        for name in self.autocenter_options:
+            combobox.append_text(name)
+            index += 1
+        option = self.t_.get('autocenter', "off")
+        # Hack to convert old values that used to be T/F
+        if isinstance(option, bool):
+            choice = {True: 'on', False: 'off'}
+            option = choice[option]
+        index = self.autocenter_options.index(option)
+        combobox.set_index(index)
+        combobox.add_callback('activated', self.set_autocenter_cb)
+        b.center_new.set_tooltip("Automatically center image in window when switching images")
+
+        b.follow_new.set_tooltip("View new images as they arrive")
+        b.raise_new.set_tooltip("Raise and focus tab for new images")
+        b.create_thumbnail.set_tooltip("Create thumbnail for new images")
+        b.auto_orient.set_tooltip("Auto orient new (RGB) images")
+
+        self.w.follow_new.set_state(True)
+        self.w.follow_new.add_callback('activated', self.set_chprefs_cb)
+        self.w.raise_new.set_state(True)
+        self.w.raise_new.add_callback('activated', self.set_chprefs_cb)
+        self.w.create_thumbnail.set_state(True)
+        self.w.create_thumbnail.add_callback('activated', self.set_chprefs_cb)
+        self.w.auto_orient.set_state(True)
+        self.w.auto_orient.add_callback('activated', self.set_chprefs_cb)
 
         fr = Widgets.Frame()
-        vb2 = Widgets.VBox()
-        txt_w = Widgets.TextArea(wrap=True, editable=False)
-        txt_w.set_text("Check items you want to be reset from the default viewer profile between images. This happens BEFORE any items remembered with image are set.")
-        vb2.add_widget(txt_w, stretch=0)
-        vb2.add_widget(w, stretch=1)
-        fr.set_widget(vb2)
+        fr.set_widget(w)
         exp.set_widget(fr)
         vbox.add_widget(exp, stretch=0)
 
@@ -1574,7 +1675,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     viewer_restore_contrast=reset_contrast,
                     viewer_restore_color_map=reset_color_map)
 
-    def set_viewer_profile_cb(self, *args):
+    def update_viewer_profile_cb(self, *args):
         self.fitsimage.capture_default_viewer_profile()
 
     def set_buffer_cb(self, *args):
