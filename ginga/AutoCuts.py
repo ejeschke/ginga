@@ -9,16 +9,16 @@ import numpy as np
 from ginga import trcalc
 from ginga.misc import Bunch
 #from ginga.misc.ParamSet import Param
-from ginga.util import zscale
+
+from astropy.visualization import ZScaleInterval
 
 have_scipy = True
-autocut_methods = ('minmax', 'median', 'histogram', 'stddev', 'zscale')
+autocut_methods = ['minmax', 'median', 'histogram', 'stddev', 'zscale']
 try:
     import scipy.ndimage.filters
 except ImportError:
     have_scipy = False
-    autocut_methods = ('minmax', 'histogram', 'stddev', 'zscale')
-
+    autocut_methods = ['minmax', 'histogram', 'stddev', 'zscale']
 
 __all__ = ['AutoCutsBase', 'Minmax', 'Histogram', 'StdDev', 'MedianFilter',
            'ZScale', 'get_autocuts', 'get_autocuts_names']
@@ -830,7 +830,9 @@ class ZScale(AutoCutsBase):
 
         if samples.size == 0:
             return (0, 0)
-        loval, hival = zscale.zscale_samples(samples, contrast=contrast)
+
+        _interval = ZScaleInterval(samples.size, contrast=contrast)
+        loval, hival = _interval.get_limits(samples)
         return loval, hival
 
 
