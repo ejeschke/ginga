@@ -208,6 +208,10 @@ class ImageViewBase(Callback.Callbacks):
         name = self.t_.get('autocut_method', 'zscale')
         klass = AutoCuts.get_autocuts(name)
         self.autocuts = klass(self.logger)
+        params = self.t_.get('autocut_params', [])
+        if len(params) > 0:
+            params = dict(params)
+            self.autocuts.update_params(**params)
 
         self.vip = vip.ViewerImageProxy(self)
 
@@ -2608,6 +2612,10 @@ class ImageViewBase(Callback.Callbacks):
             if method != str(self.autocuts):
                 ac_class = AutoCuts.get_autocuts(method)
                 self.autocuts = ac_class(self.logger)
+                params = self.t_.get('autocut_params', [])
+                if len(params) > 0:
+                    params = dict(params)
+                    self.autocuts.update_params(**params)
 
         elif setting.name == 'autocut_params':
             params = self.t_.get('autocut_params', [])

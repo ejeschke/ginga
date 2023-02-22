@@ -40,13 +40,14 @@ class AutoCutsBase(object):
         return []
 
     def __init__(self, logger):
-        super(AutoCutsBase, self).__init__()
+        super().__init__()
 
         self.logger = logger
         self.kind = 'base'
         self.crop_radius = 512
-        self.max_sample = 1000
+        self.max_sample = 20000
         self.pct_sample = 0.02
+        self.min_sample = 1000
 
     def update_params(self, **param_dict):
         # TODO: find a cleaner way to update these
@@ -175,7 +176,8 @@ class AutoCutsBase(object):
         wd, ht = image.get_size()
         total_points = wd * ht
         if num_points is None:
-            num_points = min(int(total_points * self.pct_sample),
+            num_points = min(max(self.min_sample,
+                                 int(total_points * self.pct_sample)),
                              self.max_sample)
         num_points = min(num_points, total_points)
         if num_points == 0:
@@ -213,7 +215,8 @@ class AutoCutsBase(object):
         ht, wd = data.shape[:2]
         total_points = wd * ht
         if num_points is None:
-            num_points = min(int(total_points * self.pct_sample),
+            num_points = min(max(self.min_sample,
+                                 int(total_points * self.pct_sample)),
                              self.max_sample)
         num_points = min(num_points, total_points)
         if num_points == 0:
@@ -324,7 +327,7 @@ class Clip(AutoCutsBase):
     """
 
     def __init__(self, logger):
-        super(Clip, self).__init__(logger)
+        super().__init__(logger)
         self.kind = 'clip'
 
     def calc_cut_levels(self, image):
@@ -357,7 +360,7 @@ class Minmax(AutoCutsBase):
     """
 
     def __init__(self, logger):
-        super(Minmax, self).__init__(logger)
+        super().__init__(logger)
         self.kind = 'minmax'
 
     def calc_cut_levels(self, image):
@@ -436,7 +439,7 @@ class Histogram(AutoCutsBase):
     def __init__(self, logger, usecrop=None, sample='crop',
                  full_px_limit=None, num_points=None,
                  pct=0.999, numbins=2048):
-        super(Histogram, self).__init__(logger)
+        super().__init__(logger)
 
         self.kind = 'histogram'
         self.sample = sample
@@ -619,7 +622,7 @@ class StdDev(AutoCutsBase):
     def __init__(self, logger, usecrop=None, sample='grid',
                  full_px_limit=None, num_points=None,
                  hensa_lo=-1.5, hensa_hi=4.0):
-        super(StdDev, self).__init__(logger)
+        super().__init__(logger)
 
         self.kind = 'stddev'
         self.sample = sample
@@ -714,7 +717,7 @@ class MedianFilter(AutoCutsBase):
         ]
 
     def __init__(self, logger, num_points=2000, length=5):
-        super(MedianFilter, self).__init__(logger)
+        super().__init__(logger)
 
         self.kind = 'median'
         self.num_points = num_points
@@ -784,7 +787,7 @@ class ZScale(AutoCutsBase):
         ]
 
     def __init__(self, logger, contrast=0.25, num_points=None):
-        super(ZScale, self).__init__(logger)
+        super().__init__(logger)
 
         self.kind = 'zscale'
         self.contrast = contrast
@@ -800,7 +803,7 @@ class ZScale(AutoCutsBase):
 
     def calc_cut_levels_data(self, data_np):
         """See subclass documentation."""
-        cutout = self.get_sample_data(data_np)
+        cutout = self.get_sample_data(data_np, num_points=self.num_points)
 
         loval, hival = self.calc_zscale(cutout, contrast=self.contrast,
                                         num_points=self.num_points)
