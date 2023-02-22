@@ -7,6 +7,10 @@ Ver 4.1.0 (unreleased)
 - change implementation of splash banner to a pop-up modal dialog
   with version string
 - fixed menubar integration on Mac OS X
+- fixed an issue with auto cuts saved parameters not being loaded
+  correctly
+- fixed an issue with certain auto cuts methods not getting enough
+  samples when the image size is very small
 
 Ver 4.0.1 (2022-12-27)
 ======================
