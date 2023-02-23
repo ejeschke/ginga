@@ -94,7 +94,10 @@ class CanvasMixin(object):
 
     def lookup_object_tag(self, obj):
         # TODO: we may need to have a reverse index eventually
-        tags, objs = list(zip(*self.tags.items()))
+        res = list(zip(*self.tags.items()))
+        if len(res) == 0:
+            return None
+        tags, objs = res
         try:
             idx = objs.index(obj)
             return tags[idx]
@@ -121,7 +124,11 @@ class CanvasMixin(object):
             self.update_canvas(whence=3)
 
     def delete_objects(self, objects, redraw=True):
-        tags, objs = list(zip(*self.tags.items()))
+        res = list(zip(*self.tags.items()))
+        if len(res) == 0:
+            tags, objs = [], []
+        else:
+            tags, objs = res
         for obj in objects:
             try:
                 idx = objs.index(obj)
@@ -131,7 +138,7 @@ class CanvasMixin(object):
             if tag is not None:
                 self.delete_object_by_tag(tag, redraw=False)
             else:
-                CompoundMixin.delete_object(obj)
+                CompoundMixin.delete_object(self, obj)
 
         if redraw:
             self.update_canvas(whence=3)
