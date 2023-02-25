@@ -2,10 +2,14 @@
 Tests of Ginga canvas objects.
 
 """
+import pytest
 import logging
+
+import numpy as np
 
 from ginga.pilw.ImageViewPil import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
+from ginga.AstroImage import AstroImage
 
 
 class TestCanvas(object):
@@ -33,6 +37,12 @@ class TestCanvas(object):
         assert o in self.canvas
         self.canvas.delete_object(o)
         assert o not in self.canvas
+
+    def test_delete_from_empty_canvas(self):
+        """Test deleting an object that does not exist on a canvas."""
+        o = self.dc.Line(10, 10, -200, -300)
+        with pytest.raises(ValueError) as e:
+            self.canvas.delete_object(o)
 
     def test_clear_canvas(self):
         """Test clearing a canvas."""
@@ -70,3 +80,57 @@ class TestCanvas(object):
         assert tuple(o.get_center_pt()) == (50, 60)
         o.move_delta_pt((-10, 15))
         assert tuple(o.get_center_pt()) == (40, 75)
+
+    def _setup_color_test(self, obj):
+        img = AstroImage(data_np=np.zeros((100, 100), dtype=int))
+        self.viewer.set_image(img)
+        self.canvas.add(obj)
+        mask = img.get_shape_mask(obj)
+        data = img.get_data()
+        data[mask] = 1
+        return np.sum(data)
+
+    def test_color_object_circle(self):
+        """Test coloring a circle."""
+        res = self._setup_color_test(self.dc.Circle(49.5, 49.5, 12.0))
+        assert res == 448
+
+    def test_color_object_box(self):
+        """Test coloring a box."""
+        res = self._setup_color_test(self.dc.Box(49.5, 49.5, 12.0, 14.0))
+        assert res == 672
+
+    def test_color_object_ellipse(self):
+        """Test coloring an ellipse."""
+        res = self._setup_color_test(self.dc.Ellipse(49.5, 49.5, 12.0, 30.0))
+        assert res == 1136
+
+    def test_color_object_line(self):
+        """Test coloring a line."""
+        res = self._setup_color_test(self.dc.Line(10.0, 10.0, 88.0, 63.0))
+        assert res == 196
+
+    def _setup_cutout_test(self, obj):
+        img = AstroImage(data_np=np.zeros((100, 100), dtype=int))
+        self.viewer.set_image(img)
+        self.canvas.add(obj)
+        data = img.cutout_shape(obj)
+        return data
+
+    def test_cutout_object_circle(self):
+        """Test cutting out a circle."""
+        data = self._setup_cutout_test(self.dc.Circle(49.5, 49.5, 12.0))
+        assert data.shape == (25, 25)
+        assert np.ma.count_masked(data) == 177
+
+    def test_cutout_object_box(self):
+        """Test cutting out a box."""
+        data = self._setup_cutout_test(self.dc.Box(49.5, 49.5, 12.0, 14.0))
+        assert data.shape == (29, 25)
+        assert np.ma.count_masked(data) == 53
+
+    def test_cutout_object_ellipse(self):
+        """Test cutting out an ellipse."""
+        data = self._setup_cutout_test(self.dc.Ellipse(49.5, 49.5, 12.0, 30.0))
+        assert data.shape == (61, 25)
+        assert np.ma.count_masked(data) == 389
