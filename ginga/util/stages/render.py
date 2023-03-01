@@ -23,7 +23,7 @@ class CreateBg(Stage):
     _stagename = 'viewer-createbg'
 
     def __init__(self, viewer):
-        super(CreateBg, self).__init__()
+        super().__init__()
 
         self.viewer = viewer
         self.dtype = np.uint8
@@ -67,7 +67,7 @@ class ICCProf(Stage):
     _stagename = 'viewer-icc-profiler'
 
     def __init__(self, viewer):
-        super(ICCProf, self).__init__()
+        super().__init__()
 
         self.viewer = viewer
 
@@ -121,7 +121,7 @@ class FlipSwap(Stage):
     _stagename = 'viewer-flipswap'
 
     def __init__(self, viewer):
-        super(FlipSwap, self).__init__()
+        super().__init__()
 
         self.viewer = viewer
 
@@ -156,7 +156,7 @@ class Rotate(Stage):
     _stagename = 'viewer-rotate'
 
     def __init__(self, viewer):
-        super(Rotate, self).__init__()
+        super().__init__()
 
         self.viewer = viewer
 
@@ -205,7 +205,7 @@ class Output(Stage):
     _stagename = 'viewer-output'
 
     def __init__(self, viewer):
-        super(Output, self).__init__()
+        super().__init__()
 
         self.viewer = viewer
 
@@ -357,7 +357,7 @@ class Scale(Stage):
     _stagename = 'viewer-scale'
 
     def __init__(self, viewer):
-        super(Scale, self).__init__()
+        super().__init__()
 
         self.viewer = viewer
 
@@ -509,7 +509,7 @@ class Merge(Stage):
     _stagename = 'viewer-merge-overlay'
 
     def __init__(self, viewer):
-        super(Merge, self).__init__()
+        super().__init__()
 
         self.viewer = viewer
 
@@ -570,7 +570,7 @@ class Cuts(Stage):
     _stagename = 'viewer-cut-levels'
 
     def __init__(self, viewer):
-        super(Cuts, self).__init__()
+        super().__init__()
 
         self.viewer = viewer
 
@@ -623,16 +623,16 @@ class RGBMap(Stage):
     _stagename = 'viewer-rgb-mapper'
 
     def __init__(self, viewer):
-        super(RGBMap, self).__init__()
+        super().__init__()
 
         self.viewer = viewer
 
     def run(self, prev_stage):
-        data = self.pipeline.get_data(prev_stage)
-        if data is None:
+        arr_in = self.pipeline.get_data(prev_stage)
+        if arr_in is None:
             self.pipeline.send(res_np=None)
             return
-        self.verify_2d(data)
+        self.verify_2d(arr_in)
 
         cvs_img = self.pipeline.get('cvs_img')
         state = self.pipeline.get('state')
@@ -643,13 +643,12 @@ class RGBMap(Stage):
             rgbmap = self.viewer.get_rgbmap()
 
         # See NOTE in Cuts
-        ## if not np.issubdtype(data.dtype, np.dtype(np.uint)):
-        ##     data = data.astype(np.uint)
+        ## if not np.issubdtype(arr_in.dtype, np.dtype(np.uint)):
+        ##     arr_in = arr_in.astype(np.uint)
 
         # get RGB mapped array
-        image_order = trcalc.guess_order(data.shape)
-        rgbobj = rgbmap.get_rgbarray(data, order=state.order,
-                                     image_order=image_order)
-        res_np = rgbobj.get_array(state.order)
+        image_order = trcalc.guess_order(arr_in.shape)
+        arr_out = rgbmap.get_rgb_array(arr_in, order=state.order,
+                                       image_order=image_order)
 
         self.pipeline.send(res_np=res_np)

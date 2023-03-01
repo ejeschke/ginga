@@ -8,13 +8,15 @@ import time
 import uuid
 import numpy as np
 
-from ginga.misc import Callback, Settings
+from ginga.misc import Callback, Settings, Bunch
 from ginga import ColorDist, trcalc
 from ginga import cmap as mod_cmap
 from ginga import imap as mod_imap
+from ginga.util import pipeline
+from ginga.util.stages.base import Stage, StageError
 
 
-class RGBMapError(Exception):
+class RGBMapError(StageError):
     pass
 
 
@@ -91,21 +93,12 @@ class RGBMapper(Callback.Callbacks):
         # For color and intensity maps
         self.cmap = None
         self.imap = None
-        self.arr = None
-        self.iarr = None
-        self.carr = None
-        self.sarr = None
-        self.scale_pct = 1.0
 
         # targeted bit depth per-pixel band of the output RGB array
         # (can be less than the data size of the output array)
         if bpp is None:
             bpp = 8
-        self.bpp = bpp
-        # maximum value that we can generate in this range
-        self.maxc = int(2 ** self.bpp - 1)
-        # data size per pixel band in the output RGB array
-        self._set_dtype()
+        self.set_bpp(bpp)
 
         # Create settings and set defaults
         if settings is None:
@@ -135,14 +128,6 @@ class RGBMapper(Callback.Callbacks):
         self.t_.get_setting('color_algorithm').add_callback('set',
                                                             self.color_algorithm_set_cb)
 
-        # For scaling algorithms
-        hashsize = self.t_.get('color_hashsize', self.maxc + 1)
-        if dist is None:
-            color_alg_name = self.t_.get('color_algorithm', 'linear')
-            color_dist_class = ColorDist.get_dist(color_alg_name)
-            dist = color_dist_class(hashsize)
-        self.dist = dist
-
         # For callbacks
         for name in ('changed', ):
             self.enable_callback(name)
@@ -170,14 +155,6 @@ class RGBMapper(Callback.Callbacks):
         else:
             self.reset_sarr(callback=False)
 
-    def _set_dtype(self):
-        if self.bpp <= 8:
-            self.dtype = np.dtype(np.uint8)
-        elif self.bpp <= 16:
-            self.dtype = np.dtype(np.uint16)
-        else:
-            self.dtype = np.dtype(np.uint32)
-
     def set_bpp(self, bpp):
         """
         Set the bit depth (per band) for the output.
@@ -186,9 +163,33 @@ class RGBMapper(Callback.Callbacks):
         """
         self.bpp = bpp
         self.maxc = int(2 ** self.bpp - 1)
-        self._set_dtype()
-        self.calc_cmap()
-        self.recalc(callback=False)
+
+        self.create_pipeline()
+
+        self.refresh_cache()
+
+    def create_pipeline(self):
+        # create RGB mapping pipeline
+        self.p_input = RGBInput(bpp=self.bpp)
+        self.p_dist = Distribute(bpp=self.bpp)
+        self.p_shift = ShiftMap(bpp=self.bpp)
+        self.p_imap = IntensityMap(bpp=self.bpp)
+        self.p_cmap = ColorMap(bpp=self.bpp)
+
+        stages = [self.p_input,
+                  self.p_dist,
+                  self.p_shift,
+                  self.p_imap,
+                  self.p_cmap,
+                  ]
+        self.pipeline = pipeline.Pipeline(self.logger, stages)
+        self.pipeline.name = 'rgb-mapper'
+
+        # TODO: get from upper pipeline
+        state = Bunch.Bunch(order='RGBA')
+        self.pipeline.set(state=state)
+
+        self.refresh_cache()
 
     def get_settings(self):
         return self.t_
@@ -222,30 +223,30 @@ class RGBMapper(Callback.Callbacks):
         return self.cmap
 
     def calc_cmap(self):
-        clst = self.cmap.clst
-        self.maxc = len(clst) - 1
-        arr = np.array(clst).transpose() * float(self.maxc)
-        # does this really need to be the same type as rgbmap output type?
-        carr = np.round(arr).astype(self.dtype, copy=False)
+        self.p_cmap.set_cmap(self.cmap)
+        carr = self.p_cmap.get_carr()
         self.t_.set(color_array=carr)
 
     def invert_cmap(self, callback=True):
-        carr = np.fliplr(self.carr)
+        self.p_cmap.invert_cmap()
+        carr = self.p_cmap.get_carr()
         # TEMP: ignore passed callback parameter
         self.t_.set(color_array=carr)
 
     def rotate_cmap(self, num, callback=True):
-        carr = np.roll(self.carr, num, axis=1)
+        self.p_cmap.rotate_cmap(num)
+        carr = self.p_cmap.get_carr()
         # TEMP: ignore passed callback parameter
         self.t_.set(color_array=carr)
 
     def restore_cmap(self, callback=True):
         with self.suppress_changed:
             self.reset_sarr(callback=False)
-            # TEMP: ignore passed callback parameter
             self.calc_cmap()
+            # TEMP: ignore passed callback parameter
 
     def reset_cmap(self):
+        self.p_cmap.reset_cmap()
         self.recalc()
 
     def get_rgb(self, index):
@@ -254,7 +255,9 @@ class RGBMapper(Callback.Callbacks):
         mapped by the value of `index`.
         """
         index = int(index)
-        return tuple(self.arr[index])
+        assert (index >= 0) and (index <= self.maxc), \
+            RGBMapError("Index must be in range 0-%d !" % (self.maxc))
+        return tuple(self.cache_arr[index])
 
     def get_rgbval(self, index):
         """
@@ -264,8 +267,10 @@ class RGBMapper(Callback.Callbacks):
         index = int(index)
         assert (index >= 0) and (index <= self.maxc), \
             RGBMapError("Index must be in range 0-%d !" % (self.maxc))
-        index = int(self.sarr[index].clip(0, self.maxc))
-        return self.arr[index]
+        return self.cache_arr[index]
+
+    def get_colors(self):
+        return self.cache_arr
 
     def get_colors(self):
         idx = np.arange(0, self.maxc + 1, dtype=np.uint)
@@ -289,7 +294,7 @@ class RGBMapper(Callback.Callbacks):
         self.calc_imap()
         with self.suppress_changed:
             # TEMP: ignore passed callback parameter
-            self.recalc()
+            self.recalc(callback=callback)
             # callback=False in the following because we don't want to
             # recursively invoke set_imap()
             self.t_.set(intensity_map=imap.name, callback=False)
@@ -301,18 +306,17 @@ class RGBMapper(Callback.Callbacks):
         return self.imap
 
     def calc_imap(self):
-        arr = np.array(self.imap.ilst) * float(self.maxc)
-        self.iarr = np.round(arr).astype(np.uint, copy=False)
+        self.p_imap.set_imap(self.imap)
+        self.refresh_cache()
 
     def reset_sarr(self, callback=True):
-        maxlen = self.maxc + 1
-        self.scale_pct = 1.0
-        sarr = np.arange(maxlen)
-        # TEMP: ignore passed callback parameter
+        self.p_shift.reset_sarr()
+        sarr = self.p_shift.get_sarr()
         self.t_.set(shift_array=sarr)
 
     def get_sarr(self):
-        return self.sarr
+        sarr = self.p_shift.get_sarr()
+        return sarr
 
     def set_sarr(self, sarr, callback=True):
         if sarr is not None:
@@ -323,20 +327,12 @@ class RGBMapper(Callback.Callbacks):
     def shift_array_set_cb(self, setting, sarr):
         if sarr is not None:
             sarr = np.asarray(sarr).clip(0, self.maxc).astype(np.uint)
-            maxlen = self.maxc + 1
-            _len = len(sarr)
-            if _len != maxlen:
-                raise RGBMapError("shift map length %d != %d" % (_len, maxlen))
-            self.sarr = sarr
-            # NOTE: can't reset scale_pct here because it results in a
-            # loop with e.g. scale_and_shift()
-            #self.scale_pct = 1.0
-            self.make_callback('changed')
-        else:
-            self.reset_sarr(callback=True)
+            self.p_shift.set_sarr(sarr)
+            self.refresh_cache()
+        self.make_callback('changed')
 
     def get_carr(self):
-        return self.carr
+        return self.p_cmap.get_carr()
 
     def set_carr(self, carr, callback=True):
         if carr is not None:
@@ -345,53 +341,49 @@ class RGBMapper(Callback.Callbacks):
         self.t_.set(color_array=carr, callback=True)
 
     def color_array_set_cb(self, setting, carr):
-        if carr is not None:
-            carr = np.asarray(carr).clip(0, self.maxc).astype(self.dtype)
-            maxlen = self.maxc + 1
-            self.carr = carr
-            _len = carr.shape[1]
-            if _len != maxlen:
-                raise RGBMapError("color map length %d != %d" % (_len, maxlen))
-        else:
-            self.calc_cmap()
+        self.p_cmap.set_carr(carr)
+        self.refresh_cache()
         self.recalc(callback=True)
 
-    def recalc(self, callback=True):
-        self.arr = np.copy(self.carr.T)
-        # Apply intensity map to rearrange colors
-        if self.iarr is not None:
-            self.arr = self.arr[self.iarr]
+    def refresh_cache(self):
+        i_arr = np.arange(0, self.maxc + 1, dtype=np.uint)
+        self.p_dist.result.setvals(res_np=i_arr)
+        self.pipeline.run_from(self.p_shift)
+        cache_arr = self.pipeline.get_data(self.pipeline[-1])
+        #self.cache_arr = self.get_carr()
+        if cache_arr is not None:
+            self.cache_arr = cache_arr[:, :3]
 
-        # NOTE: don't reset shift array
-        #self.reset_sarr(callback=False)
+    def recalc(self, callback=True):
+        self.refresh_cache()
         if callback:
             self.make_callback('changed')
 
     def get_hash_size(self):
-        return self.dist.get_hash_size()
+        return self.p_dist.get_hash_size()
 
     def set_hash_size(self, size, callback=True):
         # TEMP: ignore passed callback parameter
         self.t_.set(color_hashsize=size)
 
     def color_hashsize_set_cb(self, setting, size):
-        self.dist.set_hash_size(size)
+        self.p_dist.set_hash_size(size)
         self.make_callback('changed')
 
     def get_hash_algorithms(self):
         return ColorDist.get_dist_names()
 
     def get_hash_algorithm(self):
-        return str(self.dist)
+        return str(self.p_dist.dist)
 
     def get_dist(self):
         """
         Return the color distribution used by this RGBMapper.
         """
-        return self.dist
+        return self.p_dist.get_dist()
 
     def set_dist(self, dist, callback=True):
-        self.dist = dist
+        self.p_dist.set_dist(dist)
         if callback:
             self.make_callback('changed')
 
@@ -400,12 +392,11 @@ class RGBMapper(Callback.Callbacks):
         self.t_.set(color_algorithm=name)
 
     def set_color_algorithm(self, name):
-        size = self.t_.get('color_hashsize', self.dist.get_hash_size())
-        dist = ColorDist.get_dist(name)(size)
-        self.set_dist(dist, callback=True)
+        self.t_.set(color_algorithm=name)
 
     def color_algorithm_set_cb(self, setting, name):
-        self.set_color_algorithm(name)
+        self.p_dist.set_color_algorithm(name)
+        self.make_callback('changed')
 
     def get_order_indexes(self, order, cs):
         order = order.upper()
@@ -416,49 +407,11 @@ class RGBMapper(Callback.Callbacks):
         cs = cs.upper()
         return [order.index(c) for c in cs]
 
-    def _get_rgbarray(self, idx, rgbobj, image_order=''):
-        # NOTE: data is assumed to be in the range 0-maxc at this point
-        # but clip as a precaution
-        # NOTE [A]: idx is always an array calculated in the caller and
-        #    discarded afterwards
-        # idx = idx.clip(0, self.maxc).astype(np.uint, copy=False)
-        #idx.clip(0, self.maxc, out=idx)
-
-        # run it through the shift array and clip the result
-        # See NOTE [A]
-        # idx = self.sarr[idx].clip(0, self.maxc).astype(np.uint, copy=False)
-        idx = self.sarr[idx]
-        # TODO: I think we can avoid this operation, if shift array contents
-        # can be limited to 0..maxc
-        #idx.clip(0, self.maxc, out=idx)
-
-        ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
-        out = rgbobj.rgbarr
-
-        # See NOTE [A]
-        if (image_order is None) or (len(image_order) == 1):
-            out[..., [ri, gi, bi]] = self.arr[idx]
-
-        elif len(image_order) == 2:
-            mj, aj = self.get_order_indexes(image_order, 'MA')
-            out[..., [ri, gi, bi]] = self.arr[idx[..., mj]]
-
-        else:
-            # <== indexes already contain RGB info.
-            rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
-            out[..., ri] = self.arr[:, 0][idx[..., rj]]
-            out[..., gi] = self.arr[:, 1][idx[..., gj]]
-            out[..., bi] = self.arr[:, 2][idx[..., bj]]
-
-    def get_rgbarray(self, idx, out=None, order='RGB', image_order=''):
+    def get_rgb_array(self, idx, order='RGB', image_order=''):
         """
         Parameters
         ----------
         idx : index array
-
-        out : output array or None
-            The output array.  If `None` one of the correct size and depth
-            will be created.
 
         order : str
             The order of the color planes in the output array (e.g. "ARGB")
@@ -467,117 +420,37 @@ class RGBMapper(Callback.Callbacks):
             The order of channels if indexes already contain RGB info.
         """
         t1 = time.time()
-        # prepare output array
-        shape = idx.shape
-        depth = len(order)
 
-        if (image_order is not None) and (len(image_order) > 1):
-            # indexes contain RGB axis, so omit this
-            res_shape = shape[:-1] + (depth, )
-        else:
-            res_shape = shape + (depth, )
+        self.p_input.set_input(idx)
+        self.pipeline.run_from(self.p_input)
 
-        if out is None:
-            out = np.empty(res_shape, dtype=self.dtype, order='C')
-        else:
-            # TODO: assertion check on shape of out
-            if res_shape != out.shape:
-                raise RGBMapError("Output array shape %s doesn't match result "
-                                  "shape %s" % (str(out.shape), str(res_shape)))
+        out_arr = self.pipeline.get_data(self.pipeline[-1])
 
-        res = RGBPlanes(out, order)
-
-        # set alpha channel
-        if res.hasAlpha:
-            aa = res.get_slice('A')
-            aa.fill(self.maxc)
+        # reorder as caller needs it
+        #out_arr = trcalc.reorder_image(order, out_arr, state.order)
 
         t2 = time.time()
-        idx = self.get_hasharray(idx)
-
-        t3 = time.time()
-        self._get_rgbarray(idx, res, image_order=image_order)
-
-        t4 = time.time()
-        self.logger.debug("rgbmap: t2=%.4f t3=%.4f t4=%.4f total=%.4f" % (
-            t2 - t1, t3 - t2, t4 - t3, t4 - t1))
-        return res
+        self.logger.debug("rgbmap: total=%.4f" % (t2 - t1))
+        return out_arr
 
     def get_hasharray(self, idx):
-        return self.dist.hash_array(idx)
-
-    def _shift(self, sarr, pct, rotate=False):
-        n = len(sarr)
-        num = int(n * pct)
-        arr = np.roll(sarr, num)
-        if not rotate:
-            if num > 0:
-                arr[0:num] = sarr[0]
-            elif num < 0:
-                arr[n + num:n] = sarr[-1]
-        return arr
-
-    def _stretch(self, sarr, scale):
-        old_wd = len(sarr)
-        new_wd = int(round(scale * old_wd))
-
-        # Is there a more efficient way to do this?
-        xi = np.mgrid[0:new_wd]
-        iscale_x = float(old_wd) / float(new_wd)
-
-        xi = (xi * iscale_x).astype(np.uint, copy=False)
-        xi = xi.clip(0, old_wd - 1).astype(np.uint, copy=False)
-        newdata = sarr[xi]
-        return newdata
+        return self.p_dist.dist.hash_array(idx)
 
     def shift(self, pct, rotate=False, callback=True):
-        work = self._shift(self.sarr, pct, rotate=rotate)
-        maxlen = self.maxc + 1
-        assert len(work) == maxlen, \
-            RGBMapError("shifted shift map is != %d" % maxlen)
-        self.t_.set(shift_array=work)
+        self.p_shift.shift(pct, rotate=rotate)
+        self.t_.set(shift_array=self.p_shift.get_sarr())
 
     def scale_and_shift(self, scale_pct, shift_pct, callback=True):
         """Stretch and/or shrink the color map via altering the shift map.
         """
-        maxlen = self.maxc + 1
-        self.sarr = np.arange(maxlen)
-
-        # limit shrinkage to 5% of original size
-        scale = max(scale_pct, 0.050)
-        self.scale_pct = scale
-
-        work = self._stretch(self.sarr, scale)
-        n = len(work)
-        if n < maxlen:
-            # pad on the lowest and highest values of the shift map
-            m = (maxlen - n) // 2 + 1
-            barr = np.array([0] * m)
-            tarr = np.array([self.maxc] * m)
-            work = np.concatenate([barr, work, tarr])
-            work = work[:maxlen]
-
-        # we are mimicing ds9's stretch and shift algorithm here.
-        # ds9 seems to cut the center out of the stretched array
-        # BEFORE shifting
-        n = len(work) // 2
-        halflen = maxlen // 2
-        work = work[n - halflen:n + halflen].astype(np.uint, copy=False)
-        assert len(work) == maxlen, \
-            RGBMapError("scaled shift map is != %d" % maxlen)
-
-        # shift map according to the shift_pct
-        work = self._shift(work, shift_pct)
-        assert len(work) == maxlen, \
-            RGBMapError("shifted shift map is != %d" % maxlen)
-
-        self.t_.set(shift_array=work)
+        self.p_shift.scale_and_shift(scale_pct, shift_pct)
+        self.t_.set(shift_array=self.p_shift.get_sarr())
 
     def stretch(self, scale_factor, callback=True):
         """Stretch the color map via altering the shift map.
         """
-        self.scale_pct *= scale_factor
-        self.scale_and_shift(self.scale_pct, 0.0, callback=callback)
+        self.p_shift.stretch(scale_factor)
+        self.t_.set(shift_array=self.p_shift.get_sarr())
 
     def copy_attributes(self, dst_rgbmap, keylist=None):
         if keylist is None:
@@ -603,6 +476,21 @@ class NonColorMapper(RGBMapper):
         maxlen = self.maxc + 1
         self.dist.set_hash_size(maxlen)
         self.reset_sarr(callback=False)
+
+    def create_pipeline(self):
+        # create RGB mapping pipeline
+        self.p_input = RGBInput(bpp=self.bpp)
+        self.p_dist = Distribute(bpp=self.bpp)
+        self.p_shift = ShiftMap(bpp=self.bpp)
+        self.p_imap = IntensityMap(bpp=self.bpp)
+        self.p_cmap = ColorMap(bpp=self.bpp)
+
+        stages = [self.p_input,
+                  self.p_dist,
+                  self.p_shift,
+                  ]
+        self.pipeline = pipeline.Pipeline(self.logger, stages)
+        self.pipeline.name = 'rgb-mapper'
 
     def _get_rgbarray(self, idx, rgbobj, image_order='RGB'):
         # NOTE: data is assumed to be in the range 0-maxc at this point
@@ -659,4 +547,399 @@ class PassThruRGBMapper(RGBMapper):
         out[..., [ri, gi, bi]] = idx[..., [rj, gj, bj]]
 
 
-#END
+class RGBMapStage(Stage):
+
+    def __init__(self, bpp=8):
+        super().__init__()
+
+        self.set_bpp(bpp)
+
+    def _set_dtype(self):
+        if self.bpp <= 8:
+            self.dtype = np.dtype(np.uint8)
+        elif self.bpp <= 16:
+            self.dtype = np.dtype(np.uint16)
+        else:
+            self.dtype = np.dtype(np.uint32)
+
+    def set_bpp(self, bpp):
+        """
+        Set the bit depth (per band) for the output.
+        A typical "32-bit RGBA" image would be 8; a 48-bit image would
+        be 16, etc.
+        """
+        self.bpp = bpp
+        self.maxc = int(2 ** self.bpp - 1)
+        self._set_dtype()
+
+
+class RGBInput(RGBMapStage):
+    """First.
+
+    """
+    _stagename = 'rgbmap-input'
+
+    def __init__(self, bpp=8):
+        super().__init__(bpp=bpp)
+
+        self.in_arr = None
+
+    def set_input(self, in_arr):
+        if not np.issubdtype(in_arr.dtype, np.uint):
+            in_arr = in_arr.astype(np.uint)
+
+        #self.verify_2d(in_arr)
+
+        self.in_arr = in_arr
+
+    def run(self, prev_stage):
+        if prev_stage is not None:
+            raise StageError("'{}' in wrong location".format(self._stagename))
+
+        if self._bypass:
+            self.pipeline.send(res_np=None)
+            return
+
+        self.logger.debug("{}: sending data ({})".format(self._stagename,
+                                                         self.in_arr))
+        self.pipeline.send(res_np=self.in_arr)
+
+
+class Distribute(RGBMapStage):
+    """Distribute data according to a curve.
+
+    """
+    _stagename = 'rgbmap-distribute'
+
+    def __init__(self, bpp=8):
+        super().__init__(bpp=bpp)
+
+        self.hashsize = 65536
+        self.set_color_algorithm('linear')
+
+    def set_dist(self, dist):
+        self.dist = dist
+
+    def get_dist(self):
+        return self.dist
+
+    def get_hash_size(self):
+        return self.hashsize
+
+    def set_hash_size(self, size):
+        self.hashsize = size
+        self.dist.set_hash_size(size)
+
+    def set_color_algorithm(self, name):
+        color_dist_class = ColorDist.get_dist(name)
+        self.dist = color_dist_class(self.hashsize)
+
+    def run(self, prev_stage):
+        arr_in = self.pipeline.get_data(prev_stage)
+        if arr_in is None:
+            self.pipeline.send(res_np=None)
+            return
+        #self.verify_2d(arr_in)
+
+        if not np.issubdtype(arr_in.dtype, np.uint):
+            arr_in = arr_in.astype(np.uint)
+
+        out_arr = self.dist.hash_array(arr_in)
+
+        self.logger.debug("{}: sending result ({})".format(self._stagename,
+                                                           out_arr))
+        self.pipeline.send(res_np=out_arr)
+
+
+class ShiftMap(RGBMapStage):
+    """Redistribute data according to a shift array.
+
+    """
+    _stagename = 'rgbmap-shift-map'
+
+    def __init__(self, bpp=8):
+        super().__init__(bpp=bpp)
+
+        self.reset_sarr()
+
+    def get_sarr(self):
+        return self.sarr
+
+    def reset_sarr(self):
+        maxlen = self.maxc + 1
+        self.scale_pct = 1.0
+        self.sarr = np.arange(maxlen)
+
+    def set_sarr(self, sarr):
+        if sarr is not None:
+            sarr = np.asarray(sarr).clip(0, self.maxc).astype(np.uint)
+            maxlen = self.maxc + 1
+            _len = len(sarr)
+            if _len != maxlen:
+                raise RGBMapError("shift map length %d != %d" % (_len, maxlen))
+            self.sarr = sarr
+        else:
+            self.reset_sarr()
+
+    def _shift(self, sarr, pct, rotate=False):
+        n = len(sarr)
+        num = int(n * pct)
+        arr = np.roll(sarr, num)
+        if not rotate:
+            if num > 0:
+                arr[0:num] = sarr[0]
+            elif num < 0:
+                arr[n + num:n] = sarr[-1]
+        return arr
+
+    def _stretch(self, sarr, scale):
+        old_wd = len(sarr)
+        new_wd = int(round(scale * old_wd))
+
+        # Is there a more efficient way to do this?
+        xi = np.mgrid[0:new_wd]
+        iscale_x = float(old_wd) / float(new_wd)
+
+        xi = (xi * iscale_x).astype(np.uint, copy=False)
+        xi = xi.clip(0, old_wd - 1).astype(np.uint, copy=False)
+        newdata = sarr[xi]
+        return newdata
+
+    def shift(self, pct, rotate=False, callback=True):
+        work = self._shift(self.sarr, pct, rotate=rotate)
+        maxlen = self.maxc + 1
+        assert len(work) == maxlen, \
+            RGBMapError("shifted shift map is != %d" % maxlen)
+
+        self.sarr = work
+
+    def scale_and_shift(self, scale_pct, shift_pct, callback=True):
+        """Stretch and/or shrink the color map via altering the shift map.
+        """
+        maxlen = self.maxc + 1
+        self.sarr = np.arange(maxlen)
+
+        # limit shrinkage to 5% of original size
+        scale = max(scale_pct, 0.050)
+        self.scale_pct = scale
+
+        work = self._stretch(self.sarr, scale)
+        n = len(work)
+        if n < maxlen:
+            # pad on the lowest and highest values of the shift map
+            m = (maxlen - n) // 2 + 1
+            barr = np.array([0] * m)
+            tarr = np.array([self.maxc] * m)
+            work = np.concatenate([barr, work, tarr])
+            work = work[:maxlen]
+
+        # we are mimicing ds9's stretch and shift algorithm here.
+        # ds9 seems to cut the center out of the stretched array
+        # BEFORE shifting
+        n = len(work) // 2
+        halflen = maxlen // 2
+        work = work[n - halflen:n + halflen].astype(np.uint, copy=False)
+        assert len(work) == maxlen, \
+            RGBMapError("scaled shift map is != %d" % maxlen)
+
+        # shift map according to the shift_pct
+        work = self._shift(work, shift_pct)
+        assert len(work) == maxlen, \
+            RGBMapError("shifted shift map is != %d" % maxlen)
+
+        self.sarr = work
+
+    def stretch(self, scale_factor, callback=True):
+        """Stretch the color map via altering the shift map.
+        """
+        self.scale_pct *= scale_factor
+        self.scale_and_shift(self.scale_pct, 0.0, callback=callback)
+
+    def run(self, prev_stage):
+        in_arr = self.pipeline.get_data(prev_stage)
+        if in_arr is None:
+            self.pipeline.send(res_np=None)
+            return
+        #self.verify_2d(in_arr)
+
+        if not np.issubdtype(in_arr.dtype, np.uint):
+            in_arr = in_arr.astype(np.uint)
+
+        # run it through the shift array and clip the result
+        # See NOTE [A]
+        # out_arr = self.sarr[in_arr].clip(0, self.maxc).astype(np.uint, copy=False)
+        out_arr = self.sarr[in_arr]
+        # TODO: I think we can avoid this operation, if shift array contents
+        # can be limited to 0..maxc
+        #out_arr.clip(0, self.maxc, out=out_arr)
+
+        self.logger.debug("{}: sending data ({})".format(self._stagename,
+                                                         out_arr))
+        self.pipeline.send(res_np=out_arr)
+
+
+class IntensityMap(RGBMapStage):
+    """Map indexes through a curve.
+
+    """
+    _stagename = 'rgbmap-intensity-map'
+
+    def __init__(self, bpp=8):
+        super().__init__(bpp=bpp)
+
+        self.imap = None
+        self.iarr = None
+        self.set_intensity_map('ramp')
+
+    def get_iarr(self):
+        return self.iarr
+
+    def set_intensity_map(self, imap_name):
+        im = mod_imap.get_imap(imap_name)
+        self.set_imap(im)
+
+    def set_imap(self, imap):
+        self.imap = imap
+        self.calc_imap()
+
+    def calc_imap(self):
+        arr = np.array(self.imap.ilst) * float(self.maxc)
+        self.iarr = np.round(arr).astype(np.uint, copy=False)
+
+    def run(self, prev_stage):
+        in_arr = self.pipeline.get_data(prev_stage)
+        if in_arr is None:
+            self.pipeline.send(res_np=None)
+            return
+        #self.verify_2d(in_arr)
+
+        if not np.issubdtype(in_arr.dtype, np.uint):
+            in_arr = in_arr.astype(np.uint)
+
+        out_arr = self.iarr[in_arr]
+
+        self.logger.debug("{}: sending data ({})".format(self._stagename,
+                                                         out_arr))
+        self.pipeline.send(res_np=out_arr)
+
+
+class ColorMap(RGBMapStage):
+    """Map indexes through a three-color lookup table.
+
+    """
+    _stagename = 'rgbmap-color-map'
+
+    def __init__(self, bpp=8):
+        super().__init__(bpp=bpp)
+
+        self.cmap = None
+        self.carr = None
+        self.set_color_map('gray')
+
+    def set_color_map(self, cmap_name):
+        cm = mod_cmap.get_cmap(cmap_name)
+        self.set_cmap(cm)
+
+    def get_carr(self):
+        return self.carr
+
+    def set_carr(self, carr):
+        if carr is not None:
+            carr = np.asarray(carr).clip(0, self.maxc).astype(self.dtype)
+            maxlen = self.maxc + 1
+            self.carr = carr
+            _len = carr.shape[1]
+            if _len != maxlen:
+                raise RGBMapError("color map length %d != %d" % (_len, maxlen))
+        else:
+            self.calc_cmap()
+
+    def set_cmap(self, cmap):
+        self.cmap = cmap
+        self.calc_cmap()
+
+    def invert_cmap(self):
+        self.carr = np.fliplr(self.carr)
+
+    def rotate_cmap(self, num):
+        self.carr = np.roll(self.carr, num, axis=1)
+
+    def reset_cmap(self):
+        self.calc_cmap()
+
+    def calc_cmap(self):
+        clst = self.cmap.clst
+        self.maxc = len(clst) - 1
+        arr = np.array(clst).transpose() * float(self.maxc)
+        # does this really need to be the same type as rgbmap output type?
+        self.carr = np.round(arr).astype(self.dtype, copy=False)
+
+    def get_order_indexes(self, order, cs):
+        order = order.upper()
+        if order == '':
+            # assume standard RGB order if we don't find an order
+            # explicitly set
+            return [0, 1, 2]
+        cs = cs.upper()
+        return [order.index(c) for c in cs]
+
+    def run(self, prev_stage):
+        in_arr = self.pipeline.get_data(prev_stage)
+        if in_arr is None:
+            self.pipeline.send(res_np=None)
+            return
+        #self.verify_2d(in_arr)
+
+        if not np.issubdtype(in_arr.dtype, np.uint):
+            in_arr = in_arr.astype(np.uint)
+
+        # prepare output array
+        shape = in_arr.shape
+        # get RGB order requested for output
+        state = self.pipeline.get('state')
+        order = state.order
+        depth = len(order)
+        image_order = trcalc.guess_order(shape)
+
+        if (image_order is not None) and (len(image_order) > 1):
+            # indexes contain RGB axis, so omit this
+            res_shape = shape[:-1] + (depth, )
+        else:
+            res_shape = shape + (depth, )
+
+        out = np.empty(res_shape, dtype=self.dtype, order='C')
+
+        rgbobj = RGBPlanes(out, order)
+
+        # set alpha channel
+        if rgbobj.hasAlpha:
+            aa = rgbobj.get_slice('A')
+            aa.fill(self.maxc)
+
+        ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
+        out_arr = rgbobj.rgbarr
+
+        arr = self.carr.T
+
+        # See NOTE [A]
+        if (image_order is None) or (len(image_order) == 1):
+            out_arr[..., [ri, gi, bi]] = arr[in_arr]
+
+        elif len(image_order) == 2:
+            mj, aj = self.get_order_indexes(image_order, 'MA')
+            out_arr[..., [ri, gi, bi]] = arr[in_arr[..., mj]]
+
+        else:
+            # <== indexes already contain RGB info.
+            rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
+            out_arr[..., ri] = arr[:, 0][in_arr[..., rj]]
+            out_arr[..., gi] = arr[:, 1][in_arr[..., gj]]
+            out_arr[..., bi] = arr[:, 2][in_arr[..., bj]]
+
+        # alpha = self.pipeline.get('alpha')
+        # if alpha is not None:
+        #     out_arr[..., -1] = alpha
+
+        self.logger.debug("{}: sending data ({})".format(self._stagename,
+                                                         out_arr))
+        self.pipeline.send(res_np=out_arr)
