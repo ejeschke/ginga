@@ -722,16 +722,19 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
 
     def gl_set_cmap(self, rgbmap):
         # TODO: this does not yet work with 'histeq' color distribution
-        # Downsample color distribution hash to our opengl colormap length
         hashsize = rgbmap.get_hash_size()
         idx = rgbmap.get_hasharray(np.arange(0, hashsize))
-        xi = (np.arange(0, self._cmap_len) * (hashsize / self._cmap_len)).clip(0, hashsize).astype(np.uint)
-        if len(xi) != self._cmap_len:
-            raise render.RenderError("Error generating color hash table index: size mismatch {} != {}".format(len(xi), self._cmap_len))
+        if hashsize != self._cmap_len:
+            # Downsample color distribution hash to our opengl colormap length
+            xi = (np.arange(0, self._cmap_len) * (hashsize / self._cmap_len)).clip(0, hashsize).astype(np.uint)
+            if len(xi) != self._cmap_len:
+                raise render.RenderError("Error generating color hash table index: size mismatch {} != {}".format(len(xi), self._cmap_len))
 
-        idx = idx[xi]
-        img_arr = np.ascontiguousarray(rgbmap.arr[rgbmap.sarr[idx]],
+            idx = idx[xi]
+
+        img_arr = np.ascontiguousarray(rgbmap.get_colors(),
                                        dtype=np.uint8)
+        img_arr = img_arr[idx]
 
         # append alpha channel
         wd = img_arr.shape[0]

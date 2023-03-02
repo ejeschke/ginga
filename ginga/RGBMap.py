@@ -88,34 +88,6 @@ class RGBMapper(Callback.Callbacks):
         self.logger = logger
         self.mapper_id = str(uuid.uuid4())
 
-        # Create settings and set defaults
-        if settings is None:
-            settings = Settings.SettingGroup(logger=self.logger)
-        self.settings = settings
-        self.t_ = settings
-        self.settings_keys = ['color_map', 'intensity_map',
-                              'color_array', 'shift_array',
-                              'color_algorithm', 'color_hashsize',
-                              ]
-
-        # add our defaults
-        self.t_.add_defaults(color_map='gray', intensity_map='ramp',
-                             color_algorithm='linear',
-                             color_hashsize=65536,
-                             color_array=None, shift_array=None)
-        self.t_.get_setting('color_map').add_callback('set',
-                                                      self.color_map_set_cb)
-        self.t_.get_setting('intensity_map').add_callback('set',
-                                                          self.intensity_map_set_cb)
-        self.t_.get_setting('color_array').add_callback('set',
-                                                        self.color_array_set_cb)
-        self.t_.get_setting('shift_array').add_callback('set',
-                                                        self.shift_array_set_cb)
-        self.t_.get_setting('color_hashsize').add_callback('set',
-                                                           self.color_hashsize_set_cb)
-        self.t_.get_setting('color_algorithm').add_callback('set',
-                                                            self.color_algorithm_set_cb)
-
         # For color and intensity maps
         self.cmap = None
         self.imap = None
@@ -135,8 +107,36 @@ class RGBMapper(Callback.Callbacks):
         # data size per pixel band in the output RGB array
         self._set_dtype()
 
+        # Create settings and set defaults
+        if settings is None:
+            settings = Settings.SettingGroup(logger=self.logger)
+        self.settings = settings
+        self.t_ = settings
+        self.settings_keys = ['color_map', 'intensity_map',
+                              'color_array', 'shift_array',
+                              'color_algorithm', 'color_hashsize',
+                              ]
+
+        # add our defaults
+        self.t_.add_defaults(color_map='gray', intensity_map='ramp',
+                             color_algorithm='linear',
+                             color_hashsize=self.maxc + 1,
+                             color_array=None, shift_array=None)
+        self.t_.get_setting('color_map').add_callback('set',
+                                                      self.color_map_set_cb)
+        self.t_.get_setting('intensity_map').add_callback('set',
+                                                          self.intensity_map_set_cb)
+        self.t_.get_setting('color_array').add_callback('set',
+                                                        self.color_array_set_cb)
+        self.t_.get_setting('shift_array').add_callback('set',
+                                                        self.shift_array_set_cb)
+        self.t_.get_setting('color_hashsize').add_callback('set',
+                                                           self.color_hashsize_set_cb)
+        self.t_.get_setting('color_algorithm').add_callback('set',
+                                                            self.color_algorithm_set_cb)
+
         # For scaling algorithms
-        hashsize = self.t_.get('color_hashsize', 65536)
+        hashsize = self.t_.get('color_hashsize', self.maxc + 1)
         if dist is None:
             color_alg_name = self.t_.get('color_algorithm', 'linear')
             color_dist_class = ColorDist.get_dist(color_alg_name)
@@ -266,6 +266,10 @@ class RGBMapper(Callback.Callbacks):
             RGBMapError("Index must be in range 0-%d !" % (self.maxc))
         index = int(self.sarr[index].clip(0, self.maxc))
         return self.arr[index]
+
+    def get_colors(self):
+        idx = np.arange(0, self.maxc + 1, dtype=np.uint)
+        return self.arr[self.sarr[idx]]
 
     def set_intensity_map(self, imap_name):
         self.t_.set(intensity_map=imap_name)

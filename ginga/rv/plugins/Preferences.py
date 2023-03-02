@@ -450,10 +450,6 @@ class Preferences(GingaPlugin.LocalPlugin):
             pass
         combobox.add_callback('activated', self.set_calg_cb)
 
-        ## entry = b.table_size
-        ## entry.set_text(str(self.t_.get('color_hashsize', 65535)))
-        ## entry.add_callback('activated', self.set_tablesize_cb)
-
         fr.set_widget(w)
         vbox.add_widget(fr)
 
@@ -1053,9 +1049,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         name = 'linear'
         index = self.calg_names.index(name)
         self.w.calg_choice.set_index(index)
-        hashsize = 65535
-        ## self.w.table_size.set_text(str(hashsize))
-        self.t_.set(color_algorithm=name, color_hashsize=hashsize)
+        self.t_.set(color_algorithm=name)
 
     def set_zoomrate_cb(self, w, rate):
         self.t_.set(zoom_rate=rate)

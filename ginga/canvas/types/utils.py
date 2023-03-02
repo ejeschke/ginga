@@ -125,11 +125,12 @@ class ColorBar(CanvasObjectBase):
         clr_ht = pxht - scale_ht
 
         dist = rgbmap.get_dist()
+        color_arr = rgbmap.get_colors() / maxf
 
         j = ival
         off = 0
         range_pts = []
-        for i in range(maxc):
+        for i in range(len(color_arr)):
 
             wd = clr_wd
             if rem_px > 0:
@@ -140,8 +141,7 @@ class ColorBar(CanvasObjectBase):
                     wd += 1
             x = off
 
-            (r, g, b) = rgbmap.get_rgbval(i)
-            color = (r / maxf, g / maxf, b / maxf)
+            color = tuple(color_arr[i])
 
             cr.set_line(color, linewidth=0)
             cr.set_fill(color, alpha=self.fillalpha)
@@ -314,11 +314,12 @@ class DrawableColorBarP(RectangleP):
         clr_ht = pxht - scale_ht
 
         dist = rgbmap.get_dist()
+        color_arr = rgbmap.get_colors() / maxf
 
         j = ival
         off = cx1
         range_pts = []
-        for i in range(maxc):
+        for i in range(len(color_arr)):
 
             wd = clr_wd
             if rem_px > 0:
@@ -329,8 +330,7 @@ class DrawableColorBarP(RectangleP):
                     wd += 1
             x = off
 
-            (r, g, b) = rgbmap.get_rgbval(i)
-            color = (r / maxf, g / maxf, b / maxf)
+            color = tuple(color_arr[i])
 
             cr.set_line(color, linewidth=0)
             cr.set_fill(color, alpha=self.fillalpha)

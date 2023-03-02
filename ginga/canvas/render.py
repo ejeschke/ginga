@@ -9,9 +9,9 @@ from io import BytesIO
 import numpy as np
 from PIL import Image
 
-from ginga import trcalc, RGBMap
+from ginga import trcalc
 from ginga.fonts import font_asst
-from ginga.util import pipeline, rgb_cms
+from ginga.util import pipeline
 from ginga.util.stages import render
 from ginga.misc import Bunch
 

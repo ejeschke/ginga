@@ -26,8 +26,6 @@ class RGBMap(Stage):
         self._calg_name = 'linear'
         self._cmap_name = 'gray'
         self._imap_name = 'ramp'
-        self._hash_size = 256
-        # TODO: currently hash size cannot be changed
         self.viewer = None
         self.fv = None
 
@@ -37,8 +35,8 @@ class RGBMap(Stage):
         top = Widgets.VBox()
 
         # create and initialize RGB mapper
+        # TODO: currently hash size cannot be changed
         self.rgbmap = RGBMapper(self.logger)
-        self.rgbmap.set_hash_size(self._hash_size)
         self.rgbmap.set_color_algorithm(self._calg_name)
         self.rgbmap.set_color_map(self._cmap_name)
         self.rgbmap.set_intensity_map(self._imap_name)
@@ -74,10 +72,6 @@ class RGBMap(Stage):
         except Exception:
             pass
         combobox.add_callback('activated', self.set_calg_cb)
-
-        ## entry = b.table_size
-        ## entry.set_text(str(self.t_.get('color_hashsize', 65535)))
-        ## entry.add_callback('activated', self.set_tablesize_cb)
 
         fr.set_widget(w)
         top.add_widget(fr, stretch=0)
@@ -173,7 +167,8 @@ class RGBMap(Stage):
         cbar = ColorBar.ColorBar(self.logger, rgbmap=self.rgbmap,
                                  link=True,
                                  settings=settings)
-        cbar.cbar_view.cut_levels(0, self._hash_size - 1)
+        vmax = self.rgbmap.get_hash_size() - 1
+        cbar.cbar_view.cut_levels(0, vmax)
         cbar_w = cbar.get_widget()
         cbar_w.resize(-1, height)
 
