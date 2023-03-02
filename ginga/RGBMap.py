@@ -272,10 +272,6 @@ class RGBMapper(Callback.Callbacks):
     def get_colors(self):
         return self.cache_arr
 
-    def get_colors(self):
-        idx = np.arange(0, self.maxc + 1, dtype=np.uint)
-        return self.arr[self.sarr[idx]]
-
     def set_intensity_map(self, imap_name):
         self.t_.set(intensity_map=imap_name)
 
@@ -471,7 +467,7 @@ class NonColorMapper(RGBMapper):
     adjustment, but does no coloring.
     """
     def __init__(self, logger, dist=None, bpp=None):
-        super(NonColorMapper, self).__init__(logger, dist=dist, bpp=bpp)
+        super().__init__(logger, dist=dist, bpp=bpp)
 
         maxlen = self.maxc + 1
         self.dist.set_hash_size(maxlen)
@@ -520,7 +516,7 @@ class PassThruRGBMapper(RGBMapper):
     speed rendering of "finished" RGB data.
     """
     def __init__(self, logger, dist=None, bpp=None):
-        super(PassThruRGBMapper, self).__init__(logger, bpp=bpp)
+        super().__init__(logger, bpp=bpp)
 
         # ignore passed in distribution
         maxlen = self.maxc + 1
@@ -614,7 +610,7 @@ class Distribute(RGBMapStage):
     def __init__(self, bpp=8):
         super().__init__(bpp=bpp)
 
-        self.hashsize = 65536
+        self.hashsize = 256
         self.set_color_algorithm('linear')
 
     def set_dist(self, dist):
