@@ -11,6 +11,7 @@ Ver 4.1.0 (unreleased)
   correctly
 - fixed an issue with certain auto cuts methods not getting enough
   samples when the image size is very small
+- removed old, deprecated StandardPixelRenderer
 
 Ver 4.0.1 (2022-12-27)
 ======================
