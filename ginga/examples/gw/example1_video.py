@@ -196,7 +196,7 @@ class GingaVision(object):
         frame = 0
         last_report = 0
         done = False
-        while not self.ev_quit.isSet() and not done:
+        while not self.ev_quit.is_set() and not done:
             start_time = time.time()
             self.logger.debug("capture frame")
             frame += 1

@@ -89,7 +89,7 @@ class WidgetBase(Callback.Callbacks):
         # self.widget.raise_()
 
     def resize(self, width, height):
-        self.widget.resize(width, height)
+        self.widget.resize(int(width), int(height))
 
     def show(self):
         self.widget.show()
