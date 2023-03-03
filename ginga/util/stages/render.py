@@ -10,7 +10,7 @@ the default renderer for standard widget backends.
 """
 import numpy as np
 
-from ginga import trcalc
+from ginga import trcalc, RGBImage
 
 from .base import Stage, StageError
 
@@ -254,11 +254,11 @@ class Overlays(Stage):
 
     ginga.canvas.types.image.Image:
 
-    [scale] => [merge]
+    [scale] => [reorder] => [merge]
 
     ginga.canvas.types.image.NormImage:
 
-    [scale] => [cuts] => [rgbmap] => [merge]
+    [scale] => [reorder] => [cuts] => [rgbmap] => [merge]
     """
 
     _stagename = 'viewer-image-overlays'
@@ -269,13 +269,20 @@ class Overlays(Stage):
         self.viewer = viewer
 
     def run(self, prev_stage):
+        whence = self.pipeline.get('whence')
+        dstarr = self.pipeline.get_data(self)
+        if whence >= 3 and dstarr is not None:
+            # if we are only overplotting (whence >= 3) then we can
+            # simply use the result of the last pipeline run because
+            # nothing should have changed
+            self.pipeline.send(res_np=dstarr)
+            return
+
         bgarr = self.pipeline.get_data(prev_stage)
         self.verify_2d(bgarr)
 
         dstarr = np.copy(bgarr)
         self.pipeline.set(dstarr=dstarr)
-
-        whence = self.pipeline.get('whence')
 
         p_canvas = self.viewer.get_private_canvas()
         self._overlay_images(p_canvas, whence=whence)
@@ -296,8 +303,9 @@ class Overlays(Stage):
         from ginga.util import pipeline
         pipe = cache.get('minipipe', None)
         if pipe is None:
-            stages = [Scale(self.viewer),
-                      Merge(self.viewer)]
+            stages = [Scale(self.viewer),    # 0
+                      Reorder(self.viewer),  # 1
+                      Merge(self.viewer)]    # 2
             pipe = pipeline.Pipeline(self.logger, stages)
             pipe.name = 'image-overlays'
             cache.minipipe = pipe
@@ -316,10 +324,11 @@ class Overlays(Stage):
         from ginga.util import pipeline
         pipe = cache.get('minipipe', None)
         if pipe is None:
-            stages = [Scale(self.viewer),
-                      Cuts(self.viewer),
-                      RGBMap(self.viewer),
-                      Merge(self.viewer)]
+            stages = [Scale(self.viewer),    # 0
+                      Reorder(self.viewer),  # 1
+                      Cuts(self.viewer),     # 2
+                      RGBMap(self.viewer),   # 3
+                      Merge(self.viewer)]    # 4
             pipe = pipeline.Pipeline(self.logger, stages)
             pipe.name = 'image-overlays'
             cache.minipipe = pipe
@@ -333,11 +342,11 @@ class Overlays(Stage):
         if not cache.visible:
             return
         elif whence <= 1:
-            pipe.run_from(pipe[1])
+            pipe.run_from(pipe[2])  # Cuts
         elif whence <= 2:
-            pipe.run_from(pipe[2])
+            pipe.run_from(pipe[3])  # RGBMap
         else:
-            pipe.run_from(pipe[3])
+            pipe.run_from(pipe[4])  # Merge
 
 
 class Scale(Stage):
@@ -353,7 +362,8 @@ class Scale(Stage):
         self.viewer = viewer
 
     def run(self, prev_stage):
-        #assert prev_stage is None, StageError("'viewscale' in wrong location")
+        #if prev_stage is not None:
+        #    raise StageError(f"'{}' in wrong location".format(self._stagename))
         cvs_img = self.pipeline.get('cvs_img')
         cache = cvs_img.get_cache(self.viewer)
 
@@ -434,34 +444,58 @@ class Scale(Stage):
 
         self.pipeline.set(offset=(off_x, off_y))
 
-        ## if cvs_img.rgbmap is not None:
-        ##     rgbmap = cvs_img.rgbmap
-        ## else:
-        rgbmap = self.viewer.get_rgbmap()
+        self.pipeline.send(res_np=data)
+
+
+class Reorder(Stage):
+    """Reorder RGB images for the pipeline.
+
+    Reorders multiband images for processing in the pipeline standard
+    order.  Additionally, if the image has an alpha channel, then strip
+    it off and save it until it is recombined later with the colorized
+    output--this saves us having to deal with an alpha band in the cuts
+    leveling and RGB mapping routines.
+    """
+
+    _stagename = 'viewer-reorder'
+
+    def __init__(self, viewer):
+        super(Reorder, self).__init__()
+
+        self.viewer = viewer
+
+    def run(self, prev_stage):
+        data = self.pipeline.get_data(prev_stage)
+        if data is None:
+            self.pipeline.send(res_np=None)
+            return
+        self.verify_2d(data)
+
+        cvs_img = self.pipeline.get('cvs_img')
 
         state = self.pipeline.get('state')
+        image = cvs_img.get_image()
         image_order = image.get_order()
 
-        ## if image_order != state.order:
-        ##     # reorder image channels for pipeline
-        ##     data = trcalc.reorder_image(state.order, data, image_order)
+        if isinstance(image, RGBImage.RGBImage) and image_order != state.order:
+            # reorder image channels for pipeline
+            data = trcalc.reorder_image(state.order, data, image_order)
 
+        # strip off alpha layer, if any
         if 'A' not in image_order:
             alpha = None
 
         else:
-            # if image has an alpha channel, then strip it off and save
-            # it until it is recombined later with the colorized output
-            # this saves us having to deal with an alpha band in the
-            # cuts leveling and RGB mapping routines
-            # normalize alpha array to the final output range
+            # strip off alpha layer
+            # data, alpha = trcalc.remove_alpha(data)
             a_idx = image_order.index('A')
-            alpha = trcalc.array_convert(data[..., a_idx], rgbmap.dtype)
+            alpha = data[..., a_idx]
             data = data[..., 0:a_idx]
             ht, wd, dp = data.shape
             if dp == 1:
                 data = data.reshape((ht, wd))
 
+        # currently added back on in Merge stage
         self.pipeline.set(alpha=alpha)
 
         self.pipeline.send(res_np=data)
@@ -501,9 +535,14 @@ class Merge(Stage):
         dst_order = state.order
         image_order = state.order
 
-        ## alpha = self.pipeline.get('alpha')
-        ## if alpha is not None:
-        ##     rgbarr[..., -1] = alpha
+        # merge back in alpha layer if one was stripped off earler
+        # in the pipeline
+        alpha = self.pipeline.get('alpha')
+        if alpha is not None and 'A' in state.order:
+            a_idx = state.order.index('A')
+            # normalize alpha array to the final output range
+            alpha = trcalc.array_convert(alpha, rgbarr.dtype)
+            rgbarr[..., a_idx] = alpha
 
         # composite the image into the destination array at the
         # calculated position
@@ -612,9 +651,5 @@ class RGBMap(Stage):
         rgbobj = rgbmap.get_rgbarray(data, order=state.order,
                                      image_order=image_order)
         res_np = rgbobj.get_array(state.order)
-
-        alpha = self.pipeline.get('alpha')
-        if alpha is not None:
-            res_np[..., -1] = alpha
 
         self.pipeline.send(res_np=res_np)

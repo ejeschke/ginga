@@ -387,7 +387,7 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
 
     elif data_np.dtype == _dtype_uint8 and _use in (None, 'pillow'):
         if logger is not None:
-            logger.info("resizing with pillow")
+            logger.debug("resizing with pillow")
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = pil_resize[interpolation]
@@ -483,7 +483,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
 
     elif data_np.dtype == _dtype_uint8 and _use in (None, 'pillow'):
         if logger is not None:
-            logger.info("resizing with pillow")
+            logger.debug("resizing with pillow")
         if interpolation == 'basic':
             interpolation = 'nearest'
         method = pil_resize[interpolation]
