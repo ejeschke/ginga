@@ -338,9 +338,8 @@ class RGBMap(Stage):
 
         # get RGB mapped array
         image_order = trcalc.guess_order(data.shape)
-        rgbobj = self.rgbmap.get_rgbarray(data, order=self.order,
-                                          image_order=image_order)
-        res_np = rgbobj.get_array(self.order)
+        res_np = self.rgbmap.get_rgb_array(data, order=self.order,
+                                           image_order=image_order)
 
         self.pipeline.send(res_np=res_np)
 

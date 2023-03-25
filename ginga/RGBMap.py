@@ -89,10 +89,12 @@ class RGBMapper(Callback.Callbacks):
 
         self.logger = logger
         self.mapper_id = str(uuid.uuid4())
+        self.cache_arr = None
 
         # For color and intensity maps
         self.cmap = None
         self.imap = None
+        self.dist = dist
 
         # targeted bit depth per-pixel band of the output RGB array
         # (can be less than the data size of the output array)
@@ -172,6 +174,8 @@ class RGBMapper(Callback.Callbacks):
         # create RGB mapping pipeline
         self.p_input = RGBInput(bpp=self.bpp)
         self.p_dist = Distribute(bpp=self.bpp)
+        if self.dist is not None:
+            self.p_dist.set_dist(self.dist)
         self.p_shift = ShiftMap(bpp=self.bpp)
         self.p_imap = IntensityMap(bpp=self.bpp)
         self.p_cmap = ColorMap(bpp=self.bpp)
@@ -346,7 +350,6 @@ class RGBMapper(Callback.Callbacks):
         self.p_dist.result.setvals(res_np=i_arr)
         self.pipeline.run_from(self.p_shift)
         cache_arr = self.pipeline.get_data(self.pipeline[-1])
-        #self.cache_arr = self.get_carr()
         if cache_arr is not None:
             self.cache_arr = cache_arr[:, :3]
 
@@ -403,7 +406,7 @@ class RGBMapper(Callback.Callbacks):
         cs = cs.upper()
         return [order.index(c) for c in cs]
 
-    def get_rgb_array(self, idx, order='RGB', image_order=''):
+    def get_rgb_array(self, idx, order='RGBA', image_order=''):
         """
         Parameters
         ----------
@@ -417,10 +420,21 @@ class RGBMapper(Callback.Callbacks):
         """
         t1 = time.time()
 
-        self.p_input.set_input(idx)
-        self.pipeline.run_from(self.p_input)
+        if self.cache_arr is not None:
+            # if the cache array is set, then this will deliver a faster
+            # short cut to the colorized output--just apply the color
+            # distribution and then map through the cache array
+            idx = self.get_hasharray(idx)
+            out_arr = self.p_cmap.do_map_index(idx, self.cache_arr)
+        else:
+            # else run through the pipeline as usual
+            state = self.pipeline.get('state')
+            state.setvals(order=order)
 
-        out_arr = self.pipeline.get_data(self.pipeline[-1])
+            self.p_input.set_input(idx)
+            self.pipeline.run_from(self.p_input)
+
+            out_arr = self.pipeline.get_data(self.pipeline[-1])
 
         # reorder as caller needs it
         #out_arr = trcalc.reorder_image(order, out_arr, state.order)
@@ -469,14 +483,17 @@ class NonColorMapper(RGBMapper):
     def __init__(self, logger, dist=None, bpp=None):
         super().__init__(logger, dist=dist, bpp=bpp)
 
-        maxlen = self.maxc + 1
-        self.dist.set_hash_size(maxlen)
-        self.reset_sarr(callback=False)
+        cm = mod_cmap.get_cmap('gray')
+        self._c_arr = np.asarray(cm.clst)
+
+        self.refresh_cache()
 
     def create_pipeline(self):
         # create RGB mapping pipeline
         self.p_input = RGBInput(bpp=self.bpp)
         self.p_dist = Distribute(bpp=self.bpp)
+        if self.dist is not None:
+            self.p_dist.set_dist(self.dist)
         self.p_shift = ShiftMap(bpp=self.bpp)
         self.p_imap = IntensityMap(bpp=self.bpp)
         self.p_cmap = ColorMap(bpp=self.bpp)
@@ -486,25 +503,23 @@ class NonColorMapper(RGBMapper):
                   self.p_shift,
                   ]
         self.pipeline = pipeline.Pipeline(self.logger, stages)
-        self.pipeline.name = 'rgb-mapper'
+        self.pipeline.name = 'rgb-noncoloring-mapper'
 
-    def _get_rgbarray(self, idx, rgbobj, image_order='RGB'):
-        # NOTE: data is assumed to be in the range 0-maxc at this point
-        # but clip as a precaution
-        # See NOTE [A]: idx is always an array calculated in the caller and
-        #    discarded afterwards
-        #idx.clip(0, self.maxc, out=idx)
+        # will be overridden from outer pipelines as needed
+        state = Bunch.Bunch(order='RGBA')
+        self.pipeline.set(state=state)
 
-        # run it through the shift array and clip the result
-        # See NOTE [A]
-        idx = self.sarr[idx]
-        #idx.clip(0, self.maxc, out=idx)
+        self.refresh_cache()
 
-        ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
-        rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
-        out = rgbobj.rgbarr
+    def refresh_cache(self):
+        if not hasattr(self, '_c_arr'):
+            return
+        i_arr = np.arange(0, self.maxc + 1, dtype=np.uint)
+        self.p_dist.result.setvals(res_np=i_arr)
+        self.pipeline.run_from(self.p_shift)
+        idx_arr = self.pipeline.get_data(self.pipeline[-1])
 
-        out[..., [ri, gi, bi]] = idx[..., [rj, gj, bj]]
+        self.cache_arr = self._c_arr[idx_arr]
 
 
 class PassThruRGBMapper(RGBMapper):
@@ -516,31 +531,27 @@ class PassThruRGBMapper(RGBMapper):
     speed rendering of "finished" RGB data.
     """
     def __init__(self, logger, dist=None, bpp=None):
-        super().__init__(logger, bpp=bpp)
+        super().__init__(logger, dist=dist, bpp=bpp)
 
-        # ignore passed in distribution
-        maxlen = self.maxc + 1
-        self.dist = ColorDist.LinearDist(maxlen)
+        cm = mod_cmap.get_cmap('gray')
+        self.cache_arr = np.asarray(cm.clst).astype(np.uint8)
+
+    def refresh_cache(self):
+        #self.cache_arr = np.asarray(cm.clst).astype(np.uint8)
+        pass
 
     def get_hasharray(self, idx):
         # data is already constrained to 0..maxc and we want to
         # bypass color redistribution
         return idx
 
-    def _get_rgbarray(self, idx, rgbobj, image_order='RGB'):
-        # NOTE: data is assumed to be in the range 0-maxc at this point
-        # but clip as a precaution
-        # See NOTE [A]: idx is always an array calculated in the caller and
-        #    discarded afterwards
-        ## idx.clip(0, self.maxc, out=idx)
-
-        # bypass the shift array and skip color mapping,
-        # index is the final data
-        ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
-        rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
-        out = rgbobj.rgbarr
-
-        out[..., [ri, gi, bi]] = idx[..., [rj, gj, bj]]
+    def get_rgb_array(self, idx, order='RGB', image_order=''):
+        return idx
+        # reorder as caller needs it
+        if image_order in (None, ''):
+            image_order = trcalc.guess_order(idx.shape)
+        out_arr = trcalc.reorder_image(order, idx, image_order)
+        return out_arr
 
 
 class RGBMapStage(Stage):
@@ -610,7 +621,7 @@ class Distribute(RGBMapStage):
     def __init__(self, bpp=8):
         super().__init__(bpp=bpp)
 
-        self.hashsize = 256
+        self.hashsize = self.maxc + 1
         self.set_color_algorithm('linear')
 
     def set_dist(self, dist):
@@ -879,13 +890,7 @@ class ColorMap(RGBMapStage):
         cs = cs.upper()
         return [order.index(c) for c in cs]
 
-    def run(self, prev_stage):
-        in_arr = self.pipeline.get_data(prev_stage)
-        if in_arr is None:
-            self.pipeline.send(res_np=None)
-            return
-        #self.verify_2d(in_arr)
-
+    def do_map_index(self, in_arr, map_arr):
         if not np.issubdtype(in_arr.dtype, np.uint):
             in_arr = in_arr.astype(np.uint)
 
@@ -915,26 +920,35 @@ class ColorMap(RGBMapStage):
         ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
         out_arr = rgbobj.rgbarr
 
-        arr = self.carr.T
-
         # See NOTE [A]
         if (image_order is None) or (len(image_order) == 1):
-            out_arr[..., [ri, gi, bi]] = arr[in_arr]
+            out_arr[..., [ri, gi, bi]] = map_arr[in_arr]
 
         elif len(image_order) == 2:
             mj, aj = self.get_order_indexes(image_order, 'MA')
-            out_arr[..., [ri, gi, bi]] = arr[in_arr[..., mj]]
+            out_arr[..., [ri, gi, bi]] = map_arr[in_arr[..., mj]]
 
         else:
             # <== indexes already contain RGB info.
             rj, gj, bj = self.get_order_indexes(image_order, 'RGB')
-            out_arr[..., ri] = arr[:, 0][in_arr[..., rj]]
-            out_arr[..., gi] = arr[:, 1][in_arr[..., gj]]
-            out_arr[..., bi] = arr[:, 2][in_arr[..., bj]]
+            out_arr[..., ri] = map_arr[:, 0][in_arr[..., rj]]
+            out_arr[..., gi] = map_arr[:, 1][in_arr[..., gj]]
+            out_arr[..., bi] = map_arr[:, 2][in_arr[..., bj]]
 
         # alpha = self.pipeline.get('alpha')
         # if alpha is not None:
         #     out_arr[..., -1] = alpha
+
+        return out_arr
+
+    def run(self, prev_stage):
+        in_arr = self.pipeline.get_data(prev_stage)
+        if in_arr is None:
+            self.pipeline.send(res_np=None)
+            return
+        #self.verify_2d(in_arr)
+
+        out_arr = self.do_map_index(in_arr, self.carr.T)
 
         self.logger.debug("{}: sending data ({})".format(self._stagename,
                                                          out_arr))

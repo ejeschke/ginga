@@ -520,6 +520,9 @@ class Merge(Stage):
             return
         self.verify_2d(rgbarr)
 
+        if len(rgbarr.shape) != 3 or rgbarr.shape[2] < 3:
+            raise StageError("Not an RGB array (shape={})".format(rgbarr.shape))
+
         cvs_img = self.pipeline.get('cvs_img')
         off_x, off_y = self.pipeline.get('offset')
         dstarr = self.pipeline.get('dstarr')
@@ -539,6 +542,8 @@ class Merge(Stage):
         # in the pipeline
         alpha = self.pipeline.get('alpha')
         if alpha is not None and 'A' in state.order:
+            if rgbarr.shape[2] != 4:
+                raise StageError("RGB array lacks alpha band (shape={})".format(rgbarr.shape))
             a_idx = state.order.index('A')
             # normalize alpha array to the final output range
             alpha = trcalc.array_convert(alpha, rgbarr.dtype)
@@ -643,12 +648,12 @@ class RGBMap(Stage):
             rgbmap = self.viewer.get_rgbmap()
 
         # See NOTE in Cuts
-        ## if not np.issubdtype(arr_in.dtype, np.dtype(np.uint)):
-        ##     arr_in = arr_in.astype(np.uint)
+        if not np.issubdtype(arr_in.dtype, np.dtype(np.uint)):
+            arr_in = arr_in.astype(np.uint)
 
         # get RGB mapped array
         image_order = trcalc.guess_order(arr_in.shape)
         arr_out = rgbmap.get_rgb_array(arr_in, order=state.order,
                                        image_order=image_order)
 
-        self.pipeline.send(res_np=res_np)
+        self.pipeline.send(res_np=arr_out)
