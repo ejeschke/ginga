@@ -333,13 +333,13 @@ class Clip(AutoCutsBase):
     def calc_cut_levels(self, image):
         loval, hival = image.get_minmax()
 
-        return (float(loval), float(hival))
+        return float(loval), float(hival)
 
     def calc_cut_levels_data(self, data_np):
         loval = np.nanmin(data_np)
         hival = np.nanmax(data_np)
 
-        return (float(loval), float(hival))
+        return float(loval), float(hival)
 
     def cut_levels(self, data, loval, hival, vmin=0.0, vmax=255.0):
         return data.clip(vmin, vmax)
@@ -367,7 +367,7 @@ class Minmax(AutoCutsBase):
         """See subclass documentation."""
         loval, hival = image.get_minmax()
 
-        return (float(loval), float(hival))
+        return float(loval), float(hival)
 
     def calc_cut_levels_data(self, data_np):
         """See subclass documentation."""
@@ -377,7 +377,7 @@ class Minmax(AutoCutsBase):
         loval = np.min(data)
         hival = np.max(data)
 
-        return (float(loval), float(hival))
+        return float(loval), float(hival)
 
 
 class Histogram(AutoCutsBase):
@@ -463,7 +463,7 @@ class Histogram(AutoCutsBase):
 
         bnch = self.calc_histogram(data, pct=self.pct, numbins=self.numbins)
         loval, hival = bnch.loval, bnch.hival
-        return loval, hival
+        return float(loval), float(hival)
 
     def calc_cut_levels_data(self, data_np):
         """See subclass documentation."""
@@ -480,7 +480,7 @@ class Histogram(AutoCutsBase):
 
         bnch = self.calc_histogram(data, pct=self.pct, numbins=self.numbins)
         loval, hival = bnch.loval, bnch.hival
-        return loval, hival
+        return float(loval), float(hival)
 
     def calc_histogram(self, data, pct=1.0, numbins=2048):
         """Internal function used by this class."""
@@ -648,7 +648,7 @@ class StdDev(AutoCutsBase):
 
         loval, hival = self.calc_stddev(data, hensa_lo=self.hensa_lo,
                                         hensa_hi=self.hensa_hi)
-        return loval, hival
+        return float(loval), float(hival)
 
     def calc_cut_levels_data(self, data_np):
         """See subclass documentation."""
@@ -667,7 +667,7 @@ class StdDev(AutoCutsBase):
             return (0, 0)
         loval, hival = self.calc_stddev(data, hensa_lo=self.hensa_lo,
                                         hensa_hi=self.hensa_hi)
-        return loval, hival
+        return float(loval), float(hival)
 
     def calc_stddev(self, data, hensa_lo=-1.5, hensa_hi=4.0):
         """Internal function used by this class."""
@@ -728,14 +728,14 @@ class MedianFilter(AutoCutsBase):
         data = self.get_sample(image, num_points=self.num_points)
 
         loval, hival = self.calc_medianfilter(data, length=self.length)
-        return loval, hival
+        return float(loval), float(hival)
 
     def calc_cut_levels_data(self, data_np):
         """See subclass documentation."""
         data = self.get_sample_data(data_np, num_points=self.num_points)
 
         loval, hival = self.calc_medianfilter(data, length=self.length)
-        return loval, hival
+        return float(loval), float(hival)
 
     def calc_medianfilter(self, data, length=5):
         """Internal function used by this class."""
@@ -799,7 +799,7 @@ class ZScale(AutoCutsBase):
 
         loval, hival = self.calc_zscale(data, contrast=self.contrast,
                                         num_points=self.num_points)
-        return loval, hival
+        return float(loval), float(hival)
 
     def calc_cut_levels_data(self, data_np):
         """See subclass documentation."""
@@ -807,7 +807,7 @@ class ZScale(AutoCutsBase):
 
         loval, hival = self.calc_zscale(cutout, contrast=self.contrast,
                                         num_points=self.num_points)
-        return loval, hival
+        return float(loval), float(hival)
 
     def calc_zscale(self, data, contrast=0.25, num_points=1000):
         """Internal function used by this class."""
