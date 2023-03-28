@@ -483,43 +483,8 @@ class NonColorMapper(RGBMapper):
     def __init__(self, logger, dist=None, bpp=None):
         super().__init__(logger, dist=dist, bpp=bpp)
 
-        cm = mod_cmap.get_cmap('gray')
-        self._c_arr = np.asarray(cm.clst)
-
-        self.refresh_cache()
-
-    def create_pipeline(self):
-        # create RGB mapping pipeline
-        self.p_input = RGBInput(bpp=self.bpp)
-        self.p_dist = Distribute(bpp=self.bpp)
-        if self.dist is not None:
-            self.p_dist.set_dist(self.dist)
-        self.p_shift = ShiftMap(bpp=self.bpp)
-        self.p_imap = IntensityMap(bpp=self.bpp)
-        self.p_cmap = ColorMap(bpp=self.bpp)
-
-        stages = [self.p_input,
-                  self.p_dist,
-                  self.p_shift,
-                  ]
-        self.pipeline = pipeline.Pipeline(self.logger, stages)
-        self.pipeline.name = 'rgb-noncoloring-mapper'
-
-        # will be overridden from outer pipelines as needed
-        state = Bunch.Bunch(order='RGBA')
-        self.pipeline.set(state=state)
-
-        self.refresh_cache()
-
-    def refresh_cache(self):
-        if not hasattr(self, '_c_arr'):
-            return
-        i_arr = np.arange(0, self.maxc + 1, dtype=np.uint)
-        self.p_dist.result.setvals(res_np=i_arr)
-        self.pipeline.run_from(self.p_shift)
-        idx_arr = self.pipeline.get_data(self.pipeline[-1])
-
-        self.cache_arr = self._c_arr[idx_arr]
+        self.p_imap.bypass(True)
+        self.p_cmap.bypass(True)
 
 
 class PassThruRGBMapper(RGBMapper):
@@ -533,29 +498,17 @@ class PassThruRGBMapper(RGBMapper):
     def __init__(self, logger, dist=None, bpp=None):
         super().__init__(logger, dist=dist, bpp=bpp)
 
-        cm = mod_cmap.get_cmap('gray')
-        self.cache_arr = np.asarray(cm.clst).astype(np.uint8)
-
-    def refresh_cache(self):
-        #self.cache_arr = np.asarray(cm.clst).astype(np.uint8)
-        pass
-
-    def get_hasharray(self, idx):
-        # data is already constrained to 0..maxc and we want to
-        # bypass color redistribution
-        return idx
-
-    def get_rgb_array(self, idx, order='RGB', image_order=''):
-        return idx
-        # reorder as caller needs it
-        if image_order in (None, ''):
-            image_order = trcalc.guess_order(idx.shape)
-        out_arr = trcalc.reorder_image(order, idx, image_order)
-        return out_arr
+        self.p_dist.bypass(True)
+        self.p_shift.bypass(True)
+        self.p_imap.bypass(True)
+        self.p_cmap.bypass(True)
 
 
 class RGBMapStage(Stage):
+    """A class that all stages participating in color mapping subclass.
 
+    Establishes the bit depth of the RGB mapping.
+    """
     def __init__(self, bpp=8):
         super().__init__()
 
@@ -581,8 +534,8 @@ class RGBMapStage(Stage):
 
 
 class RGBInput(RGBMapStage):
-    """First.
-
+    """First stage of a sub-pipeline that accepts the input to be colored
+    this should usually be the output of the "Cuts" stage of rendering.
     """
     _stagename = 'rgbmap-input'
 
@@ -615,6 +568,8 @@ class RGBInput(RGBMapStage):
 class Distribute(RGBMapStage):
     """Distribute data according to a curve.
 
+    This stage handles the distribution of input values according to a
+    predefined mapping such as linear, log, power, sqrt, asinh, etc.
     """
     _stagename = 'rgbmap-distribute'
 
@@ -661,6 +616,8 @@ class Distribute(RGBMapStage):
 class ShiftMap(RGBMapStage):
     """Redistribute data according to a shift array.
 
+    This stage handles colormap shifts and stretches, which are used to
+    set brightness and contrast in the image.
     """
     _stagename = 'rgbmap-shift-map'
 
