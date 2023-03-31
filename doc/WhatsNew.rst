@@ -12,6 +12,7 @@ Ver 4.1.0 (unreleased)
 - fixed an issue with certain auto cuts methods not getting enough
   samples when the image size is very small
 - removed old, deprecated StandardPixelRenderer
+- RGB mapping has been refactored to use a pipeline
 
 Ver 4.0.1 (2022-12-27)
 ======================
