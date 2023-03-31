@@ -652,8 +652,6 @@ class RGBMap(Stage):
             arr_in = arr_in.astype(np.uint)
 
         # get RGB mapped array
-        image_order = trcalc.guess_order(arr_in.shape)
-        arr_out = rgbmap.get_rgb_array(arr_in, order=state.order,
-                                       image_order=image_order)
+        arr_out = rgbmap.get_rgb_array(arr_in, order=state.order)
 
         self.pipeline.send(res_np=arr_out)

@@ -3,7 +3,7 @@
 #
 import numpy as np
 
-from ginga import trcalc, cmap, imap, ColorDist
+from ginga import cmap, imap, ColorDist
 from ginga.RGBMap import RGBMapper
 from ginga.gw import Widgets, ColorBar
 
@@ -337,9 +337,7 @@ class RGBMap(Stage):
             data = data.astype(np.uint)
 
         # get RGB mapped array
-        image_order = trcalc.guess_order(data.shape)
-        res_np = self.rgbmap.get_rgb_array(data, order=self.order,
-                                           image_order=image_order)
+        res_np = self.rgbmap.get_rgb_array(data, order=self.order)
 
         self.pipeline.send(res_np=res_np)
 
