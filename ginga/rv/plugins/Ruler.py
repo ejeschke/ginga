@@ -56,8 +56,7 @@ useful for close up, zoomed-in work on the image.  "Clear" clears the
 ruler from the image.
 
 **Tips**
-Open the "Zoom" plugin to precisely see detail of the cursor area (the
-graphics of the ruler are not shown there, however).
+Open the "Zoom" plugin to precisely see detail of the cursor area.
 The "Pick" plugin can also be used in conjunction with Ruler to identify
 the central point of an object, when aligning either end of the ruler.
 
