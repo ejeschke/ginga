@@ -14,6 +14,7 @@ Ver 4.1.0 (unreleased)
 - removed old, deprecated StandardPixelRenderer
 - RGB mapping has been refactored to use a pipeline
 - Removed deprecated preload feature
+- Fix for focusing plugins that have no GUI
 
 Ver 4.0.1 (2022-12-27)
 ======================

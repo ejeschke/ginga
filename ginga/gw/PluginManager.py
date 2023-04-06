@@ -205,7 +205,7 @@ class PluginManager(Callback.Callbacks):
         p_info = bnch.pInfo
         # If this is a local plugin, raise the channel associated with the
         # plug in
-        if p_info.chinfo is not None:
+        if hasattr(p_info.obj, 'resume'):
             self.logger.debug("resuming plugin %s" % (name))
             p_info.obj.resume()
 
@@ -239,7 +239,7 @@ class PluginManager(Callback.Callbacks):
         try:
             self.focus.remove(lname)
 
-            if p_info.chinfo is not None:
+            if hasattr(p_info.obj, 'pause'):
                 p_info.obj.pause()
 
             self.make_callback('unfocus-plugin', bnch)
@@ -351,19 +351,17 @@ class PluginManager(Callback.Callbacks):
         if vbox is not None:
             self.finish_gui(p_info, vbox)
 
-            self.activate(p_info)
-            # focusing plugin will also raise plugin and associated
-            # channel viewer
-            self.set_focus(p_info.name)
+        self.activate(p_info)
 
-        else:
-            self.activate(p_info)
+        # focusing plugin will also raise plugin and associated
+        # channel viewer
+        self.set_focus(p_info.name)
 
-            # If this is a local plugin, raise the channel viewer
-            # associated with the plug in
-            if p_info.chinfo is not None:
-                itab = p_info.chinfo.name
-                self.ds.raise_tab(itab)
+        # If this is a local plugin, raise the channel viewer
+        # associated with the plug in
+        if p_info.chinfo is not None:
+            itab = p_info.chinfo.name
+            self.ds.raise_tab(itab)
 
     def stop_plugin(self, p_info):
         self.logger.debug("stopping plugin %s" % (str(p_info)))

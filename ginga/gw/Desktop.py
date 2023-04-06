@@ -521,6 +521,15 @@ class Desktop(Callback.Callbacks):
             pack(widget)
             return ['vbox', params] + res
 
+        # scrollable
+        def scrollable(params, rest, pack):
+            widget = Widgets.ScrollArea()
+            r = make(rest[0], lambda w: widget.set_widget(w))
+
+            process_common_params('scrollable', widget, params)
+            pack(widget)
+            return ['scrollable', params, r]
+
         # top-level dialog box
         def dialog(params, rows, pack):
             if len(self.toplevels) == 0:
@@ -622,6 +631,8 @@ class Desktop(Callback.Callbacks):
                 res = vbox(params, rest, pack)
             elif kind == 'hbox':
                 res = hbox(params, rest, pack)
+            elif kind == 'scrollable':
+                res = scrollable(params, rest, pack)
             elif kind == 'dialog':
                 res = dialog(params, rest, pack)
             elif kind == 'top':
@@ -630,6 +641,8 @@ class Desktop(Callback.Callbacks):
                 res = seq(params, rest, pack)
             elif kind in ('ws', 'mdi', 'widget'):
                 res = make_widget(kind, params, rest, pack)
+            else:
+                raise ValueError(f"don't understand kind: '{kind}'")
 
             return res
 
