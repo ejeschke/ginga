@@ -190,7 +190,7 @@ class ImageViewBase(Callback.Callbacks):
                              profile_use_color_map=False)
         self.profile_keylist = ['flip_x', 'flip_y', 'swap_xy', 'scale',
                                 'pan', 'pan_coord', 'rot_deg', 'cuts',
-                                'color_algorithm', 'color_hashsize',
+                                'color_algorithm',
                                 'color_map', 'intensity_map',
                                 'color_array', 'shift_array']
         #for name in self.t_.keys():
@@ -843,93 +843,103 @@ class ImageViewBase(Callback.Callbacks):
         is loaded.  Either the embedded profile settings or the default
         settings are applied as specified in the channel preferences.
         """
+        # 1. copy the current viewer settings
+        tmpprof = Settings.SettingGroup()
+        self.t_.copy_settings(tmpprof, include_callbacks=False,
+                              keylist=self.profile_keylist,
+                              callback=False)
+
+        # 2. reset selected items in the copy to default profile
+        # if there is one
+        keylist1 = set([])
+        if self.default_viewer_profile is not None:
+            dvp = self.default_viewer_profile
+            if self.t_['viewer_restore_transform'] and 'flip_x' in dvp:
+                keylist1.update({'flip_x', 'flip_y', 'swap_xy'})
+
+            if self.t_['viewer_restore_scale'] and 'scale' in dvp:
+                keylist1.add('scale')
+
+            if self.t_['viewer_restore_pan'] and 'pan' in dvp:
+                keylist1.add('pan')
+
+            if self.t_['viewer_restore_rotation'] and 'rot_deg' in dvp:
+                keylist1.add('rot_deg')
+
+            if self.t_['viewer_restore_cuts'] and 'cuts' in dvp:
+                keylist1.add('cuts')
+
+            if self.t_['viewer_restore_distribution'] and 'color_algorithm' in dvp:
+                keylist1.add('color_algorithm')
+
+            if self.t_['viewer_restore_color_map'] and 'color_map' in dvp:
+                keylist1.update({'color_map', 'intensity_map',
+                                 'color_array'})
+
+            if self.t_['viewer_restore_contrast'] and 'shift_array' in dvp:
+                keylist1.add('shift_array')
+
+            dvp.copy_settings(tmpprof, keylist=list(keylist1), callback=False)
+
+        # 3. apply image-embedded profile selected items to the copy
+        keylist2 = set([])
         profile = image.get('profile', None)
-        keylist = []
+        if profile is not None:
+            if self.t_['profile_use_transform'] and 'flip_x' in profile:
+                keylist2.update({'flip_x', 'flip_y', 'swap_xy'})
+
+            if self.t_['profile_use_scale'] and 'scale' in profile:
+                keylist2.add('scale')
+
+            if self.t_['profile_use_pan'] and 'pan' in profile:
+                keylist2.add('pan')
+
+            if self.t_['profile_use_rotation'] and 'rot_deg' in profile:
+                keylist2.add('rot_deg')
+
+            if self.t_['profile_use_cuts'] and 'cuts' in profile:
+                keylist2.add('cuts')
+
+            if self.t_['profile_use_distribution'] and 'color_algorithm' in profile:
+                keylist2.add('color_algorithm')
+
+            if self.t_['profile_use_color_map'] and 'color_map' in profile:
+                keylist2.update({'color_map', 'intensity_map',
+                                 'color_array'})
+
+            if self.t_['profile_use_contrast'] and 'shift_array' in profile:
+                keylist2.add('shift_array')
+
+            profile.copy_settings(tmpprof, keylist=list(keylist2),
+                                  callback=False)
+
         with self.suppress_redraw:
-            # reset viewer to default profile if there is one
-            if self.default_viewer_profile is not None:
-                dvp = self.default_viewer_profile
-                keylist2 = []
-                if self.t_['viewer_restore_transform'] and 'flip_x' in dvp:
-                    keylist2.extend(['flip_x', 'flip_y', 'swap_xy'])
+            # 4. update our settings from the copy
+            keylist = list(keylist1.union(keylist2))
+            self.apply_profile(tmpprof, keylist=keylist)
 
-                if self.t_['viewer_restore_scale'] and 'scale' in dvp:
-                    keylist2.extend(['scale'])
-
-                if self.t_['viewer_restore_pan'] and 'pan' in dvp:
-                    keylist2.extend(['pan'])
-
-                if self.t_['viewer_restore_rotation'] and 'rot_deg' in dvp:
-                    keylist2.extend(['rot_deg'])
-
-                if self.t_['viewer_restore_cuts'] and 'cuts' in dvp:
-                    keylist2.extend(['cuts'])
-
-                if self.t_['viewer_restore_distribution'] and 'color_algorithm' in dvp:
-                    keylist2.extend(['color_algorithm', 'color_hashsize'])
-
-                if self.t_['viewer_restore_color_map'] and 'color_map' in dvp:
-                    keylist2.extend(['color_map', 'intensity_map',
-                                    'color_array'])
-
-                if self.t_['viewer_restore_contrast'] and 'shift_array' in dvp:
-                    keylist2.extend(['shift_array'])
-
-                self.default_viewer_profile.copy_settings(self.t_,
-                                                          keylist=keylist2,
-                                                          callback=False)
-
-            # apply image-embedded profile as user intends
-            if profile is not None:
-                if self.t_['profile_use_transform'] and 'flip_x' in profile:
-                    keylist.extend(['flip_x', 'flip_y', 'swap_xy'])
-
-                if self.t_['profile_use_scale'] and 'scale' in profile:
-                    keylist.extend(['scale'])
-
-                if self.t_['profile_use_pan'] and 'pan' in profile:
-                    keylist.extend(['pan'])
-
-                if self.t_['profile_use_rotation'] and 'rot_deg' in profile:
-                    keylist.extend(['rot_deg'])
-
-                if self.t_['profile_use_cuts'] and 'cuts' in profile:
-                    keylist.extend(['cuts'])
-
-                if self.t_['profile_use_distribution'] and 'color_algorithm' in profile:
-                    keylist.extend(['color_algorithm', 'color_hashsize'])
-
-                if self.t_['profile_use_color_map'] and 'color_map' in profile:
-                    keylist.extend(['color_map', 'intensity_map',
-                                    'color_array'])
-
-                if self.t_['profile_use_contrast'] and 'shift_array' in profile:
-                    keylist.extend(['shift_array'])
-
-                self.apply_profile(profile, keylist=keylist)
-
-            # proceed with initialization that is not in the profile
+            # 5. proceed with initialization that is not in the profile
             # initialize transforms
-            if self.t_['auto_orient'] and 'flip_x' not in keylist:
+            if self.t_['auto_orient'] and 'flip_x' not in keylist2:
                 self.logger.debug(
                     "auto orient (%s)" % (self.t_['auto_orient']))
                 self.auto_orient()
 
             # initialize scale
-            if self.t_['autozoom'] != 'off' and 'scale' not in keylist:
+            if self.t_['autozoom'] != 'off' and 'scale' not in keylist2:
                 self.logger.debug("auto zoom (%s)" % (self.t_['autozoom']))
                 self.zoom_fit(no_reset=True)
 
             # initialize pan position
             # NOTE: False a possible value from historical use
             if (self.t_['autocenter'] not in ('off', False) and
-                'pan' not in keylist):
+                'pan' not in keylist2):
                 self.logger.debug(
                     "auto center (%s)" % (self.t_['autocenter']))
                 self.center_image(no_reset=True)
 
             # initialize cuts
-            if self.t_['autocuts'] != 'off' and 'cuts' not in keylist:
+            if self.t_['autocuts'] != 'off' and 'cuts' not in keylist2:
                 self.logger.debug("auto cuts (%s)" % (self.t_['autocuts']))
                 self.auto_levels()
 
