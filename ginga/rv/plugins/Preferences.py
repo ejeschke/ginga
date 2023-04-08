@@ -263,11 +263,11 @@ show scroll bars around the edge of the viewer frame.
 When switching between images, the viewer can be reset to a "default"
 state by saving a default viewer profile and checking boxes for the
 attributes to be reset.
-Set your viewer state as you prefer (scale, rotation, color map, etc) then
-click the "Update Viewer Profile" button.  Now check which items should be
-reset to those values between images. Finally, click the "Save Settings"
-button at the bottom if you want these settings to be persistent across
-Ginga restarts.
+Set your viewer state as you prefer (scale, rotation, color map, etc) and
+click the "Update Viewer Profile" button at the bottom of the plugin.
+Now check which items should be reset to those values between images.
+Finally, click the "Save Settings" button at the bottom if you want these
+settings to be persistent across Ginga restarts.
 
 * "Reset Scale" will reset the zoom (scale) level to the viewer profile
 * "Reset Pan" will reset the pan position to the viewer profile
@@ -936,7 +936,6 @@ class Preferences(GingaPlugin.LocalPlugin):
                      'Reset Distribution', 'checkbutton'),
                     ('Reset Contrast', 'checkbutton',
                      'Reset Color Map', 'checkbutton'),
-                    ("Update Viewer Profile", 'button'),
                     )
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
@@ -970,9 +969,6 @@ class Preferences(GingaPlugin.LocalPlugin):
             self.t_.get('viewer_restore_color_map', False))
         self.w.reset_color_map.add_callback('activated', self.reset_viewer_cb)
         self.w.reset_color_map.set_tooltip("Reset color map between images")
-        self.w.update_viewer_profile.add_callback('activated',
-                                                  self.update_viewer_profile_cb)
-        self.w.update_viewer_profile.set_tooltip("Update viewer profile from current settings (click 'Save Settings' to make persistent)")
 
         fr = Widgets.Frame()
         vb2 = Widgets.VBox()
@@ -1201,6 +1197,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         btns.add_widget(btn, stretch=0)
         btn = Widgets.Button("Save Settings")
         btn.add_callback('activated', lambda w: self.save_preferences())
+        btn.set_tooltip("Save current settings for channel (across restarts)")
+        btns.add_widget(btn)
+        btn = Widgets.Button("Update Viewer Profile")
+        btn.add_callback('activated', self.update_viewer_profile_cb)
+        btn.set_tooltip("Update viewer profile from current settings (click 'Save Settings' to make persistent)")
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)

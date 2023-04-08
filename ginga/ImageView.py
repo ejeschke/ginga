@@ -872,9 +872,8 @@ class ImageViewBase(Callback.Callbacks):
             if self.t_['viewer_restore_distribution'] and 'color_algorithm' in dvp:
                 keylist1.add('color_algorithm')
 
-            if self.t_['viewer_restore_color_map'] and 'color_map' in dvp:
-                keylist1.update({'color_map', 'intensity_map',
-                                 'color_array'})
+            if self.t_['viewer_restore_color_map'] and 'color_array' in dvp:
+                keylist1.update({'color_array', 'intensity_map'})
 
             if self.t_['viewer_restore_contrast'] and 'shift_array' in dvp:
                 keylist1.add('shift_array')
@@ -903,9 +902,8 @@ class ImageViewBase(Callback.Callbacks):
             if self.t_['profile_use_distribution'] and 'color_algorithm' in profile:
                 keylist2.add('color_algorithm')
 
-            if self.t_['profile_use_color_map'] and 'color_map' in profile:
-                keylist2.update({'color_map', 'intensity_map',
-                                 'color_array'})
+            if self.t_['profile_use_color_map'] and 'color_array' in profile:
+                keylist2.update({'color_array', 'intensity_map'})
 
             if self.t_['profile_use_contrast'] and 'shift_array' in profile:
                 keylist2.add('shift_array')
@@ -914,6 +912,17 @@ class ImageViewBase(Callback.Callbacks):
                                   callback=False)
 
         with self.suppress_redraw:
+            # NOTE: special hack for modified color maps:
+            # copy over the "color_map" setting but don't invoke callback
+            # because that would override color array, which may be modified
+            # by inversion, rotation, etc.
+            if 'color_array' in keylist2:
+                profile.copy_settings(self.t_, keylist=['color_map'],
+                                      callback=False)
+            elif 'color_array' in keylist1:
+                dvp.copy_settings(self.t_, keylist=['color_map'],
+                                  callback=False)
+
             # 4. update our settings from the copy
             keylist = list(keylist1.union(keylist2))
             self.apply_profile(tmpprof, keylist=keylist)
