@@ -10,7 +10,7 @@ channel.  An instance can be opened for each channel.
 
 **Usage**
 
-The ``Preferences`` plugin sets the preferences on a per-channel basis.
+The ``Preferences`` plugin sets the preferences *on a per-channel basis*.
 The preferences for a given channel are inherited from the "Image"
 channel until they are explicitly set and saved using this plugin.
 
@@ -250,7 +250,7 @@ displayed in plugins like "Contents" or "Thumbs" (which generally have
 their own setting preference for ordering).
 
 The "Use scrollbars" check box controls whether the channel viewer will
-show scroll bars around the edge of the viewer frame.
+show scroll bars around the edge of the viewer frame to pan the image.
 
 **Reset (Viewer) Preferences**
 
@@ -260,14 +260,18 @@ show scroll bars around the edge of the viewer frame.
 
    "Reset" (Viewer) preferences.
 
-When switching between images, the viewer can be reset to a "default"
-state by saving a default viewer profile and checking boxes for the
-attributes to be reset.
-Set your viewer state as you prefer (scale, rotation, color map, etc) and
+Each channel viewer has a *viewer profile* that is initialized to the state
+of the viewer just after creation and the restoration of saved settings for
+that channel.  When switching between images, the attributes of the viewer
+can be reset to this profile according to the checked boxes in this section.
+*If nothing is checked, nothing will be reset from the viewer profile*.
+
+To use this feature, set your viewer preferences as you prefer and
 click the "Update Viewer Profile" button at the bottom of the plugin.
 Now check which items should be reset to those values between images.
 Finally, click the "Save Settings" button at the bottom if you want these
-settings to be persistent across Ginga restarts.
+settings to be persistent across Ginga restarts and set as the default user
+profile for this channel when you restart ginga and recreate this channel.
 
 * "Reset Scale" will reset the zoom (scale) level to the viewer profile
 * "Reset Pan" will reset the pan position to the viewer profile
@@ -296,10 +300,10 @@ settings to be persistent across Ginga restarts.
 
    "Remember" (Image) preferences.
 
-When an image is loaded, an image profile is created and attached to the
+When an image is loaded, an *image profile* is created and attached to the
 image metadata in the channel.  These profiles are continuously updated with
 viewer state as the image is manipulated.  The "Remember" preferences
-control which parts of these profiles are restored to the viewer state
+control which attributes of these profiles are restored to the viewer state
 when the image is navigated (back) to in the channel:
 
 * "Remember Scale" will restore the zoom (scale) level of the image
@@ -311,12 +315,27 @@ when the image is navigated (back) to in the channel:
 * "Remember Contrast" will restore any contrast/bias adjustment
 * "Remember Color Map" will restore any color map choices made
 
+*If nothing is checked, nothing will be restored from the image profile*.
+
 .. note:: These items will be set BEFORE any auto (cut/zoom/center new)
           adjustments are made. If a remembered item is set, it will override
           any auto adjustment setting for the channel.
 
 .. tip:: If you use this feature you may also want to set "Reset (Viewer)
          Preferences" (see above).
+
+***An Example***
+
+As an example of using the Reset and Remember settings, suppose that you
+frequently use the contrast adjustment. You would like the contrast that
+you set with a particular image to be restored when that image is viewed
+again. However, when you view a new image, you would like the contrast to
+start out at some normal setting.
+
+To accomplish this, manually reset the contrast to the desired default
+setting.  Check "Reset Contrast" and then press "Update Viewer Profile".
+Finally, check "Remember Contrast".  Click "Save Settings" to make the
+channel settings persistent.
 
 **New Image Preferences**
 
