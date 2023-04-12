@@ -661,6 +661,42 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_imap_cb)
 
+        # COLOR MAP MANIPULATIONS
+        fr = Widgets.Frame("Color Map Manipulations")
+
+        captions = (('Contrast:', 'label', 'stretch', 'hscale'),
+                    ('Brightness:', 'label', 'shift', 'hscale'),
+                    ('Rotate:', 'label', 'rotate', 'hscale'),
+                    ('Invert', 'button', 'Restore', 'button'))
+        w, b = Widgets.build_info(captions, orientation='vertical')
+        self.w.update(b)
+
+        b.stretch.set_tracking(True)
+        b.stretch.set_limits(0, 100, incr_value=1)
+        b.stretch.set_value(100)
+        b.stretch.add_callback('value-changed', self.stretch_cmap_cb)
+        b.stretch.set_tooltip("Stretch color map")
+
+        b.shift.set_tracking(True)
+        b.shift.set_limits(-100, 100, incr_value=1)
+        b.shift.set_value(0)
+        b.shift.add_callback('value-changed', self.shift_cmap_cb)
+        b.shift.set_tooltip("Shift color map")
+
+        b.rotate.set_tracking(True)
+        b.rotate.set_limits(-100, 100, incr_value=1)
+        b.rotate.set_value(0)
+        b.rotate.add_callback('value-changed', self.rotate_cmap_cb)
+        b.rotate.set_tooltip("Rotate when shifting")
+
+        b.invert.set_tooltip("Invert color map")
+        b.invert.add_callback('activated', self.invert_cmap_cb)
+        # b.restore.set_tooltip("Restore color map")
+        # b.restore.add_callback('activated', self.restore_cmap_cb)
+
+        fr.set_widget(w)
+        vbox.add_widget(fr)
+
         # AUTOCUTS OPTIONS
         fr = Widgets.Frame("Auto Cuts")
         vbox2 = Widgets.VBox()
@@ -1273,6 +1309,37 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.imap_names.index(imap_name)
         self.w.imap_choice.set_index(index)
         self.t_.set(color_map=cmap_name, intensity_map=imap_name)
+
+    def stretch_cmap_cb(self, w, val):
+        rgbmap = self.fitsimage.get_rgbmap()
+        rgbmap.reset_sarr(callback=False)
+        stretch_val = 100.0 - val
+        scale_pct = stretch_val / 100.0
+        shift_val = self.w.shift.get_value()
+        shift_pct = - shift_val / 100.0
+
+        rgbmap.scale_and_shift(scale_pct, shift_pct)
+
+    def shift_cmap_cb(self, w, val):
+        rgbmap = self.fitsimage.get_rgbmap()
+        rgbmap.reset_sarr(callback=False)
+        shift_pct = - val / 100.0
+        stretch_val = 100.0 - self.w.stretch.get_value()
+        scale_pct = stretch_val / 100.0
+
+        rgbmap.scale_and_shift(scale_pct, shift_pct)
+
+    def rotate_cmap_cb(self, w, val):
+        rgbmap = self.fitsimage.get_rgbmap()
+        rgbmap.calc_cmap()
+        pct = val / 100.0
+        num = int(255 * pct)
+        rgbmap.rotate_cmap(num)
+        #rgbmap.shift(shift_pct, rotate=rotate)
+
+    def invert_cmap_cb(self, w):
+        rgbmap = self.fitsimage.get_rgbmap()
+        rgbmap.invert_cmap()
 
     def set_default_distmaps(self):
         name = 'linear'
