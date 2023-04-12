@@ -15,6 +15,9 @@ Ver 4.1.0 (unreleased)
 - RGB mapping has been refactored to use a pipeline
 - Removed deprecated preload feature
 - Fix for focusing plugins that have no GUI
+- Added feature to reset viewer attributes between images (can be
+  used synergistically with the "remember" feature). See "Reset (Viewer)"
+  and "Remember (Image)" settings in the "Preferences" plugin.
 
 Ver 4.0.1 (2022-12-27)
 ======================
