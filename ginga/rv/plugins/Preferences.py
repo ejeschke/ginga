@@ -15,12 +15,14 @@ The preferences for a given channel are inherited from the "Image"
 channel until they are explicitly set and saved using this plugin.
 
 If "Save Settings" is pressed, it will save the settings to the user's
-home Ginga folder so that when a channel with the same name is created
-in future Ginga sessions it will obtain the same settings.
+$HOME/.ginga folder (a "channel_NAME.cfg" file for each channel NAME)
+so that when a channel with the same name is created in future Ginga
+sessions it will obtain the same settings.
 
 **Color Distribution Preferences**
 
 .. figure:: figures/cdist-prefs.png
+   :width: 400px
    :align: center
    :alt: Color Distribution preferences
 
@@ -43,6 +45,7 @@ default.
 **Color Mapping Preferences**
 
 .. figure:: figures/cmap-prefs.png
+   :width: 400px
    :align: center
    :alt: Color Mapping preferences
 
@@ -70,6 +73,7 @@ See "Customizing Ginga" for details.
 **Auto Cuts Preferences**
 
 .. figure:: figures/autocuts-prefs.png
+   :width: 400px
    :align: center
    :alt: Auto Cuts Preferences
 
@@ -97,6 +101,7 @@ allow changes to parameters particular to each algorithm.
 **Transform Preferences**
 
 .. figure:: figures/transform-prefs.png
+   :width: 400px
    :align: center
    :alt: Transform Preferences
 
@@ -124,6 +129,7 @@ is unflipped, unswapped, and unrotated.
 **WCS Preferences**
 
 .. figure:: figures/wcs-prefs.png
+   :width: 400px
    :align: center
    :alt: WCS Preferences
 
@@ -142,6 +148,7 @@ readout or a decimal degrees readout.
 **Zoom Preferences**
 
 .. figure:: figures/zoom-prefs.png
+   :width: 400px
    :align: center
    :alt: Zoom preferences
 
@@ -201,6 +208,7 @@ default values.
 **Pan Preferences**
 
 .. figure:: figures/pan-prefs.png
+   :width: 400px
    :align: center
    :alt: Pan Preferences
 
@@ -231,6 +239,7 @@ the pan position and for debugging.
 **General Preferences**
 
 .. figure:: figures/general-prefs.png
+   :width: 400px
    :align: center
    :alt: General Preferences
 
@@ -255,6 +264,7 @@ show scroll bars around the edge of the viewer frame to pan the image.
 **Reset (Viewer) Preferences**
 
 .. figure:: figures/reset-prefs.png
+   :width: 400px
    :align: center
    :alt: Reset (Viewer) Preferences
 
@@ -295,6 +305,7 @@ profile for this channel when you restart ginga and recreate this channel.
 **Remember (Image) Preferences**
 
 .. figure:: figures/remember-prefs.png
+   :width: 400px
    :align: center
    :alt: Remember (Image) Preferences
 
@@ -340,6 +351,7 @@ channel settings persistent.
 **New Image Preferences**
 
 .. figure:: figures/newimages-prefs.png
+   :width: 400px
    :align: center
    :alt: New Image Preferences
 
@@ -423,6 +435,7 @@ orient by WCS, at present.
 **ICC Profiles Preferences**
 
 .. figure:: figures/icc-prefs.png
+   :width: 400px
    :align: center
    :alt: ICC Profiles Preferences
 

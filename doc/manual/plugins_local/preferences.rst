@@ -4,6 +4,7 @@ Preferences
 ===========
 
 .. image:: figures/preferences.png
+   :width: 600px
    :align: center
    :alt: Preferences plugin
 
