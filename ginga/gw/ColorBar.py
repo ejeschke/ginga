@@ -4,6 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import numpy as np
+
 from ginga.misc import Callback, Settings
 from ginga import RGBMap
 
@@ -113,16 +115,12 @@ class ColorBar(Callback.Callbacks):
         self.cbar_view.redraw(whence=whence)
 
     def shift_colormap(self, pct):
-        if self._sarr is None:
-            return
-        with self.rgbmap.suppress_changed:
-            self.rgbmap.set_sarr(self._sarr, callback=False)
-            self.rgbmap.shift(pct)
-        self.redraw(whence=2)
+        self.rgbmap.shift(pct, reset=True)
+        #self.redraw(whence=2)
 
     def stretch_colormap(self, pct):
-        self.rgbmap.stretch(pct)
-        self.redraw(whence=2)
+        self.rgbmap.stretch(pct, reset=False)
+        #self.redraw(whence=2)
 
     def rgbmap_cb(self, rgbmap):
         self.redraw(whence=2)
@@ -130,8 +128,6 @@ class ColorBar(Callback.Callbacks):
     def cursor_press_cb(self, canvas, event, data_x, data_y):
         x, y = event.viewer.get_last_win_xy()
         self._start_x = x
-        sarr = self.rgbmap.get_sarr()
-        self._sarr = sarr.copy()
         return True
 
     def cursor_release_cb(self, canvas, event, data_x, data_y):

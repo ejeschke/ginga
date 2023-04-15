@@ -192,7 +192,8 @@ class ImageViewBase(Callback.Callbacks):
                                 'pan', 'pan_coord', 'rot_deg', 'cuts',
                                 'color_algorithm',
                                 'color_map', 'intensity_map',
-                                'color_array', 'shift_array']
+                                'color_map_invert', 'color_map_rot_pct',
+                                'contrast', 'brightness']
         #for name in self.t_.keys():
         for name in self.profile_keylist:
             self.t_.get_setting(name).add_callback('set',
@@ -626,11 +627,10 @@ class ImageViewBase(Callback.Callbacks):
 
     def invert_cmap(self):
         """Invert the color map.
-        See :meth:`ginga.RGBMap.RGBMapper.invert_cmap`.
 
         """
-        rgbmap = self.get_rgbmap()
-        rgbmap.invert_cmap()
+        tf = self.t_.get('color_map_invert', False)
+        self.t_.set(color_map_invert=not tf)
 
     def set_imap(self, im):
         """Set intensity map.
@@ -665,20 +665,19 @@ class ImageViewBase(Callback.Callbacks):
         rgbmap.scale_and_shift(scale_pct, shift_pct)
 
     def restore_contrast(self):
-        """Restores the color map from any stretch and/or shrinkage.
-        See :meth:`ginga.RGBMap.RGBMapper.reset_sarr`.
+        """Restores the color map from any stretch and/or shrinkage
 
         """
-        rgbmap = self.get_rgbmap()
-        rgbmap.reset_sarr()
+        with self.suppress_redraw:
+            self.t_.set(contrast=0.5, brightness=0.5)
 
     def restore_cmap(self):
         """Restores the color map from any rotation, stretch and/or shrinkage.
-        See :meth:`ginga.RGBMap.RGBMapper.restore_cmap`.
 
         """
-        rgbmap = self.get_rgbmap()
-        rgbmap.restore_cmap()
+        with self.suppress_redraw:
+            self.t_.set(color_map_invert=False, color_map_rot_pct=0.0,
+                        contrast=0.5, brightness=0.5)
 
     def rgbmap_cb(self, rgbmap):
         """Handle callback for when RGB map has changed."""
@@ -872,11 +871,12 @@ class ImageViewBase(Callback.Callbacks):
             if self.t_['viewer_restore_distribution'] and 'color_algorithm' in dvp:
                 keylist1.add('color_algorithm')
 
-            if self.t_['viewer_restore_color_map'] and 'color_array' in dvp:
-                keylist1.update({'color_array', 'intensity_map'})
+            if self.t_['viewer_restore_color_map'] and 'color_map' in dvp:
+                keylist1.update({'color_map', 'intensity_map',
+                                 'color_map_invert', 'color_map_rot_pct'})
 
-            if self.t_['viewer_restore_contrast'] and 'shift_array' in dvp:
-                keylist1.add('shift_array')
+            if self.t_['viewer_restore_contrast'] and 'contrast' in dvp:
+                keylist1.update({'contrast', 'brightness'})
 
             dvp.copy_settings(tmpprof, keylist=list(keylist1), callback=False)
 
@@ -902,27 +902,17 @@ class ImageViewBase(Callback.Callbacks):
             if self.t_['profile_use_distribution'] and 'color_algorithm' in profile:
                 keylist2.add('color_algorithm')
 
-            if self.t_['profile_use_color_map'] and 'color_array' in profile:
-                keylist2.update({'color_array', 'intensity_map'})
+            if self.t_['profile_use_color_map'] and 'color_map' in profile:
+                keylist2.update({'color_map', 'intensity_map',
+                                 'color_map_invert', 'color_map_rot_pct'})
 
-            if self.t_['profile_use_contrast'] and 'shift_array' in profile:
-                keylist2.add('shift_array')
+            if self.t_['profile_use_contrast'] and 'contrast' in profile:
+                keylist2.update({'contrast', 'brightness'})
 
             profile.copy_settings(tmpprof, keylist=list(keylist2),
                                   callback=False)
 
         with self.suppress_redraw:
-            # NOTE: special hack for modified color maps:
-            # copy over the "color_map" setting but don't invoke callback
-            # because that would override color array, which may be modified
-            # by inversion, rotation, etc.
-            if 'color_array' in keylist2:
-                profile.copy_settings(self.t_, keylist=['color_map'],
-                                      callback=False)
-            elif 'color_array' in keylist1:
-                dvp.copy_settings(self.t_, keylist=['color_map'],
-                                  callback=False)
-
             # 4. update our settings from the copy
             keylist = list(keylist1.union(keylist2))
             self.apply_profile(tmpprof, keylist=keylist)
@@ -2892,7 +2882,8 @@ class ImageViewBase(Callback.Callbacks):
             if 'rgbmap' in attrlist:
                 keylist.extend(['color_algorithm', 'color_hashsize',
                                 'color_map', 'intensity_map',
-                                'color_array', 'shift_array'])
+                                'color_map_invert', 'color_map_rot_pct',
+                                'contrast', 'brightness'])
                 _whence = min(_whence, 2.0)
 
         if whence <= 2.3:
