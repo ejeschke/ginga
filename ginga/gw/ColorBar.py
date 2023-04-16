@@ -32,7 +32,7 @@ class ColorBar(Callback.Callbacks):
         self.settings = settings
 
         self._start_x = 0
-        self._sarr = None
+        self._brightness = 0.5
 
         cbar = Viewers.CanvasView(logger=self.logger)
         width, height = 1, self.settings.get('cbar_height', 36)
@@ -114,13 +114,15 @@ class ColorBar(Callback.Callbacks):
     def redraw(self, whence=0):
         self.cbar_view.redraw(whence=whence)
 
-    def shift_colormap(self, pct):
-        self.rgbmap.shift(pct, reset=True)
-        #self.redraw(whence=2)
+    def shift_colormap(self, delta_pct):
+        t_ = self.rgbmap.get_settings()
+        pct = np.clip(self._brightness - delta_pct, 0.0, 1.0)
+        t_.set(brightness=pct)
 
     def stretch_colormap(self, pct):
-        self.rgbmap.stretch(pct, reset=False)
-        #self.redraw(whence=2)
+        t_ = self.rgbmap.get_settings()
+        pct = np.clip(t_['contrast'] * pct, 0.0, 1.0)
+        t_.set(contrast=pct)
 
     def rgbmap_cb(self, rgbmap):
         self.redraw(whence=2)
@@ -128,6 +130,7 @@ class ColorBar(Callback.Callbacks):
     def cursor_press_cb(self, canvas, event, data_x, data_y):
         x, y = event.viewer.get_last_win_xy()
         self._start_x = x
+        self._brightness = self.rgbmap.get_settings().get('brightness', 0.5)
         return True
 
     def cursor_release_cb(self, canvas, event, data_x, data_y):
@@ -152,13 +155,17 @@ class ColorBar(Callback.Callbacks):
         return True
 
     def none_move_cb(self, canvas, event, data_x, data_y):
+        print("none-move called")
         x, y = event.viewer.get_last_win_xy()
         wd, ht = event.viewer.get_window_size()
         dist = self.rgbmap.get_dist()
         pct = float(x) / float(wd)
+        print(f"pct = {pct}")
         rng_pct = dist.get_dist_pct(pct)
+        print(f"rng_pct = {rng_pct}")
         loval, hival = event.viewer.get_cut_levels()
         value = float(loval + (rng_pct * (hival - loval)))
+        print(f"value = {value}")
         self.make_callback('motion', value, event)
         return True
 
@@ -166,10 +173,10 @@ class ColorBar(Callback.Callbacks):
         direction = event.direction
         if (direction < 90.0) or (direction > 270.0):
             # up
-            scale_factor = 1.1
+            scale_factor = 0.9
         else:
             # not up!
-            scale_factor = 0.9
+            scale_factor = 1.1
 
         self.stretch_colormap(scale_factor)
 
@@ -178,6 +185,3 @@ class ColorBar(Callback.Callbacks):
     def pinch_cb(self, viewer, event):
         scale_factor = event.scale
         self.stretch_colormap(scale_factor)
-
-
-#END

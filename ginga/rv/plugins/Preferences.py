@@ -475,7 +475,6 @@ management in general for details on these choices.
 
 """
 import math
-import numpy as np
 
 from ginga.gw import Widgets
 from ginga.misc import ParamSet, Bunch

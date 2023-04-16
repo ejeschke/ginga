@@ -127,7 +127,7 @@ class CMapMode(Mode):
 
     def _invert_cmap(self, viewer, msg):
         msg = self.settings.get('msg_cmap', msg)
-        viewer.invert_cmap()
+        viewer.invert_color_map()
         if msg:
             self.onscreen_message("Inverted color map", delay=1.0)
 

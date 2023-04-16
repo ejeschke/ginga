@@ -625,12 +625,15 @@ class ImageViewBase(Callback.Callbacks):
         rgbmap = self.get_rgbmap()
         rgbmap.set_cmap(cm)
 
-    def invert_cmap(self):
+    def invert_color_map(self):
         """Invert the color map.
 
         """
         tf = self.t_.get('color_map_invert', False)
         self.t_.set(color_map_invert=not tf)
+
+    # to be deprecated
+    invert_cmap = invert_color_map
 
     def set_imap(self, im):
         """Set intensity map.
@@ -663,6 +666,39 @@ class ImageViewBase(Callback.Callbacks):
         """
         rgbmap = self.get_rgbmap()
         rgbmap.scale_and_shift(scale_pct, shift_pct)
+
+    def rotate_color_map(self, pct):
+        """Rotate the color map.
+
+        Parameters
+        ----------
+        pct :  float
+            The percentage (range: -1.0: 1.0) to rotate the color map.
+
+        """
+        self.t_.set(color_map_rot_pct=pct)
+
+    def set_contrast(self, pct):
+        """Set the contrast of the viewer.
+
+        Parameters
+        ----------
+        pct :  float
+            The percentage (range: 0.0: 1.0) to set the contrast.
+
+        """
+        self.t_.set(contrast=pct)
+
+    def set_brightness(self, pct):
+        """Set the brightness of the viewer.
+
+        Parameters
+        ----------
+        pct :  float
+            The percentage (range: 0.0: 1.0) to set the brightness.
+
+        """
+        self.t_.set(brightness=pct)
 
     def restore_contrast(self):
         """Restores the color map from any stretch and/or shrinkage
