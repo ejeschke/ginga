@@ -60,15 +60,44 @@ The "Colormap" control selects which color map should be loaded and
 used.  Click the control to show the list, or simply scroll the mouse
 wheel while hovering the cursor over the control.
 
+.. note:: Ginga comes with a good selection of color maps, but should you
+          want more, you can add custom ones or, if ``matplotlib`` is
+          installed, you can load all the ones that it has.
+          See "Customizing Ginga" for details.
+
 The "Intensity" control selects which intensity map should be used
 with the color map.  The intensity map is applied just before the color
 map, and can be used to change the standard linear scale of values into
 an inverted scale, logarithmic, etc.
 
-Ginga comes with a good selection of color maps, but should you want
-more, you can add custom ones or, if ``matplotlib`` is installed, you
-can load all the ones that it has.
-See "Customizing Ginga" for details.
+The "Invert CMap" checkbox can be used to invert the selected color map
+(note that a number of colormaps are also selectable from the "Colormap"
+controlin inverted form).
+
+The "Rotate" control can be used to rotate the colormap, while the
+"Unrotate CMap" button will restore the rotation to its default, unrotated
+state.
+
+The "Color Defaults" button will reset all the color mapping controls to
+the default values: "gray" color map, "ramp" (linear) intensity, and no
+inversion or rotation of the color map.
+
+**Contrast and Brightness (Bias) Preferences**
+
+.. figure:: figures/contrast-prefs.png
+   :width: 400px
+   :align: center
+   :alt: Contrast and Brightness (Bias) preferences
+
+   "Contrast and Brightness (Bias)" preferences.
+
+The "Contrast" and "Brightness" controls will set the contrast and brightness
+(aka "bias") of the viewer.  They offer an alternative to 1) using the contrast
+mode within the viewer window, or 2) manipulating the color bar by dragging (to
+set brightness/bias) or scrolling (to set contrast).
+
+The "Default Contrast" and "Default Brightness" controls set their respective
+settings back to the default value.
 
 **Auto Cuts Preferences**
 
@@ -679,7 +708,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.add_callback('activated', self.set_imap_cb)
 
         # CONTRAST MANIPULATIONS
-        fr = Widgets.Frame("Contrast and Brightness")
+        fr = Widgets.Frame("Contrast and Brightness (Bias)")
 
         captions = (('Contrast:', 'label', 'contrast', 'hscale'),
                     ('Brightness:', 'label', 'brightness', 'hscale'),
@@ -697,7 +726,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.brightness.set_limits(0, 100, incr_value=1)
         b.brightness.set_value(50)
         b.brightness.add_callback('value-changed', self.brightness_cb)
-        b.brightness.set_tooltip("Set brightness for the viewer")
+        b.brightness.set_tooltip("Set brightness/bias for the viewer")
 
         btn = Widgets.Button('Default Contrast')
         btn.set_tooltip("Reset contrast to default")
@@ -1338,10 +1367,6 @@ class Preferences(GingaPlugin.LocalPlugin):
 
     def invert_cmap_cb(self, w, tf):
         self.t_.set(color_map_invert=tf)
-
-    def restore_cmap_cb(self, w):
-        rgbmap = self.fitsimage.get_rgbmap()
-        rgbmap.restore_cmap()
 
     def restore_contrast_cb(self, w):
         self.t_.set(contrast=0.5)
