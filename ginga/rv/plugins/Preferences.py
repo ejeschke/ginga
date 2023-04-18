@@ -1704,7 +1704,7 @@ class Preferences(GingaPlugin.LocalPlugin):
                     viewer_restore_cuts=reset_cuts,
                     viewer_restore_transform=reset_transform,
                     viewer_restore_rotation=reset_rotation,
-                    viewer_restore_distributioin=reset_distribution,
+                    viewer_restore_distribution=reset_distribution,
                     viewer_restore_contrast=reset_contrast,
                     viewer_restore_color_map=reset_color_map)
 
