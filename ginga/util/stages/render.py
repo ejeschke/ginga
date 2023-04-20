@@ -547,7 +547,7 @@ class Merge(Stage):
                 #raise StageError("RGB array lacks alpha band (shape={})".format(rgbarr.shape))
                 # insert an empty alpha layer to accomodate
                 rgbarr = np.insert(rgbarr, a_idx,
-                                   np.zeros((rgbarr.shape[:2] + (1,)),
+                                   np.zeros(rgbarr.shape[:2],
                                             dtype=rgbarr.dtype),
                                    axis=2)
             # normalize alpha array to the final output range

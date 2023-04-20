@@ -533,8 +533,10 @@ class AstropyFitsFileHandler(BaseFitsFileHandler):
 
     def write_fits(self, path, data, header, **kwargs):
         fits_f = self.create_fits(data, header)
-        fits_f.writeto(path, **kwargs)
-        fits_f.close()
+        try:
+            fits_f.writeto(path, **kwargs)
+        finally:
+            fits_f.close()
 
     def save_as_file(self, filepath, data, header, **kwargs):
         self.write_fits(filepath, data, header, **kwargs)
