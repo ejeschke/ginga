@@ -542,9 +542,14 @@ class Merge(Stage):
         # in the pipeline
         alpha = self.pipeline.get('alpha')
         if alpha is not None and 'A' in state.order:
-            if rgbarr.shape[2] != 4:
-                raise StageError("RGB array lacks alpha band (shape={})".format(rgbarr.shape))
             a_idx = state.order.index('A')
+            if rgbarr.shape[2] != 4:
+                #raise StageError("RGB array lacks alpha band (shape={})".format(rgbarr.shape))
+                # insert an empty alpha layer to accomodate
+                rgbarr = np.insert(rgbarr, a_idx,
+                                   np.zeros((rgbarr.shape[:2] + (1,)),
+                                            dtype=rgbarr.dtype),
+                                   axis=2)
             # normalize alpha array to the final output range
             alpha = trcalc.array_convert(alpha, rgbarr.dtype)
             rgbarr[..., a_idx] = alpha
