@@ -13,6 +13,7 @@ import binascii
 from collections import namedtuple
 from io import BytesIO
 
+from PIL import Image
 import tornado.web
 import tornado.websocket
 import tornado.template
@@ -261,7 +262,7 @@ def get_image_src_from_buffer(img_buf, imgtype='png'):
 
 
 def get_icon(iconpath, size=None, format='png'):
-    image = io_rgb.PILimage.open(iconpath)
+    image = Image.open(iconpath)
     if size is not None:
         wd, ht = size
     else:
@@ -276,7 +277,7 @@ def get_icon(iconpath, size=None, format='png'):
 
 
 def get_native_image(imgpath, format='png'):
-    image = io_rgb.PILimage.open(imgpath)
+    image = Image.open(imgpath)
 
     img_buf = BytesIO()
     image.save(img_buf, format=format)

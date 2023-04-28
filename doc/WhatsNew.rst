@@ -18,6 +18,7 @@ Ver 4.1.0 (unreleased)
 - Added feature to reset viewer attributes between images (can be
   used synergistically with the "remember" feature). See "Reset (Viewer)"
   and "Remember (Image)" settings in the "Preferences" plugin.
+- Fixed bug with pg backend loading icons
 
 Ver 4.0.1 (2022-12-27)
 ======================
