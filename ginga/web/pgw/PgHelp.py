@@ -19,7 +19,6 @@ import tornado.websocket
 import tornado.template
 
 from ginga.misc import Bunch, Callback
-from ginga.util.io import io_rgb
 from ginga.util.evloop import get_ioloop
 from ginga.fonts import font_asst
 
