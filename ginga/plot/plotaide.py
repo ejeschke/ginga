@@ -48,7 +48,8 @@ class PlotAide(Callback.Callbacks):
             settings = Settings.SettingGroup(name='plotaide',
                                              logger=self.logger)
         self.settings = settings
-        self.settings.set_defaults(autoaxis_x='on', autoaxis_y='on')
+        self.settings.set_defaults(autoaxis_x='on', autoaxis_y='on',
+                                   tweak_lim_pct=0.05)
 
         # internal flags used for synchronization
         self._panning_x = False
@@ -357,6 +358,16 @@ class PlotAide(Callback.Callbacks):
         return np.array([(x_vals.min(), y_vals.min()),
                          (x_vals.max(), y_vals.max())])
 
+    def tweak_limits(self, lo, hi):
+        """Ensure that we can see the plotted lines by tweaking the
+        limits just a tad to be just outside their range.
+        """
+        spread = hi - lo
+        margin_pct = self.settings.get('tweak_lim_pct', 0.05)
+        lo -= spread * margin_pct
+        hi += spread * margin_pct
+        return lo, hi
+
     def setup_standard_frame(self, title='', x_title=None, y_title=None,
                              num_x_labels=4, num_y_labels=4,
                              warn_y=None, alert_y=None):
@@ -467,6 +478,7 @@ class PlotAide(Callback.Callbacks):
             vl = self.viewer.get_limits()
             x_lo, x_hi = vl[0][0], vl[1][0]
 
+            y_lo, y_hi = self.tweak_limits(y_lo, y_hi)
             self.viewer.set_limits([(x_lo, y_lo), (x_hi, y_hi)])
             self.viewer.zoom_fit(axis='y')
 
