@@ -60,7 +60,7 @@ jobs:
         python -m pip install PyQt5 scipy photutils
         python -m pip install -e .[test]
     - name: Install Qt
-      uses: jurplel/install-qt-action@88f3374475d094ce56ca6a7cc41cfda5a6ec093c  # v2.13.0
+      uses: jurplel/install-qt-action@c650b0c3306c1c46739f40ff0fe418af8c4ba02e  # v3.2.0
     - name: Run tests
       run: pytest --pyargs ginga doc -sv
 
@@ -81,7 +81,7 @@ jobs:
         python -m pip install PyQt5 numpy==1.16 astropy==3.2
         python -m pip install -e .[test]
     - name: Install Qt
-      uses: jurplel/install-qt-action@88f3374475d094ce56ca6a7cc41cfda5a6ec093c  # v2.13.0
+      uses: jurplel/install-qt-action@c650b0c3306c1c46739f40ff0fe418af8c4ba02e  # v3.2.0
     - name: Run tests
       run: pytest --pyargs ginga doc -sv
 
@@ -103,7 +103,7 @@ jobs:
         python -m pip install git+https://github.com/astropy/astropy.git@main#egg=astropy
         python -m pip install -e .[test]
     - name: Install Qt
-      uses: jurplel/install-qt-action@88f3374475d094ce56ca6a7cc41cfda5a6ec093c  # v2.13.0
+      uses: jurplel/install-qt-action@c650b0c3306c1c46739f40ff0fe418af8c4ba02e  # v3.2.0
     - name: Run tests
       run: pytest --pyargs ginga doc -sv
 
