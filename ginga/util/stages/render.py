@@ -317,6 +317,7 @@ class Overlays(Stage):
             return
 
         if not cache.visible:
+            # set by Scale stage depending on image visibility in result
             return
         pipe.run_from(pipe[1])
 
@@ -340,6 +341,7 @@ class Overlays(Stage):
             return
 
         if not cache.visible:
+            # set by Scale stage depending on image visibility in result
             return
         elif whence <= 1:
             pipe.run_from(pipe[2])  # Cuts

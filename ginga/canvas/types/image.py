@@ -142,7 +142,8 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         viewer.prepare_image(self, cache, whence)
 
     def _reset_cache(self, cache):
-        cache.setvals(cutout=None, rgbarr=None, drawn=False, cvs_pos=(0, 0))
+        cache.setvals(cutout=None, rgbarr=None, drawn=False, visible=False,
+                      cvs_pos=(0, 0))
         return cache
 
     def reset_optimize(self):
@@ -338,7 +339,7 @@ class NormImageP(ImageP):
 
     def _reset_cache(self, cache):
         cache.setvals(cutout=None, alpha=None, prergb=None, rgbarr=None,
-                      drawn=False, cvs_pos=(0, 0))
+                      drawn=False, visible=False, cvs_pos=(0, 0))
         return cache
 
 
