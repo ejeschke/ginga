@@ -19,6 +19,9 @@ Ver 4.1.0 (unreleased)
   used synergistically with the "remember" feature). See "Reset (Viewer)"
   and "Remember (Image)" settings in the "Preferences" plugin.
 - Fixed bug with pg backend loading icons
+- Pick plugin settings now has options to set the autozoom and autocuts
+  settings for the "Image" and "Contour" viewers (see "plugin_Pick.cfg"
+  file in .../ginga/examples/configs)
 
 Ver 4.0.1 (2022-12-27)
 ======================

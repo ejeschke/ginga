@@ -479,8 +479,8 @@ class Pick(GingaPlugin.LocalPlugin):
         di = Viewers.CanvasView(logger=self.logger)
         width, height = self._wd, self._ht
         di.set_desired_size(width, height)
-        di.enable_autozoom('override')
-        di.enable_autocuts('off')
+        di.enable_autozoom(self.settings.get('cutout_autozoom', 'override'))
+        di.enable_autocuts(self.settings.get('cutout_autocuts', 'off'))
         di.set_zoom_algorithm('rate')
         di.set_zoomrate(1.6)
         settings = di.get_settings()
@@ -521,16 +521,25 @@ class Pick(GingaPlugin.LocalPlugin):
         nb.add_widget(iw, title="Image")
 
         # Set up "Contour" tab viewer
-        if contour.have_skimage:
+        contour_widget_type = self.settings.get('contour_widget', 'choose')
+        if contour_widget_type == 'choose':
+            if contour.have_skimage:
+                contour_widget_type = 'ginga'
+            else:
+                contour_widget_type = 'matplotlib'
+
+        if contour_widget_type == 'ginga':
             # Contour plot, Ginga-style
             ci = Viewers.CanvasView(logger=self.logger)
             width, height = 400, 300
             ci.set_desired_size(width, height)
-            ci.enable_autozoom('override')
-            ci.enable_autocuts('override')
+            ci.enable_autozoom(self.settings.get('contour_autozoom',
+                                                 'override'))
+            ci.enable_autocuts(self.settings.get('contour_autocuts',
+                                                 'override'))
+            ci.set_autocut_params('histogram')
             ci.set_zoom_algorithm('rate')
             ci.set_zoomrate(1.6)
-            ci.set_autocut_params('histogram')
 
             t_ = ci.get_settings()
             if self.contour_interpolation not in self.contour_interp_methods:
@@ -565,7 +574,7 @@ class Pick(GingaPlugin.LocalPlugin):
             nb.add_widget(ciw, title="Contour")
 
         if have_mpl:
-            if not contour.have_skimage:
+            if contour_widget_type == 'matplotlib':
                 # Contour plot
                 self.contour_plot = plots.ContourPlot(
                     logger=self.logger, width=width, height=height)

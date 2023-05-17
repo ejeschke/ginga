@@ -19,7 +19,7 @@ class ColorBar(CanvasObjectBase):
             Param(name='height', type=int, default=36,
                   min=0, max=200, widget='spinbutton', incr=1,
                   description="Height of colorbar in pixels"),
-            Param(name='offset', type=int, default=40,
+            Param(name='offset', type=int, default=0,
                   min=0, max=200, widget='spinbutton', incr=1,
                   description="Offset in pixels from the top or bottom of the window"),
             Param(name='side', type=str,
@@ -53,7 +53,7 @@ class ColorBar(CanvasObjectBase):
                   description="Opacity of fill"),
         ]
 
-    def __init__(self, height=36, offset=40, side='bottom', showrange=True,
+    def __init__(self, height=36, offset=0, side='bottom', showrange=True,
                  font='fixed', fontsize=8,
                  color='black', bgcolor='white',
                  linewidth=1, linestyle='solid', alpha=1.0,
