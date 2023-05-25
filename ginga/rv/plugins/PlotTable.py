@@ -313,12 +313,12 @@ class PlotTable(LocalPlugin):
 
         if self.tab.masked:
             if self.x_col == self._idxname:
-                x_mask = np.ones_like(self._idx, dtype=np.bool)
+                x_mask = np.ones_like(self._idx, dtype=bool)
             else:
                 x_mask = ~self.tab[self.x_col].mask
 
             if self.y_col == self._idxname:
-                y_mask = np.ones_like(self._idx, dtype=np.bool)
+                y_mask = np.ones_like(self._idx, dtype=bool)
             else:
                 y_mask = ~self.tab[self.y_col].mask
 
