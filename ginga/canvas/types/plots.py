@@ -810,7 +810,7 @@ class CalcPlot(XYPlot):
 
         wd, ht = self.viewer.get_window_size()
 
-        x_pts = self.x_fn(np.linspace(start_x, stop_x, wd, dtype='float'))
+        x_pts = self.x_fn(np.linspace(start_x, stop_x, wd, dtype=float))
         y_pts = self.y_fn(x_pts)
         points = np.array((x_pts, y_pts)).T
         self.path.points = points

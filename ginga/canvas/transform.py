@@ -686,7 +686,7 @@ class ScaleOffsetTransform(BaseTransform):
         if has_z:
             add_pt.append(0.0)
 
-        ntv_pts = np.add(np.multiply(ntv_pts, mpy_pt), add_pt).astype('int')
+        ntv_pts = np.add(np.multiply(ntv_pts, mpy_pt), add_pt).astype(int)
 
         return ntv_pts
 

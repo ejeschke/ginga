@@ -269,7 +269,7 @@ class TVMask(LocalPlugin):
 
         try:
             # 0=False, everything else True
-            dat = fits.getdata(filename).astype('bool')
+            dat = fits.getdata(filename).astype(bool)
         except Exception as e:
             self.logger.error('{0}: {1}'.format(e.__class__.__name__, str(e)))
             return
