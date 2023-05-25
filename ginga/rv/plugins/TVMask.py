@@ -269,7 +269,7 @@ class TVMask(LocalPlugin):
 
         try:
             # 0=False, everything else True
-            dat = fits.getdata(filename).astype(np.bool)
+            dat = fits.getdata(filename).astype('bool')
         except Exception as e:
             self.logger.error('{0}: {1}'.format(e.__class__.__name__, str(e)))
             return
@@ -318,7 +318,7 @@ class TVMask(LocalPlugin):
     def _rgbtomask(self, obj):
         """Convert RGB arrays from mask canvas object back to boolean mask."""
         dat = obj.get_image().get_data()  # RGB arrays
-        return dat.sum(axis=2).astype(np.bool)  # Convert to 2D mask
+        return dat.sum(axis=2).astype('bool')  # Convert to 2D mask
 
     def hl_table2canvas(self, w, res_dict):
         """Highlight mask on canvas when user click on table."""

@@ -51,7 +51,7 @@ class CompoundMixin(object):
     def contains_pts(self, pts):
         if len(self.objects) == 0:
             x_arr, y_arr = np.asarray(pts).T
-            return np.full(x_arr.shape, False, dtype=np.bool)
+            return np.full(x_arr.shape, False, dtype='bool')
 
         return reduce(self._contains_reduce,
                       map(lambda obj: obj.contains_pts(pts), self.objects))

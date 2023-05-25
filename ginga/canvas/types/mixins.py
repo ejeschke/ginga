@@ -326,7 +326,7 @@ class PolygonMixin(object):
                         y_arr.astype(float, copy=False))
         xa, ya = x_arr, y_arr
 
-        result = np.empty(y_arr.shape, dtype=np.bool)
+        result = np.empty(y_arr.shape, dtype='bool')
         result.fill(False)
 
         points = self.get_data_points()
