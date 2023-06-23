@@ -1826,8 +1826,10 @@ class GridBox(ContainerBase):
     def __init__(self, rows=1, columns=1):
         super(GridBox, self).__init__()
 
+        # TODO: GtkTable has been deprecated--migrate to GtkGrid?
         w = Gtk.Table(rows=rows, columns=columns)
         self.widget = w
+        self.tbl = {}
         self.num_rows = rows
         self.num_cols = columns
 
@@ -1846,6 +1848,9 @@ class GridBox(ContainerBase):
         self.set_row_spacing(val)
         self.set_column_spacing(val)
 
+    def get_row_column_count(self):
+        return self.num_rows, self.num_cols
+
     def add_widget(self, child, row, col, stretch=0):
         resize = False
         if row > self.num_rows:
@@ -1857,6 +1862,13 @@ class GridBox(ContainerBase):
         if resize:
             self.resize_grid(self.num_rows, self.num_cols)
 
+        key = (row, col)
+        if key in self.tbl:
+            # take care of case where we are overwriting a child
+            old_child = self.tbl[key]
+            old_child.hide()
+            self.remove(old_child)
+        self.tbl[key] = child
         self.add_ref(child)
         w = child.get_widget()
         if stretch > 0:
@@ -1872,6 +1884,87 @@ class GridBox(ContainerBase):
                            xpadding=0, ypadding=0)
         self.widget.show_all()
         self.make_callback('widget-added', child)
+
+    def get_widget_at_cell(self, row, col):
+        return self.tbl[(row, col)]
+
+    def insert_row(self, index, widgets):
+        if len(widgets) != self.num_cols:
+            raise ValueError("Number of widgets (%d) != number of columns (%d)".format(len(widgets), self.num_cols))
+
+        self.num_rows += 1
+        self.resize_grid(self.num_rows, self.num_cols)
+
+        xoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
+        yoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
+
+        # handle case where user inserts row before the end of the gridbox
+        if index < self.num_rows - 1:
+            # shift key/value pairs down to make the row empty at index
+            for i in range(self.num_rows - 2, index - 1, -1):
+                for j in range(self.num_cols):
+                    child = self.tbl[(i, j)]
+                    self.tbl[(i + 1, j)] = child
+                    # move actual widget down in GtkTable
+                    w = child.get_widget()
+                    self._remove(w)
+                    row, col = i + 1, j
+                    self.widget.attach(w, col, col + 1, row, row + 1,
+                                       xoptions=xoptions, yoptions=yoptions,
+                                       xpadding=0, ypadding=0)
+
+        for j in range(self.num_cols):
+            child = widgets[j]
+            # populate inserted row with widgets
+            self.tbl[(index, j)] = child
+            self.add_ref(child)
+            row, col = index, j
+            w = child.get_widget()
+            self.widget.attach(w, col, col + 1, row, row + 1,
+                               xoptions=xoptions, yoptions=yoptions,
+                               xpadding=0, ypadding=0)
+
+        self.widget.show_all()
+
+        for child in widgets:
+            self.make_callback('widget-added', child)
+
+    def append_row(self, widgets):
+        num_rows, num_cols = self.get_row_column_count()
+        return self.insert_row(num_rows, widgets)
+
+    def delete_row(self, index):
+        if index < 0 or index >= self.num_rows:
+            raise ValueError("Index (%d) out of bounds (%d)".format(index, self.num_rows))
+
+        xoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
+        yoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
+
+        # remove widgets in row from table
+        for j in range(self.num_cols):
+            child = self.tbl.pop((index, j))
+            self.remove(child)
+
+        if index < self.num_rows - 1:
+            # if not removing very last row,
+            # shift dict key, value pairs up
+            for i in range(index + 1, self.num_rows):
+                for j in range(self.num_cols):
+                    child = self.tbl[(i, j)]
+                    self.tbl[(i - 1, j)] = child
+                    # move actual widget up in GtkTable
+                    w = child.get_widget()
+                    self._remove(w)
+                    row, col = i - 1, j
+                    self.widget.attach(w, col, col + 1, row, row + 1,
+                                       xoptions=xoptions, yoptions=yoptions,
+                                       xpadding=0, ypadding=0)
+            # delete items in last row to maintain self.tbl
+            for j in range(self.num_cols):
+                self.tbl.pop((self.num_rows - 1, j))
+
+        self.num_rows -= 1
+        self.resize_grid(self.num_rows, self.num_cols)
 
 
 class Toolbar(ContainerBase):

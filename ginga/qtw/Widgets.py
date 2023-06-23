@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import os.path
-import platform
 import pathlib
 from functools import reduce
 
@@ -89,7 +88,7 @@ class WidgetBase(Callback.Callbacks):
         # self.widget.raise_()
 
     def resize(self, width, height):
-        self.widget.resize(int(width), int(height))
+        self.widget.resize(width, height)
 
     def show(self):
         self.widget.show()
@@ -1597,6 +1596,7 @@ class GridBox(ContainerBase):
         layout = QtGui.QGridLayout()
         w.setLayout(layout)
         self.widget = w
+        self.tbl = {}
 
     def resize_grid(self, rows, columns):
         pass
@@ -1611,23 +1611,86 @@ class GridBox(ContainerBase):
         self.set_row_spacing(val)
         self.set_column_spacing(val)
 
+    def get_row_column_count(self):
+        num_rows = self.widget.layout().rowCount()
+        num_cols = self.widget.layout().columnCount()
+        return num_rows, num_cols
+
     def add_widget(self, child, row, col, stretch=0):
+        key = (row, col)
+        if key in self.tbl:
+            # take care of case where we are overwriting a child
+            old_child = self.tbl[key]
+            old_child.hide()
+            self.remove(old_child)
+        self.tbl[key] = child
         self.add_ref(child)
+
         w = child.get_widget()
         self.widget.layout().addWidget(w, row, col)
         self.make_callback('widget-added', child)
 
-    def insert_cell(self, row, col):
-        raise NotImplementedError("insert_cell needs to be implemented!")
+    def get_widget_at_cell(self, row, col):
+        return self.tbl[(row, col)]
 
-    def insert_row(self, index):
-        raise NotImplementedError("insert_row needs to be implemented!")
+    def insert_row(self, index, widgets):
+        num_rows, num_cols = self.get_row_column_count()
 
-    def append_row(self):
-        raise NotImplementedError("append_row needs to be implemented!")
+        if len(widgets) != num_cols:
+            raise ValueError("Number of widgets (%d) != number of columns (%d)".format(len(widgets), num_cols))
+
+        # handle case where user inserts row before the end of the gridbox
+        if index < num_rows:
+            # shift key/value pairs down to make the row empty at index
+            for i in range(num_rows, index, -1):
+                for j in range(num_cols):
+                    key = (i - 1, j)
+                    if key in self.tbl:
+                        child = self.tbl.pop(key)
+                        self.tbl[(i, j)] = child
+                        # move actual widget down in QGridLayout
+                        w = child.get_widget()
+                        self._remove(w)
+                        self.widget.layout().addWidget(w, i, j)
+
+        for j in range(num_cols):
+            child = widgets[j]
+            self.add_widget(child, index, j)
+
+    def append_row(self, widgets):
+        num_rows, num_cols = self.get_row_column_count()
+        return self.insert_row(num_rows, widgets)
 
     def delete_row(self, index):
-        raise NotImplementedError("delete_row needs to be implemented!")
+        num_rows, num_cols = self.get_row_column_count()
+        if index < 0 or index >= num_rows:
+            raise ValueError("Index (%d) out of bounds (%d)".format(index, num_rows))
+
+        # remove widgets in row to be deleted from table
+        for j in range(num_cols):
+            key = (index, j)
+            if key in self.tbl:
+                child = self.tbl.pop(key)
+                child.hide()
+                self.remove(child)
+
+        if index < num_rows - 1:
+            # if not removing very last row, shift key/value pairs up
+            for i in range(index + 1, num_rows):
+                for j in range(num_cols):
+                    key = (i, j)
+                    if key in self.tbl:
+                        child = self.tbl[key]
+                        self.tbl[(i - 1, j)] = child
+                        # move actual widget up in QGridLayout
+                        w = child.get_widget()
+                        self._remove(w)
+                        self.widget.layout().addWidget(w, i - 1, j)
+            # delete items in last row to maintain self.tbl
+            for j in range(num_cols):
+                key = (num_rows - 1, j)
+                if key in self.tbl:
+                    self.tbl.pop(key)
 
 
 class ToolbarAction(WidgetBase):
@@ -1793,9 +1856,8 @@ class Menubar(ContainerBase):
         super(Menubar, self).__init__()
 
         self.widget = QtGui.QMenuBar()
-        macos_ver = platform.mac_ver()[0]
-        if len(macos_ver) > 0:
-            self.widget.setNativeMenuBar(True)
+        if hasattr(self.widget, 'setNativeMenuBar'):
+            self.widget.setNativeMenuBar(False)
         self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child, name):
