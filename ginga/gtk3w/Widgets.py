@@ -1890,7 +1890,7 @@ class GridBox(ContainerBase):
 
     def insert_row(self, index, widgets):
         if len(widgets) != self.num_cols:
-            raise ValueError("Number of widgets (%d) != number of columns (%d)".format(len(widgets), self.num_cols))
+            raise ValueError("Number of widgets ({}) != number of columns ({})".format(len(widgets), self.num_cols))
 
         self.num_rows += 1
         self.resize_grid(self.num_rows, self.num_cols)
@@ -1935,7 +1935,7 @@ class GridBox(ContainerBase):
 
     def delete_row(self, index):
         if index < 0 or index >= self.num_rows:
-            raise ValueError("Index (%d) out of bounds (%d)".format(index, self.num_rows))
+            raise ValueError("Index ({}) out of bounds ({})".format(index, self.num_rows))
 
         xoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)
         yoptions = (Gtk.AttachOptions.FILL | Gtk.AttachOptions.SHRINK)

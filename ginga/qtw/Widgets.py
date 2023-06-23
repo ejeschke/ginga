@@ -1637,7 +1637,7 @@ class GridBox(ContainerBase):
         num_rows, num_cols = self.get_row_column_count()
 
         if len(widgets) != num_cols:
-            raise ValueError("Number of widgets (%d) != number of columns (%d)".format(len(widgets), num_cols))
+            raise ValueError("Number of widgets ({}) != number of columns ({})".format(len(widgets), num_cols))
 
         # handle case where user inserts row before the end of the gridbox
         if index < num_rows:
@@ -1664,7 +1664,7 @@ class GridBox(ContainerBase):
     def delete_row(self, index):
         num_rows, num_cols = self.get_row_column_count()
         if index < 0 or index >= num_rows:
-            raise ValueError("Index (%d) out of bounds (%d)".format(index, num_rows))
+            raise ValueError("Index ({}) out of bounds ({})".format(index, num_rows))
 
         # remove widgets in row to be deleted from table
         for j in range(num_cols):
