@@ -57,11 +57,15 @@ class ColorManager:
 
     def profile_to_working_numpy(self, image_np, kwds, intent=None):
 
+        shp = image_np.shape
+        if len(shp) != 3 or shp[2] < 3:
+            self.logger.info("Not an RGB image; leaving image unprofiled.")
+            return image_np
+
         # If we have a working color profile then handle any embedded
         # profile or color space information, if possible
         if not have_cms:
-            self.logger.info(
-                "No CMS is installed; leaving image unprofiled.")
+            self.logger.info("No CMS is installed; leaving image unprofiled.")
             return image_np
 
         if not have_profile(working_profile):
