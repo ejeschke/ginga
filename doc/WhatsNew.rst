@@ -22,6 +22,8 @@ Ver 4.1.0 (unreleased)
 - Pick plugin settings now has options to set the autozoom and autocuts
   settings for the "Image" and "Contour" viewers (see "plugin_Pick.cfg"
   file in .../ginga/examples/configs)
+- Fixed an issue with readout of values under the cursor when an image
+  is plotted at a non-zero origin
 
 Ver 4.0.1 (2022-12-27)
 ======================
