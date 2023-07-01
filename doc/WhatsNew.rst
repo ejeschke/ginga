@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 4.1.0 (unreleased)
+Ver 4.1.0 (2022-06-30)
 ======================
 - change implementation of splash banner to a pop-up modal dialog
   with version string
