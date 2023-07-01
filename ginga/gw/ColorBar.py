@@ -155,17 +155,13 @@ class ColorBar(Callback.Callbacks):
         return True
 
     def none_move_cb(self, canvas, event, data_x, data_y):
-        print("none-move called")
         x, y = event.viewer.get_last_win_xy()
         wd, ht = event.viewer.get_window_size()
         dist = self.rgbmap.get_dist()
         pct = float(x) / float(wd)
-        print(f"pct = {pct}")
         rng_pct = dist.get_dist_pct(pct)
-        print(f"rng_pct = {rng_pct}")
         loval, hival = event.viewer.get_cut_levels()
         value = float(loval + (rng_pct * (hival - loval)))
-        print(f"value = {value}")
         self.make_callback('motion', value, event)
         return True
 
