@@ -4,6 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import numpy as np
+
 from ginga.misc import Callback, Settings
 from ginga import RGBMap
 
@@ -30,7 +32,7 @@ class ColorBar(Callback.Callbacks):
         self.settings = settings
 
         self._start_x = 0
-        self._sarr = None
+        self._brightness = 0.5
 
         cbar = Viewers.CanvasView(logger=self.logger)
         width, height = 1, self.settings.get('cbar_height', 36)
@@ -112,17 +114,15 @@ class ColorBar(Callback.Callbacks):
     def redraw(self, whence=0):
         self.cbar_view.redraw(whence=whence)
 
-    def shift_colormap(self, pct):
-        if self._sarr is None:
-            return
-        with self.rgbmap.suppress_changed:
-            self.rgbmap.set_sarr(self._sarr, callback=False)
-            self.rgbmap.shift(pct)
-        self.redraw(whence=2)
+    def shift_colormap(self, delta_pct):
+        t_ = self.rgbmap.get_settings()
+        pct = np.clip(self._brightness - delta_pct, 0.0, 1.0)
+        t_.set(brightness=pct)
 
     def stretch_colormap(self, pct):
-        self.rgbmap.stretch(pct)
-        self.redraw(whence=2)
+        t_ = self.rgbmap.get_settings()
+        pct = np.clip(t_['contrast'] * pct, 0.0, 1.0)
+        t_.set(contrast=pct)
 
     def rgbmap_cb(self, rgbmap):
         self.redraw(whence=2)
@@ -130,8 +130,7 @@ class ColorBar(Callback.Callbacks):
     def cursor_press_cb(self, canvas, event, data_x, data_y):
         x, y = event.viewer.get_last_win_xy()
         self._start_x = x
-        sarr = self.rgbmap.get_sarr()
-        self._sarr = sarr.copy()
+        self._brightness = self.rgbmap.get_settings().get('brightness', 0.5)
         return True
 
     def cursor_release_cb(self, canvas, event, data_x, data_y):
@@ -170,10 +169,10 @@ class ColorBar(Callback.Callbacks):
         direction = event.direction
         if (direction < 90.0) or (direction > 270.0):
             # up
-            scale_factor = 1.1
+            scale_factor = 0.9
         else:
             # not up!
-            scale_factor = 0.9
+            scale_factor = 1.1
 
         self.stretch_colormap(scale_factor)
 
@@ -182,6 +181,3 @@ class ColorBar(Callback.Callbacks):
     def pinch_cb(self, viewer, event):
         scale_factor = event.scale
         self.stretch_colormap(scale_factor)
-
-
-#END

@@ -25,6 +25,8 @@ Default bindings in mode
 * right click : restore contrast to defaults
 
 """
+import numpy as np
+
 from ginga.modes.mode_base import Mode
 
 
@@ -56,9 +58,8 @@ class ContrastMode(Mode):
         self.onscreen_message(None)
 
     def restore_contrast(self, viewer, msg=True):
+        viewer.get_settings().set(contrast=0.5, brightness=0.5)
         msg = self.settings.get('msg_cmap', msg)
-        rgbmap = viewer.get_rgbmap()
-        rgbmap.reset_sarr()
         if msg:
             self.onscreen_message("Restored contrast", delay=0.5)
         return True
@@ -67,20 +68,16 @@ class ContrastMode(Mode):
         win_wd, win_ht = viewer.get_window_size()
 
         # translate Y cursor position as a percentage of the window
-        # height into a scaling factor
-        y_pct = (win_ht - y) / float(win_ht)
-
-        # I tried to mimic ds9's exponential scale feel along the Y-axis
-        def exp_scale(i):
-            return (1.0 / (i**3)) * 0.0002 + (1.0 / i) * 0.085
-
-        scale_pct = exp_scale(1.0 - y_pct)
+        # height into a contrast pct
+        contrast_pct = np.clip(y, 0, win_ht) / float(win_ht)
 
         # translate X cursor position as a percentage of the window
-        # width into a shifting factor
-        shift_pct = x / float(win_wd) - 0.5
+        # width into a brightness pct
+        brightness_pct = 1.0 - np.clip(x, 0, win_wd) / float(win_wd)
 
-        viewer.scale_and_shift_cmap(scale_pct, shift_pct)
+        with viewer.suppress_redraw:
+            viewer.get_settings().set(contrast=contrast_pct,
+                                      brightness=brightness_pct)
 
     #####  KEYBOARD ACTION CALLBACKS #####
 

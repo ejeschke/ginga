@@ -32,6 +32,8 @@ Default bindings in mode
 * right click : restore color map (same as "r")
 
 """
+import numpy as np
+
 from ginga import cmap, imap
 from ginga.modes.mode_base import Mode
 
@@ -87,15 +89,10 @@ class CMapMode(Mode):
 
         # translate X cursor position as a percentage of the window
         # width into a shifting factor
-        half_wd = win_wd / 2.0
-        shift_pct = (x - half_wd) / float(half_wd)
-        num = int(shift_pct * 255)
-        self.logger.debug("rotating color map by %d steps" % (num))
+        shift_pct = np.clip(x, 0, win_wd) / float(win_wd)
+        self.logger.debug("rotating color map by %.2f pct" % (shift_pct))
 
-        rgbmap = viewer.get_rgbmap()
-        with rgbmap.suppress_changed:
-            rgbmap.restore_cmap(callback=False)
-            rgbmap.rotate_cmap(num)
+        viewer.get_settings().set(color_map_rot_pct=shift_pct)
 
     def _cycle_cmap(self, viewer, msg, direction='down'):
         msg = self.settings.get('msg_cmap', msg)
@@ -119,16 +116,18 @@ class CMapMode(Mode):
     def _reset_cmap(self, viewer, msg):
         msg = self.settings.get('msg_cmap', msg)
         # default
-        cmapname = 'gray'
-        viewer.set_color_map(cmapname)
-        if msg:
-            self.onscreen_message("Color map: %s" % (cmapname),
-                                  delay=1.0)
+        with viewer.suppress_redraw:
+            t_ = viewer.get_settings()
+            cmapname = 'gray'
+            t_.set(color_map=cmapname, intensity_map='ramp',
+                   color_map_invert=False, color_map_rot_pct=0.0)
+            if msg:
+                self.onscreen_message("Color map: %s" % (cmapname),
+                                      delay=1.0)
 
     def _invert_cmap(self, viewer, msg):
         msg = self.settings.get('msg_cmap', msg)
-        rgbmap = viewer.get_rgbmap()
-        rgbmap.invert_cmap()
+        viewer.invert_color_map()
         if msg:
             self.onscreen_message("Inverted color map", delay=1.0)
 

@@ -60,15 +60,44 @@ The "Colormap" control selects which color map should be loaded and
 used.  Click the control to show the list, or simply scroll the mouse
 wheel while hovering the cursor over the control.
 
+.. note:: Ginga comes with a good selection of color maps, but should you
+          want more, you can add custom ones or, if ``matplotlib`` is
+          installed, you can load all the ones that it has.
+          See "Customizing Ginga" for details.
+
 The "Intensity" control selects which intensity map should be used
 with the color map.  The intensity map is applied just before the color
 map, and can be used to change the standard linear scale of values into
 an inverted scale, logarithmic, etc.
 
-Ginga comes with a good selection of color maps, but should you want
-more, you can add custom ones or, if ``matplotlib`` is installed, you
-can load all the ones that it has.
-See "Customizing Ginga" for details.
+The "Invert CMap" checkbox can be used to invert the selected color map
+(note that a number of colormaps are also selectable from the "Colormap"
+controlin inverted form).
+
+The "Rotate" control can be used to rotate the colormap, while the
+"Unrotate CMap" button will restore the rotation to its default, unrotated
+state.
+
+The "Color Defaults" button will reset all the color mapping controls to
+the default values: "gray" color map, "ramp" (linear) intensity, and no
+inversion or rotation of the color map.
+
+**Contrast and Brightness (Bias) Preferences**
+
+.. figure:: figures/contrast-prefs.png
+   :width: 400px
+   :align: center
+   :alt: Contrast and Brightness (Bias) preferences
+
+   "Contrast and Brightness (Bias)" preferences.
+
+The "Contrast" and "Brightness" controls will set the contrast and brightness
+(aka "bias") of the viewer.  They offer an alternative to 1) using the contrast
+mode within the viewer window, or 2) manipulating the color bar by dragging (to
+set brightness/bias) or scrolling (to set contrast).
+
+The "Default Contrast" and "Default Brightness" controls set their respective
+settings back to the default value.
 
 **Auto Cuts Preferences**
 
@@ -516,7 +545,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.sort_options = ('loadtime', 'alpha')
 
         for key in ['color_map', 'intensity_map',
-                    'color_algorithm', 'color_hashsize']:
+                    'color_algorithm', 'color_hashsize',
+                    'color_map_invert', 'color_map_rot_pct',
+                    'contrast', 'brightness']:
             self.t_.get_setting(key).add_callback(
                 'set', self.rgbmap_changed_ext_cb)
 
@@ -618,16 +649,31 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         captions = (('Colormap:', 'label', 'Colormap', 'combobox'),
                     ('Intensity:', 'label', 'Intensity', 'combobox'),
-                    ('Color Defaults', 'button'))
+                    ('Rotate:', 'label', 'rotate_cmap', 'hscale'),
+                    ('Invert CMap', 'checkbutton', 'Unrotate CMap', 'button',
+                     'Color Defaults', 'button'))
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         self.w.cmap_choice = b.colormap
         self.w.imap_choice = b.intensity
-        b.color_defaults.add_callback('activated',
-                                      lambda w: self.set_default_cmaps())
+
+        b.invert_cmap.set_tooltip("Invert color map")
+        b.invert_cmap.set_state(False)
+        b.invert_cmap.add_callback('activated', self.invert_cmap_cb)
+
+        b.rotate_cmap.set_tracking(True)
+        b.rotate_cmap.set_limits(0, 100, incr_value=1)
+        b.rotate_cmap.set_value(0)
+        b.rotate_cmap.add_callback('value-changed', self.rotate_cmap_cb)
+        b.rotate_cmap.set_tooltip("Rotate the colormap")
+
         b.colormap.set_tooltip("Choose a color map for this image")
         b.intensity.set_tooltip("Choose an intensity map for this image")
-        b.color_defaults.set_tooltip("Restore default color and intensity maps")
+        b.unrotate_cmap.set_tooltip("Undo cmap rotation")
+        b.unrotate_cmap.add_callback('activated', lambda w: self.unrotate_cmap())
+        b.color_defaults.set_tooltip("Restore all color map settings to defaults")
+        b.color_defaults.add_callback('activated',
+                                      lambda w: self.set_default_cmaps())
         fr.set_widget(w)
         vbox.add_widget(fr)
 
@@ -660,6 +706,39 @@ class Preferences(GingaPlugin.LocalPlugin):
             index = self.imap_names.index('ramp')
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_imap_cb)
+
+        # CONTRAST MANIPULATIONS
+        fr = Widgets.Frame("Contrast and Brightness (Bias)")
+
+        captions = (('Contrast:', 'label', 'contrast', 'hscale'),
+                    ('Brightness:', 'label', 'brightness', 'hscale'),
+                    ('_cb1', 'spacer', '_hbox_cb', 'hbox'))
+        w, b = Widgets.build_info(captions, orientation='vertical')
+        self.w.update(b)
+
+        b.contrast.set_tracking(True)
+        b.contrast.set_limits(0, 100, incr_value=1)
+        b.contrast.set_value(50)
+        b.contrast.add_callback('value-changed', self.contrast_cb)
+        b.contrast.set_tooltip("Set contrast for the viewer")
+
+        b.brightness.set_tracking(True)
+        b.brightness.set_limits(0, 100, incr_value=1)
+        b.brightness.set_value(50)
+        b.brightness.add_callback('value-changed', self.brightness_cb)
+        b.brightness.set_tooltip("Set brightness/bias for the viewer")
+
+        btn = Widgets.Button('Default Contrast')
+        btn.set_tooltip("Reset contrast to default")
+        btn.add_callback('activated', self.restore_contrast_cb)
+        b._hbox_cb.add_widget(btn, stretch=0)
+        btn = Widgets.Button('Default Brightness')
+        btn.set_tooltip("Reset brightness to default")
+        btn.add_callback('activated', self.restore_brightness_cb)
+        b._hbox_cb.add_widget(btn, stretch=0)
+
+        fr.set_widget(w)
+        vbox.add_widget(fr)
 
         # AUTOCUTS OPTIONS
         fr = Widgets.Frame("Auto Cuts")
@@ -1261,9 +1340,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         name = self.calg_names[index]
         self.t_.set(color_algorithm=name)
 
-    def set_tablesize_cb(self, w):
-        value = int(w.get_text())
-        self.t_.set(color_hashsize=value)
+    def unrotate_cmap(self):
+        self.t_.set(color_map_rot_pct=0.0)
 
     def set_default_cmaps(self):
         cmap_name = "gray"
@@ -1272,7 +1350,29 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.cmap_choice.set_index(index)
         index = self.imap_names.index(imap_name)
         self.w.imap_choice.set_index(index)
-        self.t_.set(color_map=cmap_name, intensity_map=imap_name)
+        self.t_.set(color_map=cmap_name, intensity_map=imap_name,
+                    color_map_invert=False, color_map_rot_pct=0.0)
+
+    def contrast_cb(self, w, val):
+        pct = val / 100.0
+        self.t_.set(contrast=pct)
+
+    def brightness_cb(self, w, val):
+        pct = val / 100.0
+        self.t_.set(brightness=pct)
+
+    def rotate_cmap_cb(self, w, val):
+        pct = val / 100.0
+        self.t_.set(color_map_rot_pct=pct)
+
+    def invert_cmap_cb(self, w, tf):
+        self.t_.set(color_map_invert=tf)
+
+    def restore_contrast_cb(self, w):
+        self.t_.set(contrast=0.5)
+
+    def restore_brightness_cb(self, w):
+        self.t_.set(brightness=0.5)
 
     def set_default_distmaps(self):
         name = 'linear'
@@ -1531,6 +1631,17 @@ class Preferences(GingaPlugin.LocalPlugin):
             idx = 0
         self.w.intensity.set_index(idx)
 
+        contrast_pct = self.t_['contrast']
+        self.w.contrast.set_value(int(contrast_pct * 100))
+
+        bright_pct = self.t_['brightness']
+        self.w.brightness.set_value(int(bright_pct * 100))
+
+        self.w.invert_cmap.set_state(self.t_['color_map_invert'])
+
+        rot_pct = self.t_['color_map_rot_pct']
+        self.w.rotate_cmap.set_value(int(rot_pct * 100))
+
     def set_buflen_ext_cb(self, setting, value):
         num_images = self.t_['numImages']
 
@@ -1755,6 +1866,11 @@ class Preferences(GingaPlugin.LocalPlugin):
             # may be a custom intensity map installed
             index = 0
         self.w.imap_choice.set_index(index)
+
+        self.w.contrast.set_value(int(prefs.get('contrast', 0.5) * 100))
+        self.w.brightness.set_value(int(prefs.get('brightness', 0.5) * 100))
+        self.w.invert_cmap.set_state(prefs.get('color_map_invert', False))
+        self.w.rotate_cmap.set_value(int(prefs.get('color_map_rot_pct', 0.0) * 100))
 
         # TODO: this is a HACK to get around Qt's callbacks
         # on setting widget values--need a way to disable callbacks

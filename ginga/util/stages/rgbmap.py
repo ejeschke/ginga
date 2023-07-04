@@ -26,6 +26,11 @@ class RGBMap(Stage):
         self._calg_name = 'linear'
         self._cmap_name = 'gray'
         self._imap_name = 'ramp'
+        self._invert_cmap = False
+        self._rotate_cmap_pct = 0.0
+        self._contrast = 0.5
+        self._brightness = 0.5
+
         self.viewer = None
         self.fv = None
 
@@ -37,9 +42,13 @@ class RGBMap(Stage):
         # create and initialize RGB mapper
         # TODO: currently hash size cannot be changed
         self.rgbmap = RGBMapper(self.logger)
-        self.rgbmap.set_color_algorithm(self._calg_name)
-        self.rgbmap.set_color_map(self._cmap_name)
-        self.rgbmap.set_intensity_map(self._imap_name)
+        self.rgbmap.get_settings().set(color_algorithm=self._calg_name,
+                                       color_map=self._cmap_name,
+                                       intensity_map=self._imap_name,
+                                       color_map_invert=self._invert_cmap,
+                                       color_map_rot_pct=self._rotate_cmap_pct,
+                                       contrast=self._contrast,
+                                       brightness=self._brightness)
         self.rgbmap.add_callback('changed', self.rgbmap_changed_cb)
 
         self.settings_keys = list(self.rgbmap.settings_keys)
@@ -81,16 +90,31 @@ class RGBMap(Stage):
 
         captions = (('Colormap:', 'label', 'Colormap', 'combobox'),
                     ('Intensity:', 'label', 'Intensity', 'combobox'),
+                    ('Rotate:', 'label', 'rotate_cmap', 'hscale'),
+                    ('Invert CMap', 'checkbutton', 'Unrotate CMap', 'button'),
                     ('Color Defaults', 'button', 'Copy from viewer', 'button'))
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
         self.w.cmap_choice = b.colormap
         self.w.imap_choice = b.intensity
-        b.color_defaults.add_callback('activated',
-                                      lambda w: self.set_default_cmaps())
+
+        b.invert_cmap.set_tooltip("Invert color map")
+        b.invert_cmap.set_state(False)
+        b.invert_cmap.add_callback('activated', self.invert_cmap_cb)
+
+        b.rotate_cmap.set_tracking(False)
+        b.rotate_cmap.set_limits(0, 100, incr_value=1)
+        b.rotate_cmap.set_value(0)
+        b.rotate_cmap.add_callback('value-changed', self.rotate_cmap_cb)
+        b.rotate_cmap.set_tooltip("Rotate the colormap")
+
         b.colormap.set_tooltip("Choose a color map for this image")
         b.intensity.set_tooltip("Choose an intensity map for this image")
-        b.color_defaults.set_tooltip("Restore default color and intensity maps")
+        b.unrotate_cmap.set_tooltip("Undo cmap rotation")
+        b.unrotate_cmap.add_callback('activated', self.unrotate_cmap_cb)
+        b.color_defaults.set_tooltip("Restore all color map settings to defaults")
+        b.color_defaults.add_callback('activated',
+                                      lambda w: self.set_default_cmaps())
         fr.set_widget(w)
 
         combobox = b.colormap
@@ -122,41 +146,37 @@ class RGBMap(Stage):
 
         top.add_widget(fr, stretch=0)
 
-        # COLOR MAP MANIPULATIONS
-        fr = Widgets.Frame("Color Map Manipulations")
+        # CONTRAST MANIPULATIONS
+        fr = Widgets.Frame("Contrast and Brightness (Bias)")
 
-        captions = (('Contrast:', 'label', 'stretch', 'hscale'),
-                    ('Brightness:', 'label', 'shift', 'hscale'),
-                    ('Rotate:', 'label', 'rotate', 'hscale'),
-                    ('Invert', 'button', 'Restore', 'button'))
+        captions = (('Contrast:', 'label', 'contrast', 'hscale'),
+                    ('Brightness:', 'label', 'brightness', 'hscale'),
+                    ('_cb1', 'spacer', '_hbox_cb', 'hbox'))
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
 
-        b.stretch.set_tracking(True)
-        b.stretch.set_limits(0, 100, incr_value=1)
-        b.stretch.set_value(100)
-        b.stretch.add_callback('value-changed', self.stretch_cmap_cb)
-        b.stretch.set_tooltip("Stretch color map")
+        b.contrast.set_tracking(False)
+        b.contrast.set_limits(0, 100, incr_value=1)
+        b.contrast.set_value(50)
+        b.contrast.add_callback('value-changed', self.contrast_set_cb)
+        b.contrast.set_tooltip("Set contrast for the viewer")
 
-        b.shift.set_tracking(True)
-        b.shift.set_limits(-100, 100, incr_value=1)
-        b.shift.set_value(0)
-        b.shift.add_callback('value-changed', self.shift_cmap_cb)
-        b.shift.set_tooltip("Shift color map")
+        b.brightness.set_tracking(False)
+        b.brightness.set_limits(0, 100, incr_value=1)
+        b.brightness.set_value(50)
+        b.brightness.add_callback('value-changed', self.brightness_set_cb)
+        b.brightness.set_tooltip("Set brightness/bias for the viewer")
 
-        b.rotate.set_tracking(True)
-        b.rotate.set_limits(-100, 100, incr_value=1)
-        b.rotate.set_value(0)
-        b.rotate.add_callback('value-changed', self.rotate_cmap_cb)
-        b.rotate.set_tooltip("Rotate when shifting")
-
-        b.invert.set_tooltip("Invert color map")
-        b.invert.add_callback('activated', self.invert_cmap_cb)
-        b.restore.set_tooltip("Restore color map")
-        b.restore.add_callback('activated', self.restore_cmap_cb)
+        btn = Widgets.Button('Default Contrast')
+        btn.set_tooltip("Reset contrast to default")
+        btn.add_callback('activated', self.restore_contrast_cb)
+        b._hbox_cb.add_widget(btn, stretch=0)
+        btn = Widgets.Button('Default Brightness')
+        btn.set_tooltip("Reset brightness to default")
+        btn.add_callback('activated', self.restore_brightness_cb)
+        b._hbox_cb.add_widget(btn, stretch=0)
 
         fr.set_widget(w)
-
         top.add_widget(fr, stretch=0)
 
         # add colorbar
@@ -215,9 +235,53 @@ class RGBMap(Stage):
             self.w.intensity.set_index(idx)
             self.rgbmap.set_intensity_map(val)
 
+    @property
+    def invert_cmap(self):
+        return self._invert_cmap
+
+    @invert_cmap.setter
+    def invert_cmap(self, tf):
+        self._invert_cmap = tf
+        if self.gui_up:
+            self.w.invert_cmap.set_state(tf)
+            self.rgbmap.get_settings().set(color_map_invert=tf)
+
+    @property
+    def rotate_cmap(self):
+        return self._rotate_cmap_pct
+
+    @rotate_cmap.setter
+    def rotate_cmap(self, pct):
+        self._rotate_cmap_pct = pct
+        if self.gui_up:
+            self.w.rotate_cmap.set_value(int(pct * 100.0))
+            self.rgbmap.get_settings().set(color_map_rot_pct=pct)
+
+    @property
+    def contrast(self):
+        return self._contrast
+
+    @contrast.setter
+    def contrast(self, pct):
+        self._contrast = pct
+        if self.gui_up:
+            self.w.contrast.set_value(int(pct * 100))
+            self.rgbmap.get_settings().set(contrast=pct)
+
+    @property
+    def brightness(self):
+        return self._brightness
+
+    @brightness.setter
+    def brightness(self, pct):
+        self._brightness = pct
+        if self.gui_up:
+            self.w.brightness.set_value(int(pct * 100))
+            self.rgbmap.get_settings().set(brightness=pct)
+
     def set_cmap_cb(self, w, index):
         """This callback is invoked when the user selects a new color
-        map from the preferences pane."""
+        map from the UI."""
         old_cmap_name = self._cmap_name
         name = cmap.get_names()[index]
         self.cmap_name = name
@@ -243,7 +307,7 @@ class RGBMap(Stage):
 
     def set_calg_cb(self, w, index):
         """This callback is invoked when the user selects a new color
-        hashing algorithm from the preferences pane."""
+        hashing algorithm from the UI."""
         old_calg_name = self._calg_name
         name = self.calg_names[index]
         self.calg_name = name
@@ -253,6 +317,30 @@ class RGBMap(Stage):
                                        descr="rgbmap / change calg"))
 
         self.pipeline.run_from(self)
+
+    def rotate_cmap_cb(self, w, val):
+        old_val = self._rotate_cmap_pct
+        pct = val / 100.0
+        self.rotate_cmap = pct
+        self.pipeline.push(StageAction(self,
+                                       dict(rotate_cmap=old_val),
+                                       dict(rotate_cmap=self._rotate_cmap_pct),
+                                       descr=f"rgbmap / rotate cmap: {pct}"))
+
+        self.pipeline.run_from(self)
+
+    def invert_cmap_cb(self, w, tf):
+        old_val = self._invert_cmap
+        self.invert_cmap = tf
+        self.pipeline.push(StageAction(self,
+                                       dict(invert_cmap=old_val),
+                                       dict(invert_cmap=self._invert_cmap),
+                                       descr=f"rgbmap / invert cmap {tf}"))
+
+        self.pipeline.run_from(self)
+
+    def unrotate_cmap_cb(self, w):
+        self.rotate_cmap_cb(w, 0)
 
     def set_default_cmaps(self):
         old = dict(cmap_name=self._cmap_name, imap_name=self._imap_name)
@@ -265,6 +353,34 @@ class RGBMap(Stage):
         self.imap_name = imap_name
 
         self.pipeline.run_from(self)
+
+    def contrast_set_cb(self, w, val):
+        old_val = self._contrast
+        pct = val / 100.0
+        self.contrast = pct
+        self.pipeline.push(StageAction(self,
+                                       dict(contrast=old_val),
+                                       dict(contrast=self._contrast),
+                                       descr=f"rgbmap / contrast: {pct}"))
+
+        self.pipeline.run_from(self)
+
+    def brightness_set_cb(self, w, val):
+        old_val = self._brightness
+        pct = val / 100.0
+        self.brightness = pct
+        self.pipeline.push(StageAction(self,
+                                       dict(brightness=old_val),
+                                       dict(brightness=self._brightness),
+                                       descr=f"rgbmap / brightness: {pct}"))
+
+        self.pipeline.run_from(self)
+
+    def restore_contrast_cb(self, w):
+        self.contrast_set_cb(w, 50)
+
+    def restore_brightness_cb(self, w):
+        self.brightness_set_cb(w, 50)
 
     def set_default_distmaps(self):
         old = dict(calg_name=self._calg_name)
@@ -279,46 +395,6 @@ class RGBMap(Stage):
     def copy_from_viewer_cb(self, w):
         rgbmap = self.viewer.get_rgbmap()
         rgbmap.copy_attributes(self.rgbmap, keylist=self.settings_keys)
-
-        self.pipeline.run_from(self)
-
-    def stretch_cmap_cb(self, w, val):
-        self.rgbmap.reset_sarr(callback=False)
-        stretch_val = 100.0 - val
-        scale_pct = stretch_val / 100.0
-        shift_val = self.w.shift.get_value()
-        shift_pct = - shift_val / 100.0
-
-        self.rgbmap.scale_and_shift(scale_pct, shift_pct)
-
-        #self.fv.gui_do(self.pipeline.run_from, self)
-
-    def shift_cmap_cb(self, w, val):
-        self.rgbmap.reset_sarr(callback=False)
-        shift_pct = - val / 100.0
-        stretch_val = 100.0 - self.w.stretch.get_value()
-        scale_pct = stretch_val / 100.0
-
-        self.rgbmap.scale_and_shift(scale_pct, shift_pct)
-
-        #self.fv.gui_do(self.pipeline.run_from, self)
-
-    def rotate_cmap_cb(self, w, val):
-        self.rgbmap.calc_cmap()
-        pct = val / 100.0
-        num = int(255 * pct)
-        self.rgbmap.rotate_cmap(num)
-        #self.rgbmap.shift(shift_pct, rotate=rotate)
-
-        #self.pipeline.run_from(self)
-
-    def invert_cmap_cb(self, w):
-        self.rgbmap.invert_cmap()
-
-        self.pipeline.run_from(self)
-
-    def restore_cmap_cb(self, w):
-        self.rgbmap.restore_cmap()
 
         self.pipeline.run_from(self)
 

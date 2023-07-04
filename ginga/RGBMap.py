@@ -108,23 +108,29 @@ class RGBMapper(Callback.Callbacks):
         self.settings = settings
         self.t_ = settings
         self.settings_keys = ['color_map', 'intensity_map',
-                              'color_array', 'shift_array',
                               'color_algorithm', 'color_hashsize',
+                              'color_map_invert', 'color_map_rot_pct',
+                              'contrast', 'brightness',
                               ]
 
         # add our defaults
         self.t_.add_defaults(color_map='gray', intensity_map='ramp',
+                             color_map_invert=False, color_map_rot_pct=0.0,
                              color_algorithm='linear',
                              color_hashsize=self.maxc + 1,
-                             color_array=None, shift_array=None)
+                             contrast=0.5, brightness=0.5)
         self.t_.get_setting('color_map').add_callback('set',
                                                       self.color_map_set_cb)
         self.t_.get_setting('intensity_map').add_callback('set',
                                                           self.intensity_map_set_cb)
-        self.t_.get_setting('color_array').add_callback('set',
-                                                        self.color_array_set_cb)
-        self.t_.get_setting('shift_array').add_callback('set',
-                                                        self.shift_array_set_cb)
+        self.t_.get_setting('color_map_invert').add_callback('set',
+                                                             self.color_map_invert_set_cb)
+        self.t_.get_setting('color_map_rot_pct').add_callback('set',
+                                                              self.color_map_rot_pct_set_cb)
+        self.t_.get_setting('contrast').add_callback('set',
+                                                     self.contrast_set_cb)
+        self.t_.get_setting('brightness').add_callback('set',
+                                                       self.brightness_set_cb)
         self.t_.get_setting('color_hashsize').add_callback('set',
                                                            self.color_hashsize_set_cb)
         self.t_.get_setting('color_algorithm').add_callback('set',
@@ -136,26 +142,14 @@ class RGBMapper(Callback.Callbacks):
 
         self.suppress_changed = self.suppress_callback('changed', 'last')
 
-        carr = self.t_.get('color_array', None)
-        sarr = self.t_.get('shift_array', None)
-
         cm_name = self.t_.get('color_map', 'gray')
         self.set_color_map(cm_name)
 
+        self.p_cmap.invert_cmap(False)
+        self.p_cmap.rotate_color_map(0.0)
+
         im_name = self.t_.get('intensity_map', 'ramp')
         self.set_intensity_map(im_name)
-
-        # Initialize color array
-        if carr is not None:
-            self.set_carr(carr)
-        else:
-            self.calc_cmap()
-
-        # Initialize shift array
-        if sarr is not None:
-            self.set_sarr(sarr)
-        else:
-            self.reset_sarr(callback=False)
 
     def set_bpp(self, bpp):
         """
@@ -168,7 +162,7 @@ class RGBMapper(Callback.Callbacks):
 
         self.create_pipeline()
 
-        self.refresh_cache()
+        self._refresh_cache()
 
     def create_pipeline(self):
         # create RGB mapping pipeline
@@ -193,7 +187,7 @@ class RGBMapper(Callback.Callbacks):
         state = Bunch.Bunch(order='RGBA')
         self.pipeline.set(state=state)
 
-        self.refresh_cache()
+        self._refresh_cache()
 
     def get_settings(self):
         return self.t_
@@ -228,30 +222,39 @@ class RGBMapper(Callback.Callbacks):
 
     def calc_cmap(self):
         self.p_cmap.set_cmap(self.cmap)
-        carr = self.p_cmap.get_carr()
-        self.t_.set(color_array=carr)
+        self.recalc()
 
     def invert_cmap(self, callback=True):
-        self.p_cmap.invert_cmap()
-        carr = self.p_cmap.get_carr()
-        # TEMP: ignore passed callback parameter
-        self.t_.set(color_array=carr)
+        tf = not self.t_.get('color_map_invert', False)
+        self.t_.set(color_map_invert=tf, callback=callback)
+
+    def color_map_invert_set_cb(self, setting, tf):
+        self.p_cmap.invert_cmap(tf)
+        self.recalc()
 
     def rotate_cmap(self, num, callback=True):
-        self.p_cmap.rotate_cmap(num)
-        carr = self.p_cmap.get_carr()
-        # TEMP: ignore passed callback parameter
-        self.t_.set(color_array=carr)
+        pct = num / (self.maxc + 1)
+        self.t_.set(color_map_rot_pct=pct, callback=callback)
+
+    def color_map_rot_pct_set_cb(self, setting, pct):
+        self.p_cmap.rotate_color_map(pct)
+        self.recalc()
 
     def restore_cmap(self, callback=True):
+        """Undoes color map rotation and inversion, also resets contrast
+        and brightness.
+        """
         with self.suppress_changed:
-            self.reset_sarr(callback=False)
-            self.calc_cmap()
-            # TEMP: ignore passed callback parameter
+            self.t_.set(color_map_invert=False, color_map_rot_pct=0.0,
+                        contrast=0.5, brightness=0.5)
 
     def reset_cmap(self):
-        self.p_cmap.reset_cmap()
-        self.recalc()
+        """Similar to restore_cmap, but also restores the default color
+        and intensity maps.
+        """
+        with self.suppress_changed:
+            self.t_.set(color_map='gray', intensity_map='ramp')
+            self.restore_cmap()
 
     def get_rgb(self, index):
         """
@@ -307,45 +310,38 @@ class RGBMapper(Callback.Callbacks):
 
     def calc_imap(self):
         self.p_imap.set_imap(self.imap)
-        self.refresh_cache()
+        self.recalc()
 
     def reset_sarr(self, callback=True):
-        self.p_shift.reset_sarr()
-        sarr = self.p_shift.get_sarr()
-        self.t_.set(shift_array=sarr)
+        self.t_.set(contrast=0.5, brightness=0.5, callback=callback)
 
-    def get_sarr(self):
-        sarr = self.p_shift.get_sarr()
-        return sarr
+    def _get_sarr(self):
+        warnings.warn("get_sarr() has been deprecated", DeprecationWarning)
+        return self.p_shift._get_sarr()
 
-    def set_sarr(self, sarr, callback=True):
-        if sarr is not None:
-            sarr = np.asarray(sarr)
-        # TEMP: ignore passed callback parameter
-        self.t_.set(shift_array=sarr)
+    def _set_sarr(self, sarr, callback=True):
+        warnings.warn("set_sarr() has been deprecated", DeprecationWarning)
+        self.p_shift._set_sarr(sarr)
+        self.recalc()
 
-    def shift_array_set_cb(self, setting, sarr):
-        if sarr is not None:
-            sarr = np.asarray(sarr).clip(0, self.maxc).astype(np.uint)
-            self.p_shift.set_sarr(sarr)
-            self.refresh_cache()
-        self.make_callback('changed')
+    def contrast_set_cb(self, setting, pct):
+        self.p_shift.set_contrast(pct)
+        self.recalc()
+
+    def brightness_set_cb(self, setting, pct):
+        self.p_shift.set_brightness(pct)
+        self.recalc()
 
     def get_carr(self):
+        warnings.warn("get_carr() has been deprecated", DeprecationWarning)
         return self.p_cmap.get_carr()
 
     def set_carr(self, carr, callback=True):
-        if carr is not None:
-            carr = np.asarray(carr)
-        # TEMP: ignore passed callback parameter
-        self.t_.set(color_array=carr, callback=True)
-
-    def color_array_set_cb(self, setting, carr):
+        warnings.warn("set_carr() has been deprecated", DeprecationWarning)
         self.p_cmap.set_carr(carr)
-        self.refresh_cache()
-        self.recalc(callback=True)
+        self.recalc()
 
-    def refresh_cache(self):
+    def _refresh_cache(self):
         i_arr = np.arange(0, self.maxc + 1, dtype=np.uint)
         self.p_dist.result.setvals(res_np=i_arr)
         self.pipeline.run_from(self.p_shift)
@@ -358,7 +354,7 @@ class RGBMapper(Callback.Callbacks):
             self.cache_arr = cache_arr[:, :3]
 
     def recalc(self, callback=True):
-        self.refresh_cache()
+        self._refresh_cache()
         if callback:
             self.make_callback('changed')
 
@@ -462,20 +458,27 @@ class RGBMapper(Callback.Callbacks):
         return self.p_dist.dist.hash_array(idx)
 
     def shift(self, pct, rotate=False, callback=True):
-        self.p_shift.shift(pct, rotate=rotate)
-        self.t_.set(shift_array=self.p_shift.get_sarr())
+        warnings.warn("shift() has been deprecated", DeprecationWarning)
+        #self.p_shift.shift(pct, rotate=rotate)
+        brightness = self.p_shift._shift_to_brightness(pct, reset=False)
+        self.t_.set(brightness=brightness)
 
     def scale_and_shift(self, scale_pct, shift_pct, callback=True):
         """Stretch and/or shrink the color map via altering the shift map.
         """
-        self.p_shift.scale_and_shift(scale_pct, shift_pct)
-        self.t_.set(shift_array=self.p_shift.get_sarr())
+        warnings.warn("scale_and_shift() has been deprecated", DeprecationWarning)
+        #self.p_shift.scale_and_shift(scale_pct, shift_pct)
+        brightness = self.p_shift._shift_to_brightness(shift_pct, reset=True)
+        contrast = self.p_shift._scale_to_contrast(scale_pct, reset=True)
+        self.t_.set(brightness=brightness, contrast=contrast)
 
     def stretch(self, scale_factor, callback=True):
         """Stretch the color map via altering the shift map.
         """
-        self.p_shift.stretch(scale_factor)
-        self.t_.set(shift_array=self.p_shift.get_sarr())
+        warnings.warn("stretch() has been deprecated", DeprecationWarning)
+        #self.p_shift.stretch(scale_factor)
+        contrast = self.p_shift._scale_to_contrast(scale_factor, reset=False)
+        self.t_.set(contrast=contrast)
 
     def copy_attributes(self, dst_rgbmap, keylist=None):
         if keylist is None:
@@ -593,7 +596,8 @@ class Distribute(RGBMapStage):
     def __init__(self, bpp=8):
         super().__init__(bpp=bpp)
 
-        self.hashsize = self.maxc + 1
+        self.dist = None
+        self._hashsize = self.maxc + 1
         self.set_color_algorithm('linear')
 
     def set_dist(self, dist):
@@ -603,15 +607,15 @@ class Distribute(RGBMapStage):
         return self.dist
 
     def get_hash_size(self):
-        return self.hashsize
+        return self._hashsize
 
     def set_hash_size(self, size):
-        self.hashsize = size
+        self._hashsize = size
         self.dist.set_hash_size(size)
 
     def set_color_algorithm(self, name):
         color_dist_class = ColorDist.get_dist(name)
-        self.dist = color_dist_class(self.hashsize)
+        self.dist = color_dist_class(self._hashsize)
 
     def get_hasharray(self, arr_in):
         if self._bypass or arr_in is None:
@@ -648,28 +652,80 @@ class ShiftMap(RGBMapStage):
     def __init__(self, bpp=8):
         super().__init__(bpp=bpp)
 
-        self.reset_sarr()
+        self._contrast = 0.5
+        self._brightness = 0.5
+        self._sarr = None
 
-    def get_sarr(self):
-        return self.sarr
+        self._reset_sarr()
 
-    def reset_sarr(self):
+    @property
+    def contrast(self):
+        return self._contrast
+
+    def set_contrast(self, pct):
+        self._contrast = pct
+        scale_factor = self._contrast_to_scale(pct)
+        self._stretch(scale_factor)
+
+    @property
+    def brightness(self):
+        return self._brightness
+
+    def set_brightness(self, pct):
+        self._brightness = pct
+        shift_pct = self._brightness_to_shift(pct)
+        self._shift(shift_pct)
+
+    def _scale_to_contrast(self, scale_factor, reset=False):
+        if not reset:
+            # if not reset, multipy by the current scale factor
+            scale_factor *= self._scale_factor
+        pct = np.clip((np.clip(scale_factor, 0.01, 20.0) * 1000) / 2000,
+                      0.0, 1.0)
+        pct = 1.0 - pct
+        return pct
+
+    def _contrast_to_scale(self, contrast_pct):
+        # I tried to mimic ds9's exponential scale feel along the Y-axis
+        i = np.clip(contrast_pct, 0.0001, 1.0)
+        scale_factor = (1.0 / (i**3)) * 0.0001 + (1.0 / i) - 1.0
+        scale_factor = np.clip(scale_factor, 0.0, self.maxc)
+        return scale_factor
+
+    def _brightness_to_shift(self, brightness_pct):
+        pct = 1.0 - brightness_pct
+        # convert to (-1.0, 1.0) for shift pct
+        shift_pct = (pct - 0.5) * 2.0
+        return shift_pct
+
+    def _shift_to_brightness(self, shift_pct, reset=False):
+        if not reset:
+            # if not reset, add the current shift pct
+            shift_pct += self._shift_pct
+        pct = (np.clip(shift_pct, -1.0, 1.0) + 1) * 0.5
+        return 1.0 - pct
+
+    def _reset_sarr(self):
         maxlen = self.maxc + 1
-        self.scale_pct = 1.0
-        self.sarr = np.arange(maxlen)
+        self._contrast = 0.5
+        self._brightness = 0.5
+        self._sarr = np.arange(maxlen)
 
-    def set_sarr(self, sarr):
+    def _get_sarr(self):
+        return self._sarr
+
+    def _set_sarr(self, sarr):
         if sarr is not None:
             sarr = np.asarray(sarr).clip(0, self.maxc).astype(np.uint)
             maxlen = self.maxc + 1
             _len = len(sarr)
             if _len != maxlen:
                 raise RGBMapError("shift map length %d != %d" % (_len, maxlen))
-            self.sarr = sarr
+            self._sarr = sarr
         else:
-            self.reset_sarr()
+            self._reset_sarr()
 
-    def _shift(self, sarr, pct, rotate=False):
+    def _shift_arr(self, sarr, pct, rotate=False):
         n = len(sarr)
         num = int(n * pct)
         arr = np.roll(sarr, num)
@@ -680,7 +736,7 @@ class ShiftMap(RGBMapStage):
                 arr[n + num:n] = sarr[-1]
         return arr
 
-    def _stretch(self, sarr, scale):
+    def _stretch_arr(self, sarr, scale):
         old_wd = len(sarr)
         new_wd = int(round(scale * old_wd))
 
@@ -693,25 +749,17 @@ class ShiftMap(RGBMapStage):
         newdata = sarr[xi]
         return newdata
 
-    def shift(self, pct, rotate=False, callback=True):
-        work = self._shift(self.sarr, pct, rotate=rotate)
-        maxlen = self.maxc + 1
-        assert len(work) == maxlen, \
-            RGBMapError("shifted shift map is != %d" % maxlen)
-
-        self.sarr = work
-
-    def scale_and_shift(self, scale_pct, shift_pct, callback=True):
+    def _scale_and_shift(self, scale_factor, shift_pct, callback=True):
         """Stretch and/or shrink the color map via altering the shift map.
         """
+        # reset the shift array to normal
         maxlen = self.maxc + 1
-        self.sarr = np.arange(maxlen)
+        self._sarr = np.arange(maxlen)
 
-        # limit shrinkage to 5% of original size
-        scale = max(scale_pct, 0.050)
-        self.scale_pct = scale
+        # limit shrinkage to 1% of original size
+        scale = max(scale_factor, 0.01)
 
-        work = self._stretch(self.sarr, scale)
+        work = self._stretch_arr(self._sarr, scale)
         n = len(work)
         if n < maxlen:
             # pad on the lowest and highest values of the shift map
@@ -731,17 +779,21 @@ class ShiftMap(RGBMapStage):
             RGBMapError("scaled shift map is != %d" % maxlen)
 
         # shift map according to the shift_pct
-        work = self._shift(work, shift_pct)
+        work = self._shift_arr(work, shift_pct)
         assert len(work) == maxlen, \
             RGBMapError("shifted shift map is != %d" % maxlen)
 
-        self.sarr = work
+        self._sarr = work
 
-    def stretch(self, scale_factor, callback=True):
+    def _stretch(self, scale_factor, callback=True):
         """Stretch the color map via altering the shift map.
         """
-        self.scale_pct *= scale_factor
-        self.scale_and_shift(self.scale_pct, 0.0, callback=callback)
+        shift_pct = self._brightness_to_shift(self._brightness)
+        self._scale_and_shift(scale_factor, shift_pct, callback=callback)
+
+    def _shift(self, shift_pct, rotate=False, callback=True):
+        scale_factor = self._contrast_to_scale(self._contrast)
+        self._scale_and_shift(scale_factor, shift_pct, callback=callback)
 
     def run(self, prev_stage):
         arr_in = self.pipeline.get_data(prev_stage)
@@ -755,8 +807,8 @@ class ShiftMap(RGBMapStage):
 
         # run it through the shift array and clip the result
         # See NOTE [A]
-        # arr_out = self.sarr[arr_in].clip(0, self.maxc).astype(np.uint, copy=False)
-        arr_out = self.sarr[arr_in]
+        # arr_out = self._sarr[arr_in].clip(0, self.maxc).astype(np.uint, copy=False)
+        arr_out = self._sarr[arr_in]
         # TODO: I think we can avoid this operation, if shift array contents
         # can be limited to 0..maxc
         #arr_out.clip(0, self.maxc, out=arr_out)
@@ -777,11 +829,8 @@ class IntensityMap(RGBMapStage):
         super().__init__(bpp=bpp)
 
         self.imap = None
-        self.iarr = None
+        self._iarr = None
         self.set_intensity_map('ramp')
-
-    def get_iarr(self):
-        return self.iarr
 
     def set_intensity_map(self, imap_name):
         im = mod_imap.get_imap(imap_name)
@@ -793,7 +842,7 @@ class IntensityMap(RGBMapStage):
 
     def calc_imap(self):
         arr = np.array(self.imap.ilst) * float(self.maxc)
-        self.iarr = np.round(arr).astype(np.uint, copy=False)
+        self._iarr = np.round(arr).astype(np.uint, copy=False)
 
     def run(self, prev_stage):
         arr_in = self.pipeline.get_data(prev_stage)
@@ -805,7 +854,7 @@ class IntensityMap(RGBMapStage):
         if not np.issubdtype(arr_in.dtype, np.uint):
             arr_in = arr_in.astype(np.uint)
 
-        arr_out = self.iarr[arr_in]
+        arr_out = self._iarr[arr_in]
 
         if self.trace:
             self.logger.debug("{}: sending data ({})".format(self._stagename,
@@ -823,46 +872,56 @@ class ColorMap(RGBMapStage):
         super().__init__(bpp=bpp)
 
         self.cmap = None
-        self.carr = None
+        self._carr = None
+        self._inverted = False
+        self._rot_pct = 0.0
+
         self.set_color_map('gray')
+
+    @property
+    def inverted(self):
+        return self._inverted
+
+    @property
+    def rot_pct(self):
+        return self._rot_pct
 
     def set_color_map(self, cmap_name):
         cm = mod_cmap.get_cmap(cmap_name)
         self.set_cmap(cm)
 
-    def get_carr(self):
-        return self.carr
-
-    def set_carr(self, carr):
-        if carr is not None:
-            carr = np.asarray(carr).clip(0, self.maxc).astype(self.dtype)
-            maxlen = self.maxc + 1
-            self.carr = carr
-            _len = carr.shape[1]
-            if _len != maxlen:
-                raise RGBMapError("color map length %d != %d" % (_len, maxlen))
-        else:
-            self.calc_cmap()
-
     def set_cmap(self, cmap):
         self.cmap = cmap
         self.calc_cmap()
 
-    def invert_cmap(self):
-        self.carr = np.fliplr(self.carr)
-
-    def rotate_cmap(self, num):
-        self.carr = np.roll(self.carr, num, axis=1)
-
-    def reset_cmap(self):
+    def invert_cmap(self, tf):
+        self._inverted = tf
         self.calc_cmap()
 
-    def calc_cmap(self):
+    def rotate_color_map(self, pct):
+        self._rot_pct = np.clip(pct, -1.0, 1.0)
+        self.calc_cmap()
+
+    def _gen_cmap(self):
         clst = self.cmap.clst
         self.maxc = len(clst) - 1
         arr = np.array(clst).transpose() * float(self.maxc)
         # does this really need to be the same type as rgbmap output type?
-        self.carr = np.round(arr).astype(self.dtype, copy=False)
+        carr = np.round(arr).astype(self.dtype, copy=False)
+        return carr
+
+    def reset_cmap(self):
+        self._inverted = False
+        self._rot_pct = 0.0
+        self.calc_cmap()
+
+    def calc_cmap(self):
+        self._carr = self._gen_cmap()
+        if self._inverted:
+            self._carr = np.fliplr(self._carr)
+        num = int((self.maxc + 1) * self._rot_pct)
+        if num != 0:
+            self._carr = np.roll(self._carr, num, axis=1)
 
     def get_order_indexes(self, order, cs):
         order = order.upper()
@@ -931,7 +990,7 @@ class ColorMap(RGBMapStage):
             return
         #self.verify_2d(arr_in)
 
-        arr_out = self.do_map_index(arr_in, self.carr.T)
+        arr_out = self.do_map_index(arr_in, self._carr.T)
 
         if self.trace:
             self.logger.debug("{}: sending data ({})".format(self._stagename,
