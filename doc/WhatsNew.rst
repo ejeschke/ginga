@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 5.0.0 (unreleased)
+======================
+- Add Contrast and Brightness adjustments in "Preferences" plugin
+
 Ver 4.1.0 (2022-06-30)
 ======================
 - change implementation of splash banner to a pop-up modal dialog
@@ -24,7 +28,6 @@ Ver 4.1.0 (2022-06-30)
   file in .../ginga/examples/configs)
 - Fixed an issue with readout of values under the cursor when an image
   is plotted at a non-zero origin
-- Add Contrast and Brightness adjustments in "Preferences" plugin
 
 Ver 4.0.1 (2022-12-27)
 ======================
