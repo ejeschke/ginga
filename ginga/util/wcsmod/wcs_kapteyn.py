@@ -24,7 +24,7 @@ class KapteynWCS(common.BaseWCS):
         self.kind = 'kapteyn/WCSLIB'
         self._skyout = "equatorial icrs J2000.0"
 
-        # see: https://github.com/astropy/coordinates-benchmark/blob/master/kapteyn/convert.py  # noqa
+        # see: https://github.com/astropy/coordinates-benchmark/blob/main/kapteyn/convert.py  # noqa
         self.conv_d = dict(fk5='fk5', fk4='fk4,J2000_OBS', icrs='icrs',
                            galactic='galactic', ecliptic='ecliptic,J2000')
 

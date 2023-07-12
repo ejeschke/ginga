@@ -43,6 +43,6 @@ Goals that were completed, in reverse chronological order:
 
 * Last major release that is compatible with Python 2 (time frame: late
   2018). Beginning with v3.x.y, Ginga will be Python 3 compatible only.
-* Convert ``master`` to be Python 3.5-compatible (and above) only
+* Convert ``main`` to be Python 3.5-compatible (and above) only
   (time frame: early 2019).
 * Python 3.7 support.
