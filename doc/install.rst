@@ -151,7 +151,7 @@ Basic Installation
 
 You can download and install via ``pip`` by choosing the command that best
 suits your needs (full selection is defined in
-`setup configuration file <https://github.com/ejeschke/ginga/blob/master/setup.cfg>`_
+`setup configuration file <https://github.com/ejeschke/ginga/blob/main/setup.cfg>`_
 )::
 
    pip install ginga  # The most basic installation
