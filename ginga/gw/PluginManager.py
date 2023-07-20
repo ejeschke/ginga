@@ -61,6 +61,7 @@ class PluginManager(Callback.Callbacks):
                                               widget=None, name=name,
                                               is_toplevel=False,
                                               spec=spec,
+                                              wsname=None,
                                               fitsimage=fitsimage,
                                               chinfo=chinfo)
 
@@ -253,7 +254,7 @@ class PluginManager(Callback.Callbacks):
                                         alreadyOpenOk=alreadyOpenOk)
 
     def start_plugin_future(self, chname, opname, future,
-                            alreadyOpenOk=True):
+                            alreadyOpenOk=True, wsname=None):
         try:
             p_info = self.get_plugin_info(opname)
 
@@ -288,10 +289,14 @@ class PluginManager(Callback.Callbacks):
             if hasattr(p_info.obj, 'build_gui'):
                 vbox = Widgets.VBox()
 
-                in_ws = p_info.spec.get('workspace', None)
-                if in_ws is None:
-                    # to be deprecated
-                    in_ws = p_info.spec.ws
+                if wsname is None:
+                    in_ws = p_info.spec.get('workspace', None)
+                    if in_ws is None:
+                        # to be deprecated
+                        in_ws = p_info.spec.ws
+                else:
+                    in_ws = wsname
+                p_info.wsname = wsname
 
                 if in_ws.startswith('in:'):
                     # TODO: how to set this size appropriately
@@ -366,21 +371,32 @@ class PluginManager(Callback.Callbacks):
     def stop_plugin(self, p_info):
         self.logger.debug("stopping plugin %s" % (str(p_info)))
         wasError = False
-        e = None
+        _err = None
         try:
             p_info.obj.stop()
 
         except Exception as e:
-            wasError = True
+            wasError, _err = True, e
             self.logger.error("Plugin '{}' failed to stop correctly: {}".format(p_info.name, e),
                               exc_info=True)
 
         if p_info.widget is not None:
-            self.dispose_gui(p_info)
-            self.ds.remove_tab(p_info.tabname)
+            # if there was a GUI built for this plugin, remove it
+            try:
+                if p_info.wsname is not None:
+                    ws = self.ds.get_ws(p_info.wsname)
+                    ws.remove_tab(p_info.widget)
+                else:
+                    self.ds.remove_tab(p_info.tabname)
+                self.dispose_gui(p_info)
+
+            except Exception as e:
+                wasError, _err = True, e
+                self.logger.error("Plugin UI for '{}' wasn't closed correctly: {}".format(p_info.name, e),
+                                  exc_info=True)
 
         if wasError:
-            raise PluginManagerError(e)
+            raise PluginManagerError(_err)
 
     def stop_all_plugins(self):
         for plugin_name in self.get_active():
@@ -403,10 +419,12 @@ class PluginManager(Callback.Callbacks):
         wd, ht = vbox.get_size()
 
         try:
-            in_ws = p_info.spec.get('workspace', None)
+            in_ws = p_info.wsname
             if in_ws is None:
-                # to be deprecated
-                in_ws = p_info.spec.ws
+                in_ws = p_info.spec.get('workspace', None)
+                if in_ws is None:
+                    # to be deprecated
+                    in_ws = p_info.spec.ws
 
             if in_ws == 'in:toplevel':
                 topw = vbox.get_app().make_window()

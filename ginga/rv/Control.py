@@ -1099,7 +1099,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         ws = self.get_current_workspace()
         ws.cycle_wstype()
 
-    def add_workspace(self, wsname, wstype, inSpace=None):
+    def add_workspace(self, wsname, wstype, inSpace=None, use_toolbar=True):
         if inSpace is None:
             inSpace = self.main_wsname
 
@@ -1107,7 +1107,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             raise ValueError("Tab name already in use: '%s'" % (wsname))
 
         ws = self.ds.make_ws(name=wsname, group=1, wstype=wstype,
-                             use_toolbar=True)
+                             use_toolbar=use_toolbar)
         if inSpace != 'top level':
             self.ds.add_tab(inSpace, ws.widget, 1, ws.name)
         else:

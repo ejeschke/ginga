@@ -212,7 +212,7 @@ def eqToEq2000(ra_deg, dec_deg, eq):
 def get_xy_rotation_and_scale(header):
     """
     CREDIT: See IDL code at
-    http://www.astro.washington.edu/docs/idl/cgi-bin/getpro/library32.html?GETROT
+    https://idlastro.gsfc.nasa.gov/ftp/pro/astrom/getrot.pro
     """
 
     def calc_from_cd(cd1_1, cd1_2, cd2_1, cd2_2):

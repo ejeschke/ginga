@@ -33,6 +33,9 @@ class CompoundMixin(object):
     def __contains__(self, key):
         return key in self.objects
 
+    def __len__(self):
+        return len(self.objects)
+
     def get_llur(self):
         """
         Get lower-left and upper-right coordinates of the bounding box
