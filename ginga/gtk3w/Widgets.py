@@ -1885,6 +1885,16 @@ class GridBox(ContainerBase):
         self.widget.show_all()
         self.make_callback('widget-added', child)
 
+    def remove(self, child, delete=False):
+        # need to delete the child from self.tbl
+        children = list(self.tbl.values())
+        keys = list(self.tbl.keys())
+        idx = children.index(child)
+        key = keys[idx]
+        del self.tbl[key]
+
+        super().remove(child, delete=delete)
+
     def get_widget_at_cell(self, row, col):
         return self.tbl[(row, col)]
 

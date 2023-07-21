@@ -1043,7 +1043,7 @@ class SymmetricGridWidget(Widgets.GridBox):
         try:
             idx = widgets.index(child)
 
-        except IndexError:
+        except (IndexError, ValueError):
             raise ValueError("child not in container")
 
         o_rows, o_cols = self._calc_dims(len(widgets))
