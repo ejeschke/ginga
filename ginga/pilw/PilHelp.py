@@ -36,7 +36,12 @@ def text_size(text, font):
     f = get_cached_font(font.fontname, font.fontsize)
     i = Image.new('RGBA', (1, 1))
     d = ImageDraw.Draw(i, 'RGBA')
-    return d.textsize(text)
+    if hasattr(d, 'textbbox'):
+        l, r, t, b = d.textbbox((0, 0), text, font=f)
+        wd_px, ht_px = r - l, b - t
+    else:
+        wd_px, ht_px = d.textsize(text)
+    return wd_px, ht_px
 
 
 def text_to_array(text, font, rot_deg=0.0):
@@ -131,9 +136,12 @@ class PilContext(object):
         return [(p[0], p[1]) for p in points]
 
     def text_extents(self, text, font):
-        retval = self.ctx.textsize(text, font.font)
-        wd, ht = retval
-        return wd, ht
+        if hasattr(self.ctx, 'textbbox'):
+            l, r, t, b = self.ctx.textbbox((0, 0), text, font=font.font)
+            wd_px, ht_px = r - l, b - t
+        else:
+            wd_px, ht_px = self.ctx.textsize(text, font.font)
+        return wd_px, ht_px
 
     def image(self, pt, rgb_arr):
         p_image = Image.fromarray(rgb_arr)
