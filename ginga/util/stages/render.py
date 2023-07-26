@@ -382,10 +382,21 @@ class Scale(Stage):
         # doesn't quite get the coverage right at high magnifications
         pad = 1.0
         pts = np.asarray(self.viewer.get_draw_rect()).T
-        xmin = int(np.min(pts[0])) - pad
-        ymin = int(np.min(pts[1])) - pad
-        xmax = int(np.ceil(np.max(pts[0]))) + pad
-        ymax = int(np.ceil(np.max(pts[1]))) + pad
+        xmin = np.floor(np.nanmin(pts[0])) - pad
+        ymin = np.floor(np.nanmin(pts[1])) - pad
+        xmax = np.ceil(np.nanmax(pts[0])) + pad
+        ymax = np.ceil(np.nanmax(pts[1])) + pad
+
+        # NOTE: if we see NaNs here, consider the pipeline to be terminated
+        # with nothing to draw
+        if True in np.isnan([xmin, ymin, xmax, ymax]):
+            # no overlay needed
+            self.pipeline.send(res_np=None)
+            cache.visible = False
+            self.pipeline.stop()
+            return
+
+        xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
 
         # get destination location in data_coords
         img = cvs_img
