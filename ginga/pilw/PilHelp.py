@@ -34,13 +34,12 @@ def load_font(font_name, font_file):
 
 def text_size(text, font):
     f = get_cached_font(font.fontname, font.fontsize)
-    i = Image.new('RGBA', (1, 1))
-    d = ImageDraw.Draw(i, 'RGBA')
-    if hasattr(d, 'textbbox'):
-        l, r, t, b = d.textbbox((0, 0), text, font=f)
-        wd_px, ht_px = r - l, b - t
+    if hasattr(f, 'getbbox'):
+        # PIL v10.0
+        l, t, r, b = f.getbbox(text)
+        wd_px, ht_px = int(abs(round(r - l))), int(abs(round(b - t)))
     else:
-        wd_px, ht_px = d.textsize(text)
+        wd_px, ht_px = f.getsize(text)
     return wd_px, ht_px
 
 
@@ -136,12 +135,7 @@ class PilContext(object):
         return [(p[0], p[1]) for p in points]
 
     def text_extents(self, text, font):
-        if hasattr(self.ctx, 'textbbox'):
-            l, r, t, b = self.ctx.textbbox((0, 0), text, font=font.font)
-            wd_px, ht_px = r - l, b - t
-        else:
-            wd_px, ht_px = self.ctx.textsize(text, font.font)
-        return wd_px, ht_px
+        return text_size(text, font)
 
     def image(self, pt, rgb_arr):
         p_image = Image.fromarray(rgb_arr)
