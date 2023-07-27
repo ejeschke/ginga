@@ -158,19 +158,21 @@ class PilContext(object):
         if (brush is not None) and brush.fill:
             self.ctx.ellipse(((x - radius, y - radius),
                               (x + radius, y + radius)),
-                             fill=brush.color, outline=pen.color)
+                             fill=brush.color, outline=pen.color,
+                             width=pen.linewidth)
         else:
             self.ctx.ellipse(((x - radius, y - radius),
                               (x + radius, y + radius)),
-                             outline=pen.color)
+                             outline=pen.color, width=pen.linewidth)
 
     def polygon(self, points, pen, brush):
         points = self._cvt_points(points)
 
         if (brush is not None) and brush.fill:
-            self.ctx.polygon(points, fill=brush.color, outline=pen.color)
+            self.ctx.polygon(points, fill=brush.color, outline=pen.color,
+                             width=pen.linewidth)
         else:
-            self.ctx.polygon(points, outline=pen.color)
+            self.ctx.polygon(points, outline=pen.color, width=pen.linewidth)
 
     def path(self, points, pen):
         points = self._cvt_points(points)

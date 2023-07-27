@@ -5,6 +5,10 @@ What's New
 Ver 5.0.0 (unreleased)
 ======================
 - Add Contrast and Brightness adjustments in "Preferences" plugin
+- Modifications to PIL backend
+
+  - support pillow v10.0
+  - now supports linewidth attribute
 
 Ver 4.1.0 (2022-06-30)
 ======================
