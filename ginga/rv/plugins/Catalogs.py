@@ -180,6 +180,19 @@ class Catalogs(GingaPlugin.LocalPlugin):
                                                           d['source'],
                                                           d['mapping'],
                                                           description=d['fullname'])
+            elif typ == 'astroquery.vizier':
+                if catalog.have_astroquery:
+                    obj = catalog.AstroqueryVizierCatalogServer(self.logger,
+                                                          d['fullname'],
+                                                          d['shortname'],
+                                                          d['mapping'],
+                                                          description=d['fullname'])
+
+                    if 'cat_column_filter' in d:
+                        obj.set_cat_column_filters(d['cat_column_filters'])
+
+                    if 'cat_columns' in d:
+                        obj.set_cat_columns(d['cat_columns'])
             else:
                 self.logger.debug("Unknown type ({}) specified for catalog source--skipping".format(typ))
 
