@@ -121,7 +121,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         self.catalog_server_options = []
         self.catalog_server_params = None
-        self.catalog_params = Bunch.Bunch(dict(ra='', dec='', radius=1))
+        self.catalog_params = Bunch.Bunch(dict(ra='', dec='', radius=1, width=1, height=1))
 
         self.name_server_options = []
 
@@ -1054,11 +1054,17 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def params_changed_cb(self, paramset):
         paramset.widgets_to_params()
 
+
+    #EBR: add if/elif to set parameter for vizier radius or box query
     def set_drawtype_cb(self, tf, drawtype):
         if tf:
             self.drawtype = drawtype
             self.canvas.set_drawtype(self.drawtype, color='cyan',
                                      linestyle='dash')
+            if drawtype == 'circle':
+                self.catalog_params.update(dict(box=0, radius=1))
+            elif drawtype == 'rectangle':
+                self.catalog_params.update(dict(box=1, radius=0))
 
     def __str__(self):
         return 'catalogs'
