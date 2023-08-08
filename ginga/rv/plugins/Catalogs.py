@@ -886,15 +886,19 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if not image:
             image = self.fitsimage.get_image()
         x, y = image.radectopix(obj['ra_deg'], obj['dec_deg'])
+
+        mag = obj[self.table.mag_field]
         # TODO: auto-pick a decent radius
         radius = self.settings.get('click_radius', 10)
         color = self.table.get_color(obj)
+        point = self.dc.Point(x, y, radius, color=color)
+        point.editable = False
+        #EBR: Set the radius to 0 in case the magnitude is NaN, hence only plotting the point and an invisible circle.
+        if math.isnan(mag):
+            radius = 0
 
         circle = self.dc.Circle(x, y, radius, color=color)
         circle.editable = False
-        point = self.dc.Point(x, y, radius, color=color)
-        point.editable = False
-
         ## What is this from?
         if 'pick' in obj:
             # Some objects returned from the star catalog are marked
@@ -1135,6 +1139,10 @@ class CatalogListing(object):
         else:
             point = 1.0
 
+        #EBR: added for mags = NaN in catalog
+        if math.isnan(mag):
+            point = 1.0
+
         # sanity check: clip to 0-1 range
         point = max(0.0, point)
         point = min(1.0, point)
@@ -1228,13 +1236,18 @@ class CatalogListing(object):
         self.cbar.set_imap(im)
         self.replot_stars()
 
+    #EBR: handles now also color indices and deals with NaN magnitudes
     def set_minmax(self, i, length):
         subset = self.get_subset_from_starlist(i, i + length)
         values = list(map(lambda star: float(star[self.mag_field]),
                           subset))
-        if len(values) > 0:
-            self.mag_max = max(values)
-            self.mag_min = min(values)
+
+        values_without_nan=[x for x in values if math.isnan(x) == False]
+
+        if len(values_without_nan) > 0:
+            self.mag_max = max(values_without_nan)
+            self.mag_min = min(values_without_nan)
+
             self.cbar.set_range(self.mag_min, self.mag_max)
 
     def _set_field(self, name):
