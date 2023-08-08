@@ -1631,14 +1631,15 @@ class GridBox(ContainerBase):
         self.make_callback('widget-added', child)
 
     def remove(self, child, delete=False):
+        super().remove(child, delete=delete)
+
         # need to delete the child from self.tbl
         children = list(self.tbl.values())
-        keys = list(self.tbl.keys())
-        idx = children.index(child)
-        key = keys[idx]
-        del self.tbl[key]
-
-        super().remove(child, delete=delete)
+        if child in children:
+            keys = list(self.tbl.keys())
+            idx = children.index(child)
+            key = keys[idx]
+            del self.tbl[key]
 
     def get_widget_at_cell(self, row, col):
         return self.tbl[(row, col)]
@@ -1652,16 +1653,16 @@ class GridBox(ContainerBase):
         # handle case where user inserts row before the end of the gridbox
         if index < num_rows:
             # shift key/value pairs down to make the row empty at index
-            for i in range(num_rows, index, -1):
+            for i in range(num_rows - 1, index - 1, -1):
                 for j in range(num_cols):
-                    key = (i - 1, j)
+                    key = (i, j)
                     if key in self.tbl:
                         child = self.tbl.pop(key)
-                        self.tbl[(i, j)] = child
+                        self.tbl[(i + 1, j)] = child
                         # move actual widget down in QGridLayout
                         w = child.get_widget()
                         self._remove(w)
-                        self.widget.layout().addWidget(w, i, j)
+                        self.widget.layout().addWidget(w, i + 1, j)
 
         for j in range(num_cols):
             child = widgets[j]
@@ -1690,17 +1691,12 @@ class GridBox(ContainerBase):
                 for j in range(num_cols):
                     key = (i, j)
                     if key in self.tbl:
-                        child = self.tbl[key]
+                        child = self.tbl.pop(key)
                         self.tbl[(i - 1, j)] = child
                         # move actual widget up in QGridLayout
                         w = child.get_widget()
                         self._remove(w)
                         self.widget.layout().addWidget(w, i - 1, j)
-            # delete items in last row to maintain self.tbl
-            for j in range(num_cols):
-                key = (num_rows - 1, j)
-                if key in self.tbl:
-                    self.tbl.pop(key)
 
 
 class ToolbarAction(WidgetBase):

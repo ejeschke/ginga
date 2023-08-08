@@ -2392,7 +2392,7 @@ class GridBox(ContainerBase):
         %(content)s
     </table>
     <script type="text/javascript">
-        // see python method insert_row in this widget
+        // see python method insert_row() in this widget
         ginga_app.add_widget_custom_method('%(id)s', 'insert_row',
                 function (elt, msg) {
                     let index = msg.value[0];
@@ -2403,7 +2403,18 @@ class GridBox(ContainerBase):
                         cell.innerHTML = msg.value[2][j];
                     }
         });
-        // see python method update_cell in this widget
+        // see python method append_row() in this widget
+        ginga_app.add_widget_custom_method('%(id)s', 'append_row',
+                function (elt, msg) {
+                    let index = -1;
+                    let numColumns = msg.value[0];
+                    let newRow = document.getElementById("%(id)s").insertRow(index);
+                    for (let j = 0; j < numColumns; j++) {
+                        let cell = newRow.insertCell(j);
+                        cell.innerHTML = msg.value[1][j];
+                    }
+        });
+        // see python method update_cell() in this widget
         ginga_app.add_widget_custom_method('%(id)s', 'update_cell',
                 function (elt, msg) {
                     let i = msg.value[0];
@@ -2413,7 +2424,7 @@ class GridBox(ContainerBase):
                     let cell = row.cells[j];
                     cell.innerHTML = msg.value[2];
         });
-        // see python method delete_row in this widget
+        // see python method delete_row() in this widget
         ginga_app.add_widget_custom_method('%(id)s', 'delete_row',
                 function (elt, msg) {
                     document.getElementById("%(id)s").deleteRow(msg.value);
@@ -2480,14 +2491,15 @@ class GridBox(ContainerBase):
         self.make_callback('widget-added', child)
 
     def remove(self, child, delete=False):
+        super().remove(child, delete=delete)
+
         # need to delete the child from self.tbl
         children = list(self.tbl.values())
-        keys = list(self.tbl.keys())
-        idx = children.index(child)
-        key = keys[idx]
-        del self.tbl[key]
-
-        super().remove(child, delete=delete)
+        if child in children:
+            keys = list(self.tbl.keys())
+            idx = children.index(child)
+            key = keys[idx]
+            del self.tbl[key]
 
     def get_widget_at_cell(self, row, col):
         return self.tbl[(row, col)]
@@ -2496,14 +2508,14 @@ class GridBox(ContainerBase):
         if len(widgets) != self.num_cols:
             raise ValueError("Number of widgets ({}) != number of columns ({})".format(len(widgets), self.num_cols))
 
-        self.num_rows += 1
-
         # handle case where user inserts row before the end of the gridbox
-        if index < self.num_rows - 1:
+        if index < self.num_rows:
             # shift key/value pairs down to make the row empty at index
-            for i in range(self.num_rows - 2, index - 1, -1):
+            for i in range(self.num_rows - 1, index - 1, -1):
                 for j in range(self.num_cols):
-                    self.tbl[(i + 1, j)] = self.tbl[(i, j)]
+                    key = (i, j)
+                    if key in self.tbl:
+                        self.tbl[(i + 1, j)] = self.tbl.pop(key)
 
         html = []
         for j in range(self.num_cols):
@@ -2519,11 +2531,34 @@ class GridBox(ContainerBase):
             args = [index, self.num_cols, html]
             app.do_operation("insert_row", id=self.id, value=args)
 
+        self.num_rows += 1
+
         for child in widgets:
             self.make_callback('widget-added', child)
 
     def append_row(self, widgets):
-        return self.insert_row(self.num_rows, widgets)
+        if len(widgets) != self.num_cols:
+            raise ValueError("Number of widgets ({}) != number of columns ({})".format(len(widgets), self.num_cols))
+
+        index = self.num_rows
+        self.num_rows += 1
+
+        html = []
+        for j in range(self.num_cols):
+            child = widgets[j]
+            # populate inserted row with widgets for render_body()
+            self.tbl[(index, j)] = widgets[j]
+            self.add_ref(child)
+            if self._rendered:
+                html.append(child.render())
+
+        if self._rendered:
+            app = self.get_app()
+            args = [self.num_cols, html]
+            app.do_operation("append_row", id=self.id, value=args)
+
+        for child in widgets:
+            self.make_callback('widget-added', child)
 
     def delete_row(self, index):
         if index < 0 or index >= self.num_rows:
@@ -2531,18 +2566,19 @@ class GridBox(ContainerBase):
 
         # remove widgets in row from table
         for j in range(self.num_cols):
-            child = self.tbl.pop((index, j))
-            self.remove(child)
+            key = (index, j)
+            if key in self.tbl:
+                child = self.tbl.pop(key)
+                self.remove(child)
 
         if index < self.num_rows - 1:
             # if not removing very last row,
             # shift dict key, value pairs up
             for i in range(index + 1, self.num_rows):
                 for j in range(self.num_cols):
-                    self.tbl[(i - 1, j)] = self.tbl[(i, j)]
-            # delete items in last row to maintain self.tbl
-            for j in range(self.num_cols):
-                self.tbl.pop((self.num_rows - 1, j))
+                    key = (i, j)
+                    if key in self.tbl:
+                        self.tbl[(i - 1, j)] = self.tbl.pop(key)
 
         self.num_rows -= 1
         if self._rendered:

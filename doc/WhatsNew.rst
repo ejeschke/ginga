@@ -6,6 +6,7 @@ Ver 4.1.1 (unreleased)
 ======================
 - Fixed a bug with the remove() method in GridBox widget
 - Fix for pillow backend for pillow >= 10.0
+- Fix for delete_row() in GridBox widgets
 
 Ver 4.1.0 (2022-06-30)
 ======================
