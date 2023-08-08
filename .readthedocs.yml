@@ -18,6 +18,7 @@ sphinx:
 python:
   system_packages: false
   install:
+    - requirements: doc/requirements.txt
     - method: pip
       path: .
       extra_requirements:
