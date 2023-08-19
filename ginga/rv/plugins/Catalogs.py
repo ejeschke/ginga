@@ -183,10 +183,10 @@ class Catalogs(GingaPlugin.LocalPlugin):
             elif typ == 'astroquery.vizier':
                 if catalog.have_astroquery:
                     obj = catalog.AstroqueryVizierCatalogServer(self.logger,
-                                                          d['fullname'],
-                                                          d['shortname'],
-                                                          d['mapping'],
-                                                          description=d['fullname'])
+                                                                d['fullname'],
+                                                                d['shortname'],
+                                                                d['mapping'],
+                                                                description=d['fullname'])
 
                     if 'cat_column_filter' in d:
                         obj.set_cat_column_filters(d['cat_column_filters'])
@@ -1058,8 +1058,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def params_changed_cb(self, paramset):
         paramset.widgets_to_params()
 
-
-    #EBR: add if/elif to set parameter for vizier radius or box query
+    # EBR: add if/elif to set parameter for vizier radius or box query
     def set_drawtype_cb(self, tf, drawtype):
         if tf:
             self.drawtype = drawtype
@@ -1236,13 +1235,13 @@ class CatalogListing(object):
         self.cbar.set_imap(im)
         self.replot_stars()
 
-    #EBR: handles now also color indices and deals with NaN magnitudes
+    # EBR: handles now also color indices and deals with NaN magnitudes
     def set_minmax(self, i, length):
         subset = self.get_subset_from_starlist(i, i + length)
         values = list(map(lambda star: float(star[self.mag_field]),
                           subset))
 
-        values_without_nan=[x for x in values if math.isnan(x) == False]
+        values_without_nan = [x for x in values if math.isnan(x) is False]
 
         if len(values_without_nan) > 0:
             self.mag_max = max(values_without_nan)

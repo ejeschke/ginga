@@ -21,7 +21,7 @@ from astropy import coordinates, units
 have_astroquery = False
 try:
     from astroquery.vo_conesearch import conesearch
-    from astroquery.vizier import Vizier #EBR: add astroquery.vizier to use vizier catalogs
+    from astroquery.vizier import Vizier          # EBR: add astroquery.vizier to use vizier catalogs
 
     have_astroquery = True
 except ImportError:
@@ -32,8 +32,9 @@ default_image_sources = []
 default_catalog_sources = []
 default_name_sources = []
 
-#EBR: limit the number of rows in the vizier query to 5000
-Vizier.ROW_LIMIT= 5000
+# EBR: limit the number of rows in the vizier query to 5000
+Vizier.ROW_LIMIT = 5000
+
 
 class SourceError(Exception):
     """For exceptions raised by the `~ginga.util.catalog` module."""
@@ -88,8 +89,8 @@ class AstroqueryCatalogServer(object):
         self.short_name = key
         self.mapping = mapping
         self.querymod = querymod
-        self.cat_columns = cat_columns                 #EBR: add for usage with the vizier catalog
-        self.cat_column_filters = cat_column_filters   #EBR: add for usage with the vizier catalog
+        self.cat_columns = cat_columns                 # EBR: add for usage with the vizier catalog
+        self.cat_column_filters = cat_column_filters   # EBR: add for usage with the vizier catalog
 
         if description is None:
             description = full_name
@@ -171,7 +172,6 @@ class AstroqueryCatalogServer(object):
         mags = []
         ext = {}
         fields = results.colnames
-        #print("fields are", fields)
         for name in fields:
             if name == self.mapping['id']:
                 ext['id'] = name
@@ -234,7 +234,8 @@ class AstroqueryVOCatalogServer(AstroqueryCatalogServer):
                                         use_names_over_ids=False)
         return results
 
-#EBR: add vizier catalog class
+
+# EBR: add vizier catalog class
 class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
     """For queries using the `astroquery.vizier` function."""
 
@@ -256,12 +257,11 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
                   description="Radius from center in arcmin"),
         ]
 
-    #EBR add output colums and filters for vizier catalog
+    # EBR add output colums and filters for vizier catalog
     def __init__(self, logger, full_name, key, mapping, cat_columns=[], cat_column_filters={}, description=None):
-    #def __init__(self, logger, full_name, key, mapping, description=None):
         super(AstroqueryVizierCatalogServer, self).__init__(logger, full_name,
-                                                        key, None, mapping,
-                                                        description=description, cat_columns=cat_columns, cat_column_filters=cat_column_filters)
+                                                            key, None, mapping,
+                                                            description=description, cat_columns=cat_columns, cat_column_filters=cat_column_filters)
 
     def set_cat_column_filters(self, cat_filter):
         self.cat_column_filters = cat_filter
@@ -272,16 +272,15 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
     def getParams(self):
         return self.get_params_metadata()
 
-
     def _search_radius(self, center, radius, catalog, columns, column_filters):
         # override this method to pass some special kwargs to the search
 
         if columns:
-            columns.insert(0,self.mapping['id'])
-            columns.insert(1,self.mapping['ra'])
-            columns.insert(2,self.mapping['dec'])
+            columns.insert(0, self.mapping['id'])
+            columns.insert(1, self.mapping['ra'])
+            columns.insert(2, self.mapping['dec'])
 
-        v=Vizier(columns=columns, column_filters=column_filters)
+        v = Vizier(columns=columns, column_filters=column_filters)
         results = Vizier.query_region(center, radius, catalog=catalog)
 
         return results[0]
@@ -289,11 +288,11 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
     def _search_box(self, center, width, height, catalog, columns, column_filters):
         # override this method to pass some special kwargs to the search
         if columns:
-            columns.insert(0,self.mapping['id'])
-            columns.insert(1,self.mapping['ra'])
-            columns.insert(2,self.mapping['dec'])
+            columns.insert(0, self.mapping['id'])
+            columns.insert(1, self.mapping['ra'])
+            columns.insert(2, self.mapping['dec'])
 
-        v=Vizier(columns=columns, column_filters=column_filters)
+        v = Vizier(columns=columns, column_filters=column_filters)
         v.ROW_LIMIT = 500
         results = v.query_region(center, width=width, height=height, catalog=catalog)
 
@@ -319,7 +318,7 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
         c = coordinates.SkyCoord(ra_deg * units.degree,
                                  dec_deg * units.degree,
                                  frame='icrs')
-        
+
         self.logger.info("Querying catalog: %s" % (self.full_name))
         time_start = time.time()
         with warnings.catch_warnings():  # Ignore VO warnings
@@ -329,21 +328,21 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
                 radius_deg = float(params['r']) / 60.0
                 # radius_deg = float(params['r'])
                 results = self._search_radius(c, radius_deg * units.degree,
-                                       self.full_name, columns=self.cat_columns, column_filters=self.cat_column_filters)
+                                              self.full_name, columns=self.cat_columns, column_filters=self.cat_column_filters)
             elif params['box'] == 1:
                 # Convert to degrees for search width
                 width_deg = float(params['width']) / 60.0
                 # Convert to degrees for search height
                 height_deg = float(params['height']) / 60.0
                 results = self._search_box(c, width_deg * units.degree, height_deg * units.degree,
-                                   self.full_name, columns=self.cat_columns, column_filters=self.cat_column_filters)
+                                           self.full_name, columns=self.cat_columns, column_filters=self.cat_column_filters)
             else:
                 #attempt to use the radius, this shouldn't happen
                 # Convert to degrees for search radius
                 radius_deg = float(params['r']) / 60.0
                 # radius_deg = float(params['r'])
                 results = self._search_radius(c, radius_deg * units.degree,
-                                       self.full_name)
+                                              self.full_name)
 
         time_elapsed = time.time() - time_start
         if results is None:
@@ -358,9 +357,8 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
         # Scan the returned fields to find ones we need to extract
         # particulars from (ra, dec, id, magnitude)
         mags = []
-        ext = {} #{'id': 'recno', 'ra': 'RAJ2000', 'dec': 'DEJ2000'}
+        ext = {}        # {'id': 'recno', 'ra': 'RAJ2000', 'dec': 'DEJ2000'}
         fields = results.colnames
-        #print("fields are", fields)
         for name in fields:
             if name == self.mapping['id']:
                 ext['id'] = name
@@ -387,17 +385,10 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
         columns = [('Name', 'name'),
                    ('RA', 'ra'),
                    ('DEC', 'dec'),
-#                   ('Mag', 'mag'),
-#                   ('Preference', 'preference'),
-#                   ('Priority', 'priority'),
-#                   ('Description', 'description'),
                    ]
         # Append extra columns returned by search to table header
         cols = list(fields)
-        #cols.remove(ext['ra'])
-        #cols.remove(ext['dec'])
         cols.remove(ext['id'])
-        #cols.remove('Field')
         columns.extend(zip(cols, cols))
 
         # which column is the likely one to color source circles
@@ -729,7 +720,6 @@ class CatalogServer(URLServer):
         offset = 0
         while offset < len(lines):
             line = lines[offset].strip()
-            # print(line)
             offset += 1
             if line.startswith('-'):
                 break
@@ -740,7 +730,6 @@ class CatalogServer(URLServer):
 
         for line in lines[offset:]:
             line = line.strip()
-            # print(line)
             if (len(line) == 0) or line.startswith('#'):
                 continue
             elts = line.split()
@@ -753,7 +742,6 @@ class CatalogServer(URLServer):
                 ra = elts[self.index['ra']]
                 dec = elts[self.index['dec']]
                 mag = float(elts[self.index['mag']])
-                # print(name)
 
                 if (self.format == 'deg') or not (':' in ra):
                     # Assume RA and DEC are in degrees
@@ -880,7 +868,7 @@ if have_astroquery:
         {'shortname': "APASS DR9",
          'fullname': "II/336/apass9",
          'type': 'astroquery.vizier',
-         'mapping': {'id': 'recno', 'ra': 'RAJ2000', 'dec': 'DEJ2000', 'mag': ['Vmag', 'B-V', 'Bmag', 'g\'mag', 'r\'mag', 'i\'mag'] }},
+         'mapping': {'id': 'recno', 'ra': 'RAJ2000', 'dec': 'DEJ2000', 'mag': ['Vmag', 'B-V', 'Bmag', 'g\'mag', 'r\'mag', 'i\'mag']}},
     ])
 
     default_image_sources.extend([
