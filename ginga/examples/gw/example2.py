@@ -93,15 +93,12 @@ class FitsViewer(object):
         self.readout = Widgets.Label("")
         vbox.add_widget(self.readout, stretch=0)
 
-        hbox = Widgets.HBox()
-        hbox.set_border_width(2)
-        hbox.set_spacing(4)
-
         wdrawtype = Widgets.ComboBox()
         for name in self.drawtypes:
             wdrawtype.append_text(name)
         index = self.drawtypes.index('rectangle')
         wdrawtype.set_index(index)
+        wdrawtype.set_tooltip("choose shape to draw")
         wdrawtype.add_callback('activated', lambda w, idx: self.set_drawparams())
         self.wdrawtype = wdrawtype
 
@@ -110,19 +107,50 @@ class FitsViewer(object):
             wdrawcolor.append_text(name)
         index = self.drawcolors.index('lightblue')
         wdrawcolor.set_index(index)
+        wdrawcolor.set_tooltip("choose line color")
         wdrawcolor.add_callback('activated', lambda w, idx: self.set_drawparams())
         self.wdrawcolor = wdrawcolor
 
-        wfill = Widgets.CheckBox("Fill")
-        wfill.add_callback('activated', lambda w, tf: self.set_drawparams())
-        self.wfill = wfill
+        wfillcolor = Widgets.ComboBox()
+        for name in self.drawcolors:
+            wfillcolor.append_text(name)
+        index = self.drawcolors.index('seagreen')
+        wfillcolor.set_index(index)
+        wfillcolor.set_tooltip("choose fill color")
+        wfillcolor.add_callback('activated', lambda w, idx: self.set_drawparams())
+        self.wfillcolor = wfillcolor
+
+        wwidth = Widgets.ComboBox()
+        for val in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
+            wwidth.append_text(str(val))
+        wwidth.set_index(0)
+        wwidth.set_tooltip("set line width")
+        wwidth.add_callback('activated', lambda w, idx: self.set_drawparams())
+        self.wwidth = wwidth
 
         walpha = Widgets.SpinBox(dtype=float)
         walpha.set_limits(0.0, 1.0, incr_value=0.1)
         walpha.set_value(1.0)
         walpha.set_decimals(2)
+        walpha.set_tooltip("set alpha value for line")
         walpha.add_callback('value-changed', lambda w, val: self.set_drawparams())
         self.walpha = walpha
+
+        wfillalpha = Widgets.SpinBox(dtype=float)
+        wfillalpha.set_limits(0.0, 1.0, incr_value=0.1)
+        wfillalpha.set_value(0.0)
+        wfillalpha.set_decimals(2)
+        wfillalpha.set_tooltip("set alpha value for fill")
+        wfillalpha.add_callback('value-changed', lambda w, val: self.set_drawparams())
+        self.wfillalpha = wfillalpha
+
+        wrender = Widgets.ComboBox()
+        for name in ['cairo', 'pil', 'agg', 'opencv', 'qt']:
+            wrender.append_text(name)
+        wrender.set_index(0)
+        wrender.set_tooltip("choose renderer backend")
+        wrender.add_callback('activated', lambda w, idx: self.set_renderer())
+        self.wrender = wrender
 
         wclear = Widgets.Button("Clear Canvas")
         wclear.add_callback('activated', lambda w: self.clear_canvas())
@@ -131,13 +159,26 @@ class FitsViewer(object):
         wquit = Widgets.Button("Quit")
         wquit.add_callback('activated', lambda w: self.quit())
 
+        hbox = Widgets.HBox()
+        hbox.set_border_width(2)
+        hbox.set_spacing(4)
+
         hbox.add_widget(Widgets.Label(''), stretch=1)
-        for w in (wopen, wdrawtype, wdrawcolor, wfill,
-                  Widgets.Label('Alpha:'), walpha, wclear, wquit):
+        for w in (wopen, wdrawtype, wdrawcolor, wwidth,
+                  walpha):
             hbox.add_widget(w, stretch=0)
 
         vbox.add_widget(hbox, stretch=0)
 
+        hbox = Widgets.HBox()
+        hbox.set_border_width(2)
+        hbox.set_spacing(4)
+
+        hbox.add_widget(Widgets.Label(''), stretch=1)
+        for w in (wrender, wfillcolor, wfillalpha, wclear, wquit):
+            hbox.add_widget(w, stretch=0)
+
+        vbox.add_widget(hbox, stretch=0)
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
         hbox.set_spacing(4)
@@ -172,21 +213,32 @@ class FitsViewer(object):
         index = self.wdrawtype.get_index()
         kind = self.drawtypes[index]
         index = self.wdrawcolor.get_index()
-        fill = self.wfill.get_state()
+        linewidth = int(self.wwidth.get_text())
         alpha = self.walpha.get_value()
+        fillalpha = self.wfillalpha.get_value()
 
         params = {'color': self.drawcolors[index],
+                  'linewidth': linewidth,
                   'alpha': alpha,
                   }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box'):
-            params['fill'] = fill
-            params['fillalpha'] = alpha
+            params['fill'] = True
+            index = self.wfillcolor.get_index()
+            params['fillcolor'] = self.drawcolors[index]
+            params['fillalpha'] = fillalpha
 
         self.canvas.set_drawtype(kind, **params)
 
     def clear_canvas(self):
         self.canvas.delete_all_objects()
+
+    def set_renderer(self):
+        name = self.wrender.get_text()
+        klass = render.get_render_class(name)
+        renderer = klass(self.fitsimage)
+        self.fitsimage.set_renderer(renderer)
+        self.fitsimage.redraw(whence=0)
 
     def load_file(self, filepath):
         image = load_data(filepath, logger=self.logger)

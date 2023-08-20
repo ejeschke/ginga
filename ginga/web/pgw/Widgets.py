@@ -1044,11 +1044,11 @@ class CheckBox(WidgetBase):
     </span>
     <script type="text/javascript">
         $(document).ready(function () {
-            // see python method set_state in this widget
+            // see python method set_state() in this widget
             ginga_app.add_widget_custom_method('%(id)s', 'update_state',
                 function (elt, msg) {
-                    msg.value ? document.getElementById('%(id)s').checked = true :
-                                document.getElementById('%(id)s').checked = false;
+                    let cbox = document.getElementById('%(id)s');
+                    cbox.checked = (msg.value ? true : false);
             });
         });
     </script>
@@ -1103,11 +1103,11 @@ class ToggleButton(WidgetBase):
     </div>
     <script type="text/javascript">
         $(document).ready(function () {
-            // see python method set_state in this widget
+            // see python method set_state() in this widget
             ginga_app.add_widget_custom_method('%(id)s', 'update_state',
                 function (elt, msg) {
-                    msg.value ? document.getElementById('%(id)s').checked = true :
-                                document.getElementById('%(id)s').checked = false;
+                    let tbtn = document.getElementById('%(id)s');
+                    tbtn.checked = (msg.value ? true : false);
             });
         });
     </script>
@@ -1116,9 +1116,6 @@ class ToggleButton(WidgetBase):
     def __init__(self, text=''):
         super(ToggleButton, self).__init__()
 
-        # self.widget = QtGui.QPushButton(text)
-        # self.widget.setCheckable(True)
-        # self.widget.clicked.connect(self._cb_redirect)
         self.widget = None
         self.value = False
         self.text = text
@@ -1164,14 +1161,22 @@ class RadioButton(WidgetBase):
                 document.getElementById('%(id)s').value)" %(checked)s
          value="true">%(text)s
     </span>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            // see python method set_state() in this widget
+            ginga_app.add_widget_custom_method('%(id)s', 'update_state',
+                function (elt, msg) {
+                    let rbtn = document.getElementById('%(id)s');
+                    rbtn.checked = (msg.value ? true : false);
+            });
+        });
+    </script>
     '''
     group_cnt = 0
 
     def __init__(self, text='', group=None):
         super(RadioButton, self).__init__()
 
-        # self.widget = QtGui.QRadioButton(text)
-        # self.widget.toggled.connect(self._cb_redirect)
         self.widget = None
         self.text = text
         self.value = False
@@ -1191,10 +1196,10 @@ class RadioButton(WidgetBase):
         self.make_callback('activated', event.value)
 
     def set_state(self, tf):
-        if self.value != tf:
-            # toggled only fires when the value is toggled
-            self.changed = True
-            self.value = tf
+        self.value = tf
+        if self._rendered:
+            app = self.get_app()
+            app.do_operation('update_state', id=self.id, value=self.value)
 
     def get_state(self):
         return self.value
@@ -2414,6 +2419,33 @@ class GridBox(ContainerBase):
                         cell.innerHTML = msg.value[1][j];
                     }
         });
+        // see python method resize_grid() in this widget
+        ginga_app.add_widget_custom_method('%(id)s', 'resize_grid',
+                function (elt, msg) {
+                    let tbl = document.getElementById("%(id)s");
+                    let rowsBy = msg.value[0];
+                    let colsBy = msg.value[1];
+                    let newRowSize = tbl.rows[0].cells.length + colsBy;
+                    // increase columns for existing rows
+                    if (colsBy > 0) {
+                        for (let row of tbl.rows) {
+                            for (let j = 0; j < colsBy; j++) {
+                                let cell = document.createElement('td');
+                                row.appendChild(cell);
+                            }
+                        }
+                    };
+                    if (rowsBy > 0) {
+                        for (let i = 0; i < rowsBy; i++) {
+                            let row = document.createElement('tr');
+                            for (let j = 0; j < newRowSize; j++) {
+                                let cell = document.createElement('td');
+                                row.appendChild(cell);
+                            }
+                            tbl.appendChild(row);
+                        }
+                    };
+        });
         // see python method update_cell() in this widget
         ginga_app.add_widget_custom_method('%(id)s', 'update_cell',
                 function (elt, msg) {
@@ -2445,8 +2477,16 @@ class GridBox(ContainerBase):
     def resize_grid(self, rows, columns):
         # TODO: this needs to manipulate self.tbl and self.children
         # if the size is being reduced
+        delta_rows = max(0, rows - self.num_rows)
+        delta_cols = max(0, columns - self.num_cols)
         self.num_rows = rows
         self.num_cols = columns
+
+        if delta_rows + delta_cols > 0:
+            if self._rendered:
+                app = self.get_app()
+                args = [delta_rows, delta_cols]
+                app.do_operation("resize_grid", id=self.id, value=args)
 
     def set_row_spacing(self, val):
         self.row_spacing = val
@@ -2474,8 +2514,12 @@ class GridBox(ContainerBase):
             app.do_operation("update_style", id=self.id, value=style)
 
     def add_widget(self, child, row, col, stretch=0):
-        self.num_rows = max(self.num_rows, row + 1)
-        self.num_cols = max(self.num_cols, col + 1)
+        # resize grid if necessary
+        num_rows = max(self.num_rows, row + 1)
+        num_cols = max(self.num_cols, col + 1)
+        if num_rows > self.num_rows or num_cols > self.num_cols:
+            self.resize_grid(num_rows, num_cols)
+
         key = (row, col)
         if key in self.tbl:
             # take care of case where we are overwriting a child
