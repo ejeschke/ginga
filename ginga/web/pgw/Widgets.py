@@ -193,7 +193,8 @@ class TextEntry(WidgetBase):
     html_template = '''
     <input id=%(id)s type="text" maxlength=%(size)d size=%(size)d name="%(id)s"
        class="%(classes)s" style="%(styles)s" %(disabled)s %(readonly)s
-       onkeyup="ginga_app.widget_handler('activate', '%(id)s', document.getElementById('%(id)s').value)"
+       onkeydown="if (event.key == 'Enter') {
+           ginga_app.widget_handler('activate', '%(id)s', document.getElementById('%(id)s').value) }"
        value="%(text)s">
        '''
 
