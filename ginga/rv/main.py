@@ -13,7 +13,6 @@ import os
 import logging
 import logging.handlers
 import threading
-import traceback
 
 # Local application imports
 from ginga.misc.Bunch import Bunch
@@ -177,9 +176,14 @@ class ReferenceViewer(object):
     This class exists solely to be able to customize the reference
     viewer startup.
     """
-    def __init__(self, layout=default_layout, plugins=plugins):
+    def __init__(self, layout=default_layout, plugins=plugins, appname='ginga',
+                 basedir=None, channels=None):
+        self.appname = appname
+        self.basedir = basedir
         self.layout = layout
-        self.channels = ['Image']
+        if channels is None:
+            channels = ['Image']
+        self.channels = channels
         self.default_plugins = plugins
         self.plugins = []
 
@@ -204,7 +208,8 @@ class ReferenceViewer(object):
                 self.add_plugin_spec(spec)
 
     def add_separately_distributed_plugins(self):
-        groups = ['ginga.rv.plugins']
+        groups = ['ginga.rv.plugins', 'ginga_plugins',
+                  '{}_plugins'.format(self.appname)]
         available_methods = []
 
         for group in groups:
@@ -305,28 +310,33 @@ class ReferenceViewer(object):
         `args` is a list of arguments to the viewer after parsing out
         options.  It should contain a list of files or URLs to load.
         """
+        logname = self.appname.lower().replace(' ', '_')
 
         # Create a logger
-        logger = log.get_logger(name='ginga', options=options)
+        logger = log.get_logger(name=logname, options=options)
 
         if options.basedir is not None:
-            paths.ginga_home = os.path.expanduser(options.basedir)
+            self.basedir = os.path.expanduser(options.basedir)
+        if self.basedir is not None:
+            paths.ginga_home = self.basedir
+        else:
+            self.basedir = paths.ginga_home
 
         # Get settings (preferences)
-        basedir = paths.ginga_home
-        if not os.path.exists(basedir):
+        if not os.path.exists(self.basedir):
             try:
-                os.mkdir(basedir)
+                os.mkdir(self.basedir)
             except OSError as e:
                 logger.warning(
-                    "Couldn't create ginga settings area (%s): %s" % (
-                        basedir, str(e)))
+                    "Couldn't create %s settings area (%s): %s" % (
+                        self.appname, self.basedir, str(e)))
                 logger.warning("Preferences will not be able to be saved")
 
         # Set up preferences
-        prefs = Settings.Preferences(basefolder=basedir, logger=logger)
+        prefs = Settings.Preferences(basefolder=self.basedir, logger=logger)
         settings = prefs.create_category('general')
-        settings.set_defaults(useMatplotlibColormaps=False,
+        settings.set_defaults(title=self.appname.capitalize(),
+                              useMatplotlibColormaps=False,
                               widgetSet='choose',
                               WCSpkg='choose', FITSpkg='choose',
                               suppress_fits_warnings=False,
@@ -344,35 +354,32 @@ class ReferenceViewer(object):
         sys.setrecursionlimit(settings.get('recursion_limit'))
 
         # So we can find our plugins
-        sys.path.insert(0, basedir)
+        sys.path.insert(0, self.basedir)
         package_home = os.path.split(sys.modules['ginga.version'].__file__)[0]
         child_dir = os.path.join(package_home, 'rv', 'plugins')
         sys.path.insert(0, child_dir)
-        plugin_dir = os.path.join(basedir, 'plugins')
+        plugin_dir = os.path.join(self.basedir, 'plugins')
         sys.path.insert(0, plugin_dir)
 
-        gc = os.path.join(basedir, "ginga_config.py")
-        have_ginga_config = os.path.exists(gc)
+        # Create the dynamic module manager
+        mm = ModuleManager.ModuleManager(logger)
+
+        # what is the dynamic config file to load
+        app_config = "{}_config".format(self.appname)
+        gc = os.path.join(self.basedir, f"{app_config}.py")
+        have_app_config = os.path.exists(gc)
 
         # User configuration, earliest possible intervention
-        if have_ginga_config:
+        if have_app_config:
             try:
-                import ginga_config
+                app_config = mm.load_module(app_config)
 
-                if hasattr(ginga_config, 'init_config'):
-                    ginga_config.init_config(self)
+                if hasattr(app_config, 'init_config'):
+                    app_config.init_config(self)
 
             except Exception as e:
-                try:
-                    (type, value, tb) = sys.exc_info()
-                    tb_str = "\n".join(traceback.format_tb(tb))
-
-                except Exception:
-                    tb_str = "Traceback information unavailable."
-
-                logger.error("Error processing Ginga config file: %s" % (
-                    str(e)))
-                logger.error("Traceback:\n%s" % (tb_str))
+                logger.error("Error processing %s config file: %s" % (
+                    self.appname, str(e)), exc_info=True)
 
         # Choose a toolkit
         if options.toolkit:
@@ -453,9 +460,6 @@ class ReferenceViewer(object):
             logger.warning(
                 "failed to set FITS package preference '{}': {}".format(fitspkg, e))
 
-        # Create the dynamic module manager
-        mm = ModuleManager.ModuleManager(logger)
-
         # Create and start thread pool
         ev_quit = threading.Event()
         thread_pool = Task.ThreadPool(options.numthreads, logger,
@@ -469,27 +473,19 @@ class ReferenceViewer(object):
         if options.opengl:
             settings.set(use_opengl=True)
 
-        layout_file = os.path.join(basedir, settings.get('layout_file',
-                                                         'layout'))
+        layout_file = os.path.join(self.basedir, settings.get('layout_file',
+                                                              'layout'))
         ginga_shell.set_layout(self.layout, layout_file=layout_file,
                                save_layout=settings.get('save_layout', True))
 
         # User configuration (custom star catalogs, etc.)
-        if have_ginga_config:
+        if have_app_config:
             try:
-                if hasattr(ginga_config, 'pre_gui_config'):
-                    ginga_config.pre_gui_config(ginga_shell)
+                if hasattr(app_config, 'pre_gui_config'):
+                    app_config.pre_gui_config(ginga_shell)
             except Exception as e:
-                try:
-                    (type, value, tb) = sys.exc_info()
-                    tb_str = "\n".join(traceback.format_tb(tb))
-
-                except Exception:
-                    tb_str = "Traceback information unavailable."
-
-                logger.error("Error importing Ginga config file: %s" % (
-                    str(e)))
-                logger.error("Traceback:\n%s" % (tb_str))
+                logger.error("Error importing %s config file: %s" % (
+                    self.appname, str(e)), exc_info=True)
 
         # Build desired layout
         ginga_shell.build_toplevel(ignore_saved_layout=options.norestore)
@@ -498,7 +494,7 @@ class ReferenceViewer(object):
         # default plugins to be that
         plugin_file = settings.get('plugin_file', None)
         if plugin_file is not None:
-            plugin_file = os.path.join(basedir, plugin_file)
+            plugin_file = os.path.join(self.basedir, plugin_file)
             if os.path.exists(plugin_file):
                 logger.info("Reading plugin file '%s'..." % (plugin_file))
                 try:
@@ -543,7 +539,7 @@ class ReferenceViewer(object):
             else:
                 plugin_name = long_plugin_name
                 pfx = None
-            menu_name = "%s [G]" % (plugin_name)
+            menu_name = f"{plugin_name} [G]"
             spec = Bunch(name=plugin_name, module=plugin_name,
                          ptype='global', tab=plugin_name,
                          menu=menu_name, category="Custom",
@@ -601,44 +597,33 @@ class ReferenceViewer(object):
             if not isinstance(channels, list):
                 channels = channels.split(',')
 
-        if len(channels) == 0:
-            # should provide at least one default channel?
-            channels = [settings.get('channel_prefix', "Image")]
+        if len(channels) > 0:
+            # populate the initial channel lineup
+            for item in channels:
+                if isinstance(item, str):
+                    chname, wsname = item, None
+                else:
+                    chname, wsname = item
+                ginga_shell.add_channel(chname, workspace=wsname)
 
-        # populate the initial channel lineup
-        for item in channels:
-            if isinstance(item, str):
-                chname, wsname = item, None
-            else:
-                chname, wsname = item
-            ginga_shell.add_channel(chname, workspace=wsname)
-
-        ginga_shell.change_channel(chname)
+            ginga_shell.change_channel(chname)
 
         # User configuration (custom star catalogs, etc.)
-        if have_ginga_config:
+        if have_app_config:
             try:
-                if hasattr(ginga_config, 'post_gui_config'):
-                    ginga_config.post_gui_config(ginga_shell)
+                if hasattr(app_config, 'post_gui_config'):
+                    app_config.post_gui_config(ginga_shell)
 
             except Exception as e:
-                try:
-                    (type, value, tb) = sys.exc_info()
-                    tb_str = "\n".join(traceback.format_tb(tb))
-
-                except Exception:
-                    tb_str = "Traceback information unavailable."
-
-                logger.error("Error processing Ginga config file: %s" % (
-                    str(e)))
-                logger.error("Traceback:\n%s" % (tb_str))
+                logger.error("Error processing %s config file: %s" % (
+                    self.appname, str(e)), exc_info=True)
 
         # Redirect warnings to logger
         for hdlr in logger.handlers:
             logging.getLogger('py.warnings').addHandler(hdlr)
 
         # Display banner the first time run, unless suppressed
-        show_banner = True
+        show_banner = (self.appname == 'ginga')
         try:
             show_banner = settings.get('showBanner')
 
@@ -666,23 +651,24 @@ class ReferenceViewer(object):
             else:
                 expanded_args.append(imgfile)
 
-        # Assume remaining arguments are fits files and load them.
-        if not options.separate_channels:
-            chname = channels[0]
-            ginga_shell.gui_do(ginga_shell.open_uris, expanded_args,
-                               chname=chname)
-        else:
-            i = 0
-            num_channels = len(channels)
-            for imgfile in expanded_args:
-                if i < num_channels:
-                    chname = channels[i]
-                    i = i + 1
-                else:
-                    channel = ginga_shell.add_channel_auto()
-                    chname = channel.name
-                ginga_shell.gui_do(ginga_shell.open_uris, [imgfile],
+        if len(channels) > 0:
+            # Assume remaining arguments are fits files and load them.
+            if not options.separate_channels:
+                chname = channels[0]
+                ginga_shell.gui_do(ginga_shell.open_uris, expanded_args,
                                    chname=chname)
+            else:
+                i = 0
+                num_channels = len(channels)
+                for imgfile in expanded_args:
+                    if i < num_channels:
+                        chname = channels[i]
+                        i = i + 1
+                    else:
+                        channel = ginga_shell.add_channel_auto()
+                        chname = channel.name
+                    ginga_shell.gui_do(ginga_shell.open_uris, [imgfile],
+                                       chname=chname)
 
         try:
             try:
@@ -707,7 +693,8 @@ class ReferenceViewer(object):
 
 def reference_viewer(sys_argv):
     """Create reference viewer from command line."""
-    viewer = ReferenceViewer(layout=default_layout)
+    viewer = ReferenceViewer(layout=default_layout, plugins=plugins,
+                             appname='ginga', basedir=None, channels=['Image'])
     viewer.add_default_plugins()
     viewer.add_separately_distributed_plugins()
 

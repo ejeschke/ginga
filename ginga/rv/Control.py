@@ -30,8 +30,8 @@ from ginga.modes import modeinfo
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager
 from ginga.gw import Widgets, Viewers, Desktop
-from ginga import toolkit
 from ginga.fonts import font_asst
+from ginga.util.paths import icondir as icon_dir
 
 # Version
 from ginga import __version__
@@ -48,21 +48,7 @@ except ImportError:
     pass
 
 
-#pluginconfpfx = 'plugins'
 pluginconfpfx = None
-
-package_home = os.path.split(sys.modules['ginga.version'].__file__)[0]
-
-# pick up plugins specific to our chosen toolkit
-tkname = toolkit.get_family()
-if tkname is not None:
-    # TODO: this relies on a naming convention for widget directories!
-    # TODO: I think this can be removed, since the widget specific
-    # plugin directories have been deleted
-    child_dir = os.path.join(package_home, tkname + 'w', 'plugins')
-    sys.path.insert(0, child_dir)
-
-icon_path = os.path.abspath(os.path.join(package_home, 'icons'))
 
 
 class ControlError(Exception):
@@ -87,7 +73,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Create general preferences
         self.prefs = preferences
         settings = self.prefs.create_category('general')
-        settings.add_defaults(fixedFont=None,
+        settings.add_defaults(title="Ginga",
+                              fixedFont=None,
                               serifFont=None,
                               sansFont=None,
                               channel_follows_focus=False,
@@ -176,7 +163,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # GUI initialization
         self.w = Bunch.Bunch()
-        self.iconpath = icon_path
+        self.iconpath = icon_dir
         self.main_wsname = None
         self._lastwsname = None
         self.ds = None
@@ -1666,7 +1653,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         for win in self.ds.toplevels:
             # add delete/destroy callbacks
             win.add_callback('close', self.quit)
-            win.set_title("Ginga")
+            win.set_title(self.settings.get('title', "Ginga"))
             root = win
         self.ds.add_callback('all-closed', self.quit)
 
