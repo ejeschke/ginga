@@ -21,7 +21,7 @@ from astropy import coordinates, units
 have_astroquery = False
 try:
     from astroquery.vo_conesearch import conesearch
-    from astroquery.vizier import Vizier          # EBR: add astroquery.vizier to use vizier catalogs
+    from astroquery.vizier import Vizier          # added astroquery.vizier to use vizier catalogs
 
     have_astroquery = True
 except ImportError:
@@ -32,7 +32,7 @@ default_image_sources = []
 default_catalog_sources = []
 default_name_sources = []
 
-# EBR: limit the number of rows in the vizier query to 5000
+# limit the number of rows in the vizier query to 5000
 Vizier.ROW_LIMIT = 5000
 
 
@@ -89,8 +89,8 @@ class AstroqueryCatalogServer(object):
         self.short_name = key
         self.mapping = mapping
         self.querymod = querymod
-        self.cat_columns = cat_columns                 # EBR: add for usage with the vizier catalog
-        self.cat_column_filters = cat_column_filters   # EBR: add for usage with the vizier catalog
+        self.cat_columns = cat_columns                 # added for usage with the vizier catalog
+        self.cat_column_filters = cat_column_filters   # added for usage with the vizier catalog
 
         if description is None:
             description = full_name
@@ -235,7 +235,7 @@ class AstroqueryVOCatalogServer(AstroqueryCatalogServer):
         return results
 
 
-# EBR: add vizier catalog class
+# add vizier catalog class
 class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
     """For queries using the `astroquery.vizier` function."""
 
@@ -257,7 +257,7 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
                   description="Radius from center in arcmin"),
         ]
 
-    # EBR add output colums and filters for vizier catalog
+    # add output colums and filters for vizier catalog
     def __init__(self, logger, full_name, key, mapping, cat_columns=[], cat_column_filters={}, description=None):
         super(AstroqueryVizierCatalogServer, self).__init__(logger, full_name,
                                                             key, None, mapping,

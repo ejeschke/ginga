@@ -893,7 +893,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         color = self.table.get_color(obj)
         point = self.dc.Point(x, y, radius, color=color)
         point.editable = False
-        #EBR: Set the radius to 0 in case the magnitude is NaN, hence only plotting the point and an invisible circle.
+        # Set the radius to 0 in case the magnitude is NaN, hence only plotting the point and an invisible circle.
         if math.isnan(mag):
             radius = 0
 
@@ -1058,7 +1058,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def params_changed_cb(self, paramset):
         paramset.widgets_to_params()
 
-    # EBR: add if/elif to set parameter for vizier radius or box query
+    # add if/elif to set parameter for vizier radius or box query
     def set_drawtype_cb(self, tf, drawtype):
         if tf:
             self.drawtype = drawtype
@@ -1138,7 +1138,7 @@ class CatalogListing(object):
         else:
             point = 1.0
 
-        #EBR: added for mags = NaN in catalog
+        # added for mags = NaN in catalog
         if math.isnan(mag):
             point = 1.0
 
@@ -1235,7 +1235,7 @@ class CatalogListing(object):
         self.cbar.set_imap(im)
         self.replot_stars()
 
-    # EBR: handles now also color indices and deals with NaN magnitudes
+    # handles now also color indices and deals with NaN magnitudes
     def set_minmax(self, i, length):
         subset = self.get_subset_from_starlist(i, i + length)
         values = list(map(lambda star: float(star[self.mag_field]),
