@@ -283,7 +283,9 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
         v = Vizier(columns=columns, column_filters=column_filters)
         results = Vizier.query_region(center, radius, catalog=catalog)
 
-        return results[0]
+        if len(results) > 0:
+            return results[0]
+        return None
 
     def _search_box(self, center, width, height, catalog, columns, column_filters):
         # override this method to pass some special kwargs to the search
@@ -296,7 +298,9 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
         v.ROW_LIMIT = 500
         results = v.query_region(center, width=width, height=height, catalog=catalog)
 
-        return results[0]
+        if len(results) > 0:
+            return results[0]
+        return None
 
     def search(self, **params):
         """
@@ -323,26 +327,30 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
         time_start = time.time()
         with warnings.catch_warnings():  # Ignore VO warnings
             warnings.simplefilter('ignore')
-            if params['radius'] == 1:
-                # Convert to degrees for search radius
-                radius_deg = float(params['r']) / 60.0
-                # radius_deg = float(params['r'])
-                results = self._search_radius(c, radius_deg * units.degree,
-                                              self.full_name, columns=self.cat_columns, column_filters=self.cat_column_filters)
-            elif params['box'] == 1:
-                # Convert to degrees for search width
-                width_deg = float(params['width']) / 60.0
-                # Convert to degrees for search height
-                height_deg = float(params['height']) / 60.0
-                results = self._search_box(c, width_deg * units.degree, height_deg * units.degree,
-                                           self.full_name, columns=self.cat_columns, column_filters=self.cat_column_filters)
-            else:
-                #attempt to use the radius, this shouldn't happen
-                # Convert to degrees for search radius
-                radius_deg = float(params['r']) / 60.0
-                # radius_deg = float(params['r'])
-                results = self._search_radius(c, radius_deg * units.degree,
+            try:
+                if params['radius'] == 1:
+                    # Convert to degrees for search radius
+                    radius_deg = float(params['r']) / 60.0
+                    # radius_deg = float(params['r'])
+                    results = self._search_radius(c, radius_deg * units.degree,
+                                                  self.full_name, columns=self.cat_columns, column_filters=self.cat_column_filters)
+                elif params['box'] == 1:
+                    # Convert to degrees for search width
+                    width_deg = float(params['width']) / 60.0
+                    # Convert to degrees for search height
+                    height_deg = float(params['height']) / 60.0
+                    results = self._search_box(c, width_deg * units.degree, height_deg * units.degree,
+                                               self.full_name, columns=self.cat_columns, column_filters=self.cat_column_filters)
+                else:
+                    #attempt to use the radius, this shouldn't happen
+                    # Convert to degrees for search radius
+                    radius_deg = float(params['r']) / 60.0
+                    # radius_deg = float(params['r'])
+                    results = self._search_radius(c, radius_deg * units.degree,
                                               self.full_name)
+            except Exception as e:
+                self.logger.error(f"vizier query raised an exception: {e}", exc_info=True)
+                results = None
 
         time_elapsed = time.time() - time_start
         if results is None:
