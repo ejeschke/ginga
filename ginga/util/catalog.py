@@ -347,7 +347,7 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
                     radius_deg = float(params['r']) / 60.0
                     # radius_deg = float(params['r'])
                     results = self._search_radius(c, radius_deg * units.degree,
-                                              self.full_name)
+                                                  self.full_name)
             except Exception as e:
                 self.logger.error(f"vizier query raised an exception: {e}", exc_info=True)
                 results = None
