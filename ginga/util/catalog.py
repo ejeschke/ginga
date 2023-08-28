@@ -21,6 +21,7 @@ from astropy import coordinates, units
 have_astroquery = False
 try:
     from astroquery.vo_conesearch import conesearch
+    from astroquery.vizier import Vizier          # added astroquery.vizier to use vizier catalogs
 
     have_astroquery = True
 except ImportError:
@@ -30,6 +31,9 @@ except ImportError:
 default_image_sources = []
 default_catalog_sources = []
 default_name_sources = []
+
+# limit the number of rows in the vizier query to 5000
+Vizier.ROW_LIMIT = 5000
 
 
 class SourceError(Exception):
@@ -75,7 +79,7 @@ class AstroqueryCatalogServer(object):
         ]
 
     def __init__(self, logger, full_name, key, querymod, mapping,
-                 description=None):
+                 description=None, cat_columns=None, cat_column_filters=None):
         super(AstroqueryCatalogServer, self).__init__()
         if not have_astroquery:
             raise ImportError("'astroquery' not found, please install it")
@@ -85,6 +89,9 @@ class AstroqueryCatalogServer(object):
         self.short_name = key
         self.mapping = mapping
         self.querymod = querymod
+        self.cat_columns = cat_columns                 # added for usage with the vizier catalog
+        self.cat_column_filters = cat_column_filters   # added for usage with the vizier catalog
+
         if description is None:
             description = full_name
         self.description = description
@@ -165,7 +172,6 @@ class AstroqueryCatalogServer(object):
         mags = []
         ext = {}
         fields = results.colnames
-        #print("fields are", fields)
         for name in fields:
             if name == self.mapping['id']:
                 ext['id'] = name
@@ -227,6 +233,177 @@ class AstroqueryVOCatalogServer(AstroqueryCatalogServer):
                                         return_astropy_table=True,
                                         use_names_over_ids=False)
         return results
+
+
+# add vizier catalog class
+class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
+    """For queries using the `astroquery.vizier` function."""
+
+    kind = 'astroquery.vizier'
+
+    @classmethod
+    def get_params_metadata(cls):
+        from ginga.misc.ParamSet import Param
+        return [
+            Param(name='ra', type=str, widget='entry',
+                  description="Right ascension component of center"),
+            Param(name='dec', type=str, widget='entry',
+                  description="Declination component of center"),
+            Param(name='width', type=float, default=1, widget='entry',
+                  description="Width of box in degrees"),
+            Param(name='height', type=float, default=1, widget='entry',
+                  description="Height of box in degrees"),
+            Param(name='r', type=float, default=5.0, widget='entry',
+                  description="Radius from center in arcmin"),
+        ]
+
+    # add output colums and filters for vizier catalog
+    def __init__(self, logger, full_name, key, mapping, cat_columns=[], cat_column_filters={}, description=None):
+        super(AstroqueryVizierCatalogServer, self).__init__(logger, full_name,
+                                                            key, None, mapping,
+                                                            description=description, cat_columns=cat_columns, cat_column_filters=cat_column_filters)
+
+    def set_cat_column_filters(self, cat_filter):
+        self.cat_column_filters = cat_filter
+
+    def set_cat_columns(self, cat_columns):
+        self.cat_columns = cat_columns
+
+    def getParams(self):
+        return self.get_params_metadata()
+
+    def _search_radius(self, center, radius, catalog, columns, column_filters):
+        # override this method to pass some special kwargs to the search
+
+        if columns:
+            columns.insert(0, self.mapping['id'])
+            columns.insert(1, self.mapping['ra'])
+            columns.insert(2, self.mapping['dec'])
+
+        v = Vizier(columns=columns, column_filters=column_filters)
+        results = Vizier.query_region(center, radius, catalog=catalog)
+
+        if len(results) > 0:
+            return results[0]
+        return None
+
+    def _search_box(self, center, width, height, catalog, columns, column_filters):
+        # override this method to pass some special kwargs to the search
+        if columns:
+            columns.insert(0, self.mapping['id'])
+            columns.insert(1, self.mapping['ra'])
+            columns.insert(2, self.mapping['dec'])
+
+        v = Vizier(columns=columns, column_filters=column_filters)
+        v.ROW_LIMIT = 500
+        results = v.query_region(center, width=width, height=height, catalog=catalog)
+
+        if len(results) > 0:
+            return results[0]
+        return None
+
+    def search(self, **params):
+        """
+        For compatibility with generic star catalog search.
+        """
+
+        self.logger.debug("search params=%s" % (str(params)))
+        ra, dec = params['ra'], params['dec']
+        if not (':' in ra):
+            # Assume RA and DEC are in degrees
+            ra_deg = float(ra)
+            dec_deg = float(dec)
+        else:
+            # Assume RA and DEC are in standard string notation
+            ra_deg = wcs.hmsStrToDeg(ra)
+            dec_deg = wcs.dmsStrToDeg(dec)
+
+        # Note requires astropy 0.3.x+
+        c = coordinates.SkyCoord(ra_deg * units.degree,
+                                 dec_deg * units.degree,
+                                 frame='icrs')
+
+        self.logger.info("Querying catalog: %s" % (self.full_name))
+        time_start = time.time()
+        with warnings.catch_warnings():  # Ignore VO warnings
+            warnings.simplefilter('ignore')
+            try:
+                if params['radius'] == 1:
+                    # Convert to degrees for search radius
+                    radius_deg = float(params['r']) / 60.0
+                    # radius_deg = float(params['r'])
+                    results = self._search_radius(c, radius_deg * units.degree,
+                                                  self.full_name, columns=self.cat_columns, column_filters=self.cat_column_filters)
+                elif params['box'] == 1:
+                    # Convert to degrees for search width
+                    width_deg = float(params['width']) / 60.0
+                    # Convert to degrees for search height
+                    height_deg = float(params['height']) / 60.0
+                    results = self._search_box(c, width_deg * units.degree, height_deg * units.degree,
+                                               self.full_name, columns=self.cat_columns, column_filters=self.cat_column_filters)
+                else:
+                    #attempt to use the radius, this shouldn't happen
+                    # Convert to degrees for search radius
+                    radius_deg = float(params['r']) / 60.0
+                    # radius_deg = float(params['r'])
+                    results = self._search_radius(c, radius_deg * units.degree,
+                                                  self.full_name)
+            except Exception as e:
+                self.logger.error(f"vizier query raised an exception: {e}", exc_info=True)
+                results = None
+
+        time_elapsed = time.time() - time_start
+        if results is None:
+            self.logger.info("Null result in %.2f sec" % (
+                time_elapsed))
+            raise SourceError("Null result from query")
+        else:
+            numsources = len(results)
+            self.logger.info("Found %d sources in %.2f sec" % (
+                numsources, time_elapsed))
+
+        # Scan the returned fields to find ones we need to extract
+        # particulars from (ra, dec, id, magnitude)
+        mags = []
+        ext = {}        # {'id': 'recno', 'ra': 'RAJ2000', 'dec': 'DEJ2000'}
+        fields = results.colnames
+        for name in fields:
+            if name == self.mapping['id']:
+                ext['id'] = name
+            elif name == self.mapping['ra']:
+                ext['ra'] = name
+            elif name == self.mapping['dec']:
+                ext['dec'] = name
+            if name in self.mapping.get('mag', []):
+                mags.append(name)
+
+        self.logger.debug("possible magnitude fields: %s" % str(mags))
+        if len(mags) > 0:
+            magfield = mags[0]
+        else:
+            magfield = None
+
+        # prepare the result list
+        starlist = []
+        for i in range(numsources):
+            source = dict(zip(fields, results[i]))
+            starlist.append(self.toStar(source, ext, magfield))
+
+        # metadata about the list
+        columns = [('Name', 'name'),
+                   ('RA', 'ra'),
+                   ('DEC', 'dec'),
+                   ]
+        # Append extra columns returned by search to table header
+        cols = list(fields)
+        cols.remove(ext['id'])
+        columns.extend(zip(cols, cols))
+
+        # which column is the likely one to color source circles
+        colorCode = 'Mag'
+
+        info = Bunch.Bunch(columns=columns, color=colorCode)
+        return starlist, info
 
 
 class AstroqueryImageServer(object):
@@ -551,7 +728,6 @@ class CatalogServer(URLServer):
         offset = 0
         while offset < len(lines):
             line = lines[offset].strip()
-            # print(line)
             offset += 1
             if line.startswith('-'):
                 break
@@ -562,7 +738,6 @@ class CatalogServer(URLServer):
 
         for line in lines[offset:]:
             line = line.strip()
-            # print(line)
             if (len(line) == 0) or line.startswith('#'):
                 continue
             elts = line.split()
@@ -575,7 +750,6 @@ class CatalogServer(URLServer):
                 ra = elts[self.index['ra']]
                 dec = elts[self.index['dec']]
                 mag = float(elts[self.index['mag']])
-                # print(name)
 
                 if (self.format == 'deg') or not (':' in ra):
                     # Assume RA and DEC are in degrees
@@ -699,6 +873,10 @@ if have_astroquery:
          'type': 'astroquery.vo_conesearch',
          'mapping': {'id': 'htmID', 'ra': 'ra', 'dec': 'dec',
                      'mag': ['h_m', 'j_m', 'k_m']}},
+        {'shortname': "APASS DR9",
+         'fullname': "II/336/apass9",
+         'type': 'astroquery.vizier',
+         'mapping': {'id': 'recno', 'ra': 'RAJ2000', 'dec': 'DEJ2000', 'mag': ['Vmag', 'B-V', 'Bmag', 'g\'mag', 'r\'mag', 'i\'mag']}},
     ])
 
     default_image_sources.extend([

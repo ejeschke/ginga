@@ -121,7 +121,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
 
         self.catalog_server_options = []
         self.catalog_server_params = None
-        self.catalog_params = Bunch.Bunch(dict(ra='', dec='', radius=1))
+        self.catalog_params = Bunch.Bunch(dict(ra='', dec='', radius=1, width=1, height=1))
 
         self.name_server_options = []
 
@@ -180,6 +180,19 @@ class Catalogs(GingaPlugin.LocalPlugin):
                                                           d['source'],
                                                           d['mapping'],
                                                           description=d['fullname'])
+            elif typ == 'astroquery.vizier':
+                if catalog.have_astroquery:
+                    obj = catalog.AstroqueryVizierCatalogServer(self.logger,
+                                                                d['fullname'],
+                                                                d['shortname'],
+                                                                d['mapping'],
+                                                                description=d['fullname'])
+
+                    if 'cat_column_filter' in d:
+                        obj.set_cat_column_filters(d['cat_column_filters'])
+
+                    if 'cat_columns' in d:
+                        obj.set_cat_columns(d['cat_columns'])
             else:
                 self.logger.debug("Unknown type ({}) specified for catalog source--skipping".format(typ))
 
@@ -873,15 +886,19 @@ class Catalogs(GingaPlugin.LocalPlugin):
         if not image:
             image = self.fitsimage.get_image()
         x, y = image.radectopix(obj['ra_deg'], obj['dec_deg'])
+
+        mag = obj[self.table.mag_field]
         # TODO: auto-pick a decent radius
         radius = self.settings.get('click_radius', 10)
         color = self.table.get_color(obj)
+        point = self.dc.Point(x, y, radius, color=color)
+        point.editable = False
+        # Set the radius to 0 in case the magnitude is NaN, hence only plotting the point and an invisible circle.
+        if math.isnan(mag):
+            radius = 0
 
         circle = self.dc.Circle(x, y, radius, color=color)
         circle.editable = False
-        point = self.dc.Point(x, y, radius, color=color)
-        point.editable = False
-
         ## What is this from?
         if 'pick' in obj:
             # Some objects returned from the star catalog are marked
@@ -1041,11 +1058,16 @@ class Catalogs(GingaPlugin.LocalPlugin):
     def params_changed_cb(self, paramset):
         paramset.widgets_to_params()
 
+    # add if/elif to set parameter for vizier radius or box query
     def set_drawtype_cb(self, tf, drawtype):
         if tf:
             self.drawtype = drawtype
             self.canvas.set_drawtype(self.drawtype, color='cyan',
                                      linestyle='dash')
+            if drawtype == 'circle':
+                self.catalog_params.update(dict(box=0, radius=1))
+            elif drawtype == 'rectangle':
+                self.catalog_params.update(dict(box=1, radius=0))
 
     def __str__(self):
         return 'catalogs'
@@ -1114,6 +1136,10 @@ class CatalogListing(object):
         if rng != 0.0:
             point = float(mag - self.mag_min) / rng
         else:
+            point = 1.0
+
+        # added for mags = NaN in catalog
+        if math.isnan(mag):
             point = 1.0
 
         # sanity check: clip to 0-1 range
@@ -1209,13 +1235,18 @@ class CatalogListing(object):
         self.cbar.set_imap(im)
         self.replot_stars()
 
+    # handles now also color indices and deals with NaN magnitudes
     def set_minmax(self, i, length):
         subset = self.get_subset_from_starlist(i, i + length)
         values = list(map(lambda star: float(star[self.mag_field]),
                           subset))
-        if len(values) > 0:
-            self.mag_max = max(values)
-            self.mag_min = min(values)
+
+        values_without_nan = [x for x in values if math.isnan(x) is False]
+
+        if len(values_without_nan) > 0:
+            self.mag_max = max(values_without_nan)
+            self.mag_min = min(values_without_nan)
+
             self.cbar.set_range(self.mag_min, self.mag_max)
 
     def _set_field(self, name):

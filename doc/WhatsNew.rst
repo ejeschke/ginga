@@ -10,6 +10,8 @@ Ver 5.0.0 (unreleased)
   - support pillow v10.0
   - now supports linewidth attribute
 
+- Add support for VizieR catalog sources
+
 Ver 4.1.0 (2022-06-30)
 ======================
 - change implementation of splash banner to a pop-up modal dialog
