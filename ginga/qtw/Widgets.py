@@ -2117,7 +2117,7 @@ class Application(Callback.Callbacks):
         ydpi = screen.physicalDotsPerInchY()
         self.screen_res = max(xdpi, ydpi)
 
-        for name in ('shutdown', ):
+        for name in ['close', 'shutdown']:
             self.enable_callback(name)
 
     def get_screen_size(self):
@@ -2159,7 +2159,20 @@ class Application(Callback.Callbacks):
     def mainloop(self):
         self._qtapp.exec()
 
+    def close(self):
+        """Called when someone is asking the application to close.
+        Can register for this callback if you want an application-wide
+        event to confirm closure.
+        """
+        self.make_callback('close')
+
     def quit(self):
+        """Called when someone is forcibly quitting the application.
+        Can register for this callback if you want an application-wide
+        event to clean up before shutdown.
+        """
+        self.make_callback('shutdown')
+
         self._qtapp.quit()
 
 

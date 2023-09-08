@@ -86,6 +86,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                               save_primary_header=True,
                               inherit_primary_header=False,
                               cursor_interval=0.050,
+                              confirm_shutdown=True,
                               download_folder=None,
                               save_layout=False,
                               channel_prefix="Image")
@@ -1650,9 +1651,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # TEMP: FIX ME!
         self.gpmon.ds = self.ds
 
+        self.add_callback('close', self.close_cb)
+        self.add_callback('shutdown', self.shutdown_cb)
         for win in self.ds.toplevels:
             # add delete/destroy callbacks
-            win.add_callback('close', self.quit)
+            win.add_callback('close', self.window_close)
             win.set_title(self.settings.get('title', "Ginga"))
             root = win
         self.ds.add_callback('all-closed', self.quit)
@@ -1717,7 +1720,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         filemenu.add_separator()
 
         item = filemenu.add_name("Quit")
-        item.add_callback('activated', lambda *args: self.window_close())
+        item.add_callback('activated', self.window_close)
 
         # create a Channel pulldown menu, and add it to the menu bar
         chmenu = menubar.add_name("Channel")
@@ -2379,12 +2382,36 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     # CALLBACKS
     ####################################################
 
-    def window_close(self, *args):
+    def window_close(self, w):
         """Quit the application.
         """
+        # forces processing of close_cb
+        self.close()
+
+    def close_cb(self, app):
+        if not self.settings.get('confirm_shutdown', True):
+            self.quit()
+
+        # confirm close with a dialog here
+        q_quit = Widgets.Dialog(title="Confirm Quit", modal=True,
+                                buttons=[("Cancel", False), ("Confirm", True)])
+        # necessary so it doesn't get garbage collected right away
+        self.w.quit_dialog = q_quit
+        vbox = q_quit.get_content_area()
+        vbox.set_margins(4, 4, 4, 4)
+        vbox.add_widget(Widgets.Label("Do you really want to quit?"))
+        q_quit.add_callback('activated', self._confirm_quit_cb)
+        q_quit.show()
+
+    def _confirm_quit_cb(self, w, tf):
+        self.w.quit_dialog.delete()
+        self.w.quit_dialog = None
+        if not tf:
+            return
+
         self.quit()
 
-    def quit(self, *args):
+    def shutdown_cb(self, app):
         """Quit the application.
         """
         self.logger.info("Attempting to shut down the application...")
