@@ -953,7 +953,11 @@ class TreeView(WidgetBase):
         self.shadow = {}
 
     def clear_selection(self):
-        self.widget.clearSelection()
+        self.widget.blockSignals(True)
+        try:
+            self.widget.clearSelection()
+        finally:
+            self.widget.blockSignals(False)
 
     def _path_to_item(self, path):
         s = self.shadow
@@ -964,7 +968,11 @@ class TreeView(WidgetBase):
 
     def select_path(self, path, state=True):
         item = self._path_to_item(path)
-        item.setSelected(state)
+        self.widget.blockSignals(True)
+        try:
+            item.setSelected(state)
+        finally:
+            self.widget.blockSignals(False)
 
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)

@@ -11,6 +11,8 @@ Ver 5.0.0 (unreleased)
   - now supports linewidth attribute
 
 - Add support for VizieR catalog sources
+- Fixed an issue with programatically setting selections in TreeView
+  (qt backend)
 
 Ver 4.1.0 (2022-06-30)
 ======================
