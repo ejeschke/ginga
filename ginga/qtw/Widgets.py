@@ -2117,7 +2117,7 @@ class Application(Callback.Callbacks):
         ydpi = screen.physicalDotsPerInchY()
         self.screen_res = max(xdpi, ydpi)
 
-        for name in ['close', 'shutdown']:
+        for name in ('close', 'shutdown'):
             self.enable_callback(name)
 
     def get_screen_size(self):

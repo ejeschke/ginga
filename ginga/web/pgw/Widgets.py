@@ -3312,7 +3312,7 @@ class Application(Callback.Callbacks):
         self.caller_id = 0
         self.callers = {}
 
-        for name in ['close', 'shutdown']:
+        for name in ('close', 'shutdown'):
             self.enable_callback(name)
 
     def get_screen_size(self):

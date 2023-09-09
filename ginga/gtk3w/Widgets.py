@@ -2375,7 +2375,7 @@ class Application(Callback.Callbacks):
         GObject.threads_init()
         # self._time_save = time.time()
 
-        for name in ['close', 'shutdown']:
+        for name in ('close', 'shutdown'):
             self.enable_callback(name)
 
         # Set up Gtk style
