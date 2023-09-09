@@ -13,6 +13,8 @@ Ver 5.0.0 (unreleased)
 - Add support for VizieR catalog sources
 - Fixed an issue with programatically setting selections in TreeView
   (qt backend)
+- Added a quit confirmation dialog to the reference viewer
+  (can be overridden with a setting in general.cfg)
 
 Ver 4.1.0 (2022-06-30)
 ======================

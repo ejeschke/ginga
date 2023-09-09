@@ -2375,7 +2375,7 @@ class Application(Callback.Callbacks):
         GObject.threads_init()
         # self._time_save = time.time()
 
-        for name in ('shutdown', ):
+        for name in ('close', 'shutdown'):
             self.enable_callback(name)
 
         # Set up Gtk style
@@ -2435,7 +2435,20 @@ class Application(Callback.Callbacks):
     def mainloop(self):
         Gtk.main()
 
+    def close(self):
+        """Called when someone is asking the application to close.
+        Can register for this callback if you want an application-wide
+        event to confirm closure.
+        """
+        self.make_callback('close')
+
     def quit(self):
+        """Called when someone is forcibly quitting the application.
+        Can register for this callback if you want an application-wide
+        event to clean up before shutdown.
+        """
+        self.make_callback('shutdown')
+
         Gtk.main_quit()
 
 
