@@ -24,6 +24,8 @@ try:
     from astroquery.vizier import Vizier          # added astroquery.vizier to use vizier catalogs
 
     have_astroquery = True
+    # limit the number of rows in the vizier query to 5000
+    Vizier.ROW_LIMIT = 5000
 except ImportError:
     pass
 
@@ -31,9 +33,6 @@ except ImportError:
 default_image_sources = []
 default_catalog_sources = []
 default_name_sources = []
-
-# limit the number of rows in the vizier query to 5000
-Vizier.ROW_LIMIT = 5000
 
 
 class SourceError(Exception):
