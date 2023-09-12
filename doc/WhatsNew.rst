@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 4.1.1 (unreleased)
+Ver 4.1.1 (2023-09-11)
 ======================
 - Fixed a bug with the remove() method in GridBox widget
 - Fix for pillow backend for pillow >= 10.0
