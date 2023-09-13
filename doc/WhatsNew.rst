@@ -16,6 +16,7 @@ Ver 5.0.0 (unreleased)
 - Added a quit confirmation dialog to the reference viewer
   (can be overridden with a setting in general.cfg)
 - Fix for mouse scrolling in histogram plot via Histogram plugin
+- Fix for ScreenShot plugin with pyside6, qt6 backends
 
 Ver 4.1.0 (2022-06-30)
 ======================
