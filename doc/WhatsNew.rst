@@ -2,6 +2,11 @@
 What's New
 ++++++++++
 
+Ver 4.1.2 (unreleased)
+======================
+- Fix for building documentation (changes at RTD)
+- Fix for mouse scrolling in histogram plot via Histogram plugin
+
 Ver 4.1.1 (2023-09-11)
 ======================
 - Fixed a bug with the remove() method in GridBox widget

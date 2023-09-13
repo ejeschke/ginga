@@ -594,11 +594,12 @@ class Histogram(GingaPlugin.LocalPlugin):
     def adjust_cuts_scroll(self, plot, event):
         """Adjust the width of the histogram by scrolling.
         """
-        bm = self.fitsimage.get_bindings()
+        bd = self.fitsimage.get_bindings()
+        mode = bd.get_mode_obj('cuts')
         pct = -self.scroll_pct
         if event.step > 0:
             pct = -pct
-        bm.cut_pct(self.fitsimage, pct)
+        mode.cut_pct(self.fitsimage, pct)
 
     def cutset_ext_cb(self, setting, value, fitsimage):
         if not self.gui_up:
