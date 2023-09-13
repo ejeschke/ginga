@@ -318,7 +318,11 @@ class Label(WidgetBase):
             menu_w = menu.get_widget()
 
             def on_context_menu(point):
-                menu_w.exec(lbl.mapToGlobal(point))
+                if hasattr(menu_w, 'exec_'):
+                    # PySide2
+                    menu_w.exec_(lbl.mapToGlobal(point))
+                else:
+                    menu_w.exec(lbl.mapToGlobal(point))
 
             lbl.customContextMenuRequested.connect(on_context_menu)
 
@@ -699,7 +703,11 @@ class Image(WidgetBase):
             menu_w = menu.get_widget()
 
             def on_context_menu(point):
-                menu_w.exec(lbl.mapToGlobal(point))
+                if hasattr(menu_w, 'exec_'):
+                    # PySide2
+                    menu_w.exec_(lbl.mapToGlobal(point))
+                else:
+                    menu_w.exec(lbl.mapToGlobal(point))
 
             lbl.customContextMenuRequested.connect(on_context_menu)
 
@@ -1847,11 +1855,18 @@ class Menu(ContainerBase):
         if widget is not None:
             w = widget.get_widget()
             if w.isEnabled():
-                # self.widget.popup(w.mapToGlobal(QtCore.QPoint(0, 0)))
-                self.widget.exec(w.mapToGlobal(QtCore.QPoint(0, 0)))
+                if hasattr(self.widget, 'exec_'):
+                    # PySide2
+                    self.widget.exec_(w.mapToGlobal(QtCore.QPoint(0, 0)))
+                else:
+                    self.widget.exec(w.mapToGlobal(QtCore.QPoint(0, 0)))
         else:
             if self.widget.isEnabled():
-                self.widget.exec(QCursor.pos())
+                if hasattr(self.widget, 'exec_'):
+                    # PySide2
+                    self.widget.exec_(QCursor.pos())
+                else:
+                    self.widget.exec(QCursor.pos())
 
     def get_menu(self, name):
         return self.menus[name]
