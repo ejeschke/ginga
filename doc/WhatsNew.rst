@@ -6,6 +6,7 @@ Ver 4.1.2 (unreleased)
 ======================
 - Fix for building documentation (changes at RTD)
 - Fix for mouse scrolling in histogram plot via Histogram plugin
+- Fix for ScreenShot plugin with pyside6, qt6 backends 
 
 Ver 4.1.1 (2023-09-11)
 ======================

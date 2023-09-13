@@ -243,11 +243,16 @@ class CanvasRenderer(render.StandardPipelineRenderer):
         width, height = qimg.width(), qimg.height()
 
         if hasattr(qimg, 'bits'):
-            # PyQt
+            # PyQt and newer PySide
             ptr = qimg.bits()
-            ptr.setsize(qimg.byteCount())
+            if hasattr(ptr, 'setsize'):
+                if hasattr(qimg, 'byteCount'):
+                    # Qt 5?
+                    ptr.setsize(qimg.byteCount())
+                else:
+                    ptr.setsize(qimg.sizeInBytes())
         else:
-            # PySide
+            # older PySide
             ptr = qimg.constBits()
 
         arr = np.array(ptr).reshape(height, width, 4)
