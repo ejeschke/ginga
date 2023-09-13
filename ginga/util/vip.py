@@ -161,7 +161,7 @@ class ViewerImageProxy:
         """
         val = self.get_data_xy(pt[0], pt[1])
         if val is None:
-            return np.NaN
+            return np.nan
         return val
 
     ## def extend_view(self, image, view):
@@ -185,7 +185,7 @@ class ViewerImageProxy:
     # ----- for compatibility with BaseImage objects -----
 
     def cutout_data(self, x1, y1, x2, y2, xstep=1, ystep=1, z=0,
-                    astype=float, fill_value=np.NaN):
+                    astype=float, fill_value=np.nan):
         """Cut out data area based on rectangular coordinates.
 
         Parameters
@@ -225,7 +225,7 @@ class ViewerImageProxy:
         if astype is None:
             astype = float
         if fill_value is None:
-            fill_value = np.NaN
+            fill_value = np.nan
 
         # coerce to int values, just in case
         x1, y1, x2, y2 = trcalc.sort_xy(x1, y1, x2, y2)

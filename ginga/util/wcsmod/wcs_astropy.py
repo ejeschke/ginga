@@ -76,7 +76,7 @@ class AstropyWCS(common.BaseWCS):
             origin = 0
         else:
             origin = 1
-        pixcrd = np.array([idxs], np.float_)
+        pixcrd = np.array([idxs], np.float64)
         try:
             sky = self.wcs.all_pix2world(pixcrd, origin)
             return float(sky[0, 2])
@@ -92,7 +92,7 @@ class AstropyWCS(common.BaseWCS):
             origin = 0
         else:
             origin = 1
-        pixcrd = np.array([idxs], np.float_)
+        pixcrd = np.array([idxs], np.float64)
         try:
             # sky = self.wcs.wcs_pix2sky(pixcrd, origin)
             # sky = self.wcs.all_pix2sky(pixcrd, origin)
@@ -118,7 +118,7 @@ class AstropyWCS(common.BaseWCS):
         args = [ra_deg, dec_deg]
         if naxispath:
             args += [0] * len(naxispath)
-        skycrd = np.array([args], np.float_)
+        skycrd = np.array([args], np.float64)
 
         try:
             pix = self.wcs.all_world2pix(skycrd, origin, maxiter=20,
