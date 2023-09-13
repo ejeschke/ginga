@@ -191,8 +191,8 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         x1, y1, x2, y2 = self.get_coords()
 
         contains = np.logical_and(
-            np.logical_and(x1 <= x_arr, x_arr <= x2),
-            np.logical_and(y1 <= y_arr, y_arr <= y2))
+            np.logical_and(x1 <= x_arr, x_arr < x2),
+            np.logical_and(y1 <= y_arr, y_arr < y2))
         return contains
 
     def rotate(self, theta, xoff=0, yoff=0):
