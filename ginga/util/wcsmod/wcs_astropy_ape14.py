@@ -89,7 +89,7 @@ class AstropyWCS(common.BaseWCS):
 
     def spectral_coord(self, idxs, coords='data'):
         # NOTE: origin is always 0, coords unused.
-        pixcrd = np.array([idxs], np.float_)
+        pixcrd = np.array([idxs], np.float64)
         try:
             sky = self.wcs.pixel_to_world(
                 pixcrd[:, 0], pixcrd[:, 1], pixcrd[:, 2])
@@ -134,7 +134,7 @@ class AstropyWCS(common.BaseWCS):
             else:
                 origin = 1
             try:
-                pix = self.wcs.wcs_world2pix(np.array([args], np.float_), origin)
+                pix = self.wcs.wcs_world2pix(np.array([args], np.float64), origin)
             except Exception as e:
                 self.logger.error(
                     "Error calculating radectopix: {}".format(str(e)))

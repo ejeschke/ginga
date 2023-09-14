@@ -419,11 +419,11 @@ class BezierCurve(Path):
         wd, ht = image.get_size()
         if getvalues:
             res = [data[int(y), int(x)]
-                   if 0 <= x < wd and 0 <= y < ht else np.NaN
+                   if 0 <= x < wd and 0 <= y < ht else np.nan
                    for x, y in self.get_points_on_curve(image)]
         else:
             res = [(int(x), int(y))
-                   if 0 <= x < wd and 0 <= y < ht else np.NaN
+                   if 0 <= x < wd and 0 <= y < ht else np.nan
                    for x, y in self.get_points_on_curve(image)]
         return res
 
