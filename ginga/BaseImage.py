@@ -532,7 +532,7 @@ class BaseImage(ViewerObjectBase):
                 try:
                     val = self.get_data_xy(x, y)
                 except Exception:
-                    val = np.NaN
+                    val = np.nan
                 res.append(val)
             else:
                 res.append((x, y))
