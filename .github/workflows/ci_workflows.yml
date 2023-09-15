@@ -41,15 +41,18 @@ jobs:
             toxenv: bandit
 
           # Basic tests
-          - os: ubuntu-latest
+          - name: Test with Python 3.9 on Linux
+            os: ubuntu-latest
             python: '3.9'
             toxenv: py39-test
             toxposargs: -sv
-          - os: macos-latest
+          - name: Test with Python 3.10 on OSX
+            os: macos-latest
             python: '3.10'
             toxenv: py310-test
             toxposargs: -sv
-          - os: windows-latest
+          - name: Test with Python 3.11 on Windows
+            os: windows-latest
             python: '3.11'
             toxenv: py311-test
             toxposargs: -sv
@@ -75,9 +78,6 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python }}
-    #- name: Install Qt
-    #  if: ${{ contains(matrix.toxenv,'-test') }}
-    #  uses: jurplel/install-qt-action@c650b0c3306c1c46739f40ff0fe418af8c4ba02e  # v3.2.0
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip tox
