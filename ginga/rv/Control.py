@@ -1503,7 +1503,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # create dialog for banner
         title = f"Ginga v{__version__}"
-        top = Widgets.Dialog(title=title, buttons=[["Close", 0]], modal=True)
+        top = Widgets.Dialog(title=title, parent=self.w.root,
+                             buttons=[["Close", 0]], modal=False)
 
         def _close_banner(*args):
             top.delete()
@@ -2393,7 +2394,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.quit()
 
         # confirm close with a dialog here
-        q_quit = Widgets.Dialog(title="Confirm Quit", modal=True,
+        q_quit = Widgets.Dialog(title="Confirm Quit", modal=False,
+                                parent=self.w.root,
                                 buttons=[("Cancel", False), ("Confirm", True)])
         # necessary so it doesn't get garbage collected right away
         self.w.quit_dialog = q_quit
