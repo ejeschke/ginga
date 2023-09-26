@@ -12,7 +12,6 @@ import time
 import tempfile
 import threading
 import logging
-import platform
 import atexit
 import shutil
 import inspect
@@ -1697,16 +1696,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         menubar = Widgets.Menubar()
         self.menubar = menubar
-
-        # NOTE: Special hack for Mac OS X. From the Qt documentation:
-        # "If you want all windows in a Mac application to share one
-        #  menu bar, you must create a menu bar that does not have a
-        #  parent."
-        macos_ver = platform.mac_ver()[0]
-        if len(macos_ver) > 0:
-            pass
-        else:
-            holder.add_widget(menubar, stretch=1)
+        holder.add_widget(menubar, stretch=1)
 
         # create a File pulldown menu, and add it to the menu bar
         filemenu = menubar.add_name("File")
@@ -2403,6 +2393,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         vbox.set_margins(4, 4, 4, 4)
         vbox.add_widget(Widgets.Label("Do you really want to quit?"))
         q_quit.add_callback('activated', self._confirm_quit_cb)
+        q_quit.add_callback('close', lambda w: self._confirm_quit_cb(w, False))
         q_quit.show()
 
     def _confirm_quit_cb(self, w, tf):

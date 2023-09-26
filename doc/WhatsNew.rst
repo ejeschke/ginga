@@ -20,6 +20,7 @@ Ver 5.0.0 (unreleased)
 - Fix for context menu pop up in pyside2
 - Fix for a logger annoyance message when mousing over far edge of image
 - Updates for deprecations in numpy 2.0
+- Fix for missing menubar on some versions of Qt and Mac OS X
 
 Ver 4.1.0 (2022-06-30)
 ======================

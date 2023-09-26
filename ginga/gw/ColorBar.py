@@ -107,7 +107,7 @@ class ColorBar(Callback.Callbacks):
         self.redraw(whence=2)
 
     def resize_cb(self, viewer, width, height):
-        self.logger.info("colorbar resized to %dx%d" % (width, height))
+        self.logger.debug("colorbar resized to %dx%d" % (width, height))
         self.cbar.height = height
         self.cbar_view.redraw(whence=0)
 

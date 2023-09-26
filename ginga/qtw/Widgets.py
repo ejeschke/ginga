@@ -1886,7 +1886,7 @@ class Menubar(ContainerBase):
 
         self.widget = QtGui.QMenuBar()
         if hasattr(self.widget, 'setNativeMenuBar'):
-            self.widget.setNativeMenuBar(False)
+            self.widget.setNativeMenuBar(True)
         self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child, name):
