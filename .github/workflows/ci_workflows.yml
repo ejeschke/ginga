@@ -2,6 +2,11 @@ name: CI
 
 on:
   push:
+    branches:
+    - main
+    - 'v*'
+    tags:
+    - '*'
   pull_request:
   schedule:
     # Weekly Monday 6AM build
@@ -14,104 +19,77 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pep_and_audit:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-    - name: Lint with flake8
-      run: |
-        python -m pip install --upgrade pip flake8
-        flake8 ginga --count
-    # Make sure that packaging will work
-    - name: PEP 517 build
-      run: |
-        python -m pip install --upgrade setuptools build twine
-        python -m build --sdist .
-        twine check dist/*
-    - name: Security audit
-      run: |
-        python -m pip install --upgrade bandit
-        bandit -r . -c .bandit.yaml
-
-  multi_oses:
+  tests:
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: true
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          # Make sure that packaging will work
+          - name: Lint with flake8
+            os: ubuntu-latest
+            python: 3.x
+            toxenv: codestyle
+          - name: PEP 517 build
+            os: ubuntu-latest
+            python: 3.x
+            toxenv: twine
+          - name: Security audit
+            os: ubuntu-latest
+            python: 3.x
+            toxenv: bandit
+
+          # Basic tests
+          - name: Test with Python 3.9 on Linux
+            os: ubuntu-latest
+            python: '3.9'
+            toxenv: py39-test
+            toxposargs: -sv
+          - name: Test with Python 3.10 on OSX
+            os: macos-latest
+            python: '3.10'
+            toxenv: py310-test
+            toxposargs: -sv
+          - name: Test with Python 3.11 on Windows
+            os: windows-latest
+            python: '3.11'
+            toxenv: py311-test
+            toxposargs: -sv
+
+          - name: Test with old dependencies
+            os: ubuntu-latest
+            python: 3.8
+            toxenv: py38-test-oldestdeps
+            toxposargs: -sv
+
+          - name: Test with dev dependencies
+            os: ubuntu-latest
+            python: '3.11'
+            toxenv: py311-test-devdeps
+            toxposargs: -sv
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
-    - name: Install and build
+        python-version: ${{ matrix.python }}
+    - name: Install Python dependencies
       run: |
-        python -m pip install --upgrade pip setuptools
-        python -m pip install PyQt5 scipy photutils
-        python -m pip install -e .[test]
-    - name: Install Qt
-      uses: jurplel/install-qt-action@c650b0c3306c1c46739f40ff0fe418af8c4ba02e  # v3.2.0
+        python -m pip install --upgrade pip tox
     - name: Run tests
-      run: pytest --pyargs ginga doc -sv
+      run: tox -e ${{ matrix.toxenv }} -- ${{ matrix.toxposargs }}
 
-  older_deps_tests:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.8'
-    - name: Install and build
-      run: |
-        python -m pip install --upgrade pip setuptools
-        python -m pip install PyQt5 numpy==1.21 astropy==5.0
-        python -m pip install -e .[test]
-    - name: Install Qt
-      uses: jurplel/install-qt-action@c650b0c3306c1c46739f40ff0fe418af8c4ba02e  # v3.2.0
-    - name: Run tests
-      run: pytest --pyargs ginga doc -sv
-
-  dev_deps_tests:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-    - name: Install and build
-      run: |
-        python -m pip install --upgrade pip setuptools
-        python -m pip install PyQt5 matplotlib
-        python -m pip install git+https://github.com/astropy/astropy.git@main#egg=astropy
-        python -m pip install -e .[test]
-    - name: Install Qt
-      uses: jurplel/install-qt-action@c650b0c3306c1c46739f40ff0fe418af8c4ba02e  # v3.2.0
-    - name: Run tests
-      run: pytest --pyargs ginga doc -sv
-
+  # tox does not play well with conda
   conda_linux_tests:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Set up Python
@@ -124,7 +102,7 @@ jobs:
         $CONDA/bin/conda update -n base -c defaults conda
         $CONDA/bin/conda install pip setuptools setuptools_scm
         $CONDA/bin/conda install qtpy pyqt matplotlib
-        $CONDA/bin/conda install attrs "astropy>=5.2" pytest-astropy -c conda-forge
+        $CONDA/bin/conda install attrs "astropy>=5.2" pytest-astropy-header pytest-doctestplus pytest-remotedata -c conda-forge
         $CONDA/bin/pip install -e .
     - name: Run tests
       run: $CONDA/bin/pytest --pyargs ginga doc -sv

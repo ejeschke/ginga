@@ -12,27 +12,41 @@ permissions:
   contents: read
 
 jobs:
-  multi_oses:
+  tests:
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: true
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          # Basic tests but with RC
+          - name: Test with Python 3.9 on Linux
+            os: ubuntu-latest
+            python: '3.9'
+            toxenv: py39-test-predeps
+            toxposargs: -sv
+          - name: Test with Python 3.10 on OSX
+            os: macos-latest
+            python: '3.10'
+            toxenv: py310-test-predeps
+            toxposargs: -sv
+          - name: Test with Python 3.11 on Windows
+            os: windows-latest
+            python: '3.11'
+            toxenv: py311-test-predeps
+            toxposargs: -sv
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
-    - name: Install and build
+        python-version: ${{ matrix.python }}
+    - name: Install Python dependencies
       run: |
-        python -m pip install --upgrade pip setuptools
-        python -m pip install PyQt5
-        python -m pip install numpy scipy astropy photutils --pre
-        python -m pip install -e .[test]
-    - name: Install Qt
-      uses: jurplel/install-qt-action@c650b0c3306c1c46739f40ff0fe418af8c4ba02e  # v3.2.0
+        python -m pip install --upgrade pip tox
     - name: Run tests
-      run: pytest --pyargs ginga doc -sv
+      run: tox -e ${{ matrix.toxenv }} -- ${{ matrix.toxposargs }}
