@@ -65,8 +65,8 @@ jobs:
 
           - name: Test with dev dependencies
             os: ubuntu-latest
-            python: '3.11'
-            toxenv: py311-test-devdeps
+            python: '3.12-dev'
+            toxenv: py312-test-devdeps
             toxposargs: -sv
 
     steps:
