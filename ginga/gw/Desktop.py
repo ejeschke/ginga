@@ -884,12 +884,25 @@ class Workspace(Widgets.WidgetBase):
 
         self.vbox.remove(old_widget)
 
+        old_wstype = self.wstype
         self._set_wstype(wstype)
         self.vbox.add_widget(self.nb, stretch=1)
 
         for child in list(old_widget.get_children()):
             # TODO: sort by previous index so they get added to the
             # new widget in the same order
+            if old_wstype == 'mdi':
+                # record MDI window size and position if we are leaving
+                # an MDI configuration
+                child.extdata.mdi_size = child.get_size()
+                child.extdata.mdi_pos = child.get_pos()
+            if self.wstype == 'mdi':
+                # if entering an MDI configuration and we don't have
+                # previously saved size then set it to the current size
+                if child.extdata.get('mdi_size', None) is None:
+                    child.extdata.mdi_size = child.get_size()
+                    child.extdata.mdi_pos = child.get_pos()
+
             title = child.extdata.get('tab_title', '')
             child.hide()
             old_widget.remove(child)

@@ -282,20 +282,21 @@ class MDISubWindow(Callback.Callbacks):
 
         vbox = Gtk.VBox()
         vbox.set_border_width(4)
-        hbox = Gtk.HBox()
-        close = Gtk.Button("x")
-        maxim = Gtk.Button("^")
-        minim = Gtk.Button("v")
-        hbox.pack_start(close, False, False, 0)
-        hbox.pack_start(minim, False, False, 0)
-        hbox.pack_start(maxim, False, False, 0)
 
+        hbox = Gtk.HBox()
         evbox = Gtk.EventBox()
         evbox.add(label)
         modify_bg(evbox, "gray90")
         self.label = label
         self.evbox = evbox
         hbox.pack_start(evbox, True, True, 2)
+
+        close = Gtk.Button("X")
+        maxim = Gtk.Button("^")
+        minim = Gtk.Button("_")
+        hbox.pack_start(minim, False, False, 0)
+        hbox.pack_start(maxim, False, False, 0)
+        hbox.pack_start(close, False, False, 0)
 
         vbox.pack_start(hbox, False, False, 0)
         vbox.pack_start(widget, True, True, 4)
@@ -1787,5 +1788,3 @@ def set_default_style():
 
     except Exception:
         pass
-
-# END
