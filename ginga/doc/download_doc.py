@@ -5,16 +5,11 @@ import zipfile
 import urllib
 
 from astropy.utils import minversion
+from astropy.utils.data import get_pkg_data_path
 
 from ginga import toolkit
-from ginga.util.toolbox import ASTROPY_LT_4_3
 
 __all__ = ['get_doc']
-
-if ASTROPY_LT_4_3:
-    from astropy.utils.data import _find_pkg_data_path as get_pkg_data_path
-else:
-    from astropy.utils.data import get_pkg_data_path
 
 
 def _find_rtd_version():
