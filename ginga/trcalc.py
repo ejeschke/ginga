@@ -868,6 +868,11 @@ def reorder_image(dst_order, src_arr, src_order):
     """Reorder src_arr, with order of color planes in src_order, as
     dst_order.
     """
+    if len(src_arr.shape) < 3:
+        # if we have a monochrome image, convert to grayscale RGB
+        src_arr = np.dstack((src_arr, src_arr, src_arr)).astype(src_arr.dtype)
+        src_order = 'RGB'
+
     depth = src_arr.shape[2]
     if depth != len(src_order):
         if len(dst_order.replace('A', '')) != len(src_order.replace('A', '')):
