@@ -636,10 +636,10 @@ def overlay_image_2d_np(dstarr, pos, srcarr, dst_order='RGBA',
 
     dst_ht, dst_wd, dst_ch = dstarr.shape
     dst_type = dstarr.dtype
-    dst_max_val = np.iinfo(dst_type).max
+    _, dst_max_val = get_minmax_dtype(dst_type)
     src_ht, src_wd, src_ch = srcarr.shape
     src_type = srcarr.dtype
-    src_max_val = np.iinfo(src_type).max
+    _, src_max_val = get_minmax_dtype(src_type)
     dst_x, dst_y = int(round(pos[0])), int(round(pos[1]))
 
     if flipy:
@@ -748,10 +748,10 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
     dst_x, dst_y, dst_z = [int(round(pos[n])) for n in range(3)]
     dst_ht, dst_wd, dst_dp, dst_ch = dstarr.shape
     dst_type = dstarr.dtype
-    dst_max_val = np.iinfo(dst_type).max
+    _, dst_max_val = get_minmax_dtype(dst_type)
     src_ht, src_wd, src_dp, src_ch = srcarr.shape
     src_type = srcarr.dtype
-    src_max_val = np.iinfo(src_type).max
+    _, src_max_val = get_minmax_dtype(src_type)
 
     if flipy:
         srcarr = np.flipud(srcarr)
@@ -899,7 +899,7 @@ def reorder_image(dst_order, src_arr, src_order):
     bands = [src_arr[..., idx, np.newaxis] for idx in indexes]
     ht, wd = src_arr.shape[:2]
     dst_type = src_arr.dtype
-    dst_max_val = np.iinfo(dst_type).max
+    _, dst_max_val = get_minmax_dtype(dst_type)
     alpha = np.full((ht, wd, 1), dst_max_val, dtype=dst_type)
     bands.insert(dst_order.index('A'), alpha)
 
@@ -949,7 +949,7 @@ def fill_array(dstarr, order, r, g, b, a):
     """
     # TODO: can we make this more efficient?
     dtype = dstarr.dtype
-    maxv = np.iinfo(dtype).max
+    _, maxv = get_minmax_dtype(dtype)
     bgval = dict(A=int(maxv * a), R=int(maxv * r), G=int(maxv * g),
                  B=int(maxv * b))
     bgtup = tuple([bgval[order[i]] for i in range(len(order))])
@@ -969,7 +969,7 @@ def make_filled_array(shp, dtype, order, r, g, b, a):
     shp can define a 2D or 3D array.
     """
     # TODO: can we make this more efficient?
-    maxv = np.iinfo(dtype).max
+    _, maxv = get_minmax_dtype(dtype)
     bgval = dict(A=int(maxv * a), R=int(maxv * r), G=int(maxv * g),
                  B=int(maxv * b))
     bgtup = tuple([bgval[order[i]] for i in range(len(order))])
@@ -1038,7 +1038,11 @@ def add_alpha(arr, alpha=None):
 
 
 def get_minmax_dtype(dtype):
-    if issubclass(dtype.type, np.integer):
+    _type = dtype
+    if isinstance(dtype, np.dtype):
+        _type = dtype.type
+
+    if issubclass(_type, np.integer):
         info = np.iinfo(dtype)
     else:
         info = np.finfo(dtype)
