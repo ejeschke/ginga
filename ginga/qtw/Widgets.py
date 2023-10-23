@@ -2316,15 +2316,15 @@ def make_widget(title, wtype):
     elif wtype == 'llabel':
         w = Label(title)
         w.widget.setAlignment(QtCore.Qt.AlignLeft)
-    elif wtype == 'entry':
+    elif wtype in ('textentry', 'entry'):
         w = TextEntry()
         # w.widget.setMaxLength(12)
-    elif wtype == 'entryset':
+    elif wtype in ('textentryset', 'entryset'):
         w = TextEntrySet()
         # w.widget.setMaxLength(12)
     elif wtype == 'combobox':
         w = ComboBox()
-    elif wtype == 'spinbutton':
+    elif wtype in ('spinbox', 'spinbutton'):
         w = SpinBox(dtype=int)
     elif wtype == 'spinfloat':
         w = SpinBox(dtype=float)
