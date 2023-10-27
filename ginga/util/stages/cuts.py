@@ -259,7 +259,9 @@ class Cuts(Stage):
             return
 
         if self.auto:
-            self.locut, self.hicut = self.autocuts.calc_cut_levels_data(data)
+            locut, hicut = self.autocuts.calc_cut_levels_data(data)
+            # numpy objects can be problematic to serialize
+            self.locut, self.hicut = float(locut), float(hicut)
 
         res_np = self.autocuts.cut_levels(data, self.locut, self.hicut,
                                           vmin=self.vmin, vmax=self.vmax)
