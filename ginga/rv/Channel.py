@@ -303,7 +303,7 @@ class Channel(Callback.Callbacks):
     def add_history(self, imname, path, idx=None,
                     image_loader=None, image_future=None):
 
-        if not (imname in self.image_index):
+        if imname not in self.image_index:
 
             if image_loader is None:
                 image_loader = self.fv.load_image
@@ -325,6 +325,9 @@ class Channel(Callback.Callbacks):
         else:
             # already in history
             info = self.image_index[imname]
+
+            # refresh info, in case anything changed
+            self.fv.make_async_gui_callback('add-image-info', self, info)
 
         return info
 
