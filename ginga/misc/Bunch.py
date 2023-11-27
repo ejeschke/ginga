@@ -217,8 +217,8 @@ class Bunch(object):
         raise AttributeError(attr)
 
     def __setattr__(self, attr, value):
-        """Maps attributes to values for assignment.  Called for attribute style access
-        of this object for assignment.
+        """Maps attributes to values for assignment.
+        Called for attribute style access of this object for assignment.
         """
 
         # this test allows attributes to be set in the __init__ method
@@ -254,6 +254,14 @@ class Bunch(object):
 
     def __contains__(self, key):
         return key in self.tbl
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        for key in other:
+            if not self[key] == other[key]:
+                return False
+        return True
 
     def update(self, dict2):
         return self.tbl.update(dict2)
