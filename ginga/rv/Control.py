@@ -834,7 +834,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                               "\nPlease choose an opener or cancel, for file:\n"
                               "{1:}".format(mimetype, filepath))
                     self.gui_do(self.gui_choose_file_opener, errmsg, openers,
-                                _open_file, '*', filepath)
+                                _open_file, mimetype, filepath)
 
         future = Future.Future()
         future.freeze(_check_open, warnmsg)
@@ -2505,17 +2505,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         bnch = bnchs[0]
         self.ds.remove_dialog(w)
 
-        if wgts.choice is not None and wgts.choice.get_state():
+        if (wgts.choice is not None and wgts.choice.get_state() and
+            mimetype is not None):
             # user wants us to remember their choice
-            if mimetype != '*':
-                # loader is not registered for this mimetype, so go ahead
-                # and do it
-                loader.add_opener(bnch.opener, [mimetype],
-                                  priority=bnch.priority, note=bnch.note)
-            else:
-                # multiple loaders for the same mimetype--
-                # remember setting by prioritizing choice
-                bnch.priority = -1
+            # loader is not registered for this mimetype, so go ahead
+            # and do it
+            loader.add_opener(bnch.opener, [mimetype],
+                              priority=-99, note=bnch.note)
 
         self.nongui_do(open_cb, bnch.opener)
         self.__next_dialog()

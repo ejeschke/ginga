@@ -103,17 +103,16 @@ def add_opener(opener, mimetypes, priority=0, note=''):
     global loader_by_mimetype, loader_registry
     if opener.name in loader_registry:
         loader_rec = loader_registry[opener.name]
+        loader_rec.mimetypes.update(set(mimetypes))
     else:
         loader_rec = Bunch.Bunch(name=opener.name, opener=opener,
-                                 mimetypes=mimetypes, priority=priority,
-                                 note=note)
+                                 mimetypes=set(mimetypes), note=note)
         loader_registry[opener.name] = loader_rec
 
+    mimetype_rec = Bunch.Bunch(opener=loader_rec, priority=priority)
     for mimetype in mimetypes:
-        bnchs = loader_by_mimetype.setdefault(mimetype, [])
-        if loader_rec not in bnchs:
-            bnchs.append(loader_rec)
-            bnchs.sort(key=lambda bnch: bnch.priority)
+        bnchs = loader_by_mimetype.setdefault(mimetype, {})
+        bnchs[opener.name] = mimetype_rec
 
 
 def get_opener(name):
@@ -128,14 +127,15 @@ def get_openers(mimetype):
     files, with all but the best (matching) priority removed.
     """
     global loader_by_mimetype
-    bnchs = loader_by_mimetype.setdefault(mimetype, [])
-    if len(bnchs) <= 1:
-        return bnchs
+    bnchs = loader_by_mimetype.setdefault(mimetype, {})
+    if len(bnchs) == 0:
+        return []
 
     # if there is more than one possible opener, return the list of
     # those that have the best (i.e. lowest) equal priority
-    priority = min([bnch.priority for bnch in bnchs])
-    return [bnch for bnch in bnchs if bnch.priority <= priority]
+    priority = min([bnch.priority for bnch in bnchs.values()])
+    return [loader_registry[name] for name, bnch in bnchs.items()
+            if bnch.priority <= priority]
 
 
 def get_all_openers():

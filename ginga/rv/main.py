@@ -448,13 +448,8 @@ class ReferenceViewer(object):
 
         try:
             from ginga.util.io import io_fits
-            from ginga.util import loader
             if fitspkg != 'choose':
                 assert io_fits.use(fitspkg) is True
-                # opener name is not necessarily the same
-                opener = loader.get_opener(io_fits.fitsLoaderClass.name)
-                # set this opener as the priority one
-                opener.priority = -99
 
         except Exception as e:
             logger.warning(

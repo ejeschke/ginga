@@ -24,7 +24,7 @@ from ginga.AstroImage import AstroImage, AstroHeader
 from ginga.table.AstroTable import AstroTable
 
 from ginga.misc import Bunch
-from ginga.util import iohelper
+from ginga.util import iohelper, loader
 from ginga.util.io import io_base
 
 fits_configured = False
@@ -55,6 +55,9 @@ def use(fitspkg, raise_err=True):
         if have_astropy:
             fitsLoaderClass = AstropyFitsFileHandler
             fits_configured = True
+            # set this opener as the priority one
+            loader.add_opener(fitsLoaderClass, fitsLoaderClass.mimetypes,
+                              priority=-99, note=fitsLoaderClass.__doc__)
             return True
 
         elif raise_err:
@@ -67,6 +70,9 @@ def use(fitspkg, raise_err=True):
         if have_fitsio:
             fitsLoaderClass = FitsioFileHandler
             fits_configured = True
+            # set this opener as the priority one
+            loader.add_opener(fitsLoaderClass, fitsLoaderClass.mimetypes,
+                              priority=-99, note=fitsLoaderClass.__doc__)
             return True
 
         elif raise_err:
