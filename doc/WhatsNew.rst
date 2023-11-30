@@ -27,6 +27,8 @@ Ver 5.0.0 (unreleased)
   same as before) to better reflect what the mode does
 - Changed icons and cursors from PNG (bitmap) to SVG (vector) format
 - Added color distribution ("stretch") control to Info plugin
+- Added LoaderConfig plugin; allows setting of loader priorities for
+  various MIME types
 
 Ver 4.1.0 (2022-06-30)
 ======================
