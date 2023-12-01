@@ -624,9 +624,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
             hdu_dct = self.file_obj.get_directory()
 
             upper = len(self.file_obj) - 1
-            # NOTE: make a set of values, because some values will be in
-            # multiple times if known by several indexes
-            self.prep_hdu_menu(self.w.hdu, list(set(hdu_dct.values())))
+            # NOTE: make a unique list of values, because some values will
+            # be in multiple times if known by several indexes
+            hdu_lst = []
+            for item in hdu_dct.values():
+                if item not in hdu_lst:
+                    hdu_lst.append(item)
+            self.prep_hdu_menu(self.w.hdu, hdu_lst)
             self.num_hdu = upper
             self.logger.debug("there are %d hdus" % (upper + 1))
             self.w.numhdu.set_text("%d" % (upper + 1))
