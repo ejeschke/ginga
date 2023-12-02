@@ -1,4 +1,3 @@
-
 #
 # cmap.py -- color maps for fits viewing
 #
