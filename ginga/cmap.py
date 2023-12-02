@@ -1,3 +1,4 @@
+
 #
 # cmap.py -- color maps for fits viewing
 #
@@ -13309,8 +13310,7 @@ def add_matplotlib_cmap(cm, name=None):
 def add_matplotlib_cmaps(fail_on_import_error=True):
     """Add all matplotlib colormaps."""
     try:
-        import matplotlib.pyplot as plt
-        from matplotlib import cm as _cm
+        from matplotlib import colormaps as _mpl_cm
         if MPL_LT_3_4:
             from matplotlib.cbook import mplDeprecation as MatplotlibDeprecationWarning
         else:
@@ -13322,14 +13322,14 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
         return
 
     # NOTE: Update if matplotlib has new public API for this.
-    for name in plt.colormaps():
+    for name in _mpl_cm:
         if not isinstance(name, str):
             continue
         try:
             # Do not load deprecated colormaps
             with warnings.catch_warnings():
                 warnings.simplefilter('error', MatplotlibDeprecationWarning)
-                cm = _cm.get_cmap(name)
+                cm = _mpl_cm[name]
                 add_matplotlib_cmap(cm, name=name)
         except Exception as e:
             if fail_on_import_error:
