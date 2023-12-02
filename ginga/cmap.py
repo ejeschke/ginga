@@ -7,14 +7,10 @@
 import warnings
 
 import numpy as np
-from astropy.utils import minversion
 
 __all__ = ['ColorMap', 'add_cmap', 'get_cmap', 'has_cmap', 'get_names',
            'matplotlib_to_ginga_cmap', 'add_matplotlib_cmap',
            'add_matplotlib_cmaps']
-
-MPL_LT_3_4 = not minversion('matplotlib', '3.4')
-
 
 # Some built in colormaps
 
@@ -13310,10 +13306,7 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
     """Add all matplotlib colormaps."""
     try:
         from matplotlib import colormaps as _mpl_cm
-        if MPL_LT_3_4:
-            from matplotlib.cbook import mplDeprecation as MatplotlibDeprecationWarning
-        else:
-            from matplotlib import MatplotlibDeprecationWarning
+        from matplotlib import MatplotlibDeprecationWarning
     except ImportError:
         if fail_on_import_error:
             raise
