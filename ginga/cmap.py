@@ -4,8 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import warnings
-
 import numpy as np
 
 __all__ = ['ColorMap', 'add_cmap', 'get_cmap', 'has_cmap', 'get_names',
@@ -13306,7 +13304,6 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
     """Add all matplotlib colormaps."""
     try:
         from matplotlib import colormaps as _mpl_cm
-        from matplotlib import MatplotlibDeprecationWarning
     except ImportError:
         if fail_on_import_error:
             raise
@@ -13318,11 +13315,8 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
         if not isinstance(name, str):
             continue
         try:
-            # Do not load deprecated colormaps
-            with warnings.catch_warnings():
-                warnings.simplefilter('error', MatplotlibDeprecationWarning)
-                cm = _mpl_cm[name]
-                add_matplotlib_cmap(cm, name=name)
+            cm = _mpl_cm[name]
+            add_matplotlib_cmap(cm, name=name)
         except Exception as e:
             if fail_on_import_error:
                 print(f"Error adding colormap '{name}': {e!r}")
