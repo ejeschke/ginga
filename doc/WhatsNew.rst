@@ -169,6 +169,7 @@ Ver 3.3.0 (2022-02-16)
   well; they were previously pending deprecation.
 - Fixed an issue where image might not be redrawn properly if scale or
   pan is set directly via a viewer's settings object (not the usual case)
+- Added internal support for dask and zarr arrays
 
 Ver 3.2.0 (2021-06-07)
 ======================
