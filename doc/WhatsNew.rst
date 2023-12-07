@@ -22,6 +22,7 @@ Ver 5.0.0 (unreleased)
 - Updates for deprecations in numpy 2.0
 - Fix for missing menubar on some versions of Qt and Mac OS X
 - Fix for importing mpl colormaps with recent versions of matplotlib
+- Fix for utcnow(), deprecated in Python 3.12
 
 Ver 4.1.0 (2022-06-30)
 ======================
