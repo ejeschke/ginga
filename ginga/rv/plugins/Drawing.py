@@ -33,6 +33,7 @@ be saved, may be ignored or may cause errors trying to load the regions
 shapes in other software.
 """
 from datetime import datetime
+from dateutil import tz
 
 from ginga import GingaPlugin
 from ginga import colors
@@ -455,7 +456,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         # Add description to ChangeHistory
         s = 'Mask created from {0} drawings ({1})'.format(
             ntags, ','.join(sorted(obj_kinds)))
-        info = dict(time_modified=datetime.utcnow(), reason_modified=s)
+        info = dict(time_modified=datetime.now(tz=tz.UTC), reason_modified=s)
         self.fv.update_image_info(image, info)
         self.logger.info(s)
 

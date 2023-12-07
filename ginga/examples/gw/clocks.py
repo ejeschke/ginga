@@ -81,7 +81,7 @@ class Clock(object):
 
         self.clock_resized_cb(self.viewer, wd, ht)
 
-        dt = datetime.utcnow().replace(tzinfo=tz.UTC)
+        dt = datetime.now(tz=tz.UTC)
         self.update_clock(dt)
 
     def clock_resized_cb(self, viewer, width, height):
@@ -256,7 +256,7 @@ class ClockApp(object):
 
     def timer_cb(self, timer):
         """Timer callback.  Update all our clocks."""
-        dt_now = datetime.utcnow().replace(tzinfo=tz.UTC)
+        dt_now = datetime.now(tz=tz.UTC)
         self.logger.debug("timer fired. utc time is '%s'" % (str(dt_now)))
 
         for clock in self.clocks.values():

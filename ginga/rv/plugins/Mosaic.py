@@ -39,6 +39,7 @@ the other tiles.
 import math
 import time
 from datetime import datetime
+from dateutil import tz
 import threading
 
 import numpy as np
@@ -355,7 +356,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
                                    suppress_callback=True)
 
         # Add description for ChangeHistory
-        info = dict(time_modified=datetime.utcnow(),
+        info = dict(time_modified=datetime.now(tz=tz.UTC),
                     reason_modified='Added {0}'.format(
             ','.join([im.get('name') for im in images])))
         self.fv.update_image_info(self.img_mosaic, info)
