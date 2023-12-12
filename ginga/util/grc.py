@@ -9,8 +9,8 @@ from io import BytesIO
 
 from ginga.misc import Task, log
 
-import xmlrpc.client as xmlrpclib
-import xmlrpc.server as SimpleXMLRPCServer
+import xmlrpc.client as xmlrpclib  # nosec
+import xmlrpc.server as SimpleXMLRPCServer  # nosec
 
 # undefined passed value--for a data type that cannot be converted
 undefined = '#UNDEFINED'
