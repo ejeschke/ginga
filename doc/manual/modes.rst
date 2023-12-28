@@ -149,13 +149,13 @@ Pan
    :no-heading:
    :skip: PanMode
      
-.. _sec_mode_freepan:
+.. _sec_mode_zoom:
 
-FreePan
-=======
-.. automodapi:: ginga.modes.freepan
+Zoom
+====
+.. automodapi:: ginga.modes.zoom
    :no-heading:
-   :skip: FreePanMode
+   :skip: ZoomMode
      
 .. _sec_mode_rotate:
 

@@ -23,6 +23,8 @@ Ver 5.0.0 (unreleased)
 - Fix for missing menubar on some versions of Qt and Mac OS X
 - Fix for importing mpl colormaps with recent versions of matplotlib
 - Fix for utcnow(), deprecated in Python 3.12
+- Renamed mode "freepan" to "zoom" (bindings and activation are the
+  same as before) to better reflect what the mode does
 
 Ver 4.1.0 (2022-06-30)
 ======================

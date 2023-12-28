@@ -109,7 +109,7 @@ the entire image boundaries to the window boundaries.  For example,
 moving the mouse to the upper right-hand corner of the window will pan to
 the upper right hand corner of the image, etc.  You can think of this
 mode as moving the window portal around over the canvas.
-To initiate a free pan, press Space followed by "w" to enter "freepan"
+To initiate a free pan, press Space followed by "w" to enter "zoom"
 mode and then Scroll-drag to move around the window.
 
 ``[RV]`` The ``Pan`` plugin (usually embedded under the *Info* tab) shows the
