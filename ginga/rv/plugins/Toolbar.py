@@ -99,10 +99,10 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             ("---",),
             ("Pan", 'toggle', 'pan_48', "Pan with left, zoom with right",
              lambda w, tf: self.mode_cb(tf, 'pan')),
-            ("FreePan", 'toggle', 'hand_48',
+            ("Zoom", 'toggle', 'hand_48',
              "Left/right click zooms in/out;\n"
              "hold middle to pan freely over image",
-             lambda w, tf: self.mode_cb(tf, 'freepan')),
+             lambda w, tf: self.mode_cb(tf, 'zoom')),
             ("Rotate", 'toggle', 'rotate_48',
              "Drag left to rotate; click right to reset to 0 deg",
              lambda w, tf: self.mode_cb(tf, 'rotate')),
@@ -136,7 +136,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
              lambda w: self.start_plugin_cb('MultiDim')),
             ("Header", 'button', 'tags_48', "View image metadata",
              lambda w: self.start_global_plugin_cb('Header')),
-            ("Zoom", 'button', 'microscope_48', "Magnify detail",
+            ("ZoomPlugin", 'button', 'microscope_48', "Magnify detail",
              lambda w: self.start_global_plugin_cb('Zoom')),
             ):  # noqa
 
@@ -380,7 +380,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             self.logger.debug("modename=%s" % (modename))
             # toolbar follows view
             self.w.btn_pan.set_state(modename == 'pan')
-            self.w.btn_freepan.set_state(modename == 'freepan')
+            self.w.btn_zoom.set_state(modename == 'zoom')
             self.w.btn_rotate.set_state(modename == 'rotate')
             self.w.btn_dist.set_state(modename == 'dist')
             self.w.btn_cuts.set_state(modename == 'cuts')

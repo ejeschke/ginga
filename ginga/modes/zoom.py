@@ -1,10 +1,10 @@
 #
-# freepan.py -- mode for scaling (zooming) and panning
+# zoom.py -- mode for scaling (zooming) and panning
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""FreePan Mode enables bindings that can set the pan position
+"""Zoom Mode enables bindings that can set the pan position
 (the center pixel) and zoom level (scale) in a Ginga image viewer.
 
 It differs from Pan mode in the types of scrolling and panning
@@ -30,40 +30,40 @@ Default bindings in mode
 from ginga.modes.pan import PanMode
 
 
-class FreePanMode(PanMode):
+class ZoomMode(PanMode):
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
         self.actions = dict(
-            dmod_freepan=['__w', None, 'pan'],
+            dmod_zoom=['__w', None, 'pan'],
 
-            kp_zoom_fit=['freepan+backquote'],
-            kp_pan_set=['freepan+p'],
-            kp_pan_zoom_set=['freepan+r'],
-            kp_pan_zoom_save=['freepan+z'],
-            kp_pan_left=['freepan+*+left'],
-            kp_pan_right=['freepan+*+right'],
-            kp_pan_up=['freepan+*+up'],
-            kp_pan_down=['freepan+*+down'],
-            kp_pan_home=['freepan+*+home'],
-            kp_pan_end=['freepan+*+end'],
-            kp_pan_page_up=['freepan+*+page_up'],
-            kp_pan_page_down=['freepan+*+page_down'],
-            kp_center=['freepan+c'],
+            kp_zoom_fit=['zoom+backquote'],
+            kp_pan_set=['zoom+p'],
+            kp_pan_zoom_set=['zoom+r'],
+            kp_pan_zoom_save=['zoom+z'],
+            kp_pan_left=['zoom+*+left'],
+            kp_pan_right=['zoom+*+right'],
+            kp_pan_up=['zoom+*+up'],
+            kp_pan_down=['zoom+*+down'],
+            kp_pan_home=['zoom+*+home'],
+            kp_pan_end=['zoom+*+end'],
+            kp_pan_page_up=['zoom+*+page_up'],
+            kp_pan_page_down=['zoom+*+page_down'],
+            kp_center=['zoom+c'],
 
-            sc_zoom=['freepan+scroll'],
-            sc_zoom_origin=['freepan+shift+scroll'],
+            sc_zoom=['zoom+scroll'],
+            sc_zoom_origin=['zoom+shift+scroll'],
 
-            ms_freepan=['freepan+middle'],
-            ms_zoom_in=['freepan+left'],
-            ms_zoom_out=['freepan+right', 'freepan+ctrl+left'],
+            ms_freepan=['zoom+middle'],
+            ms_zoom_in=['zoom+left'],
+            ms_zoom_out=['zoom+right', 'zoom+ctrl+left'],
 
-            pa_zoom=['freepan+pan'],
-            pa_zoom_origin=['freepan+shift+pan'])
+            pa_zoom=['zoom+pan'],
+            pa_zoom_origin=['zoom+shift+pan'])
 
     def __str__(self):
-        return 'freepan'
+        return 'zoom'
 
     def start(self):
         self.viewer.switch_cursor('pan')

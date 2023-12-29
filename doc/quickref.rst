@@ -64,7 +64,7 @@ triggered from meta mode.
 +----------------------+--------------------------------------------------+
 | q                    | Enter :ref:`Pan mode <pan_mode>`.                |
 +----------------------+--------------------------------------------------+
-| w                    | Enter :ref:`Freepan mode <freepan_mode>`.        |
+| w                    | Enter :ref:`Zoom mode <zoom_mode>`.              |
 +----------------------+--------------------------------------------------+
 | r                    | Enter :ref:`Rotate mode <rotate_mode>`.          |
 +----------------------+--------------------------------------------------+
@@ -231,15 +231,15 @@ Pan mode
 | double quote (")     | Toggle autozoom for new images to *on* or *off*. |
 +----------------------+--------------------------------------------------+
 
-.. _freepan_mode:
+.. _zoom_mode:
 
-Freepan mode
-============
+Zoom mode
+=========
 
 +----------------------+---------------------------------------------------+
 | Commmand             | Description                                       |
 +======================+===================================================+
-| Turn scroll wheel    | Zoom while keeping location under the cursor.     |
+| Turn scroll wheel    | Zoom in or out.                                   |
 +----------------------+---------------------------------------------------+
 | left-click           | Set pan position, zoom in a step and warp cursor  |
 |                      | to pan position (if supported on backend).        |
