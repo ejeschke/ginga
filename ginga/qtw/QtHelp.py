@@ -48,10 +48,7 @@ try:
     from qtpy.QtWidgets import QOpenGLWidget  # noqa
     from qtpy.QtCore import QItemSelectionModel  # noqa
     from qtpy.QtWidgets import QApplication  # noqa
-    ## try:
-    ##     from qtpy import sip
-    ## except ImportError as e:
-    ##     import sip
+    from qtpy import QtSvg  # noqa
     try:
         from qtpy.QtWebEngineWidgets import QWebEngineView as QWebView  # noqa
     except ImportError as e:
@@ -378,11 +375,53 @@ def get_scroll_info(event):
     return (num_degrees, direction)
 
 
-def get_icon(iconpath, size=None):
-    image = QImage(iconpath)
+def get_image(iconpath, size=None, adjust_width=True):
+    """Get a QImage that can be used in a button or label.
+
+    Parameters
+    ----------
+    iconpath : str
+        The path to the file containing the image of the icon
+
+    size : tuple of int (width, height) or None, (defaults to (24, 24))
+        The size of the icon to be returned in pixels
+
+    adjust_width : bool, (optional, defaults to True)
+        If True, adjust width to account for the aspect ratio of the image
+    """
     if size is not None:
-        qsize = QtCore.QSize(*size)
+        wd, ht = size
+    else:
+        wd, ht = 24, 24
+
+    if iconpath.endswith('.svg'):
+        # Scalable Vector Graphics
+        svg_renderer = QtSvg.QSvgRenderer(iconpath)
+        if adjust_width:
+            # get natural size
+            qsize = svg_renderer.defaultSize()
+            _w, _h = qsize.width(), qsize.height()
+            aspect = _w / _h
+            wd = int(wd * aspect)
+        image = QImage(wd, ht, QImage.Format_ARGB32)
+        image.fill(0x00000000)
+        svg_renderer.render(QPainter(image))
+    else:
+        # PNG or similar
+        image = QImage(iconpath)
+        if adjust_width:
+            qsize = image.size()
+            _w, _h = qsize.width(), qsize.height()
+            aspect = _w / _h
+            wd = int(wd * aspect)
+        qsize = QtCore.QSize(wd, ht)
         image = image.scaled(qsize)
+
+    return image
+
+
+def get_icon(iconpath, size=None, adjust_width=True):
+    image = get_image(iconpath, size=size, adjust_width=adjust_width)
     pixmap = QPixmap.fromImage(image)
     iconw = QIcon(pixmap)
     return iconw

@@ -143,7 +143,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
                 ('forward', 'next', lambda w: self.next_slice()),
                 ('play', 'play', lambda w: self.play_start()),
                 ('stop', 'stop', lambda w: self.play_stop()), ):
-            iconpath = os.path.join(self.fv.iconpath, "%s_48.png" % name)
+            iconpath = os.path.join(self.fv.iconpath, "%s.svg" % name)
             btn = tbar.add_action(None, iconpath=iconpath)
             self.w[actn] = btn
             btn.set_enabled(False)

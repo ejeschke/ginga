@@ -15,6 +15,7 @@ from ginga.util.paths import icondir
 from ginga.qtw.QtHelp import (QtGui, QtCore, QImage, QPixmap, QCursor,
                               QPainter, QOpenGLWidget, QSurfaceFormat,
                               Timer, get_scroll_info, get_painter)
+from ginga.qtw import QtHelp
 
 from .CanvasRenderQt import CanvasRenderer
 
@@ -348,8 +349,8 @@ class ImageViewQt(ImageView.ImageViewBase):
             self.imgwin.setCursor(cursor)
 
     def make_cursor(self, iconpath, x, y):
-        image = QImage()
-        image.load(iconpath)
+        image = QtHelp.get_image(iconpath, size=(16, 16),
+                                 adjust_width=False)
         pm = QPixmap(image)
         return QCursor(pm, x, y)
 
@@ -488,8 +489,8 @@ class QtEventMixin(object):
         #imgwin.grabGesture(QtCore.Qt.TapAndHoldGesture)
 
         # Define cursors
-        for curname, filename in (('pan', 'openHandCursor.png'),
-                                  ('pick', 'thinCrossCursor.png')):
+        for curname, filename in (('pan', 'hand.svg'),
+                                  ('pick', 'cursor_cross.svg')):
             path = os.path.join(icondir, filename)
             cur = self.make_cursor(path, 8, 8)
             self.define_cursor(curname, cur)

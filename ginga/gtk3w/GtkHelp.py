@@ -787,10 +787,10 @@ class Splitter(Gtk.Layout):
 
         else:
             if self.orientation == 'horizontal':
-                thumbfile, _w, _h = ('vdots.png', self.thumb_px,
+                thumbfile, _w, _h = ('vdots.svg', self.thumb_px,
                                      int(self.thumb_px * self.thumb_aspect))
             else:
-                thumbfile, _w, _h = ('hdots.png',
+                thumbfile, _w, _h = ('hdots.svg',
                                      int(self.thumb_px * self.thumb_aspect),
                                      self.thumb_px)
             iconfile = os.path.join(icondir, thumbfile)
@@ -1694,11 +1694,19 @@ def get_scroll_info(event):
     return (num_degrees, direction)
 
 
-def get_icon(iconpath, size=None):
+def get_icon(iconpath, size=None, adjust_width=True):
     if size is not None:
         wd, ht = size
     else:
         wd, ht = 24, 24
+
+    if adjust_width:
+        pixbuf = pixbuf_new_from_file(iconpath)
+        # get "natural" dimensions
+        _w, _h = pixbuf.get_width(), pixbuf.get_height()
+        aspect = _w / _h
+        wd = int(wd * aspect)
+
     pixbuf = pixbuf_new_from_file_at_size(iconpath, wd, ht)
     return pixbuf
 
@@ -1750,9 +1758,7 @@ def pixbuf_new_from_file(file_path):
 
 
 def make_cursor(widget, iconpath, x, y):
-    image = Gtk.Image()
-    image.set_from_file(iconpath)
-    pixbuf = image.get_pixbuf()
+    pixbuf = get_icon(iconpath, size=(16, 16), adjust_width=False)
     screen = widget.get_screen()
     display = screen.get_display()
     return Gdk.Cursor(display, pixbuf, x, y)

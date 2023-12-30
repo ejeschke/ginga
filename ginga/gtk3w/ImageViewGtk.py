@@ -445,8 +445,8 @@ class GtkEventMixin(object):
         }
 
         # Define cursors
-        for curname, filename in (('pan', 'openHandCursor.png'),
-                                  ('pick', 'thinCrossCursor.png')):
+        for curname, filename in (('pan', 'hand.svg'),
+                                  ('pick', 'cursor_cross.svg')):
             path = os.path.join(icondir, filename)
             cur = self.make_cursor(path, 8, 8)
             self.define_cursor(curname, cur)

@@ -94,9 +94,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
         # Make icons
         icondir = self.fv.iconpath
-        self.folderpb = self.fv.get_icon(icondir, 'folder.png')
-        self.filepb = self.fv.get_icon(icondir, 'file.png')
-        self.fitspb = self.fv.get_icon(icondir, 'fits.png')
+        self.folderpb = self.fv.get_icon(icondir, 'folder.svg')
+        self.filepb = self.fv.get_icon(icondir, 'file.svg')
+        self.fitspb = self.fv.get_icon(icondir, 'fits.svg')
 
     def build_gui(self, container):
 
