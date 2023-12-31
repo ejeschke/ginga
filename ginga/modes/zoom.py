@@ -36,7 +36,7 @@ class ZoomMode(PanMode):
         super().__init__(viewer, settings=settings)
 
         self.actions = dict(
-            dmod_zoom=['__w', None, 'pan'],
+            dmod_zoom=['__w', None, 'zoom'],
 
             kp_zoom_fit=['zoom+backquote'],
             kp_pan_set=['zoom+p'],
@@ -66,7 +66,7 @@ class ZoomMode(PanMode):
         return 'zoom'
 
     def start(self):
-        self.viewer.switch_cursor('pan')
+        self.viewer.switch_cursor('zoom')
 
     def stop(self):
         self.viewer.switch_cursor('pick')

@@ -10,7 +10,7 @@ import numpy as np
 
 from ginga.gtk3w import GtkHelp
 from ginga import ImageView, Mixins, Bindings
-from ginga.util.paths import icondir
+from ginga.cursors import cursor_info
 from ginga.canvas import render
 
 from gi.repository import Gtk
@@ -284,8 +284,8 @@ class ImageViewGtk(ImageView.ImageViewBase):
         if win is not None:
             win.set_cursor(cursor)
 
-    def make_cursor(self, iconpath, x, y):
-        cursor = GtkHelp.make_cursor(self.imgwin, iconpath, x, y)
+    def make_cursor(self, iconpath, x, y, size=None):
+        cursor = GtkHelp.make_cursor(self.imgwin, iconpath, x, y, size=size)
         return cursor
 
     def center_cursor(self):
@@ -373,7 +373,7 @@ class GtkEventMixin(object):
         imgwin.connect("drag-motion", self.drag_motion_cb)
         imgwin.connect("drag-drop", self.drag_drop_cb)
 
-        # @$%&^(_)*&^ gnome!!
+        # for gtk key handling
         self._keytbl = {
             'shift_l': 'shift_l',
             'shift_r': 'shift_r',
@@ -445,11 +445,17 @@ class GtkEventMixin(object):
         }
 
         # Define cursors
-        for curname, filename in (('pan', 'hand.svg'),
-                                  ('pick', 'cursor_cross.svg')):
-            path = os.path.join(icondir, filename)
-            cur = self.make_cursor(path, 8, 8)
-            self.define_cursor(curname, cur)
+        cursor_names = cursor_info.get_cursor_names()
+        def_px_size = 16
+        for curname in cursor_names:
+            curinfo = cursor_info.get_cursor_info(curname)
+            wd_px = int(curinfo.scale_width * def_px_size)
+            ht_px = int(curinfo.scale_height * def_px_size)
+            pt_x = int(curinfo.point_x_pct * wd_px)
+            pt_y = int(curinfo.point_y_pct * ht_px)
+            cur = self.make_cursor(curinfo.path, pt_x, pt_y,
+                                   size=(wd_px, ht_px))
+            self.define_cursor(curinfo.name, cur)
 
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',

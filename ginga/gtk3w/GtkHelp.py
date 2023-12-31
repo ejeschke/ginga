@@ -1757,8 +1757,10 @@ def pixbuf_new_from_file(file_path):
     return GdkPixbuf.Pixbuf.new_from_file(file_path)
 
 
-def make_cursor(widget, iconpath, x, y):
-    pixbuf = get_icon(iconpath, size=(16, 16), adjust_width=False)
+def make_cursor(widget, iconpath, x, y, size=None):
+    if size is None:
+        size = (16, 16)
+    pixbuf = get_icon(iconpath, size=size, adjust_width=False)
     screen = widget.get_screen()
     display = screen.get_display()
     return Gdk.Cursor(display, pixbuf, x, y)

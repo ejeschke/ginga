@@ -32,7 +32,7 @@ class DrawMode(Mode):
         super().__init__(viewer, settings=settings)
 
         self.actions = dict(
-            dmod_draw=['__b', None, None],
+            dmod_draw=['__b', None, 'draw'],
 
             # NOTE: these only here to generate events. The events are
             # handled by the DrawingCanvas mixin
@@ -52,7 +52,8 @@ class DrawMode(Mode):
         return 'draw'
 
     def start(self):
-        pass
+        self.viewer.switch_cursor('draw')
 
     def stop(self):
+        self.viewer.switch_cursor('pick')
         self.onscreen_message(None)
