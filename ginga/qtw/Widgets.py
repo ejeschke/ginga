@@ -9,7 +9,7 @@ import pathlib
 from functools import reduce
 
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
-                              QImage, QCursor, QFont)
+                              QCursor, QFont)
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch, Settings, LineHistory

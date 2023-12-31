@@ -15,7 +15,7 @@ from ginga.misc.Bunch import Bunch
 __all__ = ['add_cursor', 'get_cursor_names', 'get_cursor_info']
 
 available_cursors = {}
-cursor_config = {}
+
 
 def add_cursor(name, curdct):
     if name not in available_cursors:
@@ -30,7 +30,6 @@ def add_cursor(name, curdct):
 
 
 def discover_cursors():
-    global cursor_config
     # discover modes in ginga.cursors folder
     cursor_idx = os.path.join(paths.ginga_pkgdir, "cursors", "cursors.toml")
     with open(cursor_idx, 'r') as cur_f:

@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
-import glob
 import tempfile
 from functools import partial
 
@@ -351,7 +350,8 @@ class ImageViewQt(ImageView.ImageViewBase):
 
     def make_cursor(self, curpath, x, y, size=None):
         if size is None:
-            size = (16, 16)
+            def_px_size = self.settings.get('default_cursor_length', 16)
+            size = (def_px_size, def_px_size)
         image = QtHelp.get_image(curpath, size=size,
                                  adjust_width=False)
         pm = QPixmap(image)
@@ -493,7 +493,7 @@ class QtEventMixin(object):
 
         # Define cursors
         cursor_names = cursor_info.get_cursor_names()
-        def_px_size = 16
+        def_px_size = self.settings.get('default_cursor_length', 16)
         for curname in cursor_names:
             curinfo = cursor_info.get_cursor_info(curname)
             wd_px = int(curinfo.scale_width * def_px_size)

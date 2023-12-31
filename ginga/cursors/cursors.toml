@@ -2,16 +2,13 @@
 # Define cursors for Ginga
 #
 # Each cursor should be defined with the following attributes:
-#   file: name of the cursor (relative to ginga.cursors, if it doesn't
-#          begin with a '/')
-#   scale_width: scaling factor for width from default length
-#   scale_height: scaling factor for height from default length
+#   file: name of the cursor (if it doesn't begin with a path separator
+#         then it is considered relative to ginga.cursors)
+#   scale_width: scaling factor for width from default cursor length
+#   scale_height: scaling factor for height from default cursor length
 #   point_x_pct: percent offset from (0, 0) for the X point of the cursor
 #   point_y_pct: percent offset from (0, 0) for the Y point of the cursor
 #
-
-[defaults]
-dim_px = 16
 
 [cursors]
 

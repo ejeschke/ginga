@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 
 import sys
-import os
 import numpy as np
 
 from ginga.gtk3w import GtkHelp
@@ -285,6 +284,9 @@ class ImageViewGtk(ImageView.ImageViewBase):
             win.set_cursor(cursor)
 
     def make_cursor(self, iconpath, x, y, size=None):
+        if size is None:
+            def_px_size = self.settings.get('default_cursor_length', 16)
+            size = (def_px_size, def_px_size)
         cursor = GtkHelp.make_cursor(self.imgwin, iconpath, x, y, size=size)
         return cursor
 
@@ -446,7 +448,7 @@ class GtkEventMixin(object):
 
         # Define cursors
         cursor_names = cursor_info.get_cursor_names()
-        def_px_size = 16
+        def_px_size = self.settings.get('default_cursor_length', 16)
         for curname in cursor_names:
             curinfo = cursor_info.get_cursor_info(curname)
             wd_px = int(curinfo.scale_width * def_px_size)

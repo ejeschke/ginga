@@ -174,6 +174,7 @@ class ImageViewBase(Callback.Callbacks):
                              show_focus_indicator=None,
                              onscreen_font='Sans Serif',
                              onscreen_font_size=None,
+                             default_cursor_length=16,
                              color_fg="#D0F0E0", color_bg="#404040",
                              limits=None, enter_focus=None)
         self.t_.get_setting('limits').add_callback('set', self._set_limits_cb)
