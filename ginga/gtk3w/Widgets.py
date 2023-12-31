@@ -1320,11 +1320,11 @@ class Expander(ContainerBase):
         self.widget = vbox.get_widget()
         self._vbox = vbox
         if Expander.r_arrow is None:
-            iconpath = os.path.join(icondir, 'triangle-right-48.png')
+            iconpath = os.path.join(icondir, 'triangle-right.svg')
             Expander.r_arrow = GtkHelp.pixbuf_new_from_file_at_size(iconpath,
                                                                     12, 12)
         if Expander.d_arrow is None:
-            iconpath = os.path.join(icondir, 'triangle-down-48.png')
+            iconpath = os.path.join(icondir, 'triangle-down.svg')
             Expander.d_arrow = GtkHelp.pixbuf_new_from_file_at_size(iconpath,
                                                                     12, 12)
         self._d_arrow = Gtk.Image.new_from_pixbuf(Expander.d_arrow)

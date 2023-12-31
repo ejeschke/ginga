@@ -106,7 +106,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             ("Rotate", 'toggle', 'rotate',
              "Drag left to rotate; click right to reset to 0 deg",
              lambda w, tf: self.mode_cb(tf, 'rotate')),
-            ("Dist", 'toggle', 'distribute_48',
+            ("Dist", 'toggle', 'sqrt',
              "Scroll to set color distribution algorithm",
              lambda w, tf: self.mode_cb(tf, 'dist')),
             ("Cuts", 'toggle', 'cuts',
