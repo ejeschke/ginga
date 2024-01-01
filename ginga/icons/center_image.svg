@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="158.75mm"
-   height="158.75mm"
-   viewBox="0 0 158.74998 158.75"
+   width="29.999994mm"
+   height="29.999994mm"
+   viewBox="0 0 29.99999 29.999994"
    version="1.1"
    id="svg909"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
@@ -27,34 +27,30 @@
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     inkscape:zoom="1.23"
-     inkscape:cx="300.4065"
-     inkscape:cy="299.5935"
+     inkscape:zoom="0.81"
+     inkscape:cx="521.60494"
+     inkscape:cy="272.22222"
      inkscape:window-width="2125"
      inkscape:window-height="1123"
-     inkscape:window-x="3966"
-     inkscape:window-y="285"
+     inkscape:window-x="1255"
+     inkscape:window-y="478"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1" />
   <defs
-     id="defs906"><style
-   type="text/css"
-   id="style1162" />
-
-	
-	
-	
-	
-</defs>
+     id="defs906">
+    <style
+       type="text/css"
+       id="style1162" />
+  </defs>
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-25.646429,-81.190121)">
+     transform="translate(-32.701988,-88.24568)">
     <g
-       style="fill:none"
+       style="fill:none;stroke-width:2.13221;stroke-miterlimit:4;stroke-dasharray:none"
        id="g5726"
-       transform="matrix(8.8194444,0,0,8.8194444,-0.81190385,54.731788)">
+       transform="matrix(1.6545139,0,0,1.6545139,27.847818,83.39151)">
       <path
          d="M 8,4 H 6 C 4.89543,4 4,4.89543 4,6 V 8 M 8,20 H 6 C 4.89543,20 4,19.1046 4,18 V 16 M 16,4 h 2 c 1.1046,0 2,0.89543 2,2 v 2 m -4,12 h 2 c 1.1046,0 2,-0.8954 2,-2 v -2 m -5,-4 c 0,1.6569 -1.3431,3 -3,3 -1.6569,0 -3,-1.3431 -3,-3 0,-1.6569 1.3431,-3 3,-3 1.6569,0 3,1.3431 3,3 z"
          stroke="#000000"
@@ -62,7 +58,7 @@
          stroke-linecap="round"
          stroke-linejoin="round"
          id="path5717"
-         style="fill:none" />
+         style="fill:none;stroke-width:2.13221;stroke-miterlimit:4;stroke-dasharray:none" />
     </g>
   </g>
 </svg>

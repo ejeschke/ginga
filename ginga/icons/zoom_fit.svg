@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="4.2334909mm"
-   height="4.2328954mm"
-   viewBox="0 0 4.2334909 4.2328954"
+   width="30.004221mm"
+   height="30mm"
+   viewBox="0 0 30.004221 30"
    version="1.1"
    id="svg5"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
@@ -23,9 +23,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="15.3"
-     inkscape:cx="-3.627451"
-     inkscape:cy="7.745098"
+     inkscape:zoom="2.35"
+     inkscape:cx="-31.702128"
+     inkscape:cy="7.8723404"
      inkscape:window-width="2125"
      inkscape:window-height="1123"
      inkscape:window-x="3935"
@@ -42,19 +42,22 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-102.83686,-146.38355)">
+     transform="translate(-102.83687,-146.38355)">
     <g
-       id="g1091">
+       id="g1091"
+       transform="matrix(7.087347,0,0,7.087347,-626.00367,-891.08747)"
+       style="stroke-width:0.141097">
       <g
-         style="fill:currentColor"
+         style="fill:currentColor;stroke-width:0.141097"
          id="g900"
          transform="matrix(0.26458333,0,0,0.26458333,102.8371,146.38306)">
         <path
            d="m 11.742,10.344 a 6.5,6.5 0 1 0 -1.397,1.398 h -0.001 c 0.03,0.04 0.062,0.078 0.098,0.115 l 3.85,3.85 a 1.0002026,1.0002026 0 0 0 1.415,-1.414 l -3.85,-3.85 a 1.007,1.007 0 0 0 -0.115,-0.1 z M 12,6.5 a 5.5,5.5 0 1 1 -11,0 5.5,5.5 0 0 1 11,0"
-           id="path891" />
+           id="path891"
+           style="stroke-width:0.141097" />
       </g>
       <rect
-         style="fill:none;stroke:#000000;stroke-width:0.1;stroke-linejoin:round;stop-color:#000000"
+         style="fill:none;stroke:#000000;stroke-width:0.0141097;stroke-linejoin:round;stop-color:#000000"
          id="rect924"
          width="1.8297729"
          height="2.024086"
