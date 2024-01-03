@@ -1749,8 +1749,8 @@ class Toolbar(ContainerBase):
         self._menu = None
         self.widget.setStyleSheet(
             """
-            QToolBar { padding: 0; spacing: 0; }\n
-            QToolBar QToolButton { padding: 0; margin: 0; }\n
+            QToolBar { padding: 0; spacing: 1; }\n
+            QToolBar QToolButton { padding: 2; margin: 0; }\n
             """)
 
     def add_action(self, text, toggle=False, iconpath=None, iconsize=None):
