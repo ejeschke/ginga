@@ -1,0 +1,41 @@
+#
+# Define cursors for Ginga
+#
+# Each cursor should be defined with the following attributes:
+#   file: name of the cursor (if it doesn't begin with a path separator
+#         then it is considered relative to ginga.cursors)
+#   scale_width: scaling factor for width from default cursor length
+#   scale_height: scaling factor for height from default cursor length
+#   point_x_pct: percent offset from (0, 0) for the X point of the cursor
+#   point_y_pct: percent offset from (0, 0) for the Y point of the cursor
+#
+
+[cursors]
+
+[cursors.pick]
+file = 'cross.svg'
+scale_width = 1.0
+scale_height = 1.0
+point_x_pct = 0.5
+point_y_pct = 0.5
+
+[cursors.pan]
+file = 'hand.svg'
+scale_width = 1.0
+scale_height = 1.53
+point_x_pct = 0.5
+point_y_pct = 0.5
+    
+[cursors.draw]
+file = 'pencil.svg'
+scale_width = 1.5
+scale_height = 1.5
+point_x_pct = 0.0
+point_y_pct = 0.95
+
+[cursors.zoom]
+file = 'magnify.svg'
+scale_width = 2.0
+scale_height = 2.0
+point_x_pct = 0.385
+point_y_pct = 0.385

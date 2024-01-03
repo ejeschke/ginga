@@ -2554,13 +2554,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             tb.add_separator()
 
             # add toolbar buttons for navigating between tabs
-            iconpath = os.path.join(self.iconpath, "prev_48.png")
+            iconpath = os.path.join(self.iconpath, "prev.svg")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
             btn.set_tooltip("Focus previous tab in this workspace")
             btn.add_callback('activated', lambda w: self.prev_channel_ws(ws))
             ws.extdata.w_prev_tab = btn
             btn.set_enabled(False)
-            iconpath = os.path.join(self.iconpath, "next_48.png")
+            iconpath = os.path.join(self.iconpath, "next.svg")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 24))
             btn.set_tooltip("Focus next tab in this workspace")
             btn.add_callback('activated', lambda w: self.next_channel_ws(ws))
@@ -2578,13 +2578,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             btn = tb.add_widget(entry)
 
             # add toolbar buttons adding and deleting channels
-            iconpath = os.path.join(self.iconpath, "inbox_plus_48.png")
+            iconpath = os.path.join(self.iconpath, "inbox_plus.svg")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 23))
             btn.set_tooltip("Add a channel to this workspace")
             btn.add_callback('activated',
                              lambda w: self.add_channel_auto_ws(ws))
             ws.extdata.w_new_channel = btn
-            iconpath = os.path.join(self.iconpath, "inbox_minus_48.png")
+            iconpath = os.path.join(self.iconpath, "inbox_minus.svg")
             btn = tb.add_action(None, iconpath=iconpath, iconsize=(24, 23))
             btn.set_tooltip("Delete current channel from this workspace")
             btn.add_callback('activated',

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+
+<svg
+   fill="#000000"
+   width="131.77121"
+   height="113.38585"
+   viewBox="0 0 3.9531363 3.4015755"
+   id="square-root"
+   data-name="Flat Line"
+   class="icon flat-line"
+   version="1.1"
+   sodipodi:docname="sqrt.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs36507" />
+  <sodipodi:namedview
+     id="namedview36505"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="0.89"
+     inkscape:cx="306.74157"
+     inkscape:cy="-157.86517"
+     inkscape:window-width="2100"
+     inkscape:window-height="1123"
+     inkscape:window-x="1088"
+     inkscape:window-y="554"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="square-root" />
+  <path
+     id="primary"
+     d="m 0.208,1.7008281 h 0.2574246 a 0.19650755,0.18660029 0 0 1 0.1827524,0.121288 l 0.5423609,1.371512 0.5600463,-2.83258997 a 0.19650755,0.18660029 0 0 1 0.1965076,-0.153014 h 1.7980445"
+     style="fill:none;stroke:#000000;stroke-width:0.416;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+</svg>

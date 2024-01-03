@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+
+<svg
+   version="1.0"
+   id="Layer_1"
+   width="99.212593"
+   height="113.38583"
+   viewBox="0 0 7.9370074 9.0708661"
+   enable-background="new 0 0 64 64"
+   xml:space="preserve"
+   sodipodi:docname="file.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+   id="defs1738" /><sodipodi:namedview
+   id="namedview1736"
+   pagecolor="#ffffff"
+   bordercolor="#666666"
+   borderopacity="1.0"
+   inkscape:pageshadow="2"
+   inkscape:pageopacity="0.0"
+   inkscape:pagecheckerboard="0"
+   showgrid="false"
+   fit-margin-top="0"
+   fit-margin-left="0"
+   fit-margin-right="0"
+   fit-margin-bottom="0"
+   inkscape:zoom="1.09125"
+   inkscape:cx="349.14089"
+   inkscape:cy="400"
+   inkscape:window-width="2100"
+   inkscape:window-height="1123"
+   inkscape:window-x="3910"
+   inkscape:window-y="44"
+   inkscape:window-maximized="0"
+   inkscape:current-layer="Layer_1" />
+<g
+   id="g1733"
+   transform="matrix(0.14173228,0,0,0.14173228,-0.56692912,0)"
+   style="stroke-width:7.05555">
+	<g
+   id="g1715"
+   style="stroke-width:7.05555">
+		<polygon
+   fill="#f9ebb2"
+   points="46,14 56.586,14 46,3.414 "
+   id="polygon1711"
+   style="stroke-width:43.5583" />
+		<path
+   fill="#f9ebb2"
+   d="m 45,16 c -0.553,0 -1,-0.447 -1,-1 V 2 H 8 C 6.896,2 6,2.896 6,4 v 56 c 0,1.104 0.896,2 2,2 h 48 c 1.104,0 2,-0.896 2,-2 V 16 Z"
+   id="path1713"
+   style="stroke-width:43.5583" />
+	</g>
+	<path
+   fill="#394240"
+   d="m 14,26 c 0,0.553 0.447,1 1,1 h 34 c 0.553,0 1,-0.447 1,-1 0,-0.553 -0.447,-1 -1,-1 H 15 c -0.553,0 -1,0.447 -1,1 z"
+   id="path1717"
+   style="stroke-width:43.5583" />
+	<path
+   fill="#394240"
+   d="M 49,37 H 15 c -0.553,0 -1,0.447 -1,1 0,0.553 0.447,1 1,1 h 34 c 0.553,0 1,-0.447 1,-1 0,-0.553 -0.447,-1 -1,-1 z"
+   id="path1719"
+   style="stroke-width:43.5583" />
+	<path
+   fill="#394240"
+   d="M 49,43 H 15 c -0.553,0 -1,0.447 -1,1 0,0.553 0.447,1 1,1 h 34 c 0.553,0 1,-0.447 1,-1 0,-0.553 -0.447,-1 -1,-1 z"
+   id="path1721"
+   style="stroke-width:43.5583" />
+	<path
+   fill="#394240"
+   d="M 49,49 H 15 c -0.553,0 -1,0.447 -1,1 0,0.553 0.447,1 1,1 h 34 c 0.553,0 1,-0.447 1,-1 0,-0.553 -0.447,-1 -1,-1 z"
+   id="path1723"
+   style="stroke-width:43.5583" />
+	<path
+   fill="#394240"
+   d="M 49,31 H 15 c -0.553,0 -1,0.447 -1,1 0,0.553 0.447,1 1,1 h 34 c 0.553,0 1,-0.447 1,-1 0,-0.553 -0.447,-1 -1,-1 z"
+   id="path1725"
+   style="stroke-width:43.5583" />
+	<path
+   fill="#394240"
+   d="m 15,20 h 16 c 0.553,0 1,-0.447 1,-1 0,-0.553 -0.447,-1 -1,-1 H 15 c -0.553,0 -1,0.447 -1,1 0,0.553 0.447,1 1,1 z"
+   id="path1727"
+   style="stroke-width:43.5583" />
+	<path
+   fill="#394240"
+   d="M 59.706,14.292 45.708,0.294 C 45.527,0.112 45.277,0 45,0 H 8 C 5.789,0 4,1.789 4,4 v 56 c 0,2.211 1.789,4 4,4 h 48 c 2.211,0 4,-1.789 4,-4 V 15 c 0,-0.277 -0.112,-0.527 -0.294,-0.708 z M 46,3.414 56.586,14 H 46 Z M 58,60 c 0,1.104 -0.896,2 -2,2 H 8 C 6.896,62 6,61.104 6,60 V 4 C 6,2.896 6.896,2 8,2 h 36 v 13 c 0,0.553 0.447,1 1,1 h 13 z"
+   id="path1729"
+   style="stroke-width:43.5583" />
+	<polygon
+   opacity="0.15"
+   fill="#231f20"
+   points="46,14 46,3.414 56.586,14 "
+   id="polygon1731"
+   style="stroke-width:43.5583" />
+</g>
+</svg>

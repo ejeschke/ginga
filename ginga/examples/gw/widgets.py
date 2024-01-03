@@ -567,7 +567,7 @@ def show_example(cbox, top, logger):
         w.add_widget(Widgets.Button('A Button'))
         w.add_separator()
         w.add_action("Toggle me", toggle=True)
-        w.add_action(None, iconpath=os.path.join(icondir, 'hand_48.png'))
+        w.add_action(None, iconpath=os.path.join(icondir, 'hand.svg'))
         vbox.add_widget(w)
         vbox.add_widget(Widgets.Label("App content"), stretch=1)
 

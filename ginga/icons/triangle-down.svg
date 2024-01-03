@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="60.472439"
+   height="39.015522"
+   fill="currentColor"
+   class="bi bi-caret-down-fill"
+   viewBox="0 0 60.472439 39.015522"
+   version="1.1"
+   id="svg5764"
+   sodipodi:docname="triangle-down.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs5768" />
+  <sodipodi:namedview
+     id="namedview5766"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="6.37"
+     inkscape:cx="5.8084772"
+     inkscape:cy="4.0031397"
+     inkscape:window-width="2100"
+     inkscape:window-height="1123"
+     inkscape:window-x="3910"
+     inkscape:window-y="44"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg5764" />
+  <path
+     d="M 26.312997,37.237213 1.300438,8.6469625 C -1.6514192,5.2830967 0.74761699,1.9187416e-6 5.2275559,1.9187416e-6 H 55.252671 A 5.2152958,5.2152958 0 0 1 59.179791,8.6521775 L 34.167232,37.231997 a 5.2152958,5.2152958 0 0 1 -7.854235,0 z"
+     id="path5762"
+     style="stroke-width:0.999997" />
+</svg>

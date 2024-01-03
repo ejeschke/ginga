@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="26.39642mm"
+   height="29.999989mm"
+   viewBox="0 0 26.39642 29.999989"
+   version="1.1"
+   id="svg1125"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="orient_ne.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1127"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="1.44"
+     inkscape:cx="-44.791667"
+     inkscape:cy="-44.097222"
+     inkscape:window-width="2125"
+     inkscape:window-height="1123"
+     inkscape:window-x="633"
+     inkscape:window-y="658"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1122">
+    <inkscape:path-effect
+       effect="bspline"
+       id="path-effect7625"
+       is_visible="true"
+       weight="33.333333"
+       steps="2"
+       helper_size="0"
+       apply_no_weight="true"
+       apply_with_weight="true"
+       only_selected="false"
+       lpeversion="0" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-38.210865,-160.20772)">
+    <g
+       id="g842">
+      <g
+         style="fill:currentColor;stroke-width:0.204882"
+         id="g1544"
+         transform="matrix(0,0.80676458,2.0671374,0,34.633793,177.82548)">
+        <path
+           d="m 7.27,2.047 a 1,1 0 0 1 1.46,0 l 6.345,6.77 c 0.6,0.638 0.146,1.683 -0.73,1.683 H 11.5 v 3 a 1,1 0 0 1 -1,1 h -5 a 1,1 0 0 1 -1,-1 v -3 H 1.654 C 0.78,10.5 0.326,9.455 0.924,8.816 Z"
+           id="path1542"
+           style="stroke-width:0.204882" />
+      </g>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:condensed;font-size:21.8423px;line-height:125%;font-family:'Arial Narrow';-inkscape-font-specification:'Arial Narrow, Bold Condensed';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264582px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         x="43.228878"
+         y="175.84288"
+         id="text7572"><tspan
+           sodipodi:role="line"
+           id="tspan7570"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.8423px;font-family:'Arial Black';-inkscape-font-specification:'Arial Black, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke-width:0.264582px"
+           x="43.228878"
+           y="175.84288">E</tspan></text>
+    </g>
+  </g>
+</svg>

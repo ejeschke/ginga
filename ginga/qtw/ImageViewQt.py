@@ -11,10 +11,11 @@ from functools import partial
 import numpy as np
 
 from ginga import ImageView, Mixins, Bindings
-from ginga.util.paths import icondir
+from ginga.cursors import cursor_info
 from ginga.qtw.QtHelp import (QtGui, QtCore, QImage, QPixmap, QCursor,
                               QPainter, QOpenGLWidget, QSurfaceFormat,
                               Timer, get_scroll_info, get_painter)
+from ginga.qtw import QtHelp
 
 from .CanvasRenderQt import CanvasRenderer
 
@@ -347,9 +348,12 @@ class ImageViewQt(ImageView.ImageViewBase):
         if self.imgwin is not None:
             self.imgwin.setCursor(cursor)
 
-    def make_cursor(self, iconpath, x, y):
-        image = QImage()
-        image.load(iconpath)
+    def make_cursor(self, curpath, x, y, size=None):
+        if size is None:
+            def_px_size = self.settings.get('default_cursor_length', 16)
+            size = (def_px_size, def_px_size)
+        image = QtHelp.get_image(curpath, size=size,
+                                 adjust_width=False)
         pm = QPixmap(image)
         return QCursor(pm, x, y)
 
@@ -488,13 +492,19 @@ class QtEventMixin(object):
         #imgwin.grabGesture(QtCore.Qt.TapAndHoldGesture)
 
         # Define cursors
-        for curname, filename in (('pan', 'openHandCursor.png'),
-                                  ('pick', 'thinCrossCursor.png')):
-            path = os.path.join(icondir, filename)
-            cur = self.make_cursor(path, 8, 8)
-            self.define_cursor(curname, cur)
+        cursor_names = cursor_info.get_cursor_names()
+        def_px_size = self.settings.get('default_cursor_length', 16)
+        for curname in cursor_names:
+            curinfo = cursor_info.get_cursor_info(curname)
+            wd_px = int(curinfo.scale_width * def_px_size)
+            ht_px = int(curinfo.scale_height * def_px_size)
+            pt_x = int(curinfo.point_x_pct * wd_px)
+            pt_y = int(curinfo.point_y_pct * ht_px)
+            cur = self.make_cursor(curinfo.path, pt_x, pt_y,
+                                   size=(wd_px, ht_px))
+            self.define_cursor(curinfo.name, cur)
 
-        # @$%&^(_)*&^ qt!!
+        # for qt key handling
         self._keytbl = {
             '`': 'backquote',
             '"': 'doublequote',

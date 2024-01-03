@@ -174,6 +174,7 @@ class ImageViewBase(Callback.Callbacks):
                              show_focus_indicator=None,
                              onscreen_font='Sans Serif',
                              onscreen_font_size=None,
+                             default_cursor_length=16,
                              color_fg="#D0F0E0", color_bg="#404040",
                              limits=None, enter_focus=None)
         self.t_.get_setting('limits').add_callback('set', self._set_limits_cb)
@@ -3344,7 +3345,7 @@ class ImageViewBase(Callback.Callbacks):
         #self.logger.warning("Subclass should override this abstract method!")
         return None
 
-    def make_cursor(self, iconpath, x, y):
+    def make_cursor(self, iconpath, x, y, size=None):
         """Make a cursor in the viewer's native widget toolkit.
         This should be implemented by subclasses.
 
@@ -3358,6 +3359,9 @@ class ImageViewBase(Callback.Callbacks):
 
         y : int
             the Y position of the center of the cursor hot spot
+
+        size: (int, int) tuple or None (optional, defaults to None)
+            the size of the cursor to create in pixels (width, height)
 
         """
         self.logger.warning("Subclass should override this abstract method!")

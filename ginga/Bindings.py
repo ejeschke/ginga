@@ -298,7 +298,7 @@ class ImageViewBindings(object):
     def add_cursor(self, viewer, curname, curpath):
         if not curpath.startswith('/'):
             curpath = os.path.join(icondir, curpath)
-        cursor = viewer.make_cursor(curpath, 8, 8)
+        cursor = viewer.make_cursor(curpath, 8, 8, size=(16, 16))
         viewer.define_cursor(curname, cursor)
 
     #####  ENABLERS #####

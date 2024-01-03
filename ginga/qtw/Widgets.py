@@ -9,7 +9,7 @@ import pathlib
 from functools import reduce
 
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
-                              QImage, QCursor, QFont)
+                              QCursor, QFont)
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch, Settings, LineHistory
@@ -1217,10 +1217,10 @@ class Expander(ContainerBase):
         # these icons in the class variable declarations
         if Expander.r_arrow is None:
             Expander.r_arrow = QtHelp.get_icon(
-                os.path.join(icondir, 'triangle-right-48.png'), size=(12, 12))
+                os.path.join(icondir, 'triangle-right.svg'), size=(12, 12))
         if Expander.d_arrow is None:
             Expander.d_arrow = QtHelp.get_icon(
-                os.path.join(icondir, 'triangle-down-48.png'), size=(12, 12))
+                os.path.join(icondir, 'triangle-down.svg'), size=(12, 12))
 
         self.widget = QtGui.QWidget()
         vbox = QtGui.QVBoxLayout()
@@ -1756,14 +1756,10 @@ class Toolbar(ContainerBase):
     def add_action(self, text, toggle=False, iconpath=None, iconsize=None):
         child = ToolbarAction()
         if iconpath:
-            image = QImage(iconpath)
             wd, ht = 24, 24
             if iconsize is not None:
                 wd, ht = iconsize
-            qsize = QtCore.QSize(wd, ht)
-            image = image.scaled(qsize)
-            pixmap = QPixmap.fromImage(image)
-            iconw = QIcon(pixmap)
+            iconw = QtHelp.get_icon(iconpath, size=(wd, ht))
             action = self.widget.addAction(iconw, text,
                                            child._cb_redirect)
             if text is not None and len(text) > 0:

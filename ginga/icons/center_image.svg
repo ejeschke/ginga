@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="40.400196mm"
+   height="30mm"
+   viewBox="0 0 40.40019 30"
+   version="1.1"
+   id="svg909"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="center_image.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview911"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="0.81"
+     inkscape:cx="226.54321"
+     inkscape:cy="-40.123457"
+     inkscape:window-width="2125"
+     inkscape:window-height="1123"
+     inkscape:window-x="1255"
+     inkscape:window-y="478"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs906">
+    <style
+       type="text/css"
+       id="style1162" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(28.888617,-170.94525)">
+    <g
+       id="g1711">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:2.8;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
+         id="rect875"
+         width="37.600197"
+         height="27.200001"
+         x="-27.488617"
+         y="172.34525" />
+      <g
+         style="fill:#000000;stroke-width:11.0073"
+         id="g1706"
+         transform="matrix(1.2018549,0,0,1.2018549,-18.303358,176.33041)">
+        <path
+           d="M 7,7 H 9 V 9 H 7 Z M 7,0 H 9 V 5 H 7 Z m 0,11 h 2 v 5 H 7 Z m 4,-4 h 5 V 9 H 11 Z M 0,7 H 5 V 9 H 0 Z"
+           fill-rule="evenodd"
+           id="path1697"
+           style="stroke-width:121.16" />
+      </g>
+    </g>
+  </g>
+</svg>
