@@ -26,6 +26,7 @@ Ver 5.0.0 (unreleased)
 - Renamed mode "freepan" to "zoom" (bindings and activation are the
   same as before) to better reflect what the mode does
 - Changed icons and cursors from PNG (bitmap) to SVG (vector) format
+- Added color distribution ("stretch") control to Info plugin
 
 Ver 4.1.0 (2022-06-30)
 ======================

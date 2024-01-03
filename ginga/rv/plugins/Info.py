@@ -2,7 +2,7 @@
 # Please see the file LICENSE.txt for details.
 """
 The ``Info`` plugin provides a pane of commonly useful metadata about the
-associated channel image.  Common information includes some metadata
+focused channel image.  Common information includes some metadata
 header values, coordinates, dimensions of the image, minimum and
 maximum values, etc.  As the cursor is moved around the image, the X, Y,
 Value, RA, and DEC values are updated to reflect the value under the cursor.
@@ -13,10 +13,15 @@ Value, RA, and DEC values are updated to reflect the value under the cursor.
 
 **Usage**
 
-At the bottom of the ``Info`` interface the cut levels controls. Here
-the low and high cut levels are shown and can be adjusted.  Pressing the
-"Auto Levels" button will recalculate cut levels based on the current
-auto cut levels algorithm and parameters defined in the channel
+At the bottom of the ``Info`` interface are the color distribution
+and cut levels controls.  The selector above the cut levels boxes lets
+you chose from several distribution algorithms that map the values in
+the image to the color map.  Choices are "linear", "log", "power", "sqrt",
+"squared", "asinh", "sinh", and "histeq" (histogram equalization).
+
+Below this, the low and high cut levels are shown and can be adjusted.
+Pressing the "Auto Levels" button will recalculate cut levels based on
+the current auto cut levels algorithm and parameters defined in the channel
 preferences.
 
 Below the "Auto Levels" button, the status of the settings for
@@ -43,7 +48,7 @@ file--then Close and Help buttons will be added to the bottom of the UI.
 """
 from ginga.gw import Widgets
 from ginga.misc import Bunch
-from ginga import GingaPlugin
+from ginga import GingaPlugin, ColorDist
 
 __all__ = ['Info']
 
@@ -137,7 +142,8 @@ class Info(GingaPlugin.GlobalPlugin):
         vbox.add_widget(sw2, stretch=1)
 
         captions = (('Channel:', 'label', 'Channel', 'llabel'),
-                    ('Zoom:', 'label', 'Zoom', 'llabel'),
+                    ('Zoom:', 'label', 'Zoom', 'llabel',
+                     'Color Dist', 'combobox'),
                     ('Cut Low:', 'label', 'Cut Low Value', 'llabel',
                      'Cut Low', 'entry'),
                     ('Cut High:', 'label', 'Cut High Value', 'llabel',
@@ -165,25 +171,24 @@ class Info(GingaPlugin.GlobalPlugin):
         b.cut_high.set_text(str(hival))
         b.cut_high_value.set_text(str(hival))
 
+        combobox = b.color_dist
+        for name in ColorDist.get_dist_names():
+            combobox.append_text(name)
+        b.color_dist.set_tooltip("Set distribution (stretching) algorithm")
+
         combobox = b.cut_new
-        index = 0
         for name in self.autocut_options:
             combobox.append_text(name)
-            index += 1
         b.cut_new.set_tooltip("Automatically set cut levels when switching images")
 
         combobox = b.zoom_new
-        index = 0
         for name in self.autozoom_options:
             combobox.append_text(name)
-            index += 1
         b.zoom_new.set_tooltip("Automatically fit image to window when switching images")
 
         combobox = b.center_new
-        index = 0
         for name in self.autocenter_options:
             combobox.append_text(name)
-            index += 1
         b.center_new.set_tooltip("Automatically center image in window when switching images")
 
         b.follow_new.set_tooltip("Automatically switch to new images in channel")
@@ -212,6 +217,8 @@ class Info(GingaPlugin.GlobalPlugin):
         channel.extdata._info_info = info
 
         winfo.channel.set_text(chname)
+        winfo.color_dist.add_callback('activated', self.set_color_dist,
+                                      channel, info)
         winfo.cut_low.add_callback('activated', self.cut_levels,
                                    channel, info)
         winfo.cut_high.add_callback('activated', self.cut_levels,
@@ -239,6 +246,8 @@ class Info(GingaPlugin.GlobalPlugin):
         for name in ['scale']:
             fitssettings.get_setting(name).add_callback(
                 'set', self.zoomset_cb, channel)
+        fitssettings.get_setting('color_algorithm').add_callback(
+            'set', self.cdistset_cb, channel)
         fitssettings.get_setting('autocuts').add_callback(
             'set', self.autocuts_cb, channel)
         fitssettings.get_setting('autozoom').add_callback(
@@ -353,6 +362,15 @@ class Info(GingaPlugin.GlobalPlugin):
         #info.winfo.cut_high.set_text('%.4g' % (hival))
         info.winfo.cut_high_value.set_text('%.4g' % (hival))
 
+    def cdistset_cb(self, setting, value, channel):
+        if not self.gui_up:
+            return
+        info = channel.extdata._info_info
+        if info is None:
+            return
+        name = value
+        info.winfo.color_dist.set_text(name)
+
     def autocuts_cb(self, setting, option, channel):
         if not self.gui_up:
             return
@@ -466,6 +484,10 @@ class Info(GingaPlugin.GlobalPlugin):
         info.winfo.follow_new.set_state(t_['switchnew'])
         info.winfo.raise_new.set_state(t_['raisenew'])
 
+        # Set color distribution indicator
+        name = t_['color_algorithm']
+        info.winfo.color_dist.set_text(name)
+
         image = fitsimage.get_image()
         if image is None:
             return
@@ -535,6 +557,10 @@ class Info(GingaPlugin.GlobalPlugin):
 
     def auto_levels(self, w, channel, info):
         channel.fitsimage.auto_levels()
+
+    def set_color_dist(self, w, idx, channel, info):
+        name = w.get_text()
+        channel.fitsimage.set_color_algorithm(name)
 
     def __str__(self):
         return 'info'

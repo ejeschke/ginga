@@ -128,15 +128,15 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             ("ResetContrast", 'button', 'reset_contrast', "Reset contrast",
              self.reset_contrast_cb),
             ("---",),
-            ("Preferences", 'button', 'settings', "Set channel preferences",
+            ("Preferences", 'button', 'settings', "Set channel preferences (in focused channel)",
              lambda w: self.start_plugin_cb('Preferences')),
-            ("FBrowser", 'button', 'folder_open', "Open file",
+            ("FBrowser", 'button', 'folder_open', "Open file (in focused channel)",
              lambda w: self.start_plugin_cb('FBrowser')),
-            ("MultiDim", 'button', 'layers', "Select HDUs or cube slices",
+            ("MultiDim", 'button', 'layers', "Select HDUs or cube slices (in focused channel)",
              lambda w: self.start_plugin_cb('MultiDim')),
-            ("Header", 'button', 'tags', "View image metadata",
+            ("Header", 'button', 'tags', "View image metadata (Header plugin)",
              lambda w: self.start_global_plugin_cb('Header')),
-            ("ZoomPlugin", 'button', 'microscope', "Magnify detail",
+            ("ZoomPlugin", 'button', 'microscope', "Magnify detail (Zoom plugin)",
              lambda w: self.start_global_plugin_cb('Zoom')),
             ):  # noqa
 
@@ -144,11 +144,13 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             if name == '---':
                 tb.add_separator()
                 continue
-            iconpath = os.path.join(self.fv.iconpath, "%s.svg" % (tup[2]))
-            if not os.path.exists(iconpath):
-                iconpath = os.path.join(self.fv.iconpath, "%s.png" % (tup[2]))
-            btn = tb.add_action(None, toggle=(tup[1] == 'toggle'),
-                                iconpath=iconpath, iconsize=(24, 24))
+            if tup[1] not in ['button', 'toggle']:
+                btn = Widgets.make_widget(name, tup[1])
+                tb.add_widget(btn)
+            else:
+                iconpath = os.path.join(self.fv.iconpath, "%s.svg" % (tup[2]))
+                btn = tb.add_action(None, toggle=(tup[1] == 'toggle'),
+                                    iconpath=iconpath, iconsize=(24, 24))
             if tup[3]:
                 btn.set_tooltip(tup[3])
             if tup[4]:
@@ -364,20 +366,20 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         self.w.btn_up.set_enabled(enabled)
         self.w.btn_down.set_enabled(enabled)
 
-    def _update_toolbar_state(self, fitsimage):
-        if (fitsimage is None) or (not self.gui_up):
+    def _update_toolbar_state(self, chviewer):
+        if (chviewer is None) or (not self.gui_up):
             return
         self.logger.debug("updating toolbar state")
         try:
             # update transform toggles
-            flipx, flipy, swapxy = fitsimage.get_transforms()
+            flipx, flipy, swapxy = chviewer.get_transforms()
             # toolbar follows view
             self.w.btn_flipx.set_state(flipx)
             self.w.btn_flipy.set_state(flipy)
             self.w.btn_swapxy.set_state(swapxy)
 
             # update mode toggles
-            bm = fitsimage.get_bindmap()
+            bm = chviewer.get_bindmap()
             modename, mode_type = bm.current_mode()
             self.logger.debug("modename=%s" % (modename))
             # toolbar follows view
