@@ -33,8 +33,8 @@ Select one or more lines and type a priority for them in the box labeled
           with -1 will be used without asking the user to choose.
 
 
-Click "Save" to save the priorities in your $HOME/.ginga area so that they
-will be reloaded and used on subsequent restarts of the program.
+Click "Save" to save the priorities to $HOME/.ginga/loaders.json so that
+they will be reloaded and used on subsequent restarts of the program.
 """
 import os.path
 
