@@ -25,6 +25,7 @@ Ver 5.0.0 (unreleased)
 - Fix for utcnow(), deprecated in Python 3.12
 - Renamed mode "freepan" to "zoom" (bindings and activation are the
   same as before) to better reflect what the mode does
+- Changed icons and cursors from PNG (bitmap) to SVG (vector) format
 
 Ver 4.1.0 (2022-06-30)
 ======================
