@@ -19,7 +19,7 @@ from ginga.misc.Bunch import Bunch
 from ginga.misc import Task, ModuleManager, Settings, log
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
-from ginga.util import paths, rgb_cms, json, compat
+from ginga.util import paths, rgb_cms, json, compat, loader
 
 # Catch warnings
 logging.captureWarnings(True)
@@ -168,6 +168,9 @@ plugins = [
           menu="Header [G]", hidden=False, category='Utils', ptype='global'),
     Bunch(module='Zoom', tab='Zoom', workspace='left', start=False,
           menu="Zoom [G]", category='Utils', ptype='global'),
+    Bunch(module='LoaderConfig', tab='Loaders', workspace='channels',
+          start=False, menu="LoaderConfig [G]", category='Debug',
+          ptype='global'),
 ]
 
 
@@ -517,6 +520,26 @@ class ReferenceViewer(object):
         fmt = logging.Formatter(log.LOG_FORMAT)
         guiHdlr.setFormatter(fmt)
         logger.addHandler(guiHdlr)
+
+        # Set loader priorities, if user has saved any
+        # (see LoaderConfig plugin)
+        path = os.path.join(self.basedir, 'loaders.json')
+        if os.path.exists(path):
+            try:
+                with open(path, 'r') as in_f:
+                    loader_dct = json.loads(in_f.read())
+
+                # set saved priorities for openers
+                for mimetype, m_dct in loader_dct.items():
+                    for name, l_dct in m_dct.items():
+                        opener = loader.get_opener(name)
+                        loader.add_opener(opener, [mimetype],
+                                          priority=l_dct['priority'],
+                                          note=opener.__doc__)
+
+            except Exception as e:
+                logger.error(f"failed to process loader file '{path}': {e}",
+                             exc_info=True)
 
         # Load any custom modules
         if options.modules is not None:

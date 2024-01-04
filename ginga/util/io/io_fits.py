@@ -220,7 +220,7 @@ class AstropyFitsFileHandler(BaseFitsFileHandler):
     """
 
     name = 'astropy.io.fits'
-    mimetypes = ['image/fits', 'image/x-fits']
+    mimetypes = ['image/fits', 'image/x-fits', 'application/fits']
 
     @classmethod
     def check_availability(cls):
@@ -562,7 +562,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
     """For loading FITS (Flexible Image Transport System) data files.
     """
     name = 'fitsio'
-    mimetypes = ['image/fits', 'image/x-fits']
+    mimetypes = ['image/fits', 'image/x-fits', 'application/fits']
 
     @classmethod
     def check_availability(cls):
