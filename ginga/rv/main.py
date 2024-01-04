@@ -538,8 +538,8 @@ class ReferenceViewer(object):
                                           note=opener.__doc__)
 
             except Exception as e:
-                self.logger.error(f"failed to process loader file '{path}': {e}",
-                                  exc_info=True)
+                logger.error(f"failed to process loader file '{path}': {e}",
+                             exc_info=True)
 
         # Load any custom modules
         if options.modules is not None:
