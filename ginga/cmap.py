@@ -13305,10 +13305,16 @@ def add_matplotlib_cmaps(fail_on_import_error=True):
     try:
         from matplotlib import colormaps as _mpl_cm
     except ImportError:
-        if fail_on_import_error:
-            raise
-        # silently fail
-        return
+        # earlier versions of matplotlib
+        try:
+            import matplotlib.pyplot as plt
+            from matplotlib import cm
+            _mpl_cm = {name: cm.get_cmap(name) for name in plt.colormaps()}
+        except Exception:
+            if fail_on_import_error:
+                raise
+            # silently fail
+            return
 
     # NOTE: Update if matplotlib has new public API for this.
     for name in _mpl_cm:
