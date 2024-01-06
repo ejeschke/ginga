@@ -39,13 +39,6 @@ from ginga import __version__
 from ginga.rv.Channel import Channel
 from ginga.rv.rvmode import RVMode
 
-have_docutils = False
-try:
-    from docutils.core import publish_string
-    have_docutils = True
-except ImportError:
-    pass
-
 
 pluginconfpfx = None
 
@@ -430,10 +423,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         """
         Provide help text for the user.
 
-        This method will convert the text as necessary with docutils and
-        display it in the WBrowser plugin, if available.  If the plugin is
-        not available and the text is type 'rst' then the text will be
-        displayed in a plain text widget.
+        This method will trim the text as necessary and display it in
+        the WBrowser plugin, if available.  If the plugin is not
+        available and the text is type 'rst' or 'plain' then the text
+        will be displayed in a plain text widget.
 
         Parameters
         ----------
@@ -456,32 +449,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             # of each line
             text = toolbox.trim_prefix(text, trim_pfx)
 
-        if text_kind == 'rst':
-            # try to convert RST to HTML using docutils
-            try:
-                overrides = {'input_encoding': 'ascii',
-                             'output_encoding': 'utf-8'}
-                text_html = publish_string(text, writer_name='html',
-                                           settings_overrides=overrides)
-                # docutils produces 'bytes' output, but webkit needs
-                # a utf-8 string
-                text = text_html.decode('utf-8')
-                text_kind = 'html'
+        if text_kind in ['rst', 'plain']:
+            self.show_help_text(name, text)
 
-            except Exception as e:
-                self.logger.error("Error converting help text to HTML: %s" % (
-                    str(e)))
-                # revert to showing RST as plain text
+        elif text_kind == 'html':
+            self.help(text=text, text_kind='html')
 
         else:
             raise ValueError(
                 "I don't know how to display text of kind '%s'" % (text_kind))
-
-        if text_kind == 'html':
-            self.help(text=text, text_kind='html')
-
-        else:
-            self.show_help_text(name, text)
 
     def help(self, text=None, text_kind='url'):
 
@@ -503,7 +479,29 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         else:
             obj.show_help()
 
-    def show_help_text(self, name, help_txt, wsname='right'):
+    def help_plugin(self, plugin_obj, plugin_name, plugin_doc, text_kind='rst'):
+        """
+        Called from a plugin's default help() method. Attempts to display
+        the plugin documentation in the WBrowser plugin (preferably) or
+        falling back to showing plain text in a text widget.
+        """
+        if not self.gpmon.has_plugin('WBrowser'):
+            # text kind is assumed to not be a URL, but 'rst' or 'plain'
+            self.show_help_text(plugin_name, plugin_doc)
+            return
+
+        self.start_global_plugin('WBrowser')
+
+        # need to let GUI finish processing, it seems
+        self.update_pending()
+
+        def _fallback():
+            self.show_help_text(plugin_name, plugin_doc)
+
+        obj = self.gpmon.get_plugin('WBrowser')
+        obj.show_help(plugin=plugin_obj, no_url_callback=_fallback)
+
+    def show_help_text(self, name, help_txt, wsname='channels'):
         """
         Show help text in a closeable tab window.  The title of the
         window is set from ``name`` prefixed with 'HELP:'

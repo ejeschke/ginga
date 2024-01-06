@@ -1,5 +1,6 @@
-"""Download rendered HTML doc from RTD."""
+"""Tools for accessing or downloading HTML doc from RTD."""
 import os
+import re
 import shutil
 import zipfile
 import urllib
@@ -7,16 +8,17 @@ import urllib
 from astropy.utils import minversion
 from astropy.utils.data import get_pkg_data_path
 
+from ginga.GingaPlugin import GlobalPlugin, LocalPlugin
 from ginga import toolkit
+import ginga
 
-__all__ = ['get_doc']
+__all__ = ['get_doc', 'get_online_docs_url']
 
 
 def _find_rtd_version():
     """Find closest RTD doc version."""
     vstr = 'latest'
     try:
-        import ginga
         from bs4 import BeautifulSoup
     except ImportError:
         return vstr
@@ -138,8 +140,6 @@ def get_doc(logger=None, plugin=None, reporthook=None):
         URL to local documentation, if available.
 
     """
-    from ginga.GingaPlugin import GlobalPlugin, LocalPlugin
-
     if isinstance(plugin, GlobalPlugin):
         plugin_page = 'plugins_global'
         plugin_name = str(plugin)
@@ -153,20 +153,13 @@ def get_doc(logger=None, plugin=None, reporthook=None):
     try:
         index_html = _download_rtd_zip(reporthook=reporthook)
 
-    # Download failed, use online resource
+    # Download failed
     except Exception as e:
-        url = 'https://ginga.readthedocs.io/en/latest/'
-
-        if plugin_name is not None:
-            if toolkit.family.startswith('qt'):
-                # This displays plugin docstring.
-                url = None
-            else:
-                # This redirects to online doc.
-                url += 'manual/{}/{}.html'.format(plugin_page, plugin_name)
-
         if logger is not None:
-            logger.error(str(e))
+            logger.error(f"failed to download documentation: {e}",
+                         exc_info=True)
+        # fall back to online version
+        url = get_online_docs_url(plugin=plugin)
 
     # Use local resource
     else:
@@ -176,5 +169,39 @@ def get_doc(logger=None, plugin=None, reporthook=None):
         # https://github.com/rtfd/readthedocs.org/issues/2803
         if plugin_name is not None:
             url += '#{}'.format(plugin_name)
+
+    return url
+
+
+def get_online_docs_url(plugin=None):
+    """
+    Return URL to online documentation closest to this Ginga version.
+
+    Parameters
+    ----------
+    plugin : obj or `None`
+        Plugin object. If given, URL points to plugin doc directly.
+        If this function is called from within plugin class,
+        pass ``self`` here.
+
+    Returns
+    -------
+    url : str
+        URL to online documentation (possibly top-level).
+
+    """
+    ginga_ver = ginga.__version__
+    if re.match(r'^v\d+\.\d+\.\d+$', ginga_ver):
+        rtd_version = ginga_ver
+    else:
+        # default to latest
+        rtd_version = 'latest'
+    url = f"https://ginga.readthedocs.io/en/{rtd_version}"
+    if plugin is not None:
+        plugin_name = str(plugin)
+        if isinstance(plugin, GlobalPlugin):
+            url += f'/manual/plugins_global/{plugin_name}.html'
+        elif isinstance(plugin, LocalPlugin):
+            url += f'/manual/plugins_local/{plugin_name}.html'
 
     return url

@@ -3589,9 +3589,9 @@ class Dialog(ContainerBase):
 
         self.title = title
         self.parent = parent
-        self.buttons = buttons
         self.value = None
         self.modal = modal
+        self.buttons = []
         self.body = VBox()
         for name in ('activated', 'open', 'close', 'resize'):
             self.enable_callback(name)
@@ -3607,6 +3607,7 @@ class Dialog(ContainerBase):
             hbox.set_spacing(4)
             for name, val in buttons:
                 btn = Button(name)
+                self.buttons.append(btn)
                 btn.add_callback('activated', self._btn_choice, name, val)
                 hbox.add_widget(btn)
             self.body.add_widget(hbox, stretch=0)

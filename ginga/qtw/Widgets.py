@@ -2197,6 +2197,7 @@ class Dialog(TopLevelMixin, WidgetBase):
             parent = parent.get_widget()
         self.widget = QtGui.QDialog(parent)
         self.widget.setModal(modal)
+        self.buttons = []
 
         vbox = QtGui.QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
@@ -2210,16 +2211,19 @@ class Dialog(TopLevelMixin, WidgetBase):
         if len(buttons) > 0:
             hbox_w = QtGui.QWidget()
             hbox = QtGui.QHBoxLayout()
+            hbox.setContentsMargins(5, 5, 5, 5)
+            hbox.setSpacing(4)
             hbox_w.setLayout(hbox)
 
             for name, val in buttons:
-                btn = QtGui.QPushButton(name)
+                btn = Button(name)
+                self.buttons.append(btn)
 
                 def cb(val):
-                    return lambda: self._cb_redirect(val)
+                    return lambda w: self._cb_redirect(val)
 
-                btn.clicked.connect(cb(val))
-                hbox.addWidget(btn, stretch=0)
+                btn.add_callback('activated', cb(val))
+                hbox.addWidget(btn.get_widget(), stretch=1)
 
             vbox.addWidget(hbox_w, stretch=0)
             # self.widget.closeEvent = lambda event: self.delete()

@@ -2457,18 +2457,28 @@ class Dialog(TopLevelMixin, WidgetBase):
     def __init__(self, title='', flags=0, buttons=[],
                  parent=None, modal=False):
         WidgetBase.__init__(self)
+        self.buttons = []
 
         if parent is not None:
             self.parent = parent.get_widget()
         else:
             self.parent = None
 
-        button_list = []
-        for name, val in buttons:
-            button_list.extend([name, val])
+        self.widget = Gtk.Dialog(title=title, flags=flags)
+        btn_box = Gtk.ButtonBox()
+        btn_box.set_border_width(5)
+        btn_box.set_spacing(4)
 
-        self.widget = Gtk.Dialog(title=title, flags=flags,
-                                 buttons=tuple(button_list))
+        for name, val in buttons:
+            btn = Button(name)
+            self.buttons.append(btn)
+
+            def cb(val):
+                return lambda w: self._cb_redirect(val)
+
+            btn.add_callback('activated', cb(val))
+            btn_box.pack_start(btn.get_widget(), True, True, 0)
+
         self.widget.set_modal(modal)
 
         TopLevelMixin.__init__(self, title=title)
@@ -2477,12 +2487,13 @@ class Dialog(TopLevelMixin, WidgetBase):
         self.content.set_border_width(0)
         content = self.widget.get_content_area()
         content.pack_start(self.content.get_widget(), True, True, 0)
+        content.pack_end(btn_box, True, True, 0)
 
-        self.widget.connect("response", self._cb_redirect)
+        #self.widget.connect("response", self._cb_redirect)
 
         self.enable_callback('activated')
 
-    def _cb_redirect(self, w, val):
+    def _cb_redirect(self, val):
         self.make_callback('activated', val)
 
     def get_content_area(self):
