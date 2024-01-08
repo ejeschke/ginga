@@ -244,7 +244,7 @@ Writing widget toolkit independent code
 You can write code that allows the widget set to be abstracted by
 Ginga's widget wrappers.  This is the same technique used to allow the
 reference viewer to switch between supported toolkits using the "-t"
-command line option.  Currently only Qt (4/5), Gtk (3), and HTML5 (to a
+command line option.  Currently only Qt (5/6), Gtk (3), and HTML5 (to a
 more limited degree) are supported, and there are some limitations
 compared to developing using a native toolkit directly.  Nevertheless,
 the ability to target different platforms just by changing a command

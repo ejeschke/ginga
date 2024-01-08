@@ -132,10 +132,11 @@ setting the pan position. Zooming afterward will keep the pan
 position in the center of the window. To reset the pan position to the
 center of the image, press 'c'.
 
-Ginga has an auto zoom feature to automatically fit newly loaded images
-to the window, similar to what happens when the backquote key is
-pressed.  See "Zoom Preferences" section in :ref:`sec-plugins-preferences`
-for details.
+``[RV]`` Ginga has an auto zoom feature to automatically fit newly loaded
+images to the window, similar to what happens when the backquote key is
+pressed.  See "Zoom" section in :ref:`sec-plugins-preferences` for details.
+The pan position can also be set precisely (in data or WCS coordinates)
+from the same plugin under the "Panning" section.
 
 ----
 
@@ -173,7 +174,8 @@ There are several ways to manually set the cut levels:
   level; and when you reach the desired levels, release the mouse
   button. Scrolling the mouse wheel in this mode will also change the
   low and high cut levels simultaneously--toward or away from each
-  other, resulting in lower or higher contrast.
+  other, resulting in lower or higher contrast; hold the Ctrl key down
+  to change the contrast in finer increments.
 
 * ``[RV]`` The "Cut Low" and "Cut High" boxes in the Info plugin panel
   can be used. The current values are shown to the left; simply type a
@@ -191,7 +193,8 @@ Ginga can algorithmically estimate and set the cut levels--called *auto (cut) le
 
 * Press the ("a") key when the viewing widget has the focus.
 
-* ``[RV]`` Click the "Auto Levels" button in the Info plugin panel.
+* ``[RV]`` Click the "Auto Levels" button in the Info plugin panel,
+  or click the auto levels icon in the Toolbar plugin.
 
 ``[RV]`` The auto cut levels feature is controlled by several factors in the
 preferences, including the choice of algorithm and some parameters to
@@ -223,8 +226,11 @@ Press Esc to exit the "dist" mode.
 
 To reset to the default ("linear") map, press "D" (capital D).
 
-``[RV]`` The color scale distribution algorithms can also be set from the
-``Preferences`` plugin, under the heading "Color Distribution".
+``[RV]`` You can enter "dist" mode by clicking the distribution icon
+(looks like a square root symbol) in the Toolbar plugin.  The color scale
+distribution algorithms can also be set from the ``Preferences`` plugin,
+under the heading "Color Distribution", or from the drop-down control in
+the ``Info`` plugin, just above the cut levels boxes.
 
 ---------------------------
 Making contrast adjustments
@@ -240,6 +246,10 @@ left/right shifts the map, and up/down stretches or shrinks the map.
 
 You can also press "t" to enter "contrast" mode, where you can then use
 a regular Left-drag.
+
+``[RV]`` You can enter contrast mode by clicking the contrast icon in the
+Toolbar plugin, or you can use the contrast and brightness/bias controls
+from the ``Preferences`` plugin, under the heading "Contrast and Brightness".
 
 -------------------------------------
 Changing the color and intensity maps
@@ -321,7 +331,8 @@ angle to 0 (unrotated).
 
 ``[RV]`` The image can also be transformed in the channel
 :ref:`sec-plugins-preferences` (see "Transform Preferences") which has
-checkboxes for flip X, flip Y, swap XY and a box for rotation by degrees.
+checkboxes for flip X, flip Y, swap XY and a box for rotation by degrees,
+or by using the corresponding buttons in the Toolbar plugin.
 
 
 .. rubric:: Footnotes

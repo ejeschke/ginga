@@ -1493,10 +1493,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             text = '1/%.2fx' % (1.0 / scalefactor)
         return text
 
-    def banner(self, raiseTab=False):  # noqa
-        # NOTE: raiseTab kwarg ignored and will be deprecated
+    def banner(self):
         # load banner image
-        banner_file = os.path.join(self.iconpath, 'ginga-splash.ppm')
+        banner_file = os.path.join(self.iconpath, 'ginga-splash.png')
         image = self.load_image(banner_file)
         wd, ht = image.get_size()
 
