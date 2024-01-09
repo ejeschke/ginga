@@ -10,6 +10,10 @@ import numpy as np
 
 from ginga.misc import Bunch, Callback, Settings
 from ginga.canvas import transform
+from ginga.modes import modeinfo
+
+from .plot_mode import PlotMode
+modeinfo.add_mode(PlotMode)
 
 
 class PlotAide(Callback.Callbacks):
@@ -84,26 +88,10 @@ class PlotAide(Callback.Callbacks):
         bd.enable_flip(True)
         self.bd = bd
 
-        bm = vi.get_bindmap()
-        # add a new "plot" mode
-        bm.add_mode('__p', 'plot', mode_type='locked', msg=None)
-        bm.set_mode('plot', mode_type='locked')
-        # scrolling in this mode creates activity under event 'plot-zoom'
-        bm.map_event('plot', [], 'sc_scroll', 'plot-zoom')
-        bm.map_event('plot', ['ctrl'], 'sc_scroll', 'plot-zoom')
-        vi.set_callback('plot-zoom-scroll', self.scroll_cb)
-        bm.map_event('plot', [], 'pa_pan', 'plot-zoom')
-        bm.map_event('plot', ['ctrl'], 'pa_pan', 'plot-zoom')
-        vi.set_callback('plot-zoom-pan', self.scroll_by_pan_cb)
-
-        bm.map_event('plot', [], 'kp_y', 'plot-autoaxis-y')
-        vi.set_callback('keydown-plot-autoaxis-y', self._y_press_cb)
-        bm.map_event('plot', [], 'kp_v', 'plot-visible-y')
-        vi.set_callback('keydown-plot-visible-y', self._v_press_cb)
-        bm.map_event('plot', [], 'kp_x', 'plot-autoaxis-x')
-        vi.set_callback('keydown-plot-autoaxis-x', self._x_press_cb)
-        bm.map_event('plot', [], 'kp_p', 'plot-position-x')
-        vi.set_callback('keydown-plot-position-x', self._p_press_cb)
+        # enables plot mode specific bindings
+        mode = self.bd.get_mode_obj('plot')
+        mode.set_aide_ref(self)
+        self.bd.set_mode(vi, 'plot', mode_type='locked')
 
         for name in ['plot-zoom-x', 'plot-zoom-y', 'pan']:
             self.enable_callback(name)
@@ -608,31 +596,6 @@ class PlotAide(Callback.Callbacks):
         self.viewer.set_pan(t, y)
         self.adjust_view()
 
-    def scroll_cb(self, viewer, event):
-        """Callback called when the user scrolls in the viewer window.
-        From this we generate a 'plot-zoom-x' or a 'plot-zoom-y' event.
-        """
-        direction = self.bd.get_direction(event.direction)
-        zoom_direction = 'in' if direction == 'up' else 'out'
-        # default is to zoom the X axis unless CTRL is held down
-        zoom_axis = 'y' if 'ctrl' in event.modifiers else 'x'
-        event = 'plot-zoom-{}'.format(zoom_axis)
-        # turn this into a zoom event for any callbacks registered for it
-        self.make_callback(event, zoom_direction)
-        return True
-
-    def scroll_by_pan_cb(self, viewer, event):
-        """Callback called when the user pans in the viewer window
-        (i.e. touchpad pan event); we turn this into a zoom event.
-        """
-        bd = self.viewer.get_bindings()
-        mode = bd.get_mode_obj('pan')  # any mode will do
-        event = mode._pa_synth_scroll_event(event)
-        if event.state != 'move':
-            return False
-        self.scroll_cb(viewer, event)
-        return True
-
     def plot_zoom_x_cb(self, plot, direction):
         """Default callback called when the user zooms the plot in X."""
         scale_x, scale_y = self.viewer.get_scale_xy()
@@ -674,30 +637,6 @@ class PlotAide(Callback.Callbacks):
             self.adjust_view()
 
         return True
-
-    def _y_press_cb(self, *args):
-        """Callback invoked when the user presses 'y' in the viewer window.
-        """
-        autoaxis_y = self.settings['autoaxis_y'] == 'on'
-        self.settings['autoaxis_y'] = 'off' if autoaxis_y else 'on'
-
-    def _v_press_cb(self, *args):
-        """Callback invoked when the user presses 'v' in the viewer window.
-        """
-        autoaxis_y = self.settings['autoaxis_y'] == 'vis'
-        self.settings['autoaxis_y'] = 'off' if autoaxis_y else 'vis'
-
-    def _x_press_cb(self, *args):
-        """Callback invoked when the user presses 'x' in the viewer window.
-        """
-        autoaxis_x = self.settings['autoaxis_x'] == 'on'
-        self.settings['autoaxis_x'] = 'off' if autoaxis_x else 'on'
-
-    def _p_press_cb(self, *args):
-        """Callback invoked when the user presses 'p' in the viewer window.
-        """
-        autopan_x = self.settings['autoaxis_x'] == 'pan'
-        self.settings['autoaxis_x'] = 'off' if autopan_x else 'pan'
 
     def _pan_cb(self, settings, pan_pos):
         """Callback invoked by the viewer when a pan happens pans in our
