@@ -1,4 +1,4 @@
-.. _sec-plugins-LoaderConfig:
+.. _sec-plugins-global-loaderconfig:
 
 LoaderConfig
 ============

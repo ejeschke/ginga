@@ -9,6 +9,7 @@ import itertools
 
 from ginga.misc import Bunch, Settings, Callback
 from ginga.util.paths import icondir
+from ginga import events
 
 
 class ImageViewBindings(object):
@@ -365,231 +366,6 @@ class ImageViewBindings(object):
             return 'none'
 
 
-class UIEvent:
-    """Base class for user interface events."""
-    def __init__(self, viewer=None):
-        self.viewer = viewer
-        self.handled = False
-
-    def accept(self):
-        self.handled = True
-
-    def was_handled(self):
-        return self.handled
-
-
-class KeyEvent(UIEvent):
-    """A key press or release event in a Ginga viewer.
-
-    Attributes
-    ----------
-    key : str
-        The key as it is known to Ginga
-
-    state: str
-        'down' if a key press, 'up' if a key release
-
-    mode : str
-        The mode name of the mode that was active when the event happened
-
-    modifiers : set of str
-        A set of names of modifier keys that were pressed at the time
-
-    data_x : float
-        X part of the data coordinates of the viewer under the cursor
-
-    data_y : float
-        Y part of the data coordinates of the viewer under the cursor
-
-    viewer : subclass of `~ginga.ImageView.ImageViewBase`
-        The viewer in which the event happened
-    """
-    def __init__(self, key=None, state=None, mode=None, modifiers=None,
-                 data_x=None, data_y=None, viewer=None):
-        super().__init__(viewer=viewer)
-        self.key = key
-        self.state = state
-        self.mode = mode
-        self.modifiers = modifiers
-        self.data_x = data_x
-        self.data_y = data_y
-
-
-class PointEvent(UIEvent):
-    """A mouse/pointer/cursor event in a Ginga viewer.
-
-    Attributes
-    ----------
-    button : str
-        The name of the button as set up in the configuration
-
-    state: str
-        'down' if a press, 'move' if being dragged, 'up' if a release
-
-    mode : str
-        The mode name of the mode that was active when the event happened
-
-    modifiers : set of str
-        A set of names of modifier keys that were pressed at the time
-
-    data_x : float
-        X part of the data coordinates of the viewer under the cursor
-
-    data_y : float
-        Y part of the data coordinates of the viewer under the cursor
-
-    viewer : subclass of `~ginga.ImageView.ImageViewBase`
-        The viewer in which the event happened
-    """
-    def __init__(self, button=None, state=None, mode=None, modifiers=None,
-                 data_x=None, data_y=None, viewer=None):
-        super().__init__(viewer=viewer)
-        self.button = button
-        self.state = state
-        self.mode = mode
-        self.modifiers = modifiers
-        self.data_x = data_x
-        self.data_y = data_y
-
-
-class ScrollEvent(UIEvent):
-    """A mouse or trackpad scroll event in a Ginga viewer.
-
-    Attributes
-    ----------
-    button : str
-        The name of the button as set up in the configuration
-
-    state: str
-        Always 'scroll'
-
-    mode : str
-        The mode name of the mode that was active when the event happened
-
-    modifiers : set of str
-        A set of names of modifier keys that were pressed at the time
-
-    direction : float
-        A direction in compass degrees of the scroll
-
-    amount : float
-        The amount of the scroll
-
-    data_x : float
-        X part of the data coordinates of the viewer under the cursor
-
-    data_y : float
-        Y part of the data coordinates of the viewer under the cursor
-
-    viewer : subclass of `~ginga.ImageView.ImageViewBase`
-        The viewer in which the event happened
-    """
-    def __init__(self, button=None, state=None, mode=None, modifiers=None,
-                 direction=None, amount=None, data_x=None, data_y=None,
-                 viewer=None):
-        super().__init__(viewer=viewer)
-        self.button = button
-        self.state = state
-        self.mode = mode
-        self.modifiers = modifiers
-        self.direction = direction
-        self.amount = amount
-        self.data_x = data_x
-        self.data_y = data_y
-
-
-class PinchEvent(UIEvent):
-    """A pinch event in a Ginga viewer.
-
-    Attributes
-    ----------
-    button : str
-        The name of the button as set up in the configuration
-
-    state: str
-        'start' (gesture starting), 'move' (in action) or 'stop' (done)
-
-    mode : str
-        The mode name of the mode that was active when the event happened
-
-    modifiers : set of str
-        A set of names of modifier keys that were pressed at the time
-
-    rot_deg : float
-        Amount of rotation in degrees
-
-    scale : float
-        Scale of the pinch shrink or enlargement
-
-    data_x : float
-        X part of the data coordinates of the viewer under the cursor
-
-    data_y : float
-        Y part of the data coordinates of the viewer under the cursor
-
-    viewer : subclass of `~ginga.ImageView.ImageViewBase`
-        The viewer in which the event happened
-    """
-    def __init__(self, button=None, state=None, mode=None, modifiers=None,
-                 rot_deg=None, scale=None, data_x=None, data_y=None,
-                 viewer=None):
-        super().__init__(viewer=viewer)
-        self.button = button
-        self.state = state
-        self.mode = mode
-        self.modifiers = modifiers
-        self.rot_deg = rot_deg
-        self.scale = scale
-        self.data_x = data_x
-        self.data_y = data_y
-
-
-class PanEvent(UIEvent):
-    """A pinch event in a Ginga viewer.
-
-    Attributes
-    ----------
-    button : str
-        The name of the button as set up in the configuration
-
-    state: str
-        'start' (gesture starting), 'move' (in action) or 'stop' (done)
-
-    mode : str
-        The mode name of the mode that was active when the event happened
-
-    modifiers : set of str
-        A set of names of modifier keys that were pressed at the time
-
-    delta_x : float
-        Amount of scroll movement in the X direction
-
-    delta_y : float
-        Amount of scroll movement in the Y direction
-
-    data_x : float
-        X part of the data coordinates of the viewer under the cursor
-
-    data_y : float
-        Y part of the data coordinates of the viewer under the cursor
-
-    viewer : subclass of `~ginga.ImageView.ImageViewBase`
-        The viewer in which the event happened
-    """
-    def __init__(self, button=None, state=None, mode=None, modifiers=None,
-                 delta_x=None, delta_y=None, data_x=None, data_y=None,
-                 viewer=None):
-        super().__init__(viewer=viewer)
-        self.button = button
-        self.state = state
-        self.mode = mode
-        self.modifiers = modifiers
-        self.delta_x = delta_x
-        self.delta_y = delta_y
-        self.data_x = data_x
-        self.data_y = data_y
-
-
 class BindingMapError(Exception):
     pass
 
@@ -877,9 +653,9 @@ class BindingMapper(Callback.Callbacks):
         trigger = 'kp_' + keyname
         last_x, last_y = viewer.get_last_data_xy()
 
-        event = KeyEvent(key=keyname, state='down', mode=self._kbdmode,
-                         modifiers=self._modifiers, viewer=viewer,
-                         data_x=last_x, data_y=last_y)
+        event = events.KeyEvent(key=keyname, state='down', mode=self._kbdmode,
+                                modifiers=self._modifiers, viewer=viewer,
+                                data_x=last_x, data_y=last_y)
 
         if self._kbdmode is None:
             cbname = 'key-down-none'
@@ -941,9 +717,9 @@ class BindingMapper(Callback.Callbacks):
         trigger = 'kp_' + keyname
         last_x, last_y = viewer.get_last_data_xy()
 
-        event = KeyEvent(key=keyname, state='up', mode=self._kbdmode,
-                         modifiers=self._modifiers, viewer=viewer,
-                         data_x=last_x, data_y=last_y)
+        event = events.KeyEvent(key=keyname, state='up', mode=self._kbdmode,
+                                modifiers=self._modifiers, viewer=viewer,
+                                data_x=last_x, data_y=last_y)
 
         if self._kbdmode is None:
             cbname = 'key-up-none'
@@ -997,9 +773,10 @@ class BindingMapper(Callback.Callbacks):
             return False
 
         trigger = 'ms_' + button
-        event = PointEvent(button=button, state='down', mode=self._kbdmode,
-                           modifiers=self._modifiers, viewer=viewer,
-                           data_x=data_x, data_y=data_y)
+        event = events.PointEvent(button=button, state='down',
+                                  mode=self._kbdmode,
+                                  modifiers=self._modifiers, viewer=viewer,
+                                  data_x=data_x, data_y=data_y)
 
         if self._kbdmode is None:
             cbname = 'btn-down-none'
@@ -1037,9 +814,10 @@ class BindingMapper(Callback.Callbacks):
             return False
 
         trigger = 'ms_' + button
-        event = PointEvent(button=button, state='move', mode=self._kbdmode,
-                           modifiers=self._modifiers, viewer=viewer,
-                           data_x=data_x, data_y=data_y)
+        event = events.PointEvent(button=button, state='move',
+                                  mode=self._kbdmode,
+                                  modifiers=self._modifiers, viewer=viewer,
+                                  data_x=data_x, data_y=data_y)
 
         if self._kbdmode is None:
             cbname = 'btn-move-none'
@@ -1053,8 +831,6 @@ class BindingMapper(Callback.Callbacks):
             else:
                 cbname = 'btn-move-%s' % str(self._kbdmode).lower()
 
-        ## self.logger.debug("making callback for %s (mode=%s)" % (
-        ##     cbname, self._kbdmode))
         res = viewer.make_ui_callback_viewer(viewer, cbname, event,
                                              data_x, data_y)
 
@@ -1078,9 +854,9 @@ class BindingMapper(Callback.Callbacks):
             return False
 
         trigger = 'ms_' + button
-        event = PointEvent(button=button, state='up', mode=self._kbdmode,
-                           modifiers=self._modifiers, viewer=viewer,
-                           data_x=data_x, data_y=data_y)
+        event = events.PointEvent(button=button, state='up', mode=self._kbdmode,
+                                  modifiers=self._modifiers, viewer=viewer,
+                                  data_x=data_x, data_y=data_y)
 
         if self._kbdmode is None:
             cbname = 'btn-up-none'
@@ -1112,10 +888,11 @@ class BindingMapper(Callback.Callbacks):
 
     def window_scroll(self, viewer, direction, amount, data_x, data_y):
         trigger = 'sc_scroll'
-        event = ScrollEvent(button='scroll', state='scroll', mode=self._kbdmode,
-                            modifiers=self._modifiers, viewer=viewer,
-                            direction=direction, amount=amount,
-                            data_x=data_x, data_y=data_y)
+        event = events.ScrollEvent(button='scroll', state='scroll',
+                                   mode=self._kbdmode,
+                                   modifiers=self._modifiers, viewer=viewer,
+                                   direction=direction, amount=amount,
+                                   data_x=data_x, data_y=data_y)
 
         if self._kbdmode is None:
             cbname = 'scroll-none'
@@ -1149,10 +926,11 @@ class BindingMapper(Callback.Callbacks):
 
         trigger = 'pi_pinch'
         last_x, last_y = viewer.get_last_data_xy()
-        event = PinchEvent(button=button, state=state, mode=self._kbdmode,
-                           modifiers=self._modifiers, viewer=viewer,
-                           rot_deg=rot_deg, scale=scale,
-                           data_x=last_x, data_y=last_y)
+        event = events.PinchEvent(button=button, state=state,
+                                  mode=self._kbdmode,
+                                  modifiers=self._modifiers, viewer=viewer,
+                                  rot_deg=rot_deg, scale=scale,
+                                  data_x=last_x, data_y=last_y)
 
         if self._kbdmode is None:
             cbname = 'pinch-none'
@@ -1188,10 +966,10 @@ class BindingMapper(Callback.Callbacks):
 
         trigger = 'pa_pan'
         last_x, last_y = viewer.get_last_data_xy()
-        event = PanEvent(button=button, state=state, mode=self._kbdmode,
-                         modifiers=self._modifiers, viewer=viewer,
-                         delta_x=delta_x, delta_y=delta_y,
-                         data_x=last_x, data_y=last_y)
+        event = events.PanEvent(button=button, state=state, mode=self._kbdmode,
+                                modifiers=self._modifiers, viewer=viewer,
+                                delta_x=delta_x, delta_y=delta_y,
+                                data_x=last_x, data_y=last_y)
 
         if self._kbdmode is None:
             cbname = 'pan-none'

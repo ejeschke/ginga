@@ -16,7 +16,7 @@ from matplotlib.path import Path
 from matplotlib.transforms import BboxTransformTo, Transform
 from matplotlib.projections import register_projection
 
-from ginga.Bindings import PointEvent
+from ginga.events import PointEvent
 
 
 class GingaAxes(Axes):

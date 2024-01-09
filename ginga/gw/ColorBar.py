@@ -57,7 +57,7 @@ class ColorBar(Callback.Callbacks):
         cbar.add_callback('cursor-move', self.cursor_drag_cb)
         cbar.add_callback('cursor-up', self.cursor_release_cb)
         cbar.add_callback('draw-up', self.draw_release_cb)
-        cbar.add_callback('none-move', self.none_move_cb)
+        cbar.add_callback('btn-move-none', self.none_move_cb)
         cbar.add_callback('zoom-scroll', self.scroll_cb)
         cbar.add_callback('zoom-pinch', self.pinch_cb)
 

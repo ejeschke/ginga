@@ -71,10 +71,9 @@ class RVMode(Mode):
             kp_remove_channel_auto=['K'],
             kp_show_channel_names=['f1'],
             kp_previous_channel_in_workspace=['left'],
-            kp_next_channel_in_workspace=['n', 'right'],
+            kp_next_channel_in_workspace=['n', 'right'])
 
-            #ms_focus_viewer=['left'],
-            ms_showxy=['nobtn'])
+        viewer.set_callback('none-move', self.ms_showxy)
 
     def __str__(self):
         return 'rvmode'
@@ -166,18 +165,17 @@ class RVMode(Mode):
 
     #####  MOUSE ACTION CALLBACKS #####
 
-    def ms_showxy(self, viewer, event, data_x, data_y, msg=True):
+    def ms_showxy(self, viewer, event, data_x, data_y):
         """Motion event in the channel viewer window.  Show the pointing
         information under the cursor.
         """
         self.fv.showxy(viewer, data_x, data_y)
-        return True
+        return False
 
-    # def ms_focus_viewer(self, viewer, event, data_x, data_y, msg=True):
+    # def ms_focus_viewer(self, viewer, event, data_x, data_y):
     #     if event.state == 'down':
     #         chname = self.fv.get_channel_name(viewer)
     #         if chname is not None:
     #             self.fv.force_focus(chname)
-    #     return True
-
-    ##### GESTURE ACTION CALLBACKS #####
+    #     # NOTE: this return of False is important!
+    #     return False

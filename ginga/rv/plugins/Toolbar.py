@@ -17,7 +17,7 @@ import os.path
 
 from ginga.gw import Widgets
 from ginga.misc import Bunch
-from ginga.Bindings import KeyEvent
+from ginga.events import KeyEvent
 from ginga import GingaPlugin
 
 __all__ = ['Toolbar']

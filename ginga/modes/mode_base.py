@@ -6,7 +6,7 @@
 
 import math
 
-from ginga.Bindings import ScrollEvent
+from ginga.events import ScrollEvent
 
 
 class Mode:

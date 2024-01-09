@@ -29,6 +29,8 @@ Ver 5.0.0 (unreleased)
 - Added color distribution ("stretch") control to Info plugin
 - Added LoaderConfig plugin; allows setting of loader priorities for
   various MIME types
+- Fixed an issue with the "none-move" event, affected Crosshair plugin
+  and "hover" event on canvas items
 
 Ver 4.1.0 (2022-06-30)
 ======================
