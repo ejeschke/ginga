@@ -49,10 +49,6 @@ try:
     from qtpy.QtCore import QItemSelectionModel  # noqa
     from qtpy.QtWidgets import QApplication  # noqa
     from qtpy import QtSvg  # noqa
-    try:
-        from qtpy.QtWebEngineWidgets import QWebEngineView as QWebView  # noqa
-    except ImportError as e:
-        pass
 
     # Let's see what qtpy configured for us...
     from qtpy import PYQT5, PYQT6, PYSIDE2, PYSIDE6

@@ -14,9 +14,6 @@ from functools import reduce
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.web.pgw import PgHelp
 
-# For future support of WebView widget
-has_webkit = False
-
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Dial', 'Label', 'Button', 'ComboBox',
            'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
@@ -25,8 +22,7 @@ __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'Page', 'TopLevel', 'Application', 'Dialog',
-           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
-           'has_webkit']
+           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
 
 
 class WidgetError(Exception):
