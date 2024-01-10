@@ -1505,7 +1505,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                              buttons=[["Close", 0]], modal=False)
 
         def _close_banner(*args):
-            top.delete()
+            self.ds.remove_dialog(top)
 
         top.add_callback('activated', _close_banner)
         vbox = top.get_content_area()
@@ -1524,7 +1524,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         vbox.add_widget(w, stretch=1)
 
         viewer.set_image(image)
-        top.show()
+        self.ds.show_dialog(top)
 
     def remove_image_by_name(self, chname, imname, impath=None):
         channel = self.get_channel(chname)
@@ -1742,7 +1742,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         item = helpmenu.add_name("About")
         item.add_callback('activated',
-                          lambda *args: self.banner(raiseTab=True))
+                          lambda *args: self.banner())
 
         item = helpmenu.add_name("Documentation")
         item.add_callback('activated', lambda *args: self.help())
