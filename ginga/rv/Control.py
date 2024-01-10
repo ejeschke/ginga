@@ -17,6 +17,7 @@ import shutil
 import inspect
 import warnings
 from collections import OrderedDict
+import webbrowser
 
 # Local application imports
 from ginga import cmap, imap
@@ -25,6 +26,7 @@ from ginga.util import catalog, iohelper, loader, toolbox
 from ginga.util import viewer as gviewer
 from ginga.canvas.CanvasObject import drawCatalog
 from ginga.modes import modeinfo
+from ginga.doc import download_doc
 
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager
@@ -173,6 +175,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # fullscreen viewer and top-level widget
         self.fs_viewer = None
         self.w.fscreen = None
+        self._help = Bunch.Bunch(remember_choice=False, choice=0)
 
         # enables reference-viewer specific bindings
         RVMode.set_shell_ref(self)
@@ -424,9 +427,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         Provide help text for the user.
 
         This method will trim the text as necessary and display it in
-        the WBrowser plugin, if available.  If the plugin is not
-        available and the text is type 'rst' or 'plain' then the text
-        will be displayed in a plain text widget.
+        the text widget.
 
         Parameters
         ----------
@@ -434,16 +435,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             Category of help to show.
 
         text : str
-            The text to show.  Should be plain, HTML or RST text
+            The text to show.
 
         text_kind : str (optional)
-            One of 'plain', 'html', 'rst'.  Default is 'plain'.
+            One of 'plain' or 'rst'.  Default is 'plain'.
 
         trim_pfx : int (optional)
             Number of spaces to trim off the beginning of each line of text.
 
         """
-
         if trim_pfx > 0:
             # caller wants to trim some space off the front
             # of each line
@@ -452,54 +452,80 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if text_kind in ['rst', 'plain']:
             self.show_help_text(name, text)
 
-        elif text_kind == 'html':
-            self.help(text=text, text_kind='html')
-
         else:
             raise ValueError(
                 "I don't know how to display text of kind '%s'" % (text_kind))
 
     def help(self, text=None, text_kind='url'):
-
-        if not self.gpmon.has_plugin('WBrowser'):
-            return self.show_error("help() requires 'WBrowser' plugin")
-
-        self.start_global_plugin('WBrowser')
-
-        # need to let GUI finish processing, it seems
-        self.update_pending()
-
-        obj = self.gpmon.get_plugin('WBrowser')
-
-        if text is not None:
-            if text_kind == 'url':
-                obj.browse(text)
-            else:
-                obj.browse(text, url_is_content=True)
+        if text_kind == 'url':
+            if text is None:
+                # get top URL of external Ginga RTD docs
+                text = download_doc.get_online_docs_url(plugin=None)
+            self.show_help_url(text)
         else:
-            obj.show_help()
+            if isinstance(text, str):
+                self.show_help_text('HELP', text)
+
+    def help_url(self, url):
+        """
+        Open a URL in an external browser using Python's webbrowser module.
+        """
+        self.logger.info(f"opening '{url}' in external browser...")
+        webbrowser.open(url)
 
     def help_plugin(self, plugin_obj, plugin_name, plugin_doc, text_kind='rst'):
         """
-        Called from a plugin's default help() method. Attempts to display
-        the plugin documentation in the WBrowser plugin (preferably) or
-        falling back to showing plain text in a text widget.
+        Called from a plugin's default help() method. Offers to show the
+        user plugin docstring in a text widget or view the RTD doc in an
+        external web browser.
         """
-        if not self.gpmon.has_plugin('WBrowser'):
-            # text kind is assumed to not be a URL, but 'rst' or 'plain'
-            self.show_help_text(plugin_name, plugin_doc)
-            return
 
-        self.start_global_plugin('WBrowser')
+        def _do_help(val):
+            if val == 1:
+                # show plain text in a text widget
+                if plugin_obj is not None:
+                    name, doc = plugin_obj._help_docstring()
+                    self.show_help_text(name, doc)
+            elif val == 2:
+                # show web page in external browser
+                url = download_doc.get_online_docs_url(plugin=plugin_obj)
+                self.help_url(url)
 
-        # need to let GUI finish processing, it seems
-        self.update_pending()
+        if self._help.choice > 0:
+            # User made a decision to keep getting plugin help the same way
+            return _do_help(self._help.choice)
 
-        def _fallback():
-            self.show_help_text(plugin_name, plugin_doc)
+        # Create troubleshooting dialog if downloading cannot be done
+        dialog = Widgets.Dialog(title="Show documentation",
+                                parent=self.w.root,
+                                modal=False,
+                                buttons=[("Cancel", 0),
+                                         ("Show RST text", 1),
+                                         ("Use external browser", 2),
+                                         ])
+        dialog.buttons[0].set_tooltip("Skip help")
+        dialog.buttons[1].set_tooltip("Show local docstring for plugin help")
+        dialog.buttons[2].set_tooltip("Show online web documentation in external browser")
+        vbox = dialog.get_content_area()
+        dialog_text = Widgets.TextArea(wrap=True, editable=False)
+        dialog_text.set_text("How would you like to see help?")
+        vbox.add_widget(dialog_text, stretch=1)
+        cb = Widgets.CheckBox("Remember my choice for session")
+        cb.set_state(False)
+        vbox.add_widget(cb, stretch=0)
 
-        obj = self.gpmon.get_plugin('WBrowser')
-        obj.show_help(plugin=plugin_obj, no_url_callback=_fallback)
+        def _remember_choice_cb(w, tf):
+            self._help.remember_choice = tf
+
+        def _do_help_cb(dialog, val):
+            if self._help.remember_choice:
+                self._help.choice = val
+            self.ds.remove_dialog(dialog)
+            _do_help(val)
+
+        cb.add_callback('activated', _remember_choice_cb)
+        dialog.add_callback('activated', _do_help_cb)
+        self.ds.show_dialog(dialog)
 
     def show_help_text(self, name, help_txt, wsname='channels'):
         """

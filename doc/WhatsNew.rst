@@ -46,8 +46,9 @@ Ver 5.0.0 (unreleased)
 - Added PluginConfig plugin; allows configuration of all Ginga plugins
   graphically; can enable/disable, change menu categories, etc.
 - Removed --profile and --debug command-line options
-- Fix a number of issues with the help system to make it more robust;
-  removed WBrowser plugin
+- Fix a number of issues with the help system to make it simpler and
+  more robust; removed WBrowser plugin, handle URLs with Python webbrowser
+  module
 
 Ver 4.1.0 (2022-06-30)
 ======================
