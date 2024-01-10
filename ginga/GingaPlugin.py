@@ -56,8 +56,7 @@ class BasePlugin(object):
 
     def help(self, text_kind='rst'):
         """Display help for the plugin."""
-        plg_name, plg_doc = self._help_docstring()
-        self.fv.help_plugin(self, plg_name, plg_doc, text_kind=text_kind)
+        self.fv.help_plugin(self, text_kind=text_kind)
 
 
 class GlobalPlugin(BasePlugin):

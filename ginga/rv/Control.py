@@ -466,14 +466,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if isinstance(text, str):
                 self.show_help_text('HELP', text)
 
-    def help_url(self, url):
+    def show_help_url(self, url):
         """
         Open a URL in an external browser using Python's webbrowser module.
         """
         self.logger.info(f"opening '{url}' in external browser...")
         webbrowser.open(url)
 
-    def help_plugin(self, plugin_obj, plugin_name, plugin_doc, text_kind='rst'):
+    def help_plugin(self, plugin_obj, text_kind='rst'):
         """
         Called from a plugin's default help() method. Offers to show the
         user plugin docstring in a text widget or view the RTD doc in an
@@ -489,7 +489,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             elif val == 2:
                 # show web page in external browser
                 url = download_doc.get_online_docs_url(plugin=plugin_obj)
-                self.help_url(url)
+                self.show_help_url(url)
 
         if self._help.choice > 0:
             # User made a decision to keep getting plugin help the same way
