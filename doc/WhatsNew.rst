@@ -43,6 +43,9 @@ Ver 5.0.0 (unreleased)
   - RGB video files can be opened (with OpenCv loader) and examined with
     MultiDim plugin or naxis mode (video frames is treated as axis 3)
 
+- Added PluginConfig plugin; allows configuration of all Ginga plugins
+  graphically; can enable/disable, change menu categories, etc.
+
 Ver 4.1.0 (2022-06-30)
 ======================
 - change implementation of splash banner to a pop-up modal dialog

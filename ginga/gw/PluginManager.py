@@ -40,6 +40,8 @@ class PluginManager(Callback.Callbacks):
             self.enable_callback(name)
 
     def load_plugin(self, name, spec, chinfo=None):
+        if not spec.get('enabled', True):
+            return
         try:
             module = self.mm.get_module(spec.module)
             className = spec.get('klass', spec.module)

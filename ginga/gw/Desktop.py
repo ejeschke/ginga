@@ -8,6 +8,8 @@ import time
 import math
 import os.path
 
+import yaml
+
 from ginga.misc import Bunch, Callback
 from ginga.gw import Widgets, Viewers
 from ginga.util import json
@@ -696,15 +698,13 @@ class Desktop(Callback.Callbacks):
 
         self.record_sizes()
 
-        _n, ext = os.path.splitext(lo_file)
         # write layout
+        _n, ext = os.path.splitext(lo_file)
         with open(lo_file, 'w') as out_f:
-            if ext.lower() == '.json':
-                out_f.write(json.dumps(layout, indent=2))
+            if ext.lower() in ['.yml', '.yaml']:
+                out_f.write(yaml.dump(layout, indent=2))
             else:
-                # older, python format
-                import pprint
-                pprint.pprint(layout, out_f)
+                out_f.write(json.dumps(layout, indent=2))
 
     def read_layout_conf(self, lo_file):
         # read layout
@@ -712,12 +712,10 @@ class Desktop(Callback.Callbacks):
             buf = in_f.read()
 
         _n, ext = os.path.splitext(lo_file)
-        if ext.lower() == '.json':
-            layout = json.loads(buf)
+        if ext.lower() in ['.yml', '.yaml']:
+            layout = yaml.safe_load(buf)
         else:
-            # older, python format
-            import ast
-            layout = ast.literal_eval(buf)
+            layout = json.loads(buf)
         return layout
 
     def build_desktop(self, layout, lo_file=None, widget_dict=None):

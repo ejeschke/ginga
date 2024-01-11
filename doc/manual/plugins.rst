@@ -53,6 +53,7 @@ Global plugins
    plugins_global/saveimage
    plugins_global/downloads
    plugins_global/loaderconfig
+   plugins_global/pluginconfig
 
 
 .. _sec-localplugins:

@@ -14,12 +14,15 @@ import logging
 import logging.handlers
 import threading
 
+# 3rd party
+import yaml
+
 # Local application imports
 from ginga.misc.Bunch import Bunch
 from ginga.misc import Task, ModuleManager, Settings, log
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
-from ginga.util import paths, rgb_cms, json, compat, loader
+from ginga.util import paths, rgb_cms, compat, loader
 
 # Catch warnings
 logging.captureWarnings(True)
@@ -72,105 +75,128 @@ plugins = [
     # hidden plugins, started at program initialization
     Bunch(module='Operations', workspace='operations', start=True,
           hidden=True, category='System', menu="Operations [G]",
-          ptype='global'),
+          ptype='global', enabled=True),
     Bunch(module='Toolbar', workspace='toolbar', start=True,
-          hidden=True, category='System', menu="Toolbar [G]", ptype='global'),
+          hidden=True, category='System', menu="Toolbar [G]", ptype='global',
+          enabled=True),
     Bunch(module='Pan', workspace='uleft', start=True,
-          hidden=True, category='System', menu="Pan [G]", ptype='global'),
+          hidden=True, category='System', menu="Pan [G]", ptype='global',
+          enabled=True),
     Bunch(module='Info', tab='Synopsis', workspace='lleft', start=True,
-          hidden=True, category='System', menu="Info [G]", ptype='global'),
+          hidden=True, category='System', menu="Info [G]", ptype='global',
+          enabled=True),
     Bunch(module='Thumbs', tab='Thumbs', workspace='right', start=True,
-          hidden=True, category='System', menu="Thumbs [G]", ptype='global'),
+          hidden=True, category='System', menu="Thumbs [G]", ptype='global',
+          enabled=True),
     Bunch(module='Contents', tab='Contents', workspace='right', start=True,
-          hidden=True, category='System', menu="Contents [G]", ptype='global'),
+          hidden=True, category='System', menu="Contents [G]", ptype='global',
+          enabled=True),
     Bunch(module='Colorbar', workspace='cbar', start=True,
-          hidden=True, category='System', menu="Colorbar [G]", ptype='global'),
+          hidden=True, category='System', menu="Colorbar [G]", ptype='global',
+          enabled=True),
     Bunch(module='Cursor', workspace='readout', start=True,
-          hidden=True, category='System', menu="Cursor [G]", ptype='global'),
+          hidden=True, category='System', menu="Cursor [G]", ptype='global',
+          enabled=True),
     Bunch(module='Errors', tab='Errors', workspace='right', start=True,
-          hidden=True, category='System', menu="Errors [G]", ptype='global'),
+          hidden=True, category='System', menu="Errors [G]", ptype='global',
+          enabled=True),
     Bunch(module='Downloads', tab='Downloads', workspace='right', start=False,
-          menu="Downloads [G]", category='Utils', ptype='global'),
+          menu="Downloads [G]", category='Utils', ptype='global', enabled=True),
 
     # optional, user-started plugins
     Bunch(module='Blink', tab='Blink Channels', workspace='right', start=False,
-          menu="Blink Channels [G]", category='Analysis', ptype='global'),
+          menu="Blink Channels [G]", category='Analysis', ptype='global',
+          enabled=True),
     Bunch(module='Blink', workspace='dialogs', menu='Blink Images',
-          category='Analysis', ptype='local'),
+          category='Analysis', ptype='local', enabled=True),
     Bunch(module='Crosshair', workspace='left', category='Analysis',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='Cuts', workspace='dialogs', category='Analysis',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='LineProfile', workspace='dialogs',
-          category='Analysis.Datacube', ptype='local'),
+          category='Analysis.Datacube', ptype='local', enabled=True),
     Bunch(module='Histogram', workspace='dialogs', category='Analysis',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='Overlays', workspace='dialogs', category='Analysis',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='Pick', workspace='dialogs', category='Analysis',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='PixTable', workspace='dialogs', category='Analysis',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='TVMark', workspace='dialogs', category='Analysis',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='TVMask', workspace='dialogs', category='Analysis',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='WCSMatch', tab='WCSMatch', workspace='right', start=False,
-          menu="WCS Match [G]", category='Analysis', ptype='global'),
+          menu="WCS Match [G]", category='Analysis', ptype='global',
+          enabled=True),
     Bunch(module='Command', tab='Command', workspace='lleft', start=False,
-          menu="Command Line [G]", category='Debug', ptype='global'),
+          menu="Command Line [G]", category='Debug', ptype='global',
+          enabled=True),
     Bunch(module='Log', tab='Log', workspace='right', start=False,
-          menu="Logger Info [G]", category='Debug', ptype='global'),
+          menu="Logger Info [G]", category='Debug', ptype='global',
+          enabled=True),
     Bunch(module='MultiDim', workspace='lleft', category='Navigation',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='RC', tab='RC', workspace='right', start=False,
-          menu="Remote Control [G]", category='Remote', ptype='global'),
+          menu="Remote Control [G]", category='Remote', ptype='global',
+          enabled=True),
     Bunch(module='SAMP', tab='SAMP', workspace='right', start=False,
-          menu="SAMP Client [G]", category='Remote', ptype='global'),
-    Bunch(module='Compose', workspace='dialogs', category='RGB', ptype='local'),
+          menu="SAMP Client [G]", category='Remote', ptype='global',
+          enabled=False),
+    Bunch(module='Compose', workspace='dialogs', category='RGB', ptype='local',
+          enabled=False),
     Bunch(module='ScreenShot', workspace='dialogs', category='RGB',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='ColorMapPicker', tab='ColorMapPicker',
           menu="Set Color Map [G]", workspace='right', start=False,
-          category='RGB', ptype='global'),
+          category='RGB', ptype='global', enabled=True),
     Bunch(module='ColorMapPicker',
           menu="Set Color Map", workspace='dialogs', category='RGB',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='PlotTable', workspace='dialogs', category='Table',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='Catalogs', workspace='dialogs', category='Utils',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='Drawing', workspace='dialogs', category='Utils',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='AutoLoad', workspace='dialogs', category='Utils',
-          ptype='local'),
-    #Bunch(module='Pipeline', workspace='dialogs', category='Utils',
-    #      ptype='local'),
+          ptype='local', enabled=False),
+    Bunch(module='Pipeline', workspace='dialogs', category='Utils',
+          ptype='local', enabled=False),
     Bunch(module='FBrowser', workspace='dialogs', category='Utils',
-          ptype='local'),
+          ptype='local', enabled=True),
     Bunch(module='ChangeHistory', tab='History', workspace='right',
-          menu="History [G]", start=False, category='Utils', ptype='global'),
-    Bunch(module='Mosaic', workspace='dialogs', category='Utils', ptype='local'),
-    Bunch(module='Collage', workspace='dialogs', category='Utils', ptype='local'),
+          menu="History [G]", start=False, category='Utils', ptype='global',
+          enabled=True),
+    Bunch(module='Mosaic', workspace='dialogs', category='Utils', ptype='local',
+          enabled=True),
+    Bunch(module='Collage', workspace='dialogs', category='Utils', ptype='local',
+          enabled=True),
     Bunch(module='FBrowser', tab='Open File', workspace='right',
-          menu="Open File [G]", start=False, category='Utils', ptype='global'),
+          menu="Open File [G]", start=False, category='Utils', ptype='global',
+          enabled=True),
     Bunch(module='Preferences', workspace='dialogs', category='Utils',
-          ptype='local'),
-    Bunch(module='Ruler', workspace='dialogs', category='Utils', ptype='local'),
+          ptype='local', enabled=True),
+    Bunch(module='Ruler', workspace='dialogs', category='Utils', ptype='local',
+          enabled=True),
     # TODO: Add SaveImage to File menu.
     Bunch(module='SaveImage', tab='SaveImage', workspace='right',
-          menu="Save File [G]", start=False, category='Utils', ptype='global'),
+          menu="Save File [G]", start=False, category='Utils', ptype='global',
+          enabled=True),
     Bunch(module='WCSAxes', workspace='dialogs', category='Utils',
-          ptype='local'),
-    Bunch(module='WBrowser', tab='Help', workspace='channels', start=False,
-          menu="Help [G]", category='Help', ptype='global'),
+          ptype='local', enabled=True),
     Bunch(module='Header', tab='Header', workspace='left', start=False,
-          menu="Header [G]", hidden=False, category='Utils', ptype='global'),
+          menu="Header [G]", hidden=False, category='Utils', ptype='global',
+          enabled=True),
     Bunch(module='Zoom', tab='Zoom', workspace='left', start=False,
           menu="Zoom [G]", category='Utils', ptype='global'),
     Bunch(module='LoaderConfig', tab='Loaders', workspace='channels',
           start=False, menu="LoaderConfig [G]", category='Debug',
-          ptype='global'),
+          ptype='global', enabled=True),
+    Bunch(module='PluginConfig', tab='Plugins', workspace='channels',
+          start=False, menu="PluginConfig [G]", category='Debug',
+          ptype='global', enabled=True),
 ]
 
 
@@ -189,12 +215,24 @@ class ReferenceViewer(object):
         self.channels = channels
         self.default_plugins = plugins
         self.plugins = []
+        self.plugin_dct = dict()
 
     def add_plugin_spec(self, spec):
         self.plugins.append(spec)
+        plugin_name = self.get_plugin_name(spec)
+        self.plugin_dct[plugin_name] = spec
 
     def clear_default_plugins(self):
         self.plugins = []
+        self.plugin_dct = dict()
+
+    def get_plugin_name(self, spec):
+        module = spec['module']
+        if '.' in module:
+            module = module.split('.')[-1]
+        klass = spec.get('klass', None)
+        name = module if klass is None else klass
+        return name
 
     def add_default_plugins(self, except_global=[], except_local=[]):
         """
@@ -348,8 +386,8 @@ class ReferenceViewer(object):
                               font_scaling_factor=None,
                               save_layout=True,
                               use_opengl=False,
-                              layout_file='layout',
-                              plugin_file='plugins.json',
+                              layout_file='layout.json',
+                              plugin_file='plugins.yml',
                               channel_prefix="Image")
         settings.load(onError='silent')
 
@@ -472,7 +510,7 @@ class ReferenceViewer(object):
             settings.set(use_opengl=True)
 
         layout_file = os.path.join(self.basedir, settings.get('layout_file',
-                                                              'layout'))
+                                                              'layout.json'))
         ginga_shell.set_layout(self.layout, layout_file=layout_file,
                                save_layout=settings.get('save_layout', True))
 
@@ -488,20 +526,6 @@ class ReferenceViewer(object):
         # Build desired layout
         ginga_shell.build_toplevel(ignore_saved_layout=options.norestore)
 
-        # Does user have a customized plugin setup?  If so, override the
-        # default plugins to be that
-        plugin_file = settings.get('plugin_file', None)
-        if plugin_file is not None:
-            plugin_file = os.path.join(self.basedir, plugin_file)
-            if os.path.exists(plugin_file):
-                logger.info("Reading plugin file '%s'..." % (plugin_file))
-                try:
-                    with open(plugin_file, 'r') as in_f:
-                        buf = in_f.read()
-                        self.plugins = json.loads(buf)
-                except Exception as e:
-                    logger.error("Error reading plugin file: %s" % (str(e)))
-
         # Did user specify a particular geometry?
         if options.geometry:
             ginga_shell.set_geometry(options.geometry)
@@ -513,6 +537,7 @@ class ReferenceViewer(object):
             disabled_plugins = settings.get('disable_plugins', [])
             if not isinstance(disabled_plugins, list):
                 disabled_plugins = disabled_plugins.lower().split(',')
+        disabled_plugins = set(disabled_plugins)
 
         # Add GUI log handler (for "Log" global plugin)
         guiHdlr = GuiLogHandler(ginga_shell)
@@ -523,11 +548,11 @@ class ReferenceViewer(object):
 
         # Set loader priorities, if user has saved any
         # (see LoaderConfig plugin)
-        path = os.path.join(self.basedir, 'loaders.json')
+        path = os.path.join(self.basedir, 'loaders.yml')
         if os.path.exists(path):
             try:
                 with open(path, 'r') as in_f:
-                    loader_dct = json.loads(in_f.read())
+                    loader_dct = yaml.safe_load(in_f.read())
 
                 # set saved priorities for openers
                 for mimetype, m_dct in loader_dct.items():
@@ -561,6 +586,7 @@ class ReferenceViewer(object):
             spec = Bunch(name=plugin_name, module=plugin_name,
                          ptype='global', tab=plugin_name,
                          menu=menu_name, category="Custom",
+                         enabled=True,
                          workspace='right', pfx=pfx)
             self.add_plugin_spec(spec)
 
@@ -582,14 +608,44 @@ class ReferenceViewer(object):
                 pfx = None
             spec = Bunch(module=plugin_name, workspace='dialogs',
                          ptype='local', category="Custom",
-                         hidden=False, pfx=pfx)
+                         hidden=False, pfx=pfx, enabled=True)
             self.add_plugin_spec(spec)
 
-        # Mark disabled plugins
+        # Does user have a saved plugin setup?  If so, check which
+        # plugins should be disabled, or have a customized category or
+        # workspace
+        plugin_file = settings.get('plugin_file', None)
+        if plugin_file is not None:
+            plugin_file = os.path.join(self.basedir, plugin_file)
+            if os.path.exists(plugin_file):
+                logger.info("Reading plugin file '%s'..." % (plugin_file))
+                try:
+                    with open(plugin_file, 'r') as in_f:
+                        buf = in_f.read()
+                        _plugins = yaml.safe_load(buf)
+
+                    for dct in _plugins:
+                        plugin_name = self.get_plugin_name(dct)
+                        if plugin_name in self.plugin_dct:
+                            spec = self.plugin_dct[plugin_name]
+                            # user can configure:
+                            # enabled/category/workspace/hidden/start
+                            spec['enabled'] = dct.get('enabled', True)
+                            spec['category'] = dct.get('category', None)
+                            spec['hidden'] = dct.get('hidden', False)
+                            spec['workspace'] = dct.get('workspace', 'dialogs')
+                            if spec['ptype'] == 'global':
+                                spec['start'] = dct.get('start', False)
+
+                except Exception as e:
+                    logger.error(f"Error reading plugin file: {e}",
+                                 exc_info=True)
+
+        # Mark disabled plugins (command-line has precedence)
         for spec in self.plugins:
-            if spec.get('enabled', None) is None:
-                spec['enabled'] = (False if spec.module.lower() in disabled_plugins
-                                   else True)
+            if spec.module.lower() in disabled_plugins:
+                spec['enabled'] = False
+
         # submit plugin specs to shell
         ginga_shell.set_plugins(self.plugins)
 
