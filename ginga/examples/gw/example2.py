@@ -14,6 +14,7 @@ from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.canvas import render
 from ginga.misc import log
 from ginga.util.loader import load_data
+from ginga.locale.localize import _tr
 
 
 class FitsViewer(object):
@@ -28,12 +29,12 @@ class FitsViewer(object):
         self.app = Widgets.Application(logger=logger)
         self.app.add_callback('shutdown', self.quit)
         if hasattr(Widgets, 'Page'):
-            self.page = Widgets.Page("Ginga example2")
+            self.page = Widgets.Page(_tr("Ginga example2"))
             self.app.add_window(self.page)
-            self.top = Widgets.TopLevel("Ginga example2")
+            self.top = Widgets.TopLevel(_tr("Ginga example2"))
             self.page.add_dialog(self.top)
         else:
-            self.top = Widgets.TopLevel("Ginga example2")
+            self.top = Widgets.TopLevel(_tr("Ginga example2"))
             self.app.add_window(self.top)
         self.top.add_callback('close', self.closed)
 
@@ -152,21 +153,21 @@ class FitsViewer(object):
         wrender.add_callback('activated', lambda w, idx: self.set_renderer())
         self.wrender = wrender
 
-        wclear = Widgets.Button("Clear Canvas")
+        wclear = Widgets.Button(_tr("Clear Canvas"))
         wclear.add_callback('activated', lambda w: self.clear_canvas())
-        wopen = Widgets.Button("Open File")
+        wopen = Widgets.Button(_tr("Open File"))
         wopen.add_callback('activated', lambda w: self.open_file())
-        wquit = Widgets.Button("Quit")
+        wquit = Widgets.Button(_tr("Quit"))
         wquit.add_callback('activated', lambda w: self.quit())
 
         hbox = Widgets.HBox()
         hbox.set_border_width(2)
         hbox.set_spacing(4)
 
-        hbox.add_widget(Widgets.Label(''), stretch=1)
         for w in (wopen, wdrawtype, wdrawcolor, wwidth,
-                  walpha):
+                  Widgets.Label(_tr('Alpha') + ':'), walpha):
             hbox.add_widget(w, stretch=0)
+        hbox.add_widget(Widgets.Label(''), stretch=1)
 
         vbox.add_widget(hbox, stretch=0)
 
@@ -182,22 +183,22 @@ class FitsViewer(object):
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
         hbox.set_spacing(4)
-        btn1 = Widgets.RadioButton("Draw")
+        btn1 = Widgets.RadioButton(_tr("Draw"))
         btn1.set_state(mode == 'draw')
         btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
-        btn1.set_tooltip("Choose this to draw on the canvas")
+        btn1.set_tooltip(_tr("Choose this to draw on the canvas"))
         hbox.add_widget(btn1)
 
-        btn2 = Widgets.RadioButton("Edit", group=btn1)
+        btn2 = Widgets.RadioButton(_tr("Edit"), group=btn1)
         btn2.set_state(mode == 'edit')
         btn2.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
-        btn2.set_tooltip("Choose this to edit things on the canvas")
+        btn2.set_tooltip(_tr("Choose this to edit things on the canvas"))
         hbox.add_widget(btn2)
 
-        btn3 = Widgets.RadioButton("Pick", group=btn1)
+        btn3 = Widgets.RadioButton(_tr("Pick"), group=btn1)
         btn3.set_state(mode == 'pick')
         btn3.add_callback('activated', lambda w, val: self.set_mode_cb('pick', val))
-        btn3.set_tooltip("Choose this to pick things on the canvas")
+        btn3.set_tooltip(_tr("Choose this to pick things on the canvas"))
         hbox.add_widget(btn3)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
@@ -246,7 +247,7 @@ class FitsViewer(object):
         self.top.set_title(filepath)
 
     def open_file(self):
-        self.fs.popup("Open FITS file", self.load_file)
+        self.fs.popup(_tr("Open FITS file"), self.load_file)
 
     def drop_file_cb(self, viewer, paths):
         filename = paths[0]
@@ -278,10 +279,10 @@ class FitsViewer(object):
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
                                                format='str', coords='fits')
         except Exception as e:
-            self.logger.warning("Bad coordinate conversion: %s" % (
+            self.logger.warning(_tr("Bad coordinate conversion") + ": %s" % (
                 str(e)))
-            ra_txt = 'BAD WCS'
-            dec_txt = 'BAD WCS'
+            ra_txt = _tr('BAD WCS')
+            dec_txt = _tr('BAD WCS')
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)

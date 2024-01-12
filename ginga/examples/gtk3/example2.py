@@ -14,6 +14,7 @@ from ginga.canvas.CanvasObject import get_canvas_types
 from ginga import colors
 from ginga.misc import log
 from ginga.util.loader import load_data
+from ginga.locale.localize import _
 
 from gi.repository import Gtk
 
@@ -107,7 +108,7 @@ class FitsViewer(object):
         wdrawcolor.connect('changed', self.set_drawparams)
         self.wdrawcolor = wdrawcolor
 
-        wfill = GtkHelp.CheckButton(label="Fill")
+        wfill = GtkHelp.CheckButton(label=_("Fill"))
         wfill.sconnect('toggled', self.set_drawparams)
         self.wfill = wfill
 
@@ -119,15 +120,15 @@ class FitsViewer(object):
         walpha.sconnect('value-changed', self.set_drawparams)
         self.walpha = walpha
 
-        wclear = Gtk.Button(label="Clear Canvas")
+        wclear = Gtk.Button(label=_("Clear Canvas"))
         wclear.connect('clicked', self.clear_canvas)
 
-        wopen = Gtk.Button(label="Open File")
+        wopen = Gtk.Button(label=_("Open File"))
         wopen.connect('clicked', self.open_file)
-        wquit = Gtk.Button(label="Quit")
+        wquit = Gtk.Button(label=_("Quit"))
         wquit.connect('clicked', quit)
 
-        for w in (wquit, wclear, walpha, Gtk.Label(label="Alpha:"),
+        for w in (wquit, wclear, walpha, Gtk.Label(label=_("Alpha") + ":"),
                   wfill, wdrawcolor, wdrawtype, wopen):
             hbox.pack_end(w, False, False, 0)
 
@@ -165,7 +166,7 @@ class FitsViewer(object):
         self.root.set_title(filepath)
 
     def open_file(self, w):
-        self.select.popup("Open FITS file", self.load_file)
+        self.select.popup(_("Open FITS file"), self.load_file)
 
     def drop_file_cb(self, fitsimage, paths):
         fileName = paths[0]
@@ -197,10 +198,10 @@ class FitsViewer(object):
             ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
                                                format='str', coords='fits')
         except Exception as e:
-            self.logger.warning("Bad coordinate conversion: %s" % (
+            self.logger.warning(_("Bad coordinate conversion") + ": %s" % (
                 str(e)))
-            ra_txt = 'BAD WCS'
-            dec_txt = 'BAD WCS'
+            ra_txt = _('BAD WCS')
+            dec_txt = _('BAD WCS')
 
         text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
             ra_txt, dec_txt, fits_x, fits_y, value)

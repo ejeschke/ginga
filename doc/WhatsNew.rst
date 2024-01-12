@@ -31,6 +31,8 @@ Ver 5.0.0 (unreleased)
   various MIME types
 - Fixed an issue with the "none-move" event, affected Crosshair plugin
   and "hover" event on canvas items
+- added an internationalization framework (see "Internationalization"
+  chapter in the Ginga manual).
 
 Ver 4.1.0 (2022-06-30)
 ======================
