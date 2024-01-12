@@ -106,7 +106,10 @@ writing their own custom mode should refer to
 .. note::
 
    The standard modes and default bindings are summarized in the
-   Quick Reference :ref:`ginga-quick-reference`.
+   Quick Reference :ref:`ginga-quick-reference`.  In the reference
+   viewer, you can pop up a help tab with the bindings for the mode
+   if you press 'h' in the channel viewer while that viewer is in a
+   mode.
 
 
 .. _sec_mode_cmap:

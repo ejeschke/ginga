@@ -17,7 +17,7 @@ Exit the mode by
 Default bindings in mode
 ------------------------
 * l : set low cut level to the value of the pixel under the cursor
-* h : set high cut level to the value of the pixel under the cursor
+* k : set high cut level to the value of the pixel under the cursor
 * S : set the the low and high cut levels to the min/max values in
   the image
 * A : set the low and high cut levels to 0, 255;
@@ -55,7 +55,7 @@ class CutsMode(Mode):
 
             kp_cut_255=['cuts+A'],
             kp_cut_lo=['cuts+l'],
-            kp_cut_hi=['cuts+h'],
+            kp_cut_hi=['cuts+k'],
             kp_cut_minmax=['cuts+S'],
             kp_cut_auto=['a', 'cuts+a'],
             kp_autocuts_alg_prev=['cuts+up', 'cuts+b'],
