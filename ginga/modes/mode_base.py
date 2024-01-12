@@ -30,6 +30,16 @@ class Mode:
         self._start_x = None
         self._start_y = None
 
+    def get_docstring(self):
+        import inspect
+
+        # Insert section title at the beginning
+        mode_name = self.__class__.__name__
+        mode_mod = inspect.getmodule(self)
+        mode_doc = ('{}\n{}\n'.format(mode_name, '=' * len(mode_name)) +
+                    mode_mod.__doc__)
+        return mode_name, mode_doc
+
     def get_settings(self):
         if self.settings is not None:
             return self.settings

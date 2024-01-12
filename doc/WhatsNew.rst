@@ -31,8 +31,11 @@ Ver 5.0.0 (unreleased)
   various MIME types
 - Fixed an issue with the "none-move" event, affected Crosshair plugin
   and "hover" event on canvas items
-- added an internationalization framework (see "Internationalization"
-  chapter in the Ginga manual).
+- Added an internationalization framework (see "Internationalization"
+  chapter in the Ginga manual).  Not yet enabled for reference viewer
+- Added button in Toolbar plugin to activate cmap (colormap) mode
+- Added mode help; type 'h' in the viewer window when you are in a mode
+  to display a help tab for that mode (reference viewer only)
 
 Ver 4.1.0 (2022-06-30)
 ======================

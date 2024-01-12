@@ -109,6 +109,9 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             ("Dist", 'toggle', 'sqrt',
              "Scroll to set color distribution algorithm",
              lambda w, tf: self.mode_cb(tf, 'dist')),
+            ("CMap", 'toggle', 'palette',
+             "Scroll to set color map",
+             lambda w, tf: self.mode_cb(tf, 'cmap')),
             ("Cuts", 'toggle', 'cuts',
              "Left/right sets hi cut, up/down sets lo cut",
              lambda w, tf: self.mode_cb(tf, 'cuts')),
@@ -176,11 +179,11 @@ class Toolbar(GingaPlugin.GlobalPlugin):
     # CALLBACKS
 
     def add_channel_cb(self, viewer, channel):
-        fitsimage = channel.fitsimage
-        fitsimage.add_callback('transform', self.viewer_transform_cb)
+        chviewer = channel.fitsimage
+        chviewer.add_callback('transform', self.viewer_transform_cb)
 
-        bm = fitsimage.get_bindmap()
-        bm.add_callback('mode-set', self.mode_set_cb, fitsimage)
+        bm = chviewer.get_bindmap()
+        bm.add_callback('mode-set', self.mode_set_cb, chviewer)
 
     def delete_channel_cb(self, viewer, channel):
         self.logger.debug("delete channel %s" % (channel.name))
@@ -190,9 +193,9 @@ class Toolbar(GingaPlugin.GlobalPlugin):
     def focus_cb(self, viewer, channel):
         self.update_channel_buttons(channel)
 
-        fitsimage = channel.fitsimage
-        self.active = fitsimage
-        self._update_toolbar_state(fitsimage)
+        chviewer = channel.fitsimage
+        self.active = chviewer
+        self._update_toolbar_state(chviewer)
         return True
 
     def center_image_cb(self, w):
@@ -273,41 +276,43 @@ class Toolbar(GingaPlugin.GlobalPlugin):
     def mode_cb(self, tf, modename):
         if self.active is None:
             self.active = self._get_viewer()
-        fitsimage = self.active
-        if fitsimage is None:
+        chviewer = self.active
+        if chviewer is None:
             return
-        bm = fitsimage.get_bindmap()
+        bm = chviewer.get_bindmap()
         if not tf:
-            bm.reset_mode(fitsimage)
+            bm.reset_mode(chviewer)
+            self.fv.show_status("")
             return True
 
         bm.set_mode(modename)
         # just in case mode change failed
-        self._update_toolbar_state(fitsimage)
+        self._update_toolbar_state(chviewer)
+        self.fv.show_status(f"Type 'h' in the viewer to show help for mode {modename}")
         return True
 
-    def mode_set_cb(self, bm, mode, mtype, fitsimage):
+    def mode_set_cb(self, bm, mode, mtype, chviewer):
         # called whenever the user interaction mode is changed
         # in the viewer
         if self.active is None:
             self.active = self._get_viewer()
-        if fitsimage != self.active:
+        if chviewer != self.active:
             return True
-        self._update_toolbar_state(fitsimage)
+        self._update_toolbar_state(chviewer)
         return True
 
-    def viewer_transform_cb(self, fitsimage):
+    def viewer_transform_cb(self, chviewer):
         # called whenever the transform (flip x/y, swap axes) is done
         # in the viewer
         if self.active is None:
             self.active = self._get_viewer()
-        if fitsimage != self.active:
+        if chviewer != self.active:
             return True
-        self._update_toolbar_state(fitsimage)
+        self._update_toolbar_state(chviewer)
         return True
 
-    def new_image_cb(self, fitsimage, image):
-        self._update_toolbar_state(fitsimage)
+    def new_image_cb(self, chviewer, image):
+        self._update_toolbar_state(chviewer)
         return True
 
     def set_locked_cb(self, w, tf):
@@ -317,22 +322,22 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             modetype = 'oneshot'
         if self.active is None:
             self.active = self._get_viewer()
-        fitsimage = self.active
-        if fitsimage is None:
+        chviewer = self.active
+        if chviewer is None:
             return
 
         # get current bindmap, make sure that the mode is consistent
         # with current lock button
-        bm = fitsimage.get_bindmap()
+        bm = chviewer.get_bindmap()
         modename, cur_modetype = bm.current_mode()
         bm.set_default_mode_type(modetype)
 
         bm.set_mode(modename, mode_type=modetype)
         if not tf:
             # turning off lock also resets the mode
-            bm.reset_mode(fitsimage)
+            bm.reset_mode(chviewer)
 
-        self._update_toolbar_state(fitsimage)
+        self._update_toolbar_state(chviewer)
         return True
 
     # LOGIC
@@ -389,6 +394,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             self.w.btn_dist.set_state(modename == 'dist')
             self.w.btn_cuts.set_state(modename == 'cuts')
             self.w.btn_contrast.set_state(modename == 'contrast')
+            self.w.btn_cmap.set_state(modename == 'cmap')
 
             default_mode_type = bm.get_default_mode_type()
             if 'btn_modelock' in self.w:

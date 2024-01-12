@@ -19,6 +19,7 @@ class RVMode(Mode):
     H : raise Header plugin (if activated)
     C : raise Contents plugin (if activated)
     D : raise Dialogs tab
+    h : show help message for the current mode
     F : go borderless fullscreen
     f : toggle fullscreen
     m : toggle maximized
@@ -55,6 +56,7 @@ class RVMode(Mode):
             kp_raise_header=['H'],
             kp_raise_contents=['C'],
             kp_raise_dialogs=['D'],
+            kp_show_mode_help=['h'],
 
             kp_go_fullscreen=['F'],
             kp_toggle_fullscreen=['f'],
@@ -159,6 +161,16 @@ class RVMode(Mode):
     def kp_next_channel_in_workspace(self, viewer, event, data_x, data_y,
                                      msg=True):
         self.fv.next_channel()
+        return True
+
+    def kp_show_mode_help(self, viewer, event, data_x, data_y, msg=True):
+        bm = viewer.get_bindmap()
+        mode_name, mode_type = bm.current_mode()
+        if mode_name is not None:
+            bd = viewer.get_bindings()
+            mode_obj = bd.get_mode_obj(mode_name)
+            name, docstr = mode_obj.get_docstring()
+            self.fv.show_help_text(name, docstr, wsname='right')
         return True
 
     #####  SCROLL ACTION CALLBACKS #####
