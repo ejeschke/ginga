@@ -210,7 +210,7 @@ Pan mode
 | right-drag           | Zoom in/out proportionally to L/R drag.          |
 +----------------------+--------------------------------------------------+
 | scroll-wheel         | Zoom in or out.                                  |
-+-------------- -------+--------------------------------------------------+
++----------------------+--------------------------------------------------+
 | pinch-gesture        | Zoom in/out porportionally to gesture.           |
 +----------------------+--------------------------------------------------+
 | <Modifier> +         | Pan in direction of arrow key. Adding Ctrl       |
