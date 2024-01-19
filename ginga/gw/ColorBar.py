@@ -58,8 +58,8 @@ class ColorBar(Callback.Callbacks):
         cbar.add_callback('cursor-up', self.cursor_release_cb)
         cbar.add_callback('draw-up', self.draw_release_cb)
         cbar.add_callback('btn-move-none', self.none_move_cb)
-        cbar.add_callback('zoom-scroll', self.scroll_cb)
-        cbar.add_callback('zoom-pinch', self.pinch_cb)
+        cbar.add_callback('scroll-none', self.scroll_cb)
+        cbar.add_callback('pinch-none', self.pinch_cb)
 
         #cbar.configure(width, height)
         iw = Viewers.GingaViewerWidget(viewer=cbar)
@@ -155,15 +155,17 @@ class ColorBar(Callback.Callbacks):
         return True
 
     def none_move_cb(self, canvas, event, data_x, data_y):
-        x, y = event.viewer.get_last_win_xy()
-        wd, ht = event.viewer.get_window_size()
-        dist = self.rgbmap.get_dist()
-        pct = float(x) / float(wd)
-        rng_pct = dist.get_dist_pct(pct)
-        loval, hival = event.viewer.get_cut_levels()
-        value = float(loval + (rng_pct * (hival - loval)))
-        self.make_callback('motion', value, event)
-        return True
+        if event.button == 'nobtn':
+            x, y = event.viewer.get_last_win_xy()
+            wd, ht = event.viewer.get_window_size()
+            dist = self.rgbmap.get_dist()
+            pct = float(x) / float(wd)
+            rng_pct = dist.get_dist_pct(pct)
+            loval, hival = event.viewer.get_cut_levels()
+            value = float(loval + (rng_pct * (hival - loval)))
+            self.make_callback('motion', value, event)
+            return True
+        return False
 
     def scroll_cb(self, viewer, event):
         direction = event.direction

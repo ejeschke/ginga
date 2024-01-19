@@ -39,6 +39,8 @@ Default bindings in mode
 * scroll : zoom (scale) the image
 * left drag : pan the view
 * right drag : camera pan the view
+* pan gesture: pan the view porportionally to the gesture
+* pinch gesture: zoom the image porportionally to the gesture
 
 """
 import math

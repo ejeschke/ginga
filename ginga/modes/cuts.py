@@ -28,7 +28,7 @@ Default bindings in mode
 * n, down arrow : select the next auto cuts algorithm in the list
 * colon : toggle auto cuts for new images "on" or "off" in this viewer
 * semicolon : set auto cuts for new images to "override" in this viewer
-* scroll : adjust contrast by squeezing or stretching levels;
+* scroll wheel : adjust contrast by squeezing or stretching levels;
   one direction squeezes, the other stretches
 * Ctrl + scroll : adjust micro contrast by squeezing or stretching levels;
   similar to scroll, but amount of stretch/squeeze is reduced
@@ -40,6 +40,10 @@ Default bindings in mode
 * Ctrl + left drag : adjust high level by moving cursor;
   moving left/right adjusts high level
 * right click : perform an auto levels (same as "a")
+* pinch gesture: widen or narrow gap between low and high cut levels
+  (similar to scroll wheel)
+* Ctrl + pan gesture: change high cut level up or down
+* Shift + pan gesture: change low cut level up or down
 
 """
 from ginga.modes.mode_base import Mode
@@ -70,7 +74,10 @@ class CutsMode(Mode):
             ms_cutlo=['cuts+shift+left'],
             ms_cuthi=['cuts+ctrl+left'],
             ms_cutall=['cuts+left'],
-            ms_cut_auto=['cuts+right'])
+            ms_cut_auto=['cuts+right'],
+
+            pa_cut=['cuts+shift+pan', 'cuts+ctrl+pan'],
+            pi_squeeze_cuts=['cuts+pinch'])
 
         self._hival = 0.0
         self._loval = 0.0
@@ -125,7 +132,7 @@ class CutsMode(Mode):
         loval, hival = viewer.get_cut_levels()
         loval = loval + (pct * spread)
         if msg:
-            self.onscreen_message("Cut low: %.4f" % (loval))
+            self.onscreen_message("Cut low: %.4f" % (loval), delay=1.0)
         viewer.cut_levels(loval, hival)
 
     def _cutlow_xy(self, viewer, x, y, msg=True):
@@ -138,7 +145,7 @@ class CutsMode(Mode):
         loval, hival = viewer.get_cut_levels()
         loval = minval + (pct * spread)
         if msg:
-            self.onscreen_message("Cut low: %.4f" % (loval))
+            self.onscreen_message("Cut low: %.4f" % (loval), delay=1.0)
         viewer.cut_levels(loval, hival)
 
     def _cuthigh_pct(self, viewer, pct, msg=True):
@@ -149,7 +156,7 @@ class CutsMode(Mode):
         loval, hival = viewer.get_cut_levels()
         hival = hival - (pct * spread)
         if msg:
-            self.onscreen_message("Cut high: %.4f" % (hival))
+            self.onscreen_message("Cut high: %.4f" % (hival), delay=1.0)
         viewer.cut_levels(loval, hival)
 
     def _cuthigh_xy(self, viewer, x, y, msg=True):
@@ -162,7 +169,7 @@ class CutsMode(Mode):
         loval, hival = viewer.get_cut_levels()
         hival = maxval - (pct * spread)
         if msg:
-            self.onscreen_message("Cut high: %.4f" % (hival))
+            self.onscreen_message("Cut high: %.4f" % (hival), delay=1.0)
         viewer.cut_levels(loval, hival)
 
     def _cutboth_xy(self, viewer, x, y, msg=True):
@@ -176,7 +183,7 @@ class CutsMode(Mode):
         loval = self._loval + (ypct * spread)
         if msg:
             self.onscreen_message("Cut low: %.4f  high: %.4f" % (
-                loval, hival))
+                loval, hival), delay=1.0)
         viewer.cut_levels(loval, hival)
 
     def cut_pct(self, viewer, pct, msg=True):
@@ -364,3 +371,46 @@ class CutsMode(Mode):
 
     def ms_cut_auto(self, viewer, event, data_x, data_y, msg=True):
         self.kp_cut_auto(viewer, event, data_x, data_y, msg=msg)
+
+    ##### GESTURE ACTION CALLBACKS #####
+
+    def pa_cut(self, viewer, event, msg=True):
+        """Change the cut levels in the viewer by a pan gesture.
+        (the back end must support gestures)
+
+        NOTE: this feature is experimental. How to determine the
+        percentage (pct) to cut?
+        """
+        if not self.cancut:
+            return False
+        if event.state == 'move':
+            event = self._pa_synth_scroll_event(event)
+            rev = self.settings.get('zoom_scroll_reverse', False)
+            direction = self.get_direction(event.direction, rev=rev)
+            pct = 0.001
+            if direction == 'down':
+                pct = - pct
+            if 'shift' in event.modifiers:
+                self._cutlow_pct(viewer, pct, msg=msg)
+            elif 'ctrl' in event.modifiers:
+                self._cuthigh_pct(viewer, -pct, msg=msg)
+            else:
+                return False
+            return True
+        return False
+
+    def pi_squeeze_cuts(self, viewer, event, msg=True):
+        """Change the cut levels in the viewer by a pinch gesture.
+        Widens or narrows the gap between the cut levels porportionally
+        to the pinch gesture.
+        (the back end must support gestures)
+        """
+        if not self.cancut:
+            return False
+        event.accept()
+
+        scale = event.scale
+        cut_lo, cut_hi = viewer.get_cut_levels()
+        # widens or narrows gap between cuts
+        cut_lo, cut_hi = cut_lo * (1 / scale), cut_hi * scale
+        viewer.cut_levels(cut_lo, cut_hi)

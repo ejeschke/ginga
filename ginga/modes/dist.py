@@ -23,8 +23,9 @@ Default bindings in mode
 * D : reset the color distribution algorithm to "linear"
 * b, up arrow : select the previous distribution algorithm in the list
 * n, down arrow : select the next distribution algorithm in the list
-* scroll : select the color distribution algorithm by scrolling
-
+* scroll wheel : select the color distribution algorithm by scrolling
+* pan gesture : select the color distribution algorithm by swiping
+  (hint: finalize selection of algorithm with up/down arrow keys)
 """
 from ginga.modes.mode_base import Mode
 
@@ -41,7 +42,9 @@ class DistMode(Mode):
             kp_dist_prev=['dist+up', 'dist+b'],
             kp_dist_next=['dist+down', 'dist+n'],
 
-            sc_dist=['dist+scroll'])
+            sc_dist=['dist+scroll'],
+
+            pa_dist_cycle=['dist+pan'])
 
     def __str__(self):
         return 'dist'
@@ -122,4 +125,20 @@ class DistMode(Mode):
         direction = self.get_direction(event.direction)
         self._cycle_dist(viewer, msg, direction=direction)
 
-    #####  MOUSE ACTION CALLBACKS #####
+    ##### GESTURE ACTION CALLBACKS #####
+
+    def pa_dist_cycle(self, viewer, event, msg=True):
+        """Change the color distribution algorithm by a pan gesture.
+        (the back end must support gestures)
+        """
+        if not self.cancmap:
+            return False
+        event.accept()
+        event = self._pa_synth_scroll_event(event)
+        if event.state == 'move':
+            rev = self.settings.get('zoom_scroll_reverse', False)
+            direction = self.get_direction(event.direction, rev=rev)
+            self._cycle_dist(viewer, msg, direction=direction)
+
+            return True
+        return False

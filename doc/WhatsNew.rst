@@ -36,6 +36,7 @@ Ver 5.0.0 (unreleased)
 - Added button in Toolbar plugin to activate cmap (colormap) mode
 - Added mode help; type 'h' in the viewer window when you are in a mode
   to display a help tab for that mode (reference viewer only)
+- Better support for touchpad gestures in modes
 
 Ver 4.1.0 (2022-06-30)
 ======================

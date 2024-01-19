@@ -93,12 +93,11 @@ Panning and zooming commands
 +----------------------+--------------------------------------------------+
 | Commmand             | Description                                      |
 +======================+==================================================+
-| Scroll wheel turned  | Zoom in or out.                                  |
+| scroll-wheel         | Zoom in or out.                                  |
 +----------------------+--------------------------------------------------+
-| Shift + scroll wheel | Zoom while keeping location under the cursor.    |
+| Shift + scroll-wheel | Zoom while keeping location under the cursor.    |
 +----------------------+--------------------------------------------------+
-| Ctrl + scroll wheel  | Pan in direction of scroll.                      |
-| turned               |                                                  |
+| Ctrl + scroll-wheel  | Pan in direction of scroll.                      |
 +----------------------+--------------------------------------------------+
 | Digit                | Zoom image to zoom steps 1, 2, ..., 9, 10.       |
 | (1234567890)         |                                                  |
@@ -204,9 +203,15 @@ Pan mode
 +======================+==================================================+
 | left-drag            | Pan proportionally to drag.                      |
 +----------------------+--------------------------------------------------+
+| pan-gesture          | Pan proportionally to gesture.                   |
++----------------------+--------------------------------------------------+
 | middle-click         | Set pan position.                                |
 +----------------------+--------------------------------------------------+
 | right-drag           | Zoom in/out proportionally to L/R drag.          |
++----------------------+--------------------------------------------------+
+| scroll-wheel         | Zoom in or out.                                  |
++-------------- -------+--------------------------------------------------+
+| pinch-gesture        | Zoom in/out porportionally to gesture.           |
 +----------------------+--------------------------------------------------+
 | <Modifier> +         | Pan in direction of arrow key. Adding Ctrl       |
 | arrow key            | reduces amount, adding Shift reduces more.       |
@@ -236,23 +241,24 @@ Pan mode
 Zoom mode
 =========
 
-+----------------------+---------------------------------------------------+
-| Commmand             | Description                                       |
-+======================+===================================================+
-| Turn scroll wheel    | Zoom in or out.                                   |
-+----------------------+---------------------------------------------------+
-| left-click           | Set pan position, zoom in a step and warp cursor  |
-|                      | to pan position (if supported on backend).        |
-+----------------------+---------------------------------------------------+
-| right-click          | Set pan position, zoom out a step and warp        |
-|                      | cursor to pan position (if supported on backend). |
-+----------------------+---------------------------------------------------+
-| middle-drag          | Pans freely over entire image in proportion       |
-|                      | to cursor position versus window.                 |
-+----------------------+---------------------------------------------------+
-| p, z, backquote, r,  | (Same as for :ref:`Pan mode <pan_mode>`.)         |
-| c, arrow keys        |                                                   |
-+----------------------+---------------------------------------------------+
++----------------------+--------------------------------------------------+
+| Commmand             | Description                                      |
++======================+==================================================+
+| scroll-wheel         | Zoom in or out.                                  |
++----------------------+--------------------------------------------------+
+| left-click           | Set pan position, zoom in a step and warp cursor |
+|                      | to pan position (if supported on backend).       |
++----------------------+--------------------------------------------------+
+| right-click          | Set pan position, zoom out a step and warp       |
+|                      | cursor to pan position (if supported on backend).|
++----------------------+--------------------------------------------------+
+| middle-drag          | Pans freely over entire image in proportion      |
+|                      | to cursor position versus window.                |
++----------------------+--------------------------------------------------+
+| p, z, backquote, r,  | (Same as for :ref:`Pan mode <pan_mode>`.)        |
+| c, arrow keys, pan   |                                                  |
+| and pinch gestures   |                                                  |
++----------------------+--------------------------------------------------+
 
 .. _dist_mode:
 
@@ -262,7 +268,7 @@ Dist mode
 +----------------------+--------------------------------------------------+
 | Commmand             | Description                                      |
 +======================+==================================================+
-| scroll               | Select distribution from linear, log, etc.       |
+| scroll-wheel         | Select distribution from linear, log, etc.       |
 +----------------------+--------------------------------------------------+
 | b, up-arrow          | Select prev distribution in list.                |
 +----------------------+--------------------------------------------------+
@@ -285,12 +291,20 @@ Cuts mode
 | Ctrl + left-drag     | Interactive cut low level only                   |
 |                      | (horizontal drag).                               |
 +----------------------+--------------------------------------------------+
+| Ctrl + pan gesture   | Change cut high level up/down.                   |
++----------------------+--------------------------------------------------+
 | Shift + left-drag    | Interactive cut high level only                  |
 |                      | (horizontal drag).                               |
 +----------------------+--------------------------------------------------+
-| scroll               | Coarse (10%) adjustment in/out.                  |
+| Shift + pan gesture  | Change cut low level up/down.                    |
 +----------------------+--------------------------------------------------+
-| Ctrl + scroll        | Fine (1%) adjustment in/out.                     |
+| scroll-wheel         | Squeeze or stretch gap between cuts.             |
+|                      | Coarse (10%) adjustment in/out.                  |
++----------------------+--------------------------------------------------+
+| Ctrl + scroll-wheel  | Squeeze or stretch gap between cuts.             |
+|                      | Fine (1%) adjustment in/out.                     |
++----------------------+--------------------------------------------------+
+| pinch gesture        | Squeeze or stretch gap between cuts.             |
 +----------------------+--------------------------------------------------+
 | a, right-click       | Do an auto level to restore cuts.                |
 +----------------------+--------------------------------------------------+
@@ -325,6 +339,16 @@ Contrast mode
 +----------------------+--------------------------------------------------+
 | right-click          | Restore the contrast (via colormap) to its       |
 |                      | original (unstretched, unshifted) state.         |
++----------------------+--------------------------------------------------+
+| scroll-wheel         | Increase/decrease contrast.                      |
+|                      | (add Ctrl to adjust it more finely).             |
++----------------------+--------------------------------------------------+
+| Shift + scroll-wheel | Increase/decrease brightness (bias).             |
+|                      | (add Ctrl to adjust it more finely).             |
++----------------------+--------------------------------------------------+
+| Ctrl + pan gesture   | Increase/decrease contrast.                      |
++----------------------+--------------------------------------------------+
+| Shift + pan gesture  | Increase/decrease brightness (bias).             |
 +----------------------+--------------------------------------------------+
 | T                    | Restore the contrast (via colormap) to its       |
 |                      | original (unstretched, unshifted) state.         |
@@ -374,58 +398,58 @@ Rotate mode
 Cmap mode
 =========
 
-+----------------------+---------------------------------------------------+
-| Commmand             | Description                                       |
-+======================+===================================================+
-| scroll               | Select color map.                                 |
-+----------------------+---------------------------------------------------+
-| left-drag            | Rotate color map.                                 |
-+----------------------+---------------------------------------------------+
-| right-click          | Unrotate color map.                               |
-+----------------------+---------------------------------------------------+
-| b, up-arrow          | Select prev color map in list.                    |
-+----------------------+---------------------------------------------------+
-| n, down-arrow        | Select next color map in list.                    |
-+----------------------+---------------------------------------------------+
-| I                    | Toggle invert color map.                          |
-+----------------------+---------------------------------------------------+
-| r                    | Restore color map to unrotated, uninverted state. |
-+----------------------+---------------------------------------------------+
-| Ctrl + scroll        | Select intensity map.                             |
-+----------------------+---------------------------------------------------+
-| j, left-arrow        | Select prev intensity map in list.                |
-+----------------------+---------------------------------------------------+
-| k, right-arrow       | Select next intensity map in list.                |
-+----------------------+---------------------------------------------------+
-| i                    | Restore intensity map to "ramp".                  |
-+----------------------+---------------------------------------------------+
-| c                    | Toggle a color bar overlay on the image.          |
-+----------------------+---------------------------------------------------+
-| Y                    | Restore the color map to default ('gray').        |
-+----------------------+---------------------------------------------------+
++----------------------+--------------------------------------------------+
+| Commmand             | Description                                      |
++======================+==================================================+
+| scroll               | Select color map.                                |
++----------------------+--------------------------------------------------+
+| left-drag            | Rotate color map.                                |
++----------------------+--------------------------------------------------+
+| right-click          | Unrotate color map.                              |
++----------------------+--------------------------------------------------+
+| b, up-arrow          | Select prev color map in list.                   |
++----------------------+--------------------------------------------------+
+| n, down-arrow        | Select next color map in list.                   |
++----------------------+--------------------------------------------------+
+| I                    | Toggle invert color map.                         |
++----------------------+--------------------------------------------------+
+| r                    | Restore color map to unrotated, uninverted state.|
++----------------------+--------------------------------------------------+
+| Ctrl + scroll        | Select intensity map.                            |
++----------------------+--------------------------------------------------+
+| j, left-arrow        | Select prev intensity map in list.               |
++----------------------+--------------------------------------------------+
+| k, right-arrow       | Select next intensity map in list.               |
++----------------------+--------------------------------------------------+
+| i                    | Restore intensity map to "ramp".                 |
++----------------------+--------------------------------------------------+
+| c                    | Toggle a color bar overlay on the image.         |
++----------------------+--------------------------------------------------+
+| Y                    | Restore the color map to default ('gray').       |
++----------------------+--------------------------------------------------+
 
 .. _naxis_mode:
 
 Naxis mode
 ==========
 
-.. note:: Naxis mode is used when viewing data that has more than 2
+.. note:: Naxis mode can be used when viewing data that has more than 2
           dimensions (e.g., data cubes).
 
-+----------------------+---------------------------------------------------+
-| Commmand             | Description                                       |
-+======================+===================================================+
-| scroll               | Select previous or next slice of current axis.    |
-+----------------------+---------------------------------------------------+
-| Ctrl + scroll        | Select previous or next axis as current axis.     |
-+----------------------+---------------------------------------------------+
-| left drag            | select slice as a function of percentage of       |
-|                      | cursor/window width.                              |
-+----------------------+---------------------------------------------------+
-| up-arrow             | Select prev axis as current axis.                 |
-+----------------------+---------------------------------------------------+
-| down-arrow           | Select next axis as current axis.                 |
-+----------------------+---------------------------------------------------+
++----------------------+--------------------------------------------------+
+| Commmand             | Description                                      |
++======================+==================================================+
+| scroll               | Select previous or next slice of current axis.   |
++----------------------+--------------------------------------------------+
+| Ctrl + scroll        | Select previous or next axis as current axis.    |
++----------------------+--------------------------------------------------+
+| left drag            | select slice as a function of percentage of      |
+|                      | cursor/window width.                             |
++----------------------+--------------------------------------------------+
+| up-arrow             | Select prev axis as current axis.                |
++----------------------+--------------------------------------------------+
+| down-arrow           | Select next axis as current axis.                |
++----------------------+--------------------------------------------------+
 
 .. _plot_mode:
 
@@ -435,22 +459,22 @@ Plot mode
 Plot mode is only valid when the viewer is used with a ``PlotAide``
 object to display a graph.
 
-+----------------------+---------------------------------------------------+
-| Commmand             | Description                                       |
-+======================+===================================================+
-| scroll               | Zoom the X axis.                                  |
-|                      | (Sets `autoaxis_x` to `off`, if it was `on`)      |
-+----------------------+---------------------------------------------------+
-| Ctrl + scroll        | Zoom the Y axis. (Sets `autoaxis_y` to `off`)     |
-+----------------------+---------------------------------------------------+
-| x                    | Toggle `autoaxis_x` between `on` and `off`.       |
-+----------------------+---------------------------------------------------+
-| p                    | Toggle `autoaxis_x` between `pan` and `off`.      |
-+----------------------+---------------------------------------------------+
-| y                    | Toggle `autoaxis_y` between `on` and `off`.       |
-+----------------------+---------------------------------------------------+
-| v                    | Toggle `autoaxis_y` between `vis` and `off`.      |
-+----------------------+---------------------------------------------------+
++----------------------+--------------------------------------------------+
+| Commmand             | Description                                      |
++======================+==================================================+
+| scroll               | Zoom the X axis.                                 |
+|                      | (Sets `autoaxis_x` to `off`, if it was `on`)     |
++----------------------+--------------------------------------------------+
+| Ctrl + scroll        | Zoom the Y axis. (Sets `autoaxis_y` to `off`)    |
++----------------------+--------------------------------------------------+
+| x                    | Toggle `autoaxis_x` between `on` and `off`.      |
++----------------------+--------------------------------------------------+
+| p                    | Toggle `autoaxis_x` between `pan` and `off`.     |
++----------------------+--------------------------------------------------+
+| y                    | Toggle `autoaxis_y` between `on` and `off`.      |
++----------------------+--------------------------------------------------+
+| v                    | Toggle `autoaxis_y` between `vis` and `off`.     |
++----------------------+--------------------------------------------------+
 
 The graph can be flipped in X or Y and the axes swapped, using the keystroke
 commands found in the transform section above (:ref:`transform_commands`).
@@ -463,9 +487,9 @@ see the chapter on plots (:ref:`ch-plots`).
 Autozoom setting
 ================
 
-The "autozoom" setting can be set to one of the following: "on", "override", "once" or
-"off".  This affects the behavior of the viewer when changing to a new
-image (when done in the typical way) as follows:
+The "autozoom" setting can be set to one of the following: "on", "override",
+"once" or "off".  This affects the behavior of the viewer when changing to a
+new image (when done in the typical way) as follows:
 
 * `on`: the image will be scaled to fit the window
 * `override`: like `on`, except that once the zoom/scale is changed by the
@@ -474,17 +498,17 @@ image (when done in the typical way) as follows:
   first image
 * `off`: an image scaled to the current viewer setting
 
-(In the :ref:`Reference Viewer <reference_viewer>`, this is set under the "Zoom New" setting in the
-channel preferences.)
+(In the :ref:`Reference Viewer <reference_viewer>`, this is set under the
+"Zoom New" setting in the channel preferences.)
 
 .. _autocenter_setting:
 
 Autocenter setting
 ==================
 
-The "autocenter" setting can be set to one of the following: "on", "override", "once" or
-"off".  This affects the behavior of the viewer when changing to a new
-image (when done in the typical way) as follows:
+The "autocenter" setting can be set to one of the following: "on", "override",
+"once" or "off".  This affects the behavior of the viewer when changing to a
+new image (when done in the typical way) as follows:
 
 * `on`: the pan position will be set to the center of the image
 * `override`: like `on`, except that once the pan position is changed by the
@@ -493,17 +517,17 @@ image (when done in the typical way) as follows:
   first image
 * `off`: the pan position is taken from the current viewer setting
 
-(In the :ref:`Reference Viewer <reference_viewer>`, this is set under the "Center New" setting in the
-channel preferences.)
+(In the :ref:`Reference Viewer <reference_viewer>`, this is set under the
+"Center New" setting in the channel preferences.)
 
 .. _autocuts_setting:
 
 Autocuts setting
 ================
 
-The "autocuts" setting can be set to one of following: "on", "override", "once" or
-"off". This affects the behavior of the viewer when changing to a new
-image (when done in the typical way) as follows:
+The "autocuts" setting can be set to one of following: "on", "override",
+"once" or "off". This affects the behavior of the viewer when changing to a
+new image (when done in the typical way) as follows:
 
 * `on`: the cut levels for the image will be calculated and set according
   to the autocuts algorithm setting
@@ -513,8 +537,8 @@ image (when done in the typical way) as follows:
   first image
 * `off`: the cut levels are applied from the current viewer setting
 
-(In the ref:`Reference Viewer <reference_viewer>`, this is set under the "Cut New" setting in the
-channel preferences.)
+(In the ref:`Reference Viewer <reference_viewer>`, this is set under the
+"Cut New" setting in the channel preferences.)
 
 
 .. _reference_viewer:

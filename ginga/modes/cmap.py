@@ -28,6 +28,8 @@ Default bindings in mode
 * k, right arrow : set next intensity map in list
 * scroll : choose color map from list
 * Ctrl + scroll : choose intensity map from list
+* pan gesture: choose color map from list (hint: use up/down arrows keys
+  to finalize selection)
 * left drag : rotate current color map
 * right click : restore color map (same as "r")
 
@@ -60,7 +62,9 @@ class CMapMode(Mode):
             sc_imap=['cmap+ctrl+scroll'],
 
             ms_cmap_rotate=['cmap+left'],
-            ms_cmap_restore=['cmap+right'])
+            ms_cmap_restore=['cmap+right'],
+
+            pa_cmap_cycle=['cmap+pan'])
 
     def __str__(self):
         return 'cmap'
@@ -280,3 +284,21 @@ class CMapMode(Mode):
         event.accept()
         if event.state == 'down':
             self.restore_colormap(viewer, msg)
+
+    ##### GESTURE ACTION CALLBACKS #####
+
+    def pa_cmap_cycle(self, viewer, event, msg=True):
+        """Change the color map by a pan gesture.
+        (the back end must support gestures)
+        """
+        if not self.cancmap:
+            return False
+        event.accept()
+        event = self._pa_synth_scroll_event(event)
+        if event.state == 'move':
+            rev = self.settings.get('zoom_scroll_reverse', False)
+            direction = self.get_direction(event.direction, rev=rev)
+            self._cycle_cmap(viewer, msg, direction=direction)
+
+            return True
+        return False

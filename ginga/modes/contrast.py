@@ -23,6 +23,10 @@ Default bindings in mode
   * Moving left/right controls shift, up/down controls stretch.
   * Release button when satisfied with the contrast.
 * right click : restore contrast to defaults
+* scroll wheel : change contrast (add Ctrl to change more finely)
+* Shift + scroll wheel : change brightness (add Ctrl to change more finely)
+* Ctrl + pan gesture : change contrast
+* Shift + pan gesture : change brightness
 
 """
 import numpy as np
@@ -40,8 +44,12 @@ class ContrastMode(Mode):
 
             kp_contrast_restore=['T', 'contrast+t', 'contrast+T'],
 
+            sc_contrast=['contrast+scroll', 'contrast+*+scroll'],
+
             ms_contrast=['contrast+left', 'ctrl+right'],
-            ms_contrast_restore=['contrast+right', 'ctrl+middle'])
+            ms_contrast_restore=['contrast+right', 'ctrl+middle'],
+
+            pa_contrast=['contrast+ctrl+pan', 'contrast+shift+pan'])
 
     def __str__(self):
         return 'contrast'
@@ -61,7 +69,8 @@ class ContrastMode(Mode):
         viewer.get_settings().set(contrast=0.5, brightness=0.5)
         msg = self.settings.get('msg_cmap', msg)
         if msg:
-            self.onscreen_message("Restored contrast", delay=0.5)
+            self.onscreen_message("Restored brightness and contrast",
+                                  delay=0.5)
         return True
 
     def _tweak_colormap(self, viewer, x, y, mode):
@@ -79,6 +88,26 @@ class ContrastMode(Mode):
             viewer.get_settings().set(contrast=contrast_pct,
                                       brightness=brightness_pct)
 
+    def _change_contrast(self, viewer, msg, change_pct):
+        msg = self.settings.get('msg_contrast', msg)
+        pct = viewer.get_settings().get('contrast')
+        change_factor = 1.0 + change_pct
+        pct = min(1.0, max(0.0, pct * change_factor))
+        viewer.get_settings().set(contrast=pct)
+        if msg:
+            self.onscreen_message("Contrast: %.2f%%" % (pct * 100),
+                                  delay=1.0)
+
+    def _change_brightness(self, viewer, msg, change_pct):
+        msg = self.settings.get('msg_contrast', msg)
+        pct = viewer.get_settings().get('brightness')
+        change_factor = 1.0 + change_pct
+        pct = min(1.0, max(0.0, pct * change_factor))
+        viewer.get_settings().set(brightness=pct)
+        if msg:
+            self.onscreen_message("Brightness: %.2f%%" % (pct * 100),
+                                  delay=1.0)
+
     #####  KEYBOARD ACTION CALLBACKS #####
 
     def kp_contrast_restore(self, viewer, event, data_x, data_y, msg=True):
@@ -89,6 +118,24 @@ class ContrastMode(Mode):
         self.restore_contrast(viewer, msg=msg)
 
     #####  SCROLL ACTION CALLBACKS #####
+
+    def sc_contrast(self, viewer, event, msg=True):
+        """Interactively change the contrast or brightness by scrolling.
+        """
+        if not self.cancmap:
+            return False
+        event.accept()
+        rev = self.settings.get('zoom_scroll_reverse', False)
+        direction = self.get_direction(event.direction, rev=rev)
+        change_pct = 0.05
+        if 'ctrl' in event.modifiers:
+            change_pct = 0.01
+        if direction == 'down':
+            change_pct = - change_pct
+        if 'shift' in event.modifiers:
+            self._change_brightness(viewer, msg, change_pct)
+        else:
+            self._change_contrast(viewer, msg, change_pct)
 
     #####  MOUSE ACTION CALLBACKS #####
 
@@ -123,3 +170,28 @@ class ContrastMode(Mode):
         event.accept()
         if event.state == 'down':
             self.restore_contrast(viewer, msg=msg)
+
+    ##### GESTURE ACTION CALLBACKS #####
+
+    def pa_contrast(self, viewer, event, msg=True):
+        """Change the contrast or brightness by a pan gesture.
+        (the back end must support gestures)
+        """
+        if not self.cancmap:
+            return False
+        event.accept()
+        event = self._pa_synth_scroll_event(event)
+        if event.state == 'move':
+            rev = self.settings.get('zoom_scroll_reverse', False)
+            direction = self.get_direction(event.direction, rev=rev)
+            change_pct = 0.01
+            if direction == 'down':
+                change_pct = - change_pct
+            if 'shift' in event.modifiers:
+                self._change_brightness(viewer, msg, change_pct)
+                return True
+            elif 'ctrl' in event.modifiers:
+                self._change_contrast(viewer, msg, change_pct)
+                return True
+
+        return False
