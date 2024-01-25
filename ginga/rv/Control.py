@@ -473,14 +473,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.logger.info(f"opening '{url}' in external browser...")
         webbrowser.open(url)
 
-    def help_plugin(self, plugin_obj, text_kind='rst'):
+    def help_plugin(self, plugin_obj, text_kind='rst', url=None):
         """
         Called from a plugin's default help() method. Offers to show the
         user plugin docstring in a text widget or view the RTD doc in an
         external web browser.
         """
 
-        def _do_help(val):
+        def _do_help(val, url=None):
             if val == 1:
                 # show plain text in a text widget
                 if plugin_obj is not None:
@@ -488,12 +488,13 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                     self.show_help_text(name, doc)
             elif val == 2:
                 # show web page in external browser
-                url = download_doc.get_online_docs_url(plugin=plugin_obj)
+                if url is None:
+                    url = download_doc.get_online_docs_url(plugin=plugin_obj)
                 self.show_help_url(url)
 
         if self._help.choice > 0:
             # User made a decision to keep getting plugin help the same way
-            return _do_help(self._help.choice)
+            return _do_help(self._help.choice, url=url)
 
         # Create troubleshooting dialog if downloading cannot be done
         dialog = Widgets.Dialog(title="Show documentation",
@@ -517,14 +518,14 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         def _remember_choice_cb(w, tf):
             self._help.remember_choice = tf
 
-        def _do_help_cb(dialog, val):
+        def _do_help_cb(dialog, val, url=None):
             if self._help.remember_choice:
                 self._help.choice = val
             self.ds.remove_dialog(dialog)
-            _do_help(val)
+            _do_help(val, url=url)
 
         cb.add_callback('activated', _remember_choice_cb)
-        dialog.add_callback('activated', _do_help_cb)
+        dialog.add_callback('activated', _do_help_cb, url=url)
         self.ds.show_dialog(dialog)
 
     def show_help_text(self, name, help_txt, wsname='channels'):
