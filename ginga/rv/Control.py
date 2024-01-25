@@ -484,7 +484,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             if val == 1:
                 # show plain text in a text widget
                 if plugin_obj is not None:
-                    name, doc = plugin_obj._help_docstring()
+                    name, doc = plugin_obj._get_docstring()
                     self.show_help_text(name, doc)
             elif val == 2:
                 # show web page in external browser

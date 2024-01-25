@@ -44,7 +44,7 @@ class BasePlugin(object):
         """This method is called to stop the plugin."""
         pass
 
-    def _help_docstring(self):
+    def _get_docstring(self):
         import inspect
 
         # Insert section title at the beginning
@@ -53,6 +53,10 @@ class BasePlugin(object):
         plg_doc = ('{}\n{}\n'.format(plg_name, '=' * len(plg_name)) +
                    plg_mod.__doc__)
         return plg_name, plg_doc
+
+    def _help_docstring(self):
+        plg_name, plg_doc = self._get_docstring()
+        self.fv.help_text(plg_name, plg_doc, text_kind='rst', trim_pfx=4)
 
     def help(self, text_kind='rst'):
         """Display help for the plugin."""
