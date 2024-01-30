@@ -1131,7 +1131,7 @@ class WCSAxes(CompoundObject):
         d_ra = ra_size / (self.num_ra + 1)
         d_dec = dec_size / (self.num_dec + 1)
         ra_arr = np.arange(ra_min + d_ra, ra_max - d_ra * 0.5, d_ra)
-        dec_arr = np.arange(dec_min + d_dec, dec_max - d_ra * 0.5, d_dec)
+        dec_arr = np.arange(dec_min + d_dec, dec_max - d_dec * 0.5, d_dec)
 
         # RA/DEC step size for each vector
         d_ra_step = ra_size * self._pix_res / min_imsize
