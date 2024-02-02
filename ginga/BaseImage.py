@@ -156,15 +156,6 @@ class BaseImage(ViewerObjectBase):
     def _get_data(self):
         return self._data
 
-    def _get_fast_data(self):
-        """
-        Return an array similar to but possibly smaller than self._data,
-        for fast calculation of the intensity distribution.
-
-        NOTE: this is used by the Ginga plugin for Glue
-        """
-        return self._data
-
     def copy_data(self):
         data = self._get_data()
         return data.copy()
@@ -251,7 +242,7 @@ class BaseImage(ViewerObjectBase):
                 self.wcs.has_valid_wcs())
 
     def _set_minmax(self):
-        data = self._get_fast_data()
+        data = self._get_data()
         try:
             self.maxval = np.nanmax(data)
             self.minval = np.nanmin(data)

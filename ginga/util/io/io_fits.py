@@ -18,7 +18,6 @@ any images.  Otherwise Ginga will try to pick one for you.
 """
 import re
 import numpy as np
-import warnings
 
 from ginga.AstroImage import AstroImage, AstroHeader
 from ginga.table.AstroTable import AstroTable
@@ -86,12 +85,6 @@ def use(fitspkg, raise_err=True):
 
 class BaseFitsFileHandler(io_base.BaseIOHandler):
 
-    # TODO: remove in a future version
-    @classmethod
-    def register_type(cls, name, klass):
-        raise Exception("This method has been deprecated;"
-                        "you don't need to call it anymore.")
-
     def __init__(self, logger):
         super(BaseFitsFileHandler, self).__init__(logger)
 
@@ -100,6 +93,9 @@ class BaseFitsFileHandler(io_base.BaseIOHandler):
         self.hdu_info = []
         self.hdu_db = {}
         self.extver_db = {}
+
+    def __del__(self):
+        self.close()
 
     def get_factory(self):
         hdlr = self.__class__(self.logger)
@@ -442,7 +438,8 @@ class AstropyFitsFileHandler(BaseFitsFileHandler):
         self.info = None
         fits_f = self.fits_f
         self.fits_f = None
-        fits_f.close()
+        if fits_f is not None:
+            fits_f.close()
 
     def find_first_good_hdu(self):
 
@@ -546,16 +543,6 @@ class AstropyFitsFileHandler(BaseFitsFileHandler):
 
     def save_as_file(self, filepath, data, header, **kwargs):
         self.write_fits(filepath, data, header, **kwargs)
-
-    def fromHDU(self, hdu, ahdr):
-        warnings.warn("fromHDU will be deprecated in the next release--"
-                      "use copy_header instead",
-                      DeprecationWarning)
-        return self.copy_header(hdu, ahdr)
-
-
-# TO BE DEPRECATED
-PyFitsFileHandler = AstropyFitsFileHandler
 
 
 class FitsioFileHandler(BaseFitsFileHandler):
@@ -835,12 +822,6 @@ class FitsioFileHandler(BaseFitsFileHandler):
 
     def save_as_file(self, filepath, data, header, **kwargs):
         self.write_fits(filepath, data, header, **kwargs)
-
-    def fromHDU(self, hdu, ahdr):
-        warnings.warn("fromHDU will be deprecated in the next release--"
-                      "use copy_header instead",
-                      DeprecationWarning)
-        return self.copy_header(hdu, ahdr)
 
 
 if not fits_configured:

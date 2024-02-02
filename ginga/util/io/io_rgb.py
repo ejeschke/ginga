@@ -105,6 +105,9 @@ class BaseRGBFileHandler(io_base.BaseIOHandler):
         self.close()
         return False
 
+    def __del__(self):
+        self.close()
+
     def load_idx_cont(self, idx_spec, loader_cont_fn, **kwargs):
 
         # TODO: raise an error if idx_spec doesn't match a single image
