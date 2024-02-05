@@ -529,6 +529,9 @@ class PillowFileHandler(BaseRGBFileHandler):
         if self.rgb_f is None:
             raise ValueError("Please call open_file() first!")
 
+        if idx is None:
+            idx = 0
+
         if idx > 0:
             raise IndexError(f"index {idx} out of range")
 
