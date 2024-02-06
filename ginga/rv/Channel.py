@@ -23,7 +23,8 @@ class Channel(Callback.Callbacks):
         Name of the channel.
 
     fv : `~ginga.rv.Control.GingaShell`
-        The reference viewer shell.
+        The reference viewer shell.  This is the central control object
+        for the Ginga Reference Viewer.
 
     settings : `~ginga.misc.Settings.SettingGroup`
         Channel settings.
@@ -67,11 +68,30 @@ class Channel(Callback.Callbacks):
             'set', self._sort_changed_ext_cb)
 
     def connect_viewer(self, viewer):
+        """Add a viewer to the set of viewers for this channel."""
         if viewer not in self.viewers:
             self.viewers.append(viewer)
             self.viewer_dict[viewer.vname] = viewer
 
     def move_image_to(self, imname, channel):
+        """Move a data object named `imname` from this channel to another
+        channel.
+
+        Parameters
+        ----------
+        imname : str
+            Name of the data in this channel (names are unique per-channel)
+
+        channel : `~ginga.rv.Channel.Channel`
+            Channel to which we will move the data
+
+        Callbacks
+        ---------
+        Will invoke `add-image` in the receiving channel if a data object
+        with that name does not exist there already (see add_image_update()).
+
+        Will invoke `remove-image` in this channel (see remove_image()).
+        """
         if self == channel:
             return
 
@@ -79,6 +99,22 @@ class Channel(Callback.Callbacks):
         self.remove_image(imname)
 
     def copy_image_to(self, imname, channel, silent=False):
+        """Copy a data object named `imname` from this channel to another
+        channel.
+
+        Parameters
+        ----------
+        imname : str
+            Name of the data in this channel (names are unique per-channel)
+
+        channel : `~ginga.rv.Channel.Channel`
+            Channel to which we will copy the data
+
+        Callbacks
+        ---------
+        Will invoke `add-image` in the receiving channel if a data object
+        with that name does not exist there already (see add_image_update()).
+        """
         if self == channel:
             return
 
@@ -104,6 +140,18 @@ class Channel(Callback.Callbacks):
                                update_viewer=False)
 
     def remove_image(self, imname):
+        """Remove a data object named `imname` from this channel.
+
+        Parameters
+        ----------
+        imname : str
+            Name of the data in this channel (names are unique per-channel)
+
+        Callbacks
+        ---------
+        Will invoke `remove-image` including the channel name, data object
+        name and path.
+        """
         info = self.image_index[imname]
         self.remove_history(imname)
 
@@ -122,10 +170,11 @@ class Channel(Callback.Callbacks):
         return info
 
     def get_image_names(self):
+        """Return the list of data items in this channel."""
         return [info.name for info in self.history]
 
     def get_loaded_image(self, imname):
-        """Get an image from memory.
+        """Get an data object from this channel's memory cache.
 
         Parameters
         ----------
@@ -134,20 +183,39 @@ class Channel(Callback.Callbacks):
 
         Returns
         -------
-        image
-            Image object.
+        image : subclass of `~ginga.BaseImage.ViewerObjectBase`
+            Data object.
 
         Raises
         ------
         KeyError
-            Image is not in memory.
+            If the named data item is not in the memory cache.
 
         """
         image = self.datasrc[imname]
         return image
 
     def add_image(self, image, silent=False, bulk_add=False):
+        """Add a data object to this channel.
 
+        Parameters
+        ----------
+        image : subclass of `~ginga.BaseImage.ViewerObjectBase`
+            Data object to be added.
+
+        silent : bool (optional, defaults to `False`)
+            Indicates a "silent add", in which case the callback is
+            suppressed.
+
+        bulk_add : bool (optional, defaults to `False`)
+            Indicates a "bulk add", in which the callback is not
+            suppressed, but the channel viewer will not be updated.
+
+        Callbacks
+        ---------
+        Will invoke `add-image`, if `silent` is `False`
+        (see add_image_update()).
+        """
         imname = image.get('name', None)
         if imname is None:
             raise ValueError("image has no name")
@@ -180,7 +248,29 @@ class Channel(Callback.Callbacks):
                                   update_viewer=not bulk_add)
 
     def add_image_info(self, info):
+        """Add a data object's metadata to this channel.
 
+        This function is used to add enough metadata about a data
+        object to the channel so that the object can be later loaded
+        and viewed from the channel on demand.  To do so, the bunch
+        passed as `info` should include as a minimum:
+
+        * name: name of object
+        * path: file path to object
+
+        Optionally, an image loader or image future can be specified.
+        If ommitted, the default loader is used and a future is created
+        using that loader.
+
+        Parameters
+        ----------
+        info : `~ginga.Bunch.Bunch`
+            Metadata about a data object to be added.
+
+        Callbacks
+        ---------
+        Will invoke `add-image-info` (see add_history()).
+        """
         image_loader = info.get('image_loader', self.fv.load_image)
 
         # create an image_future if one does not exist
@@ -189,14 +279,40 @@ class Channel(Callback.Callbacks):
             image_future = Future.Future()
             image_future.freeze(image_loader, info.path)
 
-        info = self.add_history(info.name, info.path,
-                                image_loader=image_loader,
-                                image_future=image_future)
+        self.add_history(info.name, info.path,
+                         image_loader=image_loader,
+                         image_future=image_future)
 
     def get_image_info(self, imname):
+        """Return metadata about a data object in this channel.
+
+        Parameters
+        ----------
+        imname : str
+            Name of the data in this channel (names are unique per-channel)
+
+        Returns
+        -------
+        info : `~ginga.Bunch.Bunch`
+            Metadata about a data object to be added.
+        """
         return self.image_index[imname]
 
     def update_image_info(self, image, info):
+        """Update metadata about a data object in this channel.
+
+        Parameters
+        ----------
+        image : subclass of `~ginga.BaseImage.ViewerObjectBase`
+            Data object to be updated.
+
+        info : `~ginga.Bunch.Bunch`
+            Metadata about the data object to be updated.
+
+        Callbacks
+        ---------
+        Will invoke `add-image-info` including the updated metadata.
+        """
         imname = image.get('name', None)
         if (imname is None) or (imname not in self.image_index):
             return False
@@ -218,6 +334,24 @@ class Channel(Callback.Callbacks):
         return True
 
     def add_image_update(self, image, info, update_viewer=False):
+        """Update metadata about a data object in this channel.
+
+        Parameters
+        ----------
+        image : subclass of `~ginga.BaseImage.ViewerObjectBase`
+            Data object to be updated.
+
+        info : `~ginga.Bunch.Bunch`
+            Metadata about the data object to be updated.
+
+        update_viewer : bool (optional, defaults to `False`)
+            If `True`, will also update the channel viewer if the data
+            object is the same as the most recent object in the channel.
+
+        Callbacks
+        ---------
+        Will invoke `add-image` including the data name, object and metadata.
+        """
         self.fv.make_async_gui_callback('add-image', self.name, image, info)
 
         if not update_viewer:
@@ -240,6 +374,11 @@ class Channel(Callback.Callbacks):
                 self.fv.change_channel(self.name)
 
     def refresh_cursor_image(self):
+        """Refresh the channel viewer to the current item pointed to
+        by the channel cursor.
+
+        Mostly internal routine used when the channel cursor is changed.
+        """
         if self.cursor < 0:
             self.viewer.clear()
             self.fv.channel_image_updated(self, None)
@@ -255,6 +394,15 @@ class Channel(Callback.Callbacks):
             self.switch_name(info.name)
 
     def prev_image(self, loop=True):
+        """Move the channel cursor to the previous data object in this
+        channel.
+
+        Parameters
+        ----------
+        loop : bool (optional, defaults to `True`)
+            If `True`, will loop around to the end of the channel's
+            data objects if the cursor is at the start.
+        """
         self.logger.debug("Previous image")
         if self.cursor <= 0:
             n = len(self.history) - 1
@@ -266,10 +414,18 @@ class Channel(Callback.Callbacks):
             self.cursor -= 1
 
         self.refresh_cursor_image()
-
         return True
 
     def next_image(self, loop=True):
+        """Move the channel cursor to the next data object in this
+        channel.
+
+        Parameters
+        ----------
+        loop : bool (optional, defaults to `True`)
+            If `True`, will loop around to the start of the channel's
+            data objects if the cursor is at the end.
+        """
         self.logger.debug("Next image")
         n = len(self.history) - 1
         if self.cursor >= n:
@@ -281,10 +437,12 @@ class Channel(Callback.Callbacks):
             self.cursor += 1
 
         self.refresh_cursor_image()
-
         return True
 
     def _add_info(self, info):
+        """Internal method used to add metadata to the channel's index
+        of data objects.
+        """
         if info.name in self.image_index:
             # image info is already present
             return False
@@ -302,6 +460,40 @@ class Channel(Callback.Callbacks):
 
     def add_history(self, imname, path, idx=None,
                     image_loader=None, image_future=None):
+        """Add metadata about a data object to this channel.
+
+        See add_image_info() for use and additional information.
+
+        Parameters
+        ----------
+        imname : str
+            Unique name (to this channel) of a data object to be added.
+
+        path : str
+            Path to the data object in storage.
+
+        idx : int or str (optional, defaults to None)
+            An optional index into the file, indicating an HDU or logical
+            subunit of the file to load.
+
+        image_loader : function (optional, defaults to None)
+            An optional loader for this data item.  If `None` is passed,
+            then defaults to the default loader.
+
+        image_future : `~ginga.misc.Future.Future` (optional, default: None)
+            An optional image future used to reload the image if it is
+            unloaded from memory.  If `None` is passed, then defaults to
+            a future using the default loader.
+
+        Returns
+        -------
+        info : `~ginga.Bunch.Bunch`
+            A record of the metadata about the data object.
+
+        Callbacks
+        ---------
+        Will invoke `add-image-info` including the updated metadata.
+        """
 
         if imname not in self.image_index:
 
@@ -332,6 +524,17 @@ class Channel(Callback.Callbacks):
         return info
 
     def remove_history(self, imname):
+        """Remove metadata about a data object in this channel.
+
+        Parameters
+        ----------
+        imname : str
+            Unique name (to this channel) of a data object.
+
+        Callbacks
+        ---------
+        Will invoke `remove-image-info` including the metadata record.
+        """
         if imname in self.image_index:
             info = self.image_index[imname]
             del self.image_index[imname]
@@ -348,10 +551,27 @@ class Channel(Callback.Callbacks):
             self.fv.make_async_gui_callback('remove-image-info', self, info)
 
     def get_current_image(self):
+        """Return the data object being viewed in this channel.
+
+        Returns
+        -------
+        image : subclass of `~ginga.BaseImage.ViewerObjectBase`
+            Data object.
+        """
         return self.viewer.get_dataobj()
 
     def view_object(self, dataobj):
+        """View the data object (`dataobj`) in an appropriate channel
+        viewer.
 
+        This is a mostly internal method used to view a data object in
+        the channel. See switch_image().
+
+        Parameters
+        ----------
+        dataobj : subclass of `~ginga.BaseImage.ViewerObjectBase`
+            Data object to be viewed in an appropriate channel viewer.
+        """
         # see if a viewer has been used on this object before
         vinfo = None
         obj_name = dataobj.get('name')
@@ -405,7 +625,14 @@ class Channel(Callback.Callbacks):
         self.fv.channel_image_updated(self, dataobj)
 
     def switch_image(self, image):
+        """Switch to data object (`image`) in this channel.
 
+        Parameters
+        ----------
+        image : subclass of `~ginga.BaseImage.ViewerObjectBase`
+            Data object in this channel to be viewed in an appropriate
+            channel viewer.
+        """
         curimage = self.get_current_image()
         if curimage == image:
             self.logger.debug("Apparently no need to set channel viewer.")
@@ -415,7 +642,13 @@ class Channel(Callback.Callbacks):
         self.view_object(image)
 
     def switch_name(self, imname):
+        """Switch to data object named by `imname` in this channel.
 
+        Parameters
+        ----------
+        imname : str
+            Unique name of a data object in this channel.
+        """
         if imname in self.datasrc:
             # Image is still in the heap
             image = self.datasrc[imname]
@@ -491,6 +724,13 @@ class Channel(Callback.Callbacks):
         self.history.sort(key=self.hist_sort)
 
     def get_image_profile(self, image):
+        """Get the image profile for data object `image`.
+
+        The image profile is not an ICC profile, but rather a set of
+        settings that the image was last viewed with.  The settings can
+        be saved and restored when an image is viewed according to the
+        channel preferences under Reset (Viewer) and Rememeber (Image).
+        """
         profile = image.get('profile', None)
         if profile is None:
             profile = Settings.SettingGroup()
@@ -498,12 +738,15 @@ class Channel(Callback.Callbacks):
         return profile
 
     def __len__(self):
+        """Return the number of the items added to this channel."""
         return len(self.history)
 
     def __contains__(self, imname):
+        """Returns `True` if data object named `imname` is in this channel."""
         return imname in self.image_index
 
     def __getitem__(self, imname):
+        """Returns metadata about the data object named `imname`."""
         return self.image_index[imname]
 
 # END

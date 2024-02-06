@@ -254,7 +254,7 @@ class OpenCvFileHandler(BaseRGBFileHandler):
         self.hdu_info = []
         self.hdu_db = {}
         self.numframes = int(self.rgb_f.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.logger.info("number of frames: {}".format(self.numframes))
+        self.logger.debug("number of frames: {}".format(self.numframes))
 
         name = "image{}".format(idx)
         extver = 0
@@ -469,7 +469,7 @@ class PillowFileHandler(BaseRGBFileHandler):
             self.numframes = self.rgb_f.n_frames - 1
         else:
             self.numframes = 0
-        self.logger.info("number of frames: {}".format(self.numframes))
+        self.logger.debug("number of frames: {}".format(self.numframes))
 
         name = "image{}".format(idx)
         extver = 0

@@ -27,6 +27,9 @@ Reference/API
 .. automodapi:: ginga.Bindings
    :no-inheritance-diagram:
 
+.. automodapi:: ginga.rv.Channel
+   :no-inheritance-diagram:
+
 .. automodapi:: ginga.rv.main
    :no-inheritance-diagram:
 
