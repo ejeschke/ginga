@@ -1,5 +1,9 @@
 [build-system]
-requires = ["setuptools>=30.3.0",
-            "setuptools_scm",
+requires = ["setuptools>=64",
+            "setuptools_scm[toml]>=7",
             "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "ginga/version.py"
+version_scheme = "release-branch-semver"
