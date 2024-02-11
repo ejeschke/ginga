@@ -63,7 +63,6 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
     def __init__(self, fv):
         super().__init__(fv)
 
-        self.yes_no = {True: 'yes', False: 'no'}
         self.plugin_dct = dict()
 
         self.columns = [("Name", 'name'),
@@ -125,14 +124,14 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
                 name = module if klass is None else klass
                 enabled = spec.get('enabled', True)
                 ptype = spec['ptype']
-                start = 'n/a' if ptype == 'local' else self.yes_no[spec.get('start', False)]
+                start = 'False' if ptype == 'local' else str(spec.get('start', False))
                 dct[name] = dict(name=name,
                                  module=module,
-                                 enabled=self.yes_no[enabled],
+                                 enabled=str(enabled),
                                  ptype=spec['ptype'],
                                  category=spec.get('category', 'Custom'),
                                  workspace=spec.get('workspace', 'Dialogs'),
-                                 hidden=self.yes_no[spec.get('hidden', False)],
+                                 hidden=str(spec.get('hidden', False)),
                                  start=start)
             self.plugin_dct = dct
 
@@ -189,6 +188,12 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
             self.w.edit_dialog = None
             return
 
+        sel_dct = self.w.plugin_tbl.get_selected()
+        if len(sel_dct) == 0:
+            self.fv.show_error("No table entries selected",
+                               raisetab=True)
+            return
+
         enabled = self.w.enabled.get_state()
         category = self.w.category.get_text().strip()
         workspace = self.w.workspace.get_text().strip()
@@ -205,14 +210,13 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
                                raisetab=True)
             return
 
-        sel_dct = self.w.plugin_tbl.get_selected()
         for name, pl_dct in sel_dct.items():
-            self.plugin_dct[name]['enabled'] = 'yes' if enabled else 'no'
+            self.plugin_dct[name]['enabled'] = str(enabled)
             self.plugin_dct[name]['category'] = category
             self.plugin_dct[name]['workspace'] = workspace
             if self.plugin_dct[name]['ptype'] == 'global':
-                self.plugin_dct[name]['start'] = 'yes' if start else 'no'
-            self.plugin_dct[name]['hidden'] = 'yes' if hidden else 'no'
+                self.plugin_dct[name]['start'] = str(start)
+            self.plugin_dct[name]['hidden'] = str(hidden)
 
         self.w.plugin_tbl.set_tree(self.plugin_dct)
 
@@ -221,10 +225,12 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
         _plugins = []
         for key, dct in self.plugin_dct.items():
             d = dct.copy()
-            d['enabled'] = (d['enabled'] == 'yes')
+            d['enabled'] = (d['enabled'] == 'True')
             if d['ptype'] == 'global':
-                d['start'] = (d['start'] == 'yes')
-            d['hidden'] = (d['hidden'] == 'yes')
+                d['start'] = (d['start'] == 'True')
+            else:
+                d['start'] = False
+            d['hidden'] = (d['hidden'] == 'True')
             _plugins.append(d)
         try:
             with open(path, 'w') as out_f:
@@ -242,7 +248,7 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
         self.w.enabled.set_enabled(selected)
         enabled = set([p_dct['enabled'] for p_dct in dct.values()])
         if len(enabled) == 1:
-            self.w.enabled.set_state(enabled.pop() == 'yes')
+            self.w.enabled.set_state(enabled.pop() == 'True')
         else:
             self.w.enabled.set_state(True)
 
@@ -264,22 +270,22 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
         else:
             self.w.workspace.set_text('')
 
-        # only enable auto start widget if at least one ptype is 'global'
+        # only enable auto start widget if all ptypes are 'global'
         ptypes = set([p_dct['ptype'] for p_dct in dct.values()])
-        self.w.auto_start.set_enabled('global' in ptypes)
+        self.w.auto_start.set_enabled(len(ptypes) == 1 and 'global' in ptypes)
 
         starts = set([p_dct['start'] for p_dct in dct.values()])
         if len(starts) == 1:
-            auto_start = (starts.pop() == 'yes')
+            auto_start = (starts.pop() == 'True')
             self.w.auto_start.set_state(auto_start)
         else:
             self.w.auto_start.set_state(False)
 
-        # only set hidden widget if all selected are hidden == 'yes'
+        # only set hidden widget if all selected are hidden == 'True'
         self.w.hidden.set_enabled(selected)
         hiddens = set([p_dct['hidden'] for p_dct in dct.values()])
         if len(hiddens) == 1:
-            hidden = (hiddens.pop() == 'yes')
+            hidden = (hiddens.pop() == 'True')
             self.w.hidden.set_state(hidden)
         else:
             self.w.hidden.set_state(False)

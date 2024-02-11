@@ -45,6 +45,7 @@ Ver 5.0.0 (unreleased)
 
 - Added PluginConfig plugin; allows configuration of all Ginga plugins
   graphically; can enable/disable, change menu categories, etc.
+- Removed --profile and --debug command-line options
 
 Ver 4.1.0 (2022-06-30)
 ======================

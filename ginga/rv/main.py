@@ -292,9 +292,6 @@ class ReferenceViewer(object):
                      help="Buffer length to NUM")
         add_argument('-c', "--channels", dest="channels",
                      help="Specify list of channels to create")
-        add_argument("--debug", dest="debug", default=False,
-                     action="store_true",
-                     help="Enter the pdb debugger on main()")
         add_argument("--disable-plugins", dest="disable_plugins",
                      metavar="NAMES",
                      help="Specify plugins that should be disabled")
@@ -315,16 +312,13 @@ class ReferenceViewer(object):
                      action="store_true",
                      help="Don't display the splash screen")
         add_argument("--numthreads", dest="numthreads", type=int,
-                     default=30, metavar="NUM",
+                     default=4, metavar="NUM",
                      help="Start NUM threads in thread pool")
         add_argument("--opengl", dest="opengl", default=False,
                      action="store_true",
                      help="Use OpenGL acceleration")
         add_argument("--plugins", dest="plugins", metavar="NAMES",
                      help="Specify additional plugins to load")
-        add_argument("--profile", dest="profile", action="store_true",
-                     default=False,
-                     help="Run the profiler on main()")
         add_argument("--sep", dest="separate_channels", default=False,
                      action="store_true",
                      help="Load files in separate channels")
@@ -566,51 +560,6 @@ class ReferenceViewer(object):
                 logger.error(f"failed to process loader file '{path}': {e}",
                              exc_info=True)
 
-        # Load any custom modules
-        if options.modules is not None:
-            modules = options.modules.split(',')
-        else:
-            modules = settings.get('global_plugins', [])
-            if not isinstance(modules, list):
-                modules = modules.split(',')
-
-        for long_plugin_name in modules:
-            if '.' in long_plugin_name:
-                tmpstr = long_plugin_name.split('.')
-                plugin_name = tmpstr[-1]
-                pfx = '.'.join(tmpstr[:-1])
-            else:
-                plugin_name = long_plugin_name
-                pfx = None
-            menu_name = f"{plugin_name} [G]"
-            spec = Bunch(name=plugin_name, module=plugin_name,
-                         ptype='global', tab=plugin_name,
-                         menu=menu_name, category="Custom",
-                         enabled=True,
-                         workspace='right', pfx=pfx)
-            self.add_plugin_spec(spec)
-
-        # Load any custom local plugins
-        if options.plugins is not None:
-            plugins = options.plugins.split(',')
-        else:
-            plugins = settings.get('local_plugins', [])
-            if not isinstance(plugins, list):
-                plugins = plugins.split(',')
-
-        for long_plugin_name in plugins:
-            if '.' in long_plugin_name:
-                tmpstr = long_plugin_name.split('.')
-                plugin_name = tmpstr[-1]
-                pfx = '.'.join(tmpstr[:-1])
-            else:
-                plugin_name = long_plugin_name
-                pfx = None
-            spec = Bunch(module=plugin_name, workspace='dialogs',
-                         ptype='local', category="Custom",
-                         hidden=False, pfx=pfx, enabled=True)
-            self.add_plugin_spec(spec)
-
         # Does user have a saved plugin setup?  If so, check which
         # plugins should be disabled, or have a customized category or
         # workspace
@@ -627,19 +576,80 @@ class ReferenceViewer(object):
                     for dct in _plugins:
                         plugin_name = self.get_plugin_name(dct)
                         if plugin_name in self.plugin_dct:
+                            # we know about this plugin, override listed
+                            # attributes
                             spec = self.plugin_dct[plugin_name]
-                            # user can configure:
-                            # enabled/category/workspace/hidden/start
-                            spec['enabled'] = dct.get('enabled', True)
-                            spec['category'] = dct.get('category', None)
-                            spec['hidden'] = dct.get('hidden', False)
-                            spec['workspace'] = dct.get('workspace', 'dialogs')
+                            for name in ['enabled', 'category', 'hidden',
+                                         'workspace', 'tab', 'menu',
+                                         'pfx', 'optray']:
+                                if name in dct:
+                                    spec[name] = dct[name]
                             if spec['ptype'] == 'global':
-                                spec['start'] = dct.get('start', False)
+                                spec['start'] = dct.get('start',
+                                                        spec.get('start', False))
+                        else:
+                            # unknown plugin
+                            spec = Bunch(dct)
+                            self.add_plugin_spec(spec)
 
                 except Exception as e:
                     logger.error(f"Error reading plugin file: {e}",
                                  exc_info=True)
+
+        # Load any custom global plugins named on command line or in
+        # general.cfg
+        if options.modules is not None:
+            global_plugins = options.modules.split(',')
+        else:
+            global_plugins = settings.get('global_plugins', [])
+            if not isinstance(global_plugins, list):
+                global_plugins = global_plugins.split(',')
+
+        for long_plugin_name in global_plugins:
+            if '.' in long_plugin_name:
+                tmpstr = long_plugin_name.split('.')
+                plugin_name = tmpstr[-1]
+                pfx = '.'.join(tmpstr[:-1])
+            else:
+                plugin_name = long_plugin_name
+                pfx = None
+            if plugin_name in self.plugin_dct:
+                spec = self.plugin_dct[plugin_name]
+                spec.enabled = True
+            else:
+                menu_name = f"{plugin_name} [G]"
+                spec = Bunch(name=plugin_name, module=plugin_name,
+                             ptype='global', tab=plugin_name,
+                             menu=menu_name, category="Custom",
+                             enabled=True,
+                             workspace='right', pfx=pfx)
+                self.add_plugin_spec(spec)
+
+        # Load any custom local plugins named on command line or in
+        # general.cfg
+        if options.plugins is not None:
+            local_plugins = options.plugins.split(',')
+        else:
+            local_plugins = settings.get('local_plugins', [])
+            if not isinstance(local_plugins, list):
+                local_plugins = local_plugins.split(',')
+
+        for long_plugin_name in local_plugins:
+            if '.' in long_plugin_name:
+                tmpstr = long_plugin_name.split('.')
+                plugin_name = tmpstr[-1]
+                pfx = '.'.join(tmpstr[:-1])
+            else:
+                plugin_name = long_plugin_name
+                pfx = None
+            if plugin_name in self.plugin_dct:
+                spec = self.plugin_dct[plugin_name]
+                spec.enabled = True
+            else:
+                spec = Bunch(module=plugin_name, workspace='dialogs',
+                             ptype='local', category="Custom",
+                             hidden=False, pfx=pfx, enabled=True)
+                self.add_plugin_spec(spec)
 
         # Mark disabled plugins (command-line has precedence)
         for spec in self.plugins:
@@ -784,22 +794,7 @@ def reference_viewer(sys_argv):
     if options.display:
         os.environ['DISPLAY'] = options.display
 
-    # Are we debugging this?
-    if options.debug:
-        import pdb
-
-        pdb.run('viewer.main(options, args)')
-
-    # Are we profiling this?
-    elif options.profile:
-        import profile
-
-        print(("%s profile:" % sys_argv[0]))
-        profile.runctx('viewer.main(options, args)',
-                       dict(options=options, args=args, viewer=viewer), {})
-
-    else:
-        viewer.main(options, args)
+    viewer.main(options, args)
 
 
 def _main():
