@@ -105,10 +105,11 @@ plugins = [
 
     # optional, user-started plugins
     Bunch(module='Blink', tab='Blink Channels', workspace='right', start=False,
-          menu="Blink Channels [G]", category='Analysis', ptype='global',
-          enabled=True),
+          name='Blink[channels]', menu="Blink Channels [G]",
+          category='Analysis', ptype='global', enabled=True),
     Bunch(module='Blink', workspace='dialogs', menu='Blink Images',
-          category='Analysis', ptype='local', enabled=True),
+          name='Blink[images]', category='Analysis', ptype='local',
+          enabled=True),
     Bunch(module='Crosshair', workspace='left', category='Analysis',
           ptype='local', enabled=True),
     Bunch(module='Cuts', workspace='dialogs', category='Analysis',
@@ -149,7 +150,8 @@ plugins = [
     Bunch(module='ScreenShot', workspace='dialogs', category='RGB',
           ptype='local', enabled=True),
     Bunch(module='ColorMapPicker', tab='ColorMapPicker',
-          menu="Set Color Map [G]", workspace='right', start=False,
+          name="ColorMapPicker[G]", menu="Set Color Map [G]",
+          workspace='right', start=False,
           category='RGB', ptype='global', enabled=True),
     Bunch(module='ColorMapPicker',
           menu="Set Color Map", workspace='dialogs', category='RGB',
@@ -174,8 +176,8 @@ plugins = [
     Bunch(module='Collage', workspace='dialogs', category='Utils', ptype='local',
           enabled=True),
     Bunch(module='FBrowser', tab='Open File', workspace='right',
-          menu="Open File [G]", start=False, category='Utils', ptype='global',
-          enabled=True),
+          name="FBrowser[G]", menu="Open File [G]", start=False,
+          category='Utils', ptype='global', enabled=True),
     Bunch(module='Preferences', workspace='dialogs', category='Utils',
           ptype='local', enabled=True),
     Bunch(module='Ruler', workspace='dialogs', category='Utils', ptype='local',
@@ -227,6 +229,8 @@ class ReferenceViewer(object):
         self.plugin_dct = dict()
 
     def get_plugin_name(self, spec):
+        if 'name' in spec:
+            return spec['name']
         module = spec['module']
         if '.' in module:
             module = module.split('.')[-1]

@@ -1,0 +1,101 @@
+[
+    "seq",
+    {},
+    [
+        "vbox",
+        {
+            "height": 1200,
+            "name": "top",
+            "width": 1200
+        },
+        {
+            "row": [
+                "hbox",
+                {
+                    "name": "menu"
+                }
+            ],
+            "stretch": 0
+        },
+        {
+            "row": [
+                "ws",
+                {
+                    "group": 3,
+                    "height": 300,
+                    "name": "upper",
+                    "wstype": "grid"
+                }
+            ],
+            "stretch": 0
+        },
+        {
+            "row": [
+                "ws",
+                {
+                    "group": 2,
+                    "height": 40,
+                    "name": "toolbar",
+                    "wstype": "stack"
+                }
+            ],
+            "stretch": 0
+        },
+        {
+            "row": [
+                "ws",
+                {
+                    "default": true,
+                    "group": 1,
+                    "height": 900,
+                    "name": "channels",
+                    "use_toolbar": true,
+                    "wstype": "tabs"
+                }
+            ],
+            "stretch": 1
+        },
+        {
+            "row": [
+                "ws",
+                {
+                    "group": 99,
+                    "name": "cbar",
+                    "wstype": "stack"
+                }
+            ],
+            "stretch": 0
+        },
+        {
+            "row": [
+                "ws",
+                {
+                    "group": 99,
+                    "name": "readout",
+                    "wstype": "stack"
+                }
+            ],
+            "stretch": 0
+        },
+        {
+            "row": [
+                "ws",
+                {
+                    "group": 99,
+                    "name": "operations",
+                    "wstype": "stack"
+                }
+            ],
+            "stretch": 0
+        },
+        {
+            "row": [
+                "hbox",
+                {
+                    "name": "status"
+                }
+            ],
+            "stretch": 0
+        }
+    ]
+]
