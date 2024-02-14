@@ -188,5 +188,5 @@ callback.
 
 .. note:: To see what attributes are available in each event, see the
           ``KeyEvent``, ``PointEvent``, ``ScrollEvent``, ``PanEvent``, and
-          ``PinchEvent`` in the :ref:`api` (look under `ginga.Bindings`).
+          ``PinchEvent`` in the :ref:`api` (look under `ginga.events`).
 

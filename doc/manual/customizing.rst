@@ -97,7 +97,7 @@ Customizing the Layout
 
 Ginga has a flexible table-driven layout scheme for dynamically creating
 workspaces and mapping the available plugins to workspaces.  This layout
-can be specified with a Python structure (`layout`) in the configuration
+can be specified with a JSON structure (`layout.json`) in the configuration
 area.  If there is no file initially, Ginga will use the built in
 default layout.  Ginga will will update its window size, position and
 some layout information to the layout file when the program is closed,
@@ -106,9 +106,7 @@ attempt to restore the window to the saved configuration.
 
 .. note:: The name of the layout file is set in the general
           configuration file (``general.cfg``) as the value for
-          ``layout_file``.  Set it to "layout.json" if you prefer to use
-          the JSON format or "layout" if you prefer to use the Python
-          format (the default).
+          ``layout_file``.  Set it to "layout.json".
           
 .. note:: If you don't want Ginga to remember your changes to the window
           size or position, you can add the option ``save_layout =
@@ -180,10 +178,11 @@ container:
   for the workspace type, whether that is a notebook tab, MDI window
   titlebar, etc.
 
-Here is the standard layout (Python format), as an example:
+Here is the standard layout (JSON format), as an example:
 
-.. literalinclude:: ../../ginga/examples/layouts/standard/layout
-    :language: python
+.. literalinclude:: ../../ginga/examples/layouts/standard/layout.json
+    :language: json
+    :caption: The standard layout
 
 In the above example, we define a top-level window consisting of a vbox
 (named "top") with 4 layers: a hbox ("menu"), hpanel ("hpnl"), a
@@ -207,39 +206,84 @@ workspace.  The "main" vbox is configured with four rows of workspaces:
 Customizing the set of plugins
 ==============================
 
-In the configuration directory, the presence of a file ``plugins.json``
-will override the built-in configuration of plugins.  The file format is
-a JSON array containing JSON objects, each of which configures a plugin.
-Example:
+Using general.cfg
+-----------------
 
-.. code-block::
+You can add or remove plugins loaded using the ``general.cfg``
+configuration file in the configuration directory (see note above under
+"Configuration Options").  This file has several settings that you can
+use:
 
-    [
-        {
-            "__bunch__": true,
-            "module": "Info",
-            "tab": "Synopsis",
-            "workspace": "lleft",
-            "start": true,
-            "hidden": true,
-            "category": "System",
-            "menu": "Info [G]",
-            "ptype": "global"
-       },
-       ...
-   ]
+* ``local_plugins`` is a string of comma-separated local-type plugin
+  names that should be loaded (see "Custom plugin directory" below).
+  These will be loaded *in addition* to the default set of local plugins.
+  (Example: ``local_plugins = "ExposureCalc"``)
+  This is overridden by the ``--plugins`` option on the ginga command
+  line, if used.
+* ``global_plugins`` is a string of comma-separated global-type plugin
+  names that should be loaded (see "Custom plugin directory" below).
+  These will be loaded *in addition* to the default set of global plugins.
+  (Example: ``global_plugins = "ObservationControl"``)
+  This is overridden by the ``--modules`` option on the ginga command
+  line, if used.
+* ``disable_plugins`` is a string of comma-separated plugin names that
+  should *not* be loaded, and these can include bundled plugins of either
+  local or global type.
+  (Example: ``disable_plugins = "SAMP,Compose,Catalogs"``)
+  This is overridden by the ``--disable-plugins`` option on the ginga
+  command line, if used.
+
+
+Custom plugin directory
+-----------------------
+
+If there is a ``plugins`` directory in the configuration area, it is added
+to the ``PYTHONPATH`` for the purpose of loading plugins.  You can put
+plugin modules in this directory, and then use the ``local_plugins`` or
+``global_plugins`` options in ``general.cfg`` or the ginga command line
+(see above) to automatically load them.
+
+Plugin configuration file
+-------------------------
+
+In the configuration directory, the presence of a file ``plugins.yml``
+will augment the built-in configuration of plugins.  The file format is
+a YAML array containing dict-like objects, each of which configures a
+plugin. Example::
+
+    - category: Analysis
+      enabled: true
+      hidden: false
+      module: Crosshair
+      name: Crosshair
+      ptype: local
+      start: false
+      workspace: left
+    ...
     
-                 
+
+.. note:: This file is most easily created using the ``PluginConfig``
+          plugin, which is a plugin that can be invoked to configure the
+          overall set of plugins.  It writes this file when you click the
+          "Save" button using the plugin UI.  Using this plugin you can
+          easily set the ``enabled`` attribute to ``False`` for any plugins
+          you wish to disable.
+
+
+.. important:: Some plugins, like ``Operations``, when disabled, may result
+               in inconvenient or difficult UI experience.  If you run into
+               difficulty, simply remove the ``$HOME/.ginga/plugins.yml``
+               file to restore the default plugin configuration.
+
+
 The keys for each object are defined as follows:
 
-* ``__bunch__``: should be present and set to ``true`` to force
-  deserialization to a `~ginga.misc.Bunch.Bunch`.
 * ``module``: The name of the module in the ``$PYTHONPATH`` containing
   the plugin.
 * ``class``: if present, indicates the name of the class within the
   module that denotes the plugin (if not present the class is assumed
   to be named identically to the module).
-* ``tab``: the name that the plugin should appear as when opened in a
+* ``name``: the name that the plugin should appear as when opened in a
   workspace (usually as a tab, but it depends on the type of
   workspace). Often the same name as the class, but can be different.
   If not present, defaults to the class or module name of the plugin.
@@ -247,7 +291,8 @@ The keys for each object are defined as follows:
   (or default layout) where the plugin should be started (see section
   below on workspace customization).
 * ``start``: ``true`` if the module is of the global type and should
-  be started at program startup. Defaults to ``false``.
+  be started at program startup. Defaults to ``false``. Ignored if the
+  plugin type is "local".
 * ``hidden``: ``true`` if the plugin should be hidden from the
   "Operation" and "Plugins" menus. Often paired with ``hidden`` being
   ``true`` for plugins that are considered to be a necessary part of
@@ -258,6 +303,9 @@ The keys for each object are defined as follows:
 * ``menu``: a name for how the plugin should appear under the category
   in the menu structure.  The convention is to append "[G]" if it is
   a global plugin.
+* ``tab``: a name for how the plugin should appear when opened in a
+  workspace (usually a tabbed widget or MDI window). This will default
+  to the plugin name if omitted.
 * ``ptype``: either "local" or "global", depending on whether the
   plugin is a local or global one.
 * ``optray``: to prevent a control icon from appearing in the
@@ -265,17 +313,43 @@ The keys for each object are defined as follows:
   non-hidden plugins is ``true`` and for hidden plugins ``false``.
 * ``enabled``: ``false`` to disable the plugin from being loaded.
     
-See the standard set of plugins in
-``.../ginga/examples/layouts/standard/plugins.json``
+
+===============================
+Customizing the set of channels
+===============================
+
+Using general.cfg
+-----------------
+
+You can customize channel options using the ``general.cfg`` configuration
+file in the configuration directory (see note above under
+"Configuration Options").  This file has several settings that you can
+use:
+
+* You can customize the default set of channels that Ginga will create
+  on startup using the ``channels`` setting.  Simply set it to a comma
+  separated string of channels that should be created.
+  (Example: ``channels = "Incoming,Work,Processed"``)
+  This is overridden by the ``--channels`` option on the ginga command
+  line, if used.
+* You can set the default prefix used to create additional channels
+  using the ``channel_prefix`` setting.
+  (Example: ``channel_prefix = "FITS"``)
 
 
-Custom plugin directory
------------------------
+====================================
+Exploring the example custom layouts
+====================================
 
-If there is a ``plugins`` directory in the configuration area, it is added
-to the ``PYTHONPATH`` for the purpose of loading plugins.  You can put
-plugin modules in this directory, and then add entries to the
-``plugins.json`` file described above to add new, custom plugins.
+In the "examples/layouts" directory distributed with the source code, you
+can experiment with some example layouts using the ``--basedir`` command
+line option::
+
+    ginga --basedir=your/path/to/Ginga/ginga/examples/layouts/ds9ish
+
+
+There is an example for the "standard" layout, a "ds9ish" layout and a
+"twofer" layout.
 
 ====================================================================
 Customizing the Reference Viewer (with Python) During Initialization
@@ -285,6 +359,12 @@ For the ultimate flexibility, the reference viewer can be customized
 during viewer initialization using a Python module called ``ginga_config``,
 which can be anywhere in the user's Python import path, including in the
 Ginga configuration folder described above.
+
+.. important:: Using this file may override or interfere with some other
+               methods of configuration during startup.  We recommend that
+               you use this as a "last resort" to customizing the reference
+               viewer (think of it similar to "monkey patching").
+
 
 Specifically, this file will be imported and two methods will be run if
 defined: ``pre_gui_config(ginga_shell)`` and
@@ -311,13 +391,15 @@ layout table in the ``pre_gui_config()`` method described above::
         ginga_shell.set_layout(my_layout)
 
 If done in the ``pre_gui_config()`` method (as shown) the new layout will
-be the one that is used when the GUI is constructed.  See the default
-layout in ``~ginga.rv.main`` as an example.
+be the one that is used when the GUI is constructed.  You might do this
+if you want to make a radical change to the layout, or specify the layout
+as a Python data structure rather than using a JSON layout file.
+See the default layout in ``~ginga.rv.main`` as an example.
 
 Start Plugins and Create Channels
 ---------------------------------
 
-You can create channels and start plugins using the
+You can create channels using the
 ``post_gui_config()`` method.
 
 A plugin can be started automatically in ``post_gui_config()`` using the
@@ -332,11 +414,6 @@ A plugin can be started automatically in ``post_gui_config()`` using the
         ginga_shell.add_channel('Image')
         ginga_shell.start_local_plugin('Image', 'Histogram', None)
 
-Alternately, you can also start plugins via the command line interface using
-``--plugins`` and ``-modules`` for local and global plugins, respectively.
-To load multiple plugins at once, use a comma-separated list. For example::
-
-    ginga --plugins=MyLocalPlugin,Imexam --modules=MyGlobalPlugin
 
 Adding Plugins
 ==============
@@ -358,36 +435,15 @@ The above call would try to load a local plugin called "DQCheck" from a
 module called "DQCheck".  When invoked from the Operations menu it would
 occupy a spot in the "dialogs" workspace (see layout discussion above).
 
-Disabling Plugins
-=================
-
-Both local and global plugins can be disabled (thus, not shown in the
-reference viewer) using the ``--disable-plugins`` option in the
-command line interface. To remove multiple plugins at once,
-use a comma-separated list. For example::
-
-    ginga --disable-plugins=Zoom,Compose
-
-Alternately, plugins can also be disabled via ``general.cfg`` configuration
-file. For example::
-
-    disable_plugins = "Zoom,Compose"
-
-Finally, if you are using a custom "plugins.json" file as described
-above, you can simply set the ``enabled`` attribute to ``False`` in the
-JSON object for that plugin in the file.
-
-Some plugins, like ``Operations``, when disabled, may result in
-inconvenient GUI experience.
 
 ==============================
 Making a Custom Startup Script
 ==============================
 
-You can make a custom startup script to make the same reference viewer
-configuration available without relying on a custom set of startup files
-or the ``ginga_config`` module.  To do this we make use of the
-`~ginga.rv.main` module: 
+For more permanent customization you can make a custom startup script to
+make the same reference viewer configuration available without relying on
+a custom set of startup files or the ``ginga_config`` module.  To do this
+we make use of the `~ginga.rv.main` module:
 
 .. code-block:: python
 

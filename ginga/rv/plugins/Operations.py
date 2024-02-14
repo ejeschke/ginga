@@ -123,7 +123,7 @@ class Operations(GingaPlugin.GlobalPlugin):
 
         plugins = self.fv.get_plugins()
         for spec in plugins:
-            if spec.get('hidden', False):
+            if spec.get('hidden', False) or not spec.get('enabled', True):
                 continue
             self.fv.error_wrap(self.add_operation, self.fv, spec)
 

@@ -328,8 +328,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             pfx = spec.get('pfx', pluginconfpfx)
             path = spec.get('path', None)
-            self.mm.load_module(spec.module, pfx=pfx, path=path)
             self.plugins.append(spec)
+            if spec.get('enabled', True):
+                self.mm.load_module(spec.module, pfx=pfx, path=path)
 
         except Exception as e:
             self.logger.error("Unable to load local plugin '%s': %s" % (
@@ -342,8 +343,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
             pfx = spec.get('pfx', pluginconfpfx)
             path = spec.get('path', None)
-            self.mm.load_module(spec.module, pfx=pfx, path=path)
             self.plugins.append(spec)
+            if spec.get('enabled', True):
+                self.mm.load_module(spec.module, pfx=pfx, path=path)
 
             self.gpmon.load_plugin(name, spec)
 
@@ -352,8 +354,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 name, str(e)))
 
     def add_plugin(self, spec):
-        if not spec.get('enabled', True):
-            return
         ptype = spec.get('ptype', 'local')
         if ptype == 'global':
             self.add_global_plugin(spec)
@@ -1773,6 +1773,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def add_plugin_menu(self, name, spec):
         # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
         if 'menu_plug' not in self.w:
+            return
+        if not spec.get('enabled', True):
             return
         category = spec.get('category', None)
         categories = None

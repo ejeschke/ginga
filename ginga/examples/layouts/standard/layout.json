@@ -1,0 +1,392 @@
+[
+  "seq",
+  {
+    "__bunch__": true,
+    "name": "top_1",
+    "height": 1270,
+    "width": 2025,
+    "xpos": 879,
+    "ypos": 127,
+    "spacing": null
+  },
+  [
+    "vbox",
+    {
+      "__bunch__": true,
+      "name": "top",
+      "width": 2025,
+      "height": 1270,
+      "xpos": -1,
+      "ypos": -1,
+      "spacing": null
+    },
+    {
+      "row": [
+        "hbox",
+        {
+          "__bunch__": true,
+          "name": "menu",
+          "height": 29,
+          "width": 2025,
+          "xpos": -1,
+          "ypos": -1,
+          "spacing": null
+        }
+      ],
+      "stretch": 0
+    },
+    {
+      "row": [
+        "hpanel",
+        {
+          "__bunch__": true,
+          "name": "hpnl",
+          "height": 1164,
+          "width": 2025,
+          "xpos": -1,
+          "ypos": -1,
+          "spacing": null,
+          "sizes": [
+            460,
+            1034,
+            515
+          ]
+        },
+        [
+          "ws",
+          {
+            "__bunch__": true,
+            "name": "left",
+            "wstype": "tabs",
+            "width": 460,
+            "height": 1164,
+            "group": 2,
+            "title": null,
+            "show_tabs": true,
+            "show_border": false,
+            "scrollable": true,
+            "detachable": false,
+            "tabpos": "top",
+            "use_toolbar": false,
+            "xpos": -1,
+            "ypos": -1,
+            "spacing": null,
+            "child_attribs": {
+              "Info": {
+                "title": "Info",
+                "mdi_pos": [
+                  0,
+                  0
+                ],
+                "size": [
+                  456,
+                  1120
+                ]
+              }
+            }
+          },
+          [
+            [
+              "Info",
+              [
+                "vpanel",
+                {
+                  "__bunch__": true,
+                  "name": "vpanel_0",
+                  "height": 1120,
+                  "width": 456,
+                  "xpos": -1,
+                  "ypos": -1,
+                  "spacing": null,
+                  "sizes": [
+                    479,
+                    633
+                  ]
+                },
+                [
+                  "ws",
+                  {
+                    "__bunch__": true,
+                    "name": "uleft",
+                    "wstype": "stack",
+                    "height": 479,
+                    "group": 3,
+                    "title": null,
+                    "width": 456,
+                    "show_tabs": true,
+                    "show_border": false,
+                    "scrollable": true,
+                    "detachable": false,
+                    "tabpos": "top",
+                    "use_toolbar": false,
+                    "xpos": -1,
+                    "ypos": -1,
+                    "spacing": null,
+                    "child_attribs": {}
+                  },
+                  []
+                ],
+                [
+                  "ws",
+                  {
+                    "__bunch__": true,
+                    "name": "lleft",
+                    "wstype": "tabs",
+                    "height": 633,
+                    "group": 3,
+                    "title": null,
+                    "width": 456,
+                    "show_tabs": true,
+                    "show_border": false,
+                    "scrollable": true,
+                    "detachable": false,
+                    "tabpos": "top",
+                    "use_toolbar": false,
+                    "xpos": -1,
+                    "ypos": -1,
+                    "spacing": null,
+                    "child_attribs": {}
+                  },
+                  []
+                ]
+              ]
+            ]
+          ]
+        ],
+        [
+          "vbox",
+          {
+            "__bunch__": true,
+            "name": "main",
+            "width": 1034,
+            "height": 1164,
+            "xpos": -1,
+            "ypos": -1,
+            "spacing": null
+          },
+          {
+            "row": [
+              "ws",
+              {
+                "__bunch__": true,
+                "name": "channels",
+                "wstype": "tabs",
+                "group": 1,
+                "use_toolbar": true,
+                "default": true,
+                "title": null,
+                "height": 1057,
+                "width": 1034,
+                "show_tabs": true,
+                "show_border": false,
+                "scrollable": true,
+                "detachable": false,
+                "tabpos": "top",
+                "xpos": -1,
+                "ypos": -1,
+                "spacing": null,
+                "child_attribs": {
+                  "Image": {
+                    "title": "Image",
+                    "mdi_pos": [
+                      0,
+                      0
+                    ],
+                    "size": [
+                      1030,
+                      965
+                    ]
+                  }
+                }
+              },
+              []
+            ],
+            "stretch": 1
+          },
+          {
+            "row": [
+              "ws",
+              {
+                "__bunch__": true,
+                "name": "cbar",
+                "wstype": "stack",
+                "group": 99,
+                "title": null,
+                "height": 48,
+                "width": 1034,
+                "show_tabs": true,
+                "show_border": false,
+                "scrollable": true,
+                "detachable": false,
+                "tabpos": "top",
+                "use_toolbar": false,
+                "xpos": -1,
+                "ypos": -1,
+                "spacing": null,
+                "child_attribs": {}
+              },
+              []
+            ],
+            "stretch": 0
+          },
+          {
+            "row": [
+              "ws",
+              {
+                "__bunch__": true,
+                "name": "readout",
+                "wstype": "stack",
+                "group": 99,
+                "title": null,
+                "height": 24,
+                "width": 1034,
+                "show_tabs": true,
+                "show_border": false,
+                "scrollable": true,
+                "detachable": false,
+                "tabpos": "top",
+                "use_toolbar": false,
+                "xpos": -1,
+                "ypos": -1,
+                "spacing": null,
+                "child_attribs": {}
+              },
+              []
+            ],
+            "stretch": 0
+          },
+          {
+            "row": [
+              "ws",
+              {
+                "__bunch__": true,
+                "name": "operations",
+                "wstype": "stack",
+                "group": 99,
+                "title": null,
+                "height": 35,
+                "width": 1034,
+                "show_tabs": true,
+                "show_border": false,
+                "scrollable": true,
+                "detachable": false,
+                "tabpos": "top",
+                "use_toolbar": false,
+                "xpos": -1,
+                "ypos": -1,
+                "spacing": null,
+                "child_attribs": {}
+              },
+              []
+            ],
+            "stretch": 0
+          }
+        ],
+        [
+          "ws",
+          {
+            "__bunch__": true,
+            "name": "right",
+            "wstype": "tabs",
+            "width": 515,
+            "height": 1164,
+            "group": 2,
+            "title": null,
+            "show_tabs": true,
+            "show_border": false,
+            "scrollable": true,
+            "detachable": false,
+            "tabpos": "top",
+            "use_toolbar": false,
+            "xpos": -1,
+            "ypos": -1,
+            "spacing": null,
+            "child_attribs": {
+              "Dialogs": {
+                "title": "Dialogs",
+                "mdi_pos": [
+                  0,
+                  0
+                ],
+                "size": [
+                  511,
+                  1120
+                ]
+              }
+            }
+          },
+          [
+            [
+              "Dialogs",
+              [
+                "ws",
+                {
+                  "__bunch__": true,
+                  "name": "dialogs",
+                  "wstype": "tabs",
+                  "group": 2,
+                  "title": null,
+                  "height": 1120,
+                  "width": 511,
+                  "show_tabs": true,
+                  "show_border": false,
+                  "scrollable": true,
+                  "detachable": false,
+                  "tabpos": "top",
+                  "use_toolbar": false,
+                  "xpos": -1,
+                  "ypos": -1,
+                  "spacing": null,
+                  "child_attribs": {}
+                },
+                []
+              ]
+            ]
+          ]
+        ]
+      ],
+      "stretch": 1
+    },
+    {
+      "row": [
+        "ws",
+        {
+          "__bunch__": true,
+          "name": "toolbar",
+          "wstype": "stack",
+          "height": 48,
+          "group": 2,
+          "title": null,
+          "width": 2025,
+          "show_tabs": true,
+          "show_border": false,
+          "scrollable": true,
+          "detachable": false,
+          "tabpos": "top",
+          "use_toolbar": false,
+          "xpos": -1,
+          "ypos": -1,
+          "spacing": null,
+          "child_attribs": {}
+        },
+        []
+      ],
+      "stretch": 0
+    },
+    {
+      "row": [
+        "hbox",
+        {
+          "__bunch__": true,
+          "name": "status",
+          "height": 29,
+          "width": 2025,
+          "xpos": -1,
+          "ypos": -1,
+          "spacing": null
+        }
+      ],
+      "stretch": 0
+    }
+  ]
+]

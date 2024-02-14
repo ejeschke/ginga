@@ -7,6 +7,9 @@
 import time
 import math
 import os.path
+import uuid
+
+import yaml
 
 from ginga.misc import Bunch, Callback
 from ginga.gw import Widgets, Viewers
@@ -22,7 +25,6 @@ class Desktop(Callback.Callbacks):
         self.logger = app.logger
         # for tabs
         self.tab = Bunch.caselessDict()
-        self.tabcount = 0
         self.workspace = Bunch.caselessDict()
         self.default_ws_name = None
 
@@ -101,9 +103,26 @@ class Desktop(Callback.Callbacks):
                 res.append(name)
         return res
 
-    def get_tabnames(self, group=1):
+    def _get_unique_name(self):
+        return '_uniq_' + str(uuid.uuid4())
+
+    def get_tabnames(self, group=1, unique=False):
+        """Return a list of all tab names.
+
+        Parameters
+        ----------
+        group : int (optional, defaults to 1)
+            Only return tabs that belong to a certain group.
+
+        unique : bool (optional, defaults to False)
+            If True, return the unique (coded) tab names,
+            otherwise returns regular tab names (which will not
+            include duplicate names).
+        """
         res = []
         for name in self.tab.keys():
+            if unique != (name.startswith('_uniq_')):
+                continue
             bnch = self.tab[name]
             if group is None:
                 res.append(name)
@@ -111,37 +130,81 @@ class Desktop(Callback.Callbacks):
                 res.append(name)
         return res
 
+    def add_widget_as_toplevel(self, title, widget, data=None):
+        topw = widget.get_app().make_window()
+        topw.set_title(title)
+        topw.set_widget(widget)
+        topw.show()
+
+        bnch = Bunch.Bunch(widget=widget, name=title,
+                           enclosure='toplevel', parent=topw,
+                           tabname=title, data=data,
+                           uniqname=self._get_unique_name(),
+                           group=1, wsname=None)
+        if title not in self.tab:
+            self.tab[title] = bnch
+        self.tab[bnch.uniqname] = bnch
+        return bnch
+
+    def add_widget_as_dialog(self, title, widget, data=None):
+        dialog = Widgets.Dialog(title=title,
+                                flags=0,
+                                buttons=[],
+                                parent=self.app.w.root)
+        box = dialog.get_content_area()
+        box.add_widget(widget, stretch=1)
+        dialog.show()
+
+        bnch = Bunch.Bunch(widget=widget, name=title,
+                           enclosure='dialog', parent=dialog,
+                           tabname=title, data=data,
+                           uniqname=self._get_unique_name(),
+                           group=1, wsname=None)
+        if title not in self.tab:
+            self.tab[title] = bnch
+        self.tab[bnch.uniqname] = bnch
+        return bnch
+
     def add_tab(self, wsname, widget, group, labelname, tabname=None,
                 data=None):
         ws = self.get_ws(wsname)
-        self.tabcount += 1
         if not tabname:
             tabname = labelname
-            if tabname in self.tab:
-                tabname = 'tab%d' % self.tabcount
 
         ws.add_tab(widget, title=labelname)
         bnch = Bunch.Bunch(widget=widget, name=labelname,
+                           enclosure='workspace', workspace=ws,
                            tabname=tabname, data=data,
+                           uniqname=self._get_unique_name(),
                            group=group, wsname=wsname)
-        self.tab[tabname] = bnch
+        if tabname not in self.tab:
+            self.tab[tabname] = bnch
+        self.tab[bnch.uniqname] = bnch
         return bnch
 
     def _find_nb(self, tabname):
-        widget = self.tab[tabname].widget
-        for ws in self.workspace.values():
-            nb = ws.nb
-            page_num = nb.index_of(widget)
-            if page_num < 0:
-                continue
-            return (nb, page_num)
-        return (None, None)
+        if tabname not in self.tab:
+            return (None, None)
+        bnch = self.tab[tabname]
+        page_num = bnch.workspace.nb.index_of(bnch.widget)
+        if page_num < 0:
+            return (None, None)
+        return (bnch.workspace.nb, page_num)
 
     def _find_tab(self, widget):
         for key, bnch in self.tab.items():
             if widget == bnch.widget:
                 return bnch
         return None
+
+    def _cleanup_tab(self, widget):
+        """Clean up our tabs table after a tab or window has been deleted."""
+        found = []
+        for key, bnch in self.tab.items():
+            if widget == bnch.widget:
+                found.append(key)
+        for key in found:
+            del self.tab[key]
 
     def raise_tab(self, tabname):
         # construct a list of the tabs to raise in the order they
@@ -165,8 +228,8 @@ class Desktop(Callback.Callbacks):
         nb, index = self._find_nb(tabname)
         widget = self.tab[tabname].widget
         if (nb is not None) and (index >= 0):
-            del self.tab[tabname]
             nb.remove(widget)
+        self._cleanup_tab(widget)
 
     def highlight_tab(self, tabname, onoff):
         nb, index = self._find_nb(tabname)
@@ -696,15 +759,13 @@ class Desktop(Callback.Callbacks):
 
         self.record_sizes()
 
-        _n, ext = os.path.splitext(lo_file)
         # write layout
+        _n, ext = os.path.splitext(lo_file)
         with open(lo_file, 'w') as out_f:
-            if ext.lower() == '.json':
-                out_f.write(json.dumps(layout, indent=2))
+            if ext.lower() in ['.yml', '.yaml']:
+                out_f.write(yaml.dump(layout, indent=2))
             else:
-                # older, python format
-                import pprint
-                pprint.pprint(layout, out_f)
+                out_f.write(json.dumps(layout, indent=2))
 
     def read_layout_conf(self, lo_file):
         # read layout
@@ -712,12 +773,10 @@ class Desktop(Callback.Callbacks):
             buf = in_f.read()
 
         _n, ext = os.path.splitext(lo_file)
-        if ext.lower() == '.json':
-            layout = json.loads(buf)
+        if ext.lower() in ['.yml', '.yaml']:
+            layout = yaml.safe_load(buf)
         else:
-            # older, python format
-            import ast
-            layout = ast.literal_eval(buf)
+            layout = json.loads(buf)
         return layout
 
     def build_desktop(self, layout, lo_file=None, widget_dict=None):

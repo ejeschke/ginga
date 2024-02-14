@@ -38,9 +38,11 @@ they will be reloaded and used on subsequent restarts of the program.
 """
 import os.path
 
+import yaml
+
 from ginga import GingaPlugin
 from ginga.util.paths import ginga_home
-from ginga.util import loader, json
+from ginga.util import loader
 from ginga.gw import Widgets
 
 __all__ = ['LoaderConfig']
@@ -139,10 +141,10 @@ class LoaderConfig(GingaPlugin.GlobalPlugin):
         self.w.loader_tbl.set_tree(self.loader_dct)
 
     def save_loaders_cb(self):
-        path = os.path.join(ginga_home, 'loaders.json')
+        path = os.path.join(ginga_home, 'loaders.yml')
         try:
             with open(path, 'w') as out_f:
-                out_f.write(json.dumps(self.loader_dct, indent=4))
+                out_f.write(yaml.dump(self.loader_dct, indent=4))
 
         except Exception as e:
             self.logger.error(f"failed to save loader file: {e}",
