@@ -121,18 +121,22 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
             for spec in self.fv.plugins:
                 module = spec['module']
                 klass = spec.get('klass', None)
-                name = module if klass is None else klass
+                name = spec.get('name', module if klass is None else klass)
                 enabled = spec.get('enabled', True)
                 ptype = spec['ptype']
                 start = 'False' if ptype == 'local' else str(spec.get('start', False))
-                dct[name] = dict(name=name,
-                                 module=module,
-                                 enabled=str(enabled),
-                                 ptype=spec['ptype'],
-                                 category=spec.get('category', 'Custom'),
-                                 workspace=spec.get('workspace', 'Dialogs'),
-                                 hidden=str(spec.get('hidden', False)),
-                                 start=start)
+                _dct = dict(name=name,
+                            module=module,
+                            enabled=str(enabled),
+                            ptype=spec['ptype'],
+                            category=spec.get('category', 'Custom'),
+                            workspace=spec.get('workspace', 'in:dialog'),
+                            hidden=str(spec.get('hidden', False)),
+                            start=start)
+                for key in ('menu', 'tab', 'klass'):
+                    if key in spec:
+                        _dct[key] = spec[key]
+                dct[name] = _dct
             self.plugin_dct = dct
 
         self.w.plugin_tbl.set_tree(self.plugin_dct)
