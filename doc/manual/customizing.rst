@@ -178,10 +178,11 @@ container:
   for the workspace type, whether that is a notebook tab, MDI window
   titlebar, etc.
 
-Here is the standard layout (Python format), as an example:
+Here is the standard layout (JSON format), as an example:
 
-.. literalinclude:: ../../ginga/examples/layouts/standard/layout
-    :language: python
+.. literalinclude:: ../../ginga/examples/layouts/standard/layout.json
+    :language: json
+    :caption: The standard layout
 
 In the above example, we define a top-level window consisting of a vbox
 (named "top") with 4 layers: a hbox ("menu"), hpanel ("hpnl"), a
