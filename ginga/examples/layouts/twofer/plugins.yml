@@ -167,7 +167,6 @@
   hidden: false
   module: ColorMapPicker
   menu: Set Color Map
-  name: ColorMapPicker[L]
   ptype: local
   start: false
   workspace: dialogs
@@ -312,6 +311,7 @@
   hidden: false
   module: FBrowser
   name: FBrowser[G]
+  menu: Load File [G]
   ptype: global
   start: false
   workspace: bottom
@@ -319,7 +319,7 @@
   enabled: true
   hidden: false
   module: FBrowser
-  name: FBrowser[L]
+  menu: Load File
   ptype: local
   start: false
   workspace: bottom

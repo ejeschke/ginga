@@ -388,7 +388,7 @@ class PluginManager(Callback.Callbacks):
                 if p_info.wsname is not None:
                     ws = self.ds.get_ws(p_info.wsname)
                     ws.remove_tab(p_info.widget)
-                else:
+                elif not p_info.is_toplevel:
                     self.ds.remove_tab(p_info.tabname)
                 self.dispose_gui(p_info)
 
@@ -425,33 +425,29 @@ class PluginManager(Callback.Callbacks):
             if in_ws is None:
                 in_ws = p_info.spec.get('workspace', None)
                 if in_ws is None:
-                    # to be deprecated
-                    in_ws = p_info.spec.ws
+                    in_ws = 'in:toplevel'
 
             if in_ws == 'in:toplevel':
-                topw = vbox.get_app().make_window()
+                bnch = self.ds.add_widget_as_toplevel(p_info.tabname, vbox)
+                bnch.plugin_info = p_info
+                topw = bnch.parent
                 topw.add_callback('close',
                                   lambda *args: self.deactivate(p_info.name))
-                topw.resize(wd, ht)
-                topw.set_title(p_info.tabname)
-                topw.set_widget(vbox)
+                # NOTE: for now, let toplevel window be it's "natural size"
+                # topw.resize(wd, ht)
                 p_info.widget = topw
                 p_info.is_toplevel = True
-                topw.show()
 
             elif in_ws == 'in:dialog':
-                dialog = Widgets.Dialog(title=p_info.name,
-                                        flags=0,
-                                        buttons=[],
-                                        parent=self.fv.w.root)
-                dialog.resize(wd, ht)
-                box = dialog.get_content_area()
-                box.add_widget(vbox, stretch=1)
+                bnch = self.ds.add_widget_as_dialog(p_info.tabname, vbox)
+                bnch.plugin_info = p_info
+                dialog = bnch.parent
+                dialog.add_callback('close',
+                                    lambda *args: self.deactivate(p_info.name))
+                # NOTE: for now, let dialog window be it's "natural size"
+                #dialog.resize(wd, ht)
                 p_info.widget = dialog
                 p_info.is_toplevel = True
-                # TODO: need to add callback to remove from Desktop
-                # dialog list?
-                self.ds.show_dialog(dialog)
 
             else:
                 bnch = self.ds.add_tab(in_ws, vbox, 2, p_info.tabname,
@@ -467,8 +463,10 @@ class PluginManager(Callback.Callbacks):
                 p_info.is_toplevel = False
 
         except Exception as e:
-            self.fv.show_error("Error finishing plugin UI for '%s': %s" % (
-                p_info.name, str(e)))
+            errmsg = "Error finishing plugin UI for '%s': %s" % (
+                p_info.name, str(e))
+            self.logger.error(errmsg, exc_info=True)
+            self.fv.show_error(errmsg)
 
     def tab_switched_cb(self, tab_w, widget):
         # A tab in a workspace in which we started a plugin has been
@@ -510,6 +508,7 @@ class PluginManager(Callback.Callbacks):
     def dispose_gui(self, p_info):
         self.logger.debug("disposing of gui")
         vbox = p_info.widget
+        self.ds._cleanup_tab(vbox)
         p_info.widget = None
         vbox.hide()
         vbox.delete()

@@ -1,9 +1,9 @@
 - category: Analysis
   enabled: true
   hidden: false
-  module: Blink[images]
+  module: Blink
   menu: Blink Images [G]
-  name: Blink
+  name: Blink[images]
   ptype: local
   start: false
   workspace: in:toplevel
@@ -166,7 +166,6 @@
   hidden: false
   module: ColorMapPicker
   menu: Set Color Map
-  name: ColorMapPicker[L]
   ptype: local
   start: false
   workspace: in:toplevel
@@ -310,6 +309,7 @@
   enabled: true
   hidden: false
   module: FBrowser
+  menu: Load File [G]
   name: FBrowser[G]
   ptype: global
   start: false
@@ -318,7 +318,7 @@
   enabled: true
   hidden: false
   module: FBrowser
-  name: FBrowser[L]
+  menu: Load File
   ptype: local
   start: false
   workspace: in:toplevel
