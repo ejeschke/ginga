@@ -40,7 +40,6 @@ Global plugins
    plugins_global/colorbar
    plugins_global/cursor
    plugins_global/operations
-   plugins_global/wbrowser
    plugins_global/fbrowser
    plugins_global/colormappicker
    plugins_global/errors

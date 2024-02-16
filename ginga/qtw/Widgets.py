@@ -15,24 +15,16 @@ from ginga.qtw import QtHelp
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir
 
-has_webkit = False
-try:
-    from ginga.qtw.QtHelp import QWebView  # noqa
-    has_webkit = True
-except ImportError:
-    pass
-
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'GrowingTextEdit', 'TextArea', 'Label', 'Button', 'ComboBox',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
-           'WebView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
+           'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
            'Dialog', 'SaveDialog', 'DragPackage',
-           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
-           'has_webkit']
+           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
 
 
 class WidgetError(Exception):
@@ -1031,33 +1023,6 @@ class TreeView(WidgetBase):
         drag_pkg = DragPackage(self.widget)
         self.make_callback('drag-start', drag_pkg, res_dict)
         drag_pkg.start_drag()
-
-
-class WebView(WidgetBase):
-    def __init__(self):
-        if not has_webkit:
-            raise NotImplementedError("Missing webkit")
-
-        super(WebView, self).__init__()
-        self.widget = QWebView()
-
-    def load_url(self, url):
-        self.widget.load(QtCore.QUrl(url))
-
-    def load_html_string(self, html_string):
-        self.widget.setHtml(html_string)
-
-    def go_back(self):
-        self.widget.back()
-
-    def go_forward(self):
-        self.widget.forward()
-
-    def reload_page(self):
-        self.widget.reload()
-
-    def stop_loading(self):
-        self.widget.stop()
 
 
 # CONTAINERS
@@ -2197,6 +2162,7 @@ class Dialog(TopLevelMixin, WidgetBase):
             parent = parent.get_widget()
         self.widget = QtGui.QDialog(parent)
         self.widget.setModal(modal)
+        self.buttons = []
 
         vbox = QtGui.QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
@@ -2210,16 +2176,19 @@ class Dialog(TopLevelMixin, WidgetBase):
         if len(buttons) > 0:
             hbox_w = QtGui.QWidget()
             hbox = QtGui.QHBoxLayout()
+            hbox.setContentsMargins(5, 5, 5, 5)
+            hbox.setSpacing(4)
             hbox_w.setLayout(hbox)
 
             for name, val in buttons:
-                btn = QtGui.QPushButton(name)
+                btn = Button(name)
+                self.buttons.append(btn)
 
                 def cb(val):
-                    return lambda: self._cb_redirect(val)
+                    return lambda w: self._cb_redirect(val)
 
-                btn.clicked.connect(cb(val))
-                hbox.addWidget(btn, stretch=0)
+                btn.add_callback('activated', cb(val))
+                hbox.addWidget(btn.get_widget(), stretch=1)
 
             vbox.addWidget(hbox_w, stretch=0)
             # self.widget.closeEvent = lambda event: self.delete()

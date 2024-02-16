@@ -18,33 +18,16 @@ from gi.repository import Gdk
 from gi.repository import GObject
 from gi.repository import GdkPixbuf
 
-import gi
-has_webkit = False
-
-try:
-    # this is necessary to prevent a warning message on import
-    gi.require_version('WebKit2', '4.0')
-
-    from gi.repository import WebKit2 as WebKit  # noqa
-    has_webkit = True
-except Exception:
-    try:
-        gi.require_version('WebKit', '3.0')
-        from gi.repository import WebKit  # noqa
-    except Exception:
-        pass
-
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
-           'WebView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
+           'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
            'Dialog', 'SaveDialog', 'DragPackage', 'WidgetMoveEvent',
-           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
-           'has_webkit']
+           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
 
 # path to our icons
 icondir = os.path.split(ginga.icons.__file__)[0]
@@ -1159,33 +1142,6 @@ class TreeView(WidgetBase):
         drag_pkg = DragPackage(self.tv, selection)
         self.make_callback('drag-start', drag_pkg, res_dict)
         drag_pkg.start_drag()
-
-
-class WebView(WidgetBase):
-    def __init__(self):
-        if not has_webkit:
-            raise NotImplementedError("Missing webkit")
-
-        super(WebView, self).__init__()
-        self.widget = WebKit.WebView()
-
-    def load_url(self, url):
-        self.widget.open(url)
-
-    def load_html_string(self, html_string):
-        self.widget.load_string(html_string, 'text/html', 'utf-8', 'file://')
-
-    def go_back(self):
-        self.widget.go_back()
-
-    def go_forward(self):
-        self.widget.go_forward()
-
-    def reload_page(self):
-        self.widget.reload()
-
-    def stop_loading(self):
-        self.widget.stop_loading()
 
 
 # CONTAINERS
@@ -2457,18 +2413,28 @@ class Dialog(TopLevelMixin, WidgetBase):
     def __init__(self, title='', flags=0, buttons=[],
                  parent=None, modal=False):
         WidgetBase.__init__(self)
+        self.buttons = []
 
         if parent is not None:
             self.parent = parent.get_widget()
         else:
             self.parent = None
 
-        button_list = []
-        for name, val in buttons:
-            button_list.extend([name, val])
+        self.widget = Gtk.Dialog(title=title, flags=flags)
+        btn_box = Gtk.ButtonBox()
+        btn_box.set_border_width(5)
+        btn_box.set_spacing(4)
 
-        self.widget = Gtk.Dialog(title=title, flags=flags,
-                                 buttons=tuple(button_list))
+        for name, val in buttons:
+            btn = Button(name)
+            self.buttons.append(btn)
+
+            def cb(val):
+                return lambda w: self._cb_redirect(val)
+
+            btn.add_callback('activated', cb(val))
+            btn_box.pack_start(btn.get_widget(), True, True, 0)
+
         self.widget.set_modal(modal)
 
         TopLevelMixin.__init__(self, title=title)
@@ -2477,12 +2443,13 @@ class Dialog(TopLevelMixin, WidgetBase):
         self.content.set_border_width(0)
         content = self.widget.get_content_area()
         content.pack_start(self.content.get_widget(), True, True, 0)
+        content.pack_end(btn_box, True, True, 0)
 
-        self.widget.connect("response", self._cb_redirect)
+        #self.widget.connect("response", self._cb_redirect)
 
         self.enable_callback('activated')
 
-    def _cb_redirect(self, w, val):
+    def _cb_redirect(self, val):
         self.make_callback('activated', val)
 
     def get_content_area(self):

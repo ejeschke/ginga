@@ -44,7 +44,7 @@ class BasePlugin(object):
         """This method is called to stop the plugin."""
         pass
 
-    def _help_docstring(self):
+    def _get_docstring(self):
         import inspect
 
         # Insert section title at the beginning
@@ -52,22 +52,15 @@ class BasePlugin(object):
         plg_mod = inspect.getmodule(self)
         plg_doc = ('{}\n{}\n'.format(plg_name, '=' * len(plg_name)) +
                    plg_mod.__doc__)
+        return plg_name, plg_doc
 
+    def _help_docstring(self):
+        plg_name, plg_doc = self._get_docstring()
         self.fv.help_text(plg_name, plg_doc, text_kind='rst', trim_pfx=4)
 
-    def help(self):
+    def help(self, text_kind='rst'):
         """Display help for the plugin."""
-        if not self.fv.gpmon.has_plugin('WBrowser'):
-            self._help_docstring()
-            return
-
-        self.fv.start_global_plugin('WBrowser')
-
-        # need to let GUI finish processing, it seems
-        self.fv.update_pending()
-
-        obj = self.fv.gpmon.get_plugin('WBrowser')
-        obj.show_help(plugin=self, no_url_callback=self._help_docstring)
+        self.fv.help_plugin(self, text_kind=text_kind)
 
 
 class GlobalPlugin(BasePlugin):

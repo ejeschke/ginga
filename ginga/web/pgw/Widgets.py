@@ -14,9 +14,6 @@ from functools import reduce
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.web.pgw import PgHelp
 
-# For future support of WebView widget
-has_webkit = False
-
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Dial', 'Label', 'Button', 'ComboBox',
            'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
@@ -25,8 +22,7 @@ __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'Page', 'TopLevel', 'Application', 'Dialog',
-           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap',
-           'has_webkit']
+           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
 
 
 class WidgetError(Exception):
@@ -3589,9 +3585,9 @@ class Dialog(ContainerBase):
 
         self.title = title
         self.parent = parent
-        self.buttons = buttons
         self.value = None
         self.modal = modal
+        self.buttons = []
         self.body = VBox()
         for name in ('activated', 'open', 'close', 'resize'):
             self.enable_callback(name)
@@ -3607,6 +3603,7 @@ class Dialog(ContainerBase):
             hbox.set_spacing(4)
             for name, val in buttons:
                 btn = Button(name)
+                self.buttons.append(btn)
                 btn.add_callback('activated', self._btn_choice, name, val)
                 hbox.add_widget(btn)
             self.body.add_widget(hbox, stretch=0)
