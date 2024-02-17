@@ -192,7 +192,7 @@ plugins = [
           menu="Header [G]", hidden=False, category='Utils', ptype='global',
           enabled=True),
     Bunch(module='Zoom', tab='Zoom', workspace='left', start=False,
-          menu="Zoom [G]", category='Utils', ptype='global'),
+          menu="Zoom [G]", category='Utils', ptype='global', enabled=True),
     Bunch(module='LoaderConfig', tab='Loaders', workspace='channels',
           start=False, menu="LoaderConfig [G]", category='Debug',
           ptype='global', enabled=True),
