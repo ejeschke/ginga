@@ -2,8 +2,6 @@
 #
 # clocks.py -- Ginga clocks
 #
-# eric@naoj.org
-#
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
@@ -15,13 +13,13 @@ Usage:
   $ clock.py --help
   $ clock.py --show-timezones
   $ clock.py --show-colors
+
+NOTE: needs python >= 3.9
 """
 import sys
 import os
-from datetime import datetime
-
-import pytz
-from dateutil import tz
+from datetime import datetime, timezone, timedelta
+import zoneinfo
 
 import ginga.toolkit as ginga_toolkit
 from ginga import colors
@@ -43,15 +41,13 @@ class Clock(object):
 
         if isinstance(timezone_info, Bunch):
             self.timezone_name = timezone_info.location
-            self.tzinfo = tz.tzoffset(self.timezone_name,
-                                      timezone_info.time_offset)
+            self.tzinfo = timezone(timedelta(days=0,
+                                             seconds=int(timezone_info.time_offset)),
+                                   name=self.timezone_name)
         else:
             # assume timezone_info is a str
             self.timezone_name = timezone_info
-            #self.tzinfo = pytz.timezone(timezone)
-            # NOTE: wierd construction is necessary to get a dateutil
-            # timezone from the better names produced by pytz
-            self.tzinfo = tz.gettz(str(pytz.timezone(timezone_info)))
+            self.tzinfo = zoneinfo.ZoneInfo(timezone_info)
 
         self.color = color
         self.font = font
@@ -81,7 +77,7 @@ class Clock(object):
 
         self.clock_resized_cb(self.viewer, wd, ht)
 
-        dt = datetime.now(tz=tz.UTC)
+        dt = datetime.now(tz=timezone.utc)
         self.update_clock(dt)
 
     def clock_resized_cb(self, viewer, width, height):
@@ -174,11 +170,10 @@ class ClockApp(object):
         self.country_timezone = Widgets.ComboBox(editable=True)
 
         # make a giant list of time zones
-        zones = [timezone for timezones in pytz.country_timezones.values()
-                 for timezone in timezones]
+        zones = list(zoneinfo.available_timezones())
         zones.sort()
-        for timezone in zones:
-            self.country_timezone.append_text(timezone)
+        for zonename in zones:
+            self.country_timezone.append_text(zonename)
 
         # also let user set timezone by UTC offset
         self.location_label = Widgets.Label('Location')
@@ -220,29 +215,32 @@ class ClockApp(object):
         self.timer.start(1.0)
 
     def more_clock_by_offset(self, w):
-        location = self.location.get_text()
+        location = self.location.get_text().strip()
         time_offset = self.time_offset.get_value()
         sec_hour = 3600
-        timezone = Bunch(location=location, time_offset=time_offset * sec_hour)
+        if location == "":
+            location = f"UTC{time_offset:+.2f}"
+        timezone_info = Bunch(location=location,
+                              time_offset=time_offset * sec_hour)
         color = self.colors[self.color_index % len(self.colors)]
         self.color_index += 1
-        self.add_clock(timezone=timezone, color=color)
+        self.add_clock(timezone_info, color=color)
 
     def more_clock_by_timezone(self, w):
-        timezone = self.country_timezone.get_text()
+        timezone_info = self.country_timezone.get_text()
         color = self.colors[self.color_index % len(self.colors)]
         self.color_index += 1
 
-        self.add_clock(timezone=timezone, color=color)
+        self.add_clock(timezone_info, color=color)
 
-    def add_clock(self, timezone, color='lightgreen', show_seconds=None):
-        """Add a clock to the grid.  `timezone` is a string representing
+    def add_clock(self, timezone_info, color='lightgreen', show_seconds=None):
+        """Add a clock to the grid.  `timezone_info` is a string representing
         a valid timezone.
         """
         if show_seconds is None:
             show_seconds = self.options.show_seconds
 
-        clock = Clock(self.app, self.logger, timezone, color=color,
+        clock = Clock(self.app, self.logger, timezone_info, color=color,
                       font=self.options.font, show_seconds=show_seconds)
         clock.widget.cfg_expand(horizontal='expanding', vertical='expanding')
 
@@ -250,13 +248,15 @@ class ClockApp(object):
         cols = self.settings.get('columns')
         row = num_clocks // cols
         col = num_clocks % cols
-        self.clocks[timezone] = clock
+        if not isinstance(timezone_info, str):
+            timezone_info = timezone_info.location
+        self.clocks[timezone_info] = clock
 
         self.grid.add_widget(clock.widget, row, col, stretch=1)
 
     def timer_cb(self, timer):
         """Timer callback.  Update all our clocks."""
-        dt_now = datetime.now(tz=tz.UTC)
+        dt_now = datetime.now(tz=timezone.utc)
         self.logger.debug("timer fired. utc time is '%s'" % (str(dt_now)))
 
         for clock in self.clocks.values():
@@ -408,8 +408,10 @@ if __name__ == "__main__":
     args = options.args
 
     if options.show_timezones:
-        for timezone in pytz.all_timezones:
-            print(timezone)
+        zones = list(zoneinfo.available_timezones())
+        zones.sort()
+        for zonename in zones:
+            print(zonename)
         sys.exit(0)
 
     if options.show_colors:
@@ -421,20 +423,4 @@ if __name__ == "__main__":
     if options.display:
         os.environ['DISPLAY'] = options.display
 
-    # Are we debugging this?
-    if options.debug:
-        import pdb
-
-        pdb.run('main(options, args)')
-
-    # Are we profiling this?
-    elif options.profile:
-        import profile
-
-        print(("%s profile:" % sys.argv[0]))
-        profile.run('main(options, args)')
-
-    else:
-        main(options, args)
-
-# END
+    main(options, args)
