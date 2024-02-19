@@ -49,6 +49,7 @@ Ver 5.0.0 (unreleased)
 - Fix a number of issues with the help system to make it simpler and
   more robust; removed WBrowser plugin, handle URLs with Python webbrowser
   module
+- Number of threads can be configured in general settings file
 
 Ver 4.1.0 (2022-06-30)
 ======================

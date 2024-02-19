@@ -316,7 +316,7 @@ class ReferenceViewer(object):
                      action="store_true",
                      help="Don't display the splash screen")
         add_argument("--numthreads", dest="numthreads", type=int,
-                     default=4, metavar="NUM",
+                     default=None, metavar="NUM",
                      help="Start NUM threads in thread pool")
         add_argument("--opengl", dest="opengl", default=False,
                      action="store_true",
@@ -380,6 +380,7 @@ class ReferenceViewer(object):
                               WCSpkg='choose', FITSpkg='choose',
                               suppress_fits_warnings=False,
                               recursion_limit=2000,
+                              num_threads=4,
                               icc_working_profile=None,
                               font_scaling_factor=None,
                               save_layout=True,
@@ -494,9 +495,12 @@ class ReferenceViewer(object):
             logger.warning(
                 "failed to set FITS package preference '{}': {}".format(fitspkg, e))
 
-        # Create and start thread pool
         ev_quit = threading.Event()
-        thread_pool = Task.ThreadPool(options.numthreads, logger,
+        # Create and start thread pool
+        num_threads = settings.get('num_threads', 4)
+        if options.numthreads is not None:
+            num_threads = options.numthreads
+        thread_pool = Task.ThreadPool(num_threads, logger,
                                       ev_quit=ev_quit)
         thread_pool.startall()
 
