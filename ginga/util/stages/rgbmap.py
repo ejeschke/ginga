@@ -6,7 +6,6 @@ import numpy as np
 from ginga import ColorDist, trcalc
 from ginga import cmap as mod_cmap
 from ginga import imap as mod_imap
-from ginga.gw import Widgets, ColorBar
 
 from .base import Stage, StageAction, StageError
 
@@ -40,6 +39,8 @@ class RGBMap(Stage):
         self.fv = None
 
     def build_gui(self, container):
+        from ginga.gw import Widgets, ColorBar
+
         self.viewer = self.pipeline.get('viewer')
         self.fv = self.pipeline.get("fv")
         top = Widgets.VBox()
