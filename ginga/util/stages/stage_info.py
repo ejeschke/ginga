@@ -28,8 +28,9 @@ def get_stage_catalog(logger):
             if (inspect.isclass(attr) and issubclass(attr, base.Stage) and
                 attr is not base.Stage):
                 name = getattr(attr, '_stagename', str(attr).lower())
-                if not name.startswith('viewer-'):
-                    # for now, do not include viewer
-                    stage_catalog[name] = attr
+                if name.startswith('viewer-') or name.startswith('rgbmap-'):
+                    continue
+                # for now, do not include viewer
+                stage_catalog[name] = attr
 
     return stage_catalog

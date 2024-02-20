@@ -6,15 +6,14 @@
 #
 import uuid
 import numpy as np
-import warnings
 
 from ginga.misc import Callback, Settings, Bunch
 from ginga import ColorDist, trcalc
 from ginga import cmap as mod_cmap
 from ginga import imap as mod_imap
 from ginga.util import pipeline
-from ginga.util.stages.rgbmap import (RGBInput, Distribute, ShiftMap,
-                                      IntensityMap, ColorMap, RGBMapError)
+from ginga.util.stages.color import (RGBInput, Distribute, ShiftMap,
+                                     IntensityMap, ColorMap, RGBMapError)
 
 
 class RGBPlanes(object):
@@ -312,30 +311,12 @@ class RGBMapper(Callback.Callbacks):
     def reset_sarr(self, callback=True):
         self.t_.set(contrast=0.5, brightness=0.5, callback=callback)
 
-    def _get_sarr(self):
-        warnings.warn("get_sarr() has been deprecated", DeprecationWarning)
-        return self.p_shift._get_sarr()
-
-    def _set_sarr(self, sarr, callback=True):
-        warnings.warn("set_sarr() has been deprecated", DeprecationWarning)
-        self.p_shift._set_sarr(sarr)
-        self.recalc()
-
     def contrast_set_cb(self, setting, pct):
         self.p_shift.set_contrast(pct)
         self.recalc()
 
     def brightness_set_cb(self, setting, pct):
         self.p_shift.set_brightness(pct)
-        self.recalc()
-
-    def get_carr(self):
-        warnings.warn("get_carr() has been deprecated", DeprecationWarning)
-        return self.p_cmap.get_carr()
-
-    def set_carr(self, carr, callback=True):
-        warnings.warn("set_carr() has been deprecated", DeprecationWarning)
-        self.p_cmap.set_carr(carr)
         self.recalc()
 
     def _refresh_cache(self):
@@ -426,56 +407,8 @@ class RGBMapper(Callback.Callbacks):
 
         return arr_out
 
-    def get_rgbarray(self, idx, order='RGB', image_order=None):
-        """
-        Parameters
-        ----------
-        idx : index array
-
-        order : str
-            The order of the color planes in the output array (e.g. "RGBA")
-
-        image_order : str or None
-            The order of channels if indexes already contain RGB info.
-        """
-        warnings.warn("get_rgbarray(idx) has been deprecated--"
-                      "use get_rgb_array(idx) instead",
-                      DeprecationWarning)
-
-        if image_order not in (None, ''):
-            # reorder image channels for pipeline
-            state = self.pipeline.get('state')
-            if state.order != image_order:
-                idx = trcalc.reorder_image(state.order, idx, image_order)
-
-        arr_out = self.get_rgb_array(idx, order=order)
-        return RGBPlanes(arr_out, order)
-
     def get_hasharray(self, idx):
         return self.p_dist.dist.hash_array(idx)
-
-    def shift(self, pct, rotate=False, callback=True):
-        warnings.warn("shift() has been deprecated", DeprecationWarning)
-        #self.p_shift.shift(pct, rotate=rotate)
-        brightness = self.p_shift._shift_to_brightness(pct, reset=False)
-        self.t_.set(brightness=brightness)
-
-    def scale_and_shift(self, scale_pct, shift_pct, callback=True):
-        """Stretch and/or shrink the color map via altering the shift map.
-        """
-        warnings.warn("scale_and_shift() has been deprecated", DeprecationWarning)
-        #self.p_shift.scale_and_shift(scale_pct, shift_pct)
-        brightness = self.p_shift._shift_to_brightness(shift_pct, reset=True)
-        contrast = self.p_shift._scale_to_contrast(scale_pct, reset=True)
-        self.t_.set(brightness=brightness, contrast=contrast)
-
-    def stretch(self, scale_factor, callback=True):
-        """Stretch the color map via altering the shift map.
-        """
-        warnings.warn("stretch() has been deprecated", DeprecationWarning)
-        #self.p_shift.stretch(scale_factor)
-        contrast = self.p_shift._scale_to_contrast(scale_factor, reset=False)
-        self.t_.set(contrast=contrast)
 
     def copy_attributes(self, dst_rgbmap, keylist=None):
         if keylist is None:

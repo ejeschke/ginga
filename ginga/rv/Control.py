@@ -15,7 +15,6 @@ import logging
 import atexit
 import shutil
 import inspect
-import warnings
 from collections import OrderedDict
 import webbrowser
 
@@ -2847,16 +2846,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.update_pending()
         return True
 
-    def motion_cb(self, viewer, button, data_x, data_y):
-        """Motion event in the channel viewer window.  Show the pointing
-        information under the cursor.
-        """
-        warnings.warn("This function has been deprecated--"
-                      "use showxy() instead",
-                      DeprecationWarning)
-        self.showxy(viewer, data_x, data_y)
-        return True
-
     def dragdrop(self, chviewer, uris):
         """Called when a drop operation is performed on a channel viewer.
         We are called back with a URL and we attempt to (down)load it if it
@@ -2867,6 +2856,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.open_uris(uris, chname=chname)
         return True
 
+    def force_focus_cb(self, viewer, event, data_x, data_y):
+        chname = self.get_channel_name(viewer)
+        if chname is not None:
+            self.force_focus(chname)
+        return True
+
     def force_focus(self, chname):
         if not self.settings.get('channel_follows_focus', False):
             self.change_channel(chname, raisew=True)
@@ -2875,15 +2870,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         v = channel.viewer
         if hasattr(v, 'take_focus'):
             v.take_focus()
-
-    def force_focus_cb(self, viewer, event, data_x, data_y):
-        warnings.warn("This function has been deprecated--"
-                      "use force_focus() instead",
-                      DeprecationWarning)
-        chname = self.get_channel_name(viewer)
-        if chname is not None:
-            self.force_focus(chname)
-        return True
 
     def focus_cb(self, viewer, tf, name):
         """Called when ``viewer`` gets ``(tf==True)`` or loses

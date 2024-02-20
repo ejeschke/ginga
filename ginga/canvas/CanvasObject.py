@@ -7,7 +7,6 @@
 import numpy as np
 from collections import namedtuple
 import copy
-import warnings
 
 from ginga.misc import Callback, Bunch
 from ginga import trcalc, colors
@@ -550,90 +549,6 @@ class CanvasObjectBase(Callback.Callbacks):
     def get_llur(self):
         a, b = trcalc.get_bounds(self.get_data_points())
         return (a[0], a[1], b[0], b[1])
-
-    # --- TO BE DEPRECATED METHODS ---
-
-    def move_delta(self, xoff, yoff):
-        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
-        Use move_delta_pt instead.
-        """
-        warnings.warn("move_delta(xoff, yoff) has been deprecated--"
-                      "use move_delta_pt((xoff, yoff)) instead",
-                      DeprecationWarning)
-        self.move_delta_pt((xoff, yoff))
-
-    def move_to(self, xdst, ydst):
-        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
-        Use move_to_pt() instead.
-        """
-        warnings.warn("move_to(xdst, ydst) has been deprecated--"
-                      "use move_to_pt((xdst, ydst)) instead",
-                      DeprecationWarning)
-        self.move_to_pt((xdst, ydst))
-
-    def scale_by(self, scale_x, scale_y):
-        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
-        Use scale_by_factors() instead.
-        """
-        warnings.warn("scale_by(scale_x, scale_y) has been deprecated--"
-                      "use scale_by_factors((scale_x, scale_y)) instead",
-                      DeprecationWarning)
-        self.scale_by_factors((scale_x, scale_y))
-
-    def rescale_by(self, scale_x, scale_y, detail):
-        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
-        Use rescale_by_factors() instead.
-        """
-        warnings.warn("rescale_by() has been deprecated--"
-                      "use rescale_by_factors() instead",
-                      DeprecationWarning)
-        self.rescale_by_factors((scale_x, scale_y), detail)
-
-    def rotate(self, theta_deg, xoff=0, yoff=0):
-        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
-        Use rotate_deg() instead.
-        """
-        warnings.warn("rotate(theta_deg) has been deprecated--"
-                      "use rotate_deg([theta_deg]) instead",
-                      DeprecationWarning)
-        self.rotate_deg([theta_deg], (xoff, yoff))
-
-    def rotate_by(self, theta_deg):
-        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
-        Use rotate_by_deg() instead.
-        """
-        warnings.warn("rotate_by(theta_deg) has been deprecated--"
-                      "use rotate_by_deg([theta_deg]) instead",
-                      DeprecationWarning)
-        self.rotate_by_deg([theta_deg])
-
-    def contains_arr(self, x_arr, y_arr):
-        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
-        Use contains_pts() instead.
-        """
-        warnings.warn("contains_arr(x_arr, y_arr) has been deprecated--"
-                      "use contains_pts(np.asarray((x_arr, y_arr)).T) instead",
-                      DeprecationWarning)
-        pts = np.asarray((x_arr, y_arr)).T
-        return self.contains_pts(pts)
-
-    def contains(self, x, y):
-        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
-        Use contains_pt() instead.
-        """
-        warnings.warn("contains(x, y) has been deprecated--"
-                      "use contains_pt((x, y)) instead",
-                      DeprecationWarning)
-        return self.contains_pt((x, y))
-
-    def select_contains(self, viewer, x, y):
-        """For backward compatibility.  TO BE DEPRECATED--DO NOT USE.
-        Use select_contains_pt() instead.
-        """
-        warnings.warn("select_contains(viewer, x, y) has been deprecated--"
-                      "use select_contains_pt(viewer, (x, y)) instead",
-                      DeprecationWarning)
-        return self.select_contains_pt(viewer, (x, y))
 
 
 # this is the data structure to which drawing classes are registered

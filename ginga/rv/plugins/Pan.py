@@ -164,7 +164,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         iw = Viewers.GingaViewerWidget(panimage)
         iw.resize(self._wd, self._ht)
         self.nb.add_widget(iw)
-        #index = self.nb.index_of(iw)
         paninfo = Bunch.Bunch(panimage=panimage, widget=iw,
                               compass_wcs=compass_wcs, compass_xy=compass_xy,
                               panrect=None)
@@ -173,9 +172,6 @@ class Pan(GingaPlugin.GlobalPlugin):
         fitsimage.copy_attributes(panimage, self.copy_attrs)
 
         fitsimage.add_callback('redraw', self.redraw_cb, channel)
-        fitsimage.add_callback('image-set',
-                               lambda viewer, image: self._redo(channel, image))
-
         self.logger.debug("channel '%s' added." % (channel.name))
 
     def delete_channel(self, viewer, channel):

@@ -340,12 +340,6 @@ class PolygonMixin(object):
                 np.logical_or(xi <= xa, xj <= xa))
             # NOTE: get a divide by zero here for some elements whose tf=False
             # Need to figure out a way to conditionally do those w/tf=True
-            # Till then we use the warnings module to suppress the warning.
-            ## with warnings.catch_warnings():
-            ##     warnings.simplefilter('default', RuntimeWarning)
-            # NOTE postscript: warnings context manager causes this computation
-            # to fail silently sometimes where it previously worked with a
-            # warning--commenting out the warning manager for now
             cross = ((xi + (ya - yi).astype(float, copy=False) /
                       (yj - yi) * (xj - xi)) < xa)
 
