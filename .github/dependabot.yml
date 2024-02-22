@@ -1,0 +1,26 @@
+version: 2
+updates:
+
+  - package-ecosystem: "github-actions" # See documentation for possible values
+    directory: ".github/workflows" # Location of package manifests
+    target-branch: "main"
+    schedule:
+      interval: "monthly"
+      time: "02:10"
+    groups:
+      actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: pip
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "monthly"
+      time: "02:00"
+    groups:
+      actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
