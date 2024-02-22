@@ -465,7 +465,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         self.fv.nongui_do(self.mosaicer.mosaic, images)
 
         # Add description for ChangeHistory
-        info = dict(time_modified=datetime.utcnow(),
+        info = dict(time_modified=datetime.now(tz=timezone.utc),
                     reason_modified='Added {0}'.format(
             ','.join([im.get('name') for im in images])))
         self.fv.update_image_info(self.mosaicer.baseimage, info)
