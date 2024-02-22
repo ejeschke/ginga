@@ -309,49 +309,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
         return img_mosaic
 
-    def _prepare_mosaic1(self, msg):
-        self.canvas.delete_all_objects()
-        self.update_status(msg)
-
-    def _inline(self, images):
-        self.fv.assert_nongui_thread()
-
-        # Get optional parameters
-        trim_px = self.settings.get('trim_px', 0)
-        match_bg = self.settings.get('match_bg', False)
-        merge = self.settings.get('merge', False)
-        allow_expand = self.settings.get('allow_expand', True)
-        expand_pad_deg = self.settings.get('expand_pad_deg', 0.010)
-        annotate = self.settings.get('annotate_images', False)
-        bg_ref = None
-        if match_bg:
-            bg_ref = self.bg_ref
-
-        time_intr1 = time.time()
-
-        # Add description for ChangeHistory
-        info = dict(time_modified=datetime.now(tz=timezone.utc),
-                    reason_modified='Added {0}'.format(
-            ','.join([im.get('name') for im in images])))
-        self.fv.update_image_info(self.img_mosaic, info)
-
-        # # annotate ingested image with its name?
-        # if annotate and (not allow_expand):
-        #     for i, image in enumerate(images):
-        #         (xlo, ylo, xhi, yhi) = loc[i]
-        #         header = image.get_header()
-        #         if self.ann_fits_kwd is not None:
-        #             imname = str(header[self.ann_fits_kwd])
-        #         else:
-        #             imname = image.get('name', 'noname')
-
-        #         x, y = (xlo + xhi) / 2., (ylo + yhi) / 2.
-        #         self.canvas.add(self.dc.Text(x, y, imname, color='red'),
-        #                         redraw=False)
-
-        time_intr2 = time.time()
-        self.process_elapsed += time_intr2 - time_intr1
-
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
         self.gui_up = False
