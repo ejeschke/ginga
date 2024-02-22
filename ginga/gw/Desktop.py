@@ -213,6 +213,8 @@ class Desktop(Callback.Callbacks):
         name = tabname.lower()
         while name in self.tab:
             bnch = self.tab[name]
+            if bnch.wsname is None:
+                break
             l.insert(0, name)
             name = bnch.wsname.lower()
             if name in l:
