@@ -29,6 +29,9 @@ class Brush(object):
 class Font(object):
     def __init__(self, fontname='sans', fontsize=12.0, color='black'):
         fontname = font_asst.resolve_alias(fontname, fontname)
+        # try to resolve this to some font we can use
+        fontname = get_cached_font(fontname, fontsize)
+
         self.fontname = fontname
         self.fontsize = fontsize
         self.color = color
@@ -40,9 +43,42 @@ class Font(object):
 
 
 def load_font(font_name, font_file):
-    # TODO!
-    ## raise ValueError("Loading fonts dynamically is an unimplemented"
-    ##                  " feature for matplotlib back end")
+    from matplotlib import font_manager
+    # may raise an exception
+    font_manager.fontManager.addfont(font_file)
+
+
+def get_cached_font(font_name, font_size):
+    key = ('mpl', font_name)
+    try:
+        return font_asst.get_cache(key)
+
+    except KeyError:
+        pass
+
+    # font not loaded? try and load it
+    try:
+        info = font_asst.get_font_info(font_name, subst_ok=False)
+        load_font(font_name, info.font_path)
+        font_asst.add_cache(key, font_name)
+        return font_name
+
+    except Exception as e:
+        # couldn't load font
+        pass
+
+    # try and substitute one of the built in fonts
+    try:
+        info = font_asst.get_font_info(font_name, subst_ok=True)
+        load_font(font_name, info.font_path)
+
+        font_asst.add_cache(key, font_name)
+        return font_name
+
+    except Exception as e:
+        # couldn't load substitute font
+        pass
+
     return font_name
 
 

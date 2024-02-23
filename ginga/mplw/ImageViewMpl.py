@@ -8,10 +8,10 @@ from io import BytesIO
 
 # Matplotlib imports
 import matplotlib
-#from matplotlib.path import Path
 
 from ginga import ImageView
 from ginga import Mixins, Bindings
+from ginga.cursors import cursor_info
 
 # NOTE: this import is necessary to register the 'ginga' projection
 # used via matplotlib, even though the module is not directly
@@ -36,9 +36,6 @@ rc['keymap.save'] = 'ctrl+s'     # saving current figure
 rc['keymap.grid'] = 'ctrl+g'     # switching on/off a grid in current axes
 rc['keymap.yscale'] = []         # toggle scaling of y-axes ('log'/'linear')
 rc['keymap.xscale'] = []         # toggle scaling of x-axes ('log'/'linear')
-
-
-MPL_V1 = matplotlib.__version__.startswith('1')
 
 
 class ImageViewMplError(ImageView.ImageViewError):
@@ -67,6 +64,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self.img_bg = (0.5, 0.5, 0.5)
 
         self.in_axes = False
+        self.debug = False
         # Matplotlib expects RGBA data for color images
         self.rgb_order = 'RGBA'
 
@@ -87,10 +85,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
                                   )
         #ax = fig.add_subplot(111)
         self.ax_img = ax
-        # We don't want the axes cleared every time plot() is called
-        if MPL_V1:
-            # older versions of matplotlib
-            ax.hold(False)
         # TODO: is this needed, since frame_on == False?
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
@@ -107,8 +101,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
                                      #viewer=self,
                                      #projection='ginga'
                                      )
-        if MPL_V1:
-            newax.hold(True)
         newax.autoscale(enable=False)
         newax.get_xaxis().set_visible(False)
         newax.get_yaxis().set_visible(False)
@@ -168,20 +160,21 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # matplotlib figure axis
         dst_x = dst_y = 0
 
-        # fill background color
-        ## rect = self.figure.patch
-        ## rect.set_facecolor(self.img_bg)
+        # for debugging
+        if self.debug:
+            rect = self.figure.patch
+            rect.set_facecolor('blue')
 
         # attempt 1: using a FigureImage (non-scaled)
         if self.mpimage is None:
             self.mpimage = self.figure.figimage(data, xo=dst_x, yo=dst_y,
-                                                origin='upper')
+                                                origin='upper', resize=False)
 
         else:
             # note: this is not a typo--these offsets have a different
             # attribute name than in the constructor ('ox' vs. 'xo')
-            self.mpimage.ox = dst_x
-            self.mpimage.oy = dst_y
+            self.mpimage.xo = dst_x
+            self.mpimage.yo = dst_y
             self.mpimage.set_data(data)
 
     def render_image2(self, arr, order, win_coord):
@@ -263,7 +256,11 @@ class ImageViewMpl(ImageView.ImageViewBase):
         self.configure(width, height)
 
     def _resize_cb(self, event):
-        wd, ht = event.width, event.height
+        # NOTE: this no longer works, need to calculate canvas size
+        # from the figure
+        #wd, ht = event.width, event.height
+        wd = int(self.figure.get_figwidth() * self.figure.dpi)
+        ht = int(self.figure.get_figheight() * self.figure.dpi)
         self.logger.debug("canvas resized %dx%d" % (wd, ht))
         self.configure_window(wd, ht)
 
@@ -276,12 +273,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         return ax
-
-    def get_png_image_as_buffer(self, output=None):
-        """DO NOT USE: *** TO BE DEPRECATED ***
-        Use get_rgb_image_as_buffer() instead.
-        """
-        return self.get_rgb_image_as_buffer(output=output, format='png')
 
     def get_rgb_image_as_buffer(self, output=None, format='png', quality=90):
         if self.figure is None:
@@ -374,13 +365,13 @@ class ImageViewEvent(ImageViewMpl):
             'pagedown': 'page_down',
         }
 
-        # Define cursors for pick and pan
-        #hand = openHandCursor()
-        hand = 0
-        self.define_cursor('pan', hand)
-        #cross = thinCrossCursor('aquamarine')
-        cross = 1
-        self.define_cursor('pick', cross)
+        # Define cursors
+        cursor_names = cursor_info.get_cursor_names()
+        # TODO: handle other cursor types
+        cross = 1   # hand = 0
+        for curname in cursor_names:
+            curinfo = cursor_info.get_cursor_info(curname)
+            self.define_cursor(curinfo.name, cross)
 
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',

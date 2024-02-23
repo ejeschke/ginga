@@ -27,22 +27,6 @@ sessions.  Run this by supplying a single FITS file on the command line.
 """
 
 import sys
-import os
-import platform
-# just in case you want to use qt
-os.environ['QT_API'] = 'pyqt'
-
-import matplotlib
-MPL_V1 = matplotlib.__version__.startswith('1')
-options = ['Qt4Agg', 'GTK', 'GTKAgg', 'MacOSX', 'GTKCairo', 'WXAgg',
-           'TkAgg', 'QtAgg', 'FltkAgg', 'WX']
-# Force a specific toolkit on mac
-macos_ver = platform.mac_ver()[0]
-if len(macos_ver) > 0:
-    # change this to "pass" if you want to force a different backend
-    # On Mac OS X I found the default choice for matplotlib is not stable
-    # with ginga
-    matplotlib.use('Qt4Agg')
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -88,9 +72,6 @@ fi.set_image(image)
 
 # Note adding axis from ginga (mpl backend) object
 ax = fi.add_axes()
-if MPL_V1:
-    # old matplotlib API
-    ax.hold(True)
 
 wd, ht = image.get_size()
 
