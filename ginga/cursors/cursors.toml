@@ -14,6 +14,7 @@
 
 [cursors.pick]
 file = 'cross.svg'
+web = 'crosshair'
 scale_width = 1.0
 scale_height = 1.0
 point_x_pct = 0.5
@@ -21,6 +22,7 @@ point_y_pct = 0.5
 
 [cursors.pan]
 file = 'hand.svg'
+web = 'grab'
 scale_width = 1.0
 scale_height = 1.53
 point_x_pct = 0.5
@@ -28,6 +30,7 @@ point_y_pct = 0.5
     
 [cursors.draw]
 file = 'pencil.svg'
+web = 'default'
 scale_width = 1.5
 scale_height = 1.5
 point_x_pct = 0.0
@@ -35,6 +38,7 @@ point_y_pct = 0.95
 
 [cursors.zoom]
 file = 'magnify.svg'
+web = 'zoom-in'
 scale_width = 2.0
 scale_height = 2.0
 point_x_pct = 0.385

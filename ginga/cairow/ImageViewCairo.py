@@ -7,7 +7,6 @@
 
 import sys
 import numpy as np
-from io import BytesIO
 
 import cairo
 
@@ -61,13 +60,6 @@ class ImageViewCairo(ImageView.ImageViewBase):
         finally:
             self.dst_surface = None
 
-    def get_png_image_as_buffer(self, output=None):
-        ibuf = output
-        if ibuf is None:
-            ibuf = BytesIO()
-        self.surface.write_to_png(ibuf)
-        return ibuf
-
     def update_widget(self):
         if not self.surface:
             return
@@ -87,6 +79,3 @@ class ImageViewCairo(ImageView.ImageViewBase):
 
     def set_cursor(self, cursor):
         pass
-
-
-# END

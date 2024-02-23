@@ -8,6 +8,7 @@
 
 import sys
 import logging
+from argparse import ArgumentParser
 
 from ginga import colors
 from ginga.canvas.CanvasObject import get_canvas_types
@@ -302,12 +303,8 @@ def main(options, args):
 if __name__ == "__main__":
 
     # Parse command line options
-    from argparse import ArgumentParser
-
     argprs = ArgumentParser()
 
-    argprs.add_argument("--debug", dest="debug", default=False, action="store_true",
-                        help="Enter the pdb debugger on main()")
     argprs.add_argument("--host", dest="host", metavar="HOST",
                         default='localhost',
                         help="Listen on HOST for connections")
@@ -319,9 +316,6 @@ if __name__ == "__main__":
     argprs.add_argument("--port", dest="port", metavar="PORT",
                         type=int, default=9909,
                         help="Listen on PORT for connections")
-    argprs.add_argument("--profile", dest="profile", action="store_true",
-                        default=False,
-                        help="Run the profiler on main()")
     argprs.add_argument("-r", "--renderer", dest="renderer", metavar="NAME",
                         default=None,
                         help="Choose renderer (pil|agg|opencv|cairo)")
@@ -334,20 +328,4 @@ if __name__ == "__main__":
 
     (options, args) = argprs.parse_known_args(sys.argv[1:])
 
-    # Are we debugging this?
-    if options.debug:
-        import pdb
-
-        pdb.run('main(options, args)')
-
-    # Are we profiling this?
-    elif options.profile:
-        import profile
-
-        print(("%s profile:" % sys.argv[0]))
-        profile.run('main(options, args)')
-
-    else:
-        main(options, args)
-
-# END
+    main(options, args)

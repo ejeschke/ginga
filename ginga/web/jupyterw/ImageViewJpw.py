@@ -50,6 +50,7 @@ from ginga import ImageView, AstroImage
 from ginga import Mixins, Bindings
 from ginga.canvas import render
 from ginga.util import loader
+from ginga.cursors import cursor_info
 
 from ginga.web.jupyterw import JpHelp
 
@@ -217,12 +218,11 @@ class ImageViewEvent(ImageViewJpw):
             "'": 'singlequote',
         }
 
-        # Define cursors for pick and pan
-        #hand = openHandCursor()
-        hand = 'fleur'
-        self.define_cursor('pan', hand)
-        cross = 'cross'
-        self.define_cursor('pick', cross)
+        # Define cursors
+        cursor_names = cursor_info.get_cursor_names()
+        for curname in cursor_names:
+            curinfo = cursor_info.get_cursor_info(curname)
+            self.define_cursor(curinfo.name, curinfo.web)
 
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',

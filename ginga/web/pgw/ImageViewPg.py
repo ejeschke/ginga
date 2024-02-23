@@ -8,6 +8,7 @@
 
 from ginga import ImageView, Mixins, Bindings
 from ginga.canvas import render
+from ginga.cursors import cursor_info
 
 
 default_html_fmt = 'jpeg'
@@ -353,12 +354,11 @@ class ImageViewEvent(ImageViewPg):
                                           'insert', 'delete', 'home', 'end',
                                           'page_up', 'page_down',
                                           ])
-        # Define cursors for pick and pan
-        #hand = openHandCursor()
-        hand = 'fleur'
-        self.define_cursor('pan', hand)
-        cross = 'cross'
-        self.define_cursor('pick', cross)
+        # Define cursors
+        cursor_names = cursor_info.get_cursor_names()
+        for curname in cursor_names:
+            curinfo = cursor_info.get_cursor_info(curname)
+            self.define_cursor(curinfo.name, curinfo.web)
 
         self._shifted = False
 

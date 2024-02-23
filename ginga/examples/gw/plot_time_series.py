@@ -196,13 +196,17 @@ def make_data(t, N, names, y_range):
 def cross_connect_plots(plot_info):
     # cross connect the plots so that zooming or panning in X in one
     # does the same to all the others
+    plot_info = list(plot_info)
     m_settings = plot_info[0].aide.settings
     for res_a in plot_info:
-        for res_b in set(plot_info) - set([res_a]):
-            res_a.aide.add_callback('plot-zoom-x', res_b.aide.plot_zoom_x_cb)
+        for res_b in plot_info:
+            if res_b != res_a:
+                res_a.aide.add_callback('plot-zoom-x',
+                                        res_b.aide.plot_zoom_x_cb)
 
         if res_a.aide.settings is not m_settings:
-            m_settings.share_settings(res_a.aide.settings, keylist=['autoaxis_x'])
+            m_settings.share_settings(res_a.aide.settings,
+                                      keylist=['autoaxis_x'])
 
 
 def main(options, args):
@@ -349,18 +353,4 @@ if __name__ == "__main__":
 
     (options, args) = argprs.parse_known_args(sys.argv[1:])
 
-    # Are we debugging this?
-    if options.debug:
-        import pdb
-
-        pdb.run('main(options, args)')
-
-    # Are we profiling this?
-    elif options.profile:
-        import profile
-
-        print(("%s profile:" % sys.argv[0]))
-        profile.run('main(options, args)')
-
-    else:
-        main(options, args)
+    main(options, args)
