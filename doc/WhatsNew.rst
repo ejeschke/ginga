@@ -50,6 +50,9 @@ Ver 5.0.0 (unreleased)
   more robust; removed WBrowser plugin, handle URLs with Python webbrowser
   module
 - Number of threads can be configured in general settings file
+- Fixes to various examples for third-party package changes
+  (particularly matplotlib backend examples)
+- Fixes for event handler treatment of return boolean values
 
 Ver 4.1.0 (2022-06-30)
 ======================

@@ -5,7 +5,6 @@
 # Please see the file LICENSE.txt for details.
 #
 from functools import reduce
-import warnings
 
 import numpy as np
 
@@ -204,12 +203,6 @@ class CompoundMixin(object):
             self.objects.remove(obj)
             index = self.objects.index(belowThis)
             self.objects.insert(index, obj)
-
-    def rotate(self, theta, xoff=0, yoff=0):
-        warnings.warn("rotate(theta_deg) has been deprecated--"
-                      "use rotate_deg([theta_deg]) instead",
-                      DeprecationWarning)
-        self.rotate_deg([theta], (xoff, yoff))
 
     def rotate_deg(self, thetas, offset):
         for obj in self.objects:

@@ -12,8 +12,9 @@ import matplotlib.textpath as textpath
 
 
 class Pen(object):
-    def __init__(self, color='black', linewidth=1, linestyle='solid'):
-        self.color = color
+    def __init__(self, color='black', linewidth=1, linestyle='solid',
+                 alpha=1.0):
+        self.color = get_color(color, alpha=alpha)
         self.linewidth = linewidth
         if linestyle == 'dash':
             linestyle = 'dashdot'
@@ -21,23 +22,24 @@ class Pen(object):
 
 
 class Brush(object):
-    def __init__(self, color='black', fill=False):
-        self.color = color
+    def __init__(self, color='black', fill=False, alpha=1.0):
+        self.color = get_color(color, alpha=alpha)
         self.fill = fill
 
 
 class Font(object):
-    def __init__(self, fontname='sans', fontsize=12.0, color='black'):
+    def __init__(self, fontname='sans', fontsize=12.0, color='black',
+                 alpha=1.0):
         fontname = font_asst.resolve_alias(fontname, fontname)
-        # try to resolve this to some font we can use
-        fontname = get_cached_font(fontname, fontsize)
 
         self.fontname = fontname
         self.fontsize = fontsize
-        self.color = color
+        self.color = get_color(color, alpha=alpha)
+        # try to resolve this to some font we can use
+        self.font = get_cached_font(self.fontname, self.fontsize)
 
     def get_fontdict(self):
-        fontdict = dict(color=self.color, family=self.fontname,
+        fontdict = dict(color=self.color, family=self.font,
                         size=self.fontsize, transform=None)
         return fontdict
 
@@ -80,6 +82,16 @@ def get_cached_font(font_name, font_size):
         pass
 
     return font_name
+
+
+def get_color(color, alpha=1.0):
+    if color is not None:
+        r, g, b = colors.resolve_color(color)
+    else:
+        r, g, b = 1.0, 1.0, 1.0
+
+    #return (int(r * 255), int(g * 255), int(b * 255), int(alpha * 255))
+    return (r, g, b, alpha)
 
 
 class MplContext(object):
@@ -135,25 +147,15 @@ class MplContext(object):
         self.kwdargs['linewidth'] = pen.linewidth
         self.kwdargs['linestyle'] = pen.linestyle
 
-    def get_color(self, color, alpha):
-        if color is not None:
-            r, g, b = colors.resolve_color(color)
-        else:
-            r, g, b = 1.0, 1.0, 1.0
-
-        return (r, g, b, alpha)
-
     def get_pen(self, color, alpha=1.0, linewidth=1, linestyle='solid'):
-        color = self.get_color(color, alpha=alpha)
-        return Pen(color=color, linewidth=linewidth, linestyle=linestyle)
+        return Pen(color=color, linewidth=linewidth, linestyle=linestyle,
+                   alpha=alpha)
 
     def get_brush(self, color, alpha=1.0):
-        color = self.get_color(color, alpha=alpha)
-        return Brush(color=color, fill=True)
+        return Brush(color=color, fill=True, alpha=alpha)
 
     def get_font(self, name, size, color, alpha=1.0):
-        color = self.get_color(color, alpha=alpha)
-        return Font(fontname=name, fontsize=size, color=color)
+        return Font(fontname=name, fontsize=size, color=color, alpha=alpha)
 
     def text_extents(self, text, font):
         # This is not completely accurate because it depends a lot

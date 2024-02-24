@@ -50,6 +50,8 @@ class UIMixin(object):
         if self.ui_active:
             return super(UIMixin, self).make_callback(name, *args, **kwargs)
 
+        return False
+
     def make_ui_callback_viewer(self, viewer, name, *args, **kwargs):
         """Invoke callbacks on all objects (i.e. layers) from the top to
         the bottom, returning when the first one returns True.  If none
@@ -71,6 +73,8 @@ class UIMixin(object):
             if self.ui_active:
                 return super(UIMixin, self).make_callback(name, *args, **kwargs)
 
+        return False
+
     def make_callback_children(self, name, *args, **kwargs):
         """Invoke callbacks on all objects (i.e. layers) from the top to
         the bottom, returning when the first one returns True.  If none
@@ -82,7 +86,9 @@ class UIMixin(object):
             while num >= 0:
                 obj = self.objects[num]
                 if isinstance(obj, Callbacks):
-                    obj.make_callback(name, *args, **kwargs)
+                    res = obj.make_callback(name, *args, **kwargs)
+                    if res:
+                        return res
                 num -= 1
 
         return super(UIMixin, self).make_callback(name, *args, **kwargs)

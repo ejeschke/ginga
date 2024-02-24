@@ -22,21 +22,6 @@ Press 'c' to clear the canvas of drawn points.
 """
 
 import sys
-import os
-import platform
-# just in case you want to use qt
-os.environ['QT_API'] = 'pyqt5'
-
-import matplotlib
-options = ['Qt4Agg', 'GTK', 'GTKAgg', 'MacOSX', 'GTKCairo', 'WXAgg',
-           'TkAgg', 'QtAgg', 'FltkAgg', 'WX']
-# Force a specific toolkit on mac
-macos_ver = platform.mac_ver()[0]
-if len(macos_ver) > 0:
-    # change this to "pass" if you want to force a different backend
-    # On Mac OS X I found the default choice for matplotlib is not stable
-    # with ginga
-    matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
 
 from ginga.mplw.ImageViewMpl import CanvasView
@@ -55,10 +40,12 @@ class MyGingaFigure(object):
         fi = CanvasView(logger=logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
-        fi.add_callback('key-press', self.key_press_ginga)
         fi.set_figure(fig)
         fi.show_mode_indicator(True, corner='ur')
         self.fitsimage = fi
+
+        p_canvas = fi.get_canvas()
+        p_canvas.add_callback('key-down-none', self.key_press_ginga)
 
         self.dc = get_canvas_types()
 
@@ -68,11 +55,11 @@ class MyGingaFigure(object):
         canvas = self.dc.DrawingCanvas()
         canvas.enable_draw(True)
         canvas.set_draw_mode('draw')
-        canvas.set_callback('button-press', self.btn_down)
-        canvas.set_callback('button-release', self.btn_up)
+        canvas.set_callback('btn-down-none', self.btn_down)
+        canvas.set_callback('btn-up-none', self.btn_up)
         canvas.set_drawtype('point', color='cyan')
         canvas.set_callback('draw-event', self.draw_event)
-        canvas.add_callback('key-press', self.key_press)
+        canvas.add_callback('key-down-none', self.key_press)
         canvas.set_surface(self.fitsimage)
         canvas.ui_set_active(True)
         self.canvas = canvas
@@ -88,14 +75,16 @@ class MyGingaFigure(object):
         processing by the bindings layer of Ginga.
         """
         # insert the canvas
-        self.fitsimage.add(self.canvas, tag='mycanvas')
+        p_canvas = self.fitsimage.get_canvas()
+        p_canvas.add(self.canvas, tag='mycanvas')
 
     def release(self):
         """
         Remove our canvas so that we no longer intercept events.
         """
         # retract the canvas
-        self.fitsimage.delete_object_by_tag('mycanvas')
+        p_canvas = self.fitsimage.get_canvas()
+        p_canvas.delete_object_by_tag('mycanvas')
 
     def clear(self):
         """
@@ -115,39 +104,42 @@ class MyGingaFigure(object):
     # NOTE: return values on callbacks are important: if True then lower
     # layer Ginga canvas items will not get events
 
-    def key_press(self, canvas, keyname):
+    def key_press(self, canvas, event, data_x, data_y):
+        keyname = event.key
         if keyname == 'x':
             self.fitsimage.onscreen_message("Moving to regular mode",
                                             delay=1.0)
             self.release()
+            return True
         elif keyname == 'c':
             self.clear()
             return True
 
-        fi = canvas.fitsimage
+        fi = self.fitsimage
         data_x, data_y = fi.get_last_data_xy()
         ra, dec = self.get_wcs(data_x, data_y)
         print("key %s pressed at data %d,%d ra=%s dec=%s" % (
             keyname, data_x, data_y, ra, dec))
         return True
 
-    def key_press_ginga(self, fitsimage, keyname):
+    def key_press_ginga(self, canvas, event, data_x, data_y):
+        keyname = event.key
         if keyname == 'x':
             self.fitsimage.onscreen_message("Moving to capture mode",
                                             delay=1.0)
             self.capture()
         return True
 
-    def btn_down(self, canvas, button, data_x, data_y):
+    def btn_down(self, canvas, event, data_x, data_y):
         ra, dec = self.get_wcs(data_x, data_y)
         print("button %s pressed at data %d,%d ra=%s dec=%s" % (
-            button, data_x, data_y, ra, dec))
+            event.button, data_x, data_y, ra, dec))
         return False
 
-    def btn_up(self, canvas, button, data_x, data_y):
+    def btn_up(self, canvas, event, data_x, data_y):
         ra, dec = self.get_wcs(data_x, data_y)
         print("button %s released at data %d,%d ra=%s dec=%s" % (
-            button, data_x, data_y, ra, dec))
+            event.button, data_x, data_y, ra, dec))
         return False
 
     def draw_event(self, canvas, tag):

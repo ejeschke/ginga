@@ -20,7 +20,8 @@ from . import transform  # noqa
 from .CanvasRenderMpl import CanvasRenderer
 from .MplHelp import Timer
 
-# Override some matplotlib keyboard UI defaults
+# Override some matplotlib keyboard UI defaults that interfere with
+# Ginga key bindings
 rc = matplotlib.rcParams
 # TODO: figure out how to keep from overriding the user's desirable
 # rcParams
@@ -32,7 +33,7 @@ rc['keymap.forward'] = 'right'   # left handed quick navigation
 rc['keymap.pan'] = []            # pan mnemonic
 rc['keymap.zoom'] = []           # zoom mnemonic
 rc['keymap.save'] = 'ctrl+s'     # saving current figure
-#rc['keymap.quit'] = 'ctrl+w'     # close the current figure
+rc['keymap.quit'] = 'ctrl+w'     # close the current figure
 rc['keymap.grid'] = 'ctrl+g'     # switching on/off a grid in current axes
 rc['keymap.yscale'] = []         # toggle scaling of y-axes ('log'/'linear')
 rc['keymap.xscale'] = []         # toggle scaling of x-axes ('log'/'linear')
@@ -59,9 +60,6 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # NOTE: matplotlib manages it's Y coordinates by default with
         # the origin at the bottom (see base class)
         self.origin_upper = False
-
-        self.img_fg = (1.0, 1.0, 1.0)
-        self.img_bg = (0.5, 0.5, 0.5)
 
         self.in_axes = False
         self.debug = False
@@ -298,6 +296,8 @@ class ImageViewMpl(ImageView.ImageViewBase):
         pass
 
     def set_cursor(self, cursor):
+        # TODO
+        #self.figure.canvas.set_cursor(cursor)
         pass
 
     def onscreen_message(self, text, delay=None, redraw=True):
@@ -366,9 +366,10 @@ class ImageViewEvent(ImageViewMpl):
         }
 
         # Define cursors
+        from matplotlib.backend_tools import Cursors
         cursor_names = cursor_info.get_cursor_names()
         # TODO: handle other cursor types
-        cross = 1   # hand = 0
+        cross = Cursors.POINTER
         for curname in cursor_names:
             curinfo = cursor_info.get_cursor_info(curname)
             self.define_cursor(curinfo.name, cross)

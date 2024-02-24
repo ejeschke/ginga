@@ -157,7 +157,7 @@ class ContrastMode(Mode):
             self._start_x, self._start_y = x, y
             if msg:
                 self.onscreen_message(
-                    "Shift and stretch colormap (drag mouse)", delay=1.0)
+                    "Change contrast and brightness (drag mouse)", delay=1.0)
         else:
             self.onscreen_message(None)
 

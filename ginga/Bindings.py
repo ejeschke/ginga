@@ -688,8 +688,8 @@ class BindingMapper(Callback.Callbacks):
             if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = 'keydown-%s' % (emap.name)
-                viewer.make_ui_callback_viewer(viewer, cbname, event,
-                                               last_x, last_y)
+                res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                                     last_x, last_y)
             else:
                 # TEMP: hack to get around the issue of how keynames
                 # are generated--shifted characters with no modifiers
@@ -697,10 +697,10 @@ class BindingMapper(Callback.Callbacks):
                 if idx in self.eventmap:
                     emap = self.eventmap[idx]
                     cbname = 'keydown-%s' % (emap.name)
-                    viewer.make_ui_callback_viewer(viewer, cbname, event,
-                                                   last_x, last_y)
+                    res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                                         last_x, last_y)
 
-        return True
+        return res
 
     def window_key_release(self, viewer, keyname):
         self.logger.debug("keyname=%s" % (keyname))
@@ -750,8 +750,8 @@ class BindingMapper(Callback.Callbacks):
             if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = 'keyup-%s' % (emap.name)
-                viewer.make_ui_callback_viewer(viewer, cbname, event,
-                                               last_x, last_y)
+                res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                                     last_x, last_y)
             else:
                 # TEMP: hack to get around the issue of how keynames
                 # are generated--shifted characters with no modifiers
@@ -759,9 +759,9 @@ class BindingMapper(Callback.Callbacks):
                 if idx in self.eventmap:
                     emap = self.eventmap[idx]
                     cbname = 'keyup-%s' % (emap.name)
-                    viewer.make_ui_callback_viewer(viewer, cbname, event,
-                                                   last_x, last_y)
-        return True
+                    res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                                         last_x, last_y)
+        return res
 
     def window_button_press(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d btncode=%s" % (data_x, data_y,
@@ -802,9 +802,9 @@ class BindingMapper(Callback.Callbacks):
             if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = '%s-down' % (emap.name)
-                viewer.make_ui_callback_viewer(viewer, cbname, event,
-                                               data_x, data_y)
-        return True
+                res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                                     data_x, data_y)
+        return res
 
     def window_motion(self, viewer, btncode, data_x, data_y):
 
@@ -840,9 +840,9 @@ class BindingMapper(Callback.Callbacks):
             if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = '%s-move' % (emap.name)
-                viewer.make_ui_callback_viewer(viewer, cbname, event,
-                                               data_x, data_y)
-        return True
+                res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                                     data_x, data_y)
+        return res
 
     def window_button_release(self, viewer, btncode, data_x, data_y):
         self.logger.debug("x,y=%d,%d button=%s" % (data_x, data_y,
@@ -882,9 +882,9 @@ class BindingMapper(Callback.Callbacks):
             if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = '%s-up' % (emap.name)
-                viewer.make_ui_callback_viewer(viewer, cbname, event,
-                                               data_x, data_y)
-        return True
+                res = viewer.make_ui_callback_viewer(viewer, cbname, event,
+                                                     data_x, data_y)
+        return res
 
     def window_scroll(self, viewer, direction, amount, data_x, data_y):
         trigger = 'sc_scroll'
@@ -914,8 +914,9 @@ class BindingMapper(Callback.Callbacks):
             if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = '%s-scroll' % (emap.name)
-                viewer.make_ui_callback_viewer(viewer, cbname, event)
-        return True
+                res = viewer.make_ui_callback_viewer(viewer, cbname, event)
+
+        return res
 
     def window_pinch(self, viewer, state, rot_deg, scale):
         btncode = 0
@@ -954,8 +955,9 @@ class BindingMapper(Callback.Callbacks):
             if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = '%s-pinch' % (emap.name)
-                viewer.make_ui_callback_viewer(viewer, cbname, event)
-        return True
+                res = viewer.make_ui_callback_viewer(viewer, cbname, event)
+
+        return res
 
     def window_pan(self, viewer, state, delta_x, delta_y):
         btncode = 0
@@ -993,5 +995,6 @@ class BindingMapper(Callback.Callbacks):
             if idx in self.eventmap:
                 emap = self.eventmap[idx]
                 cbname = '%s-pan' % (emap.name)
-                viewer.make_ui_callback_viewer(viewer, cbname, event)
-        return True
+                res = viewer.make_ui_callback_viewer(viewer, cbname, event)
+
+        return res
