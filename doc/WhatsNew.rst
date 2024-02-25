@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 5.0.0 (unreleased)
+Ver 5.0.0 (2024-02-24)
 ======================
 - Add Contrast and Brightness adjustments in "Preferences" plugin
 - Modifications to PIL backend
