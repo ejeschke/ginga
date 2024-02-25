@@ -80,6 +80,11 @@ class WidgetBase(Callback.Callbacks):
         # self.widget.raise_()
 
     def resize(self, width, height):
+        _wd, _ht = self.get_size()
+        if width < 0:
+            width = _wd
+        if height < 0:
+            height = _ht
         self.widget.resize(int(width), int(height))
 
     def show(self):

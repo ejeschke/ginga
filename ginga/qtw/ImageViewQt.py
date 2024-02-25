@@ -53,6 +53,7 @@ class RenderGraphicsView(QtGui.QGraphicsView):
         if pixmap is None:
             return
         x1, y1, x2, y2 = rect.getCoords()
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         width = x2 - x1 + 1
         height = y2 - y1 + 1
 
@@ -63,6 +64,7 @@ class RenderGraphicsView(QtGui.QGraphicsView):
     def resizeEvent(self, event):
         rect = self.geometry()
         x1, y1, x2, y2 = rect.getCoords()
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         width = x2 - x1 + 1
         height = y2 - y1 + 1
 
@@ -174,6 +176,8 @@ class ImageViewQt(ImageView.ImageViewBase):
         elif self.wtype == 'scene':
             self.scene = QtGui.QGraphicsScene()
             self.imgwin = RenderGraphicsView(self.scene)
+            self.imgwin.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+            self.imgwin.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         elif self.wtype == 'opengl':
             if not have_opengl:
                 raise ImageViewQtError("Please install 'pyopengl' to use render: '%s'" % (render))
@@ -221,9 +225,8 @@ class ImageViewQt(ImageView.ImageViewBase):
             # See http://stackoverflow.com/questions/3513788/qt-qgraphicsview-without-scrollbar
             width, height = width - 2, height - 2
             self.scene.setSceneRect(1, 1, width - 2, height - 2)
-
-        # tell renderer about our new size
-        #self.renderer.resize((width, height))
+            self.imgwin.fitInView(self.scene.sceneRect(),
+                                  QtCore.Qt.IgnoreAspectRatio)
 
         if self.wtype == 'opengl':
             pass
