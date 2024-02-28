@@ -62,10 +62,6 @@ class OnePointMixin(object):
     def scale_by_factors(self, factors):
         pass
 
-    def scale_by(self, scale_x, scale_y):
-        # TO BE DEPRECATED--use scale_by_factors instead
-        pass
-
 
 class TwoPointMixin(object):
 
@@ -200,10 +196,6 @@ class OnePointOneRadiusMixin(OnePointMixin):
     def scale_by_factors(self, factors):
         self.radius *= np.asarray(factors).max()
 
-    def scale_by(self, scale_x, scale_y):
-        # TO BE DEPRECATED--use scale_by_factors instead
-        self.radius *= max(scale_x, scale_y)
-
 
 class OnePointTwoRadiusMixin(OnePointMixin):
 
@@ -267,11 +259,6 @@ class OnePointTwoRadiusMixin(OnePointMixin):
         self.xradius *= factors[0]
         self.yradius *= factors[1]
 
-    def scale_by(self, scale_x, scale_y):
-        # TO BE DEPRECATED--use scale_by_factors instead
-        self.xradius *= scale_x
-        self.yradius *= scale_y
-
     def get_llur(self):
         points = (self.crdmap.offset_pt((self.x, self.y),
                                         (-self.xradius, -self.yradius)),
@@ -319,6 +306,12 @@ class PolygonMixin(object):
         return (a[0], a[1], b[0], b[1])
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
+        points = self.get_data_points()
+        if len(points) == 0:
+            return np.asarray([False] * len(pts))
+
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
         x_arr, y_arr = np.asarray(pts).T
@@ -328,8 +321,6 @@ class PolygonMixin(object):
 
         result = np.empty(y_arr.shape, dtype=bool)
         result.fill(False)
-
-        points = self.get_data_points()
 
         xj, yj = points[-1]
         for point in points:

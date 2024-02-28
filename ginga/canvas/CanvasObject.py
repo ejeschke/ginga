@@ -141,7 +141,17 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def contains_pt(self, pt):
         pts = np.asarray([pt])
-        return self.contains_pts(pts)[0]
+        res = self.contains_pts(pts)
+        if res is None:
+            # TODO: this *should* never be None, because contains_pts
+            # should always return an array (which might be 0 length,
+            # if there are no points)
+            # Need to figure out why we receive this at times
+            #raise ValueError("Received None for contains_pts")
+            return False
+        if len(res) == 0:
+            return False
+        return res[0]
 
     def select_contains_pt(self, viewer, pt):
         return self.contains_pt(pt)

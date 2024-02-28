@@ -187,6 +187,8 @@ class ImageP(OnePointMixin, CanvasObjectBase):
         return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         x_arr, y_arr = np.asarray(pts).T
         x1, y1, x2, y2 = self.get_coords()
 
