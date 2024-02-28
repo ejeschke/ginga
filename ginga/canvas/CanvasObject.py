@@ -141,7 +141,10 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def contains_pt(self, pt):
         pts = np.asarray([pt])
-        return self.contains_pts(pts)[0]
+        res = self.contains_pts(pts)
+        if res in (None, False, True) or len(res) == 0:
+            return res
+        return res[0]
 
     def select_contains_pt(self, viewer, pt):
         return self.contains_pt(pt)

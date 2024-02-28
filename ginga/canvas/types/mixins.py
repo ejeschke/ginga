@@ -319,6 +319,8 @@ class PolygonMixin(object):
         return (a[0], a[1], b[0], b[1])
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         # NOTE: we use a version of the ray casting algorithm
         # See: http://alienryderflex.com/polygon/
         x_arr, y_arr = np.asarray(pts).T
@@ -330,6 +332,8 @@ class PolygonMixin(object):
         result.fill(False)
 
         points = self.get_data_points()
+        if len(points) == 0:
+            return np.asarray([False] * len(pts))
 
         xj, yj = points[-1]
         for point in points:
