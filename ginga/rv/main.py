@@ -624,12 +624,13 @@ class ReferenceViewer(object):
             if plugin_name in self.plugin_dct:
                 spec = self.plugin_dct[plugin_name]
                 spec.enabled = True
+                spec.start = True
             else:
                 menu_name = f"{plugin_name} [G]"
                 spec = Bunch(name=plugin_name, module=plugin_name,
                              ptype='global', tab=plugin_name,
                              menu=menu_name, category="Custom",
-                             enabled=True,
+                             enabled=True, start=True,
                              workspace='right', pfx=pfx)
                 self.add_plugin_spec(spec)
 
