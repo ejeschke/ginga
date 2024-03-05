@@ -313,6 +313,10 @@ class Path(PolygonMixin, CanvasObjectBase):
         # This code is split out of contains_pts() so that it can
         # be called from BezierCurve with a different set of path
         # points.
+        if len(points) == 0:
+            return np.array([], dtype=bool)
+        if len(path_points) == 0:
+            return np.asarray([False] * len(points))
         p_start = path_points[0]
         points = np.asarray(points)
         contains = None
@@ -540,9 +544,13 @@ class BoxP(OnePointTwoRadiusMixin, CanvasObjectBase):
         return points
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
+        points = self.get_points()
+        if len(points) == 0:
+            return np.asarray([False] * len(pts))
         x_arr, y_arr = np.asarray(pts).T
 
-        points = self.get_points()
         x1, y1 = points[0]
         x2, y2 = points[2]
 
@@ -677,9 +685,13 @@ class SquareBoxP(OnePointOneRadiusMixin, CanvasObjectBase):
         return new_rot
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         x_arr, y_arr = np.asarray(pts).T
 
         points = self.get_points()
+        if len(points) == 0:
+            return np.asarray([False] * len(pts))
         x1, y1 = points[0]
         x2, y2 = points[2]
 
@@ -835,11 +847,15 @@ class EllipseP(OnePointTwoRadiusMixin, CanvasObjectBase):
         return points
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         x_arr, y_arr = np.asarray(pts).T
         x_arr, y_arr = (x_arr.astype(float, copy=False),
                         y_arr.astype(float, copy=False))
 
         points = self.get_points()
+        if len(points) == 0:
+            return np.asarray([False] * len(pts))
         # rotate point back to cartesian alignment for test
         xd, yd = points[0]
         xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
@@ -1047,6 +1063,8 @@ class TriangleP(OnePointTwoRadiusMixin, CanvasObjectBase):
         return (x1, y1, x2, y2)
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         x_arr, y_arr = np.asarray(pts).T
         x_arr, y_arr = (x_arr.astype(float, copy=False),
                         y_arr.astype(float, copy=False))
@@ -1169,6 +1187,8 @@ class CircleP(OnePointOneRadiusMixin, CanvasObjectBase):
         self.kind = 'circle'
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         x_arr, y_arr = np.asarray(pts).T
         x_arr, y_arr = (x_arr.astype(float, copy=False),
                         y_arr.astype(float, copy=False))
@@ -1306,6 +1326,8 @@ class PointP(OnePointOneRadiusMixin, CanvasObjectBase):
         OnePointOneRadiusMixin.__init__(self)
 
     def contains_pts(self, pts, radius=1.0):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         points = np.asarray(pts)
         pt = self.crdmap.to_data((self.x, self.y))
         contains = self.point_within_radius(points, pt, radius)
@@ -1473,6 +1495,8 @@ class RectangleP(TwoPointMixin, CanvasObjectBase):
         return points
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         x_arr, y_arr = np.asarray(pts).T
         x1, y1, x2, y2 = self.get_llur()
 
@@ -1606,7 +1630,11 @@ class LineP(TwoPointMixin, CanvasObjectBase):
         return points
 
     def contains_pts(self, pts, radius=1.0):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         points = self.get_points()
+        if len(points) == 0:
+            return np.asarray([False] * len(pts))
         contains = self.point_within_line(pts, points[0], points[1],
                                           radius)
         return contains
@@ -1731,6 +1759,8 @@ class RightTriangleP(TwoPointMixin, CanvasObjectBase):
         return points
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         x_arr, y_arr = np.asarray(pts).T
         x_arr, y_arr = (x_arr.astype(float, copy=False),
                         y_arr.astype(float, copy=False))
@@ -1840,6 +1870,8 @@ class XRange(RectangleP):
         self.kind = 'xrange'
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         x_arr, y_arr = np.asarray(pts).T
         x1, y1, x2, y2 = self.get_llur()
 
@@ -1935,6 +1967,8 @@ class YRange(RectangleP):
         self.kind = 'yrange'
 
     def contains_pts(self, pts):
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         x_arr, y_arr = np.asarray(pts).T
         x1, y1, x2, y2 = self.get_llur()
 

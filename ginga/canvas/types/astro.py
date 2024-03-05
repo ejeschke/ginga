@@ -626,6 +626,8 @@ class AnnulusMixin(object):
 
     def contains_pts(self, pts):
         """Containment test on arrays."""
+        if len(pts) == 0:
+            return np.array([], dtype=bool)
         obj1, obj2 = self.objects
         arg1 = obj2.contains_pts(pts)
         arg2 = np.logical_not(obj1.contains_pts(pts))

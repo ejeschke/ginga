@@ -294,8 +294,8 @@ class PluginManager(Callback.Callbacks):
                 if wsname is None:
                     in_ws = p_info.spec.get('workspace', None)
                     if in_ws is None:
-                        # to be deprecated
-                        in_ws = p_info.spec.ws
+                        # spec.ws to be deprecated
+                        in_ws = p_info.spec.get('ws', 'in:toplevel')
                 else:
                     in_ws = wsname
                 p_info.wsname = wsname
@@ -425,7 +425,8 @@ class PluginManager(Callback.Callbacks):
             if in_ws is None:
                 in_ws = p_info.spec.get('workspace', None)
                 if in_ws is None:
-                    in_ws = 'in:toplevel'
+                    # spec.ws to be deprecated
+                    in_ws = p_info.spec.get('ws', 'in:toplevel')
 
             if in_ws == 'in:toplevel':
                 bnch = self.ds.add_widget_as_toplevel(p_info.tabname, vbox)
