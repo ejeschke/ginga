@@ -730,22 +730,10 @@ class Desktop(Callback.Callbacks):
 
             if rec.kind in ('ws',):
                 # record ws type
-                # TODO: record positions of subwindows
                 wstype = rec.ws.wstype
                 d = dict(wstype=wstype)
-                cd = dict()
-                for child in rec.ws.nb.get_children():
-                    if child.get_widget() is None:
-                        continue
-                    title = child.extdata.get('tab_title', None)
-                    mdi_pos = child.extdata.get('mdi_pos', (0, 0))
-                    size = child.extdata.get('mdi_size', None)
-                    if size is None:
-                        size = child.get_size()
-                    if title is not None:
-                        cd[title] = dict(title=title, mdi_pos=mdi_pos,
-                                         size=size)
-                d['child_attribs'] = cd
+                cfg_d = rec.ws.get_configuration()
+                d['child_attribs'] = cfg_d['tabs']
                 rec.params.update(d)
 
             if rec.kind == 'top':
@@ -1040,6 +1028,29 @@ class Workspace(Widgets.WidgetBase):
 
     def remove_tab(self, child):
         self.nb.remove(child)
+
+    def get_configuration(self):
+        """Return the configuration of this workspace as a dictionary."""
+        cd = dict()
+        for child in self.nb.get_children():
+            if child.get_widget() is None:
+                continue
+            title = child.extdata.get('tab_title', None)
+            mdi_pos = child.extdata.get('mdi_pos', (0, 0))
+            size = child.extdata.get('mdi_size', None)
+            if size is None:
+                size = child.get_size()
+            if title is not None:
+                cd[title] = dict(title=title, mdi_pos=mdi_pos,
+                                 size=size)
+        res = dict(wsname=self.name, wstype=self.wstype, tabs=cd)
+        return res
+
+    def record_positions(self):
+        """Record our placement and size of child windows in the workspace."""
+        res = self.get_configuration()
+        self.child_catalog.update(res['tabs'])
+        return res
 
 
 class SymmetricGridWidget(Widgets.GridBox):
