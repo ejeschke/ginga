@@ -28,4 +28,6 @@ else:
     ginga_home = os.path.join(home, '.ginga')
 
 
-# END
+def set_home(dirpath):
+    global ginga_home
+    ginga_home = dirpath

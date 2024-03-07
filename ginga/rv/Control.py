@@ -167,7 +167,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self._rsize = None
 
         self.filesel = None
-        self.menubar = None
         self.gui_dialog_lock = threading.RLock()
         self.gui_dialog_list = []
         self.w.root = None
@@ -389,10 +388,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         for spec in self.plugins:
             name = spec.setdefault('name', spec.get('klass', spec.module))
-            hidden = spec.get('hidden', False)
-            if not hidden:
-                self.add_plugin_menu(name, spec)
-
             start = spec.get('start', True)
             # for now only start global plugins that have start==True
             # channels are not yet created by this time
@@ -1691,10 +1686,6 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             ws = self.ds.get_ws(wsname)
             self.init_workspace(ws)
 
-        if 'menu' in self.w:
-            menuholder = self.w['menu']
-            self.w.menubar = self.add_menus(menuholder)
-
         self.add_dialogs()
 
         if 'status' in self.w:
@@ -1715,108 +1706,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 newname.append(c)
         return pfx + ''.join(newname)
 
-    def add_menus(self, holder):
-
-        menubar = Widgets.Menubar()
-        self.menubar = menubar
-        holder.add_widget(menubar, stretch=1)
-
-        # create a File pulldown menu, and add it to the menu bar
-        filemenu = menubar.add_name("File")
-
-        item = filemenu.add_name("Load Image")
-        item.add_callback('activated', lambda *args: self.gui_load_file())
-
-        item = filemenu.add_name("Remove Image")
-        item.add_callback("activated",
-                          lambda *args: self.remove_current_image())
-
-        filemenu.add_separator()
-
-        item = filemenu.add_name("Quit")
-        item.add_callback('activated', self.window_close)
-
-        # create a Channel pulldown menu, and add it to the menu bar
-        chmenu = menubar.add_name("Channel")
-
-        item = chmenu.add_name("Add Channel")
-        item.add_callback('activated', lambda *args: self.gui_add_channel())
-
-        item = chmenu.add_name("Add Channels")
-        item.add_callback('activated', lambda *args: self.gui_add_channels())
-
-        item = chmenu.add_name("Delete Channel")
-        item.add_callback('activated', lambda *args: self.gui_delete_channel())
-
-        # create a Window pulldown menu, and add it to the menu bar
-        wsmenu = menubar.add_name("Workspace")
-
-        item = wsmenu.add_name("Add Workspace")
-        item.add_callback('activated', lambda *args: self.gui_add_ws())
-
-        # # create a Option pulldown menu, and add it to the menu bar
-        # optionmenu = menubar.add_name("Option")
-
-        # create a Plugins pulldown menu, and add it to the menu bar
-        plugmenu = menubar.add_name("Plugins")
-        self.w.menu_plug = plugmenu
-
-        # create a Help pulldown menu, and add it to the menu bar
-        helpmenu = menubar.add_name("Help")
-
-        item = helpmenu.add_name("About")
-        item.add_callback('activated',
-                          lambda *args: self.banner())
-
-        item = helpmenu.add_name("Documentation")
-        item.add_callback('activated', lambda *args: self.help())
-
-        return menubar
-
-    def add_menu(self, name):
-        """Add a menu with name `name` to the global menu bar.
-        Returns a menu widget.
-        """
-        if self.menubar is None:
-            raise ValueError("No menu bar configured")
-        return self.menubar.add_name(name)
-
-    def get_menu(self, name):
-        """Get the menu with name `name` from the global menu bar.
-        Returns a menu widget.
-        """
-        if self.menubar is None:
-            raise ValueError("No menu bar configured")
-        return self.menubar.get_menu(name)
-
     def add_dialogs(self):
         if hasattr(GwHelp, 'FileSelection'):
             self.filesel = GwHelp.FileSelection(self.w.root.get_widget(),
                                                 all_at_once=True)
-
-    def add_plugin_menu(self, name, spec):
-        # NOTE: self.w.menu_plug is a ginga.Widgets wrapper
-        if 'menu_plug' not in self.w:
-            return
-        if not spec.get('enabled', True):
-            return
-        category = spec.get('category', None)
-        categories = None
-        if category is not None:
-            categories = category.split('.')
-        menuname = spec.get('menu', spec.get('tab', name))
-
-        menu = self.w.menu_plug
-        if categories is not None:
-            for catname in categories:
-                try:
-                    menu = menu.get_menu(catname)
-                except KeyError:
-                    menu = menu.add_menu(catname)
-
-        item = menu.add_name(menuname)
-        item.add_callback('activated',
-                          lambda *args: self.start_plugin(name, spec))
 
     def add_statusbar(self, holder):
         self.w.status = Widgets.StatusBar()

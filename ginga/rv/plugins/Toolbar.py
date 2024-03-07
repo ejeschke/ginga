@@ -48,21 +48,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         fv.add_callback('add-image-info', self._ch_image_added_cb)
         fv.add_callback('remove-image-info', self._ch_image_removed_cb)
 
-    def build_gui(self, container):
-        top = Widgets.VBox()
-        top.set_border_width(0)
-
-        vbox, sw, orientation = Widgets.get_oriented_box(container,
-                                                         orientation=self.settings.get('orientation', None))
-        self.orientation = orientation
-        vbox.set_spacing(0)
-        vbox.set_border_width(0)
-
-        tb = Widgets.Toolbar(orientation=orientation)
-
-        for tup in (
-            #("Load", 'button', 'fits_open_48', "Open an image file",
-            #None),
+        self.layout = [
+            # (Name, type, icon, tooltip)
             ("FlipX", 'toggle', 'flip_x', "Flip image in X axis",
              self.flipx_cb),
             ("FlipY", 'toggle', 'flip_y', "Flip image in Y axis",
@@ -79,10 +66,6 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             ("OrientLH", 'button', 'orient_ne', "Orient image N=Up E=Left",
              self.orient_lh_cb),
             ("---",),
-            ## ("Prev", 'button', 'prev', "Go to previous channel",
-            ##  lambda w: self.fv.prev_channel()),
-            ## ("Next", 'button', 'next', "Go to next channel",
-            ##  lambda w: self.fv.next_channel()),
             ("Up", 'button', 'up', "Go to previous image in channel",
              lambda w: self.fv.prev_img()),
             ("Down", 'button', 'down', "Go to next image in channel",
@@ -140,8 +123,14 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             ("Header", 'button', 'tags', "View image metadata (Header plugin)",
              lambda w: self.start_global_plugin_cb('Header')),
             ("ZoomPlugin", 'button', 'microscope', "Magnify detail (Zoom plugin)",
-             lambda w: self.start_global_plugin_cb('Zoom')),
-            ):  # noqa
+             lambda w: self.start_global_plugin_cb('Zoom'))]
+
+    def build_gui(self, container):
+        self.orientation = Widgets.get_orientation(container)
+        tb = Widgets.Toolbar(orientation=self.orientation)
+        self.w.toolbar = tb
+
+        for tup in self.layout:
 
             name = tup[0]
             if name == '---':
@@ -151,7 +140,9 @@ class Toolbar(GingaPlugin.GlobalPlugin):
                 btn = Widgets.make_widget(name, tup[1])
                 tb.add_widget(btn)
             else:
-                iconpath = os.path.join(self.fv.iconpath, "%s.svg" % (tup[2]))
+                iconpath = tup[2]
+                if not iconpath.startswith(os.path.sep):
+                    iconpath = os.path.join(self.fv.iconpath, "%s.svg" % (iconpath))
                 btn = tb.add_action(None, toggle=(tup[1] == 'toggle'),
                                     iconpath=iconpath, iconsize=(24, 24))
             if tup[3]:
@@ -162,18 +153,8 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             # add to our widget dict
             self.w[Widgets.name_mangle(name, pfx='btn_')] = btn
 
-            # add widget to toolbar
-            #tb.add_widget(btn)
+        container.add_widget(tb, stretch=0)
 
-        hbox = Widgets.HBox()
-        hbox.add_widget(tb, stretch=0)
-        # stretcher
-        hbox.add_widget(Widgets.Label(''), stretch=1)
-        #sw.set_widget(tb)
-
-        #top.add_widget(sw, stretch=1)
-
-        container.add_widget(hbox, stretch=0)
         self.gui_up = True
 
     # CALLBACKS

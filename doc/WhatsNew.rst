@@ -8,6 +8,9 @@ Ver 5.1.0 (unreleased)
   automatically
 - Improved error checking on contains_pts() method for canvas items
 - Removed references to distutils module, deprecated in python 3.12
+- Made menubar a plugin; this allows very flexible menu configuration
+  for users implementing their own variations on the reference viewer;
+  NOTE: if you don't see Ginga menus, delete your $HOME/.ginga/layout*
 
 Ver 5.0.0 (2024-02-24)
 ======================

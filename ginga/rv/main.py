@@ -31,7 +31,8 @@ __all__ = ['ReferenceViewer']
 
 default_layout = ['seq', {},
                    ['vbox', dict(name='top', width=1400, height=700),  # noqa
-                    dict(row=['hbox', dict(name='menu')],
+                    dict(row=['ws', dict(name='menubar', wstype='stack',
+                                         group=99)],
                          stretch=0),
                     dict(row=['hpanel', dict(name='hpnl'),
                      ['ws', dict(name='left', wstype='tabs',  # noqa
@@ -73,6 +74,9 @@ default_layout = ['seq', {},
 
 plugins = [
     # hidden plugins, started at program initialization
+    Bunch(module='Menubar', klass='GingaMenubar', workspace='menubar',
+          start=True, hidden=True, category='System', menu="Menubar [G]",
+          ptype='global', enabled=True),
     Bunch(module='Operations', workspace='operations', start=True,
           hidden=True, category='System', menu="Operations [G]",
           ptype='global', enabled=True),
@@ -200,6 +204,10 @@ plugins = [
           start=False, menu="PluginConfig [G]", category='Debug',
           ptype='global', enabled=True),
 ]
+
+
+def get_plugin_spec(module=None):
+    return [spec for spec in plugins if spec['module'] == module]
 
 
 class ReferenceViewer(object):
