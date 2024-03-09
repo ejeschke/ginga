@@ -2,6 +2,12 @@
 What's New
 ++++++++++
 
+Ver 5.0.1 (unreleased)
+======================
+- Fixed an issue where --modules option did not start a global plugin
+  automatically
+- Improved error checking on contains_pts() method for canvas items
+
 Ver 5.0.0 (2024-02-24)
 ======================
 - Add Contrast and Brightness adjustments in "Preferences" plugin
