@@ -140,8 +140,8 @@ class ImageViewGtk(ImageView.ImageViewBase):
                 return
             except Exception as e:
                 # uncomment to troubleshoot
-                ## self.logger.error("Error choosing renderer '{}': {}".format(name, e),
-                ##                   exc_info=True)
+                # self.logger.error("Error choosing renderer '{}': {}".format(name, e),
+                #                   exc_info=True)
                 continue
 
         raise ImageViewGtkError("No valid renderers available: {}".format(str(self.possible_renderers)))

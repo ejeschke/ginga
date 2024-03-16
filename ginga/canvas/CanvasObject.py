@@ -160,39 +160,34 @@ class CanvasObjectBase(Callback.Callbacks):
         i1, j1, i2, j2 = self.calc_vertexes(x1, y1, x2, y2)
 
         alpha = getattr(self, 'alpha', 1.0)
-        cr.set_fill(self.color, alpha=alpha)
-        cr.draw_polygon(((x2, y2), (i1, j1), (i2, j2)))
-        cr.set_fill(None)
+        fill = cr.get_fill(self.color, alpha=alpha)
+        cr.draw_polygon(((x2, y2), (i1, j1), (i2, j2)), fill=fill)
 
     def draw_caps(self, cr, cap, points, radius=None):
-        i = 0
+        alpha = getattr(self, 'alpha', 1.0)
+        bfill = cr.get_fill('black', alpha=alpha)
+        if radius is None:
+            radius = self.cap_radius
         for pt in points:
             cx, cy = pt[:2]
-            if radius is None:
-                radius = self.cap_radius
-            alpha = getattr(self, 'alpha', 1.0)
             if cap == 'ball':
                 color = getattr(self, 'color', 'black')
                 # Draw edit control points in different colors than the others
                 if isinstance(pt, EditPoint):
-                    cr.set_fill('black', alpha=alpha)
                     r = cr.renderer.calc_const_len(radius + 2.0)
-                    cr.draw_circle(cx, cy, r)
+                    cr.draw_circle(cx, cy, r, fill=bfill)
 
                     color = pt.edit_color
 
                 cr.set_fill(color, alpha=alpha)
                 r = cr.renderer.calc_const_len(radius)
-                cr.draw_circle(cx, cy, r)
-                #cr.set_fill(self, None)
-            i += 1
+                cr.draw_circle(cx, cy, r, fill=cr.fill)
 
     def draw_edit(self, cr, viewer):
         bbox = self.get_bbox()
         cpoints = self.get_cpoints(viewer, points=bbox, no_rotate=True)
-        cr.set_fill(None)
-        cr.set_line(color='cyan', style='dash')
-        cr.draw_polygon(cpoints)
+        bline = cr.set_line(color='cyan', linewidth=1, linestyle='dash')
+        cr.draw_polygon(cpoints, line=bline)
 
         points = self.get_edit_points(viewer)
         cpoints = self.get_cpoints(viewer, points=points)
@@ -216,7 +211,7 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def calc_vertexes(self, start_cx, start_cy, end_cx, end_cy,
                       arrow_length=10, arrow_degrees=0.35):
-
+        # TODO: make adjustments to allow for linewidth
         angle = np.arctan2(end_cy - start_cy, end_cx - start_cx) + np.pi
 
         cx1 = end_cx + arrow_length * np.cos(angle - arrow_degrees)
@@ -235,9 +230,9 @@ class CanvasObjectBase(Callback.Callbacks):
 
     def scale_font(self, viewer):
         scale = viewer.get_scale_max()
-        basesize = getattr(self, 'fontsize', 10.0)
+        basesize = getattr(self, 'fontsize', 12.0)
         if basesize is None:
-            basesize = 10.0
+            basesize = 12.0
         min_size = getattr(self, 'fontsize_min', 2.0)
         n = 1.4
         fontsize = max(min_size, basesize + np.log(scale) / np.log(n))

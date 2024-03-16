@@ -28,7 +28,7 @@ class ColorBar(CanvasObjectBase):
             Param(name='showrange', type=_bool,
                   default=True, valid=[False, True],
                   description="Show the range in the colorbar"),
-            Param(name='font', type=str, default='fixed',
+            Param(name='font', type=str, default='Roboto',
                   description="Font family for text"),
             Param(name='fontsize', type=float, default=8.0,
                   min=8, max=72,
@@ -54,7 +54,7 @@ class ColorBar(CanvasObjectBase):
         ]
 
     def __init__(self, height=36, offset=0, side='bottom', showrange=True,
-                 font='fixed', fontsize=8,
+                 font='Roboto', fontsize=8,
                  color='black', bgcolor='white',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):
@@ -82,15 +82,15 @@ class ColorBar(CanvasObjectBase):
         loval, hival = viewer.get_cut_levels()
 
         cr = viewer.renderer.setup_cr(self)
+        font = cr.get_font(self.font, fontsize=self.fontsize)
+        fill = cr.get_fill(color=self.color, alpha=self.alpha)
         tr = viewer.tform['window_to_native']
 
         # Calculate reasonable spacing for range numbers
-        cr.set_font(self.font, self.fontsize, color=self.color,
-                    alpha=self.alpha)
         hitxt = "%.4g" % (hival)
         lotxt = "%.4g" % (loval)
-        txt_wdh, txt_hth = cr.text_extents(hitxt)
-        txt_wdl, txt_htl = cr.text_extents(lotxt)
+        txt_wdh, txt_hth = cr.text_extents(hitxt, font=font)
+        txt_wdl, txt_htl = cr.text_extents(lotxt, font=font)
         txt_wd = max(txt_wdh, txt_wdl)
         avg_pixels_per_range_num = self.t_spacing + txt_wd
         scale_ht = 0
@@ -148,7 +148,8 @@ class ColorBar(CanvasObjectBase):
 
             cx1, cy1, cx2, cy2 = x, y_base, x + wd, y_base + clr_ht
             cr.draw_polygon(tr.to_(((cx1, cy1), (cx2, cy1),
-                                    (cx2, cy2), (cx1, cy2))))
+                                    (cx2, cy2), (cx1, cy2))),
+                            line=cr.line, fill=cr.fill)
 
             # Draw range scale if we are supposed to
             if self.showrange and i in _interval:
@@ -175,26 +176,25 @@ class ColorBar(CanvasObjectBase):
             x = 0
             cx1, cy1, cx2, cy2 = x, y_top - scale_ht, x + pxwd, y_top
             cp = tr.to_(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
-            cr.draw_polygon(cp)
+            cr.draw_polygon(cp, line=cr.line, fill=cr.fill)
 
-            cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
-            cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
+            tline = cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
+            cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1], line=tline)
 
-            cr.set_font(self.font, self.fontsize, color=self.color,
-                        alpha=self.alpha)
             for (cx, cy, cyy, text) in range_pts:
                 cp = tr.to_(((cx, cy), (cx, cy + self.tick_ht), (cx, cyy - 2)))
                 # tick
-                cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
+                cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1],
+                             line=tline)
                 # number
-                cr.draw_text(cp[2][0], cp[2][1], text)
+                cr.draw_text(cp[2][0], cp[2][1], text, font=font, fill=fill)
 
         # draw optional border
         if self.linewidth > 0:
-            cr.set_fill(self.bgcolor, alpha=0.0)
+            cr.set_line(color=self.bgcolor, linewidth=self.linewidth)
             cx1, cy1, cx2, cy2 = 0, y_base, wd, y_top
             cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
-            cr.draw_polygon(tr.to_(cpoints))
+            cr.draw_polygon(tr.to_(cpoints), line=cr.line)
 
 
 class DrawableColorBarP(RectangleP):
@@ -218,7 +218,7 @@ class DrawableColorBarP(RectangleP):
             Param(name='showrange', type=_bool,
                   default=True, valid=[False, True],
                   description="Show the range in the colorbar"),
-            Param(name='font', type=str, default='fixed',
+            Param(name='font', type=str, default='Roboto',
                   description="Font family for text"),
             Param(name='fontsize', type=float, default=8,
                   min=8, max=72,
@@ -244,7 +244,7 @@ class DrawableColorBarP(RectangleP):
         ]
 
     def __init__(self, p1, p2, showrange=True,
-                 font='fixed', fontsize=8,
+                 font='Roboto', fontsize=8,
                  color='black', bgcolor='white',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):
@@ -269,11 +269,6 @@ class DrawableColorBarP(RectangleP):
         cr = viewer.renderer.setup_cr(self)
 
         cpoints = self.get_cpoints(viewer)
-
-        # draw optional border
-        if self.linewidth > 0:
-            cr.set_line(self.color, alpha=self.alpha)
-            cr.draw_polygon(cpoints)
         cx1, cy1 = cpoints[0]
         cx2, cy2 = cpoints[2]
         cx1, cy1, cx2, cy2 = self.swapxy(cx1, cy1, cx2, cy2)
@@ -281,13 +276,14 @@ class DrawableColorBarP(RectangleP):
 
         loval, hival = viewer.get_cut_levels()
 
+        font = cr.get_font(self.font, fontsize=self.fontsize)
+        fill = cr.get_fill(color=self.color, alpha=self.alpha)
+
         # Calculate reasonable spacing for range numbers
-        cr.set_font(self.font, self.fontsize, color=self.color,
-                    alpha=self.alpha)
         hitxt = "%.4g" % (hival)
         lotxt = "%.4g" % (loval)
-        txt_wdh, txt_hth = cr.text_extents(hitxt)
-        txt_wdl, txt_htl = cr.text_extents(lotxt)
+        txt_wdh, txt_hth = cr.text_extents(hitxt, font=font)
+        txt_wdl, txt_htl = cr.text_extents(lotxt, font=font)
         txt_wd = max(txt_wdh, txt_wdl)
         avg_pixels_per_range_num = self.t_spacing + txt_wd
         scale_ht = 0
@@ -341,7 +337,8 @@ class DrawableColorBarP(RectangleP):
 
             cx1, cy1, cx2, cy2 = x, y_base, x + wd, y_base + clr_ht
             cr.draw_polygon(((cx1, cy1), (cx2, cy1),
-                             (cx2, cy2), (cx1, cy2)))
+                             (cx2, cy2), (cx1, cy2)),
+                            line=cr.line, fill=cr.fill)
 
             # Draw range scale if we are supposed to
             if self.showrange and i in _interval:
@@ -367,19 +364,25 @@ class DrawableColorBarP(RectangleP):
 
             cx1, cy1, cx2, cy2 = x_base, y_top - scale_ht, x_top, y_top
             cp = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
-            cr.draw_polygon(cp)
+            cr.draw_polygon(cp, line=cr.line, fill=cr.fill)
 
-            cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
-            cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
+            tline = cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
+            cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1], line=tline)
 
-            cr.set_font(self.font, self.fontsize, color=self.color,
-                        alpha=self.alpha)
             for (cx, cy, cyy, text) in range_pts:
                 cp = ((cx, cy), (cx, cy + self.tick_ht), (cx, cyy - 2))
                 # tick
-                cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
+                cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1],
+                             line=tline)
                 # number
-                cr.draw_text(cp[2][0], cp[2][1], text)
+                cr.draw_text(cp[2][0], cp[2][1], text, font=font, fill=fill)
+
+        # draw optional border
+        if self.linewidth > 0:
+            cr.set_line(color=self.bgcolor, linewidth=self.linewidth)
+            cx1, cy1, cx2, cy2 = x_base, y_base, x_top, y_top
+            cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
+            cr.draw_polygon(cpoints, line=cr.line)
 
 
 class DrawableColorBar(DrawableColorBarP):
@@ -389,7 +392,7 @@ class DrawableColorBar(DrawableColorBarP):
         return cls(cxt.start_x, cxt.start_y, cxt.x, cxt.y, **cxt.drawparams)
 
     def __init__(self, x1, y1, x2, y2, showrange=True,
-                 font='fixed', fontsize=8,
+                 font='Roboto', fontsize=8,
                  color='black', bgcolor='white',
                  linewidth=1, linestyle='solid', alpha=1.0,
                  fillalpha=1.0, rgbmap=None, optimize=True, **kwdargs):
@@ -422,7 +425,7 @@ class ModeIndicator(CanvasObjectBase):
             Param(name='offset', type=int, default=10,
                   min=0, max=200, widget='spinbutton', incr=1,
                   description="Offset in pixels from the right and bottom of the window"),
-            Param(name='font', type=str, default='Sans Serif',
+            Param(name='font', type=str, default='Roboto',
                   description="Font family for text"),
             Param(name='fontsize', type=float, default=None,
                   min=8, max=72,
@@ -438,7 +441,7 @@ class ModeIndicator(CanvasObjectBase):
                   description="Opacity of fill"),
         ]
 
-    def __init__(self, corner='lr', offset=10, font='Sans Serif', fontsize=12,
+    def __init__(self, corner='lr', offset=10, font='Roboto', fontsize=12,
                  color='yellow', alpha=1.0, fillalpha=1.0, **kwdargs):
         super(ModeIndicator, self).__init__(corner=corner, offset=offset,
                                             font=font, fontsize=fontsize,
@@ -468,9 +471,9 @@ class ModeIndicator(CanvasObjectBase):
 
         color = 'cyan' if mode == 'meta' else self.color
 
-        cr.set_font(self.font, self.fontsize, color=color,
-                    alpha=self.alpha)
-        txt_wd, txt_ht = cr.text_extents(text)
+        font = cr.get_font(self.font, fontsize=self.fontsize)
+        fg_fill = cr.get_fill(color=color, alpha=self.alpha)
+        txt_wd, txt_ht = cr.text_extents(text, font=font)
 
         # draw bg
         box_wd, box_ht = 2 * self.xpad + txt_wd, 2 * self.ypad + txt_ht
@@ -483,19 +486,19 @@ class ModeIndicator(CanvasObjectBase):
         if self.corner == 'ul':
             x_base, y_base = self.offset, self.offset
 
-        cr.set_line('black', linewidth=0)
-        cr.set_fill('black', alpha=self.fillalpha)
+        bg_fill = cr.get_fill('black', alpha=self.fillalpha)
 
         cx1, cy1, cx2, cy2 = x_base, y_base, x_base + box_wd, y_base + box_ht
         cr.draw_polygon(tr.to_(((cx1, cy1), (cx2, cy1),
-                                (cx2, cy2), (cx1, cy2))))
+                                (cx2, cy2), (cx1, cy2))), fill=bg_fill)
 
         # draw fg
-        cr.set_line(color=color, linewidth=1, alpha=self.alpha)
+        #cr.set_line(color=color, linewidth=0, alpha=self.alpha)
+        #cr.set_fill(color=color, alpha=self.alpha)
 
         cx, cy = x_base + self.xpad, y_base + txt_ht + self.ypad
         cx, cy = tr.to_((cx, cy))
-        cr.draw_text(cx, cy, text)
+        cr.draw_text(cx, cy, text, font=font, fill=fg_fill)
 
 
 class FocusIndicator(CanvasObjectBase):
@@ -549,11 +552,11 @@ class FocusIndicator(CanvasObjectBase):
 
         # draw a rectangle around the perimeter
         cr.set_line(color=self.color, linewidth=lw, alpha=self.alpha,
-                    style=self.linestyle)
+                    linestyle=self.linestyle)
 
         cpoints = ((off, off), (wd - off, off), (wd - off, ht - off),
                    (off, ht - off))
-        cr.draw_polygon(tr.to_(cpoints))
+        cr.draw_polygon(tr.to_(cpoints), line=cr.line)
 
     def focus_cb(self, viewer, onoff):
         has_focus = self.has_focus

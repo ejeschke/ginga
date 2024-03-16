@@ -58,12 +58,24 @@ class TextP(OnePointMixin, CanvasObjectBase):
             Param(name='fontscale', type=_bool,
                   default=False, valid=[False, True],
                   description="Scale font with scale of viewer"),
+            Param(name='linewidth', type=int, default=0,
+                  min=0, max=20, widget='spinbutton', incr=1,
+                  description="Width of outline"),
             Param(name='color',
                   valid=colors_plus_none, type=_color, default='yellow',
                   description="Color of text"),
             Param(name='alpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of text"),
+            Param(name='fill', type=_bool,
+                  default=True, valid=[False, True],
+                  description="Fill the background"),
+            Param(name='fillcolor', default=None,
+                  valid=colors_plus_none, type=_color,
+                  description="Color of fill"),
+            Param(name='fillalpha', type=float, default=1.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of fill"),
             Param(name='rot_deg', type=float, default=0.0,
                   min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
                   description="Rotation of text"),
@@ -78,14 +90,17 @@ class TextP(OnePointMixin, CanvasObjectBase):
 
     def __init__(self, pt, text='EDIT ME',
                  font='Sans Serif', fontsize=None, fontscale=False,
-                 fontsize_min=6.0, fontsize_max=None,
-                 color='yellow', alpha=1.0, rot_deg=0.0,
-                 showcap=False, **kwdargs):
+                 fill=True, fontsize_min=6.0, fontsize_max=None,
+                 color='yellow', alpha=1.0, fillcolor=None, fillalpha=1.0,
+                 linewidth=0, rot_deg=0.0, showcap=False, **kwdargs):
         self.kind = 'text'
+        if fillcolor is None:
+            fillcolor = color
         points = np.asarray([pt], dtype=float)
         super(TextP, self).__init__(points=points, color=color, alpha=alpha,
-                                    font=font, fontsize=fontsize,
-                                    fontscale=fontscale,
+                                    fillcolor=fillcolor, fillalpha=fillalpha,
+                                    fill=fill, font=font, fontsize=fontsize,
+                                    fontscale=fontscale, linewidth=linewidth,
                                     fontsize_min=fontsize_min,
                                     fontsize_max=fontsize_max,
                                     text=text, rot_deg=rot_deg,
@@ -155,11 +170,12 @@ class TextP(OnePointMixin, CanvasObjectBase):
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
-        cr.set_font_from_shape(self)
+        cr.initialize_from_shape(self, line=True, fill=True, font=True)
 
         x, y = self.get_data_points()[0]
         cx, cy = viewer.get_canvas_xy(x, y)
-        cr.draw_text(cx, cy, self.text, rot_deg=self.rot_deg)
+        cr.draw_text(cx, cy, self.text, rot_deg=self.rot_deg,
+                     font=cr.font, fill=cr.fill, line=cr.line)
 
 
 class Text(TextP):
@@ -170,13 +186,17 @@ class Text(TextP):
 
     def __init__(self, x, y, text='EDIT ME',
                  font='Sans Serif', fontsize=None, fontscale=False,
-                 fontsize_min=6.0, fontsize_max=None,
-                 color='yellow', alpha=1.0, rot_deg=0.0,
-                 showcap=False, **kwdargs):
+                 fontsize_min=6.0, fontsize_max=None, fill=True,
+                 color='yellow', alpha=1.0, fillcolor=None, fillalpha=1.0,
+                 linewidth=0, rot_deg=0.0, showcap=False, **kwdargs):
+        if fillcolor is None:
+            fillcolor = color
         TextP.__init__(self, (x, y), text=text, color=color, alpha=alpha,
+                       fill=fill, fillcolor=fillcolor, fillalpha=fillalpha,
                        font=font, fontsize=fontsize, fontscale=fontscale,
                        fontsize_min=fontsize_min, fontsize_max=fontsize_max,
-                       rot_deg=rot_deg, showcap=showcap, **kwdargs)
+                       linewidth=linewidth, rot_deg=rot_deg, showcap=showcap,
+                       **kwdargs)
 
 
 class Polygon(PolygonMixin, CanvasObjectBase):
@@ -251,10 +271,11 @@ class Polygon(PolygonMixin, CanvasObjectBase):
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
+        cr.initialize_from_shape(self, line=True, fill=True)
 
         cpoints = self.get_cpoints(viewer)
 
-        cr.draw_polygon(cpoints)
+        cr.draw_polygon(cpoints, line=cr.line, fill=cr.fill)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -352,7 +373,8 @@ class Path(PolygonMixin, CanvasObjectBase):
         cpoints = self.get_cpoints(viewer)
 
         cr = viewer.renderer.setup_cr(self)
-        cr.draw_path(cpoints)
+        cr.initialize_from_shape(self, line=True)
+        cr.draw_path(cpoints, line=cr.line)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -435,12 +457,13 @@ class BezierCurve(Path):
         cpoints = self.get_cpoints(viewer)
 
         cr = viewer.renderer.setup_cr(self)
+        cr.initialize_from_shape(self, line=True)
         if len(cpoints) < 4:
             # until we have 4 points, we cannot draw a quadradic bezier curve
-            cr.draw_path(cpoints)
+            cr.draw_path(cpoints, line=cr.line)
         else:
             if hasattr(cr, 'draw_bezier_curve'):
-                cr.draw_bezier_curve(cpoints)
+                cr.draw_bezier_curve(cpoints, line=cr.line)
 
             else:
                 # No Bezier support in this backend, so calculate intermediate
@@ -448,7 +471,7 @@ class BezierCurve(Path):
                 #steps = max(*viewer.get_window_size())
                 steps = bezier.bezier_steps
                 ipoints = list(bezier.get_4pt_bezier(steps, cpoints))
-                cr.draw_path(ipoints)
+                cr.draw_path(ipoints, line=cr.line)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -568,7 +591,8 @@ class BoxP(OnePointTwoRadiusMixin, CanvasObjectBase):
         cpoints = self.get_cpoints(viewer)
 
         cr = viewer.renderer.setup_cr(self)
-        cr.draw_polygon(cpoints)
+        cr.initialize_from_shape(self, line=True, fill=True)
+        cr.draw_polygon(cpoints, line=cr.line, fill=cr.fill)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -732,7 +756,8 @@ class SquareBoxP(OnePointOneRadiusMixin, CanvasObjectBase):
         cpoints = self.get_cpoints(viewer)
 
         cr = viewer.renderer.setup_cr(self)
-        cr.draw_polygon(cpoints)
+        cr.initialize_from_shape(self, line=True, fill=True)
+        cr.draw_polygon(cpoints, line=cr.line, fill=cr.fill)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -916,6 +941,7 @@ class EllipseP(OnePointTwoRadiusMixin, CanvasObjectBase):
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
+        cr.initialize_from_shape(self, line=True, fill=True)
 
         if hasattr(cr, 'draw_ellipse'):
             # <- backend can draw rotated ellipses
@@ -924,13 +950,14 @@ class EllipseP(OnePointTwoRadiusMixin, CanvasObjectBase):
             cx, cy = cpoints[0]
             cxradius = abs(cpoints[1][0] - cx)
             cyradius = abs(cpoints[2][1] - cy)
-            cr.draw_ellipse(cx, cy, cxradius, cyradius, self.rot_deg)
+            cr.draw_ellipse(cx, cy, cxradius, cyradius, self.rot_deg,
+                            line=cr.line, fill=cr.fill)
 
         elif hasattr(cr, 'draw_ellipse_bezier'):
             # <- backend can draw Bezier curves
             points = self.get_bezier_pts(self.get_points())
             cp = self.get_cpoints(viewer, points=points)
-            cr.draw_ellipse_bezier(cp)
+            cr.draw_ellipse_bezier(cp, line=cr.line, fill=cr.fill)
 
         else:
             # <- backend can draw polygons
@@ -938,7 +965,7 @@ class EllipseP(OnePointTwoRadiusMixin, CanvasObjectBase):
             cp = self.get_cpoints(viewer, points=points)
             num_pts = bezier.bezier_steps
             cp = bezier.get_bezier(num_pts, cp)
-            cr.draw_polygon(cp)
+            cr.draw_polygon(cp, line=cr.line, fill=cr.fill)
 
         if self.showcap:
             cpoints = self.get_cpoints(viewer)
@@ -1093,7 +1120,8 @@ class TriangleP(OnePointTwoRadiusMixin, CanvasObjectBase):
         cpoints = self.get_cpoints(viewer)
 
         cr = viewer.renderer.setup_cr(self)
-        cr.draw_polygon(cpoints)
+        cr.initialize_from_shape(self, line=True, fill=True)
+        cr.draw_polygon(cpoints, line=cr.line, fill=cr.fill)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -1238,7 +1266,8 @@ class CircleP(OnePointOneRadiusMixin, CanvasObjectBase):
         cx, cy, cradius = self.calc_radius(viewer,
                                            cpoints[0], cpoints[1])
         cr = viewer.renderer.setup_cr(self)
-        cr.draw_circle(cx, cy, cradius)
+        cr.initialize_from_shape(self, line=True, fill=True)
+        cr.draw_circle(cx, cy, cradius, line=cr.line, fill=cr.fill)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, ((cx, cy), ))
@@ -1353,42 +1382,43 @@ class PointP(OnePointOneRadiusMixin, CanvasObjectBase):
                                            cpoints[0], cpoints[1])
 
         cr = viewer.renderer.setup_cr(self)
+        cr.initialize_from_shape(self, line=True, fill=True)
 
         cx1, cy1 = cx - cradius, cy - cradius
         cx2, cy2 = cx + cradius, cy + cradius
 
         if self.style == 'cross':
-            cr.draw_line(cx1, cy1, cx2, cy2)
-            cr.draw_line(cx1, cy2, cx2, cy1)
+            cr.draw_line(cx1, cy1, cx2, cy2, line=cr.line)
+            cr.draw_line(cx1, cy2, cx2, cy1, line=cr.line)
 
         elif self.style == 'plus':
-            cr.draw_line(cx1, cy, cx2, cy)
-            cr.draw_line(cx, cy1, cx, cy2)
+            cr.draw_line(cx1, cy, cx2, cy, line=cr.line)
+            cr.draw_line(cx, cy1, cx, cy2, line=cr.line)
 
         elif self.style == 'circle':
-            cr.draw_circle(cx, cy, cradius)
+            cr.draw_circle(cx, cy, cradius, line=cr.line, fill=cr.fill)
 
         elif self.style == 'square':
             cpts = [(cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)]
-            cr.draw_polygon(cpts)
+            cr.draw_polygon(cpts, line=cr.line, fill=cr.fill)
 
         elif self.style == 'diamond':
             cpts = [(cx, cy1), ((cx + cx2) * 0.5, cy),
                     (cx, cy2), ((cx1 + cx) * 0.5, cy)]
-            cr.draw_polygon(cpts)
+            cr.draw_polygon(cpts, line=cr.line, fill=cr.fill)
 
         elif self.style == 'hexagon':
             cpts = [(cx1, cy), ((cx1 + cx) * 0.5, cy2), ((cx + cx2) * 0.5, cy2),
                     (cx2, cy), ((cx + cx2) * 0.5, cy1), ((cx1 + cx) * 0.5, cy1)]
-            cr.draw_polygon(cpts)
+            cr.draw_polygon(cpts, line=cr.line, fill=cr.fill)
 
         elif self.style == 'downtriangle':
             cpts = [(cx1, cy1), (cx2, cy1), (cx, cy2)]
-            cr.draw_polygon(cpts)
+            cr.draw_polygon(cpts, line=cr.line, fill=cr.fill)
 
         elif self.style == 'uptriangle':
             cpts = [(cx1, cy2), (cx2, cy2), (cx, cy1)]
-            cr.draw_polygon(cpts)
+            cr.draw_polygon(cpts, line=cr.line, fill=cr.fill)
 
         else:
             raise ValueError("Don't understand draw style '{}' of point".format(self.style))
@@ -1511,27 +1541,31 @@ class RectangleP(TwoPointMixin, CanvasObjectBase):
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
+        cr.initialize_from_shape(self, line=True, fill=True)
 
         cpoints = self.get_cpoints(viewer)
-        cr.draw_polygon(cpoints)
+        cr.draw_polygon(cpoints, line=cr.line, fill=cr.fill)
 
         if self.drawdims:
             fontsize = self.scale_font(viewer)
-            cr.set_font(self.font, fontsize, color=self.color)
+            cr.set_font(self.font, fontsize)
+            cr.set_fill(color=self.color, alpha=self.alpha)
 
             # draw label on X dimension
             x, y = (self.x1 + self.x2) * 0.5, self.y2
             pts = self.get_data_points(points=[(x, y)])
             cpts = self.get_cpoints(viewer, points=pts)
             cx, cy = cpts[0][:2]
-            cr.draw_text(cx, cy, "%f" % abs(self.x2 - self.x1))
+            cr.draw_text(cx, cy, "%f" % abs(self.x2 - self.x1),
+                         font=cr.font, fill=cr.fill)
 
             # draw label on Y dimension
             x, y = self.x2, (self.y1 + self.y2) * 0.5
             pts = self.get_data_points(points=[(x, y)])
             cpts = self.get_cpoints(viewer, points=pts)
             cx, cy = cpts[0][:2]
-            cr.draw_text(cx, cy, "%f" % abs(self.y2 - self.y1))
+            cr.draw_text(cx, cy, "%f" % abs(self.y2 - self.y1),
+                         font=cr.font, fill=cr.fill)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -1656,7 +1690,8 @@ class LineP(TwoPointMixin, CanvasObjectBase):
         cx2, cy2 = viewer.get_canvas_xy(x2, y2)
 
         cr = viewer.renderer.setup_cr(self)
-        cr.draw_line(cx1, cy1, cx2, cy2)
+        cr.initialize_from_shape(self, line=True)
+        cr.draw_line(cx1, cy1, cx2, cy2, line=cr.line)
 
         if self.arrow == 'end':
             self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
@@ -1789,7 +1824,8 @@ class RightTriangleP(TwoPointMixin, CanvasObjectBase):
     def draw(self, viewer):
         cpoints = self.get_cpoints(viewer)
         cr = viewer.renderer.setup_cr(self)
-        cr.draw_polygon(cpoints)
+        cr.initialize_from_shape(self, line=True, fill=True)
+        cr.draw_polygon(cpoints, line=cr.line, fill=cr.fill)
 
         if self.showcap:
             self.draw_caps(cr, self.cap, cpoints)
@@ -1897,6 +1933,7 @@ class XRange(RectangleP):
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
+        cr.initialize_from_shape(self, line=True, fill=True)
 
         # factor in reaches of y1, y2 in data coords
         draw_pts = viewer.get_draw_bbox()
@@ -1908,17 +1945,19 @@ class XRange(RectangleP):
         pts = self.get_data_points(points=pts)
         cpoints = self.get_cpoints(viewer, points=pts)
 
-        cr.draw_polygon(cpoints)
+        cr.draw_polygon(cpoints, line=cr.line, fill=cr.fill)
 
         if self.drawdims:
             fontsize = self.scale_font(viewer)
-            cr.set_font(self.font, fontsize, color=self.color)
+            cr.set_font(self.font, fontsize)
+            cr.set_fill(color=self.color, alpha=self.alpha)
 
             x, y = (self.x1 + self.x2) * 0.5, (y1 + y2) * 0.5
             pts = self.get_data_points(points=[(x, y)])
             cpts = self.get_cpoints(viewer, points=pts)
             cx, cy = cpts[0][:2]
-            cr.draw_text(cx, cy, "%f:%f" % (self.x1, self.x2))
+            cr.draw_text(cx, cy, "%f:%f" % (self.x1, self.x2),
+                         font=cr.font, fill=cr.fill)
 
 
 class YRange(RectangleP):
@@ -2006,6 +2045,7 @@ class YRange(RectangleP):
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
+        cr.initialize_from_shape(self, line=True, fill=True)
 
         # factor in reaches of x1, x2 in data coords
         draw_pts = viewer.get_draw_bbox()
@@ -2017,17 +2057,19 @@ class YRange(RectangleP):
         pts = self.get_data_points(points=pts)
         cpoints = self.get_cpoints(viewer, points=pts)
 
-        cr.draw_polygon(cpoints)
+        cr.draw_polygon(cpoints, line=cr.line, fill=cr.fill)
 
         if self.drawdims:
             fontsize = self.scale_font(viewer)
-            cr.set_font(self.font, fontsize, color=self.color)
+            cr.set_font(self.font, fontsize)
+            cr.set_fill(color=self.color, alpha=self.alpha)
 
             x, y = (x1 + x2) * 0.5, (self.y1 + self.y2) * 0.5
             pts = self.get_data_points(points=[(x, y)])
             cpts = self.get_cpoints(viewer, points=pts)
             cx, cy = cpts[0][:2]
-            cr.draw_text(cx, cy, "%f:%f" % (self.y1, self.y2))
+            cr.draw_text(cx, cy, "%f:%f" % (self.y1, self.y2),
+                         font=cr.font, fill=cr.fill)
 
 
 register_canvas_types(

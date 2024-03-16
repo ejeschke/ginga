@@ -28,6 +28,10 @@ shader_dir, _ = os.path.split(__file__)
 # NOTE: we update the version later in gl_initialize()
 opengl_version = parse_version('3.0')
 
+# special scaling for GL text drawing to normalize it relative
+# to other backends
+_font_scale_factor = 2.0
+
 
 class RenderContext(render.RenderContextBase):
 
@@ -37,80 +41,16 @@ class RenderContext(render.RenderContextBase):
         # TODO: encapsulate this drawable
         self.cr = GlHelp.GlContext(surface)
 
-        self.pen = None
-        self.brush = None
-        self.font = None
+        self._font_scale_factor = _font_scale_factor
 
-    def set_line_from_shape(self, shape):
-        alpha = getattr(shape, 'alpha', 1.0)
-        linewidth = getattr(shape, 'linewidth', 1.0)
-        linestyle = getattr(shape, 'linestyle', 'solid')
-        color = getattr(shape, 'color', 'black')
-        self.pen = self.cr.get_pen(color, linewidth=linewidth,
-                                   linestyle=linestyle, alpha=alpha)
+    # def set_font(self, fontname, fontsize):
+    #     fontsize = self.scale_fontsize(fontsize)
+    #     self.font = self.cr.get_font(fontname, fontsize)
 
-    def set_fill_from_shape(self, shape):
-        fill = getattr(shape, 'fill', False)
-        if fill:
-            if hasattr(shape, 'fillcolor') and shape.fillcolor:
-                color = shape.fillcolor
-            else:
-                color = shape.color
-            alpha = getattr(shape, 'alpha', 1.0)
-            alpha = getattr(shape, 'fillalpha', alpha)
-            self.brush = self.cr.get_brush(color, alpha=alpha)
-        else:
-            self.brush = None
-
-    def set_font_from_shape(self, shape):
-        if hasattr(shape, 'font'):
-            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
-                not getattr(shape, 'fontscale', False)):
-                fontsize = shape.fontsize
-            else:
-                fontsize = shape.scale_font(self.viewer)
-            fontsize = self.scale_fontsize(fontsize)
-            alpha = getattr(shape, 'alpha', 1.0)
-            self.font = self.cr.get_font(shape.font, fontsize, shape.color,
-                                         alpha=alpha)
-        else:
-            self.font = None
-
-    def initialize_from_shape(self, shape, line=True, fill=True, font=True):
-        if line:
-            self.set_line_from_shape(shape)
-        if fill:
-            self.set_fill_from_shape(shape)
-        if font:
-            self.set_font_from_shape(shape)
-
-    def set_line(self, color, alpha=1.0, linewidth=1, style='solid'):
-        self.pen = self.cr.get_pen(color, linewidth=linewidth,
-                                   linestyle=style, alpha=alpha)
-
-    def set_fill(self, color, alpha=1.0):
-        if color is None:
-            self.brush = None
-        else:
-            self.brush = self.cr.get_brush(color, alpha=alpha)
-
-    def setup_pen_brush(self, pen, brush):
-        # pen, brush are from ginga.vec
-        self.pen = self.cr.get_pen(pen.color, alpha=pen.alpha,
-                                   linewidth=pen.linewidth,
-                                   linestyle=pen.linestyle)
-        if brush is None:
-            self.brush = None
-        else:
-            self.brush = self.cr.get_brush(brush.color, alpha=brush.alpha)
-
-    def set_font(self, fontname, fontsize, color='black', alpha=1.0):
-        fontsize = self.scale_fontsize(fontsize)
-        self.font = self.cr.get_font(fontname, fontsize, color,
-                                     alpha=alpha)
-
-    def text_extents(self, text):
-        return self.cr.text_extents(text, self.font)
+    def text_extents(self, text, font=None):
+        if font is None:
+            font = self.font
+        return self.cr.text_extents(text, font)
 
     ##### DRAWING OPERATIONS #####
 
@@ -133,11 +73,12 @@ class RenderContext(render.RenderContextBase):
 
         self.renderer.gl_draw_image(cvs_img, cp)
 
-    def draw_text(self, cx, cy, text, rot_deg=0.0):
+    def draw_text(self, cx, cy, text, rot_deg=0.0, font=None, fill=None,
+                  line=None):
         # TODO: this draws text as polygons, since there is no native
         # text support in OpenGL.  It uses cairo to convert the text to
         # paths.  Currently the paths are drawn, but not filled correctly.
-        paths = CairoHelp.text_to_paths(text, self.font, flip_y=True,
+        paths = CairoHelp.text_to_paths(text, font, flip_y=True,
                                         cx=cx, cy=cy, rot_deg=rot_deg)
         scale = self.viewer.get_scale()
         base = np.array((cx, cy))
@@ -149,17 +90,15 @@ class RenderContext(render.RenderContextBase):
             if rot_deg != 0.0:
                 pts = trcalc.rotate_coord(pts, [rot_deg], (cx, cy))
             pts = (pts - base) * (1 / scale) + base
-            self.set_line(self.font.color, alpha=self.font.alpha)
+            self.set_line(fill.color, alpha=fill.alpha, linewidth=1)
             # NOTE: since non-convex polygons are not filled correctly, it
             # doesn't work to set any fill here
-            self.set_fill(None)
-            self.draw_polygon(pts)
+            self.draw_polygon(pts, line=self.line)
 
-    def draw_polygon(self, cpoints):
-        self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints,
-                                    self.brush, self.pen)
+    def draw_polygon(self, cpoints, line=None, fill=None):
+        self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints, fill, line)
 
-    def draw_circle(self, cx, cy, cradius):
+    def draw_circle(self, cx, cy, cradius, line=None, fill=None):
         # we have to approximate a circle in OpenGL
         # TODO: there is a more efficient algorithm described here:
         # http://slabode.exofire.net/circle_draw.shtml
@@ -171,17 +110,14 @@ class RenderContext(render.RenderContextBase):
             dy = cradius * np.sin(theta)
             cpoints.append((cx + dx, cy + dy))
 
-        self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints,
-                                    self.brush, self.pen)
+        self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints, fill, line)
 
-    def draw_line(self, cx1, cy1, cx2, cy2):
+    def draw_line(self, cx1, cy1, cx2, cy2, line=None):
         cpoints = [(cx1, cy1), (cx2, cy2)]
-        self.renderer.gl_draw_shape(gl.GL_LINES, cpoints,
-                                    self.brush, self.pen)
+        self.renderer.gl_draw_shape(gl.GL_LINES, cpoints, None, line)
 
-    def draw_path(self, cpoints):
-        self.renderer.gl_draw_shape(gl.GL_LINE_STRIP, cpoints,
-                                    self.brush, self.pen)
+    def draw_path(self, cpoints, line=None):
+        self.renderer.gl_draw_shape(gl.GL_LINE_STRIP, cpoints, None, line)
 
 
 class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
@@ -819,7 +755,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         self.pgm_mgr.setup_program(None)
 
-    def gl_draw_shape(self, gl_shape, cpoints, brush, pen):
+    def gl_draw_shape(self, gl_shape, cpoints, fill, line):
 
         if not self._drawing:
             # this test ensures that we are not trying to draw before
@@ -852,8 +788,8 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         _loc = self.pgm_mgr.get_uniform_loc("fg_clr")
 
         # draw fill, if any
-        if brush is not None and brush.color is not None:
-            _c = brush.color
+        if fill is not None and fill.color is not None:
+            _c = fill._color_4tup
             gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
 
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
@@ -863,15 +799,15 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
 
         # draw line, if any
         # TODO: support line stippling (dash)
-        if pen is not None and pen.linewidth > 0:
-            _c = pen.color
+        if line is not None and line.linewidth > 0:
+            _c = line._color_4tup
             gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
 
             # draw outline
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
             # > 1.0 not guaranteed to be supported as of OpenGL 4.2
             # TODO
-            # gl.glLineWidth(pen.linewidth)
+            # gl.glLineWidth(line.linewidth)
             gl.glLineWidth(1.0)
 
             gl.glDrawArrays(gl_shape, 0, len(vertices))
@@ -1028,14 +964,13 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
     def setup_cr(self, shape):
         # special cr that just stores up a render list
         cr = vec.RenderContext(self, self.viewer, self.surface)
+        cr._font_scale_factor = _font_scale_factor
         cr.initialize_from_shape(shape, font=False)
         return cr
 
     def text_extents(self, text, font):
         cr = RenderContext(self, self.viewer, self.surface)
-        cr.set_font(font.fontname, font.fontsize, color=font.color,
-                    alpha=font.alpha)
-        return cr.text_extents(text)
+        return cr.text_extents(text, font=font)
 
     def calc_const_len(self, clen):
         # zoom is accomplished by viewing distance in OpenGL, so we
@@ -1048,5 +983,5 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
 
     def get_dimensions(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)
-        cr.set_font_from_shape(shape)
-        return cr.text_extents(shape.text)
+        font = cr.get_font_from_shape(shape)
+        return cr.text_extents(shape.text, font=font)

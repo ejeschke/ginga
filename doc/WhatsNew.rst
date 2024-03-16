@@ -16,6 +16,12 @@ Ver 5.1.0 (unreleased)
   coordinates
 - Fixed drawing of Crosshair canvas object in opengl backend
 - Fixed drawing of XRange and YRange in non-data coordinates
+- Refactoring of rendering primitives; simplifies renderer implementation
+
+  - "Text" objects now have linewidth (default: 0), fill (default: True),
+    fillcolor (default: None) and fillalpha (default: 1.0) attributes.
+    Default behavior if fillcolor isn't specified is to default to the
+    "color" attribute, thus preserving backward-compatible behavior.
 
 Ver 5.0.0 (2024-02-24)
 ======================

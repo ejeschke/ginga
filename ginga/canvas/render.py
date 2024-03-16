@@ -9,7 +9,7 @@ from io import BytesIO
 import numpy as np
 from PIL import Image
 
-from ginga import trcalc
+from ginga import trcalc, colors
 from ginga.fonts import font_asst
 from ginga.util import pipeline
 from ginga.util.stages import render
@@ -21,7 +21,62 @@ class RenderError(Exception):
     pass
 
 
-class RenderContextBase(object):
+class Line:
+    def __init__(self, color='black', alpha=1.0, linewidth=1,
+                 linestyle='solid'):
+        if color is None:
+            color = 'black'
+        self.color = color
+        self.alpha = alpha
+        self.linewidth = linewidth
+        self.linestyle = linestyle
+
+        # resolve the color to a 4-tuple of (r, g, b, a)
+        self._color_4tup = get_color(self.color, self.alpha)
+
+        # attributes in here can be set by the renderer
+        self.render = Bunch.Bunch()
+
+    def get_bpp_color(self, bpp):
+        r, g, b, a = self._color_4tup
+        maxv = 2**bpp - 1
+        return (int(r * maxv), int(g * maxv), int(b * maxv), int(a * maxv))
+
+
+class Fill:
+    def __init__(self, color=None, alpha=1.0):
+        self.color = color
+        self.alpha = alpha
+
+        # resolve the color to a 4-tuple of (r, g, b, a)
+        self._color_4tup = get_color(self.color, self.alpha)
+
+        # attributes in here can be set by the renderer
+        self.render = Bunch.Bunch()
+
+    def get_bpp_color(self, bpp):
+        r, g, b, a = self._color_4tup
+        maxv = 2**bpp - 1
+        return (int(r * maxv), int(g * maxv), int(b * maxv), int(a * maxv))
+
+
+class Font:
+    def __init__(self, fontname='sans', fontsize=12):
+        if fontname is None:
+            fontname = 'Sans Serif'
+        fontname = font_asst.resolve_alias(fontname, fontname)
+        self.fontname = fontname
+        if fontsize is None:
+            fontsize = 12
+        self.fontsize = fontsize
+        # scale relative to a 12pt font
+        self.scale = fontsize / 12.0
+
+        # attributes in here can be set by the renderer
+        self.render = Bunch.Bunch()
+
+
+class RenderContextBase:
     """Base class from which all RenderContext classes are derived."""
 
     def __init__(self, renderer, viewer):
@@ -29,11 +84,140 @@ class RenderContextBase(object):
         self.viewer = viewer
         self.renderkey = renderer.kind
 
+        self.line = None
+        self.fill = None
+        self.font = None
+
+        # special value that can vary by subclasses to scale the font
+        # according to each renderer type
+        self._font_scale_factor = 1.0
+
+    def __get_color(self, color, alpha):
+        return get_color(color, alpha)
+
+    def get_line(self, color, alpha=1.0, linewidth=1, linestyle='solid'):
+        return Line(color=color, linewidth=linewidth,
+                    linestyle=linestyle, alpha=alpha)
+
+    def get_fill(self, color, alpha=1.0):
+        return Fill(color=color, alpha=alpha)
+
+    def get_font(self, fontname, fontsize=None, fontscale=False,
+                 fontsize_min=2, fontsize_max=None):
+        fontname = font_asst.resolve_alias(fontname, fontname)
+        if fontsize is None:
+            fontsize = 12
+            fontsize = self.scale_fontsize(fontsize)
+        if fontscale:
+            # requesting to scale the font according to the viewer zoom level
+            scale = self.viewer.get_scale_max()
+            n = 1.4
+            fontsize = max(fontsize_min, fontsize + np.log(scale) / np.log(n))
+            if fontsize_max is not None:
+                fontsize = min(fontsize_max, fontsize)
+
+        # apply special scaling factor for this backend
+        fontsize = int(round(fontsize * self._font_scale_factor))
+        return Font(fontname, fontsize)
+
+    def set_line(self, color, alpha=1.0, linewidth=1, linestyle='solid'):
+        self.line = self.get_line(color=color, linewidth=linewidth,
+                                  linestyle=linestyle, alpha=alpha)
+        return self.line
+
+    def set_fill(self, color, alpha=1.0):
+        self.fill = self.get_fill(color=color, alpha=alpha)
+        return self.fill
+
+    def set_font(self, fontname, fontsize=None):
+        self.font = self.get_font(fontname, fontsize=fontsize)
+        return self.font
+
+    def get_line_from_shape(self, shape):
+        linewidth = getattr(shape, 'linewidth', 1.0)
+        linestyle = getattr(shape, 'linestyle', 'solid')
+        alpha = getattr(shape, 'alpha', 1.0)
+        color = getattr(shape, 'color', 'black')
+        return self.get_line(color, alpha=alpha,
+                             linewidth=linewidth, linestyle=linestyle)
+
+    def get_fill_from_shape(self, shape):
+        fill = getattr(shape, 'fill', False)
+        if fill:
+            if hasattr(shape, 'fillcolor') and shape.fillcolor is not None:
+                color = shape.fillcolor
+            else:
+                color = shape.color
+
+            alpha = getattr(shape, 'alpha', None)
+            fillalpha = getattr(shape, 'fillalpha', alpha)
+            fill = self.get_fill(color, alpha=fillalpha)
+        else:
+            fill = None
+        return fill
+
+    def get_font_from_shape(self, shape):
+        if hasattr(shape, 'font'):
+            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
+                not getattr(shape, 'fontscale', False)):
+                # user specified a font size and no scaling
+                fontsize = shape.fontsize
+            else:
+                # user specified to scale font based on zoom level
+                # of viewer
+                # TODO: I think we can use the scaling in get_font()
+                fontsize = shape.scale_font(self.viewer)
+
+            # render-specific scaling
+            #fontsize = self.scale_fontsize(fontsize)
+            font = self.get_font(shape.font, fontsize=fontsize)
+        else:
+            font = None
+        return font
+
+    def set_line_from_shape(self, shape):
+        self.line = self.get_line_from_shape(shape)
+        return self.line
+
+    def set_fill_from_shape(self, shape):
+        self.fill = self.get_fill_from_shape(shape)
+        return self.fill
+
+    def set_font_from_shape(self, shape):
+        self.font = self.get_font_from_shape(shape)
+        return self.font
+
+    def initialize_from_shape(self, shape, line=False, fill=False, font=False):
+        if line:
+            self.set_line_from_shape(shape)
+        if fill:
+            self.set_fill_from_shape(shape)
+        if font:
+            self.set_font_from_shape(shape)
+
     def scale_fontsize(self, fontsize):
         # TO BE EVENTUALLY DEPRECATED
         return self.renderer.scale_fontsize(fontsize)
 
+    ##### DRAWING OPERATIONS #####
+
     def draw_image(self, cvs_img, cpoints, cache, whence, order='RGBA'):
+        pass
+
+    def draw_text(self, cx, cy, text, rot_deg=0.0, font=None, fill=None,
+                  line=None):
+        pass
+
+    def draw_polygon(self, cpoints, line=None, fill=None):
+        pass
+
+    def draw_circle(self, cx, cy, cradius, line=None, fill=None):
+        pass
+
+    def draw_line(self, cx1, cy1, cx2, cy2, line=None):
+        pass
+
+    def draw_path(self, cpoints, line=None):
         pass
 
 
@@ -262,6 +446,10 @@ def get_render_class(rtype):
         from ginga.cairow import CanvasRenderCairo
         return CanvasRenderCairo.CanvasRenderer
 
+    if rtype == 'matplotlib':
+        from ginga.mplw import CanvasRenderMpl
+        return CanvasRenderMpl.CanvasRenderer
+
     if rtype == 'opengl':
         from ginga.opengl import CanvasRenderGL
         return CanvasRenderGL.CanvasRenderer
@@ -454,3 +642,11 @@ class StandardPipelineRenderer(RendererBase):
 
     def scale_fontsize(self, fontsize):
         return font_asst.scale_fontsize(self.kind, fontsize)
+
+
+def get_color(color, alpha):
+    if color is not None:
+        r, g, b = colors.resolve_color(color)
+    else:
+        r, g, b, alpha = 1.0, 1.0, 1.0, 0.0
+    return (r, g, b, alpha)

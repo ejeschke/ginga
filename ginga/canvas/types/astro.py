@@ -172,17 +172,18 @@ class RulerP(TwoPointMixin, CanvasObjectBase):
         text = self.get_ruler_distances(viewer)
 
         cr = viewer.renderer.setup_cr(self)
-        cr.set_font_from_shape(self)
+        line = cr.set_line_from_shape(self)
+        font = cr.set_font_from_shape(self)
 
-        cr.draw_line(cx1, cy1, cx2, cy2)
+        cr.draw_line(cx1, cy1, cx2, cy2, line=line)
         self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
         self.draw_arrowhead(cr, cx2, cy2, cx1, cy1)
 
         # calculate offsets and positions for drawing labels
         # try not to cover anything up
-        xtwd, xtht = cr.text_extents(text.x)
-        ytwd, ytht = cr.text_extents(text.y)
-        htwd, htht = cr.text_extents(text.h)
+        xtwd, xtht = cr.text_extents(text.x, font=font)
+        ytwd, ytht = cr.text_extents(text.y, font=font)
+        htwd, htht = cr.text_extents(text.h, font=font)
 
         diag_xoffset = 0
         diag_yoffset = 0
@@ -215,31 +216,35 @@ class RulerP(TwoPointMixin, CanvasObjectBase):
         x = cx2 + yplumb_xoffset
         yh += (max(cy1, cy2) - yh) // 2
 
+        fill = cr.set_fill(self.color, alpha=self.alpha)
         xd = xh + diag_xoffset
         yd = yh + diag_yoffset
-        cr.draw_text(xd, yd, text.h)
+        cr.draw_text(xd, yd, text.h, font=font, fill=fill)
 
         if self.showends:
-            cr.draw_text(cx1 + 4, cy1 + xtht + 4, text.b)
-            cr.draw_text(cx2 + 4, cy2 + xtht + 4, text.e)
+            cr.draw_text(cx1 + 4, cy1 + xtht + 4, text.b, font=font, fill=fill)
+            cr.draw_text(cx2 + 4, cy2 + xtht + 4, text.e, font=font, fill=fill)
 
         if self.showplumb:
             if self.color2:
-                alpha = getattr(self, 'alpha', 1.0)
-                cr.set_line(self.color2, alpha=alpha, style='dash')
+                pline = cr.get_line(self.color2, alpha=self.alpha,
+                                    linestyle='dash')
+                fill = cr.get_fill(self.color2, alpha=self.alpha)
+            else:
+                fill = cr.get_fill(self.color, alpha=self.alpha)
 
             # draw X plumb line
-            cr.draw_line(cx1, cy1, cx2, cy1)
+            cr.draw_line(cx1, cy1, cx2, cy1, line=pline)
 
             # draw Y plumb line
-            cr.draw_line(cx2, cy1, cx2, cy2)
+            cr.draw_line(cx2, cy1, cx2, cy2, line=pline)
 
             # draw X plum line label
             xh -= xtwd // 2
-            cr.draw_text(xh, y, text.x)
+            cr.draw_text(xh, y, text.x, font=font, fill=fill)
 
             # draw Y plum line label
-            cr.draw_text(x, yh, text.y)
+            cr.draw_text(x, yh, text.y, font=font, fill=fill)
 
         if self.showcap and self.showplumb:
             # only cap is at intersection of plumb lines
@@ -387,12 +392,14 @@ class CompassP(OnePointOneRadiusMixin, CanvasObjectBase):
             xn, yn, xe, ye = x, y + radius, x + radius, y
 
         cr = viewer.renderer.setup_cr(self)
-        cr.set_font_from_shape(self)
+        line = cr.set_line_from_shape(self)
+        fill = cr.set_fill(self.color, alpha=self.alpha)
+        font = cr.get_font_from_shape(self)
 
         if bad_arms:
             points = self.get_cpoints(viewer, points=[(x, y)])
             cx, cy = points[0]
-            cr.draw_text(cx, cy, 'BAD WCS')
+            cr.draw_text(cx, cy, 'BAD WCS', font=font, fill=fill)
             return
 
         points = np.asarray([(x, y), (xn, yn), (xe, ye)])
@@ -400,11 +407,11 @@ class CompassP(OnePointOneRadiusMixin, CanvasObjectBase):
         (cx1, cy1), (cx2, cy2), (cx3, cy3) = self.get_cpoints(viewer,
                                                               points=points)
         # draw North line and arrowhead
-        cr.draw_line(cx1, cy1, cx2, cy2)
+        cr.draw_line(cx1, cy1, cx2, cy2, line=line)
         self.draw_arrowhead(cr, cx1, cy1, cx2, cy2)
 
         # draw East line and arrowhead
-        cr.draw_line(cx1, cy1, cx3, cy3)
+        cr.draw_line(cx1, cy1, cx3, cy3, line=line)
         self.draw_arrowhead(cr, cx1, cy1, cx3, cy3)
 
         # draw "N" & "E" or "X" and "Y"
@@ -412,16 +419,17 @@ class CompassP(OnePointOneRadiusMixin, CanvasObjectBase):
             te, tn = 'X', 'Y'
         else:
             te, tn = 'E', 'N'
-        cx, cy = self.get_textpos(cr, tn, cx1, cy1, cx2, cy2)
-        cr.draw_text(cx, cy, tn)
-        cx, cy = self.get_textpos(cr, te, cx1, cy1, cx3, cy3)
-        cr.draw_text(cx, cy, te)
+        cx, cy = self.get_textpos(cr, tn, font, cx1, cy1, cx2, cy2)
+        cr.draw_text(cx, cy, tn, font=font, fill=fill)
+        cx, cy = self.get_textpos(cr, te, font, cx1, cy1, cx3, cy3)
+        cr.draw_text(cx, cy, te, font=font, fill=fill)
 
         if self.showcap:
+            cr.set_line(color=self.color, linewidth=1)
             self.draw_caps(cr, self.cap, ((cx1, cy1), ))
 
-    def get_textpos(self, cr, text, cx1, cy1, cx2, cy2):
-        htwd, htht = cr.text_extents(text)
+    def get_textpos(self, cr, text, font, cx1, cy1, cx2, cy2):
+        htwd, htht = cr.text_extents(text, font=font)
         diag_xoffset = 0
         diag_yoffset = 0
         xplumb_yoffset = 0
@@ -593,17 +601,18 @@ class CrosshairP(OnePointMixin, CanvasObjectBase):
             text = self.text
 
         cr = viewer.renderer.setup_cr(self)
-        cr.set_font_from_shape(self)
+        font = cr.get_font_from_shape(self)
+        line = cr.set_line_from_shape(self)
 
         # draw horizontal line
-        cr.draw_line(hx1, hy1, hx2, hy2)
+        cr.draw_line(hx1, hy1, hx2, hy2, line=line)
 
         # draw vertical line
-        cr.draw_line(vx1, vy1, vx2, vy2)
+        cr.draw_line(vx1, vy1, vx2, vy2, line=line)
 
-        txtwd, txtht = cr.text_extents(text)
-        cr.set_line(self.textcolor, alpha=self.alpha)
-        cr.draw_text(cx + 10, cy + 4 + txtht, text)
+        txtwd, txtht = cr.text_extents(text, font=font)
+        cr.set_fill(self.textcolor, alpha=self.alpha)
+        cr.draw_text(cx + 10, cy + 4 + txtht, text, font=font, fill=cr.fill)
 
 
 class Crosshair(CrosshairP):

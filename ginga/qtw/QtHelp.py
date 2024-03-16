@@ -14,6 +14,7 @@ import ginga.toolkit
 from ginga.util import iohelper
 from ginga.misc import Callback, Bunch
 from ginga.fonts import font_asst
+from ginga import colors
 
 configured = False
 
@@ -421,6 +422,16 @@ def get_icon(iconpath, size=None, adjust_width=True):
     pixmap = QPixmap.fromImage(image)
     iconw = QIcon(pixmap)
     return iconw
+
+
+def get_color(color, alpha):
+    clr = QColor()
+    if isinstance(color, tuple):
+        clr.setRgbF(color[0], color[1], color[2], alpha)
+    else:
+        r, g, b = colors.lookup_color(color)
+        clr.setRgbF(r, g, b, alpha)
+    return clr
 
 
 def get_cached_font(font_name, font_size):

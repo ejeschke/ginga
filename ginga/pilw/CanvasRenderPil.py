@@ -23,80 +23,42 @@ class RenderContext(render.RenderContextBase):
         render.RenderContextBase.__init__(self, renderer, viewer)
 
         # TODO: encapsulate this drawable
-        self.cr = PilHelp.PilContext(surface)
+        self.ctx = PilHelp.PilContext(surface)
 
-        self.pen = None
-        self.brush = None
-        self.font = None
+        # special scaling for PIL text drawing to normalize it relative
+        # to other backends
+        self._font_scale_factor = 1.75
 
-    def set_line_from_shape(self, shape):
-        # TODO: support line style
-        alpha = getattr(shape, 'alpha', 1.0)
-        color = getattr(shape, 'color', 'black')
-        linewidth = getattr(shape, 'linewidth', 1)
-        self.pen = self.cr.get_pen(color, linewidth=linewidth, alpha=alpha)
+    def get_line(self, color, alpha=1.0, linewidth=1, linestyle='solid'):
+        line = super().get_line(color, alpha=alpha, linewidth=linewidth,
+                                linestyle=linestyle)
 
-    def set_fill_from_shape(self, shape):
-        fill = getattr(shape, 'fill', False)
-        if fill:
-            if hasattr(shape, 'fillcolor') and shape.fillcolor:
-                color = shape.fillcolor
-            else:
-                color = shape.color
-            alpha = getattr(shape, 'alpha', 1.0)
-            alpha = getattr(shape, 'fillalpha', alpha)
-            self.brush = self.cr.get_brush(color, alpha=alpha)
+        line.render.color = line.get_bpp_color(8)
+        return line
+
+    def get_fill(self, color, alpha=1.0):
+        fill = super().get_fill(color, alpha=alpha)
+
+        fill.render.color = fill.get_bpp_color(8)
+        return fill
+
+    def get_font(self, fontname, **kwargs):
+        font = super().get_font(fontname, **kwargs)
+
+        font.render.font = self.ctx._get_font(font)
+        return font
+
+    def text_extents(self, text, font=None):
+        if font is None:
+            font = self.font
+        _font = font.render.font
+        if hasattr(_font, 'getbbox'):
+            # PIL v10.0
+            l, t, r, b = _font.getbbox(text)
+            wd_px, ht_px = int(abs(round(r - l))), int(abs(round(b - t)))
         else:
-            self.brush = None
-
-    def set_font_from_shape(self, shape):
-        if hasattr(shape, 'font'):
-            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
-                not getattr(shape, 'fontscale', False)):
-                fontsize = shape.fontsize
-            else:
-                fontsize = shape.scale_font(self.viewer)
-            alpha = getattr(shape, 'alpha', 1.0)
-            fontsize = self.scale_fontsize(fontsize)
-            self.font = self.cr.get_font(shape.font, fontsize, shape.color,
-                                         alpha=alpha)
-        else:
-            self.font = None
-
-    def initialize_from_shape(self, shape, line=True, fill=True, font=True):
-        if line:
-            self.set_line_from_shape(shape)
-        if fill:
-            self.set_fill_from_shape(shape)
-        if font:
-            self.set_font_from_shape(shape)
-
-    def set_line(self, color, alpha=1.0, linewidth=1, style='solid'):
-        # TODO: support line style
-        self.pen = self.cr.get_pen(color, linewidth=linewidth, alpha=alpha)
-
-    def set_fill(self, color, alpha=1.0):
-        if color is None:
-            self.brush = None
-        else:
-            self.brush = self.cr.get_brush(color, alpha=alpha)
-
-    def setup_pen_brush(self, pen, brush):
-        # pen, brush are from ginga.vec
-        self.pen = self.cr.get_pen(pen.color, alpha=pen.alpha,
-                                   linewidth=pen.linewidth)
-        if brush is None:
-            self.brush = None
-        else:
-            self.brush = self.cr.get_brush(brush.color, alpha=brush.alpha)
-
-    def set_font(self, fontname, fontsize, color='black', alpha=1.0):
-        fontsize = self.scale_fontsize(fontsize)
-        self.font = self.cr.get_font(fontname, fontsize, color,
-                                     alpha=alpha)
-
-    def text_extents(self, text):
-        return self.cr.text_extents(text, self.font)
+            wd_px, ht_px = _font.getsize(text)
+        return wd_px, ht_px
 
     def get_affine_transform(self, cx, cy, rot_deg):
         x, y = 0, 0          # old center
@@ -118,25 +80,26 @@ class RenderContext(render.RenderContextBase):
         # no-op for this renderer
         pass
 
-    def draw_text(self, cx, cy, text, rot_deg=0.0):
-        wd, ht = self.cr.text_extents(text, self.font)
+    def draw_text(self, cx, cy, text, rot_deg=0.0, font=None, fill=None,
+                  line=None):
+        wd, ht = self.ctx.text_extents(text, font=font)
 
         # NOTE: rotation ignored in PIL, for now
-        self.cr.text((cx, cy - ht), text, self.font, self.pen)
+        self.ctx.text((cx, cy - ht), text, font, line, fill)
 
-    def draw_polygon(self, cpoints):
+    def draw_polygon(self, cpoints, line=None, fill=None):
         cpoints = trcalc.strip_z(cpoints)
-        self.cr.polygon(cpoints, self.pen, self.brush)
+        self.ctx.polygon(cpoints, line, fill)
 
-    def draw_circle(self, cx, cy, cradius):
-        self.cr.circle((cx, cy), cradius, self.pen, self.brush)
+    def draw_circle(self, cx, cy, cradius, line=None, fill=None):
+        self.ctx.circle((cx, cy), cradius, line, fill)
 
-    def draw_line(self, cx1, cy1, cx2, cy2):
-        self.cr.line((cx1, cy1), (cx2, cy2), self.pen)
+    def draw_line(self, cx1, cy1, cx2, cy2, line=None):
+        self.ctx.line((cx1, cy1), (cx2, cy2), line)
 
-    def draw_path(self, cpoints):
+    def draw_path(self, cpoints, line=None):
         cpoints = trcalc.strip_z(cpoints)
-        self.cr.path(cpoints, self.pen)
+        self.ctx.path(cpoints, line)
 
 
 class CanvasRenderer(render.StandardPipelineRenderer):
@@ -208,7 +171,6 @@ class CanvasRenderer(render.StandardPipelineRenderer):
 
     def setup_cr(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)
-        cr.initialize_from_shape(shape, font=False)
         return cr
 
     def get_dimensions(self, shape):
@@ -218,8 +180,7 @@ class CanvasRenderer(render.StandardPipelineRenderer):
 
     def text_extents(self, text, font):
         cr = RenderContext(self, self.viewer, self.surface)
-        cr.set_font(font.fontname, font.fontsize, color=font.color,
-                    alpha=font.alpha)
+        cr.set_font(font.fontname, font.fontsize)
         return cr.text_extents(text)
 
 #END

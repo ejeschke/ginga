@@ -23,72 +23,36 @@ class RenderContext(render.RenderContextBase):
         render.RenderContextBase.__init__(self, renderer, viewer)
 
         # TODO: encapsulate this drawable
-        self.cr = AggHelp.AggContext(surface)
+        self.ctx = AggHelp.AggContext(surface)
 
-        self.pen = None
-        self.brush = None
-        self.font = None
+        # special scaling for Agg text drawing to normalize it relative
+        # to other backends
+        self._font_scale_factor = 1.75
 
-    def set_line_from_shape(self, shape):
-        # TODO: support style
-        alpha = getattr(shape, 'alpha', 1.0)
-        linewidth = getattr(shape, 'linewidth', 1.0)
-        color = getattr(shape, 'color', 'black')
-        self.pen = self.cr.get_pen(color, linewidth=linewidth,
-                                   alpha=alpha)
+    def get_line(self, color, alpha=1.0, linewidth=1, linestyle='solid'):
+        line = super().get_line(color, alpha=alpha, linewidth=linewidth,
+                                linestyle=linestyle)
 
-    def set_fill_from_shape(self, shape):
-        fill = getattr(shape, 'fill', False)
-        if fill:
-            if hasattr(shape, 'fillcolor') and shape.fillcolor:
-                color = shape.fillcolor
-            else:
-                color = shape.color
-            alpha = getattr(shape, 'alpha', 1.0)
-            alpha = getattr(shape, 'fillalpha', alpha)
-            self.brush = self.cr.get_brush(color, alpha=alpha)
-        else:
-            self.brush = None
+        _color = line.get_bpp_color(8)
+        line.render.color = _color
+        line.render.pen = agg.Pen(_color[:3], width=line.linewidth,
+                                  opacity=_color[3])
+        return line
 
-    def set_font_from_shape(self, shape):
-        if hasattr(shape, 'font'):
-            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
-                not getattr(shape, 'fontscale', False)):
-                fontsize = shape.fontsize
-            else:
-                fontsize = shape.scale_font(self.viewer)
-            fontsize = self.scale_fontsize(fontsize)
-            alpha = getattr(shape, 'alpha', 1.0)
-            self.font = self.cr.get_font(shape.font, fontsize, shape.color,
-                                         alpha=alpha)
-        else:
-            self.font = None
+    def get_fill(self, color, alpha=1.0):
+        fill = super().get_fill(color, alpha=alpha)
 
-    def initialize_from_shape(self, shape, line=True, fill=True, font=True):
-        if line:
-            self.set_line_from_shape(shape)
-        if fill:
-            self.set_fill_from_shape(shape)
-        if font:
-            self.set_font_from_shape(shape)
+        _color = fill.get_bpp_color(8)
+        fill.render.color = _color
+        fill.render.brush = agg.Brush(_color[:3], opacity=_color[3])
+        return fill
 
-    def set_line(self, color, alpha=1.0, linewidth=1, style='solid'):
-        # TODO: support line width and style
-        self.pen = self.cr.get_pen(color, alpha=alpha)
-
-    def set_fill(self, color, alpha=1.0):
-        if color is None:
-            self.brush = None
-        else:
-            self.brush = self.cr.get_brush(color, alpha=alpha)
-
-    def set_font(self, fontname, fontsize, color='black', alpha=1.0):
-        fontsize = self.scale_fontsize(fontsize)
-        self.font = self.cr.get_font(fontname, fontsize, color,
-                                     alpha=alpha)
-
-    def text_extents(self, text):
-        return self.cr.text_extents(text, self.font)
+    def text_extents(self, text, font=None):
+        if font is None:
+            font = self.font
+        fill = self.get_fill('black')
+        _font = self.ctx._get_font(font, fill)
+        return self.ctx.text_extents(text, _font)
 
     def get_affine_transform(self, cx, cy, rot_deg):
         x, y = cx, cy        # old center
@@ -110,60 +74,79 @@ class RenderContext(render.RenderContextBase):
         # no-op for this renderer
         pass
 
-    def draw_text(self, cx, cy, text, rot_deg=0.0):
+    def draw_text(self, cx, cy, text, rot_deg=0.0, font=None, fill=None,
+                  line=None):
 
-        wd, ht = self.cr.text_extents(text, self.font)
+        _font = self.ctx._get_font(font, fill)
+        wd, ht = self.ctx.text_extents(text, _font)
 
         affine = self.get_affine_transform(cx, cy, rot_deg)
-        self.cr.canvas.settransform(affine)
+        self.ctx.canvas.settransform(affine)
         try:
-            self.cr.canvas.text((cx, cy - ht), text, self.font)
+            self.ctx.canvas.text((cx, cy - ht), text, _font)
         finally:
             # reset default transform
-            self.cr.canvas.settransform()
+            self.ctx.canvas.settransform()
 
-    def draw_polygon(self, cpoints):
+    def draw_polygon(self, cpoints, line=None, fill=None):
+        pen = None if line is None else line.render.pen
+        brush = None if fill is None else fill.render.brush
+
         cpoints = trcalc.strip_z(cpoints)
-        self.cr.canvas.polygon(list(chain.from_iterable(cpoints)),
-                               self.pen, self.brush)
+        self.ctx.canvas.polygon(list(chain.from_iterable(cpoints)),
+                                pen, brush)
 
-    def draw_circle(self, cx, cy, cradius):
-        self.cr.canvas.ellipse(
-            (cx - cradius, cy - cradius, cx + cradius, cy + cradius),
-            self.pen, self.brush)
+    def draw_circle(self, cx, cy, cradius, line=None, fill=None):
+        pen = None if line is None else line.render.pen
+        brush = None if fill is None else fill.render.brush
+
+        if line is not None and fill is not None:
+            self.ctx.canvas.ellipse(
+                (cx - cradius, cy - cradius, cx + cradius, cy + cradius),
+                pen, brush)
 
     # NOTE: recent versions of aggdraw are not rendering Bezier curves
     # correctly--we comment out these temporarily so that we fall back to
     # a version that generates our own Beziers
     #
-    # def draw_bezier_curve(self, cp):
+    # def draw_bezier_curve(self, cp, line=None):
+    #     pen = None if line is None else line.render.pen
+    #     brush = None if fill is None else fill.render.brush
+    #
     #     path = agg.Path()
     #     path.moveto(cp[0][0], cp[0][1])
     #     path.curveto(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
-    #     self.cr.canvas.path(path, self.pen, self.brush)
+    #     self.ctx.canvas.path(path, pen, brush)
 
-    # def draw_ellipse_bezier(self, cp):
+    # def draw_ellipse_bezier(self, cp, line=None, fill=None):
     #     # draw 4 bezier curves to make the ellipse because there seems
     #     # to be a bug in aggdraw ellipse drawing function
+    #     pen = None if line is None else line.render.pen
+    #     brush = None if fill is None else fill.render.brush
+
     #     path = agg.Path()
     #     path.moveto(cp[0][0], cp[0][1])
     #     path.curveto(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
     #     path.curveto(cp[4][0], cp[4][1], cp[5][0], cp[5][1], cp[6][0], cp[6][1])
     #     path.curveto(cp[7][0], cp[7][1], cp[8][0], cp[8][1], cp[9][0], cp[9][1])
     #     path.curveto(cp[10][0], cp[10][1], cp[11][0], cp[11][1], cp[12][0], cp[12][1])
-    #     self.cr.canvas.path(path, self.pen, self.brush)
+    #     self.ctx.canvas.path(path, pen, brush)
 
-    def draw_line(self, cx1, cy1, cx2, cy2):
-        self.cr.canvas.line((cx1, cy1, cx2, cy2), self.pen)
+    def draw_line(self, cx1, cy1, cx2, cy2, line=None):
+        if line is not None:
+            self.ctx.canvas.line((cx1, cy1, cx2, cy2), line.render.pen)
 
-    def draw_path(self, cpoints):
-        cp = trcalc.strip_z(cpoints)
-        # TODO: is there a more efficient way in aggdraw to do this?
-        path = agg.Path()
-        path.moveto(cp[0][0], cp[0][1])
-        for pt in cp[1:]:
-            path.lineto(pt[0], pt[1])
-        self.cr.canvas.path(path, self.pen, self.brush)
+    def draw_path(self, cpoints, line=None):
+        if line is not None:
+            cp = trcalc.strip_z(cpoints)
+            # TODO: is there a more efficient way in aggdraw to do this?
+            path = agg.Path()
+            path.moveto(cp[0][0], cp[0][1])
+            for pt in cp[1:]:
+                path.lineto(pt[0], pt[1])
+            #brush = agg.Brush(line._color[:3], opacity=line._color[3])
+            brush = agg.Brush(line._color[:3], opacity=0)
+            self.ctx.canvas.path(path, line.render.pen, brush)
 
 
 class CanvasRenderer(render.StandardPipelineRenderer):
@@ -223,18 +206,15 @@ class CanvasRenderer(render.StandardPipelineRenderer):
 
     def setup_cr(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)
-        cr.initialize_from_shape(shape, font=False)
         return cr
 
     def get_dimensions(self, shape):
         cr = self.setup_cr(shape)
-        cr.set_font_from_shape(shape)
-        return cr.text_extents(shape.text)
+        font = cr.get_font_from_shape(shape)
+        return cr.text_extents(shape.text, font=font)
 
     def text_extents(self, text, font):
         cr = RenderContext(self, self.viewer, self.surface)
-        cr.set_font(font.fontname, font.fontsize, color=font.color,
-                    alpha=font.alpha)
-        return cr.text_extents(text)
+        return cr.text_extents(text, font=font)
 
 #END

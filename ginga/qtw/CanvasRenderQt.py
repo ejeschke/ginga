@@ -6,11 +6,11 @@
 #
 import numpy as np
 
-from ginga.qtw.QtHelp import (QtCore, QPen, QPolygonF, QColor, QFontMetrics,
+from ginga.qtw.QtHelp import (QtCore, QPen, QBrush, QPolygonF, QColor,
+                              QFontMetrics,
                               QPainterPath, QImage, QPixmap, get_font,
                               get_painter)
 
-from ginga import colors
 from ginga.vec import CanvasRenderVec as vec
 from ginga.canvas import render
 # force registration of all canvas types
@@ -22,94 +22,58 @@ class RenderContext(render.RenderContextBase):
     def __init__(self, renderer, viewer, surface):
         render.RenderContextBase.__init__(self, renderer, viewer)
 
-        self.cr = get_painter(surface)
+        self.ctx = get_painter(surface)
 
-    def __get_color(self, color, alpha):
-        clr = QColor()
-        if isinstance(color, tuple):
-            clr.setRgbF(color[0], color[1], color[2], alpha)
+        # special scaling for Qt text drawing to normalize it relative
+        # to other backends
+        self._font_scale_factor = 0.9
+
+    def get_line(self, color, alpha=1.0, linewidth=1, linestyle='solid'):
+        line = super().get_line(color, alpha=alpha, linewidth=linewidth,
+                                linestyle=linestyle)
+
+        if (line.color is None or np.isclose(line.linewidth, 0) or
+            np.isclose(line.alpha, 0.0)):
+            pen = QPen(QtCore.Qt.NoPen)
         else:
-            r, g, b = colors.lookup_color(color)
-            clr.setRgbF(r, g, b, alpha)
-        return clr
+            pen = QPen()
+            pen.setWidthF(line.linewidth)
 
-    def set_line_from_shape(self, shape):
-        pen = QPen()
-        pen.setWidthF(getattr(shape, 'linewidth', 1.0))
-
-        if hasattr(shape, 'linestyle'):
-            if shape.linestyle == 'dash':
+            if line.linestyle == 'dash':
                 pen.setDashPattern([3.0, 4.0, 6.0, 4.0])
                 pen.setDashOffset(5.0)
 
-        alpha = getattr(shape, 'alpha', 1.0)
-        color = getattr(shape, 'color', 'black')
-        color = self.__get_color(color, alpha)
-        pen.setColor(color)
-        self.cr.setPen(pen)
+            color = QColor()
+            color.setRgbF(*line._color_4tup)
+            pen.setColor(color)
 
-    def set_fill_from_shape(self, shape):
-        fill = getattr(shape, 'fill', False)
-        if fill:
-            if hasattr(shape, 'fillcolor') and shape.fillcolor:
-                color = shape.fillcolor
-            else:
-                color = shape.color
+        line.render.pen = pen
+        return line
 
-            if color is None:
-                self.cr.setBrush(QtCore.Qt.NoBrush)
-            else:
-                alpha = getattr(shape, 'alpha', None)
-                fillalpha = getattr(shape, 'fillalpha', alpha)
-                color = self.__get_color(color, fillalpha)
-                self.cr.setBrush(color)
+    def get_fill(self, color, alpha=1.0):
+        fill = super().get_fill(color, alpha=alpha)
+
+        if fill.color is None or np.isclose(fill.alpha, 0.0):
+            brush = QBrush(QtCore.Qt.NoBrush)
         else:
-            self.cr.setBrush(QtCore.Qt.NoBrush)
+            color = QColor()
+            color.setRgbF(*fill._color_4tup)
+            brush = QBrush(color)
 
-    def set_font_from_shape(self, shape):
-        if hasattr(shape, 'font'):
-            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
-                not getattr(shape, 'fontscale', False)):
-                fontsize = shape.fontsize
-            else:
-                fontsize = shape.scale_font(self.viewer)
-            fontsize = self.scale_fontsize(fontsize)
-            font = get_font(shape.font, fontsize)
-            self.cr.setFont(font)
+        fill.render.brush = brush
+        return fill
 
-    def initialize_from_shape(self, shape, line=True, fill=True, font=True):
-        if line:
-            self.set_line_from_shape(shape)
-        if fill:
-            self.set_fill_from_shape(shape)
-        if font:
-            self.set_font_from_shape(shape)
+    def get_font(self, fontname, **kwargs):
+        font = super().get_font(fontname, **kwargs)
 
-    def set_line(self, color, alpha=1.0, linewidth=1, style='solid'):
-        clr = self.__get_color(color, alpha)
-        pen = self.cr.pen()
-        pen.setColor(clr)
-        pen.setWidthF(float(linewidth))
-        if style == 'dash':
-            pen.setDashPattern([3.0, 4.0, 6.0, 4.0])
-            pen.setDashOffset(5.0)
-        self.cr.setPen(pen)
+        # NOTE: QFont needs integer point size
+        font.render.font = get_font(font.fontname, int(font.fontsize))
+        return font
 
-    def set_fill(self, color, alpha=1.0):
-        if color is None:
-            self.cr.setBrush(QtCore.Qt.NoBrush)
-        else:
-            color = self.__get_color(color, alpha)
-            self.cr.setBrush(color)
-
-    def set_font(self, fontname, fontsize, color='black', alpha=1.0):
-        self.set_line(color, alpha=alpha)
-        fontsize = self.scale_fontsize(fontsize)
-        font = get_font(fontname, fontsize)
-        self.cr.setFont(font)
-
-    def text_extents(self, text):
-        fm = self.cr.fontMetrics()
+    def text_extents(self, text, font=None):
+        if font is None:
+            font = self.font
+        fm = QFontMetrics(font.render.font)
         if hasattr(fm, 'horizontalAdvance'):
             width = fm.horizontalAdvance(text)
         else:
@@ -117,53 +81,94 @@ class RenderContext(render.RenderContextBase):
         height = fm.height()
         return width, height
 
-    def setup_pen_brush(self, pen, brush):
-        if pen is not None:
-            self.set_line(pen.color, alpha=pen.alpha, linewidth=pen.linewidth,
-                          style=pen.linestyle)
-
-        self.cr.setBrush(QtCore.Qt.NoBrush)
-        if brush is not None:
-            self.set_fill(brush.color, alpha=brush.alpha)
-
     ##### DRAWING OPERATIONS #####
 
     ## def draw_image(self, cvs_img, cpoints, cache, whence, order='RGBA'):
     ##     # no-op for this renderer
     ##     pass
 
-    def draw_text(self, cx, cy, text, rot_deg=0.0):
-        self.cr.save()
-        self.cr.translate(cx, cy)
-        self.cr.rotate(-rot_deg)
+    def draw_text(self, cx, cy, text, rot_deg=0.0, font=None, fill=None,
+                  line=None):
+        self.ctx.save()
+        self.ctx.translate(cx, cy)
+        self.ctx.rotate(-rot_deg)
 
-        self.cr.drawText(0, 0, text)
+        if font is not None:
+            self.ctx.setFont(font.render.font)
+        # draw bg
+        qfont = self.ctx.font()
+        # fm = QFontMetrics(qfont)
+        # qrect = fm.boundingRect(text)
+        # self.ctx.fillRect(qrect, self.ctx.brush())
+        # # draw fg
+        # self.ctx.drawText(0, 0, text)
+        #----------
+        self.ctx.setBrush(QtCore.Qt.NoBrush if fill is None
+                          else fill.render.brush)
 
-        self.cr.restore()
+        if line is not None:
+            self.ctx.setPen(line.render.pen)
+            path = QPainterPath()
+            path.addText(QtCore.QPointF(0, 0), qfont, text)
+            self.ctx.drawPath(path)
+        else:
+            # NOTE: drawText() is more efficient if we have a lot of text,
+            # so use it instead if we are not stroking a path outline.
+            # When we use drawText(), we need to set the color by the pen
+            pen = QPen()
+            color = QColor()
+            color.setRgbF(*fill._color_4tup)
+            pen.setColor(color)
+            self.ctx.setPen(pen)
+            self.ctx.drawText(0, 0, text)
 
-    def draw_polygon(self, cpoints):
+        self.ctx.restore()
+
+    def draw_polygon(self, cpoints, line=None, fill=None):
+
+        self.ctx.setPen(QtCore.Qt.NoPen if line is None
+                        else line.render.pen)
+        self.ctx.setBrush(QtCore.Qt.NoBrush if fill is None
+                          else fill.render.brush)
+
         ## cpoints = trcalc.strip_z(cpoints)
         qpoints = [QtCore.QPointF(p[0], p[1]) for p in cpoints]
         p = cpoints[0]
         qpoints.append(QtCore.QPointF(p[0], p[1]))
         qpoly = QPolygonF(qpoints)
 
-        self.cr.drawPolygon(qpoly)
+        self.ctx.drawPolygon(qpoly)
 
-    def draw_circle(self, cx, cy, cradius):
+    def draw_circle(self, cx, cy, cradius, line=None, fill=None):
+
+        self.ctx.setPen(QtCore.Qt.NoPen if line is None
+                        else line.render.pen)
+        self.ctx.setBrush(QtCore.Qt.NoBrush if fill is None
+                          else fill.render.brush)
+
         # this is necessary to work around a bug in Qt--radius of 0
         # causes a crash
         cradius = max(cradius, 0.000001)
         pt = QtCore.QPointF(cx, cy)
-        self.cr.drawEllipse(pt, float(cradius), float(cradius))
+        self.ctx.drawEllipse(pt, float(cradius), float(cradius))
 
-    def draw_bezier_curve(self, cp):
+    def draw_bezier_curve(self, cp, line=None):
+
+        self.ctx.setPen(QtCore.Qt.NoPen if line is None
+                        else line.render.pen)
+
         path = QPainterPath()
         path.moveTo(cp[0][0], cp[0][1])
         path.cubicTo(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
-        self.cr.drawPath(path)
+        self.ctx.drawPath(path)
 
-    def draw_ellipse_bezier(self, cp):
+    def draw_ellipse_bezier(self, cp, line=None, fill=None):
+
+        self.ctx.setPen(QtCore.Qt.NoPen if line is None
+                        else line.render.pen)
+        self.ctx.setBrush(QtCore.Qt.NoBrush if fill is None
+                          else fill.render.brush)
+
         # draw 4 bezier curves to make the ellipse
         path = QPainterPath()
         path.moveTo(cp[0][0], cp[0][1])
@@ -171,20 +176,28 @@ class RenderContext(render.RenderContextBase):
         path.cubicTo(cp[4][0], cp[4][1], cp[5][0], cp[5][1], cp[6][0], cp[6][1])
         path.cubicTo(cp[7][0], cp[7][1], cp[8][0], cp[8][1], cp[9][0], cp[9][1])
         path.cubicTo(cp[10][0], cp[10][1], cp[11][0], cp[11][1], cp[12][0], cp[12][1])
-        self.cr.drawPath(path)
+        self.ctx.drawPath(path)
 
-    def draw_line(self, cx1, cy1, cx2, cy2):
-        self.cr.pen().setCapStyle(QtCore.Qt.RoundCap)
-        self.cr.drawLine(QtCore.QLineF(QtCore.QPointF(cx1, cy1),
-                                       QtCore.QPointF(cx2, cy2)))
+    def draw_line(self, cx1, cy1, cx2, cy2, line=None):
 
-    def draw_path(self, cp):
+        self.ctx.setPen(QtCore.Qt.NoPen if line is None
+                        else line.render.pen)
+        self.ctx.pen().setCapStyle(QtCore.Qt.RoundCap)
+
+        self.ctx.drawLine(QtCore.QLineF(QtCore.QPointF(cx1, cy1),
+                                        QtCore.QPointF(cx2, cy2)))
+
+    def draw_path(self, cp, line=None):
+
+        self.ctx.setPen(QtCore.Qt.NoPen if line is None
+                        else line.render.pen)
+        self.ctx.pen().setCapStyle(QtCore.Qt.RoundCap)
+
         ## cp = trcalc.strip_z(cp)
-        self.cr.pen().setCapStyle(QtCore.Qt.RoundCap)
         pts = [QtCore.QLineF(QtCore.QPointF(cp[i][0], cp[i][1]),
                              QtCore.QPointF(cp[i + 1][0], cp[i + 1][1]))
                for i in range(len(cp) - 1)]
-        self.cr.drawLines(pts)
+        self.ctx.drawLines(pts)
 
 
 class CanvasRenderer(render.StandardPipelineRenderer):
@@ -225,12 +238,6 @@ class CanvasRenderer(render.StandardPipelineRenderer):
         # Need to hang on to a reference to the array
         result.ndarray = rgb_data
         return result
-
-    def _get_color(self, r, g, b):
-        # TODO: combine with the method from the RenderContext?
-        n = 255.0
-        clr = QColor(int(r * n), int(g * n), int(b * n))
-        return clr
 
     def get_surface_as_array(self, order=None):
 
@@ -309,8 +316,8 @@ class CanvasRenderer(render.StandardPipelineRenderer):
 
     def get_dimensions(self, shape):
         cr = self.setup_cr(shape)
-        cr.set_font_from_shape(shape)
-        return cr.text_extents(shape.text)
+        font = cr.get_font_from_shape(shape)
+        return cr.text_extents(shape.text, font=font)
 
     def text_extents(self, text, font):
         qfont = get_font(font.fontname, font.fontsize)
@@ -321,6 +328,13 @@ class CanvasRenderer(render.StandardPipelineRenderer):
             width = fm.width(text)
         height = fm.height()
         return width, height
+
+
+class VectorRenderContext(vec.RenderContext, RenderContext):
+
+    def __init__(self, renderer, viewer, surface):
+        vec.RenderContext.__init__(self, renderer, viewer, surface)
+        RenderContext.__init__(self, renderer, viewer, surface)
 
 
 class VectorCanvasRenderer(vec.VectorRenderMixin, CanvasRenderer):
@@ -339,6 +353,7 @@ class VectorCanvasRenderer(vec.VectorRenderMixin, CanvasRenderer):
         if self._img_args is not None:
             super(VectorCanvasRenderer, self).render_image(*self._img_args)
 
+        CanvasRenderer.initialize(self)
         cr = RenderContext(self, self.viewer, self.surface)
         self.draw_vector(cr)
 
@@ -348,13 +363,12 @@ class VectorCanvasRenderer(vec.VectorRenderMixin, CanvasRenderer):
 
     def setup_cr(self, shape):
         # special cr that just stores up a render list
-        cr = vec.RenderContext(self, self.viewer, self.surface)
-        cr.initialize_from_shape(shape, font=False)
+        cr = VectorRenderContext(self, self.viewer, self.surface)
         return cr
 
     def get_dimensions(self, shape):
-        cr = super(VectorCanvasRenderer, self).setup_cr(shape)
-        cr.set_font_from_shape(shape)
-        return cr.text_extents(shape.text)
+        cr = CanvasRenderer.setup_cr(self, shape)
+        font = cr.get_font_from_shape(shape)
+        return cr.text_extents(shape.text, font=font)
 
 #END

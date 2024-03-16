@@ -5,16 +5,15 @@
 # Please see the file LICENSE.txt for details.
 
 import sys
-import math
 
 import numpy as np
 import cairo
 
-from ginga import colors
-from ginga.fonts import font_asst
 from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
+
+from . import CairoHelp
 
 
 class RenderContext(render.RenderContextBase):
@@ -22,118 +21,36 @@ class RenderContext(render.RenderContextBase):
     def __init__(self, renderer, viewer, surface):
         render.RenderContextBase.__init__(self, renderer, viewer)
 
-        self.cr = cairo.Context(surface)
+        self.ctx = cairo.Context(surface)
         # set up antialiasing
         fo = cairo.FontOptions()
         fo.set_antialias(cairo.ANTIALIAS_DEFAULT)
-        self.cr.set_font_options(fo)
+        self.ctx.set_font_options(fo)
 
-        self.fill = False
-        self.fill_color = None
-        self.fill_alpha = 1.0
+        # special scaling for Cairo text drawing to normalize it relative
+        # to other backends
+        self._font_scale_factor = 1.85
 
-    def __get_color(self, color, alpha):
-        if color is not None:
-            r, g, b = colors.resolve_color(color)
-        else:
-            r, g, b = 1.0, 1.0, 1.0
-        return (r, g, b, alpha)
+    def setup_line(self, line):
+        r, g, b, a = line._color_4tup
+        self.ctx.set_source_rgba(r, g, b, a)
+        self.ctx.set_line_width(line.linewidth)
+        if line.linestyle == 'dash':
+            self.ctx.set_dash([3.0, 4.0, 6.0, 4.0], 5.0)
 
-    def _set_color(self, color, alpha=1.0):
-        r, g, b, a = self.__get_color(color, alpha)
-        self.cr.set_source_rgba(r, g, b, a)
+    def setup_fill(self, fill):
+        r, g, b, a = fill._color_4tup
+        self.ctx.set_source_rgba(r, g, b, a)
 
-    def _reset_path(self):
-        self.cr.new_path()
+    def setup_font(self, font):
+        self.ctx.select_font_face(font.fontname)
+        self.ctx.set_font_size(font.fontsize)
 
-    def _draw_fill(self):
-        if self.fill:
-            self._set_color(self.fill_color, alpha=self.fill_alpha)
-            self.cr.fill()
-
-    def set_line_from_shape(self, shape):
-        alpha = getattr(shape, 'alpha', 1.0)
-        color = getattr(shape, 'color', 'black')
-        self._set_color(color, alpha=alpha)
-
-        linewidth = getattr(shape, 'linewidth', 1)
-        self.cr.set_line_width(linewidth)
-
-        if hasattr(shape, 'linestyle'):
-            if shape.linestyle == 'dash':
-                self.cr.set_dash([3.0, 4.0, 6.0, 4.0], 5.0)
-
-    def set_fill_from_shape(self, shape):
-        self.fill = getattr(shape, 'fill', False)
-        if self.fill:
-            color = getattr(shape, 'fillcolor', None)
-            if color is None:
-                color = shape.color
-            self.fill_color = color
-
-            alpha = getattr(shape, 'alpha', 1.0)
-            self.fill_alpha = getattr(shape, 'fillalpha', alpha)
-
-    def set_font_from_shape(self, shape):
-        if hasattr(shape, 'font'):
-            if (hasattr(shape, 'fontsize') and shape.fontsize is not None and
-                not getattr(shape, 'fontscale', False)):
-                fontsize = shape.fontsize
-            else:
-                fontsize = shape.scale_font(self.viewer)
-            fontname = font_asst.resolve_alias(shape.font, shape.font)
-            self.cr.select_font_face(fontname)
-            fontsize = self.scale_fontsize(fontsize)
-            self.cr.set_font_size(fontsize)
-
-    def initialize_from_shape(self, shape, line=True, fill=True, font=True):
-        if font:
-            self.set_font_from_shape(shape)
-        if line:
-            self.set_line_from_shape(shape)
-        if fill:
-            self.set_fill_from_shape(shape)
-
-    def set_line(self, color, alpha=1.0, linewidth=1, style='solid'):
-
-        self._set_color(color, alpha=alpha)
-        self.cr.set_line_width(linewidth)
-
-        if style == 'dash':
-            self.cr.set_dash([3.0, 4.0, 6.0, 4.0], 5.0)
-
-    def set_fill(self, color, alpha=1.0):
-        if color is None:
-            self.fill = False
-        else:
-            self.fill = True
-            self.fill_color = color
-            self.fill_alpha = alpha
-
-    def set_font(self, fontname, fontsize, color='black', alpha=1.0):
-        fontname = font_asst.resolve_alias(fontname, fontname)
-        self.cr.select_font_face(fontname)
-        fontsize = self.scale_fontsize(fontsize)
-        self.cr.set_font_size(fontsize)
-        self._set_color(color, alpha=alpha)
-
-    def text_extents(self, text):
-        a, b, wd, ht, i, j = self.cr.text_extents(text)
-        # NOTE: in cairo it seems we have to a apply a small
-        # "fudge factor" to computed text height to get reasonable
-        # height value
-        ht *= 1.2
+    def text_extents(self, text, font=None):
+        if font is None:
+            font = self.font
+        wd, ht = CairoHelp.text_size(text, font)
         return wd, ht
-
-    def setup_pen_brush(self, pen, brush):
-        if pen is not None:
-            self.set_line(pen.color, alpha=pen.alpha, linewidth=pen.linewidth,
-                          style=pen.linestyle)
-
-        if brush is None:
-            self.fill = False
-        else:
-            self.set_fill(brush.color, alpha=brush.alpha)
 
     ##### DRAWING OPERATIONS #####
 
@@ -141,68 +58,101 @@ class RenderContext(render.RenderContextBase):
         # no-op for this renderer
         pass
 
-    def draw_text(self, cx, cy, text, rot_deg=0.0):
-        self.cr.save()
-        self.cr.translate(cx, cy)
-        self.cr.move_to(0, 0)
-        self.cr.rotate(-math.radians(rot_deg))
-        self.cr.show_text(text)
-        self.cr.restore()
-        self.cr.new_path()
+    def draw_text(self, cx, cy, text, rot_deg=0.0, font=None, line=None,
+                  fill=None):
+        self.ctx.save()
+        self.ctx.translate(cx, cy)
+        self.ctx.move_to(0, 0)
+        self.ctx.rotate(-np.radians(rot_deg))
+        if font is not None:
+            self.setup_font(font)
+        if line is not None:
+            self.setup_line(line)
+            self.ctx.text_path(text)
+            self.ctx.stroke_preserve()
+            if fill is not None:
+                self.setup_fill(fill)
+                self.ctx.fill()
+        else:
+            # NOTE: show_text() is more efficient if we have a lot of text,
+            # according to Cairo docs, so use it instead if we are not
+            # stroking a path outline
+            if fill is not None:
+                self.setup_fill(fill)
+                self.ctx.show_text(text)
 
-    def draw_polygon(self, cpoints):
+        self.ctx.restore()
+        self.ctx.new_path()
+
+    def draw_polygon(self, cpoints, line=None, fill=None):
         (cx0, cy0) = cpoints[-1][:2]
-        self.cr.move_to(cx0, cy0)
+        self.ctx.move_to(cx0, cy0)
         for cpt in cpoints:
             cx, cy = cpt[:2]
-            self.cr.line_to(cx, cy)
-        self.cr.close_path()
-        self.cr.stroke_preserve()
+            self.ctx.line_to(cx, cy)
+        self.ctx.close_path()
+        if line is not None:
+            self.setup_line(line)
+            self.ctx.stroke_preserve()
+        if fill is not None:
+            self.setup_fill(fill)
+            self.ctx.fill()
+        self.ctx.new_path()
 
-        self._draw_fill()
-        self.cr.new_path()
+    def draw_circle(self, cx, cy, cradius, line=None, fill=None):
+        self.ctx.arc(cx, cy, cradius, 0, 2 * np.pi)
+        if line is not None:
+            self.setup_line(line)
+            self.ctx.stroke_preserve()
+        if fill is not None:
+            self.setup_fill(fill)
+            self.ctx.fill()
+        self.ctx.new_path()
 
-    def draw_circle(self, cx, cy, cradius):
-        self.cr.arc(cx, cy, cradius, 0, 2 * math.pi)
-        self.cr.stroke_preserve()
+    def draw_bezier_curve(self, cp, line=None):
+        self.ctx.move_to(cp[0][0], cp[0][1])
+        self.ctx.curve_to(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
 
-        self._draw_fill()
-        self.cr.new_path()
+        if line is not None:
+            self.setup_line(line)
+            self.ctx.stroke()
+        self.ctx.new_path()
 
-    def draw_bezier_curve(self, cp):
-        self.cr.move_to(cp[0][0], cp[0][1])
-        self.cr.curve_to(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
-
-        self.cr.stroke()
-        self.cr.new_path()
-
-    def draw_ellipse_bezier(self, cp):
+    def draw_ellipse_bezier(self, cp, line=None, fill=None):
         # draw 4 bezier curves to make the ellipse
-        self.cr.move_to(cp[0][0], cp[0][1])
-        self.cr.curve_to(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
-        self.cr.curve_to(cp[4][0], cp[4][1], cp[5][0], cp[5][1], cp[6][0], cp[6][1])
-        self.cr.curve_to(cp[7][0], cp[7][1], cp[8][0], cp[8][1], cp[9][0], cp[9][1])
-        self.cr.curve_to(cp[10][0], cp[10][1], cp[11][0], cp[11][1], cp[12][0], cp[12][1])
-        self.cr.stroke_preserve()
+        self.ctx.move_to(cp[0][0], cp[0][1])
+        self.ctx.curve_to(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
+        self.ctx.curve_to(cp[4][0], cp[4][1], cp[5][0], cp[5][1], cp[6][0], cp[6][1])
+        self.ctx.curve_to(cp[7][0], cp[7][1], cp[8][0], cp[8][1], cp[9][0], cp[9][1])
+        self.ctx.curve_to(cp[10][0], cp[10][1], cp[11][0], cp[11][1], cp[12][0], cp[12][1])
+        if line is not None:
+            self.setup_line(line)
+            self.ctx.stroke_preserve()
 
-        self._draw_fill()
-        self.cr.new_path()
+        if fill is not None:
+            self.setup_fill(fill)
+            self.ctx.fill()
+        self.ctx.new_path()
 
-    def draw_line(self, cx1, cy1, cx2, cy2):
-        self.cr.set_line_cap(cairo.LINE_CAP_ROUND)
-        self.cr.move_to(cx1, cy1)
-        self.cr.line_to(cx2, cy2)
-        self.cr.stroke()
-        self.cr.new_path()
+    def draw_line(self, cx1, cy1, cx2, cy2, line=None):
+        self.ctx.set_line_cap(cairo.LINE_CAP_ROUND)
+        self.ctx.move_to(cx1, cy1)
+        self.ctx.line_to(cx2, cy2)
+        if line is not None:
+            self.setup_line(line)
+            self.ctx.stroke()
+        self.ctx.new_path()
 
-    def draw_path(self, cpoints):
+    def draw_path(self, cpoints, line=None):
         (cx0, cy0) = cpoints[0][:2]
-        self.cr.move_to(cx0, cy0)
+        self.ctx.move_to(cx0, cy0)
         for cpt in cpoints[1:]:
             cx, cy = cpt[:2]
-            self.cr.line_to(cx, cy)
-        self.cr.stroke()
-        self.cr.new_path()
+            self.ctx.line_to(cx, cy)
+        if line is not None:
+            self.setup_line(line)
+            self.ctx.stroke()
+        self.ctx.new_path()
 
 
 class CanvasRenderer(render.StandardPipelineRenderer):
@@ -240,13 +190,13 @@ class CanvasRenderer(render.StandardPipelineRenderer):
 
         # fill surface with background color;
         # this reduces unwanted garbage in the resizing window
-        cr = cairo.Context(self.surface)
+        ctx = cairo.Context(self.surface)
 
         # fill surface with background color
-        cr.rectangle(0, 0, width, height)
+        ctx.rectangle(0, 0, width, height)
         r, g, b = self.viewer.get_bg()
-        cr.set_source_rgba(r, g, b)
-        cr.fill()
+        ctx.set_source_rgba(r, g, b)
+        ctx.fill()
 
         super(CanvasRenderer, self).resize(dims)
 
@@ -264,16 +214,16 @@ class CanvasRenderer(render.StandardPipelineRenderer):
         daht, dawd, depth = arr.shape
         self.logger.debug("arr shape is %dx%dx%d" % (dawd, daht, depth))
 
-        cr = cairo.Context(self.surface)
+        ctx = cairo.Context(self.surface)
         # TODO: is it really necessary to hang on to this context?
-        self.cr = cr
+        self.ctx = ctx
 
         # fill surface with background color
         imgwin_wd, imgwin_ht = self.viewer.get_window_size()
-        cr.rectangle(0, 0, imgwin_wd, imgwin_ht)
+        ctx.rectangle(0, 0, imgwin_wd, imgwin_ht)
         r, g, b = self.viewer.get_bg()
-        cr.set_source_rgba(r, g, b)
-        cr.fill()
+        ctx.set_source_rgba(r, g, b)
+        ctx.fill()
 
         stride = cairo.ImageSurface.format_stride_for_width(cairo.FORMAT_ARGB32,
                                                             dawd)
@@ -281,11 +231,11 @@ class CanvasRenderer(render.StandardPipelineRenderer):
                                                          cairo.FORMAT_ARGB32,
                                                          dawd, daht, stride)
 
-        cr.set_source_surface(img_surface, dst_x, dst_y)
-        cr.set_operator(cairo.OPERATOR_SOURCE)
+        ctx.set_source_surface(img_surface, dst_x, dst_y)
+        ctx.set_operator(cairo.OPERATOR_SOURCE)
 
-        cr.mask_surface(img_surface, dst_x, dst_y)
-        cr.fill()
+        ctx.mask_surface(img_surface, dst_x, dst_y)
+        ctx.fill()
 
     def get_surface_as_array(self, order=None):
         if self.surface_arr is None:
@@ -297,18 +247,16 @@ class CanvasRenderer(render.StandardPipelineRenderer):
 
     def setup_cr(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)
-        cr.initialize_from_shape(shape, font=False)
         return cr
 
     def get_dimensions(self, shape):
         cr = self.setup_cr(shape)
-        cr.set_font_from_shape(shape)
-        return cr.text_extents(shape.text)
+        font = cr.get_font_from_shape(shape)
+        return cr.text_extents(shape.text, font=font)
 
     def text_extents(self, text, font):
         cr = RenderContext(self, self.viewer, self.surface)
-        cr.set_font(font.fontname, font.fontsize, color=font.color,
-                    alpha=font.alpha)
+        cr.setup_font(font)
         return cr.text_extents(text)
 
 # END

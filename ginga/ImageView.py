@@ -3655,7 +3655,10 @@ class ImageViewBase(Callback.Callbacks):
             Text = canvas.get_draw_class('text')
             canvas.add(Text(x, y, text=text,
                             font=font, fontsize=font_size,
-                            color=self.img_fg, coord='window'),
+                            #color='black', alpha=1.0, linewidth=1,
+                            fill=True,
+                            fillcolor=self.img_fg, fillalpha=1.0,
+                            coord='window'),
                        tag=tag, redraw=False)
 
         if redraw:

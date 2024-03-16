@@ -8,7 +8,6 @@ import os.path
 
 from OpenGL import GL as gl
 
-from ginga import colors
 import ginga.fonts
 from ginga.canvas import transform
 
@@ -37,68 +36,14 @@ def get_cached_font(fontpath, fontsize):
         return font
 
 
-class Pen(object):
-    def __init__(self, color='black', alpha=1.0, linewidth=1,
-                 linestyle='solid'):
-        self.color = color
-        self.linewidth = linewidth
-        self.linestyle = linestyle
-        self.alpha = alpha
-
-
-class Brush(object):
-    def __init__(self, color='black', fill=False, alpha=1.0):
-        self.color = color
-        self.fill = fill
-        self.alpha = alpha
-
-
-class Font(object):
-    def __init__(self, fontname='ariel', fontsize=12.0, color='black',
-                 linewidth=1, alpha=1.0):
-        self.fontname = fontname
-        self.fontsize = fontsize * 2.0
-        self.color = color
-        self.linewidth = linewidth
-        # scale relative to a 12pt font
-        self.scale = fontsize / 12.0
-        self.alpha = alpha
-        # TODO: currently there is only support for some simple built-in
-        # fonts.  What kind of fonts/lookup can we use for this?
-        #self.font = get_cached_font(self.fontname, self.fontsize)
-
-
 class GlContext(object):
 
     def __init__(self, widget):
-        #self.set_canvas(widget)
         self.widget = widget
-
-    def get_color(self, color, alpha=1.0):
-        if color is not None:
-            r, g, b = colors.resolve_color(color)
-        else:
-            r, g, b = 1.0, 1.0, 1.0
-
-        return (r, g, b, alpha)
-
-    def get_pen(self, color, linewidth=1, linestyle='solid', alpha=1.0):
-        color = self.get_color(color, alpha=alpha)
-        return Pen(color=color, linewidth=linewidth, linestyle=linestyle,
-                   alpha=alpha)
-
-    def get_brush(self, color, alpha=1.0):
-        color = self.get_color(color, alpha=alpha)
-        return Brush(color=color, fill=True, alpha=alpha)
-
-    def get_font(self, name, size, color, linewidth=1, alpha=1.0):
-        color = self.get_color(color, alpha=alpha)
-        return Font(fontname=name, fontsize=size, color=color,
-                    linewidth=linewidth, alpha=alpha)
 
     def text_extents(self, text, font):
         # TODO: we need a better approximation
-        wd = len(text) * font.fontsize
+        wd = len(text) * font.fontsize * 0.45
         ht = font.fontsize
         return wd, ht
 

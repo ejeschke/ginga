@@ -4,44 +4,10 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-from ginga import colors
 from ginga.misc import Bunch, Callback
 from ginga.fonts import font_asst
 
 import matplotlib.textpath as textpath
-
-
-class Pen(object):
-    def __init__(self, color='black', linewidth=1, linestyle='solid',
-                 alpha=1.0):
-        self.color = get_color(color, alpha=alpha)
-        self.linewidth = linewidth
-        if linestyle == 'dash':
-            linestyle = 'dashdot'
-        self.linestyle = linestyle
-
-
-class Brush(object):
-    def __init__(self, color='black', fill=False, alpha=1.0):
-        self.color = get_color(color, alpha=alpha)
-        self.fill = fill
-
-
-class Font(object):
-    def __init__(self, fontname='sans', fontsize=12.0, color='black',
-                 alpha=1.0):
-        fontname = font_asst.resolve_alias(fontname, fontname)
-
-        self.fontname = fontname
-        self.fontsize = fontsize
-        self.color = get_color(color, alpha=alpha)
-        # try to resolve this to some font we can use
-        self.font = get_cached_font(self.fontname, self.fontsize)
-
-    def get_fontdict(self):
-        fontdict = dict(color=self.color, family=self.font,
-                        size=self.fontsize, transform=None)
-        return fontdict
 
 
 def load_font(font_name, font_file):
@@ -84,16 +50,6 @@ def get_cached_font(font_name, font_size):
     return font_name
 
 
-def get_color(color, alpha=1.0):
-    if color is not None:
-        r, g, b = colors.resolve_color(color)
-    else:
-        r, g, b = 1.0, 1.0, 1.0
-
-    #return (int(r * 255), int(g * 255), int(b * 255), int(alpha * 255))
-    return (r, g, b, alpha)
-
-
 class MplContext(object):
 
     def __init__(self, axes):
@@ -120,21 +76,23 @@ class MplContext(object):
     def pop(self):
         self.kwdargs = self.stack.pop()
 
-    def update_fill(self, brush):
-        if brush is None:
+    def update_fill(self, fill):
+        if fill is None:
             self.kwdargs['fill'] = False
             return
 
         self.kwdargs['fill'] = True
-        self.kwdargs['facecolor'] = brush.color
+        self.kwdargs['facecolor'] = fill._color_4tup
 
-    def update_line(self, pen):
-        self.kwdargs['color'] = pen.color
-        self.kwdargs['linewidth'] = pen.linewidth
-        self.kwdargs['linestyle'] = pen.linestyle
+    def update_line(self, line):
+        if line is not None:
+            self.kwdargs['color'] = line._color_4tup
+            self.kwdargs['linewidth'] = line.linewidth
+            style = 'dashdot' if line.linestyle == 'dash' else 'solid'
+            self.kwdargs['linestyle'] = style
 
-    def update_patch(self, pen, brush):
-        self.update_fill(brush)
+    def update_patch(self, line, fill):
+        self.update_fill(fill)
 
         if self.kwdargs['fill']:
             line_color_attr = 'facecolor'
@@ -143,19 +101,17 @@ class MplContext(object):
         else:
             line_color_attr = 'color'
 
-        self.kwdargs[line_color_attr] = pen.color
-        self.kwdargs['linewidth'] = pen.linewidth
-        self.kwdargs['linestyle'] = pen.linestyle
+        if line is not None:
+            self.kwdargs[line_color_attr] = line._color_4tup
+            self.kwdargs['linewidth'] = line.linewidth
+            style = 'dashdot' if line.linestyle == 'dash' else 'solid'
+            self.kwdargs['linestyle'] = style
 
-    def get_pen(self, color, alpha=1.0, linewidth=1, linestyle='solid'):
-        return Pen(color=color, linewidth=linewidth, linestyle=linestyle,
-                   alpha=alpha)
-
-    def get_brush(self, color, alpha=1.0):
-        return Brush(color=color, fill=True, alpha=alpha)
-
-    def get_font(self, name, size, color, alpha=1.0):
-        return Font(fontname=name, fontsize=size, color=color, alpha=alpha)
+    def get_fontdict(self, font, fill):
+        _font = get_cached_font(font.fontname, font.fontsize)
+        fontdict = dict(color=fill._color_4tup, family=_font,
+                        size=font.fontsize, transform=None)
+        return fontdict
 
     def text_extents(self, text, font):
         # This is not completely accurate because it depends a lot
