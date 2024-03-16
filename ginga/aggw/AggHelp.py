@@ -6,7 +6,6 @@
 
 import aggdraw as agg
 
-from ginga import colors
 from ginga.fonts import font_asst
 
 
@@ -42,39 +41,16 @@ class AggContext(object):
     def set_canvas(self, canvas):
         self.canvas = canvas
 
-    def get_color(self, color):
-        if color is not None:
-            r, g, b = colors.resolve_color(color)
-        else:
-            r, g, b = 1.0, 1.0, 1.0
+    def _get_font(self, font, fill):
+        color = fill.render.color[:3]
+        op = fill.render.color[3]
 
-        return (int(r * 255), int(g * 255), int(b * 255))
-
-    def get_pen(self, color, linewidth=1, alpha=1.0):
-        # if hasattr(self, 'linestyle'):
-        #     if self.linestyle == 'dash':
-        #         cr.set_dash([ 3.0, 4.0, 6.0, 4.0], 5.0)
-        op = int(alpha * 255)
-
-        p = agg.Pen(self.get_color(color), width=linewidth,
-                    opacity=op)
-        return p
-
-    def get_brush(self, color, alpha=1.0):
-        op = int(alpha * 255)
-        b = agg.Brush(self.get_color(color), opacity=op)
-        return b
-
-    def get_font(self, name, size, color, alpha=1.0):
-        color = self.get_color(color)
-        op = int(alpha * 255)
-
-        name = font_asst.resolve_alias(name, name)
-        font = get_cached_font(name, size, color, op)
+        font = get_cached_font(font.fontname, font.fontsize, color, op)
         return font
 
-    def text_extents(self, text, font):
-        wd, ht = self.canvas.textsize(text, font)
+    def text_extents(self, text, _font):
+        # _font is an Agg font
+        wd, ht = self.canvas.textsize(text, _font)
         return wd, ht
 
 # END

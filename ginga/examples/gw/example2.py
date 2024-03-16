@@ -122,9 +122,9 @@ class FitsViewer(object):
         self.wfillcolor = wfillcolor
 
         wwidth = Widgets.ComboBox()
-        for val in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
+        for val in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
             wwidth.append_text(str(val))
-        wwidth.set_index(0)
+        wwidth.set_index(1)
         wwidth.set_tooltip("set line width")
         wwidth.add_callback('activated', lambda w, idx: self.set_drawparams())
         self.wwidth = wwidth
@@ -145,8 +145,11 @@ class FitsViewer(object):
         wfillalpha.add_callback('value-changed', lambda w, val: self.set_drawparams())
         self.wfillalpha = wfillalpha
 
+        renderers = ['cairo', 'pil', 'agg', 'opencv']
+        if ginga_toolkit.family.startswith('qt'):
+            renderers.extend(['qt', 'vqt'])
         wrender = Widgets.ComboBox()
-        for name in ['cairo', 'pil', 'agg', 'opencv', 'qt']:
+        for name in renderers:
             wrender.append_text(name)
         wrender.set_index(0)
         wrender.set_tooltip("choose renderer backend")
@@ -224,7 +227,7 @@ class FitsViewer(object):
                   }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
                     'righttriangle', 'ellipse', 'square', 'box',
-                    'squarebox'):
+                    'squarebox', 'text'):
             params['fill'] = True
             index = self.wfillcolor.get_index()
             params['fillcolor'] = self.drawcolors[index]
