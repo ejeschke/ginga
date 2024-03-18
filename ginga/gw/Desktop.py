@@ -9,8 +9,6 @@ import math
 import os.path
 import uuid
 
-import yaml
-
 from ginga.misc import Bunch, Callback
 from ginga.gw import Widgets, Viewers
 from ginga.util import json
@@ -752,7 +750,11 @@ class Desktop(Callback.Callbacks):
         # write layout
         _n, ext = os.path.splitext(lo_file)
         with open(lo_file, 'w') as out_f:
-            if ext.lower() in ['.yml', '.yaml']:
+            if len(ext) == 0:
+                import pprint
+                pprint.pprint(layout, out_f)
+            elif ext.lower() in ['.yml', '.yaml']:
+                import yaml
                 out_f.write(yaml.dump(layout, indent=2))
             else:
                 out_f.write(json.dumps(layout, indent=2))
@@ -763,7 +765,12 @@ class Desktop(Callback.Callbacks):
             buf = in_f.read()
 
         _n, ext = os.path.splitext(lo_file)
-        if ext.lower() in ['.yml', '.yaml']:
+        if len(ext) == 0:
+            # older, python format
+            import ast
+            layout = ast.literal_eval(buf)
+        elif ext.lower() in ['.yml', '.yaml']:
+            import yaml
             layout = yaml.safe_load(buf)
         else:
             layout = json.loads(buf)
