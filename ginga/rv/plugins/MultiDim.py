@@ -43,7 +43,7 @@ to step through the planes in that axis.
 import time
 import re
 import os
-from distutils import spawn
+from shutil import which
 from contextlib import contextmanager
 
 from ginga.gw import Widgets
@@ -55,7 +55,7 @@ from ginga.util.videosink import VideoSink
 import numpy as np
 
 have_mencoder = False
-if spawn.find_executable("mencoder"):
+if which("mencoder") is not None:
     have_mencoder = True
 
 __all__ = ['MultiDim']
