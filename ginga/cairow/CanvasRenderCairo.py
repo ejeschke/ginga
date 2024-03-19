@@ -23,6 +23,10 @@ class RenderContext(render.RenderContextBase):
         render.RenderContextBase.__init__(self, renderer, viewer)
 
         self.cr = cairo.Context(surface)
+        # set up antialiasing
+        fo = cairo.FontOptions()
+        fo.set_antialias(cairo.ANTIALIAS_DEFAULT)
+        self.cr.set_font_options(fo)
 
         self.fill = False
         self.fill_color = None

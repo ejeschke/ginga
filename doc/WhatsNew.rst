@@ -11,6 +11,7 @@ Ver 5.1.0 (unreleased)
 - Made menubar a plugin; this allows very flexible menu configuration
   for users implementing their own variations on the reference viewer;
   NOTE: if you don't see Ginga menus, delete your $HOME/.ginga/layout*
+- Added default antialiasing to cairo renderer
 
 Ver 5.0.0 (2024-02-24)
 ======================
