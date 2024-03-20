@@ -36,7 +36,10 @@ def use(name):
         if name in ('gtk', 'gtk3'):
             name = 'gtk3'
             family = 'gtk3'
-        assert name in ['gtk3'], \
+        elif name == 'gtk4':
+            name = 'gtk4'
+            family = 'gtk4'
+        assert name in ['gtk3', 'gtk4'], \
             ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('tk'):

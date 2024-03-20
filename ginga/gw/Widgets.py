@@ -10,6 +10,9 @@ if tkname == 'qt':
 elif tkname == 'gtk3':
     from ginga.gtk3w.Widgets import *  # noqa
 
+elif tkname == 'gtk4':
+    from ginga.gtk4w.Widgets import *  # noqa
+
 elif tkname == 'pg':
     from ginga.web.pgw.Widgets import *  # noqa
 

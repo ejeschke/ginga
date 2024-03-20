@@ -1118,7 +1118,11 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
     def _plot_enter_cursor(self, event):
         if self.t_['plot_enter_focus']:
             w = self.get_widget()
-            w.setFocus()
+            if hasattr(w, 'setFocus'):
+                # NOTE: this is a Qt call, not cross-backend
+                # TODO: see if matplotlib has a backend independent way
+                # to do this
+                w.setFocus()
 
         self.make_ui_callback('enter')
 

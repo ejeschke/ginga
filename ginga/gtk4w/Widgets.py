@@ -5,15 +5,17 @@
 # Please see the file LICENSE.txt for details.
 #
 
-import os.path
+import uuid
 from functools import reduce
 
-from ginga.gtk3w import GtkHelp
+from ginga.gtk4w import GtkHelp
 from ginga.misc import Callback, Bunch, Settings, LineHistory
-from ginga.util.paths import icondir, app_icon_path
+from ginga.util.paths import app_icon_path
 
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import GLib
+from gi.repository import Gio
 from gi.repository import GObject
 from gi.repository import GdkPixbuf
 
@@ -64,16 +66,17 @@ class WidgetBase(Callback.Callbacks):
 
     def get_size(self):
         try:
-            rect = self.widget.get_allocation()
-            # x, y = rect.x, rect.y
-            wd, ht = rect.width, rect.height
+            wd = self.widget.get_width()
+            ht = self.widget.get_height()
+            if wd == 0 or ht == 0:
+                wd, ht = self.widget.get_size_request()
+                if int(wd + ht) <= 0:
+                    raise Exception("No size yet")
 
         except Exception as e:
             # window maybe isn't realized yet--try other ways
             min_req, nat_req = self.widget.get_preferred_size()
             wd, ht = nat_req.width, nat_req.height
-            # req = self.widget.get_size_request()
-            # wd, ht = req
 
             # wd, ht = max(1, wd), max(1, ht)
         return wd, ht
@@ -87,12 +90,14 @@ class WidgetBase(Callback.Callbacks):
         return _app
 
     def delete(self):
-        self.widget.destroy()
+        #self.widget.destroy()
+        #self.hide()
+        self.widget.unrealize()
         self.widget = None
 
     def show(self):
-        # self.widget.show()
-        self.widget.show_all()
+        #self.widget.show_all()
+        self.widget.show()
 
     def hide(self):
         self.widget.hide()
@@ -120,7 +125,7 @@ class WidgetBase(Callback.Callbacks):
         pass
 
     def set_border_width(self, pix):
-        self.widget.set_border_width(pix)
+        GtkHelp.set_border_width(self.widget, pix)
 
 # BASIC WIDGETS
 
@@ -132,7 +137,8 @@ class TextEntry(WidgetBase):
         w = Gtk.Entry()
         w.set_text(text)
         w.set_editable(editable)
-        w.connect('key-press-event', self._key_press_event)
+        # TODO
+        #w.connect('key-press-event', self._key_press_event)
         w.connect('activate', self._cb_redirect)
         self.widget = w
 
@@ -176,7 +182,8 @@ class TextEntry(WidgetBase):
     def set_font(self, font, size=10):
         if isinstance(font, str):
             font = self.get_font(font, size)
-        self.widget.modify_font(font)
+        # TODO
+        #self.widget.modify_font(font)
 
     def set_length(self, numchars):
         # this only sets the visible length of the widget
@@ -188,17 +195,19 @@ class TextEntrySet(WidgetBase):
     def __init__(self, text='', editable=True):
         super(TextEntrySet, self).__init__()
 
-        hbox = Gtk.HBox()
+        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         hbox.set_spacing(4)
         w = Gtk.Entry()
         w.set_text(text)
         w.set_editable(editable)
-        hbox.pack_start(w, True, True, 0)
+        w.set_hexpand(True)
+        hbox.append(w)
         w.connect('activate', self._cb_redirect)
         self.entry = w
-        w = Gtk.Button('Set')
+        w = Gtk.Button(label='Set')
         w.connect('clicked', self._cb_redirect)
-        hbox.pack_start(w, False, False, 0)
+        #hbox.pack_start(w, False, False, 0)
+        hbox.append(w)
         self.btn = w
         self.widget = hbox
 
@@ -219,7 +228,8 @@ class TextEntrySet(WidgetBase):
     def set_font(self, font, size=10):
         if isinstance(font, str):
             font = self.get_font(font, size)
-        self.widget.modify_font(font)
+        # TODO
+        #self.widget.modify_font(font)
 
     def set_length(self, numchars):
         # self.widget.set_width_chars(numchars)
@@ -244,9 +254,10 @@ class TextArea(WidgetBase):
 
         # this widget has a built in ScrollArea to match Qt functionality
         sw = Gtk.ScrolledWindow()
-        sw.set_border_width(2)
+        GtkHelp.set_border_width(sw, 2)
+        sw.set_has_frame(True)
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        sw.add(self.tw)
+        sw.set_child(self.tw)
         self.widget = sw
 
         self.histlimit = 0
@@ -304,7 +315,8 @@ class TextArea(WidgetBase):
     def set_font(self, font, size=10):
         if isinstance(font, str):
             font = self.get_font(font, size)
-        self.tw.modify_font(font)
+        # TODO
+        #self.tw.modify_font(font)
 
     def set_wrap(self, tf):
         if tf:
@@ -317,11 +329,8 @@ class Label(WidgetBase):
     def __init__(self, text='', halign='left', style='normal', menu=None):
         super(Label, self).__init__()
 
-        label = Gtk.Label(text)
-        evbox = Gtk.EventBox()
-        evbox.set_border_width(0)
-        evbox.props.visible_window = False
-        evbox.add(label)
+        label = Gtk.Label(label=text)
+        GtkHelp.set_border_width(label, 0)
 
         if halign == 'left':
             label.set_justify(Gtk.Justification.LEFT)
@@ -330,20 +339,17 @@ class Label(WidgetBase):
         elif halign == 'right':
             label.set_justify(Gtk.Justification.RIGHT)
 
-        evbox.connect("button_press_event", self._cb_redirect)
-        self.enable_callback('activated')
-        evbox.connect("button_release_event", self._cb_redirect2)
-        self.enable_callback('released')
+        # label.connect("button_press_event", self._cb_redirect)
+        # self.enable_callback('activated')
+        # label.connect("button_release_event", self._cb_redirect2)
+        # self.enable_callback('released')
 
         self.label = label
         self.menu = menu
-        self.evbox = evbox
-        self.widget = evbox
+        self.widget = label
         if style == 'clickable':
             fr = Gtk.Frame()
-            fr.set_shadow_type(Gtk.ShadowType.OUT)
-            evbox.props.visible_window = True
-            fr.add(evbox)
+            fr.set_child(label)
             self.frame = fr
             self.widget = fr
 
@@ -356,8 +362,7 @@ class Label(WidgetBase):
         elif event.button == 3 and self.menu is not None:
             menu_w = self.menu.get_widget()
             if menu_w.get_sensitive():
-                return menu_w.popup(None, None, None, None,
-                                    event.button, event.time)
+                return menu_w.popup()
         return False
 
     def _cb_redirect2(self, widget, event):
@@ -376,11 +381,12 @@ class Label(WidgetBase):
     def set_font(self, font, size=10):
         if isinstance(font, str):
             font = self.get_font(font, size)
-        self.label.modify_font(font)
+        # TODO
+        #self.label.modify_font(font)
 
     def set_color(self, fg=None, bg=None):
         if bg is not None:
-            GtkHelp.modify_bg(self.evbox, bg)
+            GtkHelp.modify_bg(self.widget, bg)
         if fg is not None:
             self.label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(fg))
 
@@ -389,7 +395,7 @@ class Button(WidgetBase):
     def __init__(self, text=''):
         super(Button, self).__init__()
 
-        w = Gtk.Button(text)
+        w = Gtk.Button(label=text)
         self.widget = w
         w.connect('clicked', self._cb_redirect)
 
@@ -531,11 +537,11 @@ class Slider(WidgetBase):
         # NOTE: parameter dtype is ignored for now for gtk3
 
         if orientation == 'horizontal':
-            w = GtkHelp.HScale()
+            w = GtkHelp.Scale(orientation=Gtk.Orientation.HORIZONTAL)
             # TEMP: hack because scales don't seem to expand as expected
             w.set_size_request(200, -1)
         else:
-            w = GtkHelp.VScale()
+            w = GtkHelp.Scale(orientation=Gtk.Orientation.VERTICAL)
             w.set_size_request(-1, 200)
         self.widget = w
 
@@ -607,9 +613,9 @@ class ScrollBar(WidgetBase):
         super(ScrollBar, self).__init__()
 
         if orientation == 'horizontal':
-            self.widget = Gtk.HScrollbar()
+            self.widget = Gtk.Scrollbar(orientation=Gtk.Orientation.HORIZONTAL)
         else:
-            self.widget = Gtk.VScrollbar()
+            self.widget = Gtk.Scrollbar(orientation=Gtk.Orientation.VERTICAL)
         self.widget.set_range(0.0, 100.0)
         self.widget.connect('value-changed', self._cb_redirect)
 
@@ -631,7 +637,7 @@ class CheckBox(WidgetBase):
     def __init__(self, text=''):
         super(CheckBox, self).__init__()
 
-        self.widget = GtkHelp.CheckButton(text)
+        self.widget = GtkHelp.CheckButton(label=text)
         self.widget.sconnect('toggled', self._cb_redirect)
 
         self.enable_callback('activated')
@@ -651,8 +657,8 @@ class ToggleButton(WidgetBase):
     def __init__(self, text=''):
         super(ToggleButton, self).__init__()
 
-        w = GtkHelp.ToggleButton(text)
-        w.set_mode(True)
+        w = GtkHelp.ToggleButton(label=text)
+        #w.set_mode(True)
         self.widget = w
         self.widget.sconnect('toggled', self._cb_redirect)
 
@@ -673,12 +679,11 @@ class RadioButton(WidgetBase):
     def __init__(self, text='', group=None):
         super(RadioButton, self).__init__()
 
+        self.widget = GtkHelp.RadioButton(label=text)
         if group is not None:
-            group = group.get_widget()
-            self.widget = GtkHelp.RadioButton.new_with_label_from_widget(group,
-                                                                         text)
-        else:
-            self.widget = GtkHelp.RadioButton.new_with_label(None, text)
+            group_w = group.get_widget()
+            self.widget.set_group(group_w)
+
         self.widget.connect('toggled', self._cb_redirect)
 
         self.enable_callback('activated')
@@ -702,13 +707,11 @@ class Image(WidgetBase):
             native_image = Gtk.Image()
         self.image = native_image
         self.image.set_property("has-tooltip", True)
-        evbox = Gtk.EventBox()
-        evbox.add(self.image)
-        evbox.connect("button-press-event", self._cb_redirect1)
-        evbox.connect("button-release-event", self._cb_redirect2)
+        # evbox.connect("button-press-event", self._cb_redirect1)
+        # evbox.connect("button-release-event", self._cb_redirect2)
         self._action = None
         self.menu = menu
-        self.widget = evbox
+        self.widget = self.image
 
         self.enable_callback('activated')
 
@@ -720,8 +723,7 @@ class Image(WidgetBase):
             elif event.button == 3 and self.menu is not None:
                 menu_w = self.menu.get_widget()
                 if menu_w.get_sensitive():
-                    return menu_w.popup(None, None, None, None,
-                                        event.button, event.time)
+                    return menu_w.popup()
 
     def _cb_redirect2(self, widget, event):
         if event.type == Gdk.EventType.BUTTON_RELEASE:
@@ -809,7 +811,8 @@ class TreeView(WidgetBase):
 
         # this widget has a built in ScrollArea to match Qt functionality
         sw = Gtk.ScrolledWindow()
-        sw.set_border_width(2)
+        sw.set_has_frame(True)
+        GtkHelp.set_border_width(sw, 2)
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.widget = sw
 
@@ -825,12 +828,14 @@ class TreeView(WidgetBase):
             tv = Gtk.TreeView()
 
         self.tv = tv
-        sw.add(self.tv)
+        sw.set_child(self.tv)
         tv.connect('cursor-changed', self._selection_cb)
         tv.connect('row-activated', self._cb_redirect)
         # needed to get alternating row colors
         if use_alt_row_color:
-            tv.set_rules_hint(True)
+            # TODO
+            #tv.set_rules_hint(True)
+            pass
         if self.selection == 'multiple':
             # enable multiple selection
             treeselection = tv.get_selection()
@@ -1173,9 +1178,10 @@ class ContainerBase(WidgetBase):
         self.children.append(ref)
 
     def _remove(self, childw, delete=False):
-        self.widget.remove(childw)
+        childw.unparent()
         if delete:
-            childw.destroy()
+            #childw.destroy()
+            pass
 
     def remove(self, child, delete=False):
         if child not in self.children:
@@ -1207,39 +1213,49 @@ class ContainerBase(WidgetBase):
         return self.children[idx]
 
     def set_margins(self, left, right, top, bottom):
-        # TODO: can this be made more accurate?
-        self.widget.set_border_width(left)
+        self.widget.set_margin_start(left)
+        self.widget.set_margin_end(right)
+        self.widget.set_margin_top(top)
+        self.widget.set_margin_bottom(bottom)
 
 
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Box, self).__init__()
 
+        self.orientation = orientation
         if orientation == 'horizontal':
-            self.widget = Gtk.HBox()
+            self.widget = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         else:
-            self.widget = Gtk.VBox()
+            self.widget = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
     def set_spacing(self, val):
         self.widget.set_spacing(val)
 
-    def insert_widget(self, idx, child, stretch=0.0):
+    def insert_widget(self, idx, child, stretch=0):
         child_w = child.get_widget()
         # TODO: can this be made more accurate?
-        expand = (float(stretch) > 0.0)
-        self.widget.pack_start(child_w, expand, True, 0)
+        expand = (float(stretch) > 0)
+        if self.orientation == 'horizontal':
+            child_w.set_hexpand(expand)
+        else:
+            child_w.set_vexpand(expand)
+        self.widget.append(child_w)
         self.widget.reorder_child(child_w, idx)
         self.children.insert(idx, child)
-        self.widget.show_all()
         self.make_callback('widget-added', child)
 
-    def add_widget(self, child, stretch=0.0):
+    def add_widget(self, child, stretch=0):
         self.add_ref(child)
         child_w = child.get_widget()
         # TODO: can this be made more accurate?
-        expand = (float(stretch) > 0.0)
-        self.widget.pack_start(child_w, expand, True, 0)
-        self.widget.show_all()
+        # old style was pack_start(child, expand_bool, fill_bool, padding_px_int)
+        expand = (float(stretch) > 0)
+        if self.orientation == 'horizontal':
+            child_w.set_hexpand(expand)
+        else:
+            child_w.set_vexpand(expand)
+        self.widget.append(child_w)
         self.make_callback('widget-added', child)
 
 
@@ -1258,15 +1274,14 @@ class Frame(ContainerBase):
         super(Frame, self).__init__()
 
         fr = Gtk.Frame(label=title)
-        fr.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
-        fr.set_label_align(0.10, 0.5)
+        #fr.set_label_align(0.10, 0.5)
+        fr.set_label_align(0.10)
         self.widget = fr
 
     def set_widget(self, child):
         self.remove_all()
         self.add_ref(child)
-        self.widget.add(child.get_widget())
-        self.widget.show_all()
+        self.widget.set_child(child.get_widget())
 
     def set_text(self, text):
         w = self.get_widget()
@@ -1275,69 +1290,33 @@ class Frame(ContainerBase):
 
 
 class Expander(ContainerBase):
-    r_arrow = None
-    d_arrow = None
-
     def __init__(self, title=None, notoggle=False):
-        super(Expander, self).__init__()
+        super().__init__()
 
-        vbox = VBox()
-        vbox.set_margins(0, 0, 0, 0)
-        vbox.set_spacing(0)
-        self.widget = vbox.get_widget()
-        self._vbox = vbox
-        if Expander.r_arrow is None:
-            iconpath = os.path.join(icondir, 'triangle-right.svg')
-            Expander.r_arrow = GtkHelp.pixbuf_new_from_file_at_size(iconpath,
-                                                                    12, 12)
-        if Expander.d_arrow is None:
-            iconpath = os.path.join(icondir, 'triangle-down.svg')
-            Expander.d_arrow = GtkHelp.pixbuf_new_from_file_at_size(iconpath,
-                                                                    12, 12)
-        self._d_arrow = Gtk.Image.new_from_pixbuf(Expander.d_arrow)
-        self._r_arrow = Gtk.Image.new_from_pixbuf(Expander.r_arrow)
-
-        self.toggle = None
-        if not notoggle:
-            toggle = ToggleButton(title)
-            self.toggle = toggle
-            toggle_w = toggle.get_widget()
-            toggle_w.set_always_show_image(True)
-            r_arrow = Gtk.Image.new_from_pixbuf(Expander.r_arrow)
-            toggle_w.set_image(r_arrow)
-            toggle.add_callback('activated', self._toggle_widget)
-            vbox.add_widget(toggle, stretch=0)
-
+        self.widget = Gtk.Expander()
+        self.widget.set_label(title)
+        self.widget.connect("activate", self._cb_redirect)
+        # NOTE: currently no support for notoggle
         self.content = None
 
         for name in ('opened', 'closed'):
             self.enable_callback(name)
 
-    def set_widget(self, child, stretch=1):
-        if self.content is not None:
-            self.widget.remove(self.content)
-        self.content = child
-
-    def expand(self, tf):
-        children = self._vbox.get_children()
-        if tf:
-            if self.content is None or self.content in children:
-                return
-            if self.toggle is not None:
-                self.toggle.get_widget().set_image(self._d_arrow)
-            self._vbox.add_widget(self.content, stretch=1)
+    def _cb_redirect(self, w):
+        if w.get_expanded():
             self.make_callback('opened')
-
         else:
-            if self.content is None or self.content not in children:
-                return
-            if self.toggle is not None:
-                self.toggle.get_widget().set_image(self._r_arrow)
-            self._vbox.remove(self.content)
             self.make_callback('closed')
 
-    def _toggle_widget(self, w, tf):
-        self.expand(tf)
+    def set_widget(self, child, stretch=1):
+        if self.content is not None:
+            self.remove(self.content)
+        self.add_ref(child)
+        self.content = child
+        self.widget.set_child(child.get_widget())
+
+    def expand(self, tf):
+        self.widget.set_expanded(tf)
 
 
 class TabWidget(ContainerBase):
@@ -1422,18 +1401,13 @@ class TabWidget(ContainerBase):
     def add_widget(self, child, title=''):
         self.add_ref(child)
         child_w = child.get_widget()
-        label = Gtk.Label(title)
-        evbox = Gtk.EventBox()
-        evbox.props.visible_window = True
-        evbox.add(label)
-        evbox.show_all()
-        evbox.connect("button-press-event", self._cb_select, child)
-        self.widget.append_page(child_w, evbox)
+        label = Gtk.Label(label=title)
+        #label.connect("button-press-event", self._cb_select, child)
+        self.widget.append_page(child_w, label)
         if self.reorderable:
             self.widget.set_tab_reorderable(child_w, True)
         if self.detachable:
             self.widget.set_tab_detachable(child_w, True)
-        self.widget.show_all()
         # attach title to child
         child.extdata.tab_title = title
         self.make_callback('widget-added', child)
@@ -1484,7 +1458,8 @@ class MDIWidget(ContainerBase):
 
         # TODO: currently scrollbars are only partially working
         sw = Gtk.ScrolledWindow()
-        sw.set_border_width(2)
+        sw.set_has_frame(True)
+        GtkHelp.set_border_width(sw, 2)
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.widget = sw
         w = GtkHelp.MDIWidget()
@@ -1498,9 +1473,9 @@ class MDIWidget(ContainerBase):
         w._set_current_page = w.set_current_page
         w.set_current_page = self._set_current_page
 
-        sw.set_hadjustment(self.mdi_w.get_hadjustment())
-        sw.set_vadjustment(self.mdi_w.get_vadjustment())
-        sw.add(self.mdi_w)
+        #sw.set_hadjustment(self.mdi_w.get_hadjustment())
+        #sw.set_vadjustment(self.mdi_w.get_vadjustment())
+        sw.set_child(self.mdi_w)
 
         for name in ('page-switch', 'page-close'):
             self.enable_callback(name)
@@ -1522,7 +1497,8 @@ class MDIWidget(ContainerBase):
     def _remove(self, childw, delete=False):
         self.mdi_w.remove(childw)
         if delete:
-            childw.destroy()
+            #childw.destroy()
+            pass
 
     def _window_resized(self, subwin, wd, ht):
         self.mdi_w._resize_page(subwin, wd, ht)
@@ -1592,7 +1568,7 @@ class MDIWindow(WidgetBase):
             child.resize(wd, ht)
 
         child_w = child.get_widget()
-        label = Gtk.Label(title)
+        label = Gtk.Label(label=title)
         if iconpath is None:
             iconpath = app_icon_path
 
@@ -1662,25 +1638,23 @@ class ScrollArea(ContainerBase):
         super(ScrollArea, self).__init__()
 
         sw = Gtk.ScrolledWindow()
-        sw.set_border_width(2)
+        sw.set_has_frame(True)
+        GtkHelp.set_border_width(sw, 2)
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.widget = sw
 
         self.enable_callback('configure')
-        sw.connect("size_allocate", self._resize_cb)
+        # TODO
+        #sw.connect("resize", self._resize_cb)
 
-    def _resize_cb(self, widget, allocation):
-        rect = widget.get_allocation()
-        # x, y = rect.x, rect.y
-        width, height = rect.width, rect.height
+    def _resize_cb(self, widget, width, height):
         self.make_callback('configure', width, height)
         return True
 
     def set_widget(self, child):
         self.remove_all()
         self.add_ref(child)
-        self.widget.add_with_viewport(child.get_widget())
-        self.widget.show_all()
+        self.widget.set_child(child.get_widget())
 
     def scroll_to_end(self, vertical=True, horizontal=False):
         if vertical:
@@ -1704,9 +1678,9 @@ class Splitter(ContainerBase):
 
     def _get_pane(self):
         if self.orientation == 'horizontal':
-            w = Gtk.HPaned()
+            w = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
         else:
-            w = Gtk.VPaned()
+            w = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
         w.set_wide_handle(True)
         return w
 
@@ -1716,12 +1690,10 @@ class Splitter(ContainerBase):
 
         # without a Frame it can be difficult to see the divider
         frame_w = Gtk.Frame()
-        #frame_w.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
-        frame_w.set_shadow_type(Gtk.ShadowType.NONE)
-        frame_w.add(child_w)
+        frame_w.set_child(child_w)
 
         if len(self.children) == 1:
-            self.widget.pack1(frame_w)
+            self.widget.set_start_child(frame_w)
 
         else:
             last = self.widget
@@ -1731,10 +1703,9 @@ class Splitter(ContainerBase):
             w = self._get_pane()
             self.panes.append(w)
 
-            w.pack1(frame_w)
-            last.pack2(w)
+            w.set_start_child(frame_w)
+            last.set_end_child(w)
 
-        self.widget.show_all()
         self.make_callback('widget-added', child)
 
     def _get_sizes(self, pane):
@@ -1778,11 +1749,10 @@ class Splitter2(ContainerBase):
         # without a Frame it can be difficult to see the divider
         frame_w = Gtk.Frame()
         #frame_w.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
-        frame_w.set_shadow_type(Gtk.ShadowType.NONE)
-        frame_w.add(child_w)
+        #frame_w.set_shadow_type(Gtk.ShadowType.NONE)
+        frame_w.set_child(child_w)
 
         self.widget.add_widget(frame_w)
-        self.widget.show_all()
         self.make_callback('widget-added', child)
 
     def get_sizes(self):
@@ -1805,7 +1775,7 @@ class GridBox(ContainerBase):
     def resize_grid(self, rows, columns):
         self.num_rows = rows
         self.num_cols = columns
-        # No resize() for Gtk Grid widget
+        # No resize() for Gtk4 Grid widget
         #self.widget.resize(rows, columns)
 
     def set_row_spacing(self, val):
@@ -1893,19 +1863,20 @@ class Toolbar(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Toolbar, self).__init__()
 
-        w = Gtk.Toolbar()
-        w.set_style(Gtk.ToolbarStyle.ICONS)
-        if orientation == 'horizontal':
-            w.set_orientation(Gtk.Orientation.HORIZONTAL)
-        else:
-            w.set_orientation(Gtk.Orientation.VERTICAL)
-        self.widget = w
+        self.box = Box(orientation=orientation)
+        #w.set_style(Gtk.ToolbarStyle.ICONS)
+        self.widget = self.box.get_widget()
+        # if orientation == 'horizontal':
+        #     w.set_orientation(Gtk.Orientation.HORIZONTAL)
+        # else:
+        #     w.set_orientation(Gtk.Orientation.VERTICAL)
 
     def add_action(self, text, toggle=False, iconpath=None, iconsize=None):
         if toggle:
             child = ToggleButton(text)
         else:
             child = Button(text)
+        child.get_widget().set_has_frame(False)
 
         if iconpath is not None:
             if iconsize is not None:
@@ -1916,26 +1887,17 @@ class Toolbar(ContainerBase):
                 wd, ht = px, px
             pixbuf = GtkHelp.pixbuf_new_from_file_at_size(iconpath, wd, ht)
             if pixbuf is not None:
-                image = Gtk.Image.new_from_pixbuf(pixbuf)
-                child.get_widget().set_image(image)
+                image_w = Gtk.Image.new_from_pixbuf(pixbuf)
+                btn_w = child.get_widget()
+                btn_w.set_child(image_w)
 
         self.add_widget(child)
         return child
 
     def add_widget(self, child):
-        # gtk3 says to add a generic widget using ToolItem.new()
-        tool_w = Gtk.ToolItem.new()
-        w = child.get_widget()
-        tool_w.add(w)
-        w.show()
-        tool = ContainerBase()
-        tool.widget = tool_w
-        tool_w.show()
-        tool.add_ref(child)
-        self.add_ref(tool)
-        self.widget.insert(tool_w, -1)
+        self.box.add_widget(child, stretch=0)
         self.make_callback('widget-added', child)
-        return tool
+        return child
 
     def add_menu(self, text, menu=None, mtype='tool'):
         if menu is None:
@@ -1947,14 +1909,15 @@ class Toolbar(ContainerBase):
             self.add_widget(child)
             child.add_callback('released', lambda w: menu.hide())
 
-        child.add_callback('activated', lambda w: menu.popup())
+        child.add_callback('activated', lambda w: menu.popup(child))
         return menu
 
     def add_separator(self):
-        sep_w = Gtk.SeparatorToolItem()
-        sep = wrap(sep_w)
-        self.widget.insert(sep_w, -1)
-        self.add_ref(sep)
+        #sep_w = Gtk.SeparatorToolItem()
+        #sep = wrap(sep_w)
+        #self.widget.insert(sep_w, -1)
+        #self.add_ref(sep)
+        self.box.add_widget(Label(" | "), stretch=0)
 
 
 class MenuAction(WidgetBase):
@@ -1963,24 +1926,41 @@ class MenuAction(WidgetBase):
 
         self.text = text
         self.checkable = checkable
+        self.state = None
 
+        action_id = "menu-" + str(uuid.uuid4())
         if checkable:
-            self.widget = Gtk.CheckMenuItem(label=text)
-            self.widget.connect('toggled', self._cb_redirect)
+            self.state = GLib.Variant("b", False)
+            self.action = Gio.SimpleAction(name=action_id,
+                                           parameter_type=None,
+                                           state=self.state,
+                                           enabled=True)
+            self.action.connect('change-state', self._cb_redirect)
         else:
-            self.widget = Gtk.MenuItem(label=text)
-            self.widget.connect('activate', self._cb_redirect)
-        self.widget.show()
+            self.action = Gio.SimpleAction(name=action_id,
+                                           parameter_type=None,
+                                           state=None,
+                                           enabled=True)
+            #self.action = Gio.SimpleAction.new(action_id, None)
+            self.action.connect('activate', self._cb_redirect)
 
+        _app._gtkapp.add_action(self.action)
+        #self.action.set_enabled(True)
+
+        self.widget = Gio.MenuItem.new(text, "app." + action_id)
+        #self.widget = Gio.MenuItem()
+        #self.widget.set_label(text)
+        #self.widget.set_action_and_target_value("app." + action_id, None)
         self.enable_callback('activated')
 
     def set_state(self, tf):
         if not self.checkable:
             raise ValueError("Not a checkable menu item")
-        self.widget.set_active(tf)
+        #self.action.set_state(tf)
+        self.action.set_state(GLib.Variant("b", tf))
 
     def get_state(self):
-        return self.widget.get_active()
+        return self.action.get_state()
 
     def _cb_redirect(self, *args):
         if self.checkable:
@@ -1994,76 +1974,73 @@ class Menu(ContainerBase):
     def __init__(self):
         super(Menu, self).__init__()
 
-        self.widget = Gtk.Menu()
+        self.model = Gio.Menu()
+        # NOTE: this is only used if the menu is employed as a context menu
+        self.widget = Gtk.PopoverMenu.new_from_model_full(self.model,
+                                                          Gtk.PopoverMenuFlags.NESTED)
+        self.widget.set_halign(Gtk.Align.START)
+        self.widget.set_has_arrow(False)
+        self.widget.set_autohide(True)
+        self.widget.set_cascade_popdown(True)
         self.menus = Bunch.Bunch(caseless=True)
-        self.widget.show()
+        self.add_separator()
 
     def add_widget(self, child):
-        menuitem_w = child.get_widget()
-        self.widget.append(menuitem_w)
-        self.add_ref(child)
-        # self.widget.show_all()
         self.make_callback('widget-added', child)
 
     def add_name(self, name, checkable=False):
         child = MenuAction(text=name, checkable=checkable)
-        self.add_widget(child)
+        self.menus[name] = child
+        self.section.append_item(child.get_widget())
+        #self.widget.set_menu_model(self.model)
         return child
 
     def add_menu(self, name):
-        item_w = Gtk.MenuItem(label=name)
         child = Menu()
-        self.add_ref(child)
         self.menus[name] = child
-        item_w.set_submenu(child.get_widget())
-        self.widget.append(item_w)
-        item_w.show()
+        self.section.append_submenu(name, child.model)
+        #self.widget.set_menu_model(self.model)
         return child
 
     def get_menu(self, name):
         return self.menus[name]
 
     def add_separator(self):
-        sep = Gtk.SeparatorMenuItem()
-        self.widget.append(sep)
-        sep.show()
+        self.section = Gio.Menu()
+        item = Gio.MenuItem.new_section(label=None,
+                                        section=self.section)
+        self.model.append_item(item)
 
     def popup(self, widget=None):
-        menu = self.widget
-        menu.show_all()
-        now = int(0)
-        if menu.get_sensitive():
-            menu.popup(None, None, None, None, 0, now)
+        if widget is not None:
+            self.widget.set_parent(widget.get_widget())
+        if self.widget.get_sensitive():
+            self.widget.popup()
 
 
 class Menubar(ContainerBase):
     def __init__(self):
         super(Menubar, self).__init__()
 
-        self.widget = Gtk.MenuBar()
+        self.model = Gio.Menu()
+        self.widget = Gtk.PopoverMenuBar.new_from_model(self.model)
         self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child, name):
         if not isinstance(child, Menu):
             raise ValueError("child widget needs to be a Menu object")
-        item_w = Gtk.MenuItem(label=name)
-        item_w.set_submenu(child.get_widget())
-        self.add_ref(child)
-        self.widget.append(item_w)
+        self.model.append_submenu(name, child.model)
         self.menus[name] = child
-        item_w.show()
+        #item.add_callback('activated', self._show_menu, name)
         self.make_callback('widget-added', child)
         return child
 
     def add_name(self, name):
-        item_w = Gtk.MenuItem(label=name)
         child = Menu()
-        self.add_ref(child)
-        self.menus[name] = child
-        item_w.set_submenu(child.get_widget())
-        self.widget.append(item_w)
-        item_w.show()
-        return child
+        return self.add_widget(child, name)
+
+    # def _show_menu(self, menubar, name):
+    #     self.menus[name].popup()
 
     def get_menu(self, name):
         return self.menus[name]
@@ -2075,9 +2052,10 @@ class TopLevelMixin(object):
         self._fullscreen = False
 
         self.widget.connect("destroy", self._quit)
-        self.widget.connect("delete_event", self._close_event)
-        self.widget.connect("window_state_event", self._window_event)
-        self.widget.connect("configure-event", self._configure_event)
+        # TODO
+        self.widget.connect("close-request", self._close_event)
+        #self.widget.connect("window_state_event", self._window_event)
+        #self.widget.connect("configure-event", self._configure_event)
 
         if title is not None:
             self.widget.set_title(title)
@@ -2085,7 +2063,7 @@ class TopLevelMixin(object):
         self.enable_callback('close')
 
     def show(self):
-        self.widget.show_all()
+        self.widget.show()
 
     def hide(self):
         self.widget.hide()
@@ -2093,7 +2071,7 @@ class TopLevelMixin(object):
     def _quit(self, *args):
         self.close()
 
-    def _close_event(self, widget, event):
+    def _close_event(self, widget):
         try:
             self.close()
 
@@ -2123,11 +2101,17 @@ class TopLevelMixin(object):
 
         self.make_callback('close')
 
+    def delete(self):
+        widget = self.widget
+        super().delete()
+        window = widget.get_root()
+        if window is not None:
+            window.destroy()
+
     def get_size(self):
         try:
-            rect = self.widget.get_allocation()
-            # x, y = rect.x, rect.y
-            wd, ht = rect.width, rect.height
+            wd = self.widget.get_width()
+            ht = self.widget.get_height()
 
         except Exception as e:
             # window maybe isn't realized yet--try other ways
@@ -2142,58 +2126,64 @@ class TopLevelMixin(object):
 
     def get_pos(self):
         res = None
-        window = self.widget.get_window()
+        window = self.widget.get_root()
         if window is not None:
-            res = window.get_origin()
-            if isinstance(res, tuple) and len(res) == 2:
-                return res
+            # TODO: Gtk4 doesn't want you to know a window's position
+            #res = window.get_origin()
+            #if isinstance(res, tuple) and len(res) == 2:
+            #    return res
+            pass
 
         ed = self.extdata
-        x, y = ed.get('x', None), ed.get('y', None)
+        x, y = ed.get('x', 0), ed.get('y', 0)
         return x, y
 
     def raise_(self):
-        window = self.widget.get_window()
-        if window is not None:
-            window.raise_()
+        # window = self.widget.get_root()
+        # if window is not None:
+        #     window.raise_()
+        self.widget.present()
 
     def lower(self):
-        window = self.widget.get_window()
+        window = self.widget.get_root()
         if window is not None:
             window.lower()
 
     def focus(self):
-        window = self.widget.get_window()
-        if window is not None:
-            window.focus()
+        # window = self.widget.get_root()
+        # if window is not None:
+        #     window.focus()
+        self.widget.focus()
 
     def move(self, x, y):
-        window = self.widget.get_window()
+        window = self.widget.get_root()
         if window is not None:
-            window.move(x, y)
+            # Gtk4 doesn't want to allow you to move windows
+            #window.move(x, y)
+            pass
 
     def maximize(self):
-        window = self.widget.get_window()
+        window = self.widget.get_root()
         if window is not None:
             window.maximize()
 
     def unmaximize(self):
-        window = self.widget.get_window()
+        window = self.widget.get_root()
         if window is not None:
             window.unmaximize()
 
     def is_maximized(self):
-        window = self.widget.get_window()
+        window = self.widget.get_root()
         mask = Gdk.WindowState.MAXIMIZED
         return window.get_state() & mask != 0
 
     def fullscreen(self):
-        window = self.widget.get_window()
+        window = self.widget.get_root()
         if window is not None:
             window.fullscreen()
 
     def unfullscreen(self):
-        window = self.widget.get_window()
+        window = self.widget.get_root()
         if window is not None:
             window.unfullscreen()
 
@@ -2201,14 +2191,14 @@ class TopLevelMixin(object):
         return self._fullscreen
 
     def iconify(self):
-        window = self.widget.get_window()
+        window = self.widget.get_root()
         if window is not None:
-            window.iconify()
+            window.minimize()
 
     def uniconify(self):
-        window = self.widget.get_window()
+        window = self.widget.get_root()
         if window is not None:
-            window.deiconify()
+            window.unminimize()
 
     def set_title(self, title):
         self.widget.set_title(title)
@@ -2224,22 +2214,31 @@ class TopLevel(TopLevelMixin, ContainerBase):
         widget = GtkHelp.TopLevel()
         if iconpath is None:
             iconpath = app_icon_path
-        widget.set_icon(GtkHelp.get_icon(iconpath))
+        # TODO: no set_icon in Gtk4
+        #widget.set_icon(GtkHelp.get_icon(iconpath))
         self.widget = widget
-        widget.set_border_width(0)
+        GtkHelp.set_border_width(widget, 0)
 
         TopLevelMixin.__init__(self, title=title)
+        if _app is None:
+            raise Exception("Application object needs to be created before any widgets")
+        _app.add_window(self)
 
     def set_widget(self, child):
         self.add_ref(child)
         child_w = child.get_widget()
-        self.widget.add(child_w)
+        self.widget.set_child(child_w)
 
     def set_icon(self, iconpath):
         # NOTE: not guaranteed to work after the window is created because
         # this can be rendered by the window manager. Better to use the
         # constructor 'iconpath' parameter
-        self.widget.set_icon(GtkHelp.get_icon(iconpath))
+        # TODO: no set_icon in Gtk4
+        #self.widget.set_icon(GtkHelp.get_icon(iconpath))
+        pass
+
+    def add_dialog(self, child_dialog):
+        pass
 
 
 class Application(Callback.Callbacks):
@@ -2284,6 +2283,14 @@ class Application(Callback.Callbacks):
         # self.logger.debug("screen dimensions %dx%d" % (
         #     self.screen_wd, self.screen_ht))
 
+        app = Gtk.Application(application_id="ginga")
+        app.connect('activate', self.on_activate_cb)
+        self._gtkapp = app
+        self._gtkapp.connect('window-added', self._show_window)
+        self._gtkapp.connect('action-added', self._show_action)
+        self._activated = False
+        self._pending = []
+        self._periodic = []
         _app = self
 
         # supposedly needed for GObject < 3.10.2
@@ -2296,31 +2303,52 @@ class Application(Callback.Callbacks):
         # Set up Gtk style
         GtkHelp.set_default_style()
 
+    def _show_action(self, *args):
+        pass
+
+    def _show_window(self, *args):
+        pass
+
     def get_screen_size(self):
         return (self.screen_wd, self.screen_ht)
 
+    def on_activate_cb(self, app, *args):
+        self._activated = True
+        while len(self._pending) > 0:
+            widget = self._pending.pop()
+            self.add_window(widget)
+
+    def add_periodic_callback(self, after_sec, method):
+        after_msec = int(after_sec * 1000)
+        self._periodic.append(Bunch.Bunch(after_sec=after_sec,
+                                          after_msec=after_msec,
+                                          method=method))
+
     def process_events(self):
-
-        while Gtk.events_pending():
-            try:
-                Gtk.main_iteration()
-                # TEMP: to help solve the issue of gtk3 events getting
-                # lost--we want to know whether the process_event loop
-                # is running, so ping periodically if events are showing
-                # up
-                # cur_time = time.time()
-                # if cur_time - self._time_save > 10.0:
-                #     self.logger.info("process_events ping!")
-                #     self._time_save = cur_time
-
-            except Exception as e:
-                self.logger.error("Exception in main_iteration() loop: %s" %
-                                  (str(e)))
+        pass
 
     def process_end(self):
         pass
 
+    def _process_custom_events(self, bnch):
+        try:
+            bnch.method()
+        finally:
+            #GObject.timeout_add(bnch.after_msec,
+            #                    self._process_custom_events, bnch)
+            GObject.idle_add(self._process_custom_events, bnch)
+
+    def _boot_periodic(self):
+        for bnch in self._periodic:
+            #GObject.timeout_add(bnch.after_msec,
+            #                    self._process_custom_events, bnch)
+            GObject.idle_add(self._process_custom_events, bnch)
+
     def add_window(self, window, wid=None):
+        if not self._activated:
+            self._pending.append(window)
+            return
+        self._gtkapp.add_window(window.get_widget())
         if wid is None:
             wid = 'win%d' % (self.wincnt)
             self.wincnt += 1
@@ -2341,14 +2369,18 @@ class Application(Callback.Callbacks):
 
     def make_window(self, title=None):
         w = TopLevel(title=title)
-        self.add_window(w)
         return w
 
     def make_timer(self):
         return GtkHelp.Timer()
 
+    def _mainloop(self):
+        GObject.idle_add(self._boot_periodic)
+
+        self._gtkapp.run(None)
+
     def mainloop(self):
-        Gtk.main()
+        self._gtkapp.run(None)
 
     def close(self):
         """Called when someone is asking the application to close.
@@ -2364,7 +2396,7 @@ class Application(Callback.Callbacks):
         """
         self.make_callback('shutdown')
 
-        Gtk.main_quit()
+        self._gtkapp.quit()
 
 
 class Dialog(TopLevelMixin, WidgetBase):
@@ -2379,10 +2411,13 @@ class Dialog(TopLevelMixin, WidgetBase):
         else:
             self.parent = None
 
-        self.widget = Gtk.Dialog(title=title, flags=flags)
-        btn_box = Gtk.ButtonBox()
-        btn_box.set_border_width(5)
+        self.widget = Gtk.Dialog(title=title)
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        GtkHelp.set_border_width(btn_box, 5)
         btn_box.set_spacing(4)
+        if modal and self.parent is not None:
+            root = self.parent.get_root()
+            self.widget.set_transient_for(root)
 
         for name, val in buttons:
             btn = Button(name)
@@ -2392,7 +2427,7 @@ class Dialog(TopLevelMixin, WidgetBase):
                 return lambda w: self._cb_redirect(val)
 
             btn.add_callback('activated', cb(val))
-            btn_box.pack_start(btn.get_widget(), True, True, 0)
+            btn_box.append(btn.get_widget())
 
         self.widget.set_modal(modal)
 
@@ -2401,8 +2436,11 @@ class Dialog(TopLevelMixin, WidgetBase):
         self.content = VBox()
         self.content.set_border_width(0)
         content = self.widget.get_content_area()
-        content.pack_start(self.content.get_widget(), True, True, 0)
-        content.pack_end(btn_box, True, True, 0)
+        w = self.content.get_widget()
+        w.set_hexpand(True)
+        w.set_vexpand(True)
+        content.append(w)
+        content.append(btn_box)
 
         #self.widget.connect("response", self._cb_redirect)
 
@@ -2450,10 +2488,12 @@ class SaveDialog(object):
             if (self.selectedfilter is not None and
                     not path.endswith(self.selectedfilter)):
                 path += self.selectedfilter
-            self.widget.destroy()
+            #self.widget.destroy()
+            self.widget = None
             return path
         elif response == Gtk.ResponseType.CANCEL:
-            self.widget.destroy()
+            #self.widget.destroy()
+            self.widget = None
             return None
 
 
@@ -2500,10 +2540,12 @@ def name_mangle(name, pfx=''):
 def make_widget(title, wtype):
     if wtype == 'label':
         w = Label(title)
-        w.label.set_alignment(0.95, 0.5)
+        #w.label.set_alignment(0.95, 0.5)
+        #w.label.set_xalign(0.95)
     elif wtype == 'llabel':
         w = Label(title)
-        w.label.set_alignment(0.05, 0.95)
+        #w.label.set_alignment(0.05, 0.95)
+        #w.label.set_xalign(0.05)
     elif wtype in ('textentry', 'entry'):
         w = TextEntry()
         # w.get_widget().set_width_chars(12)
@@ -2579,6 +2621,7 @@ def build_info(captions, orientation='vertical'):
     table = GridBox(rows=numrows, columns=numcols)
     table.set_row_spacing(2)
     table.set_column_spacing(4)
+    #box.pack_start(table, False, False, 0)
     box.add_widget(table, stretch=0)
 
     wb = Bunch.Bunch()

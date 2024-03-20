@@ -8,6 +8,9 @@ if tkname == 'qt':
 elif tkname == 'gtk3':
     from ginga.gtk3w.Plot import *  # noqa
 
+elif tkname == 'gtk4':
+    from ginga.gtk4w.Plot import *  # noqa
+
 elif tkname == 'pg':
     from ginga.web.pgw.Plot import *  # noqa
 
