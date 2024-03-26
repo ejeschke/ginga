@@ -245,7 +245,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
 
         # Set the axis limits
         # TODO: should we do this only for those who have autoaxis=True?
-        ## x0, y0, x1, y1 = self.get_datarect()
+        ## x0, y0, x1, y1 = self.get_data_rect()
         ## for ax in self.figure.axes:
         ##     ax.set_xlim(x0, x1)
         ##     ax.set_ylim(y0, y1)

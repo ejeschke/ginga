@@ -549,14 +549,22 @@ class CrosshairP(OnePointMixin, CanvasObjectBase):
         return self.within_radius(viewer, pt, p0, self.cap_radius)
 
     def draw(self, viewer):
-        wd, ht = viewer.get_window_size()
-        cpoints = self.get_cpoints(viewer)
-        (cx, cy) = cpoints[0]
+        draw_pts = viewer.get_draw_bbox()
+        pts = np.asarray(self.crdmap.data_to(draw_pts))
+        xs = pts.T[0]
+        x1, x2 = xs.min(), xs.max()
+        ys = pts.T[1]
+        y1, y2 = ys.min(), ys.max()
 
-        hx1, hx2 = 0, wd
-        hy1 = hy2 = cy
-        vy1, vy2 = 0, ht
-        vx1 = vx2 = cx
+        pts = self.get_data_points(points=[(x1, self.y), (x2, self.y),
+                                           (self.x, y1), (self.x, y2)])
+        cpoints = self.get_cpoints(viewer, points=pts)
+        hx1, hy1 = cpoints[0]
+        hx2, hy2 = cpoints[1]
+        vx1, vy1 = cpoints[2]
+        vx2, vy2 = cpoints[3]
+        cpoints = self.get_cpoints(viewer)
+        cx, cy = cpoints[0]
 
         if self.text is None:
             if self.format == 'xy':

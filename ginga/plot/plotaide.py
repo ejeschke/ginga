@@ -432,8 +432,8 @@ class PlotAide(Callback.Callbacks):
                         self.autopan_x()
 
                 # recalculate plots based on new X limits
-                rect = self.viewer.get_pan_rect()
-                x_lo, x_hi = rect[0][0], rect[2][0]
+                bbox = self.viewer.get_pan_bbox()
+                x_lo, x_hi = bbox[0][0], bbox[2][0]
 
                 for plot_src in self.plots.values():
                     plot_src.calc_points(self.viewer, x_lo, x_hi)

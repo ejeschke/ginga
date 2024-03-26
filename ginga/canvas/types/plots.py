@@ -157,7 +157,7 @@ class XYPlot(CanvasObjectBase):
         """Called when recalculating our path's points.
         """
         # select only points within range of the current pan/zoom
-        bbox = viewer.get_pan_rect()
+        bbox = viewer.get_pan_bbox()
         if bbox is None:
             self.path.points = []
             return

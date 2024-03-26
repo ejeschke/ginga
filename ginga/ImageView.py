@@ -1672,7 +1672,7 @@ class ImageViewBase(Callback.Callbacks):
         x, y = int(float(xpct) * wd), int(float(ypct) * ht)
         return (x, y)
 
-    def get_pan_rect(self):
+    def get_pan_bbox(self):
         """Get the coordinates in the actual data corresponding to the
         area shown in the display for the current zoom level and pan.
 
@@ -1689,10 +1689,10 @@ class ImageViewBase(Callback.Callbacks):
         arr_pts = self.tform['data_to_window'].from_(win_pts)
         return arr_pts
 
-    def get_draw_rect(self):
+    def get_draw_bbox(self):
         """Get the coordinates in the actual data corresponding to the
         area needed for drawing images for the current zoom level and pan.
-        Unlike get_pan_rect(), this includes areas outside of the
+        Unlike get_pan_bbox(), this includes areas outside of the
         current viewport, but that might be viewed with a transformation
         or rotation subsequently applied.
 
@@ -1714,7 +1714,7 @@ class ImageViewBase(Callback.Callbacks):
         arr_pts = self.tform['data_to_window'].from_(win_pts)
         return arr_pts
 
-    def get_datarect(self):
+    def get_data_rect(self):
         """Get the approximate LL and UR corners of the displayed image.
 
         Returns
@@ -1725,7 +1725,7 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         # get the data points in the four corners
-        a, b = trcalc.get_bounds(self.get_pan_rect())
+        a, b = trcalc.get_bounds(self.get_pan_bbox())
 
         # determine bounding box
         x1, y1 = a[:2]
@@ -2402,8 +2402,8 @@ class ImageViewBase(Callback.Callbacks):
         rx1, rx2 = np.min(x), np.max(x)
         ry1, ry2 = np.min(y), np.max(y)
 
-        rect = self.get_pan_rect()
-        arr = np.array(rect, dtype=float)
+        bbox = self.get_pan_bbox()
+        arr = np.array(bbox, dtype=float)
         x, y = tr.to_(arr).T
 
         qx1, qx2 = np.min(x), np.max(x)
@@ -3713,6 +3713,11 @@ class ImageViewBase(Callback.Callbacks):
     def show_focus_indicator(self, tf, color='white'):
         # TO BE DEPRECATED--please use addons.show_focus_indicator
         addons.show_focus_indicator(self, tf, color=color)
+
+    # TO BE DEPRECATED
+    get_draw_rect = get_draw_bbox
+    get_pan_rect = get_pan_bbox
+    get_datarect = get_data_rect
 
 
 class SuppressRedraw(object):

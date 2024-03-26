@@ -12,6 +12,10 @@ Ver 5.1.0 (unreleased)
   for users implementing their own variations on the reference viewer;
   NOTE: if you don't see Ginga menus, delete your $HOME/.ginga/layout*
 - Added default antialiasing to cairo renderer
+- Fixed drawing of dimension labels for rectangles specified in WCS
+  coordinates
+- Fixed drawing of Crosshair canvas object in opengl backend
+- Fixed drawing of XRange and YRange in non-data coordinates
 
 Ver 5.0.0 (2024-02-24)
 ======================

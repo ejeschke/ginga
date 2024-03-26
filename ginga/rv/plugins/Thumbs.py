@@ -900,7 +900,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # sanity check and adjustment so that popup will be minimally obscured
         # by a window edge
-        x3, y3, x4, y4 = thumbs_viewer.get_datarect()
+        x3, y3, x4, y4 = thumbs_viewer.get_data_rect()
         if rect.x2 > x4:
             off = rect.x2 - x4
             rect.x1 -= off
@@ -1090,7 +1090,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         """Return the list of thumbkeys for the thumbs that should be
         visible in the Thumbs pane.
         """
-        x1, y1, x2, y2 = self.c_view.get_datarect()
+        x1, y1, x2, y2 = self.c_view.get_data_rect()
         self.logger.debug("datarect=(%f, %f, %f, %f)", x1, y1, x2, y2)
 
         # TODO: should really be text ht

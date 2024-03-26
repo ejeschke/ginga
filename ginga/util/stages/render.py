@@ -378,10 +378,10 @@ class Scale(Stage):
         self.verify_2d(data_np)
 
         # get extent of our data coverage in the window
-        # TODO: get rid of padding by fixing get_draw_rect() which
+        # TODO: get rid of padding by fixing get_draw_bbox() which
         # doesn't quite get the coverage right at high magnifications
         pad = 1.0
-        pts = np.asarray(self.viewer.get_draw_rect()).T
+        pts = np.asarray(self.viewer.get_draw_bbox()).T
         xmin = np.floor(np.nanmin(pts[0])) - pad
         ymin = np.floor(np.nanmin(pts[1])) - pad
         xmax = np.ceil(np.nanmax(pts[0])) + pad
