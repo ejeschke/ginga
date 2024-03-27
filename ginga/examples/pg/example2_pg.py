@@ -171,7 +171,8 @@ class FitsViewer(object):
                   'alpha': alpha,
                   }
         if kind in ('circle', 'rectangle', 'polygon', 'triangle',
-                    'righttriangle', 'ellipse', 'square', 'box'):
+                    'righttriangle', 'ellipse', 'square', 'box',
+                    'squarebox'):
             params['fill'] = fill
             params['fillalpha'] = alpha
 

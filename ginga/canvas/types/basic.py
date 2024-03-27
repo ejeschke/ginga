@@ -1426,7 +1426,7 @@ class RectangleP(TwoPointMixin, CanvasObjectBase):
     def get_params_metadata(cls):
         return [
             Param(name='coord', type=str, default='data',
-                  valid=['data', 'wcs', 'cartesian', 'window'],
+                  valid=coord_names,
                   description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
