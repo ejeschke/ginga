@@ -334,7 +334,7 @@ class Pan(GingaPlugin.GlobalPlugin):
             paninfo.panimage.clear()
 
         x, y = fitsimage.get_pan()
-        points = fitsimage.get_pan_rect()
+        points = fitsimage.get_pan_bbox()
 
         limits = fitsimage.get_limits()
         width = limits[1][0] - limits[0][0]

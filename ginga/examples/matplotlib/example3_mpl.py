@@ -352,7 +352,7 @@ class FitsViewer(QtGui.QMainWindow):
         ax = self.fig.add_subplot(111)
         ax.autoscale(True, tight=True)
 
-        x0, y0, x1, y1 = tuple(map(int, fi.get_datarect()))
+        x0, y0, x1, y1 = tuple(map(int, fi.get_data_rect()))
         #extent = (x0, x1, y0, y1)
 
         image = fi.get_image()

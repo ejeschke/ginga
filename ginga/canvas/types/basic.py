@@ -1520,13 +1520,17 @@ class RectangleP(TwoPointMixin, CanvasObjectBase):
             cr.set_font(self.font, fontsize, color=self.color)
 
             # draw label on X dimension
-            pt = ((self.x1 + self.x2) * 0.5, self.y2)
-            cx, cy = self.get_cpoints(viewer, points=[pt])[0]
+            x, y = (self.x1 + self.x2) * 0.5, self.y2
+            pts = self.get_data_points(points=[(x, y)])
+            cpts = self.get_cpoints(viewer, points=pts)
+            cx, cy = cpts[0][:2]
             cr.draw_text(cx, cy, "%f" % abs(self.x2 - self.x1))
 
             # draw label on Y dimension
-            pt = (self.x2, (self.y1 + self.y2) * 0.5)
-            cx, cy = self.get_cpoints(viewer, points=[pt])[0]
+            x, y = self.x2, (self.y1 + self.y2) * 0.5
+            pts = self.get_data_points(points=[(x, y)])
+            cpts = self.get_cpoints(viewer, points=pts)
+            cx, cy = cpts[0][:2]
             cr.draw_text(cx, cy, "%f" % abs(self.y2 - self.y1))
 
         if self.showcap:
@@ -1853,7 +1857,10 @@ class XRange(RectangleP):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        return cls(cxt.start_x, cxt.x, **cxt.drawparams)
+        # Need to set Y coordinates to get accurate drawing in WCS coords
+        xrng = cls(cxt.start_x, cxt.x, **cxt.drawparams)
+        xrng.y1, xrng.y2 = cxt.start_y, cxt.y
+        return xrng
 
     def __init__(self, x1, x2, color='yellow',
                  linewidth=0, linestyle='solid', showcap=False,
@@ -1879,19 +1886,26 @@ class XRange(RectangleP):
         return contains
 
     def get_edit_points(self, viewer):
-        tup = viewer.get_datarect()
-        dy = (tup[1] + tup[3]) * 0.5
-        pt = self.get_data_points(points=self.get_points())
-        return [MovePoint((pt[0][0] + pt[2][0]) * 0.5, dy),
-                EditPoint(pt[0][0], dy),
-                EditPoint(pt[2][0], dy)]
+        tup = viewer.get_data_rect()
+        pts = self.crdmap.data_to([(tup[0], tup[1]), (tup[2], tup[3])])
+        dy = (pts[0][1] + pts[1][1]) * 0.5
+        pts = self.get_data_points(points=[((self.x1 + self.x2) * 0.5, dy),
+                                           (self.x1, dy), (self.x2, dy)])
+        return [MovePoint(*pts[0]),
+                EditPoint(*pts[1]),
+                EditPoint(*pts[2])]
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
 
-        tup = viewer.get_datarect()
-        pts = [(self.x1, tup[1]), (self.x2, tup[1]),
-               (self.x2, tup[3]), (self.x1, tup[3])]
+        # factor in reaches of y1, y2 in data coords
+        draw_pts = viewer.get_draw_bbox()
+        pts = np.asarray(self.crdmap.data_to(draw_pts))
+        ys = pts.T[1]
+        y1, y2 = ys.min(), ys.max()
+        pts = [(self.x1, y1), (self.x2, y1), (self.x2, y2), (self.x1, y2)]
+
+        pts = self.get_data_points(points=pts)
         cpoints = self.get_cpoints(viewer, points=pts)
 
         cr.draw_polygon(cpoints)
@@ -1900,8 +1914,10 @@ class XRange(RectangleP):
             fontsize = self.scale_font(viewer)
             cr.set_font(self.font, fontsize, color=self.color)
 
-            pt = ((self.x1 + self.x2) * 0.5, (tup[1] + tup[3]) * 0.5)
-            cx, cy = self.get_cpoints(viewer, points=[pt])[0]
+            x, y = (self.x1 + self.x2) * 0.5, (y1 + y2) * 0.5
+            pts = self.get_data_points(points=[(x, y)])
+            cpts = self.get_cpoints(viewer, points=pts)
+            cx, cy = cpts[0][:2]
             cr.draw_text(cx, cy, "%f:%f" % (self.x1, self.x2))
 
 
@@ -1950,7 +1966,10 @@ class YRange(RectangleP):
 
     @classmethod
     def idraw(cls, canvas, cxt):
-        return cls(cxt.start_y, cxt.y, **cxt.drawparams)
+        # Need to set Y coordinates to get accurate drawing in WCS coords
+        yrng = cls(cxt.start_y, cxt.y, **cxt.drawparams)
+        yrng.x1, yrng.x2 = cxt.start_x, cxt.x
+        return yrng
 
     def __init__(self, y1, y2, color='yellow',
                  linewidth=0, linestyle='solid', showcap=False,
@@ -1976,19 +1995,26 @@ class YRange(RectangleP):
         return contains
 
     def get_edit_points(self, viewer):
-        tup = viewer.get_datarect()
-        dx = (tup[0] + tup[2]) * 0.5
-        pt = self.get_data_points(points=self.get_points())
-        return [MovePoint(dx, (pt[0][1] + pt[2][1]) * 0.5),
-                EditPoint(dx, pt[0][1]),
-                EditPoint(dx, pt[2][1])]
+        tup = viewer.get_data_rect()
+        pts = self.crdmap.data_to([(tup[0], tup[1]), (tup[2], tup[3])])
+        dx = (pts[0][0] + pts[1][0]) * 0.5
+        pts = self.get_data_points(points=[(dx, (self.y1 + self.y2) * 0.5),
+                                           (dx, self.y1), (dx, self.y2)])
+        return [MovePoint(*pts[0]),
+                EditPoint(*pts[1]),
+                EditPoint(*pts[2])]
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
 
-        tup = viewer.get_datarect()
-        pts = [(tup[0], self.y1), (tup[2], self.y1),
-               (tup[2], self.y2), (tup[0], self.y2)]
+        # factor in reaches of x1, x2 in data coords
+        draw_pts = viewer.get_draw_bbox()
+        pts = np.asarray(self.crdmap.data_to(draw_pts))
+        xs = pts.T[0]
+        x1, x2 = xs.min(), xs.max()
+        pts = [(x1, self.y1), (x2, self.y1), (x2, self.y2), (x1, self.y2)]
+
+        pts = self.get_data_points(points=pts)
         cpoints = self.get_cpoints(viewer, points=pts)
 
         cr.draw_polygon(cpoints)
@@ -1997,8 +2023,10 @@ class YRange(RectangleP):
             fontsize = self.scale_font(viewer)
             cr.set_font(self.font, fontsize, color=self.color)
 
-            pt = ((tup[0] + tup[2]) * 0.5, (self.y1 + self.y2) * 0.5)
-            cx, cy = self.get_cpoints(viewer, points=[pt])[0]
+            x, y = (x1 + x2) * 0.5, (self.y1 + self.y2) * 0.5
+            pts = self.get_data_points(points=[(x, y)])
+            cpts = self.get_cpoints(viewer, points=pts)
+            cx, cy = cpts[0][:2]
             cr.draw_text(cx, cy, "%f:%f" % (self.y1, self.y2))
 
 

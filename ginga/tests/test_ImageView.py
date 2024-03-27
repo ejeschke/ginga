@@ -49,7 +49,7 @@ class TestImageView(object):
         viewer.set_image(self.image)
         viewer.set_pan(401.0, 501.0)
         viewer.scale_to(8.0, 8.0)
-        x1, y1, x2, y2 = viewer.get_datarect()
+        x1, y1, x2, y2 = viewer.get_data_rect()
         result = np.array([(x1, y1), (x2, y2)])
         expected = np.array([[376., 482.25], [426., 519.75]])
         assert np.all(np.isclose(expected, result))

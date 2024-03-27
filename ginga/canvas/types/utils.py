@@ -6,7 +6,7 @@
 #
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        register_canvas_types,
-                                       colors_plus_none, coord_names)
+                                       colors_plus_none)
 from .basic import RectangleP
 from ginga.misc.ParamSet import Param
 
@@ -202,8 +202,8 @@ class DrawableColorBarP(RectangleP):
     @classmethod
     def get_params_metadata(cls):
         return [
-            Param(name='coord', type=str, default='data',
-                  valid=coord_names,
+            Param(name='coord', type=str, default='percentage',
+                  valid=['percentage', 'window'],
                   description="Set type of coordinates"),
             Param(name='x1', type=float, default=0.0, argpos=0,
                   description="First X coordinate of object"),
@@ -266,16 +266,20 @@ class DrawableColorBarP(RectangleP):
         if rgbmap is None:
             rgbmap = viewer.get_rgbmap()
 
+        cr = viewer.renderer.setup_cr(self)
+
         cpoints = self.get_cpoints(viewer)
+
+        # draw optional border
+        if self.linewidth > 0:
+            cr.set_line(self.color, alpha=self.alpha)
+            cr.draw_polygon(cpoints)
         cx1, cy1 = cpoints[0]
         cx2, cy2 = cpoints[2]
         cx1, cy1, cx2, cy2 = self.swapxy(cx1, cy1, cx2, cy2)
         width, height = abs(cx2 - cx1), abs(cy2 - cy1)
 
         loval, hival = viewer.get_cut_levels()
-
-        cr = viewer.renderer.setup_cr(self)
-        tr = viewer.tform['window_to_native']
 
         # Calculate reasonable spacing for range numbers
         cr.set_font(self.font, self.fontsize, color=self.color,
@@ -336,8 +340,8 @@ class DrawableColorBarP(RectangleP):
             cr.set_fill(color, alpha=self.fillalpha)
 
             cx1, cy1, cx2, cy2 = x, y_base, x + wd, y_base + clr_ht
-            cr.draw_polygon(tr.to_(((cx1, cy1), (cx2, cy1),
-                                    (cx2, cy2), (cx1, cy2))))
+            cr.draw_polygon(((cx1, cy1), (cx2, cy1),
+                             (cx2, cy2), (cx1, cy2)))
 
             # Draw range scale if we are supposed to
             if self.showrange and i in _interval:
@@ -362,7 +366,7 @@ class DrawableColorBarP(RectangleP):
             cr.set_line(self.bgcolor, linewidth=0)
 
             cx1, cy1, cx2, cy2 = x_base, y_top - scale_ht, x_top, y_top
-            cp = tr.to_(((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2)))
+            cp = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
             cr.draw_polygon(cp)
 
             cr.set_line(color=self.color, linewidth=1, alpha=self.alpha)
@@ -371,18 +375,11 @@ class DrawableColorBarP(RectangleP):
             cr.set_font(self.font, self.fontsize, color=self.color,
                         alpha=self.alpha)
             for (cx, cy, cyy, text) in range_pts:
-                cp = tr.to_(((cx, cy), (cx, cy + self.tick_ht), (cx, cyy - 2)))
+                cp = ((cx, cy), (cx, cy + self.tick_ht), (cx, cyy - 2))
                 # tick
                 cr.draw_line(cp[0][0], cp[0][1], cp[1][0], cp[1][1])
                 # number
                 cr.draw_text(cp[2][0], cp[2][1], text)
-
-        # draw optional border
-        if self.linewidth > 0:
-            cr.set_fill(self.bgcolor, alpha=0.0)
-            cx1, cy1, cx2, cy2 = x_base, y_base, x_top, y_top
-            cpoints = ((cx1, cy1), (cx2, cy1), (cx2, cy2), (cx1, cy2))
-            cr.draw_polygon(tr.to_(cpoints))
 
 
 class DrawableColorBar(DrawableColorBarP):
