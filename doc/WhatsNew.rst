@@ -8,6 +8,7 @@ Ver 5.0.1 (unreleased)
   automatically
 - Improved error checking on contains_pts() method for canvas items
 - Removed references to distutils module, deprecated in python 3.12
+- Added default antialiasing to cairo renderer
 
 Ver 5.0.0 (2024-02-24)
 ======================
