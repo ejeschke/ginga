@@ -240,7 +240,7 @@ class GwMain(Callback.Callbacks):
             self.update_pending(timeout=timeout)
 
     def gui_quit(self):
-        "Call this to cause the GUI thread to quit the mainloop."""
+        """Call this to cause the GUI thread to quit the mainloop."""
         self.ev_quit.set()
 
         self.make_callback('shutdown')
