@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 5.0.2 (unreleased)
+======================
+- Fix broken WCS compass in Pan plugin
+
 Ver 5.0.1 (2024-03-31)
 ======================
 - Fixed an issue where --modules option did not start a global plugin
