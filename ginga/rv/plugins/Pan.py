@@ -218,10 +218,7 @@ class Pan(GingaPlugin.GlobalPlugin):
 
     # CALLBACKS
 
-    def _redo(self, channel, image):
-        """NOTE: this plugin is triggered not by a CHANNEL getting a new
-        image, but by the VIEWER getting a new image, OR the viewer redrawing.
-        """
+    def redo(self, channel, image):
         if not self.gui_up:
             return
         self.logger.debug("redo")
