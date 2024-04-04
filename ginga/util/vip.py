@@ -254,7 +254,7 @@ class ViewerImageProxy:
             _x1, _y1, _x2, _y2 = cv_img.get_llur()
             dx = min(x2, _x2) - max(x1, _x1)
             dy = min(y2, _y2) - max(y1, _y1)
-            if not (dx >= 0 and dy >= 0):
+            if dx < 0 or dy < 0:
                 continue
 
             # make a dst mask to assign only those pixels in this image

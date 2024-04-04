@@ -481,8 +481,9 @@ class PixTable(GingaPlugin.LocalPlugin):
                           int(np.floor(self.lasty + px_off)))
 
         # cutout image data
-        data, x1, y1, x2, y2 = image.cutout_radius(data_x, data_y,
-                                                   self.pixtbl_radius)
+        x1, x2 = int(data_x - self.pixtbl_radius), int(data_x + self.pixtbl_radius + 1)
+        y1, y2 = int(data_y - self.pixtbl_radius), int(data_y + self.pixtbl_radius + 1)
+        data = image.cutout_data(x1, y1, x2, y2)
 
         self.fv.error_wrap(self.plot, data, x1, y1, x2, y2,
                            self.lastx, self.lasty,
