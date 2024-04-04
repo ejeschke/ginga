@@ -449,6 +449,7 @@ def get_cached_font(font_name, font_size):
         font = QFont(font_family, font_size)
         font.setStyleStrategy(QFont.PreferAntialias)
         font_asst.add_cache(key, font)
+        return font
 
     except KeyError:
         pass
@@ -456,6 +457,7 @@ def get_cached_font(font_name, font_size):
     # see if we can build the font from the name
     try:
         font = QFont(font_name, font_size)
+        font.setStyleStrategy(QFont.PreferAntialias)
         font_asst.add_cache(key, font)
         return font
 

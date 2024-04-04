@@ -2080,6 +2080,7 @@ class Application(Callback.Callbacks):
         if QtHelp.have_pyqt6 or QtHelp.have_pyside6:
             QtGui.QApplication.setHighDpiScaleFactorRoundingPolicy(
                 QtCore.Qt.HighDpiScaleFactorRoundingPolicy.Floor)
+        #QtGui.QApplication.setAttribute(QtCore.Qt.AA_DisableHighDpiScaling, True)
 
         app = QtGui.QApplication([])
         # app.lastWindowClosed.connect(lambda *args: self._quit())

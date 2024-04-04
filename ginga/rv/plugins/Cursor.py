@@ -25,12 +25,9 @@ There is no associated configuration GUI.
           from an origin of 1, as per the FITS standard.
 
 """
-import platform
-
-from ginga import GingaPlugin, toolkit
+from ginga import GingaPlugin
 from ginga.gw import Readout
 from ginga.ImageView import ImageViewNoDataError
-from ginga.fonts import font_asst
 
 __all__ = ['Cursor']
 
@@ -55,27 +52,13 @@ class Cursor(GingaPlugin.GlobalPlugin):
     def build_gui(self, container):
         readout = Readout.Readout(-1, 24)
 
-        # NOTE: Special hack for certain platforms, otherwise the font
-        # on the readout is too small
-        macos_ver = platform.mac_ver()[0]
-
         font_size = self.settings.get('font_size', None)
         if font_size is None:
-            if len(macos_ver) > 0:
-                # Mac OS X
-                font_size = 16
-            elif toolkit.get_family().startswith('gtk'):
-                # Gtk
-                font_size = 11
-            else:
-                font_size = 11
+            font_size = 12
 
         font_name = self.settings.get('font_name', None)
         if font_name is None:
-            font_name = font_asst.resolve_alias('fixed', 'Courier')
-            if len(macos_ver) > 0:
-                # Mac OS X
-                font_name = 'monaco'
+            font_name = 'fixed'
 
         readout.set_font(font_name, font_size)
 

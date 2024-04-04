@@ -26,7 +26,7 @@ class RenderContext(render.RenderContextBase):
 
         # special scaling for Qt text drawing to normalize it relative
         # to other backends
-        self._font_scale_factor = 0.9
+        self._font_scale_factor = 1.4
 
     def get_line(self, color, alpha=1.0, linewidth=1, linestyle='solid'):
         line = super().get_line(color, alpha=alpha, linewidth=linewidth,
