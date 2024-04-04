@@ -29,7 +29,7 @@ class RenderContext(render.RenderContextBase):
 
         # special scaling for Cairo text drawing to normalize it relative
         # to other backends
-        self._font_scale_factor = 1.85
+        self._font_scale_factor = 1.75
 
     def setup_line(self, line):
         r, g, b, a = line._color_4tup

@@ -33,6 +33,7 @@ class Readout(object):
                              coord='window')
         canvas.add(self.text_obj, redraw=False)
 
+        # these are set and used by the Cursor plugin
         self.maxx = 0
         self.maxy = 0
         self.maxv = 0

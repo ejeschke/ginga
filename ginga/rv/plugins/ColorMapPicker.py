@@ -209,7 +209,7 @@ class ColorMapPicker(GingaPlugin.LocalPlugin):
             cbar = ColorBar(x1, y1, x2, y2, cm_name=name, showrange=False,
                             rgbmap=rgbmap, coord='window')
             l2.append(cbar)
-            l2.append(Text(x2 + sep, y2, name, color='white', fontsize=16,
+            l2.append(Text(x2 + sep, y2, name, color='white', fontsize=11,
                            coord='window'))
 
         Compound = canvas.get_draw_class('compoundobject')
