@@ -23,6 +23,10 @@ Ver 5.1.0 (unreleased)
     Default behavior if fillcolor isn't specified is to default to the
     "color" attribute, thus preserving backward-compatible behavior.
 
+- Fixed broken WCS compass in Pan plugin
+- Fixed broken Close button in FBrowser and ColorMapPicker when activated
+  as global plugins
+
 Ver 5.0.0 (2024-02-24)
 ======================
 - Add Contrast and Brightness adjustments in "Preferences" plugin
