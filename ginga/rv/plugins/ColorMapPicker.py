@@ -243,7 +243,7 @@ class ColorMapPicker(GingaPlugin.LocalPlugin):
 
     def close(self):
         if self.fitsimage is None:
-            self.fv.stop_global_plugin(str(self))
+            self.fv.stop_global_plugin(str(self) + '[g]')
         else:
             self.fv.stop_local_plugin(self.chname, str(self))
         return True

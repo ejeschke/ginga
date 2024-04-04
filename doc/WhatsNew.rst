@@ -5,6 +5,8 @@ What's New
 Ver 5.0.2 (unreleased)
 ======================
 - Fix broken WCS compass in Pan plugin
+- Fixed broken Close button in FBrowser and ColorMapPicker when activated
+  as global plugins
 
 Ver 5.0.1 (2024-03-31)
 ======================
