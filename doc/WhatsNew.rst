@@ -26,6 +26,8 @@ Ver 5.1.0 (unreleased)
 - Fixed broken WCS compass in Pan plugin
 - Fixed broken Close button in FBrowser and ColorMapPicker when activated
   as global plugins
+- Fixed a bug in PixTable plugin where it would report a table for X and Y
+  values outside the image
 
 Ver 5.0.0 (2024-02-24)
 ======================
