@@ -68,10 +68,11 @@ class ColorBar(Callback.Callbacks):
         # under Gtk due to the hack to allow resize down (see gtk3w/Widget.py)
         #iw.resize(width, height)
 
-        fontsize = self.settings.get('fontsize', 12)
+        font = self.settings.get('font', 'sans')
+        fontsize = self.settings.get('fontsize', 10)
         canvas = self.cbar_view.get_canvas()
         self.cbar = utils.ColorBar(offset=0, height=height, rgbmap=rgbmap,
-                                   fontsize=fontsize)
+                                   font=font, fontsize=fontsize)
         canvas.add(self.cbar, tag='colorbar')
 
         self.set_rgbmap(rgbmap)
