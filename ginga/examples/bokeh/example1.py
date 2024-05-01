@@ -39,7 +39,7 @@ def main():
 
     # create a new plot with default tools, using figure
     fig = figure(x_range=[0, wd], y_range=[0, ht],
-                 plot_width=wd, plot_height=ht,
+                 width=wd, height=ht,
                  toolbar_location="below", toolbar_sticky=False,
                  tools=TOOLS, output_backend="webgl")
     viewer = CanvasView(logger=logger)

@@ -72,8 +72,8 @@ class ImageViewBokeh(ImageView.ImageViewBase):
 
         self._setup_handlers(figure)
 
-        wd = figure.plot_width
-        ht = figure.plot_height
+        wd = figure.width
+        ht = figure.height
 
         self.configure_window(wd, ht)
 
@@ -336,8 +336,7 @@ class ImageViewEvent(ImageViewBokeh):
         #amount = abs(event.delta) * 15.0
         amount = int(abs(event.delta))
 
-        self.logger.info("scroll deg=%f direction=%f" % (
-            amount, direction))
+        self.logger.info(f"scroll deg={amount} direction={direction}")
 
         self.last_win_x, self.last_win_y = x, y
         data_x, data_y = self.check_cursor_location()
