@@ -66,7 +66,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # Create general preferences
         self.prefs = preferences
         settings = self.prefs.create_category('general')
-        settings.add_defaults(title="Ginga",
+        settings.add_defaults(appname='ginga',
+                              title="Ginga",
                               fixedFont=None,
                               serifFont=None,
                               sansFont=None,
@@ -116,6 +117,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.cur_channel = None
         self.wscount = 0
         self.statustask = None
+        self.appname = settings.get('appname', 'ginga')
 
         # Load bindings preferences
         bindprefs = self.prefs.create_category('bindings')
@@ -197,7 +199,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         return self.make_timer()
 
     def stop(self):
-        self.logger.info("shutting down Ginga...")
+        self.logger.info(f"shutting down {self.appname}...")
         self.timer_factory.quit()
         self.ev_quit.set()
         self.logger.debug("should be exiting now")
@@ -453,7 +455,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def help(self, text=None, text_kind='url'):
         if text_kind == 'url':
             if text is None:
-                # get top URL of external Ginga RTD docs
+                # get top URL of external RTD docs
                 text = download_doc.get_online_docs_url(plugin=None)
             self.show_help_url(text)
         else:
@@ -1346,7 +1348,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                     num_images=None, settings=None,
                     settings_template=None,
                     settings_share=None, share_keylist=None):
-        """Create a new Ginga channel.
+        """Create a new channel.
 
         Parameters
         ----------
@@ -1825,7 +1827,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     ####################################################
 
     def set_titlebar(self, text):
-        self.w.root.set_title("Ginga: %s" % text)
+        self.w.root.set_title("{}: {}".format(self.appname.capitalize(), text))
 
     def build_viewpane(self, settings, rgbmap=None, size=(1, 1)):
         # instantiate bindings loaded with users preferences

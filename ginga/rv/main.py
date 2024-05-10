@@ -382,7 +382,8 @@ class ReferenceViewer(object):
         # Set up preferences
         prefs = Settings.Preferences(basefolder=self.basedir, logger=logger)
         settings = prefs.create_category('general')
-        settings.set_defaults(title=self.appname.capitalize(),
+        settings.set_defaults(appname=self.appname,
+                              title=self.appname.capitalize(),
                               useMatplotlibColormaps=False,
                               widgetSet='choose',
                               WCSpkg='choose', FITSpkg='choose',
