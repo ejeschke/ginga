@@ -284,6 +284,14 @@ class MDISubWindow(Callback.Callbacks):
         vbox.set_border_width(4)
 
         hbox = Gtk.HBox()
+
+        # set window icon
+        iconfile = os.path.join(icondir, "ginga.svg")
+        pixbuf = pixbuf_new_from_file_at_size(iconfile, 32, 32)
+        image = Gtk.Image.new_from_pixbuf(pixbuf)
+        hbox.pack_start(image, False, False, 2)
+
+        # titlebar label
         evbox = Gtk.EventBox()
         evbox.add(label)
         modify_bg(evbox, "gray90")
@@ -291,9 +299,22 @@ class MDISubWindow(Callback.Callbacks):
         self.evbox = evbox
         hbox.pack_start(evbox, True, True, 2)
 
-        close = Gtk.Button("X")
-        maxim = Gtk.Button("^")
-        minim = Gtk.Button("_")
+        # titlebar buttons
+        iconfile = os.path.join(icondir, "close.svg")
+        pixbuf = pixbuf_new_from_file_at_size(iconfile, 24, 24)
+        image = Gtk.Image.new_from_pixbuf(pixbuf)
+        close = Gtk.Button()
+        close.set_image(image)
+        iconfile = os.path.join(icondir, "maximize.svg")
+        pixbuf = pixbuf_new_from_file_at_size(iconfile, 24, 24)
+        image = Gtk.Image.new_from_pixbuf(pixbuf)
+        maxim = Gtk.Button()
+        maxim.set_image(image)
+        iconfile = os.path.join(icondir, "minimize.svg")
+        pixbuf = pixbuf_new_from_file_at_size(iconfile, 24, 24)
+        image = Gtk.Image.new_from_pixbuf(pixbuf)
+        minim = Gtk.Button()
+        minim.set_image(image)
         hbox.pack_start(minim, False, False, 0)
         hbox.pack_start(maxim, False, False, 0)
         hbox.pack_start(close, False, False, 0)
