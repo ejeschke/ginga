@@ -1566,7 +1566,7 @@ class MDIWidget(ContainerBase):
 
 
 class MDIWindow(WidgetBase):
-    def __init__(self, parent, child, title=''):
+    def __init__(self, parent, child, title='', iconpath=None):
         """NOTE: this widget is not meant to be instantiated except *inside*
         of MDIWidget implementation.
         """
@@ -1582,7 +1582,10 @@ class MDIWindow(WidgetBase):
 
         child_w = child.get_widget()
         label = Gtk.Label(title)
-        subwin = GtkHelp.MDISubWindow(child_w, label)
+        if iconpath is None:
+            iconpath = os.path.join(icondir, "ginga.svg")
+
+        subwin = GtkHelp.MDISubWindow(child_w, label, iconpath=iconpath)
         self.widget = subwin
         # attach title to child
         child.extdata.tab_title = title
@@ -2264,14 +2267,15 @@ class TopLevelMixin(object):
 
 class TopLevel(TopLevelMixin, ContainerBase):
 
-    def __init__(self, title=None):
+    def __init__(self, title=None, iconpath=None):
         ContainerBase.__init__(self)
 
         self._fullscreen = False
 
         widget = GtkHelp.TopLevel()
-        ginga_icon = os.path.join(icondir, "ginga.svg")
-        widget.set_icon(GtkHelp.get_icon(ginga_icon))
+        if iconpath is None:
+            iconpath = os.path.join(icondir, "ginga.svg")
+        widget.set_icon(GtkHelp.get_icon(iconpath))
         self.widget = widget
         widget.set_border_width(0)
 
@@ -2281,6 +2285,12 @@ class TopLevel(TopLevelMixin, ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         self.widget.add(child_w)
+
+    def set_icon(self, iconpath):
+        # NOTE: not guaranteed to work after the window is created because
+        # this can be rendered by the window manager. Better to use the
+        # constructor 'iconpath' parameter
+        self.widget.set_icon(GtkHelp.get_icon(iconpath))
 
 
 class Application(Callback.Callbacks):

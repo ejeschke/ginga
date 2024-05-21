@@ -275,7 +275,7 @@ class MultiDragDropTreeView(Gtk.TreeView):
 
 class MDISubWindow(Callback.Callbacks):
 
-    def __init__(self, widget, label):
+    def __init__(self, widget, label, iconpath=None):
         super(MDISubWindow, self).__init__()
 
         self.widget = widget
@@ -286,10 +286,11 @@ class MDISubWindow(Callback.Callbacks):
         hbox = Gtk.HBox()
 
         # set window icon
-        iconfile = os.path.join(icondir, "ginga.svg")
-        pixbuf = pixbuf_new_from_file_at_size(iconfile, 32, 32)
-        image = Gtk.Image.new_from_pixbuf(pixbuf)
-        hbox.pack_start(image, False, False, 2)
+        if iconpath is None:
+            iconpath = os.path.join(icondir, "ginga.svg")
+        pixbuf = pixbuf_new_from_file_at_size(iconpath, 32, 32)
+        self.image = Gtk.Image.new_from_pixbuf(pixbuf)
+        hbox.pack_start(self.image, False, False, 2)
 
         # titlebar label
         evbox = Gtk.EventBox()
@@ -346,6 +347,10 @@ class MDISubWindow(Callback.Callbacks):
         maxim.connect('clicked', lambda *args: self.make_callback('maximize'))
         minim.connect('clicked', lambda *args: self.make_callback('minimize'))
         close.connect('clicked', lambda *args: self.make_callback('close'))
+
+    def set_icon(self, iconpath):
+        pixbuf = pixbuf_new_from_file_at_size(iconpath, 32, 32)
+        self.image.set_from_pixbuf(pixbuf)
 
     def raise_(self):
         window = self.frame.get_window()

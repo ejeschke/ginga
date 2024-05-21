@@ -1949,7 +1949,7 @@ class TopLevelMixin(object):
 
 
 class MDIWindow(TopLevelMixin, WidgetBase):
-    def __init__(self, parent, child, title=''):
+    def __init__(self, parent, child, title='', iconpath=None):
         """NOTE: this widget is not meant to be instantiated except *inside*
         of MDIWidget implementation.
         """
@@ -1957,8 +1957,9 @@ class MDIWindow(TopLevelMixin, WidgetBase):
         self.parent = parent
         w = QtGui.QMdiSubWindow(parent.get_widget())
         # replace Qt logo from subwindow
-        ginga_icon = os.path.join(icondir, "ginga.svg")
-        w.setWindowIcon(QIcon(ginga_icon))
+        if iconpath is None:
+            iconpath = os.path.join(icondir, "ginga.svg")
+        w.setWindowIcon(QIcon(iconpath))
         self.widget = w
 
         child_w = child.get_widget()
@@ -2007,6 +2008,9 @@ class MDIWindow(TopLevelMixin, WidgetBase):
         child.show()
         w.show()
 
+    def set_icon(self, iconpath):
+        self.widget.setWindowIcon(QIcon(iconpath))
+
     def _window_resized(self, event, subwin, child):
         qsize = event.size()
         wd, ht = qsize.width(), qsize.height()
@@ -2032,12 +2036,14 @@ class MDIWindow(TopLevelMixin, WidgetBase):
 
 class TopLevel(TopLevelMixin, ContainerBase):
 
-    def __init__(self, title=None):
+    def __init__(self, title=None, iconpath=None):
         ContainerBase.__init__(self)
 
         widget = QtHelp.TopLevel()
-        ginga_icon = os.path.join(icondir, "ginga.svg")
-        widget.setWindowIcon(QIcon(ginga_icon))
+
+        if iconpath is None:
+            iconpath = os.path.join(icondir, "ginga.svg")
+        widget.setWindowIcon(QIcon(iconpath))
         self.widget = widget
         box = QtGui.QVBoxLayout()
         box.setContentsMargins(0, 0, 0, 0)
@@ -2050,6 +2056,12 @@ class TopLevel(TopLevelMixin, ContainerBase):
         self.add_ref(child)
         child_w = child.get_widget()
         self.widget.layout().addWidget(child_w)
+
+    def set_icon(self, iconpath):
+        # NOTE: not guaranteed to work after the window is created because
+        # this can be rendered by the window manager. Better to use the
+        # constructor 'iconpath' parameter
+        self.widget.setWindowIcon(QIcon(iconpath))
 
 
 class Application(Callback.Callbacks):

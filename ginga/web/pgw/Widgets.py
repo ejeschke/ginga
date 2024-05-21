@@ -3121,7 +3121,7 @@ class TopLevel(ContainerBase):
     </script>
     """
 
-    def __init__(self, title="", parent=None):
+    def __init__(self, title="", parent=None, iconpath=None):
 
         super(TopLevel, self).__init__()
 
@@ -3130,6 +3130,8 @@ class TopLevel(ContainerBase):
 
         self.title = title
         self.parent = parent
+        # NOTE: iconpath is TODO
+        self.iconpath = iconpath
 
         for name in ('open', 'close', 'resize'):
             self.enable_callback(name)
@@ -3158,6 +3160,10 @@ class TopLevel(ContainerBase):
     def set_widget(self, child):
         self.remove_all()
         self.add_ref(child)
+
+    def set_icon(self, iconpath):
+        # TODO!
+        pass
 
     def show(self):
         if self._rendered:
