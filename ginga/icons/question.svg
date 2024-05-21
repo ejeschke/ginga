@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="20.000631mm"
+   height="19.097042mm"
+   viewBox="0 0 20.000632 19.097042"
+   version="1.1"
+   id="svg1238"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="question.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1240"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="0.42"
+     inkscape:cx="-519.04762"
+     inkscape:cy="-63.095238"
+     inkscape:window-width="1736"
+     inkscape:window-height="1099"
+     inkscape:window-x="683"
+     inkscape:window-y="462"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1235" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-108.55707,-164.6538)">
+    <g
+       id="g19875"
+       transform="matrix(0.49387585,0,0,0.4932535,68.564236,115.23884)"
+       style="stroke-width:2.02608">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:2.02608;stroke-miterlimit:10;stroke-dasharray:none;stop-color:#000000"
+         id="rect1912"
+         width="38.471207"
+         height="36.690407"
+         x="81.990555"
+         y="101.1947" />
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:38.5561px;line-height:125%;font-family:Fortana;-inkscape-font-specification:'Fortana, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.536066px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         x="90.642509"
+         y="133.65144"
+         id="text4026"><tspan
+           sodipodi:role="line"
+           id="tspan4024"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:38.5561px;font-family:Fortana;-inkscape-font-specification:'Fortana, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke-width:0.536066px"
+           x="90.642509"
+           y="133.65144">?</tspan></text>
+    </g>
+  </g>
+</svg>

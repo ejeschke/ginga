@@ -2009,6 +2009,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                             lambda w, rsp: self.delete_channel_cb(w, rsp, chname))  # noqa
 
         box = dialog.get_content_area()
+        hbox = Widgets.HBox()
+        hbox.set_border_width(4)
+        hbox.add_widget(Widgets.Label(""), stretch=1)
+        img = Widgets.Image()
+        iconfile = os.path.join(icon_dir, "question.svg")
+        img.load_file(iconfile)
+        hbox.add_widget(img, stretch=0)
+        hbox.add_widget(Widgets.Label(""), stretch=1)
+        box.add_widget(hbox, stretch=1)
         box.add_widget(lbl, stretch=0)
 
         self.ds.show_dialog(dialog)
@@ -2023,6 +2032,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                             lambda w, rsp: self.delete_tab_cb(w, rsp, tabname))
 
         box = dialog.get_content_area()
+        hbox = Widgets.HBox()
+        hbox.set_border_width(4)
+        hbox.add_widget(Widgets.Label(""), stretch=1)
+        img = Widgets.Image()
+        iconfile = os.path.join(icon_dir, "question.svg")
+        img.load_file(iconfile)
+        hbox.add_widget(img, stretch=0)
+        hbox.add_widget(Widgets.Label(""), stretch=1)
+        box.add_widget(hbox, stretch=1)
         box.add_widget(lbl, stretch=0)
 
         self.ds.show_dialog(dialog)
@@ -2311,6 +2329,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.w.quit_dialog = q_quit
         vbox = q_quit.get_content_area()
         vbox.set_margins(4, 4, 4, 4)
+        hbox = Widgets.HBox()
+        hbox.set_border_width(4)
+        hbox.add_widget(Widgets.Label(""), stretch=1)
+        img = Widgets.Image()
+        iconfile = os.path.join(icon_dir, "warning.svg")
+        img.load_file(iconfile)
+        hbox.add_widget(img, stretch=0)
+        hbox.add_widget(Widgets.Label(""), stretch=1)
+        vbox.add_widget(hbox, stretch=1)
         vbox.add_widget(Widgets.Label("Do you really want to quit?"))
         q_quit.add_callback('activated', self._confirm_quit_cb)
         q_quit.add_callback('close', lambda w: self._confirm_quit_cb(w, False))
