@@ -19,7 +19,7 @@ to compile anything, but as always, your mileage may vary.
 REQUIRED
 ========
 
-* python (v. 3.7 or higher)
+* python (v. 3.9 or higher)
 * setuptools-scm
 * numpy  (v. 1.14 or higher)
 * astropy
@@ -28,22 +28,18 @@ REQUIRED
 Strongly recommended, because some features will not be available without it:
 
 * scipy
-* opencv-python (also distributed as opencv or python-opencv,
-  depending on where you get it from)
 * exifread
-* beautifulsoup4
-* docutils (to display help for plugins)
 
-For opening `FITS <https://fits.gsfc.nasa.gov/>`_ files you will
-need one of the following packages:
+Optionally, for opening `FITS <https://fits.gsfc.nasa.gov/>`_ files Ginga can
+use:
 
-* astropy
+* astropy (requirement)
 * fitsio
 
 For `WCS <https://fits.gsfc.nasa.gov/fits_wcs.html>`_ resolution
 you will need one of the following packages:
 
-* astropy
+* astropy (requirement)
 * kapteyn
 * astLib
 * starlink
@@ -86,7 +82,7 @@ Helpful, but not necessary (may optimize or speed up certain operations):
 * opencv-python (speeds up rotation, mosaicing and some transformations)
 * pyopengl + pycairo (for using OpenGL features; very useful for 4K or larger
   monitors)
-* filemagic (aids in identifying files when opening them)
+* python-magic (aids in identifying files when opening them)
 
 ==============================
 Notes on Supported Widget Sets
@@ -179,7 +175,7 @@ Installation from Source
 
 #. Unpack, go into the top level directory, and run::
 
-     pip install -e .
+     pip install .
 
 ==============================
 Platform Specific Instructions
@@ -201,15 +197,13 @@ via Anaconda or Miniconda as described below.
 Mac/Windows/Linux (others)
 ==========================
 
-Anaconda
---------
+Miniconda
+---------
 
 For Mac/Windows or other Linux users, we recommend installing the
-`Anaconda distribution <http://continuum.io/downloads>`_ (or Miniconda).
-This distribution already includes all of the necessary packages to run
-Ginga.
+`Miniconda distribution <https://docs.anaconda.com/free/miniconda/index.html>`_ (or Anaconda).
 
-After installing Anaconda, open the Anaconda Prompt and follow instructions
+After installing Miniconda, open the Anaconda Prompt and follow instructions
 under :ref:`install_generic` via ``conda``.
 
 =============
