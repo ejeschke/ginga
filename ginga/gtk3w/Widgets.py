@@ -6,12 +6,11 @@
 #
 
 import os.path
+from functools import reduce
 
 from ginga.gtk3w import GtkHelp
-import ginga.icons
-
 from ginga.misc import Callback, Bunch, Settings, LineHistory
-from functools import reduce
+from ginga.util.paths import icondir, app_icon_path
 
 from gi.repository import Gtk
 from gi.repository import Gdk
@@ -28,9 +27,6 @@ __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
            'Dialog', 'SaveDialog', 'DragPackage', 'WidgetMoveEvent',
            'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
-
-# path to our icons
-icondir = os.path.split(ginga.icons.__file__)[0]
 
 
 class WidgetError(Exception):
@@ -1583,7 +1579,7 @@ class MDIWindow(WidgetBase):
         child_w = child.get_widget()
         label = Gtk.Label(title)
         if iconpath is None:
-            iconpath = os.path.join(icondir, "ginga.svg")
+            iconpath = app_icon_path
 
         subwin = GtkHelp.MDISubWindow(child_w, label, iconpath=iconpath)
         self.widget = subwin
@@ -2274,7 +2270,7 @@ class TopLevel(TopLevelMixin, ContainerBase):
 
         widget = GtkHelp.TopLevel()
         if iconpath is None:
-            iconpath = os.path.join(icondir, "ginga.svg")
+            iconpath = app_icon_path
         widget.set_icon(GtkHelp.get_icon(iconpath))
         self.widget = widget
         widget.set_border_width(0)

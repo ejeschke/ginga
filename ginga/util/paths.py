@@ -18,7 +18,8 @@ home = os.path.expanduser('~')
 
 # path to our icons
 icondir = os.path.split(ginga.icons.__file__)[0]
-
+# define app icon
+app_icon_path = os.path.join(icondir, 'ginga.svg')
 
 if 'GINGA_HOME' in os.environ:
     # User override
@@ -31,3 +32,8 @@ else:
 def set_home(dirpath):
     global ginga_home
     ginga_home = dirpath
+
+
+def set_icon(svg_path):
+    global app_icon_path
+    app_icon_path = svg_path

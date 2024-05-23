@@ -13,7 +13,7 @@ from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
 from ginga.qtw import QtHelp
 
 from ginga.misc import Callback, Bunch, Settings, LineHistory
-from ginga.util.paths import icondir
+from ginga.util.paths import icondir, app_icon_path
 
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'GrowingTextEdit', 'TextArea', 'Label', 'Button', 'ComboBox',
@@ -1958,7 +1958,7 @@ class MDIWindow(TopLevelMixin, WidgetBase):
         w = QtGui.QMdiSubWindow(parent.get_widget())
         # replace Qt logo from subwindow
         if iconpath is None:
-            iconpath = os.path.join(icondir, "ginga.svg")
+            iconpath = app_icon_path
         w.setWindowIcon(QIcon(iconpath))
         self.widget = w
 
@@ -2042,7 +2042,7 @@ class TopLevel(TopLevelMixin, ContainerBase):
         widget = QtHelp.TopLevel()
 
         if iconpath is None:
-            iconpath = os.path.join(icondir, "ginga.svg")
+            iconpath = app_icon_path
         widget.setWindowIcon(QIcon(iconpath))
         self.widget = widget
         box = QtGui.QVBoxLayout()

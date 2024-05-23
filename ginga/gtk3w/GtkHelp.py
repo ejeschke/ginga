@@ -14,7 +14,7 @@ import numpy as np
 
 from ginga.misc import Bunch, Callback
 from ginga.fonts import font_asst
-from ginga.util.paths import icondir
+from ginga.util.paths import icondir, app_icon_path
 import ginga.toolkit
 
 import gi
@@ -287,7 +287,7 @@ class MDISubWindow(Callback.Callbacks):
 
         # set window icon
         if iconpath is None:
-            iconpath = os.path.join(icondir, "ginga.svg")
+            iconpath = app_icon_path
         pixbuf = pixbuf_new_from_file_at_size(iconpath, 32, 32)
         self.image = Gtk.Image.new_from_pixbuf(pixbuf)
         hbox.pack_start(self.image, False, False, 2)
