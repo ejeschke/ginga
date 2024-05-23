@@ -1,4 +1,5 @@
 # GINGA
+![Ginga Logo](doc/_static/ginga-128x128.png)
 
 [![Powered by Astropy Badge](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org)
 [![Documentation Status](https://readthedocs.org/projects/ginga/badge/?version=latest)](https://ginga.readthedocs.io/en/latest/)
