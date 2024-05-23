@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 5.1.0 (unreleased)
+Ver 5.1.0 (2024-05-22)
 ======================
 - Fixed an issue where --modules option did not start a global plugin
   automatically
@@ -28,6 +28,7 @@ Ver 5.1.0 (unreleased)
   as global plugins
 - Fixed a bug in PixTable plugin where it would report a table for X and Y
   values outside the image
+- Fixed bokeh back end to be up to date with recent bokeh changes
 
 Ver 5.0.0 (2024-02-24)
 ======================
