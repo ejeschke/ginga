@@ -12,6 +12,8 @@ import pathlib
 import urllib.parse
 import tempfile
 
+import puremagic
+
 from ginga.misc import Bunch
 from ginga.util.paths import ginga_home, ginga_pkgdir
 
@@ -25,21 +27,6 @@ local_mimetypes = os.path.join(ginga_home, "mime.types")
 if os.path.exists(local_mimetypes):
     mimetypes.init(files=[local_mimetypes])
 
-
-magic_tester = None
-try:
-    import magic
-    have_magic = True
-    # it seems there are conflicting versions of a 'magic'
-    # module for python floating around...*sigh*
-    # (python-magic vs. filemagic)
-    if not hasattr(magic, 'from_file'):
-        # filemagic
-        magic_tester = magic.open(magic.MAGIC_MIME)
-        magic_tester.load()
-
-except (ImportError, Exception):
-    have_magic = False
 
 # NOTE: this is a shortcut list of extensions in which we trust the
 # extension over the mimetype that might be returned by the Python
@@ -65,7 +52,6 @@ known_types = {
 
 def guess_filetype(filepath):
     """Guess the type of a file."""
-    # If we have python-magic, use it to determine file type
     typ = None
 
     # Some specific checks for known file suffixes
@@ -75,17 +61,10 @@ def guess_filetype(filepath):
             typ = mimetype
             break
 
-    if typ is None and have_magic:
+    if typ is None:
         try:
-            # it seems there are conflicting versions of a 'magic'
-            # module for python floating around...*sigh*
-            if hasattr(magic, 'from_file'):
-                # python-magic
-                typ = magic.from_file(filepath, mime=True)
-
-            elif magic_tester is not None:
-                # filemagic
-                typ = magic_tester.file(filepath)
+            # Try to check using magic!
+            typ = puremagic.from_file(filepath, mime=True)
 
             if isinstance(typ, str) and ';' in typ:
                 typ, enc = typ.split(';')
@@ -94,7 +73,7 @@ def guess_filetype(filepath):
             typ = None
 
     if typ is None:
-        # if no magic, or magic fails, fall back to mimetypes
+        # if magic fails, fall back to mimetypes
         try:
             typ, enc = mimetypes.guess_type(filepath)
 

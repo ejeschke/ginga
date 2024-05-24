@@ -2,6 +2,11 @@
 What's New
 ++++++++++
 
+Ver 5.2.0 (unreleased)
+======================
+- Substituted puremagic package for python-magic (works better across
+  platforms)
+
 Ver 5.1.0 (2024-05-22)
 ======================
 - Fixed an issue where --modules option did not start a global plugin
