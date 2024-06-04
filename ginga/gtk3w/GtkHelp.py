@@ -398,6 +398,7 @@ class MDIWidget(Gtk.Layout):
         self.connect("motion_notify_event", self.motion_notify_event)
         self.connect("button_press_event", self.button_press_event)
         self.connect("button_release_event", self.button_release_event)
+        self.connect("scroll_event", self.scroll_event)
 
         modify_bg(self, "gray50")
 
@@ -690,6 +691,9 @@ class MDIWidget(Gtk.Layout):
         self._update_area_size()
         return True
 
+    def scroll_event(self, widget, event):
+        return True
+
     def tile_pages(self):
         # calculate number of rows and cols, try to maintain a square
         # TODO: take into account the window geometry
@@ -700,7 +704,8 @@ class MDIWidget(Gtk.Layout):
             cols += 1
 
         # find out how big each window should be
-        rect = self.get_allocation()
+        parent = self.get_parent()
+        rect = parent.get_allocation()
         width, height = rect.width, rect.height
         wd, ht = width // cols, height // rows
 
@@ -742,7 +747,8 @@ class MDIWidget(Gtk.Layout):
         subwin.width, subwin.height = wd, ht
 
     def maximize_page(self, subwin):
-        rect = self.get_allocation()
+        parent = self.get_parent()
+        rect = parent.get_allocation()
         wd, ht = rect.width, rect.height
 
         subwin.raise_()
@@ -752,7 +758,8 @@ class MDIWidget(Gtk.Layout):
         self._update_area_size()
 
     def minimize_page(self, subwin):
-        rect = self.get_allocation()
+        parent = self.get_parent()
+        rect = parent.get_allocation()
         height = rect.height
 
         rect = subwin.frame.get_allocation()

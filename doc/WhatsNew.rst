@@ -6,6 +6,7 @@ Ver 5.2.0 (unreleased)
 ======================
 - Substituted puremagic package for python-magic (works better across
   platforms)
+- Fixed an issue with the mouse wheel event scrolling MDI workspaces
 
 Ver 5.1.0 (2024-05-22)
 ======================
