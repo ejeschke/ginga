@@ -302,14 +302,13 @@ class PluginManager(Callback.Callbacks):
 
                 if in_ws.startswith('in:'):
                     # TODO: how to set this size appropriately
-                    # Which plugins are actually using this attribute?
-                    vbox.size = (400, 900)
+                    vbox.extdata.size = (400, 900)
 
                 else:
                     # attach size of workspace to container so plugin
                     # can plan for how to configure itself
                     wd, ht = self.ds.get_ws_size(in_ws)
-                    vbox.size = (wd, ht)
+                    vbox.extdata.size = (wd, ht)
 
                 if future:
                     p_info.obj.build_gui(vbox, future=future)

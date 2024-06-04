@@ -17,11 +17,10 @@ elif tkname == 'pg':
 # MODULE FUNCTIONS
 
 def get_orientation(container, aspect=1.0):
-    if not hasattr(container, 'size'):
-        return 'vertical'
-    (wd, ht) = container.size
-    # wd, ht = container.get_size()
-    # print('container size is %dx%d' % (wd, ht))
+    if hasattr(container, 'extdata') and hasattr(container.extdata, 'size'):
+        wd, ht = container.extdata.size
+    else:
+        wd, ht = container.get_size()
     if ht == 0:
         return 'horizontal' if wd > 0 else 'vertical'
     calc_aspect = wd / ht
