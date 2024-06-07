@@ -19,6 +19,7 @@ from ginga.gw import Widgets
 from ginga.misc import Bunch
 from ginga.events import KeyEvent
 from ginga import GingaPlugin
+from ginga.util import viewer as gviewer
 
 __all__ = ['Toolbar']
 
@@ -30,7 +31,9 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         super(Toolbar, self).__init__(fv)
 
         # active view
+        self.channel = None
         self.active = None
+        self.viewers = []
         # holds our gui widgets
         self.w = Bunch.Bunch()
         self.gui_up = False
@@ -50,6 +53,9 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
         self.layout = [
             # (Name, type, icon, tooltip)
+            ("Viewer", 'combobox', '---', "Choose a compatible viewer for this data",
+             self.viewer_cb),
+            ("---",),
             ("FlipX", 'toggle', 'flip_x', "Flip image in X axis",
              self.flipx_cb),
             ("FlipY", 'toggle', 'flip_y', "Flip image in Y axis",
@@ -153,6 +159,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             # add to our widget dict
             self.w[Widgets.name_mangle(name, pfx='btn_')] = btn
 
+        container.set_border_width(2)
         container.add_widget(tb, stretch=0)
 
         self.gui_up = True
@@ -168,11 +175,15 @@ class Toolbar(GingaPlugin.GlobalPlugin):
 
     def delete_channel_cb(self, viewer, channel):
         self.logger.debug("delete channel %s" % (channel.name))
-        # we don't keep around any baggage on channels so nothing
-        # to delete
+        if channel is self.channel:
+            self.channel = None
 
     def focus_cb(self, viewer, channel):
+        self.channel = channel
         self.update_channel_buttons(channel)
+
+        dataobj = channel.viewer.get_dataobj()
+        self._update_viewer_selection(channel, dataobj)
 
         chviewer = channel.fitsimage
         self.active = chviewer
@@ -271,6 +282,39 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         self._update_toolbar_state(chviewer)
         self.fv.show_status(f"Type 'h' in the viewer to show help for mode {modename}")
         return True
+
+    def viewer_cb(self, w, idx):
+        vinfo = self.viewers[idx]
+        self.logger.info(f"viewer {vinfo.name} selected")
+        dataobj = self.channel.viewer.get_dataobj()
+        self.channel.open_with_viewer(vinfo, dataobj)
+
+    def _update_viewer_selection(self, channel, dataobj):
+        if not self.gui_up:
+            return
+        # find available viewers that can view this kind of object
+        viewers = gviewer.get_viewers(dataobj)
+        new_names = [viewer.name for viewer in viewers]
+        old_names = [viewer.name for viewer in self.viewers]
+        if new_names != old_names:
+            # repopulate viewer selector
+            self.viewers = viewers
+            self.w.btn_viewer.clear()
+            self.logger.debug("available viewers for {} are {}".format(type(dataobj), new_names))
+            for name in new_names:
+                self.w.btn_viewer.append_text(name)
+            # set the box to the viewer we have selected
+            cur_name = channel.viewer.vname
+            if cur_name in new_names:
+                self.w.btn_viewer.set_text(cur_name)
+
+    def redo(self, channel, dataobj):
+        if not self.gui_up:
+            return
+        if channel is not self.channel:
+            return
+        self.logger.debug("redo")
+        self._update_viewer_selection(channel, dataobj)
 
     def mode_set_cb(self, bm, mode, mtype, chviewer):
         # called whenever the user interaction mode is changed
