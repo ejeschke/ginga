@@ -44,6 +44,8 @@ class TableViewBase(Callback.Callbacks):
         else:
             self.logger = logging.Logger('TableViewBase')
 
+        self._table = None
+
         # Create settings and set defaults
         if settings is None:
             settings = Settings.SettingGroup(logger=self.logger)

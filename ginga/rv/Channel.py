@@ -592,15 +592,15 @@ class Channel(Callback.Callbacks):
         # if there is only one viewer available, use it otherwise
         # pop-up a dialog and ask the user
         if len(viewers) == 1:
-            self._open_with_viewer(viewers[0], dataobj)
+            self.open_with_viewer(viewers[0], dataobj)
             return
 
         msg = ("Multiple viewers are available for this data object. "
                "Please select one.")
-        self.fv.gui_choose_viewer(msg, viewers, self._open_with_viewer,
+        self.fv.gui_choose_viewer(msg, viewers, self.open_with_viewer,
                                   dataobj)
 
-    def _open_with_viewer(self, vinfo, dataobj):
+    def open_with_viewer(self, vinfo, dataobj):
         # if we don't have this viewer type then install one in the channel
         if vinfo.name not in self.viewer_dict:
             self.fv.make_viewer(vinfo, self)
@@ -611,7 +611,8 @@ class Channel(Callback.Callbacks):
         self.widget.set_index(idx)
 
         # and load the data
-        self.viewer.set_dataobj(dataobj)
+        if self.viewer.get_dataobj() is not dataobj:
+            self.viewer.set_dataobj(dataobj)
 
         obj_name = dataobj.get('name')
         if obj_name in self.image_index:

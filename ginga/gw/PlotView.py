@@ -44,6 +44,8 @@ class PlotViewGw(Callback.Callbacks):
         else:
             self.logger = logging.Logger('PlotView')
 
+        self._dataobj = None
+
         # Create settings and set defaults
         if settings is None:
             settings = Settings.SettingGroup(logger=self.logger)

@@ -10,7 +10,7 @@ from ginga.misc import Bunch
 viewer_db = {}
 
 
-def register_viewer(vclass):
+def register_viewer(vclass, priority=0):
     """Register a channel viewer.
 
     Parameters
@@ -21,7 +21,7 @@ def register_viewer(vclass):
     global viewer_db
     viewer_db[vclass.vname] = Bunch.Bunch(name=vclass.vname,
                                           vclass=vclass,
-                                          priority=0)
+                                          priority=priority)
 
 
 def get_viewers(dataobj):
