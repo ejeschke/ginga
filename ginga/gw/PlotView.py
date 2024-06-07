@@ -7,8 +7,9 @@
 import logging
 import numpy as np
 
-from ginga.misc import Callback, Settings
+from ginga.misc import Callback, Settings, Bunch
 from ginga import AstroImage
+from ginga.table import AstroTable
 
 from ginga.gw import Widgets
 try:
@@ -24,11 +25,14 @@ class PlotViewGw(Callback.Callbacks):
     """
 
     vname = 'Ginga Plot'
-    vtypes = [AstroImage.AstroImage]
+    vtypes = [AstroImage.AstroImage, AstroTable.AstroTable]
 
     @classmethod
     def viewable(cls, dataobj):
         """Test whether `dataobj` is viewable by this viewer."""
+        if isinstance(dataobj, AstroTable.AstroTable):
+            # TODO: check for at least 2 columns?
+            return True
         if not isinstance(dataobj, AstroImage.AstroImage):
             return False
         shp = list(dataobj.shape)
@@ -45,12 +49,21 @@ class PlotViewGw(Callback.Callbacks):
             self.logger = logging.Logger('PlotView')
 
         self._dataobj = None
+        # To store all active table info
+        self.tab = None
+        self.cols = []
+        self._idx = []
+        self._idxname = '_idx'
+        # To store selected columns names of active table
+        self.x_col = ''
+        self.y_col = ''
 
         # Create settings and set defaults
         if settings is None:
             settings = Settings.SettingGroup(logger=self.logger)
         self.settings = settings
         self.settings.add_defaults(plot_bg='white', show_marker=False,
+                                   x_index=1, y_index=2,
                                    linewidth=1, linestyle='-',
                                    linecolor='blue', markersize=6,
                                    markerwidth=0.5, markercolor='red',
@@ -82,7 +95,9 @@ class PlotViewGw(Callback.Callbacks):
 
         top.add_widget(self.plot_w, stretch=1)
 
-        captions = (('Log X', 'checkbutton', 'Log Y', 'checkbutton',
+        captions = (('X:', 'label', 'x_combo', 'combobox',
+                     'Y:', 'label', 'y_combo', 'combobox'),
+                    ('Log X', 'checkbutton', 'Log Y', 'checkbutton',
                      'Show Marker', 'checkbutton'),
                     ('X Low:', 'label', 'x_lo', 'entry',
                      'X High:', 'label', 'x_hi', 'entry',
@@ -97,6 +112,20 @@ class PlotViewGw(Callback.Callbacks):
         self.w = b
 
         top.add_widget(w, stretch=0)
+
+        # Controls for X-axis column listing
+        combobox = b.x_combo
+        combobox.add_callback('activated', self.x_select_cb)
+        self.w.xcombo = combobox
+        combobox.set_enabled(False)
+        combobox.set_tooltip('Select a column to plot on X-axis')
+
+        # Controls for Y-axis column listing
+        combobox = b.y_combo
+        combobox.add_callback('activated', self.y_select_cb)
+        self.w.ycombo = combobox
+        combobox.set_enabled(False)
+        combobox.set_tooltip('Select a column to plot on Y-axis')
 
         b.log_x.set_state(self.line_plot.logx)
         b.log_x.add_callback('activated', self.log_x_cb)
@@ -163,6 +192,31 @@ class PlotViewGw(Callback.Callbacks):
 
         self._dataobj = dataobj
 
+        if isinstance(self._dataobj, AstroTable.AstroTable):
+            # <-- dealing with a table
+            self.clear_data()
+            self.w.x_combo.set_enabled(True)
+            self.w.y_combo.set_enabled(True)
+            # Generate column indices
+            self.tab = dataobj.get_data()
+            self._idx = np.arange(len(self.tab))
+
+            # Populate combobox with table column names
+            self.cols = [self._idxname] + self.tab.colnames
+            self.x_col = self._set_combobox('xcombo', self.cols,
+                                            default=self.settings.get('x_index', 1))
+            self.y_col = self._set_combobox('ycombo', self.cols,
+                                            default=self.settings.get('y_index', 2))
+
+        elif isinstance(self._dataobj, AstroImage.AstroImage):
+            # <-- dealing with a 1D image
+            self.clear_data()
+            self.w.x_combo.set_enabled(False)
+            self.w.y_combo.set_enabled(False)
+
+        else:
+            raise ValueError("I don't know how to handle type '{}'".format(type(self._dataobj)))
+
         self.do_plot(reset_xlimits=True, reset_ylimits=True)
 
         self.make_callback('image-set', dataobj)
@@ -172,6 +226,13 @@ class PlotViewGw(Callback.Callbacks):
 
     def clear_data(self):
         """Clear comboboxes and columns."""
+        self.tab = None
+        self.cols = []
+        self._idx = []
+        self.x_col = ''
+        self.y_col = ''
+        self.w.xcombo.clear()
+        self.w.ycombo.clear()
         self.w.x_lo.set_text('')
         self.w.x_hi.set_text('')
         self.w.y_lo.set_text('')
@@ -200,13 +261,12 @@ class PlotViewGw(Callback.Callbacks):
         plt_kw['mec'] = plt_kw['mfc']
 
         try:
-            x_data, y_data = self.get_plot_data()
-            marker = self.get_marker()
+            p_dat = self.get_plot_data()
 
             self.line_plot.plot(
-                x_data, y_data,
-                xtitle=self.get_label('x'), ytitle=self.get_label('y'),
-                marker=marker, **plt_kw)
+                p_dat.x_data, p_dat.y_data,
+                xtitle=p_dat.x_label, ytitle=p_dat.y_label,
+                marker=p_dat.marker, **plt_kw)
 
             if not reset_xlimits:
                 self.set_xlim_cb()
@@ -217,9 +277,20 @@ class PlotViewGw(Callback.Callbacks):
             self.set_ylimits_widgets()
 
         except Exception as e:
-            self.logger.error(str(e))
+            self.logger.error(str(e), exc_info=True)
         else:
             self.save_plot.set_enabled(True)
+
+    def _set_combobox(self, attrname, vals, default=0):
+        """Populate combobox with given list."""
+        combobox = getattr(self.w, attrname)
+        for val in vals:
+            combobox.append_text(val)
+        if default > len(vals):
+            default = 0
+        val = vals[default]
+        combobox.show_text(val)
+        return val
 
     def set_xlimits_widgets(self, set_min=True, set_max=True):
         """Populate axis limits GUI with current plot values."""
@@ -246,10 +317,71 @@ class PlotViewGw(Callback.Callbacks):
 
     def get_plot_data(self):
         """Extract only good data point for plotting."""
-        y_data = self._dataobj.get_data()
-        x_data = np.arange(len(y_data))
+        if isinstance(self._dataobj, AstroImage.AstroImage):
+            y_data = self._dataobj.get_data()
+            x_data = np.arange(len(y_data))
+            x_label = 'Index'
+            y_label = 'Value'
 
-        return x_data, y_data
+        elif isinstance(self._dataobj, AstroTable.AstroTable):
+            if self.x_col == self._idxname:
+                x_data = self._idx
+            else:
+                x_data = self.tab[self.x_col].data
+            x_label = self._get_label('x')
+
+            if self.y_col == self._idxname:
+                y_data = self._idx
+            else:
+                y_data = self.tab[self.y_col].data
+            y_label = self._get_label('y')
+
+            if self.tab.masked:
+                if self.x_col == self._idxname:
+                    x_mask = np.ones_like(self._idx, dtype=bool)
+                else:
+                    x_mask = ~self.tab[self.x_col].mask
+
+                if self.y_col == self._idxname:
+                    y_mask = np.ones_like(self._idx, dtype=bool)
+                else:
+                    y_mask = ~self.tab[self.y_col].mask
+
+                mask = x_mask & y_mask
+                x_data = x_data[mask]
+                y_data = y_data[mask]
+
+            if len(x_data) > 1:
+                i = np.argsort(x_data)  # Sort X-axis to avoid messy line plot
+                x_data = x_data[i]
+                y_data = y_data[i]
+
+        else:
+            raise ValueError("I don't know how to get plot data from type '{}'".format(type(self._dataobj)))
+
+        marker = self.get_marker()
+
+        return Bunch.Bunch(x_data=x_data, y_data=y_data, marker=marker,
+                           x_label=x_label, y_label=y_label)
+
+    def _get_label(self, axis):
+        """Return plot label for column for the given axis."""
+
+        if axis == 'x':
+            colname = self.x_col
+        else:  # y
+            colname = self.y_col
+
+        if colname == self._idxname:
+            label = 'Index'
+        else:
+            col = self.tab[colname]
+            if col.unit:
+                label = '{0} ({1})'.format(col.name, col.unit)
+            else:
+                label = col.name
+
+        return label
 
     def get_marker(self):
         _marker_type = self.settings.get('markerstyle', 'o')
@@ -259,15 +391,23 @@ class PlotViewGw(Callback.Callbacks):
 
         return _marker_type
 
-    def get_label(self, axis):
-        """Return plot label for the given axis."""
+    def x_select_cb(self, w, index):
+        """Callback to set X-axis column."""
+        try:
+            self.x_col = self.cols[index]
+        except IndexError as e:
+            self.logger.error(str(e))
+        else:
+            self.do_plot(reset_xlimits=True, reset_ylimits=False)
 
-        if axis == 'x':
-            label = 'Index'
-        if axis == 'y':
-            label = 'Value'
-
-        return label
+    def y_select_cb(self, w, index):
+        """Callback to set Y-axis column."""
+        try:
+            self.y_col = self.cols[index]
+        except IndexError as e:
+            self.logger.error(str(e))
+        else:
+            self.do_plot(reset_xlimits=False, reset_ylimits=True)
 
     def log_x_cb(self, w, val):
         """Toggle linear/log scale for X-axis."""
