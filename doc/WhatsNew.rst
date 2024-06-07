@@ -5,8 +5,8 @@ What's New
 Ver 5.2.0 (unreleased)
 ======================
 - Substituted puremagic package for python-magic (works better across
-  platforms)
-- Fixed an issue with the mouse wheel event scrolling MDI workspaces
+  platforms).
+- Fixed an issue with the mouse wheel event scrolling MDI workspaces.
 - Fixed a spurious warning when moving the cursor in the Pan plugin
   window and a table or plot viewer is running in the channel
 - Made the enter_focus property default to False
@@ -17,6 +17,10 @@ Ver 5.2.0 (unreleased)
 - Added alternate versions of installed fonts to the default font set
   (bold, italic, light)
 - Some minor bug fixes for TreeView in Gtk3 backend
+- Enhanced Plot viewer can plot 1D images or from tables via Table viewer
+
+  - Toolbar and Info (Synopsis) bars change GUIs according to which
+    viewer is active in the channel
 
 Ver 5.1.0 (2024-05-22)
 ======================

@@ -146,8 +146,12 @@ class Cursor(GingaPlugin.GlobalPlugin):
         value = info.value
 
         # Update the readout
-        px_x = "%.3f" % info.x
-        px_y = "%.3f" % info.y
+        try:
+            px_x = "%.3f" % info.x
+            px_y = "%.3f" % info.y
+        except Exception:
+            px_x = "None"
+            px_y = "None"
         maxx = max(readout.maxx, len(str(px_x)))
         if maxx > readout.maxx:
             readout.maxx = maxx

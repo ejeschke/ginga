@@ -168,6 +168,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         ImageView.ImageViewBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap, settings=settings)
 
+        self.needs_scrolledview = True
         if render is None:
             render = self.t_.get('render_widget', 'widget')
         self.wtype = render
@@ -207,7 +208,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.msgtimer.add_callback('expired',
                                    lambda timer: self.onscreen_message_off())
 
-        # For optomized redrawing
+        # For optimized redrawing
         self._defer_task = Timer()
         self._defer_task.add_callback('expired',
                                       lambda timer: self.delayed_redraw())
@@ -948,7 +949,7 @@ class ScrolledView(QtGui.QAbstractScrollArea):
 
         self._adjusting = False
         self._scrolling = False
-        self.pad = 20
+        self.pad = 0
         self.range_h = 10000
         self.range_v = 10000
         self.upper_h = self.range_h
@@ -1035,6 +1036,7 @@ class ScrolledView(QtGui.QAbstractScrollArea):
             if res is None:
                 return
             pct_x, pct_y = res.pan_pct_x, res.pan_pct_y
+            # pct_x, pct_y = None, None
 
             # Only adjust pan setting for axes that have changed
             if dx != 0:
@@ -1054,6 +1056,11 @@ class ScrolledView(QtGui.QAbstractScrollArea):
 
         finally:
             self._scrolling = False
+
+    def wheelEvent(self, event):
+        # override because wheel events on viewport widget should not
+        # be processed by these scroll bars
+        event.accept()
 
     def scroll_bars(self, horizontal='on', vertical='on'):
         self._bar_status.update(dict(horizontal=horizontal,

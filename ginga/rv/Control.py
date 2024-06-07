@@ -103,7 +103,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
-                     'add-image-info', 'remove-image-info'):
+                     'add-image-info', 'remove-image-info', 'viewer-select'):
             self.enable_callback(name)
 
         # Initialize the timer factory
@@ -232,9 +232,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     # PLUGIN MANAGEMENT
 
     def start_operation(self, opname):
-        return self.start_local_plugin(None, opname, None)
+        return self.start_local_plugin(None, opname)
 
-    def start_local_plugin(self, chname, opname, future):
+    def start_local_plugin(self, chname, opname, future=None):
         channel = self.get_channel(chname)
         opmon = channel.opmon
         opmon.start_plugin_future(channel.name, opname, future)
@@ -1819,7 +1819,15 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         viewer = vinfo.vclass(logger=self.logger,
                               settings=channel.settings)
-        stk_w.add_widget(viewer.get_widget(), title=vinfo.name)
+        if getattr(viewer, 'needs_scrolledview', False):
+            si = Viewers.ScrolledView(viewer)
+            scr_val = 'on'
+            si.scroll_bars(horizontal=scr_val, vertical=scr_val)
+            #scr_set.add_callback('set', self._toggle_scrollbars, si)
+            iw = Widgets.wrap(si)
+            stk_w.add_widget(iw, title=vinfo.name)
+        else:
+            stk_w.add_widget(viewer.get_widget(), title=vinfo.name)
 
         # let the GUI respond to this widget addition
         self.update_pending()
@@ -2225,13 +2233,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         box.add_widget(wgts.table, stretch=0)
         box.add_widget(wgts.descr, stretch=1)
 
-        ## if mimetype is not None:
-        ##     hbox = Widgets.HBox()
-        ##     wgts.choice = Widgets.CheckBox("Remember choice for session")
-        ##     hbox.add_widget(wgts.choice)
-        ##     box.add_widget(hbox, stretch=0)
-        ## else:
-        ##     wgts.choice = None
+        hbox = Widgets.HBox()
+        wgts.choice = Widgets.CheckBox("Remember choice for session")
+        hbox.add_widget(wgts.choice)
+        box.add_widget(hbox, stretch=0)
 
         self.ds.show_dialog(dialog)
         dialog.resize(600, 600)
@@ -2483,12 +2488,16 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         bnchs = list(sel_dct.values())
         if len(bnchs) != 1:
-            # user didn't select an opener
+            # user didn't select a viewer
             self.show_error("Need to select one viewer!", raisetab=True)
             return
 
         bnch = bnchs[0]
         self.ds.remove_dialog(w)
+
+        if wgts.choice.get_state():
+            # user wants us to remember their choice
+            bnch.priority = -99
 
         open_cb(bnch, dataobj)
         return True

@@ -1727,7 +1727,20 @@ def get_scroll_info(event):
     return (num_degrees, direction)
 
 
-def get_icon(iconpath, size=None, adjust_width=True):
+def get_image(iconpath, size=None, adjust_width=True):
+    """Get a GdkPixbuf that can be used in a button or label.
+
+    Parameters
+    ----------
+    iconpath : str
+        The path to the file containing the image of the icon
+
+    size : tuple of int (width, height) or None, (defaults to (24, 24))
+        The size of the icon to be returned in pixels
+
+    adjust_width : bool, (optional, defaults to True)
+        If True, adjust width to account for the aspect ratio of the image
+    """
     if size is not None:
         wd, ht = size
     else:
@@ -1742,6 +1755,9 @@ def get_icon(iconpath, size=None, adjust_width=True):
 
     pixbuf = pixbuf_new_from_file_at_size(iconpath, wd, ht)
     return pixbuf
+
+
+get_icon = get_image
 
 
 def get_font(font_family, point_size):

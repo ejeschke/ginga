@@ -301,18 +301,18 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         thumbkey = (chname, imname, path)
         return thumbkey
 
-    def add_image_cb(self, shell, chname, image, info):
+    def add_image_cb(self, fv, chname, image, info):
         """This callback happens when an image is loaded into one of the
         channels in the Ginga shell.
         """
         channel = self.fv.get_channel(chname)
         genthumb = channel.settings.get('genthumb', True)
-        if not genthumb:
+        if not genthumb or image.get('nothumb', False):
             return False
 
-        self.fv.gui_do(self._add_image, shell, chname, image, info)
+        self.fv.gui_do(self._add_image, fv, chname, image, info)
 
-    def _add_image(self, shell, chname, image, info):
+    def _add_image(self, fv, chname, image, info):
         # invoked via add_image_cb()
         self.fv.assert_gui_thread()
 
@@ -343,10 +343,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                                   image, extras, channel.fitsimage)
             extras.rgbimg = thumb_image
 
-        self._add_image_info(shell, channel, info)
+        self._add_image_info(fv, channel, info)
         return True
 
-    def add_image_info_cb(self, shell, channel, info):
+    def add_image_info_cb(self, fv, channel, info):
         """This callback happens when an image is loaded into one of the
         channels in the Ginga shell OR information about an image (without)
         the actual image data is loaded into the channel (a lazy load).
@@ -355,12 +355,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         `add_image_cb` and `add_image_info_cb` will be called.
         """
         genthumb = channel.settings.get('genthumb', True)
-        if not genthumb:
+        if not genthumb or info.get('nothumb', False):
             return False
 
-        self.fv.gui_do(self._add_image_info, shell, channel, info)
+        self.fv.gui_do(self._add_image_info, fv, channel, info)
 
-    def _add_image_info(self, shell, channel, info):
+    def _add_image_info(self, fv, channel, info):
         # invoked via add_image_info_cb()
         self.fv.assert_gui_thread()
 
@@ -391,7 +391,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         return True
 
-    def remove_image_info_cb(self, shell, channel, image_info):
+    def remove_image_info_cb(self, fv, channel, image_info):
         """This callback is called when an image is removed from a channel
         in the Ginga shell.
         """
@@ -464,7 +464,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         self.timer_update.set(self.update_interval)
 
-    def add_channel_cb(self, shell, channel):
+    def add_channel_cb(self, fv, channel):
         """Called when a channel is added from the main interface.
         Parameter is channel (a bunch).
         """
@@ -481,7 +481,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # add old highlight set to channel external data
         channel.extdata.setdefault('thumbs_old_highlight', set([]))
 
-    def focus_cb(self, shell, channel):
+    def focus_cb(self, fv, channel):
         """This callback is called when a channel viewer is focused.
         We use this to highlight the proper thumbs in the Thumbs pane.
         """
@@ -812,7 +812,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         self.fv.update_pending()
 
-    def delete_channel_cb(self, shell, channel):
+    def delete_channel_cb(self, fv, channel):
         """Called when a channel is deleted from the main interface.
         Parameter is channel (a bunch).
         """
