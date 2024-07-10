@@ -2558,6 +2558,8 @@ def make_widget(title, wtype):
         w = TextEntrySet()
     elif wtype == 'combobox':
         w = ComboBox()
+    elif wtype == 'comboboxedit':
+        w = ComboBox(editable=True)
     elif wtype in ('spinbox', 'spinbutton'):
         w = SpinBox(dtype=int)
     elif wtype == 'spinfloat':

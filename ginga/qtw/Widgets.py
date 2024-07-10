@@ -2312,6 +2312,8 @@ def make_widget(title, wtype):
         # w.widget.setMaxLength(12)
     elif wtype == 'combobox':
         w = ComboBox()
+    elif wtype == 'comboboxedit':
+        w = ComboBox(editable=True)
     elif wtype in ('spinbox', 'spinbutton'):
         w = SpinBox(dtype=int)
     elif wtype == 'spinfloat':
