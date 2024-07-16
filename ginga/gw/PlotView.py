@@ -178,8 +178,8 @@ class PlotViewGw(Callback.Callbacks):
     def get_logger(self):
         return self.logger
 
-    def clear(self):
-        self.widget.clear()
+    # def clear(self):
+    #     self.widget.clear()
 
     def initialize_channel(self, fv, channel):
         # no housekeeping to do (for now) on our part, just override to
@@ -243,6 +243,34 @@ class PlotViewGw(Callback.Callbacks):
         self.line_plot.clear()
         self.line_plot.draw()
         self.save_plot.set_enabled(False)
+
+    def plot_line(self, p_dat, reset_xlimits=True, reset_ylimits=True,
+                  linewidth=1, linestyle='-', linecolor='blue'):
+        """Simple line plot."""
+
+        plt_kw = {'lw': linewidth,
+                  'ls': linestyle,
+                  'color': linecolor,
+                  }
+        self.w.x_combo.set_enabled(False)
+        self.w.y_combo.set_enabled(False)
+
+        try:
+            self.line_plot.plot(
+                p_dat.x_data, p_dat.y_data,
+                xtitle=p_dat.x_label, ytitle=p_dat.y_label,
+                marker=p_dat.marker, **plt_kw)
+
+            if not reset_xlimits:
+                self.set_xlim_cb()
+            self.set_xlimits_widgets()
+
+            if not reset_ylimits:
+                self.set_ylim_cb()
+            self.set_ylimits_widgets()
+
+        except Exception as e:
+            self.logger.error(str(e), exc_info=True)
 
     def do_plot(self, reset_xlimits=True, reset_ylimits=True):
         """Simple line plot."""
