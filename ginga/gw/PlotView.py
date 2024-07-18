@@ -89,6 +89,7 @@ class PlotViewGw(Callback.Callbacks):
         self.line_plot.connect_ui()
         self.line_plot.enable(zoom=True, pan=True)
         self.line_plot.add_callback('limits-set', self.limits_cb)
+        #self.line_plot.add_callback('draw_canvas', self.draw_cb)
 
         ax = self.line_plot.ax
         ax.grid(True)
@@ -166,7 +167,8 @@ class PlotViewGw(Callback.Callbacks):
         self.widget = top
 
         # For callbacks
-        for name in ['image-set']:
+        for name in ['image-set',  # 'image-unset',
+                     'limits-set']:  # 'redraw', 'configure'
             self.enable_callback(name)
 
     def get_widget(self):
@@ -178,8 +180,8 @@ class PlotViewGw(Callback.Callbacks):
     def get_logger(self):
         return self.logger
 
-    # def clear(self):
-    #     self.widget.clear()
+    def get_plot(self):
+        return self.plot_viewer.line_plot
 
     def initialize_channel(self, fv, channel):
         # no housekeeping to do (for now) on our part, just override to
@@ -244,33 +246,46 @@ class PlotViewGw(Callback.Callbacks):
         self.line_plot.draw()
         self.save_plot.set_enabled(False)
 
-    def plot_line(self, p_dat, reset_xlimits=True, reset_ylimits=True,
-                  linewidth=1, linestyle='-', linecolor='blue'):
+    def plot_line(self, x_data, y_data, name=None,
+                  linewidth=1, linestyle='-', color='black',
+                  alpha=1.0):
         """Simple line plot."""
 
         plt_kw = {'lw': linewidth,
                   'ls': linestyle,
-                  'color': linecolor,
+                  'color': color,
+                  'alpha': alpha,
                   }
         self.w.x_combo.set_enabled(False)
         self.w.y_combo.set_enabled(False)
 
         try:
             self.line_plot.plot(
-                p_dat.x_data, p_dat.y_data,
-                xtitle=p_dat.x_label, ytitle=p_dat.y_label,
-                marker=p_dat.marker, **plt_kw)
+                x_data, y_data,
+                xtitle=None, ytitle=None,
+                marker=None, **plt_kw)
 
-            if not reset_xlimits:
-                self.set_xlim_cb()
+            # if not reset_xlimits:
+            #     self.set_xlim_cb()
             self.set_xlimits_widgets()
 
-            if not reset_ylimits:
-                self.set_ylim_cb()
+            # if not reset_ylimits:
+            #     self.set_ylim_cb()
             self.set_ylimits_widgets()
 
         except Exception as e:
             self.logger.error(str(e), exc_info=True)
+
+    def plot_text(self, x, y, text, rot_deg=0,
+                  linewidth=1, color='black', alpha=1.0,
+                  font='sans', fontsize=12):
+        ax = self.line_plot.ax
+        fontdict = dict(color=color, family=font, size=fontsize)
+        ax.text(x, y, text, color=color, rotation=rot_deg,
+                fontdict=fontdict, clip_on=True)
+
+    def set_titles(self, title=None, x_axis=None, y_axis=None):
+        self.line_plot.set_titles(xtitle=x_axis, ytitle=y_axis, title=title)
 
     def do_plot(self, reset_xlimits=True, reset_ylimits=True):
         """Simple line plot."""
@@ -320,6 +335,13 @@ class PlotViewGw(Callback.Callbacks):
         combobox.show_text(val)
         return val
 
+    def get_limits(self):
+        xmin, xmax = self.line_plot.ax.get_xlim()
+        ymin, ymax = self.line_plot.ax.get_ylim()
+
+        # NOTE: compatible with image viewer
+        return [(xmin, ymin), (xmax, ymax)]
+
     def set_xlimits_widgets(self, set_min=True, set_max=True):
         """Populate axis limits GUI with current plot values."""
         xmin, xmax = self.line_plot.ax.get_xlim()
@@ -340,6 +362,12 @@ class PlotViewGw(Callback.Callbacks):
         """Callback that is called when the limits are set by the
         plot object.
         """
+        x_lo, x_hi = dct['x_lim']
+        y_lo, y_hi = dct['y_lim']
+
+        # NOTE: make compatible callback to image viewer
+        self.make_callback('limits-set', [(x_lo, y_lo), (x_hi, y_hi)])
+
         self.set_xlimits_widgets()
         self.set_ylimits_widgets()
 
@@ -534,6 +562,12 @@ class PlotViewGw(Callback.Callbacks):
             self.logger.error(str(e))
         else:
             self.logger.info('Table plot saved as {0}'.format(target))
+
+    def redraw_now(self):
+        self.line_plot.draw()
+
+    def redraw(self):
+        self.redraw_now()
 
     def __str__(self):
         return "PlotViewer"
