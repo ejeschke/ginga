@@ -172,7 +172,7 @@ class Operations(GingaPlugin.GlobalPlugin):
 
         idx = self.w.channel.get_index()
         chname = str(self.w.channel.get_alpha(idx))
-        self.fv.error_wrap(self.fv.start_local_plugin, chname, name, None)
+        self.fv.error_wrap(self.fv.start_local_plugin, chname, name)
 
     def set_operation_cb(self, menuname, name, ptype, spec):
         self._start_op_args = (name, ptype, spec)

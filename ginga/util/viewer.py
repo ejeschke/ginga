@@ -63,3 +63,7 @@ def get_viewer_names(dataobj):
     can view `dataobj`.
     """
     return [vinfo.name for vinfo in get_viewers(dataobj)]
+
+
+def get_vinfo(vname):
+    return viewer_db[vname]

@@ -232,9 +232,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     # PLUGIN MANAGEMENT
 
     def start_operation(self, opname):
-        return self.start_local_plugin(None, opname, None)
+        return self.start_local_plugin(None, opname)
 
-    def start_local_plugin(self, chname, opname, future):
+    def start_local_plugin(self, chname, opname, future=None):
         channel = self.get_channel(chname)
         opmon = channel.opmon
         opmon.start_plugin_future(channel.name, opname, future)

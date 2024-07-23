@@ -600,6 +600,27 @@ class Channel(Callback.Callbacks):
         self.fv.gui_choose_viewer(msg, viewers, self.open_with_viewer,
                                   dataobj)
 
+    def get_viewer(self, vname):
+        """Return the channel viewer with the specified name.
+
+        Parameters
+        ----------
+        vname : str
+            Name of the type of viewer.
+
+        Returns
+        -------
+        viewer : a ginga channel viewer of the specified type
+
+        """
+        # if we don't have this viewer type then install one in the channel
+        if vname not in self.viewer_dict:
+            vinfo = gviewer.get_vinfo(vname)
+            self.fv.make_viewer(vinfo, self)
+
+        viewer = self.viewer_dict[vname]
+        return viewer
+
     def open_with_viewer(self, vinfo, dataobj):
         # if we don't have this viewer type then install one in the channel
         if vinfo.name not in self.viewer_dict:

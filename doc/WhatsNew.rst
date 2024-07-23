@@ -5,10 +5,11 @@ What's New
 Ver 5.2.0 (unreleased)
 ======================
 - Substituted puremagic package for python-magic (works better across
-  platforms)
-- Fixed an issue with the mouse wheel event scrolling MDI workspaces
+  platforms).
+- Fixed an issue with the mouse wheel event scrolling MDI workspaces.
 - Fixed a spurious warning when moving the cursor in the Pan plugin
-  window and a table or plot viewer is running in the channel
+  window and a table or plot viewer is running in the channel.
+- Enhanced PlotViewer can plot from 1D images or (new) tables.
 
 Ver 5.1.0 (2024-05-22)
 ======================
