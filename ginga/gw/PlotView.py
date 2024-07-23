@@ -256,22 +256,9 @@ class PlotViewGw(Callback.Callbacks):
                   'color': color,
                   'alpha': alpha,
                   }
-        self.w.x_combo.set_enabled(False)
-        self.w.y_combo.set_enabled(False)
-
         try:
-            self.line_plot.plot(
-                x_data, y_data,
-                xtitle=None, ytitle=None,
-                marker=None, **plt_kw)
-
-            # if not reset_xlimits:
-            #     self.set_xlim_cb()
-            self.set_xlimits_widgets()
-
-            # if not reset_ylimits:
-            #     self.set_ylim_cb()
-            self.set_ylimits_widgets()
+            ax = self.line_plot.ax
+            ax.plot(x_data, y_data, **plt_kw)
 
         except Exception as e:
             self.logger.error(str(e), exc_info=True)
@@ -286,6 +273,19 @@ class PlotViewGw(Callback.Callbacks):
 
     def set_titles(self, title=None, x_axis=None, y_axis=None):
         self.line_plot.set_titles(xtitle=x_axis, ytitle=y_axis, title=title)
+
+    def update_limits(self):
+        self.w.x_combo.set_enabled(False)
+        self.w.y_combo.set_enabled(False)
+
+        # if not reset_xlimits:
+        #     self.set_xlim_cb()
+        self.set_xlimits_widgets()
+
+        # if not reset_ylimits:
+        #     self.set_ylim_cb()
+        self.set_ylimits_widgets()
+
 
     def do_plot(self, reset_xlimits=True, reset_ylimits=True):
         """Simple line plot."""
