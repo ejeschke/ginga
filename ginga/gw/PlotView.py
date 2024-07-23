@@ -274,7 +274,7 @@ class PlotViewGw(Callback.Callbacks):
     def set_titles(self, title=None, x_axis=None, y_axis=None):
         self.line_plot.set_titles(xtitle=x_axis, ytitle=y_axis, title=title)
 
-    def yset_grid(self, tf):
+    def set_grid(self, tf):
         ax = self.line_plot.ax
         ax.grid(tf)
 
