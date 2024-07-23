@@ -274,18 +274,16 @@ class PlotViewGw(Callback.Callbacks):
     def set_titles(self, title=None, x_axis=None, y_axis=None):
         self.line_plot.set_titles(xtitle=x_axis, ytitle=y_axis, title=title)
 
+    def yset_grid(self, tf):
+        ax = self.line_plot.ax
+        ax.grid(tf)
+
     def update_limits(self):
         self.w.x_combo.set_enabled(False)
         self.w.y_combo.set_enabled(False)
 
-        # if not reset_xlimits:
-        #     self.set_xlim_cb()
         self.set_xlimits_widgets()
-
-        # if not reset_ylimits:
-        #     self.set_ylim_cb()
         self.set_ylimits_widgets()
-
 
     def do_plot(self, reset_xlimits=True, reset_ylimits=True):
         """Simple line plot."""
