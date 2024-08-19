@@ -2,12 +2,15 @@ import logging
 
 import numpy as np
 import pytest
+from astropy.utils import minversion
 from numpy.testing import assert_allclose, assert_array_equal
 
 from ginga.AstroImage import AstroImage
 from ginga.util import iqcalc, iqcalc_astropy
 from ginga.util.iqcalc import have_scipy  # noqa
 from ginga.util.iqcalc_astropy import have_photutils  # noqa
+
+ASTROPY_LT_7_0 = not minversion("astropy", "7.0.dev")
 
 
 @pytest.mark.parametrize(
@@ -284,7 +287,13 @@ class TestIQCalcFWHMAstropy(TestIQCalcFWHM):
         self.fwhm_funcs = (self.iqcalc.calc_fwhm_gaussian,
                            self.iqcalc.calc_fwhm_moffat,
                            self.iqcalc.calc_fwhm_lorentz)
+        if ASTROPY_LT_7_0:
+            lorentz_ans = (1.9570, 1.8113)
+        else:
+            # https://github.com/astropy/astropy/pull/16794
+            lorentz_ans = (2.340321, 2.068428)
+
         self.answers = ((2.8551, 2.7732),  # Gaussian
                         (2.77949, 2.6735),  # Moffat
-                        (1.9570, 1.8113)  # Lorentz
+                        lorentz_ans  # Lorentz
                         )
