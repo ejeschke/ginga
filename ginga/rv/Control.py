@@ -1128,7 +1128,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     # CHANNEL MANAGEMENT
 
-    def add_image(self, imname, image, chname=None, silent=False):
+    def add_image(self, imname, image, chname=None, wsname=None, silent=False):
         if chname is None:
             channel = self.get_current_channel()
             if channel is None:
@@ -1136,8 +1136,12 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                  "the image")
             chname = channel.name
 
+        if self.has_channel(chname):
+            channel = self.get_channel(chname)
+        else:
+            channel = self.add_channel(chname, workspace=wsname)
+
         # add image to named channel
-        channel = self.get_channel_on_demand(chname)
         channel.add_image(image, silent=silent)
 
     def advertise_image(self, chname, image):
@@ -1427,6 +1431,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             self.logger.debug("Adding channel '%s'" % (chname))
             channel = Channel(chname, self, datasrc=None,
                               settings=settings)
+
+            if workspace is not None:
+                if not self.ds.has_ws(workspace):
+                    self.add_workspace(workspace, 'tabs')
 
             bnch = self.add_viewer(chname, settings,
                                    workspace=workspace)
