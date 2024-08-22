@@ -9,6 +9,11 @@ Ver 5.2.0 (unreleased)
 - Fixed an issue with the mouse wheel event scrolling MDI workspaces
 - Fixed a spurious warning when moving the cursor in the Pan plugin
   window and a table or plot viewer is running in the channel
+- Made the enter_focus property default to False
+
+  - Viewer windows will not steal the keyboard focus if the mouse moves
+    over them
+    
 
 Ver 5.1.0 (2024-05-22)
 ======================

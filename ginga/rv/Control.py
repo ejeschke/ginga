@@ -1849,7 +1849,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # check general settings for default value of enter_focus
         enter_focus = settings.get('enter_focus', None)
         if enter_focus is None:
-            enter_focus = self.settings.get('enter_focus', True)
+            enter_focus = self.settings.get('enter_focus', False)
         fi.set_enter_focus(enter_focus)
         # check general settings for default value of focus indicator
         focus_ind = settings.get('show_focus_indicator', None)

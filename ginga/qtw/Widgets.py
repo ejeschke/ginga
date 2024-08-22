@@ -1965,10 +1965,14 @@ class MDIWindow(TopLevelMixin, WidgetBase):
         if iconpath is None:
             iconpath = app_icon_path
         w.setWindowIcon(QIcon(iconpath))
+        #w.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.widget = w
 
         child_w = child.get_widget()
+        # what size does the widget want to be?
+        wd, ht = child_w.width(), child_w.height()
         w.setWidget(child_w)
+        w.resize(wd, ht)
 
         # NOTE: we fire the page-switch callback by intercepting the
         # focus event on the subwindow, rather than off of the
