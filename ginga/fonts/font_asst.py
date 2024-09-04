@@ -134,12 +134,23 @@ def set_scale_factor(key, factor):
 
 fontdir, xx = os.path.split(__file__)
 
-add_font(os.path.join(fontdir, 'Roboto', 'Roboto-Regular.ttf'),
+add_font(os.path.join(fontdir, 'Roboto', "Roboto-Regular.ttf"),
          font_name='roboto')
-add_font(os.path.join(fontdir, 'Roboto_Condensed', 'RobotoCondensed-Regular.ttf'),
+for name in ["Black", "Bold", "Light", "Medium", "Thin"]:
+    add_font(os.path.join(fontdir, 'Roboto', f"Roboto-{name}.ttf"),
+             font_name='roboto {}'.format(name.lower()))
+
+add_font(os.path.join(fontdir, 'Roboto_Condensed', "RobotoCondensed-Regular.ttf"),
          font_name='roboto condensed')
-add_font(os.path.join(fontdir, 'Ubuntu_Mono', 'UbuntuMono-Regular.ttf'),
+for name in ["Bold", "BoldItalic", "Italic", "Light", "LightItalic"]:
+    add_font(os.path.join(fontdir, 'Roboto_Condensed', f"RobotoCondensed-{name}.ttf"),
+             font_name='roboto condensed {}'.format(name.lower()))
+
+add_font(os.path.join(fontdir, 'Ubuntu_Mono', "UbuntuMono-Regular.ttf"),
          font_name='ubuntu mono')
+for name in ["Bold", "BoldItalic", "Italic"]:
+    add_font(os.path.join(fontdir, 'Ubuntu_Mono', f"UbuntuMono-{name}.ttf"),
+             font_name='ubuntu mono {}'.format(name.lower()))
 
 # house font needs to be available
 add_alias('house', 'ubuntu mono')

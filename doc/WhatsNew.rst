@@ -13,7 +13,9 @@ Ver 5.2.0 (unreleased)
 
   - Viewer windows will not steal the keyboard focus if the mouse moves
     over them
-    
+
+- Added alternate versions of installed fonts to the default font set
+  (bold, italic, light)
 
 Ver 5.1.0 (2024-05-22)
 ======================
