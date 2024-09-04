@@ -979,6 +979,19 @@ class TreeView(WidgetBase):
         finally:
             self.widget.blockSignals(False)
 
+    def get_selected_paths(self):
+        items = list(self.widget.selectedItems())
+        return [self._get_path(item) for item in items]
+
+    def select_paths(self, paths, state=True):
+        self.widget.blockSignals(True)
+        try:
+            for path in paths:
+                item = self._path_to_item(path)
+                item.setSelected(state)
+        finally:
+            self.widget.blockSignals(False)
+
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)
 

@@ -1018,13 +1018,26 @@ class TreeView(WidgetBase):
         treeselection = self.tv.get_selection()
         treeselection.unselect_all()
 
-    def select_path(self, path, state=True):
+    def get_selected_paths(self):
         treeselection = self.tv.get_selection()
-        item = self._path_to_item(path)
-        if state:
-            treeselection.select_iter(item)
-        else:
-            treeselection.unselect_iter(item)
+        model, pathlist = treeselection.get_selected_rows()
+        paths = []
+        for path in pathlist:
+            item = model.get_iter(path)
+            paths.append(self._get_path(item))
+        return paths
+
+    def select_paths(self, paths, state=True):
+        treeselection = self.tv.get_selection()
+        for path in paths:
+            item = self._path_to_item(path)
+            if state:
+                treeselection.select_iter(item)
+            else:
+                treeselection.unselect_iter(item)
+
+    def select_path(self, path, state=True):
+        self.select_paths([path], state=state)
 
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)  # noqa
@@ -1109,7 +1122,8 @@ class TreeView(WidgetBase):
             column, cell, model, iter = args[:4]
             bnch = model.get_value(iter, 0)
             if isinstance(bnch, str):
-                cell.set_property('text', bnch)
+                if not isinstance(cell, Gtk.CellRendererPixbuf):
+                    cell.set_property('text', bnch)
             elif isinstance(bnch, GdkPixbuf.Pixbuf):
                 cell.set_property('pixbuf', bnch)
             elif isinstance(bnch[idx], GdkPixbuf.Pixbuf):
@@ -1123,7 +1137,8 @@ class TreeView(WidgetBase):
             column, cell, model, iter = args[:4]
             bnch = model.get_value(iter, 0)
             if isinstance(bnch, str):
-                cell.set_property('text', '')
+                if not isinstance(cell, Gtk.CellRendererPixbuf):
+                    cell.set_property('text', '')
             elif isinstance(bnch, GdkPixbuf.Pixbuf):
                 cell.set_property('text', '')
             elif isinstance(bnch[idx], GdkPixbuf.Pixbuf):

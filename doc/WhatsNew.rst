@@ -16,6 +16,7 @@ Ver 5.2.0 (unreleased)
 
 - Added alternate versions of installed fonts to the default font set
   (bold, italic, light)
+- Some minor bug fixes for TreeView in Gtk3 backend
 
 Ver 5.1.0 (2024-05-22)
 ======================

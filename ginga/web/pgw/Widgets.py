@@ -1582,6 +1582,14 @@ class TreeView(WidgetBase):
             self._get_item(res_dict, rowNum)
         return res_dict
 
+    def get_selected_paths(self):
+        return [self._get_path(row_num)
+                for row_num in self.selectedRows]
+
+    def select_paths(self, paths, state=True):
+        for path in paths:
+            self.select_path(path, state=state)
+
     def clear(self):
         self.rowid = -1
         self.rows = []
