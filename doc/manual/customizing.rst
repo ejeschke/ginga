@@ -447,6 +447,8 @@ we make use of the `~ginga.rv.main` module:
 
 .. code-block:: python
 
+    #! /usr/bin/env python3
+    #
     import sys
     from argparse import ArgumentParser
 
@@ -466,7 +468,58 @@ we make use of the `~ginga.rv.main` module:
 
         argprs = ArgumentParser(description="Run my custom viewer.")
         viewer.add_default_options(argprs)
-        (options, args) = argprs.parse_known_args(sys_argv[1:])
+        (options, args) = argprs.parse_known_args(sys.argv[1:])
 
         viewer.main(options, args)
 
+Another example, where we want to make a custom application name, but use
+the same layout as the stock reference viewer, use a customized set of the
+default plugins and add some custom command line options:
+
+.. code-block:: python
+
+    #! /usr/bin/env python3
+    #
+    import sys
+    from argparse import ArgumentParser
+    
+    from ginga.rv.main import ReferenceViewer
+    
+    # plugins I want to add--see contents examples in ginga.rv.main
+    my_plugins = []
+    
+    if __name__ == "__main__":
+        # my apps name (customization will be read out of $HOME/.<appname>
+        appname = "myviewer"
+        initial_channels = ['Mychan']
+    
+        viewer = ReferenceViewer(appname=appname, channels=initial_channels)
+    
+        # global Ginga plugins we don't want to load
+        nixed_global_plugins = ['History']
+        # local Ginga plugins we don't want to load
+        nixed_local_plugins = ['PixTable']
+    
+        # add default plugins, except those we don't want
+        viewer.add_default_plugins(except_global=nixed_global_plugins,
+                                   except_local=nixed_local_plugins)
+        # add my custom plugins
+        for spec in my_plugins:
+            viewer.add_plugin(spec)
+    
+        argprs = ArgumentParser(description="Run my custom viewer.")
+        viewer.add_default_options(argprs)
+    
+        # add extra custom startup parameters to `argprs` here
+        # argprs.add_argument(...)
+    
+        # parse args
+        (options, args) = argprs.parse_known_args(sys.argv[1:])
+    
+        # do something with custom parameters
+    
+        # start the viewer
+        viewer.main(options, args)
+
+You can use this technique to build a custom viewer with your own plugins
+and the startup script distributed in your own installable package.
