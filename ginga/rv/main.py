@@ -363,11 +363,19 @@ class ReferenceViewer(object):
         logger = log.get_logger(name=logname, options=options)
 
         if options.basedir is not None:
+            # command line option overrules
             self.basedir = os.path.expanduser(options.basedir)
         if self.basedir is not None:
-            paths.ginga_home = self.basedir
+            # custom basedir
+            paths.set_home(self.basedir)
         else:
-            self.basedir = paths.ginga_home
+            if self.appname == 'ginga':
+                # stock ginga basedir
+                self.basedir = paths.ginga_home
+            else:
+                # user changed appname
+                self.basedir = os.path.join(paths.home, f".{self.appname}")
+                paths.set_home(self.basedir)
 
         # Get settings (preferences)
         if not os.path.exists(self.basedir):
