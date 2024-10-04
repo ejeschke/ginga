@@ -37,6 +37,7 @@ class Plot(Callback.Callbacks):
 
         self.logx = False
         self.logy = False
+        self.zoom_rate = 1.1
 
         self.xdata = []
         self.ydata = []
@@ -177,34 +178,54 @@ class Plot(Callback.Callbacks):
     def _plot_key_press(self, event):
         self.make_callback('key-press', event)
 
+    def zoom_plot(self, pct_x, pct_y, redraw=True):
+
+        x1, x2 = self.ax.get_xlim()
+        y1, y2 = self.ax.get_ylim()
+        set_lim = False
+
+        if pct_x is not None:
+            xrng = x2 - x1
+            xinc = (pct_x * xrng - xrng) * 0.5
+            x1, x2 = x1 - xinc, x2 + xinc
+            self.ax.set_xlim(x1, x2)
+            set_lim = True
+
+        if pct_y is not None:
+            yrng = y2 - y1
+            yinc = (pct_y * yrng - yrng) * 0.5
+            y1, y2 = y1 - yinc, y2 + yinc
+            self.ax.set_ylim(y1, y2)
+            set_lim = True
+
+        if set_lim:
+            self.make_callback('limits-set',
+                               dict(x_lim=(x1, x2), y_lim=(y1, y2)))
+            if redraw:
+                self.draw()
+
     def plot_do_zoom(self, cb_obj, event):
         """Can be set as the callback function for the 'scroll'
         event to zoom the plot.
         """
         if not self.can.zoom:
             return
+
         # Matplotlib only gives us the number of steps of the scroll,
         # positive for up and negative for down.
         if event.step > 0:
-            delta = 0.9
+            delta = self.zoom_rate ** -2
         elif event.step < 0:
-            delta = 1.1
+            delta = self.zoom_rate ** 2
 
-        x1, x2 = self.ax.get_xlim()
-        xrng = x2 - x1
-        xinc = (delta * xrng - xrng) * 0.5
-        x1, x2 = x1 - xinc, x2 + xinc
-
-        y1, y2 = self.ax.get_ylim()
-        yrng = y2 - y1
-        yinc = (delta * yrng - yrng) * 0.5
-        y1, y2 = y1 - yinc, y2 + yinc
-
-        self.ax.set_xlim(x1, x2)
-        self.ax.set_ylim(y1, y2)
-        self.make_callback('limits-set', dict(x_lim=(x1, x2), y_lim=(y1, y2)))
-
-        self.draw()
+        delta_x = delta_y = delta
+        if 'ctrl' in event.modifiers:
+            # only horizontal
+            delta_y = 1.0
+        elif 'shift' in event.modifiers:
+            # only horizontal
+            delta_x = 1.0
+        self.zoom_plot(delta_x, delta_y)
         return True
 
     def get_axes_size_in_px(self):
@@ -225,23 +246,31 @@ class Plot(Callback.Callbacks):
 
         return True
 
-    def pan_plot(self, xnew, ynew):
+    def pan_plot(self, xnew, ynew, redraw=True):
 
         x1, x2 = self.ax.get_xlim()
-        xrng = x2 - x1
-        xinc = xrng * 0.5
-        x1, x2 = xnew - xinc, xnew + xinc
-
         y1, y2 = self.ax.get_ylim()
-        yrng = y2 - y1
-        yinc = yrng * 0.5
-        y1, y2 = ynew - yinc, ynew + yinc
+        set_lim = False
 
-        self.ax.set_xlim(x1, x2)
-        self.ax.set_ylim(y1, y2)
-        self.make_callback('limits-set', dict(x_lim=(x1, x2), y_lim=(y1, y2)))
+        if xnew is not None:
+            xrng = x2 - x1
+            xinc = xrng * 0.5
+            x1, x2 = xnew - xinc, xnew + xinc
+            self.ax.set_xlim(x1, x2)
+            set_lim = True
 
-        self.draw()
+        if ynew is not None:
+            yrng = y2 - y1
+            yinc = yrng * 0.5
+            y1, y2 = ynew - yinc, ynew + yinc
+            self.ax.set_ylim(y1, y2)
+            set_lim = True
+
+        if set_lim:
+            self.make_callback('limits-set',
+                               dict(x_lim=(x1, x2), y_lim=(y1, y2)))
+            if redraw:
+                self.draw()
 
 
 class HistogramPlot(Plot):

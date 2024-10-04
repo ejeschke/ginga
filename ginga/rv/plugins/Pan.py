@@ -280,7 +280,6 @@ class Pan(GingaPlugin.GlobalPlugin):
                                           whence=whence)
                 paninfo.panimage.zoom_fit()
                 self.panset(channel.fitsimage, channel, paninfo)
-                pass
         return True
 
     # LOGIC

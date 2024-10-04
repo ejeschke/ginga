@@ -40,6 +40,7 @@ class ImageViewGtk(ImageView.ImageViewBase):
         if render is None:
             render = self.t_.get('render_widget', 'widget')
         self.wtype = render
+        self.needs_scrolledview = True
         self.surface = None
         if self.wtype == 'widget':
             imgwin = Gtk.DrawingArea()
@@ -738,7 +739,7 @@ class ScrolledView(Gtk.Table):
 
         self._adjusting = False
         self._scrolling = False
-        self.pad = 20
+        self.pad = 0
         self.sb_thickness = 20
         self.rng_x = 100.0
         self.rng_y = 100.0

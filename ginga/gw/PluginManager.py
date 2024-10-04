@@ -118,12 +118,15 @@ class PluginManager(Callback.Callbacks):
         lname = name.lower()
         return self.active[lname]
 
-    def activate(self, p_info, exclusive=True):
+    def activate(self, p_info, exclusive=None):
         name = p_info.tabname
         lname = p_info.name.lower()
         if lname in self.active:
             # plugin already active
             return
+
+        if exclusive is None:
+            exclusive = p_info.spec.get('exclusive', True)
 
         bnch = Bunch.Bunch(pInfo=p_info, lblname=name, widget=None,
                            exclusive=exclusive)
@@ -310,7 +313,7 @@ class PluginManager(Callback.Callbacks):
                     wd, ht = self.ds.get_ws_size(in_ws)
                     vbox.extdata.size = (wd, ht)
 
-                if future:
+                if future is not None:
                     p_info.obj.build_gui(vbox, future=future)
                 else:
                     p_info.obj.build_gui(vbox)

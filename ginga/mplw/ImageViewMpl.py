@@ -324,7 +324,6 @@ class ImageViewEvent(ImageViewMpl):
         ImageViewMpl.__init__(self, logger=logger, rgbmap=rgbmap,
                               settings=settings)
 
-        # @$%&^(_)*&^ gnome!!
         self._keytbl = {
             'shift': 'shift_l',
             'control': 'control_l',
@@ -404,16 +403,16 @@ class ImageViewEvent(ImageViewMpl):
         self.logger.debug("matplotlib keyname='%s'" % (keyname))
         if keyname is None:
             return keyname
-        try:
-            key = keyname.lower()
-            if 'shift+' in key:
-                key = key.replace('shift+', '')
-            if 'ctrl+' in key:
-                key = key.replace('ctrl+', '')
-            return self._keytbl[key]
-
-        except KeyError:
-            return keyname
+        key = keyname
+        if 'shift+' in key:
+            key = key.replace('shift+', '')
+        if 'ctrl+' in key:
+            key = key.replace('ctrl+', '')
+        if 'alt+' in key:
+            key = key.replace('alt+', '')
+        if 'meta+' in key:
+            key = key.replace('meta+', '')
+        return self._keytbl.get(key, key)
 
     def get_key_table(self):
         return self._keytbl

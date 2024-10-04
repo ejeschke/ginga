@@ -2352,11 +2352,14 @@ class ImageViewBase(Callback.Callbacks):
 
         """
         xy_mn, xy_mx = self.get_limits()
+        pan_x, pan_y = self.get_pan()[:2]
 
-        data_x = (xy_mn[0] + xy_mx[0]) * pct_x
-        data_y = (xy_mn[1] + xy_mx[1]) * pct_y
+        if pct_x is not None:
+            pan_x = (xy_mn[0] + xy_mx[0]) * pct_x
+        if pct_y is not None:
+            pan_y = (xy_mn[1] + xy_mx[1]) * pct_y
 
-        self.panset_xy(data_x, data_y)
+        self.panset_xy(pan_x, pan_y)
 
     def calc_pan_pct(self, pad=0, min_pct=0.0, max_pct=0.9):
         """Calculate values for vertical/horizontal panning by percentages
@@ -2399,34 +2402,32 @@ class ImageViewBase(Callback.Callbacks):
                        dtype=float)
         x, y = tr.to_(arr).T
 
-        rx1, rx2 = np.min(x), np.max(x)
-        ry1, ry2 = np.min(y), np.max(y)
+        x_min, x_max = np.min(x), np.max(x)
+        y_min, y_max = np.min(y), np.max(y)
 
         bbox = self.get_pan_bbox()
         arr = np.array(bbox, dtype=float)
         x, y = tr.to_(arr).T
 
-        qx1, qx2 = np.min(x), np.max(x)
-        qy1, qy2 = np.min(y), np.max(y)
+        x_lo, x_hi = np.min(x), np.max(x)
+        y_lo, y_hi = np.min(y), np.max(y)
 
         # this is the range of X and Y of the entire image
         # in the viewer (unscaled)
-        rng_x, rng_y = abs(rx2 - rx1), abs(ry2 - ry1)
+        rng_x, rng_y = abs(x_max - x_min), abs(y_max - y_min)
 
         # this is the *visually shown* range of X and Y
-        abs_x, abs_y = abs(qx2 - qx1), abs(qy2 - qy1)
+        vis_x, vis_y = abs(x_hi - x_lo), abs(y_hi - y_lo)
 
         # calculate the length of the slider arms as a ratio
-        ## min_pct = self.settings.get('pan_min_scroll_thumb_pct', 0.0)
-        ## max_pct = self.settings.get('pan_max_scroll_thumb_pct', 0.9)
-        xthm_pct = max(min_pct, min(abs_x / (rx2 - rx1), max_pct))
-        ythm_pct = max(min_pct, min(abs_y / (ry2 - ry1), max_pct))
+        xthm_pct = max(min_pct, min(vis_x / rng_x, max_pct))
+        ythm_pct = max(min_pct, min(vis_y / rng_y, max_pct))
 
         # calculate the pan position as a ratio
-        pct_x = min(max(0.0, abs(0.0 - rx1) / rng_x), 1.0)
-        pct_y = min(max(0.0, abs(0.0 - ry1) / rng_y), 1.0)
+        pct_x = min(max(0.0, abs(x_min) / rng_x), 1.0)
+        pct_y = min(max(0.0, abs(y_min) / rng_y), 1.0)
 
-        bnch = Bunch.Bunch(rng_x=rng_x, rng_y=rng_y, vis_x=abs_x, vis_y=abs_y,
+        bnch = Bunch.Bunch(rng_x=rng_x, rng_y=rng_y, vis_x=vis_x, vis_y=vis_y,
                            thm_pct_x=xthm_pct, thm_pct_y=ythm_pct,
                            pan_pct_x=pct_x, pan_pct_y=pct_y)
         return bnch
@@ -2445,9 +2446,6 @@ class ImageViewBase(Callback.Callbacks):
 
         pad : int (optional, defaults to 0)
             a padding amount in pixels to add to the limits when calculating
-
-        min_pct : float (optional, range 0.0:1.0, defaults to 0.0)
-        max_pct : float (optional, range 0.0:1.0, defaults to 0.9)
 
         """
         # Sanity check on inputs
@@ -2468,11 +2466,11 @@ class ImageViewBase(Callback.Callbacks):
                        dtype=float)
         x, y = tr.to_(arr).T
 
-        rx1, rx2 = np.min(x), np.max(x)
-        ry1, ry2 = np.min(y), np.max(y)
+        x_min, x_max = np.min(x), np.max(x)
+        y_min, y_max = np.min(y), np.max(y)
 
-        crd_x = rx1 + (pct_x * (rx2 - rx1))
-        crd_y = ry1 + (pct_y * (ry2 - ry1))
+        crd_x = x_min + (pct_x * (x_max - x_min))
+        crd_y = y_min + (pct_y * (y_max - y_min))
 
         pan_x, pan_y = tr.from_((crd_x, crd_y))
         self.logger.debug("crd=%f,%f pan=%f,%f" % (

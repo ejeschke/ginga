@@ -231,12 +231,13 @@ class Channel(Callback.Callbacks):
             # No
             idx = image.get('idx', None)
             path = image.get('path', None)
+            nothumb = image.get('nothumb', False)
             image_loader = image.get('image_loader', None)
             image_future = image.get('image_future', None)
             info = self.add_history(imname, path,
                                     image_loader=image_loader,
                                     image_future=image_future,
-                                    idx=idx)
+                                    idx=idx, nothumb=nothumb)
             image.set(image_info=info)
 
         # add an image profile if one is missing
@@ -459,7 +460,8 @@ class Channel(Callback.Callbacks):
         return True
 
     def add_history(self, imname, path, idx=None,
-                    image_loader=None, image_future=None):
+                    image_loader=None, image_future=None,
+                    nothumb=False):
         """Add metadata about a data object to this channel.
 
         See add_image_info() for use and additional information.
@@ -484,6 +486,9 @@ class Channel(Callback.Callbacks):
             An optional image future used to reload the image if it is
             unloaded from memory.  If `None` is passed, then defaults to
             a future using the default loader.
+
+        nothumb : bool (optional, default: False)
+            True if no thumbnail should be generated for this object.
 
         Returns
         -------
@@ -511,7 +516,8 @@ class Channel(Callback.Callbacks):
                                time_added=time.time(),
                                time_modified=None,
                                last_viewer_info=None,
-                               profile=None)
+                               profile=None,
+                               nothumb=nothumb)
             self._add_info(info)
 
         else:
@@ -600,15 +606,39 @@ class Channel(Callback.Callbacks):
         self.fv.gui_choose_viewer(msg, viewers, self.open_with_viewer,
                                   dataobj)
 
+    def get_viewer(self, vname):
+        """Return the channel viewer with the specified name.
+
+        Parameters
+        ----------
+        vname : str
+            Name of the type of viewer.
+
+        Returns
+        -------
+        viewer : a ginga channel viewer of the specified type
+
+        """
+        # if we don't have this viewer type then install one in the channel
+        if vname not in self.viewer_dict:
+            vinfo = gviewer.get_vinfo(vname)
+            self.fv.make_viewer(vinfo, self)
+
+        viewer = self.viewer_dict[vname]
+        return viewer
+
     def open_with_viewer(self, vinfo, dataobj):
         # if we don't have this viewer type then install one in the channel
         if vinfo.name not in self.viewer_dict:
             self.fv.make_viewer(vinfo, self)
 
-        self.viewer = self.viewer_dict[vinfo.name]
+        old_viewer, self.viewer = self.viewer, self.viewer_dict[vinfo.name]
         # find this viewer and raise it
         idx = self.viewers.index(self.viewer)
         self.widget.set_index(idx)
+
+        self.fv.make_async_gui_callback('viewer-select', self,
+                                        old_viewer, self.viewer)
 
         # and load the data
         if self.viewer.get_dataobj() is not dataobj:

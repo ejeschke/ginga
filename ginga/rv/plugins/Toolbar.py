@@ -19,37 +19,252 @@ from ginga.gw import Widgets
 from ginga.misc import Bunch
 from ginga.events import KeyEvent
 from ginga import GingaPlugin
+from ginga.util import viewer as gviewer
 
-__all__ = ['Toolbar']
+__all__ = ['Toolbar', 'Toolbar_Common', 'Toolbar_Ginga_Image',
+           'Toolbar_Ginga_Plot', 'Toolbar_Ginga_Table']
 
 
 class Toolbar(GingaPlugin.GlobalPlugin):
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
-        super(Toolbar, self).__init__(fv)
+        super().__init__(fv)
 
         # active view
-        self.active = None
-        # holds our gui widgets
-        self.w = Bunch.Bunch()
-        self.gui_up = False
+        self.channel = None
+        self.opname_prefix = 'Toolbar_'
 
         # get local plugin preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Toolbar')
+        self.settings.add_defaults(close_unfocused_toolbars=True)
+        self.settings.load(onError='silent')
+
+        fv.add_callback('add-channel', self.add_channel_cb)
+        fv.add_callback('delete-channel', self.delete_channel_cb)
+        fv.add_callback('channel-change', self.focus_cb)
+        fv.add_callback('viewer-select', self.viewer_select_cb)
+
+    def build_gui(self, container):
+        self.w.nb = Widgets.StackWidget()
+
+        container.add_widget(self.w.nb, stretch=1)
+
+    # CALLBACKS
+
+    def add_channel_cb(self, fv, channel):
+        if self.channel is None:
+            self.focus_cb(fv, channel)
+
+    def delete_channel_cb(self, fv, channel):
+        self.logger.debug("delete channel %s" % (channel.name))
+        if channel is self.channel:
+            self.channel = None
+
+    def focus_cb(self, fv, channel):
+        self.logger.debug("{} focused".format(channel.name))
+        if channel is not self.channel:
+            old_channel, self.channel = self.channel, channel
+
+            if self.channel is not None:
+                opname = self.get_opname(self.channel)
+                self.logger.debug(f"starting {opname} in {channel}")
+                self.start_local_plugin(self.channel, opname)
+
+            # NOTE: can stop toolbar plugins that aren't focused
+            # but it is more efficient to keep them open
+            if self.settings.get('close_unfocused_toolbars', False):
+                if old_channel is not None:
+                    opname = self.get_opname(old_channel)
+                    self.logger.debug(f"stopping {opname} in {old_channel}")
+                    self.stop_local_plugin(old_channel, opname)
+
+        return True
+
+    def viewer_select_cb(self, fv, channel, old_viewer, new_viewer):
+        self.logger.debug("viewer changed: {}".format(new_viewer.name))
+        if channel is self.channel and channel is not None:
+            #opname = self.get_opname(self.channel)
+            opname = self.opname_prefix + new_viewer.vname.replace(' ', '_')
+            self.start_local_plugin(self.channel, opname)
+
+            if old_viewer is not None and old_viewer is not new_viewer:
+                opname = self.opname_prefix + old_viewer.vname.replace(' ', '_')
+                self.stop_local_plugin(self.channel, opname)
+
+    def redo(self, channel, dataobj):
+        # NOTE: we need to call redo() specifically for our toolbars
+        # because they are not started nor managed like regular local
+        # plugins by the core, they are managed by us
+        opname = self.get_opname(channel)
+        opmon = channel.opmon
+        p_obj = opmon.get_plugin(opname)
+        try:
+            p_obj.redo()
+        except Exception as e:
+            self.logger.error(f"error updating toolbar {opmon}: {e}")
+
+    # LOGIC
+
+    def get_opname(self, channel):
+        opname = self.opname_prefix + channel.viewer.vname.replace(' ', '_')
+        return opname
+
+    def start_local_plugin(self, channel, opname, future=None):
+        wname = "{}_{}".format(channel.name, opname)
+        if wname in self.w and self.w[wname] is not None:
+            vbox = self.w[wname]
+            idx = self.w.nb.index_of(vbox)
+            self.logger.debug(f"raising {wname}")
+            self.w.nb.set_index(idx)
+            return
+        opmon = channel.opmon
+        p_obj = opmon.get_plugin(opname)
+        vbox = Widgets.VBox()
+        p_obj.build_gui(vbox)
+        self.w.nb.add_widget(vbox)
+        self.w[wname] = vbox
+        p_obj.start()
+
+    def stop_local_plugin(self, channel, opname):
+        opmon = channel.opmon
+        p_obj = opmon.get_plugin(opname)
+        try:
+            p_obj.stop()
+        except Exception as e:
+            pass
+        wname = "{}_{}".format(channel.name, opname)
+        try:
+            vbox = self.w[wname]
+            self.w.nb.remove(vbox)
+            self.w[wname] = None
+            vbox.delete()
+        except Exception as e:
+            self.logger.error(f"error stopping plugin '{wname}'")
+
+    def __str__(self):
+        return 'toolbar'
+
+
+class Toolbar_Common(GingaPlugin.LocalPlugin):
+
+    def __init__(self, fv, fitsimage):
+        # superclass defines some variables for us, like logger
+        super().__init__(fv, fitsimage)
+
+        # holds our gui widgets
+        self.w = Bunch.Bunch()
+        self.viewers = []
+        self.layout_common = [
+            # (Name, type, icon, tooltip)
+            ("viewer", 'combobox', None, "Select compatible viewer",
+             self.viewer_cb),
+            ("Up", 'button', 'up', "Go to previous image in channel",
+             lambda w: self.fv.prev_img()),
+            ("Down", 'button', 'down', "Go to next image in channel",
+             lambda w: self.fv.next_img()),
+            ("---",)]
+
+        self.gui_up = False
+
+    def close(self):
+        self.fv.stop_local_plugin(self.chname, str(self))
+
+    def stop(self):
+        self.viewers = []
+        self.gui_up = False
+
+    def start_local_plugin(self, name):
+        self.fv.start_operation(name)
+
+    def start_global_plugin(self, name):
+        self.fv.start_global_plugin(name, raise_tab=True)
+
+    def build_toolbar(self, tb_w, layout):
+
+        for tup in layout:
+            name = tup[0]
+            if name == '---':
+                tb_w.add_separator()
+                continue
+            if tup[1] not in ['button', 'toggle']:
+                btn = Widgets.make_widget(name, tup[1])
+                tb_w.add_widget(btn)
+            else:
+                iconpath = tup[2]
+                if not iconpath.startswith(os.path.sep):
+                    iconpath = os.path.join(self.fv.iconpath, "%s.svg" % (iconpath))
+                btn = tb_w.add_action(None, toggle=(tup[1] == 'toggle'),
+                                      iconpath=iconpath, iconsize=(24, 24))
+            if tup[3]:
+                btn.set_tooltip(tup[3])
+            if tup[4]:
+                btn.add_callback('activated', tup[4])
+
+            # add to our widget dict
+            self.w[Widgets.name_mangle(name, pfx='btn_')] = btn
+
+        return tb_w
+
+    def viewer_cb(self, w, idx):
+        vinfo = self.viewers[idx]
+        self.logger.debug(f"viewer {vinfo.name} selected")
+        dataobj = self.channel.viewer.get_dataobj()
+        self.channel.open_with_viewer(vinfo, dataobj)
+
+    def _update_viewer_selection(self):
+        if not self.gui_up:
+            return
+
+        dataobj = self.channel.get_current_image()
+
+        # find available viewers that can view this kind of object
+        viewers = gviewer.get_viewers(dataobj)
+        if viewers != self.viewers:
+            # repopulate viewer selector
+            self.viewers = viewers
+            new_names = [viewer.name for viewer in viewers]
+            self.w.btn_viewer.clear()
+            self.logger.debug("available viewers for {} are {}".format(type(dataobj), new_names))
+            for name in new_names:
+                self.w.btn_viewer.append_text(name)
+            # set the box to the viewer we have selected
+            cur_name = self.channel.viewer.vname
+            if cur_name in new_names:
+                self.w.btn_viewer.set_text(cur_name)
+
+    def __str__(self):
+        return 'toolbarbase'
+
+
+class Toolbar_Ginga_Image(Toolbar_Common):
+    """A toolbar for the Ginga Image viewer.
+    """
+
+    def __init__(self, fv, chviewer):
+        # superclass defines some variables for us, like logger
+        super().__init__(fv, chviewer)
+
+        # get local plugin preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('toolbar_Ginga_Image')
         self.settings.load(onError='silent')
 
         self.modetype = self.settings.get('mode_type', 'oneshot')
 
-        fv.set_callback('add-channel', self.add_channel_cb)
-        fv.set_callback('delete-channel', self.delete_channel_cb)
-        fv.set_callback('channel-change', self.focus_cb)
-        fv.add_callback('add-image-info', self._ch_image_added_cb)
-        fv.add_callback('remove-image-info', self._ch_image_removed_cb)
+        chviewer.add_callback('transform', self.viewer_transform_cb)
+
+        bm = chviewer.get_bindmap()
+        bm.add_callback('mode-set', self.mode_set_cb)
 
         self.layout = [
             # (Name, type, icon, tooltip)
+            # ("Up", 'button', 'up', "Go to previous image in channel",
+            #  lambda w: self.fv.prev_img()),
+            # ("Down", 'button', 'down', "Go to next image in channel",
+            #  lambda w: self.fv.next_img()),
+            # ("---",),
             ("FlipX", 'toggle', 'flip_x', "Flip image in X axis",
              self.flipx_cb),
             ("FlipY", 'toggle', 'flip_y', "Flip image in Y axis",
@@ -65,11 +280,6 @@ class Toolbar(GingaPlugin.GlobalPlugin):
              self.orient_rh_cb),
             ("OrientLH", 'button', 'orient_ne', "Orient image N=Up E=Left",
              self.orient_lh_cb),
-            ("---",),
-            ("Up", 'button', 'up', "Go to previous image in channel",
-             lambda w: self.fv.prev_img()),
-            ("Down", 'button', 'down', "Go to next image in channel",
-             lambda w: self.fv.next_img()),
             ("---",),
             ("Zoom In", 'button', 'zoom_in', "Zoom in",
              lambda w: self.fv.zoom_in()),
@@ -115,73 +325,34 @@ class Toolbar(GingaPlugin.GlobalPlugin):
              self.reset_contrast_cb),
             ("---",),
             ("Preferences", 'button', 'settings', "Set channel preferences (in focused channel)",
-             lambda w: self.start_plugin_cb('Preferences')),
+             lambda w: self.start_local_plugin('Preferences')),
             ("FBrowser", 'button', 'folder_open', "Open file (in focused channel)",
-             lambda w: self.start_plugin_cb('FBrowser')),
+             lambda w: self.start_local_plugin('FBrowser')),
             ("MultiDim", 'button', 'layers', "Select HDUs or cube slices (in focused channel)",
-             lambda w: self.start_plugin_cb('MultiDim')),
+             lambda w: self.start_local_plugin('MultiDim')),
             ("Header", 'button', 'tags', "View image metadata (Header plugin)",
-             lambda w: self.start_global_plugin_cb('Header')),
+             lambda w: self.start_global_plugin('Header')),
             ("ZoomPlugin", 'button', 'microscope', "Magnify detail (Zoom plugin)",
-             lambda w: self.start_global_plugin_cb('Zoom'))]
+             lambda w: self.start_global_plugin('Zoom'))]
 
     def build_gui(self, container):
         self.orientation = Widgets.get_orientation(container)
-        tb = Widgets.Toolbar(orientation=self.orientation)
-        self.w.toolbar = tb
+        tb_w = Widgets.Toolbar(orientation=self.orientation)
 
-        for tup in self.layout:
+        self.build_toolbar(tb_w, self.layout_common)
+        self.build_toolbar(tb_w, self.layout)
+        self.w.toolbar = tb_w
 
-            name = tup[0]
-            if name == '---':
-                tb.add_separator()
-                continue
-            if tup[1] not in ['button', 'toggle']:
-                btn = Widgets.make_widget(name, tup[1])
-                tb.add_widget(btn)
-            else:
-                iconpath = tup[2]
-                if not iconpath.startswith(os.path.sep):
-                    iconpath = os.path.join(self.fv.iconpath, "%s.svg" % (iconpath))
-                btn = tb.add_action(None, toggle=(tup[1] == 'toggle'),
-                                    iconpath=iconpath, iconsize=(24, 24))
-            if tup[3]:
-                btn.set_tooltip(tup[3])
-            if tup[4]:
-                btn.add_callback('activated', tup[4])
-
-            # add to our widget dict
-            self.w[Widgets.name_mangle(name, pfx='btn_')] = btn
-
-        container.add_widget(tb, stretch=0)
-
+        container.add_widget(tb_w, stretch=1)
         self.gui_up = True
+
+    def start(self):
+        self._update_toolbar_state()
 
     # CALLBACKS
 
-    def add_channel_cb(self, viewer, channel):
-        chviewer = channel.fitsimage
-        chviewer.add_callback('transform', self.viewer_transform_cb)
-
-        bm = chviewer.get_bindmap()
-        bm.add_callback('mode-set', self.mode_set_cb, chviewer)
-
-    def delete_channel_cb(self, viewer, channel):
-        self.logger.debug("delete channel %s" % (channel.name))
-        # we don't keep around any baggage on channels so nothing
-        # to delete
-
-    def focus_cb(self, viewer, channel):
-        self.update_channel_buttons(channel)
-
-        chviewer = channel.fitsimage
-        self.active = chviewer
-        self._update_toolbar_state(chviewer)
-        return True
-
     def center_image_cb(self, w):
-        view = self._get_viewer()
-        view.center_image()
+        self.fitsimage.center_image()
         return True
 
     def reset_contrast_cb(self, w):
@@ -191,18 +362,15 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         return True
 
     def auto_levels_cb(self, w):
-        view = self._get_viewer()
-        view.auto_levels()
+        self.fitsimage.auto_levels()
         return True
 
     def rot90_cb(self, w):
-        view = self._get_viewer()
-        view.rotate_delta(90.0)
+        self.fitsimage.rotate_delta(90.0)
         return True
 
     def rotn90_cb(self, w):
-        view = self._get_viewer()
-        view.rotate_delta(-90.0)
+        self.fitsimage.rotate_delta(-90.0)
         return True
 
     def orient_lh_cb(self, w):
@@ -218,82 +386,56 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         return True
 
     def reset_all_transforms_cb(self, w):
-        view = self._get_viewer()
+        view = self.fitsimage
         with view.suppress_redraw:
             view.rotate(0.0)
             view.transform(False, False, False)
-
-        return True
-
-    def start_plugin_cb(self, name):
-        self.fv.start_operation(name)
-        return True
-
-    def start_global_plugin_cb(self, name):
-        self.fv.start_global_plugin(name, raise_tab=True)
         return True
 
     def flipx_cb(self, w, tf):
-        view = self._get_viewer()
+        view = self.fitsimage
         flip_x, flip_y, swap_xy = view.get_transforms()
         flip_x = tf
         view.transform(flip_x, flip_y, swap_xy)
         return True
 
     def flipy_cb(self, w, tf):
-        view = self._get_viewer()
+        view = self.fitsimage
         flip_x, flip_y, swap_xy = view.get_transforms()
         flip_y = tf
         view.transform(flip_x, flip_y, swap_xy)
         return True
 
     def swapxy_cb(self, w, tf):
-        view = self._get_viewer()
+        view = self.fitsimage
         flip_x, flip_y, swap_xy = view.get_transforms()
         swap_xy = tf
         view.transform(flip_x, flip_y, swap_xy)
         return True
 
     def mode_cb(self, tf, modename):
-        if self.active is None:
-            self.active = self._get_viewer()
-        chviewer = self.active
-        if chviewer is None:
-            return
-        bm = chviewer.get_bindmap()
+        bm = self.fitsimage.get_bindmap()
         if not tf:
-            bm.reset_mode(chviewer)
+            bm.reset_mode(self.fitsimage)
             self.fv.show_status("")
             return True
 
         bm.set_mode(modename)
         # just in case mode change failed
-        self._update_toolbar_state(chviewer)
+        self._update_toolbar_state()
         self.fv.show_status(f"Type 'h' in the viewer to show help for mode {modename}")
         return True
 
-    def mode_set_cb(self, bm, mode, mtype, chviewer):
+    def mode_set_cb(self, bm, mode, mtype):
         # called whenever the user interaction mode is changed
         # in the viewer
-        if self.active is None:
-            self.active = self._get_viewer()
-        if chviewer != self.active:
-            return True
-        self._update_toolbar_state(chviewer)
+        self._update_toolbar_state()
         return True
 
     def viewer_transform_cb(self, chviewer):
         # called whenever the transform (flip x/y, swap axes) is done
         # in the viewer
-        if self.active is None:
-            self.active = self._get_viewer()
-        if chviewer != self.active:
-            return True
-        self._update_toolbar_state(chviewer)
-        return True
-
-    def new_image_cb(self, chviewer, image):
-        self._update_toolbar_state(chviewer)
+        self._update_toolbar_state()
         return True
 
     def set_locked_cb(self, w, tf):
@@ -301,11 +443,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             modetype = 'locked'
         else:
             modetype = 'oneshot'
-        if self.active is None:
-            self.active = self._get_viewer()
-        chviewer = self.active
-        if chviewer is None:
-            return
+        chviewer = self.fitsimage
 
         # get current bindmap, make sure that the mode is consistent
         # with current lock button
@@ -318,45 +456,36 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             # turning off lock also resets the mode
             bm.reset_mode(chviewer)
 
-        self._update_toolbar_state(chviewer)
+        self._update_toolbar_state()
         return True
 
     # LOGIC
 
-    def _get_viewer(self):
-        channel = self.fv.get_channel_info()
-        return channel.fitsimage
-
     def _get_mode(self, mode_name):
-        channel = self.fv.get_channel_info()
-        view = channel.fitsimage
+        view = self.fitsimage
         bd = view.get_bindings()
         mode = bd.get_mode_obj(mode_name)
         return view, mode
 
-    def _ch_image_added_cb(self, shell, channel, info):
-        if channel != shell.get_current_channel():
-            return
-        self.update_channel_buttons(channel)
+    def redo(self):
+        self._update_toolbar_state()
 
-    def _ch_image_removed_cb(self, shell, channel, info):
-        if channel != shell.get_current_channel():
-            return
-        self.update_channel_buttons(channel)
+    def clear(self):
+        self._update_toolbar_state()
 
-    def update_channel_buttons(self, channel):
+    def _update_toolbar_state(self):
         if not self.gui_up:
             return
-        # Update toolbar channel buttons
-        enabled = len(channel) > 1
-        self.w.btn_up.set_enabled(enabled)
-        self.w.btn_down.set_enabled(enabled)
-
-    def _update_toolbar_state(self, chviewer):
-        if (chviewer is None) or (not self.gui_up):
-            return
         self.logger.debug("updating toolbar state")
+        chviewer = self.fitsimage
         try:
+            self._update_viewer_selection()
+
+            # Update toolbar channel buttons
+            enabled = len(self.channel) > 1
+            self.w.btn_up.set_enabled(enabled)
+            self.w.btn_down.set_enabled(enabled)
+
             # update transform toggles
             flipx, flipy, swapxy = chviewer.get_transforms()
             # toolbar follows view
@@ -387,7 +516,175 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             raise e
 
     def __str__(self):
-        return 'toolbar'
+        return 'toolbar_ginga_image'
+
+
+class Toolbar_Ginga_Plot(Toolbar_Common):
+    """A toolbar for the Ginga Plot viewer.
+    """
+
+    def __init__(self, fv, chviewer):
+        # superclass defines some variables for us, like logger
+        super().__init__(fv, chviewer)
+
+        # get local plugin preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('toolbar_Ginga_Plot')
+        self.settings.add_defaults(zoom_bump_pct=1.1)
+        self.settings.load(onError='silent')
+
+        self.layout = [
+            # (Name, type, icon, tooltip)
+            ("Zoom In", 'button', 'zoom_in', "Zoom in",
+             lambda w: self.zoom_in()),
+            ("Zoom Out", 'button', 'zoom_out', "Zoom out",
+             lambda w: self.zoom_out()),
+            ("Zoom Fit", 'button', 'zoom_fit', "Fit plot to window size",
+             lambda w: self.zoom_fit()),
+            ("Zoom Fit X", 'button', 'zoom_fit_x', "Fit X axis to window size",
+             lambda w: self.zoom_fit_x()),
+            ("Zoom Fit Y", 'button', 'zoom_fit_y', "Fit Y axis to window size",
+             lambda w: self.zoom_fit_y()),
+            ("---",),
+            ("Preferences", 'button', 'settings', "Set channel preferences (in focused channel)",
+             lambda w: self.start_local_plugin('Preferences')),
+            ("FBrowser", 'button', 'folder_open', "Open file (in focused channel)",
+             lambda w: self.start_local_plugin('FBrowser')),
+            ("MultiDim", 'button', 'layers', "Select HDUs or cube slices (in focused channel)",
+             lambda w: self.start_local_plugin('MultiDim')),
+            ("Header", 'button', 'tags', "View image metadata (Header plugin)",
+             lambda w: self.start_global_plugin('Header'))]
+
+    def build_gui(self, container):
+        self.orientation = Widgets.get_orientation(container)
+        tb_w = Widgets.Toolbar(orientation=self.orientation)
+
+        self.build_toolbar(tb_w, self.layout_common)
+        self.build_toolbar(tb_w, self.layout)
+        self.w.toolbar = tb_w
+
+        container.add_widget(tb_w, stretch=1)
+        self.gui_up = True
+
+    def start(self):
+        self._update_toolbar_state()
+
+    # CALLBACKS
+
+    def zoom_in(self):
+        viewer = self.channel.get_viewer('Ginga Plot')
+        pct = self.settings['zoom_bump_pct']
+        viewer.zoom_plot(1 / pct, 1 / pct)
+
+    def zoom_out(self):
+        viewer = self.channel.get_viewer('Ginga Plot')
+        pct = self.settings['zoom_bump_pct']
+        viewer.zoom_plot(pct, pct)
+
+    def zoom_fit_x(self):
+        viewer = self.channel.get_viewer('Ginga Plot')
+        viewer.zoom_fit(axis='x')
+
+    def zoom_fit_y(self):
+        viewer = self.channel.get_viewer('Ginga Plot')
+        viewer.zoom_fit(axis='y')
+
+    def zoom_fit(self):
+        viewer = self.channel.get_viewer('Ginga Plot')
+        viewer.zoom_fit(axis='xy')
+
+    # LOGIC
+
+    def redo(self):
+        self._update_toolbar_state()
+
+    def clear(self):
+        self._update_toolbar_state()
+
+    def _update_toolbar_state(self):
+        if not self.gui_up:
+            return
+        self.logger.debug("updating toolbar state")
+        try:
+            self._update_viewer_selection()
+
+            # Update toolbar channel buttons
+            enabled = len(self.channel) > 1
+            self.w.btn_up.set_enabled(enabled)
+            self.w.btn_down.set_enabled(enabled)
+
+        except Exception as e:
+            self.logger.error("error updating toolbar: %s" % str(e))
+            raise e
+
+    def __str__(self):
+        return 'toolbar_ginga_plot'
+
+
+class Toolbar_Ginga_Table(Toolbar_Common):
+    """A toolbar for the Ginga Table viewer.
+    """
+
+    def __init__(self, fv, chviewer):
+        # superclass defines some variables for us, like logger
+        super().__init__(fv, chviewer)
+
+        # get local plugin preferences
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('toolbar_Ginga_Table')
+        self.settings.load(onError='silent')
+
+        self.layout = [
+            # (Name, type, icon, tooltip)
+            ("Preferences", 'button', 'settings', "Set channel preferences (in focused channel)",
+             lambda w: self.start_local_plugin('Preferences')),
+            ("FBrowser", 'button', 'folder_open', "Open file (in focused channel)",
+             lambda w: self.start_local_plugin('FBrowser')),
+            ("MultiDim", 'button', 'layers', "Select HDUs or cube slices (in focused channel)",
+             lambda w: self.start_local_plugin('MultiDim')),
+            ("Header", 'button', 'tags', "View image metadata (Header plugin)",
+             lambda w: self.start_global_plugin('Header'))]
+
+    def build_gui(self, container):
+        self.orientation = Widgets.get_orientation(container)
+        tb_w = Widgets.Toolbar(orientation=self.orientation)
+
+        self.build_toolbar(tb_w, self.layout_common)
+        self.build_toolbar(tb_w, self.layout)
+        self.w.toolbar = tb_w
+
+        container.add_widget(tb_w, stretch=1)
+        self.gui_up = True
+
+    def start(self):
+        self._update_toolbar_state()
+
+    # LOGIC
+
+    def redo(self):
+        self._update_toolbar_state()
+
+    def clear(self):
+        self._update_toolbar_state()
+
+    def _update_toolbar_state(self):
+        if not self.gui_up:
+            return
+        self.logger.debug("updating toolbar state")
+        try:
+            self._update_viewer_selection()
+
+            # Update toolbar channel buttons
+            enabled = len(self.channel) > 1
+            self.w.btn_up.set_enabled(enabled)
+            self.w.btn_down.set_enabled(enabled)
+
+        except Exception as e:
+            self.logger.error("error updating toolbar: %s" % str(e))
+            raise e
+
+    def __str__(self):
+        return 'toolbar_ginga_table'
 
 
 # Append module docstring with config doc for auto insert by Sphinx.

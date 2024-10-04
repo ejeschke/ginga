@@ -37,7 +37,7 @@ class ViewerObjectBase(Callback.Callbacks):
         self.metadata.setdefault('name', None)
 
         # For callbacks
-        for name in ('modified', ):
+        for name in ['modified']:
             self.enable_callback(name)
 
     def get_metadata(self):
