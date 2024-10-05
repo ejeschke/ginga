@@ -182,14 +182,15 @@ class PlotViewBase(Callback.Callbacks):
         if old_dataobj is not None:
             self.make_callback('image-unset', old_dataobj)
         self._dataobj = dataobj
+
         self.clear()
 
         if isinstance(dataobj, AstroImage):
-            dataobj.add_callback('modified', self.show_image)
+            dataobj.add_callback('modified', lambda dataobj: self.replot())
             self.show_image(dataobj)
 
         elif isinstance(dataobj, Plotable):
-            dataobj.add_callback('modified', self.show_plotable)
+            dataobj.add_callback('modified', lambda dataobj: self.replot())
             self.show_plotable(dataobj)
 
         self.zoom_fit()

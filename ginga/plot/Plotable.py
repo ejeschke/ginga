@@ -80,6 +80,7 @@ class Plotable(ViewerObjectBase):
         self.grid = tf
 
     def clear(self):
+        self.canvas.delete_all_objects()
         self.titles.x_axis = None
         self.titles.y_axis = None
         self.titles.title = None
