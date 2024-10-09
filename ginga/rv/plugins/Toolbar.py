@@ -260,11 +260,6 @@ class Toolbar_Ginga_Image(Toolbar_Common):
 
         self.layout = [
             # (Name, type, icon, tooltip)
-            # ("Up", 'button', 'up', "Go to previous image in channel",
-            #  lambda w: self.fv.prev_img()),
-            # ("Down", 'button', 'down', "Go to next image in channel",
-            #  lambda w: self.fv.next_img()),
-            # ("---",),
             ("FlipX", 'toggle', 'flip_x', "Flip image in X axis",
              self.flipx_cb),
             ("FlipY", 'toggle', 'flip_y', "Flip image in Y axis",

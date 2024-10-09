@@ -387,13 +387,8 @@ class ReferenceViewer(object):
             # custom basedir
             paths.set_home(self.basedir)
         else:
-            if self.appname == 'ginga':
-                # stock ginga basedir
-                self.basedir = paths.ginga_home
-            else:
-                # user changed appname
-                self.basedir = os.path.join(paths.home, f".{self.appname}")
-                paths.set_home(self.basedir)
+            # stock ginga basedir
+            self.basedir = paths.ginga_home
 
         # Get settings (preferences)
         if not os.path.exists(self.basedir):
