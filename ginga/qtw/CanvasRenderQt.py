@@ -74,11 +74,8 @@ class RenderContext(render.RenderContextBase):
         if font is None:
             font = self.font
         fm = QFontMetrics(font.render.font)
-        if hasattr(fm, 'horizontalAdvance'):
-            width = fm.horizontalAdvance(text)
-        else:
-            width = fm.width(text)
-        height = fm.height()
+        rect = fm.boundingRect(text)
+        width, height = rect.width(), fm.ascent()  # rect.height()
         return width, height
 
     ##### DRAWING OPERATIONS #####
@@ -95,14 +92,7 @@ class RenderContext(render.RenderContextBase):
 
         if font is not None:
             self.ctx.setFont(font.render.font)
-        # draw bg
         qfont = self.ctx.font()
-        # fm = QFontMetrics(qfont)
-        # qrect = fm.boundingRect(text)
-        # self.ctx.fillRect(qrect, self.ctx.brush())
-        # # draw fg
-        # self.ctx.drawText(0, 0, text)
-        #----------
         self.ctx.setBrush(QtCore.Qt.NoBrush if fill is None
                           else fill.render.brush)
 
@@ -322,11 +312,8 @@ class CanvasRenderer(render.StandardPipelineRenderer):
     def text_extents(self, text, font):
         qfont = get_font(font.fontname, font.fontsize)
         fm = QFontMetrics(qfont)
-        if hasattr(fm, 'horizontalAdvance'):
-            width = fm.horizontalAdvance(text)
-        else:
-            width = fm.width(text)
-        height = fm.height()
+        rect = fm.boundingRect(text)
+        width, height = rect.width(), fm.ascent()   # rect.height()
         return width, height
 
 

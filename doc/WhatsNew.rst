@@ -22,6 +22,9 @@ Ver 5.2.0 (unreleased)
   - Toolbar and Info (Synopsis) bars change GUIs according to which
     viewer is active in the channel
 
+- Text canvas type gets new attributes: bgcolor, bgalpha, bordercolor,
+  borderpadding, borderalpha, borderlinewidth
+
 Ver 5.1.0 (2024-05-22)
 ======================
 - Fixed an issue where --modules option did not start a global plugin

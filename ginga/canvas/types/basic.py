@@ -76,6 +76,24 @@ class TextP(OnePointMixin, CanvasObjectBase):
             Param(name='fillalpha', type=float, default=1.0,
                   min=0.0, max=1.0, widget='spinfloat', incr=0.05,
                   description="Opacity of fill"),
+            Param(name='bgcolor',
+                  valid=colors_plus_none, type=_color, default='white',
+                  description="Color of text background"),
+            Param(name='bgalpha', type=float, default=0.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of text background"),
+            Param(name='bordercolor',
+                  valid=colors_plus_none, type=_color, default='black',
+                  description="Color of text border"),
+            Param(name='borderlinewidth', type=int, default=0,
+                  min=0, max=20, widget='spinbutton', incr=1,
+                  description="Width of border"),
+            Param(name='borderpadding', type=int, default=4,
+                  min=0, max=20, widget='spinbutton', incr=1,
+                  description="Padding from text to border"),
+            Param(name='borderalpha', type=float, default=0.0,
+                  min=0.0, max=1.0, widget='spinfloat', incr=0.05,
+                  description="Opacity of text border"),
             Param(name='rot_deg', type=float, default=0.0,
                   min=-359.999, max=359.999, widget='spinfloat', incr=1.0,
                   description="Rotation of text"),
@@ -92,7 +110,9 @@ class TextP(OnePointMixin, CanvasObjectBase):
                  font='Sans Serif', fontsize=None, fontscale=False,
                  fill=True, fontsize_min=6.0, fontsize_max=None,
                  color='yellow', alpha=1.0, fillcolor=None, fillalpha=1.0,
-                 linewidth=0, rot_deg=0.0, showcap=False, **kwdargs):
+                 linewidth=0, rot_deg=0.0, bgcolor='white', bgalpha=0.0,
+                 bordercolor='black', borderpadding=4,
+                 borderlinewidth=0, borderalpha=0.0, showcap=False, **kwdargs):
         self.kind = 'text'
         if fillcolor is None:
             fillcolor = color
@@ -104,6 +124,11 @@ class TextP(OnePointMixin, CanvasObjectBase):
                                     fontsize_min=fontsize_min,
                                     fontsize_max=fontsize_max,
                                     text=text, rot_deg=rot_deg,
+                                    bgcolor=bgcolor, bgalpha=bgalpha,
+                                    bordercolor=bordercolor,
+                                    borderpadding=borderpadding,
+                                    borderlinewidth=borderlinewidth,
+                                    borderalpha=borderalpha,
                                     showcap=showcap, **kwdargs)
         OnePointMixin.__init__(self)
 
@@ -170,10 +195,28 @@ class TextP(OnePointMixin, CanvasObjectBase):
 
     def draw(self, viewer):
         cr = viewer.renderer.setup_cr(self)
-        cr.initialize_from_shape(self, line=True, fill=True, font=True)
+        cr.initialize_from_shape(self, line=False, fill=False, font=True)
 
         x, y = self.get_data_points()[0]
         cx, cy = viewer.get_canvas_xy(x, y)
+
+        # draw background/border
+        if self.borderalpha + self.bgalpha > 0.0:
+            cwd, cht = cr.text_extents(self.text)
+            pad = self.borderpadding
+            bbox = np.array([(cx - pad, cy + pad), (cx + cwd + pad, cy + pad),
+                             (cx + cwd + pad, cy - cht - pad),
+                             (cx - pad, cy - cht - pad)])
+            x_arr, y_arr = bbox.T
+            xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
+                                      xoff=cx, yoff=cy)
+            cpoints = np.array((xa, ya)).T
+            cr.set_line(self.bordercolor, alpha=self.borderalpha,
+                        linewidth=self.borderlinewidth)
+            cr.set_fill(self.bgcolor, alpha=self.bgalpha)
+            cr.draw_polygon(cpoints, line=cr.line, fill=cr.fill)
+
+        cr.initialize_from_shape(self, line=True, fill=True, font=False)
         cr.draw_text(cx, cy, self.text, rot_deg=self.rot_deg,
                      font=cr.font, fill=cr.fill, line=cr.line)
 
@@ -188,15 +231,21 @@ class Text(TextP):
                  font='Sans Serif', fontsize=None, fontscale=False,
                  fontsize_min=6.0, fontsize_max=None, fill=True,
                  color='yellow', alpha=1.0, fillcolor=None, fillalpha=1.0,
-                 linewidth=0, rot_deg=0.0, showcap=False, **kwdargs):
+                 linewidth=0, rot_deg=0.0, bgcolor='white', bgalpha=0.0,
+                 bordercolor='black', borderpadding=4,
+                 borderlinewidth=0, borderalpha=0.0, showcap=False, **kwdargs):
         if fillcolor is None:
             fillcolor = color
         TextP.__init__(self, (x, y), text=text, color=color, alpha=alpha,
                        fill=fill, fillcolor=fillcolor, fillalpha=fillalpha,
                        font=font, fontsize=fontsize, fontscale=fontscale,
                        fontsize_min=fontsize_min, fontsize_max=fontsize_max,
-                       linewidth=linewidth, rot_deg=rot_deg, showcap=showcap,
-                       **kwdargs)
+                       linewidth=linewidth, rot_deg=rot_deg,
+                       bgcolor=bgcolor, bgalpha=bgalpha,
+                       bordercolor=bordercolor, borderpadding=borderpadding,
+                       borderlinewidth=borderlinewidth,
+                       borderalpha=borderalpha,
+                       showcap=showcap, **kwdargs)
 
 
 class Polygon(PolygonMixin, CanvasObjectBase):
