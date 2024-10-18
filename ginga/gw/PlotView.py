@@ -982,10 +982,12 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
         """Can be set as the callback function for the 'button-press'
         event to pan the plot with middle-click.
         """
-        if event.button == 0x2:
+        cur_x, cur_y = event.data_x, event.data_y
+
+        if event.button == 0x2 or (event.button == 0x1 and
+                                   'shift' in event.modifiers):
             if not self.can.pan:
                 return
-            cur_x, cur_y = event.data_x, event.data_y
             if None not in [cur_x, cur_y]:
                 self.set_pan(cur_x, cur_y)
 

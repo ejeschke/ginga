@@ -3641,11 +3641,13 @@ class ImageViewBase(Callback.Callbacks):
             message = canvas.get_object_by_tag(tag)
             if text is None:
                 message.text = ''
+                message.bgalpha = 0.0
             else:
                 message.x = x
                 message.y = y
                 message.text = text
                 message.fontsize = font_size
+                message.bgalpha = 1.0
 
         except KeyError:
             if text is None:
@@ -3653,9 +3655,10 @@ class ImageViewBase(Callback.Callbacks):
             Text = canvas.get_draw_class('text')
             canvas.add(Text(x, y, text=text,
                             font=font, fontsize=font_size,
-                            #color='black', alpha=1.0, linewidth=1,
-                            fill=True,
-                            fillcolor=self.img_fg, fillalpha=1.0,
+                            #color='black', alpha=0.0, linewidth=0,
+                            fill=True, fillcolor=self.img_fg, fillalpha=1.0,
+                            bgcolor='black', bgalpha=1.0,
+                            borderlinewidth=0,
                             coord='window'),
                        tag=tag, redraw=False)
 
