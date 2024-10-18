@@ -16,6 +16,7 @@ Hovering over an icon on the toolbar should provide you with usage tool tip.
 import os.path
 
 from ginga.gw import Widgets
+from ginga.toolkit import family
 from ginga.misc import Bunch
 from ginga.events import KeyEvent
 from ginga import GingaPlugin
@@ -331,7 +332,11 @@ class Toolbar_Ginga_Image(Toolbar_Common):
              lambda w: self.start_global_plugin('Zoom'))]
 
     def build_gui(self, container):
-        self.orientation = Widgets.get_orientation(container)
+        # TODO: fix for GTK
+        if family.startswith('gtk'):
+            self.orientation = 'horizontal'
+        else:
+            self.orientation = Widgets.get_orientation(container)
         tb_w = Widgets.Toolbar(orientation=self.orientation)
 
         self.build_toolbar(tb_w, self.layout_common)
@@ -551,7 +556,11 @@ class Toolbar_Ginga_Plot(Toolbar_Common):
              lambda w: self.start_global_plugin('Header'))]
 
     def build_gui(self, container):
-        self.orientation = Widgets.get_orientation(container)
+        # TODO: fix for GTK
+        if family.startswith('gtk'):
+            self.orientation = 'horizontal'
+        else:
+            self.orientation = Widgets.get_orientation(container)
         tb_w = Widgets.Toolbar(orientation=self.orientation)
 
         self.build_toolbar(tb_w, self.layout_common)
@@ -641,7 +650,11 @@ class Toolbar_Ginga_Table(Toolbar_Common):
              lambda w: self.start_global_plugin('Header'))]
 
     def build_gui(self, container):
-        self.orientation = Widgets.get_orientation(container)
+        # TODO: fix for GTK
+        if family.startswith('gtk'):
+            self.orientation = 'horizontal'
+        else:
+            self.orientation = Widgets.get_orientation(container)
         tb_w = Widgets.Toolbar(orientation=self.orientation)
 
         self.build_toolbar(tb_w, self.layout_common)
