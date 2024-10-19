@@ -631,7 +631,7 @@ class CheckBox(WidgetBase):
     def get_state(self):
         val = self.widget.checkState()
         # returns 0 (unchecked) or 2 (checked)
-        return (val != 0)
+        return (val == QtCore.Qt.CheckState.Checked)
 
 
 class ToggleButton(WidgetBase):
