@@ -1817,6 +1817,9 @@ class Menu(ContainerBase):
 
         # NOTE: this get's overwritten if created from Menubar
         self.widget = QtGui.QMenu()
+        if hasattr(self.widget, 'setToolTipsVisible'):
+            # only for QT >= 5.1
+            self.widget.setToolTipsVisible(True)
         self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child):
