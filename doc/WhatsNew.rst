@@ -27,6 +27,7 @@ Ver 5.2.0 (unreleased)
 - Deprecate Gtk.Table from GTK3 backend (switch to Gtk.Grid)
 - Added experimental support for GTK4 backend
 - Fixed an issue with toggling CheckBoxes in Qt6
+- Closing a workspace now doesn't require closing all windows first
 
 Ver 5.1.0 (2024-05-22)
 ======================

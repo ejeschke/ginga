@@ -103,7 +103,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
-                     'add-image-info', 'remove-image-info', 'viewer-select'):
+                     'add-image-info', 'remove-image-info', 'viewer-select',
+                     'delete-workspace'):
             self.enable_callback(name)
 
         # Initialize the timer factory
@@ -2649,15 +2650,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def workspace_closed_cb(self, ws):
         self.logger.debug("workspace requests close")
-        num_children = ws.num_pages()
-        if num_children > 0:
-            self.show_error(
-                "Please close all windows in this workspace first!",
-                raisetab=True)
-            return
 
         # TODO: this will prompt the user if we should close the workspace
-        lbl = Widgets.Label("Really delete workspace '%s' ?" % (ws.name))
+        lbl = Widgets.Label(f"Really delete workspace '{ws.name}' ?\n\n"
+                            "This will close all open channels in that workspace.")
         dialog = Widgets.Dialog(title="Delete Workspace",
                                 flags=0,
                                 buttons=[['Cancel', 0], ['Ok', 1]],
@@ -2675,6 +2671,16 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         if rsp == 0:
             return
 
+        self.delete_workspace(ws)
+        return True
+
+    def delete_workspace(self, ws):
+        # close all channels in workspace and their plugins
+        for channel in list(self.channel.values()):
+            if channel.workspace == ws.name:
+                self.delete_channel(channel.name)
+
+        # close the workspace
         top_w = ws.extdata.get('top_w', None)
         if top_w is None:
             self.ds.remove_tab(ws.name)
@@ -2685,7 +2691,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         # inform desktop we are no longer tracking this
         self.ds.delete_ws(ws.name)
 
-        return True
+        self.make_gui_callback('delete-workspace', ws)
 
     def page_added_cb(self, ws, child):
         self.logger.debug("page added in %s: '%s'" % (ws.name, str(child)))

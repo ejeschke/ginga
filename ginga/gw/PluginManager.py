@@ -314,7 +314,7 @@ class PluginManager(Callback.Callbacks):
                     wd, ht = self.ds.get_ws_size(in_ws)
                     vbox.extdata.size = (wd, ht)
 
-                    vbox.resize(wd, ht)
+                    #vbox.resize(wd, ht)
 
                 if future is not None:
                     p_info.obj.build_gui(vbox, future=future)
