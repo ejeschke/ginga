@@ -11,6 +11,7 @@ import logging
 import time
 
 from ginga.misc import Task, Future, Callback
+from ginga.toolkit import toolkit
 from collections import deque
 
 import queue as Queue
@@ -235,8 +236,13 @@ class GwMain(Callback.Callbacks):
         # Mark our thread id
         self.gui_thread_id = threading.get_ident()
 
-        while not self.ev_quit.is_set():
+        if toolkit == 'gtk4':
+            self.app.add_periodic_callback(0.1,
+                                           lambda: self.update_pending(timeout=timeout))
+            self.app._mainloop()
+            return
 
+        while not self.ev_quit.is_set():
             self.update_pending(timeout=timeout)
 
     def gui_quit(self):

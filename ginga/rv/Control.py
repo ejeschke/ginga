@@ -2359,8 +2359,10 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         q_quit.show()
 
     def _confirm_quit_cb(self, w, tf):
-        self.w.quit_dialog.delete()
+        dialog = self.w.quit_dialog
         self.w.quit_dialog = None
+        if dialog is not None:
+            dialog.delete()
         if not tf:
             return
 

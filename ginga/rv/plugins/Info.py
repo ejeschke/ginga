@@ -612,8 +612,8 @@ class Info_Ginga_Plot(Info_Common):
 
     def set_xlim_lo_cb(self, redraw=True):
         """Set plot limit based on user values."""
-        limits = self.plot_viewer.get_limits()
-        (x_lo, y_lo), (x_hi, y_hi) = limits
+        ranges = self.plot_viewer.get_ranges()
+        (x_lo, x_hi), (y_lo, y_hi) = ranges
 
         try:
             x_min = float(self.w.x_lo.get_text())
@@ -625,8 +625,8 @@ class Info_Ginga_Plot(Info_Common):
 
     def set_xlim_hi_cb(self, redraw=True):
         """Set plot limit based on user values."""
-        limits = self.plot_viewer.get_limits()
-        (x_lo, y_lo), (x_hi, y_hi) = limits
+        ranges = self.plot_viewer.get_ranges()
+        (x_lo, x_hi), (y_lo, y_hi) = ranges
 
         try:
             x_max = float(self.w.x_hi.get_text())
@@ -638,8 +638,8 @@ class Info_Ginga_Plot(Info_Common):
 
     def set_ylim_lo_cb(self, redraw=True):
         """Set plot limit based on user values."""
-        limits = self.plot_viewer.get_limits()
-        (x_lo, y_lo), (x_hi, y_hi) = limits
+        ranges = self.plot_viewer.get_ranges()
+        (x_lo, x_hi), (y_lo, y_hi) = ranges
 
         try:
             y_min = float(self.w.y_lo.get_text())
@@ -651,8 +651,8 @@ class Info_Ginga_Plot(Info_Common):
 
     def set_ylim_hi_cb(self, redraw=True):
         """Set plot limit based on user values."""
-        limits = self.plot_viewer.get_limits()
-        (x_lo, y_lo), (x_hi, y_hi) = limits
+        ranges = self.plot_viewer.get_ranges()
+        (x_lo, x_hi), (y_lo, y_hi) = ranges
 
         try:
             y_max = float(self.w.y_hi.get_text())

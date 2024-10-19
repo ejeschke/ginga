@@ -41,7 +41,7 @@ HTML5 canvas.  Some other toolkits are being worked on and may be
 partially supported.
 
 The full reference viewer currently supports Qt (PyQt5, PyQt6, PySide2,
-PySide6) and Gtk (ver 3).  The difference is explained here, in Section
+PySide6) and Gtk (ver 3, 4).  The difference is explained here, in Section
 :ref:`ch-programming-ginga`.
 
 ----------------

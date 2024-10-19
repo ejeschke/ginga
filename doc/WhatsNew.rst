@@ -24,6 +24,8 @@ Ver 5.2.0 (unreleased)
 
 - Text canvas type gets new attributes: bgcolor, bgalpha, bordercolor,
   borderpadding, borderalpha, borderlinewidth
+- Deprecate Gtk.Table from GTK3 backend (switch to Gtk.Grid)
+- Added experimental support for GTK4 backend
 
 Ver 5.1.0 (2024-05-22)
 ======================
