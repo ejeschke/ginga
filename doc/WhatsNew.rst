@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 5.2.0 (unreleased)
+Ver 5.2.0 (2024-10-21)
 ======================
 - Substituted puremagic package for python-magic (works better across
   platforms).
