@@ -20,20 +20,20 @@ jobs:
       matrix:
         include:
           # Basic tests but with RC
-          - name: Test with Python 3.9 on Linux
+          - name: Test with Python 3.11 on Linux
             os: ubuntu-latest
-            python: '3.9'
-            toxenv: py39-test-predeps
-            toxposargs: -sv
-          - name: Test with Python 3.10 on OSX
-            os: macos-latest
-            python: '3.10'
-            toxenv: py310-test-predeps
-            toxposargs: -sv
-          - name: Test with Python 3.11 on Windows
-            os: windows-latest
             python: '3.11'
             toxenv: py311-test-predeps
+            toxposargs: -sv
+          - name: Test with Python 3.12 on OSX
+            os: macos-latest
+            python: '3.12'
+            toxenv: py312-test-predeps
+            toxposargs: -sv
+          - name: Test with Python 3.13 on Windows
+            os: windows-latest
+            python: '3.13'
+            toxenv: py313-test-predeps
             toxposargs: -sv
 
     steps:
