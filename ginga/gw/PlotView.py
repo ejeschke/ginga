@@ -964,11 +964,13 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
         if 'ctrl' in event.modifiers:
             # only horizontal
             delta_y = 1.0
-        elif 'shift' in event.modifiers:
-            # only horizontal
+        elif 'shift' in event.modifiers or 'alt' in event.modifiers:
+            # only vertical
+            # (shift works on Linux, but not Mac; alt works on Mac but
+            #  not Linux....Grrr)
             delta_x = 1.0
 
-        if 'meta' in event.modifiers:
+        if 'meta' in event.modifiers or 'cmd' in event.modifiers:
             # cursor position
             cur_x, cur_y = event.data_x, event.data_y
             if None not in [cur_x, cur_y]:
