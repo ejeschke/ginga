@@ -11,7 +11,6 @@ updates:
       actions:
         patterns:
           - "*"
-    open-pull-requests-limit: 10
 
   - package-ecosystem: pip
     directory: "/"
@@ -23,4 +22,3 @@ updates:
       actions:
         patterns:
           - "*"
-    open-pull-requests-limit: 10
