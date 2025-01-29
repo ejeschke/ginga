@@ -1701,9 +1701,9 @@ class Pick(GingaPlugin.LocalPlugin):
 
         obj.color = self.pickcolor
         args = [obj,
-                self.dc.Point(x, y, 10, color='red'),
+                self.dc.Point(x, y, 10, color='red', editable=False),
                 self.dc.Text(x1, y2, '{0}: calc'.format(self._textlabel),
-                             color=self.pickcolor)
+                             color=self.pickcolor, editable=False)
                 ]
 
         self.pick_obj = self.dc.CompoundObject(*args)

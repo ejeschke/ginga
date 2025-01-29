@@ -2,6 +2,13 @@
 What's New
 ++++++++++
 
+Ver 5.3.0 (unreleased)
+======================
+- Fixed an issue with editing objects in the Pick plugin
+- Fixed an issue where image metadata not always loaded correctly with
+  Pillow for RGB images
+- Added support for Apple HEIF (.HEIC) RGB images if pillow-heif is installed
+
 Ver 5.2.0 (2024-10-21)
 ======================
 - Substituted puremagic package for python-magic (works better across

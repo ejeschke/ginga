@@ -18,6 +18,7 @@ from ginga.util.io import io_base
 from ginga.misc import Bunch
 from ginga import trcalc
 
+# optional imports
 try:
     # do we have opencv available?
     import cv2
@@ -32,6 +33,12 @@ try:
 except ImportError:
     have_exif = False
 
+try:
+    # for opening HEIC (Apple image) files)
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    pass
 # For testing...
 #have_exif = False
 #have_opencv = False
@@ -442,7 +449,8 @@ class PillowFileHandler(BaseRGBFileHandler):
                  'image/bmp',
                  'image/x-tga',
                  'image/x-icns',
-                 'image/vnd.microsoft.icon']
+                 'image/vnd.microsoft.icon',
+                 'image/heif']
 
     @classmethod
     def check_availability(cls):
@@ -559,15 +567,15 @@ class PillowFileHandler(BaseRGBFileHandler):
         return data_obj
 
     def _get_header(self, image_pil, kwds):
-        if hasattr(image_pil, '_getexif'):
-            info = image_pil._getexif()
+        if hasattr(image_pil, 'getexif'):
+            info = image_pil.getexif()
             if info is not None:
                 for tag, value in info.items():
                     kwd = TAGS.get(tag, tag)
                     kwds[kwd] = value
 
         else:
-            self.logger.warning("can't get EXIF data; no _getexif() method")
+            self.logger.warning("can't get EXIF data; no getexif() method")
 
         # is there an embedded color profile?
         if 'icc_profile' in image_pil.info:
@@ -585,8 +593,8 @@ class PillowFileHandler(BaseRGBFileHandler):
             if kwds is None:
                 kwds = Header()
                 metadata['header'] = kwds
-            else:
-                kwds = Header()
+        else:
+            kwds = Header()
 
         try:
             self._get_header(image_pil, kwds)

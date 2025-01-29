@@ -66,7 +66,7 @@ class CanvasObjectBase(Callback.Callbacks):
         if not hasattr(self, 'kind'):
             self.kind = None
         # For debugging
-        self.name = None
+        self.name = kwdargs.get('name', None)
         self.viewer = None
 
         # For callbacks
