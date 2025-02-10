@@ -170,12 +170,13 @@ class Output(Stage):
             profile = None
 
         if format == 'jpeg':
-            img = Image.fromarray(data[:, :, 0:3])
+            img = Image.fromarray(data[:, :, 0:3].astype(np.uint8))
             img.save(path, format='jpeg', quality=quality,
                      icc_profile=profile)
 
         elif format == 'png':
-            img = Image.fromarray(data)  # alpha layer OK for PNG
+            # alpha layer OK for PNG
+            img = Image.fromarray(data.astype(np.uint8))
             img.save(path, format='png', quality=quality,
                      icc_profile=profile)
 
