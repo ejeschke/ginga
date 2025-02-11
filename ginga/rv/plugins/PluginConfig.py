@@ -133,7 +133,7 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
                             workspace=spec.get('workspace', 'in:dialog'),
                             hidden=str(spec.get('hidden', False)),
                             start=start)
-                for key in ('menu', 'tab', 'klass'):
+                for key in ('menu', 'tab', 'klass', 'index', 'exclusive'):
                     if key in spec:
                         _dct[key] = spec[key]
                 dct[name] = _dct
