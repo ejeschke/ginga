@@ -1648,11 +1648,12 @@ class GridBox(ContainerBase):
     def get_widget_at_cell(self, row, col):
         return self.tbl[(row, col)]
 
-    def insert_row(self, index, widgets):
+    def insert_row(self, index, widgets=None):
         num_rows, num_cols = self.get_row_column_count()
 
-        if len(widgets) != num_cols:
-            raise ValueError("Number of widgets ({}) != number of columns ({})".format(len(widgets), num_cols))
+        if widgets is not None:
+            if len(widgets) != num_cols:
+                raise ValueError("Number of widgets ({}) != number of columns ({})".format(len(widgets), num_cols))
 
         # handle case where user inserts row before the end of the gridbox
         if index < num_rows:
@@ -1668,9 +1669,10 @@ class GridBox(ContainerBase):
                         self._remove(w)
                         self.widget.layout().addWidget(w, i + 1, j)
 
-        for j in range(num_cols):
-            child = widgets[j]
-            self.add_widget(child, index, j)
+        if widgets is not None:
+            for j in range(num_cols):
+                child = widgets[j]
+                self.add_widget(child, index, j)
 
     def append_row(self, widgets):
         num_rows, num_cols = self.get_row_column_count()

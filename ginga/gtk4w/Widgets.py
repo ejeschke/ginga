@@ -1828,17 +1828,20 @@ class GridBox(ContainerBase):
     def get_widget_at_cell(self, row, col):
         return self.tbl[(row, col)]
 
-    def insert_row(self, index, widgets):
-        if len(widgets) != self.num_cols:
-            raise ValueError("Number of widgets ({}) != number of columns ({})".format(len(widgets), self.num_cols))
+    def insert_row(self, index, widgets=None):
+        if widgets is not None:
+            if len(widgets) != self.num_cols:
+                raise ValueError("Number of widgets ({}) != number of columns ({})".format(len(widgets), self.num_cols))
 
         self.resize_grid(self.num_rows + 1, self.num_cols)
 
         if index > self.num_rows:
             index = self.num_rows
         self.widget.insert_row(index)
-        for col, child in enumerate(widgets):
-            self.add_widget(child, index, col)
+
+        if widgets is not None:
+            for col, child in enumerate(widgets):
+                self.add_widget(child, index, col)
 
     def append_row(self, widgets):
         num_rows, num_cols = self.get_row_column_count()
