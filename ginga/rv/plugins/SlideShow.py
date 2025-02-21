@@ -54,6 +54,7 @@ the files to be loaded for each slide.
 import os
 from datetime import timedelta
 import time
+import tempfile
 
 import pandas as pd
 
@@ -215,7 +216,7 @@ class SlideShow(LocalPlugin):
         self.load_slideshow(path)
 
     def get_thumbnail(self, path, slide_d, menu=None):
-        tmp_filename = "/tmp/thumb.png"
+        tmp_filename = os.path.join(tempfile.gettempdir(), "thumb.png")
         full_image = loader.load_data(path, idx=0, logger=self.logger)
         image_name = "img-{}".format(str(time.time()))
         slide_d['name'] = image_name
