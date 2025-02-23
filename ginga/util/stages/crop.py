@@ -119,7 +119,8 @@ class Crop(Stage):
         if obj.kind != 'rectangle':
             return True
 
-        x1, y1, x2, y2 = obj.get_llur()
+        corners = obj.get_llur()
+        x1, y1, x2, y2 = list(map(int, corners))
         old = self._get_state()
         self._update_crop_rect(x1, y1, x2, y2)
         new = self._get_state()
@@ -131,6 +132,7 @@ class Crop(Stage):
         # reposition other elements to match
         if self.aspect is not None:
             x1, y1, x2, y2 = self._enforce_aspect(x1, y1, x2, y2)
+        x1, y1, x2, y2 = list(map(int, [x1, y1, x2, y2]))
         rect = self.crop_obj.objects[0]
         rect.x1, rect.y1, rect.x2, rect.y2 = x1, y1, x2, y2
         text = self.crop_obj.objects[1]

@@ -63,6 +63,7 @@ from ginga.GingaPlugin import LocalPlugin
 from ginga.gw import Widgets, GwHelp
 from ginga.pilw.ImageViewPil import CanvasView
 from ginga.util import loader
+from ginga.util.paths import icondir
 
 __all__ = ['SlideShow']
 
@@ -97,6 +98,7 @@ class SlideShow(LocalPlugin):
         self.thumb_width = 180
         self.tg = self.get_thumb_generator()
         self.tg.name = 'slideshow-thumb-generator'
+        self._genthumb = fitsimage.get_settings().get('genthumb', True)
 
         self.cover = self.dc.Polygon([(0, 0), (0, 0), (0, 0), (0, 0)],
                                      fill=True, fillcolor='brown',
@@ -220,7 +222,7 @@ class SlideShow(LocalPlugin):
         full_image = loader.load_data(path, idx=0, logger=self.logger)
         image_name = "img-{}".format(str(time.time()))
         slide_d['name'] = image_name
-        full_image.set(name=image_name)
+        full_image.set(name=image_name, nothumb=True)
         self.tg.set_image(full_image)
         thumb_bytes = self.tg.get_rgb_image_as_bytes(format='png')
         with open(tmp_filename, 'wb') as out_f:
@@ -237,6 +239,8 @@ class SlideShow(LocalPlugin):
         slideshow = df.to_dict(orient='records')
         self.w.grid.remove_all(delete=True)
         self.w.load_progress.set_value(0.0)
+        # TODO: have a custom error slide
+        error_fname = os.path.join(icondir, 'ginga-512x512.png')
 
         for row, slide_d in enumerate(slideshow):
             # append slide directory to filename if a full
@@ -246,7 +250,17 @@ class SlideShow(LocalPlugin):
                 fname = os.path.join(slide_dir, fname)
                 slide_d['filename'] = fname
 
-            image, image_w = self.get_thumbnail(fname, slide_d)
+            try:
+                image, image_w = self.get_thumbnail(fname, slide_d)
+            except Exception as e:
+                self.fv.show_error(f"Error loading slide #{row} ({fname}): {e}")
+                # TODO: show an error slide
+                try:
+                    slide_d['filename'] = error_fname
+                    image, image_w = self.get_thumbnail(error_fname, slide_d)
+                except Exception as e:
+                    continue
+
             self.w.grid.add_widget(image_w, row, 0)
 
             # if 'duration' not in slide_d:
@@ -382,6 +396,12 @@ class SlideShow(LocalPlugin):
             p_canvas.add(self.canvas, tag='slideshow')
         self.resume()
 
+        # record state of creating thumbnails for this channel
+        # and turn it off
+        t_ = self.fitsimage.get_settings()
+        self._genthumb = t_.get('genthumb', True)
+        t_.set(genthumb=False)
+
     def pause(self):
         self.canvas.ui_set_active(False)
 
@@ -400,6 +420,8 @@ class SlideShow(LocalPlugin):
         p_canvas = self.fitsimage.get_canvas()
         if self.canvas in p_canvas:
             p_canvas.delete_object_by_tag('slideshow')
+        t_ = self.fitsimage.get_settings()
+        t_.set(genthumb=self._genthumb)
         self.fv.show_status('')
 
     def swap_slides(self, from_idx, to_idx):
