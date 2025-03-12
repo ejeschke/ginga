@@ -94,7 +94,7 @@ class XYDataSource:
                 raise ValueError("Buffer is full")
             # circular queue full, need to expunge an old element
             _x, _y = self.buf[self.rear]
-            if not np.isnan(_y):
+            if np.isfinite(_y):
                 self.slmm.remove_head(_y)
             self.rear = (self.rear + 1) % self.length
 
@@ -103,7 +103,7 @@ class XYDataSource:
             self.rear = self.front
 
         self.buf[self.front, :] = pt
-        if not np.isnan(y):
+        if np.isfinite(y):
             self.slmm.add_tail(y)
 
     def add(self, pt, update_limits=True):
@@ -223,12 +223,12 @@ class SlidingWindowMinMax:
 
     def remove_head(self, val):
         if val < self.min_deque[0]:
-            raise ValueError("Wrong value")
+            raise ValueError(f"Wrong value (min: {self.min_deque[0]}, val: {val})")
         elif val == self.min_deque[0]:
             self.min_deque.popleft()
 
         if val > self.max_deque[0]:
-            raise ValueError("Wrong value")
+            raise ValueError(f"Wrong value (max: {self.max_deque[0]}, val: {val})")
         elif val == self.max_deque[0]:
             self.max_deque.popleft()
 
