@@ -600,12 +600,16 @@ class QtEventMixin(object):
         if hasattr(event, 'position'):
             pos = event.position()
             return pos.x(), pos.y()
-        else:
+        elif hasattr(event, 'pos'):
             pos = event.pos()
             return pos.x(), pos.y()
+        else:
+            return 0, 0
 
     def enter_notify_event(self, widget, event):
-        self.last_win_x, self.last_win_y = self._get_pos(event)
+        # NOTE: recent versions of Qt don't seem to support getting the
+        # position from a QFocusEvent
+        #self.last_win_x, self.last_win_y = self._get_pos(event)
         self.check_cursor_location()
 
         enter_focus = self.t_.get('enter_focus', False)
