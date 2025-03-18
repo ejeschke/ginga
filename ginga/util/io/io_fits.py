@@ -23,7 +23,7 @@ from ginga.AstroImage import AstroImage, AstroHeader
 from ginga.table.AstroTable import AstroTable
 
 from ginga.misc import Bunch
-from ginga.util import iohelper, loader
+from ginga.util import iohelper
 from ginga.util.io import io_base
 
 fits_configured = False
@@ -49,14 +49,15 @@ class FITSError(Exception):
 
 def use(fitspkg, raise_err=True):
     global fits_configured, fitsLoaderClass
+    from ginga.io.loader import add_opener
 
     if fitspkg == 'astropy':
         if have_astropy:
             fitsLoaderClass = AstropyFitsFileHandler
             fits_configured = True
             # set this opener as the priority one
-            loader.add_opener(fitsLoaderClass, fitsLoaderClass.mimetypes,
-                              priority=-99, note=fitsLoaderClass.__doc__)
+            add_opener(fitsLoaderClass, fitsLoaderClass.mimetypes,
+                       priority=-99, note=fitsLoaderClass.__doc__)
             return True
 
         elif raise_err:
@@ -70,8 +71,8 @@ def use(fitspkg, raise_err=True):
             fitsLoaderClass = FitsioFileHandler
             fits_configured = True
             # set this opener as the priority one
-            loader.add_opener(fitsLoaderClass, fitsLoaderClass.mimetypes,
-                              priority=-99, note=fitsLoaderClass.__doc__)
+            add_opener(fitsLoaderClass, fitsLoaderClass.mimetypes,
+                       priority=-99, note=fitsLoaderClass.__doc__)
             return True
 
         elif raise_err:

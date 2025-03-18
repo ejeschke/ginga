@@ -8,6 +8,7 @@ Ver 5.3.0 (unreleased)
 - Fixed an issue where image metadata not always loaded correctly with
   Pillow for RGB images
 - Added support for Apple HEIF (.HEIC) RGB images if pillow-heif is installed
+- Fixed an issue with circular import of loader entry points under python 3.12
 
 Ver 5.2.0 (2024-10-21)
 ======================
