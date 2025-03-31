@@ -9,6 +9,7 @@ Ver 5.3.0 (unreleased)
   Pillow for RGB images
 - Added support for Apple HEIF (.HEIC) RGB images if pillow-heif is installed
 - Fixed an issue with circular import of loader entry points under python 3.12
+- Updates of minimum required versions of support packages
 
 Ver 5.2.0 (2024-10-21)
 ======================

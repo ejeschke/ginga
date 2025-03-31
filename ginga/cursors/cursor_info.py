@@ -3,11 +3,7 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
-try:
-    import tomllib
-except ImportError:
-    # see setup.cfg, for python < 3.11
-    import tomli as tomllib
+import tomllib
 
 from ginga.util import paths
 from ginga.misc.Bunch import Bunch
