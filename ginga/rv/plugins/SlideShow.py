@@ -38,7 +38,7 @@ of the slide and the total duration of the show.
 **Slide show file format**
 
 The slide show file format is a comma-separated (CSV) plain text file with a
-header line.  The file must contain at least one column, titled "filename".
+header line.  The file must contain at least one column, titled "file".
 This column contains the filenames (relative or absolute) of the paths to
 the files to be loaded for each slide.
 
@@ -57,6 +57,7 @@ import time
 import tempfile
 
 import pandas as pd
+import yaml
 
 # GINGA
 from ginga.GingaPlugin import LocalPlugin
@@ -206,8 +207,7 @@ class SlideShow(LocalPlugin):
 
     def _popup_load_dialog_cb(self, w):
         self.w.fs.popup('Load slide show', self._load_slideshow_file,
-                        initialdir='.',
-                        filename='Slide show files (*.csv)')
+                        initialdir='.')
 
     def _load_slideshow_file(self, path):
         self.w.path.set_text(path)
@@ -235,8 +235,26 @@ class SlideShow(LocalPlugin):
 
     def load_slideshow(self, path):
         slide_dir, fname = os.path.split(path)
-        df = pd.read_csv(path, skip_blank_lines=True, comment='#')
-        slideshow = df.to_dict(orient='records')
+        _, ext = os.path.splitext(fname)
+        ext = ext.lower()
+        try:
+            if ext in ['.yml', '.yaml']:
+                with open(path, 'r') as in_f:
+                    buf = in_f.read()
+                contents = yaml.safe_load(buf)
+                slideshow = contents['slideshow']['slides']
+            elif ext in ['.csv']:
+                df = pd.read_csv(path, skip_blank_lines=True, comment='#')
+                slideshow = df.to_dict(orient='records')
+            else:
+                self.fv.show_error(f"Don't recognize format '{ext}'")
+                return
+        except Exception as e:
+            errmsg = f"Error loading slide show: {e}"
+            self.fv.show_error(errmsg)
+            self.logger.error(errmsg, exc_info=True)
+            return
+
         self.w.grid.remove_all(delete=True)
         self.w.load_progress.set_value(0.0)
         # TODO: have a custom error slide
@@ -245,18 +263,20 @@ class SlideShow(LocalPlugin):
         for row, slide_d in enumerate(slideshow):
             # append slide directory to filename if a full
             # path is not given
-            fname = slide_d['filename']
+            fname = slide_d['file']
             if not fname.startswith('/'):
                 fname = os.path.join(slide_dir, fname)
-                slide_d['filename'] = fname
+                slide_d['file'] = fname
 
             try:
                 image, image_w = self.get_thumbnail(fname, slide_d)
             except Exception as e:
-                self.fv.show_error(f"Error loading slide #{row} ({fname}): {e}")
+                errmsg = f"Error loading slide #{row} ({fname}): {e}"
+                self.fv.show_error(errmsg)
+                self.logger.error(errmsg, exc_info=True)
                 # TODO: show an error slide
                 try:
-                    slide_d['filename'] = error_fname
+                    slide_d['file'] = error_fname
                     image, image_w = self.get_thumbnail(error_fname, slide_d)
                 except Exception as e:
                     continue
@@ -309,11 +329,11 @@ class SlideShow(LocalPlugin):
 
         # image = slide_d.get('image', None)
         # if image is None:
-        #     image = loader.load_data(slide_d['filename'], logger=self.logger)
+        #     image = loader.load_data(slide_d['file'], logger=self.logger)
         #     slide_d['image'] = image
 
         self.w.slide.set_value(index)
-        _dir, fname = os.path.split(slide_d['filename'])
+        _dir, fname = os.path.split(slide_d['file'])
         self.w.filename.set_text(fname)
 
         hidden = slide_d.get('hide', False)
@@ -512,7 +532,7 @@ class SlideShow(LocalPlugin):
     def add_slide(self, uri):
         slide_d = dict()
         image, image_w = self.get_thumbnail(uri, slide_d)
-        slide_d['filename'] = image.get('path')
+        slide_d['file'] = image.get('path')
 
         row = len(self.slideshow)
         self.slideshow.append(slide_d)
