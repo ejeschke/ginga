@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 5.3.0 (unreleased)
+Ver 5.3.0 (2025-04-02)
 ======================
 - Fixed an issue with editing objects in the Pick plugin
 - Fixed an issue where image metadata not always loaded correctly with
