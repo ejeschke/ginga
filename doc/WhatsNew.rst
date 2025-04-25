@@ -2,6 +2,16 @@
 What's New
 ++++++++++
 
+Ver 5.4.0 (unreleased)
+======================
+- Wrapped widget enhancements
+
+  - added methods and callbacks for expansion and collapse of rows in TreeView
+  - ability to set color of Button widgets
+  - add ColorDialog, a color selection dialog
+  - add FileDialog, a file/directory dialog (can replace FileSelection)
+  - fixed an issue with custom styling being inherited unnecessarily
+
 Ver 5.3.0 (2025-04-02)
 ======================
 - Fixed an issue with editing objects in the Pick plugin

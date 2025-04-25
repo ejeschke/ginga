@@ -9,9 +9,10 @@ import pathlib
 from functools import reduce
 
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
-                              QCursor, QFont)
+                              QCursor, QFont, SaveDialog)
 from ginga.qtw import QtHelp
 
+from ginga import colors
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
 
@@ -23,7 +24,7 @@ __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
-           'Dialog', 'SaveDialog', 'DragPackage',
+           'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog', 'DragPackage',
            'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
 
 
@@ -43,6 +44,7 @@ class WidgetBase(Callback.Callbacks):
         super(WidgetBase, self).__init__()
 
         self.widget = None
+        self._widget_name = str(id(self))
         # external data can be attached here
         self.extdata = Bunch.Bunch()
 
@@ -99,6 +101,17 @@ class WidgetBase(Callback.Callbacks):
     def get_font(self, font_family, point_size):
         font = QtHelp.get_font(font_family, point_size)
         return font
+
+    def _set_name(self, obj):
+        name = obj.objectName()
+        if name is None or len(name) == 0:
+            name = str(id(obj))
+        obj.setObjectName(name)
+        self._widget_name = name
+        return name
+
+    def _get_name(self):
+        return self._widget_name
 
     def cfg_expand(self, horizontal='fixed', vertical='fixed'):
         """WARNING: this call has specific effects dependent on the back
@@ -302,6 +315,7 @@ class Label(WidgetBase):
             lbl.setAlignment(QtCore.Qt.AlignRight)
 
         self.widget = lbl
+        self._set_name(self.widget)
         lbl.mousePressEvent = self._cb_redirect
         lbl.mouseReleaseEvent = self._cb_redirect2
 
@@ -350,9 +364,20 @@ class Label(WidgetBase):
             font = self.get_font(font, size)
         self.widget.setFont(font)
 
-    def set_color(self, fg=None, bg=None):
-        self.widget.setStyleSheet(
-            "QLabel { background-color: %s; color: %s; }" % (bg, fg))
+    def set_color(self, bg=None, fg=None):
+        content = ""
+        if bg is not None:
+            bg_tup = colors.resolve_color(bg)
+            bg_hex = colors.get_hex(bg_tup)
+            content = f"background-color: {bg_hex};"
+        if fg is not None:
+            fg_tup = colors.resolve_color(fg)
+            fg_hex = colors.get_hex(fg_tup)
+            content = f"{content} color: {fg_hex};"
+        if len(content) > 0:
+            myname = self._get_name()
+            self.widget.setStyleSheet(
+                "#%s { %s }" % (myname, content))
 
     def set_halign(self, align):
         # TODO: set horizontal alignment of text
@@ -365,6 +390,7 @@ class Button(WidgetBase):
 
         self.widget = QtGui.QPushButton(text)
         self.widget.clicked.connect(self._cb_redirect)
+        self._set_name(self.widget)
 
         self.enable_callback('activated')
 
@@ -373,6 +399,21 @@ class Button(WidgetBase):
 
     def get_text(self):
         return self.widget.text()
+
+    def set_color(self, bg=None, fg=None):
+        content = ""
+        if bg is not None:
+            bg_tup = colors.resolve_color(bg)
+            bg_hex = colors.get_hex(bg_tup)
+            content = f"background-color: {bg_hex};"
+        if fg is not None:
+            fg_tup = colors.resolve_color(fg)
+            fg_hex = colors.get_hex(fg_tup)
+            content = f"{content} color: {fg_hex};"
+        if len(content) > 0:
+            myname = self._get_name()
+            self.widget.setStyleSheet(
+                "#%s { %s }" % (myname, content))
 
     def _cb_redirect(self, *args):
         self.make_callback('activated')
@@ -796,11 +837,14 @@ class TreeView(WidgetBase):
         tv.setAlternatingRowColors(use_alt_row_color)
         tv.itemDoubleClicked.connect(self._cb_redirect)
         tv.itemSelectionChanged.connect(self._selection_cb)
+        tv.itemExpanded.connect(self._item_expanded_cb)
+        tv.itemCollapsed.connect(self._item_collapsed_cb)
         if self.dragable:
             tv.setDragEnabled(True)
             tv.startDrag = self._start_drag
 
-        for cbname in ('selected', 'activated', 'drag-start'):
+        for cbname in ('selected', 'activated', 'drag-start', 'expanded',
+                       'collapsed'):
             self.enable_callback(cbname)
 
     def setup_table(self, columns, levels, leaf_key):
@@ -837,14 +881,32 @@ class TreeView(WidgetBase):
         self.clear()
         self.add_tree(tree_dict)
 
-    def add_tree(self, tree_dict):
+    def add_tree(self, tree_dict, expand_new=False):
+        """Add a tree to the TreeView"""
+        if self.sortable:
+            # NOTE: turning off sorting while adding makes the operation
+            # faster
+            self.widget.setSortingEnabled(False)
 
+        self._add_subtree(1, self.shadow, self.widget, tree_dict,
+                          expand_new=expand_new)
+
+        if self.sortable:
+            # re-enable sorting if needed
+            self.widget.setSortingEnabled(True)
+
+        # User wants auto expand?
+        if self.auto_expand:
+            self.widget.expandAll()
+
+    def update_tree(self, tree_dict, expand_new=False):
+        """Update the TreeView according to the changes in `tree_dict`"""
         if self.sortable:
             self.widget.setSortingEnabled(False)
 
-        for key in tree_dict:
-            self._add_subtree(1, self.shadow,
-                              self.widget, key, tree_dict[key])
+        self._del_subtree(1, self.shadow, self.widget, tree_dict)
+        self._add_subtree(1, self.shadow, self.widget, tree_dict,
+                          expand_new=expand_new)
 
         if self.sortable:
             self.widget.setSortingEnabled(True)
@@ -853,26 +915,50 @@ class TreeView(WidgetBase):
         if self.auto_expand:
             self.widget.expandAll()
 
-    def _add_subtree(self, level, shadow, parent_item, key, node):
+    def _del_subtree(self, level, shadow, parent_item, tree):
+        """Prune elements from widget that are not in the new tree"""
 
-        if level >= self.levels:
-            # leaf node
-            values = ['' if _key == 'icon' else str(node[_key])
-                      for _key in self.datakeys]
-            try:
-                bnch = shadow[key]
+        for key in list(shadow.keys()):
+            bnch = shadow[key]
+            if key not in tree:
                 item = bnch.item
-                # TODO: update leaf item
-
-            except KeyError:
-                # new item
-                item = TreeWidgetItem(parent_item, values)
+                del shadow[key]
                 if level == 1:
-                    parent_item.addTopLevelItem(item)
+                    parent_item.takeTopLevelItem(parent_item.indexOfTopLevelItem(item))
                 else:
-                    parent_item.addChild(item)
+                    parent_item.removeChild(item)
+            else:
+                if level < self.levels:
+                    self._del_subtree(level + 1, bnch.node, bnch.item,
+                                      tree[key])
 
-                shadow[key] = Bunch.Bunch(node=node, item=item, terminal=True)
+    def _add_subtree(self, level, shadow, parent_item, tree, expand_new=False):
+        """add/update elements from widget that are in the new tree"""
+
+        for key in tree:
+            node = tree[key]
+            if level >= self.levels:
+                # leaf node
+                values = ['' if _key == 'icon' else str(node[_key])
+                          for _key in self.datakeys]
+                try:
+                    bnch = shadow[key]
+                    item = bnch.item
+                    bnch.node.update(node)
+                    # update leaf item
+                    for i in range(len(values)):
+                        item.setText(i, values[i])
+
+                except KeyError:
+                    # new item
+                    item = TreeWidgetItem(parent_item, values)
+                    if level == 1:
+                        parent_item.addTopLevelItem(item)
+                    else:
+                        parent_item.addChild(item)
+
+                    bnch = Bunch.Bunch(node=node, item=item, terminal=True)
+                    shadow[key] = bnch
 
                 # hack for adding an image to a table
                 # TODO: add types for columns
@@ -883,30 +969,45 @@ class TreeView(WidgetBase):
                 # mark cell as non-editable
                 item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
 
-        else:
-            try:
-                # node already exists
-                bnch = shadow[key]
-                item = bnch.item
-                d = bnch.node
+            else:
+                try:
+                    # shadow node already exists
+                    bnch = shadow[key]
+                    item = bnch.item
+                    d = bnch.node
 
-            except KeyError:
-                # new node
-                item = TreeWidgetItem(parent_item, [str(key)])
-                if level == 1:
-                    parent_item.addTopLevelItem(item)
-                else:
-                    parent_item.addChild(item)
-                d = {}
-                shadow[key] = Bunch.Bunch(node=d, item=item, terminal=False)
+                except KeyError:
+                    # new node
+                    item = TreeWidgetItem(parent_item, [str(key)])
+                    if level == 1:
+                        parent_item.addTopLevelItem(item)
+                    else:
+                        parent_item.addChild(item)
+                    d = {}
+                    shadow[key] = Bunch.Bunch(node=d, item=item, terminal=False)
 
-            # recurse for non-leaf interior node
-            for key in node:
-                self._add_subtree(level + 1, d, item, key, node[key])
+                    if expand_new:
+                        self.widget.expandItem(item)
+
+                # ensure that items that were collapsed stay collapsed
+                expanded = item.isExpanded()
+                if not expanded:
+                    self.widget.collapseItem(item)
+
+                # recurse for non-leaf interior node
+                self._add_subtree(level + 1, d, item, node)
 
     def _selection_cb(self):
         res_dict = self.get_selected()
         self.make_callback('selected', res_dict)
+
+    def _item_expanded_cb(self, item):
+        path = self._get_path(item)
+        self.make_callback('expanded', path)
+
+    def _item_collapsed_cb(self, item):
+        path = self._get_path(item)
+        self.make_callback('collapsed', path)
 
     def _cb_redirect(self, item):
         res_dict = {}
@@ -944,14 +1045,87 @@ class TreeView(WidgetBase):
             d[dst_key] = None
 
     def get_selected(self):
+        """Get a dict of selected items."""
         items = list(self.widget.selectedItems())
         res_dict = {}
         for item in items:
             if item.childCount() > 0:
-                # only leaf nodes can be selected
+                # only leaf nodes can be reported with this method
                 continue
+            else:
+                self._get_item(res_dict, item)
+        return res_dict
+
+    def get_selected_paths(self):
+        """Get a list of selected paths.
+        NOTE: this returns both leaves and branches (leaf paths are
+        longer)
+        """
+        items = list(self.widget.selectedItems())
+        return [self._get_path(item) for item in items]
+
+    def _get_children(self, item_list, parent_item, status='all'):
+        # helper function for get_children()
+        for row in range(parent_item.childCount()):
+            item = parent_item.child(row)
+            if item.childCount() > 0:
+                if (status == 'all' or
+                    (status == 'expanded' and item.isExpanded()) or
+                    (status == 'collapsed' and not item.isExpanded())):
+                    self._get_children(item_list, item, status=status)
+            else:
+                item_list.append(item)
+        return item_list
+
+    def get_children(self, status='all'):
+        item_list = []
+        for key, bnch in self.shadow.items():
+            item = bnch.item
+            if (status == 'all' or
+                (status == 'expanded' and item.isExpanded()) or
+                (status == 'collapsed' and not item.isExpanded())):
+                self._get_children(item_list, item, status=status)
+
+        res_dict = {}
+        for item in item_list:
             self._get_item(res_dict, item)
         return res_dict
+
+    def get_expanded(self):
+        """Returns a list of paths of all the expanded nodes."""
+        res_list = []
+        iterator = QtGui.QTreeWidgetItemIterator(self.widget,
+                                                 QtGui.QTreeWidgetItemIterator.HasChildren)
+        while iterator.value():
+            item = iterator.value()
+            if item.isExpanded():
+                res_list.append(self._get_path(item))
+            iterator += 1
+
+        return res_list
+
+    def get_collapsed(self):
+        """Returns a list of paths of all the collapsed nodes."""
+        res_list = []
+        iterator = QtGui.QTreeWidgetItemIterator(self.widget,
+                                                 QtGui.QTreeWidgetItemIterator.HasChildren)
+        while iterator.value():
+            item = iterator.value()
+            if not item.isExpanded():
+                res_list.append(self._get_path(item))
+            iterator += 1
+
+        return res_list
+
+    def expand_all(self, tf):
+        self.widget.blockSignals(True)
+        try:
+            if tf:
+                self.widget.expandAll()
+            else:
+                self.widget.collapseAll()
+        finally:
+            self.widget.blockSignals(False)
 
     def clear(self):
         self.widget.clear()
@@ -979,16 +1153,23 @@ class TreeView(WidgetBase):
         finally:
             self.widget.blockSignals(False)
 
-    def get_selected_paths(self):
-        items = list(self.widget.selectedItems())
-        return [self._get_path(item) for item in items]
-
     def select_paths(self, paths, state=True):
         self.widget.blockSignals(True)
         try:
             for path in paths:
                 item = self._path_to_item(path)
                 item.setSelected(state)
+        finally:
+            self.widget.blockSignals(False)
+
+    def select_all(self, state=True):
+        self.widget.blockSignals(True)
+        try:
+            iterator = QtGui.QTreeWidgetItemIterator(self.widget)
+            while iterator.value():
+                item = iterator.value()
+                item.setSelected(state)
+                iterator += 1
         finally:
             self.widget.blockSignals(False)
 
@@ -1556,6 +1737,8 @@ class Splitter(ContainerBase):
         self.thumb_px = thumb_px
 
         w = QtGui.QSplitter()
+        self.widget = w
+        self._set_name(self.widget)
         self.orientation = orientation
         # NOTE: need to style splitter due to lack of any visual
         # indicator on Linux and Windows
@@ -1565,18 +1748,18 @@ class Splitter(ContainerBase):
                 iconfile = pathlib.Path(icondir) / 'vdots.png'
                 w.setStyleSheet(
                     """
-                    QSplitter::handle { width: %spx; height: %spx;
-                                        image: url(%s); }
-                    """ % (self.thumb_px, self.thumb_px, iconfile))
+                    #%s::handle { width: %spx; height: %spx;
+                                  image: url(%s); }
+                    """ % (self._get_name(), self.thumb_px, self.thumb_px,
+                           iconfile))
         else:
             w.setOrientation(QtCore.Qt.Vertical)
             if thumb_px is not None:
                 iconfile = pathlib.Path(icondir) / 'hdots.png'
                 w.setStyleSheet(
                     """
-                    QSplitter::handle { height: %spx; image: url(%s); }
-                    """ % (self.thumb_px, iconfile))
-        self.widget = w
+                    #%s::handle { height: %spx; image: url(%s); }
+                    """ % (self._get_name(), self.thumb_px, iconfile))
         w.setChildrenCollapsible(True)
 
     def add_widget(self, child):
@@ -1736,12 +1919,14 @@ class Toolbar(ContainerBase):
         else:
             w.setOrientation(QtCore.Qt.Vertical)
         self.widget = w
+        self._set_name(self.widget)
         self._menu = None
+        myname = self._get_name()
         self.widget.setStyleSheet(
             """
-            QToolBar { padding: 0; spacing: 1; }\n
-            QToolBar QToolButton { padding: 2; margin: 0; }\n
-            """)
+            #%s { padding: 0; spacing: 1; }\n
+            #%s QToolButton { padding: 2; margin: 0; }\n
+            """ % (myname, myname))
 
     def add_action(self, text, toggle=False, iconpath=None, iconsize=None):
         child = ToolbarAction()
@@ -2247,29 +2432,113 @@ class Dialog(TopLevelMixin, WidgetBase):
         return self.content
 
 
-class SaveDialog(QtGui.QFileDialog):
+class ColorDialog(TopLevelMixin, WidgetBase):
+    """A color selection dialog."""
+    def __init__(self, title='', initial_color='blue',
+                 parent=None, modal=False):
+        WidgetBase.__init__(self)
 
-    def __init__(self, title=None, selectedfilter=None):
-        super(SaveDialog, self).__init__()
+        if parent is not None:
+            parent = parent.get_widget()
+        self.widget = QtGui.QColorDialog(parent)
+        self.widget.setModal(modal)
+        self.set_color(initial_color)
+        self.widget.colorSelected.connect(self._cb_redirect)
+        self.widget.currentColorChanged.connect(self._cb_changed)
+        self._chosen_color = self.get_color(format='tuple')
 
-        self.title = title
-        self.selectedfilter = selectedfilter
-        self.widget = self
+        TopLevelMixin.__init__(self, title=title)
 
-    def get_path(self):
-        res = self.getSaveFileName(self, self.title, '', self.selectedfilter)
+        for name in ['activated', 'pick']:
+            self.enable_callback(name)
 
-        if isinstance(res, tuple):
-            res = res[0]
+    def _cb_redirect(self, q_color):
+        r, g, b, a = q_color.getRgbF()
+        self._chosen_color = (r, g, b, a)
+        self.make_callback('activated', self._chosen_color)
 
-        if (res and self.selectedfilter is not None and
-                not res.endswith(self.selectedfilter[1:])):
-            res += self.selectedfilter[1:]
-        if res == '':
-            # user cancelled dialog
-            res = None
+    def _cb_changed(self, q_color):
+        r, g, b, a = q_color.getRgbF()
+        self.make_callback('activated', (r, g, b, a))
 
-        return res
+    def get_color(self, format='tuple'):
+        if format == 'tuple':
+            return self._chosen_color
+        if format == 'hex':
+            return colors.get_hex(self._chosen_color[:3])
+        raise ValueError(f"bad format type: '{format}'; should be 'tuple' or 'hex'")
+
+    def set_color(self, color):
+        (r, g, b) = colors.resolve_color(color)
+        self._chosen_color = (r, g, b)
+        q_color = QtHelp.get_color((r, g, b), 1.0)
+        self.widget.setCurrentColor(q_color)
+
+    def popup(self, parent=None):
+        if parent is not None:
+            self.widget.setParent(parent.get_widget())
+        self.widget.open()
+
+
+class FileDialog(TopLevelMixin, WidgetBase):
+    """A file/directory selection dialog."""
+    def __init__(self, title='', parent=None, modal=False):
+        WidgetBase.__init__(self)
+
+        if parent is not None:
+            parent = parent.get_widget()
+        self.widget = QtGui.QFileDialog(parent)
+        self.widget.setFileMode(QtGui.QFileDialog.AnyFile)  # default, unless changed
+        self.widget.setModal(modal)
+        self.widget.filesSelected.connect(self._cb_redirect)
+        self.filter_dict = dict()
+
+        TopLevelMixin.__init__(self, title=title)
+
+        for name in ['activated']:
+            self.enable_callback(name)
+
+    def set_mode(self, mode):
+        self.widget.setOption(QtGui.QFileDialog.ShowDirsOnly, False)
+        if mode == 'any':
+            self.widget.setFileMode(QtGui.QFileDialog.AnyFile)
+        elif mode == 'file':
+            self.widget.setFileMode(QtGui.QFileDialog.ExistingFile)
+        elif mode == 'files':
+            self.widget.setFileMode(QtGui.QFileDialog.ExistingFiles)
+        if mode == 'directory':
+            self.widget.setFileMode(QtGui.QFileDialog.Directory)
+            self.widget.setOption(QtGui.QFileDialog.ShowDirsOnly, True)
+
+    def set_directory(self, path):
+        if not os.path.isdir(path):
+            raise ValueError(f"{path} does not seem to be an existing  directory")
+        self.widget.setDirectory(path)
+
+    def clear_filters(self):
+        self.filter_dict = dict()
+        self.widget.setNameFilter("")
+
+    def add_ext_filter(self, category, file_ext):
+        exts = self.filter_dict.setdefault(category, [])
+        if not file_ext.startswith('.'):
+            file_ext = '.' + file_ext
+        exts.append(f"*{file_ext}")
+
+        l = []
+        for category, exts in self.filter_dict.items():
+            l.append("{} ({})".format(category, ' '.join(exts)))
+        s = ';;'.join(l)
+        self.widget.setNameFilter(s)
+
+    def _cb_redirect(self, paths):
+        if len(paths) > 0:
+            self.make_callback('activated', paths)
+
+    def popup(self, parent=None):
+        if parent is not None:
+            self.widget.setParent(parent.get_widget())
+        self.widget.open()
 
 
 class DragPackage(object):

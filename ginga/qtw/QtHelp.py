@@ -251,6 +251,31 @@ class DirectorySelection(object):
             self.cb(dirname)
 
 
+class SaveDialog(QtGui.QFileDialog):
+
+    def __init__(self, title=None, selectedfilter=None):
+        super(SaveDialog, self).__init__()
+
+        self.title = title
+        self.selectedfilter = selectedfilter
+        self.widget = self
+
+    def get_path(self):
+        res = self.getSaveFileName(self, self.title, '', self.selectedfilter)
+
+        if isinstance(res, tuple):
+            res = res[0]
+
+        if (res and self.selectedfilter is not None and
+                not res.endswith(self.selectedfilter[1:])):
+            res += self.selectedfilter[1:]
+        if res == '':
+            # user cancelled dialog
+            res = None
+
+        return res
+
+
 class Timer(Callback.Callbacks):
     """Abstraction of a GUI-toolkit implemented timer."""
 

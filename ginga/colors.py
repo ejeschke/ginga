@@ -759,6 +759,12 @@ def recalc_color_list():
     color_list.sort()
 
 
+def get_hex(color_tup):
+    """Return RGB 'hex/web/hash notation' of a given RGB color tuple."""
+    r, g, b = color_tup[:3]
+    return f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}'
+
+
 def lookup_color(name, format='tuple'):
     """Find RGB or hex values for a supported color.
 
@@ -766,7 +772,7 @@ def lookup_color(name, format='tuple'):
         Color name (e.g., ``'red'``) or hash (e.g., ``'#ff0000'``).
         Color name is case-sensitive.
 
-    format : {'tuple', 'hash'}
+    format : {'tuple', 'hash' (or 'hex')}
         Desired output to be an RGB tuple or hash.
 
     Returns
@@ -783,12 +789,12 @@ def lookup_color(name, format='tuple'):
         Invalid format.
 
     """
-    supported_formats = ('tuple', 'hash')
+    supported_formats = ('tuple', 'hash', 'hex')
     if format not in supported_formats:
         raise ValueError(f'format needs to be one of {supported_formats}')
 
     if name.startswith('#'):  # hex notation
-        if format == 'hash':
+        if format in ['hash', 'hex']:
             return name  # no-op
 
         name = name[1:]  # Strip leading #
@@ -807,7 +813,7 @@ def lookup_color(name, format='tuple'):
     if format == 'tuple':
         return rgb
 
-    return f'#{int(rgb[0] * 255):02x}{int(rgb[1] * 255):02x}{int(rgb[2] * 255):02x}'
+    return get_hex(rgb)
 
 
 def resolve_color(color):

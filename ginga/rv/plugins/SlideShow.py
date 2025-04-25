@@ -61,7 +61,7 @@ import yaml
 
 # GINGA
 from ginga.GingaPlugin import LocalPlugin
-from ginga.gw import Widgets, GwHelp
+from ginga.gw import Widgets
 from ginga.pilw.ImageViewPil import CanvasView
 from ginga.util import loader
 from ginga.util.paths import icondir
@@ -109,7 +109,6 @@ class SlideShow(LocalPlugin):
     def build_gui(self, container):
         """Build GUI such that image list area is maximized."""
 
-        self.w.fs = GwHelp.FileSelection(container.get_widget())
         vbox = Widgets.VBox()
 
         captions = (('Load', 'button', 'path', 'textentry',
@@ -133,6 +132,10 @@ class SlideShow(LocalPlugin):
         b.default_duration.add_callback('activated', self.set_duration_cb)
         b.default_duration.set_text(str(self.def_duration))
         b.default_duration.set_tooltip("Set the default duration if none found for a slide")
+
+        self.w.fs = Widgets.FileDialog(parent=b.load, title='Load slide show')
+        self.w.fs.set_mode('file')
+        self.w.fs.add_callback('activated', self._load_slideshow_file)
 
         vbox2 = Widgets.VBox()
         vbox2.add_widget(w, stretch=0)
@@ -206,10 +209,10 @@ class SlideShow(LocalPlugin):
         self.gui_up = True
 
     def _popup_load_dialog_cb(self, w):
-        self.w.fs.popup('Load slide show', self._load_slideshow_file,
-                        initialdir='.')
+        self.w.fs.popup()
 
-    def _load_slideshow_file(self, path):
+    def _load_slideshow_file(self, w, paths):
+        path = paths[0]
         self.w.path.set_text(path)
         self.load_slideshow(path)
 

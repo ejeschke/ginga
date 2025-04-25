@@ -1718,9 +1718,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         return pfx + ''.join(newname)
 
     def add_dialogs(self):
-        if hasattr(GwHelp, 'FileSelection'):
-            self.filesel = GwHelp.FileSelection(self.w.root.get_widget(),
-                                                all_at_once=True)
+        if hasattr(Widgets, 'FileDialog'):
+            self.filesel = Widgets.FileDialog(title="Load File")
+            self.filesel.add_callback('activated', self.load_file_cb)
 
     def add_statusbar(self, holder):
         self.w.status = Widgets.StatusBar()
@@ -2133,8 +2133,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def gui_load_file(self, initialdir=None):
         #self.start_operation('FBrowser')
-        self.filesel.popup("Load File", self.load_file_cb,
-                           initialdir=initialdir)
+        if initialdir is not None:
+            self.filesel.set_directory(initialdir)
+        self.filesel.popup()
 
     def gui_choose_file_opener(self, msg, openers, open_cb, mimetype,
                                filepath):
@@ -2617,11 +2618,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         return True
 
-    def load_file_cb(self, paths):
+    def load_file_cb(self, w, paths):
         # NOTE: this dialog callback is handled a little differently
         # from some of the other pop-ups.  It only gets called if a
         # file was selected and "Open" clicked.  This is due to the
-        # use of FileSelection rather than Dialog widget
+        # use of FileDialog widget
         self.open_uris(paths)
 
     def _get_channel_by_container(self, child):
