@@ -49,7 +49,7 @@ class FITSError(Exception):
 
 def use(fitspkg, raise_err=True):
     global fits_configured, fitsLoaderClass
-    from ginga.io.loader import add_opener
+    from ginga.util.loader import add_opener
 
     if fitspkg == 'astropy':
         if have_astropy:
