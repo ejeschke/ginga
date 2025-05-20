@@ -340,8 +340,8 @@ class Label(WidgetBase):
         # Enable highlighting for copying
         # lbl.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
-        self.enable_callback('activated')
-        self.enable_callback('released')
+        for name in ['activated', 'released']:
+            self.enable_callback(name)
 
     def _cb_redirect(self, event):
         buttons = event.buttons()
@@ -1972,6 +1972,12 @@ class Toolbar(ContainerBase):
     def add_separator(self):
         self.widget.addSeparator()
 
+    def add_spacer(self):
+        spacer = QtGui.QWidget()
+        spacer.setSizePolicy(QtGui.QSizePolicy.Expanding,
+                             QtGui.QSizePolicy.Expanding)
+        self.widget.addWidget(spacer)
+
 
 class MenuAction(WidgetBase):
     def __init__(self, text=None, checkable=False):
@@ -2459,7 +2465,7 @@ class ColorDialog(TopLevelMixin, WidgetBase):
 
     def _cb_changed(self, q_color):
         r, g, b, a = q_color.getRgbF()
-        self.make_callback('activated', (r, g, b, a))
+        self.make_callback('pick', (r, g, b, a))
 
     def get_color(self, format='tuple'):
         if format == 'tuple':
@@ -2500,13 +2506,13 @@ class FileDialog(TopLevelMixin, WidgetBase):
 
     def set_mode(self, mode):
         self.widget.setOption(QtGui.QFileDialog.ShowDirsOnly, False)
-        if mode == 'any':
+        if mode == 'save':
             self.widget.setFileMode(QtGui.QFileDialog.AnyFile)
         elif mode == 'file':
             self.widget.setFileMode(QtGui.QFileDialog.ExistingFile)
         elif mode == 'files':
             self.widget.setFileMode(QtGui.QFileDialog.ExistingFiles)
-        if mode == 'directory':
+        elif mode == 'directory':
             self.widget.setFileMode(QtGui.QFileDialog.Directory)
             self.widget.setOption(QtGui.QFileDialog.ShowDirsOnly, True)
 
