@@ -87,6 +87,9 @@ class XYDataSource:
 
     def _add(self, pt):
         x, y = pt
+        if not np.isfinite(y):
+            return
+
         front = (self.front + 1) % self.length
 
         if front == self.rear:
@@ -94,8 +97,7 @@ class XYDataSource:
                 raise ValueError("Buffer is full")
             # circular queue full, need to expunge an old element
             _x, _y = self.buf[self.rear]
-            if np.isfinite(_y):
-                self.slmm.remove_head(_y)
+            self.slmm.remove_head(_y)
             self.rear = (self.rear + 1) % self.length
 
         self.front = front
@@ -103,8 +105,7 @@ class XYDataSource:
             self.rear = self.front
 
         self.buf[self.front, :] = pt
-        if np.isfinite(y):
-            self.slmm.add_tail(y)
+        self.slmm.add_tail(y)
 
     def add(self, pt, update_limits=True):
         """Add a single data point and update the plot.
