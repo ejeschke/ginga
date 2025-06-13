@@ -80,7 +80,7 @@ def show_example(cbox, top, logger):
         _vbox.add_widget(alignbox, stretch=0)
         for name in ["Left", "Center", "Right"]:
             alignbox.append_text(name)
-        alignbox.add_callback('activated', lambda r, val: label.set_halign(r.get_text()))
+        alignbox.add_callback('activated', lambda r, val: label.set_halign(r.get_text().lower()))
         alignbox.add_callback('activated',
                               lambda w, val: logger.info("chose '{}'".format(w.get_text())))
         label.set_halign('Left')
@@ -255,7 +255,7 @@ def show_example(cbox, top, logger):
         w = Widgets.Slider(orientation='horizontal')
         w.set_limits(0, 5, incr_value=1)
         w.set_value(4)
-        w.set_tracking(True)
+        w.set_tracking(False)
         w.add_callback('value-changed',
                        lambda w, val: logger.info("chose {}".format(val)))
         _vbox.add_widget(w)
@@ -302,7 +302,7 @@ def show_example(cbox, top, logger):
         _vbox.add_widget(w, stretch=0)
         _ent = Widgets.TextEntrySet()
         _vbox.add_widget(_ent, stretch=0)
-        _ent.add_callback('activated', lambda r: w.set_value(float(r.get_text())))
+        _ent.add_callback('activated', lambda r: w.set_value(float(r.get_text()) / 100.))
         w.set_value(0.6)
         vbox.add_widget(_vbox)
 
@@ -330,11 +330,6 @@ def show_example(cbox, top, logger):
                                 review2="Meh", review3="Jolly good!"))
         w.set_tree(tree)
         vbox.add_widget(w, stretch=1)
-
-    elif wname == 'webview':
-        w = Widgets.WebView()
-        w.load_url("http://www.google.com/")
-        vbox.add_widget(w)
 
     elif wname == 'frame':
         w = Widgets.Frame(title="Frame Title")
@@ -577,7 +572,6 @@ def show_example(cbox, top, logger):
                              parent=top, modal=False)
         dia.add_callback('activated',
                          lambda w, rsp: logger.info("user chose %s" % (rsp)))
-        top.add_dialog(dia)
         cntr = dia.get_content_area()
         cntr.add_widget(Widgets.Label("My Dialog Content"))
 
@@ -641,7 +635,7 @@ def main(options, args):
     for wname in ['label', 'button', 'textentry', 'textentryset', 'textarea',
                   'checkbox', 'togglebutton', 'radiobutton', 'combobox',
                   'spinbox', 'slider', 'scrollbar', 'progressbar', 'statusbar',
-                  'image', 'treeview', 'webview', 'frame', 'expander',
+                  'image', 'treeview', 'frame', 'expander',
                   'hbox', 'vbox', 'splitter', 'scrollarea', 'tabwidget',
                   'stackwidget', 'mdiwidget', 'gridbox', 'menubar', 'toolbar',
                   'dialog', 'dial']:

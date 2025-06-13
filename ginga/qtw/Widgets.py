@@ -380,8 +380,15 @@ class Label(WidgetBase):
                 "#%s { %s }" % (myname, content))
 
     def set_halign(self, align):
-        # TODO: set horizontal alignment of text
-        pass
+        align = align.lower()
+        if align == 'left':
+            self.widget.setAlignment(QtCore.Qt.AlignLeft)
+        elif align == 'center':
+            self.widget.setAlignment(QtCore.Qt.AlignHCenter)
+        elif align == 'right':
+            self.widget.setAlignment(QtCore.Qt.AlignRight)
+        else:
+            raise ValueError(f"Don't understand alignment '{align}'")
 
 
 class Button(WidgetBase):
