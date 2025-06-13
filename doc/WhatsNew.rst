@@ -14,6 +14,8 @@ Ver 5.4.0 (unreleased)
   - fixed a bug where FITS loader preference on command line options
     or configuration file was not working
 
+- Added internal support for dask and zarr arrays
+
 Ver 5.3.0 (2025-04-02)
 ======================
 - Fixed an issue with editing objects in the Pick plugin
