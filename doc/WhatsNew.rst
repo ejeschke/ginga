@@ -11,8 +11,11 @@ Ver 5.4.0 (unreleased)
   - add ColorDialog, a color selection dialog
   - add FileDialog, a file/directory dialog (can replace FileSelection)
   - fixed an issue with custom styling being inherited unnecessarily
-  - fixed a bug where FITS loader preference on command line options
-    or configuration file was not working
+
+- Fixed a bug where FITS loader preference on command line options
+  or configuration file was not working
+- Add ability to dynamically reload separately distributed plugins
+  using the Command plugin (with reload_local or reload_global commands)
 
 Ver 5.3.0 (2025-04-02)
 ======================

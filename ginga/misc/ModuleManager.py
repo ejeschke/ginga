@@ -44,13 +44,14 @@ class ModuleManagerError(Exception):
     pass
 
 
-class ModuleManager(object):
+class ModuleManager(importlib.machinery.PathFinder):
     """Simple class to dynamically manage module imports."""
 
     def __init__(self, logger):
         self.logger = logger
 
         self.module = {}
+        self.path_map = {}
 
     def load_module(self, module_name, pfx=None, path=None):
         """Load/reload module from the given name."""
@@ -68,6 +69,7 @@ class ModuleManager(object):
             else:
                 self.logger.info("Loading module '%s'..." % module_name)
                 module = my_import(name, path=path)
+                self.path_map[name] = path
 
             self.module[module_name] = module
             return module
@@ -84,3 +86,13 @@ class ModuleManager(object):
 
         except KeyError:
             return sys.modules[module_name]
+
+    def find_spec(self, fullname, path, target=None):
+        if fullname not in self.path_map:
+            return None
+        return importlib.util.spec_from_file_location(fullname,
+                                                      self.path_map[fullname])
+
+    def find_module(self, fullname, path):
+        # No need to implement, backward compatibility only
+        return None

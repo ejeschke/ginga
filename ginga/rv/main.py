@@ -435,6 +435,7 @@ class ReferenceViewer(object):
 
         # Create the dynamic module manager
         mm = ModuleManager.ModuleManager(logger)
+        sys.meta_path.append(mm)
 
         # what is the dynamic config file to load
         app_config = "{}_config".format(self.appname)
