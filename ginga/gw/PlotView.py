@@ -8,7 +8,7 @@ import logging
 from io import BytesIO
 import numpy as np
 
-from ginga import Mixins
+from ginga import Mixins, colors
 from ginga.misc import Callback, Settings, Bunch
 from ginga.AstroImage import AstroImage
 from ginga.plot.Plotable import Plotable
@@ -301,12 +301,25 @@ class PlotViewBase(Callback.Callbacks):
             self.logger.error(str(e), exc_info=True)
 
     def _plot_text(self, x, y, text, artist_category='default', rot_deg=0,
-                   linewidth=1, color='black', alpha=1.0,
-                   font='sans', fontsize=12):
+                   linewidth=1, color='black', font='sans', fontsize=12,
+                   bgcolor=None, bordercolor=None, borderlinewidth=0,
+                   borderpadding=4):
         artists = self.artist_dct.setdefault(artist_category, [])
         fontdict = dict(color=color, family=font, size=fontsize)
+        kwargs = dict()
+        if bgcolor is not None:
+            bbox = dict(facecolor=bgcolor)
+            kwargs['bbox'] = bbox
+        if bordercolor is not None:
+            bbox = kwargs.get('bbox', dict())
+            bbox['edgecolor'] = bordercolor
+            bbox['linewidth'] = borderlinewidth
+        bbox = kwargs.get('bbox', None)
+        if bbox is not None:
+            bbox['pad'] = borderpadding
+
         text = self.ax.text(x, y, text, color=color, rotation=rot_deg,
-                            fontdict=fontdict, clip_on=True)
+                            fontdict=fontdict, clip_on=True, **kwargs)
         artists.append(text)
 
         # adjust limits if necessary
@@ -491,9 +504,23 @@ class PlotViewBase(Callback.Callbacks):
                                 alpha=obj.alpha)
 
             elif isinstance(obj, self.dc.Text):
+                text_clr = colors.resolve_color(obj.color, obj.alpha,
+                                                format='tuple')
+                bg_clr = None
+                if obj.bgcolor is not None:
+                    bg_clr = colors.resolve_color(obj.bgcolor, obj.bgalpha,
+                                                  format='tuple')
+                bd_clr = None
+                if obj.bordercolor is not None:
+                    bd_clr = colors.resolve_color(obj.bordercolor, obj.borderalpha,
+                                                  format='tuple')
                 self._plot_text(obj.x, obj.y, text=obj.text,
                                 rot_deg=obj.rot_deg,
-                                color=obj.color, fontsize=obj.fontsize)
+                                color=text_clr, bgcolor=bg_clr,
+                                bordercolor=bd_clr,
+                                borderlinewidth=obj.borderlinewidth,
+                                borderpadding=obj.borderpadding,
+                                font=obj.font, fontsize=obj.fontsize)
 
             elif isinstance(obj, self.dc.NormImage):
                 image = obj.get_image()

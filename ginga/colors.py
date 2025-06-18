@@ -9,8 +9,9 @@
 import re
 import collections
 
-__all__ = ['recalc_color_list', 'lookup_color', 'resolve_color', 'add_color',
-           'remove_color', 'get_colors', 'scan_rgbtxt', 'scan_rgbtxt_buf']
+__all__ = ['recalc_color_list', 'get_hex', 'lookup_color', 'resolve_color',
+           'add_color', 'remove_color', 'get_colors', 'scan_rgbtxt',
+           'scan_rgbtxt_buf']
 
 color_dict = {
  'aliceblue': (0.9411764705882353, 0.9725490196078431, 1.0),  # noqa
@@ -759,10 +760,15 @@ def recalc_color_list():
     color_list.sort()
 
 
-def get_hex(color_tup):
+def get_hex(color_tup, alpha=None):
     """Return RGB 'hex/web/hash notation' of a given RGB color tuple."""
     r, g, b = color_tup[:3]
-    return f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}'
+    rgb = f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}'
+
+    if alpha is None:
+        return rgb
+    rgba = f'{rgb}{int(alpha * 255):02x}'
+    return rgba
 
 
 def lookup_color(name, format='tuple'):
@@ -801,7 +807,6 @@ def lookup_color(name, format='tuple'):
         rgb = (int(name[:2], 16) / 255.0,
                int(name[2:4], 16) / 255.0,
                int(name[4:6], 16) / 255.0)
-
         return rgb
 
     # must be a name
@@ -816,7 +821,7 @@ def lookup_color(name, format='tuple'):
     return get_hex(rgb)
 
 
-def resolve_color(color):
+def resolve_color(color, alpha=None, format='tuple'):
     """Return RGB tuple of a given color."""
     if isinstance(color, str):
         r, g, b = lookup_color(color)
@@ -826,7 +831,12 @@ def resolve_color(color):
     else:
         raise ValueError("color parameter must be a str or sequence")
 
-    return (r, g, b)
+    if format == 'tuple':
+        if alpha is not None:
+            return (r, g, b, alpha)
+        return (r, g, b)
+    else:
+        return get_hex((r, g, b), alpha=alpha)
 
 
 def _validate_color_tuple(tup):
