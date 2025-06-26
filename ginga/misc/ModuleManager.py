@@ -12,6 +12,8 @@ The ModuleManager class
 import sys
 import os
 import importlib
+# apparently this is necessary...
+import importlib.machinery
 
 __all__ = ['ModuleManager']
 
