@@ -17,6 +17,8 @@ Ver 5.4.0 (unreleased)
 - Add ability to dynamically reload separately distributed plugins
   using the Command plugin (with reload_local or reload_global commands)
 
+- Added internal support for dask and zarr arrays
+
 Ver 5.3.0 (2025-04-02)
 ======================
 - Fixed an issue with editing objects in the Pick plugin
