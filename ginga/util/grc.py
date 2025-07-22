@@ -207,6 +207,8 @@ class RemoteServer(object):
         self.port = port
         # If blank, listens on all interfaces
         self.host = host
+        # this holds the RPC server
+        self.server = None
 
         if logger is None:
             logger = log.get_logger(null=True)
@@ -230,11 +232,12 @@ class RemoteServer(object):
             self.server.serve_forever(poll_interval=0.1)
 
     def stop(self):
-        self.server.shutdown()
-        # TODO: unfortunate that we have to reach inside the implementation
-        # of socketserver.  It appears that when you shut down the server it
-        # does *not* close the socket.
-        self.server.socket.close()
+        if self.server is not None:
+            self.server.shutdown()
+            # TODO: unfortunate that we have to reach inside the implementation
+            # of socketserver.  It appears that when you shut down the server it
+            # does *not* close the socket.
+            self.server.socket.close()
         self.server = None
 
     def restart(self):

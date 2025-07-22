@@ -18,6 +18,8 @@ Ver 5.4.0 (unreleased)
   using the Command plugin (with reload_local or reload_global commands)
 - Changed default port for Remote Control plugin and made a command line
   switch (--rcport) to allow launch time changing of the port
+- Fixed an spurious error when closing Ginga after shutting down the RC
+  plugin manually
 
 Ver 5.3.0 (2025-04-02)
 ======================
