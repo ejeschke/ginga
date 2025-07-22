@@ -509,24 +509,6 @@ ginga_initialize_canvas = function (canvas, id, app) {
         canvas.addEventListener("keyup", pg_canvas.input_handler, true);
         canvas.addEventListener("keypress", pg_canvas.input_handler, true);
 
-        // enable touch events if this is a touch device
-        if (is_touch_device) {
-            pg_canvas.hammer = new Hammer(canvas, {})
-            pg_canvas.hammer.get('pinch').set({ enable: true });
-            pg_canvas.hammer.get('rotate').set({ enable: true });
-            pg_canvas.hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
-            pg_canvas.hammer.on('pan', pg_canvas.input_handler_gesture)
-            pg_canvas.hammer.on('panstart', pg_canvas.input_handler_gesture)
-            pg_canvas.hammer.on('panend', pg_canvas.input_handler_gesture)
-            pg_canvas.hammer.on('tap', pg_canvas.input_handler_gesture)
-            pg_canvas.hammer.on('pinch', pg_canvas.input_handler_gesture)
-            pg_canvas.hammer.on('pinchstart', pg_canvas.input_handler_gesture)
-            pg_canvas.hammer.on('pinchend', pg_canvas.input_handler_gesture)
-            pg_canvas.hammer.on('rotate', pg_canvas.input_handler_gesture)
-            pg_canvas.hammer.on('rotatestart', pg_canvas.input_handler_gesture)
-            pg_canvas.hammer.on('rotateend', pg_canvas.input_handler_gesture)
-        }
-
         canvas.addEventListener("focus", pg_canvas.input_handler, true);
         //canvas.addEventListener("blur", pg_canvas.input_handler, true);
         canvas.addEventListener("focusout", pg_canvas.input_handler, true);

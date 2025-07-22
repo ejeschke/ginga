@@ -419,6 +419,10 @@ class TextArea(WidgetBase):
             app = self.get_app()
             app.do_operation('update_wrap', id=self.id, value=self.wrap)
 
+    def set_scroll_pos(self, pos):
+        # TODO
+        pass
+
     def render(self):
         # TODO: handle wrapping, render font
         d = dict(id=self.id, text=self.text, disabled='', editable='',
@@ -1434,7 +1438,8 @@ class TreeView(WidgetBase):
         # selected.
         self.selectedRows = []
 
-        for cbname in ('selected', 'activated', 'drag-start'):
+        for cbname in ('selected', 'activated', 'drag-start',
+                       'collapsed', 'expanded'):
             self.enable_callback(cbname)
 
     def setup_table(self, columns, levels, leaf_key):
@@ -3248,10 +3253,6 @@ class TopLevel(ContainerBase):
 class Application(Callback.Callbacks):
 
     script_decls = {
-        'hammer': '''
-    <script type="text/javascript" src="/js/hammer.js"></script>
-    ''',
-
         'jquery': '''
     <!-- jQuery foundation -->
     <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
@@ -3300,7 +3301,7 @@ class Application(Callback.Callbacks):
         self.ws_handlers = []
         # default sections from script imports to insert in web pages
         # see Page widget, above
-        self.script_imports = ['hammer', 'jquery']
+        self.script_imports = ['jquery']
 
         _app = self
         widget_dict[0] = self
