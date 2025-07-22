@@ -486,12 +486,47 @@ class Toolbar_Ginga_Image(Toolbar_Common):
             self.w.btn_up.set_enabled(enabled)
             self.w.btn_down.set_enabled(enabled)
 
+            bd = chviewer.get_bindings()
+            can_flip = bd.get_feature_allow('flip')
+            self.w.btn_flipx.set_enabled(can_flip)
+            self.w.btn_flipy.set_enabled(can_flip)
+            self.w.btn_swapxy.set_enabled(can_flip)
+
             # update transform toggles
             flipx, flipy, swapxy = chviewer.get_transforms()
             # toolbar follows view
             self.w.btn_flipx.set_state(flipx)
             self.w.btn_flipy.set_state(flipy)
             self.w.btn_swapxy.set_state(swapxy)
+
+            can_rotate = bd.get_feature_allow('rotate')
+            self.w.btn_rotate.set_enabled(can_rotate)
+            self.w.btn_restore.set_enabled(can_rotate & can_flip)
+            self.w.btn_rot90.set_enabled(can_rotate)
+            self.w.btn_rotn90.set_enabled(can_rotate)
+            self.w.btn_orientrh.set_enabled(can_rotate)
+            self.w.btn_orientlh.set_enabled(can_rotate)
+
+            can_pan = bd.get_feature_allow('pan')
+            can_zoom = bd.get_feature_allow('zoom')
+            self.w.btn_pan.set_enabled(can_pan & can_zoom)
+            self.w.btn_center.set_enabled(can_pan)
+
+            self.w.btn_zoom_in.set_enabled(can_zoom)
+            self.w.btn_zoom_out.set_enabled(can_zoom)
+            self.w.btn_zoom_fit.set_enabled(can_zoom)
+            self.w.btn_zoom_1_1.set_enabled(can_zoom)
+            self.w.btn_zoom.set_enabled(can_pan & can_zoom)
+
+            can_cut = bd.get_feature_allow('cut')
+            self.w.btn_cuts.set_enabled(can_cut)
+            self.w.btn_autolevels.set_enabled(can_cut)
+
+            can_cmap = bd.get_feature_allow('cmap')
+            self.w.btn_contrast.set_enabled(can_cmap)
+            self.w.btn_resetcontrast.set_enabled(can_cmap)
+            self.w.btn_dist.set_enabled(can_cmap)
+            self.w.btn_cmap.set_enabled(can_cmap)
 
             # update mode toggles
             bm = chviewer.get_bindmap()
