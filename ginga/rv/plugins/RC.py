@@ -206,12 +206,12 @@ class RC(GingaPlugin.GlobalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_RC')
         self.settings.add_defaults(bind_host='localhost',
-                                   bind_port=9000,
+                                   bind_port=grc.default_rc_port,
                                    start_server=True)
         self.settings.load(onError='silent')
 
         # What port to listen for requests
-        self.port = self.settings.get('bind_port', 9000)
+        self.port = self.settings.get('bind_port', grc.default_rc_port)
         # If blank, listens on all interfaces
         self.host = self.settings.get('bind_host', 'localhost')
 

@@ -22,7 +22,7 @@ from ginga.misc.Bunch import Bunch
 from ginga.misc import Task, ModuleManager, Settings, log
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
-from ginga.util import paths, rgb_cms, compat, loader
+from ginga.util import paths, rgb_cms, compat, loader, grc
 
 # Catch warnings
 logging.captureWarnings(True)
@@ -351,6 +351,9 @@ class ReferenceViewer(object):
                      help="Use OpenGL acceleration")
         add_argument("--plugins", dest="plugins", metavar="NAMES",
                      help="Specify additional plugins to load")
+        add_argument("--rcport", dest="rc_port", type=int,
+                     default=None, metavar="NUM",
+                     help="Use PORT for Ginga Remote Control plugin")
         add_argument("--sep", dest="separate_channels", default=False,
                      action="store_true",
                      help="Load files in separate channels")
@@ -401,6 +404,10 @@ class ReferenceViewer(object):
                     "Couldn't create %s settings area (%s): %s" % (
                         self.appname, self.basedir, str(e)))
                 logger.warning("Preferences will not be able to be saved")
+
+        if options.rc_port is not None:
+            # user specified a custom Remote Control port
+            grc.default_rc_port = options.rc_port
 
         # Set up preferences
         prefs = Settings.Preferences(basefolder=self.basedir, logger=logger)

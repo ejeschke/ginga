@@ -16,6 +16,8 @@ Ver 5.4.0 (unreleased)
   or configuration file was not working
 - Add ability to dynamically reload separately distributed plugins
   using the Command plugin (with reload_local or reload_global commands)
+- Changed default port for Remote Control plugin and made a command line
+  switch (--rcport) to allow launch time changing of the port
 
 Ver 5.3.0 (2025-04-02)
 ======================

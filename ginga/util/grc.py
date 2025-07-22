@@ -15,6 +15,8 @@ import xmlrpc.server as SimpleXMLRPCServer  # nosec
 # undefined passed value--for a data type that cannot be converted
 undefined = '#UNDEFINED'
 
+default_rc_port = 11771
+
 
 class _ginga_proxy(object):
 
@@ -194,12 +196,14 @@ class RemoteClient(object):
 
 class RemoteServer(object):
 
-    def __init__(self, obj, host='localhost', port=9000, ev_quit=None,
+    def __init__(self, obj, host='localhost', port=None, ev_quit=None,
                  logger=None):
         super(RemoteServer, self).__init__()
 
         self.robj = obj
         # What port to listen for requests
+        if port is None:
+            port = default_rc_port
         self.port = port
         # If blank, listens on all interfaces
         self.host = host
