@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import sys
 from PIL import Image
 
 have_pil_imagetk = False
@@ -234,17 +235,16 @@ class ImageViewEvent(ImageViewTk):
             'next': 'page_down',
         }
 
-        # Define cursors for pick and pan
-        #hand = openHandCursor()
-        hand = 'fleur'
-        self.define_cursor('pan', hand)
-        cross = 'cross'
-        self.define_cursor('pick', cross)
+        # Define default cursors
+        for cur_name, tk_cur_name in [('pan', 'fleur'),
+                                      ('pick', 'cross'),
+                                      ('draw', 'pencil'),
+                                      ('zoom', 'target')]:
+            self.define_cursor(cur_name, tk_cur_name)
 
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
-                     'scroll', 'map', 'focus', 'enter', 'leave',
-                     ):
+                     'scroll', 'map', 'focus', 'enter', 'leave'):
             self.enable_callback(name)
 
     def set_widget(self, canvas):
@@ -261,6 +261,13 @@ class ImageViewEvent(ImageViewTk):
         canvas.bind("<ButtonPress>", self.button_press_event)
         canvas.bind("<ButtonRelease>", self.button_release_event)
         canvas.bind("<Motion>", self.motion_notify_event)
+        if (sys.platform.startswith('darwin') or
+            sys.platform.startswith('win')):
+            # MacOS and Windows only
+            try:
+                canvas.bind("<MouseWheel>", self.scroll_event)
+            except Exception as e:
+                pass
 
         # TODO: Set up widget as a drag and drop destination
 
@@ -332,8 +339,7 @@ class ImageViewEvent(ImageViewTk):
 
                 return self.make_ui_callback_viewer(self, 'scroll', direction,
                                                     num_degrees, data_x, data_y)
-
-            button |= 0x1 << (event.num - 1)
+        button |= 0x1 << (event.num - 1)
         self._button = button
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
@@ -381,6 +387,26 @@ class ImageViewEvent(ImageViewTk):
 
         return self.make_ui_callback_viewer(self, 'motion', button,
                                             data_x, data_y)
+
+    def scroll_event(self, event):
+        x = event.x
+        y = event.y
+        self.last_win_x, self.last_win_y = x, y
+
+        if event.delta > 0:
+            direction = 0.0   # up
+        else:
+            direction = 180.0
+
+        # 15 deg is standard 1-click turn for a wheel mouse
+        num_degrees = 15.0
+        self.logger.debug("scroll deg=%f direction=%f" % (
+            num_degrees, direction))
+
+        data_x, data_y = self.check_cursor_location()
+
+        return self.make_ui_callback_viewer(self, 'scroll', direction,
+                                            num_degrees, data_x, data_y)
 
     ## def drop_event(self, widget, context, x, y, selection, targetType,
     ##                time):

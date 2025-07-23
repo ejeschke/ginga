@@ -20,6 +20,7 @@ Ver 5.4.0 (unreleased)
   switch (--rcport) to allow launch time changing of the port
 - Fixed an spurious error when closing Ginga after shutting down the RC
   plugin manually
+- A fix for the Tk widget on Windows and Mac OSX to allow proper scrolling
 
 Ver 5.3.0 (2025-04-02)
 ======================
