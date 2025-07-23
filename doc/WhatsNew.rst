@@ -22,6 +22,8 @@ Ver 5.4.0 (unreleased)
   plugin manually
 - A fix for the Tk widget on Windows and Mac OSX to allow proper scrolling
 
+- Added internal support for dask and zarr arrays
+
 Ver 5.3.0 (2025-04-02)
 ======================
 - Fixed an issue with editing objects in the Pick plugin
