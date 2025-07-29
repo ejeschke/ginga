@@ -11,6 +11,7 @@ import os
 import warnings
 
 # THIRD-PARTY
+import numpy as np
 from astropy.utils.exceptions import AstropyUserWarning
 from astropy.utils.data import get_pkg_data_path
 
@@ -130,6 +131,70 @@ def trim_prefix(text, nchr):
         res.append(line)
 
     return '\n'.join(res)
+
+
+def calc_decimal_places(a, b, max_decimals=15):
+    """
+    Returns the number of decimal places needed to clearly distinguish
+    two floating point numbers.
+
+    Parameters
+    ----------
+    a : float or int
+        First number.
+
+    b : float or int
+        Second number.
+
+    max_decimals: int
+        Maximum number of decimals to consider (default 15).
+
+    Returns
+    -------
+    precision : int
+        Number of decimal places needed.
+    """
+    if a == b:
+        return 0  # No difference to distinguish
+
+    diff = np.abs(a - b)
+    if diff == 0:
+        return 0
+
+    # Find the exponent of the difference
+    exponent = np.floor(np.log10(diff))
+    decimals_needed = int(max(0, -exponent + 1))
+
+    if max_decimals is not None:
+        decimals_needed = min(decimals_needed, max_decimals)
+
+    return decimals_needed
+
+
+def calc_float_strings(a, b, max_decimals=15):
+    """
+    Returns the string formatting of two floating point numbers.
+
+    Parameters
+    ----------
+    a : float
+        First number.
+
+    b : float
+        Second number.
+
+    max_decimals: int
+        Maximum number of decimals to consider (default 15).
+
+    Returns
+    -------
+    a_str, b_str : tuple of (str, str)
+        The string formatted numbers
+    """
+    precision = calc_decimal_places(a, b)
+    a_str = f"{a:.{precision}f}"
+    b_str = f"{b:.{precision}f}"
+    return a_str, b_str
 
 
 def generate_cfg_example(config_name, cfgpath='examples/configs', **kwargs):

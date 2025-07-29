@@ -69,6 +69,7 @@ import numpy as np
 from ginga.gw import Widgets
 from ginga import GingaPlugin
 from ginga import AutoCuts
+from ginga.util.toolbox import calc_float_strings
 
 try:
     from ginga.gw import Plot
@@ -407,8 +408,9 @@ class Histogram(GingaPlugin.LocalPlugin):
         ## for lbl in lbls:
         ##     lbl.set(rotation=45, horizontalalignment='right')
 
-        self.w.cut_low.set_text(str(loval))
-        self.w.cut_high.set_text(str(hival))
+        lo_str, hi_str = calc_float_strings(loval, hival)
+        self.w.cut_low.set_text(lo_str)
+        self.w.cut_high.set_text(hi_str)
         self.plot.fig.canvas.draw()
 
         if self.show_stats:
@@ -617,8 +619,9 @@ class Histogram(GingaPlugin.LocalPlugin):
                                            linestyle='-', color='black')
         self.hiline = self.plot.ax.axvline(hival, 0.0, 0.99,
                                            linestyle='-', color='black')
-        self.w.cut_low.set_text(str(loval))
-        self.w.cut_high.set_text(str(hival))
+        lo_str, hi_str = calc_float_strings(loval, hival)
+        self.w.cut_low.set_text(lo_str)
+        self.w.cut_high.set_text(hi_str)
         #self.plot.fig.canvas.draw()
         self.redo()
 

@@ -55,6 +55,7 @@ from ginga.rv.plugins.Toolbar import Toolbar
 from ginga.table.AstroTable import AstroTable
 from ginga.plot.Plotable import Plotable
 from ginga.canvas.CanvasObject import get_canvas_types
+from ginga.util.toolbox import calc_float_strings
 
 __all__ = ['Info', 'Info_Ginga_Image',
            'Info_Ginga_Plot', 'Info_Ginga_Table']
@@ -159,15 +160,16 @@ class Info_Ginga_Image(Info_Common):
         self.w.update(b)
         b.cut_levels.set_tooltip("Set cut levels manually")
         loval, hival = self.fitsimage.get_cut_levels()
+        lo_str, hi_str = calc_float_strings(loval, hival)
         b.auto_levels.set_tooltip("Set cut levels by algorithm")
         b.cut_low.set_tooltip("Set low cut level (press Enter)")
         b.cut_low.set_length(9)
-        b.cut_low.set_text(str(loval))
-        b.cut_low_value.set_text(str(loval))
+        b.cut_low.set_text(lo_str)
+        b.cut_low_value.set_text(lo_str)
         b.cut_high.set_tooltip("Set high cut level (press Enter)")
         b.cut_high.set_length(9)
-        b.cut_high.set_text(str(hival))
-        b.cut_high_value.set_text(str(hival))
+        b.cut_high.set_text(hi_str)
+        b.cut_high_value.set_text(hi_str)
 
         combobox = b.color_dist
         for name in ColorDist.get_dist_names():
@@ -268,10 +270,9 @@ class Info_Ginga_Image(Info_Common):
         if not self.gui_up:
             return
         loval, hival = value
-        #self.w.cut_low.set_text('%.4g' % (loval))
-        self.w.cut_low_value.set_text('%.4g' % (loval))
-        #self.w.cut_high.set_text('%.4g' % (hival))
-        self.w.cut_high_value.set_text('%.4g' % (hival))
+        lo_str, hi_str = calc_float_strings(loval, hival)
+        self.w.cut_low_value.set_text(lo_str)
+        self.w.cut_high_value.set_text(hi_str)
 
     def cdistset_cb(self, setting, value):
         if not self.gui_up:
@@ -347,10 +348,9 @@ class Info_Ginga_Image(Info_Common):
             return
         # Show cut levels
         loval, hival = self.fitsimage.get_cut_levels()
-        #self.w.cut_low.set_text('%.4g' % (loval))
-        self.w.cut_low_value.set_text('%.4g' % (loval))
-        #self.w.cut_high.set_text('%.4g' % (hival))
-        self.w.cut_high_value.set_text('%.4g' % (hival))
+        lo_str, hi_str = calc_float_strings(loval, hival)
+        self.w.cut_low_value.set_text(lo_str)
+        self.w.cut_high_value.set_text(hi_str)
 
         # update zoom indicator
         scalefactor = self.fitsimage.get_scale()
@@ -588,19 +588,21 @@ class Info_Ginga_Plot(Info_Common):
         """Populate axis limits GUI with current plot values."""
         ranges = self.plot_viewer.get_ranges()
         (x_lo, x_hi), (y_lo, y_hi) = ranges
+        x_lo_str, x_hi_str = calc_float_strings(x_lo, x_hi)
         if set_min:
-            self.w.x_lo.set_text('{0}'.format(x_lo))
+            self.w.x_lo.set_text(x_lo_str)
         if set_max:
-            self.w.x_hi.set_text('{0}'.format(x_hi))
+            self.w.x_hi.set_text(x_hi_str)
 
     def set_ylimits_widgets(self, set_min=True, set_max=True):
         """Populate axis limits GUI with current plot values."""
         ranges = self.plot_viewer.get_ranges()
         (x_lo, x_hi), (y_lo, y_hi) = ranges
+        y_lo_str, y_hi_str = calc_float_strings(y_lo, y_hi)
         if set_min:
-            self.w.y_lo.set_text('{0}'.format(y_lo))
+            self.w.y_lo.set_text(y_lo_str)
         if set_max:
-            self.w.y_hi.set_text('{0}'.format(y_hi))
+            self.w.y_hi.set_text(y_hi_str)
 
     def x_dist_cb(self, w, index):
         _dist = w.get_text().lower()

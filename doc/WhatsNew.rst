@@ -21,6 +21,7 @@ Ver 5.4.0 (unreleased)
 - Fixed an spurious error when closing Ginga after shutting down the RC
   plugin manually
 - A fix for the Tk widget on Windows and Mac OSX to allow proper scrolling
+- Better formatting of cuts and plot limits (limit excessive decimals)
 
 Ver 5.3.0 (2025-04-02)
 ======================
