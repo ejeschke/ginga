@@ -1719,7 +1719,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
     def add_dialogs(self):
         if hasattr(Widgets, 'FileDialog'):
-            self.filesel = Widgets.FileDialog(title="Load File")
+            self.filesel = Widgets.FileDialog(title="Load File",
+                                              parent=self.w.root)
             self.filesel.add_callback('activated', self.load_file_cb)
 
     def add_statusbar(self, holder):

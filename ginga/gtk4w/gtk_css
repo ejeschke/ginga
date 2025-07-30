@@ -1,5 +1,5 @@
 /*
- CSS for styling Gtk3 widgets
+ CSS for styling Gtk4 widgets
  */
 
 /*
@@ -12,6 +12,7 @@ GtkToggleButton {
     border: 1px solid;
     padding: 1px;
 }
+
 /*
 GtkToolbar GtkToggleButton:checked {
     background-color: shade (@theme_bg_color, 0.9);

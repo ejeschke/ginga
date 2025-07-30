@@ -44,7 +44,7 @@ class WidgetBase(Callback.Callbacks):
         super(WidgetBase, self).__init__()
 
         self.widget = None
-        self._widget_name = str(id(self))
+        self._widget_name = f"W{id(self)}"
         # external data can be attached here
         self.extdata = Bunch.Bunch()
 
@@ -105,7 +105,7 @@ class WidgetBase(Callback.Callbacks):
     def _set_name(self, obj):
         name = obj.objectName()
         if name is None or len(name) == 0:
-            name = str(id(obj))
+            name = f"W{id(obj)}"
         obj.setObjectName(name)
         self._widget_name = name
         return name
@@ -300,6 +300,13 @@ class TextArea(WidgetBase):
             self.widget.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
         else:
             self.widget.setLineWrapMode(QtGui.QTextEdit.NoWrap)
+
+    def set_scroll_pos(self, pos):
+        vsb = self.widget.verticalScrollBar()
+        if pos == -1:
+            vsb.setValue(vsb.maximum())
+        else:
+            vsb.setValue(pos)
 
 
 class Label(WidgetBase):

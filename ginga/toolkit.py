@@ -76,8 +76,11 @@ def choose():
         from ginga.qtw import QtHelp  # noqa
     except ImportError:
         try:
-            from ginga.gtkw3 import GtkHelp  # noqa
-        except ImportError:
-            raise ImportError("qt or gtk variants not found")
+            from ginga.gtk3w import GtkHelp  # noqa
+        except (ImportError, ValueError) as e:
+            try:
+                from ginga.gtk4w import GtkHelp  # noqa
+            except (ImportError, ValueError) as e:
+                raise ImportError("qt or gtk variants not found")
 
 # END

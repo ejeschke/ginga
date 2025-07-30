@@ -16,11 +16,14 @@ from ginga.misc import Bunch, Callback
 from ginga.fonts import font_asst
 from ginga.util.paths import icondir, app_icon_path
 import ginga.toolkit
+from ginga.util import icon_helper
 
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk  # noqa
 from gi.repository import Gdk  # noqa
+from gi.repository import GLib  # noqa
+from gi.repository import Gio  # noqa
 from gi.repository import GdkPixbuf  # noqa
 from gi.repository import GObject  # noqa
 from gi.repository import Pango  # noqa
@@ -334,8 +337,14 @@ class MDISubWindow(Callback.Callbacks):
         frame = Gtk.EventBox()
         frame.set_size_request(self.width, self.height)
         frame.props.visible_window = True
-        frame.set_border_width(0)
-        modify_bg(frame, "gray70")
+
+        # set a nice border around the subwindow
+        context = frame.get_style_context()
+        context.add_class("custom_bg")
+        css_data = "*.custom_bg { background-image: none; background-color: gray85; border-color: black; border-style: solid; border-width: 1px; }"
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(css_data.encode())
+        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         self.frame = frame
 
         frame.add(vbox)
@@ -379,7 +388,7 @@ class MDIWidget(Gtk.Layout):
         self.kbdmouse_mask = 0
         self.cascade_offset = 50
         self.minimized_width = 150
-        self.delta_px = 50
+        self.delta_px = 15
 
         mask = self.get_events()
         self.set_events(mask |
@@ -417,8 +426,8 @@ class MDIWidget(Gtk.Layout):
         # in order to accurately determine its position and size
         #self.update_subwin_position(subwin)
         #self.update_subwin_size(subwin)
-        GObject.timeout_add(1000, self.update_subwin_position, subwin)
-        GObject.timeout_add(1500, self.update_subwin_size, subwin)
+        GLib.timeout_add(1000, self.update_subwin_position, subwin)
+        GLib.timeout_add(1500, self.update_subwin_size, subwin)
 
         self._update_area_size()
 
@@ -567,9 +576,12 @@ class MDIWidget(Gtk.Layout):
             # bottom
             origin = 'b'
             updates = set(['h'])
-        else:
+        elif abs(y - y1) < self.delta_px:
             origin = 't'
             updates = set(['h', 'y'])
+        else:
+            origin = '@'
+            updates = []
 
         self.selected_child = Bunch.Bunch(subwin=subwin, action='resize',
                                           x_origin=x1, y_origin=y1,
@@ -1028,7 +1040,16 @@ class Splitter(Gtk.Layout):
         if button == 0x1:
             pos = x if self.orientation == 'horizontal' else y
             sizes = list(self._sizes)
-            sizes[i] = self._calc_size(i, pos)
+            old_size = sizes[i]
+            new_size = self._calc_size(i, pos)
+            sizes[i] = new_size
+            if i < len(sizes) - 1:
+                # adjust space in next pane over to account for size adjustment
+                # in this pane
+                diff = new_size - old_size
+                neighbor_size = sizes[i + 1]
+                neighbor_size = max(self.thumb_px, neighbor_size - diff)
+                sizes[i + 1] = neighbor_size
             self.set_sizes(sizes)
         return True
 
@@ -1636,7 +1657,7 @@ class Timer(Callback.Callbacks):
         self.deadline = self.start_time + duration
         # Gtk timer set in milliseconds
         time_ms = int(duration * 1000.0)
-        self._timer = GObject.timeout_add(time_ms, self._redirect_cb)
+        self._timer = GLib.timeout_add(time_ms, self._redirect_cb)
 
     def _redirect_cb(self):
         self._timer = None
@@ -1798,11 +1819,41 @@ def pixbuf_new_from_data(rgb_buf, rgbtype, hasAlpha, bpp, dawd, daht, stride):
                                           dawd, daht, stride, None, None)
 
 
-def pixbuf_new_from_file_at_size(foldericon, width, height):
-    return GdkPixbuf.Pixbuf.new_from_file_at_size(foldericon, width, height)
+def pixbuf_new_from_file_at_size(file_path, width, height):
+    _, ext = os.path.splitext(file_path)
+    if ext.lower() == '.svg' and icon_helper.have_cairosvg:
+        try:
+            b_io = icon_helper.load_svg_to_pngbuf(file_path, wd_px=width,
+                                                  ht_px=height)
+            gbytes = GLib.Bytes.new(b_io.getvalue())
+            pixbuf = GdkPixbuf.Pixbuf.new_from_stream_at_scale(
+                stream=Gio.MemoryInputStream.new_from_bytes(gbytes),
+                width=-1,  # to keep original width
+                height=-1,  # to keep original height
+                preserve_aspect_ratio=True,
+                cancellable=None)
+            return pixbuf
+
+        except Exception as e:
+            pass
+
+    return GdkPixbuf.Pixbuf.new_from_file_at_size(file_path, width, height)
 
 
 def pixbuf_new_from_file(file_path):
+    _, ext = os.path.splitext(file_path)
+    if ext.lower() == '.svg' and icon_helper.have_cairosvg:
+        try:
+            b_io = icon_helper.load_svg_to_pngbuf(file_path)
+            gbytes = GLib.Bytes.new(b_io.getvalue())
+            pixbuf = GdkPixbuf.Pixbuf.new_from_stream(
+                stream=Gio.MemoryInputStream.new_from_bytes(gbytes),
+                cancellable=None)
+            return pixbuf
+
+        except Exception as e:
+            pass
+
     return GdkPixbuf.Pixbuf.new_from_file(file_path)
 
 

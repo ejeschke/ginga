@@ -383,7 +383,7 @@ class ImageViewBase(Callback.Callbacks):
             The height of the window in pixels.
 
         """
-        width, height = int(width), int(height)
+        width, height = int(max(width, 1)), int(max(height, 1))
         self._imgwin_wd = width
         self._imgwin_ht = height
         self.logger.debug("widget resized to %dx%d" % (width, height))

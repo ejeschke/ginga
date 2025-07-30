@@ -16,11 +16,14 @@ from ginga.misc import Bunch, Callback
 from ginga.fonts import font_asst
 from ginga.util.paths import icondir, app_icon_path
 import ginga.toolkit
+from ginga.util import icon_helper
 
 import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk  # noqa
 from gi.repository import Gdk  # noqa
+from gi.repository import GLib  # noqa
+from gi.repository import Gio  # noqa
 from gi.repository import GdkPixbuf  # noqa
 from gi.repository import GObject  # noqa
 from gi.repository import Pango  # noqa
@@ -253,28 +256,29 @@ class MultiDragDropTreeView(Gtk.TreeView):
         self.add_controller(event)
         self.defer_select = False
 
-    def on_button_press(self, widget, event):
+    def on_button_press(self, event, n_clicks, x, y):
         # Here we intercept mouse clicks on selected items so that we can
         # drag multiple items without the click selecting only one
-        target = self.get_path_at_pos(int(event.x), int(event.y))
+        state = event.get_current_event_state()
+        target = self.get_path_at_pos(int(x), int(y))
         if (target and
-                event.type == Gdk.EventType.BUTTON_PRESS and
-                not (event.state &
-                     (Gdk.ModifierType.CONTROL_MASK |
-                      Gdk.ModifierType.SHIFT_MASK)) and
-                self.get_selection().path_is_selected(target[0])):
+            not (state &
+                 (Gdk.ModifierType.CONTROL_MASK |
+                  Gdk.ModifierType.SHIFT_MASK)) and
+            self.get_selection().path_is_selected(target[0])):
             # disable selection
             self.get_selection().set_select_function(lambda *ignore: False)
             self.defer_select = target[0]
 
-    def on_button_release(self, widget, event):
+    def on_button_release(self, event, n_clicks, x, y):
         # re-enable selection
         self.get_selection().set_select_function(lambda *ignore: True)
 
-        target = self.get_path_at_pos(int(event.x), int(event.y))
+        x, y = int(x), int(y)
+        target = self.get_path_at_pos(x, y)
         if (self.defer_select and target and
                 self.defer_select == target[0] and
-                not (event.x == 0 and event.y == 0)):  # certain drag and drop
+                not (x == 0 and y == 0)):  # certain drag and drop
             self.set_cursor(target[0], target[1], False)
 
         self.defer_select = False
@@ -287,6 +291,7 @@ class MDISubWindow(Callback.Callbacks):
 
         self.widget = widget
         self.border_wd = 6
+        self.mdi_area = None
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         set_border_width(vbox, self.border_wd)
@@ -298,7 +303,7 @@ class MDISubWindow(Callback.Callbacks):
         if iconpath is None:
             iconpath = app_icon_path
         pixbuf = pixbuf_new_from_file_at_size(iconpath, 32, 32)
-        self.image = Gtk.Image.new_from_pixbuf(pixbuf)
+        self.image = Gtk.Picture.new_for_pixbuf(pixbuf)
         hbox.append(self.image)
 
         modify_bg(label, "gray90")
@@ -309,19 +314,19 @@ class MDISubWindow(Callback.Callbacks):
         # titlebar buttons
         iconfile = os.path.join(icondir, "close.svg")
         pixbuf = pixbuf_new_from_file_at_size(iconfile, 24, 24)
-        image = Gtk.Image.new_from_pixbuf(pixbuf)
+        image = Gtk.Picture.new_for_pixbuf(pixbuf)
         close = Gtk.Button()
         modify_bg(close, "gray90")
         close.set_child(image)
         iconfile = os.path.join(icondir, "maximize.svg")
         pixbuf = pixbuf_new_from_file_at_size(iconfile, 24, 24)
-        image = Gtk.Image.new_from_pixbuf(pixbuf)
+        image = Gtk.Picture.new_for_pixbuf(pixbuf)
         maxim = Gtk.Button()
         modify_bg(maxim, "gray90")
         maxim.set_child(image)
         iconfile = os.path.join(icondir, "minimize.svg")
         pixbuf = pixbuf_new_from_file_at_size(iconfile, 24, 24)
-        image = Gtk.Image.new_from_pixbuf(pixbuf)
+        image = Gtk.Picture.new_for_pixbuf(pixbuf)
         minim = Gtk.Button()
         modify_bg(minim, "gray90")
         minim.set_child(image)
@@ -344,8 +349,14 @@ class MDISubWindow(Callback.Callbacks):
         vbox.append(widget)
 
         frame = Gtk.Frame()
-        modify_bg(frame, "gray70")
         frame.set_child(vbox)
+        # set a nice border around the subwindow
+        context = frame.get_style_context()
+        context.add_class("custom_bg")
+        css_data = "*.custom_bg { background-image: none; background-color: gray85; border-color: black; border-style: solid; border-width: 1px; }"
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(css_data.encode())
+        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         self.frame = frame
 
         for name in ('close', 'maximize', 'minimize'):
@@ -357,59 +368,65 @@ class MDISubWindow(Callback.Callbacks):
 
     def set_icon(self, iconpath):
         pixbuf = pixbuf_new_from_file_at_size(iconpath, 32, 32)
-        self.image.set_from_pixbuf(pixbuf)
+        self.image.set_for_pixbuf(pixbuf)
 
     def raise_(self):
-        # TODO!
-        #self.frame.raise_()
-        parent = self.frame.get_parent()
-        parent.raise_subwin(self)
+        if self.mdi_area is not None:
+            self.mdi_area.raise_subwin(self)
 
     def lower(self):
-        # TODO
-        #self.frame.lower()
-        parent = self.frame.get_parent()
-        parent.lower_subwin(self)
+        if self.mdi_area is not None:
+            self.mdi_area.lower_subwin(self)
 
     def focus(self):
         self.frame.grab_focus()
 
 
-class MDIWidget(Gtk.Fixed):
+class MDIWidget:
     """
     Multiple Document Interface type widget for Gtk.
     """
     def __init__(self):
-        Gtk.Fixed.__init__(self)
-
         self.children = []
         self.cur_index = -1
         self.selected_child = None
         self.kbdmouse_mask = 0
         self.cascade_offset = 50
         self.minimized_width = 150
-        self.delta_px = 50
+        self.delta_px = 15
+
+        # TODO: currently scrollbars are only partially working
+        self.widget = Gtk.Fixed()
+        sw = Gtk.ScrolledWindow()
+        sw.set_has_frame(True)
+        set_border_width(sw, 2)
+        sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        sw.set_child(self.widget)
+        vp = sw.get_child()
+        vp.set_scroll_to_focus(False)
+        self.sw = sw
 
         controller = Gtk.EventControllerMotion.new()
         controller.connect("motion", self.motion_notify_event)
-        self.add_controller(controller)
+        self.widget.add_controller(controller)
         controller = Gtk.GestureClick.new()
         controller.connect("pressed", self.button_press_event)
         controller.connect("released", self.button_release_event)
         # all buttons
         controller.set_button(0)
-        self.add_controller(controller)
+        self.widget.add_controller(controller)
         self._button_controller = controller
         event = Gtk.EventControllerScroll.new(
             Gtk.EventControllerScrollFlags.BOTH_AXES)
         event.connect("scroll", self.scroll_event)
-        self.add_controller(event)
+        self.widget.add_controller(event)
 
-        modify_bg(self, "gray50")
+        modify_bg(self.widget, "gray50")
 
     def add_subwin(self, subwin):
 
         self.children.append(subwin)
+        subwin.mdi_area = self
 
         event = Gtk.GestureClick.new()
         event.connect("pressed", self.select_child_cb, subwin)
@@ -421,7 +438,7 @@ class MDIWidget(Gtk.Fixed):
         subwin.add_callback('maximize', lambda *args: self.maximize_page(subwin))
         subwin.add_callback('minimize', lambda *args: self.minimize_page(subwin))
 
-        self.put(subwin.frame, subwin.x, subwin.y)
+        self.widget.put(subwin.frame, subwin.x, subwin.y)
 
         # note: seem to need a slight delay to let the widget be mapped
         # in order to accurately determine its position and size
@@ -432,12 +449,16 @@ class MDIWidget(Gtk.Fixed):
 
         self._update_area_size()
 
+    def get_mdi_wdht(self):
+        wd, ht = self.sw.get_width(), self.sw.get_height()
+        return wd, ht
+
     def append_page(self, widget, label):
 
         subwin = MDISubWindow(widget, label)
 
         # pick a random spot to place the window initially
-        wd, ht = self.get_width(), self.get_height()
+        wd, ht = self.get_mdi_wdht()
         x = random.randint(self.cascade_offset,  # nosec
                            max(self.cascade_offset + 10, wd // 2))
         y = random.randint(self.cascade_offset,  # nosec
@@ -492,12 +513,12 @@ class MDIWidget(Gtk.Fixed):
             self.children.remove(subwin)
             self.cur_index = -1
             frame = subwin.frame
-            #super(MDIWidget, self).remove(frame)
+            self.widget.remove(frame)
             widget.unparent()
         self._update_area_size()
 
     def get_widget_position(self, widget):
-        x, y = self.get_child_position(widget)
+        x, y = self.widget.get_child_position(widget)
         x, y = int(x), int(y)
         return x, y
 
@@ -515,15 +536,15 @@ class MDIWidget(Gtk.Fixed):
 
     def raise_subwin(self, subwin):
         self.update_subwin_position(subwin)
-        super().remove(subwin.frame)
-        self.put(subwin.frame, subwin.x, subwin.y)
+        self.widget.remove(subwin.frame)
+        self.widget.put(subwin.frame, subwin.x, subwin.y)
 
     def lower_subwin(self, subwin):
         #subwin.raise_()
         pass
 
-    def select_child_cb(self, gesture, whatsit, x, y, subwin):
-        x_root, y_root = subwin.title.translate_coordinates(self, x, y)
+    def select_child_cb(self, event, whatsit, x, y, subwin):
+        x_root, y_root = subwin.title.translate_coordinates(self.widget, x, y)
 
         x, y = self.get_widget_position(subwin.frame)
         subwin.x, subwin.y = x, y
@@ -536,16 +557,16 @@ class MDIWidget(Gtk.Fixed):
         self.selected_child = Bunch.Bunch(subwin=subwin, action='move',
                                           x_origin=x, y_origin=y,
                                           x_root=x_root, y_root=y_root)
-        #gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        event.set_state(Gtk.EventSequenceState.CLAIMED)
         return True
 
-    def start_resize_cb(self, gesture, whatit, x, y, subwin):
+    def start_resize_cb(self, event, whatit, x, y, subwin):
         if self.selected_child is not None:
             # move is being done
             return True
         self.update_subwin_size(subwin)
 
-        x_root, y_root = subwin.frame.translate_coordinates(self, x, y)
+        x_root, y_root = subwin.frame.translate_coordinates(self.widget, x, y)
         x, y = x_root, y_root
 
         x1, y1 = self.get_widget_position(subwin.frame)
@@ -583,20 +604,23 @@ class MDIWidget(Gtk.Fixed):
             # bottom
             origin = 'b'
             updates = set(['h'])
-        else:
+        elif abs(y - y1) < self.delta_px:
             origin = 't'
             updates = set(['h', 'y'])
+        else:
+            origin = '@'
+            updates = []
 
         self.selected_child = Bunch.Bunch(subwin=subwin, action='resize',
                                           x_origin=x1, y_origin=y1,
                                           wd=wd, ht=ht,
                                           x_root=x_root, y_root=y_root,
                                           origin=origin, updates=updates)
-        #gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        event.set_state(Gtk.EventSequenceState.CLAIMED)
         return True
 
-    def button_press_event(self, gesture, whatsit, x, y):
-        # event_button = gesture.get_current_button()
+    def button_press_event(self, event, whatsit, x, y):
+        # event_button = event.get_current_button()
         # button = 0
         # if event_button != 0:
         #     button |= 0x1 << (event_button - 1)
@@ -604,7 +628,7 @@ class MDIWidget(Gtk.Fixed):
         return True
 
     def _update_area_size(self):
-        mx_wd, mx_ht = self.get_width(), self.get_height()
+        mx_wd, mx_ht = self.get_mdi_wdht()
 
         for subwin in self.children:
             x, y = self.get_widget_position(subwin.frame)
@@ -645,7 +669,7 @@ class MDIWidget(Gtk.Fixed):
                     ht = bnch.ht + -abs(dy)
 
             # this works better if it is not self.move_page()
-            self.move(subwin.frame, x, y)
+            self.widget.move(subwin.frame, x, y)
 
         if 'w' in updates or 'h' in updates:
             # this works better if it is not self.resize_page()
@@ -704,7 +728,7 @@ class MDIWidget(Gtk.Fixed):
                 x = int(subwin.x + (x_root - bnch.x_root))
                 y = int(subwin.y + (y_root - bnch.y_root))
                 # this works better if it is not self.move_page()
-                self.move(subwin.frame, x, y)
+                self.widget.move(subwin.frame, x, y)
 
             elif bnch.action == 'resize':
                 self._resize(bnch, x_root, y_root)
@@ -727,7 +751,7 @@ class MDIWidget(Gtk.Fixed):
             cols += 1
 
         # find out how big each window should be
-        width, height = self.get_width(), self.get_height()
+        width, height = self.get_mdi_wdht()
         wd, ht = width // cols, height // rows
 
         # and move and resize them into place
@@ -742,47 +766,51 @@ class MDIWidget(Gtk.Fixed):
                     x, y = j * wd, i * ht
                     self.move_page(subwin, x, y)
 
-                    subwin.raise_()
-
         self._update_area_size()
 
     def cascade_pages(self):
         x, y = 0, 0
         for subwin in self.children:
             self.move_page(subwin, x, y)
-            subwin.raise_()
             x += self.cascade_offset
             y += self.cascade_offset
 
         self._update_area_size()
 
+        # NOTE: hack necessary to stack windows in the correct order
+        # after cascading.  If we try to raise them in the same loop
+        # they do not get moved
+        def _raise_children():
+            for subwin in self.children:
+                self.raise_subwin(subwin)
+
+        GLib.timeout_add(300, _raise_children)
+
     def use_tabs(self, tf):
         pass
 
     def set_size(self, wd, ht):
-        self.set_size_request(wd, ht)
+        self.widget.set_size_request(wd, ht)
 
     def move_page(self, subwin, x, y):
-        self.move(subwin.frame, x, y)
         subwin.x, subwin.y = x, y
+        self.widget.move(subwin.frame, x, y)
 
     def resize_page(self, subwin, wd, ht):
         subwin.frame.set_size_request(wd, ht)
         subwin.width, subwin.height = wd, ht
 
     def maximize_page(self, subwin):
-        widget = self.get_parent()
-        wd, ht = widget.get_width(), widget.get_height()
+        width, height = self.get_mdi_wdht()
 
         subwin.raise_()
-        self.resize_page(subwin, wd, ht)
+        self.resize_page(subwin, width, height)
         self.move_page(subwin, 0, 0)
 
         self._update_area_size()
 
     def minimize_page(self, subwin):
-        widget = self.get_parent()
-        height = widget.get_height()
+        width, height = self.get_mdi_wdht()
 
         x, _ = self.get_widget_position(subwin.frame)
 
@@ -846,7 +874,7 @@ class Splitter(Gtk.Fixed):
                 widget.set_vexpand(True)
             iconfile = os.path.join(icondir, thumbfile)
             pixbuf = pixbuf_new_from_file_at_size(iconfile, _w, _h)
-            image = Gtk.Image.new_from_pixbuf(pixbuf)
+            image = Gtk.Picture.new_for_pixbuf(pixbuf)
             #modify_bg(thumb, "gray90")
             thumb = image
 
@@ -1049,7 +1077,16 @@ class Splitter(Gtk.Fixed):
         if button == 0x1:
             pos = x if self.orientation == 'horizontal' else y
             sizes = list(self._sizes)
-            sizes[i] = self._calc_size(i, pos)
+            old_size = sizes[i]
+            new_size = self._calc_size(i, pos)
+            sizes[i] = new_size
+            if i < len(sizes) - 1:
+                # adjust space in next pane over to account for size adjustment
+                # in this pane
+                diff = new_size - old_size
+                neighbor_size = sizes[i + 1]
+                neighbor_size = max(self.thumb_px, neighbor_size - diff)
+                sizes[i + 1] = neighbor_size
             self.set_sizes(sizes)
         return True
 
@@ -1767,11 +1804,6 @@ def load_font(font_name, font_file):
     return font_name
 
 
-# def pixbuf_new_from_xpm_data(xpm_data):
-#     xpm_data = bytes('\n'.join(xpm_data))
-#     return GdkPixbuf.Pixbuf.new_from_xpm_data(xpm_data)
-
-
 # def pixbuf_new_from_array(data, rgbtype, bpp):
 #     # NOTE: there is a bug in gtk4 with pixbuf_new_from_array()
 #     # See: http://stackoverflow.com/questions/24062779/how-to-correctly-covert-3d-array-into-continguous-rgb-bytes/24070152#24070152
@@ -1792,12 +1824,43 @@ def load_font(font_name, font_file):
 #                                           dawd, daht, stride, None, None)
 
 
-def pixbuf_new_from_file_at_size(foldericon, width, height):
-    return GdkPixbuf.Pixbuf.new_from_file_at_size(foldericon, width, height)
+def pixbuf_new_from_file_at_size(file_path, width, height):
+    _, ext = os.path.splitext(file_path)
+    if ext.lower() == '.svg' and icon_helper.have_cairosvg:
+        try:
+            b_io = icon_helper.load_svg_to_pngbuf(file_path, wd_px=width,
+                                                  ht_px=height)
+            gbytes = GLib.Bytes.new(b_io.getvalue())
+            pixbuf = GdkPixbuf.Pixbuf.new_from_stream_at_scale(
+                stream=Gio.MemoryInputStream.new_from_bytes(gbytes),
+                width=-1,  # to keep original width
+                height=-1,  # to keep original height
+                preserve_aspect_ratio=True,
+                cancellable=None)
+            return pixbuf
+
+        except Exception as e:
+            pass
+
+    return GdkPixbuf.Pixbuf.new_from_file_at_size(file_path, width, height)
 
 
 def pixbuf_new_from_file(file_path):
-    return GdkPixbuf.Pixbuf.new_from_file(file_path)
+    _, ext = os.path.splitext(file_path)
+    if ext.lower() == '.svg' and icon_helper.have_cairosvg:
+        try:
+            b_io = icon_helper.load_svg_to_pngbuf(file_path)
+            gbytes = GLib.Bytes.new(b_io.getvalue())
+            pixbuf = GdkPixbuf.Pixbuf.new_from_stream(
+                stream=Gio.MemoryInputStream.new_from_bytes(gbytes),
+                cancellable=None)
+            return pixbuf
+
+        except Exception as e:
+            pass
+
+    pixbuf = GdkPixbuf.Pixbuf.new_from_file(file_path)
+    return pixbuf
 
 
 def make_cursor(widget, iconpath, x, y, size=None):

@@ -6,14 +6,18 @@
 #
 
 import os.path
+import pathlib
 from functools import reduce
 
 from ginga.gtk3w import GtkHelp
+from ginga import colors
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
+from ginga.util.syncops import Shelf
 
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import GdkPixbuf
 
@@ -25,8 +29,9 @@ __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
-           'Dialog', 'SaveDialog', 'DragPackage', 'WidgetMoveEvent',
-           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
+           'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog', 'DragPackage',
+           'WidgetMoveEvent', 'name_mangle', 'make_widget', 'hadjust',
+           'build_info', 'wrap']
 
 
 class WidgetError(Exception):
@@ -47,6 +52,7 @@ class WidgetBase(Callback.Callbacks):
         super(WidgetBase, self).__init__()
 
         self.widget = None
+        self._widget_name = f"W{id(self)}"
         # external data can be attached here
         self.extdata = Bunch.Bunch()
 
@@ -109,11 +115,20 @@ class WidgetBase(Callback.Callbacks):
         # hackish way to allow the widget to be resized down again later
         # NOTE: this may cause some problems for sizing certain widgets
         if width > 0 and height > 0:
-            GObject.idle_add(self.widget.set_size_request, -1, -1)
+            GLib.idle_add(self.widget.set_size_request, -1, -1)
 
     def get_font(self, font_family, point_size):
         font = GtkHelp.get_font(font_family, point_size)
         return font
+
+    def _set_name(self, obj):
+        name = f"W{id(obj)}"
+        self._widget_name = name
+        obj.set_name(name)
+        return name
+
+    def _get_name(self):
+        return self._widget_name
 
     def cfg_expand(self, horizontal='fixed', vertical='fixed'):
         # this is for compatibility with Qt widgets
@@ -130,6 +145,8 @@ class TextEntry(WidgetBase):
         super(TextEntry, self).__init__()
 
         w = Gtk.Entry()
+        w.set_hexpand(True)
+        w.set_halign(Gtk.Align.FILL)
         w.set_text(text)
         w.set_editable(editable)
         w.connect('key-press-event', self._key_press_event)
@@ -191,6 +208,8 @@ class TextEntrySet(WidgetBase):
         hbox = Gtk.HBox()
         hbox.set_spacing(4)
         w = Gtk.Entry()
+        w.set_hexpand(True)
+        w.set_halign(Gtk.Align.FILL)
         w.set_text(text)
         w.set_editable(editable)
         hbox.pack_start(w, True, True, 0)
@@ -312,12 +331,24 @@ class TextArea(WidgetBase):
         else:
             self.tw.set_wrap_mode(Gtk.WrapMode.NONE)
 
+    def set_scroll_pos(self, pos):
+        vadj = self.widget.get_vadjustment()
+        if pos == -1:
+            vadj.set_value(vadj.get_upper())
+        else:
+            vadj.set_value(pos)
+
 
 class Label(WidgetBase):
     def __init__(self, text='', halign='left', style='normal', menu=None):
         super(Label, self).__init__()
 
         label = Gtk.Label(text)
+        pad = 2
+        label.set_margin_start(pad)
+        label.set_margin_end(pad)
+        label.set_margin_top(1)
+        label.set_margin_bottom(1)
         evbox = Gtk.EventBox()
         evbox.set_border_width(0)
         evbox.props.visible_window = False
@@ -384,6 +415,17 @@ class Label(WidgetBase):
         if fg is not None:
             self.label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(fg))
 
+    def set_halign(self, align):
+        align = align.lower()
+        if align == 'left':
+            self.label.set_justify(Gtk.Justification.LEFT)
+        elif align == 'center':
+            self.label.set_justify(Gtk.Justification.CENTER)
+        elif align == 'right':
+            self.label.set_justify(Gtk.Justification.RIGHT)
+        else:
+            raise ValueError(f"Don't understand alignment '{align}'")
+
 
 class Button(WidgetBase):
     def __init__(self, text=''):
@@ -391,6 +433,7 @@ class Button(WidgetBase):
 
         w = Gtk.Button(text)
         self.widget = w
+        self._set_name(w)
         w.connect('clicked', self._cb_redirect)
 
         self.enable_callback('activated')
@@ -400,6 +443,26 @@ class Button(WidgetBase):
 
     def get_text(self):
         return self.widget.get_label()
+
+    def set_color(self, bg=None, fg=None):
+        if bg is not None:
+            bg_tup = colors.resolve_color(bg)
+            bg_hex = colors.get_hex(bg_tup)
+            # NOTE: background-image must be none
+            content = f"background-image: none; background-color: {bg_hex};"
+        if fg is not None:
+            fg_tup = colors.resolve_color(fg)
+            fg_hex = colors.get_hex(fg_tup)
+            content = f"{content} color: {fg_hex};"
+        if len(content) == 0:
+            return
+        context = self.widget.get_style_context()
+        myname = self._get_name()
+        context.add_class(myname)
+        css_data = "*.%s { %s }" % (myname, content)
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(css_data.encode())
+        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
     def _cb_redirect(self, *args):
         self.make_callback('activated')
@@ -786,8 +849,8 @@ class StatusBar(WidgetBase):
             GObject.source_remove(self.statustask)
             self.statustask = None
         if duration > 0.0:
-            self.statustask = GObject.timeout_add(int(1000 * duration),
-                                                  self.clear_message)
+            self.statustask = GLib.timeout_add(int(1000 * duration),
+                                               self.clear_message)
 
 
 class TreeView(WidgetBase):
@@ -826,17 +889,22 @@ class TreeView(WidgetBase):
 
         self.tv = tv
         sw.add(self.tv)
-        tv.connect('cursor-changed', self._selection_cb)
         tv.connect('row-activated', self._cb_redirect)
+        tv.connect('row-collapsed', self._row_collapsed_cb)
+        tv.connect('row-expanded', self._row_expanded_cb)
         # needed to get alternating row colors
         if use_alt_row_color:
             tv.set_rules_hint(True)
+        treeselection = tv.get_selection()
+        treeselection.connect('changed', self._selection_cb)
         if self.selection == 'multiple':
             # enable multiple selection
-            treeselection = tv.get_selection()
             treeselection.set_mode(Gtk.SelectionMode.MULTIPLE)
+        self._selection_shelf = Shelf()
+        self._selection_stocker = self._selection_shelf.get_stocker()
 
-        for cbname in ('selected', 'activated', 'drag-start'):
+        for cbname in ('selected', 'activated', 'drag-start',
+                       'collapsed', 'expanded'):
             self.enable_callback(cbname)
 
     def setup_table(self, columns, levels, leaf_key):
@@ -899,18 +967,18 @@ class TreeView(WidgetBase):
         model = Gtk.TreeStore(object)
         self._add_tree(model, tree_dict)
 
-    def add_tree(self, tree_dict):
+    def add_tree(self, tree_dict, expand_new=False):
         model = self.tv.get_model()
-        self._add_tree(model, tree_dict)
+        self._add_tree(model, tree_dict, expand_new=expand_new)
 
-    def _add_tree(self, model, tree_dict):
+    def _add_tree(self, model, tree_dict, expand_new=False):
 
         # Hack to get around slow TreeView scrolling with large lists
         self.tv.set_fixed_height_mode(False)
 
-        for key in tree_dict:
-            self._add_subtree(1, self.shadow,
-                              model, None, key, tree_dict[key])
+        #self._del_subtree(1, self.shadow, model, tree_dict)
+        self._add_subtree(1, self.shadow, model, None, tree_dict,
+                          expand_new=expand_new)
 
         self.tv.set_model(model)
 
@@ -920,46 +988,98 @@ class TreeView(WidgetBase):
         if self.auto_expand:
             self.tv.expand_all()
 
-    def _add_subtree(self, level, shadow, model, parent_item, key, node):
+    def update_tree(self, tree_dict, expand_new=False):
+        model = self.tv.get_model()
+        self._del_subtree(1, self.shadow, model, tree_dict)
+        self._add_subtree(1, self.shadow, model, None, tree_dict,
+                          expand_new=expand_new)
 
-        if level >= self.levels:
-            # leaf node
-            try:
-                bnch = shadow[key]
+    def _del_subtree(self, level, shadow, model, tree):
+        """prune elements from widget that are not in the new tree"""
+
+        for key in list(shadow.keys()):
+            bnch = shadow[key]
+            if key not in tree:
                 item_iter = bnch.item
-                # TODO: update leaf item
+                del shadow[key]
+                model.remove(item_iter)
 
-            except KeyError:
-                # new item
-                item_iter = model.append(parent_item, [node])
-                shadow[key] = Bunch.Bunch(node=node, item=item_iter,
-                                          terminal=True)
+            else:
+                if level < self.levels:
+                    self._del_subtree(level + 1, bnch.node, model, tree[key])
 
-        else:
-            try:
-                # node already exists
-                bnch = shadow[key]
-                item = bnch.item
-                d = bnch.node
+    def _add_subtree(self, level, shadow, model, parent_item, tree,
+                     expand_new=False):
+        """add/update elements from widget that are in the new tree"""
 
-            except KeyError:
-                # new node
-                item = model.append(None, [str(key)])
-                d = {}
-                shadow[key] = Bunch.Bunch(node=d, item=item, terminal=False)
+        expand_paths = []
 
-            # recurse for non-leaf interior node
-            for key in node:
-                self._add_subtree(level + 1, d, model, item, key, node[key])
+        for key in tree:
+            node = tree[key]
+            if level >= self.levels:
+                # leaf node
+                values = ['' if _key == 'icon' else str(node[_key])
+                          for _key in self.datakeys]
+                try:
+                    bnch = shadow[key]
+                    item_iter = bnch.item
+                    bnch.node = node
+                    # update leaf item
+                    # model.set(item_iter, node)
+                    # for i, val in enumerate(values):
+                    #     print(f"setting col {i}={val}")
+                    #     model.set_value(item_iter, i, val)
 
-    def _selection_cb(self, treeview):
-        path, column = treeview.get_cursor()
-        if path is None:
+                except KeyError:
+                    # new item
+                    item_iter = model.append(parent_item, [node])
+                    shadow[key] = Bunch.Bunch(node=node, item=item_iter,
+                                              terminal=True)
+
+            else:
+                try:
+                    # shadow node already exists
+                    bnch = shadow[key]
+                    item = bnch.item
+                    d = bnch.node
+
+                except KeyError:
+                    # new node
+                    item = model.append(None, [str(key)])
+                    d = {}
+                    shadow[key] = Bunch.Bunch(node=d, item=item, terminal=False)
+
+                    if expand_new:
+                        #self.tv.expand_row(model.get_path(item), True)
+                        expand_paths.append(model.get_path(item))
+
+                # recurse for non-leaf interior node
+                self._add_subtree(level + 1, d, model, item, node)
+
+        # NOTE: for some reason, we need to do the expansion of rows at
+        # the end
+        for path in expand_paths:
+            self.tv.expand_row(path, False)
+
+    def _selection_cb(self, treeselection):
+        # NOTE: hack to get around recursive handling of selection
+        # callback
+        if self._selection_shelf.is_blocked():
             return
-        model = treeview.get_model()
-        item = model.get_iter(path)
+
+        model, paths = treeselection.get_selected_rows()
+        iter_lst = []
+        for path in paths:
+            item = model.get_iter(path)
+            if model.iter_has_child(item):
+                continue
+            else:
+                iter_lst.append(item)
+
         res_dict = {}
-        self._get_item(res_dict, item)
+        for item in iter_lst:
+            self._get_item(res_dict, item)
+
         self.make_callback('selected', res_dict)
 
     def _cb_redirect(self, treeview, path, column):
@@ -968,6 +1088,65 @@ class TreeView(WidgetBase):
         res_dict = {}
         self._get_item(res_dict, item)
         self.make_callback('activated', res_dict)
+
+    def _get_children(self, iter_list, model, item_iter, status='all'):
+        child_iter = model.iter_children(item_iter)
+        while child_iter is not None:
+            if model.iter_has_child(child_iter):
+                m_path = model.get_path(child_iter)
+                if m_path is None:
+                    continue
+                if (status == 'all' or
+                    (status == 'expanded' and self.tv.row_expanded(m_path)) or
+                    (status == 'collapsed' and not self.tv.row_expanded(m_path))):
+                    self._get_children(iter_list, model, child_iter)
+            else:
+                iter_list.append(child_iter)
+            child_iter = model.iter_next(child_iter)
+
+    def get_children(self, status='all'):
+        item_list = []
+        model = self.tv.get_model()
+        for key, bnch in self.shadow.items():
+            item = bnch.item
+            m_path = model.get_path(item)
+            if m_path is None:
+                continue
+            if (status == 'all' or
+                (status == 'expanded' and self.tv.row_expanded(m_path)) or
+                (status == 'collapsed' and not self.tv.row_expanded(m_path))):
+                self._get_children(item_list, model, item, status=status)
+
+        res_dict = {}
+        for item in item_list:
+            self._get_item(res_dict, item)
+        return res_dict
+
+    def _row_collapsed_cb(self, treeview, item_iter, path):
+        path = self._get_path(item_iter)
+        self.make_callback('collapsed', path)
+
+    def _row_expanded_cb(self, treeview, item_iter, path):
+        path = self._get_path(item_iter)
+        self.make_callback('expanded', path)
+
+    def get_expanded(self):
+        """Returns a list of paths of all the expanded nodes."""
+        res_list = []
+        # TODO
+        return res_list
+
+    def get_collapsed(self):
+        """Returns a list of paths of all the collapsed nodes."""
+        res_list = []
+        # TODO
+        return res_list
+
+    def expand_all(self, tf):
+        if tf:
+            self.tv.expand_all()
+        else:
+            self.tv.collapse_all()
 
     def _get_path(self, item):
         if item is None:
@@ -1004,24 +1183,23 @@ class TreeView(WidgetBase):
         d[dst_key] = s[dst_key].node
 
     def get_selected(self):
+        """Get a dict of selected items."""
         treeselection = self.tv.get_selection()
         model, pathlist = treeselection.get_selected_rows()
         res_dict = {}
         for path in pathlist:
             item = model.get_iter(path)
+            if model.iter_has_child(item):
+                # only leaf nodes can be selected
+                continue
             self._get_item(res_dict, item)
         return res_dict
 
-    def clear(self):
-        model = Gtk.TreeStore(object)
-        self.tv.set_model(model)
-        self.shadow = {}
-
-    def clear_selection(self):
-        treeselection = self.tv.get_selection()
-        treeselection.unselect_all()
-
     def get_selected_paths(self):
+        """Get a list of selected paths.
+        NOTE: this returns both leaves and branches (leaf paths are
+        longer)
+        """
         treeselection = self.tv.get_selection()
         model, pathlist = treeselection.get_selected_rows()
         paths = []
@@ -1030,17 +1208,37 @@ class TreeView(WidgetBase):
             paths.append(self._get_path(item))
         return paths
 
-    def select_paths(self, paths, state=True):
+    def clear(self):
+        model = Gtk.TreeStore(object)
+        with self._selection_stocker:
+            self.tv.set_model(model)
+        self.shadow = {}
+
+    def clear_selection(self):
         treeselection = self.tv.get_selection()
-        for path in paths:
-            item = self._path_to_item(path)
-            if state:
-                treeselection.select_iter(item)
-            else:
-                treeselection.unselect_iter(item)
+        with self._selection_stocker:
+            treeselection.unselect_all()
+
+    def select_paths(self, paths, state=True):
+        with self._selection_stocker:
+            treeselection = self.tv.get_selection()
+            for path in paths:
+                item = self._path_to_item(path)
+                if state:
+                    treeselection.select_iter(item)
+                else:
+                    treeselection.unselect_iter(item)
 
     def select_path(self, path, state=True):
         self.select_paths([path], state=state)
+
+    def select_all(self, state=True):
+        treeselection = self.tv.get_selection()
+        with self._selection_stocker:
+            if not state:
+                treeselection.unselect_all()
+            else:
+                treeselection.select_all()
 
     def highlight_path(self, path, onoff, font_color='green'):
         item = self._path_to_item(path)  # noqa
@@ -1097,6 +1295,20 @@ class TreeView(WidgetBase):
         model.set_sort_func(idx, fn)
         return True
 
+    def _cmp(self, val1, val2):
+        if isinstance(val1, str):
+            val1, val2 = val1.lower(), val2.lower()
+            try:
+                val1, val2 = float(val1), float(val2)
+            except ValueError:
+                pass
+            if val1 < val2:
+                return -1
+            elif val1 > val2:
+                return 1
+            else:
+                return 0
+
     def _mksrtfnN(self, idx):
         def fn(*args):
             model, iter1, iter2 = args[:3]
@@ -1104,19 +1316,10 @@ class TreeView(WidgetBase):
             bnch2 = model.get_value(iter2, 0)
             if isinstance(bnch1, str):
                 if isinstance(bnch2, str):
-                    s1, s2 = bnch1.lower(), bnch2.lower()
-                    if s1 < s2:
-                        return -1
-                    if s1 > s2:
-                        return 1
-                return 0
+                    return self._cmp(bnch1, bnch2)
             val1, val2 = bnch1[idx], bnch2[idx]
             if isinstance(val1, str):
-                val1, val2 = val1.lower(), val2.lower()
-                if val1 < val2:
-                    return -1
-                if val1 > val2:
-                    return 1
+                return self._cmp(val1, val2)
             return 0
         return fn
 
@@ -1208,7 +1411,11 @@ class ContainerBase(WidgetBase):
 
     def set_margins(self, left, right, top, bottom):
         # TODO: can this be made more accurate?
-        self.widget.set_border_width(left)
+        #self.widget.set_border_width(left)
+        self.widget.set_margin_start(left)
+        self.widget.set_margin_end(right)
+        self.widget.set_margin_top(top)
+        self.widget.set_margin_bottom(bottom)
 
 
 class Box(ContainerBase):
@@ -1705,9 +1912,20 @@ class Splitter(ContainerBase):
     def _get_pane(self):
         if self.orientation == 'horizontal':
             w = Gtk.HPaned()
+            # NOTE: styling the separator doesn't seem to work in Gtk4
+            iconfile = pathlib.Path(icondir) / 'vdots.png'
+            content = "background-image: url('file://%s'); background-repeat: no-repeat; background-position: center center; background-size: 10px 30px;" % (iconfile)
         else:
             w = Gtk.VPaned()
+            # NOTE: styling the separator doesn't seem to work in Gtk4
+            iconfile = pathlib.Path(icondir) / 'hdots.png'
+            content = "background-image: url('file://%s'); background-repeat: no-repeat; background-position: center center; background-size: 30px 10px;" % (iconfile)
         w.set_wide_handle(True)
+        context = w.get_style_context()
+        css_data = "paned separator.wide { %s }" % (content)
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(css_data.encode())
+        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         return w
 
     def add_widget(self, child):
@@ -1841,7 +2059,8 @@ class GridBox(ContainerBase):
         self.tbl[key] = child
         self.add_ref(child)
         w = child.get_widget()
-        self.widget.attach(w, row, col, 1, 1)
+        # NOTE: attach() specifies column, THEN row
+        self.widget.attach(w, col, row, 1, 1)
         self.make_callback('widget-added', child)
 
     def remove(self, child, delete=False):
@@ -1868,6 +2087,7 @@ class GridBox(ContainerBase):
         if index > self.num_rows:
             index = self.num_rows
         self.widget.insert_row(index)
+
         if widgets is not None:
             for col, child in enumerate(widgets):
                 self.add_widget(child, index, col)
@@ -1954,6 +2174,14 @@ class Toolbar(ContainerBase):
 
     def add_separator(self):
         sep_w = Gtk.SeparatorToolItem()
+        sep = wrap(sep_w)
+        self.widget.insert(sep_w, -1)
+        self.add_ref(sep)
+
+    def add_spacer(self):
+        sep_w = Gtk.SeparatorToolItem()
+        sep_w.set_draw(False)
+        sep_w.set_expand(True)
         sep = wrap(sep_w)
         self.widget.insert(sep_w, -1)
         self.add_ref(sep)
@@ -2222,6 +2450,7 @@ class TopLevel(TopLevelMixin, ContainerBase):
         ContainerBase.__init__(self)
 
         self._fullscreen = False
+        self.dialogs = []
 
         widget = GtkHelp.TopLevel()
         if iconpath is None:
@@ -2242,6 +2471,16 @@ class TopLevel(TopLevelMixin, ContainerBase):
         # this can be rendered by the window manager. Better to use the
         # constructor 'iconpath' parameter
         self.widget.set_icon(GtkHelp.get_icon(iconpath))
+
+    def add_dialog(self, child):
+        # for compatibility with Gtk4, eventually
+        if child not in self.dialogs:
+            self.dialogs.append(child)
+
+    def remove_dialog(self, child):
+        # for compatibility with Gtk4, eventually
+        if child in self.dialogs:
+            self.dialogs.remove(child)
 
 
 class Application(Callback.Callbacks):
@@ -2369,55 +2608,179 @@ class Application(Callback.Callbacks):
         Gtk.main_quit()
 
 
-class Dialog(TopLevelMixin, WidgetBase):
+class Dialog(WidgetBase):
 
     def __init__(self, title='', flags=0, buttons=[],
                  parent=None, modal=False):
-        WidgetBase.__init__(self)
+        super().__init__()
+        flags = Gtk.DialogFlags.DESTROY_WITH_PARENT
+        self.widget = Gtk.Dialog(flags=flags)
         self.buttons = []
+        self.parent = parent
+        self.modal = modal
 
-        if parent is not None:
-            self.parent = parent.get_widget()
-        else:
-            self.parent = None
-
-        self.widget = Gtk.Dialog(title=title, flags=flags)
-        btn_box = Gtk.ButtonBox()
-        btn_box.set_border_width(5)
-        btn_box.set_spacing(4)
+        self.widget.set_title(title)
+        self.widget.connect('response', self._cb_redirect)
+        self.widget.connect('close', self._cb_close)
+        vbox = self.widget.get_content_area()
+        self.content = VBox()
+        self.content.widget = vbox
 
         for name, val in buttons:
-            btn = Button(name)
-            self.buttons.append(btn)
-
-            def cb(val):
-                return lambda w: self._cb_redirect(val)
-
-            btn.add_callback('activated', cb(val))
-            btn_box.pack_start(btn.get_widget(), True, True, 0)
+            btn_w = self.widget.add_button(name, val)
 
         self.widget.set_modal(modal)
 
-        TopLevelMixin.__init__(self, title=title)
+        for name in ['activated', 'close']:
+            self.enable_callback(name)
 
-        self.content = VBox()
-        self.content.set_border_width(0)
-        content = self.widget.get_content_area()
-        content.pack_start(self.content.get_widget(), True, True, 0)
-        content.pack_end(btn_box, True, True, 0)
-
-        #self.widget.connect("response", self._cb_redirect)
-
-        self.enable_callback('activated')
-
-    def _cb_redirect(self, val):
+    def _cb_redirect(self, widget, val):
         self.make_callback('activated', val)
+
+    def _cb_close(self, widget):
+        self.make_callback('close')
 
     def get_content_area(self):
         return self.content
 
+    def show(self):
+        self.popup()
+
+    def popup(self, parent=None):
+        if parent is None:
+            parent = self.parent
+        if parent is not None:
+            self.parent.get_widget()
+            parent_w = parent.get_widget()
+            if isinstance(parent_w, Gtk.Window):
+                self.widget.set_transient_for(parent_w)
+        self.widget.run()
+
+
+class ColorDialog(Dialog):
+    """A color selection dialog."""
+    def __init__(self, title='', initial_color='blue',
+                 parent=None, modal=False, auto_close=True):
+        buttons = [("Cancel", 0), ("OK", 1)]
+        Dialog.__init__(self, title=title, buttons=buttons,
+                        parent=parent, modal=modal)
+
+        self.chooser = Gtk.ColorChooserWidget()
+        self.chooser.set_use_alpha(False)
+        vbox = self.get_content_area()
+        vbox.add_widget(wrap(self.chooser), stretch=1)
+
+        self.set_color(initial_color)
+        self.chooser.connect('color_activated', self._cb_changed)
+
+        self._chosen_color = self.get_color(format='tuple')
+        self.auto_close = auto_close
+
+        # TODO: pick callback does not currently work
+        for name in ['activated', 'pick']:
+            self.enable_callback(name)
+
+    def _cb_redirect(self, widget, val):
+        if self.auto_close:
+            self.widget.hide()
+        if val == 0:
+            # Cancel
+            return
+        gc = self.chooser.get_rgba()
+        self._chosen_color = (gc.red, gc.green, gc.blue, gc.alpha)
+        self.make_callback('activated', self._chosen_color)
+
+    def _cb_changed(self, *args):
+        gc = self.chooser.get_rgba()
+        self.make_callback('pick', (gc.red, gc.green, gc.blue, gc.alpha))
+
+    def get_color(self, format='tuple'):
+        if format == 'tuple':
+            return self._chosen_color
+        if format == 'hex':
+            return colors.get_hex(self._chosen_color[:3])
+        raise ValueError(f"bad format type: '{format}'; should be 'tuple' or 'hex'")
+
+    def set_color(self, color):
+        (r, g, b) = colors.resolve_color(color)
+        self._chosen_color = (r, g, b)
+        g_color = Gdk.RGBA(r, g, b, 1.0)
+        self.chooser.set_rgba(g_color)
+
+
+class FileDialog(Dialog):
+    """A file/directory selection dialog."""
+    def __init__(self, title='', parent=None, modal=False, auto_close=True):
+        buttons = [("Cancel", 0), ("OK", 1)]
+        Dialog.__init__(self, title=title, buttons=buttons,
+                        parent=parent, modal=modal)
+
+        self.chooser = Gtk.FileChooserWidget()
+        self.chooser.connect('file-activated', self._cb_redirect2)
+
+        vbox = self.get_content_area()
+        vbox.add_widget(wrap(self.chooser), stretch=1)
+
+        self.filter_dict = dict()
+        self.auto_close = auto_close
+
+    def set_mode(self, mode):
+        if mode == 'save':
+            self.chooser.set_action(Gtk.FileChooserAction.SAVE)
+            self.chooser.set_select_multiple(False)
+        elif mode == 'file':
+            self.chooser.set_action(Gtk.FileChooserAction.OPEN)
+            self.chooser.set_select_multiple(False)
+        elif mode == 'files':
+            self.chooser.set_action(Gtk.FileChooserAction.OPEN)
+            self.chooser.set_select_multiple(True)
+        elif mode == 'directory':
+            self.chooser.set_action(Gtk.FileChooserAction.CREATE_FOLDER)
+            self.chooser.set_select_multiple(False)
+
+    def set_directory(self, path):
+        if not os.path.isdir(path):
+            raise ValueError(f"{path} does not seem to be an existing  directory")
+        self.chooser.set_current_folder(path)
+
+    def clear_filters(self):
+        self.filter_dict = dict()
+        filt = Gtk.FileFilter()
+        self.chooser.set_filter("*")
+
+    def add_ext_filter(self, category, file_ext):
+        exts = self.filter_dict.setdefault(category, [])
+        if not file_ext.startswith('.'):
+            file_ext = '.' + file_ext
+        exts.append(f"*{file_ext}")
+
+        filt = Gtk.FileFilter()
+        for category, exts in self.filter_dict.items():
+            for ext in exts:
+                filt.add_pattern(ext)
+        self.chooser.set_filter(filt)
+
+    def _cb_redirect(self, widget, val):
+        if self.auto_close:
+            self.widget.hide()
+        if val == 0:
+            # Cancel
+            return
+        paths = self.chooser.get_filenames()
+        if len(paths) > 0:
+            self.make_callback('activated', paths)
+
+    def _cb_redirect2(self, widget):
+        # double-click on a file, or pressed ENTER
+        paths = self.chooser.get_filenames()
+        if self.auto_close:
+            self.widget.hide()
+        if len(paths) > 0:
+            self.make_callback('activated', paths)
+
 
 class SaveDialog(object):
+    # TODO: deprecate and use only FileDialog
     def __init__(self, title='Save File', selectedfilter=None):
         action = Gtk.FileChooserAction.SAVE
         buttons = (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
