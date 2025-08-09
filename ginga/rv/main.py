@@ -419,7 +419,7 @@ class ReferenceViewer(object):
                               WCSpkg='choose', FITSpkg='choose',
                               suppress_fits_warnings=False,
                               recursion_limit=2000,
-                              num_threads=30,
+                              num_threads=4,
                               icc_working_profile=None,
                               font_scaling_factor=None,
                               save_layout=True,
@@ -537,7 +537,7 @@ class ReferenceViewer(object):
 
         ev_quit = threading.Event()
         # Create and start thread pool
-        num_threads = settings.get('num_threads', 30)
+        num_threads = settings.get('num_threads', 4)
         if options.numthreads is not None:
             num_threads = options.numthreads
         thread_pool = Task.ThreadPool(num_threads, logger,

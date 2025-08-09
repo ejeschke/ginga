@@ -24,6 +24,8 @@ Ver 5.4.0 (unreleased)
 - Better formatting of cuts and plot limits (limit excessive decimals)
 - Fixed an error in reference viewer with detection of Gtk toolkits
 - Gtk4 backend support is much improved
+- Enhancements to the thread pool, with dynamic adding of threads when
+  busy and stopping of threads when they have been idle
 
 Ver 5.3.0 (2025-04-02)
 ======================

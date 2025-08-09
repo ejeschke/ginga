@@ -701,11 +701,6 @@ class PriorityQueue(Queue.PriorityQueue):
 
 # ------------ WORKER THREADS ------------
 
-class _WorkerReset(Exception):
-    """Local exception used to reset a worker thread."""
-    pass
-
-
 class WorkerThread(object):
     """Container for a thread in which to call the execute() method of a task.
     A WorkerThread object waits on the task queue, executes a task when it
@@ -719,14 +714,18 @@ class WorkerThread(object):
         self.queue = queue
         self.logger = logger
         self.timeout = timeout
-        if ev_quit:
-            self.ev_quit = ev_quit
-        else:
-            self.ev_quit = threading.Event()
+        # global termination flag
+        if ev_quit is None:
+            ev_quit = threading.Event()
+        self.ev_quit = ev_quit
+        # local termination flag
+        self.my_quit = threading.Event()
         self.tpool = tpool
         self.lock = threading.RLock()
+        self.thread = None
         self.status = 'stopped'
-        self.time_start = 0.0
+        self.time_idle = None
+        self.tid = None
 
     def setstatus(self, status):
         """Sets our status field so that others can inquire what we are doing.
@@ -735,12 +734,16 @@ class WorkerThread(object):
         """
         with self.lock:
             self.status = status
+            if status == 'idle':
+                self.time_idle = time.time()
+            else:
+                self.time_idle = None
 
     def getstatus(self):
         """Returns our status--a string describing what we are doing.
         """
         with self.lock:
-            return (self.status, self.time_start)
+            return (self.status, self.time_idle)
 
     def execute(self, task):
         """Execute a task.
@@ -751,7 +754,6 @@ class WorkerThread(object):
         try:
             # Try to run the task.  If we catch an exception, then
             # it becomes the result.
-            self.time_start = time.time()
             self.setstatus('executing %s' % taskid)
 
             self.logger.debug("now executing task '%s'" % taskid)
@@ -773,25 +775,26 @@ class WorkerThread(object):
             # Wake up waiters on other threads
             task.done(res, noraise=True)
 
-            self.time_start = 0.0
             self.setstatus('idle')
 
     # Basic task execution loop.  Dequeue a task and run it, then look
     # for another one
-    def taskloop(self):
+    def taskloop(self, ev_start):
+        self.tid = threading.get_ident()
         self.setstatus('starting')
-        self.logger.debug('Starting worker thread loop.')
+        self.logger.debug(f"thread {self.tid} starting worker thread loop.")
 
         # If we were handed a thread pool upon startup, then register
         # ourselves with it.
-        if self.tpool:
-            self.tpool.register_up()
+        if self.tpool is not None:
+            self.tpool.register_up(self)
 
         try:
             self.setstatus('idle')
-            while not self.ev_quit.is_set():
+            if ev_start is not None:
+                ev_start.set()
+            while not self.ev_quit.is_set() and not self.my_quit.is_set():
                 try:
-
                     # Wait on our queue for a task; will timeout in
                     # self.timeout secs
                     (priority, task) = self.queue.get(block=True,
@@ -803,29 +806,44 @@ class WorkerThread(object):
 
                     self.execute(task)
 
-                except _WorkerReset:
-                    self.logger.info("Worker reset!")
-
                 except Queue.Empty as e:
                     # Reach here when we time out waiting for a task
-                    pass
+                    if self.tpool is not None and self.time_idle is not None:
+                        idle_sec = time.time() - self.time_idle
+                        if (self.tpool.idle_limit_sec is not None and
+                            idle_sec > self.tpool.idle_limit_sec):
+                            self.tpool.offer_to_quit(self)
 
         finally:
-            self.logger.debug('Stopping worker thread loop.')
-
-            if self.tpool:
-                self.tpool.register_dn()
+            if self.tpool is not None:
+                self.tpool.register_dn(self)
 
             self.setstatus('stopped')
 
-    def start(self):
-        self.thread = threading.Thread(target=self.taskloop, args=[])
+        self.logger.debug(f"thread {self.tid} exiting.")
+
+    def start(self, wait=False):
+        if self.thread is not None:
+            raise RuntimeError("A worker thread is already running")
+        self.my_quit.clear()
+        ev_start = None
+        if wait:
+            ev_start = threading.Event()
+        self.thread = threading.Thread(target=self.taskloop, args=[ev_start])
         self.thread.start()
 
+        if wait:
+            ev_start.wait()
+
     def stop(self):
-        # Put termination sentinal on queue
-        self.queue.put((0, None))
-        self.ev_quit.set()
+        self.my_quit.set()
+
+    def cleanup(self):
+        if self.thread is not None:
+            alive = self.thread.is_alive()
+            if not alive:
+                self.thread.join()
+            self.thread = None
 
 
 # ------------ THREAD POOL ------------
@@ -841,124 +859,95 @@ class ThreadPool(object):
     """
 
     def __init__(self, numthreads=1, logger=None, ev_quit=None,
+                 minthreads=0, idle_limit_sec=10.0,
                  workerClass=WorkerThread):
 
-        self.numthreads = numthreads
+        self.numthreads = max(1, numthreads)
         self.logger = logger
-        if ev_quit:
-            self.ev_quit = ev_quit
-        else:
-            self.ev_quit = threading.Event()
+        if ev_quit is None:
+            ev_quit = threading.Event()
+        self.ev_quit = ev_quit
         self.lock = threading.RLock()
         self.workerClass = workerClass
+        if minthreads is None:
+            minthreads = numthreads
+        self.minthreads = max(0, minthreads)
+        self.idle_limit_sec = idle_limit_sec
+        self.mon_thread = None
 
         self.queue = PriorityQueue()
-        self.workers = []
-        self.tids = []
 
         # Used to synchronize thread pool startup (see register() method)
         self.regcond = threading.Condition()
-        self.runningcount = 0
+        self.mp_cond = threading.Condition()
         self.status = 'down'
+        self.waiting = [self.workerClass(self.queue, logger=self.logger,
+                                         ev_quit=self.ev_quit, tpool=self)
+                        for i in range(self.numthreads)]
+        self.running = []
+        self.cleanup = []
 
-    def startall(self, wait=False, **kwdargs):
+    def startall(self, wait=False, **kwargs):
         """Start all of the threads in the thread pool.  If _wait_ is True
         then don't return until all threads are up and running.  Any extra
         keyword arguments are passed to the worker thread constructor.
         """
-        self.logger.debug("startall called")
-        with self.regcond:
-            while self.status != 'down':
-                if self.status in ('start', 'up') or self.ev_quit.is_set():
-                    # For now, abandon additional request to start
-                    self.logger.error("ignoring duplicate request to start thread pool")
-                    return
+        if self.mon_thread is not None:
+            self.logger.error("ignoring duplicate request to start thread pool")
+            return
 
-                self.logger.debug("waiting for threads: count=%d" %
-                                  self.runningcount)
-                self.regcond.wait()
+        self.logger.debug("startall called, starting pool monitor thread")
+        self.status = 'start'
+        self.mon_thread = threading.Thread(target=self.monitor_pool, args=[])
+        self.mon_thread.start()
 
-            #assert(self.status == 'down')
-            if self.ev_quit.is_set():
-                return
-
-            self.runningcount = 0
-            self.status = 'start'
-            self.workers = []
-            if wait:
-                tpool = self
-            else:
-                tpool = None
-
-            # Start all worker threads
-            self.logger.debug("starting threads in thread pool")
-            for i in range(self.numthreads):
-                t = self.workerClass(self.queue, logger=self.logger,
-                                     ev_quit=self.ev_quit, tpool=tpool,
-                                     **kwdargs)
-                self.workers.append(t)
-                t.start()
-
-            # if started with wait=True, then expect that threads will register
-            # themselves and last one up will set status to "up"
-            if wait:
+        # if started with wait=True, then expect that threads will register
+        # themselves and last one up will set status to "up"
+        if wait:
+            with self.regcond:
                 # Threads are on the way up.  Wait until last one starts.
                 while self.status != 'up' and not self.ev_quit.is_set():
                     self.logger.debug("waiting for threads: count=%d" %
-                                      self.runningcount)
+                                      len(self.running))
                     self.regcond.wait()
-            else:
-                # otherwise, we just assume the pool is up
-                self.status = 'up'
-            self.logger.debug("startall done")
-
-    def addThreads(self, numthreads, **kwdargs):
-        with self.regcond:
-            # Start all worker threads
-            self.logger.debug("adding %d threads to thread pool" % (
-                numthreads))
-            for i in range(numthreads):
-                t = self.workerClass(self.queue, logger=self.logger,
-                                     ev_quit=self.ev_quit, tpool=self.tpool,
-                                     **kwdargs)
-                self.workers.append(t)
-                t.start()
-
-            self.numthreads += numthreads
+        self.logger.debug("startall done")
 
     def stopall(self, wait=False):
         """Stop all threads in the worker pool.  If _wait_ is True
         then don't return until all threads are down.
         """
         self.logger.debug("stopall called")
-        with self.regcond:
-            while self.status != 'up':
-                if self.status in ('stop', 'down') or self.ev_quit.is_set():
-                    # For now, silently abandon additional request to stop
-                    self.logger.warning("ignoring duplicate request to stop thread pool.")
-                    return
-
-                self.logger.debug("waiting for threads: count=%d" %
-                                  self.runningcount)
-                self.regcond.wait()
-
-            #assert(self.status == 'up')
-            self.logger.debug("stopping threads in thread pool")
+        with self.lock:
             self.status = 'stop'
-            # Signal to all threads to terminate.
-            self.ev_quit.set()
+        # Signal to all threads to terminate.
+        self.ev_quit.set()
 
-            if wait:
+        if wait:
+            with self.regcond:
                 # Threads are on the way down.  Wait until last one quits.
                 while self.status != 'down':
                     self.logger.debug("waiting for threads: count=%d" %
-                                      self.runningcount)
+                                      len(self.running))
                     self.regcond.wait()
 
-            self.logger.debug("stopall done")
+        self.mon_thread.join()
+        self.mon_thread = None
+        self.logger.debug("stopall done")
+
+    def add_threads(self, add_numthreads, minthreads=None):
+        with self.regcond:
+            self.waiting.extend([self.workerClass(self.queue,
+                                                  logger=self.logger,
+                                                  ev_quit=self.ev_quit,
+                                                  tpool=self)
+                                 for i in range(add_numthreads)])
+            self.numthreads += add_numthreads
+            if minthreads is not None:
+                self.minthreads = max(0, minthreads)
 
     def workerStatus(self):
-        return list(map(lambda t: t.getstatus(), self.workers))
+        with self.regcond:
+            return list(map(lambda t: t.getstatus(), self.running))
 
     def addTask(self, task, priority=0):
         """Add a task to the queue of tasks.
@@ -967,6 +956,38 @@ class ThreadPool(object):
         Tasks are executed in first-come-first-served order.
         """
         self.queue.put((priority, task))
+        with self.mp_cond:
+            # wake up pool monitor thread to check on things
+            self.mp_cond.notify()
+
+    def monitor_pool(self):
+        """Monitor the thread pool.
+
+        A thread is started in this method to monitor the thread pool and
+        clean up or activate new threads as needed.
+        """
+        self.logger.debug("starting the thread pool monitor loop...")
+        while not self.ev_quit.is_set():
+            worker = None
+            with self.regcond:
+                # join threads that have exited
+                while len(self.cleanup) > 0:
+                    dead_worker = self.cleanup.pop()
+                    dead_worker.cleanup()
+
+                num_running = len(self.running)
+                if (num_running < self.minthreads or
+                    self.queue.qsize() > 0 and num_running < self.numthreads):
+                    assert (len(self.waiting) > 0)
+                    worker = self.waiting[0]
+
+            if worker is not None:
+                worker.start(wait=True)
+            else:
+                with self.mp_cond:
+                    self.mp_cond.wait(timeout=0.25)
+
+        self.logger.debug("stopping the thread pool monitor loop...")
 
     def delTask(self, taskid):
         self.logger.error("delTask not yet implemented")
@@ -974,7 +995,17 @@ class ThreadPool(object):
     def purgeTasks(self):
         self.logger.error("purgeTasks not yet implemented")
 
-    def register_up(self):
+    def offer_to_quit(self, worker):
+        """Called by WorkerThread objects when they have been idle
+        for a certain period.
+        """
+        with self.regcond:
+            if len(self.running) <= self.minthreads or self.queue.qsize() > 0:
+                return
+
+            worker.stop()
+
+    def register_up(self, worker):
         """Called by WorkerThread objects to register themselves.
 
         Acquire the condition variable for the WorkerThread objects.
@@ -983,31 +1014,38 @@ class ThreadPool(object):
         if it was called with wait=True.
         """
         with self.regcond:
-            self.runningcount += 1
-            tid = threading.get_ident()
-            self.tids.append(tid)
-            self.logger.debug("register_up: (%d) count is %d" %
-                              (tid, self.runningcount))
-            if self.runningcount == self.numthreads:
+            self.waiting.remove(worker)
+            self.running.append(worker)
+            num_running = len(self.running)
+            self.logger.debug("register_up: (%d) count is %d" % (
+                worker.tid, num_running))
+            if num_running == self.minthreads:
                 self.status = 'up'
-            self.regcond.notify()
+                self.regcond.notify()
 
-    def register_dn(self):
-        """Called by WorkerThread objects to register themselves.
+    def register_dn(self, worker):
+        """Called by WorkerThread objects to de-register themselves.
 
         Acquire the condition variable for the WorkerThread objects.
         Decrement the running-thread count.  If we are the last thread to
         start, release the ThreadPool thread, which is stuck in start()
         """
         with self.regcond:
-            self.runningcount -= 1
-            tid = threading.get_ident()
-            self.tids.remove(tid)
-            self.logger.debug("register_dn: count_dn is %d" % self.runningcount)
-            self.logger.debug("register_dn: remaining: %s" % str(self.tids))
-            if self.runningcount == 0:
+            self.running.remove(worker)
+            self.waiting.append(worker)
+            self.cleanup.append(worker)
+            num_running = len(self.running)
+            self.logger.debug("register_dn: (%d) count is %d" % (
+                worker.tid, num_running))
+            with self.mp_cond:
+                # wake up pool monitor to clean up thread
+                self.mp_cond.notify()
+            if num_running == 0:
                 self.status = 'down'
-            self.regcond.notify()
+                self.regcond.notify()
+
+    # TO BE DEPRECATED
+    addThreads = add_threads
 
 
 # ------------ SUPPORT FUNCTIONS ------------
