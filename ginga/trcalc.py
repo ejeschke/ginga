@@ -120,7 +120,8 @@ def rotate_clip(data_np, theta_deg, rotctr_x=None, rotctr_y=None,
     if rotctr_y is None:
         rotctr_y = ht // 2
 
-    if dtype == _dtype_uint8 and have_opencv and _use in (None, 'opencv'):
+    if (have_opencv and dtype in (_dtype_uint8, _dtype_uint16) and
+        _use in (None, 'opencv')):
         if logger is not None:
             logger.debug("rotating with OpenCv")
         # opencv is fastest
@@ -356,7 +357,8 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
     if dtype is None:
         dtype = data_np.dtype
 
-    if have_opencv and _use in (None, 'opencv'):
+    if (have_opencv and _use in (None, 'opencv') and
+        interpolation not in ('basic', 'nearest')):
         if logger is not None:
             logger.debug("resizing with OpenCv")
         # opencv is fastest and supports many methods
@@ -376,7 +378,8 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif data_np.dtype == _dtype_uint8 and _use in (None, 'pillow'):
+    elif (data_np.dtype == _dtype_uint8 and _use in (None, 'pillow') and
+          interpolation not in ('basic', 'nearest')):
         if logger is not None:
             logger.debug("resizing with pillow")
         if interpolation == 'basic':
@@ -450,7 +453,8 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
     if dtype is None:
         dtype = data_np.dtype
 
-    if have_opencv and _use in (None, 'opencv'):
+    if (have_opencv and _use in (None, 'opencv') and
+        interpolation not in ('basic', 'nearest')):
         if logger is not None:
             logger.debug("resizing with OpenCv")
         # opencv is fastest
@@ -472,7 +476,8 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
         ht, wd = newdata.shape[:2]
         scale_x, scale_y = float(wd) / old_wd, float(ht) / old_ht
 
-    elif data_np.dtype == _dtype_uint8 and _use in (None, 'pillow'):
+    elif (data_np.dtype == _dtype_uint8 and _use in (None, 'pillow') and
+          interpolation not in ('basic', 'nearest')):
         if logger is not None:
             logger.debug("resizing with pillow")
         if interpolation == 'basic':
