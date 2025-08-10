@@ -217,12 +217,15 @@ class Zoom(GingaPlugin.GlobalPlugin):
 
     def stop(self):
         self.gui_up = False
+        #self.zoomimage = None
         self._split_sizes = self.w.splitter.get_sizes()
         return True
 
     # CALLBACKS
 
     def update_zoomviewer(self, channel):
+        if not self.gui_up:
+            return
         fitsimage = channel.fitsimage
         self.fitsimage_focus = fitsimage
         # Reflect transforms, colormap, etc.
@@ -256,6 +259,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.update_zoomviewer(channel)
 
     def _zoomset(self, fitsimage, zoomlevel):
+        if not self.gui_up:
+            return
         if fitsimage != self.fitsimage_focus:
             return True
         if self.t_abszoom:
@@ -287,6 +292,8 @@ class Zoom(GingaPlugin.GlobalPlugin):
     # LOGIC
 
     def magnify_xy(self, fitsimage, data_x, data_y):
+        if not self.gui_up:
+            return
         # Show zoom image in zoom window
         self.zoom_x, self.zoom_y = data_x, data_y
 
