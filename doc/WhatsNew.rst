@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 5.5.0 (unreleased)
+======================
+- fixed default port number for Ginga remote control in the docstring
+
 Ver 5.4.0 (2025-08-10)
 ======================
 - Wrapped widget enhancements

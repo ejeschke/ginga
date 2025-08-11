@@ -15,7 +15,7 @@ through the use of an XML-RPC interface.  Start the plugin from the
 "Plugins" menu (invoke "Start RC") or launch ginga with the ``--modules=RC``
 command line option to start it automatically.
 
-By default, the plugin starts up with server running on port 9000 bound
+By default, the plugin starts up with server running on port 11771 bound
 to the localhost interface -- this allows connections only from the local
 host.  If you want to change this, set the host and port in the "Set
 Addr" control and press ``Enter`` -- you should see the address update in the
@@ -54,7 +54,7 @@ Per-channel methods can be called like this::
 
 Calls can be made from a remote host by adding the options::
 
-        --host=<hostname> --port=9000
+        --host=<hostname> --port=11771
 
 (In the plugin GUI, be sure to remove the "localhost" prefix
 from the "addr", but leave the colon and port.)
@@ -135,7 +135,7 @@ follows::
 
         from ginga.util import grc
         host = 'localhost'
-        port = 9000
+        port = grc.default_rc_port
         viewer = grc.RemoteClient(host, port)
 
 This viewer object is now linked to the Ginga using ``RC``.
