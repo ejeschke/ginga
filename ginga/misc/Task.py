@@ -84,7 +84,6 @@ class Task(Callback.Callbacks):
                 if override and var in override:
                     self.__dict__[var] = override[var]
                 else:
-                    #print "COPYING VAR FROM PARENT: %s(%s)" % (var, str(taskParent.__dict__[var]))
                     self.__dict__[var] = taskParent.__dict__[var]
 
         else:
@@ -114,7 +113,7 @@ class Task(Callback.Callbacks):
         Subclass should override this method, if it has an asynchronous
         way to start the task and return immediately.
         """
-        if self.threadPool:
+        if self.threadPool is not None:
             self.threadPool.addTask(self)
 
             # Lets other threads have a chance to run
@@ -859,7 +858,7 @@ class ThreadPool(object):
     """
 
     def __init__(self, numthreads=1, logger=None, ev_quit=None,
-                 minthreads=0, idle_limit_sec=10.0,
+                 minthreads=None, idle_limit_sec=10.0,
                  workerClass=WorkerThread):
 
         self.numthreads = max(1, numthreads)
@@ -896,9 +895,9 @@ class ThreadPool(object):
             self.logger.error("ignoring duplicate request to start thread pool")
             return
 
-        self.logger.debug("startall called, starting pool monitor thread")
+        self.logger.debug("startall called, starting pool attendant thread")
         self.status = 'start'
-        self.mon_thread = threading.Thread(target=self.monitor_pool, args=[])
+        self.mon_thread = threading.Thread(target=self.pool_attendant, args=[])
         self.mon_thread.start()
 
         # if started with wait=True, then expect that threads will register
@@ -957,16 +956,16 @@ class ThreadPool(object):
         """
         self.queue.put((priority, task))
         with self.mp_cond:
-            # wake up pool monitor thread to check on things
+            # wake up pool attendant thread to check on things
             self.mp_cond.notify()
 
-    def monitor_pool(self):
-        """Monitor the thread pool.
+    def pool_attendant(self):
+        """Monitor the thread pool as the "pool attendant".
 
         A thread is started in this method to monitor the thread pool and
         clean up or activate new threads as needed.
         """
-        self.logger.debug("starting the thread pool monitor loop...")
+        self.logger.debug("starting the thread pool attendant loop...")
         while not self.ev_quit.is_set():
             worker = None
             with self.regcond:
@@ -987,7 +986,7 @@ class ThreadPool(object):
                 with self.mp_cond:
                     self.mp_cond.wait(timeout=0.25)
 
-        self.logger.debug("stopping the thread pool monitor loop...")
+        self.logger.debug("stopping the thread pool attendant loop...")
 
     def delTask(self, taskid):
         self.logger.error("delTask not yet implemented")
@@ -1038,7 +1037,7 @@ class ThreadPool(object):
             self.logger.debug("register_dn: (%d) count is %d" % (
                 worker.tid, num_running))
             with self.mp_cond:
-                # wake up pool monitor to clean up thread
+                # wake up pool attendant to clean up thread
                 self.mp_cond.notify()
             if num_running == 0:
                 self.status = 'down'

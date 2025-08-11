@@ -131,7 +131,8 @@ class TestTask01(object):
         self.logger.setLevel(logging.DEBUG)
         self.logger.debug("setting up thread pool")
 
-        self.tpool = Task.ThreadPool(numthreads=20, logger=self.logger)
+        self.tpool = Task.ThreadPool(numthreads=20, minthreads=4,
+                                     logger=self.logger)
         self.tpool.startall(wait=True)
 
         # Make a fake 'parent' task

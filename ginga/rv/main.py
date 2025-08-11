@@ -540,8 +540,8 @@ class ReferenceViewer(object):
         num_threads = settings.get('num_threads', 4)
         if options.numthreads is not None:
             num_threads = options.numthreads
-        thread_pool = Task.ThreadPool(num_threads, logger,
-                                      ev_quit=ev_quit)
+        thread_pool = Task.ThreadPool(numthreads=num_threads, logger=logger,
+                                      minthreads=1, ev_quit=ev_quit)
         thread_pool.startall()
 
         # Create the Ginga main object
