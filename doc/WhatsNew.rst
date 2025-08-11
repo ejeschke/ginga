@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 5.4.0 (unreleased)
+Ver 5.4.0 (2025-08-10)
 ======================
 - Wrapped widget enhancements
 
