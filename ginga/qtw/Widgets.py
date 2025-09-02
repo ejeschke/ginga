@@ -1653,8 +1653,8 @@ class MDIWidget(ContainerBase):
         super(MDIWidget, self).__init__()
 
         w = QtGui.QMdiArea()
-        w.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        w.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        w.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        w.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         # See note below in add_widget()
         #w.subWindowActivated.connect(self._cb_redirect)
         # disable wheel event scrolling the space

@@ -8,7 +8,7 @@ import logging
 from io import BytesIO
 import numpy as np
 
-from ginga import Mixins, colors
+from ginga import Mixins, colors, cmap, trcalc
 from ginga.misc import Callback, Settings, Bunch
 from ginga.AstroImage import AstroImage
 from ginga.plot.Plotable import Plotable
@@ -75,11 +75,28 @@ class PlotViewBase(Callback.Callbacks):
                              plot_limits=None,
                              plot_range=None,
                              plot_enter_focus=True,
+                             plot_autozoom='override',
                              plot_zoom_rate=1.1)
+
+        self.t_.get_setting('plot_range').add_callback('set', self.ranges_change_cb)
 
         # pan position
         self.t_.add_defaults(plot_pan=(0.0, 0.0))
         self.t_.get_setting('plot_pan').add_callback('set', self.pan_change_cb)
+
+        # color maps
+        self._set_colormap()
+        for name in ['color_map', 'color_map_invert', 'color_map_rot_pct']:
+            self.t_.get_setting(name).add_callback('set', self.cmap_change_cb)
+
+        # cuts
+        #self.t_.get_setting('cuts').add_callback('set', self.generic_change_cb)
+
+        # transforms
+        for name in ['cuts', 'flip_x', 'flip_y', 'swap_xy', 'scale_x_base',
+                     'scale_y_base']:
+            self.t_.get_setting(name).add_callback(
+                'set', self.generic_change_cb)
 
         # for axis scaling
         self.t_.add_defaults(plot_dist_axis=('linear', 'linear'))
@@ -96,6 +113,23 @@ class PlotViewBase(Callback.Callbacks):
                      'plot_marker_style']:
             self.t_.get_setting(name).add_callback('set',
                                                    lambda setting, value: self.replot())
+
+        # embedded profiles
+        self.use_embedded_profile = True
+        self.t_.add_defaults(profile_use_range=True)
+        self.profile_keylist = ['plot_range', 'color_map', 'color_map_invert',
+                                'color_map_rot_pct', 'color_algorithm',
+                                'cuts']
+        for name in self.profile_keylist:
+            self.t_.get_setting(name).add_callback('set',
+                                                   self._update_profile_cb)
+
+        # viewer profile support
+        self.default_viewer_profile = None
+        # NOTE: other ones we support:
+        # - viewer_restore_cuts, viewer_restore_color_map
+        self.t_.add_defaults(viewer_restore_range=True)
+        self.capture_default_viewer_profile()
 
         # TODO
         width, height = 500, 500
@@ -181,19 +215,18 @@ class PlotViewBase(Callback.Callbacks):
         old_dataobj = self._dataobj
         if old_dataobj is not None:
             self.make_callback('image-unset', old_dataobj)
-        self._dataobj = dataobj
 
         self.clear()
 
+        self._dataobj = dataobj
+
         if isinstance(dataobj, AstroImage):
-            dataobj.add_callback('modified', lambda dataobj: self.replot())
+            dataobj.add_callback('modified', self._dataobj_modified_cb)
             self.show_image(dataobj)
 
         elif isinstance(dataobj, Plotable):
-            dataobj.add_callback('modified', lambda dataobj: self.replot())
+            dataobj.add_callback('modified', self._dataobj_modified_cb)
             self.show_plotable(dataobj)
-
-        self.zoom_fit()
 
         self.make_callback('image-set', dataobj)
 
@@ -202,17 +235,18 @@ class PlotViewBase(Callback.Callbacks):
 
     def clear(self, redraw=True):
         """Clear plot display."""
+        self.logger.debug('clearing viewer...')
+        self._dataobj = None
         self.clear_data()
-        self.t_['plot_range'] = None
         if redraw:
             self.redraw()
 
     def clear_data(self):
-        self.logger.debug('clearing viewer...')
         self.artist_dct = dict()
         self.ax.set_aspect('auto')
+        #self.ax.set_aspect('equal', adjustable='box')
         self.ax.cla()
-        self.t_['plot_limits'] = None
+        self.t_.set(plot_limits=None, plot_range=None)
         self._data_limits = None
 
     def remove_artist_category(self, artist_category, redraw=True):
@@ -330,24 +364,44 @@ class PlotViewBase(Callback.Callbacks):
         # Get the data extents
         x0, y0 = 0, 0
         data_np = dataobj.get_data()
-        y1, x1 = data_np.shape[:2]
-        # flipx, flipy, swapxy = self.get_transforms()
-        # if swapxy:
-        #     x0, x1, y0, y1 = y0, y1, x0, x1
 
-        locut, hicut = self.autocuts.calc_cut_levels_data(data_np)
+        data_np = trcalc.transform(data_np, flip_x=self.t_['flip_x'],
+                                   flip_y=self.t_['flip_y'],
+                                   swap_xy=self.t_['swap_xy'])
+
+        y1, x1 = data_np.shape[:2]
+
+        #locut, hicut = self.autocuts.calc_cut_levels_data(data_np)
+        locut, hicut = self.t_['cuts']
+
+        # set aspect ratio for scaling
+        x_base, y_base = self.t_['scale_x_base'], self.t_['scale_y_base']
+        aspect = y_base / x_base
 
         extent = (x0, x1, y0, y1)
         img = self.ax.imshow(data_np, origin='lower',
                              interpolation='none',
                              norm='linear',  # also 'log',
                              vmin=locut, vmax=hicut,
-                             cmap='gray',
-                             extent=extent)
+                             cmap=self.mpl_color_map)  #,
+                             #extent=extent)
         artists.append(img)
+
+        self.ax.set_aspect(aspect, adjustable='datalim')
 
         # adjust limits if necessary
         self._record_limits(np.array((x0, x1)), np.array((y0, y1)))
+
+    def _set_colormap(self):
+        g_clr_map = cmap.get_cmap(self.t_.get('color_map', 'gray'))
+        self.mpl_color_map = cmap.ginga_to_matplotlib_cmap(g_clr_map)
+
+    def cmap_change_cb(self, setting, value):
+        self._set_colormap()
+        self.replot()
+
+    def generic_change_cb(self, setting, value):
+        self.replot()
 
     def set_limits(self, limits):
         self.settings.set(plot_limits=limits)
@@ -400,6 +454,28 @@ class PlotViewBase(Callback.Callbacks):
             x_lo, x_hi = x_range
             ranges[0] = [x_lo, x_hi]
             adjusted = True
+
+        if y_range is not None:
+            y_lo, y_hi = y_range
+            ranges[1] = [y_lo, y_hi]
+            adjusted = True
+
+        if adjusted:
+            self.t_.set(plot_range=ranges, callback=True)
+
+    def ranges_change_cb(self, setting, ranges):
+        adjusted = False
+        if ranges is None:
+            ranges = (None, None)
+        x_range, y_range = ranges
+
+        ranges = self.get_ranges()
+        (x_lo, x_hi), (y_lo, y_hi) = ranges
+
+        if x_range is not None:
+            x_lo, x_hi = x_range
+            ranges[0] = [x_lo, x_hi]
+            adjusted = True
             self.ax.set_xlim(x_lo, x_hi)
 
         if y_range is not None:
@@ -409,7 +485,6 @@ class PlotViewBase(Callback.Callbacks):
             self.ax.set_ylim(y_lo, y_hi)
 
         if adjusted:
-            self.t_['plot_range'] = ranges
             self.make_callback('range-set', ranges.copy())
 
             _pan_x, _pan_y = self.t_['plot_pan'][:2]
@@ -420,8 +495,6 @@ class PlotViewBase(Callback.Callbacks):
                 #self.t_['plot_pan'] = (pan_x, pan_y)
                 self.set_pan(pan_x, pan_y)
 
-            #self.make_callback('range-set', ranges.copy())
-
             self.redraw()
 
     def get_ranges(self):
@@ -430,7 +503,6 @@ class PlotViewBase(Callback.Callbacks):
             (x_lo, y_lo), (x_hi, y_hi) = self.get_limits()
             return [[x_lo, x_hi], [y_lo, y_hi]]
 
-        #return [(x_lo, x_hi), (y_lo, y_hi)]
         return ranges.copy()
 
     def zoom_fit(self, axis='xy', no_reset=False):
@@ -461,8 +533,8 @@ class PlotViewBase(Callback.Callbacks):
 
         self.set_ranges(x_range=(x_lo, x_hi), y_range=(y_lo, y_hi))
 
-        if self.t_['autozoom'] == 'once':
-            self.t_.set(autozoom='off')
+        if self.t_['plot_autozoom'] == 'once':
+            self.t_.set(plot_autozoom='off')
 
     def set_dist_axis(self, x_axis=None, y_axis=None):
         if x_axis is None:
@@ -529,6 +601,94 @@ class PlotViewBase(Callback.Callbacks):
             elif isinstance(obj, self.dc.Canvas):
                 self.render_canvas(obj)
 
+    def apply_profile_or_settings(self, dataobj):
+        """Apply a profile to the viewer.
+
+        Parameters
+        ----------
+        dataobj : `~ginga.AstroImage.AstroImage` or `~ginga.plot.Plotable`
+            Image object.
+
+        This function is used to initialize the viewer when a new data object
+        is loaded.  Either the embedded profile settings or the default
+        settings are applied as specified in the channel preferences.
+        """
+        # 1. copy the current viewer settings
+        tmpprof = Settings.SettingGroup()
+        self.t_.copy_settings(tmpprof, include_callbacks=False,
+                              keylist=self.profile_keylist,
+                              callback=False)
+
+        # 2. reset selected items in the copy to default profile
+        # if there is one
+        keylist1 = set([])
+        if self.default_viewer_profile is not None:
+            dvp = self.default_viewer_profile
+            if self.t_['viewer_restore_range'] and 'plot_range' in dvp:
+                keylist1.add('plot_range')
+
+            # is this really needed if we restore the range?
+            if self.t_['viewer_restore_pan'] and 'plot_pan' in dvp:
+                keylist1.add('plot_pan')
+
+            # TODO
+            # if self.t_['viewer_restore_cuts'] and 'cuts' in dvp:
+            #     keylist1.add('cuts')
+
+            # if self.t_['viewer_restore_distribution'] and 'color_algorithm' in dvp:
+            #     keylist1.add('color_algorithm')
+
+            # if self.t_['viewer_restore_color_map'] and 'color_map' in dvp:
+            #     keylist1.update({'color_map', 'color_map_invert',
+            #                      'color_map_rot_pct'})
+
+            dvp.copy_settings(tmpprof, keylist=list(keylist1), callback=False)
+
+        # 3. apply embedded profile selected items to the copy
+        keylist2 = set([])
+        profile = dataobj.get('profile', None)
+        if profile is not None:
+            # is this really needed if we restore the range?
+            if self.t_['profile_use_pan'] and 'plot_pan' in profile:
+                keylist2.add('plot_pan')
+
+            if self.t_['profile_use_range'] and 'plot_range' in profile:
+                keylist2.add('plot_range')
+
+            # TODO
+            # if self.t_['profile_use_cuts'] and 'cuts' in profile:
+            #     keylist2.add('cuts')
+
+            # if self.t_['profile_use_distribution'] and 'color_algorithm' in profile:
+            #     keylist2.add('color_algorithm')
+
+            # if self.t_['profile_use_color_map'] and 'color_map' in profile:
+            #     keylist2.update({'color_map', 'color_map_invert',
+            #                      'color_map_rot_pct'})
+
+            profile.copy_settings(tmpprof, keylist=list(keylist2),
+                                  callback=False)
+
+        # 4. update our settings from the copy
+        keylist = list(keylist1.union(keylist2))
+        self.apply_profile(tmpprof, keylist=keylist)
+
+        # 5. proceed with initialization that is not in the profile
+        # initialize scale
+        if self.t_['plot_autozoom'] != 'off' and 'plot_range' not in keylist2:
+            self.logger.debug("auto zoom (%s)" % (self.t_['plot_autozoom']))
+            self.zoom_fit()
+
+        # TODO
+        # # initialize cuts
+        # if self.t_['autocuts'] != 'off' and 'cuts' not in keylist2:
+        #     self.logger.debug("auto cuts (%s)" % (self.t_['autocuts']))
+        #     self.auto_levels()
+
+        # save the profile in the image
+        if self.use_embedded_profile:
+            self.checkpoint_profile()
+
     def show_plotable(self, plotable):
         canvas = plotable.get_canvas()
         self.render_canvas(canvas)
@@ -538,6 +698,8 @@ class PlotViewBase(Callback.Callbacks):
                         x_axis=titles.x_axis, y_axis=titles.y_axis,
                         redraw=False)
         self.set_grid(plotable.grid)
+
+        self.apply_profile_or_settings(plotable)
 
         self.redraw()
 
@@ -553,10 +715,12 @@ class PlotViewBase(Callback.Callbacks):
             self._plot_line(x_data, data_np)
 
         elif len(data_np.shape) == 2:
-            self.set_titles(title=image.get('name', "NoName 2D data"),
+            self.set_titles(title=image.get('name', "NoName 2D data")[:15],
                             x_axis="X", y_axis="Y",
                             redraw=False)
             self._plot_normimage(image)
+
+        self.apply_profile_or_settings(image)
 
         self.redraw()
 
@@ -566,6 +730,7 @@ class PlotViewBase(Callback.Callbacks):
             return
 
         (x_lo, x_hi), (y_lo, y_hi) = self.get_ranges()
+
         self.clear_data()
 
         if isinstance(dataobj, AstroImage):
@@ -575,6 +740,16 @@ class PlotViewBase(Callback.Callbacks):
             self.show_plotable(dataobj)
 
         self.set_ranges(x_range=(x_lo, x_hi), y_range=(y_lo, y_hi))
+
+    def _dataobj_modified_cb(self, dataobj):
+        """Called when a dataobj we have looked at before is modified."""
+        _dataobj = self.get_dataobj()
+        if _dataobj is None or _dataobj is not dataobj:
+            # nothing to do or object being modified is not the one
+            # we are displaying
+            return
+
+        self.replot()
 
     def get_pan(self, coord='data'):
         """Get pan positions.
@@ -919,6 +1094,64 @@ class PlotViewBase(Callback.Callbacks):
         cursor = self.get_cursor(cname)
         self.figure.canvas.set_cursor(cursor)
 
+    def apply_profile(self, profile, keylist=None):
+        """Apply a profile to the viewer.
+
+        Parameters
+        ----------
+        profile : `~ginga.misc.Settings.SettingGroup`
+
+        This function is used to initialize the viewer to a known state.
+        The keylist, if given, will limit the items to be transferred
+        from the profile to viewer settings, otherwise all items are
+        copied.
+        """
+        profile.copy_settings(self.t_, keylist=keylist,
+                              callback=True)
+
+    def capture_profile(self, profile):
+        self.t_.copy_settings(profile, keylist=self.profile_keylist,
+                              callback=False)
+        self.logger.debug("profile attributes set")
+
+    def capture_default_viewer_profile(self):
+        if self.default_viewer_profile is None:
+            self.default_viewer_profile = Settings.SettingGroup()
+        self.t_.copy_settings(self.default_viewer_profile,
+                              keylist=self.profile_keylist,
+                              callback=False)
+        self.logger.info("captured default profile")
+
+    def checkpoint_profile(self):
+        profile = self.save_profile()
+        if profile is None:
+            # no dataobj in viewer
+            return
+        self.capture_profile(profile)
+        return profile
+
+    def save_profile(self, **params):
+        """Save the given parameters into profile settings.
+
+        Parameters
+        ----------
+        params : dict
+            Keywords and values to be saved.
+
+        """
+        dataobj = self.get_dataobj()
+        if dataobj is None:
+            return
+
+        profile = dataobj.save_profile(**params)
+        return profile
+
+    def _update_profile_cb(self, setting, value):
+        key = setting.name
+        if self.use_embedded_profile:
+            kwargs = {key: value}
+            self.save_profile(**kwargs)
+
     def __str__(self):
         return "PlotViewBase"
 
@@ -933,7 +1166,7 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
         # for interactive features
         self.can = Bunch.Bunch(zoom=False, pan=False)
 
-        # for qt key handling
+        # for matplotlib key handling
         self._keytbl = {
             'shift': 'shift_l',
             'control': 'control_l',

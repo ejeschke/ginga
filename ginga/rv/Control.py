@@ -1561,7 +1561,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         viewer = channel.viewer
         self.logger.info("removing image %s" % (imname))
         # If this is the current image in the viewer, clear the viewer
-        image = viewer.get_image()
+        image = viewer.get_dataobj()
         if image is not None:
             curname = image.get('name', 'NONAME')
             if curname == imname:
@@ -1578,7 +1578,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
     def remove_current_image(self):
         channel = self.get_current_channel()
         viewer = channel.viewer
-        image = viewer.get_image()
+        image = viewer.get_dataobj()
         if image is None:
             return
         imname = image.get('name', 'NONAME')

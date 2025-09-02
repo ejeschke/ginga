@@ -195,7 +195,6 @@ class ImageViewBase(Callback.Callbacks):
                                 'color_map', 'intensity_map',
                                 'color_map_invert', 'color_map_rot_pct',
                                 'contrast', 'brightness']
-        #for name in self.t_.keys():
         for name in self.profile_keylist:
             self.t_.get_setting(name).add_callback('set',
                                                    self._update_profile_cb)
@@ -1030,15 +1029,7 @@ class ImageViewBase(Callback.Callbacks):
         if image is None:
             return
 
-        profile = image.get('profile', None)
-        if profile is None:
-            # If image has no profile then create one
-            profile = Settings.SettingGroup()
-            image.set(profile=profile)
-
-        self.logger.debug("saving to image profile: params=%s" % (
-            str(params)))
-        profile.set(**params)
+        profile = image.save_profile(**params)
         return profile
 
     def _update_profile_cb(self, setting, value):

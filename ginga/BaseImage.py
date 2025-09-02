@@ -7,7 +7,7 @@
 import numpy as np
 import logging
 
-from ginga.misc import Bunch, Callback
+from ginga.misc import Bunch, Callback, Settings
 from ginga import trcalc, AutoCuts
 
 
@@ -68,6 +68,9 @@ class ViewerObjectBase(Callback.Callbacks):
     def __getitem__(self, kwd):
         return self.metadata[kwd]
 
+    def __setitem__(self, kwd, value):
+        self.metadata[kwd] = value
+
     def __contains__(self, kwd):
         return kwd in self.metadata
 
@@ -77,8 +80,25 @@ class ViewerObjectBase(Callback.Callbacks):
     def set(self, **kwds):
         self.update(kwds)
 
-    def __setitem__(self, kwd, value):
-        self.metadata[kwd] = value
+    def save_profile(self, **params):
+        """Save the given parameters into profile settings.
+
+        Parameters
+        ----------
+        params : dict
+            Keywords and values to be saved.
+
+        """
+        profile = self.get('profile', None)
+        if profile is None:
+            # If we has no profile then create one
+            profile = Settings.SettingGroup()
+            self.set(profile=profile)
+
+        self.logger.debug("saving to profile: params=%s" % (
+            str(params)))
+        profile.set(**params)
+        return profile
 
 
 class BaseImage(ViewerObjectBase):
