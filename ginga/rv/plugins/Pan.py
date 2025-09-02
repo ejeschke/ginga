@@ -280,6 +280,10 @@ class Pan(GingaPlugin.GlobalPlugin):
                                           whence=whence)
                 paninfo.panimage.zoom_fit()
                 self.panset(channel.fitsimage, channel, paninfo)
+            else:
+                # nothing except a graphical overlay change, so simply
+                # redraw to keep pace
+                paninfo.panimage.redraw(whence=whence)
         return True
 
     # LOGIC
