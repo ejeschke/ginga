@@ -138,6 +138,10 @@ class RGBMapper(Callback.Callbacks):
 
         self.suppress_changed = self.suppress_callback('changed', 'last')
 
+        if self.dist is None:
+            calg_name = self.t_.get('color_algorithm', 'linear')
+            self.set_color_algorithm(calg_name)
+
         cm_name = self.t_.get('color_map', 'gray')
         self.set_color_map(cm_name)
 
