@@ -1851,7 +1851,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.cmap_choice.set_index(index)
 
         # color dist algorithm
-        calg = rgbmap.get_hash_algorithm()
+        calg = rgbmap.t_.get('color_algorithm', 'linear')
         index = self.calg_names.index(calg)
         self.w.calg_choice.set_index(index)
 
