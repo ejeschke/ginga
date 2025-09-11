@@ -644,7 +644,7 @@ class QueueTaskset(Task):
 
                 self.task = task
 
-                task.add_callback(self.child_done)
+                task.add_callback('resolved', self.child_done)
 
                 with self.lock:
                     self.count += 1

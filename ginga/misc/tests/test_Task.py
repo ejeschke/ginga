@@ -5,8 +5,6 @@ import logging
 
 from .. import Task
 
-#LOGDEBUG = True  # COMMENTED BECAUSE NOT USED
-
 
 # ========================================================================
 

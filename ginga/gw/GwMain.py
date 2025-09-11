@@ -201,7 +201,8 @@ class GwMain(Callback.Callbacks):
 
     def nongui_do_cb(self, tup, method, *args, **kwdargs):
         task = Task.FuncTask(method, args, kwdargs, logger=self.logger)
-        task.register_callback(tup[0], args=tup[1:])
+        _args = [] if len(tup) == 1 else tup[1:]
+        task.add_callback('resolved', tup[0], *_args)
         return self.nongui_do_task(task)
 
     def nongui_do_future(self, future):

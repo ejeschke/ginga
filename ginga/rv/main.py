@@ -423,7 +423,7 @@ class ReferenceViewer(object):
                               suppress_fits_warnings=False,
                               recursion_limit=2000,
                               min_threads=2,
-                              num_threads=os.cpu_count(),
+                              num_threads=max(os.cpu_count(), 10),
                               threadpool_analyze_interval_sec=None,
                               icc_working_profile=None,
                               font_scaling_factor=None,
@@ -542,7 +542,7 @@ class ReferenceViewer(object):
 
         ev_quit = threading.Event()
         # Create and start thread pool
-        num_threads = settings.get('num_threads', os.cpu_count())
+        num_threads = settings.get('num_threads', max(os.cpu_count(), 10))
         if options.numthreads is not None:
             num_threads = options.numthreads
         min_threads = settings.get('min_threads', 2)
