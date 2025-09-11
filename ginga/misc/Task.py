@@ -859,7 +859,7 @@ class ThreadPool(object):
 
     def __init__(self, numthreads=1, logger=None, ev_quit=None,
                  minthreads=None, idle_limit_sec=10.0,
-                 workerClass=WorkerThread):
+                 workerClass=WorkerThread, analyze_interval=None):
 
         self.numthreads = max(1, numthreads)
         self.logger = logger
@@ -873,6 +873,8 @@ class ThreadPool(object):
         self.minthreads = max(0, minthreads)
         self.idle_limit_sec = idle_limit_sec
         self.mon_thread = None
+        self._analyze_time = 0.0
+        self.analyze_interval = analyze_interval
 
         self.queue = PriorityQueue()
 
@@ -967,6 +969,12 @@ class ThreadPool(object):
         """
         self.logger.debug("starting the thread pool attendant loop...")
         while not self.ev_quit.is_set():
+            if self.analyze_interval is not None:
+                cur_time = time.time()
+                if cur_time - self._analyze_time > self.analyze_interval:
+                    self._analyze_time = cur_time
+                    self.analyze_threads()
+
             worker = None
             with self.regcond:
                 # join threads that have exited
@@ -987,6 +995,35 @@ class ThreadPool(object):
                     self.mp_cond.wait(timeout=0.25)
 
         self.logger.debug("stopping the thread pool attendant loop...")
+
+    def analyze_threads(self):
+        self.logger.info("--- analyzing active threads...")
+        count = 0
+        for thread in threading.enumerate():
+            count += 1
+            if thread.ident is None:
+                # Exclude threads that haven't started yet
+                self.logger.info(f"{count:3d}: thread named {thread.name} is initializing...")
+                continue
+
+            self.logger.info(f"{count:3d}: thread name: {thread.name}, thread id: {thread.ident}")
+            try:
+                # Get the top-level stack frame for the thread
+                frame = sys._current_frames().get(thread.ident)
+                if frame:
+                    # Iterate through the stack frames to find the current function
+                    while frame:
+                        function_name = frame.f_code.co_name
+                        self.logger.info(f"currently in function: {function_name}")
+                        frame = frame.f_back   # Move to the calling frame
+                        if function_name != '<module>':
+                            # Stop if we're not in the global scope
+                            break
+                else:
+                    self.logger.warning("could not retrieve stack frame for this thread (might be idle or finished).")
+            except Exception as e:
+                self.logger.error(f"error inspecting thread {thread.name}: {e}")
+        self.logger.info("--- done analyzing")
 
     def delTask(self, taskid):
         self.logger.error("delTask not yet implemented")

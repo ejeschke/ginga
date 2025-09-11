@@ -335,6 +335,9 @@ class ReferenceViewer(object):
         add_argument("-g", "--geometry", dest="geometry",
                      default=None, metavar="GEOM",
                      help="X geometry for initial size and placement")
+        add_argument("--minthreads", dest="minthreads", type=int,
+                     default=None, metavar="NUM",
+                     help="Start minimum of NUM threads in thread pool")
         add_argument("--modules", dest="modules", metavar="NAMES",
                      help="Specify additional modules to load")
         add_argument("--norestore", dest="norestore", default=False,
@@ -345,7 +348,7 @@ class ReferenceViewer(object):
                      help="Don't display the splash screen")
         add_argument("--numthreads", dest="numthreads", type=int,
                      default=None, metavar="NUM",
-                     help="Start NUM threads in thread pool")
+                     help="Maximum NUM threads in thread pool")
         add_argument("--opengl", dest="opengl", default=False,
                      action="store_true",
                      help="Use OpenGL acceleration")
@@ -419,7 +422,9 @@ class ReferenceViewer(object):
                               WCSpkg='choose', FITSpkg='choose',
                               suppress_fits_warnings=False,
                               recursion_limit=2000,
-                              num_threads=4,
+                              min_threads=2,
+                              num_threads=os.cpu_count(),
+                              threadpool_analyze_interval_sec=None,
                               icc_working_profile=None,
                               font_scaling_factor=None,
                               save_layout=True,
@@ -537,11 +542,16 @@ class ReferenceViewer(object):
 
         ev_quit = threading.Event()
         # Create and start thread pool
-        num_threads = settings.get('num_threads', 4)
+        num_threads = settings.get('num_threads', os.cpu_count())
         if options.numthreads is not None:
             num_threads = options.numthreads
+        min_threads = settings.get('min_threads', 2)
+        if options.minthreads is not None:
+            min_threads = options.minthreads
+        analyze_interval = settings.get('threadpool_analyze_interval_sec', None)
         thread_pool = Task.ThreadPool(numthreads=num_threads, logger=logger,
-                                      minthreads=1, ev_quit=ev_quit)
+                                      minthreads=min_threads, ev_quit=ev_quit,
+                                      analyze_interval=analyze_interval)
         thread_pool.startall()
 
         # Create the Ginga main object
