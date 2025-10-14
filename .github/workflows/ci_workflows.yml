@@ -56,17 +56,22 @@ jobs:
             python: '3.13'
             toxenv: py313-test
             toxposargs: -sv
+          - name: Test with Python 3.14 on Linux
+            os: ubuntu-latest
+            python: '3.14'
+            toxenv: py314-test
+            toxposargs: -sv
 
           - name: Test with old dependencies
             os: ubuntu-latest
-            python: 3.11
+            python: '3.11'
             toxenv: py311-test-oldestdeps
             toxposargs: -sv
 
           - name: Test with dev dependencies
             os: ubuntu-latest
-            python: '3.13'
-            toxenv: py313-test-devdeps
+            python: '3.14'
+            toxenv: py314-test-devdeps
             toxposargs: -sv
 
     steps:
