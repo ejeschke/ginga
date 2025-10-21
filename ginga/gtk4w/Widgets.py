@@ -12,6 +12,7 @@ from functools import reduce
 
 from ginga.gtk4w import GtkHelp
 from ginga import colors
+from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
 from ginga.util.syncops import Shelf
@@ -21,7 +22,6 @@ from gi.repository import Gdk
 from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import GObject
-from gi.repository import GdkPixbuf
 
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox',
@@ -31,9 +31,9 @@ __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
-           'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog', 'DragPackage',
-           'WidgetMoveEvent', 'name_mangle', 'make_widget', 'hadjust',
-           'build_info', 'wrap']
+           'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog', 'MessageDialog',
+           'DragPackage', 'WidgetMoveEvent', 'name_mangle', 'make_widget',
+           'hadjust', 'build_info', 'wrap']
 
 
 class WidgetError(Exception):
@@ -336,11 +336,17 @@ class TextArea(WidgetBase):
         # TODO
         #self.tw.modify_font(font)
 
-    def set_wrap(self, tf):
-        if tf:
-            self.tw.set_wrap_mode(Gtk.WrapMode.WORD)
+    def set_wrap(self, kind):
+        d = {'none': Gtk.WrapMode.NONE,
+             'char': Gtk.WrapMode.CHAR,
+             'word': Gtk.WrapMode.WORD,
+             'full': Gtk.WrapMode.WORD_CHAR,
+             }
+        if isinstance(kind, bool):
+            # <-- old API interface
+            self.tw.set_wrap_mode(d['word' if kind else 'none'])
         else:
-            self.tw.set_wrap_mode(Gtk.WrapMode.NONE)
+            self.tw.set_wrap_mode(d[kind])
 
     def set_scroll_pos(self, pos):
         vadj = self.widget.get_vadjustment()
@@ -452,6 +458,7 @@ class Button(WidgetBase):
 
         w = Gtk.Button(label=text)
         self.widget = w
+        self._set_name(w)
         w.connect('clicked', self._cb_redirect)
 
         self.enable_callback('activated')
@@ -776,13 +783,18 @@ class RadioButton(WidgetBase):
 
 
 class Image(WidgetBase):
+
+    @classmethod
+    def get_native_image_from_file(cls, iconpath, size=None, adjust_width=True):
+        return GtkHelp.get_image(iconpath, size=size,
+                                 adjust_width=adjust_width)
+
     def __init__(self, native_image=None, style='normal', menu=None):
         super(Image, self).__init__()
 
-        if native_image is None:
-            #native_image = Gtk.Image()
-            native_image = Gtk.Picture()
-        self.image = native_image
+        self.image = Gtk.Picture()
+        if native_image is not None:
+            self.image.set_pixbuf(native_image)
         self.image.set_property("has-tooltip", True)
         gesture = Gtk.GestureClick.new()
         gesture.connect("pressed", self._cb_redirect1)
@@ -831,12 +843,7 @@ class Image(WidgetBase):
     def load_file(self, img_path, format=None):
         # format ignored at present
         pixbuf = GtkHelp.pixbuf_new_from_file(img_path)
-        if hasattr(self.image, 'set_from_pixbuf'):
-            # Gtk.Image
-            self.image.set_from_pixbuf(pixbuf)
-        else:
-            # Gtk.Picture
-            self.image.set_pixbuf(pixbuf)
+        self.image.set_pixbuf(pixbuf)
 
 
 class ProgressBar(WidgetBase):
@@ -905,8 +912,13 @@ class TreeView(WidgetBase):
         self.leaf_idx = 0
         self.columns = []
         self.datakeys = []
+        self.datatypes = []
         # shadow index
         self.shadow = {}
+        self.font = 'Sans Serif'
+        self.fontsize = 10.0
+        self.cell_pad_px = 0
+        self.editable = False
 
         # this widget has a built in ScrollArea to match Qt functionality
         sw = Gtk.ScrolledWindow()
@@ -935,6 +947,7 @@ class TreeView(WidgetBase):
         else:
             tv = Gtk.TreeView()
 
+        self._set_name(tv)
         self.tv = tv
         sw.set_child(self.tv)
         tv.connect('row-activated', self._cb_redirect)
@@ -954,8 +967,9 @@ class TreeView(WidgetBase):
         self._selection_stocker = self._selection_shelf.get_stocker()
 
         for cbname in ('selected', 'activated', 'drag-start',
-                       'collapsed', 'expanded'):
+                       'collapsed', 'expanded', 'changed'):
             self.enable_callback(cbname)
+        self.__set_style()
 
     def setup_table(self, columns, levels, leaf_key):
         self.clear()
@@ -969,15 +983,23 @@ class TreeView(WidgetBase):
             # columns specifies a mapping
             headers = [col[0] for col in columns]
             datakeys = [col[1] for col in columns]
+            if len(columns[0]) > 2:
+                datatypes = [col[2] for col in columns]
+            else:
+                datatypes = ['icon' if _key == 'icon' else 'str'
+                             for _key in datakeys]
         else:
             headers = datakeys = columns
+            datatypes = ['icon' if _key == 'icon' else 'str'
+                         for _key in datakeys]
 
         self.datakeys = datakeys
+        self.datatypes = datatypes
         self.leaf_idx = datakeys.index(self.leaf_key)
         # make sort functions
         self.cell_sort_funcs = []
-        for kwd in self.datakeys:
-            self.cell_sort_funcs.append(self._mksrtfnN(kwd))
+        for i, kwd in enumerate(self.datakeys):
+            self.cell_sort_funcs.append(self._mksrtfnN(kwd, self.datatypes[i]))
 
         # Remove old columns, if any
         for col in list(self.tv.get_columns()):
@@ -986,22 +1008,26 @@ class TreeView(WidgetBase):
         # Set up headers
         for n in range(0, len(self.columns)):
             kwd = self.datakeys[n]
-            if kwd == 'icon':
+            datakey = self.datakeys[n]
+            datatype = self.datatypes[n]
+            if datatype == 'icon':
                 cell = Gtk.CellRendererPixbuf()
+            elif datatype == 'check':
+                cell = Gtk.CellRendererToggle()
+                cell.connect("toggled", self._toggled_cb, datakey, n)
             else:
                 cell = Gtk.CellRendererText()
-            cell.set_padding(2, 0)
+                cell.set_property("editable", self.editable)
+                cell.connect("edited", self._edited_cb, datakey, n)
+
+            cell.set_padding(self.cell_pad_px, self.cell_pad_px)
             header = headers[n]
             tvc = Gtk.TreeViewColumn(header, cell)
             tvc.set_resizable(True)
             if self.sortable:
                 tvc.connect('clicked', self.sort_cb, n)
                 tvc.set_clickable(True)
-            if n == 0:
-                fn_data = self._mkcolfn0(kwd)
-                # cell.set_property('xalign', 1.0)
-            else:
-                fn_data = self._mkcolfnN(kwd)
+            fn_data = self._mkcolfnN(n, kwd, datatype)
             tvc.set_cell_data_func(cell, fn_data)
             self.tv.append_column(tvc)
 
@@ -1010,6 +1036,7 @@ class TreeView(WidgetBase):
         self.tv.set_model(treemodel)
         # This speeds up rendering of TreeViews
         self.tv.set_fixed_height_mode(True)
+        self.__set_style()
 
     def set_tree(self, tree_dict):
         self.clear()
@@ -1068,17 +1095,11 @@ class TreeView(WidgetBase):
             node = tree[key]
             if level >= self.levels:
                 # leaf node
-                values = ['' if _key == 'icon' else str(node[_key])
-                          for _key in self.datakeys]
                 try:
                     bnch = shadow[key]
                     item_iter = bnch.item
-                    bnch.node = node
-                    # update leaf item
-                    # model.set(item_iter, node)
-                    # for i, val in enumerate(values):
-                    #     print(f"setting col {i}={val}")
-                    #     model.set_value(item_iter, i, val)
+                    # bnch.node = node
+                    bnch.node.update(node)
 
                 except KeyError:
                     # new item
@@ -1100,7 +1121,7 @@ class TreeView(WidgetBase):
                     shadow[key] = Bunch.Bunch(node=d, item=item, terminal=False)
 
                     if expand_new:
-                        #self.tv.expand_row(model.get_path(item), False)
+                        #self.tv.expand_row(model.get_path(item), True)
                         expand_paths.append(model.get_path(item))
 
                 # recurse for non-leaf interior node
@@ -1294,6 +1315,15 @@ class TreeView(WidgetBase):
         item = self._path_to_item(path)  # noqa
         # TODO
 
+    def set_font(self, fontname, size):
+        self.font = fontname
+        self.fontsize = size
+        self.__set_style()
+
+    def set_cell_padding(self, px):
+        self.cell_pad_px = int(px)
+        self.__set_style()
+
     def _path_to_item(self, path):
         s = self.shadow
         for name in path[:-1]:
@@ -1337,6 +1367,24 @@ class TreeView(WidgetBase):
             res.append(col.get_width())
         return res
 
+    def set_path_background(self, path, bgcolor, alpha=1.0):
+        # TODO
+        pass
+
+    def __set_style(self):
+        myname = self._get_name()
+        style = f"""
+        .{myname} {{
+            font-family: {self.font};
+            font-size: {self.fontsize}pt;
+        }}
+        """
+        context = self.widget.get_style_context()
+        context.add_class(myname)
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(style.encode())
+        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()
         model = treeview.get_model()
@@ -1359,45 +1407,41 @@ class TreeView(WidgetBase):
             else:
                 return 0
 
-    def _mksrtfnN(self, idx):
+    def _mksrtfnN(self, kwd, datatype):
         def fn(*args):
             model, iter1, iter2 = args[:3]
             bnch1 = model.get_value(iter1, 0)
             bnch2 = model.get_value(iter2, 0)
             if isinstance(bnch1, str):
                 return self._cmp(bnch1, bnch2)
-            val1, val2 = bnch1[idx], bnch2[idx]
+            val1, val2 = bnch1[kwd], bnch2[kwd]
             return self._cmp(val1, val2)
         return fn
 
-    def _mkcolfn0(self, idx):
+    def _mkcolfnN(self, idx, kwd, datatype):
         def fn(*args):
             column, cell, model, iter = args[:4]
             bnch = model.get_value(iter, 0)
-            if isinstance(bnch, str):
-                if not isinstance(cell, Gtk.CellRendererPixbuf):
-                    cell.set_property('text', bnch)
-            elif isinstance(bnch, GdkPixbuf.Pixbuf):
-                cell.set_property('pixbuf', bnch)
-            elif isinstance(bnch[idx], GdkPixbuf.Pixbuf):
-                cell.set_property('pixbuf', bnch[idx])
+            if isinstance(bnch, Bunch.Bunch) or isinstance(bnch, dict):
+                # leaf row
+                value = bnch[kwd]
             else:
-                cell.set_property('text', bnch[idx])
-        return fn
+                value = bnch
+                # NOTE: hack to set other columns to show nothing
+                # if this is not a leaf row.  Not sure idx will always
+                # be 0 only for the shown value
+                if idx > 0:
+                    value = ''
 
-    def _mkcolfnN(self, idx):
-        def fn(*args):
-            column, cell, model, iter = args[:4]
-            bnch = model.get_value(iter, 0)
-            if isinstance(bnch, str):
-                if not isinstance(cell, Gtk.CellRendererPixbuf):
-                    cell.set_property('text', '')
-            elif isinstance(bnch, GdkPixbuf.Pixbuf):
-                cell.set_property('text', '')
-            elif isinstance(bnch[idx], GdkPixbuf.Pixbuf):
-                cell.set_property('pixbuf', bnch[idx])
+            if isinstance(cell, Gtk.CellRendererPixbuf):
+                if datatype == 'icon':
+                    cell.set_property('pixbuf', value)
+            elif isinstance(cell, Gtk.CellRendererToggle):
+                if datatype == 'check':
+                    cell.set_property('active', value)
             else:
-                cell.set_property('text', str(bnch[idx]))
+                # text cell, by process of elimination
+                cell.set_property('text', str(value))
         return fn
 
     def _start_drag(self, treeview, context, selection,
@@ -1406,6 +1450,26 @@ class TreeView(WidgetBase):
         drag_pkg = DragPackage(self.tv, selection)
         self.make_callback('drag-start', drag_pkg, res_dict)
         drag_pkg.start_drag()
+
+    def _edited_cb(self, cell, path, new_text, datakey, col):
+        model = self.tv.get_model()
+        item = model.get_iter(path)
+        tr_row = model[item]
+        dct = tr_row[0]
+        text = dct[datakey]
+        dct[datakey] = new_text
+        _path = self._get_path(item)
+        self.make_callback('changed', _path, datakey, new_text)
+
+    def _toggled_cb(self, cell, path, datakey, col):
+        model = self.tv.get_model()
+        item = model.get_iter(path)
+        tr_row = model[item]
+        dct = tr_row[0]
+        tf = not dct[datakey]
+        dct[datakey] = tf
+        _path = self._get_path(item)
+        self.make_callback('changed', _path, datakey, tf)
 
 
 # CONTAINERS
@@ -1423,6 +1487,7 @@ class ContainerBase(WidgetBase):
         self.children.append(ref)
 
     def _remove(self, childw, delete=False):
+        self.widget.remove(childw)
         childw.unparent()
         if delete:
             #childw.destroy()
@@ -1668,6 +1733,17 @@ class TabWidget(ContainerBase):
         if widget is None:
             return -1
         return self.widget.page_num(widget)
+
+    def remove(self, child, delete=False):
+        idx = self.index_of(child)
+        self.children.remove(child)
+        self.widget.remove_page(idx)
+        child_w = child.get_widget()
+        child_w.unparent()
+        if delete:
+            # child_w.destroy()
+            pass
+        self.make_callback('widget-removed', child)
 
     def index_to_widget(self, idx):
         """Returns child corresponding to `idx`"""
@@ -2629,6 +2705,10 @@ class Application(Callback.Callbacks):
 
         self.window_dict[wid] = window
 
+    def remove_window(self, window):
+        wid = window.wid
+        del self.window_dict[wid]
+
     def get_window(self, wid):
         return self.window_dict[wid]
 
@@ -2673,7 +2753,7 @@ class Application(Callback.Callbacks):
 class Dialog(WidgetBase):
 
     def __init__(self, title='', flags=0, buttons=[],
-                 parent=None, modal=False):
+                 parent=None, modal=False, autoclose=False):
         super().__init__()
         self.buttons = []
         self.parent = parent
@@ -2703,10 +2783,7 @@ class Dialog(WidgetBase):
             btn = Button(name)
             self.buttons.append(btn)
 
-            def cb(val):
-                return lambda w: self._cb_redirect(val)
-
-            btn.add_callback('activated', cb(val))
+            btn.add_callback('activated', self._cb_redirect, val)
             btn_box.add_widget(btn, stretch=0)
 
         # ??
@@ -2721,8 +2798,14 @@ class Dialog(WidgetBase):
         for name in ['activated', 'close']:
             self.enable_callback(name)
 
-    def _cb_redirect(self, val):
+        if autoclose:
+            self.add_callback('close', lambda w: w.hide())
+
+    def _cb_redirect(self, widget, val):
         self.make_callback('activated', val)
+
+    def _cb_close(self, widget):
+        self.make_callback('close')
 
     def get_content_area(self):
         return self.content
@@ -2742,6 +2825,53 @@ class Dialog(WidgetBase):
                     self.widget.set_transient_for(parent_w)
 
         self.widget.show()
+
+
+class MessageDialog(Dialog):
+
+    icon_dct = dict()
+
+    @classmethod
+    def set_category_icon(cls, category, iconpath, size=(64, 64)):
+        native_img = Image.get_native_image_from_file(iconpath, size=size)
+        cls.icon_dct[category] = native_img
+
+    def __init__(self, title='', flags=None, buttons=[("Dismiss", 0)],
+                 parent=None, modal=False, autoclose=False):
+        Dialog.__init__(self, title=title, flags=flags, buttons=buttons,
+                        parent=parent, modal=modal, autoclose=autoclose)
+
+        # initialize default icons for certain categories
+        if 'warning' not in MessageDialog.icon_dct:
+            for category, iconfile in [('warning', "warning.svg"),
+                                       #('critical', "critical.svg"),
+                                       #('denied', "denied.svg"),
+                                       ('error', "error.svg"),
+                                       ('info', "information.svg"),
+                                       ('question', "question.svg")]:
+                iconpath = os.path.join(ginga_icon_dir, iconfile)
+                MessageDialog.set_category_icon(category, iconpath)
+
+        vbox = self.get_content_area()
+        vbox.set_margins(4, 4, 4, 4)
+
+    def set_message(self, category, text, title=None):
+        if title is not None:
+            self.set_title(title)
+        vbox = self.get_content_area()
+        vbox.remove_all()
+        if category in self.icon_dct:
+            hbox = HBox()
+            hbox.set_border_width(4)
+            hbox.add_widget(Label(""), stretch=1)
+            img = Image(native_image=MessageDialog.icon_dct[category])
+            hbox.add_widget(img, stretch=0)
+            hbox.add_widget(Label(""), stretch=1)
+            vbox.add_widget(hbox, stretch=1)
+
+        tw = Label(text)
+        vbox.add_widget(tw, stretch=1)
+        vbox.add_widget(tw)
 
 
 class ColorDialog(Dialog):

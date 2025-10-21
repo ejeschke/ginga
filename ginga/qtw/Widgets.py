@@ -13,18 +13,20 @@ from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
 from ginga.qtw import QtHelp
 
 from ginga import colors
+from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
 
 __all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'GrowingTextEdit', 'TextArea', 'Label', 'Button', 'ComboBox',
+           'TextArea', 'Label', 'Button', 'ComboBox',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
            'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
-           'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog', 'DragPackage',
+           'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog',
+           'MessageDialog', 'DragPackage',
            'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
 
 
@@ -232,77 +234,69 @@ class TextEntrySet(WidgetBase):
         self.entry.setEnabled(tf)
 
 
-class GrowingTextEdit(QtGui.QTextEdit):
-
-    def __init__(self, *args, **kwargs):
-        super(GrowingTextEdit, self).__init__(*args, **kwargs)
-        self.document().documentLayout().documentSizeChanged.connect(
-            self.sizeChange)
-        self.heightMin = 0
-        self.heightMax = 65000
-
-    def sizeChange(self):
-        docHeight = self.document().size().height()
-        # add some margin to prevent auto scrollbars
-        docHeight += 20
-        if self.heightMin <= docHeight <= self.heightMax:
-            self.setMaximumHeight(int(docHeight))
-
-
 class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
         super(TextArea, self).__init__()
 
-        # tw = QtGui.QTextEdit()
-        tw = GrowingTextEdit()
+        #tw = QtGui.QTextEdit()
+        tw = QtHelp.QGrowingTextEdit()
         tw.setReadOnly(not editable)
         if wrap:
             tw.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
         else:
             tw.setLineWrapMode(QtGui.QTextEdit.NoWrap)
+        self.tw = tw
         self.widget = tw
 
     def append_text(self, text, autoscroll=True):
         if text.endswith('\n'):
             text = text[:-1]
-        self.widget.append(text)
+        self.tw.append(text)
         if not autoscroll:
             return
 
-        self.widget.moveCursor(QTextCursor.End)
-        self.widget.moveCursor(QTextCursor.StartOfLine)
-        self.widget.ensureCursorVisible()
+        self.tw.moveCursor(QTextCursor.End)
+        self.tw.moveCursor(QTextCursor.StartOfLine)
+        self.tw.ensureCursorVisible()
 
     def get_text(self):
-        return self.widget.document().toPlainText()
+        return self.tw.document().toPlainText()
 
     def clear(self):
-        self.widget.clear()
+        self.tw.clear()
 
     def set_text(self, text):
         self.clear()
         self.append_text(text)
 
     def set_editable(self, tf):
-        self.widget.setReadOnly(not tf)
+        self.tw.setReadOnly(not tf)
 
     def set_limit(self, numlines):
-        # self.widget.setMaximumBlockCount(numlines)
+        # self.tw.setMaximumBlockCount(numlines)
         pass
 
     def set_font(self, font, size=10):
         if not isinstance(font, QFont):
             font = self.get_font(font, size)
-        self.widget.setCurrentFont(font)
+        self.tw.setCurrentFont(font)
 
-    def set_wrap(self, tf):
-        if tf:
-            self.widget.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
+    def set_wrap(self, kind):
+        if isinstance(kind, bool):
+            # <-- old API
+            kind = 'full' if kind else 'none'
+
+        if kind == 'none':
+            self.tw.setLineWrapMode(QtGui.QTextEdit.NoWrap)
         else:
-            self.widget.setLineWrapMode(QtGui.QTextEdit.NoWrap)
+            self.tw.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
+            if kind in ('char', 'full'):
+                self.tw.setWordWrapMode(QtGui.QTextOption.WrapAnywhere)
+            elif kind == 'word':
+                self.tw.setWordWrapMode(QtGui.QTextOption.WrapAtWordBoundaryOrAnywhere)
 
     def set_scroll_pos(self, pos):
-        vsb = self.widget.verticalScrollBar()
+        vsb = self.tw.verticalScrollBar()
         if pos == -1:
             vsb.setValue(vsb.maximum())
         else:
@@ -735,6 +729,12 @@ class RadioButton(WidgetBase):
 
 
 class Image(WidgetBase):
+
+    @classmethod
+    def get_native_image_from_file(cls, iconpath, size=None, adjust_width=True):
+        return QtHelp.get_image(iconpath, size=size,
+                                adjust_width=adjust_width)
+
     def __init__(self, native_image=None, style='normal', menu=None):
         super(Image, self).__init__()
 
@@ -840,8 +840,13 @@ class TreeView(WidgetBase):
         self.leaf_idx = 0
         self.columns = []
         self.datakeys = []
+        self.datatypes = []
         # shadow index
         self.shadow = {}
+        self.font = 'Sans Serif'
+        self.fontsize = 10.0
+        self.cell_pad_px = 0
+        self.editable = False
 
         tv = QtGui.QTreeWidget()
         self.widget = tv
@@ -853,12 +858,13 @@ class TreeView(WidgetBase):
         tv.itemSelectionChanged.connect(self._selection_cb)
         tv.itemExpanded.connect(self._item_expanded_cb)
         tv.itemCollapsed.connect(self._item_collapsed_cb)
+        tv.itemChanged.connect(self._item_changed_cb)
         if self.dragable:
             tv.setDragEnabled(True)
             tv.startDrag = self._start_drag
 
         for cbname in ('selected', 'activated', 'drag-start', 'expanded',
-                       'collapsed'):
+                       'collapsed', 'changed'):
             self.enable_callback(cbname)
 
     def setup_table(self, columns, levels, leaf_key):
@@ -879,10 +885,18 @@ class TreeView(WidgetBase):
             # columns specifies a mapping
             headers = [col[0] for col in columns]
             datakeys = [col[1] for col in columns]
+            if len(columns[0]) > 2:
+                datatypes = [col[2] for col in columns]
+            else:
+                datatypes = ['icon' if _key == 'icon' else 'str'
+                             for _key in datakeys]
         else:
             headers = datakeys = columns
+            datatypes = ['icon' if _key == 'icon' else 'str'
+                         for _key in datakeys]
 
         self.datakeys = datakeys
+        self.datatypes = datatypes
         self.leaf_idx = datakeys.index(self.leaf_key)
 
         if self.sortable:
@@ -953,19 +967,14 @@ class TreeView(WidgetBase):
             node = tree[key]
             if level >= self.levels:
                 # leaf node
-                values = ['' if _key == 'icon' else str(node[_key])
-                          for _key in self.datakeys]
                 try:
                     bnch = shadow[key]
                     item = bnch.item
                     bnch.node.update(node)
-                    # update leaf item
-                    for i in range(len(values)):
-                        item.setText(i, values[i])
 
                 except KeyError:
                     # new item
-                    item = TreeWidgetItem(parent_item, values)
+                    item = TreeWidgetItem(parent_item)
                     if level == 1:
                         parent_item.addTopLevelItem(item)
                     else:
@@ -974,14 +983,28 @@ class TreeView(WidgetBase):
                     bnch = Bunch.Bunch(node=node, item=item, terminal=True)
                     shadow[key] = bnch
 
-                # hack for adding an image to a table
-                # TODO: add types for columns
-                if 'icon' in node:
-                    i = self.datakeys.index('icon')
-                    item.setIcon(i, node['icon'])
-
-                # mark cell as non-editable
-                item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+                # update leaf item
+                for i, _key in enumerate(self.datakeys):
+                    datatype = self.datatypes[i]
+                    if datatype == 'icon':
+                        item.setIcon(i, node[_key])
+                    elif datatype == 'check':
+                        state = QtCore.Qt.Checked if node[_key] else \
+                            QtCore.Qt.Unchecked
+                        item.setCheckState(i, state)
+                        # if self.editable:
+                        #     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                        # else:
+                        #     item.setFlags(item.flags() & ~QtCore.Qt.ItemIsUserCheckable)
+                    elif datatype == 'widget':
+                        qt_w = node[_key].get_widget()
+                        self.widget.setItemWidget(item, i, qt_w)
+                    else:
+                        item.setText(i, str(node[_key]))
+                        if self.editable:
+                            item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+                        else:
+                            item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
 
             else:
                 try:
@@ -1022,6 +1045,20 @@ class TreeView(WidgetBase):
     def _item_collapsed_cb(self, item):
         path = self._get_path(item)
         self.make_callback('collapsed', path)
+
+    def _item_changed_cb(self, item, col):
+        path = self._get_path(item)
+        key = self.datakeys[col]
+        datatype = self.datatypes[col]
+        if datatype == 'check':
+            val = (item.checkState(col) == QtCore.Qt.Checked)
+        elif datatype == 'widget':
+            # should return the wrapped widget here
+            val = None
+        else:
+            val = item.text(col)
+        # TODO: change shadow bunch?
+        self.make_callback('changed', path, key, val)
 
     def _cb_redirect(self, item):
         res_dict = {}
@@ -1196,12 +1233,20 @@ class TreeView(WidgetBase):
             color = QtHelp.QColor('black')
         else:
             font.setBold(True)
-            color = QtHelp.QColor(font_color)
+            color = QtHelp.get_color(font_color, 1.0)
         brush = QtHelp.QBrush(color)
 
         for i in range(item.columnCount()):
             item.setForeground(i, brush)
             item.setFont(i, font)
+
+    def set_path_background(self, path, bgcolor, alpha=1.0):
+        item = self._path_to_item(path)
+        hex_clr = colors.resolve_color(bgcolor, format='hex')
+        qclr = QtHelp.get_color(bgcolor, alpha)
+        brush = QtHelp.QBrush(qclr)
+        for i in range(item.columnCount()):
+            item.setBackground(i, brush)
 
     def scroll_to_path(self, path):
         item = self._path_to_item(path)
@@ -1230,6 +1275,32 @@ class TreeView(WidgetBase):
 
     def get_column_widths(self):
         return [self.widget.columnWidth(i) for i in range(len(self.columns))]
+
+    def set_font(self, fontname, size):
+        self.font = fontname
+        self.fontsize = size
+        self.__set_style()
+
+    def set_cell_padding(self, px):
+        self.cell_pad_px = int(px)
+        self.__set_style()
+
+    def __set_style(self):
+        style = f"""
+        QTreeWidget {{
+            font: {self.font};
+            font-size: {self.fontsize}pt;
+        }}
+        QHeaderView::section {{
+            font: {self.font};
+            font-size: {self.fontsize}pt;
+            font-weight: bold;
+        }}
+        QTreeWidget::item {{
+            padding: {self.cell_pad_px};
+        }}
+        """
+        self.widget.setStyleSheet(style)
 
     def _start_drag(self, event):
         res_dict = self.get_selected()
@@ -2365,6 +2436,10 @@ class Application(Callback.Callbacks):
 
         self.window_dict[wid] = window
 
+    def remove_window(self, window):
+        wid = window.wid
+        del self.window_dict[wid]
+
     def get_window(self, wid):
         return self.window_dict[wid]
 
@@ -2405,7 +2480,7 @@ class Application(Callback.Callbacks):
 class Dialog(TopLevelMixin, WidgetBase):
 
     def __init__(self, title='', flags=None, buttons=[],
-                 parent=None, modal=False):
+                 parent=None, modal=False, autoclose=False):
         WidgetBase.__init__(self)
 
         if parent is not None:
@@ -2445,11 +2520,66 @@ class Dialog(TopLevelMixin, WidgetBase):
 
         self.enable_callback('activated')
 
+        if autoclose:
+            self.add_callback('close', lambda w: w.hide())
+
     def _cb_redirect(self, val):
         self.make_callback('activated', val)
 
     def get_content_area(self):
         return self.content
+
+    def popup(self, parent=None):
+        if parent is not None:
+            self.widget.setParent(parent.get_widget())
+        self.widget.show()
+
+
+class MessageDialog(Dialog):
+
+    icon_dct = dict()
+
+    @classmethod
+    def set_category_icon(cls, category, iconpath, size=(64, 64)):
+        native_img = Image.get_native_image_from_file(iconpath, size=size)
+        cls.icon_dct[category] = native_img
+
+    def __init__(self, title='', flags=None, buttons=[("Dismiss", 0)],
+                 parent=None, modal=False, autoclose=False):
+        Dialog.__init__(self, title=title, flags=flags, buttons=buttons,
+                        parent=parent, modal=modal, autoclose=autoclose)
+
+        # initialize default icons for certain categories
+        if 'warning' not in MessageDialog.icon_dct:
+            for category, iconfile in [('warning', "warning.svg"),
+                                       #('critical', "critical.svg"),
+                                       #('denied', "denied.svg"),
+                                       ('error', "error.svg"),
+                                       ('info', "information.svg"),
+                                       ('question', "question.svg")]:
+                iconpath = os.path.join(ginga_icon_dir, iconfile)
+                MessageDialog.set_category_icon(category, iconpath)
+
+        vbox = self.get_content_area()
+        vbox.set_margins(4, 4, 4, 4)
+
+    def set_message(self, category, text, title=None):
+        if title is not None:
+            self.set_title(title)
+        vbox = self.get_content_area()
+        vbox.remove_all()
+        if category in self.icon_dct:
+            hbox = HBox()
+            hbox.set_border_width(4)
+            hbox.add_widget(Label(""), stretch=1)
+            img = Image(native_image=MessageDialog.icon_dct[category])
+            hbox.add_widget(img, stretch=0)
+            hbox.add_widget(Label(""), stretch=1)
+            vbox.add_widget(hbox, stretch=1)
+
+        tw = Label(text)
+        vbox.add_widget(tw, stretch=1)
+        vbox.add_widget(tw)
 
 
 class ColorDialog(TopLevelMixin, WidgetBase):

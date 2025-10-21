@@ -1804,6 +1804,36 @@ def load_font(font_name, font_file):
     return font_name
 
 
+def get_image(iconpath, size=None, adjust_width=True):
+    """Get a GdkPixbuf that can be used in a button or label.
+
+    Parameters
+    ----------
+    iconpath : str
+        The path to the file containing the image of the icon
+
+    size : tuple of int (width, height) or None, (defaults to (24, 24))
+        The size of the icon to be returned in pixels
+
+    adjust_width : bool, (optional, defaults to True)
+        If True, adjust width to account for the aspect ratio of the image
+    """
+    if size is not None:
+        wd, ht = size
+    else:
+        wd, ht = 24, 24
+
+    if adjust_width:
+        pixbuf = pixbuf_new_from_file(iconpath)
+        # get "natural" dimensions
+        _w, _h = pixbuf.get_width(), pixbuf.get_height()
+        aspect = _w / _h
+        wd = int(wd * aspect)
+
+    pixbuf = pixbuf_new_from_file_at_size(iconpath, wd, ht)
+    return pixbuf
+
+
 # def pixbuf_new_from_array(data, rgbtype, bpp):
 #     # NOTE: there is a bug in gtk4 with pixbuf_new_from_array()
 #     # See: http://stackoverflow.com/questions/24062779/how-to-correctly-covert-3d-array-into-continguous-rgb-bytes/24070152#24070152

@@ -2498,6 +2498,10 @@ class GridBox(ContainerBase):
                 args = [delta_rows, delta_cols]
                 app.do_operation("resize_grid", id=self.id, value=args)
 
+    def _cb_redirect(self, event):
+        # TODO: need to see when this is getting called!
+        self.make_callback('activated')
+
     def set_row_spacing(self, val):
         self.row_spacing = val
         self.add_css_styles([('border-collapse', 'separate')])
@@ -3348,6 +3352,10 @@ class Application(Callback.Callbacks):
         window.app = self
 
         self.window_dict[wid] = window
+
+    def remove_window(self, window):
+        wid = window.wid
+        del self.window_dict[wid]
 
     def get_window(self, wid):
         return self.window_dict[wid]

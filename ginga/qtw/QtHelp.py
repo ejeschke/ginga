@@ -48,7 +48,7 @@ try:
                             QCursor, QFontMetrics, QSurfaceFormat)
     from qtpy.QtWidgets import QOpenGLWidget  # noqa
     from qtpy.QtCore import QItemSelectionModel  # noqa
-    from qtpy.QtWidgets import QApplication  # noqa
+    from qtpy.QtWidgets import QApplication, QWidget  # noqa
     from qtpy import QtSvg  # noqa
 
     # Let's see what qtpy configured for us...
@@ -88,7 +88,7 @@ QMdiSubWindow { margin: 0px; padding: 2px; }
 """
 
 
-class TopLevel(QtGui.QWidget):
+class TopLevel(QWidget):
 
     app = None
     ## def __init__(self, *args, **kwdargs):
@@ -100,6 +100,23 @@ class TopLevel(QtGui.QWidget):
 
     def setApp(self, app):
         self.app = app
+
+
+class QGrowingTextEdit(QtGui.QTextEdit):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.document().documentLayout().documentSizeChanged.connect(
+            self.sizeChange)
+        self.heightMin = 0
+        self.heightMax = 65000
+
+    def sizeChange(self):
+        docHeight = self.document().size().height()
+        # add some margin to prevent auto scrollbars
+        docHeight += 20
+        if self.heightMin <= docHeight <= self.heightMax:
+            self.setMaximumHeight(int(docHeight))
 
 
 class ComboBox(QtGui.QComboBox):
@@ -128,9 +145,9 @@ class ComboBox(QtGui.QComboBox):
         self.addItem(text)
 
 
-class VBox(QtGui.QWidget):
+class VBox(QWidget):
     def __init__(self, *args, **kwdargs):
-        super(VBox, self).__init__(*args, **kwdargs)
+        super().__init__(*args, **kwdargs)
 
         layout = QtGui.QVBoxLayout()
         # because of ridiculous defaults
@@ -144,9 +161,9 @@ class VBox(QtGui.QWidget):
         self.layout().setSpacing(val)
 
 
-class HBox(QtGui.QWidget):
+class HBox(QWidget):
     def __init__(self, *args, **kwdargs):
-        super(HBox, self).__init__(*args, **kwdargs)
+        super().__init__(*args, **kwdargs)
 
         layout = QtGui.QHBoxLayout()
         # because of ridiculous defaults
@@ -254,7 +271,7 @@ class DirectorySelection(object):
 class SaveDialog(QtGui.QFileDialog):
 
     def __init__(self, title=None, selectedfilter=None):
-        super(SaveDialog, self).__init__()
+        super().__init__()
 
         self.title = title
         self.selectedfilter = selectedfilter
@@ -282,7 +299,7 @@ class Timer(Callback.Callbacks):
     def __init__(self, duration=0.0):
         """Create a timer set to expire after `duration` sec.
         """
-        super(Timer, self).__init__()
+        super().__init__()
 
         self.duration = duration
         # For storing aritrary data with timers
@@ -449,13 +466,10 @@ def get_icon(iconpath, size=None, adjust_width=True):
     return iconw
 
 
-def get_color(color, alpha):
+def get_color(color, alpha=None):
     clr = QColor()
-    if isinstance(color, tuple):
-        clr.setRgbF(color[0], color[1], color[2], alpha)
-    else:
-        r, g, b = colors.lookup_color(color)
-        clr.setRgbF(r, g, b, alpha)
+    clr_tup = colors.resolve_color(color, alpha=alpha, format='tuple')
+    clr.setRgbF(*clr_tup)
     return clr
 
 
