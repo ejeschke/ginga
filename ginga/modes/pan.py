@@ -45,10 +45,15 @@ Default bindings in mode
 """
 import math
 
+from ginga.ImageView import ImageViewBase
 from ginga.modes.mode_base import Mode
 
 
 class PanMode(Mode):
+
+    @classmethod
+    def is_compatible_viewer(cls, viewer):
+        return isinstance(viewer, ImageViewBase)
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

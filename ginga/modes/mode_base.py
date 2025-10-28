@@ -16,6 +16,13 @@ class Mode:
     # this should match that given in ~ginga.util.addons.show_mode_indicator()
     tag = '_$mode_indicator'
 
+    @classmethod
+    def is_compatible_viewer(cls, viewer):
+        """Return True if this mode can be used with this viewer.
+        """
+        return False
+        raise NotImplementedError("Subclass should override this abstract class method!")
+
     def __init__(self, viewer, settings=None):
         super().__init__()
 

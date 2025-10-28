@@ -46,10 +46,15 @@ Default bindings in mode
 * Shift + pan gesture: change low cut level up or down
 
 """
+from ginga.ImageView import ImageViewBase
 from ginga.modes.mode_base import Mode
 
 
 class CutsMode(Mode):
+
+    @classmethod
+    def is_compatible_viewer(cls, viewer):
+        return isinstance(viewer, ImageViewBase)
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

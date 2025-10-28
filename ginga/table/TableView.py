@@ -4,15 +4,14 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import logging
 from collections import OrderedDict
 
+from ginga.util.viewer import ViewerBase
 from ginga.table import AstroTable
-from ginga.misc import Callback, Settings
 from ginga.misc import Bunch
 
 
-class TableViewBase(Callback.Callbacks):
+class TableViewBase(ViewerBase):
     """An abstract base class for displaying tables represented by
     astropy table objects.
 
@@ -37,51 +36,19 @@ class TableViewBase(Callback.Callbacks):
         return True
 
     def __init__(self, logger=None, settings=None):
-        Callback.Callbacks.__init__(self)
-
-        if logger is not None:
-            self.logger = logger
-        else:
-            self.logger = logging.Logger('TableViewBase')
+        ViewerBase.__init__(self, logger=logger, settings=settings)
 
         self._table = None
-
-        # Create settings and set defaults
-        if settings is None:
-            settings = Settings.SettingGroup(logger=self.logger)
-        self.settings = settings
-
-        # for debugging
-        self.name = str(self)
 
         self.settings.add_defaults(color_alternate_rows=True,
                                    max_rows_for_col_resize=5000)
 
+        # no specific UI modes for this viewer
+        self.set_allowed_modes([])
+
         # For callbacks
         for name in ('table-set', 'configure', ):
             self.enable_callback(name)
-
-    def get_settings(self):
-        """Get the settings used by this instance.
-
-        Returns
-        -------
-        settings : `~ginga.misc.Settings.SettingGroup`
-            Settings.
-
-        """
-        return self.settings
-
-    def get_logger(self):
-        """Get the logger used by this instance.
-
-        Returns
-        -------
-        logger : :py:class:`~logging.Logger`
-            Logger.
-
-        """
-        return self.logger
 
     def set_table(self, table):
         if not isinstance(table, AstroTable.AstroTable):
@@ -98,12 +65,6 @@ class TableViewBase(Callback.Callbacks):
     # for compatibility with other Ginga viewers
     get_dataobj = get_table
     set_dataobj = set_table
-
-    def initialize_channel(self, fv, channel):
-        """The reference viewer calls this method with itself and the channel
-        when it is inserted into a channel.
-        """
-        self.logger.warning("subclass should override this method")
 
 
 class TableViewGw(TableViewBase):
@@ -190,8 +151,3 @@ class TableViewGw(TableViewBase):
 
     def clear(self):
         self.widget.clear()
-
-    def initialize_channel(self, fv, channel):
-        # no housekeeping to do (for now) on our part, just override to
-        # suppress the logger warning
-        pass

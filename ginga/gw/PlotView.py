@@ -4,21 +4,22 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import logging
 from io import BytesIO
 import numpy as np
 
-from ginga import Mixins, colors, cmap, trcalc
-from ginga.misc import Callback, Settings, Bunch
-from ginga.AstroImage import AstroImage
+from ginga import Mixins, colors
+from ginga.util.viewer import ViewerBase
+from ginga.misc import Bunch, Settings
 from ginga.plot.Plotable import Plotable
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.cursors import cursor_info
-from ginga import events, AutoCuts
+from ginga import Bindings
+from ginga.fonts import font_asst
 
 try:
     from matplotlib.figure import Figure
     from matplotlib.backend_tools import Cursors
+    from ginga.mplw import MplHelp
 
     from ginga.gw.Plot import PlotWidget
     have_mpl = True
@@ -28,45 +29,29 @@ except ImportError:
 __all__ = ['PlotViewBase', 'PlotViewEvent', 'PlotViewGw']
 
 
-class PlotViewBase(Callback.Callbacks):
+class PlotViewBase(ViewerBase):
     """A Ginga viewer for displaying 2D plots using matplotlib.
     """
 
     vname = 'Ginga Plot'
-    vtypes = [AstroImage, Plotable]
+    vtypes = [Plotable]
 
     @classmethod
     def viewable(cls, dataobj):
         """Test whether `dataobj` is viewable by this viewer."""
         if isinstance(dataobj, Plotable):
             return True
-        if not isinstance(dataobj, AstroImage):
-            return False
-        shp = list(dataobj.shape)
-        # comment this check to be able to view 2D images with this viewer
-        if 0 in shp or len(shp) != 1:
-            return False
-        return True
+        return False
 
     def __init__(self, logger=None, settings=None, figure=None):
-        Callback.Callbacks.__init__(self)
 
         if not have_mpl:
             raise ImportError("Install 'matplotlib' to use this viewer")
 
-        if logger is not None:
-            self.logger = logger
-        else:
-            self.logger = logging.Logger('PlotView')
+        ViewerBase.__init__(self, logger=logger, settings=settings)
         self.needs_scrolledview = True
 
-        # Create settings and set defaults
-        # NOTE: typically inheriting channel settings
-        if settings is None:
-            settings = Settings.SettingGroup(logger=self.logger)
-        self.settings = settings
-        self.t_ = settings
-
+        self.t_ = self.settings
         self.t_.add_defaults(plot_bg='white',
                              plot_save_suffix='.png',
                              plot_dpi=100, plot_save_dpi=100,
@@ -83,20 +68,6 @@ class PlotViewBase(Callback.Callbacks):
         # pan position
         self.t_.add_defaults(plot_pan=(0.0, 0.0))
         self.t_.get_setting('plot_pan').add_callback('set', self.pan_change_cb)
-
-        # color maps
-        self._set_colormap()
-        for name in ['color_map', 'color_map_invert', 'color_map_rot_pct']:
-            self.t_.get_setting(name).add_callback('set', self.cmap_change_cb)
-
-        # cuts
-        #self.t_.get_setting('cuts').add_callback('set', self.generic_change_cb)
-
-        # transforms
-        for name in ['cuts', 'flip_x', 'flip_y', 'swap_xy', 'scale_x_base',
-                     'scale_y_base']:
-            self.t_.get_setting(name).add_callback(
-                'set', self.generic_change_cb)
 
         # for axis scaling
         self.t_.add_defaults(plot_dist_axis=('linear', 'linear'))
@@ -117,17 +88,13 @@ class PlotViewBase(Callback.Callbacks):
         # embedded profiles
         self.use_embedded_profile = True
         self.t_.add_defaults(profile_use_range=True)
-        self.profile_keylist = ['plot_range', 'color_map', 'color_map_invert',
-                                'color_map_rot_pct', 'color_algorithm',
-                                'cuts']
+        self.profile_keylist = ['plot_range']
         for name in self.profile_keylist:
             self.t_.get_setting(name).add_callback('set',
                                                    self._update_profile_cb)
 
         # viewer profile support
         self.default_viewer_profile = None
-        # NOTE: other ones we support:
-        # - viewer_restore_cuts, viewer_restore_color_map
         self.t_.add_defaults(viewer_restore_range=True)
         self.capture_default_viewer_profile()
 
@@ -148,7 +115,6 @@ class PlotViewBase(Callback.Callbacks):
         self._dataobj = None
         self._data_limits = None
         self.rgb_order = 'RGBA'
-
         # for debugging
         self.name = str(self)
         # cursors
@@ -162,8 +128,22 @@ class PlotViewBase(Callback.Callbacks):
         self.ax.grid(True)
 
         self.dc = get_canvas_types()
-        klass = AutoCuts.get_autocuts('zscale')
-        self.autocuts = klass(self.logger)
+        self.private_canvas = self.dc.DrawingCanvas()
+
+        # setup default fg color
+        color = self.t_.get('color_fg', "#D0F0E0")
+        r, g, b = colors.lookup_color(color)
+        self.clr_fg = (r, g, b)
+
+        # setup default bg color
+        color = self.t_.get('color_bg', "#404040")
+        r, g, b = colors.lookup_color(color)
+        self.clr_bg = (r, g, b)
+
+        self.timer = MplHelp.Timer(mplcanvas=self.figure.canvas)
+        self.timer.add_callback('expired', self._timer_cb)
+        # holds onscreen text object
+        self._ost = None
 
         # For callbacks
         for name in ['image-set', 'image-unset',
@@ -178,23 +158,20 @@ class PlotViewBase(Callback.Callbacks):
         # same as self.plot_w
         return self.figure.canvas
 
+    def get_window_size(self):
+        fig = self.get_figure()
+        fig_wd_in, fig_ht_in = fig.get_size_inches()
+        fig_dpi = fig.get_dpi()
+        wd_px = int(fig_wd_in * fig_dpi)
+        ht_px = int(fig_ht_in * fig_dpi)
+        return (wd_px, ht_px)
+
     def add_axis(self, **kwdargs):
         self.ax = self.figure.add_subplot(111, **kwdargs)
         return self.ax
 
     def get_axis(self):
         return self.ax
-
-    def get_settings(self):
-        return self.settings
-
-    def get_logger(self):
-        return self.logger
-
-    def initialize_channel(self, fv, channel):
-        # no housekeeping to do (for now) on our part, just override to
-        # suppress the logger warning
-        pass
 
     def set_dataobj(self, dataobj):
         """Set 1D data to be displayed.
@@ -220,11 +197,7 @@ class PlotViewBase(Callback.Callbacks):
 
         self._dataobj = dataobj
 
-        if isinstance(dataobj, AstroImage):
-            dataobj.add_callback('modified', self._dataobj_modified_cb)
-            self.show_image(dataobj)
-
-        elif isinstance(dataobj, Plotable):
+        if isinstance(dataobj, Plotable):
             dataobj.add_callback('modified', self._dataobj_modified_cb)
             self.show_plotable(dataobj)
 
@@ -359,50 +332,6 @@ class PlotViewBase(Callback.Callbacks):
         # adjust limits if necessary
         self._record_limits(x, y)
 
-    def _plot_normimage(self, dataobj, artist_category='default', rot_deg=0):
-        artists = self.artist_dct.setdefault(artist_category, [])
-        # Get the data extents
-        x0, y0 = 0, 0
-        data_np = dataobj.get_data()
-
-        data_np = trcalc.transform(data_np, flip_x=self.t_['flip_x'],
-                                   flip_y=self.t_['flip_y'],
-                                   swap_xy=self.t_['swap_xy'])
-
-        y1, x1 = data_np.shape[:2]
-
-        #locut, hicut = self.autocuts.calc_cut_levels_data(data_np)
-        locut, hicut = self.t_['cuts']
-
-        # set aspect ratio for scaling
-        x_base, y_base = self.t_['scale_x_base'], self.t_['scale_y_base']
-        aspect = y_base / x_base
-
-        extent = (x0, x1, y0, y1)
-        img = self.ax.imshow(data_np, origin='lower',
-                             interpolation='none',
-                             norm='linear',  # also 'log',
-                             vmin=locut, vmax=hicut,
-                             cmap=self.mpl_color_map)  #,
-                             #extent=extent)
-        artists.append(img)
-
-        self.ax.set_aspect(aspect, adjustable='datalim')
-
-        # adjust limits if necessary
-        self._record_limits(np.array((x0, x1)), np.array((y0, y1)))
-
-    def _set_colormap(self):
-        g_clr_map = cmap.get_cmap(self.t_.get('color_map', 'gray'))
-        self.mpl_color_map = cmap.ginga_to_matplotlib_cmap(g_clr_map)
-
-    def cmap_change_cb(self, setting, value):
-        self._set_colormap()
-        self.replot()
-
-    def generic_change_cb(self, setting, value):
-        self.replot()
-
     def set_limits(self, limits):
         self.settings.set(plot_limits=limits)
 
@@ -518,7 +447,7 @@ class PlotViewBase(Callback.Callbacks):
             One of: 'x', 'y', or 'xy' (default).
 
         no_reset : bool
-            Do not reset ``autozoom`` setting.
+            Do not reset ``plot_autozoom`` setting.
 
         """
         # calculate actual width of the limits/image, considering rotation
@@ -594,10 +523,6 @@ class PlotViewBase(Callback.Callbacks):
                                 borderpadding=obj.borderpadding,
                                 font=obj.font, fontsize=obj.fontsize)
 
-            elif isinstance(obj, self.dc.NormImage):
-                image = obj.get_image()
-                self._plot_normimage(image, rot_deg=obj.rot_deg)
-
             elif isinstance(obj, self.dc.Canvas):
                 self.render_canvas(obj)
 
@@ -606,7 +531,7 @@ class PlotViewBase(Callback.Callbacks):
 
         Parameters
         ----------
-        dataobj : `~ginga.AstroImage.AstroImage` or `~ginga.plot.Plotable`
+        dataobj : `~ginga.plot.Plotable`
             Image object.
 
         This function is used to initialize the viewer when a new data object
@@ -703,27 +628,6 @@ class PlotViewBase(Callback.Callbacks):
 
         self.redraw()
 
-    def show_image(self, image):
-        data_np = image.get_data()
-
-        self.set_grid(False)
-        if len(data_np.shape) == 1:
-            x_data = np.arange(len(data_np))
-            self.set_titles(title=image.get('name', "NoName 1D data"),
-                            x_axis="Index", y_axis="Value",
-                            redraw=False)
-            self._plot_line(x_data, data_np)
-
-        elif len(data_np.shape) == 2:
-            self.set_titles(title=image.get('name', "NoName 2D data")[:15],
-                            x_axis="X", y_axis="Y",
-                            redraw=False)
-            self._plot_normimage(image)
-
-        self.apply_profile_or_settings(image)
-
-        self.redraw()
-
     def replot(self):
         dataobj = self._dataobj
         if dataobj is None:
@@ -733,10 +637,7 @@ class PlotViewBase(Callback.Callbacks):
 
         self.clear_data()
 
-        if isinstance(dataobj, AstroImage):
-            self.show_image(dataobj)
-
-        elif isinstance(dataobj, Plotable):
+        if isinstance(dataobj, Plotable):
             self.show_plotable(dataobj)
 
         self.set_ranges(x_range=(x_lo, x_hi), y_range=(y_lo, y_hi))
@@ -1152,6 +1053,41 @@ class PlotViewBase(Callback.Callbacks):
             kwargs = {key: value}
             self.save_profile(**kwargs)
 
+    def set_foreground(self, fg):
+        self.clr_fg = colors.resolve_color(fg)
+
+    def set_background(self, bg):
+        self.clr_bg = colors.resolve_color(bg)
+
+    def onscreen_message(self, text, delay=None, redraw=True):
+        if self._ost is not None:
+            self._ost.remove()
+
+        width, height = self.get_window_size()
+
+        font = self.t_.get('onscreen_font', 'sans serif')
+        font_size = self.t_.get('onscreen_font_size', None)
+        if font_size is None:
+            font_size = font_asst.calc_font_size(width)
+
+        self._ost = self.figure.text(0.5, 0.5, text,
+                                     transform=self.figure.transFigure,
+                                     ha='center', va='center', fontsize=16,
+                                     font='Sans', color=self.clr_fg,
+                                     bbox={'facecolor': 'black',
+                                           'alpha': 1.0, 'pad': 6})
+        if redraw:
+            self.redraw()
+
+        if delay is not None:
+            self.timer.set(delay)
+
+    def onscreen_message_off(self):
+        return self.onscreen_message('')
+
+    def _timer_cb(self, timer):
+        self.onscreen_message_off()
+
     def __str__(self):
         return "PlotViewBase"
 
@@ -1162,9 +1098,6 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
         PlotViewBase.__init__(self, logger=logger, settings=settings,
                               figure=figure)
         Mixins.UIMixin.__init__(self)
-
-        # for interactive features
-        self.can = Bunch.Bunch(zoom=False, pan=False)
 
         # for matplotlib key handling
         self._keytbl = {
@@ -1182,78 +1115,17 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
             'pageup': 'page_up',
             'pagedown': 'page_down',
         }
+
         # For callbacks
-        #for name in []:
-        #    self.enable_callback(name)
+        for name in ('motion', 'button-press', 'button-release',
+                     'key-press', 'key-release', 'drag-drop',
+                     'scroll', 'map', 'focus', 'enter', 'leave',
+                     'pinch', 'pan',  # 'swipe', 'tap'
+                     ):
+            self.enable_callback(name)
 
         self.last_data_x, self.last_data_y = 0, 0
         self.connect_ui()
-
-        # enable interactivity in the plot
-        self.__enable(zoom=True, pan=True)
-
-    def __enable(self, pan=False, zoom=False):
-        # NOTE: don't use this interface!  Likely to change!!!
-        """If `pan` is True, enable interactive panning in the plot by a
-        middle click.  If `zoom` is True , enable interactive zooming in
-        the plot by scrolling.
-        """
-        self.can.update(dict(pan=pan, zoom=zoom))
-        self.ui_set_active(True, viewer=self)
-        if pan or zoom:
-            if pan:
-                self.add_callback('button-press', self.plot_do_pan)
-            if zoom:
-                self.add_callback('scroll', self.plot_do_zoom)
-
-    def plot_do_zoom(self, cb_obj, event):
-        """Can be set as the callback function for the 'scroll'
-        event to zoom the plot.
-        """
-        if not self.can.zoom:
-            return
-
-        # Matplotlib only gives us the number of steps of the scroll,
-        # positive for up and negative for down.
-        if event.amount > 0:
-            delta = self.t_['plot_zoom_rate'] ** -2
-        elif event.amount < 0:
-            delta = self.t_['plot_zoom_rate'] ** 2
-
-        delta_x = delta_y = delta
-        if 'ctrl' in event.modifiers:
-            # only horizontal
-            delta_y = 1.0
-        elif 'shift' in event.modifiers or 'alt' in event.modifiers:
-            # only vertical
-            # (shift works on Linux, but not Mac; alt works on Mac but
-            #  not Linux....Grrr)
-            delta_x = 1.0
-
-        if 'meta' in event.modifiers or 'cmd' in event.modifiers:
-            # cursor position
-            cur_x, cur_y = event.data_x, event.data_y
-            if None not in [cur_x, cur_y]:
-                self.zoom_plot_at_cursor(cur_x, cur_y, delta_x, delta_y)
-        else:
-            self.zoom_plot(delta_x, delta_y)
-
-        return True
-
-    def plot_do_pan(self, cb_obj, event):
-        """Can be set as the callback function for the 'button-press'
-        event to pan the plot with middle-click.
-        """
-        cur_x, cur_y = event.data_x, event.data_y
-
-        if event.button == 0x2 or (event.button == 0x1 and
-                                   'shift' in event.modifiers):
-            if not self.can.pan:
-                return
-            if None not in [cur_x, cur_y]:
-                self.set_pan(cur_x, cur_y)
-
-        return True
 
     def connect_ui(self):
         canvas = self.figure.canvas
@@ -1322,56 +1194,43 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
             direction = 180.0
         amount = event.step
         modifiers = self.__get_modifiers(event)
-        evt = events.ScrollEvent(viewer=self, button=button, state='scroll',
-                                 mode=None, modifiers=modifiers,
-                                 direction=direction, amount=amount,
-                                 data_x=event.xdata, data_y=event.ydata)
-        self.make_ui_callback('scroll', evt)
+        self.last_data_x, self.last_data_y = event.xdata, event.ydata
+        num_degrees = amount  # ???
+        self.make_ui_callback_viewer(self, 'scroll', direction, num_degrees,
+                                     self.last_data_x, self.last_data_y)
 
     def _plot_button_press(self, event):
         button = self.__get_button(event)
         modifiers = self.__get_modifiers(event)
         self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        evt = events.PointEvent(viewer=self, button=button, state='down',
-                                mode=None, modifiers=modifiers,
-                                data_x=event.xdata, data_y=event.ydata)
-        self.make_ui_callback('button-press', evt)
+        self.make_ui_callback_viewer(self, 'button-press', button,
+                                     self.last_data_x, self.last_data_y)
 
     def _plot_button_release(self, event):
         button = self.__get_button(event)
         modifiers = self.__get_modifiers(event)
         self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        evt = events.PointEvent(viewer=self, button=button, state='up',
-                                mode=None, modifiers=modifiers,
-                                data_x=event.xdata, data_y=event.ydata)
-        self.make_ui_callback('button-release', evt)
+        self.make_ui_callback_viewer(self, 'button-release', button,
+                                     self.last_data_x, self.last_data_y)
 
     def _plot_motion_notify(self, event):
         button = self.__get_button(event)
         modifiers = self.__get_modifiers(event)
         self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        evt = events.PointEvent(viewer=self, button=button, state='move',
-                                mode=None, modifiers=modifiers,
-                                data_x=event.xdata, data_y=event.ydata)
-        self.make_ui_callback('motion', evt)
+        self.make_ui_callback_viewer(self, 'motion', button,
+                                     self.last_data_x, self.last_data_y)
 
     def _plot_key_press(self, event):
         key = self.__get_key(event)
         modifiers = self.__get_modifiers(event)
         self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        evt = events.KeyEvent(viewer=self, key=key, state='down',
-                              mode=None, modifiers=modifiers,
-                              data_x=event.xdata, data_y=event.ydata)
-        self.make_ui_callback('key-press', evt)
+        self.make_ui_callback_viewer(self, 'key-press', key)
 
     def _plot_key_release(self, event):
         key = self.__get_key(event)
         modifiers = self.__get_modifiers(event)
         self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        evt = events.KeyEvent(viewer=self, key=key, state='up',
-                              mode=None, modifiers=modifiers,
-                              data_x=event.xdata, data_y=event.ydata)
-        self.make_ui_callback('key-release', evt)
+        self.make_ui_callback_viewer(self, 'key-release', key)
 
     def _plot_resize(self, event):
         wd, ht = event.width, event.height
@@ -1379,20 +1238,117 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
 
     def _plot_enter_cursor(self, event):
         if self.t_['plot_enter_focus']:
+            self.take_focus()
+        self.make_callback('enter')
+
+    def _plot_leave_cursor(self, event):
+        self.make_callback('leave')
+
+    def take_focus(self):
             w = self.get_widget()
             if hasattr(w, 'setFocus'):
                 # NOTE: this is a Qt call, not cross-backend
                 # TODO: see if matplotlib has a backend independent way
                 # to do this
                 w.setFocus()
+            elif hasattr(w, 'grab_focus'):
+                # NOTE: this is a Gtk3 call, not cross-backend
+                w.grab_focus()
 
-        self.make_ui_callback('enter')
-
-    def _plot_leave_cursor(self, event):
-        self.make_ui_callback('leave')
+    def get_last_data_xy(self):
+        return (self.last_data_x, self.last_data_y)
 
     def __str__(self):
         return "PlotViewEvent"
 
 
-PlotViewGw = PlotViewEvent
+class CanvasView(PlotViewEvent):
+
+    # class variables for binding map and bindings can be set
+    bindmapClass = Bindings.BindingMapper
+    bindingsClass = Bindings.ImageViewBindings
+
+    @classmethod
+    def set_bindingsClass(cls, klass):
+        cls.bindingsClass = klass
+
+    @classmethod
+    def set_bindmapClass(cls, klass):
+        cls.bindmapClass = klass
+
+    def __init__(self, logger=None, settings=None, figure=None,
+                 bindmap=None, bindings=None):
+        PlotViewEvent.__init__(self, logger=logger, settings=settings,
+                               figure=figure)
+        Mixins.UIMixin.__init__(self)
+
+        #self.private_canvas.ui_set_active(True, viewer=self)
+        self.ui_set_active(True, viewer=self)
+
+        if bindmap is None:
+            bindmap = CanvasView.bindmapClass(self.logger)
+        self.bindmap = bindmap
+        bindmap.register_for_events(self)
+
+        if bindings is None:
+            bindings = CanvasView.bindingsClass(self.logger)
+        self.set_bindings(bindings)
+
+        # TODO: defaults?
+        bindings.enable(pan=True, zoom=True)
+
+        self._mode = None
+        self.modetbl = dict(locked='L', softlock='S', held='H', oneshot='O')
+        self.bindmap.add_callback('mode-set', self._mode_set_cb)
+
+        # TODO
+        bindings.set_mode(self, 'plot2d', mode_type='locked')
+
+        # Needed for UIMixin to propagate events correctly
+        #self.objects = [self.private_canvas]
+
+    def get_bindmap(self):
+        return self.bindmap
+
+    def get_bindings(self):
+        return self.bindings
+
+    def set_bindings(self, bindings):
+        self.bindings = bindings
+        bindings.set_bindings(self)
+
+    def _mode_set_cb(self, bindmap, mode, mode_type):
+
+        width, height = self.get_window_size()
+
+        font = self.t_.get('onscreen_font', 'sans serif')
+        font_size = self.t_.get('onscreen_font_size', None)
+        if font_size is None:
+            font_size = font_asst.calc_font_size(width * 0.33)
+            # TEMP
+            if self._mode is None:
+                font_size = 12
+
+        # show the little mode status window
+        if self._mode is not None:
+            self._mode.remove()
+            self._mode = None
+        if mode is not None:
+            mode_txt = f"{mode} [{self.modetbl[mode_type]}]"
+            self._mode = self.figure.text(0.92, 0.94, mode_txt,
+                                          transform=self.figure.transFigure,
+                                          ha='center', va='center',
+                                          font=font, fontsize=font_size,
+                                          color=self.clr_fg,
+                                          bbox={'facecolor': 'black',
+                                                'alpha': 1.0, 'pad': 6})
+        self.redraw()
+
+    # def set_canvas(self, canvas, private_canvas=None):
+    #     super(CanvasView, self).set_canvas(canvas,
+    #                                        private_canvas=private_canvas)
+
+    #     self.objects[0] = self.private_canvas
+
+
+PlotViewGw = CanvasView

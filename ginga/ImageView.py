@@ -9,20 +9,20 @@
 from io import BytesIO
 
 import math
-import logging
 import threading
 import time
-import uuid
 
 import numpy as np
 
-from ginga.misc import Callback, Settings, Bunch
+from ginga.misc import Bunch, Settings
 from ginga import BaseImage, AstroImage
 from ginga import RGBMap, AutoCuts, ColorDist, zoom
 from ginga import colors, trcalc
 from ginga.canvas import coordmap, transform
 from ginga.canvas.types.layer import DrawingCanvas
 from ginga.util import addons, vip
+from ginga.util.viewer import ViewerBase
+from ginga.fonts import font_asst
 
 __all__ = ['ImageViewBase']
 
@@ -39,7 +39,7 @@ class ImageViewNoDataError(ImageViewError):
     pass
 
 
-class ImageViewBase(Callback.Callbacks):
+class ImageViewBase(ViewerBase):
     """An abstract base class for displaying images represented by
     Numpy data arrays.
 
@@ -76,19 +76,10 @@ class ImageViewBase(Callback.Callbacks):
         return True
 
     def __init__(self, logger=None, rgbmap=None, settings=None):
-        Callback.Callbacks.__init__(self)
+        ViewerBase.__init__(self, logger=logger, settings=settings)
 
-        if logger is not None:
-            self.logger = logger
-        else:
-            self.logger = logging.Logger('ImageViewBase')
-
-        # Create settings and set defaults
-        if settings is None:
-            settings = Settings.SettingGroup(logger=self.logger)
-        self.settings = settings
         # to be eventually deprecated
-        self.t_ = settings
+        self.t_ = self.settings
 
         # RGB mapper
         if rgbmap:
@@ -102,10 +93,6 @@ class ImageViewBase(Callback.Callbacks):
 
         # Renderer
         self.renderer = None
-
-        # for debugging
-        self.viewer_id = str(uuid.uuid4())
-        self.name = self.viewer_id
 
         # Initialize RGBMap
         rgbmap.add_callback('changed', self.rgbmap_cb)
@@ -355,9 +342,6 @@ class ImageViewBase(Callback.Callbacks):
             self.rf_timer.add_callback('expired', self.refresh_timer_cb,
                                        self.rf_flags)
 
-    def __str__(self):
-        return self.name
-
     def set_window_size(self, width, height):
         """Report the size of the window to display the image.
 
@@ -446,28 +430,6 @@ class ImageViewBase(Callback.Callbacks):
         """
         height, width = data.shape[:2]
         return (width, height)
-
-    def get_settings(self):
-        """Get the settings used by this instance.
-
-        Returns
-        -------
-        settings : `~ginga.misc.Settings.SettingGroup`
-            Settings.
-
-        """
-        return self.t_
-
-    def get_logger(self):
-        """Get the logger used by this instance.
-
-        Returns
-        -------
-        logger : :py:class:`~logging.Logger`
-            Logger.
-
-        """
-        return self.logger
 
     def get_vip(self):
         """Get the ViewerImageProxy object used by this instance.
@@ -3614,7 +3576,7 @@ class ImageViewBase(Callback.Callbacks):
         font = self.t_.get('onscreen_font', 'sans serif')
         font_size = self.t_.get('onscreen_font_size', None)
         if font_size is None:
-            font_size = self._calc_font_size(width)
+            font_size = font_asst.calc_font_size(width)
 
         # TODO: need some way to accurately estimate text extents
         # without actually putting text on the canvas
@@ -3657,41 +3619,8 @@ class ImageViewBase(Callback.Callbacks):
             canvas.update_canvas(whence=3)
 
     def _calc_font_size(self, win_wd):
-        """Heuristic to calculate an appropriate font size based on the
-        width of the viewer window.
-
-        Parameters
-        ----------
-        win_wd : int
-            The width of the viewer window.
-
-        Returns
-        -------
-        font_size : int
-            Approximately appropriate font size in points
-
-        """
-        font_size = 4
-        if win_wd >= 1600:
-            font_size = 24
-        elif win_wd >= 1000:
-            font_size = 18
-        elif win_wd >= 800:
-            font_size = 16
-        elif win_wd >= 600:
-            font_size = 14
-        elif win_wd >= 500:
-            font_size = 12
-        elif win_wd >= 400:
-            font_size = 11
-        elif win_wd >= 300:
-            font_size = 10
-        elif win_wd >= 250:
-            font_size = 8
-        elif win_wd >= 200:
-            font_size = 6
-
-        return font_size
+        # TO BE DEPRECATED--please use font_asst.calc_font_size
+        return font_asst.calc_font_size(win_wd)
 
     def show_pan_mark(self, tf, color='red'):
         # TO BE DEPRECATED--please use addons.show_pan_mark

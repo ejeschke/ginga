@@ -23,10 +23,15 @@ Default bindings in mode
 * up/down arrow : select previous or next axis as current axis
 
 """
+from ginga.ImageView import ImageViewBase
 from ginga.modes.mode_base import Mode
 
 
 class NaxisMode(Mode):
+
+    @classmethod
+    def is_compatible_viewer(cls, viewer):
+        return isinstance(viewer, ImageViewBase)
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

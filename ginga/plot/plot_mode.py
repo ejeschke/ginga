@@ -24,10 +24,18 @@ Default bindings in mode
 * Ctrl + scroll : zoom (scale) the plot in Y
 
 """
+from ginga.ImageView import ImageViewBase
 from ginga.modes.mode_base import Mode
 
 
 class PlotMode(Mode):
+
+    @classmethod
+    def is_compatible_viewer(cls, viewer):
+        # return (isinstance(viewer, ImageViewBase) and
+        #         # verify that we have a plot aide set
+        #         getattr(viewer, 'aide', None) is not None)
+        return isinstance(viewer, ImageViewBase)
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

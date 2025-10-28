@@ -130,6 +130,44 @@ def set_scale_factor(key, factor):
     scaling_factor[key] = factor
 
 
+def calc_font_size(win_wd):
+    """Heuristic to calculate an appropriate font size based on the
+    width of the viewer window.
+
+    Parameters
+    ----------
+    win_wd : int
+        The width of the viewer window.
+
+    Returns
+    -------
+    font_size : int
+        Approximately appropriate font size in points
+
+    """
+    font_size = 4
+    if win_wd >= 1600:
+        font_size = 24
+    elif win_wd >= 1000:
+        font_size = 18
+    elif win_wd >= 800:
+        font_size = 16
+    elif win_wd >= 600:
+        font_size = 14
+    elif win_wd >= 500:
+        font_size = 12
+    elif win_wd >= 400:
+        font_size = 11
+    elif win_wd >= 300:
+        font_size = 10
+    elif win_wd >= 250:
+        font_size = 8
+    elif win_wd >= 200:
+        font_size = 6
+
+    return font_size
+
+
 # --- Set up bundled fonts ---
 
 fontdir, xx = os.path.split(__file__)

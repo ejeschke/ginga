@@ -671,10 +671,9 @@ class Info_Ginga_Plot(Info_Common):
             self.set_xlimits_widgets()
             self.set_ylimits_widgets()
 
-    def motion_cb(self, viewer, event):
+    def motion_cb(self, viewer, button, data_x, data_y):
         if not self.gui_up:
             return
-        data_x, data_y = event.data_x, event.data_y
         x_str = str(data_x)
         y_str = str(data_y)
         self.w.x_val.set_text(x_str)

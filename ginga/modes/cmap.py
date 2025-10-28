@@ -36,11 +36,16 @@ Default bindings in mode
 """
 import numpy as np
 
+from ginga.ImageView import ImageViewBase
 from ginga import cmap, imap
 from ginga.modes.mode_base import Mode
 
 
 class CMapMode(Mode):
+
+    @classmethod
+    def is_compatible_viewer(cls, viewer):
+        return isinstance(viewer, ImageViewBase)
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

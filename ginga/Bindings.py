@@ -157,6 +157,9 @@ class ImageViewBindings(object):
         act_d = dict()
         from ginga.modes.modeinfo import available_modes
         for mode_class in available_modes:
+            if not mode_class.is_compatible_viewer(viewer):
+                # check that this mode is compatible with this viewer
+                continue
             mode_obj = mode_class(viewer, settings=self.settings)
             for name, value in mode_obj.actions.items():
                 pfx = name[:3]
@@ -906,6 +909,8 @@ class BindingMapper(Callback.Callbacks):
             else:
                 cbname = 'scroll-%s' % str(self._kbdmode).lower()
 
+        # self.logger.debug("making callback for %s (mode=%s)" % (
+        #     cbname, self._kbdmode))
         res = viewer.make_ui_callback_viewer(viewer, cbname, event)
 
         if not event.was_handled() and not res:

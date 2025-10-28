@@ -27,10 +27,15 @@ Default bindings in mode
 * pan gesture : select the color distribution algorithm by swiping
   (hint: finalize selection of algorithm with up/down arrow keys)
 """
+from ginga.ImageView import ImageViewBase
 from ginga.modes.mode_base import Mode
 
 
 class DistMode(Mode):
+
+    @classmethod
+    def is_compatible_viewer(cls, viewer):
+        return isinstance(viewer, ImageViewBase)
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

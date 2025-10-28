@@ -26,6 +26,10 @@ from ginga.modes.mode_base import Mode
 
 class MetaMode(Mode):
 
+    @classmethod
+    def is_compatible_viewer(cls, viewer):
+        return True
+
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
