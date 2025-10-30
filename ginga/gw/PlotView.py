@@ -1245,15 +1245,15 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
         self.make_callback('leave')
 
     def take_focus(self):
-            w = self.get_widget()
-            if hasattr(w, 'setFocus'):
-                # NOTE: this is a Qt call, not cross-backend
-                # TODO: see if matplotlib has a backend independent way
-                # to do this
-                w.setFocus()
-            elif hasattr(w, 'grab_focus'):
-                # NOTE: this is a Gtk3 call, not cross-backend
-                w.grab_focus()
+        w = self.get_widget()
+        if hasattr(w, 'setFocus'):
+            # NOTE: this is a Qt call, not cross-backend
+            # TODO: see if matplotlib has a backend independent way
+            # to do this
+            w.setFocus()
+        elif hasattr(w, 'grab_focus'):
+            # NOTE: this is a Gtk3 call, not cross-backend
+            w.grab_focus()
 
     def get_last_data_xy(self):
         return (self.last_data_x, self.last_data_y)
