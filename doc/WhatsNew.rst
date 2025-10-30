@@ -35,6 +35,8 @@ Ver 5.4.0 (2025-08-10)
 - Enhancements to the thread pool, with dynamic adding of threads when
   busy and stopping of threads when they have been idle
 
+- Added internal support for dask and zarr arrays
+
 Ver 5.3.0 (2025-04-02)
 ======================
 - Fixed an issue with editing objects in the Pick plugin
