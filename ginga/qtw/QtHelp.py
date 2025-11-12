@@ -10,6 +10,8 @@ import math
 import weakref
 import time
 
+import numpy as np
+
 import ginga.toolkit
 from ginga.util import iohelper
 from ginga.misc import Callback, Bunch
@@ -565,6 +567,46 @@ def get_painter(surface):
     if not isinstance(surface, QImage):
         _painters[surface] = painter
     return painter
+
+
+def get_rgb_array(widget):
+    """Get a numpy RGB array corresponding to a widget."""
+    qsize = widget.size()
+    wd, ht = qsize.width(), qsize.height()
+    qimg = QImage(wd, ht, QImage.Format_RGB32)
+
+    # render into the qimage
+    painter = QPainter(qimg)
+    widget.render(painter)
+    painter.end()
+
+    # these should be the same as before, but just in case
+    wd, ht = qimg.width(), qimg.height()
+
+    # Get a pointer to the raw bytes
+    ptr = qimg.bits()
+
+    # Set the size of the buffer in bytes
+    ptr.setsize(qimg.byteCount())
+
+    # Create the numpy array from the buffer, reshape it to (height, width, 4)
+    # for 32-bit formats
+    # The channels might be in BGRA/RGBA order depending on the system/format
+    arr = np.array(ptr).reshape(ht, wd, 4)
+
+    # Qt's RGB32 is usually 0xffRRGGBB on little-endian systems, appearing as
+    # BGRA in numpy array
+    # To get RGB, we typically need to swap the R and B channels and drop the
+    # alpha channel.
+    # This might vary by platform/Qt version
+
+    # Assuming typical BGRA order in the numpy array created from QImage.Format_RGB32/ARGB32:
+    # arr is [B, G, R, A] or [B, G, R, 255]
+    # We want [R, G, B]
+    rgb_array = arr[:, :, [2, 1, 0]]
+
+    # want the numpy array to persist after the QImage is modified or deleted
+    return rgb_array.copy()
 
 
 def set_default_opengl_context():

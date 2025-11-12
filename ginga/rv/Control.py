@@ -178,9 +178,11 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         self.w.fscreen = None
         self._help = Bunch.Bunch(remember_choice=False, choice=0)
 
-        # enables reference-viewer specific bindings
-        RVMode.set_shell_ref(self)
+        # adds reference-viewer attribute to those modes that want it
         modeinfo.add_mode(RVMode)
+        for modeclass in modeinfo.available_modes:
+            if hasattr(modeclass, 'set_shell_ref'):
+                modeclass.set_shell_ref(self)
 
         # register viewers
         gviewer.register_viewer(Viewers.CanvasView)

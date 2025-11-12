@@ -155,7 +155,6 @@ class PlotViewBase(ViewerBase):
         return self.figure
 
     def get_widget(self):
-        # same as self.plot_w
         return self.figure.canvas
 
     def get_window_size(self):
@@ -205,6 +204,11 @@ class PlotViewBase(ViewerBase):
 
     def get_dataobj(self):
         return self._dataobj
+
+    def get_data_size(self):
+        # NOTE: used to determine widths needed in cursor readout
+        (x_lo, y_lo), (x_hi, y_hi) = self.get_limits()
+        return (x_hi, y_hi)
 
     def clear(self, redraw=True):
         """Clear plot display."""
@@ -893,6 +897,12 @@ class PlotViewBase(ViewerBase):
         height *= self.figure.dpi
         return (width, height)
 
+    def get_rgb_array(self):
+        canvas = self.get_widget()
+        # force a draw
+        canvas.draw()
+        return self.plot_w.get_rgb_array()
+
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):
         """Get the current image shown in the viewer, with any overlaid
@@ -1202,14 +1212,16 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
     def _plot_button_press(self, event):
         button = self.__get_button(event)
         modifiers = self.__get_modifiers(event)
-        self.last_data_x, self.last_data_y = event.xdata, event.ydata
+        # NOTE: event.xdata, event.ydata seem to be None
+        # self.last_data_x, self.last_data_y = event.xdata, event.ydata
         self.make_ui_callback_viewer(self, 'button-press', button,
                                      self.last_data_x, self.last_data_y)
 
     def _plot_button_release(self, event):
         button = self.__get_button(event)
         modifiers = self.__get_modifiers(event)
-        self.last_data_x, self.last_data_y = event.xdata, event.ydata
+        # NOTE: event.xdata, event.ydata seem to be None
+        # self.last_data_x, self.last_data_y = event.xdata, event.ydata
         self.make_ui_callback_viewer(self, 'button-release', button,
                                      self.last_data_x, self.last_data_y)
 
@@ -1223,13 +1235,15 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
     def _plot_key_press(self, event):
         key = self.__get_key(event)
         modifiers = self.__get_modifiers(event)
-        self.last_data_x, self.last_data_y = event.xdata, event.ydata
+        # NOTE: event.xdata, event.ydata seem to be None
+        # self.last_data_x, self.last_data_y = event.xdata, event.ydata
         self.make_ui_callback_viewer(self, 'key-press', key)
 
     def _plot_key_release(self, event):
         key = self.__get_key(event)
         modifiers = self.__get_modifiers(event)
-        self.last_data_x, self.last_data_y = event.xdata, event.ydata
+        # NOTE: event.xdata, event.ydata seem to be None
+        # self.last_data_x, self.last_data_y = event.xdata, event.ydata
         self.make_ui_callback_viewer(self, 'key-release', key)
 
     def _plot_resize(self, event):

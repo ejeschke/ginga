@@ -143,6 +143,9 @@ class WidgetBase(Callback.Callbacks):
     def set_border_width(self, pix):
         GtkHelp.set_border_width(self.widget, pix)
 
+    def get_rgb_array(self):
+        return GtkHelp.get_rgb_array(self.widget)
+
 # BASIC WIDGETS
 
 
@@ -1470,6 +1473,9 @@ class TreeView(WidgetBase):
         dct[datakey] = tf
         _path = self._get_path(item)
         self.make_callback('changed', _path, datakey, tf)
+
+    def get_rgb_array(self):
+        return GtkHelp.get_rgb_array(self.tv)
 
 
 # CONTAINERS

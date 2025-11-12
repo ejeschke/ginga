@@ -151,3 +151,15 @@ class TableViewGw(TableViewBase):
 
     def clear(self):
         self.widget.clear()
+
+    def get_data_size(self):
+        return (1, 1)
+
+    def get_last_data_xy(self):
+        return (0, 0)
+
+    def get_window_size(self):
+        return self.widget.get_size()
+
+    def get_rgb_array(self):
+        return self.widget.get_rgb_array()

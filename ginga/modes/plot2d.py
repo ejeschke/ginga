@@ -32,6 +32,14 @@ from ginga.modes.mode_base import Mode
 
 class Plot2DMode(Mode):
 
+    # Needs to be set by reference viewer (via set_shell_ref) before any
+    # channel viewers are created
+    fv = None
+
+    @classmethod
+    def set_shell_ref(cls, fv):
+        cls.fv = fv
+
     @classmethod
     def is_compatible_viewer(cls, viewer):
         return isinstance(viewer, PlotViewBase)
@@ -42,6 +50,7 @@ class Plot2DMode(Mode):
         self.actions = dict(
             dmod_plot2d=['__2', None, 'plot2d'],
 
+            ms_showxy=['plot2d+nobtn'],
             ms_panset2d=['plot2d+middle', 'plot2d+shift+left'],
 
             sc_zoom2d=['plot2d+*+scroll'],
@@ -73,6 +82,8 @@ class Plot2DMode(Mode):
 
     def stop(self):
         pass
+
+    #####  SCROLL ACTION CALLBACKS #####
 
     def sc_zoom2d(self, viewer, event, msg=True):
         """Can be set as the callback function for the 'scroll'
@@ -108,6 +119,15 @@ class Plot2DMode(Mode):
             viewer.zoom_plot(delta_x, delta_y)
 
         return True
+
+    #####  MOUSE ACTION CALLBACKS #####
+
+    def ms_showxy(self, viewer, event, data_x, data_y):
+        """Motion event in the channel viewer window.  Show the pointing
+        information under the cursor.
+        """
+        self.fv.showxy(viewer, data_x, data_y)
+        return False
 
     def ms_panset2d(self, viewer, event, data_x, data_y, msg=True):
         """An interactive way to set the pan position.  The location

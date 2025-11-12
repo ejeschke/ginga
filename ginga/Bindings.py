@@ -767,7 +767,7 @@ class BindingMapper(Callback.Callbacks):
         return res
 
     def window_button_press(self, viewer, btncode, data_x, data_y):
-        self.logger.debug("x,y=%d,%d btncode=%s" % (data_x, data_y,
+        self.logger.debug("x,y=%s,%s btncode=%s" % (data_x, data_y,
                                                     hex(btncode)))
         self._button |= btncode
         button = self.get_button(btncode)
@@ -848,7 +848,7 @@ class BindingMapper(Callback.Callbacks):
         return res
 
     def window_button_release(self, viewer, btncode, data_x, data_y):
-        self.logger.debug("x,y=%d,%d button=%s" % (data_x, data_y,
+        self.logger.debug("x,y=%s,%s button=%s" % (data_x, data_y,
                                                    hex(btncode)))
         self._button &= ~btncode
         button = self.get_button(btncode)

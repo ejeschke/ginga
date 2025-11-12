@@ -10,6 +10,9 @@ Ver 5.5.0 (unreleased)
 - fixed an issue where the Preferences plugin did not show the color
   distribution algorithm that was saved in the channel correctly
 - Added internal support for dask and zarr arrays
+- Fixed an issue with the close confirmation dialog under Gtk3 backend
+- Adds keyboard mode support for the plot viewer
+- Adds thumbnails for plot and table viewer items
 
 Ver 5.4.0 (2025-08-10)
 ======================

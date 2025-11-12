@@ -96,3 +96,14 @@ class Plotable(ViewerObjectBase):
     def get_thumbnail(self, length):
         thumb_np = np.eye(length)
         return thumb_np
+
+    def info_xy(self, data_x, data_y, settings):
+        info = super().info_xy(data_x, data_y, settings)
+
+        ra_txt = "%+.3f" % (data_x)
+        dec_txt = "%+.3f" % (data_y)
+        ra_lbl, dec_lbl = "X", "Y"
+
+        info.update(dict(itype='plotxy', ra_txt=ra_txt, dec_txt=dec_txt,
+                         ra_lbl=ra_lbl, dec_lbl=dec_lbl))
+        return info

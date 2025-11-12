@@ -52,11 +52,15 @@ import time
 import threading
 import bisect
 
+import numpy as np
+
 from ginga import GingaPlugin
-from ginga import RGBImage
+from ginga import RGBImage, trcalc
 from ginga.misc import Bunch
 from ginga.util import iohelper
 from ginga.gw import Widgets, Viewers
+from ginga.gw.PlotView import PlotViewBase
+from ginga.table.TableView import TableViewBase
 from ginga.util.paths import icondir
 from ginga.pilw.ImageViewPil import CanvasView
 from ginga.util.io import io_rgb
@@ -340,7 +344,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             # since we have full size image in hand, generate a thumbnail
             # now, and cache it for when the thumb is added to the canvas
             thumb_image = self._regen_thumb_image(self.thumb_generator,
-                                                  image, extras, channel.fitsimage)
+                                                  image, extras, channel.viewer)
             extras.rgbimg = thumb_image
 
         self._add_image_info(fv, channel, info)
@@ -797,7 +801,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             # Generate new thumbnail
             self.logger.debug("generating new thumbnail")
             thumb_image = self._regen_thumb_image(self.thumb_generator,
-                                                  image, extras, channel.fitsimage)
+                                                  image, extras, channel.viewer)
 
             # Save a thumbnail for future browsing
             if save_thumb and info.path is not None:
@@ -942,6 +946,29 @@ class Thumbs(GingaPlugin.GlobalPlugin):
     def _regen_thumb_image(self, tg, image, extras, viewer):
         self.logger.debug("generating new thumbnail")
 
+        if isinstance(viewer, (PlotViewBase, TableViewBase)):
+            # if a viewer was passed, and there is an image loaded there,
+            cur_obj = viewer.get_dataobj()
+            if cur_obj == image:
+                vwr_img = viewer.get_rgb_array()
+                ht, wd = vwr_img.shape[:2]
+                length = self.settings.get('thumb_length', 128)
+                aspect = min(wd, ht) / max(wd, ht)
+                if ht > wd:
+                    new_ht, new_wd = length, int(aspect * length)
+                else:
+                    new_wd, new_ht = length, int(aspect * length)
+                rgb_img, scales = trcalc.get_scaled_cutout_wdht(vwr_img,
+                                                                0, 0, wd, ht,
+                                                                new_wd, new_ht,
+                                                                interpolation='basic',
+                                                                logger=None,
+                                                                dtype=np.uint8)
+                thumb_image = RGBImage.RGBImage(rgb_img, order='RGB')
+                extras.setvals(rgbimg=thumb_image, placeholder=False,
+                               time_update=time.time())
+                return thumb_image
+
         if not tg.viewable(image):
             # this is not something we know how to open
             # TODO: other viewers might be able to open it, need to check
@@ -992,7 +1019,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             try:
                 thumb_image = self._regen_thumb_image(self.thumb_generator,
                                                       image, extras,
-                                                      channel.fitsimage)
+                                                      channel.viewer)
                 extras.setvals(rgbimg=thumb_image, placeholder=False,
                                time_update=None)
                 return thumb_image

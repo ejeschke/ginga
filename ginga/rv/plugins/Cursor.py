@@ -68,7 +68,7 @@ class Cursor(GingaPlugin.GlobalPlugin):
         container.add_widget(rw, stretch=0)
         self.gui_up = True
 
-    def readout_config(self, fitsimage, image, readout):
+    def readout_config(self, viewer, image, readout):
         if (readout is None) or (image is None):
             return True
         self.logger.debug("configuring readout (%s)" % (str(readout)))
@@ -77,7 +77,7 @@ class Cursor(GingaPlugin.GlobalPlugin):
         # all X, Y coords as well as values.
 
         try:
-            width, height = fitsimage.get_data_size()
+            width, height = viewer.get_data_size()
         except ImageViewNoDataError as exc:  # table
             self.logger.debug(str(exc))
             return
@@ -90,32 +90,32 @@ class Cursor(GingaPlugin.GlobalPlugin):
         return True
 
     def force_update(self, channel):
-        viewer = channel.fitsimage
+        viewer = channel.viewer
         data_x, data_y = viewer.get_last_data_xy()
         self.fv.showxy(viewer, data_x, data_y)
 
     def redo(self, channel, image):
         if not self.gui_up or channel is None:
             return
-        self.readout_config(channel.fitsimage, image, self.readout)
+        self.readout_config(channel.viewer, image, self.readout)
 
         # force an update on an image change, because the WCS
         # may be different, even if the data coords are the same
         self.force_update(channel)
 
-    def change_readout(self, channel, fitsimage):
-        self.readout.fitsimage = fitsimage
+    def change_readout(self, channel, viewer):
+        self.readout.ext_viewer = viewer
 
-        image = fitsimage.get_image()
+        image = viewer.get_dataobj()
         if image is not None:
-            self.readout_config(fitsimage, image, self.readout)
+            self.readout_config(viewer, image, self.readout)
             self.logger.debug("configured readout")
 
     def focus_cb(self, viewer, channel):
         if not self.gui_up or channel is None:
             return
 
-        self.change_readout(channel, channel.fitsimage)
+        self.change_readout(channel, channel.viewer)
 
         # force an update on a channel change, because the WCS
         # may be different, even if the data coords are the same
@@ -134,14 +134,14 @@ class Cursor(GingaPlugin.GlobalPlugin):
         self.fv.stop_global_plugin(str(self))
         return True
 
-    def field_info_cb(self, viewer, channel, info):
+    def field_info_cb(self, fv, channel, info):
         if not self.gui_up or channel is None:
             return
         readout = self.readout
-        fitsimage = channel.fitsimage
+        viewer = channel.viewer
 
-        if readout.fitsimage != fitsimage:
-            self.change_readout(channel, fitsimage)
+        if readout.ext_viewer != viewer:
+            self.change_readout(channel, viewer)
 
         value = info.value
 

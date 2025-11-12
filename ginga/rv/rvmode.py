@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.ImageView import ImageViewBase
+# from ginga.gw.PlotView import PlotViewBase
 from ginga.modes.mode_base import Mode
 
 
@@ -48,14 +49,17 @@ class RVMode(Mode):
 
     @classmethod
     def is_compatible_viewer(cls, viewer):
-        # return True
         return isinstance(viewer, ImageViewBase)
+        # return isinstance(viewer, ImageViewBase) or \
+        #     isinstance(viewer, PlotViewBase)
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)
 
         self.actions = dict(
             dmod_rvmode=['__m', None, None],
+
+            ms_showxy=['none+nobtn'],
 
             kp_raise_zoom=['Z'],
             kp_raise_info=['I'],
@@ -80,8 +84,6 @@ class RVMode(Mode):
             kp_show_channel_names=['f1'],
             kp_previous_channel_in_workspace=['left'],
             kp_next_channel_in_workspace=['n', 'right'])
-
-        viewer.set_callback('none-move', self.ms_showxy)
 
     def __str__(self):
         return 'rvmode'

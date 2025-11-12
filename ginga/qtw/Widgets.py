@@ -131,6 +131,9 @@ class WidgetBase(Callback.Callbacks):
         v_policy = QtGui.QSizePolicy.Policy(policy_dict[vertical])
         self.widget.setSizePolicy(QtGui.QSizePolicy(h_policy, v_policy))
 
+    def get_rgb_array(self):
+        return QtHelp.get_rgb_array(self.widget)
+
 
 # BASIC WIDGETS
 

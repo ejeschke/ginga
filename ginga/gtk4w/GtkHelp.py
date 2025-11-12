@@ -22,6 +22,7 @@ import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk  # noqa
 from gi.repository import Gdk  # noqa
+from gi.repository import Gsk  # noqa
 from gi.repository import GLib  # noqa
 from gi.repository import Gio  # noqa
 from gi.repository import GdkPixbuf  # noqa
@@ -1891,6 +1892,44 @@ def pixbuf_new_from_file(file_path):
 
     pixbuf = GdkPixbuf.Pixbuf.new_from_file(file_path)
     return pixbuf
+
+
+def get_rgb_array(widget):
+    """Get a numpy RGB array corresponding to a widget."""
+
+    # Ensure layout is computed
+    widget.realize()
+    widget.allocate(widget.get_width(), widget.get_height(), -1)
+
+    width = widget.get_width()
+    height = widget.get_height()
+    if width == 0 or height == 0:
+        raise RuntimeError("Widget has zero width or height")
+
+    # --- 1. Snapshot the widget ---
+    snapshot = Gtk.Snapshot()
+    widget.snapshot(snapshot)
+    node = snapshot.to_node()
+
+    # --- 2. Create renderer and render the node ---
+    renderer = Gsk.Renderer()
+    renderer.realize(widget.get_native())   # Uses display backend
+
+    # Render into a Gdk.Texture
+    texture = renderer.render_texture(node, width, height)
+
+    # --- 3. Download raw pixel bytes from the texture ---
+    # Format is GUARANTEED rgba8 (unpremultiplied)
+    bytes_obj = texture.download_bytes()
+    pixel_bytes = bytes_obj.get_data()
+
+    raw = np.frombuffer(pixel_bytes, dtype=np.uint8)
+
+    # --- 4. Reshape and drop alpha ---
+    arr = raw.reshape((height, width, 4))   # RGBA
+    rgb = arr[:, :, :3]                     # RGB only
+
+    return rgb.copy()
 
 
 def make_cursor(widget, iconpath, x, y, size=None):

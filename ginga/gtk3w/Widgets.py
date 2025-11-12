@@ -137,6 +137,10 @@ class WidgetBase(Callback.Callbacks):
     def set_border_width(self, pix):
         self.widget.set_border_width(pix)
 
+    def get_rgb_array(self):
+        return GtkHelp.get_rgb_array(self.widget)
+
+
 # BASIC WIDGETS
 
 
@@ -1427,6 +1431,9 @@ class TreeView(WidgetBase):
         _path = self._get_path(item)
         self.make_callback('changed', _path, datakey, tf)
 
+    def get_rgb_array(self):
+        return GtkHelp.get_rgb_array(self.tv)
+
 
 # CONTAINERS
 
@@ -2690,7 +2697,7 @@ class Dialog(WidgetBase):
 
         self.widget.set_title(title)
         self.widget.connect('response', self._cb_redirect)
-        self.widget.connect('close', self._cb_close)
+        self.widget.connect('delete-event', self._cb_close)
         vbox = self.widget.get_content_area()
         self.content = VBox()
         self.content.widget = vbox
@@ -2707,10 +2714,16 @@ class Dialog(WidgetBase):
             self.add_callback('close', lambda w: w.hide())
 
     def _cb_redirect(self, widget, val):
+        if val == Gtk.ResponseType.DELETE_EVENT:
+            # NOTE: hack when the user closes the dialog using the
+            # window manager
+            return self._cb_close(widget, val)
+
         self.make_callback('activated', val)
 
-    def _cb_close(self, widget):
+    def _cb_close(self, widget, val):
         self.make_callback('close')
+        return True
 
     def get_content_area(self):
         return self.content
@@ -2726,7 +2739,8 @@ class Dialog(WidgetBase):
             parent_w = parent.get_widget()
             if isinstance(parent_w, Gtk.Window):
                 self.widget.set_transient_for(parent_w)
-        self.widget.run()
+
+        self.widget.show()
 
 
 class MessageDialog(Dialog):

@@ -1857,6 +1857,51 @@ def pixbuf_new_from_file(file_path):
     return GdkPixbuf.Pixbuf.new_from_file(file_path)
 
 
+def get_rgb_array(widget):
+    """Get a numpy RGB array corresponding to a widget."""
+
+    # Ensure widget is realized and drawn
+    widget.realize()
+    window = widget.get_window()
+    if window is None:
+        raise RuntimeError("Widget has no GdkWindow (not realized?)")
+
+    # Get widget allocation (dimensions)
+    alloc = widget.get_allocation()
+    width, height = alloc.width, alloc.height
+
+    # Create a pixbuf from the window contents
+    pb = Gdk.pixbuf_get_from_window(window, 0, 0, width, height)
+    if pb is None:
+        raise RuntimeError("Failed to capture widget. Possibly not yet visible?")
+
+    pixels = pb.get_pixels()              # bytes-like
+    rowstride = pb.get_rowstride()        # bytes per row (includes padding)
+    n_channels = pb.get_n_channels()      # 3 or 4 commonly
+
+    raw = np.frombuffer(pixels, dtype=np.uint8)
+    raw_len = raw.size
+
+    # Compute how many *actual rows* exist in the raw buffer
+    actual_rows = raw_len // rowstride
+
+    if actual_rows < height:
+        height = actual_rows
+
+    # Reshape exactly by the actual existing rows
+    arr = raw[: actual_rows * rowstride].reshape((actual_rows, rowstride))
+
+    # Crop to the requested height and width
+    arr = arr[:height, : width * n_channels]
+    arr = arr.reshape((height, width, n_channels))
+
+    # Convert RGBA to RGB if needed
+    if n_channels == 4:
+        arr = arr[:, :, :3]
+
+    return arr.copy()
+
+
 def make_cursor(widget, iconpath, x, y, size=None):
     if size is None:
         size = (16, 16)
