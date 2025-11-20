@@ -419,6 +419,19 @@ def get_coord_system_name(header):
     if match:
         return 'heliographicstonyhurst'
 
+    # check for spectral image. The spectral info could be in any axis,
+    # so we need to check 2 CTYPEi keywords. It needs to go before PIXEL
+    # and LINEAR checks.
+    match = re.match(r'^LAMBDA$', ctype)
+    match2 = None
+    try:
+        ctype2 = header['CTYPE2'].strip().upper()
+        match2 = re.match(r'^LAMBDA$', ctype2)
+    except KeyError:
+        pass
+    if match or match2:
+        return 'spectral'
+
     match = re.match(r'^PIXEL$', ctype)
     if match:
         return 'pixel'
