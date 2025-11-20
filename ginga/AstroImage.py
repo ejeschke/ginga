@@ -9,7 +9,6 @@ import traceback
 from collections import OrderedDict
 
 import numpy as np
-from astropy.wcs.docstrings import crval
 
 from ginga.util import wcs, wcsmod
 from ginga.BaseImage import BaseImage, ImageError, Header
