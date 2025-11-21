@@ -221,7 +221,33 @@ _hdr = {'2d': {'ADC-END': 6.28,
                'LSTART': -2.43E+02,
                'VOBS': -1.95447368244E+00,
                'LTYPE': 'velocity',
-               'SPECSYS': 'BARYCENT'}}
+               'SPECSYS': 'BARYCENT'},
+  'spectral': {'XTENSION': 'IMAGE',
+               'BITPIX': -64,
+               'NAXIS': 2,
+               'NAXIS1': 9547,
+               'NAXIS2': 2182,
+               'PCOUNT': 0,
+               'GCOUNT': 1,
+               'EXTNAME': 'MSC01',
+               'CTYPE1': 'LAMBDA',
+               'CUNIT1': 'Angstrom',
+               'CDELT1': 0.6375808050775049,
+               'CRPIX1': 0,
+               'CRVAL1': 5217.0,
+               'CTYPE2': 'LINEAR',
+               'CUNIT2': 'pixel',
+               'CDELT2': 1.0,
+               'CRPIX2': 0,
+               'CRVAL2': 0.0,
+               'NSPEC': 9547,
+               'NSPAT': 2182,
+               'WAVEMIN': 5217.0,
+               'WAVEMAX': 11303.346365269863,
+               'DETNAME': 'MSC01',
+               'PIPELINE': 'PYPEIT',
+               'PYPELINE': 'MultiSlit',
+               'PYP_SPEC': 'keck_deimos'}}
 img_dict = {}
 
 
@@ -276,6 +302,11 @@ def test_scalar_2d(modname):
 
     gal = img.wcs.pixtosystem(xy_v1, system='galactic')
     assert_allclose(gal, (60.97030081935234, -3.9706229385605307), rtol=1e-4)
+
+    # spectral
+    img = img_dict[modname]['spectral']
+    from IPython import embed
+    embed()
 
 
 @pytest.mark.parametrize('modname', _wcsmods)
@@ -440,6 +471,8 @@ def test_choose_coord_units(val):
      ({'CTYPE1': 'RA---TAN', 'RADESYS': 'bar'}, 'bar'),
      ({'CTYPE1': 'HPLN-TAN'}, 'helioprojective'),
      ({'CTYPE1': 'HGLT-TAN'}, 'heliographicstonyhurst'),
+     ({'CTYPE1': 'LAMBDA'}, 'spectral'),
+     ({'CTYPE2': 'LAMBDA'}, 'spectral'),
      ({'CTYPE1': 'PIXEL'}, 'pixel'),
      ({'CTYPE1': 'LINEAR'}, 'pixel'),
      ({'CTYPE1': 'foo'}, 'icrs')])
