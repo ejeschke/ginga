@@ -375,13 +375,14 @@ class AstroImage(BaseImage):
         # Read WCS keywords for spectral axis
         kwds = [f'CRVAL{spec_axis}', f'CDELT{spec_axis}', f'CRPIX{spec_axis}', f'NAXIS{spec_axis}']
         crval, cdelt, crpix, naxis_spec = self.get_keywords_list(*kwds)
+        naxis_spat = self.get_keyword(f'NAXIS{3 - spec_axis}')
 
         # Build wavelength array
         pix_arr = np.arange(naxis_spec) - (crpix - 1)
         wave_array = crval + pix_arr * cdelt
 
         # Create 2D wavelength image matching data shape
-        _ht, _wd = self._get_data().shape  # height, width
+        _ht, _wd = (naxis_spat, naxis_spec) if spec_axis==1 else (naxis_spec, naxis_spat)  # height, width
 
         if spec_axis == 1:
             # Spectral axis is along rows

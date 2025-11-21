@@ -304,10 +304,15 @@ def test_scalar_2d(modname):
     assert_allclose(gal, (60.97030081935234, -3.9706229385605307), rtol=1e-4)
 
     # spectral
+    xy_v1 = (4612., 1461.)
+    wave_spat_v1 = (8158.1, None)
     img = img_dict[modname]['spectral']
-    from IPython import embed
-    embed()
-
+    img.set(header=_hdr['spectral'])
+    wav, spat, wav_lb, spat_lbl = img.pixtospec(xy_v1[0], xy_v1[1])
+    assert_allclose(wav, wave_spat_v1[0], rtol=1e-4)
+    assert spat is wave_spat_v1[1]
+    assert wav_lb == "\u03bb"
+    assert spat_lbl == ""
 
 @pytest.mark.parametrize('modname', _wcsmods)
 def test_vectorized_2d(modname):
@@ -472,7 +477,7 @@ def test_choose_coord_units(val):
      ({'CTYPE1': 'HPLN-TAN'}, 'helioprojective'),
      ({'CTYPE1': 'HGLT-TAN'}, 'heliographicstonyhurst'),
      ({'CTYPE1': 'LAMBDA'}, 'spectral'),
-     ({'CTYPE2': 'LAMBDA'}, 'spectral'),
+     ({'CTYPE1': 'LINEAR','CTYPE2': 'LAMBDA'}, 'spectral'),
      ({'CTYPE1': 'PIXEL'}, 'pixel'),
      ({'CTYPE1': 'LINEAR'}, 'pixel'),
      ({'CTYPE1': 'foo'}, 'icrs')])
