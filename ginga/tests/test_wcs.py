@@ -343,7 +343,6 @@ def test_scalar_2d(modname):
     img = img_dict[modname]['spectral_rot']
     img.set(header=_hdr['spectral_rot'])
     wav, spat, wav_lb, spat_lbl = img.pixtospec(xy_v1[1], xy_v1[0])
-    #from IPython import embed; embed()
     assert_allclose(wav, wave_spat_v1[0], rtol=1e-4)
     assert spat is wave_spat_v1[1]
     assert wav_lb == "\u03bb"
