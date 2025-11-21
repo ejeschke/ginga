@@ -247,7 +247,33 @@ _hdr = {'2d': {'ADC-END': 6.28,
                'DETNAME': 'MSC01',
                'PIPELINE': 'PYPEIT',
                'PYPELINE': 'MultiSlit',
-               'PYP_SPEC': 'keck_deimos'}}
+               'PYP_SPEC': 'keck_deimos'},
+'spectral_rot':{'XTENSION': 'IMAGE',
+                'BITPIX': -64,
+                'NAXIS': 2,
+                'NAXIS1': 2182,
+                'NAXIS2': 9547,
+                'PCOUNT': 0,
+                'GCOUNT': 1,
+                'EXTNAME': 'MSC01',
+                'CTYPE1': 'LINEAR',
+                'CUNIT1': 'pixel',
+                'CDELT1': 1.0,
+                'CRPIX1': 0,
+                'CRVAL1': 0.0,
+                'CTYPE2': 'LAMBDA',
+                'CUNIT2': 'Angstrom',
+                'CDELT2': 0.637597286039636,
+                'CRPIX2': 0,
+                'CRVAL2': 5217.0,
+                'NSPEC': 9547,
+                'NSPAT': 2182,
+                'WAVEMIN': 5217.0,
+                'WAVEMAX': 11303.503692534365,
+                'DETNAME': 'MSC01',
+                'PIPELINE': 'PYPEIT',
+                'PYPELINE': 'MultiSlit',
+                'PYP_SPEC': 'keck_deimos'}}
 img_dict = {}
 
 
@@ -313,6 +339,16 @@ def test_scalar_2d(modname):
     assert spat is wave_spat_v1[1]
     assert wav_lb == "\u03bb"
     assert spat_lbl == ""
+    # spectral rotated
+    img = img_dict[modname]['spectral_rot']
+    img.set(header=_hdr['spectral_rot'])
+    wav, spat, wav_lb, spat_lbl = img.pixtospec(xy_v1[1], xy_v1[0])
+    #from IPython import embed; embed()
+    assert_allclose(wav, wave_spat_v1[0], rtol=1e-4)
+    assert spat is wave_spat_v1[1]
+    assert wav_lb == "\u03bb"
+    assert spat_lbl == ""
+
 
 @pytest.mark.parametrize('modname', _wcsmods)
 def test_vectorized_2d(modname):
