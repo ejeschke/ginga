@@ -382,11 +382,11 @@ class AstroImage(BaseImage):
         wave_array = crval + pix_arr * cdelt
 
         # Create 2D wavelength image matching data shape
-        _ht, _wd = (naxis_spat, naxis_spec) if spec_axis==1 else (naxis_spec, naxis_spat)  # height, width
+        _ht, _wd = (naxis_spat, naxis_spec) if spec_axis == 1 else (naxis_spec, naxis_spat)  # height, width
 
         if spec_axis == 1:
             # Spectral axis is along rows
-            waveimg = np.tile(wave_array, (_ht,1))
+            waveimg = np.tile(wave_array, (_ht, 1))
         elif spec_axis == 2:
             # Spectral axis is along columns
             waveimg = np.tile(wave_array[:, np.newaxis], _wd)
