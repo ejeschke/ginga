@@ -512,7 +512,9 @@ def test_choose_coord_units(val):
      ({'CTYPE1': 'HPLN-TAN'}, 'helioprojective'),
      ({'CTYPE1': 'HGLT-TAN'}, 'heliographicstonyhurst'),
      ({'CTYPE1': 'LAMBDA'}, 'spectral'),
+     ({'CTYPE1': 'WAVE'}, 'spectral'),
      ({'CTYPE1': 'LINEAR', 'CTYPE2': 'LAMBDA'}, 'spectral'),
+     ({'CTYPE1': 'LINEAR', 'CTYPE2': 'WAVE'}, 'spectral'),
      ({'CTYPE1': 'PIXEL'}, 'pixel'),
      ({'CTYPE1': 'LINEAR'}, 'pixel'),
      ({'CTYPE1': 'foo'}, 'icrs')])
