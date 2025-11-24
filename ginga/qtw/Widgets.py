@@ -9,7 +9,7 @@ import pathlib
 from functools import reduce
 
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
-                              QCursor, QFont, SaveDialog)
+                              QTextOption, QCursor, QFont, SaveDialog)
 from ginga.qtw import QtHelp
 
 from ginga import colors
@@ -291,9 +291,9 @@ class TextArea(WidgetBase):
         else:
             self.tw.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
             if kind in ('char', 'full'):
-                self.tw.setWordWrapMode(QtGui.QTextOption.WrapAnywhere)
+                self.tw.setWordWrapMode(QTextOption.WrapAnywhere)
             elif kind == 'word':
-                self.tw.setWordWrapMode(QtGui.QTextOption.WrapAtWordBoundaryOrAnywhere)
+                self.tw.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
 
     def set_scroll_pos(self, pos):
         vsb = self.tw.verticalScrollBar()

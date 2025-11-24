@@ -45,7 +45,8 @@ try:
     from qtpy.QtGui import (QImage, QColor, QFont, QPixmap, QIcon,  # noqa
                             QPainter, QPen, QPolygonF, QPolygon, QTextCursor,
                             QDrag, QPainterPath, QBrush, QFontDatabase,
-                            QCursor, QFontMetrics, QSurfaceFormat)
+                            QCursor, QFontMetrics, QSurfaceFormat,
+                            QTextOption)
     from qtpy.QtWidgets import QOpenGLWidget  # noqa
     from qtpy.QtCore import QItemSelectionModel  # noqa
     from qtpy.QtWidgets import QApplication, QWidget  # noqa
