@@ -354,6 +354,63 @@ class AstroImage(BaseImage):
         return self.wcs.radectopix(ra_deg, dec_deg, coords=coords,
                                    naxispath=self.revnaxis)
 
+    def pixtospec(self, x, y):
+
+        # check for cached wavelength array
+        waveimg = self.get('wavelen_array', None)
+        if waveimg is None:
+            # build wavelength array
+            # Check that image is 2D
+            naxis = self.get_keyword('NAXIS')
+            if naxis != 2:
+                raise ValueError("Image must be 2-dimensional")
+
+            # Find the spectral axis (using CTYPE)
+            spec_axis = None
+            for i in range(1, naxis + 1):
+                ctype = self.get_keyword(f'CTYPE{i}')
+                if 'LAMBDA' in ctype.upper():
+                    spec_axis = i
+                    break
+
+            if spec_axis is None:
+                # Default to axis 1 if not found
+                spec_axis = 1
+
+            # Read WCS keywords for spectral axis
+            kwds = [f'CRVAL{spec_axis}', f'CDELT{spec_axis}', f'CRPIX{spec_axis}', f'NAXIS{spec_axis}']
+            crval, cdelt, crpix, naxis_spec = self.get_keywords_list(*kwds)
+            naxis_spat = self.get_keyword(f'NAXIS{3 - spec_axis}')
+
+            # Build wavelength array
+            pix_arr = np.arange(naxis_spec) - (crpix - 1)
+            wave_array = crval + pix_arr * cdelt
+
+            # Create 2D wavelength image matching data shape
+            _ht, _wd = (naxis_spat, naxis_spec) if spec_axis == 1 else (naxis_spec, naxis_spat)  # height, width
+
+            if spec_axis == 1:
+                # Spectral axis is along rows
+                waveimg = np.tile(wave_array, (_ht, 1))
+            elif spec_axis == 2:
+                # Spectral axis is along columns
+                waveimg = np.tile(wave_array[:, np.newaxis], _wd)
+            else:
+                raise ValueError(f"Unsupported spectral axis: {spec_axis}")
+            self.set(wavelen_array=waveimg)
+
+        _ht, _wd = waveimg.shape
+
+        # We report the value across the pixel, even though the coords
+        # change halfway across the pixel
+        _x = int(np.floor(x + 0.5))
+        _y = int(np.floor(y + 0.5))
+        wav = waveimg[_y, _x] if 0 <= _y < _ht and 0 <= _x < _wd else None
+        #labels
+        wav_lbl, spat_lbl = "\u03bb", ""
+
+        return wav, None, wav_lbl, spat_lbl
+
     def info_xy(self, data_x, data_y, settings):
         info = super(AstroImage, self).info_xy(data_x, data_y, settings)
 
@@ -377,6 +434,11 @@ class AstroImage(BaseImage):
                 ra_txt = "%+.3f" % (x)
                 dec_txt = "%+.3f" % (y)
                 ra_lbl, dec_lbl = "X", "Y"
+            elif self.wcs.coordsys == 'spectral':
+                wav, spat, wav_lb, spat_lbl = self.pixtospec(data_x, data_y)
+                ra_txt = f"{wav:<14.6g}" if wav is not None else ''
+                dec_txt = ""
+                ra_lbl, dec_lbl = wav_lb, spat_lbl
 
             else:
                 args = [data_x, data_y] + self.revnaxis
