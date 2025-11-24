@@ -398,7 +398,7 @@ class AstroImage(BaseImage):
             else:
                 raise ValueError(f"Unsupported spectral axis: {spec_axis}")
             self.set(wavelen_array=waveimg)
-            
+
         _ht, _wd = waveimg.shape
 
         # We report the value across the pixel, even though the coords
