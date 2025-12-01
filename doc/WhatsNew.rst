@@ -9,6 +9,7 @@ Ver 5.5.0 (unreleased)
   graphics change in the associated channel viewer
 - fixed an issue where the Preferences plugin did not show the color
   distribution algorithm that was saved in the channel correctly
+- Added internal support for dask and zarr arrays
 
 Ver 5.4.0 (2025-08-10)
 ======================
@@ -34,8 +35,6 @@ Ver 5.4.0 (2025-08-10)
 - Gtk4 backend support is much improved
 - Enhancements to the thread pool, with dynamic adding of threads when
   busy and stopping of threads when they have been idle
-
-- Added internal support for dask and zarr arrays
 
 Ver 5.3.0 (2025-04-02)
 ======================

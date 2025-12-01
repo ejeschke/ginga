@@ -48,6 +48,24 @@ try:
 except ImportError:
     pass
 
+# Check for zarr arrays
+have_zarr = False
+try:
+    import zarr
+    have_zarr = True
+
+except ImportError:
+    pass
+
+# Check for dask arrays
+have_dask = False
+try:
+    import dask.array as da
+    have_dask = True
+
+except ImportError:
+    pass
+
 # For testing
 #have_opencv = False
 
@@ -1212,20 +1230,13 @@ def fancy_index(d_obj, view):
             # <-- numpy array
             view = np.ix_(*view)
 
-        # duck-typing test for zarr object
-        elif hasattr(d_obj, 'get_coordinate_selection'):
+        # test for zarr array
+        elif have_zarr and isinstance(d_obj, zarr.Array):
             # <-- zarr object
-            # zarr does not support numpy-style fancy indexing for 2D
-            # and higher arrays, so we need to use the
-            # get_coordinate_selection() method to fetch all the values
-            shape = [len(idxs) for idxs in view]
-            _m = np.meshgrid(*tuple(reversed(view)))
-            iarrs = [_m[i].reshape(-1) for i in range(len(_m))]
-            arr = d_obj.get_coordinate_selection(tuple(reversed(iarrs)))
-            arr = arr.reshape(shape)
-            return arr
+            view = np.ix_(*view)
 
-        else:
+        # test for dask array
+        elif have_dask and isinstance(d_obj, da.Array):
             # <-- dask array
             # dask does not support fancy indexing for 2D or higher arrays
             # so we need to index in stages.
@@ -1237,6 +1248,9 @@ def fancy_index(d_obj, view):
                 arr = d_obj[view[0]][:, view[1]][:, :, view[2]]
                 return arr
             raise ValueError("Array must be 2D or 3D for this indexing")
+
+        else:
+            raise IndexError("Don't know how to fancy index this array type")
 
     # <-- regular slicing, supported by all array types
     return d_obj[view]
