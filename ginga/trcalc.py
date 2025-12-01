@@ -48,6 +48,24 @@ try:
 except ImportError:
     pass
 
+# Check for zarr arrays
+have_zarr = False
+try:
+    import zarr
+    have_zarr = True
+
+except ImportError:
+    pass
+
+# Check for dask arrays
+have_dask = False
+try:
+    import dask.array as da
+    have_dask = True
+
+except ImportError:
+    pass
+
 # For testing
 #have_opencv = False
 
@@ -257,7 +275,7 @@ def get_scaled_cutout_wdht_view(shp, x1, y1, x2, y2, new_wd, new_ht):
         if yi_max > max_y:
             raise ValueError("Y index (%d) exceeds shape bounds (%d)" % (yi_max, max_y))
 
-    view = np.ix_(yi, xi)
+    view = (yi, xi)
 
     # Calculate actual scale used (vs. desired)
     scale_x = float(wd) / old_wd
@@ -326,7 +344,7 @@ def get_scaled_cutout_wdhtdp_view(shp, p1, p2, new_dims):
         if zi_max > max_z:
             raise ValueError("Z index (%d) exceeds shape bounds (%d)" % (zi_max, max_z))
 
-    view = np.ix_(yi, xi, zi)
+    view = (yi, xi, zi)
 
     # Calculate actual scale used (vs. desired)
     scale_x = float(wd) / old_wd
@@ -399,11 +417,11 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
 
     else:
         if logger is not None:
-            logger.debug('resizing by slicing')
+            logger.debug('resizing by fancy indexing')
         view, (scale_x, scale_y) = get_scaled_cutout_wdht_view(data_np.shape,
                                                                x1, y1, x2, y2,
                                                                new_wd, new_ht)
-        newdata = data_np[view]
+        newdata = np.asarray(fancy_index(data_np, view))
 
     newdata = newdata.astype(dtype, copy=False)
 
@@ -412,10 +430,10 @@ def get_scaled_cutout_wdht(data_np, x1, y1, x2, y2, new_wd, new_ht,
 
 def get_scaled_cutout_wdhtdp(data_np, p1, p2, new_dims, logger=None):
     if logger is not None:
-        logger.debug('resizing by slicing')
+        logger.debug('resizing by fancy indexing')
     view, scales = get_scaled_cutout_wdhtdp_view(data_np.shape,
                                                  p1, p2, new_dims)
-    newdata = data_np[view]
+    newdata = np.asarray(fancy_index(data_np, view))
 
     return newdata, scales
 
@@ -503,7 +521,7 @@ def get_scaled_cutout_basic(data_np, x1, y1, x2, y2, scale_x, scale_y,
                                                     (x1, y1), (x2, y2),
                                                     (scale_x, scale_y))
         scale_x, scale_y = scales
-        newdata = data_np[view]
+        newdata = np.asarray(fancy_index(data_np, view))
 
     newdata = newdata.astype(dtype, copy=False)
 
@@ -527,7 +545,7 @@ def get_scaled_cutout_basic2(data_np, p1, p2, scales,
         logger.debug('resizing by slicing')
     view, oscales = get_scaled_cutout_basic_view(data_np.shape,
                                                  p1, p2, scales)
-    newdata = data_np[view]
+    newdata = np.asarray(fancy_index(data_np, view))
 
     return newdata, oscales
 
@@ -683,6 +701,7 @@ def overlay_image_2d_np(dstarr, pos, srcarr, dst_order='RGBA',
     if copy:
         dstarr = np.copy(dstarr, order='C')
 
+    # Figure out the position of the alpha channel, if one is present
     da_idx = -1
     slc = slice(0, 3)
     if 'A' in dst_order:
@@ -1182,3 +1201,58 @@ def calc_aspect_str(wd, ht):
     _wd, _ht = int(wd / gcd), int(ht / gcd)
     _as = str(_wd) + ':' + str(_ht)
     return _as
+
+
+def fancy_index(d_obj, view):
+    """Return a slice from a data object according to a view.
+
+    Parameters
+    ----------
+    d_obj : numpy ndarray, dask array, or zarr array
+        2D or 3D data array
+
+    view : tuple of slice or int array
+        View into the array.  Tuple can contain slice objects or
+        1D integer arrays (indexes into an axis).
+
+    Returns
+    -------
+    arr : ndarray
+        The result of the fancy index as a numpy array
+    """
+    if not isinstance(view, tuple):
+        view = tuple(view)
+
+    if not isinstance(view[0], slice):
+        # <-- indicates fancy indexing being used instead of slices
+
+        if isinstance(d_obj, np.ndarray):
+            # <-- numpy array
+            view = np.ix_(*view)
+
+        # test for zarr array
+        elif have_zarr and isinstance(d_obj, zarr.Array):
+            # <-- zarr object
+            view = np.ix_(*view)
+
+        # test for dask array
+        elif have_dask and isinstance(d_obj, da.Array):
+            # <-- dask array
+            # dask does not support fancy indexing for 2D or higher arrays
+            # so we need to index in stages.
+            n = len(view)
+            if n == 2:
+                arr = d_obj[view[0]][:, view[1]]
+                return arr
+            elif n == 3:
+                arr = d_obj[view[0]][:, view[1]][:, :, view[2]]
+                return arr
+            raise ValueError("Array must be 2D or 3D for this indexing")
+
+        else:
+            raise IndexError("Don't know how to fancy index this array type")
+
+    # <-- regular slicing, supported by all array types
+    return d_obj[view]
+
+# END

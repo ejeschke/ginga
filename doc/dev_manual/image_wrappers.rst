@@ -45,6 +45,18 @@ Once you have an object, you can load data directly contained in a
 
      >>> img.update_keywords(kw_dict)
 
+``AstroImage`` objects also support ``dask`` arrays::
+
+  >>> import dask.array as da
+  >>> data_dk = da.from_array(data, chunks=(100, 100))
+  >>> img.load_data(data_dk)
+
+and ``zarr`` arrays::
+
+  >>> import zarr
+  >>> data_z = zarr.creation.array(data, chunks=(100, 100))
+  >>> img.load_data(data_z)
+
 From an ``astropy.io.fits.HDU``::
 
   >>> from astropy.io import fits
