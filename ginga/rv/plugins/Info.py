@@ -50,7 +50,7 @@ import time
 import numpy as np
 
 from ginga.gw import Widgets
-from ginga import GingaPlugin, ColorDist
+from ginga import GingaPlugin, ColorDist, colors
 from ginga.rv.plugins.Toolbar import Toolbar
 from ginga.table.AstroTable import AstroTable
 from ginga.plot.Plotable import Plotable
@@ -478,6 +478,18 @@ class Info_Ginga_Plot(Info_Common):
         viewer.add_callback('range-set', self.range_set_cb)
         viewer.add_callback('motion', self.motion_cb)
 
+        self.tab = None
+        self.cols = []
+        self._idx = []
+        self._idxname = '_idx'
+        self.line_count = 0
+        self.colors = ['black', 'darkblue', 'forestgreen', 'purple4',
+                       'orangered', 'magenta', 'cyan4']
+        self._next_color = self.colors[0]
+        self.color_count = 0
+        # To store selected columns names of active table
+        self.x_col = ''
+        self.y_col = ''
         self.gui_up = False
 
     def build_gui(self, container):
@@ -511,12 +523,71 @@ class Info_Ginga_Plot(Info_Common):
         sw2.set_widget(col)
         vbox.add_widget(sw2, stretch=1)
 
-        captions = (('spacer_1', 'spacer', 'X', 'llabel', 'Y', 'llabel'),
+        captions = (('spacer_11', 'spacer', 'X', 'llabel', 'Y', 'llabel'),
+                    ('Col:', 'label', 'x_col', 'combobox', 'y_col', 'combobox'),
+                    ('spacer_23', 'spacer',
+                     "Color", 'button', "Add to plot", 'button'),
+                    ('spacer_13', 'spacer',
+                     "Clear Plot", 'button'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+
+        # Controls for X-axis column listing
+        combobox = b.x_col
+        combobox.set_enabled(False)
+        for name in self.cols:
+            combobox.append_text(name)
+        if self.x_col in self.cols:
+            combobox.set_text(self.x_col)
+        combobox.add_callback('activated', self.x_select_cb)
+        combobox.set_tooltip('Select a column to plot on X-axis')
+
+        # Controls for Y-axis column listing
+        combobox = b.y_col
+        combobox.set_enabled(False)
+        for name in self.cols:
+            combobox.append_text(name)
+        if self.y_col in self.cols:
+            combobox.set_text(self.y_col)
+        combobox.add_callback('activated', self.y_select_cb)
+        combobox.set_tooltip('Select a column to plot on Y-axis')
+
+        # Button and dialog to select color
+        self.w.colorselect = Widgets.ColorDialog(parent=b.color,
+                                                 title="Choose line color")
+        self.w.colorselect.add_callback('activated', self.color_select_cb)
+        hex_color = colors.lookup_color(self._next_color, format='hex')
+        self.w.colorselect.set_color(hex_color)
+        b.color.add_callback('activated', lambda w: self.w.colorselect.popup())
+        b.color.set_tooltip("Set the color of the line to be added")
+        b.color.set_color(bg=hex_color, fg='white')
+
+        # Button to clear plot
+        b.clear_plot.set_tooltip("Clear the current plot")
+        b.clear_plot.add_callback('activated', self.clear_plot_cb)
+
+        # Button to save plot
+        b.add_to_plot.set_tooltip("Add selected columns to plot")
+        b.add_to_plot.add_callback('activated', self.add_to_plot_cb)
+        b.add_to_plot.set_enabled(False)
+
+        fr = Widgets.Expander(title="Plot from Table")
+        self.w.plot_tbl_expand = fr
+        row = Widgets.HBox()
+        row.set_spacing(0)
+        row.set_border_width(0)
+        row.add_widget(w, stretch=0)
+        row.add_widget(Widgets.Label(''), stretch=1)
+        fr.set_widget(row)
+        vbox.add_widget(fr, stretch=0)
+
+        captions = (('spacer_21', 'spacer', 'X', 'llabel', 'Y', 'llabel'),
                     ('Dist:', 'label', 'x_dist', 'combobox',
                      'y_dist', 'combobox'),
                     ('Low:', 'label', 'x_lo', 'entry', 'y_lo', 'entry'),
                     ('High:', 'label', 'x_hi', 'entry', 'y_hi', 'entry'),
-                    ('spacer_3', 'spacer', 'Show marker', 'checkbox',
+                    ('spacer_22', 'spacer', 'Show marker', 'checkbox',
                      'Save Plot', 'button'),
                     )
         w, b = Widgets.build_info(captions)
@@ -562,12 +633,15 @@ class Info_Ginga_Plot(Info_Common):
         b.save_plot.add_callback('activated', lambda w: self.save_cb())
         b.save_plot.set_enabled(True)
 
+        fr = Widgets.Expander(title="Plot Controls")
         row = Widgets.HBox()
         row.set_spacing(0)
         row.set_border_width(0)
         row.add_widget(w, stretch=0)
         row.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(row, stretch=0)
+        fr.set_widget(row)
+        vbox.add_widget(fr, stretch=0)
+        fr.expand(True)
 
         container.add_widget(sw, stretch=1)
         self.gui_up = True
@@ -580,6 +654,11 @@ class Info_Ginga_Plot(Info_Common):
             return
 
         dataobj = self.plot_viewer.get_dataobj()
+        table = dataobj.get('table', None)
+        if table is not None:
+            self.setup_table(table)
+        else:
+            self.clear()
 
         name = self.trunc(dataobj.get('name', 'Noname'))
         self.w.name.set_text(name)
@@ -705,126 +784,25 @@ class Info_Ginga_Plot(Info_Common):
         else:
             self.logger.info('Table plot saved as {0}'.format(target))
 
-    def start(self):
-        self.redo()
+    # --- TABLE METHODS ---
 
-    def stop(self):
-        self.gui_up = False
+    def setup_table(self, table):
+        self.tab = table
+        self.w.plot_tbl_expand.set_enabled(True)
+        self.w.plot_tbl_expand.expand(True)
+        # Generate column indices
+        self.w.x_col.set_enabled(True)
+        self.w.y_col.set_enabled(True)
+        self.w.add_to_plot.set_enabled(True)
+        # Generate column indices
+        self._idx = np.arange(len(self.tab))
 
-    def close(self):
-        # NOTE: this shouldn't be called under normal usage
-        self.fv.stop_local_plugin(self.chname, str(self))
-
-    def __str__(self):
-        return 'info_ginga_plot'
-
-
-class Info_Ginga_Table(Info_Common):
-    """Info sidebar for the Ginga Table viewer.
-    """
-
-    def __init__(self, fv, chviewer):
-        # superclass defines some variables for us, like logger
-        super().__init__(fv, chviewer)
-
-        viewer = self.channel.get_viewer('Ginga Table')
-        self.table_viewer = viewer
-
-        # To store all active table info
-        self.tab = None
-        self.cols = []
-        self._idx = []
-        self._idxname = '_idx'
-        # To store selected columns names of active table
-        self.x_col = ''
-        self.y_col = ''
-
-        self.gui_up = False
-
-    def build_gui(self, container):
-        sw = Widgets.ScrollArea()
-
-        vbox = Widgets.VBox()
-        sw.set_widget(vbox)
-
-        captions = (('Channel:', 'label', 'channel', 'llabel'),
-                    ('Name:', 'label', 'name', 'llabel'),
-                    )
-        w, b = Widgets.build_info(captions)
-        self.w = b
-
-        self.w.channel.set_text(self.channel.name)
-
-        col = Widgets.VBox()
-        row = Widgets.HBox()
-        row.set_spacing(0)
-        row.set_border_width(0)
-        row.add_widget(w, stretch=0)
-        row.add_widget(Widgets.Label(''), stretch=1)
-        col.add_widget(row, stretch=0)
-        col.add_widget(Widgets.Label(''), stretch=1)
-        sw2 = Widgets.ScrollArea()
-        sw2.set_widget(col)
-        vbox.add_widget(sw2, stretch=1)
-
-        channel = self.channel
-        self.w.channel.set_text(channel.name)
-
-        captions = (('spacer_1', 'spacer', 'X', 'llabel', 'Y', 'llabel'),
-                    ('Col:', 'label', 'x_col', 'combobox', 'y_col', 'combobox'),
-                    ('spacer_3', 'spacer', 'spacer_4', 'spacer',
-                     'Make Plot', 'button'),
-                    )
-        w, b = Widgets.build_info(captions)
-        self.w.update(b)
-
-        # Controls for X-axis column listing
-        combobox = b.x_col
-        combobox.set_enabled(False)
-        for name in self.cols:
-            combobox.append_text(name)
-        if self.x_col in self.cols:
-            combobox.set_text(self.x_col)
-        combobox.add_callback('activated', self.x_select_cb)
-        combobox.set_tooltip('Select a column to plot on X-axis')
-
-        # Controls for Y-axis column listing
-        combobox = b.y_col
-        combobox.set_enabled(False)
-        for name in self.cols:
-            combobox.append_text(name)
-        if self.y_col in self.cols:
-            combobox.set_text(self.y_col)
-        combobox.add_callback('activated', self.y_select_cb)
-        combobox.set_tooltip('Select a column to plot on Y-axis')
-
-        # Button to save plot
-        b.make_plot.set_tooltip("Plot selected columns")
-        b.make_plot.add_callback('activated', self.make_plot_cb)
-        b.make_plot.set_enabled(False)
-
-        fr = Widgets.Frame("Plot Maker")
-        fr.set_widget(w)
-        row = Widgets.HBox()
-        row.set_spacing(0)
-        row.set_border_width(0)
-        row.add_widget(fr, stretch=0)
-        row.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(row, stretch=0)
-
-        container.add_widget(sw, stretch=1)
-        self.gui_up = True
-
-    def start(self):
-        self.redo()
-
-    def stop(self):
-        self.tab = None
-        self.gui_up = False
-
-    def close(self):
-        # NOTE: this shouldn't be called under normal usage
-        self.fv.stop_local_plugin(self.chname, str(self))
+        # Populate combobox with table column names
+        cols = [self._idxname] + self.tab.colnames
+        if cols != self.cols:
+            self.cols = cols
+            self.x_col = self._set_combobox(self.w.x_col, self.cols, default=1)
+            self.y_col = self._set_combobox(self.w.y_col, self.cols, default=2)
 
     def _set_combobox(self, combobox, vals, default=0):
         """Populate combobox with given list."""
@@ -837,48 +815,18 @@ class Info_Ginga_Table(Info_Common):
         combobox.show_text(val)
         return val
 
-    def setup_table(self, dataobj):
-        # Generate column indices
-        self.w.x_col.set_enabled(True)
-        self.w.y_col.set_enabled(True)
-        self.w.make_plot.set_enabled(True)
-        # Generate column indices
-        self.tab = dataobj.get_data()
-        self._idx = np.arange(len(self.tab))
-
-        # Populate combobox with table column names
-        cols = [self._idxname] + self.tab.colnames
-        if cols != self.cols:
-            self.cols = cols
-            self.x_col = self._set_combobox(self.w.x_col, self.cols, default=1)
-            self.y_col = self._set_combobox(self.w.y_col, self.cols, default=2)
-
     def clear(self):
+        self.w.plot_tbl_expand.expand(False)
+        self.w.plot_tbl_expand.set_enabled(False)
+        self.w.add_to_plot.set_enabled(False)
+        self.w.x_col.clear()
+        self.w.y_col.clear()
         self.tab = None
         self.cols = []
         self._idx = []
         self._idxname = '_idx'
         self.x_col = ''
         self.y_col = ''
-
-    def redo(self):
-        """This is called when a new image arrives or the data in the
-        existing image changes.
-        """
-        if not self.gui_up:
-            return
-
-        dataobj = self.table_viewer.get_dataobj()
-        if isinstance(dataobj, AstroTable):
-            self.setup_table(dataobj)
-
-        else:
-            self.logger.info("not able to process this object")
-
-        name = self.trunc(dataobj.get('name', 'Noname'))
-        self.w.name.set_text(name)
-
-    # LOGIC
 
     def _get_label(self, axis):
         """Return plot label for column for the given axis."""
@@ -913,7 +861,21 @@ class Info_Ginga_Table(Info_Common):
         except IndexError as e:
             self.logger.error(str(e))
 
-    def make_plot_cb(self, w):
+    def clear_plot_cb(self, w):
+        plot = self.plot_viewer.get_dataobj()
+        plot.set_titles(x_axis='', y_axis='')
+        canvas = plot.get_canvas()
+        objs = canvas.get_objects_by_tag_pfx('plot_')
+        canvas.delete_objects(objs)
+        self.line_count = 0
+        self.color_count = len(self.colors) - 1
+        self._cycle_color()
+        plot.make_callback('modified')
+
+    def add_to_plot_cb(self, w):
+        plot = self.plot_viewer.get_dataobj()
+        name = plot.get('name')
+
         if self.x_col == self._idxname:
             x_data = self._idx
         else:
@@ -926,10 +888,9 @@ class Info_Ginga_Table(Info_Common):
 
         x_label = self._get_label('x')
         y_label = self._get_label('y')
-        dataobj = self.table_viewer.get_dataobj()
-        name = "plot_{}".format(time.time())
-        #title = self.trunc(dataobj.get('name', 'NoName'))
         title = name
+        plot.set_titles(x_axis=x_label, y_axis=y_label, title=title)
+        plot.set_grid(True)
 
         if self.tab.masked:
             if self.x_col == self._idxname:
@@ -951,20 +912,156 @@ class Info_Ginga_Table(Info_Common):
             x_data = x_data[i]
             y_data = y_data[i]
 
-        plot = Plotable(logger=self.logger)
-        plot.set_titles(x_axis=x_label, y_axis=y_label, title=title)
-        plot.set_grid(True)
-
-        plot.set(name=name, path=None, nothumb=False)
+        # pick a rotating color for the new plot
+        color = self._next_color
+        self._cycle_color()
 
         canvas = plot.get_canvas()
         dc = get_canvas_types()
         points = np.array((x_data, y_data)).T
-        canvas.add(dc.Path(points, color='black', linewidth=1,
+        canvas.add(dc.Path(points, color=color, linewidth=1,
                            alpha=1.0),
+                   tag=f"plot_{self.line_count}",
                    redraw=False)
+        self.line_count += 1
+
+        plot.make_callback('modified')
+        self.plot_viewer.zoom_fit()
+
+    def color_select_cb(self, w, color):
+        hex_color = w.get_color(format='hex')
+        self._next_color = hex_color
+        self.w.color.set_color(bg=hex_color, fg='black')
+
+    def _cycle_color(self):
+        self.color_count = (self.color_count + 1) % len(self.colors)
+        _next_color = self.colors[self.color_count]
+        hex_color = colors.lookup_color(_next_color, format='hex')
+        self.w.colorselect.set_color(hex_color)
+        self.w.color.set_color(bg=hex_color, fg='white')
+        self._next_color = hex_color
+
+    def start(self):
+        self.redo()
+
+    def stop(self):
+        self.tab = None
+        self.gui_up = False
+
+    def close(self):
+        # NOTE: this shouldn't be called under normal usage
+        self.fv.stop_local_plugin(self.chname, str(self))
+
+    def __str__(self):
+        return 'info_ginga_plot'
+
+
+class Info_Ginga_Table(Info_Common):
+    """Info sidebar for the Ginga Table viewer.
+    """
+
+    def __init__(self, fv, chviewer):
+        # superclass defines some variables for us, like logger
+        super().__init__(fv, chviewer)
+
+        viewer = self.channel.get_viewer('Ginga Table')
+        self.table_viewer = viewer
+
+        self.gui_up = False
+
+    def build_gui(self, container):
+        sw = Widgets.ScrollArea()
+
+        vbox = Widgets.VBox()
+        sw.set_widget(vbox)
+
+        captions = (('Channel:', 'label', 'channel', 'llabel'),
+                    ('Name:', 'label', 'name', 'llabel'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w = b
+
+        self.w.channel.set_text(self.channel.name)
+
+        col = Widgets.VBox()
+        row = Widgets.HBox()
+        row.set_spacing(0)
+        row.set_border_width(0)
+        row.add_widget(w, stretch=0)
+        row.add_widget(Widgets.Label(''), stretch=1)
+        col.add_widget(row, stretch=0)
+        col.add_widget(Widgets.Label(''), stretch=1)
+        sw2 = Widgets.ScrollArea()
+        sw2.set_widget(col)
+        vbox.add_widget(sw2, stretch=1)
+
+        channel = self.channel
+        self.w.channel.set_text(channel.name)
+
+        captions = (('New Plot', 'button'),
+                    )
+        w, b = Widgets.build_info(captions)
+        self.w.update(b)
+
+        b.new_plot.set_tooltip("Create new plot for this table")
+        b.new_plot.add_callback('activated', self.new_plot_cb)
+
+        fr = Widgets.Frame("Plot")
+        row = Widgets.HBox()
+        row.set_spacing(0)
+        row.set_border_width(0)
+        row.add_widget(w, stretch=0)
+        row.add_widget(Widgets.Label(''), stretch=1)
+        fr.set_widget(row)
+        vbox.add_widget(fr, stretch=0)
+
+        container.add_widget(sw, stretch=1)
+        self.gui_up = True
+
+    def start(self):
+        self.redo()
+
+    def stop(self):
+        self.gui_up = False
+
+    def close(self):
+        # NOTE: this shouldn't be called under normal usage
+        self.fv.stop_local_plugin(self.chname, str(self))
+
+    def new_plot_cb(self, w):
+        dataobj = self.table_viewer.get_dataobj()
+        if dataobj is None:
+            self.fv.show_error("No table loaded")
+            return
+        name = "plot_{}".format(time.time())
+        plot = Plotable(logger=self.logger)
+        plot.set_titles(x_axis='', y_axis='', title=name)
+        plot.set_grid(True)
+
+        table = dataobj.get_data()
+        plot.set(name=name, path=None, nothumb=False, table=table)
 
         self.channel.add_image(plot)
+
+    def redo(self):
+        """This is called when a new image arrives or the data in the
+        existing image changes.
+        """
+        if not self.gui_up:
+            return
+
+        dataobj = self.table_viewer.get_dataobj()
+        if isinstance(dataobj, AstroTable):
+            if self.gui_up:
+                self.w.new_plot.set_enabled(True)
+
+        else:
+            if self.gui_up:
+                self.w.new_plot.set_enabled(False)
+            self.logger.info("not able to process this object")
+
+        name = self.trunc(dataobj.get('name', 'Noname'))
+        self.w.name.set_text(name)
 
     def __str__(self):
         return 'info_ginga_table'

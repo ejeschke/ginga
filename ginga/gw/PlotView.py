@@ -297,8 +297,8 @@ class PlotViewBase(ViewerBase):
             plt_kw.update({'marker': self.t_['plot_marker_style'],
                            'ms': self.t_['plot_marker_size'],
                            'mew': self.t_['plot_marker_width'],
-                           'mfc': self.t_['plot_marker_color'],
-                           'mec': self.t_['plot_marker_color']})
+                           'mfc': color,
+                           'mec': color})
 
         try:
             artists = self.artist_dct.setdefault(artist_category, [])

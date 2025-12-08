@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.ImageView import ImageViewBase
-# from ginga.gw.PlotView import PlotViewBase
+from ginga.gw.PlotView import PlotViewBase
 from ginga.modes.mode_base import Mode
 
 
@@ -49,9 +49,8 @@ class RVMode(Mode):
 
     @classmethod
     def is_compatible_viewer(cls, viewer):
-        return isinstance(viewer, ImageViewBase)
-        # return isinstance(viewer, ImageViewBase) or \
-        #     isinstance(viewer, PlotViewBase)
+        #return isinstance(viewer, ImageViewBase)
+        return isinstance(viewer, (ImageViewBase, PlotViewBase))
 
     def __init__(self, viewer, settings=None):
         super().__init__(viewer, settings=settings)

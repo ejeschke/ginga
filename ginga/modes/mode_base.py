@@ -20,8 +20,8 @@ class Mode:
     def is_compatible_viewer(cls, viewer):
         """Return True if this mode can be used with this viewer.
         """
+        # raise NotImplementedError("Subclass should override this abstract class method!")
         return False
-        raise NotImplementedError("Subclass should override this abstract class method!")
 
     def __init__(self, viewer, settings=None):
         super().__init__()
