@@ -13,6 +13,7 @@ Ver 5.5.0 (unreleased)
 - Fixed an issue with the close confirmation dialog under Gtk3 backend
 - Adds keyboard mode support for the plot viewer
 - Adds thumbnails for plot and table viewer items
+- Fixed a mouse scrolling issue for Gtk4 backend
 
 Ver 5.4.0 (2025-08-10)
 ======================

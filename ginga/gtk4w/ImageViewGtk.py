@@ -532,7 +532,8 @@ class GtkEventMixin(object):
                                             data_x, data_y)
 
     def scroll_event(self, controller, dx, dy, widget):
-        degrees, direction = GtkHelp.get_scroll_info(dx, dy)
+        event = controller.get_current_event()
+        degrees, direction = GtkHelp.get_scroll_info(event)
         self.logger.debug("scroll deg=%f direction=%f" % (
             degrees, direction))
 

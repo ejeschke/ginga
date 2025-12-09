@@ -1752,24 +1752,49 @@ def combo_box_new_text():
     return combobox
 
 
-def get_scroll_info(dx, dy):
+def get_scroll_info(event):
     """
     Returns the (degrees, direction) of a scroll motion Gtk event.
     """
-    # gtk4 scrolls in the opposite direction vertically from what
-    # we are used to doing
-    dy = -dy
-    # we have a trackpad or some device that reports pixel deltas
-    delta = math.sqrt(dx ** 2 + dy ** 2)
-    if dy < 0:
-        delta = -delta
+    dx, dy = event.get_deltas()
 
-    ang_rad = math.atan2(dy, dx)
-    direction = math.degrees(ang_rad) - 90.0
-    direction = math.fmod(direction + 360.0, 360.0)
+    unit = event.get_unit()
+    if unit == Gdk.ScrollUnit.WHEEL:
+        # <-- mouse scroll
+        # deltas will be in number of wheel clicks
 
-    # TODO: is this accurate?--NOT TESTED
-    num_degrees = delta / 8.0
+        delta = math.sqrt(dx ** 2 + dy ** 2)
+        num_degrees = 15.0 * delta
+
+        _dir = event.get_direction()
+        if _dir == Gdk.ScrollDirection.UP:
+            direction = 0.0
+        elif _dir == Gdk.ScrollDirection.DOWN:
+            direction = 180.0
+        elif _dir == Gdk.ScrollDirection.LEFT:
+            direction = 270.0
+        elif _dir == Gdk.ScrollDirection.RIGHT:
+            direction = 90.0
+        else:
+            # ???
+            direction = np.nan
+
+    else:
+        # <-- we have a trackpad or some device that reports pixel deltas
+        # unit == Gdk.ScrollUnit.SURFACE
+        # gtk4 scrolls in the opposite direction vertically from what
+        # we are used to doing
+        dy = -dy
+        delta = math.sqrt(dx ** 2 + dy ** 2)
+        if dy < 0:
+            delta = -delta
+
+        ang_rad = math.atan2(dy, dx)
+        direction = math.degrees(ang_rad) - 90.0
+        direction = math.fmod(direction + 360.0, 360.0)
+
+        # TODO: is this accurate?--NOT TESTED
+        num_degrees = delta / 8.0
 
     return (num_degrees, direction)
 
