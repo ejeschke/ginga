@@ -8,7 +8,7 @@ import sys
 import numpy as np
 
 from ginga.gtk4w import GtkHelp
-from ginga import ImageView, Mixins, Bindings
+from ginga import ImageView, Mixins, Bindings, events
 from ginga.cursors import cursor_info
 from ginga.canvas import render
 
@@ -421,6 +421,8 @@ class GtkEventMixin:
             'page_down': 'page_down',
         }
 
+        self._modifiers = frozenset([])
+
         # Define cursors
         cursor_names = cursor_info.get_cursor_names()
         def_px_size = self.settings.get('default_cursor_length', 16)
@@ -453,10 +455,13 @@ class GtkEventMixin:
     def map_event(self, widget):
         self.switch_cursor('pick')
 
-        return self.make_callback('map')
+        g_event = events.MapEvent(state='mapped', viewer=self)
+        return self.make_callback('map', g_event)
 
-    def focus_event(self, controller, widget, hasFocus):
-        return self.make_callback('focus', hasFocus)
+    def focus_event(self, controller, widget, has_focus):
+        g_event = events.FocusEvent(state='focus', mode=None,
+                                    focus=has_focus, viewer=self)
+        return self.make_callback('focus', g_event)
 
     def enter_notify_event(self, controller, x, y, widget):
         self.last_win_x, self.last_win_y = x, y
@@ -466,23 +471,41 @@ class GtkEventMixin:
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             widget.grab_focus()
-        return self.make_callback('enter')
+        g_event = events.EnterLeaveEvent(state='enter', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('enter', g_event)
 
     def leave_notify_event(self, controller, widget):
         self.logger.debug("leaving widget...")
-        return self.make_callback('leave')
+        g_event = events.EnterLeaveEvent(state='leave', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('leave', g_event)
 
     def key_press_event(self, controller, keyval, keycode, state, widget):
         keyname = Gdk.keyval_name(keyval)
         keyname = self.transkey(keyname)
         self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-press', keyname)
+        g_event = events.KeyEvent(key=keyname, state='down', mode=None,
+                                  modifiers=self._modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-press', g_event)
 
     def key_release_event(self, controller, keyval, keycode, state, widget):
         keyname = Gdk.keyval_name(keyval)
         keyname = self.transkey(keyname)
         self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-release', keyname)
+        g_event = events.KeyEvent(key=keyname, state='up', mode=None,
+                                  modifiers=self._modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-release', g_event)
 
     def button_press_event(self, gesture, whatsit, x, y, widget):
         self.last_win_x, self.last_win_y = x, y
@@ -496,8 +519,11 @@ class GtkEventMixin:
 
         # NOTE: no setting EventSequenceState.CLAIMED otherwise we don't get
         # the button release event
-        return self.make_ui_callback_viewer(self, 'button-press', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='down', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-press', g_event)
 
     def button_release_event(self, gesture, whatsit, x, y, widget):
         self.last_win_x, self.last_win_y = x, y
@@ -511,8 +537,11 @@ class GtkEventMixin:
         data_x, data_y = self.check_cursor_location()
 
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-        return self.make_ui_callback_viewer(self, 'button-release', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='up', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-release', g_event)
 
     def motion_notify_event(self, motion, x, y, widget):
         button = 0
@@ -529,8 +558,11 @@ class GtkEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'motion', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='move', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'motion', g_event)
 
     def scroll_event(self, controller, dx, dy, widget):
         event = controller.get_current_event()
@@ -541,8 +573,12 @@ class GtkEventMixin:
         # pointer location should have been recorded by motion_notify_event
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'scroll', direction, degrees,
-                                            data_x, data_y)
+        g_event = events.ScrollEvent(button=0, state='scroll', mode=None,
+                                     modifiers=self._modifiers,
+                                     direction=direction, amount=degrees,
+                                     data_x=data_x, data_y=data_y,
+                                     viewer=self)
+        return self.make_ui_callback_viewer(self, 'scroll', g_event)
 
     def on_dnd_drop(self, drop_target, value, x, y):
         paths = [gdk_path.get_path() for gdk_path in value]

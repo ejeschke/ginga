@@ -10,7 +10,7 @@ from functools import partial
 
 import numpy as np
 
-from ginga import ImageView, Mixins, Bindings
+from ginga import ImageView, Mixins, Bindings, events
 from ginga.cursors import cursor_info
 from ginga.qtw.QtHelp import (QtGui, QtCore, QImage, QPixmap, QCursor,
                               QPainter, QOpenGLWidget, QSurfaceFormat,
@@ -524,6 +524,8 @@ class QtEventMixin:
                             QtCore.Qt.Key_F11, QtCore.Qt.Key_F12,
                             ]
 
+        self._modifiers = frozenset([])
+
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
@@ -591,10 +593,14 @@ class QtEventMixin:
         self.switch_cursor('pick')
 
         self.configure_window(width, height)
-        return self.make_callback('map')
 
-    def focus_event(self, widget, event, hasFocus):
-        return self.make_callback('focus', hasFocus)
+        g_event = events.MapEvent(state='mapped', viewer=self)
+        return self.make_callback('map', g_event)
+
+    def focus_event(self, widget, event, has_focus):
+        g_event = events.FocusEvent(state='focus', mode=None,
+                                    focus=has_focus, viewer=self)
+        return self.make_callback('focus', g_event)
 
     def _get_pos(self, event):
         if hasattr(event, 'position'):
@@ -615,25 +621,44 @@ class QtEventMixin:
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             widget.setFocus()
-        return self.make_callback('enter')
+
+        g_event = events.EnterLeaveEvent(state='enter', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('enter', g_event)
 
     def leave_notify_event(self, widget, event):
         self.logger.debug("leaving widget...")
-        return self.make_callback('leave')
+        g_event = events.EnterLeaveEvent(state='leave', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('leave', g_event)
 
     def key_press_event(self, widget, event):
         keyname = event.key()
         keyname2 = "%s" % (event.text())
         keyname = self.transkey(keyname, keyname2)
         self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-press', keyname)
+        g_event = events.KeyEvent(key=keyname, state='down', mode=None,
+                                  modifiers=self._modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-press', g_event)
 
     def key_release_event(self, widget, event):
         keyname = event.key()
         keyname2 = "%s" % (event.text())
         keyname = self.transkey(keyname, keyname2)
         self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-release', keyname)
+        g_event = events.KeyEvent(key=keyname, state='up', mode=None,
+                                  modifiers=self._modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-release', g_event)
 
     def button_press_event(self, widget, event):
         buttons = event.buttons()
@@ -655,8 +680,11 @@ class QtEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'button-press', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='down', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-press', g_event)
 
     def button_release_event(self, widget, event):
         # note: for mouseRelease this needs to be button(), not buttons()!
@@ -678,8 +706,11 @@ class QtEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'button-release', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='up', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-release', g_event)
 
     def motion_notify_event(self, widget, event):
 
@@ -706,8 +737,11 @@ class QtEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'motion', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='move', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'motion', g_event)
 
     def scroll_event(self, widget, event):
         x, y = self._get_pos(event)
@@ -725,16 +759,35 @@ class QtEventMixin:
             dx, dy = point.x(), point.y()
 
             # Synthesize this as a pan gesture event
-            self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
-            self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
-            return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
+            g_event = events.PanEvent(button=0, state='start', mode=None,
+                                      modifiers=self._modifiers,
+                                      delta_x=0, delta_y=0,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+            self.make_ui_callback_viewer(self, 'pan', g_event)
+            g_event = events.PanEvent(button=0, state='move', mode=None,
+                                      modifiers=self._modifiers,
+                                      delta_x=dx, delta_y=dy,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+            self.make_ui_callback_viewer(self, 'pan', g_event)
+            g_event = events.PanEvent(button=0, state='stop', mode=None,
+                                      modifiers=self._modifiers,
+                                      delta_x=0, delta_y=0,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+            return self.make_ui_callback_viewer(self, 'pan', g_event)
 
         num_degrees, direction = get_scroll_info(event)
         self.logger.debug("scroll deg={} direction={}".format(
             num_degrees, direction))
 
-        return self.make_ui_callback_viewer(self, 'scroll', direction,
-                                            num_degrees, data_x, data_y)
+        g_event = events.ScrollEvent(button=0, state='scroll', mode=None,
+                                     modifiers=self._modifiers,
+                                     direction=direction, amount=num_degrees,
+                                     data_x=data_x, data_y=data_y,
+                                     viewer=self)
+        return self.make_ui_callback_viewer(self, 'scroll', g_event)
 
     def gesture_event(self, widget, event):
         gesture = event.gestures()[0]
@@ -777,21 +830,31 @@ class QtEventMixin:
             hdir = None
             if _hd == QtGui.QSwipeGesture.Left:
                 hdir = 'left'
+                direction = -90.0
             elif _hd == QtGui.QSwipeGesture.Right:
                 hdir = 'right'
+                direction = 90.0
 
             _vd = gesture.verticalDirection()
             vdir = None
             if _vd == QtGui.QSwipeGesture.Up:
                 vdir = 'up'
+                direction = 0.0
             elif _vd == QtGui.QSwipeGesture.Down:
                 vdir = 'down'
+                direction = 180.0
 
             self.logger.debug("swipe gesture hdir=%s vdir=%s" % (
                 hdir, vdir))
+            amount = 1.0
+        else:
+            direction, amount = 0.0, 0.0
 
-            return self.make_ui_callback_viewer(self, 'swipe', gstate,
-                                                hdir, vdir)
+        g_event = events.SwipeEvent(button=0, state=gstate, mode=None,
+                                    modifiers=self._modifiers,
+                                    direction=direction, amount=amount,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'swipe', g_event)
 
     def gs_pinching(self, event, gesture, gstate):
         rot = gesture.rotationAngle()
@@ -799,7 +862,13 @@ class QtEventMixin:
         self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
             rot, scale, gstate))
 
-        return self.make_ui_callback_viewer(self, 'pinch', gstate, rot, scale)
+        g_event = events.PinchEvent(button=0, state=gstate, mode=None,
+                                    modifiers=self._modifiers,
+                                    rot_deg=rot, scale=scale,
+                                    data_x=self.last_data_x,
+                                    data_y=self.last_data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'pinch', g_event)
 
     def gs_panning(self, event, gesture, gstate):
         d = gesture.delta()
@@ -807,7 +876,13 @@ class QtEventMixin:
         self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
             dx, dy, gstate))
 
-        return self.make_ui_callback_viewer(self, 'pan', gstate, dx, dy)
+        g_event = events.PanEvent(button=0, state=gstate, mode=None,
+                                  modifiers=self._modifiers,
+                                  delta_x=dx, delta_y=dy,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'pan', g_event)
 
     def gs_tapping(self, event, gesture, gstate):
         self.logger.debug("tapping gesture state=%s" % (

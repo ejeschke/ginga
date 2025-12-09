@@ -17,6 +17,7 @@ from bokeh import events
 from ginga import ImageView
 from ginga.canvas import render
 from ginga import Mixins, Bindings
+from ginga import events as g_events
 
 
 class ImageViewBokehError(ImageView.ImageViewError):
@@ -213,6 +214,8 @@ class BokehEventMixin:
             'f12': 'f12',
         }
 
+        self._modifiers = frozenset([])
+
         # Define cursors for pick and pan
         #hand = openHandCursor()
         hand = 0
@@ -230,6 +233,9 @@ class BokehEventMixin:
 
     def set_figure(self, figure, handle=None):
         super().set_figure(figure, handle=handle)
+
+        g_event = events.MapEvent(state='mapped', viewer=self)
+        return self.make_callback('map', g_event)
 
     def _setup_handlers(self, source):
         fig = self.figure
@@ -269,36 +275,56 @@ class BokehEventMixin:
     def get_key_table(self):
         return self._keytbl
 
-    def focus_event(self, event, hasFocus):
-        return self.make_callback('focus', hasFocus)
+    def focus_event(self, event, has_focus):
+        g_event = events.FocusEvent(state='focus', mode=None,
+                                    focus=has_focus, viewer=self)
+        return self.make_callback('focus', g_event)
 
     def enter_notify_event(self, event):
         self.logger.info("entering widget...")
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             self.focus_event(event, True)
-        return self.make_callback('enter')
+        g_event = events.EnterLeaveEvent(state='enter', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('enter', g_event)
 
     def leave_notify_event(self, event):
         self.logger.info("leaving widget...")
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             self.focus_event(event, False)
-        return self.make_callback('leave')
+        g_event = events.EnterLeaveEvent(state='leave', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('leave', g_event)
 
     def key_press_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
         if keyname is not None:
             self.logger.debug("key press event, key=%s" % (keyname))
-            return self.make_ui_callback_viewer(self, 'key-press', keyname)
+            g_event = g_events.KeyEvent(key=keyname, state='down', mode=None,
+                                        modifiers=self._modifiers,
+                                        data_x=self.last_data_x,
+                                        data_y=self.last_data_y,
+                                        viewer=self)
+            return self.make_ui_callback_viewer(self, 'key-press', g_event)
 
     def key_release_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
         if keyname is not None:
             self.logger.debug("key release event, key=%s" % (keyname))
-            return self.make_ui_callback_viewer(self, 'key-release', keyname)
+            g_event = g_events.KeyEvent(key=keyname, state='up', mode=None,
+                                        modifiers=self._modifiers,
+                                        data_x=self.last_data_x,
+                                        data_y=self.last_data_y,
+                                        viewer=self)
+            return self.make_ui_callback_viewer(self, 'key-release', g_event)
 
     def motion_notify_event(self, event):
         button = 0
@@ -310,8 +336,11 @@ class BokehEventMixin:
 
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_ui_callback_viewer(self, 'motion', button,
-                                            data_x, data_y)
+        g_event = g_events.PointEvent(button=button, state='move', mode=None,
+                                      modifiers=self._modifiers,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+        return self.make_ui_callback_viewer(self, 'motion', g_event)
 
     def scroll_event(self, event):
         x, y = int(event.x), int(event.y)
@@ -334,8 +363,12 @@ class BokehEventMixin:
 
         self.last_data_x, self.last_data_y = data_x, data_y
 
-        return self.make_ui_callback_viewer(self, 'scroll', direction, amount,
-                                            data_x, data_y)
+        g_event = g_events.ScrollEvent(button=0, state='scroll', mode=None,
+                                       modifiers=self._modifiers,
+                                       direction=direction, amount=amount,
+                                       data_x=data_x, data_y=data_y,
+                                       viewer=self)
+        return self.make_ui_callback_viewer(self, 'scroll', g_event)
 
     def pinch_event(self, event):
         # no rotation (seemingly) in the Bokeh pinch event
@@ -343,7 +376,13 @@ class BokehEventMixin:
         scale = event.scale
         self.logger.debug("pinch gesture rot=%f scale=%f" % (rot, scale))
 
-        return self.make_ui_callback_viewer(self, 'pinch', 'move', rot, scale)
+        g_event = g_events.PinchEvent(button=0, state='move', mode=None,
+                                      modifiers=self._modifiers,
+                                      rot_deg=rot, scale=scale,
+                                      data_x=self.last_data_x,
+                                      data_y=self.last_data_y,
+                                      viewer=self)
+        return self.make_ui_callback_viewer(self, 'pinch', g_event)
 
     def pan_start_event(self, event):
         # event attrs: x, y, sx, sy
@@ -353,8 +392,11 @@ class BokehEventMixin:
         self.logger.debug("button down event at %dx%d, button=%x" % (x, y, button))
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'button-press', button,
-                                            data_x, data_y)
+        g_event = g_events.PointEvent(button=button, state='down', mode=None,
+                                      modifiers=self._modifiers,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-press', g_event)
 
     def pan_event(self, event):
         # event attrs: x, y, sx, sy, delta_x, delta_y
@@ -364,8 +406,11 @@ class BokehEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'motion', button,
-                                            data_x, data_y)
+        g_event = g_events.PointEvent(button=button, state='move', mode=None,
+                                      modifiers=self._modifiers,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+        return self.make_ui_callback_viewer(self, 'motion', g_event)
 
     def pan_end_event(self, event):
         # event attrs: x, y, sx, sy
@@ -376,8 +421,11 @@ class BokehEventMixin:
         data_x, data_y = self.check_cursor_location()
 
         self.logger.debug("button up event at %dx%d, button=%x" % (x, y, button))
-        return self.make_ui_callback_viewer(self, 'button-release', button,
-                                            data_x, data_y)
+        g_event = g_events.PointEvent(button=button, state='up', mode=None,
+                                      modifiers=self._modifiers,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-release', g_event)
 
     def tap_event(self, event):
         x, y = int(event.x), int(event.y)
@@ -387,7 +435,11 @@ class BokehEventMixin:
         self.last_win_x, self.last_win_y = x, y
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback('button-press', button, data_x, data_y)
+        g_event = g_events.PointEvent(button=button, state='down', mode=None,
+                                      modifiers=self._modifiers,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-press', g_event)
 
     def press_down_event(self, event):
         x, y = int(event.x), int(event.y)
