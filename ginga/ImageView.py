@@ -2126,10 +2126,6 @@ class ImageViewBase(ViewerBase):
         """Handle callback related to changes in interpolation."""
         self.renderer.interpolation_change(value)
 
-    def set_name(self, name):
-        """Set viewer name."""
-        self.name = name
-
     def get_scale_limits(self):
         """Get scale limits.
 

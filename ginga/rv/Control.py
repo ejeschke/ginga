@@ -104,7 +104,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         for name in ('add-image', 'channel-change', 'remove-image',
                      'add-channel', 'delete-channel', 'field-info',
                      'add-image-info', 'remove-image-info', 'viewer-select',
-                     'delete-workspace'):
+                     'delete-workspace', 'viewer-create'):
             self.enable_callback(name)
 
         # Initialize the timer factory
@@ -1442,7 +1442,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
             bnch = self.add_viewer(chname, settings,
                                    workspace=workspace)
             # for debugging
-            bnch.image_viewer.set_name('channel:%s' % (chname))
+            bnch.image_viewer.set_name('ch:%s %s' % (chname,
+                                                     bnch.image_viewer.vname))
 
             opmon = self.get_plugin_manager(self.logger, self,
                                             self.ds, self.mm)
@@ -1472,6 +1473,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 if spec.get('ptype', 'global') == 'local':
                     opmon.load_plugin(opname, spec, chinfo=channel)
 
+            self.make_gui_callback('viewer-create', channel, bnch.image_viewer)
             self.make_gui_callback('add-channel', channel)
             return channel
 
@@ -1833,6 +1835,9 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
         else:
             stk_w.add_widget(viewer.get_widget(), title=vinfo.name)
 
+        # for debugging
+        viewer.set_name('ch:%s %s' % (channel.name, viewer.vname))
+
         # let the GUI respond to this widget addition
         self.update_pending()
 
@@ -1841,6 +1846,8 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
 
         # finally, let the viewer do any viewer-side initialization
         viewer.initialize_channel(self, channel)
+
+        self.make_callback('viewer-create', channel, viewer)
 
     ####################################################
     # THESE METHODS ARE CALLED FROM OTHER MODULES & OBJECTS

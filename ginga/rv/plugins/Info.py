@@ -652,12 +652,12 @@ class Info_Ginga_Plot(Info_Common):
         """
         if not self.gui_up:
             return
-
         dataobj = self.plot_viewer.get_dataobj()
         table = dataobj.get('table', None)
         if table is not None:
-            self.setup_table(table)
+            self.setup_table(table, dataobj)
         else:
+            # clear table plotting stuff
             self.clear()
 
         name = self.trunc(dataobj.get('name', 'Noname'))
@@ -786,7 +786,7 @@ class Info_Ginga_Plot(Info_Common):
 
     # --- TABLE METHODS ---
 
-    def setup_table(self, table):
+    def setup_table(self, table, plot):
         self.tab = table
         self.w.plot_tbl_expand.set_enabled(True)
         self.w.plot_tbl_expand.expand(True)
@@ -804,16 +804,10 @@ class Info_Ginga_Plot(Info_Common):
             self.x_col = self._set_combobox(self.w.x_col, self.cols, default=1)
             self.y_col = self._set_combobox(self.w.y_col, self.cols, default=2)
 
-    def _set_combobox(self, combobox, vals, default=0):
-        """Populate combobox with given list."""
-        combobox.clear()
-        for val in vals:
-            combobox.append_text(val)
-        if default > len(vals):
-            default = 0
-        val = vals[default]
-        combobox.show_text(val)
-        return val
+        # restore line and color counts
+        self.line_count = plot.get('line_count', 0)
+        self.color_count = plot.get('color_count', 0) - 1
+        self._cycle_color()
 
     def clear(self):
         self.w.plot_tbl_expand.expand(False)
@@ -827,6 +821,17 @@ class Info_Ginga_Plot(Info_Common):
         self._idxname = '_idx'
         self.x_col = ''
         self.y_col = ''
+
+    def _set_combobox(self, combobox, vals, default=0):
+        """Populate combobox with given list."""
+        combobox.clear()
+        for val in vals:
+            combobox.append_text(val)
+        if default > len(vals):
+            default = 0
+        val = vals[default]
+        combobox.show_text(val)
+        return val
 
     def _get_label(self, axis):
         """Return plot label for column for the given axis."""
@@ -870,7 +875,9 @@ class Info_Ginga_Plot(Info_Common):
         self.line_count = 0
         self.color_count = len(self.colors) - 1
         self._cycle_color()
-        plot.make_callback('modified')
+        plot.set(line_count=0, color_count=0)
+        # plot.make_callback('modified')
+        self.plot_viewer.replot()
 
     def add_to_plot_cb(self, w):
         plot = self.plot_viewer.get_dataobj()
@@ -915,6 +922,7 @@ class Info_Ginga_Plot(Info_Common):
         # pick a rotating color for the new plot
         color = self._next_color
         self._cycle_color()
+        plot.set(color_count=self.color_count)
 
         canvas = plot.get_canvas()
         dc = get_canvas_types()
@@ -924,8 +932,10 @@ class Info_Ginga_Plot(Info_Common):
                    tag=f"plot_{self.line_count}",
                    redraw=False)
         self.line_count += 1
+        plot.set(line_count=self.line_count)
 
-        plot.make_callback('modified')
+        # plot.make_callback('modified')
+        self.plot_viewer.replot()
         self.plot_viewer.zoom_fit()
 
     def color_select_cb(self, w, color):
@@ -1049,7 +1059,6 @@ class Info_Ginga_Table(Info_Common):
         """
         if not self.gui_up:
             return
-
         dataobj = self.table_viewer.get_dataobj()
         if isinstance(dataobj, AstroTable):
             if self.gui_up:

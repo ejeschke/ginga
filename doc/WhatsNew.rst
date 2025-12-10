@@ -14,6 +14,8 @@ Ver 5.5.0 (unreleased)
 - Adds keyboard mode support for the plot viewer
 - Adds thumbnails for plot and table viewer items
 - Fixed a mouse scrolling issue for Gtk4 backend
+- Fixed an issue where the thumbnail labels were not highlighted correctly
+  in the Thumbs plugin
 
 Ver 5.4.0 (2025-08-10)
 ======================

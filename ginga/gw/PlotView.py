@@ -115,8 +115,6 @@ class PlotViewBase(ViewerBase):
         self._dataobj = None
         self._data_limits = None
         self.rgb_order = 'RGBA'
-        # for debugging
-        self.name = str(self)
         # cursors
         self.cursor = {}
 
@@ -1098,9 +1096,6 @@ class PlotViewBase(ViewerBase):
     def _timer_cb(self, timer):
         self.onscreen_message_off()
 
-    def __str__(self):
-        return "PlotViewBase"
-
 
 class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
 
@@ -1271,9 +1266,6 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
 
     def get_last_data_xy(self):
         return (self.last_data_x, self.last_data_y)
-
-    def __str__(self):
-        return "PlotViewEvent"
 
 
 class CanvasView(PlotViewEvent):

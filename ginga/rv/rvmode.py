@@ -58,7 +58,7 @@ class RVMode(Mode):
         self.actions = dict(
             dmod_rvmode=['__m', None, None],
 
-            ms_showxy=['none+nobtn'],
+            ms_showxy=['none+move'],
 
             kp_raise_zoom=['Z'],
             kp_raise_info=['I'],

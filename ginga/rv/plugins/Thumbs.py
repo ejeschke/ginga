@@ -61,6 +61,7 @@ from ginga.util import iohelper
 from ginga.gw import Widgets, Viewers
 from ginga.gw.PlotView import PlotViewBase
 from ginga.table.TableView import TableViewBase
+from ginga.ImageView import ImageViewBase
 from ginga.util.paths import icondir
 from ginga.pilw.ImageViewPil import CanvasView
 from ginga.util.io import io_rgb
@@ -175,6 +176,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         fv.set_callback('add-channel', self.add_channel_cb)
         fv.set_callback('delete-channel', self.delete_channel_cb)
         fv.add_callback('channel-change', self.focus_cb)
+        fv.add_callback('viewer-create', self.viewer_create_cb)
 
         self.gui_up = False
 
@@ -468,20 +470,31 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         self.timer_update.set(self.update_interval)
 
+    def viewer_create_cb(self, fv, channel, viewer):
+        """Called when a viewer is created for a channel.
+
+        Depending on the viewer type, we add certain callbacks to change
+        our thumbnail when certain changes happen in the viewer.
+        """
+        if isinstance(viewer, ImageViewBase):
+            # <-- image viewer
+            self.logger.debug("image viewer created in channel {}".format(channel.name))
+            fitssettings = viewer.get_settings()
+            for name in ['cuts']:
+                fitssettings.get_setting(name).add_callback(
+                    'set', self.cutset_cb, viewer)
+            viewer.add_callback('transform', self.transform_cb)
+
+            rgbmap = viewer.get_rgbmap()
+            rgbmap.add_callback('changed', self.rgbmap_cb, viewer)
+
+        elif isinstance(viewer, PlotViewBase):
+            self.logger.debug("plot viewer created in channel {}".format(channel.name))
+            viewer.add_callback('redraw', self.plot_view_updated_cb)
+
     def add_channel_cb(self, fv, channel):
         """Called when a channel is added from the main interface.
-        Parameter is channel (a bunch).
         """
-        fitsimage = channel.fitsimage
-        fitssettings = fitsimage.get_settings()
-        for name in ['cuts']:
-            fitssettings.get_setting(name).add_callback(
-                'set', self.cutset_cb, fitsimage)
-        fitsimage.add_callback('transform', self.transform_cb)
-
-        rgbmap = fitsimage.get_rgbmap()
-        rgbmap.add_callback('changed', self.rgbmap_cb, fitsimage)
-
         # add old highlight set to channel external data
         channel.extdata.setdefault('thumbs_old_highlight', set([]))
 
@@ -490,16 +503,16 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         We use this to highlight the proper thumbs in the Thumbs pane.
         """
         # Reflect transforms, colormap, etc.
-        fitsimage = channel.fitsimage
+        viewer = channel.viewer
         image = channel.get_current_image()
         if image is not None:
             chname = channel.name
             thumbkey = self._get_thumb_key(chname, image)
             new_highlight = set([thumbkey])
 
-            if self.have_thumbnail(fitsimage, image):
+            if self.have_thumbnail(viewer, image):
                 # schedule an update of the thumbnail to pick up changes
-                self.redo_delay(fitsimage)
+                self.redo_delay(viewer)
         else:
             # no image has the focus
             new_highlight = set([])
@@ -508,32 +521,36 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             self.update_highlights(self._tkf_highlight, new_highlight)
             self._tkf_highlight = new_highlight
 
-    def transform_cb(self, fitsimage):
+    def transform_cb(self, viewer):
         """Called when a channel viewer has a transform event.
         Used to transform the corresponding thumbnail.
         """
-        self.redo_delay(fitsimage)
+        self.redo_delay(viewer)
         return True
 
-    def cutset_cb(self, setting, value, fitsimage):
+    def cutset_cb(self, setting, value, viewer):
         """Called when a channel viewer has a cut levels event.
         Used to adjust cuts on the corresponding thumbnail.
         """
-        self.redo_delay(fitsimage)
+        self.redo_delay(viewer)
         return True
 
-    def rgbmap_cb(self, rgbmap, fitsimage):
+    def rgbmap_cb(self, rgbmap, viewer):
         """Called when a channel viewer has an RGB mapper event.
         Used to make color and contrast adjustments on the corresponding
         thumbnail.
         """
         # color mapping has changed in some way
-        self.redo_delay(fitsimage)
+        self.redo_delay(viewer)
         return True
 
-    def redo_delay(self, fitsimage):
+    def plot_view_updated_cb(self, viewer, whence):
+        self.redo_delay(viewer)
+        return True
+
+    def redo_delay(self, viewer):
         # Delay regeneration of thumbnail until most changes have propagated
-        self.timer_redo.data.setvals(fitsimage=fitsimage)
+        self.timer_redo.data.setvals(viewer=viewer)
         self.timer_redo.set(self.lagtime)
         return True
 
@@ -542,7 +559,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         corresponding to changes in the viewer.
         """
         self.fv.assert_gui_thread()
-        self.redo_thumbnail(timer.data.fitsimage)
+        self.redo_thumbnail(timer.data.viewer)
 
     def timer_autoload_cb(self, timer):
         """Called when the autoload timer expires; used to expand placeholder
@@ -606,7 +623,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             ## self.fv.gui_do(channel.add_image_update, image, info,
             ##                update_viewer=False)
 
-            self.fv.gui_do(self.redo_thumbnail_image, channel, image, bnch,
+            self.fv.gui_do(self.redo_thumbnail_image, channel,
+                           channel.fitsimage, image, bnch,
                            save_thumb=self.save_thumbs)
 
         except Exception as e:
@@ -635,7 +653,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                     bnch = self.thumb_dict[thumbkey]
                     namelbl = bnch.get('namelbl', None)
                     if namelbl is not None:
-                        namelbl.color = fg
+                        namelbl.fillcolor = fg
 
             # highlight new labels that should be
             for thumbkey in re_hilite_set:
@@ -643,7 +661,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                     bnch = self.thumb_dict[thumbkey]
                     namelbl = bnch.get('namelbl', None)
                     if namelbl is not None:
-                        namelbl.color = bg
+                        namelbl.fillcolor = bg
 
             self.re_hilite_set = re_hilite_set
 
@@ -738,8 +756,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         (`viewer`).  If `save_thumb` is `True`, then save a copy of the
         thumbnail if the user has allowed it.
         """
-        # Get the thumbnail image
-        image = viewer.get_image()
+        # Get the main data object being viewed
+        image = viewer.get_dataobj()
         if image is None:
             return
 
@@ -762,12 +780,15 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 return
 
             bnch = self.thumb_dict[thumbkey]
-            self.redo_thumbnail_image(channel, image, bnch,
+            self.redo_thumbnail_image(channel, viewer, image, bnch,
                                       save_thumb=save_thumb)
 
-    def redo_thumbnail_image(self, channel, image, bnch, save_thumb=None):
+    def redo_thumbnail_image(self, channel, viewer, image, bnch,
+                             save_thumb=None):
         """Regenerate the thumbnail for image `image`, in the channel
-        `channel` and whose entry in the thumb_dict is `bnch`.
+        `channel` for viewer `viewer`, and whose entry in the thumb_dict
+        is `bnch`.
+
         If `save_thumb` is `True`, then save a copy of the thumbnail if
         the user has allowed it.
         """
@@ -801,7 +822,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             # Generate new thumbnail
             self.logger.debug("generating new thumbnail")
             thumb_image = self._regen_thumb_image(self.thumb_generator,
-                                                  image, extras, channel.viewer)
+                                                  image, extras, viewer)
 
             # Save a thumbnail for future browsing
             if save_thumb and info.path is not None:
@@ -948,6 +969,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         if isinstance(viewer, (PlotViewBase, TableViewBase)):
             # if a viewer was passed, and there is an image loaded there,
+            # then grab a screenshot of the viewer and resize it to a
+            # thumbnail
             cur_obj = viewer.get_dataobj()
             if cur_obj == image:
                 vwr_img = viewer.get_rgb_array()
@@ -971,8 +994,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         if not tg.viewable(image):
             # this is not something we know how to open
-            # TODO: other viewers might be able to open it, need to check
-            # with them
             image = self.placeholder_image
             extras.setvals(rgbimg=image, placeholder=False,
                            ignore=True, time_update=time.time())
