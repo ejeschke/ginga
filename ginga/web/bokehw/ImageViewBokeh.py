@@ -234,7 +234,7 @@ class BokehEventMixin:
     def set_figure(self, figure, handle=None):
         super().set_figure(figure, handle=handle)
 
-        g_event = events.MapEvent(state='mapped', viewer=self)
+        g_event = g_events.MapEvent(state='mapped', viewer=self)
         return self.make_callback('map', g_event)
 
     def _setup_handlers(self, source):
@@ -276,8 +276,8 @@ class BokehEventMixin:
         return self._keytbl
 
     def focus_event(self, event, has_focus):
-        g_event = events.FocusEvent(state='focus', mode=None,
-                                    focus=has_focus, viewer=self)
+        g_event = g_events.FocusEvent(state='focus', mode=None,
+                                      focus=has_focus, viewer=self)
         return self.make_callback('focus', g_event)
 
     def enter_notify_event(self, event):
@@ -285,10 +285,10 @@ class BokehEventMixin:
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             self.focus_event(event, True)
-        g_event = events.EnterLeaveEvent(state='enter', mode=None,
-                                         data_x=self.last_data_x,
-                                         data_y=self.last_data_y,
-                                         viewer=self)
+        g_event = g_events.EnterLeaveEvent(state='enter', mode=None,
+                                           data_x=self.last_data_x,
+                                           data_y=self.last_data_y,
+                                           viewer=self)
         return self.make_callback('enter', g_event)
 
     def leave_notify_event(self, event):
@@ -296,10 +296,10 @@ class BokehEventMixin:
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             self.focus_event(event, False)
-        g_event = events.EnterLeaveEvent(state='leave', mode=None,
-                                         data_x=self.last_data_x,
-                                         data_y=self.last_data_y,
-                                         viewer=self)
+        g_event = g_events.EnterLeaveEvent(state='leave', mode=None,
+                                           data_x=self.last_data_x,
+                                           data_y=self.last_data_y,
+                                           viewer=self)
         return self.make_callback('leave', g_event)
 
     def key_press_event(self, event):
