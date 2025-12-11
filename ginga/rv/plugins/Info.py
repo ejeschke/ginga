@@ -801,8 +801,14 @@ class Info_Ginga_Plot(Info_Common):
         cols = [self._idxname] + self.tab.colnames
         if cols != self.cols:
             self.cols = cols
-            self.x_col = self._set_combobox(self.w.x_col, self.cols, default=1)
-            self.y_col = self._set_combobox(self.w.y_col, self.cols, default=2)
+        x_col = plot.get('table_x_col', None)
+        if x_col is None:
+            x_col = cols[1] if len(cols) > 1 else cols[0]
+        self.x_col = self._set_combobox(self.w.x_col, self.cols, x_col)
+        y_col = plot.get('table_y_col', None)
+        if y_col is None:
+            y_col = cols[2] if len(cols) > 2 else cols[0]
+        self.y_col = self._set_combobox(self.w.y_col, self.cols, y_col)
 
         # restore line and color counts
         self.line_count = plot.get('line_count', 0)
@@ -822,16 +828,13 @@ class Info_Ginga_Plot(Info_Common):
         self.x_col = ''
         self.y_col = ''
 
-    def _set_combobox(self, combobox, vals, default=0):
+    def _set_combobox(self, combobox, vals, default):
         """Populate combobox with given list."""
         combobox.clear()
         for val in vals:
             combobox.append_text(val)
-        if default > len(vals):
-            default = 0
-        val = vals[default]
-        combobox.show_text(val)
-        return val
+        combobox.show_text(default)
+        return default
 
     def _get_label(self, axis):
         """Return plot label for column for the given axis."""
@@ -922,7 +925,8 @@ class Info_Ginga_Plot(Info_Common):
         # pick a rotating color for the new plot
         color = self._next_color
         self._cycle_color()
-        plot.set(color_count=self.color_count)
+        plot.set(color_count=self.color_count,
+                 table_x_col=self.x_col, table_y_col=self.y_col)
 
         canvas = plot.get_canvas()
         dc = get_canvas_types()

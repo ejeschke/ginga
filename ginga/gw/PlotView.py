@@ -794,12 +794,19 @@ class PlotViewBase(ViewerBase):
         x, y = x - pan_x, y - pan_y
 
         # calculate the length of the slider arms as a ratio
-        xthm_pct = max(min_pct, min(vis_x / rng_x, max_pct))
-        ythm_pct = max(min_pct, min(vis_y / rng_y, max_pct))
+        if rng_x == 0.0:
+            pct_x = 1.0
+            xthm_pct = 1.0
+        else:
+            pct_x = min(max(0.0, abs(x_min) / rng_x), 1.0)
+            xthm_pct = max(min_pct, min(vis_x / rng_x, max_pct))
 
-        # calculate the pan position as a ratio
-        pct_x = min(max(0.0, abs(x_min) / rng_x), 1.0)
-        pct_y = min(max(0.0, abs(y_min) / rng_y), 1.0)
+        if rng_y == 0.0:
+            pct_y = 1.0
+            ythm_pct = 1.0
+        else:
+            pct_y = min(max(0.0, abs(y_min) / rng_y), 1.0)
+            ythm_pct = max(min_pct, min(vis_y / rng_y, max_pct))
 
         bnch = Bunch.Bunch(rng_x=rng_x, rng_y=rng_y, vis_x=vis_x, vis_y=vis_y,
                            thm_pct_x=xthm_pct, thm_pct_y=ythm_pct,
