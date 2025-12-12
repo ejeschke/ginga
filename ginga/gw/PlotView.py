@@ -464,8 +464,9 @@ class PlotViewBase(ViewerBase):
 
         self.set_ranges(x_range=(x_lo, x_hi), y_range=(y_lo, y_hi))
 
-        if self.t_['plot_autozoom'] == 'once':
-            self.t_.set(plot_autozoom='off')
+        if not no_reset:
+            if self.t_['plot_autozoom'] == 'once':
+                self.t_.set(plot_autozoom='off')
 
     def set_dist_axis(self, x_axis=None, y_axis=None):
         if x_axis is None:
@@ -706,21 +707,21 @@ class PlotViewBase(ViewerBase):
         """
         self.set_pan(data_x, data_y, coord='data', no_reset=no_reset)
 
-    def pan_delta_px(self, x_delta_px, y_delta_px):
-        """Pan by a delta in X and Y specified in pixels.
+    def pan_delta(self, x_delta, y_delta):
+        """Pan by a delta in X and Y specified in data points.
 
         Parameters
         ----------
-        x_delta_px : float
-            Delta pixels in X
+        x_delta : float
+            Delta in X
 
-        y_delta_px : float
-            Delta pixels in Y
+        y_delta : float
+            Delta in Y
 
         """
         pan_x, pan_y = self.get_pan(coord='data')[:2]
-        pan_x += x_delta_px
-        pan_y += y_delta_px
+        pan_x += x_delta
+        pan_y += y_delta
         self.panset_xy(pan_x, pan_y)
 
     def panset_pct(self, pct_x, pct_y):
