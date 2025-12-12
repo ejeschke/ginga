@@ -4,30 +4,31 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""Naxis Mode enables bindings that can move through the slices in an
-image stack in a Ginga image viewer.
-
-Enter the mode by
------------------
-* Space, then "n"
-
-Exit the mode by
-----------------
-* Esc
-
-Default bindings in mode
-------------------------
-* scroll : select previous or next slice of current axis
-* Ctrl + scroll : select previous or next axis as current axis
-* left drag : select slice as a function of percentage of cursor/window width
-* up/down arrow : select previous or next axis as current axis
-
-"""
 from ginga.ImageView import ImageViewBase
 from ginga.modes.mode_base import Mode
 
 
 class NaxisMode(Mode):
+    """
+    Naxis Mode enables bindings that can move through the slices in an
+    image stack in a Ginga image viewer.
+
+    Enter the mode by
+    -----------------
+    * Space, then "n"
+
+    Exit the mode by
+    ----------------
+    * Esc
+
+    Default bindings in mode
+    ------------------------
+    * scroll : select previous or next slice of current axis
+    * Ctrl + scroll : select previous or next axis as current axis
+    * left drag : select slice as a function of percentage of cursor/window width
+    * up/down arrow : select previous or next axis as current axis
+
+    """
 
     @classmethod
     def is_compatible_viewer(cls, viewer):

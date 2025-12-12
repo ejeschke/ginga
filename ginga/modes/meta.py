@@ -4,27 +4,27 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""Meta Mode.
-
-Enter the mode by
------------------
-* Space
-
-Exit the mode by
-----------------
-* Esc
-
-Default bindings in mode
-------------------------
-* escape : exit any mode
-* L : toggle mode lock/oneshot
-* S : save image profile
-
-"""
 from ginga.modes.mode_base import Mode
 
 
 class MetaMode(Mode):
+    """Meta Mode.
+
+    Enter the mode by
+    -----------------
+    * Space
+
+    Exit the mode by
+    ----------------
+    * Esc
+
+    Default bindings in mode
+    ------------------------
+    * escape : exit any mode
+    * L : toggle mode lock/oneshot
+    * S : save image profile
+
+    """
 
     @classmethod
     def is_compatible_viewer(cls, viewer):

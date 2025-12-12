@@ -4,30 +4,31 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""Draw Mode enables bindings that can facilitate drawing.
-
-Enter the mode by
------------------
-* Space, then "b"
-
-Exit the mode by
-----------------
-* Esc
-
-Default bindings in mode
-------------------------
-* v : add a vertex to a polygon object, while drawing or editing a canvas
-* z : delete a vertex from a polygon object, while drawing or editing a canvas
-* x : delete a selected object while editing a canvas
-* left drag : draw on the canvas in the defined shape
-* right drag : draw on the canvas in the defined shape
-
-"""
 from ginga.ImageView import ImageViewBase
 from ginga.modes.mode_base import Mode
 
 
 class DrawMode(Mode):
+    """
+    Draw Mode enables bindings that can facilitate drawing.
+
+    Enter the mode by
+    -----------------
+    * Space, then "b"
+
+    Exit the mode by
+    ----------------
+    * Esc
+
+    Default bindings in mode
+    ------------------------
+    * v : add a vertex to a polygon object, while drawing or editing a canvas
+    * z : delete a vertex from a polygon object, while drawing or editing a canvas
+    * x : delete a selected object while editing a canvas
+    * left drag : draw on the canvas in the defined shape
+    * right drag : draw on the canvas in the defined shape
+
+    """
 
     @classmethod
     def is_compatible_viewer(cls, viewer):

@@ -4,33 +4,34 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""Plot2D Mode enables bindings that can set the pan position and zoom level
-(scale) in a Matplotlib plot viewer (ginga.gw.PlotView module).
-
-Enter the mode by
------------------
-* Space, then "2"
-
-Exit the mode by
-----------------
-* Esc
-
-Default bindings in mode
-------------------------
-* Shift + left click : set pan position
-* middle click : set pan position
-* scroll : zoom in/out
-* ctrl + scroll : zoom in/out X axis only
-* shift + scroll : zoom in/out Y axis only
-* alt + scroll : zoom in/out Y axis only
-* meta + scroll : zoom in/out at cursor
-"""
 from ginga.gw.PlotView import PlotViewBase
 from ginga.misc import Bunch
 from ginga.modes.mode_base import Mode
 
 
 class Plot2DMode(Mode):
+    """
+    Plot2D Mode enables bindings that can set the pan position and zoom level
+    (scale) in a Matplotlib plot viewer (ginga.gw.PlotView module).
+
+    Enter the mode by
+    -----------------
+    * Space, then "p"
+
+    Exit the mode by
+    ----------------
+    * Esc
+
+    Default bindings in mode
+    ------------------------
+    * Shift + left click : set pan position
+    * middle click : set pan position
+    * scroll : zoom in/out
+    * ctrl + scroll : zoom in/out X axis only
+    * shift + scroll : zoom in/out Y axis only
+    * alt + scroll : zoom in/out Y axis only
+    * meta + scroll : zoom in/out at cursor
+    """
 
     # Needs to be set by reference viewer (via set_shell_ref) before any
     # channel viewers are created
@@ -48,7 +49,7 @@ class Plot2DMode(Mode):
         super().__init__(viewer, settings=settings)
 
         self.actions = dict(
-            dmod_plot2d=['__2', None, 'plot2d'],
+            dmod_plot2d=['__p', None, 'plot2d'],
 
             ms_showxy=['plot2d+nobtn'],
             ms_panset2d=['plot2d+middle', 'plot2d+shift+left'],

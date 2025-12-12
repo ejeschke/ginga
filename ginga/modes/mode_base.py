@@ -43,8 +43,14 @@ class Mode:
         # Insert section title at the beginning
         mode_name = self.__class__.__name__
         mode_mod = inspect.getmodule(self)
-        mode_doc = ('{}\n{}\n'.format(mode_name, '=' * len(mode_name)) +
-                    mode_mod.__doc__)
+        _doc = "(No docstring found)"
+        if self.__class__.__doc__ is not None:
+            # prefer class docstring if found
+            _doc = self.__class__.__doc__
+        elif mode_mod.__doc__ is not None:
+            # other
+            _doc = mode_mod.__doc__
+        mode_doc = ('{}\n{}\n'.format(mode_name, '=' * len(mode_name)) + _doc)
         return mode_name, mode_doc
 
     def get_settings(self):

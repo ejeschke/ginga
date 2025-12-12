@@ -4,31 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""Contrast Mode enables bindings that can adjust the contrast of
-an image in a Ginga image viewer.
-
-Enter the mode by
------------------
-* Space, then "t"
-
-Exit the mode by
-----------------
-* Esc
-
-Default bindings in mode
-------------------------
-* T : restore contrast to defaults
-* left drag : adjust contrast
-  * Interactive shift/stretch colormap (aka contrast and bias).
-  * Moving left/right controls shift, up/down controls stretch.
-  * Release button when satisfied with the contrast.
-* right click : restore contrast to defaults
-* scroll wheel : change contrast (add Ctrl to change more finely)
-* Shift + scroll wheel : change brightness (add Ctrl to change more finely)
-* Ctrl + pan gesture : change contrast
-* Shift + pan gesture : change brightness
-
-"""
 import numpy as np
 
 from ginga.ImageView import ImageViewBase
@@ -36,6 +11,32 @@ from ginga.modes.mode_base import Mode
 
 
 class ContrastMode(Mode):
+    """
+    Contrast Mode enables bindings that can adjust the contrast of
+    an image in a Ginga image viewer.
+
+    Enter the mode by
+    -----------------
+    * Space, then "t"
+
+    Exit the mode by
+    ----------------
+    * Esc
+
+    Default bindings in mode
+    ------------------------
+    * T : restore contrast to defaults
+    * left drag : adjust contrast
+      * Interactive shift/stretch colormap (aka contrast and bias).
+      * Moving left/right controls shift, up/down controls stretch.
+      * Release button when satisfied with the contrast.
+    * right click : restore contrast to defaults
+    * scroll wheel : change contrast (add Ctrl to change more finely)
+    * Shift + scroll wheel : change brightness (add Ctrl to change more finely)
+    * Ctrl + pan gesture : change contrast
+    * Shift + pan gesture : change brightness
+
+    """
 
     @classmethod
     def is_compatible_viewer(cls, viewer):

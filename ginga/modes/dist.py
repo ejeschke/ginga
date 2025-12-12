@@ -4,34 +4,35 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""Dist Mode enables bindings that can adjust the color distribution
-of an image in a Ginga image viewer.
-
-These algorithms are similar to "curves" type profiles: "linear",
-"log", "power", "sqrt", "squared", "asinh", "sinh", "histeq"
-
-Enter the mode by
------------------
-* Space, then "d"
-
-Exit the mode by
-----------------
-* Esc
-
-Default bindings in mode
-------------------------
-* D : reset the color distribution algorithm to "linear"
-* b, up arrow : select the previous distribution algorithm in the list
-* n, down arrow : select the next distribution algorithm in the list
-* scroll wheel : select the color distribution algorithm by scrolling
-* pan gesture : select the color distribution algorithm by swiping
-  (hint: finalize selection of algorithm with up/down arrow keys)
-"""
 from ginga.ImageView import ImageViewBase
 from ginga.modes.mode_base import Mode
 
 
 class DistMode(Mode):
+    """
+    Dist Mode enables bindings that can adjust the color distribution
+    of an image in a Ginga image viewer.
+
+    These algorithms are similar to "curves" type profiles: "linear",
+    "log", "power", "sqrt", "squared", "asinh", "sinh", "histeq"
+
+    Enter the mode by
+    -----------------
+    * Space, then "d"
+
+    Exit the mode by
+    ----------------
+    * Esc
+
+    Default bindings in mode
+    ------------------------
+    * D : reset the color distribution algorithm to "linear"
+    * b, up arrow : select the previous distribution algorithm in the list
+    * n, down arrow : select the next distribution algorithm in the list
+    * scroll wheel : select the color distribution algorithm by scrolling
+    * pan gesture : select the color distribution algorithm by swiping
+      (hint: finalize selection of algorithm with up/down arrow keys)
+    """
 
     @classmethod
     def is_compatible_viewer(cls, viewer):

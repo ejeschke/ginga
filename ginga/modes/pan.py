@@ -4,45 +4,6 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""Pan Mode enables bindings that can set the pan position (the
-position under the center pixel) and zoom level (scale) in a Ginga
-image viewer.
-
-Enter the mode by
------------------
-* Space, then "q"
-
-Exit the mode by
-----------------
-* Esc
-
-Default bindings in mode
-------------------------
-* plus, equals : zoom in one zoom level
-* minus, underscore : zoom out one zoom level
-* 1-9,0 : zoom to level N (0 is 10)
-* Shift + 1-9,0 : zoom to level -N (0 is -10)
-* backquote : fit image to window size
-* doublequote : toggle auto fit for new images "on" or "off" in this viewer
-* singlequote : set auto fit for new images to "override" in this viewer
-* p : pan to the position under the cursor
-* c : pan to the center of the image
-* z : save zoom level (scale)
-* r : pan to cursor and zoom to saved scale level
-* left/right/up/down arrow : pan left/right/up/down by a small percentage
-* Shift + left/right/up/down arrow : pan left/right/up/down by a
-  very small percentage
-* pageup (pagedown) : pan up (down) by a large percentage of the screen
-* home (end) : pan towards the top (bottom) of the image
-* "?" : toggle auto center for new images "on" or "off" in this viewer
-* "/" : set auto center for new images to "override" in this viewer
-* scroll : zoom (scale) the image
-* left drag : pan the view
-* right drag : camera pan the view
-* pan gesture: pan the view porportionally to the gesture
-* pinch gesture: zoom the image porportionally to the gesture
-
-"""
 import math
 
 from ginga.ImageView import ImageViewBase
@@ -50,6 +11,46 @@ from ginga.modes.mode_base import Mode
 
 
 class PanMode(Mode):
+    """
+    Pan Mode enables bindings that can set the pan position (the
+    position under the center pixel) and zoom level (scale) in a Ginga
+    image viewer.
+
+    Enter the mode by
+    -----------------
+    * Space, then "q"
+
+    Exit the mode by
+    ----------------
+    * Esc
+
+    Default bindings in mode
+    ------------------------
+    * plus, equals : zoom in one zoom level
+    * minus, underscore : zoom out one zoom level
+    * 1-9,0 : zoom to level N (0 is 10)
+    * Shift + 1-9,0 : zoom to level -N (0 is -10)
+    * backquote : fit image to window size
+    * doublequote : toggle auto fit for new images "on" or "off" in this viewer
+    * singlequote : set auto fit for new images to "override" in this viewer
+    * p : pan to the position under the cursor
+    * c : pan to the center of the image
+    * z : save zoom level (scale)
+    * r : pan to cursor and zoom to saved scale level
+    * left/right/up/down arrow : pan left/right/up/down by a small percentage
+    * Shift + left/right/up/down arrow : pan left/right/up/down by a
+      very small percentage
+    * pageup (pagedown) : pan up (down) by a large percentage of the screen
+    * home (end) : pan towards the top (bottom) of the image
+    * "?" : toggle auto center for new images "on" or "off" in this viewer
+    * "/" : set auto center for new images to "override" in this viewer
+    * scroll : zoom (scale) the image
+    * left drag : pan the view
+    * right drag : camera pan the view
+    * pan gesture: pan the view porportionally to the gesture
+    * pinch gesture: zoom the image porportionally to the gesture
+
+    """
 
     @classmethod
     def is_compatible_viewer(cls, viewer):

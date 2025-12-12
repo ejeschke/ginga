@@ -4,31 +4,32 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-"""Plot Mode enables bindings for manipulating plots.
-
-Enter the mode by
------------------
-Mode is set by the PlotAide
-
-Exit the mode by
-----------------
-* Esc (but this is not recommended)
-
-Default bindings in mode
-------------------------
-* x : toggle autoaxis X between ON and OFF
-* y : toggle autoaxis Y between ON and OFF
-* v : toggle autoaxis Y between VIS and OFF
-* p : toggle autoaxis X between PAN and OFF
-* scroll : zoom (scale) the plot in X
-* Ctrl + scroll : zoom (scale) the plot in Y
-
-"""
 from ginga.ImageView import ImageViewBase
 from ginga.modes.mode_base import Mode
 
 
 class PlotMode(Mode):
+    """
+    Plot Mode enables bindings for manipulating plots.
+
+    Enter the mode by
+    -----------------
+    Mode is set by the PlotAide
+
+    Exit the mode by
+    ----------------
+    * Esc (but this is not recommended)
+
+    Default bindings in mode
+    ------------------------
+    * x : toggle autoaxis X between ON and OFF
+    * y : toggle autoaxis Y between ON and OFF
+    * v : toggle autoaxis Y between VIS and OFF
+    * p : toggle autoaxis X between PAN and OFF
+    * scroll : zoom (scale) the plot in X
+    * Ctrl + scroll : zoom (scale) the plot in Y
+
+    """
 
     @classmethod
     def is_compatible_viewer(cls, viewer):
@@ -44,7 +45,7 @@ class PlotMode(Mode):
         self.aide = None
 
         self.actions = dict(
-            dmod_plot=['__p', None, None],
+            dmod_plot=['__^', None, None],
 
             # NOTE: these only here to generate events. The events are
             # handled by the PlotAide object

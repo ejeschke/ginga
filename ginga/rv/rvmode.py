@@ -10,7 +10,8 @@ from ginga.modes.mode_base import Mode
 
 
 class RVMode(Mode):
-    """Reference Viewer Mode enables bindings that are specific to use in
+    """
+    Reference Viewer Mode enables bindings that are specific to use in
     the Ginga Reference image viewer, and not in standalone programs using
     the viewer widget.
 
