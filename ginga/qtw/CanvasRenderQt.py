@@ -244,9 +244,10 @@ class CanvasRenderer(render.StandardPipelineRenderer):
             ptr = qimg.bits()
             if hasattr(ptr, 'setsize'):
                 if hasattr(qimg, 'byteCount'):
-                    # Qt 5?
+                    # Qt 5
                     ptr.setsize(qimg.byteCount())
                 else:
+                    # Qt 6
                     ptr.setsize(qimg.sizeInBytes())
         else:
             # older PySide

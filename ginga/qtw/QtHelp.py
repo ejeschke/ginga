@@ -587,7 +587,12 @@ def get_rgb_array(widget):
     ptr = qimg.bits()
 
     # Set the size of the buffer in bytes
-    ptr.setsize(qimg.byteCount())
+    if hasattr(qimg, 'byteCount'):
+        # Qt 5
+        ptr.setsize(qimg.byteCount())
+    else:
+        # Qt 6
+        ptr.setsize(qimg.sizeInBytes())
 
     # Create the numpy array from the buffer, reshape it to (height, width, 4)
     # for 32-bit formats
