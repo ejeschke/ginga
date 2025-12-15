@@ -334,6 +334,28 @@ class PlotViewBase(ViewerBase):
         # adjust limits if necessary
         self._record_limits(x, y)
 
+    def _plot_xrange(self, x_lo, x_hi, artist_category='default',
+                     linewidth=0, fillcolor='aquamarine', fillalpha=0.5):
+        artists = self.artist_dct.setdefault(artist_category, [])
+        hex_color = colors.resolve_color(fillcolor, format='tuple')
+
+        span = self.ax.axvspan(x_lo, x_hi, facecolor=hex_color, alpha=fillalpha)
+        artists.append(span)
+
+        # adjust limits if necessary
+        # self._record_limits(x, y)
+
+    def _plot_yrange(self, y_lo, y_hi, artist_category='default',
+                     linewidth=0, fillcolor='aquamarine', fillalpha=0.5):
+        artists = self.artist_dct.setdefault(artist_category, [])
+        hex_color = colors.resolve_color(fillcolor, format='tuple')
+
+        span = self.ax.ayvspan(y_lo, y_hi, facecolor=hex_color, alpha=fillalpha)
+        artists.append(span)
+
+        # adjust limits if necessary
+        # self._record_limits(x, y)
+
     def set_limits(self, limits):
         self.settings.set(plot_limits=limits)
 
@@ -528,6 +550,14 @@ class PlotViewBase(ViewerBase):
 
             elif isinstance(obj, self.dc.Canvas):
                 self.render_canvas(obj)
+
+            elif isinstance(obj, self.dc.XRange):
+                self._plot_xrange(obj.x1, obj.x2, fillcolor=obj.fillcolor,
+                                  fillalpha=obj.fillalpha)
+
+            elif isinstance(obj, self.dc.YRange):
+                self._plot_xrange(obj.y1, obj.y2, fillcolor=obj.fillcolor,
+                                  fillalpha=obj.fillalpha)
 
     def apply_profile_or_settings(self, dataobj):
         """Apply a profile to the viewer.
@@ -1188,7 +1218,8 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
             key = key.replace('alt+', '')
         if 'meta+' in key:
             key = key.replace('meta+', '')
-        return self._keytbl.get(key, key)
+        key = self._keytbl.get(key, key)
+        return key
 
     def get_key_table(self):
         return self._keytbl
