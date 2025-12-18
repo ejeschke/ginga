@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 5.5.0 (unreleased)
+Ver 5.5.0 (2025-12-18)
 ======================
 - fixed default port number for Ginga remote control in the docstring
 - fixed an issue with the Pan viewer not redrawing when only the overlay
