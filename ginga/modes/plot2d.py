@@ -34,6 +34,9 @@ class Plot2DMode(Mode):
 
     Keystroke bindings
     ------------------
+
+    Zooming
+    -------
     * equals : zoom in one zoom level
     * ctrl + equals : zoom in X axis one zoom level
     * plus (shift + equals) : zoom in Y axis one zoom level
@@ -49,14 +52,18 @@ class Plot2DMode(Mode):
     * backquote : zoom X and Y axes to fit window
     * 1 : zoom X axis only to fit window
     * 2 : zoom Y axis only to fit window
-    * left arrow : pan left
-    * right arrow : pan right
-    * up arrow : pan up
-    * down arrow : pan down
     * k : set lower X range to X value at cursor
     * l : set upper X range to X value at cursor
     * K : set lower Y range to Y value at cursor
     * L : set upper Y range to Y value at cursor
+
+    Panning
+    -------
+    * left arrow : pan left
+    * right arrow : pan right
+    * up arrow : pan up
+    * down arrow : pan down
+
     """
 
     # Needs to be set by reference viewer (via set_shell_ref) before any
