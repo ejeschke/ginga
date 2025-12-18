@@ -52,7 +52,8 @@ class ImageViewBindings(object):
             # Set up our standard modifiers
             mod_shift=['shift_l', 'shift_r'],
             mod_ctrl=['control_l', 'control_r'],
-            mod_win=['meta_right'],
+            mod_alt=['alt_l', 'alt_r'],
+            mod_win=['meta_l', 'meta_r', 'meta_right'],
 
             default_mode_type='locked',
             default_lock_mode_type='locked',

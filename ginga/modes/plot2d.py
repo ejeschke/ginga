@@ -28,24 +28,27 @@ class Plot2DMode(Mode):
     * middle click : set pan position
     * scroll : zoom in/out
     * ctrl + scroll : zoom in/out X axis only
-    * shift + scroll : zoom in/out Y axis only
-    * alt + scroll : zoom in/out Y axis only
-    * meta + scroll : zoom in/out at cursor
+    * shift + scroll : zoom in/out Y axis only (On MacOS, trackpad only)
+    * alt + scroll(mouse) : zoom in/out Y axis only (Option key on Macs)
+    * alt + scroll : zoom in/out at cursor
+
+    Keystroke bindings
+    ------------------
     * equals : zoom in one zoom level
     * ctrl + equals : zoom in X axis one zoom level
-    * shift + equals (plus) : zoom in Y axis one zoom level
+    * plus (shift + equals) : zoom in Y axis one zoom level
     * minus : zoom out one zoom level
     * ctrl + minus : zoom out X axis one zoom level
-    * shift + minus (underscore): zoom out Y axis one zoom level
+    * underscore (shift + minus): zoom out Y axis one zoom level
     * 9 : zoom out maintaining cursor position
     * ctrl + 9 : zoom out X axis maintaining cursor position
-    * shift + 9 (left paren): zoom out Y axis maintaining cursor position
+    * left paren (shift + 9): zoom out Y axis maintaining cursor position
     * 0 : zoom in maintaining cursor position
     * ctrl + 0 : zoom in X axis maintaining cursor position
-    * shift + 0 (right paren): zoom in Y axis maintaining cursor position
-    * backquote : fit plot to window
-    * 1 : fit x axis only to window
-    * 2 : fit y axis only to window
+    * right paren (shift + 0): zoom in Y axis maintaining cursor position
+    * backquote : zoom X and Y axes to fit window
+    * 1 : zoom X axis only to fit window
+    * 2 : zoom Y axis only to fit window
     * left arrow : pan left
     * right arrow : pan right
     * up arrow : pan up
@@ -77,21 +80,29 @@ class Plot2DMode(Mode):
             ms_showxy=['plot2d+nobtn'],
             ms_panset2d=['plot2d+middle', 'plot2d+shift+left'],
 
-            sc_zoom2d=['plot2d+*+scroll'],
-            #sc_zoom_x=['ctrl+scroll'],
-            #sc_zoom_y=['shift+scroll'],
+            sc_zoom2d=['plot2d+scroll'],
+            sc_zoom2d_x=['plot2d+ctrl+scroll'],
+            sc_zoom2d_y=['plot2d+shift+scroll'],
+            sc_zoom2d_cursor=['plot2d+win+scroll'],
 
-            #sc_zoom_origin=['meta+scroll'],
+            kp_pan_left=['plot2d+left'],
+            kp_pan_right=['plot2d+right'],
+            kp_pan_up=['plot2d+up'],
+            kp_pan_down=['plot2d+down'],
 
-            kp_pan_left=['plot2d+*+left'],
-            kp_pan_right=['plot2d+*+right'],
-            kp_pan_up=['plot2d+*+up'],
-            kp_pan_down=['plot2d+*+down'],
+            kp_zoom_in=['plot2d+='],
+            kp_zoom_in_x=['plot2d+ctrl+='],
+            kp_zoom_in_y=['plot2d+shift++'],
+            kp_zoom_out=['plot2d+-'],
+            kp_zoom_out_x=['plot2d+ctrl+-'],
+            kp_zoom_out_y=['plot2d+shift+_'],
 
-            kp_zoom_in=['plot2d++', 'plot2d+='],
-            kp_zoom_out=['plot2d+-', 'plot2d+_'],
-            kp_zoom_cursor_in=['plot2d+*+0', 'plot2d+*+)'],
-            kp_zoom_cursor_out=['plot2d+*+9', 'plot2d+*+('],
+            kp_zoom_cursor_in=['plot2d+0'],
+            kp_zoom_cursor_in_x=['plot2d+ctrl+0'],
+            kp_zoom_cursor_in_y=['plot2d+shift+)'],
+            kp_zoom_cursor_out=['plot2d+9'],
+            kp_zoom_cursor_out_x=['plot2d+ctrl+9'],
+            kp_zoom_cursor_out_y=['plot2d+shift+('],
 
             kp_zoom_fit=['plot2d+backquote'],
             kp_zoom_fit_x=['plot2d+1'],
@@ -130,12 +141,20 @@ class Plot2DMode(Mode):
 
     #####  SCROLL ACTION CALLBACKS #####
 
-    def sc_zoom2d(self, viewer, event, msg=True):
-        """Can be set as the callback function for the 'scroll'
-        event to zoom the plot.
-        """
+    def __zoom(self, viewer, delta_x, delta_y, origin=None):
+
+        if origin is not None:
+            cur_x, cur_y = origin
+            if None not in origin:
+                viewer.zoom_plot_at_cursor(cur_x, cur_y, delta_x, delta_y)
+        else:
+            viewer.zoom_plot(delta_x, delta_y)
+
+        return True
+
+    def __zoom2d(self, viewer, event, axis='xy', origin=None):
         if not self.canzoom:
-            return
+            return False
 
         event.accept()
         # Matplotlib only gives us the number of steps of the scroll,
@@ -146,24 +165,38 @@ class Plot2DMode(Mode):
             delta = self.settings['plot_zoom_rate'] ** 2
 
         delta_x = delta_y = delta
-        if 'ctrl' in event.modifiers:
+        if axis == 'x':
             # only horizontal
             delta_y = 1.0
-        elif 'shift' in event.modifiers or 'alt' in event.modifiers:
+        elif axis == 'y':
             # only vertical
-            # (shift works on Linux, but not Mac; alt works on Mac but
-            #  not Linux....Grrr)
             delta_x = 1.0
 
-        if 'meta' in event.modifiers or 'cmd' in event.modifiers:
-            # cursor position
-            cur_x, cur_y = event.data_x, event.data_y
-            if None not in [cur_x, cur_y]:
-                viewer.zoom_plot_at_cursor(cur_x, cur_y, delta_x, delta_y)
-        else:
-            viewer.zoom_plot(delta_x, delta_y)
+        return self.__zoom(viewer, delta_x, delta_y, origin=origin)
 
-        return True
+    def sc_zoom2d(self, viewer, event):
+        """Can be set as the callback function for the 'scroll'
+        event to zoom the plot.
+        """
+        return self.__zoom2d(viewer, event)
+
+    def sc_zoom2d_x(self, viewer, event):
+        return self.__zoom2d(viewer, event, axis='x')
+
+    def sc_zoom2d_y(self, viewer, event):
+        return self.__zoom2d(viewer, event, axis='y')
+
+    def sc_zoom2d_cursor(self, viewer, event):
+        return self.__zoom2d(viewer, event,
+                             origin=(event.data_x, event.data_y))
+
+    def sc_zoom2d_cursor_x(self, viewer, event):
+        return self.__zoom2d(viewer, event, axis='x',
+                             origin=(event.data_x, event.data_y))
+
+    def sc_zoom2d_cursor_y(self, viewer, event):
+        return self.__zoom2d(viewer, event, axis='y',
+                             origin=(event.data_x, event.data_y))
 
     #####  MOUSE ACTION CALLBACKS #####
 
@@ -174,7 +207,7 @@ class Plot2DMode(Mode):
         self.fv.showxy(viewer, data_x, data_y)
         return False
 
-    def ms_panset2d(self, viewer, event, data_x, data_y, msg=True):
+    def ms_panset2d(self, viewer, event, data_x, data_y):
         """An interactive way to set the pan position.  The location
         (data_x, data_y) will be centered in the window.
 
@@ -190,10 +223,9 @@ class Plot2DMode(Mode):
 
         if not self.can.pan:
             return
-        cur_x, cur_y = event.data_x, event.data_y
 
-        if None not in [cur_x, cur_y]:
-            viewer.set_pan(cur_x, cur_y)
+        if None not in [data_x, data_y]:
+            viewer.set_pan(data_x, data_y)
 
         return True
 
@@ -205,13 +237,23 @@ class Plot2DMode(Mode):
         event.accept()
         delta = self.settings['plot_zoom_rate'] ** 2
         delta_x = delta_y = delta
-        if 'ctrl' in event.modifiers:
-            # only horizontal
-            delta_y = 1.0
-        elif 'shift' in event.modifiers or 'alt' in event.modifiers:
-            # only vertical
-            delta_x = 1.0
-        viewer.zoom_plot(delta_x, delta_y)
+        return self.__zoom(viewer, delta_x, delta_y)
+
+    def kp_zoom_out_x(self, viewer, event, data_x, data_y):
+        if not self.canzoom:
+            return False
+        event.accept()
+        delta_x = self.settings['plot_zoom_rate'] ** 2
+        delta_y = 1.0
+        return self.__zoom(viewer, delta_x, delta_y)
+
+    def kp_zoom_out_y(self, viewer, event, data_x, data_y):
+        if not self.canzoom:
+            return False
+        event.accept()
+        delta_x = 1.0
+        delta_y = self.settings['plot_zoom_rate'] ** 2
+        return self.__zoom(viewer, delta_x, delta_y)
 
     def kp_zoom_in(self, viewer, event, data_x, data_y):
         if not self.canzoom:
@@ -219,13 +261,23 @@ class Plot2DMode(Mode):
         event.accept()
         delta = self.settings['plot_zoom_rate'] ** -2
         delta_x = delta_y = delta
-        if 'ctrl' in event.modifiers:
-            # only horizontal
-            delta_y = 1.0
-        elif 'shift' in event.modifiers or 'alt' in event.modifiers:
-            # only vertical
-            delta_x = 1.0
-        viewer.zoom_plot(delta_x, delta_y)
+        return self.__zoom(viewer, delta_x, delta_y)
+
+    def kp_zoom_in_x(self, viewer, event, data_x, data_y):
+        if not self.canzoom:
+            return False
+        event.accept()
+        delta_x = self.settings['plot_zoom_rate'] ** -2
+        delta_y = 1.0
+        return self.__zoom(viewer, delta_x, delta_y)
+
+    def kp_zoom_in_y(self, viewer, event, data_x, data_y):
+        if not self.canzoom:
+            return False
+        event.accept()
+        delta_x = 1.0
+        delta_y = self.settings['plot_zoom_rate'] ** -2
+        return self.__zoom(viewer, delta_x, delta_y)
 
     def kp_zoom_cursor_out(self, viewer, event, data_x, data_y):
         if not self.canzoom:
@@ -233,14 +285,23 @@ class Plot2DMode(Mode):
         event.accept()
         delta = self.settings['plot_zoom_rate'] ** 2
         delta_x = delta_y = delta
-        if 'ctrl' in event.modifiers:
-            # only horizontal
-            delta_y = 1.0
-        elif 'shift' in event.modifiers or 'alt' in event.modifiers:
-            # only vertical
-            delta_x = 1.0
-        cur_x, cur_y = viewer.get_last_data_xy()
-        viewer.zoom_plot_at_cursor(cur_x, cur_y, delta_x, delta_y)
+        return self.__zoom(viewer, delta_x, delta_y, origin=(data_x, data_y))
+
+    def kp_zoom_cursor_out_x(self, viewer, event, data_x, data_y):
+        if not self.canzoom:
+            return False
+        event.accept()
+        delta_x = self.settings['plot_zoom_rate'] ** 2
+        delta_y = 1.0
+        return self.__zoom(viewer, delta_x, delta_y, origin=(data_x, data_y))
+
+    def kp_zoom_cursor_out_y(self, viewer, event, data_x, data_y):
+        if not self.canzoom:
+            return False
+        event.accept()
+        delta_x = 1.0
+        delta_y = self.settings['plot_zoom_rate'] ** 2
+        return self.__zoom(viewer, delta_x, delta_y, origin=(data_x, data_y))
 
     def kp_zoom_cursor_in(self, viewer, event, data_x, data_y):
         if not self.canzoom:
@@ -248,14 +309,23 @@ class Plot2DMode(Mode):
         event.accept()
         delta = self.settings['plot_zoom_rate'] ** -2
         delta_x = delta_y = delta
-        if 'ctrl' in event.modifiers:
-            # only horizontal
-            delta_y = 1.0
-        elif 'shift' in event.modifiers or 'alt' in event.modifiers:
-            # only vertical
-            delta_x = 1.0
-        cur_x, cur_y = viewer.get_last_data_xy()
-        viewer.zoom_plot_at_cursor(cur_x, cur_y, delta_x, delta_y)
+        return self.__zoom(viewer, delta_x, delta_y, origin=(data_x, data_y))
+
+    def kp_zoom_cursor_in_x(self, viewer, event, data_x, data_y):
+        if not self.canzoom:
+            return False
+        event.accept()
+        delta_x = self.settings['plot_zoom_rate'] ** -2
+        delta_y = 1.0
+        return self.__zoom(viewer, delta_x, delta_y, origin=(data_x, data_y))
+
+    def kp_zoom_cursor_in_y(self, viewer, event, data_x, data_y):
+        if not self.canzoom:
+            return False
+        event.accept()
+        delta_x = 1.0
+        delta_y = self.settings['plot_zoom_rate'] ** -2
+        return self.__zoom(viewer, delta_x, delta_y, origin=(data_x, data_y))
 
     def kp_zoom_fit(self, viewer, event, data_x, data_y):
         if not self.canzoom:
@@ -320,29 +390,25 @@ class Plot2DMode(Mode):
             return False
         event.accept()
         (x_lo, x_hi), (y_lo, y_hi) = viewer.get_ranges()
-        cur_x, cur_y = viewer.get_last_data_xy()
-        viewer.set_ranges(x_range=(cur_x, x_hi))
+        viewer.set_ranges(x_range=(data_x, x_hi))
 
     def kp_cut_x_hi(self, viewer, event, data_x, data_y):
         if not self.canpan:
             return False
         event.accept()
         (x_lo, x_hi), (y_lo, y_hi) = viewer.get_ranges()
-        cur_x, cur_y = viewer.get_last_data_xy()
-        viewer.set_ranges(x_range=(x_lo, cur_x))
+        viewer.set_ranges(x_range=(x_lo, data_x))
 
     def kp_cut_y_lo(self, viewer, event, data_x, data_y):
         if not self.canpan:
             return False
         event.accept()
         (x_lo, x_hi), (y_lo, y_hi) = viewer.get_ranges()
-        cur_x, cur_y = viewer.get_last_data_xy()
-        viewer.set_ranges(y_range=(cur_y, y_hi))
+        viewer.set_ranges(y_range=(data_y, y_hi))
 
     def kp_cut_y_hi(self, viewer, event, data_x, data_y):
         if not self.canpan:
             return False
         event.accept()
         (x_lo, x_hi), (y_lo, y_hi) = viewer.get_ranges()
-        cur_x, cur_y = viewer.get_last_data_xy()
-        viewer.set_ranges(y_range=(y_lo, cur_y))
+        viewer.set_ranges(y_range=(y_lo, data_y))

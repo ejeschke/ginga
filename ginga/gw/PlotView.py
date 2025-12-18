@@ -1147,8 +1147,8 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
             'shift': 'shift_l',
             'control': 'control_l',
             'alt': 'alt_l',
-            'win': 'super_l',
-            'meta': 'meta_right',
+            'win': 'meta_l',  # windows key
+            'cmd': 'meta_l',  # Command key on Macs
             '`': 'backquote',
             '"': 'doublequote',
             "'": 'singlequote',
@@ -1168,6 +1168,7 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
             self.enable_callback(name)
 
         self.last_data_x, self.last_data_y = 0, 0
+
         self.connect_ui()
 
     def connect_ui(self):
