@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 5.6.0 (unreleased)
+======================
+- Added variable size font (according to window size) in the plot viewer
+
 Ver 5.5.0 (2025-12-18)
 ======================
 - fixed default port number for Ginga remote control in the docstring

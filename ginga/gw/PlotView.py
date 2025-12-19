@@ -55,8 +55,8 @@ class PlotViewBase(ViewerBase):
         self.t_.add_defaults(plot_bg='white',
                              plot_save_suffix='.png',
                              plot_dpi=100, plot_save_dpi=100,
-                             plot_title_fontsize=14,
-                             plot_axis_fontsize=14,
+                             plot_title_fontsize=None,
+                             plot_axis_fontsize=None,
                              plot_limits=None,
                              plot_range=None,
                              plot_enter_focus=True,
@@ -149,6 +149,8 @@ class PlotViewBase(ViewerBase):
                      'configure']:
             self.enable_callback(name)
 
+        self.add_callback('configure', self.resize_cb)
+
     def get_figure(self):
         return self.figure
 
@@ -208,6 +210,10 @@ class PlotViewBase(ViewerBase):
         (x_lo, y_lo), (x_hi, y_hi) = self.get_limits()
         return (x_hi, y_hi)
 
+    def resize_cb(self, viewer, wd_px, ht_px):
+        self.logger.debug(f"viewer resized to {wd_px}x{ht_px}")
+        self._set_variable_font_sizes()
+
     def clear(self, redraw=True):
         """Clear plot display."""
         self.logger.debug('clearing viewer...')
@@ -234,23 +240,56 @@ class PlotViewBase(ViewerBase):
         if redraw:
             self.redraw()
 
-    def set_titles(self, title=None, x_axis=None, y_axis=None, redraw=True):
-        if x_axis is not None:
-            self.ax.set_xlabel(x_axis)
-        if y_axis is not None:
-            self.ax.set_ylabel(y_axis)
-        if title is not None:
-            self.ax.set_title(title)
-        ax = self.ax
-        ax.title.set_fontsize(self.t_['plot_title_fontsize'])
-        for item in ([ax.xaxis.label, ax.yaxis.label] +
-                     ax.get_xticklabels() + ax.get_yticklabels()):
-            item.set_fontsize(self.t_['plot_axis_fontsize'])
+    def _set_variable_font_sizes(self):
+        # recalculate font sizes if left to variable setting
+        width, height = self.get_window_size()
+        title_font_size = self.t_['plot_title_fontsize']
+        if title_font_size is None:
+            title_font_size = font_asst.calc_font_size(width)
 
-        # Make x axis labels a little more readable
+        axis_font_size = self.t_['plot_axis_fontsize']
+        if axis_font_size is None:
+            axis_font_size = font_asst.calc_font_size(width)
+
+        try:
+            ax = self.ax
+            ax.title.set_fontsize(title_font_size)
+            for item in ([ax.xaxis.get_label(), ax.yaxis.get_label()] +
+                         ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set(fontsize=axis_font_size)
+
+            self.redraw()
+        except Exception as e:
+            self.logger.error(f"error changing font size: {e}", exc_info=True)
+
+    def set_titles(self, title=None, x_axis=None, y_axis=None, redraw=True):
+        # recalculate font sizes if left to variable setting
+        width, height = self.get_window_size()
+        title_font_size = self.t_['plot_title_fontsize']
+        if title_font_size is None:
+            title_font_size = font_asst.calc_font_size(width)
+
+        axis_font_size = self.t_['plot_axis_fontsize']
+        if axis_font_size is None:
+            axis_font_size = font_asst.calc_font_size(width)
+
+        if x_axis is not None:
+            self.ax.set_xlabel(x_axis, fontsize=axis_font_size)
+        if y_axis is not None:
+            self.ax.set_ylabel(y_axis, fontsize=axis_font_size)
+        if title is not None:
+            self.ax.set_title(title, fontsize=title_font_size)
+
+        # Make X axis labels a little more readable
         lbls = self.ax.xaxis.get_ticklabels()
         for lbl in lbls:
-            lbl.set(rotation=45, horizontalalignment='right')
+            lbl.set(rotation=45, horizontalalignment='right',
+                    fontsize=axis_font_size)
+
+        # update Y axis labels
+        lbls = self.ax.yaxis.get_ticklabels()
+        for lbl in lbls:
+            lbl.set(fontsize=axis_font_size)
 
         if redraw:
             self.redraw()
