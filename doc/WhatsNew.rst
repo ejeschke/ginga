@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 5.5.1 (unreleased)
+======================
+- fixed an issue with values not being read out under the cursor
+
 Ver 5.5.0 (2025-12-18)
 ======================
 - fixed default port number for Ginga remote control in the docstring
