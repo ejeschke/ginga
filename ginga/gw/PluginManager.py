@@ -34,6 +34,7 @@ class PluginManager(Callback.Callbacks):
         self.active = {}
         self.focus = set([])
         self.exclusive = set([])
+        self.raise_set = set([])
 
         for name in ('activate-plugin', 'deactivate-plugin',
                      'focus-plugin', 'unfocus-plugin'):
@@ -66,6 +67,10 @@ class PluginManager(Callback.Callbacks):
                                               wsname=None,
                                               fitsimage=fitsimage,
                                               chinfo=chinfo)
+            if spec.get('raise_on_cc', False):
+                # if plugin wants to be raised on a channel change
+                # add its name to the set
+                self.raise_set.add(opname)
 
             self.logger.info("Plugin '%s' loaded." % name)
 
@@ -510,6 +515,17 @@ class PluginManager(Callback.Callbacks):
             p_info = bnch.get('plugin_info', None)
             if p_info is not None:
                 self.deactivate(p_info.name)
+
+    def channel_change(self):
+        """Called from the Ginga shell when the channel is changed.
+        """
+        # raise plugins that indicated they wanted to be raised when
+        # their channel is changed
+        for opname in self.raise_set:
+            p_info = self.get_plugin_info(opname)
+            tabname = p_info.get('tabname', None)
+            if tabname is not None:
+                self.fv.ds.raise_tab(tabname)
 
     def dispose_gui(self, p_info):
         self.logger.debug("disposing of gui")

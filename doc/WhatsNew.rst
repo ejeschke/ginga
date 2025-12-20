@@ -5,6 +5,8 @@ What's New
 Ver 5.6.0 (unreleased)
 ======================
 - Added ability to add icons to Ginga-wrapped Button widgets
+- Refactored Pan and Header plugins to use new parent/child plugin
+  implementation
 
 Ver 5.5.1 (2025-12-22)
 ======================

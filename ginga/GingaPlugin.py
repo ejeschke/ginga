@@ -5,8 +5,10 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.misc import Bunch
+from ginga.gw import Widgets
 
-__all__ = ['PluginError', 'GlobalPlugin', 'LocalPlugin']
+__all__ = ['PluginError', 'GlobalPlugin', 'LocalPlugin',
+           'ParentPlugin', 'ChildPlugin']
 
 
 class PluginError(Exception):
@@ -124,5 +126,126 @@ class LocalPlugin(BasePlugin):
         it is doing.
         """
         pass
+
+
+class ParentPlugin(GlobalPlugin):
+
+    def __init__(self, fv):
+        # superclass defines some variables for us, like logger
+        super().__init__(fv)
+
+        self.plugin_dct = dict()
+        self.class_childplugin = None
+
+        fv.add_callback('add-channel', self.add_channel)
+        fv.add_callback('delete-channel', self.delete_channel)
+        fv.add_callback('channel-change', self.focus_cb)
+        self.gui_up = False
+
+    def build_gui(self, container):
+        vbox = Widgets.VBox()
+        vbox.set_border_width(1)
+        vbox.set_spacing(1)
+        self.w.top_w = vbox
+
+        nb = Widgets.StackWidget()
+        vbox.add_widget(nb, stretch=1)
+        self.w.nb = nb
+
+        container.add_widget(vbox, stretch=1)
+        self.gui_up = True
+
+    def add_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
+
+        # create child plugin
+        plugin = self.class_childplugin(self.fv, channel.fitsimage, self)
+
+        if hasattr(plugin, 'build_gui'):
+            # build it's gui
+            vbox = Widgets.VBox()
+            vbox.set_border_width(1)
+            vbox.set_spacing(1)
+
+            plugin.build_gui(vbox)
+
+            self.w.nb.add_widget(vbox, title=channel.name)
+        else:
+            vbox = None
+
+        self.plugin_dct[channel.name] = Bunch.Bunch(plugin=plugin,
+                                                    widget=vbox)
+
+    def delete_channel(self, viewer, channel):
+        if not self.gui_up:
+            return
+        chname = channel.name
+        self.logger.debug("deleting channel %s" % (chname))
+        bnch = self.plugin_dct[chname]
+        del self.plugin_dct[chname]
+        widget = bnch.widget
+        try:
+            bnch.plugin.stop()
+        except Exception as e:
+            self.logger.error(f"error closing plugin: {e}")
+        if widget is not None:
+            self.w.nb.remove(widget, delete=True)
+
+    def focus_cb(self, viewer, channel):
+        if not self.gui_up:
+            return
+        bnch = self.plugin_dct[channel.name]
+        if bnch.widget is not None:
+            index = self.w.nb.index_of(bnch.widget)
+            self.w.nb.set_index(index)
+
+    def start(self):
+        names = self.fv.get_channel_names()
+        for name in names:
+            channel = self.fv.get_channel(name)
+            self.add_channel(self.fv, channel)
+
+        channel = self.fv.get_channel_info()
+        if channel is not None:
+            viewer = channel.fitsimage
+
+            image = viewer.get_image()
+            if image is not None:
+                self.redo(channel, image)
+
+            self.focus_cb(viewer, channel)
+
+    def stop(self):
+        names = self.fv.get_channel_names()
+        for name in names:
+            channel = self.fv.get_channel(name)
+            self.delete_channel(self.fv, channel)
+
+        self.gui_up = False
+        # dereference gui widgets
+        self.w = Bunch.Bunch()
+        return True
+
+    def close(self):
+        self.fv.stop_global_plugin(str(self))
+        return True
+
+    def redo(self, channel, image):
+        bnch = self.plugin_dct[channel.name]
+        bnch.plugin.redo()
+
+    def __str__(self):
+        return 'parentplugin'
+
+
+class ChildPlugin(LocalPlugin):
+
+    def __init__(self, fv, image_viewer, parent_plugin):
+        super().__init__(fv, image_viewer)
+
+        self.pp = parent_plugin
+        self.gui_up = False
+
 
 # END

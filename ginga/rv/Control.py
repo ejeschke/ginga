@@ -1306,6 +1306,7 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                                 raisetab=True)
 
         self.make_gui_callback('channel-change', channel)
+        channel.opmon.channel_change()
 
         self.update_pending()
         return True
@@ -1468,13 +1469,21 @@ class GingaShell(GwMain.GwMain, Widgets.Application):
                 self.cur_channel = channel
 
             # Prepare local plugins for this channel
-            for spec in self.get_plugins():
+            local_specs = list(filter(lambda spec: spec.get('ptype', 'global') == 'local',
+                                      self.get_plugins()))
+
+            for spec in local_specs:
                 opname = spec.get('klass', spec.get('module'))
-                if spec.get('ptype', 'global') == 'local':
-                    opmon.load_plugin(opname, spec, chinfo=channel)
+                opmon.load_plugin(opname, spec, chinfo=channel)
 
             self.make_gui_callback('viewer-create', channel, bnch.image_viewer)
             self.make_gui_callback('add-channel', channel)
+
+            for spec in local_specs:
+                if spec.get('start', False):
+                    opname = spec.get('klass', spec.get('module'))
+                    opmon.start_plugin_future(chname, opname, None)
+
             return channel
 
     def delete_channel(self, chname):
