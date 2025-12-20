@@ -2,8 +2,9 @@
 What's New
 ++++++++++
 
-Ver 5.6.0 (unreleased)
+Ver 5.5.1 (unreleased)
 ======================
+- fixed an issue with values not being read out under the cursor
 - Added variable size font (according to window size) in the plot viewer
 
 Ver 5.5.0 (2025-12-18)

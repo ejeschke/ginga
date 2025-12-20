@@ -85,6 +85,9 @@ class RVMode(Mode):
             kp_previous_channel_in_workspace=['left'],
             kp_next_channel_in_workspace=['n', 'right'])
 
+        # this seems to be necessary ???
+        viewer.set_callback('none-move', self.ms_showxy)
+
     def __str__(self):
         return 'rvmode'
 
