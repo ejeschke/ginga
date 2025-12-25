@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 5.6.0 (unreleased)
+======================
+- Added ability to add icons to Ginga-wrapped Button widgets
+
 Ver 5.5.1 (2025-12-22)
 ======================
 - fixed an issue with values not being read out under the cursor

@@ -396,10 +396,17 @@ class Label(WidgetBase):
 
 
 class Button(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text=None, iconpath=None, iconsize=None):
         super(Button, self).__init__()
 
-        self.widget = QtGui.QPushButton(text)
+        self.widget = QtGui.QPushButton()
+
+        if iconpath is not None:
+            self.set_icon(iconpath, iconsize=iconsize)
+
+        if text is not None:
+            self.widget.setText(text)
+
         self.widget.clicked.connect(self._cb_redirect)
         self._set_name(self.widget)
 
@@ -410,6 +417,13 @@ class Button(WidgetBase):
 
     def get_text(self):
         return self.widget.text()
+
+    def set_icon(self, iconpath, iconsize=None):
+        wd, ht = 24, 24
+        if iconsize is not None:
+            wd, ht = iconsize
+        iconw = QtHelp.get_icon(iconpath, size=(wd, ht))
+        self.widget.setIcon(iconw)
 
     def set_color(self, bg=None, fg=None):
         content = ""
@@ -2018,7 +2032,7 @@ class Toolbar(ContainerBase):
 
     def add_action(self, text, toggle=False, iconpath=None, iconsize=None):
         child = ToolbarAction()
-        if iconpath:
+        if iconpath is not None:
             wd, ht = 24, 24
             if iconsize is not None:
                 wd, ht = iconsize

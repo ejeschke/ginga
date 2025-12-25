@@ -522,10 +522,16 @@ class Button(WidgetBase):
             value="%(text)s">
             '''
 
-    def __init__(self, text=''):
+    def __init__(self, text=None, iconpath=None, iconsize=None):
         super(Button, self).__init__()
 
+        if text is None:
+            text = ''
         self.text = text
+        self.icon = None
+        if iconpath is not None:
+            self.set_icon(iconpath, iconsize=iconsize)
+
         self.widget = None
 
         self.enable_callback('activated')
@@ -538,6 +544,13 @@ class Button(WidgetBase):
 
     def get_text(self):
         return self.text
+
+    def set_icon(self, iconpath, iconsize=None):
+        wd, ht = 24, 24
+        if iconsize is not None:
+            wd, ht = iconsize
+        iconw = PgHelp.get_icon(iconpath, size=(wd, ht))
+        self.icon = iconw
 
     def _cb_redirect(self, event):
         self.make_callback('activated')

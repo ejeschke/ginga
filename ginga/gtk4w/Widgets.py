@@ -456,11 +456,17 @@ class Label(WidgetBase):
 
 
 class Button(WidgetBase):
-    def __init__(self, text=''):
+    def __init__(self, text=None, iconpath=None, iconsize=None):
         super(Button, self).__init__()
 
-        w = Gtk.Button(label=text)
+        w = Gtk.Button()
         self.widget = w
+        if iconpath is not None:
+            self.set_icon(iconpath, iconsize=iconsize)
+
+        if text is not None:
+            self.widget.set_label(text)
+
         self._set_name(w)
         w.connect('clicked', self._cb_redirect)
 
@@ -471,6 +477,13 @@ class Button(WidgetBase):
 
     def get_text(self):
         return self.widget.get_label()
+
+    def set_icon(self, iconpath, iconsize=None):
+        wd, ht = 24, 24
+        if iconsize is not None:
+            wd, ht = iconsize
+        iconw = GtkHelp.get_icon(iconpath, size=(wd, ht))
+        self.widget.set_image(iconw)
 
     def set_color(self, bg=None, fg=None):
         content = ""
