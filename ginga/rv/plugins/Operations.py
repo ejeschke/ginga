@@ -203,7 +203,7 @@ class Operations(GingaPlugin.GlobalPlugin):
     def activate_plugin_cb(self, pl_mgr, bnch):
         if not self.gui_up:
             return
-        spec = bnch.pInfo.spec
+        spec = bnch.p_info.spec
         optray = spec.get('optray', True)
         if not optray:
             return
@@ -211,7 +211,7 @@ class Operations(GingaPlugin.GlobalPlugin):
         if hidden:
             return
 
-        lname = bnch.pInfo.name.lower()
+        lname = bnch.p_info.name.lower()
         menu = Widgets.Menu()
         item = menu.add_name("Focus")
         item.add_callback('activated', lambda *args: pl_mgr.set_focus(lname))
@@ -239,7 +239,7 @@ class Operations(GingaPlugin.GlobalPlugin):
     def deactivate_plugin_cb(self, pl_mgr, bnch):
         if not self.gui_up:
             return
-        hidden = bnch.pInfo.spec.get('hidden', False)
+        hidden = bnch.p_info.spec.get('hidden', False)
         if hidden:
             return
 

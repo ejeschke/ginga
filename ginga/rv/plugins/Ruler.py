@@ -71,9 +71,9 @@ __all__ = ['Ruler']
 
 class Ruler(GingaPlugin.LocalPlugin):
 
-    def __init__(self, fv, fitsimage):
+    def __init__(self, fv, fitsimage, ident=None):
         # superclass defines some variables for us, like logger
-        super(Ruler, self).__init__(fv, fitsimage)
+        super().__init__(fv, fitsimage, ident=ident)
 
         # get Ruler preferences
         prefs = self.fv.get_preferences()
@@ -83,7 +83,7 @@ class Ruler(GingaPlugin.LocalPlugin):
                                    units='arcmin', angle_unit='degrees')
         self.settings.load(onError='silent')
 
-        self.layertag = 'ruler-canvas'
+        self.layertag = f'{self.ident}-canvas'
         self.ruletag = None
         self.w = None
         self.unittypes = ('arcmin', 'degrees', 'pixels')
@@ -422,7 +422,5 @@ class Ruler(GingaPlugin.LocalPlugin):
                 self.edit_select_ruler()
         return True
 
-    def __str__(self):
-        return 'ruler'
 
 # END

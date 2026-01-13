@@ -18,13 +18,19 @@ class PluginError(Exception):
 
 class BasePlugin(object):
     """Base class for all plugins."""
-    def __init__(self, fv):
-        super(BasePlugin, self).__init__()
+    def __init__(self, fv, ident=None):
+        super().__init__()
         self.fv = fv
         self.logger = fv.logger
+        self.ident = ident
 
         # Holds GUI widgets
         self.w = Bunch.Bunch()
+
+    def __str__(self):
+        if self.ident is not None:
+            return self.ident
+        return super().__str__()
 
     # def build_gui(self, container):
     #     """
@@ -67,8 +73,8 @@ class BasePlugin(object):
 
 class GlobalPlugin(BasePlugin):
     """Class to handle a global plugin."""
-    def __init__(self, fv):
-        super(GlobalPlugin, self).__init__(fv)
+    def __init__(self, fv, ident=None):
+        super().__init__(fv, ident=ident)
 
     def redo(self, channel, image):
         """This method is called when an image is set in a channel."""
@@ -81,8 +87,8 @@ class GlobalPlugin(BasePlugin):
 
 class LocalPlugin(BasePlugin):
     """Class to handle a local plugin."""
-    def __init__(self, fv, fitsimage):
-        super(LocalPlugin, self).__init__(fv)
+    def __init__(self, fv, fitsimage, ident=None):
+        super().__init__(fv, ident=ident)
         self.fitsimage = fitsimage
 
         # find our channel info
@@ -132,7 +138,7 @@ class ParentPlugin(GlobalPlugin):
 
     def __init__(self, fv):
         # superclass defines some variables for us, like logger
-        super().__init__(fv)
+        super().__init__(fv, ident=None)
 
         self.plugin_dct = dict()
         self.class_childplugin = None
@@ -234,9 +240,6 @@ class ParentPlugin(GlobalPlugin):
     def redo(self, channel, image):
         bnch = self.plugin_dct[channel.name]
         bnch.plugin.redo()
-
-    def __str__(self):
-        return 'parentplugin'
 
 
 class ChildPlugin(LocalPlugin):

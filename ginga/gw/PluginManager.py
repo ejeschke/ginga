@@ -7,6 +7,7 @@
 import sys
 import threading
 import traceback
+import inspect
 
 from ginga.gw import Widgets
 from ginga.misc import Bunch, Callback
@@ -43,19 +44,27 @@ class PluginManager(Callback.Callbacks):
     def load_plugin(self, name, spec, chinfo=None):
         if not spec.get('enabled', True):
             return
+
+        opname = name.lower()
         try:
             module = self.mm.get_module(spec.module)
             className = spec.get('klass', spec.module)
             klass = getattr(module, className)
 
+            # pass ident kwarg if the plugin has it defined in the
+            # constructor kwargs--this becomes the plugin's identity
+            kwargs = dict()
+            if has_keyword_only_parameter(klass, 'ident'):
+                kwargs['ident'] = opname
+
             if chinfo is None:
                 # global plug in
-                obj = klass(self.fv)
-                fitsimage = None
+                obj = klass(self.fv, **kwargs)
+                image_viewer = None
             else:
                 # local plugin
-                fitsimage = chinfo.fitsimage
-                obj = klass(self.fv, fitsimage)
+                image_viewer = chinfo.fitsimage
+                obj = klass(self.fv, image_viewer, **kwargs)
 
             # Prepare configuration for module.  This becomes the p_info
             # object referred to in later code.
@@ -65,7 +74,7 @@ class PluginManager(Callback.Callbacks):
                                               is_toplevel=False,
                                               spec=spec,
                                               wsname=None,
-                                              fitsimage=fitsimage,
+                                              fitsimage=image_viewer,
                                               chinfo=chinfo)
             if spec.get('raise_on_cc', False):
                 # if plugin wants to be raised on a channel change
@@ -131,18 +140,19 @@ class PluginManager(Callback.Callbacks):
             return
 
         if exclusive is None:
-            exclusive = p_info.spec.get('exclusive', True)
+            exclusive = p_info.spec.get('exclusive',
+                                        # default is True for local,
+                                        # False for global plugins
+                                        p_info.chinfo is not None)
 
-        bnch = Bunch.Bunch(pInfo=p_info, lblname=name, widget=None,
-                           exclusive=exclusive)
+        # TODO: deprecate pInfo (already have p_info)
+        bnch = Bunch.Bunch(p_info=p_info, lblname=name, widget=None,
+                           exclusive=exclusive, pInfo=p_info)
 
         if p_info.chinfo is not None:
             # local plugin
             tup = name.split(':')
             bnch.lblname = ' ' + tup[0] + ':\n' + tup[1] + ' '
-        else:
-            # global plugin
-            bnch.exclusive = False
 
         self.active[lname] = bnch
         if bnch.exclusive:
@@ -166,7 +176,7 @@ class PluginManager(Callback.Callbacks):
         del self.active[lname]
 
         try:
-            self.stop_plugin(bnch.pInfo)
+            self.stop_plugin(bnch.p_info)
 
         except Exception as e:
             self.logger.error("Error deactivating plugin: {}".format(e),
@@ -174,7 +184,7 @@ class PluginManager(Callback.Callbacks):
 
         # Set focus to another plugin if one is running, but only if it
         # is a local plugin
-        if bnch.pInfo.spec.ptype != 'global':
+        if bnch.p_info.spec.ptype != 'global':
             active = list(self.active.keys())
             if len(active) > 0:
                 name = active[0]
@@ -213,7 +223,7 @@ class PluginManager(Callback.Callbacks):
             for xname in defocus:
                 self.clear_focus(xname)
 
-        p_info = bnch.pInfo
+        p_info = bnch.p_info
         # If this is a local plugin, raise the channel associated with the
         # plug in
         if hasattr(p_info.obj, 'resume'):
@@ -246,7 +256,7 @@ class PluginManager(Callback.Callbacks):
         self.logger.debug("Unfocusing plugin '%s'" % (name))
         lname = name.lower()
         bnch = self.active[lname]
-        p_info = bnch.pInfo
+        p_info = bnch.p_info
         try:
             self.focus.remove(lname)
 
@@ -297,7 +307,9 @@ class PluginManager(Callback.Callbacks):
         vbox = None
         try:
             if hasattr(p_info.obj, 'build_gui'):
-                vbox = Widgets.VBox()
+                orientation = p_info.spec.get('orientation', 'vertical')
+                vbox = Widgets.VBox() if orientation == 'vertical' \
+                    else Widgets.HBox()
 
                 if wsname is None:
                     in_ws = p_info.spec.get('workspace', None)
@@ -494,7 +506,7 @@ class PluginManager(Callback.Callbacks):
         except KeyError:
             # no
             return
-        p_info = info.pInfo
+        p_info = info.p_info
         # important: make sure channel matches ours!
         if p_info.tabname == title:
             if self.is_active(p_info.name):
@@ -534,3 +546,14 @@ class PluginManager(Callback.Callbacks):
         p_info.widget = None
         vbox.hide()
         vbox.delete()
+
+
+def has_keyword_only_parameter(cls, param_name):
+    sig = inspect.signature(cls.__init__)
+    for name, param in sig.parameters.items():
+        if name == param_name and param.kind in (param.KEYWORD_ONLY,
+                                                 param.POSITIONAL_OR_KEYWORD):
+            return True
+        if param.kind == param.VAR_KEYWORD:
+            return True
+    return False

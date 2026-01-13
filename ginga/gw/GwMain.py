@@ -195,6 +195,18 @@ class GwMain(Callback.Callbacks):
         if my_id != self.gui_thread_id:
             return future
 
+    def make_async_gui_callback(self, name, *args, **kwargs):
+        # NOTE: asynchronous!
+        self.gui_do(self.make_callback, name, *args, **kwargs)
+
+    def make_gui_callback(self, name, *args, **kwargs):
+        if self.is_gui_thread():
+            return self.make_callback(name, *args, **kwargs)
+        else:
+            # note: this cannot be "gui_call"--locks viewer.
+            # so call becomes async when a non-gui thread invokes it
+            self.gui_do(self.make_callback, name, *args, **kwargs)
+
     def nongui_do(self, method, *args, **kwdargs):
         task = Task.FuncTask(method, args, kwdargs, logger=self.logger)
         return self.nongui_do_task(task)
