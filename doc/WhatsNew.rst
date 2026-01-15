@@ -7,6 +7,7 @@ Ver 5.6.0 (unreleased)
 - Added ability to add icons to Ginga-wrapped Button widgets
 - Refactored Pan and Header plugins to use new parent/child plugin
   implementation
+- Fixed an issue with setting filters in Gtk based FileDialogs
 
 Ver 5.5.1 (2025-12-22)
 ======================

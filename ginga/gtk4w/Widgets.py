@@ -2777,6 +2777,7 @@ class Dialog(WidgetBase):
         self.buttons = []
         self.parent = parent
         self.modal = modal
+        self.label = None
 
         vbox = VBox()
         vbox.set_border_width(4)
@@ -2876,7 +2877,10 @@ class MessageDialog(Dialog):
 
     def set_message(self, category, text, title=None):
         if title is not None:
-            self.set_title(title)
+            if self.label is not None:
+                self.label.set_text(title)
+            else:
+                self.widget.set_title(title)
         vbox = self.get_content_area()
         vbox.remove_all()
         if category in self.icon_dct:
@@ -2955,7 +2959,7 @@ class FileDialog(Dialog):
         self.chooser = Gtk.FileChooserWidget()
         # TODO: FileChooserWidget is deprecated in Gtk 4.10
         # TODO: file-activated signal is no longer supported in Gtk4
-        #self.chooser.connect('file-activated', self._cb_redirect2)
+        # self.chooser.connect('file-activated', self._cb_redirect2)
 
         vbox = self.get_content_area()
         vbox.add_widget(wrap(self.chooser), stretch=1)
@@ -2979,14 +2983,29 @@ class FileDialog(Dialog):
 
     def set_directory(self, path):
         if not os.path.isdir(path):
-            raise ValueError(f"{path} does not seem to be an existing  directory")
-        g_file = Gio.File.new_for_path(path)
-        self.chooser.set_current_folder(g_file)
+            raise ValueError(f"{path} does not seem to be an existing directory")
+        g_dir = Gio.File.new_for_path(path)
+        self.chooser.set_current_folder(g_dir)
+
+    def set_filename(self, path):
+        if os.path.isdir(path):
+            return self.set_directory(path)
+
+        _dir, filename = os.path.split(path)
+        if len(_dir) > 0:
+            if not os.path.isdir(_dir):
+                raise ValueError(f"{_dir} does not seem to be an existing directory")
+            g_dir = Gio.File.new_for_path(_dir)
+            self.chooser.set_current_folder(g_dir)
+        # TODO: set_file() does not work as expected, even if file exists
+        self.chooser.set_current_name(filename)
 
     def clear_filters(self):
         self.filter_dict = dict()
         filt = Gtk.FileFilter()
-        self.chooser.set_filter("*")
+        filt.set_name("All files (*.*)")
+        filt.add_pattern("*")
+        self.chooser.set_filter(filt)
 
     def add_ext_filter(self, category, file_ext):
         exts = self.filter_dict.setdefault(category, [])
@@ -2995,25 +3014,27 @@ class FileDialog(Dialog):
         exts.append(f"*{file_ext}")
 
         filt = Gtk.FileFilter()
+        res = []
         for category, exts in self.filter_dict.items():
+            res.append(f"{category} ({','.join(list(exts))})")
             for ext in exts:
                 filt.add_pattern(ext)
+        filt.set_name(", ".join(res))
         self.chooser.set_filter(filt)
 
-    def _cb_redirect(self, val):
+    def _cb_redirect(self, w, val):
         if self.auto_close:
             self.widget.hide()
         if val == 0:
             # Cancel
             return
-        #paths = self.chooser.get_filenames()
         paths = [g_file.get_path() for g_file in self.chooser.get_files()]
         if len(paths) > 0:
             self.make_callback('activated', paths)
 
-    # def _cb_redirect2(self, widget):
+    # def _cb_redirect2(self, widget, user_data):
     #     # double-click on a file, or pressed ENTER
-    #     paths = self.chooser.get_filenames()
+    #     paths = [g_file.get_path() for g_file in self.chooser.get_files()]
     #     if self.auto_close:
     #         self.widget.hide()
     #     if len(paths) > 0:

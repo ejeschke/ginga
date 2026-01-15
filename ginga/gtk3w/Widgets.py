@@ -2787,7 +2787,7 @@ class MessageDialog(Dialog):
 
     def set_message(self, category, text, title=None):
         if title is not None:
-            self.set_title(title)
+            self.widget.set_title(title)
         vbox = self.get_content_area()
         vbox.remove_all()
         if category in self.icon_dct:
@@ -2887,13 +2887,29 @@ class FileDialog(Dialog):
 
     def set_directory(self, path):
         if not os.path.isdir(path):
-            raise ValueError(f"{path} does not seem to be an existing  directory")
+            raise ValueError(f"{path} does not seem to be an existing directory")
         self.chooser.set_current_folder(path)
+
+    def set_filename(self, path):
+        if os.path.isdir(path):
+            return self.set_directory(path)
+
+        if os.path.exists(path):
+            self.chooser.set_filename(path)
+        else:
+            _dir, filename = os.path.split(path)
+            if len(_dir) > 0:
+                if not os.path.isdir(_dir):
+                    raise ValueError(f"{_dir} does not seem to be an existing directory")
+                self.chooser.set_current_folder(_dir)
+            self.chooser.set_current_name(filename)
 
     def clear_filters(self):
         self.filter_dict = dict()
         filt = Gtk.FileFilter()
-        self.chooser.set_filter("*")
+        filt.set_name("All files (*.*)")
+        filt.add_pattern("*")
+        self.chooser.set_filter(filt)
 
     def add_ext_filter(self, category, file_ext):
         exts = self.filter_dict.setdefault(category, [])
@@ -2902,9 +2918,12 @@ class FileDialog(Dialog):
         exts.append(f"*{file_ext}")
 
         filt = Gtk.FileFilter()
+        res = []
         for category, exts in self.filter_dict.items():
+            res.append(f"{category} ({','.join(list(exts))})")
             for ext in exts:
                 filt.add_pattern(ext)
+        filt.set_name(", ".join(res))
         self.chooser.set_filter(filt)
 
     def _cb_redirect(self, widget, val):

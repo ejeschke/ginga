@@ -2679,8 +2679,19 @@ class FileDialog(TopLevelMixin, WidgetBase):
 
     def set_directory(self, path):
         if not os.path.isdir(path):
-            raise ValueError(f"{path} does not seem to be an existing  directory")
+            raise ValueError(f"{path} does not seem to be an existing directory")
         self.widget.setDirectory(path)
+
+    def set_filename(self, path):
+        if os.path.isdir(path):
+            return self.set_directory(path)
+
+        _dir, filename = os.path.split(path)
+        if len(_dir) > 0:
+            if not os.path.isdir(_dir):
+                raise ValueError(f"{_dir} does not seem to be an existing directory")
+            self.widget.setDirectory(_dir)
+        self.widget.selectFile(filename)
 
     def clear_filters(self):
         self.filter_dict = dict()
