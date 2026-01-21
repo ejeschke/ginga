@@ -135,15 +135,15 @@ plugins = [
     Bunch(module='Crosshair', workspace='left', category='Analysis',
           ptype='local', enabled=True),
     Bunch(module='Cuts', workspace='dialogs', category='Analysis',
-          ptype='local', enabled=True),
+          ptype='local', singleton=False, enabled=True),
     Bunch(module='LineProfile', workspace='dialogs',
           category='Analysis.Datacube', ptype='local', enabled=True),
     Bunch(module='Histogram', workspace='dialogs', category='Analysis',
-          ptype='local', enabled=True),
+          ptype='local', singleton=False, enabled=True),
     Bunch(module='Overlays', workspace='dialogs', category='Analysis',
           ptype='local', enabled=True),
     Bunch(module='Pick', workspace='dialogs', category='Analysis',
-          ptype='local', enabled=True),
+          ptype='local', singleton=False, enabled=True),
     Bunch(module='PixTable', workspace='dialogs', category='Analysis',
           ptype='local', enabled=True),
     Bunch(module='TVMark', workspace='dialogs', category='Analysis',
@@ -179,11 +179,11 @@ plugins = [
           menu="Set Color Map", workspace='dialogs', category='RGB',
           ptype='local', enabled=True),
     Bunch(module='PlotTable', workspace='dialogs', category='Table',
-          ptype='local', enabled=True),
+          ptype='local', singleton=False, enabled=True),
     Bunch(module='Catalogs', workspace='dialogs', category='Utils',
           ptype='local', enabled=True),
     Bunch(module='Drawing', workspace='dialogs', category='Utils',
-          ptype='local', enabled=True),
+          ptype='local', singleton=False, enabled=True),
     Bunch(module='AutoLoad', workspace='dialogs', category='Utils',
           ptype='local', enabled=False),
     Bunch(module='Pipeline', workspace='dialogs', category='Photos',
@@ -205,7 +205,7 @@ plugins = [
     Bunch(module='Preferences', workspace='dialogs', category='Utils',
           ptype='local', enabled=True),
     Bunch(module='Ruler', workspace='dialogs', category='Utils', ptype='local',
-          enabled=True),
+          singleton=False, enabled=True),
     # TODO: Add SaveImage to File menu.
     Bunch(module='SaveImage', tab='SaveImage', workspace='right',
           menu="Save File [G]", start=False, category='Utils', ptype='global',
@@ -638,13 +638,11 @@ class ReferenceViewer(object):
                             # attributes
                             spec = self.plugin_dct[plugin_name]
                             for name in ['enabled', 'category', 'hidden',
-                                         'workspace', 'tab', 'menu',
-                                         'pfx', 'optray']:
+                                         'workspace', 'tab', 'menu', 'start',
+                                         'pfx', 'optray', 'singleton', 'limit',
+                                         'exclusive']:
                                 if name in dct:
                                     spec[name] = dct[name]
-                            if spec['ptype'] == 'global':
-                                spec['start'] = dct.get('start',
-                                                        spec.get('start', False))
                         else:
                             # unknown plugin
                             spec = Bunch(dct)

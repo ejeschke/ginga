@@ -92,6 +92,57 @@ class PluginManager(Callback.Callbacks):
         p_info = self.get_plugin_info(plname)
         return self.load_plugin(p_info.name, p_info.spec, chinfo=chinfo)
 
+    def clone_plugin(self, plname, chname=None):
+        """Clone a plugin.
+        This call is mostly used internally and
+
+        Parameters
+        ----------
+        plname : str
+            The name of the plugin to be cloned
+
+        chname : str or None (optional, defaults to None)
+            The name of the channel if this is a local plugin that is being cloned
+
+        Returns
+        -------
+        plname : str
+            The new name of the cloned plugin
+
+        p_info : `~ginga.misc.Bunch.Bunch`
+            The cloned plugin info
+        """
+        lname = plname.lower()
+        # select a suitable new name by appending integers to the plugin name
+        found = False
+        # See if there is a limit to the number of clones in the plugin spec
+        maxclones = self.plugin[lname].spec.get('limit', 100)
+        for i in range(2, maxclones + 1):
+            tname = f"{lname}{i}"
+            if tname not in self.active:
+                found = True
+                break
+        if not found:
+            raise PluginManagerError(f"Plugin {plname} has opened too many instances.")
+
+        # Create the new plugin name
+        plname = f"{plname}{i}"
+        if tname in self.plugin:
+            # <-- we've cloned this before
+            p_info = self.plugin[tname]
+        else:
+            # <-- new clone
+            spec = self.plugin[lname].spec.copy()
+            spec['name'] = plname
+            channel = None
+            if chname is not None:
+                # local plugin
+                channel = self.fv.get_channel(chname)
+            self.load_plugin(plname, spec, chinfo=channel)
+            p_info = self.get_plugin_info(plname)
+
+        return plname, p_info
+
     def has_plugin(self, plname):
         plname = plname.lower()
         return plname in self.plugin
@@ -283,25 +334,28 @@ class PluginManager(Callback.Callbacks):
                 opname))
             return
 
+        lname = p_info.name.lower()
+        if lname in self.active:
+            # <-- plugin is supposedly already active
+            if not p_info.spec.get('singleton', True):
+                opname, p_info = self.clone_plugin(opname, chname)
+
+            elif alreadyOpenOk:
+                self.set_focus(p_info.name)
+                return
+
+            else:
+                raise PluginManagerError(f"Plugin {opname} is already active.")
+
+        tabname = p_info.spec.get('tab', p_info.name)
         if chname is not None:
             # local plugin
-            plname = chname.upper() + ': ' + p_info.spec.get('tab', p_info.name)
+            plname = chname.upper() + ': ' + tabname
             p_info.tabname = plname
         else:
             # global plugin
             plname = p_info.name
-            p_info.tabname = p_info.spec.get('tab', plname)
-
-        lname = p_info.name.lower()
-
-        if lname in self.active:
-            # <-- plugin is supposedly already active
-            if alreadyOpenOk:
-                self.set_focus(p_info.name)
-                return
-
-            raise PluginManagerError("Plugin %s is already active." % (
-                plname))
+            p_info.tabname = tabname
 
         # Build GUI phase
         vbox = None

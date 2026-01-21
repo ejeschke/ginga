@@ -5,8 +5,9 @@ A plugin for generating a plot of the values along a line or path.
 
 **Plugin Type: Local**
 
-``Cuts`` is a local plugin, which means it is associated with a
-channel.  An instance can be opened for each channel.
+``Cuts`` is a local plugin, which means it is associated with a channel.
+It is not a singleton, which means multiple instances can be opened for
+each channel.
 
 **Usage**
 
@@ -124,11 +125,11 @@ cut_colors = ['magenta', 'skyblue2', 'chartreuse2', 'cyan', 'pink',
 
 class Cuts(GingaPlugin.LocalPlugin):
 
-    def __init__(self, fv, fitsimage):
+    def __init__(self, fv, fitsimage, ident=None):
         # superclass defines some variables for us, like logger
-        super(Cuts, self).__init__(fv, fitsimage)
+        super().__init__(fv, fitsimage, ident=ident)
 
-        self.layertag = 'cuts-canvas'
+        self.layertag = f'{self.ident}-canvas'
         self._new_cut = 'New Cut'
         self.cutstag = self._new_cut
         self.tags = [self._new_cut]
@@ -256,7 +257,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         btn.add_callback('activated', self.delete_all_cb)
         btn.set_tooltip("Clear all cuts")
 
-        fr = Widgets.Frame("Cuts")
+        fr = Widgets.Frame(self.ident.capitalize())
         fr.set_widget(w)
 
         box.add_widget(fr, stretch=0)
@@ -327,7 +328,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         # Add Cuts plot to its tab
         vbox_cuts = Widgets.VBox()
         vbox_cuts.add_widget(self.plot, stretch=1)
-        nb.add_widget(vbox_cuts, title="Cuts")
+        nb.add_widget(vbox_cuts, title=self.ident.capitalize())
 
         captions = (("Enable Slit", 'checkbutton',
                      "Transpose Plot", 'checkbutton', "Save", 'button'),
@@ -461,7 +462,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         old_obj = self.canvas.get_object_by_tag(old_tag)
 
         new_index = self._get_new_count()
-        new_tag = "cuts{}".format(new_index)
+        new_tag = f"{self.ident}-{new_index}"
         new_obj = old_obj.objects[0].copy()
         new_obj.move_delta_pt((20, 20))
         new_cut = self._create_cut_obj(new_index, new_obj, color='cyan')
@@ -525,7 +526,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def start(self):
         # start line cuts operation
-        self.cuts_plot.set_titles(rtitle="Cuts")
+        self.cuts_plot.set_titles(rtitle=self.ident.capitalize())
 
         self.drag_update = self.settings.get('drag_update', False)
 
@@ -786,7 +787,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         return True
 
     def _create_cut(self, x, y, count, x1, y1, x2, y2, color='cyan'):
-        text = "cuts%d" % (count)
+        text = f"{self.ident}-{count}"
         if not self.settings.get('label_cuts', False):
             text = ''
         line_obj = self.dc.Line(x1, y1, x2, y2, color=color,
@@ -830,7 +831,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             obj.objects.append(aline)
 
     def _create_cut_obj(self, count, cuts_obj, color='cyan'):
-        text = "cuts%d" % (count)
+        text = f"{self.ident}-{count}"
         if not self.settings.get('label_cuts', False):
             text = ''
         cuts_obj.showcap = False
@@ -958,7 +959,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             coords.append((data_x, 0, data_x, ht - 1))
 
         count = self._get_cut_index()
-        tag = "cuts%d" % (count)
+        tag = f"{self.ident}-{count}"
         cuts = []
         for (x1, y1, x2, y2) in coords:
             # calculate center of line
@@ -994,7 +995,7 @@ class Cuts(GingaPlugin.LocalPlugin):
             return True
 
         count = self._get_cut_index()
-        tag = "cuts%d" % (count)
+        tag = f"{self.ident}-{count}"
 
         cut = self._create_cut_obj(count, obj, color='cyan')
         cut.set_data(count=count)
@@ -1146,9 +1147,6 @@ class Cuts(GingaPlugin.LocalPlugin):
         else:
             self.slit_plot.ax.set_ylabel('')
             self.slit_plot.ax.set_xlabel('Position along slit')
-
-    def __str__(self):
-        return 'cuts'
 
 
 # Append module docstring with config doc for auto insert by Sphinx.

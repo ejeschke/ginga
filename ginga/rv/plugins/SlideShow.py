@@ -6,7 +6,8 @@ Play a slide show of images.
 **Plugin Type: Local**
 
 ``SlideShow`` is a local plugin, which means it is associated with a channel.
-An instance can be opened for each channel.
+It is not a singleton, which means multiple instances can be opened for
+each channel.
 
 **Usage**
 
@@ -71,9 +72,9 @@ __all__ = ['SlideShow']
 
 class SlideShow(LocalPlugin):
 
-    def __init__(self, fv, fitsimage):
+    def __init__(self, fv, fitsimage, ident=None):
         # superclass defines some variables for us, like logger
-        super(SlideShow, self).__init__(fv, fitsimage)
+        super().__init__(fv, fitsimage, ident=ident)
 
         # User preferences. Some are just default values and can also be
         # changed by GUI.
@@ -559,13 +560,6 @@ class SlideShow(LocalPlugin):
         tg.defer_redraw = False
         tg.set_bg(0.7, 0.7, 0.7)
         return tg
-
-    def __str__(self):
-        """
-        This method should be provided and should return the lower case
-        name of the plugin.
-        """
-        return 'slideshow'
 
 
 # Append module docstring with config doc for auto insert by Sphinx.

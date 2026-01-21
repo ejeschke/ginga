@@ -8,6 +8,14 @@ Ver 5.6.0 (unreleased)
 - Refactored Pan and Header plugins to use new parent/child plugin
   implementation
 - Fixed an issue with setting filters in Gtk based FileDialogs
+- Refactoring of the Control module of the reference viewer to separate viewer
+  logic from the workspace and plugin management
+- You can now set the start attribute for a local plugin and it will start when
+  a new channel is created
+- New ability to have more than one instance of a global plugin (if enabled)
+  and more than one instance of a local plugin per channel (if enabled)
+  - local plugins with this enabled: Pick, Cuts, Histogram, Ruler, Drawing,
+    PlotTable
 
 Ver 5.5.1 (2025-12-22)
 ======================

@@ -4,7 +4,7 @@ Skeleton example of a Ginga global plugin called 'MyGlobalPlugin'
 To enable it, copy it to your $HOME/.ginga/plugins folder (create it first
 if it does not already exist), then run ginga with the command:
 
-    $ ginga --modules=MyLocalPlugin
+    $ ginga --modules=MyGlobalPlugin
 
 From the "Operations" menu you should be able to select
 Custom->MyGlobalPlugin [G];
@@ -19,15 +19,17 @@ from ginga.gw import Widgets
 
 class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
 
-    def __init__(self, fv):
+    def __init__(self, fv, ident=None):
         """
         This method is called when the plugin is loaded for the  first
         time.  ``fv`` is a reference to the Ginga (reference viewer) shell.
+        ``ident`` should be present as a keyword parameter initialized to
+        None.  It will be passed in by the plugin manager.
 
         You need to call the superclass initializer and then do any local
         initialization.
         """
-        super(MyGlobalPlugin, self).__init__(fv)
+        super().__init__(fv, ident=ident)
 
         # Your initialization here
 
@@ -194,10 +196,3 @@ class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
     def close(self):
         self.fv.stop_global_plugin(str(self))
         return True
-
-    def __str__(self):
-        """
-        This method should be provided and should return the lower case
-        name of the plugin.
-        """
-        return 'myglobalplugin'

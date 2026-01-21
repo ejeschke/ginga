@@ -5,8 +5,9 @@ A plugin for drawing canvas forms (overlaid graphics).
 
 **Plugin Type: Local**
 
-``Drawing`` is a local plugin, which means it is associated with a
-channel.  An instance can be opened for each channel.
+``Drawing`` is a local plugin, which means it is associated with a channel.
+It is not a singleton, which means multiple instances can be opened for
+each channel.
 
 **Usage**
 
@@ -53,11 +54,11 @@ fillkinds = ('circle', 'rectangle', 'polygon', 'triangle', 'righttriangle',
 
 class Drawing(GingaPlugin.LocalPlugin):
 
-    def __init__(self, fv, fitsimage):
+    def __init__(self, fv, fitsimage, ident=None):
         # superclass defines some variables for us, like logger
-        super(Drawing, self).__init__(fv, fitsimage)
+        super().__init__(fv, fitsimage, ident=ident)
 
-        self.layertag = 'drawing-canvas'
+        self.layertag = f'{self.ident}-canvas'
 
         self.dc = fv.get_draw_classes()
         canvas = self.dc.DrawingCanvas()
@@ -529,7 +530,5 @@ class Drawing(GingaPlugin.LocalPlugin):
         # simply use overwrite=True
         regs.write(path, format=format, overwrite=True)
 
-    def __str__(self):
-        return 'drawing'
 
 # END

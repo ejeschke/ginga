@@ -10,12 +10,20 @@ large degree of flexibility and customization, as well as making overall
 design and maintenance of the program simpler.
 
 Plugins are divided into two types: *global* and *local*.
-A global plugin has a single instance shared by all channels, while a
-local plugin creates a unique instance for each channel.  If you switch
-channels, a global plugin will respond to the change by updating itself,
-while a local plugin will remain unchanged if the channel is switched,
-because its operation is specific to a given channel.  (Ginga's concept
-of channels is discussed in :ref:`concepts-channels`.)
+A global plugin is not tied to any particular channel, while a local plugin
+is associated with a channel.
+Global and local plugins are further distinguished by whether they are a
+*singleton* (the default case) or not.  If a global plugin is a singleton, then
+only one instance of it can be opened; if not, then multiple instances of it
+can be opened.  If a local plugin is a singleton, then only one instance of it
+can be opened *per channel*; if not, then multiple instances can be opened per
+channel.
+Many global plugins are written to respond to a switch of the focus between
+channels. If you focus a channel viewer (e.g. by clicking on it, or selecting
+the channel in the Operations plugin), a global plugin will respond to the change
+by updating itself, while a local plugin will normally remain unchanged if the
+channel is switched, because its operation is specific to a given channel.
+(Ginga's concept of channels is discussed in :ref:`concepts-channels`.)
 
 This chapter describes the set of plugins that come with Ginga.  Those
 interested in writing their own custom plugins should refer to

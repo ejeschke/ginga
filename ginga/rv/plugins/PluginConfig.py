@@ -124,7 +124,7 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
                 name = spec.get('name', module if klass is None else klass)
                 enabled = spec.get('enabled', True)
                 ptype = spec['ptype']
-                start = 'False' if ptype == 'local' else str(spec.get('start', False))
+                start = str(spec.get('start', False))
                 _dct = dict(name=name,
                             module=module,
                             enabled=str(enabled),
@@ -133,7 +133,9 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
                             workspace=spec.get('workspace', 'in:dialog'),
                             hidden=str(spec.get('hidden', False)),
                             start=start)
-                for key in ('menu', 'tab', 'klass', 'index', 'exclusive'):
+                # other possible attributes we simply copy
+                for key in ('menu', 'tab', 'klass', 'index', 'exclusive',
+                            'singleton', 'limit', 'pfx', 'optray'):
                     if key in spec:
                         _dct[key] = spec[key]
                 dct[name] = _dct
@@ -161,9 +163,9 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
         b.category.set_enabled(False)
         b.workspace.set_tooltip("Edit workspace of plugin(s)")
         b.workspace.set_enabled(False)
-        b.auto_start.set_tooltip("Start plugin(s) at program startup\n"
-                                 "(for global plugins only)")
-        b.auto_start.set_enabled(False)
+        b.auto_start.set_tooltip("Start plugin(s) at program startup (for global plugins)\n"
+                                 "or channel creation (local plugins)")
+        # b.auto_start.set_enabled(False)
         b.hidden.set_tooltip("Hide plugin(s) names from program menus")
         b.hidden.set_enabled(False)
 
@@ -218,8 +220,7 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
             self.plugin_dct[name]['enabled'] = str(enabled)
             self.plugin_dct[name]['category'] = category
             self.plugin_dct[name]['workspace'] = workspace
-            if self.plugin_dct[name]['ptype'] == 'global':
-                self.plugin_dct[name]['start'] = str(start)
+            self.plugin_dct[name]['start'] = str(start)
             self.plugin_dct[name]['hidden'] = str(hidden)
 
         self.w.plugin_tbl.set_tree(self.plugin_dct)
@@ -230,10 +231,7 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
         for key, dct in self.plugin_dct.items():
             d = dct.copy()
             d['enabled'] = (d['enabled'] == 'True')
-            if d['ptype'] == 'global':
-                d['start'] = (d['start'] == 'True')
-            else:
-                d['start'] = False
+            d['start'] = (d['start'] == 'True')
             d['hidden'] = (d['hidden'] == 'True')
             _plugins.append(d)
         try:
@@ -273,10 +271,6 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
             self.w.workspace.set_text(workspaces.pop())
         else:
             self.w.workspace.set_text('')
-
-        # only enable auto start widget if all ptypes are 'global'
-        ptypes = set([p_dct['ptype'] for p_dct in dct.values()])
-        self.w.auto_start.set_enabled(len(ptypes) == 1 and 'global' in ptypes)
 
         starts = set([p_dct['start'] for p_dct in dct.values()])
         if len(starts) == 1:

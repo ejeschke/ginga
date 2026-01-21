@@ -7,7 +7,8 @@ entire image.
 **Plugin Type: Local**
 
 ``Histogram`` is a local plugin, which means it is associated with a channel.
-An instance can be opened for each channel.
+It is not a singleton, which means multiple instances can be opened for
+each channel.
 
 **Usage**
 
@@ -83,11 +84,11 @@ __all__ = ['Histogram']
 
 class Histogram(GingaPlugin.LocalPlugin):
 
-    def __init__(self, fv, fitsimage):
+    def __init__(self, fv, fitsimage, ident=None):
         # superclass defines some variables for us, like logger
-        super(Histogram, self).__init__(fv, fitsimage)
+        super().__init__(fv, fitsimage, ident=ident)
 
-        self.layertag = 'histogram-canvas'
+        self.layertag = f'{self.ident}-canvas'
         self.histtag = None
         # If True, limits X axis to lo/hi cut levels
         self.xlimbycuts = True
@@ -207,7 +208,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         b.numbins.add_callback('activated', lambda w: self.set_numbins_cb())
         b.full_image.add_callback('activated', lambda w: self.full_image_cb())
 
-        fr = Widgets.Frame("Histogram")
+        fr = Widgets.Frame(self.ident.capitalize())
         vbox.add_widget(w)
         fr.set_widget(vbox)
         box.add_widget(fr, stretch=0)
@@ -271,7 +272,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         return True
 
     def start(self):
-        self.plot.set_titles(rtitle="Histogram")
+        self.plot.set_titles(rtitle=self.ident.capitalize())
 
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
@@ -521,7 +522,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         tag = canvas.add(self.dc.CompoundObject(
             self.dc.Rectangle(x1, y1, x2, y2,
                               color=self.histcolor),
-            self.dc.Text(x1, y2, "Histogram",
+            self.dc.Text(x1, y2, self.ident,
                          color=self.histcolor)))
         self.histtag = tag
 
@@ -666,9 +667,6 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.w.btn_move.set_state(mode == 'move')
         self.w.btn_draw.set_state(mode == 'draw')
         self.w.btn_edit.set_state(mode == 'edit')
-
-    def __str__(self):
-        return 'histogram'
 
 
 # Append module docstring with config doc for auto insert by Sphinx.

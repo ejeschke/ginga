@@ -7,7 +7,8 @@ in a table.
 **Plugin Type: Local**
 
 ``PlotTable`` is a local plugin, which means it is associated with a channel.
-An instance can be opened for each channel.
+It is not a singleton, which means multiple instances can be opened for
+each channel.
 
 **Usage**
 
@@ -37,9 +38,9 @@ __all__ = ['PlotTable']
 
 class PlotTable(LocalPlugin):
 
-    def __init__(self, fv, fitsimage):
+    def __init__(self, fv, fitsimage, ident=None):
         # superclass defines some variables for us, like logger
-        super(PlotTable, self).__init__(fv, fitsimage)
+        super().__init__(fv, fitsimage, ident=ident)
         self._idxname = '_idx'
 
         # To store all active table info
@@ -481,9 +482,6 @@ class PlotTable(LocalPlugin):
         self.fv.stop_local_plugin(self.chname, str(self))
         self.gui_up = False
         return True
-
-    def __str__(self):
-        return 'plottable'
 
 
 # Append module docstring with config doc for auto insert by Sphinx.

@@ -19,17 +19,18 @@ from ginga.gw import Widgets
 
 class MyLocalPlugin(GingaPlugin.LocalPlugin):
 
-    def __init__(self, fv, fitsimage):
+    def __init__(self, fv, image_viewer, ident=None):
         """
         This method is called when the plugin is loaded for the  first
         time.  ``fv`` is a reference to the Ginga (reference viewer) shell
-        and ``fitsimage`` is a reference to the specific CanvasView
+        and ``image_viewer`` is a reference to the specific viewer
         object associated with the channel on which the plugin is being
-        invoked.
+        invoked. ``ident`` should be present as a keyword parameter
+        initialized to None.  It will be passed in by the plugin manager.
         You need to call the superclass initializer and then do any local
         initialization.
         """
-        super(MyLocalPlugin, self).__init__(fv, fitsimage)
+        super().__init__(fv, image_viewer, ident=ident)
 
         # your local state and initialization code goes here
 
@@ -151,10 +152,3 @@ class MyLocalPlugin(GingaPlugin.LocalPlugin):
         active.  This method may be omitted.
         """
         pass
-
-    def __str__(self):
-        """
-        This method should be provided and should return the lower case
-        name of the plugin.
-        """
-        return 'mylocalplugin'

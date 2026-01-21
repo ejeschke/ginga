@@ -78,7 +78,8 @@ evaluation of objects, finding the center of the object and giving
 informational readings of the exact celestial coordinates, image
 quality, etc.  The Pick plugin is only visible while the user has it
 open, and does not capture the mouse actions unless the channel it is
-operating on is selected.  Thus one can have two different Pick
+operating on is selected and the particular instance of the Pick plugin
+is activated.  Thus one can have two different Pick
 operations going on concurrently on two different channels, for example,
 or a Pick operation in a camera channel, and a Cuts (line cuts)
 operation on a spectrograph channel.
@@ -91,6 +92,13 @@ notebook tab.
    :figclass: thb
 
    The ``Pick`` local plugin, shown occupying a tab.
+
+Global and local plugins are further distinguished by whether they are a
+*singleton* (the default case) or not.  If a global plugin is a singleton, then
+only one instance of it can be opened; if not, then multiple instances of it
+can be opened.  If a local plugin is a singleton, then only one instance of it
+can be opened *per channel*; if not, then multiple instances can be opened per
+channel.  ``Pick`` is an example of a non-singleton local plugin.
 
 .. _sec-writing-local-plugins:
 
@@ -107,8 +115,8 @@ local plugin.
 
     class MyPlugin(GingaPlugin.LocalPlugin):
 
-	def __init__(self, fv, fitsimage):
-	    super(MyPlugin, self).__init__(fv, fitsimage)
+	def __init__(self, fv, image_viewer, ident=None):
+	    super(MyPlugin, self).__init__(fv, image_viewer, ident=ident)
 
 	def build_gui(self, container):
 	    pass
@@ -127,9 +135,6 @@ local plugin.
 
 	def redo(self):
 	    pass
-
-	def __str__(self):
-	    return 'myplugin'
 
 
 A little more fleshed out example: MyLocalPlugin
@@ -154,17 +159,18 @@ Manager bar.
 
     class MyLocalPlugin(GingaPlugin.LocalPlugin):
 
-        def __init__(self, fv, fitsimage):
+        def __init__(self, fv, image_viewer, ident=None):
             """
             This method is called when the plugin is loaded for the  first
             time.  ``fv`` is a reference to the Ginga (reference viewer) shell
-            and ``fitsimage`` is a reference to the specific viewer
+            and ``image_viewer`` is a reference to the specific viewer
             object associated with the channel on which the plugin is being
-            invoked.
+            invoked. ``ident`` should be present as a keyword parameter
+            initialized to None.  It will be passed in by the plugin manager.
             You need to call the superclass initializer and then do any local
             initialization.
             """
-            super(MyLocalPlugin, self).__init__(fv, fitsimage)
+            super().__init__(fv, image_viewer, ident=ident)
 
             # your local state and initialization code goes here
 
@@ -306,9 +312,9 @@ Manager bar.
             """
             return 'mylocalplugin'
 
-The instance variables "fv" and "fitsimage" will be assigned by the
+The instance variables "fv" and "image_viewer" will be assigned by the
 superclass initializer to self.fv and self.fitsimage--these are the
-reference viewer "shell" and the ginga display object respectively.
+reference viewer "shell" and the ginga channel image display viewer respectively.
 To interact with the viewer you will be calling methods on one or both
 of these objects.
 
@@ -405,12 +411,12 @@ shown in :ref:`fig6`.
 
     class Ruler(GingaPlugin.LocalPlugin):
 
-        def __init__(self, fv, fitsimage):
+        def __init__(self, fv, image_viewer, ident=None):
             # superclass defines some variables for us, like logger
-            super(Ruler, self).__init__(fv, fitsimage)
+            super().__init__(fv, image_viewer, ident=ident)
 
             self.rulecolor = 'green'
-            self.layertag = 'ruler-canvas'
+            self.layertag = f'{self.ident}-canvas'
             self.ruletag = None
 
             self.dc = fv.get_draw_classes()
@@ -597,9 +603,6 @@ shown in :ref:`fig6`.
                     self.edit_select_ruler()
             return True
 
-        def __str__(self):
-            return 'ruler'
-
     #END
 
 This plugin shows a standard design pattern typical to local plugins.
@@ -631,7 +634,7 @@ Writing a Global Plugin
 -----------------------
 The last example was focused on writing a local plugin.  Global plugins
 employ a nearly identical API to that shown in Listing 2, except that
-the constructor does not take a ``fitsimage`` parameter.
+the constructor does not take a ``image_viewer`` parameter.
 ``pause()`` and ``resume()`` can safely be omitted.  Like local plugins,
 ``build_gui()`` can be omitted if there is no GUI associated with the plugin.
 
@@ -658,15 +661,17 @@ you create new channels, delete channels or load images into channels.
 
     class MyGlobalPlugin(GingaPlugin.GlobalPlugin):
 
-        def __init__(self, fv):
+        def __init__(self, fv, ident=None):
             """
             This method is called when the plugin is loaded for the  first
             time.  ``fv`` is a reference to the Ginga (reference viewer) shell.
+            ``ident`` should be present as a keyword parameter initialized to
+            None.  It will be passed in by the plugin manager.
 
             You need to call the superclass initializer and then do any local
             initialization.
             """
-            super(MyGlobalPlugin, self).__init__(fv)
+            super().__init__(fv, ident=ident)
 
             # Your initialization here
 
@@ -829,13 +834,6 @@ you create new channels, delete channels or load images into channels.
         def close(self):
             self.fv.stop_global_plugin(str(self))
             return True
-
-        def __str__(self):
-            """
-            This method should be provided and should return the lower case
-            name of the plugin.
-            """
-            return 'myglobalplugin'
 
 
 Writing Separately Installable Plugins

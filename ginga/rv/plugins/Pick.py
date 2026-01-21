@@ -5,7 +5,8 @@
 **Plugin Type: Local**
 
 ``Pick`` is a local plugin, which means it is associated with a channel.
-An instance can be opened for each channel.
+It is not a singleton, which means multiple instances can be opened for
+each channel.
 
 **Usage**
 
@@ -311,16 +312,16 @@ __all__ = ['Pick']
 
 class Pick(GingaPlugin.LocalPlugin):
 
-    def __init__(self, fv, fitsimage):
+    def __init__(self, fv, fitsimage, ident=None):
         # superclass defines some variables for us, like logger
-        super(Pick, self).__init__(fv, fitsimage)
+        super().__init__(fv, fitsimage, ident=ident)
 
-        self.layertag = 'pick-canvas'
+        self.layertag = f'{self.ident}-canvas'
         self.pickimage = None
         self.pickcenter = None
         self.pick_qs = None
         self.pick_obj = None
-        self._textlabel = 'Pick'
+        self._textlabel = self.ident.capitalize()
 
         self.contour_image = None
         self.contour_plot = None
@@ -1944,9 +1945,6 @@ class Pick(GingaPlugin.LocalPlugin):
     def drag_only_cb(self, w, tf):
         self.drag_only = tf
         return True
-
-    def __str__(self):
-        return 'pick'
 
 
 # Append module docstring with config doc for auto insert by Sphinx.

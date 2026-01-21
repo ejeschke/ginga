@@ -6,7 +6,8 @@
 **Plugin Type: Local**
 
 ``Ruler`` is a local plugin, which means it is associated with a channel.
-An instance can be opened for each channel.
+It is not a singleton, which means multiple instances can be opened for
+each channel.
 
 **Usage**
 

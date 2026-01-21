@@ -151,7 +151,7 @@ Channel Viewers
 ---------------
 
 A channel always has an image viewer associated with it, and may
-additionally have viewers for tables or other content. Only one viewer
+additionally have viewers for tables, plots or other content. Only one viewer
 is active at a time per channel.  The channel viewer is what you see in
 the window representing that channel. 
 The viewer will display the content of the currently selected data
@@ -238,22 +238,21 @@ of the viewer's execution.
 
 Plugins can be *global*, in which case they don't have any particular
 affiliation with a channel and are generally invoked singularly, or
-*local* in which case they can be invoked in multiple instances--one per
-channel. Global plugins are often written in a way that they respond to
-the action of the user changing channels. As an example, the "Pan"
-plugin will change its image to match the image shown in the selected
-channel.
+*local* in which case they can be invoked in multiple instances--one
+(or more) per channel. Global plugins are often written in a way that
+they respond to the action of the user changing channels. As an example,
+the "Pan" plugin will change its image to match the image shown in the
+selected channel.
 
 In this documentation we will also use the word *operation* to describe
 activating a plugin. For example, a "pick" operation would use the Pick 
-plugin. 
+plugin.
 
 Plugins are written as encapsulated Python modules that are loaded
 dynamically when Ginga starts. There is an API for programming plugins
 (see :ref:`ch-programming-ginga`). 
 
-The plugins are each described in more detail in  
-:ref:`ch-plugins`.    
+The plugins are each described in more detail in :ref:`ch-plugins`.
 
 For those plugins that do have a visible interface, the Ginga startup
 script can map them to certain workspaces. By manipulating this mapping
@@ -283,8 +282,8 @@ of keys and pointer buttons. *Modes* allow us to overcome this limitation.
 *Modes* are a mechanism that allow Ginga to accommodate many key and
 pointer bindings for a large number of possible operations.  
 
-Modes are set on a per-channel basis. A mode is activated by pressing a
-particular key combination when the focus is in the viewer, or by
+Modes are set on a per-viewer, per-channel basis. A mode is activated by
+pressing a particular key combination when the focus is in the viewer, or by
 clicking an appropriate button in the Toolbar plugin. 
 When the viewer is in a mode, the behavior is that some special key,
 pointer and scroll bindings will be activated and override the default ones.  
