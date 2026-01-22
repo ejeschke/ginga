@@ -14,6 +14,7 @@ Ver 5.6.0 (unreleased)
   a new channel is created
 - New ability to have more than one instance of a global plugin (if enabled)
   and more than one instance of a local plugin per channel (if enabled)
+
   - local plugins with this enabled: Pick, Cuts, Histogram, Ruler, Drawing,
     PlotTable
 
