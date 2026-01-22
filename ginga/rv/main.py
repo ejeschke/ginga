@@ -425,6 +425,7 @@ class ReferenceViewer(object):
                               min_threads=2,
                               num_threads=max(os.cpu_count(), 10),
                               threadpool_analyze_interval_sec=None,
+                              pluginmgr_allow_nonsingletons=True,
                               icc_working_profile=None,
                               font_scaling_factor=None,
                               save_layout=True,

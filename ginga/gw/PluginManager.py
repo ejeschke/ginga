@@ -23,12 +23,16 @@ class PluginManager(Callback.Callbacks):
     """
 
     def __init__(self, logger, gshell, ds, mm):
-        super(PluginManager, self).__init__()
+        super().__init__()
 
         self.logger = logger
         self.fv = gshell
         self.ds = ds
         self.mm = mm
+
+        prefs = self.fv.get_preferences()
+        self.settings = prefs.create_category('general')
+        self.settings.add_defaults(pluginmgr_allow_nonsingletons=True)
 
         self.lock = threading.RLock()
         self.plugin = Bunch.caselessDict()
@@ -36,6 +40,8 @@ class PluginManager(Callback.Callbacks):
         self.focus = set([])
         self.exclusive = set([])
         self.raise_set = set([])
+        self._allow_nonsingletons = self.settings.get('pluginmgr_allow_nonsingletons',
+                                                      True)
 
         for name in ('activate-plugin', 'deactivate-plugin',
                      'focus-plugin', 'unfocus-plugin'):
@@ -337,7 +343,7 @@ class PluginManager(Callback.Callbacks):
         lname = p_info.name.lower()
         if lname in self.active:
             # <-- plugin is supposedly already active
-            if not p_info.spec.get('singleton', True):
+            if self._allow_nonsingletons and not p_info.spec.get('singleton', True):
                 opname, p_info = self.clone_plugin(opname, chname)
 
             elif alreadyOpenOk:
