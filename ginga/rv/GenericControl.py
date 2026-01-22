@@ -57,7 +57,7 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
         self.tmpdir = tempfile.gettempdir()
 
         # For callbacks
-        for name in ('delete-workspace'):
+        for name in ['delete-workspace']:
             self.enable_callback(name)
 
         self.lock = threading.RLock()
