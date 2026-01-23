@@ -106,7 +106,7 @@ the new cut independently.
 import numpy as np
 
 from ginga.gw import Widgets
-from ginga import GingaPlugin, colors
+from ginga import GingaPlugin, BaseImage, colors
 from ginga.canvas.coordmap import OffsetMapper
 
 try:
@@ -178,6 +178,15 @@ class Cuts(GingaPlugin.LocalPlugin):
         self.cuts_image = None
 
         self.gui_up = False
+
+    def handleable(self, dataobj):
+        """Test whether `dataobj` can be handled by this plugin."""
+        if not isinstance(dataobj, BaseImage.BaseImage):
+            return False
+        shp = list(dataobj.shape)
+        if len(shp) < 2:
+            return False
+        return True
 
     def build_gui(self, container):
         if not have_mpl:

@@ -71,6 +71,12 @@ class PlotTable(LocalPlugin):
 
         self.gui_up = False
 
+    def handleable(self, dataobj):
+        """Test whether `dataobj` can be handled by this plugin."""
+        if not isinstance(dataobj, AstroTable):
+            return False
+        return True
+
     def build_gui(self, container):
         if not have_mpl:
             raise ImportError('Install matplotlib to use this plugin')
@@ -201,8 +207,9 @@ class PlotTable(LocalPlugin):
         self.clear()
 
         tab = self.channel.get_current_image()
-        if not isinstance(tab, AstroTable):
-            return
+        # NOTE: this is now checked by handleable()
+        # if not isinstance(tab, AstroTable):
+        #     return
 
         # Generate column indices
         self.tab = tab.get_data()

@@ -46,7 +46,7 @@ The "Defaults" button restores the default settings of the controls.
 import time
 
 from ginga.gw import Widgets, Viewers
-from ginga import GingaPlugin
+from ginga import GingaPlugin, BaseImage
 
 __all__ = ['Zoom']
 
@@ -94,6 +94,15 @@ class Zoom(GingaPlugin.GlobalPlugin):
         fv.add_callback('channel-change', self.focus_cb)
 
         self.gui_up = False
+
+    def handleable(self, dataobj):
+        """Test whether `dataobj` can be handled by this plugin."""
+        if not isinstance(dataobj, BaseImage.BaseImage):
+            return False
+        shp = list(dataobj.shape)
+        if len(shp) < 2:
+            return False
+        return True
 
     def build_gui(self, container):
 

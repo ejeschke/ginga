@@ -873,11 +873,11 @@ class GingaShell(GenericShell):
             self.show_error("Couldn't switch to image '%s': %s" % (
                 str(imname), str(e)), raisetab=True)
 
-    def redo_plugins(self, image, channel):
-        if image is not None:
-            imname = image.get('name', None)
+    def redo_plugins(self, dataobj, channel):
+        if dataobj is not None:
+            imname = dataobj.get('name', None)
             if (imname is not None) and (imname not in channel):
-                # image may have been removed--
+                # dataobj may have been removed--
                 # skip updates to this channel's plugins
                 return
 
@@ -887,10 +887,13 @@ class GingaShell(GenericShell):
         for key in opmon.get_active():
             obj = opmon.get_plugin(key)
             try:
-                if image is None:
-                    self.gui_do(obj.blank, channel)
+                if dataobj is None:
+                    if hasattr(obj, 'blank'):
+                        self.gui_do(obj.blank, channel)
                 else:
-                    self.gui_do(obj.redo, channel, image)
+                    if obj.handleable(dataobj):
+                        if hasattr(obj, 'redo'):
+                            self.gui_do(obj.redo, channel, dataobj)
 
             except Exception as e:
                 self.logger.error(
@@ -902,10 +905,13 @@ class GingaShell(GenericShell):
         for key in opmon.get_active():
             obj = opmon.get_plugin(key)
             try:
-                if image is None:
-                    self.gui_do(obj.blank)
+                if dataobj is None:
+                    if hasattr(obj, 'blank'):
+                        self.gui_do(obj.blank)
                 else:
-                    self.gui_do(obj.redo)
+                    if obj.handleable(dataobj):
+                        if hasattr(obj, 'redo'):
+                            self.gui_do(obj.redo)
 
             except Exception as e:
                 self.logger.error(

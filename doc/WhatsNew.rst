@@ -16,7 +16,10 @@ Ver 5.6.0 (unreleased)
   and more than one instance of a local plugin per channel (if enabled)
 
   - local plugins with this enabled: Pick, Cuts, Histogram, Ruler, Drawing,
-    PlotTable
+    PlotTable. Check use of "ident" attribute in the plugin code and setting
+    singeton=False in the plugin spec
+
+- Added a background to Crosshair text for better readability
 
 Ver 5.5.1 (2025-12-22)
 ======================

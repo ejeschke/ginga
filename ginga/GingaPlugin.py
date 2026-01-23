@@ -76,13 +76,20 @@ class GlobalPlugin(BasePlugin):
     def __init__(self, fv, ident=None):
         super().__init__(fv, ident=ident)
 
-    def redo(self, channel, image):
-        """This method is called when an image is set in a channel."""
-        pass
+    def handleable(self, dataobj):
+        """Test whether `dataobj` can be handled by this plugin."""
+        # should ideally be overridden by subclass
+        return True
 
-    def blank(self, channel):
-        """This method is called when a channel is no longer displaying any object."""
-        pass
+    # def redo(self, channel, dataobj):
+    #     """If defined, this method is called when a data object is switched to
+    #     in a channel."""
+    #     pass
+
+    # def blank(self, channel):
+    #     """If defined, this method is called when a channel is no longer
+    #     displaying any object."""
+    #     pass
 
 
 class LocalPlugin(BasePlugin):
@@ -97,6 +104,11 @@ class LocalPlugin(BasePlugin):
             self.channel = self.fv.get_channel(self.chname)
             # TO BE DEPRECATED
             self.chinfo = self.channel
+
+    def handleable(self, dataobj):
+        """Test whether `dataobj` can be handled by this plugin."""
+        # should ideally be overridden by subclass
+        return True
 
     def modes_off(self):
         """Turn off any mode user may be in."""
@@ -117,21 +129,21 @@ class LocalPlugin(BasePlugin):
         """
         pass
 
-    def redo(self):
-        """
-        This method is called when a new image arrives in the channel
-        associated with the plugin.  It can optionally redo whatever operation
-        it is doing.
-        """
-        pass
+    # def redo(self):
+    #     """
+    #     If defined, this method is called when a data object is switched
+    #     to in the channel associated with the plugin.  It can optionally
+    #     redo whatever operation it is doing.
+    #     """
+    #     pass
 
-    def blank(self):
-        """
-        This method is called when no object is displayed in the channel
-        associated with the plugin.  It can optionally clear whatever operation
-        it is doing.
-        """
-        pass
+    # def blank(self):
+    #     """
+    #     If defined, this method is called when no object is displayed in the
+    #     channel associated with the plugin.  It can optionally clear whatever
+    #     operation it is doing.
+    #     """
+    #     pass
 
 
 class ParentPlugin(GlobalPlugin):

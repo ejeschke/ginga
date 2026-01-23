@@ -68,7 +68,7 @@ by the plugin configuration file setting ``scroll_pct``.  The default is 10%.
 import numpy as np
 
 from ginga.gw import Widgets
-from ginga import GingaPlugin
+from ginga import GingaPlugin, BaseImage
 from ginga import AutoCuts
 from ginga.util.toolbox import calc_float_strings
 
@@ -137,6 +137,15 @@ class Histogram(GingaPlugin.LocalPlugin):
             fitssettings.get_setting(name).add_callback(
                 'set', self.cutset_ext_cb, fitsimage)
         self.gui_up = False
+
+    def handleable(self, dataobj):
+        """Test whether `dataobj` can be handled by this plugin."""
+        if not isinstance(dataobj, BaseImage.BaseImage):
+            return False
+        shp = list(dataobj.shape)
+        if len(shp) < 2:
+            return False
+        return True
 
     def build_gui(self, container):
         if not have_mpl:

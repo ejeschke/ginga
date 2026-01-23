@@ -152,9 +152,6 @@ class Blink(GingaPlugin.LocalPlugin):
     def stop(self):
         self.stop_blinking()
 
-    def redo(self, *args):
-        pass
-
     def _blink_timer_cb(self, timer):
         # set timer
         cur_time = time.time()

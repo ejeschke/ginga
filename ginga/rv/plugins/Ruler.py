@@ -64,7 +64,7 @@ the central point of an object, when aligning either end of the ruler.
 """
 import numpy as np
 
-from ginga import GingaPlugin
+from ginga import GingaPlugin, BaseImage
 from ginga.gw import Widgets
 
 __all__ = ['Ruler']
@@ -110,6 +110,15 @@ class Ruler(GingaPlugin.LocalPlugin):
         canvas.register_for_cursor_drawing(self.fitsimage)
         canvas.name = 'Ruler-canvas'
         self.canvas = canvas
+
+    def handleable(self, dataobj):
+        """Test whether `dataobj` can be handled by this plugin."""
+        if not isinstance(dataobj, BaseImage.BaseImage):
+            return False
+        shp = list(dataobj.shape)
+        if len(shp) < 2:
+            return False
+        return True
 
     def build_gui(self, container):
         top = Widgets.VBox()

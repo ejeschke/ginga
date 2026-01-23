@@ -430,9 +430,6 @@ class Compose(GingaPlugin.LocalPlugin):
         self.fv.show_status("")
         self.gui_up = False
 
-    def redo(self):
-        pass
-
     def __str__(self):
         return 'compose'
 

@@ -56,7 +56,7 @@ open already on that channel, it will be opened first.
 """
 import numpy as np
 
-from ginga import GingaPlugin
+from ginga import GingaPlugin, BaseImage
 from ginga.gw import Widgets, Viewers
 from ginga.canvas.types import plots as gplots
 from ginga.plot.plotaide import PlotAide
@@ -125,6 +125,15 @@ class Crosshair(GingaPlugin.LocalPlugin):
         self._wd, self._ht = 400, 300
         self._split_sizes = [self._ht, self._ht]
         self.gui_up = False
+
+    def handleable(self, dataobj):
+        """Test whether `dataobj` can be handled by this plugin."""
+        if not isinstance(dataobj, BaseImage.BaseImage):
+            return False
+        shp = list(dataobj.shape)
+        if len(shp) < 2:
+            return False
+        return True
 
     def build_gui(self, container):
         top = Widgets.VBox()

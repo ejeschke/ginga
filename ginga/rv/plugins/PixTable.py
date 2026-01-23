@@ -92,7 +92,7 @@ In "Move" mode the following keys are active:
 import numpy as np
 
 from ginga.gw import Widgets, Viewers
-from ginga import GingaPlugin, colors
+from ginga import GingaPlugin, BaseImage, colors
 
 __all__ = ['PixTable']
 
@@ -162,6 +162,15 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.mark_index = 0
         self.mark_selected = None
         self.drag_update = self.settings.get('drag_update', True)
+
+    def handleable(self, dataobj):
+        """Test whether `dataobj` can be handled by this plugin."""
+        if not isinstance(dataobj, BaseImage.BaseImage):
+            return False
+        shp = list(dataobj.shape)
+        if len(shp) < 2:
+            return False
+        return True
 
     def build_gui(self, container):
         top = Widgets.VBox()

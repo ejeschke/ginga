@@ -610,7 +610,16 @@ class CrosshairP(OnePointMixin, CanvasObjectBase):
         # draw vertical line
         cr.draw_line(vx1, vy1, vx2, vy2, line=line)
 
+        # draw background for text readability
         txtwd, txtht = cr.text_extents(text, font=font)
+        bx, by = cx + 8, cy + 4
+        cr.set_fill('black', alpha=0.70)
+        cr.draw_polygon([(bx, by), (bx, by + txtht + 4),
+                         (bx + txtwd + 6, by + txtht + 4),
+                         (bx + txtwd + 6, by)],
+                        fill=cr.fill)
+
+        # draw text
         cr.set_fill(self.textcolor, alpha=self.alpha)
         cr.draw_text(cx + 10, cy + 4 + txtht, text, font=font, fill=cr.fill)
 

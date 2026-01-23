@@ -295,7 +295,7 @@ import numpy as np
 from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga.util import wcs, contour
-from ginga import GingaPlugin, cmap, trcalc
+from ginga import GingaPlugin, BaseImage, cmap, trcalc
 
 try:
     from ginga.gw import Plot
@@ -457,6 +457,15 @@ class Pick(GingaPlugin.LocalPlugin):
         self.contour_size_min = self.settings.get('contour_size_min', 30)
         self.contour_interpolation = self.settings.get('contour_interpolation',
                                                        'nearest')
+
+    def handleable(self, dataobj):
+        """Test whether `dataobj` can be handled by this plugin."""
+        if not isinstance(dataobj, BaseImage.BaseImage):
+            return False
+        shp = list(dataobj.shape)
+        if len(shp) < 2:
+            return False
+        return True
 
     def build_gui(self, container):
         vtop = Widgets.VBox()
