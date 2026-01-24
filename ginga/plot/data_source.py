@@ -1,6 +1,7 @@
 #
 # data_source.py -- utilities to assist in making time-series plots
 #
+import numbers
 from collections import deque
 
 import numpy as np
@@ -87,7 +88,8 @@ class XYDataSource:
 
     def _add(self, pt):
         x, y = pt
-        if not np.isfinite(y):
+        # skip bogus values
+        if not isinstance(y, numbers.Number) or not np.isfinite(y):
             return
 
         front = (self.front + 1) % self.length
