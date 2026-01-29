@@ -20,6 +20,9 @@ Ver 5.6.0 (unreleased)
     singeton=False in the plugin spec
 
 - Added a background to Crosshair text for better readability
+- Refactored cursor readout to allow for more flexible ways to override the
+  default.  You can now register a function to the 'cursor_info' callback
+  on a canvas, and return the information to show in the readout.
 
 Ver 5.5.1 (2025-12-22)
 ======================

@@ -4,10 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
-from ginga.misc.Callback import Callbacks
 
-
-class UIMixin(object):
+class UIMixin:
 
     def __init__(self):
         self.ui_active = False
@@ -71,6 +69,9 @@ class UIMixin(object):
                     num -= 1
 
             if self.ui_active:
+                # NOTE: should be this! But we'd need to make additional
+                # changes
+                # return super(UIMixin, self).make_callback(viewer, name, *args, **kwargs)
                 return super(UIMixin, self).make_callback(name, *args, **kwargs)
 
         return False
@@ -81,12 +82,12 @@ class UIMixin(object):
         returns True, then make the callback on our 'native' layer.
         """
         if hasattr(self, 'objects'):
-            # Invoke callbacks on all our layers that have the UI mixin
+            # Invoke callbacks on all our layers
             num = len(self.objects) - 1
             while num >= 0:
                 obj = self.objects[num]
-                if isinstance(obj, Callbacks):
-                    res = obj.make_callback(name, *args, **kwargs)
+                if isinstance(obj, UIMixin):
+                    res = obj.make_callback_children(name, *args, **kwargs)
                     if res:
                         return res
                 num -= 1

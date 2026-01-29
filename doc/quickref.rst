@@ -456,7 +456,7 @@ Naxis mode
 Plot mode
 =========
 
-Plot mode is only valid when the viewer is used with a ``PlotAide``
+Plot mode is only valid when the image viewer is used with a ``PlotAide``
 object to display a graph.
 
 +----------------------+--------------------------------------------------+
@@ -474,6 +474,86 @@ object to display a graph.
 | y                    | Toggle `autoaxis_y` between `on` and `off`.      |
 +----------------------+--------------------------------------------------+
 | v                    | Toggle `autoaxis_y` between `vis` and `off`.     |
++----------------------+--------------------------------------------------+
+
+The graph can be flipped in X or Y and the axes swapped, using the keystroke
+commands found in the transform section above (:ref:`transform_commands`).
+
+To understand the role of the `autoaxis_x` and `autoaxis_y` settings, please
+see the chapter on plots (:ref:`ch-plots`).
+
+.. _plot2d_mode:
+
+Plot2D mode
+===========
+
+Plot2d mode is only valid when the plot viewer is used.
+
++----------------------+--------------------------------------------------+
+| Commmand             | Description                                      |
++======================+==================================================+
+| scroll               | Zoom both axes.                                  |
++----------------------+--------------------------------------------------+
+| Ctrl + scroll        | Zoom the X axis.                                 |
++----------------------+--------------------------------------------------+
+| Shift + scroll       | Zoom the Y axis.                                 |
+|                      | (On MacOS, trackpad only).                       |
++----------------------+--------------------------------------------------+
+| Alt + scroll         | Zoom the Y axis.                                 |
+|                      | (On MacOS, use the Option key).                  |
++----------------------+--------------------------------------------------+
+| Shift + left-click   | Set the pan position.                            |
++----------------------+--------------------------------------------------+
+| middle-click         | Set the pan position.                            |
++----------------------+--------------------------------------------------+
+| =                    | Zoom in one zoom level.                          |
++----------------------+--------------------------------------------------+
+| Ctrl + =             | Zoom in X axis one zoom level.                   |
++----------------------+--------------------------------------------------+
+| + (Shift + =)        | Zoom in Y axis one zoom level.                   |
++----------------------+--------------------------------------------------+
+| - (hyphen)           | Zoom out one zoom level.                         |
++----------------------+--------------------------------------------------+
+| Ctrl + hyphen        | Zoom out X axis one zoom level.                  |
++----------------------+--------------------------------------------------+
+| underscore (Shift +  | Zoom out Y axis one zoom level.                  |
+|              hyphen) |                                                  |
++----------------------+--------------------------------------------------+
+| 0                    | Zoom in, maintaining cursor position.            |
++----------------------+--------------------------------------------------+
+| Ctrl + 0             | Zoom in X axis, maintaining cursor position.     |
++----------------------+--------------------------------------------------+
+| right paren (Shift + | Zoom in Y axis, maintaining cursor position.     |
+|               0)     |                                                  |
++----------------------+--------------------------------------------------+
+| 9                    | Zoom out, maintaining cursor position.           |
++----------------------+--------------------------------------------------+
+| Ctrl + 9             | Zoom out X axis, maintaining cursor position.    |
++----------------------+--------------------------------------------------+
+| left paren (Shift +  | Zoom out Y axis, maintaining cursor position.    |
+|               9)     |                                                  |
++----------------------+--------------------------------------------------+
+| backquote            | Zoom X and Y axes to fit window.                 |
++----------------------+--------------------------------------------------+
+| 1                    | Zoom X axis to fit window.                       |
++----------------------+--------------------------------------------------+
+| 2                    | Zoom Y axis to fit window.                       |
++----------------------+--------------------------------------------------+
+| k                    | Set lower X range to X value at cursor.          |
++----------------------+--------------------------------------------------+
+| l                    | Set upper X range to X value at cursor.          |
++----------------------+--------------------------------------------------+
+| K                    | Set lower Y range to Y value at cursor.          |
++----------------------+--------------------------------------------------+
+| L                    | Set upper Y range to Y value at cursor.          |
++----------------------+--------------------------------------------------+
+| left arrow           | Pan left.                                        |
++----------------------+--------------------------------------------------+
+| right arrow          | Pan right.                                       |
++----------------------+--------------------------------------------------+
+| up arrow             | Pan up.                                          |
++----------------------+--------------------------------------------------+
+| down arrow           | Pan down.                                        |
 +----------------------+--------------------------------------------------+
 
 The graph can be flipped in X or Y and the axes swapped, using the keystroke

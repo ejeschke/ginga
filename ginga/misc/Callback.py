@@ -101,8 +101,6 @@ class Callbacks(object):
             self.enable_callback(name)
         return self.add_callback(name, fn, *args, **kwargs)
 
-    # TODO: Returns True even if any one of the callback succeeds...Is that
-    # desired?
     def make_callback(self, name, *args, **kwargs):
         if not self.has_callback(name):
             return None
@@ -153,7 +151,8 @@ class Callbacks(object):
                 # print("calling %s(%s, %s)" % (method, cb_args, cb_kwargs))
                 res = method(*cb_args, **cb_kwargs)
                 if res:
-                    result = True
+                    # result = True
+                    result = res
 
             except Exception as e:
                 # Catch exception because we need to iterate to the other

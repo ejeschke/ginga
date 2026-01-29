@@ -1202,12 +1202,14 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
-                     'pinch', 'pan',  # 'swipe', 'tap'
+                     'pinch', 'pan',  # 'swipe', 'tap',
+                     'cursor_info'
                      ):
             self.enable_callback(name)
 
         self.last_data_x, self.last_data_y = 0, 0
 
+        self.add_callback('cursor_info', self.cursor_info_cb)
         self.connect_ui()
 
     def connect_ui(self):
@@ -1345,6 +1347,18 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
 
     def get_last_data_xy(self):
         return (self.last_data_x, self.last_data_y)
+
+    def cursor_info_cb(self, canvas, pt, viewer, settings):
+        """Called if no canvas above us has handled the 'cursor_info' callback.
+
+        Return a Bunch that contains information about the position at
+        the cursor.
+        """
+        data_x, data_y = pt[:2]
+        # return generic info
+        info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
+                           x=data_x, y=data_y, value=None)
+        return info
 
 
 class CanvasView(PlotViewEvent):

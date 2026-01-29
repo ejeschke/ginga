@@ -2249,40 +2249,26 @@ class GingaShell(GenericShell):
         """Callback when the cursor timer expires.
         """
         data = timer.data
+        # NOTE: by doing a gui_do_oneshot, we cancel any previous calls
+        # to _showxy() that are pending, thus we always get the latest info
         self.gui_do_oneshot('field-info', self._showxy,
                             data.viewer, data.data_x, data.data_y)
 
     def _showxy(self, viewer, data_x, data_y):
         """Update the info from the last position recorded under the cursor.
         """
+        if not hasattr(viewer, 'make_callback_children'):
+            # a table viewer or some non-image, non-plot viewer
+            return
+        pt = (data_x, data_y)
+        info = viewer.make_callback_children('cursor_info', pt, viewer,
+                                             self.settings)
+        # info = viewer.make_ui_callback('cursor_info', pt, viewer,
+        #                                self.settings)
+        if not isinstance(info, Bunch.Bunch):
+            return
+
         self._cursor_last_update = time.time()
-
-        if not hasattr(viewer, 'get_vip'):
-            info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
-                               x=data_x, y=data_y, value=None)
-        else:
-            try:
-                image = viewer.get_vip()
-                if image.ndim < 2:
-                    return
-
-                settings = viewer.get_settings()
-                info = image.info_xy(data_x, data_y, settings)
-
-                # Are we reporting in data or FITS coordinates?
-                off = self.settings.get('pixel_coords_offset', 0.0)
-                info.x += off
-                info.y += off
-                if 'image_x' in info:
-                    info.image_x += off
-                if 'image_y' in info:
-                    info.image_y += off
-
-            except Exception as e:
-                self.logger.warning(
-                    "Can't get info under the cursor: %s" % (str(e)), exc_info=True)
-                info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
-                                   x=data_x, y=data_y, value=None)
 
         # TODO: can this be made more efficient?
         chname = self.get_channel_name(viewer)
@@ -2291,7 +2277,6 @@ class GingaShell(GenericShell):
         self.make_callback('field-info', channel, info)
 
         self.update_pending()
-        return True
 
     def dragdrop(self, chviewer, uris):
         """Called when a drop operation is performed on a channel viewer.

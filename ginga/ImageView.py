@@ -312,6 +312,7 @@ class ImageViewBase(ViewerBase):
         self.private_canvas.add_callback('modified', self.canvas_changed_cb)
         self.private_canvas.set_surface(self)
         self.private_canvas.ui_set_active(True, viewer=self)
+        self.private_canvas.add_callback('cursor_info', self.cursor_info_cb)
 
         # our public facing canvas
         self.canvas = DrawingCanvas()
@@ -516,6 +517,8 @@ class ImageViewBase(ViewerBase):
     def initialize_private_canvas(self, private_canvas):
         """Initialize the private canvas used by this instance.
         """
+        private_canvas.add_callback('cursor_info', self.cursor_info_cb)
+
         if self.t_.get('show_pan_position', False):
             self.show_pan_mark(True)
 
@@ -3557,6 +3560,35 @@ class ImageViewBase(ViewerBase):
         can take focus.
         """
         pass
+
+    def cursor_info_cb(self, canvas, pt, viewer, settings):
+        """Called if no canvas above us has handled the 'cursor_info' callback.
+
+        Return a Bunch that contains information about the position at
+        the cursor.
+        """
+        data_x, data_y = pt[:2]
+        if self.vip is None:
+            # <-- no image loaded; return generic info
+            info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
+                               x=data_x, y=data_y, value=None)
+        else:
+            try:
+                # <-- an image is loaded; ask it about this coordinate
+                image = self.get_vip()
+                if image.ndim < 2:
+                    return
+
+                # settings = self.get_settings()
+                info = image.info_xy(data_x, data_y, settings)
+
+            except Exception as e:
+                self.logger.warning("Can't get info under the cursor: {e}",
+                                    exc_info=True)
+                info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
+                                   x=data_x, y=data_y, value=None)
+
+        return info
 
     def set_onscreen_message(self, text, redraw=True):
         """Called by a subclass to update the onscreen message.

@@ -7,6 +7,7 @@
 import sys
 import traceback
 from collections import OrderedDict
+import numbers
 
 import numpy as np
 
@@ -411,6 +412,17 @@ class AstroImage(BaseImage):
 
     def info_xy(self, data_x, data_y, settings):
         info = super(AstroImage, self).info_xy(data_x, data_y, settings)
+
+        # Are we reporting in data or FITS coordinates?
+        off = settings.get('pixel_coords_offset', 0.0)
+        if isinstance(info.x, numbers.Number):
+            info.x += off
+        if isinstance(info.y, numbers.Number):
+            info.y += off
+        if 'image_x' in info and isinstance(info.image_x, numbers.Number):
+            info.image_x += off
+        if 'image_y' in info and isinstance(info.image_y, numbers.Number):
+            info.image_y += off
 
         system = settings.get('wcs_coords', None)
         format = settings.get('wcs_display', 'sexagesimal')
