@@ -56,6 +56,8 @@ class Plot2DMode(Mode):
     * l : set upper X range to X value at cursor
     * K : set lower Y range to Y value at cursor
     * L : set upper Y range to Y value at cursor
+    * g : toggle grid on/off
+    * f : toggle legend on/off
 
     Panning
     -------
@@ -84,7 +86,6 @@ class Plot2DMode(Mode):
         self.actions = dict(
             dmod_plot2d=['__p', None, 'plot2d'],
 
-            ms_showxy=['plot2d+nobtn'],
             ms_panset2d=['plot2d+middle', 'plot2d+shift+left'],
 
             sc_zoom2d=['plot2d+scroll'],
@@ -114,6 +115,8 @@ class Plot2DMode(Mode):
             kp_zoom_fit=['plot2d+backquote'],
             kp_zoom_fit_x=['plot2d+1'],
             kp_zoom_fit_y=['plot2d+2'],
+            kp_toggle_legend=['plot2d+f'],
+            kp_toggle_grid=['plot2d+g'],
 
             kp_cut_x_lo=['plot2d+k'],
             kp_cut_x_hi=['plot2d+l'],
@@ -206,13 +209,6 @@ class Plot2DMode(Mode):
                              origin=(event.data_x, event.data_y))
 
     #####  MOUSE ACTION CALLBACKS #####
-
-    def ms_showxy(self, viewer, event, data_x, data_y):
-        """Motion event in the channel viewer window.  Show the pointing
-        information under the cursor.
-        """
-        self.fv.showxy(viewer, data_x, data_y)
-        return False
 
     def ms_panset2d(self, viewer, event, data_x, data_y):
         """An interactive way to set the pan position.  The location
@@ -419,3 +415,11 @@ class Plot2DMode(Mode):
         event.accept()
         (x_lo, x_hi), (y_lo, y_hi) = viewer.get_ranges()
         viewer.set_ranges(y_range=(y_lo, data_y))
+
+    def kp_toggle_grid(self, viewer, event, data_x, data_y):
+        event.accept()
+        viewer.toggle_grid()
+
+    def kp_toggle_legend(self, viewer, event, data_x, data_y):
+        event.accept()
+        viewer.toggle_legend()

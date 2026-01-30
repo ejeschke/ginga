@@ -931,8 +931,9 @@ class Info_Ginga_Plot(Info_Common):
         canvas = plot.get_canvas()
         dc = get_canvas_types()
         points = np.array((x_data, y_data)).T
-        canvas.add(dc.Path(points, color=color, linewidth=1,
-                           alpha=1.0),
+        path = dc.Path(points, color=color, linewidth=1, alpha=1.0,
+                       name=y_label)
+        canvas.add(path,
                    tag=f"plot_{self.line_count}",
                    redraw=False)
         self.line_count += 1

@@ -8,7 +8,6 @@ import numpy as np
 
 from ginga.BaseImage import ViewerObjectBase, Header
 from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.misc.Bunch import Bunch
 
 
 class Plotable(ViewerObjectBase):
@@ -29,7 +28,7 @@ class Plotable(ViewerObjectBase):
     def set_ioClass(cls, klass):
         cls.ioClass = klass
 
-    def __init__(self, data_ap=None, metadata=None, logger=None, name=None,
+    def __init__(self, data_np=None, metadata=None, logger=None, name=None,
                  wcsclass=wcsClass, ioclass=ioClass):
 
         ViewerObjectBase.__init__(self, logger=logger, metadata=metadata,
@@ -38,11 +37,14 @@ class Plotable(ViewerObjectBase):
         self.wcs = None
         self.io = None
 
-        dc = get_canvas_types()
-        self.canvas = dc.Canvas()
-        self.titles = Bunch(title=None, x_axis=None, y_axis=None)
-        self.grid = False
+        self.dc = get_canvas_types()
+        self.canvas = self.dc.Canvas()
+        self.set_defaults(title=None, grid=False, legend=False,
+                          x_axis_label=None, y_axis_label=None)
         self.rgb_order = 'RGBA'
+
+        if data_np is not None:
+            self.plot_line(data_np)
 
     def get_size(self):
         return (self.columns, self.rows)
@@ -70,21 +72,24 @@ class Plotable(ViewerObjectBase):
 
     def set_titles(self, title=None, x_axis=None, y_axis=None):
         if x_axis is not None:
-            self.titles.x_axis = x_axis
+            self.set(x_axis_label=x_axis)
         if y_axis is not None:
-            self.titles.y_axis = y_axis
+            self.set(y_axis_label=y_axis)
         if title is not None:
-            self.titles.title = title
+            self.set(title=title)
 
     def set_grid(self, tf):
-        self.grid = tf
+        self.set(grid=tf)
+
+    def set_legend(self, tf):
+        self.set(legend=tf)
 
     def clear(self):
         self.canvas.delete_all_objects()
-        self.titles.x_axis = None
-        self.titles.y_axis = None
-        self.titles.title = None
-        self.grid = False
+        self.set(x_axis_label=None, y_axis_label=None, title=None,
+                 grid=False, legend=False)
+
+        self.make_callback('modified')
 
     def get_minmax(self, noinf=False):
         # TODO: what should this mean for a plot?
@@ -96,6 +101,15 @@ class Plotable(ViewerObjectBase):
     def get_thumbnail(self, length):
         thumb_np = np.eye(length)
         return thumb_np
+
+    def plot_line(self, points, color='black', linewidth=1,
+                  alpha=1.0, name=None, tag=None):
+        """Simple method to plot a line."""
+        path = self.dc.Path(points, color=color, linewidth=linewidth,
+                            name=name)
+        self.canvas.add(path, tag=tag)
+
+        self.make_callback('modified')
 
     def info_xy(self, data_x, data_y, settings):
         info = super().info_xy(data_x, data_y, settings)

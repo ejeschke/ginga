@@ -53,6 +53,9 @@ class PlotViewBase(ViewerBase):
 
         self.t_ = self.settings
         self.t_.add_defaults(plot_bg='white',
+                             plot_show_mode=False,
+                             plot_show_grid=True,
+                             plot_show_legend=False,
                              plot_save_suffix='.png',
                              plot_dpi=100, plot_save_dpi=100,
                              plot_title_fontsize=None,
@@ -64,6 +67,8 @@ class PlotViewBase(ViewerBase):
                              plot_zoom_rate=1.1)
 
         self.t_.get_setting('plot_range').add_callback('set', self.ranges_change_cb)
+        self.t_.get_setting('plot_show_grid').add_callback('set', self.set_grid_cb)
+        self.t_.get_setting('plot_show_legend').add_callback('set', self.set_legend_cb)
 
         # pan position
         self.t_.add_defaults(plot_pan=(0.0, 0.0))
@@ -95,7 +100,8 @@ class PlotViewBase(ViewerBase):
 
         # viewer profile support
         self.default_viewer_profile = None
-        self.t_.add_defaults(viewer_restore_range=True)
+        self.t_.add_defaults(viewer_restore_range=True,
+                             viewer_restore_pan=False)
         self.capture_default_viewer_profile()
 
         # TODO
@@ -295,7 +301,42 @@ class PlotViewBase(ViewerBase):
             self.redraw()
 
     def set_grid(self, tf):
+        self.t_.set(plot_show_grid=tf)
+
+    def set_grid_cb(self, setting, tf):
+        # record in plotable
+        plotable = self.get_dataobj()
+        if isinstance(plotable, Plotable):
+            plotable.set(grid=tf)
+
         self.ax.grid(tf)
+        self.redraw()
+
+    def toggle_grid(self):
+        tf = self.t_.get('plot_show_grid', False)
+        self.set_grid(not tf)
+
+    def set_legend(self, tf, redraw=True):
+        self.t_.set(plot_show_legend=tf)
+
+    def set_legend_cb(self, setting, tf):
+        # record in plotable
+        plotable = self.get_dataobj()
+        if isinstance(plotable, Plotable):
+            plotable.set(legend=tf)
+
+        legend = self.ax.get_legend()
+        if tf:
+            if legend is None:
+                self.ax.legend(loc='upper right')
+        else:
+            if legend is not None:
+                legend.remove()
+        self.redraw()
+
+    def toggle_legend(self):
+        tf = self.t_.get('plot_show_legend', False)
+        self.set_legend(not tf)
 
     def _record_limits(self, x_data, y_data):
         x_min, x_max = np.nanmin(x_data), np.nanmax(x_data)
@@ -329,6 +370,7 @@ class PlotViewBase(ViewerBase):
                   'color': color,
                   'alpha': alpha,
                   'antialiased': True,
+                  'label': name,
                   }
         if self.t_['plot_show_marker']:
             plt_kw.update({'marker': self.t_['plot_marker_style'],
@@ -560,13 +602,13 @@ class PlotViewBase(ViewerBase):
                 data_x, data_y = obj.points.T
                 self._plot_line(data_x, data_y, linewidth=obj.linewidth,
                                 linestyle=obj.linestyle, color=obj.color,
-                                alpha=obj.alpha)
+                                alpha=obj.alpha, name=obj.name)
 
             elif isinstance(obj, self.dc.Line):
                 data_x, data_y = [obj.x1, obj.x2], [obj.y1, obj.y2]
                 self._plot_line(data_x, data_y, linewidth=obj.linewidth,
                                 linestyle=obj.linestyle, color=obj.color,
-                                alpha=obj.alpha)
+                                alpha=obj.alpha, name=obj.name)
 
             elif isinstance(obj, self.dc.Text):
                 text_clr = colors.resolve_color(obj.color, obj.alpha,
@@ -690,11 +732,12 @@ class PlotViewBase(ViewerBase):
         canvas = plotable.get_canvas()
         self.render_canvas(canvas)
 
-        titles = plotable.titles
-        self.set_titles(title=titles.title,
-                        x_axis=titles.x_axis, y_axis=titles.y_axis,
+        self.set_titles(title=plotable['title'],
+                        x_axis=plotable['x_axis_label'],
+                        y_axis=plotable['y_axis_label'],
                         redraw=False)
-        self.set_grid(plotable.grid)
+        self.set_grid(plotable['grid'])
+        self.set_legend(plotable['legend'])
 
         self.apply_profile_or_settings(plotable)
 
@@ -1334,6 +1377,9 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
     def _plot_leave_cursor(self, event):
         self.make_callback('leave')
 
+    def set_enter_focus(self, tf):
+        self.t_['plot_enter_focus'] = tf
+
     def take_focus(self):
         w = self.get_widget()
         if hasattr(w, 'setFocus'):
@@ -1432,9 +1478,9 @@ class CanvasView(PlotViewEvent):
         if self._mode is not None:
             self._mode.remove()
             self._mode = None
-        if mode is not None:
+        if mode is not None and self.t_.get('plot_show_mode', False):
             mode_txt = f"{mode} [{self.modetbl[mode_type]}]"
-            self._mode = self.figure.text(0.92, 0.94, mode_txt,
+            self._mode = self.figure.text(0.92, 0.02, mode_txt,
                                           transform=self.figure.transFigure,
                                           ha='center', va='center',
                                           font=font, fontsize=font_size,

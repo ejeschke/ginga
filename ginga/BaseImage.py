@@ -80,6 +80,11 @@ class ViewerObjectBase(Callback.Callbacks):
     def set(self, **kwds):
         self.update(kwds)
 
+    def set_defaults(self, **kwds):
+        upd = {kwd: val for kwd, val in kwds.items()
+               if kwd not in self.metadata}
+        self.metadata.update(upd)
+
     def save_profile(self, **params):
         """Save the given parameters into profile settings.
 
