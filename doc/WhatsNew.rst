@@ -23,6 +23,8 @@ Ver 5.6.0 (unreleased)
 - Refactored cursor readout to allow for more flexible ways to override the
   default.  You can now register a function to the 'cursor_info' callback
   on a canvas, and return the information to show in the readout.
+- Fixed an issue where there was an unintended fill in drawing a Bezier
+  curve with the Qt backend
 
 Ver 5.5.1 (2025-12-22)
 ======================

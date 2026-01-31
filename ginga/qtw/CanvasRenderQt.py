@@ -143,7 +143,7 @@ class RenderContext(render.RenderContextBase):
         self.ctx.drawEllipse(pt, float(cradius), float(cradius))
 
     def draw_bezier_curve(self, cp, line=None):
-
+        self.ctx.setBrush(QtCore.Qt.NoBrush)
         self.ctx.setPen(QtCore.Qt.NoPen if line is None
                         else line.render.pen)
 
