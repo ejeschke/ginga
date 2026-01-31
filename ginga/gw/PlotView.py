@@ -172,6 +172,8 @@ class PlotViewBase(ViewerBase):
         return (wd_px, ht_px)
 
     def add_axis(self, **kwdargs):
+        if self.ax is not None:
+            self.ax.remove()
         self.ax = self.figure.add_subplot(111, **kwdargs)
         return self.ax
 
@@ -279,11 +281,19 @@ class PlotViewBase(ViewerBase):
         if axis_font_size is None:
             axis_font_size = font_asst.calc_font_size(width)
 
+        plotable = self.get_dataobj()
+
         if x_axis is not None:
+            if isinstance(plotable, Plotable):
+                plotable.set(x_axis_title=x_axis)
             self.ax.set_xlabel(x_axis, fontsize=axis_font_size)
         if y_axis is not None:
+            if isinstance(plotable, Plotable):
+                plotable.set(y_axis_title=y_axis)
             self.ax.set_ylabel(y_axis, fontsize=axis_font_size)
         if title is not None:
+            if isinstance(plotable, Plotable):
+                plotable.set(title=title)
             self.ax.set_title(title, fontsize=title_font_size)
 
         # Make X axis labels a little more readable
@@ -581,9 +591,14 @@ class PlotViewBase(ViewerBase):
 
     def axis_dist_change_cb(self, setting, value):
         x_axis, y_axis = value
+        plotable = self.get_dataobj()
         if x_axis is not None:
+            if isinstance(plotable, Plotable):
+                plotable.set(x_axis_scale=x_axis)
             self.ax.set_xscale(x_axis)
         if y_axis is not None:
+            if isinstance(plotable, Plotable):
+                plotable.set(y_axis_scale=y_axis)
             self.ax.set_yscale(y_axis)
 
         self.redraw()
@@ -738,6 +753,7 @@ class PlotViewBase(ViewerBase):
                         redraw=False)
         self.set_grid(plotable['grid'])
         self.set_legend(plotable['legend'])
+        self.set_background(plotable['clr_bg'])
 
         self.apply_profile_or_settings(plotable)
 
@@ -1186,6 +1202,12 @@ class PlotViewBase(ViewerBase):
 
     def set_background(self, bg):
         self.clr_bg = colors.resolve_color(bg)
+        # record in plotable
+        plotable = self.get_dataobj()
+        if isinstance(plotable, Plotable):
+            plotable.set(clr_bg=self.clr_bg)
+
+        self.ax.set_facecolor(self.clr_bg)
 
     def onscreen_message(self, text, delay=None, redraw=True):
         if self._ost is not None:

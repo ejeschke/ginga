@@ -47,6 +47,7 @@ file--then Close and Help buttons will be added to the bottom of the UI.
 
 """
 import time
+import numbers
 import numpy as np
 
 from ginga.gw import Widgets
@@ -403,8 +404,14 @@ class Info_Ginga_Image(Info_Common):
     def field_info_cb(self, fv, channel, info):
         if not self.gui_up:
             return
-        self.w.x.set_text("%.3f" % info.x)
-        self.w.y.set_text("%.3f" % info.y)
+        if isinstance(info.x, numbers.Number):
+            self.w.x.set_text("%.3f" % info.x)
+        else:
+            self.w.x.set_text(str(info.x))
+        if isinstance(info.y, numbers.Number):
+            self.w.y.set_text("%.3f" % info.y)
+        else:
+            self.w.y.set_text(str(info.y))
         if 'image_x' in info:
             self.w.image_x.set_text("%.3f" % info.image_x)
         else:

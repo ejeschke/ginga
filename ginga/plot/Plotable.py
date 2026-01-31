@@ -39,8 +39,9 @@ class Plotable(ViewerObjectBase):
 
         self.dc = get_canvas_types()
         self.canvas = self.dc.Canvas()
-        self.set_defaults(title=None, grid=False, legend=False,
-                          x_axis_label=None, y_axis_label=None)
+        self.set_defaults(title=None, grid=False, legend=False, clr_bg='white',
+                          x_axis_label=None, y_axis_label=None,
+                          x_axis_scale='linear', y_axis_scale='linear')
         self.rgb_order = 'RGBA'
 
         if data_np is not None:
@@ -83,6 +84,18 @@ class Plotable(ViewerObjectBase):
 
     def set_legend(self, tf):
         self.set(legend=tf)
+
+    def set_bg(self, color):
+        self.set(clr_bg=color)
+
+    def set_axes_scale(self, x_axis=None, y_axis=None):
+        kwargs = dict()
+        if x_axis is not None:
+            kwargs['x_axis_scale'] = x_axis
+        if y_axis is not None:
+            kwargs['y_axis_scale'] = y_axis
+        if len(kwargs) > 0:
+            self.set(**kwargs)
 
     def clear(self):
         self.canvas.delete_all_objects()

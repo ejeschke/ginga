@@ -1000,7 +1000,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             return image
 
         tg.set_image(image)
-        if viewer is not None:
+        if isinstance(viewer, ImageViewBase):
             # if a viewer was passed, and there is an image loaded there,
             # then copy the viewer attributes to the thumbnail generator
             v_img = viewer.get_image()
