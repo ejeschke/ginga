@@ -4,7 +4,10 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import time
+import threading
 from io import BytesIO
+
 import numpy as np
 
 from ginga import Mixins, colors
@@ -12,21 +15,18 @@ from ginga.util.viewer import ViewerBase
 from ginga.misc import Bunch, Settings
 from ginga.plot.Plotable import Plotable
 from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.cursors import cursor_info
 from ginga import Bindings
 from ginga.fonts import font_asst
 
 try:
     from matplotlib.figure import Figure
-    from matplotlib.backend_tools import Cursors
-    from ginga.mplw import MplHelp
 
-    from ginga.gw.Plot import PlotWidget
+    from ginga.gw.Plot import PlotWidget, PlotEventMixin
     have_mpl = True
 except ImportError:
     have_mpl = False
 
-__all__ = ['PlotViewBase', 'PlotViewEvent', 'CanvasView', 'PlotViewGw']
+__all__ = ['PlotViewBase', 'CanvasView', 'PlotViewGw']
 
 
 class PlotViewBase(ViewerBase):
@@ -39,7 +39,7 @@ class PlotViewBase(ViewerBase):
     @classmethod
     def viewable(cls, dataobj):
         """Test whether `dataobj` is viewable by this viewer."""
-        if isinstance(dataobj, Plotable):
+        if have_mpl and isinstance(dataobj, Plotable):
             return True
         return False
 
@@ -52,6 +52,9 @@ class PlotViewBase(ViewerBase):
         self.needs_scrolledview = True
 
         self.t_ = self.settings
+        # misc
+        self.t_.add_defaults(resize_lagtime=0.25)
+
         self.t_.add_defaults(plot_bg='white',
                              plot_show_mode=False,
                              plot_show_grid=True,
@@ -104,27 +107,28 @@ class PlotViewBase(ViewerBase):
                              viewer_restore_pan=False)
         self.capture_default_viewer_profile()
 
-        # TODO
-        width, height = 500, 500
-
-        if figure is None:
-            figure = Figure()
-            dpi = figure.get_dpi()
-            if dpi is None or dpi < 0.1:
-                dpi = self.t_['plot_dpi']
-            wd_in, ht_in = float(width) / dpi, float(height) / dpi
-            figure.set_size_inches(wd_in, ht_in)
-        self.figure = figure
-        if hasattr(self.figure, 'set_tight_layout'):
-            self.figure.set_tight_layout(True)
+        # optimization of resizing
+        self.time_last_resize = time.time()
+        self.resize_lagtime = self.t_.get('resize_lagtime', 0.25)
+        self._resize_lock = threading.RLock()
+        self._resize_dims = (0, 0)
 
         self._dataobj = None
         self._data_limits = None
         self.rgb_order = 'RGBA'
+        self.last_data_x, self.last_data_y = 0, 0
         # cursors
         self.cursor = {}
 
-        self.plot_w = PlotWidget(self)
+        # For callbacks
+        for name in ['image-set', 'image-unset',
+                     'limits-set', 'range-set', 'redraw',
+                     'configure']:
+            self.enable_callback(name)
+
+        if figure is None:
+            figure = Figure()
+        self.figure = figure
 
         self.artist_dct = dict()
         bg = self.settings.get('plot_bg', 'white')
@@ -136,32 +140,46 @@ class PlotViewBase(ViewerBase):
 
         # setup default fg color
         color = self.t_.get('color_fg', "#D0F0E0")
-        r, g, b = colors.lookup_color(color)
+        r, g, b = colors.resolve_color(color)
         self.clr_fg = (r, g, b)
 
         # setup default bg color
-        color = self.t_.get('color_bg', "#404040")
-        r, g, b = colors.lookup_color(color)
+        color = self.t_.get('color_bg', "#000000")  # #404040
+        r, g, b = colors.resolve_color(color)
         self.clr_bg = (r, g, b)
 
-        self.timer = MplHelp.Timer(mplcanvas=self.figure.canvas)
-        self.timer.add_callback('expired', self._timer_cb)
         # holds onscreen text object
         self._ost = None
-
-        # For callbacks
-        for name in ['image-set', 'image-unset',
-                     'limits-set', 'range-set', 'redraw',
-                     'configure']:
-            self.enable_callback(name)
+        # these will get set in the event mixin
+        self.timer_resize = None
+        self.timer_msg = None
 
         self.add_callback('configure', self.resize_cb)
+        self.plot_w = PlotWidget(self)
+
+    def set_figure(self, figure, mpl_canvas=None):
+        self.figure = figure
+        if mpl_canvas is None:
+            mpl_canvas = self.figure.canvas
+
+        dpi = figure.get_dpi()
+        if dpi is None or dpi < 0.1:
+            dpi = self.t_['plot_dpi']
+            wd_px, ht_px = self.plot_w.get_size()
+            wd_in, ht_in = float(wd_px) / dpi, float(ht_px) / dpi
+            figure.set_size_inches(wd_in, ht_in)
+
+        if hasattr(self.figure, 'set_tight_layout'):
+            self.figure.set_tight_layout(True)
 
     def get_figure(self):
         return self.figure
 
     def get_widget(self):
         return self.figure.canvas
+
+    def get_ginga_widget(self):
+        return self.plot_w
 
     def get_window_size(self):
         fig = self.get_figure()
@@ -218,9 +236,47 @@ class PlotViewBase(ViewerBase):
         (x_lo, y_lo), (x_hi, y_hi) = self.get_limits()
         return (x_hi, y_hi)
 
+    def set_window_size(self, wd_px, ht_px):
+        with self._resize_lock:
+            self._resize_dims = (wd_px, ht_px)
+            self.time_last_resize = time.time()
+            self._resize_flag = False
+
+            self.logger.info("canvas resized to %dx%d" % (wd_px, ht_px))
+            fig = self.get_figure()
+            fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi)
+
+        self.make_callback('configure', wd_px, ht_px)
+
+    configure = set_window_size
+    configure_window = set_window_size
+
     def resize_cb(self, viewer, wd_px, ht_px):
         self.logger.debug(f"viewer resized to {wd_px}x{ht_px}")
         self._set_variable_font_sizes()
+
+        self.redraw()
+
+    def delayed_resize(self):
+        """Called when the timer for a delayed resize expires."""
+        with self._resize_lock:
+            if not self._resize_flag:
+                # <-- no deferred resize found
+                return
+            wd_px, ht_px = self._resize_dims
+            self.set_window_size(wd_px, ht_px)
+
+    def reschedule_resize(self, wd_px, ht_px):
+        with self._resize_lock:
+            if time.time() - self.time_last_resize > self.resize_lagtime:
+                self.set_window_size(wd_px, ht_px)
+            else:
+                if self.timer_resize is None:
+                    self.set_window_size(wd_px, ht_px)
+                else:
+                    self._resize_flag = True
+                    self._resize_dims = (wd_px, ht_px)
+                    self.timer_resize.cond_set(self.resize_lagtime)
 
     def clear(self, redraw=True):
         """Clear plot display."""
@@ -228,7 +284,7 @@ class PlotViewBase(ViewerBase):
         self._dataobj = None
         self.clear_data()
         if redraw:
-            self.redraw()
+            self.redraw_now()
 
     def clear_data(self):
         self.artist_dct = dict()
@@ -539,7 +595,7 @@ class PlotViewBase(ViewerBase):
                 #self.t_['plot_pan'] = (pan_x, pan_y)
                 self.set_pan(pan_x, pan_y)
 
-            self.redraw()
+        self.redraw_now()
 
     def get_ranges(self):
         ranges = self.settings['plot_range']
@@ -604,12 +660,24 @@ class PlotViewBase(ViewerBase):
         self.redraw()
 
     def redraw_now(self, whence=0):
-        self.figure.canvas.draw()
+        try:
+            time_start = time.time()
 
-        self.make_callback('redraw', whence)
+            self.figure.canvas.draw()
 
-    def redraw(self, whence=0):
-        self.redraw_now(whence=whence)
+            time_done = time.time()
+            time_elapsed = time_done - time_start
+            self.logger.debug(
+                "widget '%s' redraw elapsed=%.4f sec" % (
+                    self.name, time_elapsed))
+
+            self.make_callback('redraw', whence)
+
+        except Exception as e:
+            self.logger.error(f"Error redrawing image: {e}", exc_info=True)
+
+    # Because we may implement deferred redrawing in the future
+    redraw = redraw_now
 
     def render_canvas(self, canvas):
         for obj in canvas.objects:
@@ -757,7 +825,7 @@ class PlotViewBase(ViewerBase):
 
         self.apply_profile_or_settings(plotable)
 
-        self.redraw()
+        self.redraw_now()
 
     def replot(self):
         dataobj = self._dataobj
@@ -1224,197 +1292,29 @@ class PlotViewBase(ViewerBase):
                                      transform=self.figure.transFigure,
                                      ha='center', va='center', fontsize=16,
                                      font='Sans', color=self.clr_fg,
+                                     # NOTE: setting facecolor by
+                                     # bbox dict  method doesn't work with
+                                     # an RGB triplet
                                      bbox={'facecolor': 'black',
+                                           'linewidth': 0, 'fill': True,
                                            'alpha': 1.0, 'pad': 6})
         if redraw:
             self.redraw()
 
-        if delay is not None:
-            self.timer.set(delay)
+        if delay is not None and self.timer_msg is not None:
+            self.timer_msg.set(delay)
 
     def onscreen_message_off(self):
         return self.onscreen_message('')
 
-    def _timer_cb(self, timer):
-        self.onscreen_message_off()
-
-
-class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
-
-    def __init__(self, logger=None, settings=None, figure=None):
-        PlotViewBase.__init__(self, logger=logger, settings=settings,
-                              figure=figure)
-        Mixins.UIMixin.__init__(self)
-
-        # for matplotlib key handling
-        self._keytbl = {
-            'shift': 'shift_l',
-            'control': 'control_l',
-            'alt': 'alt_l',
-            'win': 'meta_l',  # windows key
-            'cmd': 'meta_l',  # Command key on Macs
-            '`': 'backquote',
-            '"': 'doublequote',
-            "'": 'singlequote',
-            '\\': 'backslash',
-            ' ': 'space',
-            'enter': 'return',
-            'pageup': 'page_up',
-            'pagedown': 'page_down',
-        }
-
-        # For callbacks
-        for name in ('motion', 'button-press', 'button-release',
-                     'key-press', 'key-release', 'drag-drop',
-                     'scroll', 'map', 'focus', 'enter', 'leave',
-                     'pinch', 'pan',  # 'swipe', 'tap',
-                     'pixel-info'
-                     ):
-            self.enable_callback(name)
-
-        self.last_data_x, self.last_data_y = 0, 0
-
-        self.add_callback('pixel-info', self.pixel_info_cb)
-        self.connect_ui()
-
-    def connect_ui(self):
-        canvas = self.figure.canvas
-        if canvas is None:
-            raise ValueError("matplotlib canvas is not yet created")
-        connect = canvas.mpl_connect
-        connect("motion_notify_event", self._plot_motion_notify)
-        connect("button_press_event", self._plot_button_press)
-        connect("button_release_event", self._plot_button_release)
-        connect("scroll_event", self._plot_scroll)
-        canvas.capture_scroll = True
-        connect("figure_enter_event", self._plot_enter_cursor)
-        connect("figure_leave_event", self._plot_leave_cursor)
-        connect("key_press_event", self._plot_key_press)
-        connect("key_release_event", self._plot_key_release)
-        connect("resize_event", self._plot_resize)
-
-        # Define cursors
-        cursor_names = cursor_info.get_cursor_names()
-        # TODO: handle other cursor types
-        cross = Cursors.POINTER
-        for curname in cursor_names:
-            curinfo = cursor_info.get_cursor_info(curname)
-            self.define_cursor(curinfo.name, cross)
-        self.switch_cursor('pick')
-
-    def __get_modifiers(self, event):
-        return event.modifiers
-
-    def __get_button(self, event):
-        try:
-            btn = 0x1 << (event.button.value - 1)
-        except Exception:
-            btn = 0
-        return btn
-
-    def transkey(self, keyname):
-        self.logger.debug("matplotlib keyname='%s'" % (keyname))
-        if keyname is None:
-            return keyname
-        key = keyname
-        if 'shift+' in key:
-            key = key.replace('shift+', '')
-        if 'ctrl+' in key:
-            key = key.replace('ctrl+', '')
-        if 'alt+' in key:
-            key = key.replace('alt+', '')
-        if 'meta+' in key:
-            key = key.replace('meta+', '')
-        key = self._keytbl.get(key, key)
-        return key
-
-    def get_key_table(self):
-        return self._keytbl
-
-    def __get_key(self, event):
-        keyval = self.transkey(event.key)
-        self.logger.debug("key event, mpl={}, key={}".format(event.key,
-                                                             keyval))
-        return keyval
-
-    def _plot_scroll(self, event):
-        button = self.__get_button(event)
-        if event.button == 'up':
-            direction = 0.0
-        elif event.button == 'down':
-            direction = 180.0
-        amount = event.step
-        modifiers = self.__get_modifiers(event)
-        self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        num_degrees = amount  # ???
-        self.make_ui_callback_viewer(self, 'scroll', direction, num_degrees,
-                                     self.last_data_x, self.last_data_y)
-
-    def _plot_button_press(self, event):
-        button = self.__get_button(event)
-        modifiers = self.__get_modifiers(event)
-        # NOTE: event.xdata, event.ydata seem to be None
-        # self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        self.make_ui_callback_viewer(self, 'button-press', button,
-                                     self.last_data_x, self.last_data_y)
-
-    def _plot_button_release(self, event):
-        button = self.__get_button(event)
-        modifiers = self.__get_modifiers(event)
-        # NOTE: event.xdata, event.ydata seem to be None
-        # self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        self.make_ui_callback_viewer(self, 'button-release', button,
-                                     self.last_data_x, self.last_data_y)
-
-    def _plot_motion_notify(self, event):
-        button = self.__get_button(event)
-        modifiers = self.__get_modifiers(event)
-        self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        self.make_ui_callback_viewer(self, 'motion', button,
-                                     self.last_data_x, self.last_data_y)
-
-    def _plot_key_press(self, event):
-        key = self.__get_key(event)
-        modifiers = self.__get_modifiers(event)
-        # NOTE: event.xdata, event.ydata seem to be None
-        # self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        self.make_ui_callback_viewer(self, 'key-press', key)
-
-    def _plot_key_release(self, event):
-        key = self.__get_key(event)
-        modifiers = self.__get_modifiers(event)
-        # NOTE: event.xdata, event.ydata seem to be None
-        # self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        self.make_ui_callback_viewer(self, 'key-release', key)
-
-    def _plot_resize(self, event):
-        wd, ht = event.width, event.height
-        self.make_callback('configure', wd, ht)
-
-    def _plot_enter_cursor(self, event):
-        if self.t_['plot_enter_focus']:
-            self.take_focus()
-        self.make_callback('enter')
-
-    def _plot_leave_cursor(self, event):
-        self.make_callback('leave')
-
-    def set_enter_focus(self, tf):
-        self.t_['plot_enter_focus'] = tf
-
-    def take_focus(self):
-        w = self.get_widget()
-        if hasattr(w, 'setFocus'):
-            # NOTE: this is a Qt call, not cross-backend
-            # TODO: see if matplotlib has a backend independent way
-            # to do this
-            w.setFocus()
-        elif hasattr(w, 'grab_focus'):
-            # NOTE: this is a Gtk3 call, not cross-backend
-            w.grab_focus()
+    def set_last_data_xy(self, data_x, data_y):
+        self.last_data_x = data_x
+        self.last_data_y = data_y
 
     def get_last_data_xy(self):
         return (self.last_data_x, self.last_data_y)
+
+    check_cursor_location = get_last_data_xy
 
     def pixel_info_cb(self, canvas, pt, viewer, settings):
         """Called if no canvas above us has handled the 'pixel-info' callback.
@@ -1427,6 +1327,18 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
         info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
                            x=data_x, y=data_y, value=None)
         return info
+
+    def set_enter_focus(self, tf):
+        self.t_['plot_enter_focus'] = tf
+
+
+class PlotViewEvent(PlotEventMixin, Mixins.UIMixin, PlotViewBase):
+
+    def __init__(self, logger=None, settings=None, figure=None):
+        PlotViewBase.__init__(self, logger=logger, settings=settings,
+                              figure=figure)
+        Mixins.UIMixin.__init__(self)
+        PlotEventMixin.__init__(self)
 
 
 class CanvasView(PlotViewEvent):
@@ -1447,7 +1359,6 @@ class CanvasView(PlotViewEvent):
                  bindmap=None, bindings=None):
         PlotViewEvent.__init__(self, logger=logger, settings=settings,
                                figure=figure)
-        Mixins.UIMixin.__init__(self)
 
         #self.private_canvas.ui_set_active(True, viewer=self)
         self.ui_set_active(True, viewer=self)
@@ -1507,8 +1418,12 @@ class CanvasView(PlotViewEvent):
                                           ha='center', va='center',
                                           font=font, fontsize=font_size,
                                           color=self.clr_fg,
+                                          # NOTE: setting facecolor by
+                                          # bbox dict  method doesn't work with
+                                          # an RGB triplet
                                           bbox={'facecolor': 'black',
-                                                'alpha': 1.0, 'pad': 6})
+                                                'fill': True, 'alpha': 1.0,
+                                                'linewidth': 0, 'pad': 6})
         self.redraw()
 
     # def set_canvas(self, canvas, private_canvas=None):

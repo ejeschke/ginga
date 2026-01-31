@@ -41,7 +41,6 @@ from ginga import GingaPlugin
 from ginga.gw import Widgets
 
 try:
-    from ginga.gw import Plot
     from ginga.util import plots
     have_mpl = True
 except ImportError:
@@ -115,11 +114,10 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         self.plot = plots.Plot(logger=self.logger,
                                width=400, height=400)
-        ax = self.plot.add_axis()
-        ax.grid(True)
+        self.plot.set_grid(True)
         self._ax2 = self.plot.ax.twiny()
 
-        w = Plot.PlotWidget(self.plot)
+        w = self.plot.get_ginga_widget()
         w.resize(400, 400)
         paned.add_widget(Widgets.hadjust(w, orientation))
 
@@ -403,7 +401,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         ax2.set_xlabel('Index')
 
         self.plot.ax.legend(loc='best')
-        self.plot.draw()
+        self.plot.redraw()
 
     def get_axis(self, i):
         try:
@@ -447,7 +445,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
     def clear_plot(self):
         self.plot.clear()
-        self.plot.fig.canvas.draw()
+        self.plot.redraw()
 
     # MARK FEATURE LOGIC #
 

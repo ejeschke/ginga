@@ -93,6 +93,9 @@ class Plot2DMode(Mode):
             sc_zoom2d_y=['plot2d+shift+scroll'],
             sc_zoom2d_cursor=['plot2d+win+scroll'],
 
+            pa_zoom=['plot2d+pan'],
+            #pa_zoom_origin=['plot2d+shift+pan'])
+
             kp_pan_left=['plot2d+left'],
             kp_pan_right=['plot2d+right'],
             kp_pan_up=['plot2d+up'],
@@ -167,11 +170,13 @@ class Plot2DMode(Mode):
             return False
 
         event.accept()
-        # Matplotlib only gives us the number of steps of the scroll,
-        # positive for up and negative for down.
-        if event.amount > 0:
+        rev = self.settings.get('zoom_scroll_reverse', False)
+        direction = self.get_direction(event.direction, rev=rev)
+
+        if direction == 'up':
             delta = self.settings['plot_zoom_rate'] ** -2
-        elif event.amount < 0:
+
+        elif direction == 'down':
             delta = self.settings['plot_zoom_rate'] ** 2
 
         delta_x = delta_y = delta
@@ -231,6 +236,23 @@ class Plot2DMode(Mode):
             viewer.set_pan(data_x, data_y)
 
         return True
+
+    ##### GESTURE ACTION CALLBACKS #####
+
+    def pa_zoom(self, viewer, event, msg=True):
+        """Interactively zoom the image by a pan gesture.
+        (the back end must support gestures)
+        """
+        print("pa zoom")
+        if not self.canzoom:
+            return False
+        event.accept()
+        print(event, dir(event))
+        event = self._pa_synth_scroll_event(event)
+        print(event)
+        if event.state == 'move':
+            #self._sc_zoom(viewer, event, msg=msg, origin=None)
+            pass
 
     #####  KEYBOARD ACTION CALLBACKS #####
 

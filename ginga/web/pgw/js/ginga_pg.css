@@ -22,10 +22,6 @@ body {
 
     margin: 0px;
 
-    display: -webkit-flex;
-    display: -ms-flexbox;  /* IE 10 */
-    display: -ms-flex;     /* IE 11 */
-    display: -moz-flex;
     display: flex;
 
     justify-content: flex-start;
@@ -35,17 +31,11 @@ body {
 }
 
 .hbox {
-    -webkit-flex-flow: row;
-    -ms-flex-flow: row;
-    -moz-flex-flow: row;
     flex-flow: row;
     width: 100%;
 }
 
 .vbox {
-    -webkit-flex-flow: column;
-    -ms-flex-flow: column;
-    -moz-flex-flow: column;
     flex-flow: column;
     height: 100%;
 }

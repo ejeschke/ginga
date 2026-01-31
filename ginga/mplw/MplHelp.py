@@ -4,6 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
+import time
+
 from ginga.misc import Bunch, Callback
 from ginga.fonts import font_asst
 
@@ -134,6 +136,9 @@ class Timer(Callback.Callbacks):
         self.duration = duration
         # For storing aritrary data with timers
         self.data = Bunch.Bunch()
+        self.deadline = None
+        self.start_time = 0.0
+        self.end_time = 0.0
 
         self._timer = mplcanvas.new_timer()
         self._timer.single_shot = True
@@ -155,12 +160,37 @@ class Timer(Callback.Callbacks):
 
         self.stop()
 
+        self.start_time = time.time()
+        self.deadline = self.start_time + duration
+        self.end_time = self.deadline
         # Matplotlib timer set in milliseconds
         time_ms = int(duration * 1000.0)
         self._timer.interval = time_ms
         self._timer.start()
 
     def _redirect_cb(self):
+        self.make_callback('expired')
+
+    def is_set(self):
+        return self.deadline is not None
+
+    def cond_set(self, time_sec):
+        if not self.is_set():
+            # TODO: probably a race condition here
+            self.set(time_sec)
+
+    def elapsed_time(self):
+        return time.time() - self.start_time
+
+    def time_left(self):
+        return max(0.0, self.time_end - time.time())
+
+    def get_deadline(self):
+        return self.time_end
+
+    def expire(self):
+        """This method is called externally to expire the timer."""
+        self.stop()
         self.make_callback('expired')
 
     def stop(self):

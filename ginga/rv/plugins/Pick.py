@@ -298,7 +298,6 @@ from ginga.util import wcs, contour
 from ginga import GingaPlugin, BaseImage, cmap, trcalc
 
 try:
-    from ginga.gw import Plot
     from ginga.util import plots
     have_mpl = True
 except ImportError:
@@ -588,8 +587,9 @@ class Pick(GingaPlugin.LocalPlugin):
                 # Contour plot
                 self.contour_plot = plots.ContourPlot(
                     logger=self.logger, width=width, height=height)
-                self.contour_plot.add_axis(facecolor='black')
-                pw = Plot.PlotWidget(self.contour_plot)
+                self.contour_plot.set_background('black')
+                self.contour_plot.set_grid(False)
+                pw = self.contour_plot.get_ginga_widget()
                 pw.resize(width, height)
                 self.contour_plot.enable(pan=True, zoom=True)
 
@@ -603,24 +603,27 @@ class Pick(GingaPlugin.LocalPlugin):
             # FWHM gaussians plot
             self.fwhm_plot = plots.FWHMPlot(logger=self.logger,
                                             width=width, height=height)
-            self.fwhm_plot.add_axis(facecolor='white')
-            pw = Plot.PlotWidget(self.fwhm_plot)
+            self.fwhm_plot.set_background('white')
+            self.fwhm_plot.set_grid(True)
+            pw = self.fwhm_plot.get_ginga_widget()
             pw.resize(width, height)
             nb.add_widget(pw, title="FWHM")
 
             # Radial profile plot
             self.radial_plot = plots.RadialPlot(logger=self.logger,
                                                 width=width, height=height)
-            self.radial_plot.add_axis(facecolor='white')
-            pw = Plot.PlotWidget(self.radial_plot)
+            self.radial_plot.set_background('white')
+            self.radial_plot.set_grid(True)
+            pw = self.radial_plot.get_ginga_widget()
             pw.resize(width, height)
             nb.add_widget(pw, title="Radial")
 
             # EE profile plot
             self.ee_plot = plots.EEPlot(logger=self.logger,
                                         width=width, height=height)
-            self.ee_plot.add_axis(facecolor='white')
-            pw = Plot.PlotWidget(self.ee_plot)
+            self.ee_plot.set_background('white')
+            self.ee_plot.set_grid(True)
+            pw = self.ee_plot.get_ginga_widget()
             pw.resize(width, height)
             nb.add_widget(pw, title="EE")
 

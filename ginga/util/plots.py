@@ -7,102 +7,36 @@
 import numpy as np
 
 import matplotlib as mpl
-from matplotlib.figure import Figure
 
 from ginga.util import iqcalc as _iqcalc  # Prevent namespace confusion below
-from ginga.misc import Callback, Bunch
+from ginga.gw import PlotView
 
 # fix issue of negative numbers rendering incorrectly with default font
 mpl.rcParams['axes.unicode_minus'] = False
 
 
-class Plot(Callback.Callbacks):
+class Plot(PlotView.CanvasView):
 
     def __init__(self, figure=None, logger=None, width=500, height=500):
-        Callback.Callbacks.__init__(self)
-
-        if figure is None:
-            figure = Figure()
-            dpi = figure.get_dpi()
-            if dpi is None or dpi < 0.1:
-                dpi = 100
-            wd_in, ht_in = float(width) / dpi, float(height) / dpi
-            figure.set_size_inches(wd_in, ht_in)
-        self.fig = figure
-        if hasattr(self.fig, 'set_tight_layout'):
-            self.fig.set_tight_layout(True)
-        self.logger = logger
-        self.fontsize = 10
-        self.ax = None
+        super().__init__(logger=logger, figure=figure)
 
         self.logx = False
         self.logy = False
-        self.zoom_rate = 1.1
 
         self.xdata = []
         self.ydata = []
 
-        # for interactive features
-        self.can = Bunch.Bunch(zoom=False, pan=False)
-
-        # For callbacks
-        for name in ['draw-canvas', 'limits-set', 'motion',
-                     'button-press', 'key-press', 'scroll']:
-            self.enable_callback(name)
-
-    def get_figure(self):
-        return self.fig
-
-    def get_widget(self):
-        return self.fig.canvas
-
-    def add_axis(self, **kwdargs):
-        self.ax = self.fig.add_subplot(111, **kwdargs)
-        return self.ax
-
-    def get_axis(self):
-        return self.ax
-
-    def set_axis(self, ax):
-        self.ax = ax
-
-    def set_titles(self, xtitle=None, ytitle=None, title=None,
-                   rtitle=None):
-        if xtitle is not None:
-            self.ax.set_xlabel(xtitle)
-        if ytitle is not None:
-            self.ax.set_ylabel(ytitle)
-        if title is not None:
-            self.ax.set_title(title)
-        if rtitle is not None:
-            pass
-        ax = self.ax
-        for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
-                     ax.get_xticklabels() + ax.get_yticklabels()):
-            item.set_fontsize(self.fontsize)
-
-    def set_bg(self, color, ax=None):
-        if ax is None:
-            ax = self.ax
-        ax.set_facecolor(color)
+        bd = self.get_bindings()
+        bd.enable(pan=False, zoom=False)
 
     def clear(self):
         self.logger.debug('clearing canvas...')
-        self.ax.cla()
         self.xdata = []
         self.ydata = []
-        self.draw()
-
-    def draw(self):
-        self.fig.canvas.draw()
-
-        self.make_callback('draw-canvas')
+        super().clear()
 
     def plot(self, xarr, yarr, xtitle=None, ytitle=None, title=None,
              rtitle=None, show_legend=False, **kwdargs):
-
-        if self.ax is None:
-            self.add_axis()
 
         if self.logx:
             self.ax.set_xscale('log')
@@ -114,163 +48,49 @@ class Plot(Callback.Callbacks):
 
         self.set_titles(xtitle=xtitle, ytitle=ytitle, title=title,
                         rtitle=rtitle)
-        self.ax.grid(True)
+        self.set_grid(True)
         lines = self.ax.plot(xarr, yarr, **kwdargs)
 
-        for item in self.ax.get_xticklabels() + self.ax.get_yticklabels():
-            item.set_fontsize(self.fontsize)
+        self.set_legend(show_legend)
 
-        # Make x axis labels a little more readable
-        lbls = self.ax.xaxis.get_ticklabels()
-        for lbl in lbls:
-            lbl.set(rotation=45, horizontalalignment='right')
-
-        if show_legend:
-            self.ax.legend()
-
-        self.draw()
+        self.redraw()
         return lines
 
     def get_data(self):
-        return self.fig, self.xdata, self.ydata
-
-    def autoscale(self, axis):
-        self.ax.autoscale(enable=True, axis=axis)
-        self.draw()
-        self.ax.autoscale(enable=False, axis=axis)
-
-        x1, x2 = self.ax.get_xlim()
-        y1, y2 = self.ax.get_ylim()
-        self.make_callback('limits-set', dict(x_lim=(x1, x2), y_lim=(y1, y2)))
-
-    def connect_ui(self):
-        canvas = self.fig.canvas
-        if canvas is None:
-            raise ValueError("matplotlib canvas is not yet created")
-        connect = canvas.mpl_connect
-        connect("motion_notify_event", self._plot_motion_notify)
-        connect("button_press_event", self._plot_button_press)
-        connect("scroll_event", self._plot_scroll)
-        connect("key_press_event", self._plot_key_press)
+        return self.figure, self.xdata, self.ydata
 
     def enable(self, pan=False, zoom=False):
         """If `pan` is True, enable interactive panning in the plot by a
         middle click.  If `zoom` is True , enable interactive zooming in
         the plot by scrolling.
         """
-        self.can.update(dict(pan=pan, zoom=zoom))
-        if pan or zoom:
-            self.connect_ui()
-            if pan:
-                self.add_callback('button-press', self.plot_do_pan)
-            if zoom:
-                self.add_callback('scroll', self.plot_do_zoom)
-
-    def _plot_scroll(self, event):
-        self.make_callback('scroll', event)
-
-    def _plot_button_press(self, event):
-        self.make_callback('button-press', event)
-
-    def _plot_motion_notify(self, event):
-        self.make_callback('motion', event)
-
-    def _plot_key_press(self, event):
-        self.make_callback('key-press', event)
-
-    def zoom_plot(self, pct_x, pct_y, redraw=True):
-
-        x1, x2 = self.ax.get_xlim()
-        y1, y2 = self.ax.get_ylim()
-        set_lim = False
-
-        if pct_x is not None:
-            xrng = x2 - x1
-            xinc = (pct_x * xrng - xrng) * 0.5
-            x1, x2 = x1 - xinc, x2 + xinc
-            self.ax.set_xlim(x1, x2)
-            set_lim = True
-
-        if pct_y is not None:
-            yrng = y2 - y1
-            yinc = (pct_y * yrng - yrng) * 0.5
-            y1, y2 = y1 - yinc, y2 + yinc
-            self.ax.set_ylim(y1, y2)
-            set_lim = True
-
-        if set_lim:
-            self.make_callback('limits-set',
-                               dict(x_lim=(x1, x2), y_lim=(y1, y2)))
-            if redraw:
-                self.draw()
-
-    def plot_do_zoom(self, cb_obj, event):
-        """Can be set as the callback function for the 'scroll'
-        event to zoom the plot.
-        """
-        if not self.can.zoom:
-            return
-
-        # Matplotlib only gives us the number of steps of the scroll,
-        # positive for up and negative for down.
-        if event.step > 0:
-            delta = self.zoom_rate ** -2
-        elif event.step < 0:
-            delta = self.zoom_rate ** 2
-
-        delta_x = delta_y = delta
-        if 'ctrl' in event.modifiers:
-            # only horizontal
-            delta_y = 1.0
-        elif 'shift' in event.modifiers:
-            # only horizontal
-            delta_x = 1.0
-        self.zoom_plot(delta_x, delta_y)
-        return True
+        bd = self.get_bindings()
+        bd.enable(pan=pan, zoom=zoom)
 
     def get_axes_size_in_px(self):
-        bbox = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
+        bbox = self.ax.get_window_extent().transformed(self.figure.dpi_scale_trans.inverted())
         width, height = bbox.width, bbox.height
-        width *= self.fig.dpi
-        height *= self.fig.dpi
+        width *= self.figure.dpi
+        height *= self.figure.dpi
         return (width, height)
 
-    def plot_do_pan(self, cb_obj, event):
-        """Can be set as the callback function for the 'button-press'
-        event to pan the plot with middle-click.
-        """
-        if event.button == 2:
-            if not self.can.pan:
-                return
-            self.pan_plot(event.xdata, event.ydata)
+    def set_titles(self, xtitle=None, ytitle=None, title=None,
+                   rtitle=None):
+        """For backward compatibility -- DO NOT USE -- TO BE DEPRECATED"""
+        super().set_titles(title=title, x_axis=xtitle, y_axis=ytitle)
 
-        return True
+    def set_bg(self, color, ax=None):
+        if ax is None:
+            ax = self.ax
+        ax.set_facecolor(color)
 
-    def pan_plot(self, xnew, ynew, redraw=True):
+    def autoscale(self, axis):
+        """For backward compatibility -- DO NOT USE -- TO BE DEPRECATED"""
+        self.zoom_fit()
 
-        x1, x2 = self.ax.get_xlim()
-        y1, y2 = self.ax.get_ylim()
-        set_lim = False
-
-        if xnew is not None:
-            xrng = x2 - x1
-            xinc = xrng * 0.5
-            x1, x2 = xnew - xinc, xnew + xinc
-            self.ax.set_xlim(x1, x2)
-            set_lim = True
-
-        if ynew is not None:
-            yrng = y2 - y1
-            yinc = yrng * 0.5
-            y1, y2 = ynew - yinc, ynew + yinc
-            self.ax.set_ylim(y1, y2)
-            set_lim = True
-
-        if set_lim:
-            self.make_callback('limits-set',
-                               dict(x_lim=(x1, x2), y_lim=(y1, y2)))
-            if redraw:
-                self.draw()
+    def draw(self):
+        """For backward compatibility -- DO NOT USE -- TO BE DEPRECATED"""
+        return self.redraw()
 
 
 class HistogramPlot(Plot):
@@ -320,6 +140,7 @@ class ContourPlot(Plot):
         # decent choices: { bicubic | bilinear | nearest }
         self.interpolation = "bilinear"
         self.cbar = None
+        self.t_.set(plot_zoom_rate=1.01)
 
     def _plot_contours(self, x, y, x1, y1, x2, y2, data,
                        num_contours=None):
@@ -327,28 +148,10 @@ class ContourPlot(Plot):
         if num_contours is None:
             num_contours = self.num_contours
 
-        # TEMP: until we figure out a more reliable way to remove
-        # the color bar on all recent versions of matplotlib
-        self.fig.clf()
-        self.ax = self.cbar = None
-
-        if self.ax is None:
-            self.add_axis()
-
         ht, wd = data.shape
 
         self.ax.set_aspect('equal', adjustable='box')
         self.set_titles(title='Contours')
-
-        # Set pan position in contour plot
-        self.plot_panx = float(x) / wd
-        self.plot_pany = float(y) / ht
-
-        ## # SEE TEMP, above
-        ## # Seems remove() method is not supported for some recent
-        ## # versions of matplotlib
-        ## if self.cbar is not None:
-        ##     self.cbar.remove()
 
         self.ax.cla()
         self.ax.set_facecolor('#303030')
@@ -363,25 +166,24 @@ class ContourPlot(Plot):
             colors = ['black'] * num_contours
             self.ax.contour(self.xdata, self.ydata, data, num_contours,
                             colors=colors)  # cmap=self.cmap
-            ## self.ax.clabel(cs, inline=1, fontsize=10,
-            ##                fmt='%5.3f', color='cyan')
             # Mark the center of the object
             self.ax.plot([x], [y], marker='x', ms=20.0,
                          color='cyan')
 
             if self.cbar is None:
-                self.cbar = self.fig.colorbar(im, orientation='horizontal',
-                                              shrink=0.8, pad=0.07)
+                self.cbar = self.figure.colorbar(im, orientation='horizontal',
+                                                 shrink=0.8, pad=0.07)
             else:
-                self.cbar.update_bruteforce(im)
-
-            # Make x axis labels a little more readable
-            lbls = self.cbar.ax.xaxis.get_ticklabels()
-            for lbl in lbls:
-                lbl.set(rotation=45, horizontalalignment='right')
+                vmin, vmax = np.nanmin(data), np.nanmax(data)
+                im.set_clim(vmin, vmax)
+                self.cbar.update_normal(im)
+                self.cbar.update_ticks()
 
             # Set the pan and zoom position & redraw
-            self.draw()
+            self.set_limits([(x1, y1), (x2, y2)])
+            self.set_ranges(x_range=(x1, x2), y_range=(y1, y2))
+            self.set_pan(x, y)
+            self.redraw()
 
         except Exception as e:
             self.logger.error("Error making contour plot: %s" % (
@@ -446,7 +248,7 @@ class RadialPlot(Plot):
                              mfc='none', mec='#7570b3')
             self.ax.plot(x_curve, y_curve, '-', color='#1b9e77', lw=2)
 
-            self.draw()
+            self.redraw()
 
         except Exception as e:
             self.logger.error("Error making radial plot: %s" % (
@@ -527,7 +329,7 @@ class FWHMPlot(Plot):
                            prop={'size': 8}, labelspacing=0.2)
             self.set_titles(title="FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
 
-            self.draw()
+            self.redraw()
 
         except Exception as e:
             self.logger.error("Error making fwhm plot: %s" % (
@@ -571,7 +373,7 @@ class FWHMPlot(Plot):
                            prop={'size': 8}, labelspacing=0.2)
             self.set_titles(title="FWHM X: %.2f  Y: %.2f" % (fwhm_x, fwhm_y))
 
-            self.draw()
+            self.redraw()
 
         except Exception as e:
             self.logger.error("Error making fwhm plot: {}".format(e))
@@ -644,7 +446,7 @@ class EEPlot(Plot):
         self.ax.set_xlim(-0.1, x_max)
         self.ax.legend(loc='lower right', shadow=False, fancybox=False,
                        prop={'size': 8}, labelspacing=0.2)
-        self.draw()
+        self.redraw()
 
 
 class SurfacePlot(Plot):
@@ -670,7 +472,7 @@ class SurfacePlot(Plot):
             from mpl_toolkits.mplot3d import Axes3D  # noqa
             from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
-            self.ax = self.fig.gca(projection='3d', facecolor='#808080')
+            self.ax = self.figure.gca(projection='3d', facecolor='#808080')
 
             self.set_titles(ytitle='Y', xtitle='X',
                             title='Surface Plot')
@@ -697,10 +499,10 @@ class SurfacePlot(Plot):
 
             self.ax.view_init(elev=20.0, azim=30.0)
 
-            self.fig.colorbar(sfc, orientation='horizontal', shrink=0.9,
-                              pad=0.01)
+            self.figure.colorbar(sfc, orientation='horizontal', shrink=0.9,
+                                 pad=0.01)
 
-            self.draw()
+            self.redraw()
 
         except Exception as e:
             self.logger.error("Error making surface plot: %s" % (

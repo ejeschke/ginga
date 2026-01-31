@@ -110,7 +110,6 @@ from ginga import GingaPlugin, BaseImage, colors
 from ginga.canvas.coordmap import OffsetMapper
 
 try:
-    from ginga.gw import Plot
     from ginga.util import plots
     have_mpl = True
 except ImportError:
@@ -210,15 +209,15 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         self.cuts_plot = plots.CutsPlot(logger=self.logger,
                                         width=400, height=400)
-        self.plot = Plot.PlotWidget(self.cuts_plot)
+        self.cuts_plot.set_grid(True)
+        self.plot = self.cuts_plot.get_ginga_widget()
         self.plot.resize(400, 400)
-        ax = self.cuts_plot.add_axis()
-        ax.grid(True)
 
         self.slit_plot = plots.Plot(logger=self.logger,
                                     width=400, height=400)
-        self.slit_plot.add_axis(facecolor='black')
-        self.plot2 = Plot.PlotWidget(self.slit_plot)
+        self.slit_plot.set_background('black')
+        self.slit_plot.set_grid(False)
+        self.plot2 = self.slit_plot.get_ginga_widget()
         self.plot2.resize(400, 400)
 
         captions = (('Cut:', 'label', 'Cut', 'combobox',
@@ -535,7 +534,7 @@ class Cuts(GingaPlugin.LocalPlugin):
 
     def start(self):
         # start line cuts operation
-        self.cuts_plot.set_titles(rtitle=self.ident.capitalize())
+        self.cuts_plot.set_titles(title=self.ident.capitalize())
 
         self.drag_update = self.settings.get('drag_update', False)
 
@@ -742,7 +741,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                 self.slit_data, interpolation='nearest',
                 origin='lower', aspect='auto').set_cmap('gray')
             self.set_labels()
-            self.slit_plot.draw()
+            self.slit_plot.redraw()
 
     def _replot(self, lines, colors):
         for idx in range(len(lines)):
@@ -788,7 +787,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                     self.save_slit.set_enabled(True)
 
         # force mpl redraw
-        self.cuts_plot.draw()
+        self.cuts_plot.redraw()
 
         self.canvas.redraw(whence=3)
         self.fv.show_status(
@@ -1135,7 +1134,7 @@ class Cuts(GingaPlugin.LocalPlugin):
                 origin='lower', aspect='auto').set_cmap('gray')
             self.set_labels()
 
-        self.slit_plot.draw()
+        self.slit_plot.redraw()
 
     def transpose_plot(self, w, tf):
         old_val = self.transpose_enabled

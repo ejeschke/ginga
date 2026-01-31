@@ -474,7 +474,7 @@ class RenderGLWidgetZoom(RenderMixin, RenderGLWidget):
     pass
 
 
-class QtEventMixin(object):
+class QtEventMixin:
 
     def __init__(self):
         imgwin = self.imgwin

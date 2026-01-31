@@ -490,20 +490,19 @@ ginga_initialize_canvas = function (canvas, id, app) {
         console.log("initializing canvas for events");
 
         // set up some event handlers for the canvas
-        canvas.onmousedown = pg_canvas.input_handler;
-        canvas.onmouseup   = pg_canvas.input_handler;
-        canvas.onmousemove = pg_canvas.input_handler;
-        canvas.onmouseout  = pg_canvas.input_handler;
-        canvas.onmouseover = pg_canvas.input_handler_focus;
-        canvas.onwheel = pg_canvas.input_handler_suppress;
-        canvas.onmousewheel = pg_canvas.input_handler_suppress;
-        canvas.onclick     = pg_canvas.input_handler;
-        canvas.ondblclick  = pg_canvas.input_handler;
-        canvas.ondrop      = pg_canvas.input_handler_drop;
-        //canvas.onpaste   = pg_canvas.input_handler_drop;
-        canvas.ondragover  = pg_canvas.input_handler_suppress_only;
+        canvas.addEventListener('pointerdown', pg_canvas.input_handler)
+        canvas.addEventListener('pointermove', pg_canvas.input_handler)
+        canvas.addEventListener('pointerup', pg_canvas.input_handler)
+        canvas.addEventListener('pointerover', pg_canvas.input_handler_focus)
+        canvas.addEventListener('pointerout', pg_canvas.input_handler)
+        canvas.addEventListener('wheel', pg_canvas.input_handler_suppress)
+        canvas.addEventListener('click', pg_canvas.input_handler);
+        canvas.addEventListener('dblclick', pg_canvas.input_handler);
+        canvas.addEventListener('drop', pg_canvas.input_handler_drop);
+        //canvas.addEventListener('paste', pg_canvas.input_handler_drop);
+        canvas.addEventListener('dragover', pg_canvas.input_handler_suppress_only);
         // disable right click context mentu
-        canvas.oncontextmenu  = pg_canvas.input_handler_suppress_only;
+        canvas.addEventListener('contextmenu', pg_canvas.input_handler_suppress_only);
         
         canvas.addEventListener("keydown", pg_canvas.input_handler, true);
         canvas.addEventListener("keyup", pg_canvas.input_handler, true);

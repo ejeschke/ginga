@@ -25,8 +25,10 @@ example.
 """
 import sys
 
+import numpy as np
 import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from astropy.wcs import WCS
 
 from ginga.qtw.ImageViewQt import CanvasView
 from ginga.qtw.QtHelp import QtGui, QtCore
@@ -349,15 +351,21 @@ class FitsViewer(QtGui.QMainWindow):
         # clear previous image
         self.fig.clf()
 
-        ax = self.fig.add_subplot(111)
-        ax.autoscale(True, tight=True)
-
-        x0, y0, x1, y1 = tuple(map(int, fi.get_data_rect()))
-        #extent = (x0, x1, y0, y1)
-
         image = fi.get_image()
+        wcs = WCS(image.get_header())
+        ax = self.fig.add_subplot(111, projection=wcs)
+        #ax.autoscale(True, tight=True)
+
+        # cut out part of data that is showing
+        # constrain cutout indices to image dimensions
+        wd, ht = image.get_size()
+        x0, y0, x1, y1 = fi.get_data_rect()
+        x0, x1 = tuple(map(int, np.clip(np.array((x0, x1)), 0, wd)))
+        y0, y1 = tuple(map(int, np.clip(np.array((y0, y1)), 0, ht)))
+
         arr = image.cutout_data(x0, y0, x1, y1)
 
+        # get extents in ra/dec
         extent = self.get_wcs_extent(image, x0, y0, x1, y1)
 
         # get cut levels
@@ -371,9 +379,12 @@ class FitsViewer(QtGui.QMainWindow):
         img = ax.imshow(arr, interpolation=interp, origin="lower",
                         vmin=loval, vmax=hival, cmap=cm,
                         aspect="equal", extent=extent)
+        ax.set_xlabel('Right Ascension')
+        ax.set_ylabel('Declination')
 
         # add a colorbar
-        self.fig.colorbar(img, orientation='vertical')
+        self.fig.colorbar(img, ax=ax, orientation='vertical',
+                          label='Intensity')
 
         # force an update of the figure
         self.fig.canvas.draw()

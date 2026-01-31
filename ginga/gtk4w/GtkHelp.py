@@ -1933,8 +1933,11 @@ def get_rgb_array(widget):
 
     # --- 1. Snapshot the widget ---
     snapshot = Gtk.Snapshot()
-    widget.snapshot(snapshot)
+    # widget.snapshot(snapshot)
+    widget.snapshot_child(widget, snapshot)
     node = snapshot.to_node()
+    if node is None:
+        raise Exception("Failed to capture widget screenshot")
 
     # --- 2. Create renderer and render the node ---
     renderer = Gsk.Renderer()

@@ -73,7 +73,6 @@ from ginga import AutoCuts
 from ginga.util.toolbox import calc_float_strings
 
 try:
-    from ginga.gw import Plot
     from ginga.util import plots
     have_mpl = True
 except ImportError:
@@ -165,12 +164,10 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         self.plot = plots.Plot(logger=self.logger,
                                width=400, height=400)
-        ax = self.plot.add_axis()
-        ax.grid(True)
+        self.plot.set_grid(True)
         self.plot.add_callback('button-press', self.set_cut_by_click)
         self.plot.add_callback('scroll', self.adjust_cuts_scroll)
-        w = Plot.PlotWidget(self.plot)
-        self.plot.connect_ui()
+        w = self.plot.get_ginga_widget()
         w.resize(400, 400)
         paned.add_widget(Widgets.hadjust(w, orientation))
 
@@ -281,7 +278,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         return True
 
     def start(self):
-        self.plot.set_titles(rtitle=self.ident.capitalize())
+        self.plot.set_titles(title=self.ident.capitalize())
 
         # insert canvas, if not already
         p_canvas = self.fitsimage.get_canvas()
@@ -421,7 +418,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         lo_str, hi_str = calc_float_strings(loval, hival)
         self.w.cut_low.set_text(lo_str)
         self.w.cut_high.set_text(hi_str)
-        self.plot.fig.canvas.draw()
+        self.plot.redraw()
 
         if self.show_stats:
             # calculate statistics on finite elements in box
@@ -586,30 +583,30 @@ class Histogram(GingaPlugin.LocalPlugin):
     def auto_levels(self):
         self.fitsimage.auto_levels()
 
-    def set_cut_by_click(self, plot, event):
+    def set_cut_by_click(self, plot, button, data_x, data_y):
         """Set cut levels by a mouse click in the histogram plot:
         left: set low cut
         middle: reset (auto cuts)
         right: set high cut
         """
-        data_x = event.xdata
         lo, hi = self.fitsimage.get_cut_levels()
-        if event.button == 1:
+        if button & 0x1:
             lo = data_x
             self.fitsimage.cut_levels(lo, hi)
-        elif event.button == 2:
+        elif button & 0x2:
             self.fitsimage.auto_levels()
-        elif event.button == 3:
+        elif button & 0x4:
             hi = data_x
             self.fitsimage.cut_levels(lo, hi)
 
-    def adjust_cuts_scroll(self, plot, event):
+    def adjust_cuts_scroll(self, plot, direction, num_degrees, data_x, data_y):
         """Adjust the width of the histogram by scrolling.
         """
         bd = self.fitsimage.get_bindings()
         mode = bd.get_mode_obj('cuts')
         pct = -self.scroll_pct
-        if event.step > 0:
+        direction = bd.get_direction(direction)
+        if direction == 'up':
             pct = -pct
         mode.cut_pct(self.fitsimage, pct)
 
@@ -632,7 +629,7 @@ class Histogram(GingaPlugin.LocalPlugin):
         lo_str, hi_str = calc_float_strings(loval, hival)
         self.w.cut_low.set_text(lo_str)
         self.w.cut_high.set_text(hi_str)
-        #self.plot.fig.canvas.draw()
+        #self.plot.redraw()
         self.redo()
 
     def set_numbins_cb(self):

@@ -8,6 +8,8 @@ from io import BytesIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 from ginga.web.pgw import Widgets
+# NOTE: imported here so available when importing ginga.gw.Plot
+from ginga.web.pgw.EventMixin import PlotEventMixin  # noqa
 
 
 class PlotWidget(Widgets.Canvas):
@@ -21,42 +23,44 @@ class PlotWidget(Widgets.Canvas):
     """
 
     def __init__(self, plot, width=500, height=500):
-        super(PlotWidget, self).__init__(width=width, height=height)
+        super().__init__(width=width, height=height)
 
         self.widget = FigureCanvas(plot.get_figure())
         self.logger = plot.logger
 
-        self._configured = False
+        # self._configured = False
 
-        self.set_plot(plot)
+        if plot is not None:
+            self.set_plot(plot)
 
     def set_plot(self, plot):
         self.plot = plot
+        self.viewer = plot
         self.logger = plot.logger
         self.logger.debug("set_plot called")
 
+        viewer = self.plot
         self._dispatch_event_table = {
             "activate": self.ignore_event,
             "setbounds": self.map_event_cb,
-            "mousedown": self.ignore_event,
-            "mouseup": self.ignore_event,
-            "mousemove": self.ignore_event,
-            "mouseout": self.ignore_event,
-            "mouseover": self.ignore_event,
-            "mousewheel": self.ignore_event,
-            "wheel": self.ignore_event,
+            "pointerdown": viewer.button_press_event,
+            "pointerup": viewer.button_release_event,
+            "pointermove": viewer.motion_notify_event,
+            "pointerout": viewer.leave_notify_event,
+            "pointerover": viewer.enter_notify_event,
+            "wheel": viewer.scroll_event,
             "click": self.ignore_event,
             "dblclick": self.ignore_event,
-            "keydown": self.ignore_event,
-            "keyup": self.ignore_event,
-            "keypress": self.ignore_event,
-            "resize": self.resize_event,
-            "focus": self.ignore_event,
-            "focusout": self.ignore_event,
-            "blur": self.ignore_event,
-            "drop": self.ignore_event,
+            "keydown": viewer.key_down_event,
+            "keyup": viewer.key_up_event,
+            "keypress": viewer.key_press_event,
+            "resize": viewer.resize_event,
+            "focus": lambda event: viewer.focus_event(event, True),
+            "focusout": lambda event: viewer.focus_event(event, False),
+            "blur": lambda event: viewer.focus_event(event, False),
+            #"drop": viewer.drop_event,
             "paste": self.ignore_event,
-            # Hammer.js events
+            # Gesture events
             "pinch": self.ignore_event,
             "pinchstart": self.ignore_event,
             "pinchend": self.ignore_event,
@@ -70,10 +74,11 @@ class PlotWidget(Widgets.Canvas):
             "swipe": self.ignore_event,
         }
 
-        self.plot.add_callback('draw-canvas', self.draw_cb)
+        self.viewer.add_callback('redraw', self.redraw_cb)
+        self.viewer.set_widget(self)
 
     def get_plot(self):
-        return self.plot
+        return self.viewer
 
     def ignore_event(self, event):
         pass
@@ -86,36 +91,21 @@ class PlotWidget(Widgets.Canvas):
         buf = BytesIO()
         fig = plot.get_figure()
         fig.canvas.print_figure(buf, format='png')
-        wd, ht = self.width, self.height
+        wd, ht = plot.get_window_size()
         return (wd, ht, buf.getvalue())
 
-    def draw_cb(self, plot):
+    def redraw_cb(self, plot, whence):
         self.logger.debug("getting RGB buffer")
         wd, ht, buf = self.get_rgb_buffer(plot)
-
-        #self.logger.debug("clear_rect")
-        #self.clear_rect(0, 0, wd, ht)
 
         self.logger.debug("drawing %dx%d image" % (wd, ht))
         self.draw_image(buf, 0, 0, wd, ht)
 
-    def configure_window(self, wd, ht):
-        self.logger.debug("canvas resized to %dx%d" % (wd, ht))
-        fig = self.plot.get_figure()
-        fig.set_size_inches(float(wd) / fig.dpi, float(ht) / fig.dpi)
-
     def map_event_cb(self, event):
         wd, ht = event.width, event.height
-        self.configure_window(wd, ht)
+        self.viewer.set_window_size(wd, ht)
 
-        self.plot.draw()
         self.do_refresh()
-
-    def resize_event(self, event):
-        wd, ht = event.width, event.height
-        self.configure_window(wd, ht)
-
-        self.plot.draw()
 
     def _cb_redirect(self, event):
         method = self._dispatch_event_table[event.type]

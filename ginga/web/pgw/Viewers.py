@@ -34,12 +34,11 @@ class GingaViewerWidget(Widgets.Canvas):
         self._dispatch_event_table = {
             "activate": self.ignore_event,
             "setbounds": self.map_event_cb,
-            "mousedown": viewer.button_press_event,
-            "mouseup": viewer.button_release_event,
-            "mousemove": viewer.motion_notify_event,
-            "mouseout": viewer.leave_notify_event,
-            "mouseover": viewer.enter_notify_event,
-            "mousewheel": viewer.scroll_event,
+            "pointerdown": viewer.button_press_event,
+            "pointerup": viewer.button_release_event,
+            "pointermove": viewer.motion_notify_event,
+            "pointerout": viewer.leave_notify_event,
+            "pointerover": viewer.enter_notify_event,
             "wheel": viewer.scroll_event,
             "click": self.ignore_event,
             "dblclick": self.ignore_event,
@@ -52,7 +51,7 @@ class GingaViewerWidget(Widgets.Canvas):
             "blur": lambda event: viewer.focus_event(event, False),
             "drop": viewer.drop_event,
             "paste": self.ignore_event,
-            # Hammer.js events
+            # Gesture events
             "pinch": viewer.pinch_event,
             "pinchstart": viewer.pinch_event,
             "pinchend": viewer.pinch_event,
@@ -80,7 +79,6 @@ class GingaViewerWidget(Widgets.Canvas):
         app.do_operation('refresh_canvas', id=self.id)
 
     def do_update(self, buf):
-        #width, height = self.width, self.height
         width, height = self.viewer.get_window_size()
         self.clear_rect(0, 0, width, height)
 

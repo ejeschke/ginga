@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 5.6.0 (unreleased)
+Ver 6.0.0 (unreleased)
 ======================
 - Added ability to add icons to Ginga-wrapped Button widgets
 - Refactored Pan and Header plugins to use new parent/child plugin
@@ -25,6 +25,8 @@ Ver 5.6.0 (unreleased)
   on a canvas, and return the information to show in the readout.
 - Fixed an issue where there was an unintended fill in drawing a Bezier
   curve with the Qt backend
+- Improvements to plugins to use the new the plot viewer (API is slightly
+  changed, thus bump to new major version)
 
 Ver 5.5.1 (2025-12-22)
 ======================

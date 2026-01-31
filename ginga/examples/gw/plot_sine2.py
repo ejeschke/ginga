@@ -25,7 +25,7 @@ def main(options, args):
     ginga_toolkit.use(options.toolkit)
 
     # now we can import
-    from ginga.gw import Widgets, Viewers
+    from ginga.gw import Widgets
     from ginga.plot import PlotView
 
     app = Widgets.Application(logger=logger)
@@ -34,26 +34,34 @@ def main(options, args):
         logger.info("Top window closed.")
         sys.exit()
 
-    w = app.make_window("Sine")
-    w.add_callback('close', quit)
     app.add_callback('shutdown', quit)
+    if hasattr(Widgets, 'Page'):
+        page = Widgets.Page("Plot sine2")
+        app.add_window(page)
+        top = Widgets.TopLevel("Plot sine2")
+        page.add_dialog(top)
+    else:
+        top = Widgets.TopLevel("Plot sine2")
+        app.add_window(top)
+    top.add_callback('close', quit)
 
     vbox = Widgets.VBox()
     vbox.set_spacing(1)
     vbox.set_border_width(2)
     win_wd, win_ht = dims[:2]
     viewer = PlotView.CanvasView(logger=logger)
-    #viewer.set_desired_size(win_wd, win_ht)
-    viewer.set_background('white')
-    viewer.set_foreground('black')
     viewer.set_enter_focus(True)
+
+    bd = viewer.get_bindings()
+    bd.enable_all(True)
+
+    settings = viewer.get_settings()
+    settings.set(plot_show_mode=True)
 
     viewer.set_limits([(-2, -1), (2, 1)])
 
-    # add scrollbar interface around this viewer
-    si = Viewers.GingaScrolledViewerWidget(viewer=viewer, width=win_wd,
-                                           height=win_ht)
-    vbox.add_widget(si, stretch=1)
+    plot_w = viewer.get_ginga_widget()
+    vbox.add_widget(plot_w, stretch=1)
 
     hbox = Widgets.HBox()
     btn = Widgets.Button("Quit")
@@ -62,7 +70,7 @@ def main(options, args):
     hbox.add_widget(btn, stretch=0)
     vbox.add_widget(hbox, stretch=0)
 
-    w.set_widget(vbox)
+    top.set_widget(vbox)
 
     x_data = np.arange(-3, 3.5, 0.01)
     y_sin = np.sin(x_data)
@@ -77,15 +85,15 @@ def main(options, args):
     viewer.set_dataobj(plotable)
     # viewer.set_ranges(x_range=(-2.0, 3.5), y_range=(-1.0, 1.0))
 
-    w.resize(win_wd, win_ht)
-    w.show()
-    w.raise_()
+    top.resize(win_wd, win_ht)
+    top.show()
+    top.raise_()
 
     try:
         app.mainloop()
 
     except KeyboardInterrupt:
-        w.close()
+        top.close()
 
 
 if __name__ == "__main__":

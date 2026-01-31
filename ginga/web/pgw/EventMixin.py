@@ -1,181 +1,13 @@
 #
-# ImageViewPg.py -- a backend for Ginga using javascript and
-#      HTML5 canvas and websockets
+# EventMixin.py -- mixin class for handling events in pg widgets.
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-
-from ginga import ImageView, Mixins, Bindings
-from ginga.canvas import render
 from ginga.cursors import cursor_info
 
 
-default_html_fmt = 'jpeg'
-
-
-class ImageViewPgError(ImageView.ImageViewError):
-    pass
-
-
-class ImageViewPg(ImageView.ImageViewBase):
-
-    def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
-        ImageView.ImageViewBase.__init__(self, logger=logger,
-                                         rgbmap=rgbmap, settings=settings)
-
-        self.pgcanvas = None
-
-        # format for rendering image on HTML5 canvas
-        # NOTE: 'jpeg' has much better performance than 'png', but can show
-        # some artifacts, especially noticeable with small text
-        self.t_.set_defaults(html5_canvas_format=default_html_fmt,
-                             renderer='cairo')
-
-        self.rgb_order = 'RGBA'
-        # this should already be so, but just in case...
-        self.defer_redraw = True
-
-        # these will be assigned in set_widget()
-        self.timer_redraw = None
-        self.timer_msg = None
-
-        self.renderer = None
-        # Pick a renderer that can work with us
-        renderers = ['cairo', 'pil', 'opencv', 'agg']
-        preferred = self.t_['renderer']
-        if preferred in renderers:
-            renderers.remove(preferred)
-        self.possible_renderers = [preferred] + renderers
-        self.choose_best_renderer()
-
-    def set_widget(self, canvas_w):
-        """Call this method with the widget that will be used
-        for the display.
-        """
-        self.logger.debug("set widget canvas_w=%s" % canvas_w)
-        self.pgcanvas = canvas_w
-
-        app = canvas_w.get_app()
-        self.timer_redraw = app.make_timer()
-        self.timer_redraw.add_callback('expired',
-                                       lambda t: self.delayed_redraw())
-        self.timer_msg = app.make_timer()
-        self.timer_msg.add_callback('expired',
-                                    lambda t: self.clear_onscreen_message())
-
-        wd, ht = canvas_w.get_size()
-        self.configure_window(wd, ht)
-
-    def get_widget(self):
-        return self.pgcanvas
-
-    def choose_renderer(self, name):
-        klass = render.get_render_class(name)
-        self.renderer = klass(self)
-
-        if self.pgcanvas is not None:
-            wd, ht = self.pgcanvas_w.get_size()
-            self.configure_window(wd, ht)
-
-    def choose_best_renderer(self):
-        for name in self.possible_renderers:
-            try:
-                self.choose_renderer(name)
-                self.logger.info("best renderer available is '{}'".format(name))
-                return
-            except Exception as e:
-                # uncomment to troubleshoot
-                ## self.logger.error("Error choosing renderer '{}': {}".format(name, e),
-                ##                   exc_info=True)
-                continue
-
-        raise ImageViewPgError("No valid renderers available: {}".format(str(self.possible_renderers)))
-
-    def update_widget(self):
-        self.logger.debug("update_widget pgcanvas=%s" % self.pgcanvas)
-        if self.pgcanvas is None:
-            return
-
-        try:
-            self.logger.debug("getting image as buffer...")
-            format = self.t_.get('html5_canvas_format', default_html_fmt)
-
-            buf = self.renderer.get_surface_as_rgb_format_bytes(
-                format=format, quality=90)
-            self.logger.debug("got '%s' RGB image buffer, len=%d" % (
-                format, len(buf)))
-
-            self.pgcanvas.do_update(buf)
-
-        except Exception as e:
-            self.logger.error("Couldn't update canvas: %s" % (str(e)))
-
-    def reschedule_redraw(self, time_sec):
-        if self.pgcanvas is not None:
-            self.timer_redraw.stop()
-            self.timer_redraw.start(time_sec)
-        else:
-            self.delayed_redraw()
-
-    def get_plain_image_as_widget(self):
-        """Does not include overlaid graphics."""
-        image_buf = self.renderer.get_surface_as_rgb_format_buffer()
-        return image_buf.getvalue()
-
-    def save_plain_image_as_file(self, filepath, format='png', quality=90):
-        """Does not include overlaid graphics."""
-        pass
-
-    def set_cursor(self, cursor):
-        if self.pgcanvas is None:
-            return
-        #self.pgcanvas.config(cursor=cursor)
-
-    def onscreen_message(self, text, delay=None, redraw=True):
-        if self.pgcanvas is None:
-            return
-        self.timer_msg.stop()
-        self.set_onscreen_message(text, redraw=redraw)
-        if delay is not None:
-            self.timer_msg.start(delay)
-
-    def clear_onscreen_message(self):
-        self.logger.debug("clearing message...")
-        self.onscreen_message(None)
-
-    def configure_window(self, width, height):
-        self.configure(width, height)
-
-    def map_event(self, event):
-        self.logger.info("window mapped to %dx%d" % (
-            event.width, event.height))
-        self.configure_window(event.width, event.height)
-        self.redraw(whence=0)
-
-    def resize_event(self, event):
-        wd, ht = event.width, event.height
-        # Not quite ready for prime-time--browser seems to mess with the
-        # aspect ratio
-        self.logger.info("canvas resized to %dx%d" % (wd, ht))
-        self.configure_window(wd, ht)
-        self.redraw(whence=0)
-
-    def resize(self, width, height):
-        """Resize our window to width x height.
-        May not work---depending on how the HTML5 canvas is embedded.
-        """
-        # this shouldn't be needed
-        self.configure_window(width, height)
-
-        self.pgcanvas.resize(width, height)
-
-        # hack to force a browser reload
-        app = self.pgcanvas.get_app()
-        app.do_operation('reload_page', id=self.pgcanvas.id)
-
-
-class PgEventMixin:
+class PlotEventMixin:
 
     def __init__(self):
         self._button = 0
@@ -358,19 +190,23 @@ class PgEventMixin:
             self.define_cursor(curinfo.name, curinfo.web)
 
         self._shifted = False
+        # this is set in set_widget()
+        self.pgcanvas = None
 
-        for name in ['motion', 'button-press', 'button-release',
-                     'key-press', 'key-release', 'drag-drop',
-                     'scroll', 'map', 'focus', 'enter', 'leave',
-                     'pinch', 'rotate', 'pan', 'swipe', 'tap']:
-            self.enable_callback(name)
+    def set_widget(self, canvas_w):
+        self.logger.debug("set widget canvas_w=%s" % canvas_w)
+        self.pgcanvas = canvas_w
 
-    def set_widget(self, canvas):
-        super().set_widget(canvas)
+        app = canvas_w.get_app()
+        self.timer_resize = app.make_timer()
+        self.timer_resize.add_callback('expired',
+                                       lambda t: self.delayed_resize())
+        self.timer_msg = app.make_timer()
+        self.timer_msg.add_callback('expired',
+                                    lambda t: self.onscreen_message_off())
 
-        # see event binding setup in Viewers.py
-
-        #return self.make_callback('map')
+        wd, ht = canvas_w.get_size()
+        self.set_window_size(wd, ht)
 
     def transkey(self, keycode):
         self.logger.debug("key code in js '%d'" % (keycode))
@@ -390,6 +226,14 @@ class PgEventMixin:
 
     def get_key_table(self):
         return self._keytbl
+
+    def map_event(self, event):
+        wd, ht = event.width, event.height
+        self.set_window_size(wd, ht)
+
+    def resize_event(self, event):
+        wd, ht = event.width, event.height
+        self.reschedule_resize(wd, ht)
 
     def focus_event(self, event, has_focus):
         self.logger.debug("focus event: focus=%s" % (has_focus))
@@ -469,7 +313,8 @@ class PgEventMixin:
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
         data_x, data_y = self.check_cursor_location()
-        return self.make_ui_callback_viewer(self, 'button-release', button,
+        return self.make_ui_callback_viewer(self, 'button-release',
+                                            button,
                                             data_x, data_y)
 
     def motion_notify_event(self, event):
@@ -491,12 +336,12 @@ class PgEventMixin:
         dx, dy = event.dx, event.dy
         self.last_win_x, self.last_win_y = x, y
 
-        if (dx != 0 or dy != 0):
-            # <= This browser gives us deltas for x and y
-            # Synthesize this as a pan gesture event
-            self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
-            self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
-            return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
+        # if (dx != 0 or dy != 0):
+        #     # <= This browser gives us deltas for x and y
+        #     # Synthesize this as a pan gesture event
+        #     self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
+        #     self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
+        #     return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
 
         # 15 deg is standard 1-click turn for a wheel mouse
         # delta usually returns +/- 1.0
@@ -574,82 +419,3 @@ class PgEventMixin:
         if event.isfinal:
             state = 'end'  # noqa
             self.logger.debug("tap gesture event=%s" % (str(event)))
-
-
-class ImageViewEvent(PgEventMixin, ImageViewPg):
-
-    def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
-        ImageViewPg.__init__(self, logger=logger, rgbmap=rgbmap,
-                             settings=settings, render=render)
-
-        PgEventMixin.__init__(self)
-
-
-class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
-
-    # class variables for binding map and bindings can be set
-    bindmapClass = Bindings.BindingMapper
-    bindingsClass = Bindings.ImageViewBindings
-
-    @classmethod
-    def set_bindingsClass(cls, klass):
-        cls.bindingsClass = klass
-
-    @classmethod
-    def set_bindmapClass(cls, klass):
-        cls.bindmapClass = klass
-
-    def __init__(self, logger=None, rgbmap=None, settings=None,
-                 render='widget',
-                 bindmap=None, bindings=None):
-        ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
-                                settings=settings, render=render)
-        Mixins.UIMixin.__init__(self)
-
-        self.ui_set_active(True, viewer=self)
-
-        if bindmap is None:
-            bindmap = ImageViewZoom.bindmapClass(self.logger)
-        self.bindmap = bindmap
-        bindmap.register_for_events(self)
-
-        if bindings is None:
-            bindings = ImageViewZoom.bindingsClass(self.logger)
-        self.set_bindings(bindings)
-
-    def get_bindmap(self):
-        return self.bindmap
-
-    def get_bindings(self):
-        return self.bindings
-
-    def set_bindings(self, bindings):
-        self.bindings = bindings
-        bindings.set_bindings(self)
-
-    def center_cursor(self):
-        # NOP
-        pass
-
-    def position_cursor(self, data_x, data_y):
-        # NOP
-        pass
-
-
-class CanvasView(ImageViewZoom):
-
-    def __init__(self, logger=None, settings=None, rgbmap=None,
-                 render='widget',
-                 bindmap=None, bindings=None):
-        ImageViewZoom.__init__(self, logger=logger, settings=settings,
-                               rgbmap=rgbmap, render=render,
-                               bindmap=bindmap, bindings=bindings)
-
-        # Needed for UIMixin to propagate events correctly
-        self.objects = [self.private_canvas]
-
-    def set_canvas(self, canvas, private_canvas=None):
-        super(CanvasView, self).set_canvas(canvas,
-                                           private_canvas=private_canvas)
-
-        self.objects[0] = self.private_canvas

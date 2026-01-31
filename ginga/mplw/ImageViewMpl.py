@@ -382,7 +382,10 @@ class ImageViewEvent(ImageViewMpl):
     def set_figure(self, figure):
         super(ImageViewEvent, self).set_figure(figure)
 
-        connect = figure.canvas.mpl_connect
+        canvas = self.figure.canvas
+        if canvas is None:
+            raise ValueError("matplotlib canvas is not yet created")
+        connect = canvas.mpl_connect
         #connect("map_event", self.map_event)
         #connect("focus_in_event", self.focus_event, True)
         #connect("focus_out_event", self.focus_event, False)
@@ -396,6 +399,7 @@ class ImageViewEvent(ImageViewMpl):
         connect("key_press_event", self.key_press_event)
         connect("key_release_event", self.key_release_event)
         connect("scroll_event", self.scroll_event)
+        canvas.capture_scroll = True
 
         # TODO: drag-drop event
 
