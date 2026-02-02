@@ -7,7 +7,7 @@
 from io import BytesIO
 import numpy as np
 
-from ginga import Mixins, colors
+from ginga import Mixins, colors, events
 from ginga.util.viewer import ViewerBase
 from ginga.misc import Bunch, Settings
 from ginga.plot.Plotable import Plotable
@@ -1302,6 +1302,9 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
             self.define_cursor(curinfo.name, cross)
         self.switch_cursor('pick')
 
+        g_event = events.MapEvent(state='mapped', viewer=self)
+        return self.make_callback('map', g_event)
+
     def __get_modifiers(self, event):
         return event.modifiers
 
@@ -1347,45 +1350,75 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
         modifiers = self.__get_modifiers(event)
         self.last_data_x, self.last_data_y = event.xdata, event.ydata
         num_degrees = amount  # ???
-        self.make_ui_callback_viewer(self, 'scroll', direction, num_degrees,
-                                     self.last_data_x, self.last_data_y)
+
+        g_event = events.ScrollEvent(button=0, state='scroll', mode=None,
+                                     modifiers=modifiers,
+                                     direction=direction, amount=num_degrees,
+                                     data_x=self.last_data_x,
+                                     data_y=self.last_data_y,
+                                     viewer=self)
+        return self.make_ui_callback_viewer(self, 'scroll', g_event)
 
     def _plot_button_press(self, event):
         button = self.__get_button(event)
         modifiers = self.__get_modifiers(event)
         # NOTE: event.xdata, event.ydata seem to be None
         # self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        self.make_ui_callback_viewer(self, 'button-press', button,
-                                     self.last_data_x, self.last_data_y)
+        data_x, data_y = self.last_data_x, self.last_data_y
+
+        g_event = events.PointEvent(button=button, state='down', mode=None,
+                                    modifiers=modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-press', g_event)
 
     def _plot_button_release(self, event):
         button = self.__get_button(event)
         modifiers = self.__get_modifiers(event)
         # NOTE: event.xdata, event.ydata seem to be None
         # self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        self.make_ui_callback_viewer(self, 'button-release', button,
-                                     self.last_data_x, self.last_data_y)
+        data_x, data_y = self.last_data_x, self.last_data_y
+
+        g_event = events.PointEvent(button=button, state='up', mode=None,
+                                    modifiers=modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-release', g_event)
 
     def _plot_motion_notify(self, event):
         button = self.__get_button(event)
         modifiers = self.__get_modifiers(event)
         self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        self.make_ui_callback_viewer(self, 'motion', button,
-                                     self.last_data_x, self.last_data_y)
+        g_event = events.PointEvent(button=button, state='move', mode=None,
+                                    modifiers=modifiers,
+                                    data_x=self.last_data_x,
+                                    data_y=self.last_data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'motion', g_event)
 
     def _plot_key_press(self, event):
         key = self.__get_key(event)
         modifiers = self.__get_modifiers(event)
         # NOTE: event.xdata, event.ydata seem to be None
         # self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        self.make_ui_callback_viewer(self, 'key-press', key)
+        g_event = events.KeyEvent(key=key, state='down', mode=None,
+                                  modifiers=modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-press', g_event)
 
     def _plot_key_release(self, event):
         key = self.__get_key(event)
         modifiers = self.__get_modifiers(event)
         # NOTE: event.xdata, event.ydata seem to be None
         # self.last_data_x, self.last_data_y = event.xdata, event.ydata
-        self.make_ui_callback_viewer(self, 'key-release', key)
+        g_event = events.KeyEvent(key=key, state='up', mode=None,
+                                  modifiers=modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-release', g_event)
 
     def _plot_resize(self, event):
         wd, ht = event.width, event.height
@@ -1394,10 +1427,18 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
     def _plot_enter_cursor(self, event):
         if self.t_['plot_enter_focus']:
             self.take_focus()
-        self.make_callback('enter')
+        g_event = events.EnterLeaveEvent(state='enter', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('enter', g_event)
 
     def _plot_leave_cursor(self, event):
-        self.make_callback('leave')
+        g_event = events.EnterLeaveEvent(state='leave', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('leave', g_event)
 
     def set_enter_focus(self, tf):
         self.t_['plot_enter_focus'] = tf
@@ -1412,6 +1453,9 @@ class PlotViewEvent(Mixins.UIMixin, PlotViewBase):
         elif hasattr(w, 'grab_focus'):
             # NOTE: this is a Gtk3 call, not cross-backend
             w.grab_focus()
+        g_event = events.FocusEvent(state='focus', mode=None,
+                                    focus=True, viewer=self)
+        return self.make_callback('focus', g_event)
 
     def get_last_data_xy(self):
         return (self.last_data_x, self.last_data_y)
