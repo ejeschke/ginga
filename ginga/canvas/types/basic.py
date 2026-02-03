@@ -476,7 +476,13 @@ class BezierCurve(Path):
         PolygonMixin.__init__(self)
 
     def get_points_on_curve(self, image):
+        # NOTE: image parameter not currently used but preserved for
+        # future use
         points = list(self.get_data_points())
+        if len(points) < 4:
+            # we don't have enough points to make a bezier curve
+            # so just return the points we have
+            return points
         # use maximum dimension of image to estimate a reasonable number
         # of intermediate points
         #steps = max(*image.get_size())
