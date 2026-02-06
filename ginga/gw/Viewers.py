@@ -14,5 +14,4 @@ elif tkname == 'pg':
     from ginga.web.pgw.Viewers import *  # noqa
 
 from ginga.table.TableView import TableViewGw  # noqa
-
-from .PlotView import PlotViewGw  # noqa
+from ginga.plot.PlotView import PlotViewGw  # noqa

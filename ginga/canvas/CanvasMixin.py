@@ -25,7 +25,7 @@ class CanvasMixin(object):
         self.tags = {}
         self.count = 0
 
-        for name in ['modified', 'cursor_info']:
+        for name in ['modified', 'pixel-info']:
             self.enable_callback(name)
 
     def update_canvas(self, whence=3):

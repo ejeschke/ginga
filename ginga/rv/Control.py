@@ -2261,10 +2261,8 @@ class GingaShell(GenericShell):
             # a table viewer or some non-image, non-plot viewer
             return
         pt = (data_x, data_y)
-        info = viewer.make_callback_children('cursor_info', pt, viewer,
+        info = viewer.make_callback_children('pixel-info', pt, viewer,
                                              self.settings)
-        # info = viewer.make_ui_callback('cursor_info', pt, viewer,
-        #                                self.settings)
         if not isinstance(info, Bunch.Bunch):
             return
 

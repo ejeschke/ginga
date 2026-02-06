@@ -411,7 +411,7 @@ class AstroImage(BaseImage):
         return wav, None, wav_lbl, spat_lbl
 
     def info_xy(self, data_x, data_y, settings):
-        info = super(AstroImage, self).info_xy(data_x, data_y, settings)
+        info = super().info_xy(data_x, data_y, settings)
 
         # Are we reporting in data or FITS coordinates?
         off = settings.get('pixel_coords_offset', 0.0)

@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from ginga.ImageView import ImageViewBase
-from ginga.gw.PlotView import PlotViewBase
+from ginga.plot.PlotView import PlotViewBase
 from ginga.modes.mode_base import Mode
 
 

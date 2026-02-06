@@ -25,7 +25,8 @@ def main(options, args):
     ginga_toolkit.use(options.toolkit)
 
     # now we can import
-    from ginga.gw import Widgets, Viewers, PlotView
+    from ginga.gw import Widgets, Viewers
+    from ginga.plot import PlotView
 
     app = Widgets.Application(logger=logger)
 

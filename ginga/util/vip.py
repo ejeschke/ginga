@@ -532,21 +532,17 @@ class ViewerImageProxy:
         image, pt = self.get_image_at_pt((data_x, data_y))
         ld_image = self.viewer.get_image()
         data_off = self.viewer.data_off
-        info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
-                           x=data_x, y=data_y, value=None,
-                           ra_txt="%+.3f" % (data_x),
-                           dec_txt="%+.3f" % (data_y),
-                           ra_lbl='X', dec_lbl='Y')
 
         if ld_image is not None:
             # if there is a loaded image, use it to establish info,
             # because the WCS will depend on that
-            _info = ld_image.info_xy(data_x, data_y, settings)
-            info.setvals(itype=_info.itype,
-                         ra_txt=_info.get('ra_txt', info.ra_txt),
-                         dec_txt=_info.get('dec_txt', info.dec_txt),
-                         ra_lbl=_info.get('ra_lbl', info.ra_lbl),
-                         dec_lbl=_info.get('dec_lbl', info.dec_lbl))
+            info = ld_image.info_xy(data_x, data_y, settings)
+        else:
+            info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
+                               x=data_x, y=data_y, value=None,
+                               ra_txt="%+.3f" % (data_x),
+                               dec_txt="%+.3f" % (data_y),
+                               ra_lbl='X', dec_lbl='Y')
 
         if image is not None:
             info.image_x, info.image_y = pt

@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.gw.PlotView import PlotViewBase
+from ginga.plot.PlotView import PlotViewBase
 from ginga.misc import Bunch
 from ginga.modes.mode_base import Mode
 
@@ -12,7 +12,7 @@ from ginga.modes.mode_base import Mode
 class Plot2DMode(Mode):
     """
     Plot2D Mode enables bindings that can set the pan position and zoom level
-    (scale) in a Matplotlib plot viewer (ginga.gw.PlotView module).
+    (scale) in a Matplotlib plot viewer (ginga.plot.PlotView module).
 
     Enter the mode by
     -----------------

@@ -59,7 +59,7 @@ from ginga import RGBImage, trcalc
 from ginga.misc import Bunch
 from ginga.util import iohelper
 from ginga.gw import Widgets, Viewers
-from ginga.gw.PlotView import PlotViewBase
+from ginga.plot.PlotView import PlotViewBase
 from ginga.table.TableView import TableViewBase
 from ginga.ImageView import ImageViewBase
 from ginga.util.paths import icondir
