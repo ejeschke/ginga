@@ -11,6 +11,7 @@ import traceback
 import time
 import logging
 import inspect
+import numbers
 from collections import OrderedDict
 
 # Local application imports
@@ -2265,6 +2266,18 @@ class GingaShell(GenericShell):
                                              self.settings)
         if not isinstance(info, Bunch.Bunch):
             return
+
+        if info.itype == 'astro':
+            # Are we reporting in data or FITS coordinates?
+            off = self.settings.get('pixel_coords_offset', 0.0)
+            if isinstance(info.x, numbers.Number):
+                info.x += off
+            if isinstance(info.y, numbers.Number):
+                info.y += off
+            if 'image_x' in info and isinstance(info.image_x, numbers.Number):
+                info.image_x += off
+            if 'image_y' in info and isinstance(info.image_y, numbers.Number):
+                info.image_y += off
 
         self._cursor_last_update = time.time()
 
