@@ -26,6 +26,11 @@ try:
 except ImportError:
     have_mpl = False
 
+if not have_mpl:
+    # NOTE: needed for Sphinx documentation building
+    class PlotEventMixin:  # noqa
+        pass
+
 __all__ = ['PlotViewBase', 'CanvasView', 'PlotViewGw']
 
 
