@@ -138,7 +138,7 @@ class PlotViewBase(ViewerBase):
         self.artist_dct = dict()
         bg = self.settings.get('plot_bg', 'white')
         self.ax = self.figure.add_subplot(111, facecolor=bg)
-        self.ax.grid(True)
+        # self.ax.grid(True)
 
         self.dc = get_canvas_types()
         self.private_canvas = self.dc.DrawingCanvas()
@@ -196,11 +196,14 @@ class PlotViewBase(ViewerBase):
 
     def add_axis(self, **kwdargs):
         if self.ax is not None:
-            self.ax.remove()
+            ax, self.ax = self.ax, None
+            ax.remove()
         self.ax = self.figure.add_subplot(111, **kwdargs)
         return self.ax
 
     def get_axis(self):
+        if self.ax is None:
+            return self.add_axis()
         return self.ax
 
     def set_dataobj(self, dataobj):
@@ -247,7 +250,7 @@ class PlotViewBase(ViewerBase):
             self.time_last_resize = time.time()
             self._resize_flag = False
 
-            self.logger.info("canvas resized to %dx%d" % (wd_px, ht_px))
+            self.logger.debug("canvas resized to %dx%d" % (wd_px, ht_px))
             fig = self.get_figure()
             fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi)
 

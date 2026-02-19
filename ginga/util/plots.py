@@ -29,6 +29,11 @@ class Plot(PlotView.CanvasView):
         bd = self.get_bindings()
         bd.enable(pan=False, zoom=False)
 
+    @property
+    def fig(self):
+        # for backward compatibility
+        return self.figure
+
     def clear(self):
         self.logger.debug('clearing canvas...')
         self.xdata = []
