@@ -27,6 +27,7 @@ Ver 6.0.0 (unreleased)
   curve with the Qt backend
 - Improvements to plugins to use the new the plot viewer (API is slightly
   changed, thus bump to new major version)
+- Fix to handling of pan/scroll with touchpads in Qt6
 
 Ver 5.5.1 (2025-12-22)
 ======================

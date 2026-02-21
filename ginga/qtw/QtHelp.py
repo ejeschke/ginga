@@ -48,7 +48,7 @@ try:
                             QPainter, QPen, QPolygonF, QPolygon, QTextCursor,
                             QDrag, QPainterPath, QBrush, QFontDatabase,
                             QCursor, QFontMetrics, QSurfaceFormat,
-                            QTextOption)
+                            QTextOption, QWheelEvent)
     from qtpy.QtWidgets import QOpenGLWidget  # noqa
     from qtpy.QtCore import QItemSelectionModel  # noqa
     from qtpy.QtWidgets import QApplication, QWidget  # noqa
@@ -69,15 +69,19 @@ except ImportError as e:
 
 if have_pyqt6:
     ginga.toolkit.use('qt6')
+    from qtpy.QtGui import QInputDevice
     os.environ['QT_API'] = 'pyqt6'
 elif have_pyqt5:
     ginga.toolkit.use('qt5')
+    QInputDevice = None
     os.environ['QT_API'] = 'pyqt5'
 elif have_pyside6:
     ginga.toolkit.use('pyside6')
+    from qtpy.QtGui import QInputDevice
     os.environ['QT_API'] = 'pyside6'
 elif have_pyside2:
     ginga.toolkit.use('pyside2')
+    QInputDevice = None
     os.environ['QT_API'] = 'pyside2'
 else:
     raise ImportError("Failed to configure qt5, qt6, pyside2 or pyside6. "
@@ -567,6 +571,25 @@ def get_painter(surface):
     if not isinstance(surface, QImage):
         _painters[surface] = painter
     return painter
+
+
+def get_scroll_event_source(event):
+    """Return the source of the scroll event: 'wheel' or 'touchpad'."""
+
+    # Differentiate using the device type (if available)
+    # if QInputDevice is not None:
+    if hasattr(event, 'device'):
+        # <-- Qt6
+        if event.device().type() == QInputDevice.DeviceType.TouchPad:
+            return 'touchpad'
+
+    elif hasattr(event, 'source'):
+        # <-- Qt5
+        _src = event.source()
+        if _src == QtCore.Qt.MouseEventSynthesizedBySystem:
+            return 'touchpad'
+
+    return 'wheel'
 
 
 def get_rgb_array(widget):

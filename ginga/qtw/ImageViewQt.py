@@ -436,8 +436,8 @@ class RenderMixin(object):
         self.viewer.scroll_event(self, event)
 
     def event(self, event):
-        # This method is a hack necessary to support trackpad gestures
-        # on Qt4 because it does not support specific method overrides.
+        # This method is a hack necessary to support touchpad gestures
+        # on Qt because it does not support specific method overrides.
         # Instead we have to override the generic event handler, look
         # explicitly for gesture events.
         if event.type() == QtCore.QEvent.Gesture:
@@ -489,7 +489,7 @@ class QtEventMixin:
         imgwin.grabGesture(QtCore.Qt.PinchGesture)
         # Some of these are not well supported (read "just don't get
         # recognized") by Qt and aren't the same as standard platform
-        # trackpad gestures anyway
+        # touchpad gestures anyway
         #imgwin.grabGesture(QtCore.Qt.PanGesture)
         #imgwin.grabGesture(QtCore.Qt.SwipeGesture)
         #imgwin.grabGesture(QtCore.Qt.TapGesture)
@@ -718,22 +718,16 @@ class QtEventMixin:
         data_x, data_y = self.check_cursor_location()
 
         # NOTE: for future use in distinguishing mouse wheel vs.
-        # trackpad events
-        src = 'wheel'
-        if hasattr(event, 'source'):
-            # Qt5 only, it seems
-            _src = event.source()
-            if _src == QtCore.Qt.MouseEventNotSynthesized:
-                src = 'wheel'
-            else:
-                src = 'trackpad'  # noqa
-                point = event.pixelDelta()
-                dx, dy = point.x(), point.y()
+        # touchpad events
+        src = QtHelp.get_scroll_event_source(event)
+        if src == 'touchpad':
+            point = event.pixelDelta()
+            dx, dy = point.x(), point.y()
 
-                # Synthesize this as a pan gesture event
-                self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
-                self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
-                return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
+            # Synthesize this as a pan gesture event
+            self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
+            self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
+            return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
 
         num_degrees, direction = get_scroll_info(event)
         self.logger.debug("scroll deg={} direction={}".format(
