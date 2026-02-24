@@ -156,11 +156,9 @@ class ImageViewJpw(ImageView.ImageViewBase):
             self.msgtask.start(delay)
 
 
-class ImageViewEvent(ImageViewJpw):
+class JpwEventMixin:
 
-    def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageViewJpw.__init__(self, logger=logger, rgbmap=rgbmap,
-                              settings=settings)
+    def __init__(self)
 
         self._button = 0
 
@@ -234,7 +232,7 @@ class ImageViewEvent(ImageViewJpw):
         """Call this method with the Jupyter image widget (image_w)
         that will be used.
         """
-        super(ImageViewEvent, self).set_widget(jp_imgw)
+        super().set_widget(jp_imgw)
 
         self.jp_evt = EventListener(source=jp_imgw)
         self.jp_evt.watched_events = [
@@ -368,7 +366,16 @@ class ImageViewEvent(ImageViewJpw):
                                             data_x, data_y)
 
 
-class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
+class ImageViewEvent(Mixins.UIMixin, JpwEventMixin, ImageViewJpw):
+
+    def __init__(self, logger=None, rgbmap=None, settings=None):
+        ImageViewJpw.__init__(self, logger=logger, rgbmap=rgbmap,
+                              settings=settings)
+        Mixins.UIMixin.__init__(self)
+        JpwEventMixin.__init__(self)
+
+
+class ImageViewZoom(ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
@@ -386,7 +393,6 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                  bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings)
-        Mixins.UIMixin.__init__(self)
 
         self.ui_set_active(True, viewer=self)
 

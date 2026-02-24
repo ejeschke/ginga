@@ -156,11 +156,9 @@ class ImageViewTk(ImageView.ImageViewBase):
         self.tkcanvas.focus_set()
 
 
-class ImageViewEvent(ImageViewTk):
+class TkEventMixin:
 
-    def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageViewTk.__init__(self, logger=logger, rgbmap=rgbmap,
-                             settings=settings)
+    def __init__(self):
 
         self._button = 0
 
@@ -248,7 +246,7 @@ class ImageViewEvent(ImageViewTk):
             self.enable_callback(name)
 
     def set_widget(self, canvas):
-        super(ImageViewEvent, self).set_widget(canvas)
+        super().set_widget(canvas)
 
         canvas.bind("<Enter>", self.enter_notify_event)
         canvas.bind("<Leave>", self.leave_notify_event)
@@ -417,7 +415,16 @@ class ImageViewEvent(ImageViewTk):
     ##     return self.make_ui_callback_viewer(self, 'drag-drop', paths)
 
 
-class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
+class ImageViewEvent(Mixins.UIMixin, TkEventMixin, ImageViewTk):
+
+    def __init__(self, logger=None, rgbmap=None, settings=None):
+        ImageViewTk.__init__(self, logger=logger, rgbmap=rgbmap,
+                             settings=settings)
+        Mixins.UIMixin.__init__(self)
+        TkEventMixin.__init__(self)
+
+
+class ImageViewZoom(ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
@@ -435,7 +442,6 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                  bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings)
-        Mixins.UIMixin.__init__(self)
 
         self.ui_set_active(True, viewer=self)
 

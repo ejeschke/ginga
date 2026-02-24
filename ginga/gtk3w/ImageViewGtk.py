@@ -334,7 +334,7 @@ class ImageViewGtk(ImageView.ImageViewBase):
         self.imgwin.grab_focus()
 
 
-class GtkEventMixin(object):
+class GtkEventMixin:
 
     def __init__(self):
         imgwin = self.imgwin

@@ -845,7 +845,7 @@ class QtEventMixin:
         self.make_ui_callback_viewer(self, 'drag-drop', data)
 
 
-class ImageViewEvent(QtEventMixin, ImageViewQt):
+class ImageViewEvent(Mixins.UIMixin, QtEventMixin, ImageViewQt):
 
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         ImageViewQt.__init__(self, logger=logger, rgbmap=rgbmap,
@@ -863,10 +863,11 @@ class ImageViewEvent(QtEventMixin, ImageViewQt):
         imgwin.viewer = self
         self.imgwin = imgwin
 
+        Mixins.UIMixin.__init__(self)
         QtEventMixin.__init__(self)
 
 
-class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
+class ImageViewZoom(ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
@@ -885,7 +886,6 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                  bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, settings=settings,
                                 rgbmap=rgbmap, render=render)
-        Mixins.UIMixin.__init__(self)
 
         self.ui_set_active(True, viewer=self)
 

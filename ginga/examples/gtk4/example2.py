@@ -155,7 +155,6 @@ class FitsViewer(object):
             root.set_child(vbox)
             root.present()
 
-            print("finishing gui")
             self.gui_up = True
         except Exception as e:
             self.logger.error(f"error bringing up GUI: {e}", exc_info=True)
@@ -258,7 +257,6 @@ def main(options, args):
 
     logger = log.get_logger("example2", options=options)
 
-    print('example RENDER  is', options.render)
     fv = FitsViewer(logger, render=options.render)
     # root = fv.get_widget()
     # root.show()
@@ -268,7 +266,6 @@ def main(options, args):
 
     #fv.app.run(None)
     fv.mainloop()
-    print("application finished")
 
 
 if __name__ == "__main__":

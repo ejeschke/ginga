@@ -178,18 +178,9 @@ class ImageViewBokeh(ImageView.ImageViewBase):
         self.set_onscreen_message(None)
 
 
-class ImageViewEvent(ImageViewBokeh):
+class BokehEventMixin:
 
-    def __init__(self, logger=None, rgbmap=None, settings=None):
-        ImageViewBokeh.__init__(self, logger=logger, rgbmap=rgbmap,
-                                settings=settings)
-
-        # last known window mouse position
-        self.last_win_x = 0
-        self.last_win_y = 0
-        # last known data mouse position
-        self.last_data_x = 0
-        self.last_data_y = 0
+    def __init__(self):
 
         # @$%&^(_)*&^ gnome!!
         self._keytbl = {
@@ -238,7 +229,7 @@ class ImageViewEvent(ImageViewBokeh):
             self.enable_callback(name)
 
     def set_figure(self, figure, handle=None):
-        super(ImageViewEvent, self).set_figure(figure, handle=handle)
+        super().set_figure(figure, handle=handle)
 
     def _setup_handlers(self, source):
         fig = self.figure
@@ -407,7 +398,16 @@ class ImageViewEvent(ImageViewBokeh):
         self.logger.debug("press up event at %dx%d" % (x, y))
 
 
-class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
+class ImageViewEvent(Mixins.UIMixin, BokehEventMixin, ImageViewBokeh):
+
+    def __init__(self, logger=None, rgbmap=None, settings=None):
+        ImageViewBokeh.__init__(self, logger=logger, rgbmap=rgbmap,
+                                settings=settings)
+        Mixins.UIMixin.__init__(self)
+        BokehEventMixin.__init__(self)
+
+
+class ImageViewZoom(ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
@@ -425,7 +425,6 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                  bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings)
-        Mixins.UIMixin.__init__(self)
 
         self.ui_set_active(True, viewer=self)
 

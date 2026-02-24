@@ -576,16 +576,16 @@ class PgEventMixin:
             self.logger.debug("tap gesture event=%s" % (str(event)))
 
 
-class ImageViewEvent(PgEventMixin, ImageViewPg):
+class ImageViewEvent(Mixins.UIMixin, PgEventMixin, ImageViewPg):
 
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         ImageViewPg.__init__(self, logger=logger, rgbmap=rgbmap,
                              settings=settings, render=render)
-
+        Mixins.UIMixin.__init__(self)
         PgEventMixin.__init__(self)
 
 
-class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
+class ImageViewZoom(ImageViewEvent):
 
     # class variables for binding map and bindings can be set
     bindmapClass = Bindings.BindingMapper
@@ -604,7 +604,6 @@ class ImageViewZoom(Mixins.UIMixin, ImageViewEvent):
                  bindmap=None, bindings=None):
         ImageViewEvent.__init__(self, logger=logger, rgbmap=rgbmap,
                                 settings=settings, render=render)
-        Mixins.UIMixin.__init__(self)
 
         self.ui_set_active(True, viewer=self)
 
