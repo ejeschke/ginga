@@ -76,11 +76,15 @@ class ImageViewBokeh(ImageView.ImageViewBase):
         wd = figure.width
         ht = figure.height
 
-        self.configure_window(wd, ht)
+        # self.configure_window(wd, ht)
 
         doc = curdoc()
         doc.add_periodic_callback(self.timer_cb, 20)
         self.logger.info("figure set")
+
+        g_event = g_events.MapEvent(state='mapped', width=wd, height=ht,
+                                    viewer=self)
+        return self.make_callback('map', g_event)
 
     def get_figure(self):
         return self.figure
@@ -216,14 +220,6 @@ class BokehEventMixin:
 
         self._modifiers = frozenset([])
 
-        # Define cursors for pick and pan
-        #hand = openHandCursor()
-        hand = 0
-        self.define_cursor('pan', hand)
-        #cross = thinCrossCursor('aquamarine')
-        cross = 1
-        self.define_cursor('pick', cross)
-
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
@@ -234,8 +230,13 @@ class BokehEventMixin:
     def set_figure(self, figure, handle=None):
         super().set_figure(figure, handle=handle)
 
-        g_event = g_events.MapEvent(state='mapped', viewer=self)
-        return self.make_callback('map', g_event)
+        # Define cursors for pick and pan
+        #hand = openHandCursor()
+        hand = 0
+        self.define_cursor('pan', hand)
+        #cross = thinCrossCursor('aquamarine')
+        cross = 1
+        self.define_cursor('pick', cross)
 
     def _setup_handlers(self, source):
         fig = self.figure

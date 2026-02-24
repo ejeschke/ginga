@@ -70,7 +70,9 @@ class RenderGraphicsView(QtGui.QGraphicsView):
         width = x2 - x1 + 1
         height = y2 - y1 + 1
 
-        self.viewer.configure_window(width, height)
+        g_event = events.ResizeEvent(width=width, height=height,
+                                     viewer=self.viewer)
+        self.viewer.make_callback('resize', g_event)
 
     def sizeHint(self):
         width, height = 300, 300
@@ -115,8 +117,9 @@ class RenderWidget(QtGui.QWidget):
         width = x2 - x1 + 1
         height = y2 - y1 + 1
 
-        self.viewer.configure_window(width, height)
-        #self.update()
+        g_event = events.ResizeEvent(width=width, height=height,
+                                     viewer=self.viewer)
+        self.viewer.make_callback('resize', g_event)
 
     def sizeHint(self):
         width, height = 300, 300
@@ -631,9 +634,8 @@ class QtEventMixin:
 
         self.switch_cursor('pick')
 
-        self.configure_window(width, height)
-
-        g_event = events.MapEvent(state='mapped', viewer=self)
+        g_event = events.MapEvent(state='mapped', width=width,
+                                  height=height, viewer=self)
         return self.make_callback('map', g_event)
 
     def focus_event(self, widget, event, has_focus):

@@ -187,13 +187,22 @@ class ImageViewPg(ImageView.ImageViewBase):
         self.onscreen_message(None)
 
     def configure_window(self, width, height):
+        # Not quite ready for prime-time--browser seems to mess with the
+        # aspect ratio
+        self.logger.info("canvas resized to %dx%d" % (width, height))
         self.configure(width, height)
+        g_event = events.ResizeEvent(width=width, height=height, viewer=self)
+        self.make_callback('resize', g_event)
 
     def canvas_map_cb(self, canvas_w, event):
-        wd, ht = event['width'], event['height']
-        self.logger.debug(f"window mapped to {wd}x{ht}")
-        self.configure_window(wd, ht)
-        return self.make_callback('map')
+        self.logger.debug("window mapped to %dx%d" % (
+            event.width, event.height))
+        g_event = events.MapEvent(state='mapped',
+                                  width=event.width, height=event.height,
+                                  viewer=self)
+        self.make_callback('map', g_event)
+
+        self.configure_window(event.width, event.height)
 
     def canvas_resize_cb(self, canvas_w, event):
         with self._timer_resize_lock:
@@ -320,7 +329,10 @@ class PgEventMixin:
 
         canvas_w.set_cursor('pick')
 
-        g_event = events.MapEvent(state='mapped', viewer=self)
+        # see event binding setup in Viewers.py
+        wd, ht = canvas_w.get_size()
+        g_event = events.MapEvent(state='mapped', width=wd, height=ht,
+                                  viewer=self)
         return self.make_callback('map', g_event)
 
     def build_cursor(self, canvas_w, curinfo):
