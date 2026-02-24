@@ -158,7 +158,7 @@ class ImageViewJpw(ImageView.ImageViewBase):
 
 class JpwEventMixin:
 
-    def __init__(self)
+    def __init__(self):
 
         self._button = 0
 
