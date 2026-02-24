@@ -236,7 +236,8 @@ class FitsViewer(object):
         self.readout.set_text(text)
 
     def quit(self, w):
-        self.app.quit()
+        #self.app.quit()
+        self.app.shutdown()
         return True
 
     # def mainloop(self):

@@ -148,21 +148,24 @@ class ImageViewPg(ImageView.ImageViewBase):
         self.configure(width, height)
 
     def map_event(self, event):
-        self.logger.info("window mapped to %dx%d" % (
+        self.logger.debug("window mapped to %dx%d" % (
             event.width, event.height))
-        self.configure_window(event.width, event.height)
-        self.redraw(whence=0)
+        g_event = events.MapEvent(state='mapped',
+                                  width=event.width, height=event.height,
+                                  viewer=self)
+        return self.make_callback('resize', g_event)
 
     def resize_event(self, event):
         wd, ht = event.width, event.height
         # Not quite ready for prime-time--browser seems to mess with the
         # aspect ratio
         self.logger.info("canvas resized to %dx%d" % (wd, ht))
-        self.configure_window(wd, ht)
-        self.redraw(whence=0)
+        g_event = events.ResizeEvent(width=wd, height=ht, viewer=self)
+        return self.make_callback('resize', g_event)
 
     def resize(self, width, height):
         """Resize our window to width x height.
+        Called programatically similar to set_window_size().
         May not work---depending on how the HTML5 canvas is embedded.
         """
         # this shouldn't be needed
@@ -370,8 +373,10 @@ class PgEventMixin:
         super().set_widget(canvas)
 
         # see event binding setup in Viewers.py
+        wd, ht = canvas.get_size()
 
-        g_event = events.MapEvent(state='mapped', viewer=self)
+        g_event = events.MapEvent(state='mapped', width=wd, height=ht,
+                                  viewer=self)
         return self.make_callback('map', g_event)
 
     def transkey(self, keycode):

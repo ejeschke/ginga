@@ -58,7 +58,7 @@ class ImageViewTk(ImageView.ImageViewBase):
         """
         self.tkcanvas = canvas
 
-        canvas.bind("<Configure>", self._resize_cb)
+        canvas.bind("<Configure>", self.resize_event)
         width = canvas.winfo_width()
         height = canvas.winfo_height()
 
@@ -70,7 +70,9 @@ class ImageViewTk(ImageView.ImageViewBase):
         self.msgtask.add_callback('expired',
                                   lambda timer: self.onscreen_message(None))
 
-        self.configure_window(width, height)
+        g_event = events.MapEvent(state='mapped', width=width, height=height,
+                                  viewer=self)
+        self.make_callback('map', g_event)
 
     def get_widget(self):
         return self.tkcanvas
@@ -136,8 +138,10 @@ class ImageViewTk(ImageView.ImageViewBase):
     def configure_window(self, width, height):
         self.configure(width, height)
 
-    def _resize_cb(self, event):
-        self.configure_window(event.width, event.height)
+    def resize_event(self, event):
+        g_event = events.ResizeEvent(width=event.width, height=event.height,
+                                     viewer=self)
+        self.make_callback('resize', g_event)
 
     def set_cursor(self, cursor):
         if self.tkcanvas is None:
@@ -248,8 +252,6 @@ class TkEventMixin:
             self.enable_callback(name)
 
     def set_widget(self, canvas):
-        super().set_widget(canvas)
-
         canvas.bind("<Enter>", self.enter_notify_event)
         canvas.bind("<Leave>", self.leave_notify_event)
         canvas.bind("<FocusIn>", lambda evt: self.focus_event(evt, True))
@@ -271,8 +273,7 @@ class TkEventMixin:
 
         # TODO: Set up widget as a drag and drop destination
 
-        g_event = events.MapEvent(state='mapped', viewer=self)
-        return self.make_callback('map', g_event)
+        super().set_widget(canvas)
 
     def transkey(self, keyname):
         self.logger.debug("key name in tk '%s'" % (keyname))

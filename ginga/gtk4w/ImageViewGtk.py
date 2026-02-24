@@ -240,14 +240,16 @@ class ImageViewGtk(ImageView.ImageViewBase):
                 return True
 
         self.logger.debug(f"allocation is {width}x{height}")
-        self.configure_window(width, height)
-        return True
+        g_event = events.ResizeEvent(width=width, height=height,
+                                     viewer=self)
+        return self.make_callback('resize', g_event)
 
     def configure_glarea_cb(self, widget, width, height):
         # NOTE: this callback is only for the GLArea (OpenGL) widget
         self.logger.debug("allocation is %dx%d" % (width, height))
-        self.configure_window(width, height)
-        return True
+        g_event = events.ResizeEvent(width=width, height=height,
+                                     viewer=self)
+        return self.make_callback('resize', g_event)
 
     def make_context_current(self):
         ctx = self.imgwin.get_context()
@@ -453,9 +455,12 @@ class GtkEventMixin:
         return self._keytbl
 
     def map_event(self, widget):
+        wd, ht = widget.get_width(), widget.get_height()
+
         self.switch_cursor('pick')
 
-        g_event = events.MapEvent(state='mapped', viewer=self)
+        g_event = events.MapEvent(state='mapped', width=wd, height=ht,
+                                  viewer=self)
         return self.make_callback('map', g_event)
 
     def focus_event(self, controller, widget, has_focus):

@@ -102,7 +102,9 @@ class ImageViewJpw(ImageView.ImageViewBase):
 
         # for some reason these are stored as strings!
         wd, ht = int(jp_img.width), int(jp_img.height)
-        self.configure_window(wd, ht)
+        g_event = events.MapEvent(state='mapped', width=wd, height=ht,
+                                  viewer=self)
+        return self.make_callback('map', g_event)
 
     def get_widget(self):
         return self.jp_img
@@ -140,8 +142,8 @@ class ImageViewJpw(ImageView.ImageViewBase):
     def configure_window(self, width, height):
         self.configure(width, height)
 
-    def _resize_cb(self, event):
-        self.configure_window(event.width, event.height)
+    # def _resize_cb(self, event):
+    #     self.configure_window(event.width, event.height)
 
     def set_cursor(self, cursor):
         # TODO
@@ -216,12 +218,6 @@ class JpwEventMixin:
             "'": 'singlequote',
         }
 
-        # Define cursors
-        cursor_names = cursor_info.get_cursor_names()
-        for curname in cursor_names:
-            curinfo = cursor_info.get_cursor_info(curname)
-            self.define_cursor(curinfo.name, curinfo.web)
-
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
@@ -232,7 +228,11 @@ class JpwEventMixin:
         """Call this method with the Jupyter image widget (image_w)
         that will be used.
         """
-        super().set_widget(jp_imgw)
+        # Define cursors
+        cursor_names = cursor_info.get_cursor_names()
+        for curname in cursor_names:
+            curinfo = cursor_info.get_cursor_info(curname)
+            self.define_cursor(curinfo.name, curinfo.web)
 
         self.jp_evt = EventListener(source=jp_imgw)
         self.jp_evt.watched_events = [
@@ -245,8 +245,7 @@ class JpwEventMixin:
         self.jp_evt.on_dom_event(self._handle_event)
         self.logger.info("installed event handlers")
 
-        g_event = events.MapEvent(state='mapped', viewer=self)
-        return self.make_callback('map', g_event)
+        super().set_widget(jp_imgw)
 
     def _handle_event(self, event):
         # TODO: need focus events and maybe a map event

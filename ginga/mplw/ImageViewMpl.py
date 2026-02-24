@@ -121,11 +121,14 @@ class ImageViewMpl(ImageView.ImageViewBase):
         if hasattr(canvas, 'viewer'):
             canvas.set_viewer(self)
         else:
-            canvas.mpl_connect("resize_event", self._resize_cb)
+            canvas.mpl_connect("resize_event", self.resize_event)
 
-        # Because we don't know if resize callback works with all backends
+        # # Because we don't know if resize callback works with all backends
         left, bottom, wd, ht = self.ax_img.bbox.bounds
-        self.configure_window(wd, ht)
+        g_event = events.MapEvent(state='mapped', width=wd, height=ht,
+                                  viewer=self)
+        return self.make_callback('map', g_event)
+        # self.configure_window(wd, ht)
 
     def get_figure(self):
         return self.figure
@@ -253,14 +256,16 @@ class ImageViewMpl(ImageView.ImageViewBase):
     def configure_window(self, width, height):
         self.configure(width, height)
 
-    def _resize_cb(self, event):
+    def resize_event(self, event):
         # NOTE: this no longer works, need to calculate canvas size
         # from the figure
         #wd, ht = event.width, event.height
         wd = int(self.figure.get_figwidth() * self.figure.dpi)
         ht = int(self.figure.get_figheight() * self.figure.dpi)
         self.logger.debug("canvas resized %dx%d" % (wd, ht))
-        self.configure_window(wd, ht)
+
+        g_event = events.ResizeEvent(width=wd, height=ht, viewer=self)
+        self.make_callback('resize', g_event)
 
     def add_axes(self):
         ax = self.figure.add_axes(self.ax_img.get_position(),
@@ -380,9 +385,7 @@ class MplEventMixin:
             self.enable_callback(name)
 
     def set_figure(self, figure):
-        super().set_figure(figure)
-
-        canvas = self.figure.canvas
+        canvas = figure.canvas
         if canvas is None:
             raise ValueError("matplotlib canvas is not yet created")
         connect = canvas.mpl_connect
@@ -402,8 +405,8 @@ class MplEventMixin:
         canvas.capture_scroll = True
 
         # TODO: drag-drop event
-        g_event = events.MapEvent(state='mapped', viewer=self)
-        return self.make_callback('map', g_event)
+
+        super().set_figure(figure)
 
     def transkey(self, keyname):
         self.logger.debug("matplotlib keyname='%s'" % (keyname))

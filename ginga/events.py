@@ -303,7 +303,7 @@ class FocusEvent(UIEvent):
     Attributes
     ----------
     state: str
-        'enter' (enter window) or 'leave' (leave window)
+        'focus' (widget has focus) or 'unfocus' (widget lost focus)
 
     mode : str
         The mode name of the mode that was active when the event happened
@@ -328,11 +328,43 @@ class MapEvent(UIEvent):
     Attributes
     ----------
     state: str
-        'mapped' (window has been realized)
+        'mapped' (window has been realized) or 'unmapped'
+
+    width: int
+        width of the widget
+
+    height: int
+        height of the widget
 
     viewer : subclass of `~ginga.ImageView.ImageViewBase`
         The viewer in which the event happened
     """
-    def __init__(self, state=None, viewer=None):
+    def __init__(self, state=None, width=None, height=None, viewer=None):
         super().__init__(viewer=viewer)
         self.state = state
+        self.width = width
+        self.height = height
+
+
+class ResizeEvent(UIEvent):
+    """A resize window event in a Ginga viewer.
+
+    Attributes
+    ----------
+    state: str
+        'resize' (window has been resized)
+
+    width: int
+        width of the widget
+
+    height: int
+        height of the widget
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
+    def __init__(self, width=None, height=None, viewer=None):
+        super().__init__(viewer=viewer)
+        self.state = 'resize'
+        self.width = width
+        self.height = height

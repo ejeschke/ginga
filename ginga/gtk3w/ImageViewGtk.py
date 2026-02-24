@@ -253,14 +253,17 @@ class ImageViewGtk(ImageView.ImageViewBase):
 
         self.logger.debug("allocation is %d,%d %dx%d" % (
             x, y, width, height))
-        self.configure_window(width, height)
-        return True
+
+        g_event = events.ResizeEvent(width=width, height=height,
+                                     viewer=self)
+        return self.make_callback('resize', g_event)
 
     def configure_glarea_cb(self, widget, width, height):
         # NOTE: this callback is only for the GLArea (OpenGL) widget
         self.logger.debug("allocation is %dx%d" % (width, height))
-        self.configure_window(width, height)
-        return True
+        g_event = events.ResizeEvent(width=width, height=height,
+                                     viewer=self)
+        return self.make_callback('resize', g_event)
 
     def make_context_current(self):
         ctx = self.imgwin.get_context()
@@ -270,6 +273,7 @@ class ImageViewGtk(ImageView.ImageViewBase):
 
     def on_realize_cb(self, area):
         # NOTE: this callback is only for the GLArea (OpenGL) widget
+        # TODO: do we need to issue a map callback here?
         self.renderer.gl_initialize()
 
     def on_render_cb(self, area, ctx):
@@ -479,12 +483,13 @@ class GtkEventMixin:
         return self._keytbl
 
     def map_event(self, widget, event):
-        #super(GtkEventMixin, self).configure_event(widget, event)
-        self.configure_event(widget, event)
+        rect = widget.get_allocation()
+        x, y, width, height = rect.x, rect.y, rect.width, rect.height
 
         self.switch_cursor('pick')
 
-        g_event = events.MapEvent(state='mapped', viewer=self)
+        g_event = events.MapEvent(state='mapped', width=width, height=height,
+                                  viewer=self)
         return self.make_callback('map', g_event)
 
     def focus_event(self, widget, event, has_focus):
@@ -540,6 +545,7 @@ class GtkEventMixin:
                                   data_x=self.last_data_x,
                                   data_y=self.last_data_y,
                                   viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-release', g_event)
 
     def button_press_event(self, widget, event):
         # event.button, event.x, event.y
@@ -553,7 +559,6 @@ class GtkEventMixin:
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.check_cursor_location()
-
         g_event = events.PointEvent(button=button, state='down', mode=None,
                                     modifiers=self._modifiers,
                                     data_x=data_x, data_y=data_y,

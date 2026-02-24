@@ -6,6 +6,7 @@
 #
 from matplotlib.backend_tools import Cursors
 
+from ginga import events
 from ginga.cursors import cursor_info
 from ginga.mplw import MplHelp
 
@@ -121,9 +122,12 @@ class PlotEventMixin:
         self.set_last_data_xy(data_x, data_y)
 
         num_degrees = amount  # ???
-        self.make_ui_callback_viewer(self, 'scroll',
-                                     direction, num_degrees,
-                                     data_x, data_y)
+        g_event = events.ScrollEvent(button=0, state='scroll', mode=None,
+                                     modifiers=modifiers,
+                                     direction=direction, amount=num_degrees,
+                                     data_x=data_x, data_y=data_y,
+                                     viewer=self)
+        return self.make_ui_callback_viewer(self, 'scroll', g_event)
 
     def button_press_event(self, event):
         button = self._get_button(event)
@@ -131,8 +135,11 @@ class PlotEventMixin:
         # NOTE: event.xdata, event.ydata seem to be None
         last_data_x, last_data_y = self.get_last_data_xy()
 
-        self.make_ui_callback_viewer(self, 'button-press', button,
-                                     last_data_x, last_data_y)
+        g_event = events.PointEvent(button=button, state='down', mode=None,
+                                    modifiers=modifiers,
+                                    data_x=last_data_x, data_y=last_data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-press', g_event)
 
     def button_release_event(self, event):
         button = self._get_button(event)
@@ -140,8 +147,11 @@ class PlotEventMixin:
         # NOTE: event.xdata, event.ydata seem to be None
         last_data_x, last_data_y = self.get_last_data_xy()
 
-        self.make_ui_callback_viewer(self, 'button-release', button,
-                                     last_data_x, last_data_y)
+        g_event = events.PointEvent(button=button, state='up', mode=None,
+                                    modifiers=modifiers,
+                                    data_x=last_data_x, data_y=last_data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-release', g_event)
 
     def motion_notify_event(self, event):
         button = self._get_button(event)
@@ -150,39 +160,64 @@ class PlotEventMixin:
         data_x, data_y = event.xdata, event.ydata
         self.set_last_data_xy(data_x, data_y)
 
-        self.make_ui_callback_viewer(self, 'motion', button,
-                                     data_x, data_y)
+        g_event = events.PointEvent(button=button, state='move', mode=None,
+                                    modifiers=modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'motion', g_event)
 
     def key_down_event(self, event):
         key = self._get_key(event)
         modifiers = self._get_modifiers(event)
         # NOTE: event.xdata, event.ydata seem to be None
-        # last_data_x, last_data_y = self.get_last_data_xy()
+        last_data_x, last_data_y = self.get_last_data_xy()
 
-        self.make_ui_callback_viewer(self, 'key-press', key)
+        g_event = events.KeyEvent(key=key, state='down', mode=None,
+                                  modifiers=modifiers,
+                                  data_x=last_data_x, data_y=last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-press', g_event)
 
     def key_up_event(self, event):
         key = self._get_key(event)
         modifiers = self._get_modifiers(event)
         # NOTE: event.xdata, event.ydata seem to be None
-        # last_data_x, last_data_y = self.get_last_data_xy()
+        last_data_x, last_data_y = self.get_last_data_xy()
 
-        self.make_ui_callback_viewer(self, 'key-release', key)
+        g_event = events.KeyEvent(key=key, state='up', mode=None,
+                                  modifiers=modifiers,
+                                  data_x=last_data_x, data_y=last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-release', g_event)
 
     def resize_event(self, event):
         wd, ht = event.width, event.height
-        self.reschedule_resize(wd, ht)
+        g_event = events.ResizeEvent(width=wd, height=ht, viewer=self)
+        self.make_callback('resize', g_event)
 
     def enter_notify_event(self, event):
         if self.t_['plot_enter_focus']:
             self.take_focus()
-        self.make_callback('enter')
+        #last_data_x, last_data_y = self.get_last_data_xy()
+        data_x, data_y = event.xdata, event.ydata
+        g_event = events.EnterLeaveEvent(state='enter', mode=None,
+                                         data_x=data_x, data_y=data_y,
+                                         viewer=self)
+        return self.make_callback('enter', g_event)
 
     def leave_notify_event(self, event):
-        self.make_callback('leave')
+        #last_data_x, last_data_y = self.get_last_data_xy()
+        data_x, data_y = event.xdata, event.ydata
+        g_event = events.EnterLeaveEvent(state='leave', mode=None,
+                                         data_x=data_x, data_y=data_y,
+                                         viewer=self)
+        return self.make_callback('leave', g_event)
 
-    def focus_event(self, event, tf):
-        self.make_callback('focus', tf)
+    def focus_event(self, event, has_focus):
+        state = 'focus' if has_focus else 'unfocus'
+        g_event = events.FocusEvent(state=state, mode=None, focus=has_focus,
+                                    viewer=self)
+        return self.make_callback('focus', g_event)
 
     def take_focus(self):
         w = self.get_widget()
