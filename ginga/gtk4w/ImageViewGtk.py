@@ -494,7 +494,8 @@ class GtkEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        # NOTE: no setting EventSequenceState.CLAIMED otherwise we don't get
+        # the button release event
         return self.make_ui_callback_viewer(self, 'button-press', button,
                                             data_x, data_y)
 
