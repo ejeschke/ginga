@@ -229,3 +229,142 @@ class PanEvent(UIEvent):
         self.delta_y = delta_y
         self.data_x = data_x
         self.data_y = data_y
+
+
+class SwipeEvent(UIEvent):
+    """A swipe event in a Ginga viewer.
+
+    Attributes
+    ----------
+    button : str
+        The name of the button as set up in the configuration
+
+    state: str
+        'start' (gesture starting), 'move' (in action) or 'stop' (done)
+
+    mode : str
+        The mode name of the mode that was active when the event happened
+
+    modifiers : set of str
+        A set of names of modifier keys that were pressed at the time
+
+    direction : float
+        Direction of swipe in degrees
+
+    amount : float
+        Amount of the swipe
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
+    def __init__(self, button=None, state=None, mode=None, modifiers=None,
+                 direction=None, amount=None, viewer=None):
+        super().__init__(viewer=viewer)
+        self.button = button
+        self.state = state
+        self.mode = mode
+        self.modifiers = modifiers
+        self.direction = direction
+        self.amount = amount
+
+
+class EnterLeaveEvent(UIEvent):
+    """A an enter window/exit window event in a Ginga viewer.
+
+    Attributes
+    ----------
+    state: str
+        'enter' (enter window) or 'leave' (leave window)
+
+    mode : str
+        The mode name of the mode that was active when the event happened
+
+    data_x : float
+        X part of the data coordinates of the viewer under the cursor
+
+    data_y : float
+        Y part of the data coordinates of the viewer under the cursor
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
+    def __init__(self, state=None, mode=None,
+                 data_x=None, data_y=None, viewer=None):
+        super().__init__(viewer=viewer)
+        self.state = state
+        self.mode = mode
+        self.data_x = data_x
+        self.data_y = data_y
+
+
+class FocusEvent(UIEvent):
+    """A focus window event in a Ginga viewer.
+
+    Attributes
+    ----------
+    state: str
+        'focus' (widget has focus) or 'unfocus' (widget lost focus)
+
+    mode : str
+        The mode name of the mode that was active when the event happened
+
+    focus : bool
+        True if the window has focus, False if the window has lost focus
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
+    def __init__(self, state=None, mode=None,
+                 focus=None, viewer=None):
+        super().__init__(viewer=viewer)
+        self.state = state
+        self.mode = mode
+        self.focus = focus
+
+
+class MapEvent(UIEvent):
+    """A map window event in a Ginga viewer.
+
+    Attributes
+    ----------
+    state: str
+        'mapped' (window has been realized) or 'unmapped'
+
+    width: int
+        width of the widget
+
+    height: int
+        height of the widget
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
+    def __init__(self, state=None, width=None, height=None, viewer=None):
+        super().__init__(viewer=viewer)
+        self.state = state
+        self.width = width
+        self.height = height
+
+
+class ResizeEvent(UIEvent):
+    """A resize window event in a Ginga viewer.
+
+    Attributes
+    ----------
+    state: str
+        'resize' (window has been resized)
+
+    width: int
+        width of the widget
+
+    height: int
+        height of the widget
+
+    viewer : subclass of `~ginga.ImageView.ImageViewBase`
+        The viewer in which the event happened
+    """
+    def __init__(self, width=None, height=None, viewer=None):
+        super().__init__(viewer=viewer)
+        self.state = 'resize'
+        self.width = width
+        self.height = height

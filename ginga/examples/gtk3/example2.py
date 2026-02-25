@@ -234,32 +234,12 @@ if __name__ == "__main__":
 
     argprs = ArgumentParser()
 
-    argprs.add_argument("--debug", dest="debug", default=False,
-                        action="store_true",
-                        help="Enter the pdb debugger on main()")
     argprs.add_argument("-r", "--render", dest="render", default='widget',
                         help="Set render type {widget|opengl}")
-    argprs.add_argument("--profile", dest="profile", action="store_true",
-                        default=False,
-                        help="Run the profiler on main()")
     log.addlogopts(argprs)
 
     (options, args) = argprs.parse_known_args(sys.argv[1:])
 
-    # Are we debugging this?
-    if options.debug:
-        import pdb
-
-        pdb.run('main(options, args)')
-
-    # Are we profiling this?
-    elif options.profile:
-        import profile
-
-        print(("%s profile:" % sys.argv[0]))
-        profile.run('main(options, args)')
-
-    else:
-        main(options, args)
+    main(options, args)
 
 # END

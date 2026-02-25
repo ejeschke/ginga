@@ -74,7 +74,7 @@ class ImageViewBindings(object):
     def get_mode_obj(self, mode_name):
         return self._modes[mode_name]
 
-    def window_map(self, viewer):
+    def window_map(self, viewer, g_event):
         #self.to_default_mode(viewer)
         pass
 
@@ -627,23 +627,24 @@ class BindingMapper(Callback.Callbacks):
 
         return False
 
-    def window_map(self, viewer):
+    def window_map(self, viewer, g_event):
         return True
 
-    def window_focus(self, viewer, has_focus):
-        if not has_focus:
+    def window_focus(self, viewer, g_event):
+        if not g_event.focus:
             # fixes a problem with not receiving key release events when the
             # window loses focus
             self._modifiers = frozenset([])
         return False
 
-    def window_enter(self, viewer):
+    def window_enter(self, viewer, g_event):
         return False
 
-    def window_leave(self, viewer):
+    def window_leave(self, viewer, g_event):
         return False
 
-    def window_key_press(self, viewer, keyname):
+    def window_key_press(self, viewer, g_event):
+        keyname = g_event.key
         self.logger.debug("keyname=%s" % (keyname))
         # Is this a modifer key?
         if keyname in self.modifier_map:
@@ -706,7 +707,8 @@ class BindingMapper(Callback.Callbacks):
 
         return res
 
-    def window_key_release(self, viewer, keyname):
+    def window_key_release(self, viewer, g_event):
+        keyname = g_event.key
         self.logger.debug("keyname=%s" % (keyname))
 
         # Is this a modifer key?
@@ -767,7 +769,8 @@ class BindingMapper(Callback.Callbacks):
                                                          last_x, last_y)
         return res
 
-    def window_button_press(self, viewer, btncode, data_x, data_y):
+    def window_button_press(self, viewer, g_event):
+        btncode, data_x, data_y = g_event.button, g_event.data_x, g_event.data_y
         self.logger.debug("x,y=%s,%s btncode=%s" % (data_x, data_y,
                                                     hex(btncode)))
         self._button |= btncode
@@ -810,7 +813,8 @@ class BindingMapper(Callback.Callbacks):
                                                      data_x, data_y)
         return res
 
-    def window_motion(self, viewer, btncode, data_x, data_y):
+    def window_motion(self, viewer, g_event):
+        btncode, data_x, data_y = g_event.button, g_event.data_x, g_event.data_y
 
         button = self.get_button(btncode)
         if button is None:
@@ -848,7 +852,8 @@ class BindingMapper(Callback.Callbacks):
                                                      data_x, data_y)
         return res
 
-    def window_button_release(self, viewer, btncode, data_x, data_y):
+    def window_button_release(self, viewer, g_event):
+        btncode, data_x, data_y = g_event.button, g_event.data_x, g_event.data_y
         self.logger.debug("x,y=%s,%s button=%s" % (data_x, data_y,
                                                    hex(btncode)))
         self._button &= ~btncode
@@ -890,13 +895,13 @@ class BindingMapper(Callback.Callbacks):
                                                      data_x, data_y)
         return res
 
-    def window_scroll(self, viewer, direction, amount, data_x, data_y):
+    def window_scroll(self, viewer, g_event):
         trigger = 'sc_scroll'
         event = events.ScrollEvent(button='scroll', state='scroll',
                                    mode=self._kbdmode,
                                    modifiers=self._modifiers, viewer=viewer,
-                                   direction=direction, amount=amount,
-                                   data_x=data_x, data_y=data_y)
+                                   direction=g_event.direction, amount=g_event.amount,
+                                   data_x=g_event.data_x, data_y=g_event.data_y)
 
         if self._kbdmode is None:
             cbname = 'scroll-none'
@@ -924,7 +929,8 @@ class BindingMapper(Callback.Callbacks):
 
         return res
 
-    def window_pinch(self, viewer, state, rot_deg, scale):
+    def window_pinch(self, viewer, g_event):
+        state, rot_deg, scale = g_event.state, g_event.rot_deg, g_event.scale
         btncode = 0
         button = self.get_button(btncode)
         if button is None:
@@ -965,7 +971,8 @@ class BindingMapper(Callback.Callbacks):
 
         return res
 
-    def window_pan(self, viewer, state, delta_x, delta_y):
+    def window_pan(self, viewer, g_event):
+        state, delta_x, delta_y = g_event.state, g_event.delta_x, g_event.delta_y
         btncode = 0
         button = self.get_button(btncode)
         if button is None:
