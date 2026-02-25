@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 6.0.0 (unreleased)
+Ver 6.0.0 (2016-02-25)
 ======================
 - Added ability to add icons to Ginga-wrapped Button widgets
 - Refactored Pan and Header plugins to use new parent/child plugin
@@ -10,8 +10,8 @@ Ver 6.0.0 (unreleased)
 - Fixed an issue with setting filters in Gtk based FileDialogs
 - Refactoring of the Control module of the reference viewer to separate viewer
   logic from the workspace and plugin management
-- You can now set the start attribute for a local plugin and it will start when
-  a new channel is created
+- You can now set the start attribute for a local plugin in the plugin
+  spec and it will start when a new channel is created
 - New ability to have more than one instance of a global plugin (if enabled)
   and more than one instance of a local plugin per channel (if enabled)
 
@@ -21,12 +21,13 @@ Ver 6.0.0 (unreleased)
 
 - Added a background to Crosshair text for better readability
 - Refactored cursor readout to allow for more flexible ways to override the
-  default.  You can now register a function to the 'cursor_info' callback
+  default.  You can now register a function to the 'pixel-info' callback
   on a canvas, and return the information to show in the readout.
 - Fixed an issue where there was an unintended fill in drawing a Bezier
   curve with the Qt backend
-- Improvements to plugins to use the new the plot viewer (API is slightly
-  changed, thus bump to new major version)
+- Improvements to plugins to use the new the plot viewer (event callback
+  API is changed, thus bump to new major version), but should be backward
+  compatible aside from event callbacks
 - Fix to handling of pan/scroll with touchpads in Qt6
 
 Ver 5.5.1 (2025-12-22)
