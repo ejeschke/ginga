@@ -302,9 +302,13 @@ class ImageViewBase(ViewerBase):
         self.img_bg = (r, g, b)
 
         # For callbacks
-        for name in ('transform', 'image-set', 'image-unset', 'configure',
-                     'redraw', 'limits-set', 'cursor-changed', 'pixel-info'):
+        for name in ('map', 'resize', 'transform', 'image-set', 'image-unset',
+                     'configure', 'redraw', 'limits-set', 'cursor-changed',
+                     'pixel-info'):
             self.enable_callback(name)
+
+        self.add_callback('map', self.map_cb)
+        self.add_callback('resize', self.resize_cb)
         self.add_callback('pixel-info', self.pixel_info_cb)
 
         # private canvas for drawing
@@ -373,6 +377,7 @@ class ImageViewBase(ViewerBase):
         self.logger.debug("widget resized to %dx%d" % (width, height))
 
         self.renderer.resize((width, height))
+        self.redraw(whence=0)
 
         self.make_callback('configure', width, height)
 
@@ -380,6 +385,14 @@ class ImageViewBase(ViewerBase):
         """See :meth:`set_window_size`."""
         self._imgwin_set = True
         self.set_window_size(width, height)
+
+    def map_cb(self, viewer, event):
+        """Called when the viewer widget is mapped to a window."""
+        self.configure(event.width, event.height)
+
+    def resize_cb(self, viewer, event):
+        """Called while the viewer widget is being resized."""
+        self.configure(event.width, event.height)
 
     def configure_surface(self, width, height):
         """See :meth:`configure`."""

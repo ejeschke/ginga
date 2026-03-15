@@ -47,7 +47,7 @@ v1.embed()
 from ipyevents import Event as EventListener
 
 from ginga import ImageView, AstroImage
-from ginga import Mixins, Bindings
+from ginga import Mixins, Bindings, events
 from ginga.canvas import render
 from ginga.util import loader
 from ginga.cursors import cursor_info
@@ -102,7 +102,9 @@ class ImageViewJpw(ImageView.ImageViewBase):
 
         # for some reason these are stored as strings!
         wd, ht = int(jp_img.width), int(jp_img.height)
-        self.configure_window(wd, ht)
+        g_event = events.MapEvent(state='mapped', width=wd, height=ht,
+                                  viewer=self)
+        return self.make_callback('map', g_event)
 
     def get_widget(self):
         return self.jp_img
@@ -140,8 +142,8 @@ class ImageViewJpw(ImageView.ImageViewBase):
     def configure_window(self, width, height):
         self.configure(width, height)
 
-    def _resize_cb(self, event):
-        self.configure_window(event.width, event.height)
+    # def _resize_cb(self, event):
+    #     self.configure_window(event.width, event.height)
 
     def set_cursor(self, cursor):
         # TODO
@@ -216,12 +218,6 @@ class JpwEventMixin:
             "'": 'singlequote',
         }
 
-        # Define cursors
-        cursor_names = cursor_info.get_cursor_names()
-        for curname in cursor_names:
-            curinfo = cursor_info.get_cursor_info(curname)
-            self.define_cursor(curinfo.name, curinfo.web)
-
         for name in ('motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
@@ -232,7 +228,11 @@ class JpwEventMixin:
         """Call this method with the Jupyter image widget (image_w)
         that will be used.
         """
-        super().set_widget(jp_imgw)
+        # Define cursors
+        cursor_names = cursor_info.get_cursor_names()
+        for curname in cursor_names:
+            curinfo = cursor_info.get_cursor_info(curname)
+            self.define_cursor(curinfo.name, curinfo.web)
 
         self.jp_evt = EventListener(source=jp_imgw)
         self.jp_evt.watched_events = [
@@ -245,7 +245,7 @@ class JpwEventMixin:
         self.jp_evt.on_dom_event(self._handle_event)
         self.logger.info("installed event handlers")
 
-        return self.make_callback('map')
+        super().set_widget(jp_imgw)
 
     def _handle_event(self, event):
         # TODO: need focus events and maybe a map event
@@ -270,28 +270,48 @@ class JpwEventMixin:
         return self._keytbl
 
     def focus_event(self, event, has_focus):
-        return self.make_callback('focus', has_focus)
+        g_event = events.FocusEvent(state='focus', mode=None,
+                                    focus=has_focus, viewer=self)
+        return self.make_callback('focus', g_event)
 
     def enter_notify_event(self, event):
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             # TODO: set focus on canvas
             pass
-        return self.make_callback('enter')
+        g_event = events.EnterLeaveEvent(state='enter', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('enter', g_event)
 
     def leave_notify_event(self, event):
         self.logger.debug("leaving widget...")
-        return self.make_callback('leave')
+        g_event = events.EnterLeaveEvent(state='leave', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('leave', g_event)
 
     def key_press_event(self, event):
         keyname = self.transkey(event['code'], keyname=event['key'])
         self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-press', keyname)
+        g_event = events.KeyEvent(key=keyname, state='down', mode=None,
+                                  modifiers=self._modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-press', g_event)
 
     def key_release_event(self, event):
         keyname = self.transkey(event['code'], keyname=event['key'])
         self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-release', keyname)
+        g_event = events.KeyEvent(key=keyname, state='up', mode=None,
+                                  modifiers=self._modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-release', g_event)
 
     def button_press_event(self, event):
         x, y = event['dataX'], event['dataY']
@@ -304,7 +324,11 @@ class JpwEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'button-press', button, data_x, data_y)
+        g_event = events.PointEvent(button=button, state='down', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-press', g_event)
 
     def button_release_event(self, event):
         x, y = event['dataX'], event['dataY']
@@ -317,7 +341,11 @@ class JpwEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'button-release', button, data_x, data_y)
+        g_event = events.PointEvent(button=button, state='up', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-release', g_event)
 
     def motion_notify_event(self, event):
         button = self._button
@@ -328,19 +356,40 @@ class JpwEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'motion', button, data_x, data_y)
+        g_event = events.PointEvent(button=button, state='move', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'motion', g_event)
 
     def scroll_event(self, event):
         x, y = event['dataX'], event['dataY']
         self.last_win_x, self.last_win_y = x, y
         dx, dy = event['deltaX'], event['deltaY']
 
+        data_x, data_y = self.last_data_x, self.last_data_y
+
         if (dx != 0 or dy != 0):
             # <= This browser gives us deltas for x and y
             # Synthesize this as a pan gesture event
-            self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
-            self.make_ui_callback_viewer(self, 'pan', 'move', -dx, -dy)
-            return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
+            g_event = events.PanEvent(button=0, state='start', mode=None,
+                                      modifiers=self._modifiers,
+                                      delta_x=0, delta_y=0,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+            self.make_ui_callback_viewer(self, 'pan', g_event)
+            g_event = events.PanEvent(button=0, state='move', mode=None,
+                                      modifiers=self._modifiers,
+                                      delta_x=-dx, delta_y=-dy,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+            self.make_ui_callback_viewer(self, 'pan', g_event)
+            g_event = events.PanEvent(button=0, state='stop', mode=None,
+                                      modifiers=self._modifiers,
+                                      delta_x=0, delta_y=0,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+            return self.make_ui_callback_viewer(self, 'pan', g_event)
 
         # <= This code path should not be followed under normal
         # circumstances.
@@ -362,8 +411,12 @@ class JpwEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'scroll', direction, num_deg,
-                                            data_x, data_y)
+        g_event = events.ScrollEvent(button=0, state='scroll', mode=None,
+                                     modifiers=self._modifiers,
+                                     direction=direction, amount=num_deg,
+                                     data_x=data_x, data_y=data_y,
+                                     viewer=self)
+        return self.make_ui_callback_viewer(self, 'scroll', g_event)
 
 
 class ImageViewEvent(Mixins.UIMixin, JpwEventMixin, ImageViewJpw):
