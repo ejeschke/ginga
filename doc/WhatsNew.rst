@@ -2,6 +2,11 @@
 What's New
 ++++++++++
 
+Ver 6.1.0 (unreleased)
+======================
+- Remember position and size of a window in an MDI workspaces after a plugin
+  has been closed and reopened
+
 Ver 6.0.0 (2016-02-25)
 ======================
 - Added ability to add icons to Ginga-wrapped Button widgets

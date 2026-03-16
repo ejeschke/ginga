@@ -467,10 +467,12 @@ class PluginManager(Callback.Callbacks):
         if p_info.widget is not None:
             # if there was a GUI built for this plugin, remove it
             try:
-                if p_info.wsname is not None:
+                if p_info.is_toplevel:
+                    self.ds.record_size(p_info.name)
+                elif p_info.wsname is not None:
                     ws = self.ds.get_ws(p_info.wsname)
                     ws.remove_tab(p_info.widget)
-                elif not p_info.is_toplevel:
+                else:
                     self.ds.remove_tab(p_info.tabname)
                 self.dispose_gui(p_info)
 
@@ -510,8 +512,11 @@ class PluginManager(Callback.Callbacks):
                     # spec.ws to be deprecated
                     in_ws = p_info.spec.get('ws', 'in:toplevel')
 
-            if in_ws == 'in:toplevel':
-                bnch = self.ds.add_widget_as_toplevel(p_info.tabname, vbox)
+            is_toplevel = p_info.spec.get('is_toplevel', False)
+            is_dialog = p_info.spec.get('is_dialog', False)
+            if is_toplevel:
+                bnch = self.ds.add_widget_as_toplevel(p_info.tabname, vbox,
+                                                      name=p_info.name)
                 bnch.plugin_info = p_info
                 topw = bnch.parent
                 topw.add_callback('close',
@@ -521,7 +526,7 @@ class PluginManager(Callback.Callbacks):
                 p_info.widget = topw
                 p_info.is_toplevel = True
 
-            elif in_ws == 'in:dialog':
+            elif is_dialog:
                 bnch = self.ds.add_widget_as_dialog(p_info.tabname, vbox)
                 bnch.plugin_info = p_info
                 dialog = bnch.parent
@@ -544,6 +549,8 @@ class PluginManager(Callback.Callbacks):
                 ws_w.add_callback('page-switch', self.tab_switched_cb)
                 p_info.widget = vbox
                 p_info.is_toplevel = False
+
+            p_info.uniqname = bnch.uniqname
 
         except Exception as e:
             errmsg = "Error finishing plugin UI for '%s': %s" % (
@@ -602,10 +609,15 @@ class PluginManager(Callback.Callbacks):
     def dispose_gui(self, p_info):
         self.logger.debug("disposing of gui")
         vbox = p_info.widget
-        self.ds._cleanup_tab(vbox)
+
+        if p_info.is_toplevel:
+            self.ds.remove_widget_from_toplevel(p_info.name)
+        else:
+            self.ds._cleanup_tab(vbox)
         p_info.widget = None
-        vbox.hide()
-        vbox.delete()
+        if vbox.widget is not None:
+            vbox.hide()
+            vbox.delete()
 
 
 def has_keyword_only_parameter(cls, param_name):

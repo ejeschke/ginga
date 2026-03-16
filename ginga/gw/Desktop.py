@@ -128,21 +128,46 @@ class Desktop(Callback.Callbacks):
                 res.append(name)
         return res
 
-    def add_widget_as_toplevel(self, title, widget, data=None):
+    def add_widget_as_toplevel(self, title, widget, data=None, name=None):
         topw = widget.get_app().make_window()
         topw.set_title(title)
         topw.set_widget(widget)
         topw.show()
 
-        bnch = Bunch.Bunch(widget=widget, name=title,
+        if name is None:
+            name = title
+        bnch = self.node.get(name, None)
+        if bnch is None:
+            # New toplevel, record info
+            wd, ht = topw.get_size()
+            x, y = topw.get_pos()
+            params = Bunch.Bunch(width=wd, height=ht, xpos=x, ypos=y)
+            bnch = Bunch.Bunch(kind='toplevel', widget=topw,
+                               name=name, params=params)
+            self.node[name] = bnch
+        else:
+            bnch.widget = topw    # record new top-level widget
+            params = bnch.params
+            topw.resize(params.width, params.height)
+            topw.move(params.xpos, params.ypos)
+
+        bnch = Bunch.Bunch(widget=widget, name=name,
                            enclosure='toplevel', parent=topw,
                            tabname=title, data=data,
                            uniqname=self._get_unique_name(),
                            group=1, wsname=None)
-        if title not in self.tab:
-            self.tab[title] = bnch
+        if name not in self.tab:
+            self.tab[name] = bnch
         self.tab[bnch.uniqname] = bnch
         return bnch
+
+    def remove_widget_from_toplevel(self, name):
+        bnch = self.tab[name]
+        widget = bnch.get('parent', bnch.widget)
+        self.record_size(name)
+        del self.tab[name]
+        del self.tab[bnch.uniqname]
+        self.remove_toplevel(widget)
 
     def add_widget_as_dialog(self, title, widget, data=None):
         dialog = Widgets.Dialog(title=title,
@@ -179,6 +204,18 @@ class Desktop(Callback.Callbacks):
             self.tab[tabname] = bnch
         self.tab[bnch.uniqname] = bnch
         return bnch
+
+    def record_size(self, name):
+        bnch = self.node.get(name, None)
+        if bnch is None:
+            return
+        widget = bnch.widget
+        if widget is None:
+            return
+        params = bnch.params
+        x, y = widget.get_pos()
+        wd, ht = widget.get_size()
+        params.update(dict(xpos=x, ypos=y, width=wd, height=ht))
 
     def _find_nb(self, tabname):
         if tabname not in self.tab:
@@ -1034,6 +1071,7 @@ class Workspace(Widgets.WidgetBase):
                     w.move(*mdi_pos)
 
     def remove_tab(self, child):
+        self.record_position(child)
         self.nb.remove(child)
 
     def get_configuration(self):
@@ -1052,6 +1090,23 @@ class Workspace(Widgets.WidgetBase):
                                  size=size)
         res = dict(wsname=self.name, wstype=self.wstype, tabs=cd)
         return res
+
+    def record_position(self, child):
+        """Record the position and size of `child` in this workspace."""
+        if child.get_widget() is None:
+            return
+        title = child.extdata.get('tab_title', None)
+        if title is None:
+            return
+        pos = child.extdata.get('mdi_pos', None)
+        if pos is None:
+            pos = child.get_pos()
+        size = child.extdata.get('mdi_size', None)
+        if size is None:
+            size = child.get_size()
+
+        tabs_dct = self.child_catalog.setdefault(title, {})
+        tabs_dct.update(dict(title=title, mdi_pos=pos, size=size))
 
     def record_positions(self):
         """Record our placement and size of child windows in the workspace."""
