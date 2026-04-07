@@ -2669,6 +2669,7 @@ class FileDialog(TopLevelMixin, WidgetBase):
         self.widget.setOption(QtGui.QFileDialog.ShowDirsOnly, False)
         if mode == 'save':
             self.widget.setFileMode(QtGui.QFileDialog.AnyFile)
+            self.widget.setAcceptMode(QtGui.QFileDialog.AcceptSave)
         elif mode == 'file':
             self.widget.setFileMode(QtGui.QFileDialog.ExistingFile)
         elif mode == 'files':
