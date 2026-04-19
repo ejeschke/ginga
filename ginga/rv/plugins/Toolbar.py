@@ -332,11 +332,7 @@ class Toolbar_Ginga_Image(Toolbar_Common):
              lambda w: self.start_global_plugin('Zoom'))]
 
     def build_gui(self, container):
-        # TODO: fix for GTK
-        if family.startswith('gtk'):
-            self.orientation = 'horizontal'
-        else:
-            self.orientation = Widgets.get_orientation(container)
+        self.orientation = 'horizontal'
         tb_w = Widgets.Toolbar(orientation=self.orientation)
 
         self.build_toolbar(tb_w, self.layout_common)

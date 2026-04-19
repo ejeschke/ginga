@@ -28,14 +28,11 @@ class FitsViewer(object):
 
         self.app = Widgets.Application(logger=logger)
         self.app.add_callback('shutdown', self.quit)
-        if hasattr(Widgets, 'Page'):
-            self.page = Widgets.Page(_tr("Ginga example2"))
-            self.app.add_window(self.page)
-            self.top = Widgets.TopLevel(_tr("Ginga example2"))
-            self.page.add_dialog(self.top)
-        else:
-            self.top = Widgets.TopLevel(_tr("Ginga example2"))
-            self.app.add_window(self.top)
+        base_url = self.app.get_url()
+        if base_url is not None:
+            self.logger.info(f"view application at: {base_url}")
+        self.top = Widgets.TopLevel(title=_tr("Ginga example2"))
+        self.app.add_window(self.top)
         self.top.add_callback('close', self.closed)
 
         vbox = Widgets.VBox()
@@ -210,8 +207,8 @@ class FitsViewer(object):
         self.top.set_widget(vbox)
 
         self.fs = None
-        if hasattr(GwHelp, 'FileSelection'):
-            self.fs = GwHelp.FileSelection(self.top.get_widget())
+        if hasattr(Widgets, 'FileDialog'):
+            self.fs = Widgets.FileDialog(title=_tr("Open FITS File"))
 
     def set_drawparams(self):
         index = self.wdrawtype.get_index()
@@ -251,7 +248,7 @@ class FitsViewer(object):
         self.top.set_title(filepath)
 
     def open_file(self):
-        self.fs.popup(_tr("Open FITS file"), self.load_file)
+        self.fs.show()
 
     def drop_file_cb(self, viewer, paths):
         filename = paths[0]

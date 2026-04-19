@@ -66,7 +66,9 @@ class ImageViewPg(ImageView.ImageViewBase):
         self.timer_msg = session.make_timer()
         self.timer_msg.add_callback('expired',
                                     lambda t, n: self.clear_onscreen_message())
-
+        res = canvas_w.get_size()
+        if res is None:
+            canvas_w.resize(300, 300)
         wd, ht = canvas_w.get_size()
         self.configure_window(wd, ht)
 
@@ -112,7 +114,9 @@ class ImageViewPg(ImageView.ImageViewBase):
             self.logger.debug("got '%s' RGB image buffer, len=%d" % (
                 format, len(buf)))
 
-            self.pgcanvas.draw_image(img_info)
+            # Now using an image by default
+            # self.pgcanvas.draw_image(img_info)
+            self.pgcanvas.set_image(img_src)
 
         except Exception as e:
             self.logger.error("Couldn't update canvas: %s" % (str(e)))
@@ -136,7 +140,7 @@ class ImageViewPg(ImageView.ImageViewBase):
     def set_cursor(self, cursor):
         if self.pgcanvas is None:
             return
-        #self.pgcanvas.config(cursor=cursor)
+        self.pgcanvas.config(cursor=cursor)
 
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.pgcanvas is None:
@@ -235,6 +239,13 @@ class PgEventMixin:
             "NumpadMultiply": 'numpad_*',
         }
 
+        # define cursor names to web names now--they will be reset
+        # in set_widget()
+        cursor_names = cursor_info.get_cursor_names()
+        for curname in cursor_names:
+            curinfo = cursor_info.get_cursor_info(curname)
+            self.define_cursor(curinfo.name, curinfo.web)
+
         for name in ['motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
                      'scroll', 'map', 'focus', 'enter', 'leave',
@@ -265,6 +276,8 @@ class PgEventMixin:
                               lambda w, e: self.enter_notify_event(Bunch(e)))
         canvas_w.add_callback('leave',
                               lambda w, e: self.leave_notify_event(Bunch(e)))
+        # canvas_w.add_callback('drop-end',
+        #                       lambda w, e: self.drop_event(Bunch(e)))
 
         # Define cursors
         cursor_names = cursor_info.get_cursor_names()

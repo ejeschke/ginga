@@ -458,7 +458,7 @@ class Desktop(Callback.Callbacks):
                                   scrollable=params.scrollable,
                                   use_toolbar=params.use_toolbar,
                                   child_catalog=child_catalog)
-                widget = ws.widget
+                widget = ws
                 # debug(widget)
                 if params.get('default', False):
                     self.default_ws_name = params.name
@@ -829,20 +829,18 @@ class Desktop(Callback.Callbacks):
 
 # WORKSPACES #####
 
-class Workspace(Widgets.WidgetBase):
+class Workspace(Widgets.VBox):
 
     def __init__(self, name, wstype='tab', group=0, detachable=False,
                  use_toolbar=False, child_catalog={}):
-        super(Workspace, self).__init__()
+        Widgets.VBox.__init__(self)
 
         self.name = name
         self.wstype = wstype
         self.wstypes = ['tabs', 'mdi', 'stack', 'grid']
-        self.vbox = Widgets.VBox()
+        self.vbox = self
         self.vbox.set_spacing(0)
         self.vbox.set_border_width(0)
-        # for now
-        self.widget = self.vbox
         self.nb = None
         self.group = group
         self.detachable = detachable
@@ -1026,7 +1024,7 @@ class Workspace(Widgets.WidgetBase):
                 return True
             # widget can't take focus.  If it is a container widget,
             # check its children
-            if isinstance(widget, Widgets.ContainerBase):
+            if isinstance(widget, Widgets.Widget) and widget.is_container():
                 for child in widget.get_children():
                     if _f(child):
                         return True
@@ -1068,7 +1066,8 @@ class Workspace(Widgets.WidgetBase):
                 if size is not None:
                     w.resize(*size)
                 if mdi_pos is not None:
-                    w.move(*mdi_pos)
+                    #w.move(*mdi_pos)
+                    w.set_position(*mdi_pos)
 
     def remove_tab(self, child):
         self.record_position(child)

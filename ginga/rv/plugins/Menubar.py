@@ -147,9 +147,12 @@ class GingaMenubar(Menubar):
         if categories is not None:
             for catname in categories:
                 try:
-                    menu = menu.get_menu(catname)
+                    _menu = menu.get_menu(catname)
+                    if _menu is None:
+                        raise KeyError(catname)
                 except KeyError:
-                    menu = menu.add_menu(catname)
+                    _menu = menu.add_menu(catname)
+                menu = _menu
 
         item = menu.add_name(menuname)
         item.add_callback('activated',

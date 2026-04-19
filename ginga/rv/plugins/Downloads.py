@@ -69,7 +69,7 @@ class Downloads(GingaPlugin.GlobalPlugin):
 
         sc = Widgets.ScrollArea()
         vbox2 = Widgets.VBox()
-        fr = Widgets.Frame("Downloads")
+        fr = Widgets.Frame(title="Downloads")
         self.dlbox = Widgets.VBox()
         fr.set_widget(self.dlbox)
         vbox2.add_widget(fr, stretch=0)

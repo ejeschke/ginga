@@ -174,10 +174,11 @@ def show_example(cbox, top, logger):
         vbox.add_widget(w, stretch=1)
 
     elif wname == 'dial':
-        w = Widgets.Dial()
-        w.set_limits(-20, 20, incr_value=1)
+        w = Widgets.Dial(dtype=float, show_value=True)
+        w.set_limits(-20, 20, incr_value=0.5)
+        w.set_decimals(2)
         w.add_callback('value-changed',
-                       lambda w, val: logger.info("value changed to '{}'".format(w.get_value())))
+                       lambda w, val: logger.info("value changed to {}".format(w.get_value())))
         vbox.add_widget(w)
 
     elif wname == 'togglebutton':
@@ -240,15 +241,15 @@ def show_example(cbox, top, logger):
         vbox.add_widget(w)
         value_label = Widgets.Label("Value: {}".format(w.get_value()))
         w.add_callback('value-changed', lambda r, val: value_label.set_text("Value: {}".format(val)))
-        vbox.add_widget(value_label, stretch=1)
+        vbox.add_widget(value_label)
         # Test set_limits dynamically
         limits_label = Widgets.Label("Set limits (min, max, incr): ")
         change_limits = Widgets.TextEntrySet()
         hbox = Widgets.HBox()
-        hbox.add_widget(limits_label, stretch=1)
-        hbox.add_widget(change_limits, stretch=1)
+        hbox.add_widget(limits_label)
+        hbox.add_widget(change_limits)
         change_limits.add_callback('activated', lambda r: setting_limits(r, w))
-        vbox.add_widget(hbox, stretch=1)
+        vbox.add_widget(hbox)
 
     elif wname == 'slider':
         _vbox = Widgets.VBox()
@@ -273,7 +274,7 @@ def show_example(cbox, top, logger):
         change_val = Widgets.TextEntrySet()
         change_val.add_callback('activated', lambda r: w.set_value(int(r.get_text())))
         hbox.add_widget(set_label)
-        hbox.add_widget(change_val, stretch=1)
+        hbox.add_widget(change_val)
         _vbox.add_widget(hbox, stretch=1)
         # Test set_limits dynamically
         hbox2 = Widgets.HBox()
@@ -282,7 +283,7 @@ def show_example(cbox, top, logger):
         hbox2.add_widget(limits_label)
         hbox2.add_widget(change_limits)
         change_limits.add_callback('activated', lambda r: setting_limits(r, w))
-        _vbox.add_widget(hbox2, stretch=1)
+        _vbox.add_widget(hbox2)
         vbox.add_widget(_vbox)
 
     elif wname == 'scrollbar':
@@ -435,7 +436,7 @@ def show_example(cbox, top, logger):
         img = Widgets.Image()
         img.load_file(os.path.join(icondir, 'ginga-512x512.png'))
         _vbox = Widgets.VBox()
-        _vbox.add_widget(img, stretch=0)
+        _vbox.add_widget(img, stretch=1)
         _vbox.add_widget(a, stretch=0)
         _vbox.add_widget(s, stretch=0)
         w.set_widget(_vbox)
@@ -508,7 +509,9 @@ def show_example(cbox, top, logger):
         hbox2.add_widget(delete_row)
         # Test append_row
         append_button = Widgets.Button("Press to append a row")
-        append_button.add_callback('activated', lambda r: w.append_row())
+        append_button.add_callback('activated',
+                                   lambda r: w.append_row([Widgets.Label("FOO"),
+                                                           Widgets.Label("BAR")]))
         # Test add_widget
         hbox3 = Widgets.HBox()
         label = Widgets.Label("Enter indices to add widget (row,column): ")
@@ -518,13 +521,13 @@ def show_example(cbox, top, logger):
         hbox3.add_widget(add_widget)
 
         vbox.add_widget(w, stretch=1)
-        vbox.add_widget(row_button, stretch=1)
-        vbox.add_widget(col_button, stretch=1)
-        vbox.add_widget(both_button, stretch=1)
-        vbox.add_widget(hbox, stretch=1)
-        vbox.add_widget(hbox2, stretch=1)
-        vbox.add_widget(hbox3, stretch=1)
-        vbox.add_widget(append_button, stretch=1)
+        vbox.add_widget(row_button, stretch=0)
+        vbox.add_widget(col_button, stretch=0)
+        vbox.add_widget(both_button, stretch=0)
+        vbox.add_widget(hbox, stretch=0)
+        vbox.add_widget(hbox2, stretch=0)
+        vbox.add_widget(hbox3, stretch=0)
+        vbox.add_widget(append_button, stretch=0)
 
     elif wname == 'menubar':
         w = Widgets.Menubar()
@@ -550,15 +553,18 @@ def show_example(cbox, top, logger):
         w = Widgets.Toolbar()
         menu = w.add_menu('Menu Type 1', mtype='tool')
         menu.add_name('Larry').add_callback('activated',
-                                            lambda w: logger.info("chose Larry"))
+                                            lambda *args: logger.info("chose Larry"))
         menu.add_name('Curly').add_callback('activated',
-                                            lambda w: logger.info("chose Curly"))
+                                            lambda *args: logger.info("chose Curly"))
         menu.add_name('Moe').add_callback('activated',
-                                          lambda w: logger.info("chose Moe"))
+                                          lambda *args: logger.info("chose Moe"))
         menu = w.add_menu('Menu Type 2', mtype='mbar')
-        menu.add_name('Frank')
-        menu.add_name('Dean')
-        menu.add_name('Sammy')
+        menu.add_name('Frank').add_callback('activated',
+                                            lambda *args: logger.info("chose Frank"))
+        menu.add_name('Dean').add_callback('activated',
+                                            lambda *args: logger.info("chose Dean"))
+        menu.add_name('Sammy').add_callback('activated',
+                                            lambda *args: logger.info("chose Sammy"))
         w.add_widget(Widgets.Button('A Button'))
         w.add_separator()
         w.add_action("Toggle me", toggle=True)
@@ -567,23 +573,28 @@ def show_example(cbox, top, logger):
         vbox.add_widget(Widgets.Label("App content"), stretch=1)
 
     elif wname == 'dialog':
-        dia = Widgets.Dialog(title="Dialog Title",
-                             buttons=[('ok', 0), ('cancel', 1)],
-                             parent=top, modal=False)
-        dia.add_callback('activated',
-                         lambda w, rsp: logger.info("user chose %s" % (rsp)))
-        cntr = dia.get_content_area()
-        cntr.add_widget(Widgets.Label("My Dialog Content"))
+        def show_dialog():
+            dia1 = Widgets.Dialog(title="Dialog Title",
+                                  buttons=[('ok', 0), ('cancel', 1)],
+                                  parent=top, modal=True)
+            def _close(w, rsp):
+                logger.info(f"user chose {rsp}")
+                w.hide()
+            dia1.resize(400, 300)
+            dia1.add_callback('activated', _close)
+            cntr = dia1.get_content_area()
+            cntr.add_widget(Widgets.Label("My Dialog Content"))
+            dia1.show()
 
         # add some content to main app widget
         w = Widgets.Label("Hello World label")
         vbox.add_widget(w, stretch=1)
         hbox = Widgets.HBox()
         w = Widgets.Button("Open Dialog")
-        w.add_callback('activated', lambda w: dia.show())
+        w.add_callback('activated', lambda w: show_dialog())
         hbox.add_widget(w)
         w = Widgets.Button("Close Dialog")
-        w.add_callback('activated', lambda w: dia.hide())
+        w.add_callback('activated', lambda w: dia1.hide())
         hbox.add_widget(w)
         vbox.add_widget(hbox)
 
@@ -596,6 +607,7 @@ def show_example(cbox, top, logger):
     dia = Widgets.Dialog(title="Example: " + wname,
                          parent=top, modal=False)
     dia.add_callback('close', lambda *args: dia.delete())
+    dia.resize(400, 300)
     cntr = dia.get_content_area()
     cntr.add_widget(vbox)
     if hasattr(top, 'add_dialog'):
@@ -616,14 +628,7 @@ def main(options, args):
     app = Widgets.Application(logger=logger)
     app.add_callback('shutdown', quit)
 
-    page = None
-    if hasattr(app, 'script_imports'):
-        app.script_imports.append('jqx')
-
-        top = Widgets.Page(title="Ginga Wrapped Widgets")
-        app.add_window(top)
-    else:
-        top = app.make_window("Ginga Wrapped Widgets")
+    top = app.make_window("Ginga Wrapped Widgets")
 
     top.add_callback('close', quit)
 
@@ -647,6 +652,7 @@ def main(options, args):
     hbox.add_widget(btn)
 
     top.set_widget(hbox)
+    top.resize(300, 50)
     top.show()
     top.raise_()
 

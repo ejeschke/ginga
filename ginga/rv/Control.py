@@ -112,7 +112,7 @@ class GingaShell(GenericShell):
 
         # state for implementing field-info callback
         self._cursor_task = self.get_backend_timer()
-        self._cursor_task.set_callback('expired', self._cursor_timer_cb)
+        self._cursor_task.add_callback('expired', self._cursor_timer_cb)
         self._cursor_last_update = time.time()
         self.cursor_interval = self.settings.get('cursor_interval', 0.050)
 
@@ -802,7 +802,7 @@ class GingaShell(GenericShell):
         ws = self.ds.make_ws(name=wsname, group=1, wstype=wstype,
                              use_toolbar=use_toolbar)
         if inSpace != 'top level':
-            self.ds.add_tab(inSpace, ws.widget, 1, ws.name)
+            self.ds.add_tab(inSpace, ws, 1, ws.name)
         else:
             #width, height = 700, 800
             #self.ds.create_toplevel_ws(width, height, group=1)

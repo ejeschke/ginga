@@ -64,7 +64,7 @@ class Zoom(GingaPlugin.GlobalPlugin):
         self.zoom_y = 0
         self.t_abszoom = True
         self.zoomtask = fv.get_backend_timer()
-        self.zoomtask.set_callback('expired', self.showzoom_timer_cb)
+        self.zoomtask.add_callback('expired', self.showzoom_timer_cb)
         self.fitsimage_focus = None
         self.layer_tag = 'shared-canvas'
         self.update_time = time.time()

@@ -9,7 +9,7 @@ from ginga.misc import log
 from ginga import colors
 
 
-class Readout(object):
+class Readout:
 
     def __init__(self, width, height):
         logger = log.get_logger(null=True)
@@ -22,8 +22,9 @@ class Readout(object):
         readout.set_bg(*bg)
 
         self.viewer = readout
-        self.readout = Widgets.wrap(readout.get_widget())
-        self.readout.resize(width, height)
+        readout_w = readout.get_widget()
+        #readout_w.resize(width, height)
+        self.readout = Widgets.wrap(readout_w)
 
         canvas = readout.get_canvas()
         Text = canvas.get_draw_class('text')

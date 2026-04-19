@@ -50,7 +50,7 @@ class Cursor(GingaPlugin.GlobalPlugin):
         self.gui_up = False
 
     def build_gui(self, container):
-        readout = Readout.Readout(-1, 24)
+        readout = Readout.Readout(1, 24)
 
         font_size = self.settings.get('font_size', None)
         if font_size is None:

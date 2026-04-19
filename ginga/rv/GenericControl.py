@@ -556,8 +556,8 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
             self.quit()
 
         # confirm close with a dialog here
-        q_quit = Widgets.Dialog(title="Confirm Quit", modal=False,
-                                parent=self.w.root,
+        q_quit = Widgets.Dialog(title="Confirm Quit", modal=True,
+                                parent=self.w.root, autoclose=False,
                                 buttons=[("Cancel", False), ("Confirm", True)])
         # necessary so it doesn't get garbage collected right away
         self.w.quit_dialog = q_quit
