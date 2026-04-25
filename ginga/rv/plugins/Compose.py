@@ -173,7 +173,6 @@ class Compose(GingaPlugin.LocalPlugin):
         bd.enable_cmap(True)
 
         iw = Viewers.GingaViewerWidget(zi)
-        iw.resize(self._wd, self._ht)
 
         zi.get_canvas().add(self.canvas)
         self.canvas.set_surface(zi)

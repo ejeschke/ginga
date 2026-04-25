@@ -615,7 +615,7 @@ class PluginManager(Callback.Callbacks):
         else:
             self.ds._cleanup_tab(vbox)
         p_info.widget = None
-        if vbox.widget is not None:
+        if vbox.get_widget() is not None:
             vbox.hide()
             vbox.delete()
 

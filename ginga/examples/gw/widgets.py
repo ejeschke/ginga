@@ -562,7 +562,7 @@ def show_example(cbox, top, logger):
         menu.add_name('Frank').add_callback('activated',
                                             lambda *args: logger.info("chose Frank"))
         menu.add_name('Dean').add_callback('activated',
-                                            lambda *args: logger.info("chose Dean"))
+                                           lambda *args: logger.info("chose Dean"))
         menu.add_name('Sammy').add_callback('activated',
                                             lambda *args: logger.info("chose Sammy"))
         w.add_widget(Widgets.Button('A Button'))
@@ -577,9 +577,11 @@ def show_example(cbox, top, logger):
             dia1 = Widgets.Dialog(title="Dialog Title",
                                   buttons=[('ok', 0), ('cancel', 1)],
                                   parent=top, modal=True)
+
             def _close(w, rsp):
                 logger.info(f"user chose {rsp}")
                 w.hide()
+
             dia1.resize(400, 300)
             dia1.add_callback('activated', _close)
             cntr = dia1.get_content_area()
@@ -593,9 +595,10 @@ def show_example(cbox, top, logger):
         w = Widgets.Button("Open Dialog")
         w.add_callback('activated', lambda w: show_dialog())
         hbox.add_widget(w)
-        w = Widgets.Button("Close Dialog")
-        w.add_callback('activated', lambda w: dia1.hide())
-        hbox.add_widget(w)
+        # TODO
+        #w = Widgets.Button("Close Dialog")
+        #w.add_callback('activated', lambda w: dia.hide())
+        #hbox.add_widget(w)
         vbox.add_widget(hbox)
 
     else:

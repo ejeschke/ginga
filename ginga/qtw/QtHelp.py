@@ -49,7 +49,7 @@ try:
                             QDrag, QPainterPath, QBrush, QFontDatabase,
                             QCursor, QFontMetrics, QSurfaceFormat,
                             QTextOption, QWheelEvent)
-    from qtpy.QtWidgets import QOpenGLWidget  # noqa
+    from qtpy.QtWidgets import QOpenGLWidget, QWIDGETSIZE_MAX  # noqa
     from qtpy.QtCore import QItemSelectionModel  # noqa
     from qtpy.QtWidgets import QApplication, QWidget  # noqa
     from qtpy import QtSvg  # noqa

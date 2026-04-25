@@ -168,7 +168,6 @@ class Histogram(GingaPlugin.LocalPlugin):
         self.plot.add_callback('button-press', self.set_cut_by_click)
         self.plot.add_callback('scroll', self.adjust_cuts_scroll)
         w = self.plot.get_ginga_widget()
-        w.resize(400, 400)
         paned.add_widget(Widgets.hadjust(w, orientation))
 
         vbox = Widgets.VBox()

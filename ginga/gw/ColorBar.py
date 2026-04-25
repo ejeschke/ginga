@@ -63,10 +63,10 @@ class ColorBar(Callback.Callbacks):
 
         #cbar.configure(width, height)
         iw = Viewers.GingaViewerWidget(viewer=cbar)
+
+        w = cbar.get_widget()
+        #w.set_min_size(None, height)
         self.widget = iw
-        # NOTE: this resize causes the widget to lose it's height somehow
-        # under Gtk due to the hack to allow resize down (see gtk3w/Widget.py)
-        #iw.resize(width, height)
 
         font = self.settings.get('font', 'sans')
         fontsize = self.settings.get('fontsize', 10)

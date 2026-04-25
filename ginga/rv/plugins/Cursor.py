@@ -47,10 +47,11 @@ class Cursor(GingaPlugin.GlobalPlugin):
         fv.set_callback('channel-change', self.focus_cb)
 
         self.readout = None
+        self.desired_height = 24
         self.gui_up = False
 
     def build_gui(self, container):
-        readout = Readout.Readout(1, 24)
+        readout = Readout.Readout(1, self.desired_height)
 
         font_size = self.settings.get('font_size', None)
         if font_size is None:

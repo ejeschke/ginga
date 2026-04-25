@@ -12,6 +12,7 @@ import sys
 import os
 import logging
 import logging.handlers
+import warnings
 import threading
 
 # 3rd party
@@ -818,6 +819,7 @@ class ReferenceViewer(object):
                     ginga_shell.gui_do(ginga_shell.open_uris, [imgfile],
                                        chname=chname)
 
+        disable_warnings()
         try:
             try:
                 # if there is a network component, start it
@@ -825,6 +827,12 @@ class ReferenceViewer(object):
                     logger.info("starting network interface...")
                     ginga_shell.start()
 
+                if hasattr(ginga_shell, 'get_url'):
+                    base_url = ginga_shell.get_url()
+                    print(f"visit {base_url} to view the application")
+                    logger.info(f"visit {base_url} to view the application")
+
+                    logger.info("starting network interface...")
                 # Main loop to handle GUI events
                 logger.info("entering mainloop...")
                 ginga_shell.mainloop(timeout=0.001)
@@ -837,6 +845,23 @@ class ReferenceViewer(object):
             ev_quit.set()
 
         sys.exit(0)
+
+
+def _default_showwarning(message, category, filename, lineno, file=None,
+                         line=None):
+    if file is None:
+        file = sys.stderr
+    try:
+        text = warnings.formatwarning(message, category, filename,
+                                      lineno, line)
+        file.write(text)
+    except OSError:
+        pass
+
+
+def disable_warnings():
+    logging.captureWarnings(False)
+    warnings.showwarning = _default_showwarning
 
 
 def reference_viewer(sys_argv):

@@ -30,9 +30,9 @@ class FitsViewer(object):
         vbox.set_border_width(2)
         vbox.set_spacing(1)
 
-        hbox = Widgets.HBox()
-        hbox.set_border_width(2)
-        hbox.set_spacing(4)
+        gbox = Widgets.GridBox(rows=1, columns=2)
+        gbox.set_border_width(2)
+        gbox.set_column_spacing(4)
 
         v1 = Viewers.CanvasView(logger)
         v1.enable_autocuts('on')
@@ -58,8 +58,8 @@ class FitsViewer(object):
         v1.set_canvas(shcanvas)
 
         v1.set_desired_size(300, 300)
-        iw = Viewers.GingaViewerWidget(viewer=v1)
-        hbox.add_widget(iw, stretch=1)
+        iw = Viewers.GingaScrolledViewerWidget(viewer=v1)
+        gbox.add_widget(iw, 0, 0)
 
         # Add a second viewer viewing the same canvas
         v2 = Viewers.CanvasView(logger)
@@ -84,8 +84,8 @@ class FitsViewer(object):
         bd.enable_all(True)
 
         v2.set_desired_size(300, 300)
-        iw = Viewers.GingaViewerWidget(viewer=v2)
-        hbox.add_widget(iw, stretch=1)
+        iw = Viewers.GingaScrolledViewerWidget(viewer=v2)
+        gbox.add_widget(iw, 0, 1)
 
         # 2nd canvas as a subcanvas of the shared canvas
         canvas = self.dc.DrawingCanvas()
@@ -103,7 +103,7 @@ class FitsViewer(object):
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
 
-        vbox.add_widget(hbox, stretch=1)
+        vbox.add_widget(gbox, stretch=1)
 
         self.readout = Widgets.Label("")
         vbox.add_widget(self.readout, stretch=0)
@@ -214,10 +214,12 @@ class FitsViewer(object):
         if len(fileName) != 0:
             self.load_file(self.viewer1, fileName)
 
-    def drop_file(self, viewer, paths):
-        fileName = paths[0]
-        #print(fileName)
-        self.load_file(viewer, fileName)
+    def drop_file(self, viewer, event):
+        if event.drag_type == 'uris':
+            paths = event.contents['body']
+            filename = paths[0]
+            self.load_file(viewer, filename)
+        return True
 
     def motion(self, viewer, button, data_x, data_y):
 

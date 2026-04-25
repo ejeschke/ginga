@@ -211,14 +211,12 @@ class Cuts(GingaPlugin.LocalPlugin):
                                         width=400, height=400)
         self.cuts_plot.set_grid(True)
         self.plot = self.cuts_plot.get_ginga_widget()
-        self.plot.resize(400, 400)
 
         self.slit_plot = plots.Plot(logger=self.logger,
                                     width=400, height=400)
         self.slit_plot.set_background('black')
         self.slit_plot.set_grid(False)
         self.plot2 = self.slit_plot.get_ginga_widget()
-        self.plot2.resize(400, 400)
 
         captions = (('Cut:', 'label', 'Cut', 'combobox',
                      'New Cut Type:', 'label', 'Cut Type', 'combobox'),

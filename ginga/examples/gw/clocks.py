@@ -13,8 +13,6 @@ Usage:
   $ clock.py --help
   $ clock.py --show-timezones
   $ clock.py --show-colors
-
-NOTE: needs python >= 3.9
 """
 import sys
 import os
@@ -104,7 +102,8 @@ class Clock(object):
                               coord='window')
         self.canvas.add(self.suppl_txt, tag='_suppl', redraw=False)
 
-        self.canvas.update_canvas(whence=3)
+        dt = datetime.now(tz=timezone.utc)
+        self.update_clock(dt)
 
     def update_clock(self, dt):
         """This method is called by the ClockApp whenever the timer fires
@@ -115,7 +114,8 @@ class Clock(object):
         if self.show_seconds:
             fmt = "%H:%M:%S"
 
-        self.time_txt.text = dt.strftime(fmt)
+        time_txt = dt.strftime(fmt)
+        self.time_txt.text = time_txt
 
         suppl_text = "{0} {1}".format(dt.strftime("%Y-%m-%d"),
                                       self.timezone_name)
@@ -144,7 +144,7 @@ class ClockApp(object):
         self.colors = self.settings.get('colors', colors)
 
         # now import our items
-        from ginga.gw import Widgets, GwHelp
+        from ginga.gw import Widgets
 
         self.app = Widgets.Application(logger=logger)
         self.app.add_callback('shutdown', self.quit)
@@ -210,7 +210,8 @@ class ClockApp(object):
         self.top.set_widget(vbox)
 
         self.clocks = {}
-        self.timer = GwHelp.Timer(1.0)
+        #self.timer = self.app.make_timer(1.0)
+        self.timer = Widgets.Timer()
         self.timer.add_callback('expired', self.timer_cb)
         self.timer.start(1.0)
 
@@ -252,18 +253,18 @@ class ClockApp(object):
             timezone_info = timezone_info.location
         self.clocks[timezone_info] = clock
 
-        self.grid.add_widget(clock.widget, row, col, stretch=1)
+        self.grid.add_widget(clock.widget, row, col)
 
     def timer_cb(self, timer):
         """Timer callback.  Update all our clocks."""
+        # update clocks approx every second
+        timer.start(1.0)
+
         dt_now = datetime.now(tz=timezone.utc)
         self.logger.debug("timer fired. utc time is '%s'" % (str(dt_now)))
 
         for clock in self.clocks.values():
             clock.update_clock(dt_now)
-
-        # update clocks approx every second
-        timer.start(1.0)
 
     def set_geometry(self, geometry):
         # translation of X window geometry specification WxH+X+Y
@@ -350,8 +351,12 @@ def main(options, args):
 
     clock.top.raise_()
 
+    app = clock.top.get_app()
+    base_url = app.get_url()
+    if base_url is not None:
+        logger.info(f"view application at: {base_url}")
+
     try:
-        app = clock.top.get_app()
         app.mainloop()
 
     except KeyboardInterrupt:

@@ -18,13 +18,19 @@ class Readout:
         readout = Viewers.CanvasView(logger=logger)
         readout.name = 'readout'
         readout.set_desired_size(width, height)
+
+        readout_w = Viewers.GingaViewerWidget(viewer=readout)
+        hbox = Widgets.HBox()
+        hbox.set_padding(0)
+        hbox.add_widget(readout_w, stretch=1)
+        hbox.set_min_size(None, height)
+        hbox.set_max_size(None, height)
+
         bg = colors.lookup_color('#202030')
         readout.set_bg(*bg)
 
         self.viewer = readout
-        readout_w = readout.get_widget()
-        #readout_w.resize(width, height)
-        self.readout = Widgets.wrap(readout_w)
+        self.readout = hbox
 
         canvas = readout.get_canvas()
         Text = canvas.get_draw_class('text')

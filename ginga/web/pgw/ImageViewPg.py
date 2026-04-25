@@ -5,14 +5,17 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import threading
 
-from ginga import ImageView, Mixins, Bindings
+from pgwidgets.sync import Widgets as PGW
+
+from ginga import ImageView, Mixins, Bindings, events
 from ginga.misc.Bunch import Bunch
 from ginga.canvas import render
 from ginga.cursors import cursor_info
-from ginga.web.pgw import PgHelp
+from ginga.web.pgw import Widgets
 
-default_html_fmt = 'png'
+default_html_fmt = 'jpeg'
 
 
 class ImageViewPgError(ImageView.ImageViewError):
@@ -24,7 +27,7 @@ class ImageViewPg(ImageView.ImageViewBase):
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         ImageView.ImageViewBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap, settings=settings)
-
+        self.needs_scrolledview = True
         self.pgcanvas = None
 
         # format for rendering image on HTML5 canvas
@@ -37,7 +40,10 @@ class ImageViewPg(ImageView.ImageViewBase):
         # this should already be so, but just in case...
         self.defer_redraw = True
 
+        self._timer_resize_lock = threading.RLock()
+        self._delayed_size = (0, 0)
         # these will be assigned in set_widget()
+        self.timer_resize = None
         self.timer_redraw = None
         self.timer_msg = None
 
@@ -60,15 +66,15 @@ class ImageViewPg(ImageView.ImageViewBase):
         canvas_w.add_callback('resize', self.canvas_resize_cb)
 
         session = canvas_w.session
+        self.timer_resize = session.make_timer()
+        self.timer_resize.add_callback('expired',
+                                       lambda t, n: self.delayed_resize_cb())
         self.timer_redraw = session.make_timer()
         self.timer_redraw.add_callback('expired',
                                        lambda t, n: self.delayed_redraw())
         self.timer_msg = session.make_timer()
         self.timer_msg.add_callback('expired',
                                     lambda t, n: self.clear_onscreen_message())
-        res = canvas_w.get_size()
-        if res is None:
-            canvas_w.resize(300, 300)
         wd, ht = canvas_w.get_size()
         self.configure_window(wd, ht)
 
@@ -108,15 +114,11 @@ class ImageViewPg(ImageView.ImageViewBase):
 
             buf = self.renderer.get_surface_as_rgb_format_bytes(
                 format=format, quality=90)
-            img_src = PgHelp.get_image_src_from_buffer(buf, imgtype=format)
-            img_info = dict(src=img_src, x=0, y=0)
-
             self.logger.debug("got '%s' RGB image buffer, len=%d" % (
                 format, len(buf)))
 
             # Now using an image by default
-            # self.pgcanvas.draw_image(img_info)
-            self.pgcanvas.set_image(img_src)
+            self.pgcanvas.set_binary_image(buf, format)
 
         except Exception as e:
             self.logger.error("Couldn't update canvas: %s" % (str(e)))
@@ -137,10 +139,11 @@ class ImageViewPg(ImageView.ImageViewBase):
         """Does not include overlaid graphics."""
         pass
 
-    def set_cursor(self, cursor):
+    def set_cursor(self, name):
         if self.pgcanvas is None:
             return
-        self.pgcanvas.config(cursor=cursor)
+        #self.pgcanvas.config(cursor=cursor)
+        self.pgcanvas.set_cursor(name)
 
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.pgcanvas is None:
@@ -164,10 +167,16 @@ class ImageViewPg(ImageView.ImageViewBase):
         self.redraw(whence=0)
 
     def canvas_resize_cb(self, canvas_w, event):
-        wd, ht = event['width'], event['height']
-        self.logger.debug("canvas resized to %dx%d" % (wd, ht))
-        self.configure_window(wd, ht)
-        self.redraw(whence=0)
+        with self._timer_resize_lock:
+            self._delayed_size = (event['width'], event['height'])
+            self.timer_resize.cond_set(0.25)
+
+    def delayed_resize_cb(self):
+        with self._timer_resize_lock:
+            wd, ht = self._delayed_size
+            self.logger.info("canvas resized to %dx%d" % (wd, ht))
+            self.configure_window(wd, ht)
+            self.redraw(whence=0)
 
     def resize(self, width, height):
         """Resize our window to width x height.
@@ -176,7 +185,6 @@ class ImageViewPg(ImageView.ImageViewBase):
         # this shouldn't be needed
         #self.configure_window(width, height)
         self.pgcanvas.resize(width, height)
-
 
 
 class PgEventMixin:
@@ -276,26 +284,28 @@ class PgEventMixin:
                               lambda w, e: self.enter_notify_event(Bunch(e)))
         canvas_w.add_callback('leave',
                               lambda w, e: self.leave_notify_event(Bunch(e)))
-        # canvas_w.add_callback('drop-end',
-        #                       lambda w, e: self.drop_event(Bunch(e)))
+        canvas_w.add_callback('drop-progress',
+                              lambda w, e: self.drop_progress_event(e))
+        canvas_w.add_callback('drop-end',
+                              lambda w, e: self.drop_event(e))
 
         # Define cursors
         cursor_names = cursor_info.get_cursor_names()
         for curname in cursor_names:
             curinfo = cursor_info.get_cursor_info(curname)
-            self.build_cursor(curinfo)
+            self.build_cursor(canvas_w, curinfo)
             self.define_cursor(curinfo.name, curinfo.name)
 
-        self.pgcanvas.set_cursor('pick')
+        canvas_w.set_cursor('pick')
 
-    def build_cursor(self, curinfo):
+    def build_cursor(self, canvas_w, curinfo):
         size_px = 16
         wd = int(curinfo.scale_width * size_px)
         ht = int(curinfo.scale_height * size_px)
         hotspot_x = int(curinfo.point_x_pct * wd)
         hotspot_y = int(curinfo.point_y_pct * ht)
-        self.pgcanvas.add_cursor(curinfo.name, curinfo.path,
-                                 hotspot_x, hotspot_y, [wd, ht])
+        canvas_w.add_cursor(curinfo.name, curinfo.path,
+                            hotspot_x, hotspot_y, [wd, ht])
 
     def set_cursor(self, name):
         if self.pgcanvas is not None:
@@ -347,7 +357,7 @@ class PgEventMixin:
         # We look up the code to determine the key name
         keycode = event.keycode
         self.logger.debug("key down event, key='%s', keycode=%s" % (event.key,
-                                                                   keycode))
+                                                                    keycode))
         keyname = self.transkey(event.key, keycode)
         self.logger.debug("keyname=%s" % (keyname))
 
@@ -435,65 +445,33 @@ class PgEventMixin:
         return self.make_ui_callback_viewer(self, 'scroll', direction,
                                             num_degrees, data_x, data_y)
 
+    def drop_progress_event(self, event):
+        pass
+
     def drop_event(self, event):
-        data = event.delta
-        self.logger.debug("data=%s" % (str(data)))
-        paths = data.split('\n')
-        self.logger.debug("dropped text(s): %s" % (str(paths)))
-        return self.make_ui_callback_viewer(self, 'drag-drop', paths)
+        if event['type'] != 'drop':
+            return
 
-    def pinch_event(self, event):
-        self.logger.debug("pinch: event=%s" % (str(event)))
-        state = 'move'
-        if event.type == 'pinchstart' or event.isfirst:
-            state = 'start'
-        elif event.type == 'pinchend' or event.isfinal:
-            state = 'end'
-        rot = event.theta
-        scale = event.scale
-        self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
-            rot, scale, state))
+        drop = events.DropEvent()
+        # common elements for a drop
+        data_x, data_y = self.check_cursor_location()
+        drop.set(timestamp=event['time_stamp'], types=event['types'],
+                 x=event['x'], y=event['y'], data_x=data_x, data_y=data_y)
 
-        return self.make_ui_callback_viewer(self, 'pinch', state, rot, scale)
+        if len(event["files"]) > 0:
+            drop.set_blobs(event["files"])
+            drop.set(types=event['types'], encoding='base64')
 
-    def rotate_event(self, event):
-        state = 'move'
-        if event.type == 'rotatestart' or event.isfirst:
-            state = 'start'
-        elif event.type == 'rotateend' or event.isfinal:
-            state = 'end'
-        rot = event.theta
-        self.logger.debug("rotate gesture rot=%f state=%s" % (
-            rot, state))
+        elif len(event["text"]) > 0:
+            drop.set_text(event["text"])
 
-        return self.make_ui_callback_viewer(self, 'rotate', state, rot)
+        elif len(event["html"]) > 0:
+            drop.set_html(event["html"])
 
-    def pan_event(self, event):
-        state = 'move'
-        if event.type == 'panstart' or event.isfirst:
-            state = 'start'
-        elif event.type == 'panend' or event.isfinal:
-            state = 'end'
-        # TODO: need to know which ones to flip
-        dx, dy = -event.dx, event.dy
-        self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
-            dx, dy, state))
+        elif event["url"] is not None:
+            drop.set_uris([event["url"]])
 
-        return self.make_ui_callback_viewer(self, 'pan', state, dx, dy)
-
-    def swipe_event(self, event):
-        if event.isfinal:
-            state = 'end'  # noqa
-            self.logger.debug("swipe gesture event=%s" % (str(event)))
-            ## self.logger.debug("swipe gesture hdir=%s vdir=%s" % (
-            ##     hdir, vdir))
-            ## return self.make_ui_callback_viewer(self, 'swipe', state,
-            ##                                     hdir, vdir)
-
-    def tap_event(self, event):
-        if event.isfinal:
-            state = 'end'  # noqa
-            self.logger.debug("tap gesture event=%s" % (str(event)))
+        return self.make_ui_callback_viewer(self, 'drag-drop', drop)
 
 
 class ImageViewEvent(Mixins.UIMixin, PgEventMixin, ImageViewPg):
@@ -568,7 +546,126 @@ class CanvasView(ImageViewZoom):
         self.objects = [self.private_canvas]
 
     def set_canvas(self, canvas, private_canvas=None):
-        super(CanvasView, self).set_canvas(canvas,
-                                           private_canvas=private_canvas)
+        super().set_canvas(canvas, private_canvas=private_canvas)
 
         self.objects[0] = self.private_canvas
+
+
+class ScrolledViewPg(PGW.AbstractScrollArea):
+    """A class that can take a viewer as a parameter and add scroll bars
+    that respond to the pan/zoom levels.
+    """
+
+    def __init__(self, session, viewer):
+        self.viewer = viewer
+        super().__init__(session)
+
+        self._bar_status = dict(horizontal='on', vertical='on')
+        # the window jiggles annoyingly as the scrollbar is alternately
+        # shown and hidden if we use the default "as needed" policy, so
+        # default to always showing them (user can change this after
+        # calling the constructor, if desired)
+        self.scroll_bars(horizontal='on', vertical='on')
+
+        self._adjusting = False
+        self._scrolling = False
+        self.pad = 0
+        self.viewer_w = None
+
+        # we parent the viewer widget
+        w = viewer.get_widget()
+        if w is None:
+            # <-- viewer has not had a widget set yet--let's create one
+            self.viewer_w = PGW.Image(session, interactive=True,
+                                      use_animation_frame=True)
+            viewer.set_widget(self.viewer_w)
+        else:
+            # <-- viewer already had a widget
+            self.viewer_w = w
+
+        # and embed it in our scroll area
+        self.set_widget(self.viewer_w)
+
+        self.timer_scroll_lock = threading.RLock()
+        self.timer_scroll = PGW.Timer(session)
+        self.timer_scroll.add_callback('expired', self.delayed_scrolled_cb)
+
+        # callback when the user scrolls
+        self.add_callback('scrolled', self._scrolled_cb)
+        # callback when the user resizes our scroll area
+        self.add_callback('area-resize', self._resize_cb)
+
+        # callback when the viewer redraws
+        self.viewer.add_callback('redraw', self._calc_scrollbars)
+        # callback when the viewer limits are set
+        self.viewer.add_callback('limits-set',
+                                 lambda v, l: self._calc_scrollbars(v, 0))
+
+        self._calc_scrollbars(viewer, 0)
+
+    def _resize_cb(self, mywidget, wd, ht, v_thmb_wd, h_thmb_wd):
+        """Resize the viewer widget when the ScrolledView is resized."""
+        if self.viewer_w is not None:
+            self.viewer_w.resize(wd, ht)
+
+    def _scrolled_cb(self, mywidget, scroll_h_pct, scroll_v_pct):
+        """Gets called when our scroll bars are manipulated."""
+        if self._adjusting:
+            return
+
+        with self.timer_scroll_lock:
+            self.timer_scroll.cond_set(0.15)
+
+    def delayed_scrolled_cb(self, timer, *args):
+        """Gets called when our scroll bars are manipulated."""
+        if self._adjusting:
+            return
+
+        self._scrolling = True
+        try:
+            scroll_h_pct, scroll_v_pct = self.get_scroll_percent()
+            pct_x = scroll_h_pct
+            # invert Y pct because of orientation of scrollbar
+            pct_y = 1.0 - scroll_v_pct
+
+            self.viewer.pan_by_pct(pct_x, pct_y, pad=self.pad)
+
+            # This shouldn't be necessary, but seems to be
+            self.viewer.redraw(whence=0)
+
+        finally:
+            self._scrolling = False
+
+    def _calc_scrollbars(self, viewer, whence):
+        """Calculate and set the scrollbar handles from the pan and
+        zoom positions.
+        """
+        if self._scrolling or whence > 0:
+            return
+
+        # flag that suppresses a cyclical callback
+        self._adjusting = True
+        try:
+            res = self.viewer.calc_pan_pct(pad=self.pad)
+            if res is None:
+                return
+
+            self.set_thumb_percent(res.thm_pct_x, res.thm_pct_y)
+            pct_x, pct_y = res.pan_pct_x, 1.0 - res.pan_pct_y
+            self.set_scroll_percent(pct_x, pct_y)
+
+        finally:
+            self._adjusting = False
+
+    def scroll_bars(self, horizontal='on', vertical='on'):
+        self._bar_status.update(dict(horizontal=horizontal,
+                                     vertical=vertical))
+        self.set_scroll_bar_visibility(horizontal, vertical)
+
+    def get_scroll_bars_status(self):
+        return self._bar_status
+
+
+class ScrolledView(ScrolledViewPg):
+    def __init__(self, viewer, parent=None):
+        super().__init__(Widgets._session, viewer)

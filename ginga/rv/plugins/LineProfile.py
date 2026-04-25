@@ -118,7 +118,6 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self._ax2 = self.plot.ax.twiny()
 
         w = self.plot.get_ginga_widget()
-        w.resize(400, 400)
         paned.add_widget(Widgets.hadjust(w, orientation))
 
         captions = (('Plot All', 'checkbutton'), )

@@ -292,14 +292,16 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
         # Create troubleshooting dialog if downloading cannot be done
         dialog = Widgets.Dialog(title="Show documentation",
                                 parent=self.w.root,
-                                modal=False,
-                                buttons=[("Cancel", 0),
-                                         ("Show RST text", 1),
-                                         ("Use external browser", 2),
-                                         ])
-        dialog.buttons[0].set_tooltip("Skip help")
-        dialog.buttons[1].set_tooltip("Show local docstring for plugin help")
-        dialog.buttons[2].set_tooltip("Show online web documentation in external browser")
+                                modal=False)
+        btn = Widgets.Button("Cancel")
+        btn.set_tooltip("Skip help")
+        dialog.add_button(btn, 0)
+        btn = Widgets.Button("Show RST text")
+        btn.set_tooltip("Show local docstring for plugin help")
+        dialog.add_button(btn, 1)
+        btn = Widgets.Button("Use external browser")
+        btn.set_tooltip("Show online web documentation in external browser")
+        dialog.add_button(btn, 2)
         vbox = dialog.get_content_area()
         dialog_text = Widgets.TextArea(wrap=True, editable=False)
         dialog_text.set_text("How would you like to see help?")

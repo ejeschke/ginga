@@ -196,7 +196,6 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.pixview = pixview
         self.pix_w = Viewers.GingaViewerWidget(pixview)
         fr.set_widget(self.pix_w)
-        self.pix_w.resize(self._wd, self._ht)
 
         paned = Widgets.Splitter(orientation=orientation)
         self.w.splitter = paned

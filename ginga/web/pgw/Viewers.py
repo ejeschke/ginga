@@ -1,7 +1,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.web.pgw.ImageViewPg import CanvasView
+from ginga.web.pgw.ImageViewPg import CanvasView, ScrolledView
 from ginga.web.pgw import Widgets
 
 
@@ -17,6 +17,7 @@ class GingaViewerWidget(Widgets.Image):
 
     def __init__(self, viewer=None, width=600, height=600):
         super().__init__(interactive=True, use_animation_frame=True)
+        #super().__init__(interactive=True)
 
         self.resize(width, height)
 
@@ -36,15 +37,12 @@ class GingaViewerWidget(Widgets.Image):
         return self.viewer
 
 
-class GingaScrolledViewerWidget(GingaViewerWidget):
+class GingaScrolledViewerWidget(ScrolledView):
 
-    def scroll_bars(self, horizontal='on', vertical='on'):
-        # until implemented
-        pass
+    def __init__(self, viewer=None, width=600, height=600):
 
-    def get_scroll_bars_status(self):
-        return dict(horizontal='off', vertical='off')
+        if viewer is None:
+            viewer = CanvasView()
+        self.logger = viewer.logger
 
-
-class ScrolledView(GingaScrolledViewerWidget):
-    pass
+        super().__init__(viewer)

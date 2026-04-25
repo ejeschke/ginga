@@ -100,6 +100,8 @@ class Operations(GingaPlugin.GlobalPlugin):
             return
         chname = channel.name
         self.w.channel.insert_alpha(chname)
+        idx = self.w.channel.get_index()
+        text = self.w.channel.get_text()
 
         pl_mgr = channel.opmon
         pl_mgr.add_callback('activate-plugin', self.activate_plugin_cb)

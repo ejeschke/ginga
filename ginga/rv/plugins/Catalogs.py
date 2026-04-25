@@ -402,7 +402,6 @@ class Catalogs(GingaPlugin.LocalPlugin):
         adj = Widgets.Slider(orientation='horizontal')
         adj.set_limits(0, 1000, incr_value=1)
         adj.set_value(0)
-        #adj.resize(200, -1)
         adj.set_tracking(True)
         adj.set_tooltip("Choose subset of stars plotted")
         self.w.plotgrp = adj
@@ -1286,7 +1285,7 @@ class CatalogListing(object):
         rgbmap.add_callback('changed', lambda *args: self.replot_stars())
 
         cbar_w = self.cbar.get_widget()
-        cbar_w.resize(-1, self.cbar_ht)
+        cbar_w.set_min_size(None, self.cbar_ht)
         vbox.add_widget(cbar_w, stretch=0)
 
         btns = Widgets.HBox()

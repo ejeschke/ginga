@@ -24,7 +24,7 @@ class FitsViewer(object):
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
 
-        from ginga.gw import Widgets, Viewers, GwHelp
+        from ginga.gw import Widgets, Viewers
 
         self.app = Widgets.Application(logger=logger)
         self.app.add_callback('shutdown', self.quit)
@@ -250,9 +250,12 @@ class FitsViewer(object):
     def open_file(self):
         self.fs.show()
 
-    def drop_file_cb(self, viewer, paths):
-        filename = paths[0]
-        self.load_file(filename)
+    def drop_file_cb(self, viewer, event):
+        if event.drag_type == 'uris':
+            paths = event.contents['body']
+            filename = paths[0]
+            self.load_file(filename)
+        return True
 
     def cursor_cb(self, viewer, button, data_x, data_y):
         """This gets called when the data position relative to the cursor

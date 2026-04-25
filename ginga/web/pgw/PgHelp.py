@@ -23,7 +23,7 @@ def get_image_src_from_buffer(img_buf, imgtype='png'):
     img_string = binascii.b2a_base64(img_buf)
     if isinstance(img_string, bytes):
         img_string = img_string.decode("utf-8")
-    return ('data:image/%s;base64,' % imgtype) + img_string
+    return f'data:image/{imgtype};base64,' + img_string
 
 
 def get_icon(iconpath, size=None, format='png'):

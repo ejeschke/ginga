@@ -134,7 +134,6 @@ class Zoom(GingaPlugin.GlobalPlugin):
         bd.enable_cmap(False)
 
         iw = Viewers.GingaViewerWidget(zi)
-        iw.resize(self._wd, self._ht)
         paned = Widgets.Splitter(orientation=orientation)
         paned.add_widget(iw)
         self.w.splitter = paned

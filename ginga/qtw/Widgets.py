@@ -11,14 +11,15 @@ from functools import reduce
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
                               QTextOption, QCursor, QFont, SaveDialog)
 from ginga.qtw import QtHelp
+from ginga.qtw.QtHelp import Timer  # noqa
 
 from ginga import colors
 from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
 
-__all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'TextArea', 'Label', 'Button', 'ComboBox',
+__all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
+           'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
            'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
@@ -62,6 +63,9 @@ class WidgetBase(Callback.Callbacks):
     def set_enabled(self, tf):
         self.widget.setEnabled(tf)
 
+    def is_container(self):
+        return False
+
     def get_size(self):
         wd, ht = self.widget.width(), self.widget.height()
         return (wd, ht)
@@ -90,6 +94,24 @@ class WidgetBase(Callback.Callbacks):
         if height < 0:
             height = _ht
         self.widget.resize(int(width), int(height))
+
+    def set_min_size(self, wd, ht):
+        if wd is None:
+            # sentinal for unrestricted
+            wd = QtHelp.QWIDGETSIZE_MAX
+        if ht is None:
+            # sentinal for unrestricted
+            ht = QtHelp.QWIDGETSIZE_MAX
+        self.widget.setMinimumSize(wd, ht)
+
+    def set_max_size(self, wd, ht):
+        if wd is None:
+            # sentinal for unrestricted
+            wd = QtHelp.QWIDGETSIZE_MAX
+        if ht is None:
+            # sentinal for unrestricted
+            ht = QtHelp.QWIDGETSIZE_MAX
+        self.widget.setMaximumSize(wd, ht)
 
     def show(self):
         self.widget.show()
@@ -135,7 +157,10 @@ class WidgetBase(Callback.Callbacks):
         return QtHelp.get_rgb_array(self.widget)
 
 
+Widget = WidgetBase
+
 # BASIC WIDGETS
+
 
 class TextEntry(WidgetBase):
     def __init__(self, text='', editable=True):
@@ -1361,6 +1386,9 @@ class ContainerBase(WidgetBase):
         for w in list(self.children):
             self.remove(w, delete=delete)
 
+    def is_container(self):
+        return True
+
     def get_children(self):
         return self.children
 
@@ -1383,13 +1411,29 @@ class ContainerBase(WidgetBase):
             return None
         return self.children[idx]
 
+    def set_padding(self, px):
+        layout = self.widget.layout()
+        if layout is None:
+            return
+        if isinstance(px, int):
+            layout.setContentsMargins(px, px, px, px)
+        else:
+            layout.setContentsMargins(*px)
+
     def set_margins(self, left, right, top, bottom):
         layout = self.widget.layout()
+        if layout is None:
+            return
         layout.setContentsMargins(left, right, top, bottom)
 
     def set_border_width(self, pix):
         layout = self.widget.layout()
+        if layout is None:
+            return
         layout.setContentsMargins(pix, pix, pix, pix)
+
+    def set_border_color(self, color):
+        pass
 
 
 class Box(ContainerBase):
@@ -1781,6 +1825,14 @@ class MDIWidget(ContainerBase):
         if 0 <= idx < len(self.children):
             return self.children[idx]
         return None
+
+    def get_child_size(self, child):
+        subwin = self._get_subwin(child.get_widget())
+        return subwin.width(), subwin.height()
+
+    def get_child_position(self, child):
+        subwin = self._get_subwin(child.get_widget())
+        return subwin.x(), subwin.y()
 
     def tile_panes(self):
         self.widget.tileSubWindows()
@@ -2474,6 +2526,9 @@ class Application(Callback.Callbacks):
     def make_timer(self):
         return QtHelp.Timer()
 
+    def get_url(self):
+        return None
+
     def mainloop(self):
         self._qtapp.exec()
 
@@ -2515,24 +2570,18 @@ class Dialog(TopLevelMixin, WidgetBase):
         self.content = VBox()
         vbox.addWidget(self.content.get_widget(), stretch=1)
 
-        if len(buttons) > 0:
-            hbox_w = QtGui.QWidget()
-            hbox = QtGui.QHBoxLayout()
-            hbox.setContentsMargins(5, 5, 5, 5)
-            hbox.setSpacing(4)
-            hbox_w.setLayout(hbox)
+        # buttons
+        hbox = HBox()
+        hbox.set_padding(5)
+        hbox.set_spacing(4)
+        self.buttonbox = hbox
+        vbox.addWidget(hbox.get_widget(), stretch=0)
 
+        if len(buttons) > 0:
             for name, val in buttons:
                 btn = Button(name)
-                self.buttons.append(btn)
+                self.add_button(btn, val)
 
-                def cb(val):
-                    return lambda w: self._cb_redirect(val)
-
-                btn.add_callback('activated', cb(val))
-                hbox.addWidget(btn.get_widget(), stretch=1)
-
-            vbox.addWidget(hbox_w, stretch=0)
             # self.widget.closeEvent = lambda event: self.delete()
 
         self.enable_callback('activated')
@@ -2540,11 +2589,17 @@ class Dialog(TopLevelMixin, WidgetBase):
         if autoclose:
             self.add_callback('close', lambda w: w.hide())
 
-    def _cb_redirect(self, val):
+    def _cb_redirect(self, w, val):
         self.make_callback('activated', val)
 
     def get_content_area(self):
         return self.content
+
+    def add_button(self, btn, val):
+        self.buttons.append(btn)
+
+        btn.add_callback('activated', self._cb_redirect, val)
+        self.buttonbox.add_widget(btn, stretch=1)
 
     def popup(self, parent=None):
         if parent is not None:
@@ -2720,7 +2775,7 @@ class FileDialog(TopLevelMixin, WidgetBase):
         self.widget.open()
 
 
-class DragPackage(object):
+class DragPackage:
     def __init__(self, src_widget):
         self.src_widget = src_widget
         self._drag = QtHelp.QDrag(self.src_widget)

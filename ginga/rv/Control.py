@@ -12,6 +12,7 @@ import time
 import logging
 import inspect
 import numbers
+import base64
 from collections import OrderedDict
 
 # Local application imports
@@ -97,7 +98,6 @@ class GingaShell(GenericShell):
         self.channel = Bunch.caselessDict()
         self.channel_names = []
         self.cur_channel = None
-        #self.statustask = None
 
         # Load bindings preferences
         bindprefs = self.prefs.create_category('bindings')
@@ -602,6 +602,54 @@ class GingaShell(GenericShell):
             # rest of files are all loaded using bulk load
             self.open_uri_cont(uri, load_file_bulk)
             self.update_pending()
+
+    def open_blobs(self, blobs, chname=None, bulk_add=False):
+        """Open a set of data blobs.
+
+        These are typically passed by drag and drop from a non-local
+        location, such as pushed from a web browser.
+
+        Parameters
+        ----------
+        blobs : list of dict
+            The dicts of the blobs to load
+
+        chname: str, optional (defaults to channel with focus)
+            The name of the channel in which to load the items
+
+        bulk_add : bool, optional (defaults to False)
+            If True, then all the data items are loaded into the
+            channel without disturbing the current item there.
+            If False, then the first item loaded will be displayed
+            and the rest of the items will be loaded as bulk.
+
+        """
+        if len(blobs) == 0:
+            return
+
+        uris = []
+        for i, dct in enumerate(blobs):
+            if dct.get("data"):
+                name = dct['name']
+                mimetype = dct['type']
+                size = dct['size']
+                b64data = dct["data"].split(",", 1)[1]
+                buf = base64.b64decode(b64data)
+                buf_size = len(buf)
+                if buf_size != size:
+                    self.logger.warning(f"size of blob ({buf_size}) does not"
+                                        f" match passed size ({size})")
+                self.logger.info(f"to open: {name}")
+
+                # TODO!
+                import tempfile
+                path = os.path.join(tempfile.gettempdir(), name)
+                with open(path, 'wb') as out_f:
+                    out_f.write(buf)
+
+                uris.append(f"file:///{path}")
+
+        self.open_uris(uris, chname=chname, bulk_add=bulk_add)
 
     def zoom_in(self):
         """Zoom the view in one zoom step.
@@ -1944,10 +1992,13 @@ class GingaShell(GenericShell):
         return True
 
     def delete_channel_cb(self, w, rsp, chname):
-        self.ds.remove_dialog(w)
-        if rsp != 1:
-            return
-        self.delete_channel(chname)
+        try:
+            self.ds.remove_dialog(w)
+            if rsp != 1:
+                return
+            self.delete_channel(chname)
+        except Exception as e:
+            self.logger.error(f"error deleting channel: {e}", exc_info=True)
         return True
 
     def delete_tab_cb(self, w, rsp, tabname):
@@ -2188,7 +2239,7 @@ class GingaShell(GenericShell):
         super().delete_workspace(ws)
 
     def page_added_cb(self, ws, child):
-        self.logger.debug("page added in %s: '%s'" % (ws.name, str(child)))
+        self.logger.info("page added in %s: '%s'" % (ws.name, str(child)))
 
         num_pages = ws.num_pages()
         if ws.toolbar is not None:
@@ -2198,7 +2249,7 @@ class GingaShell(GenericShell):
             ws.extdata.w_del_channel.set_enabled(True)
 
     def page_removed_cb(self, ws, child):
-        self.logger.debug("page removed in %s: '%s'" % (ws.name, str(child)))
+        self.logger.info("page removed in %s: '%s'" % (ws.name, str(child)))
         num_pages = ws.num_pages()
         if num_pages <= 1:
             if ws.toolbar is not None:
@@ -2209,7 +2260,7 @@ class GingaShell(GenericShell):
 
     def page_close_cb(self, ws, child):
         # user is attempting to close the page
-        self.logger.debug("page closed in %s: '%s'" % (ws.name, str(child)))
+        self.logger.info("page closed in %s: '%s'" % (ws.name, str(child)))
 
         channel = self._get_channel_by_container(child)
         if channel is not None:
@@ -2289,15 +2340,22 @@ class GingaShell(GenericShell):
 
         self.update_pending()
 
-    def dragdrop(self, chviewer, uris):
+    def dragdrop(self, chviewer, drop):
         """Called when a drop operation is performed on a channel viewer.
-        We are called back with a URL and we attempt to (down)load it if it
-        names a file.
+        We are called back with a drop package.
         """
         # find out our channel
         chname = self.get_channel_name(chviewer)
-        self.open_uris(uris, chname=chname)
-        return True
+
+        if drop.drag_type == 'uris':
+            self.open_uris(drop.contents['body'], chname=chname)
+            return True
+
+        if drop.drag_type == 'blobs':
+            self.open_blobs(drop.contents['body'], chname=chname)
+            return True
+
+        return False
 
     def force_focus_cb(self, viewer, event, data_x, data_y):
         chname = self.get_channel_name(viewer)

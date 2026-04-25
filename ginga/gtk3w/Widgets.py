@@ -10,6 +10,7 @@ import pathlib
 from functools import reduce
 
 from ginga.gtk3w import GtkHelp
+from ginga.gtk3w.GtkHelp import Timer  # noqa
 from ginga import colors
 from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
@@ -21,8 +22,8 @@ from gi.repository import Gdk
 from gi.repository import GLib
 from gi.repository import GObject
 
-__all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'TextArea', 'Label', 'Button', 'ComboBox',
+__all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
+           'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
            'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
@@ -67,6 +68,9 @@ class WidgetBase(Callback.Callbacks):
 
     def set_enabled(self, tf):
         self.widget.set_sensitive(tf)
+
+    def is_container(self):
+        return False
 
     def get_size(self):
         try:
@@ -117,6 +121,19 @@ class WidgetBase(Callback.Callbacks):
         if width > 0 and height > 0:
             GLib.idle_add(self.widget.set_size_request, -1, -1)
 
+    def set_min_size(self, wd, ht):
+        if wd is None:
+            # sentinal for unrestricted
+            wd = -1
+        if ht is None:
+            # sentinal for unrestricted
+            ht = -1
+        self.widget.set_size_request(wd, ht)
+
+    def set_max_size(self, wd, ht):
+        # NOTE: no direct equivalent in Gtk
+        pass
+
     def get_font(self, font_family, point_size):
         font = GtkHelp.get_font(font_family, point_size)
         return font
@@ -140,6 +157,8 @@ class WidgetBase(Callback.Callbacks):
     def get_rgb_array(self):
         return GtkHelp.get_rgb_array(self.widget)
 
+
+Widget = WidgetBase
 
 # BASIC WIDGETS
 
@@ -1480,6 +1499,9 @@ class ContainerBase(WidgetBase):
         for child in list(self.children):
             self.remove(child, delete=delete)
 
+    def is_container(self):
+        return True
+
     def get_children(self):
         return self.children
 
@@ -1502,6 +1524,12 @@ class ContainerBase(WidgetBase):
         self.widget.set_margin_end(right)
         self.widget.set_margin_top(top)
         self.widget.set_margin_bottom(bottom)
+
+    def set_padding(self, px):
+        if isinstance(px, int):
+            self.set_margins(px, px, px, px)
+        else:
+            self.set_margins(*px)
 
 
 class Box(ContainerBase):
@@ -1858,6 +1886,12 @@ class MDIWidget(ContainerBase):
         """Returns child corresponding to `idx`"""
         nchild = self.mdi_w.get_nth_page(idx)
         return self._native_to_child(nchild)
+
+    def get_child_size(self, child):
+        return self.mdi_w.get_widget_size(child.get_widget())
+
+    def get_child_position(self, child):
+        return self.mdi_w.get_widget_position(child.get_widget())
 
     def tile_panes(self):
         self.mdi_w.tile_pages()
@@ -2678,6 +2712,9 @@ class Application(Callback.Callbacks):
     def make_timer(self):
         return GtkHelp.Timer()
 
+    def get_url(self):
+        return None
+
     def mainloop(self):
         Gtk.main()
 
@@ -2741,6 +2778,10 @@ class Dialog(WidgetBase):
 
     def get_content_area(self):
         return self.content
+
+    def add_button(self, btn):
+        # TODO
+        pass
 
     def show(self):
         self.popup()

@@ -90,7 +90,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         self.settings.load(onError='silent')
 
         # For table-of-contents pane
-        self.name_dict = Bunch.caselessDict()
+        self.name_dict = dict()
         # TODO: this ought to be customizable by channel
         self.columns = self.settings.get('columns', columns)
         self.treeview = None
@@ -312,12 +312,13 @@ class Contents(GingaPlugin.GlobalPlugin):
         else:
             file_dict = self.name_dict[chname]
 
+        info_dct = {key: bnch[key] for hdr, key in self.columns}
         if name not in file_dict:
             # new image
-            file_dict[name] = bnch
+            file_dict[name] = info_dct
         else:
             # old image
-            file_dict[name].update(bnch)
+            file_dict[name].update(info_dct)
 
         if self.gui_up:
             # TODO: either make add_tree() merge updates or make an
@@ -380,7 +381,7 @@ class Contents(GingaPlugin.GlobalPlugin):
                                     image_info.name, image_info.path)
 
     def clear(self):
-        self.name_dict = Bunch.caselessDict()
+        self.name_dict = dict()
         self._hl_path = set([])
         if self.gui_up:
             self.recreate_toc()
@@ -406,6 +407,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         tree_dict = {chname: {}}
         if self.gui_up:
             self.treeview.add_tree(tree_dict)
+            #self.recreate_toc()
 
         self._rebuild_channels()
 

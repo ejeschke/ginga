@@ -100,7 +100,6 @@ class PlotTable(LocalPlugin):
         self.tab_plot = plots.Plot(logger=self.logger,
                                    width=400, height=400)
         self.plot = Plot.PlotWidget(self.tab_plot)
-        self.plot.resize(400, 400)
         ax = self.tab_plot.add_axis()
         ax.grid(True)
 
