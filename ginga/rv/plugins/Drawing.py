@@ -199,6 +199,22 @@ class Drawing(GingaPlugin.LocalPlugin):
         b.export_regions.set_enabled(ap_region.HAVE_REGIONS)
 
         if ap_region.HAVE_REGIONS:
+            fs = Widgets.FileDialog(title="Load regions file")
+            fs.set_mode('files')
+            fs.set_directory('.')
+            fs.add_ext_filter("reg")
+            fs.add_ext_filter("ds9")
+            fs.add_ext_filter("crtf")
+            fs.add_ext_filter("fits")
+            fs.add_callback('activated', self._import_regions_files)
+            self.w.read_fs = fs
+
+            fs = Widgets.FileDialog(title="Save regions file")
+            fs.set_mode('save')
+            fs.set_directory('.')
+            fs.add_callback('activated', self._export_regions_file)
+            self.w.write_fs = fs
+
             for fmt in ap_region.regions.Regions.get_formats()['Format']:
                 b.reg_format.append_text(fmt)
         else:
@@ -495,13 +511,9 @@ class Drawing(GingaPlugin.LocalPlugin):
             self.fv.show_error("Please install astropy regions to use this",
                                raisetab=True)
             return
-        from ginga.gw.GwHelp import FileSelection
-        fs = FileSelection(w.get_widget(), all_at_once=True)
-        fs.popup('Load regions file', self._import_regions_files,
-                 initialdir='.',
-                 filename='Region files (*.reg *.ds9 *.crtf *.fits)')
+        self.w.read_fs.popup()
 
-    def _import_regions_files(self, paths):
+    def _import_regions_files(self, w, paths):
         for path in paths:
             objs = ap_region.import_regions(path, logger=self.logger)
             for obj in objs:
@@ -509,25 +521,22 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         self.canvas.update_canvas()
 
-    def export_regions_cb(self, w):
+    def export_regions_cb(self, w, paths):
         if not ap_region.HAVE_REGIONS:
             self.fv.show_error("Please install astropy regions to use this",
                                raisetab=True)
             return
 
-        fs = Widgets.SaveDialog('Save Regions',
-                                selectedfilter='*.reg')
-        path = fs.get_path()
-        if path is None:
-            # cancelled
-            return
+        self.w.write_fs.popup()
 
+    def _export_regions_file(self, w, paths):
         regs = ap_region.export_regions_canvas(self.canvas, logger=self.logger)
 
         format = self.w.reg_format.get_text()
 
         # dialog above confirms if they want to overwrite, so we can
         # simply use overwrite=True
+        path = paths[0]
         regs.write(path, format=format, overwrite=True)
 
 

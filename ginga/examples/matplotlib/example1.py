@@ -23,7 +23,7 @@ from ginga.qtw import QtHelp
 from ginga.mplw.ImageViewMpl import CanvasView
 from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
-from ginga.util.loader import load_data
+from ginga.util.loader import load_data, handle_drop_event
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -40,7 +40,7 @@ class FitsViewer(QtGui.QMainWindow):
         fi.set_autocut_params('zscale')
         fi.enable_auto_orient(True)
         fi.enable_autozoom('on')
-        #fi.set_callback('drag-drop', self.drop_file)
+        fi.set_callback('drag-drop', self.drop_file_cb)
         fi.set_callback('none-move', self.motion)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.show_mode_indicator(True, corner='ur')
@@ -100,9 +100,8 @@ class FitsViewer(QtGui.QMainWindow):
         if len(fileName) != 0:
             self.load_file(fileName)
 
-    def drop_file(self, fitsimage, paths):
-        fileName = paths[0]
-        self.load_file(fileName)
+    def drop_file_cb(self, fitsimage, drop_event):
+        handle_drop_event(fitsimage, drop_event)
 
     def motion(self, fitsimage, button, data_x, data_y):
 

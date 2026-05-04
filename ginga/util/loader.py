@@ -138,6 +138,13 @@ def get_openers(mimetype):
             if bnch.priority <= priority]
 
 
+def handle_drop_event(viewer, drop_event):
+    if drop_event.drag_type in ['uris', 'paths']:
+        for item in drop_event.contents['body']:
+            dataobj = load_data(item, logger=viewer.logger)
+            viewer.set_dataobj(dataobj)
+
+
 def get_all_openers():
     """Return a sequence of all known openers.
     """

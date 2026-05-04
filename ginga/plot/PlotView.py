@@ -188,7 +188,7 @@ class PlotViewBase(ViewerBase):
 
     def set_widget(self, canvas_w):
         # *** only called by pg widgets when the canvas is set ***
-        self.logger.debug("set widget canvas_w=%s" % canvas_w)
+        self.logger.info("set widget canvas_w=%s" % canvas_w)
         #self.pgcanvas = canvas_w
         canvas_w.add_callback('map', self.canvas_map_cb)
         canvas_w.add_callback('resize', self.canvas_resize_cb)
@@ -275,10 +275,12 @@ class PlotViewBase(ViewerBase):
     def set_window_size(self, wd_px, ht_px):
         with self._resize_lock:
             self.time_last_resize = time.time()
-            self.logger.debug("canvas resized to %dx%d" % (wd_px, ht_px))
 
             fig = self.get_figure()
+            # fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi,
+            #                     forward=True)
             fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi)
+            self.logger.info("figure resized to %dx%d" % (wd_px, ht_px))
 
             self.make_callback('configure', wd_px, ht_px)
 
@@ -302,11 +304,14 @@ class PlotViewBase(ViewerBase):
 
     def canvas_resize_cb(self, canvas_w, event):
         # *** only called by pg widgets when the canvas is resized ***
-        self.reschedule_resize(event['width'], event['height'])
+        wd_px, ht_px = event['width'], event['height']
+        #print(f"PLOT WIDGET RESIZE {wd_px}x{ht_px}")
+        self.reschedule_resize(wd_px, ht_px)
 
-    def canvas_area_resize_cb(self, *args):
+    def canvas_area_resize_cb(self, w, wd_px, ht_px, vthumb_px, hthumb_px):
         # *** only called by pg widgets when the canvas is resized ***
-        print("PLOT WIDGET RESIZE", args)
+        pass
+        #print(f"PLOT AREA WIDGET RESIZE {wd_px}x{ht_px}")
         #self.reschedule_resize(event['width'], event['height'])
 
     def delayed_resize(self):

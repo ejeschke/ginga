@@ -574,7 +574,7 @@ class ScrolledViewPg(PGW.AbstractScrollArea):
 
         # we parent the viewer widget
         w = viewer.get_widget()
-        if w is None:
+        if w is None or not isinstance(w, PGW.Image):
             # <-- viewer has not had a widget set yet--let's create one
             self.viewer_w = PGW.Image(session, interactive=True,
                                       use_animation_frame=True)

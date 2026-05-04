@@ -292,7 +292,9 @@ class Collage(GingaPlugin.LocalPlugin):
         self.fitsimage.onscreen_message("Drag new files...",
                                         delay=2.0)
 
-    def drop_cb(self, canvas, paths, *args):
+    def drop_cb(self, canvas, drop_event, *args):
+        # TODO: check type of drop
+        paths = drop_event.contents['body']
         self.logger.info("files dropped: %s" % str(paths))
         self.fv.gui_do(self.fv.error_wrap, self.collage, paths)
         return True

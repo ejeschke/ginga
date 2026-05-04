@@ -9,7 +9,7 @@ from ginga import colors
 import ginga.toolkit as ginga_toolkit
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
-from ginga.util.loader import load_data
+from ginga.util.loader import load_data, handle_drop_event
 
 
 class FitsViewer(object):
@@ -41,7 +41,7 @@ class FitsViewer(object):
         v1.set_zoom_algorithm('rate')
         v1.set_zoomrate(1.4)
         v1.show_pan_mark(True)
-        v1.set_callback('drag-drop', self.drop_file)
+        v1.set_callback('drag-drop', self.drop_file_cb)
         v1.set_callback('none-move', self.motion)
         v1.set_bg(0.2, 0.2, 0.2)
         v1.ui_set_active(True)
@@ -214,12 +214,8 @@ class FitsViewer(object):
         if len(fileName) != 0:
             self.load_file(self.viewer1, fileName)
 
-    def drop_file(self, viewer, event):
-        if event.drag_type == 'uris':
-            paths = event.contents['body']
-            filename = paths[0]
-            self.load_file(viewer, filename)
-        return True
+    def drop_file_cb(self, fitsimage, drop_event):
+        handle_drop_event(fitsimage, drop_event)
 
     def motion(self, viewer, button, data_x, data_y):
 

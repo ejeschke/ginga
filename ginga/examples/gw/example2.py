@@ -13,7 +13,7 @@ from ginga import colors
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.canvas import render
 from ginga.misc import log
-from ginga.util.loader import load_data
+from ginga.util.loader import load_data, handle_drop_event
 from ginga.locale.localize import _tr
 
 
@@ -250,12 +250,8 @@ class FitsViewer(object):
     def open_file(self):
         self.fs.show()
 
-    def drop_file_cb(self, viewer, event):
-        if event.drag_type == 'uris':
-            paths = event.contents['body']
-            filename = paths[0]
-            self.load_file(filename)
-        return True
+    def drop_file_cb(self, fitsimage, drop_event):
+        handle_drop_event(fitsimage, drop_event)
 
     def cursor_cb(self, viewer, button, data_x, data_y):
         """This gets called when the data position relative to the cursor

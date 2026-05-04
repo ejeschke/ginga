@@ -8,7 +8,7 @@ from io import BytesIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.transforms import Bbox
 
-#from ginga.web.pgw import Widgets
+from ginga.web.pgw import Widgets
 # NOTE: imported here so available when importing ginga.gw.Plot
 from ginga.web.pgw.ImageViewPg import PgEventMixin as PlotEventMixin  # noqa
 from ginga.web.pgw.ImageViewPg import ScrolledView
@@ -28,13 +28,14 @@ class PlotWidget(ScrolledView):
         #super().__init__(interactive=True, use_animation_frame=True)
         #super().__init__(interactive=True)
 
-        self.widget = FigureCanvas(plot.get_figure())
+        self._widget = FigureCanvas(plot.get_figure())
         self.image_format = 'png'
 
         super().__init__(plot)
-        # if plot is not None:
-        #     self.logger = plot.logger
-        #     self.set_plot(plot)
+        self.set_scroll_bar_visibility('auto', 'auto')
+        if plot is not None:
+            self.logger = plot.logger
+            self.set_plot(plot)
 
     def set_plot(self, plot):
         self.logger.debug("set_plot called")
@@ -51,7 +52,7 @@ class PlotWidget(ScrolledView):
     def get_rgb_buffer(self, plot):
         buf = BytesIO()
         #wd, ht = plot.get_window_size()
-        wd, ht = self.get_size()
+        wd, ht = self.viewer_w.get_size()
         fig = plot.get_figure()
         # desired width x height in inches
         wd_in, ht_in = max(0.01, wd / fig.dpi), max(0.01, ht / fig.dpi)
@@ -60,11 +61,12 @@ class PlotWidget(ScrolledView):
         _wd_px, _ht_px = int(_wd_in / fig.dpi), int(_ht_in / fig.dpi)
 
         if wd != _wd_px or ht != _ht_px:
-            print(f"FIGURE SIZE ({_wd_px}x{_ht_px}) DOES NOT MATCH WIDGET SIZE ({wd}x{ht})")
+            #print(f"FIGURE SIZE ({_wd_px}x{_ht_px}) DOES NOT MATCH WIDGET SIZE ({wd}x{ht})")
             fig.set_size_inches(wd_in, ht_in)
             fig.canvas.draw()
         else:
-            print(f"FIGURE SIZE ({_wd_px}x{_ht_px}) MATCHES WIDGET SIZE ({wd}x{ht})")
+            #print(f"FIGURE SIZE ({_wd_px}x{_ht_px}) MATCHES WIDGET SIZE ({wd}x{ht})")
+            pass
 
         # fig.canvas.print_figure(buf, format=self.image_format)
         bbox_in = Bbox([[0, 0], [wd_in, ht_in]])
@@ -83,7 +85,8 @@ class PlotWidget(ScrolledView):
         wd, ht, buf = self.get_rgb_buffer(plot)
 
         self.logger.debug("drawing %dx%d image" % (wd, ht))
-        self.set_binary_image(buf, self.image_format)
+        #self.set_binary_image(buf, self.image_format)
+        self.viewer_w.set_binary_image(buf, self.image_format)
 
 
 #END

@@ -320,7 +320,9 @@ class Compose(GingaPlugin.LocalPlugin):
         image = self.fitsimage.get_image()
         self.insert_image(image)
 
-    def drop_file_cb(self, viewer, paths):
+    def drop_file_cb(self, viewer, drop_event):
+        # TODO: check type of drop
+        paths = drop_event.contents['body']
         self.logger.info("dropped files: %s" % str(paths))
         for path in paths[:3]:
             image = self.fv.load_image(path)

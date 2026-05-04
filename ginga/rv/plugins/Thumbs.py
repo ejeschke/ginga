@@ -271,9 +271,11 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         tg.set_bg(0.7, 0.7, 0.7)
         return tg
 
-    def drag_drop_cb(self, viewer, urls):
+    def drag_drop_cb(self, viewer, drop_event):
         """Punt drag-drops to the ginga shell.
         """
+        # TODO: check type of drop
+        urls = drop_event.contents['body']
         channel = self.fv.get_current_channel()
         if channel is None:
             return

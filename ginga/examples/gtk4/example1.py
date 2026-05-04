@@ -10,7 +10,7 @@ import logging
 
 from ginga.gtk4w.ImageViewGtk import CanvasView, ScrolledView
 from ginga.gtk4w import GtkHelp
-from ginga.util.loader import load_data
+from ginga.util.loader import load_data, handle_drop_event
 
 from gi.repository import Gtk
 
@@ -99,9 +99,8 @@ class FitsViewer(object):
     def open_file(self, w):
         self.select.popup("Open FITS file", self.load_file)
 
-    def drop_file(self, fitsimage, paths):
-        fileName = paths[0]
-        self.load_file(fileName)
+    def drop_file_cb(self, fitsimage, drop_event):
+        handle_drop_event(fitsimage, drop_event)
 
     def quit(self, w):
         self.app.quit()
