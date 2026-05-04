@@ -280,7 +280,7 @@ class PlotViewBase(ViewerBase):
             # fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi,
             #                     forward=True)
             fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi)
-            self.logger.info("figure resized to %dx%d" % (wd_px, ht_px))
+            self.logger.debug("figure resized to %dx%d" % (wd_px, ht_px))
 
             self.make_callback('configure', wd_px, ht_px)
 

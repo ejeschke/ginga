@@ -57,6 +57,9 @@ class GwMain(Callback.Callbacks):
     def get_threadPool(self):
         return self.threadPool
 
+    def set_gui_thread(self):
+        self.gui_thread_id = threading.get_ident()
+
     def _execute_future(self, future):
         # Execute the GUI method
         try:

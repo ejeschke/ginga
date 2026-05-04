@@ -151,8 +151,8 @@ class FitsViewer(object):
         hbox.add_widget(btn2)
 
         self.open_dialog = Widgets.FileDialog(mode="file", accept=".fits")
-        #self.open_dialog = FileBrowser(session, mode="file", title="Open File")
-        self.open_dialog.add_ext_filter("Images", "fits")
+        # self.open_dialog = FileBrowser(session, mode="file", title="Open File")
+        # self.open_dialog.add_ext_filter("Images", "fits")
         self.open_dialog.on('activated', self.drop_file_cb)
         btn3 = Widgets.Button("Upload File")
         btn3.add_callback('activated', lambda w: self.open_dialog.popup())

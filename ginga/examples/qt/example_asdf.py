@@ -13,7 +13,7 @@ from ginga import AstroImage, colors
 from ginga.qtw.ImageViewQt import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
-from ginga.util.loader import load_data, handle_drop_event
+from ginga.util.loader import handle_drop_event
 
 from ginga.util import wcsmod
 wcsmod.use('astropy_ape14')

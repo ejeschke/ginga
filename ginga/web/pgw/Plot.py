@@ -8,7 +8,6 @@ from io import BytesIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.transforms import Bbox
 
-from ginga.web.pgw import Widgets
 # NOTE: imported here so available when importing ginga.gw.Plot
 from ginga.web.pgw.ImageViewPg import PgEventMixin as PlotEventMixin  # noqa
 from ginga.web.pgw.ImageViewPg import ScrolledView

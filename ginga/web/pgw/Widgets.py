@@ -147,7 +147,6 @@ class Application(PGW_Application, Callbacks):
         self._windows = []
         _app = self
 
-        print(f"SESSION ID {_session_id} TOKEN={token}")
         # we create a default session that is used by the widgets
         self.default_session = self.create_session(session_id=_session_id,
                                                    token=token)
@@ -831,15 +830,6 @@ def hadjust(w, orientation):
     that is normally used in a vertical stack (usually a Splitter), when it
     is instead used in a horizontal orientation.
     """
-    if orientation != 'horizontal':
-        return w
-    # This currently does not seem to be needed for most plugins that are
-    # coded to flow either vertically or horizontally and, in fact, reduces
-    # the visual asthetic somewhat.
-    ## spl = Splitter(orientation='vertical')
-    ## spl.add_widget(w)
-    ## spl.add_widget(Label(''))
-    ## return spl
     return w
 
 
@@ -876,9 +866,6 @@ def build_info(captions, orientation='vertical'):
 
 
 def wrap(native_widget):
-    #wrapper = WidgetBase()
-    #wrapper.widget = native_widget
-    #return wrapper
     return native_widget
 
 

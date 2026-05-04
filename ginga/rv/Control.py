@@ -2239,7 +2239,7 @@ class GingaShell(GenericShell):
         super().delete_workspace(ws)
 
     def page_added_cb(self, ws, child):
-        self.logger.info("page added in %s: '%s'" % (ws.name, str(child)))
+        self.logger.debug("page added in %s: '%s'" % (ws.name, str(child)))
 
         num_pages = ws.num_pages()
         if ws.toolbar is not None:
@@ -2249,7 +2249,7 @@ class GingaShell(GenericShell):
             ws.extdata.w_del_channel.set_enabled(True)
 
     def page_removed_cb(self, ws, child):
-        self.logger.info("page removed in %s: '%s'" % (ws.name, str(child)))
+        self.logger.debug("page removed in %s: '%s'" % (ws.name, str(child)))
         num_pages = ws.num_pages()
         if num_pages <= 1:
             if ws.toolbar is not None:
