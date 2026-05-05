@@ -1,19 +1,26 @@
 #
 # ImageViewPg.py -- a backend for Ginga using javascript and
-#      HTML5 canvas and websockets
+#      HTML5 canvas and optionally via websockets
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
 import threading
 
-from pgwidgets.sync import Widgets as PGW
-
 from ginga import ImageView, Mixins, Bindings, events
 from ginga.misc.Bunch import Bunch
 from ginga.canvas import render
 from ginga.cursors import cursor_info
-from ginga.web.pgw import Widgets
+from ginga.web.pgw import PgHelp
+
+in_situ_web = False
+try:
+    from pgwidgets_js.pyodide import Widgets
+    # <-- we are being imported from pyodide/pyscript
+    in_situ_web = True
+except ImportError:
+    # <-- we are being imported from python
+    from pgwidgets.sync import Widgets
 
 default_html_fmt = 'jpeg'
 
@@ -65,16 +72,21 @@ class ImageViewPg(ImageView.ImageViewBase):
         canvas_w.add_callback('map', self.canvas_map_cb)
         canvas_w.add_callback('resize', self.canvas_resize_cb)
 
-        session = canvas_w.session
-        self.timer_resize = session.make_timer()
+        if in_situ_web:
+            self.timer_resize = Widgets.Timer()
+            self.timer_redraw = Widgets.Timer()
+            self.timer_msg = Widgets.Timer()
+        else:
+            self.timer_resize = Widgets.Timer(canvas_w.session)
+            self.timer_redraw = Widgets.Timer(canvas_w.session)
+            self.timer_msg = Widgets.Timer(canvas_w.session)
+
         self.timer_resize.add_callback('expired',
-                                       lambda t, n: self.delayed_resize_cb())
-        self.timer_redraw = session.make_timer()
+                                       lambda *args: self.delayed_resize_cb())
         self.timer_redraw.add_callback('expired',
-                                       lambda t, n: self.delayed_redraw())
-        self.timer_msg = session.make_timer()
+                                       lambda *args: self.delayed_redraw())
         self.timer_msg.add_callback('expired',
-                                    lambda t, n: self.clear_onscreen_message())
+                                    lambda *args: self.clear_onscreen_message())
         wd, ht = canvas_w.get_size()
         self.configure_window(wd, ht)
 
@@ -118,7 +130,9 @@ class ImageViewPg(ImageView.ImageViewBase):
                 format, len(buf)))
 
             # Now using an image by default
-            self.pgcanvas.set_binary_image(buf, format)
+            #self.pgcanvas.set_binary_image(buf, format)
+            data_uri = PgHelp.get_image_src_from_buffer(buf, imgtype=format)
+            self.pgcanvas.set_image(data_uri)
 
         except Exception as e:
             self.logger.error("Couldn't update canvas: %s" % (str(e)))
@@ -304,7 +318,12 @@ class PgEventMixin:
         ht = int(curinfo.scale_height * size_px)
         hotspot_x = int(curinfo.point_x_pct * wd)
         hotspot_y = int(curinfo.point_y_pct * ht)
-        canvas_w.add_cursor(curinfo.name, curinfo.path,
+        path = curinfo.path
+        if in_situ_web:
+            with open(path, 'rb') as svg_f:
+                buf = svg_f.read()
+            path = PgHelp.get_image_src_from_buffer(buf, imgtype='svg')
+        canvas_w.add_cursor(curinfo.name, path,
                             hotspot_x, hotspot_y, [wd, ht])
 
     def set_cursor(self, name):
@@ -551,14 +570,19 @@ class CanvasView(ImageViewZoom):
         self.objects[0] = self.private_canvas
 
 
-class ScrolledViewPg(PGW.AbstractScrollArea):
+class ScrolledViewPg(Widgets.AbstractScrollArea):
     """A class that can take a viewer as a parameter and add scroll bars
     that respond to the pan/zoom levels.
     """
 
-    def __init__(self, session, viewer):
+    def __init__(self, *args):
+        if in_situ_web:
+            session, viewer = None, args[0]
+            super().__init__()
+        else:
+            session, viewer = args
+            super().__init__(session)
         self.viewer = viewer
-        super().__init__(session)
 
         self._bar_status = dict(horizontal='on', vertical='on')
         # the window jiggles annoyingly as the scrollbar is alternately
@@ -574,10 +598,14 @@ class ScrolledViewPg(PGW.AbstractScrollArea):
 
         # we parent the viewer widget
         w = viewer.get_widget()
-        if w is None or not isinstance(w, PGW.Image):
+        if w is None or not isinstance(w, Widgets.Image):
             # <-- viewer has not had a widget set yet--let's create one
-            self.viewer_w = PGW.Image(session, interactive=True,
-                                      use_animation_frame=True)
+            if in_situ_web:
+                self.viewer_w = Widgets.Image(interactive=True,
+                                              use_animation_frame=True)
+            else:
+                self.viewer_w = Widgets.Image(session, interactive=True,
+                                              use_animation_frame=True)
             viewer.set_widget(self.viewer_w)
         else:
             # <-- viewer already had a widget
@@ -587,7 +615,10 @@ class ScrolledViewPg(PGW.AbstractScrollArea):
         self.set_widget(self.viewer_w)
 
         self.timer_scroll_lock = threading.RLock()
-        self.timer_scroll = PGW.Timer(session)
+        if in_situ_web:
+            self.timer_scroll = Widgets.Timer()
+        else:
+            self.timer_scroll = Widgets.Timer(session)
         self.timer_scroll.add_callback('expired', self.delayed_scrolled_cb)
 
         # callback when the user scrolls
@@ -668,4 +699,5 @@ class ScrolledViewPg(PGW.AbstractScrollArea):
 
 class ScrolledView(ScrolledViewPg):
     def __init__(self, viewer, parent=None):
-        super().__init__(Widgets._session, viewer)
+        from ginga.web.pgw import Widgets as Ginga_Widgets
+        super().__init__(Ginga_Widgets._session, viewer)
