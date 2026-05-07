@@ -6,12 +6,13 @@
 # Please see the file LICENSE.txt for details.
 #
 import threading
+import base64
 
 from ginga import ImageView, Mixins, Bindings, events
 from ginga.misc.Bunch import Bunch
 from ginga.canvas import render
 from ginga.cursors import cursor_info
-from ginga.web.pgw import PgHelp
+# from ginga.web.pgw import PgHelp
 
 in_situ_web = False
 try:
@@ -130,9 +131,9 @@ class ImageViewPg(ImageView.ImageViewBase):
                 format, len(buf)))
 
             # Now using an image by default
-            #self.pgcanvas.set_binary_image(buf, format)
-            data_uri = PgHelp.get_image_src_from_buffer(buf, imgtype=format)
-            self.pgcanvas.set_image(data_uri)
+            # data_uri = PgHelp.get_image_src_from_buffer(buf, imgtype=format)
+            # self.pgcanvas.set_image(data_uri)
+            self.pgcanvas.set_binary_image(buf, format)
 
         except Exception as e:
             self.logger.error("Couldn't update canvas: %s" % (str(e)))
@@ -322,12 +323,15 @@ class PgEventMixin:
         if in_situ_web:
             with open(path, 'rb') as svg_f:
                 buf = svg_f.read()
-            path = PgHelp.get_image_src_from_buffer(buf, imgtype='svg')
+            b64 = base64.b64encode(buf).decode("ascii")
+            path = f"data:image/svg+xml;base64,{b64}"
+
         canvas_w.add_cursor(curinfo.name, path,
                             hotspot_x, hotspot_y, [wd, ht])
 
     def set_cursor(self, name):
         if self.pgcanvas is not None:
+            self.logger.debug(f"set cursor {name}")
             self.pgcanvas.set_cursor(name)
 
     def transkey(self, key_js, keycode):
