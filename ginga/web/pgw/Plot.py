@@ -50,7 +50,6 @@ class PlotWidget(ScrolledView):
 
     def get_rgb_buffer(self, plot):
         buf = BytesIO()
-        #wd, ht = plot.get_window_size()
         wd, ht = self.viewer_w.get_size()
         fig = plot.get_figure()
         # desired width x height in inches
@@ -59,23 +58,19 @@ class PlotWidget(ScrolledView):
         _wd_in, _ht_in = fig.get_size_inches()
         _wd_px, _ht_px = int(_wd_in / fig.dpi), int(_ht_in / fig.dpi)
 
-        if wd != _wd_px or ht != _ht_px:
-            #print(f"FIGURE SIZE ({_wd_px}x{_ht_px}) DOES NOT MATCH WIDGET SIZE ({wd}x{ht})")
-            fig.set_size_inches(wd_in, ht_in)
-            fig.canvas.draw()
-        else:
-            #print(f"FIGURE SIZE ({_wd_px}x{_ht_px}) MATCHES WIDGET SIZE ({wd}x{ht})")
-            pass
+        # if wd != _wd_px or ht != _ht_px:
+        #     #self.logger.info(f"FIGURE SIZE ({_wd_px}x{_ht_px}) DOES NOT MATCH WIDGET SIZE ({wd}x{ht})")
+        #     fig.set_size_inches(wd_in, ht_in)
+        #     fig.canvas.draw()
+        # else:
+        #     #self.logger.info(f"FIGURE SIZE ({_wd_px}x{_ht_px}) MATCHES WIDGET SIZE ({wd}x{ht})")
+        #     pass
 
-        # fig.canvas.print_figure(buf, format=self.image_format)
+        # fig.canvas.draw()
         bbox_in = Bbox([[0, 0], [wd_in, ht_in]])
         fig.savefig(buf, format=self.image_format, dpi='figure',
                     bbox_inches=bbox_in)
         buf.seek(0)
-        # img = Image.open(buf)
-        # img_wd, img_ht = img.size
-        # if img_wd != wd or img_ht != ht:
-        #     print(f"IMAGE SIZE ({img_wd}x{img_ht}) DOES NOT MATCH WIDGET SIZE ({wd}x{ht}")
 
         return (wd, ht, buf.getvalue())
 
@@ -84,7 +79,6 @@ class PlotWidget(ScrolledView):
         wd, ht, buf = self.get_rgb_buffer(plot)
 
         self.logger.debug("drawing %dx%d image" % (wd, ht))
-        #self.set_binary_image(buf, self.image_format)
         self.viewer_w.set_binary_image(buf, self.image_format)
 
 

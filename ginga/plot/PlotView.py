@@ -58,7 +58,7 @@ class PlotViewBase(ViewerBase):
 
         self.t_ = self.settings
         # misc
-        self.t_.add_defaults(resize_lagtime=0.25)
+        self.t_.add_defaults(defer_resize=True, resize_lagtime=0.35)
 
         self.t_.add_defaults(plot_bg='white',
                              plot_show_mode=False,
@@ -305,13 +305,11 @@ class PlotViewBase(ViewerBase):
     def canvas_resize_cb(self, canvas_w, event):
         # *** only called by pg widgets when the canvas is resized ***
         wd_px, ht_px = event['width'], event['height']
-        #print(f"PLOT WIDGET RESIZE {wd_px}x{ht_px}")
         self.reschedule_resize(wd_px, ht_px)
 
     def canvas_area_resize_cb(self, w, wd_px, ht_px, vthumb_px, hthumb_px):
         # *** only called by pg widgets when the canvas is resized ***
         pass
-        #print(f"PLOT AREA WIDGET RESIZE {wd_px}x{ht_px}")
         #self.reschedule_resize(event['width'], event['height'])
 
     def delayed_resize(self):
