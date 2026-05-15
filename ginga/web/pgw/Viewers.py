@@ -17,9 +17,8 @@ class GingaViewerWidget(Widgets.Image):
 
     def __init__(self, viewer=None, width=600, height=600):
         super().__init__(interactive=True, use_animation_frame=True)
-        #super().__init__(interactive=True)
 
-        self.resize(width, height)
+        super().set_expanding(True, True)
 
         if viewer is None:
             viewer = CanvasView()

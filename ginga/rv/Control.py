@@ -172,6 +172,9 @@ class GingaShell(GenericShell):
     def get_draw_classes(self):
         return drawCatalog
 
+    def get_widget_classes(self):
+        return Widgets
+
     # PLUGIN MANAGEMENT
 
     def start_operation(self, opname):

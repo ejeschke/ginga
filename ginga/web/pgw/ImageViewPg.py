@@ -64,6 +64,9 @@ class ImageViewPg(ImageView.ImageViewBase):
         self.possible_renderers = [preferred] + renderers
         self.choose_best_renderer()
 
+        for name in ['map']:
+            self.enable_callback(name)
+
     def set_widget(self, canvas_w):
         """Call this method with the widget that will be used
         for the display.
@@ -88,6 +91,8 @@ class ImageViewPg(ImageView.ImageViewBase):
                                        lambda *args: self.delayed_redraw())
         self.timer_msg.add_callback('expired',
                                     lambda *args: self.clear_onscreen_message())
+        canvas_w.set_expanding(True, True)
+
         wd, ht = canvas_w.get_size()
         self.configure_window(wd, ht)
 
@@ -179,7 +184,7 @@ class ImageViewPg(ImageView.ImageViewBase):
         wd, ht = event['width'], event['height']
         self.logger.debug(f"window mapped to {wd}x{ht}")
         self.configure_window(wd, ht)
-        self.redraw(whence=0)
+        return self.make_callback('map')
 
     def canvas_resize_cb(self, canvas_w, event):
         with self._timer_resize_lock:
@@ -189,7 +194,7 @@ class ImageViewPg(ImageView.ImageViewBase):
     def delayed_resize_cb(self):
         with self._timer_resize_lock:
             wd, ht = self._delayed_size
-            self.logger.info("canvas resized to %dx%d" % (wd, ht))
+            self.logger.debug("canvas resized to %dx%d" % (wd, ht))
             self.configure_window(wd, ht)
             self.redraw(whence=0)
 
@@ -627,6 +632,8 @@ class ScrolledViewPg(Widgets.AbstractScrollArea):
 
         # callback when the user scrolls
         self.add_callback('scrolled', self._scrolled_cb)
+        # callback when the user maps our scroll area
+        self.add_callback('map', self._map_cb)
         # callback when the user resizes our scroll area
         self.add_callback('area-resize', self._resize_cb)
 
@@ -637,6 +644,12 @@ class ScrolledViewPg(Widgets.AbstractScrollArea):
                                  lambda v, l: self._calc_scrollbars(v, 0))
 
         self._calc_scrollbars(viewer, 0)
+
+    def _map_cb(self, mywidget, event):
+        """Resize the viewer widget when the ScrolledView is mapped."""
+        wd, ht = event['width'], event['height']
+        if self.viewer_w is not None:
+            self.viewer_w.resize(wd, ht)
 
     def _resize_cb(self, mywidget, wd, ht, v_thmb_wd, h_thmb_wd):
         """Resize the viewer widget when the ScrolledView is resized."""

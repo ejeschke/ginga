@@ -115,12 +115,12 @@ class PlotViewBase(ViewerBase):
         # optimization of resizing
         self.time_last_resize = time.time()
         self.defer_resize = self.t_.get('defer_resize', True)
-        self.resize_lagtime = self.t_.get('resize_lagtime', 0.25)
+        self.resize_lagtime = self.t_.get('resize_lagtime', 0.35)
         self._resize_lock = threading.RLock()
         self._resize_dims = (0, 0)
         # optimization of redrawing
-        self.defer_redraw = self.t_.get('defer_redraw', False)
-        self.defer_lagtime = self.t_.get('defer_lagtime', 0.025)
+        self.defer_redraw = self.t_.get('defer_redraw', True)
+        self.defer_lagtime = self.t_.get('defer_lagtime', 0.2)
 
         # these will get set in the event mixin
         self.timer_resize = None
@@ -165,7 +165,7 @@ class PlotViewBase(ViewerBase):
         # holds onscreen text object
         self._ost = None
 
-        self.add_callback('configure', self.resize_cb)
+        self.add_callback('configure', self.configure_cb)
         self.plot_w = PlotWidget(self)
 
     def set_figure(self, figure, mpl_canvas=None):
@@ -192,8 +192,6 @@ class PlotViewBase(ViewerBase):
         #self.pgcanvas = canvas_w
         canvas_w.add_callback('map', self.canvas_map_cb)
         canvas_w.add_callback('resize', self.canvas_resize_cb)
-        if canvas_w.has_callback('area-resize'):
-            canvas_w.add_callback('area-resize', self.canvas_area_resize_cb)
 
         session = canvas_w.session
         self.timer_resize = session.make_timer()
@@ -287,13 +285,13 @@ class PlotViewBase(ViewerBase):
     configure = set_window_size
     configure_window = set_window_size
 
-    def resize_cb(self, viewer, wd_px, ht_px):
+    def configure_cb(self, viewer, wd_px, ht_px):
         # called by ourselves in response to a 'configure' callback
         # adjust font sizes and redraw
         self.logger.debug(f"viewer resized to {wd_px}x{ht_px}")
         self._set_variable_font_sizes()
 
-        self.redraw_now()
+        self.redraw()
 
     def canvas_map_cb(self, canvas_w, event):
         # *** only called by pg widgets when the canvas is mapped ***
@@ -307,11 +305,6 @@ class PlotViewBase(ViewerBase):
         wd_px, ht_px = event['width'], event['height']
         self.reschedule_resize(wd_px, ht_px)
 
-    def canvas_area_resize_cb(self, w, wd_px, ht_px, vthumb_px, hthumb_px):
-        # *** only called by pg widgets when the canvas is resized ***
-        pass
-        #self.reschedule_resize(event['width'], event['height'])
-
     def delayed_resize(self):
         """Called when the timer for a delayed resize expires."""
         with self._resize_lock:
@@ -323,15 +316,12 @@ class PlotViewBase(ViewerBase):
 
     def reschedule_resize(self, wd_px, ht_px):
         with self._resize_lock:
-            if time.time() - self.time_last_resize > self.resize_lagtime:
+            if self.timer_resize is None or not self.defer_resize:
                 self.set_window_size(wd_px, ht_px)
             else:
-                if self.timer_resize is None or not self.defer_resize:
-                    self.set_window_size(wd_px, ht_px)
-                else:
-                    self._resize_flag = True
-                    self._resize_dims = (wd_px, ht_px)
-                    self.timer_resize.cond_set(self.resize_lagtime)
+                self._resize_flag = True
+                self._resize_dims = (wd_px, ht_px)
+                self.timer_resize.set(self.resize_lagtime)
 
     def clear(self, redraw=True):
         """Clear plot display."""
@@ -339,7 +329,7 @@ class PlotViewBase(ViewerBase):
         self._dataobj = None
         self.clear_data()
         if redraw:
-            self.redraw_now()
+            self.redraw()
 
     def clear_data(self):
         self.artist_dct = dict()
@@ -650,7 +640,7 @@ class PlotViewBase(ViewerBase):
                 #self.t_['plot_pan'] = (pan_x, pan_y)
                 self.set_pan(pan_x, pan_y)
 
-        self.redraw_now()
+        self.redraw()
 
     def get_ranges(self):
         ranges = self.settings['plot_range']
@@ -743,6 +733,10 @@ class PlotViewBase(ViewerBase):
             self.timer_redraw.cond_set(time_sec)
         else:
             self.redraw_now()
+
+    def delayed_redraw(self):
+        """Called when the timer_redraw expires."""
+        self.redraw_now()
 
     def render_canvas(self, canvas):
         for obj in canvas.objects:

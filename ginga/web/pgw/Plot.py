@@ -10,11 +10,10 @@ from matplotlib.transforms import Bbox
 
 # NOTE: imported here so available when importing ginga.gw.Plot
 from ginga.web.pgw.ImageViewPg import PgEventMixin as PlotEventMixin  # noqa
-from ginga.web.pgw.ImageViewPg import ScrolledView
+from ginga.web.pgw import Widgets
 
 
-#class PlotWidget(Widgets.Image):
-class PlotWidget(ScrolledView):
+class PlotWidget(Widgets.Image):
     """
     This class implements the server-side backend of the surface for a
     web-based plot viewer.  It uses a web socket to connect to an HTML5
@@ -24,14 +23,13 @@ class PlotWidget(ScrolledView):
     surface via the set_viewer() method.
     """
     def __init__(self, plot, width=500, height=500):
-        #super().__init__(interactive=True, use_animation_frame=True)
-        #super().__init__(interactive=True)
+        super().__init__(interactive=True, use_animation_frame=True)
+
+        super().set_expanding(True, True)
 
         self._widget = FigureCanvas(plot.get_figure())
         self.image_format = 'png'
 
-        super().__init__(plot)
-        self.set_scroll_bar_visibility('auto', 'auto')
         if plot is not None:
             self.logger = plot.logger
             self.set_plot(plot)
@@ -50,7 +48,7 @@ class PlotWidget(ScrolledView):
 
     def get_rgb_buffer(self, plot):
         buf = BytesIO()
-        wd, ht = self.viewer_w.get_size()
+        wd, ht = self.get_size()
         fig = plot.get_figure()
         # desired width x height in inches
         wd_in, ht_in = max(0.01, wd / fig.dpi), max(0.01, ht / fig.dpi)
@@ -79,7 +77,7 @@ class PlotWidget(ScrolledView):
         wd, ht, buf = self.get_rgb_buffer(plot)
 
         self.logger.debug("drawing %dx%d image" % (wd, ht))
-        self.viewer_w.set_binary_image(buf, self.image_format)
+        super().set_binary_image(buf, self.image_format)
 
 
 #END

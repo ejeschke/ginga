@@ -21,7 +21,7 @@ to reflect that channel's colormap and value information.
 """
 from ginga import GingaPlugin
 from ginga.misc import Bunch
-from ginga.gw import ColorBar, Widgets
+from ginga.gw import ColorBar
 
 __all__ = ['Colorbar']
 
@@ -55,11 +55,9 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         cbar.set_imap(self.fv.im)
         cbar_w = cbar.get_widget()
         cbar_ht = self.settings.get('cbar_height', 36)
-        hbox = Widgets.HBox()
-        hbox.set_padding(0)
-        hbox.add_widget(cbar_w, stretch=1)
-        hbox.set_min_size(None, cbar_ht)
-        hbox.set_max_size(None, cbar_ht)
+        cbar_w.set_expanding(True, False)
+        cbar_w.set_min_size(None, cbar_ht)
+        cbar_w.set_max_size(None, cbar_ht)
 
         self.colorbar = cbar
         cbar.add_callback('motion', self.cbar_value_cb)
@@ -68,7 +66,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         if self.fv.gpmon.has_plugin('Cursor'):
             self.cursor_obj = self.fv.gpmon.get_plugin('Cursor')
 
-        container.add_widget(hbox, stretch=0)
+        container.add_widget(cbar_w, stretch=0)
         self.gui_up = True
 
     def add_channel_cb(self, viewer, channel):

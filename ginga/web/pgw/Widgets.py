@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from functools import reduce
+import os.path
 
 in_situ_web = False
 try:
@@ -22,17 +23,20 @@ except ImportError:
 from ginga.misc.Callback import Callbacks
 from ginga.misc import Bunch, Settings
 from ginga.web.pgw import PgHelp
+from ginga.util.paths import icondir
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'TextArea', 'Dial', 'Label', 'Button', 'ComboBox',
+           'TextArea', 'TextSource', 'Dial', 'Label', 'Button', 'ComboBox',
            'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
-           'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
-           'Canvas', 'Box', 'HBox', 'VBox', 'Frame', 'Timer',
-           'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
-           'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
-           'Menu', 'Menubar', 'Page', 'TopLevel', 'Application', 'Dialog',
-           'FileDialog', 'ColorDialog',
-           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
+           'RadioButton', 'Image', 'Canvas', 'ProgressBar', 'StatusBar',
+           'TreeView', 'TableView', 'Box', 'HBox', 'VBox', 'ButtonBox',
+           'FixedLayout', 'Frame', 'Expander', 'TabWidget', 'StackWidget',
+           'MDIWidget', 'ScrollArea', 'Splitter', 'GridBox',
+           'ToolbarAction', 'Toolbar', 'MenuAction', 'Menu', 'Menubar',
+           'Page', 'TopLevel', 'Dialog',
+           'FileDialog', 'ColorDialog', 'MessageDialog', 'Timer',
+           'Application', 'name_mangle', 'make_widget', 'hadjust',
+           'build_info', 'wrap']
 
 
 class WidgetError(Exception):
@@ -127,8 +131,21 @@ class WidgetMixin(CallbackMixin):
         # this is for compatibility with Qt widgets
         pass
 
+
+class ContainerWidgetMixin(WidgetMixin):
+
+    def __init__(self):
+        WidgetMixin.__init__(self)
+
+        self._enable_callback('widget-removed')
+
     def remove(self, child, delete=False):
         super().remove(child, destroy=delete)
+        self._make_callback('widget-removed', child)
+
+
+    def remove_all(self, delete=False):
+        super().remove_all(destroy=delete)
 
 
 # for compatibility
@@ -144,8 +161,8 @@ class ApplicationBase(Callbacks):
     socket interface (pgwidgets-python).
     """
     def __init__(self, logger=None, host='localhost', port=9909, ws_port=None,
-                 settings=None, token='none'):
-        global _session, _app
+                 settings=None):
+        global _app
         Callbacks.__init__(self)
         self.logger = logger
 
@@ -196,7 +213,7 @@ class ApplicationBase(Callbacks):
 
         super().close()
 
-    def mainloop(self):
+    def mainloop(self, timeout=None):
         self.start()
         self.run()
 
@@ -210,8 +227,7 @@ if in_situ_web:
         def __init__(self, logger=None, host='localhost', port=9909,
                      ws_port=None, settings=None, token='none'):
             ApplicationBase.__init__(self, logger=logger, host=host, port=port,
-                                     ws_port=ws_port, settings=settings,
-                                     token=token)
+                                     ws_port=ws_port, settings=settings)
 
     FileBrowser = PGW.FileDialog  # noqa
 
@@ -222,15 +238,17 @@ else:
         """Application class when only the GUI is in the browser."""
 
         def __init__(self, logger=None, host='localhost', port=9909,
-                     ws_port=None, settings=None, token='none'):
+                     ws_port=None, settings=None, max_sessions=1,
+                     token='none'):
             global _session
             ApplicationBase.__init__(self, logger=logger, host=host, port=port,
-                                     ws_port=ws_port, settings=settings,
-                                     token=token)
+                                     ws_port=ws_port, settings=settings)
             if ws_port is None:
                 ws_port = port + 1
             PGW_Application.__init__(self, ws_port=ws_port,
-                                     http_port=port, host=host, http_server=True,
+                                     http_port=port, host=host,
+                                     http_server=True,
+                                     max_sessions=max_sessions,
                                      concurrency_handling='serialized')
 
             # we create a default session that is used by the widgets
@@ -244,6 +262,16 @@ else:
         def get_url(self):
             base_url = f"http://{self._host}:{self._http_port}/?session={_session_id}&token={_session.token}"
             return base_url
+
+        def mainloop(self, timeout=None):
+            super().start()
+            super().run()
+
+        def start(self):
+            super().start()
+
+        def process_events(self, timeout=0.1):
+            super().process_events(timeout=timeout)
 
 
 # BASIC WIDGETS
@@ -293,6 +321,12 @@ class TextArea(WidgetMixin, PGW.TextArea):
     def __init__(self, *args, **kwargs):
         WidgetMixin.__init__(self)
         PGW.TextArea.__init__(self, *get_args(args), **kwargs)
+
+
+class TextSource(WidgetMixin, PGW.TextSource):
+    def __init__(self, *args, **kwargs):
+        WidgetMixin.__init__(self)
+        PGW.TextSource.__init__(self, *get_args(args), **kwargs)
 
 
 class Label(WidgetMixin, PGW.Label):
@@ -540,50 +574,72 @@ class TreeView(WidgetMixin, PGW.TreeView):
         return super().get_selected()
 
 
+class TableView(WidgetMixin, PGW.TableView):
+    def __init__(self, *args, auto_expand=False, sortable=False,
+                 selection='single', use_alt_row_color=False):
+        WidgetMixin.__init__(self)
+
+        PGW.TreeView.__init__(self, *get_args(args),
+                              selection_mode=selection, sortable=sortable,
+                              alternate_row_colors=use_alt_row_color)
+
+
 class Canvas(WidgetMixin, PGW.Canvas):
     def __init__(self, *args, **kwargs):
         WidgetMixin.__init__(self)
         PGW.Canvas.__init__(self, *get_args(args), **kwargs)
 
 
-class Box(WidgetMixin, PGW.Box):
+class Box(ContainerWidgetMixin, PGW.Box):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.Box.__init__(self, *get_args(args), **kwargs)
 
 
-class HBox(WidgetMixin, PGW.HBox):
+class HBox(ContainerWidgetMixin, PGW.HBox):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.HBox.__init__(self, *get_args(args), **kwargs)
 
 
-class VBox(WidgetMixin, PGW.VBox):
+class VBox(ContainerWidgetMixin, PGW.VBox):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.VBox.__init__(self, *get_args(args), **kwargs)
 
 
-class Frame(WidgetMixin, PGW.Frame):
+class ButtonBox(ContainerWidgetMixin, PGW.ButtonBox):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
+        PGW.ButtonBox.__init__(self, *get_args(args), **kwargs)
+
+
+class FixedLayout(ContainerWidgetMixin, PGW.FixedLayout):
+    def __init__(self, *args, **kwargs):
+        ContainerWidgetMixin.__init__(self)
+        PGW.FixedLayout.__init__(self, *get_args(args), **kwargs)
+
+
+class Frame(ContainerWidgetMixin, PGW.Frame):
+    def __init__(self, *args, **kwargs):
+        ContainerWidgetMixin.__init__(self)
         PGW.Frame.__init__(self, *get_args(args), **kwargs)
 
 
-class Expander(WidgetMixin, PGW.Expander):
-    def __init__(self, title='', notoggle=False, **kwargs):
-        WidgetMixin.__init__(self)
-        PGW.Expander.__init__(self, title=title,
+class Expander(ContainerWidgetMixin, PGW.Expander):
+    def __init__(self, *args, notoggle=False, **kwargs):
+        ContainerWidgetMixin.__init__(self)
+        PGW.Expander.__init__(self, *get_args(args),
                               collapsible=not notoggle, **kwargs)
 
     def expand(self, tf):
         self.set_collapsed(not tf)
 
 
-class TabWidget(WidgetMixin, PGW.TabWidget):
+class TabWidget(ContainerWidgetMixin, PGW.TabWidget):
     def __init__(self, *args, tabpos='top', reorderable=False,
                  detachable=False, closable=False, group=0):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.TabWidget.__init__(self, *get_args(args), closable=closable,
                                reorderable=reorderable, tab_position=tabpos)
 
@@ -595,9 +651,9 @@ class TabWidget(WidgetMixin, PGW.TabWidget):
         self._make_callback('page-switch', child)
 
 
-class StackWidget(WidgetMixin, PGW.StackWidget):
+class StackWidget(ContainerWidgetMixin, PGW.StackWidget):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.StackWidget.__init__(self, *get_args(args), **kwargs)
 
         # remapping 'page_switch'
@@ -608,9 +664,9 @@ class StackWidget(WidgetMixin, PGW.StackWidget):
         self._make_callback('page-switch', child)
 
 
-class MDIWidget(WidgetMixin, PGW.MDIWidget):
+class MDIWidget(ContainerWidgetMixin, PGW.MDIWidget):
     def __init__(self, *args, tabpos='top', mode='mdi', **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.MDIWidget.__init__(self, *get_args(args), **kwargs)
 
         self.true_mdi = True
@@ -622,19 +678,26 @@ class MDIWidget(WidgetMixin, PGW.MDIWidget):
         super().cascade_windows()
 
 
-# class MDISubWindow(WidgetMixin, PGW.MDISubWindow):
+# class MDISubWindow(ContainerWidgetMixin, PGW.MDISubWindow):
 #     def __init__(self, *args, **kwargs):
-#         WidgetMixin.__init__(self)
+#         ContainerWidgetMixin.__init__(self)
 #         PGW.MDISubWindow.__init__(self, *get_args(args), **kwargs)
 
 #     def move(self, x, y):
 #         super().set_position(x, y)
 
 
-class ScrollArea(WidgetMixin, PGW.ScrollArea):
+class ScrollArea(ContainerWidgetMixin, PGW.ScrollArea):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.ScrollArea.__init__(self, *get_args(args), **kwargs)
+
+    def get_scroll_position(self):
+        # TODO: this is a bug in pgwidgets, sometimes returns None
+        res = super().get_scroll_position()
+        if res is None:
+            return (1.0, 1.0)
+        return res
 
     def scroll_to_end(self, vertical=True, horizontal=False):
         h_pct, v_pct = self.get_scroll_position()
@@ -645,21 +708,21 @@ class ScrollArea(WidgetMixin, PGW.ScrollArea):
         self.set_scroll_position(h_pct, v_pct)
 
 
-class AbstractScrollArea(WidgetMixin, PGW.AbstractScrollArea):
+class AbstractScrollArea(ContainerWidgetMixin, PGW.AbstractScrollArea):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.AbstractScrollArea.__init__(self, *get_args(args), **kwargs)
 
 
-class Splitter(WidgetMixin, PGW.Splitter):
+class Splitter(ContainerWidgetMixin, PGW.Splitter):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.Splitter.__init__(self, *get_args(args), **kwargs)
 
 
-class GridBox(WidgetMixin, PGW.GridBox):
+class GridBox(ContainerWidgetMixin, PGW.GridBox):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.GridBox.__init__(self, *get_args(args), **kwargs)
 
     def resize_grid(self, rows, columns):
@@ -675,9 +738,9 @@ class ToolbarAction(WidgetMixin, PGW.ToolBarAction):
         PGW.ToolBarAction.__init__(self, *get_args(args), **kwargs)
 
 
-class Toolbar(WidgetMixin, PGW.ToolBar):
+class Toolbar(ContainerWidgetMixin, PGW.ToolBar):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.ToolBar.__init__(self, *get_args(args), **kwargs)
 
     def add_menu(self, text, menu=None, mtype='tool'):
@@ -710,9 +773,9 @@ class MenuAction(WidgetMixin, PGW.MenuAction):
         PGW.MenuAction.__init__(self, *get_args(args), **kwargs)
 
 
-class Menu(WidgetMixin, PGW.Menu):
+class Menu(ContainerWidgetMixin, PGW.Menu):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.Menu.__init__(self, *get_args(args), **kwargs)
 
     def add_name(self, name, checkable=False):
@@ -745,9 +808,9 @@ class Menu(WidgetMixin, PGW.Menu):
         super().popup(x, y)
 
 
-class Menubar(WidgetMixin, PGW.MenuBar):
+class Menubar(ContainerWidgetMixin, PGW.MenuBar):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.MenuBar.__init__(self, *get_args(args), **kwargs)
 
     def add_name(self, name):
@@ -762,21 +825,21 @@ class Menubar(WidgetMixin, PGW.MenuBar):
         return menu
 
 
-class Page(WidgetMixin, PGW.Page):
+class Page(ContainerWidgetMixin, PGW.Page):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.Page.__init__(self, *get_args(args), **kwargs)
 
 
-class TopLevel(WidgetMixin, PGW.TopLevel):
+class TopLevel(ContainerWidgetMixin, PGW.TopLevel):
     def __init__(self, *args, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.TopLevel.__init__(self, *get_args(args), **kwargs)
 
 
-class Dialog(WidgetMixin, PGW.Dialog):
+class Dialog(ContainerWidgetMixin, PGW.Dialog):
     def __init__(self, *args, parent=None, flags=None, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.Dialog.__init__(self, *get_args(args), **kwargs)
 
     def get_content_area(self):
@@ -789,21 +852,68 @@ class Dialog(WidgetMixin, PGW.Dialog):
         super().destroy()
 
 
-class ColorDialog(WidgetMixin, PGW.ColorDialog):
+class ColorDialog(ContainerWidgetMixin, PGW.ColorDialog):
     def __init__(self, *args, parent=None, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         PGW.ColorDialog.__init__(self, *get_args(args), **kwargs)
 
 
-# class FileDialog(WidgetMixin, PGW.FileDialog):
+# class FileDialog(ContainerWidgetMixin, PGW.FileDialog):
 #     def __init__(self, *args, title='', parent=None, **kwargs):
-#         WidgetMixin.__init__(self)
+#         ContainerWidgetMixin.__init__(self)
 #         PGW.FileDialog.__init__(self, *get_args(args), **kwargs)
 
-class FileDialog(WidgetMixin, FileBrowser):
+class FileDialog(ContainerWidgetMixin, FileBrowser):
     def __init__(self, *args, title='', parent=None, **kwargs):
-        WidgetMixin.__init__(self)
+        ContainerWidgetMixin.__init__(self)
         FileBrowser.__init__(self, *get_args(args), title=title)
+
+
+class MessageDialog(Dialog):
+
+    icon_dct = dict()
+
+    @classmethod
+    def set_category_icon(cls, category, iconpath, size=(64, 64)):
+        cls.icon_dct[category] = iconpath
+
+    def __init__(self, title='', flags=None, buttons=[("Dismiss", 0)],
+                 parent=None, modal=False, autoclose=False):
+        Dialog.__init__(self, title=title, flags=flags, buttons=buttons,
+                        parent=parent, modal=modal, autoclose=autoclose)
+
+        # initialize default icons for certain categories
+        if 'warning' not in MessageDialog.icon_dct:
+            for category, iconfile in [('warning', "warning.svg"),
+                                       #('critical', "critical.svg"),
+                                       #('denied', "denied.svg"),
+                                       ('error', "error.svg"),
+                                       ('info', "information.svg"),
+                                       ('question', "question.svg")]:
+                iconpath = os.path.join(icondir, iconfile)
+                MessageDialog.set_category_icon(category, iconpath)
+
+        vbox = self.get_content_area()
+        vbox.set_margins(4, 4, 4, 4)
+
+    def set_message(self, category, text, title=None):
+        if title is not None:
+            self.set_title(title)
+        vbox = self.get_content_area()
+        vbox.remove_all()
+        if category in self.icon_dct:
+            hbox = HBox()
+            hbox.set_border_width(4)
+            hbox.add_widget(Label(""), stretch=1)
+            img = Image()
+            img.load_file(self.icon_dct[category])
+            hbox.add_widget(img, stretch=0)
+            hbox.add_widget(Label(""), stretch=1)
+            vbox.add_widget(hbox, stretch=1)
+
+        tw = Label(text)
+        vbox.add_widget(tw, stretch=1)
+        vbox.add_widget(tw)
 
 
 class Timer(CallbackMixin, PGW.Timer):

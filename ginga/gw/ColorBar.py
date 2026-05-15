@@ -61,11 +61,7 @@ class ColorBar(Callback.Callbacks):
         cbar.add_callback('scroll-none', self.scroll_cb)
         cbar.add_callback('pinch-none', self.pinch_cb)
 
-        #cbar.configure(width, height)
         iw = Viewers.GingaViewerWidget(viewer=cbar)
-
-        w = cbar.get_widget()
-        #w.set_min_size(None, height)
         self.widget = iw
 
         font = self.settings.get('font', 'sans')

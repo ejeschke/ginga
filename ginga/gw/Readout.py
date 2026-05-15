@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.gw import Widgets, Viewers
+from ginga.gw import Viewers
 from ginga.misc import log
 from ginga import colors
 
@@ -20,17 +20,15 @@ class Readout:
         readout.set_desired_size(width, height)
 
         readout_w = Viewers.GingaViewerWidget(viewer=readout)
-        hbox = Widgets.HBox()
-        hbox.set_padding(0)
-        hbox.add_widget(readout_w, stretch=1)
-        hbox.set_min_size(None, height)
-        hbox.set_max_size(None, height)
+        readout_w.set_expanding(True, False)
+        readout_w.set_min_size(None, height)
+        readout_w.set_max_size(None, height)
 
         bg = colors.lookup_color('#202030')
         readout.set_bg(*bg)
 
         self.viewer = readout
-        self.readout = hbox
+        self.readout = readout_w
 
         canvas = readout.get_canvas()
         Text = canvas.get_draw_class('text')
