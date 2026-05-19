@@ -17,6 +17,8 @@ To force the use of one programmatically, do:
 any images.  Otherwise Ginga will try to pick one for you.
 """
 import re
+from io import BytesIO
+
 import numpy as np
 
 from ginga.AstroImage import AstroImage, AstroHeader
@@ -380,7 +382,21 @@ class AstropyFitsFileHandler(BaseFitsFileHandler):
         filepath = info.filepath
 
         self.logger.debug("Loading file '%s' ..." % (filepath))
-        fits_f = pyfits.open(filepath, 'readonly', memmap=memmap)
+        return self._open_obj(filepath, memmap=memmap, **kwargs)
+
+    def open_buffer(self, name, buf, idx=None, memmap=None, **kwargs):
+
+        # prepare compatible result to get_fileinfo()
+        self.fileinfo = Bunch.Bunch(filepath=None, url=None, numhdu=idx,
+                                    name=name, idx=0, ondisk=False)
+
+        self.logger.debug("Loading buffer for file '%s' ..." % (name))
+        file_f = BytesIO(buf)
+        return self._open_obj(file_f, memmap=memmap, **kwargs)
+
+    def _open_obj(self, file_like, memmap=None, **kwargs):
+
+        fits_f = pyfits.open(file_like, 'readonly', memmap=memmap)
         self.fits_f = fits_f
 
         # this seems to be necessary now for some fits files...
@@ -390,7 +406,7 @@ class AstropyFitsFileHandler(BaseFitsFileHandler):
         except Exception as e:
             # Let's hope for the best!
             self.logger.warning("Problem verifying fits file '%s': %s" % (
-                filepath, str(e)))
+                self.fileinfo.name, str(e)))
 
         try:
             # this can fail for certain FITS files, with a "name undefined"
@@ -714,6 +730,9 @@ class FitsioFileHandler(BaseFitsFileHandler):
                 self.hdu_db[key] = d
 
         return self
+
+    def open_buffer(self, name, io_buf, memmap=None, **kwargs):
+        raise NotImplemented("open_buffer is not supported by 'fitsio'")
 
     def close(self):
         self.hdu_info = []

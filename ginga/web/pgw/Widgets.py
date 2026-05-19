@@ -143,7 +143,6 @@ class ContainerWidgetMixin(WidgetMixin):
         super().remove(child, destroy=delete)
         self._make_callback('widget-removed', child)
 
-
     def remove_all(self, delete=False):
         super().remove_all(destroy=delete)
 
@@ -578,10 +577,9 @@ class TableView(WidgetMixin, PGW.TableView):
     def __init__(self, *args, auto_expand=False, sortable=False,
                  selection='single', use_alt_row_color=False):
         WidgetMixin.__init__(self)
-
-        PGW.TreeView.__init__(self, *get_args(args),
-                              selection_mode=selection, sortable=sortable,
-                              alternate_row_colors=use_alt_row_color)
+        PGW.TableView.__init__(self, *get_args(args),
+                               selection_mode=selection, sortable=sortable,
+                               alternate_row_colors=use_alt_row_color)
 
 
 class Canvas(WidgetMixin, PGW.Canvas):
@@ -691,13 +689,6 @@ class ScrollArea(ContainerWidgetMixin, PGW.ScrollArea):
     def __init__(self, *args, **kwargs):
         ContainerWidgetMixin.__init__(self)
         PGW.ScrollArea.__init__(self, *get_args(args), **kwargs)
-
-    def get_scroll_position(self):
-        # TODO: this is a bug in pgwidgets, sometimes returns None
-        res = super().get_scroll_position()
-        if res is None:
-            return (1.0, 1.0)
-        return res
 
     def scroll_to_end(self, vertical=True, horizontal=False):
         h_pct, v_pct = self.get_scroll_position()

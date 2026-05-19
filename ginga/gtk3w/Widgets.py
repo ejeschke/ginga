@@ -151,6 +151,10 @@ class WidgetBase(Callback.Callbacks):
         # this is for compatibility with Qt widgets
         pass
 
+    def set_expanding(self, horizontal=False, vertical=False):
+        # NOTE: no direct equivalent in Gtk
+        pass
+
     def set_border_width(self, pix):
         self.widget.set_border_width(pix)
 

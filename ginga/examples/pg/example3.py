@@ -12,7 +12,6 @@ wrappers.
 
 import sys
 import logging
-import base64
 from argparse import ArgumentParser
 
 from pgwidgets.sync import Application
@@ -234,8 +233,8 @@ class FitsViewer(object):
         f = evt["files"][0]
         name = f['name']
         if f.get("data"):
-            b64 = f["data"].split(",", 1)[1]
-            buf = base64.b64decode(b64)
+            # data is a raw buffer of the file
+            buf = f['data']
             self.load_buffer(name, buf)
 
     def update_download_cb(self, evt, prog):

@@ -232,6 +232,7 @@ class PanEvent(UIEvent):
 
 
 class DropEvent(UIEvent):
+
     def __init__(self, source=None, drag_type=None):
         self.source = source
         self.drag_type = None

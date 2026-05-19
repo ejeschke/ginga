@@ -12,7 +12,6 @@ import time
 import logging
 import inspect
 import numbers
-import base64
 from collections import OrderedDict
 
 # Local application imports
@@ -631,13 +630,12 @@ class GingaShell(GenericShell):
             return
 
         uris = []
-        for i, dct in enumerate(blobs):
-            if dct.get("data"):
-                name = dct['name']
-                mimetype = dct['type']
-                size = dct['size']
-                b64data = dct["data"].split(",", 1)[1]
-                buf = base64.b64decode(b64data)
+        for i, f_dct in enumerate(blobs):
+            if f_dct.get("data"):
+                name = f_dct['name']
+                mimetype = f_dct['type']
+                size = f_dct['size']
+                buf = f_dct['data']
                 buf_size = len(buf)
                 if buf_size != size:
                     self.logger.warning(f"size of blob ({buf_size}) does not"

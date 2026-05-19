@@ -153,6 +153,17 @@ class WidgetBase(Callback.Callbacks):
         v_policy = QtGui.QSizePolicy.Policy(policy_dict[vertical])
         self.widget.setSizePolicy(QtGui.QSizePolicy(h_policy, v_policy))
 
+    def set_expanding(self, horizontal=False, vertical=False):
+        # a simple version of cfg_expand that is more cross platform
+        policy = self.widget.sizePolicy()
+        hpolicy = policy.horizontalPolicy()
+        vpolicy = policy.verticalPolicy()
+        if horizontal:
+            hpolicy = QtGui.QSizePolicy.Expanding
+        if vertical:
+            vpolicy = QtGui.QSizePolicy.Expanding
+        self.widget.setSizePolicy(QtGui.QSizePolicy(hpolicy, vpolicy))
+
     def get_rgb_array(self):
         return QtHelp.get_rgb_array(self.widget)
 

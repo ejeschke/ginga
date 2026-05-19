@@ -9,7 +9,6 @@ import threading
 import base64
 
 from ginga import ImageView, Mixins, Bindings, events
-from ginga.misc.Bunch import Bunch
 from ginga.canvas import render
 from ginga.cursors import cursor_info
 # from ginga.web.pgw import PgHelp
@@ -285,25 +284,25 @@ class PgEventMixin:
 
         # event binding setup
         canvas_w.add_callback('pointer-down',
-                              lambda w, e: self.button_press_event(Bunch(e)))
+                              lambda w, e: self.button_press_event(e))
         canvas_w.add_callback('pointer-move',
-                              lambda w, e: self.motion_notify_event(Bunch(e)))
+                              lambda w, e: self.motion_notify_event(e))
         canvas_w.add_callback('pointer-up',
-                              lambda w, e: self.button_release_event(Bunch(e)))
+                              lambda w, e: self.button_release_event(e))
         canvas_w.add_callback('scroll',
-                              lambda w, e: self.scroll_event(Bunch(e)))
+                              lambda w, e: self.scroll_event(e))
         canvas_w.add_callback('focus-in',
-                              lambda w, e: self.focus_event(Bunch(e), True))
+                              lambda w, e: self.focus_event(e, True))
         canvas_w.add_callback('focus-out',
-                              lambda w, e: self.focus_event(Bunch(e), False))
+                              lambda w, e: self.focus_event(e, False))
         canvas_w.add_callback('key-down',
-                              lambda w, e: self.key_down_event(Bunch(e)))
+                              lambda w, e: self.key_down_event(e))
         canvas_w.add_callback('key-up',
-                              lambda w, e: self.key_up_event(Bunch(e)))
+                              lambda w, e: self.key_up_event(e))
         canvas_w.add_callback('enter',
-                              lambda w, e: self.enter_notify_event(Bunch(e)))
+                              lambda w, e: self.enter_notify_event(e))
         canvas_w.add_callback('leave',
-                              lambda w, e: self.leave_notify_event(Bunch(e)))
+                              lambda w, e: self.leave_notify_event(e))
         canvas_w.add_callback('drop-progress',
                               lambda w, e: self.drop_progress_event(e))
         canvas_w.add_callback('drop-end',
@@ -373,7 +372,7 @@ class PgEventMixin:
         # For key_press_events, javascript reports the actual printable
         # key name.  We use a special keymap to just handle the few
         # characters for which we have special names
-        keyname = event.key
+        keyname = event['key']
         self.logger.debug("key press event, keyname=%s" % (keyname))
         if keyname in self._keytbl3:
             keyname = self._keytbl3[keyname]
@@ -383,29 +382,28 @@ class PgEventMixin:
     def key_down_event(self, event):
         # For key down events, javascript only validly reports a key code.
         # We look up the code to determine the key name
-        keycode = event.keycode
-        self.logger.debug("key down event, key='%s', keycode=%s" % (event.key,
+        keycode = event['keycode']
+        self.logger.debug("key down event, key='%s', keycode=%s" % (event['key'],
                                                                     keycode))
-        keyname = self.transkey(event.key, keycode)
+        keyname = self.transkey(event['key'], keycode)
         self.logger.debug("keyname=%s" % (keyname))
 
         self.logger.debug("making key-press cb, key=%s" % (keyname))
         return self.make_ui_callback_viewer(self, 'key-press', keyname)
 
     def key_up_event(self, event):
-        keycode = event.keycode
+        keycode = event['keycode']
         self.logger.debug("key release event, keycode=%s" % (keycode))
-        keyname = self.transkey(event.key, keycode)
+        keyname = self.transkey(event['key'], keycode)
 
         self.logger.debug("making key-release cb, key=%s" % (keyname))
         return self.make_ui_callback_viewer(self, 'key-release', keyname)
 
     def button_press_event(self, event):
-        x = event.x
-        y = event.y
+        x, y = event['x'], event['y']
         self.last_win_x, self.last_win_y = x, y
         button = 0
-        button |= 0x1 << event.button_trigger - 1
+        button |= 0x1 << event['button_trigger'] - 1
         self._button = button
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
@@ -414,12 +412,10 @@ class PgEventMixin:
                                             data_x, data_y)
 
     def button_release_event(self, event):
-        # event.button, event.x, event.y
-        x = event.x
-        y = event.y
+        x, y = event['x'], event['y']
         self.last_win_x, self.last_win_y = x, y
         button = 0
-        button |= 0x1 << event.button_trigger - 1
+        button |= 0x1 << event['button_trigger'] - 1
         self._button = 0
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
@@ -430,7 +426,7 @@ class PgEventMixin:
     def motion_notify_event(self, event):
         #button = 0
         button = self._button
-        x, y = event.x, event.y
+        x, y = event['x'], event['y']
         self.last_win_x, self.last_win_y = x, y
 
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
@@ -441,9 +437,9 @@ class PgEventMixin:
                                             data_x, data_y)
 
     def scroll_event(self, event):
-        x, y = event.x, event.y
-        delta = event.delta_y
-        dx, dy = event.delta_x, event.delta_y
+        x, y = event['x'], event['y']
+        delta = event['delta_y']
+        dx, dy = event['delta_x'], event['delta_y']
         self.last_win_x, self.last_win_y = x, y
 
         # if (dx != 0 or dy != 0):
@@ -487,8 +483,10 @@ class PgEventMixin:
                  x=event['x'], y=event['y'], data_x=data_x, data_y=data_y)
 
         if len(event["files"]) > 0:
-            drop.set_blobs(event["files"])
-            drop.set(types=event['types'], encoding='base64')
+            f_lst = event["files"]
+            drop.set_blobs(f_lst)
+            # mimetypes are more accurate in the 'files' list
+            drop.set(types=[dct['type'] for dct in f_lst])
 
         elif len(event["text"]) > 0:
             drop.set_text(event["text"])

@@ -139,10 +139,44 @@ def get_openers(mimetype):
 
 
 def handle_drop_event(viewer, drop_event):
+    logger = viewer.logger
+
     if drop_event.drag_type in ['uris', 'paths']:
         for item in drop_event.contents['body']:
             dataobj = load_data(item, logger=viewer.logger)
             viewer.set_dataobj(dataobj)
+
+    elif drop_event.drag_type == 'blobs':
+        # PG widgets
+        for f_dct in drop_event.contents['body']:
+            mimetype = f_dct['type']
+            openers = get_openers(mimetype)
+            if len(openers) == 0:
+                msg = "No openers found for type '{}'".format(mimetype)
+                logger.error(msg)
+                raise ValueError(msg)
+
+            # decode the buffer as needed
+            encoding = f_dct['encoding']
+            if encoding == 'bytes':
+                # no decoding needed
+                buf = f_dct['data']
+            else:
+                msg = f"No decoder for encoding type '{encoding}' of blob"
+                logger.error(msg)
+                raise ValueError(msg)
+
+            opener = openers[0].opener(logger)
+            with opener.open_buffer(f_dct['name'], buf) as opn_f:
+                numhdu, hdu = opn_f.find_first_good_hdu()
+                dataobj = opn_f.load_hdu(hdu)
+            viewer.set_dataobj(dataobj)
+
+    else:
+        drag_type = drop_event.drag_type
+        msg = f"No handler for drag type '{drag_type}'"
+        logger.error(msg)
+        raise ValueError(msg)
 
 
 def get_all_openers():
