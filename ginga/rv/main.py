@@ -237,7 +237,7 @@ def get_plugin_spec(module=None):
     return [spec for spec in plugins if spec['module'] == module]
 
 
-class ReferenceViewer(object):
+class ReferenceViewer:
     """
     This class exists solely to be able to customize the reference
     viewer startup.
@@ -253,6 +253,11 @@ class ReferenceViewer(object):
         self.default_plugins = plugins
         self.plugins = []
         self.plugin_dct = dict()
+        self.logger = None
+        self.ev_quit = None
+        self.prefs = None
+        self.settings = None
+        self.ginga_shell = None
 
     def add_plugin_spec(self, spec):
         self.plugins.append(spec)
@@ -379,71 +384,22 @@ class ReferenceViewer(object):
                      help="Prefer WCS module NAME")
         log.addlogopts(argprs)
 
-    def main(self, options, args):
+    def setup(self):
         """
-        Main routine for running the reference viewer.
+        Setup routine for running the reference viewer.
 
-        `options` is a ArgumentParser object that has been populated with
-        values from parsing the command line.  It should at least include
-        the options from add_default_options()
-
-        `args` is a list of arguments to the viewer after parsing out
-        options.  It should contain a list of files or URLs to load.
+        Assumptions:
+        1) self.logger is set
+        2) self.appname is set
+        3) self.basedir is set
+        4) self.ev_quit is set
+        5) self.settings should be initialized with any desired overrides.
         """
-        logname = self.appname.lower().replace(' ', '_')
-
-        # Create a logger
-        logger = log.get_logger(name=logname, options=options)
-
-        if options.basedir is not None:
-            # command line option overrules
-            self.basedir = os.path.expanduser(options.basedir)
-        if self.basedir is not None:
-            # custom basedir
-            paths.set_home(self.basedir)
-        else:
-            # stock ginga basedir
-            self.basedir = paths.ginga_home
-
-        # Get settings (preferences)
-        if not os.path.exists(self.basedir):
-            try:
-                os.mkdir(self.basedir)
-            except OSError as e:
-                logger.warning(
-                    "Couldn't create %s settings area (%s): %s" % (
-                        self.appname, self.basedir, str(e)))
-                logger.warning("Preferences will not be able to be saved")
-
-        if options.rc_port is not None:
-            # user specified a custom Remote Control port
-            grc.default_rc_port = options.rc_port
-
-        # Set up preferences
-        prefs = Settings.Preferences(basefolder=self.basedir, logger=logger)
-        settings = prefs.create_category('general')
-        settings.set_defaults(appname=self.appname,
-                              title=self.appname.capitalize(),
-                              useMatplotlibColormaps=False,
-                              widgetSet='choose',
-                              WCSpkg='choose', FITSpkg='choose',
-                              suppress_fits_warnings=False,
-                              recursion_limit=2000,
-                              min_threads=2,
-                              num_threads=max(os.cpu_count(), 10),
-                              threadpool_analyze_interval_sec=None,
-                              pluginmgr_allow_nonsingletons=True,
-                              icc_working_profile=None,
-                              font_scaling_factor=None,
-                              save_layout=True,
-                              use_opengl=False,
-                              layout_file='layout.json',
-                              plugin_file='plugins.yml',
-                              channel_prefix="Image")
-        settings.load(onError='silent')
+        if self.settings is None:
+            raise RuntimeError("initialize settings before calling setup()")
 
         # default of 1000 is a little too small
-        sys.setrecursionlimit(settings.get('recursion_limit'))
+        sys.setrecursionlimit(self.settings.get('recursion_limit', 2000))
 
         # So we can find our plugins
         sys.path.insert(0, self.basedir)
@@ -454,8 +410,12 @@ class ReferenceViewer(object):
         sys.path.insert(0, plugin_dir)
 
         # Create the dynamic module manager
-        mm = ModuleManager.ModuleManager(logger)
+        mm = ModuleManager.ModuleManager(self.logger)
         sys.meta_path.append(mm)
+
+        rc_port = self.settings.get('grc_port', None)
+        if rc_port is not None:
+            grc.default_rc_port = rc_port
 
         # what is the dynamic config file to load
         app_config = "{}_config".format(self.appname)
@@ -471,14 +431,11 @@ class ReferenceViewer(object):
                     app_config.init_config(self)
 
             except Exception as e:
-                logger.error("Error processing %s config file: %s" % (
+                self.logger.error("Error processing %s config file: %s" % (
                     self.appname, str(e)), exc_info=True)
 
         # Choose a toolkit
-        if options.toolkit:
-            toolkit = options.toolkit
-        else:
-            toolkit = settings.get('widgetSet', 'choose')
+        toolkit = self.settings.get('widgetSet', 'choose')
 
         if toolkit == 'choose':
             try:
@@ -490,50 +447,41 @@ class ReferenceViewer(object):
             ginga_toolkit.use(toolkit)
 
         tkname = ginga_toolkit.get_family()
-        logger.info("Chosen toolkit (%s) family is '%s'" % (
+        self.logger.info("Chosen toolkit (%s) family is '%s'" % (
             ginga_toolkit.toolkit, tkname))
 
         # these imports have to be here, otherwise they force the choice
         # of toolkit too early
         from ginga.rv.Control import GingaShell, GuiLogHandler
 
-        if settings.get('useMatplotlibColormaps', False):
+        if self.settings.get('useMatplotlibColormaps', False):
             # Add matplotlib color maps if matplotlib is installed
             try:
                 from ginga import cmap
                 cmap.add_matplotlib_cmaps(fail_on_import_error=False)
             except Exception as e:
-                logger.warning(
+                self.logger.warning(
                     "failed to load matplotlib colormaps: %s" % (str(e)))
 
         # Set a working RGB ICC profile if user has one
-        working_profile = settings.get('icc_working_profile', None)
+        working_profile = self.settings.get('icc_working_profile', None)
         rgb_cms.working_profile = working_profile
 
-        # User wants to customize the WCS package?
-        if options.wcspkg:
-            wcspkg = options.wcspkg
-        else:
-            wcspkg = settings.get('WCSpkg', 'choose')
+        # Set the WCS package
+        wcspkg = self.settings.get('WCSpkg', 'choose')
 
         try:
             from ginga.util import wcsmod
             if wcspkg != 'choose':
                 assert wcsmod.use(wcspkg) is True
         except Exception as e:
-            logger.warning(
+            self.logger.warning(
                 "failed to set WCS package preference '{}': {}".format(wcspkg, e))
 
         # User wants to customize the FITS package?
-        if options.fitspkg:
-            fitspkg = options.fitspkg
-        else:
-            fitspkg = settings.get('FITSpkg', 'choose')
+        fitspkg = self.settings.get('FITSpkg', 'choose')
 
-        if options.suppress_fits_warnings:
-            supp_warn = options.suppress_fits_warnings
-        else:
-            supp_warn = settings.get('suppress_fits_warnings', False)
+        supp_warn = self.settings.get('suppress_fits_warnings', False)
         if supp_warn:
             import warnings
             from astropy.io import fits
@@ -545,34 +493,27 @@ class ReferenceViewer(object):
                 assert io_fits.use(fitspkg) is True
 
         except Exception as e:
-            logger.warning(
+            self.logger.warning(
                 "failed to set FITS package preference '{}': {}".format(fitspkg, e))
 
-        ev_quit = threading.Event()
         # Create and start thread pool
-        num_threads = settings.get('num_threads', max(os.cpu_count(), 10))
-        if options.numthreads is not None:
-            num_threads = options.numthreads
-        min_threads = settings.get('min_threads', 2)
-        if options.minthreads is not None:
-            min_threads = options.minthreads
-        analyze_interval = settings.get('threadpool_analyze_interval_sec', None)
-        thread_pool = Task.ThreadPool(numthreads=num_threads, logger=logger,
-                                      minthreads=min_threads, ev_quit=ev_quit,
+        min_threads = self.settings.get('min_threads', 2)
+        num_threads = self.settings.get('num_threads', max(os.cpu_count(), 10))
+        analyze_interval = self.settings.get('threadpool_analyze_interval_sec', None)
+        thread_pool = Task.ThreadPool(numthreads=num_threads, logger=self.logger,
+                                      minthreads=min_threads, ev_quit=self.ev_quit,
                                       analyze_interval=analyze_interval)
         thread_pool.startall()
 
         # Create the Ginga main object
-        ginga_shell = GingaShell(logger, thread_pool, mm, prefs,
-                                 ev_quit=ev_quit)
+        ginga_shell = GingaShell(self.logger, thread_pool, mm, self.prefs,
+                                 ev_quit=self.ev_quit)
+        self.ginga_shell = ginga_shell
 
-        if options.opengl:
-            settings.set(use_opengl=True)
-
-        layout_file = os.path.join(self.basedir, settings.get('layout_file',
-                                                              'layout.json'))
+        layout_file = os.path.join(self.basedir, self.settings.get('layout_file',
+                                                                   'layout.json'))
         ginga_shell.set_layout(self.layout, layout_file=layout_file,
-                               save_layout=settings.get('save_layout', True))
+                               save_layout=self.settings.get('save_layout', True))
 
         # User configuration (custom star catalogs, etc.)
         if have_app_config:
@@ -580,31 +521,30 @@ class ReferenceViewer(object):
                 if hasattr(app_config, 'pre_gui_config'):
                     app_config.pre_gui_config(ginga_shell)
             except Exception as e:
-                logger.error("Error importing %s config file: %s" % (
+                self.logger.error("Error importing %s config file: %s" % (
                     self.appname, str(e)), exc_info=True)
 
         # Build desired layout
-        ginga_shell.build_toplevel(ignore_saved_layout=options.norestore)
+        norestore = self.settings.get('norestore', False)
+        ginga_shell.build_toplevel(ignore_saved_layout=norestore)
 
         # Did user specify a particular geometry?
-        if options.geometry:
-            ginga_shell.set_geometry(options.geometry)
+        geometry = self.settings.get('geometry', None)
+        if geometry is not None:
+            ginga_shell.set_geometry(geometry)
 
         # make the list of disabled plugins
-        if options.disable_plugins is not None:
-            disabled_plugins = options.disable_plugins.lower().split(',')
-        else:
-            disabled_plugins = settings.get('disable_plugins', [])
-            if not isinstance(disabled_plugins, list):
-                disabled_plugins = disabled_plugins.lower().split(',')
+        disabled_plugins = self.settings.get('disable_plugins', [])
+        if not isinstance(disabled_plugins, list):
+            disabled_plugins = disabled_plugins.lower().split(',')
         disabled_plugins = set(disabled_plugins)
 
         # Add GUI log handler (for "Log" global plugin)
         guiHdlr = GuiLogHandler(ginga_shell)
-        guiHdlr.setLevel(options.loglevel)
+        guiHdlr.setLevel(self.settings.get('loglevel', logging.INFO))
         fmt = logging.Formatter(log.LOG_FORMAT)
         guiHdlr.setFormatter(fmt)
-        logger.addHandler(guiHdlr)
+        self.logger.addHandler(guiHdlr)
 
         # Set loader priorities, if user has saved any
         # (see LoaderConfig plugin)
@@ -623,17 +563,17 @@ class ReferenceViewer(object):
                                           note=opener.__doc__)
 
             except Exception as e:
-                logger.error(f"failed to process loader file '{path}': {e}",
-                             exc_info=True)
+                self.logger.error(f"failed to process loader file '{path}': {e}",
+                                  exc_info=True)
 
         # Does user have a saved plugin setup?  If so, check which
         # plugins should be disabled, or have a customized category or
         # workspace
-        plugin_file = settings.get('plugin_file', None)
+        plugin_file = self.settings.get('plugin_file', None)
         if plugin_file is not None:
             plugin_file = os.path.join(self.basedir, plugin_file)
             if os.path.exists(plugin_file):
-                logger.info("Reading plugin file '%s'..." % (plugin_file))
+                self.logger.info("Reading plugin file '%s'..." % (plugin_file))
                 try:
                     with open(plugin_file, 'r') as in_f:
                         buf = in_f.read()
@@ -657,17 +597,14 @@ class ReferenceViewer(object):
                             self.add_plugin_spec(spec)
 
                 except Exception as e:
-                    logger.error(f"Error reading plugin file: {e}",
-                                 exc_info=True)
+                    self.logger.error(f"Error reading plugin file: {e}",
+                                      exc_info=True)
 
         # Load any custom global plugins named on command line or in
         # general.cfg
-        if options.modules is not None:
-            global_plugins = options.modules.split(',')
-        else:
-            global_plugins = settings.get('global_plugins', [])
-            if not isinstance(global_plugins, list):
-                global_plugins = global_plugins.split(',')
+        global_plugins = self.settings.get('global_plugins', [])
+        if not isinstance(global_plugins, list):
+            global_plugins = global_plugins.split(',')
 
         for long_plugin_name in global_plugins:
             if '.' in long_plugin_name:
@@ -692,12 +629,9 @@ class ReferenceViewer(object):
 
         # Load any custom local plugins named on command line or in
         # general.cfg
-        if options.plugins is not None:
-            local_plugins = options.plugins.split(',')
-        else:
-            local_plugins = settings.get('local_plugins', [])
-            if not isinstance(local_plugins, list):
-                local_plugins = local_plugins.split(',')
+        local_plugins = self.settings.get('local_plugins', [])
+        if not isinstance(local_plugins, list):
+            local_plugins = local_plugins.split(',')
 
         for long_plugin_name in local_plugins:
             if '.' in long_plugin_name:
@@ -739,12 +673,9 @@ class ReferenceViewer(object):
             ginga_shell.ds.raise_tab('Thumbs')
 
         # Add custom channels
-        if options.channels is not None:
-            channels = options.channels.split(',')
-        else:
-            channels = settings.get('channels', self.channels)
-            if not isinstance(channels, list):
-                channels = channels.split(',')
+        channels = self.settings.get('channels', self.channels)
+        if not isinstance(channels, list):
+            channels = channels.split(',')
 
         if len(channels) > 0:
             # populate the initial channel lineup
@@ -764,26 +695,32 @@ class ReferenceViewer(object):
                     app_config.post_gui_config(ginga_shell)
 
             except Exception as e:
-                logger.error("Error processing %s config file: %s" % (
+                self.logger.error("Error processing %s config file: %s" % (
                     self.appname, str(e)), exc_info=True)
 
         # Redirect warnings to logger
-        for hdlr in logger.handlers:
+        for hdlr in self.logger.handlers:
             logging.getLogger('py.warnings').addHandler(hdlr)
 
+        return ginga_shell
+
+    def process_args(self, args):
+        """
+        Process command line arguments.
+        """
         # Display banner the first time run, unless suppressed
         show_banner = (self.appname == 'ginga')
         try:
-            show_banner = settings.get('showBanner')
+            show_banner = self.settings.get('showBanner')
 
         except KeyError:
             # disable for subsequent runs
-            settings.set(showBanner=False)
-            if not os.path.exists(settings.preffile):
-                settings.save()
+            self.settings.set(showBanner=False)
+            if not os.path.exists(self.settings.preffile):
+                self.settings.save()
 
-        if (not options.nosplash) and (len(args) == 0) and show_banner:
-            ginga_shell.banner()
+        if len(args) == 0 and show_banner:
+            self.ginga_shell.banner()
 
         # Handle inputs like "*.fits[ext]" that sys cmd cannot auto expand.
         expanded_args = []
@@ -800,12 +737,14 @@ class ReferenceViewer(object):
             else:
                 expanded_args.append(imgfile)
 
+        channels = self.ginga_shell.get_channel_names()
         if len(channels) > 0:
             # Assume remaining arguments are fits files and load them.
-            if not options.separate_channels:
+            if not self.settings.get('separate_channels', False):
                 chname = channels[0]
-                ginga_shell.gui_do(ginga_shell.open_uris, expanded_args,
-                                   chname=chname)
+                self.ginga_shell.gui_do(self.ginga_shell.open_uris,
+                                        expanded_args,
+                                        chname=chname)
             else:
                 i = 0
                 num_channels = len(channels)
@@ -814,37 +753,173 @@ class ReferenceViewer(object):
                         chname = channels[i]
                         i = i + 1
                     else:
-                        channel = ginga_shell.add_channel_auto()
+                        channel = self.ginga_shell.add_channel_auto()
                         chname = channel.name
-                    ginga_shell.gui_do(ginga_shell.open_uris, [imgfile],
-                                       chname=chname)
+                    self.ginga_shell.gui_do(self.ginga_shell.open_uris,
+                                            [imgfile],
+                                            chname=chname)
 
+    def run(self):
+        """
+        Activate and run the GUI event loop.
+        """
         disable_warnings()
         try:
             try:
                 # if there is a network component, start it
-                if hasattr(ginga_shell, 'start'):
-                    logger.info("starting network interface...")
-                    ginga_shell.start()
+                if hasattr(self.ginga_shell, 'start'):
+                    self.logger.info("starting network interface...")
+                    self.ginga_shell.start()
 
-                if hasattr(ginga_shell, 'get_url'):
-                    base_url = ginga_shell.get_url()
+                if hasattr(self.ginga_shell, 'get_url'):
+                    base_url = self.ginga_shell.get_url()
                     print(f"visit {base_url} to view the application")
-                    logger.info(f"visit {base_url} to view the application")
+                    self.logger.info(f"visit {base_url} to view the application")
 
-                    logger.info("starting network interface...")
+                    self.logger.info("starting network interface...")
                 # Main loop to handle GUI events
-                logger.info("entering mainloop...")
-                ginga_shell.mainloop(timeout=0.001)
+                self.logger.info("entering mainloop...")
+                self.ginga_shell.mainloop(timeout=0.001)
 
             except KeyboardInterrupt:
-                logger.error("Received keyboard interrupt!")
+                self.logger.error("Received keyboard interrupt!")
 
         finally:
-            logger.info("Shutting down...")
-            ev_quit.set()
+            self.logger.info("Shutting down...")
+            self.ev_quit.set()
 
         sys.exit(0)
+
+    def main(self, options, args):
+        """
+        Main routine for running the reference viewer.
+
+        `options` is a ArgumentParser object that has been populated with
+        values from parsing the command line.  It should at least include
+        the options from add_default_options()
+
+        `args` is a list of arguments to the viewer after parsing out
+        options.  It should contain a list of files or URLs to load.
+        """
+        logname = self.appname.lower().replace(' ', '_')
+
+        # create a logger
+        self.logger = log.get_logger(name=logname, options=options)
+        self.ev_quit = threading.Event()
+
+        if hasattr(options, 'basedir') and options.basedir is not None:
+            # command line option overrules
+            self.basedir = os.path.expanduser(options.basedir)
+        if self.basedir is not None:
+            # custom basedir
+            paths.set_home(self.basedir)
+        else:
+            # stock ginga basedir
+            self.basedir = paths.ginga_home
+
+        # get settings (preferences)
+        if not os.path.exists(self.basedir):
+            try:
+                os.mkdir(self.basedir)
+            except OSError as e:
+                self.logger.warning(
+                    "Couldn't create %s settings area (%s): %s" % (
+                        self.appname, self.basedir, str(e)))
+                self.logger.warning("Preferences will not be able to be saved")
+
+        # set up preferences
+        self.prefs = Settings.Preferences(basefolder=self.basedir,
+                                          logger=self.logger)
+
+        # general settings control initialization of viewer
+        settings = self.prefs.create_category('general')
+        settings.set_defaults(appname=self.appname,
+                              title=self.appname.capitalize(),
+                              useMatplotlibColormaps=False,
+                              widgetSet='choose',
+                              WCSpkg='choose', FITSpkg='choose',
+                              suppress_fits_warnings=False,
+                              recursion_limit=2000,
+                              min_threads=2,
+                              num_threads=max(os.cpu_count(), 10),
+                              threadpool_analyze_interval_sec=None,
+                              pluginmgr_allow_nonsingletons=True,
+                              icc_working_profile=None,
+                              font_scaling_factor=None,
+                              save_layout=True,
+                              use_opengl=False,
+                              layout_file='layout.json',
+                              plugin_file='plugins.yml',
+                              channel_prefix="Image")
+        settings.load(onError='silent')
+        self.settings = settings
+
+        # ------ command line overrides for various settings -----
+        #
+        if hasattr(options, 'rc_port') and options.rc_port is not None:
+            # user specified a custom Remote Control port
+            settings.set(grc_port=options.rc_port)
+
+        if hasattr(options, 'toolkit') and options.toolkit is not None:
+            settings.set(widgetSet=options.toolkit)
+
+        # User wants to customize the WCS package?
+        if hasattr(options, 'wcspkg') and options.wcspkg is not None:
+            settings.set(WCSpkg=options.wcspkg)
+
+        # User wants to customize the FITS package?
+        if hasattr(options, 'fitspkg') and options.fitspkg is not None:
+            settings.set(FITSpkg=options.fitspkg)
+
+        if (hasattr(options, 'suppress_fits_warnings') and
+            options.suppress_fits_warnings):
+            settings.set(suppress_fits_warnings=options.suppress_fits_warnings)
+
+        # number of threads
+        if hasattr(options, 'numthreads') and options.numthreads is not None:
+            settings.set(num_threads=options.numthreads)
+        if hasattr(options, 'minthreads') and options.minthreads is not None:
+            settings.set(min_threads=options.minthreads)
+
+        # OpenGL
+        if hasattr(options, 'opengl') and options.opengl:
+            settings.set(use_opengl=True)
+
+        # restore the window to approximate
+        if hasattr(options, 'norestore'):
+            settings.set(norestore=options.norestore)
+
+        # did user specify a particular geometry?
+        if hasattr(options, 'geometry') and options.geometry is not None:
+            settings.set(geometry=options.geometry)
+
+        if (hasattr(options, 'disable_plugins') and
+            options.disable_plugins is not None):
+            settings.set(disable_plugins=options.disable_plugins)
+
+        if hasattr(options, 'modules') and options.modules is not None:
+            settings.set(global_plugins=options.modules)
+
+        if hasattr(options, 'plugins') and options.plugins is not None:
+            settings.set(local_plugins=options.plugins)
+
+        if hasattr(options, 'channels') and options.channels is not None:
+            settings.set(channels=options.channels)
+
+        if hasattr(options, 'nosplash'):
+            settings.set(showBanner=options.nosplash)
+
+        if hasattr(options, 'separate_channels'):
+            settings.set(separate_channels=options.separate_channels)
+
+        # --------------------------------------------------------
+        self.setup()
+
+        # process non-option command line args
+        self.process_args(args)
+
+        # run the app event loop
+        self.run()
 
 
 def _default_showwarning(message, category, filename, lineno, file=None,
