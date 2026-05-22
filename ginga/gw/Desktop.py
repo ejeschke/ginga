@@ -91,6 +91,19 @@ class Desktop(Callback.Callbacks):
         w = self.get_nb(name)
         return self.get_size(w)
 
+    def get_ds_size(self):
+        if len(self.toplevels) == 0:
+            return None
+        # TODO: fix -- assume first widget in toplevels is our desktop
+        w = self.toplevels[0]
+        return w.get_size()
+
+    def set_ds_size(self, wd, ht):
+        if len(self.toplevels) == 0:
+            return
+        w = self.toplevels[0]
+        w.resize(wd, ht)
+
     def get_wsnames(self, group=1):
         res = []
         for name in self.workspace.keys():
@@ -938,6 +951,10 @@ class Workspace(Widgets.VBox):
 
         self.wstype = wstype
 
+    def resize(self, wd, ht):
+        if self.nb is not None:
+            self.nb.resize(wd, ht)
+
     def _update_mdi_menu(self):
         if self.mdi_menu is None:
             return
@@ -1094,15 +1111,23 @@ class Workspace(Widgets.VBox):
         for child in self.nb.get_children():
             if child.get_widget() is None:
                 continue
-            title = child.extdata.get('tab_title', None)
-            mdi_pos = child.extdata.get('mdi_pos', (0, 0))
-            size = child.extdata.get('mdi_size', None)
-            if size is None:
-                size = child.get_size()
+            if hasattr(self.nb, 'get_configuration'):
+                bnch = Bunch.Bunch(self.nb.get_configuration(child))
+                mdi_pos = (bnch.x, bnch.y)
+                size = (bnch.width, bnch.height)
+                title = bnch.title
+            else:
+                title = child.extdata.get('tab_title', None)
+                mdi_pos = child.extdata.get('mdi_pos', (0, 0))
+                size = child.extdata.get('mdi_size', None)
+                if size is None:
+                    size = child.get_size()
             if title is not None:
                 cd[title] = dict(title=title, mdi_pos=mdi_pos,
                                  mdi_size=size)
-        res = dict(wsname=self.name, wstype=self.wstype, tabs=cd)
+        nb_wd, nb_ht = self.nb.get_size()
+        res = dict(wsname=self.name, wstype=self.wstype,
+                   width=nb_wd, height=nb_ht, tabs=cd)
         return res
 
     def record_position(self, child):
