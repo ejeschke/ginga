@@ -31,7 +31,7 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
     a layout.
     """
     def __init__(self, logger, thread_pool, module_manager, preferences,
-                 ev_quit=None):
+                 ev_quit=None, ws_sock=None):
         GwMain.GwMain.__init__(self, logger=logger, ev_quit=ev_quit,
                                app=self, thread_pool=thread_pool)
 
@@ -44,7 +44,8 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
                               save_layout=False)
         settings.load(onError='silent')
         # this will set self.logger and self.settings
-        Widgets.Application.__init__(self, logger=logger, settings=settings)
+        Widgets.Application.__init__(self, logger=logger, settings=settings,
+                                     ws_sock=ws_sock)
 
         self.mm = module_manager
         # event for controlling termination of threads executing in this

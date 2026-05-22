@@ -33,10 +33,9 @@ __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'FixedLayout', 'Frame', 'Expander', 'TabWidget', 'StackWidget',
            'MDIWidget', 'ScrollArea', 'Splitter', 'GridBox',
            'ToolbarAction', 'Toolbar', 'MenuAction', 'Menu', 'Menubar',
-           'Page', 'TopLevel', 'Dialog',
-           'FileDialog', 'ColorDialog', 'MessageDialog', 'Timer',
-           'Application', 'name_mangle', 'make_widget', 'hadjust',
-           'build_info', 'wrap']
+           'Page', 'TopLevel', 'Dialog', 'FileDialog', 'BrowserFileDialog',
+           'ColorDialog', 'MessageDialog', 'Timer', 'Application',
+           'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
 
 
 class WidgetError(Exception):
@@ -184,6 +183,9 @@ class ApplicationBase(Callbacks):
         # subclass should override this
         return None
 
+    def is_web_backend(self):
+        return True
+
     def make_window(self, title=None):
         win = TopLevel(title=title, moveable=True, resizable=True)
         self.add_window(win)
@@ -237,16 +239,20 @@ else:
         """Application class when only the GUI is in the browser."""
 
         def __init__(self, logger=None, host='localhost', port=9909,
-                     ws_port=None, settings=None, max_sessions=1,
-                     token='none'):
+                     http_server=None, ws_port=None, ws_sock=None,
+                     max_sessions=1, token='none', settings=None):
             global _session
             ApplicationBase.__init__(self, logger=logger, host=host, port=port,
                                      ws_port=ws_port, settings=settings)
             if ws_port is None:
                 ws_port = port + 1
-            PGW_Application.__init__(self, ws_port=ws_port,
+            if http_server is None:
+                http_server = self.settings.get('http_server', False)
+                self.use_http_server = http_server
+
+            PGW_Application.__init__(self, ws_port=ws_port, ws_sock=ws_sock,
                                      http_port=port, host=host,
-                                     http_server=True,
+                                     http_server=http_server,
                                      max_sessions=max_sessions,
                                      concurrency_handling='serialized')
 
@@ -259,6 +265,8 @@ else:
             return self.default_session.get_screen_size()
 
         def get_url(self):
+            if not self.use_http_server:
+                return None
             base_url = f"http://{self._host}:{self._http_port}/?session={_session_id}&token={_session.token}"
             return base_url
 
@@ -849,15 +857,21 @@ class ColorDialog(ContainerWidgetMixin, PGW.ColorDialog):
         PGW.ColorDialog.__init__(self, *get_args(args), **kwargs)
 
 
-# class FileDialog(ContainerWidgetMixin, PGW.FileDialog):
-#     def __init__(self, *args, title='', parent=None, **kwargs):
-#         ContainerWidgetMixin.__init__(self)
-#         PGW.FileDialog.__init__(self, *get_args(args), **kwargs)
-
 class FileDialog(ContainerWidgetMixin, FileBrowser):
+    """File browser for accessing files locally."""
     def __init__(self, *args, title='', parent=None, **kwargs):
         ContainerWidgetMixin.__init__(self)
         FileBrowser.__init__(self, *get_args(args), title=title)
+
+
+class BrowserFileDialog(ContainerWidgetMixin, PGW.FileDialog):
+    """File browser for uploading files to a remote instance."""
+    def __init__(self, *args, parent=None, **kwargs):
+        ContainerWidgetMixin.__init__(self)
+        PGW.FileDialog.__init__(self, *get_args(args))
+
+    def popup(self, *args):
+        self.show()
 
 
 class MessageDialog(Dialog):

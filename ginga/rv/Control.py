@@ -54,7 +54,7 @@ class GingaShell(GenericShell):
 
     """
     def __init__(self, logger, thread_pool, module_manager, preferences,
-                 ev_quit=None):
+                 ev_quit=None, ws_sock=None):
 
         # Create general preferences
         self.prefs = preferences
@@ -80,7 +80,7 @@ class GingaShell(GenericShell):
         settings.load(onError='silent')
 
         GenericShell.__init__(self, logger, thread_pool, module_manager,
-                              preferences, ev_quit=ev_quit)
+                              preferences, ev_quit=ev_quit, ws_sock=ws_sock)
 
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',

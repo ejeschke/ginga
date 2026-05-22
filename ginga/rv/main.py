@@ -243,10 +243,12 @@ class ReferenceViewer:
     viewer startup.
     """
     def __init__(self, layout=default_layout, plugins=plugins, appname='ginga',
-                 basedir=None, channels=None):
+                 basedir=None, channels=None, ev_quit=None, ws_sock=None):
         self.appname = appname
         self.basedir = basedir
         self.layout = layout
+        self.ev_quit = ev_quit
+        self.ws_sock = ws_sock
         if channels is None:
             channels = ['Image']
         self.channels = channels
@@ -254,7 +256,6 @@ class ReferenceViewer:
         self.plugins = []
         self.plugin_dct = dict()
         self.logger = None
-        self.ev_quit = None
         self.prefs = None
         self.settings = None
         self.ginga_shell = None
@@ -389,11 +390,9 @@ class ReferenceViewer:
         Setup routine for running the reference viewer.
 
         Assumptions:
-        1) self.logger is set
-        2) self.appname is set
-        3) self.basedir is set
-        4) self.ev_quit is set
-        5) self.settings should be initialized with any desired overrides.
+        1) Following instance variables are set as needed:
+           logger, settings, prefs, appname, basedir, ev_quit, ws_sock
+        2) settings should be initialized with any desired overrides.
         """
         if self.settings is None:
             raise RuntimeError("initialize settings before calling setup()")
@@ -436,7 +435,6 @@ class ReferenceViewer:
 
         # Choose a toolkit
         toolkit = self.settings.get('widgetSet', 'choose')
-
         if toolkit == 'choose':
             try:
                 ginga_toolkit.choose()
@@ -507,7 +505,7 @@ class ReferenceViewer:
 
         # Create the Ginga main object
         ginga_shell = GingaShell(self.logger, thread_pool, mm, self.prefs,
-                                 ev_quit=self.ev_quit)
+                                 ev_quit=self.ev_quit, ws_sock=self.ws_sock)
         self.ginga_shell = ginga_shell
 
         layout_file = os.path.join(self.basedir, self.settings.get('layout_file',
@@ -773,10 +771,10 @@ class ReferenceViewer:
 
                 if hasattr(self.ginga_shell, 'get_url'):
                     base_url = self.ginga_shell.get_url()
-                    print(f"visit {base_url} to view the application")
-                    self.logger.info(f"visit {base_url} to view the application")
+                    if base_url is not None:
+                        print(f"visit {base_url} to view the application")
+                        self.logger.info(f"visit {base_url} to view the application")
 
-                    self.logger.info("starting network interface...")
                 # Main loop to handle GUI events
                 self.logger.info("entering mainloop...")
                 self.ginga_shell.mainloop(timeout=0.001)
@@ -805,7 +803,8 @@ class ReferenceViewer:
 
         # create a logger
         self.logger = log.get_logger(name=logname, options=options)
-        self.ev_quit = threading.Event()
+        if self.ev_quit is None:
+            self.ev_quit = threading.Event()
 
         if hasattr(options, 'basedir') and options.basedir is not None:
             # command line option overrules
@@ -840,6 +839,9 @@ class ReferenceViewer:
                               WCSpkg='choose', FITSpkg='choose',
                               suppress_fits_warnings=False,
                               recursion_limit=2000,
+                              # this only takes effect if we are using
+                              # the pgwidgets backend
+                              http_server=True,
                               min_threads=2,
                               num_threads=max(os.cpu_count(), 10),
                               threadpool_analyze_interval_sec=None,

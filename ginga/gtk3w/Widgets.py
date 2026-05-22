@@ -2609,7 +2609,7 @@ class TopLevel(TopLevelMixin, ContainerBase):
 
 class Application(Callback.Callbacks):
 
-    def __init__(self, logger=None, settings=None):
+    def __init__(self, logger=None, settings=None, ws_sock=None):
         global _app
         super(Application, self).__init__()
 
@@ -2718,6 +2718,9 @@ class Application(Callback.Callbacks):
 
     def get_url(self):
         return None
+
+    def is_web_backend(self):
+        return False
 
     def mainloop(self):
         Gtk.main()
