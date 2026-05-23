@@ -240,7 +240,7 @@ else:
 
         def __init__(self, logger=None, host='localhost', port=9909,
                      http_server=None, ws_port=None, ws_sock=None,
-                     max_sessions=1, token='none', settings=None):
+                     max_sessions=1, token=None, settings=None):
             global _session
             ApplicationBase.__init__(self, logger=logger, host=host, port=port,
                                      ws_port=ws_port, settings=settings)
