@@ -23,7 +23,7 @@ except ImportError:
 from ginga.misc.Callback import Callbacks
 from ginga.misc import Bunch, Settings
 from ginga.web.pgw import PgHelp
-from ginga.util.paths import icondir
+from ginga.util.paths import icondir, app_icon_path
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'TextSource', 'Dial', 'Label', 'Button', 'ComboBox',
@@ -676,6 +676,11 @@ class MDIWidget(ContainerWidgetMixin, PGW.MDIWidget):
         PGW.MDIWidget.__init__(self, *get_args(args), **kwargs)
 
         self.true_mdi = True
+        self.icon_data_uri = PgHelp.get_icon(app_icon_path, size=(16, 16))
+
+    def add_widget(self, child, title=''):
+        return super().add_widget(child, title=title,
+                                  icon_url=self.icon_data_uri)
 
     def tile_panes(self):
         super().tile_windows()

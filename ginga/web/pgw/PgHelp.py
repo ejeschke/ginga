@@ -35,12 +35,15 @@ def get_icon(iconpath, size=None, format='png'):
 
     if iconpath.lower().endswith('.svg'):
         # Scalable Vector Graphics should be scalable on the browser side
-        # svg_buf = icon_helper.load_svg_to_svgbuf(iconpath, wd_px=wd, ht_px=ht)
-        # icon_uri = get_image_src_from_buffer(svg_buf.getvalue(), imgtype='svg')
-        # return icon_uri
-        img_buf = icon_helper.load_svg_to_pngbuf(iconpath, wd_px=wd, ht_px=ht)
-        icon_uri = get_image_src_from_buffer(img_buf.getvalue(), imgtype=format)
-        return icon_uri
+        if format.startswith('svg'):
+            svg_buf = icon_helper.load_svg_to_svgbuf(iconpath, wd_px=wd, ht_px=ht)
+            icon_uri = get_image_src_from_buffer(svg_buf.getvalue(), imgtype='svg+xml')
+            return icon_uri
+
+        if format == 'png':
+            img_buf = icon_helper.load_svg_to_pngbuf(iconpath, wd_px=wd, ht_px=ht)
+            icon_uri = get_image_src_from_buffer(img_buf.getvalue(), imgtype=format)
+            return icon_uri
 
     # other types handled by pillow
     image = Image.open(iconpath)

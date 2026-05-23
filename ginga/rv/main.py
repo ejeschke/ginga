@@ -523,7 +523,7 @@ class ReferenceViewer:
                     self.appname, str(e)), exc_info=True)
 
         # Build desired layout
-        norestore = self.settings.get('norestore', False)
+        norestore = self.settings.get('ignore_saved_layout', False)
         ginga_shell.build_toplevel(ignore_saved_layout=norestore)
 
         # Did user specify a particular geometry?
@@ -889,7 +889,7 @@ class ReferenceViewer:
 
         # restore the window to approximate
         if hasattr(options, 'norestore'):
-            settings.set(norestore=options.norestore)
+            settings.set(ignore_saved_layout=options.norestore)
 
         # did user specify a particular geometry?
         if hasattr(options, 'geometry') and options.geometry is not None:
