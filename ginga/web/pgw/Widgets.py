@@ -582,12 +582,281 @@ class TreeView(WidgetMixin, PGW.TreeView):
 
 
 class TableView(WidgetMixin, PGW.TableView):
-    def __init__(self, *args, auto_expand=False, sortable=False,
-                 selection='single', use_alt_row_color=False):
+    """Flat tabular view, API-compatible with the qtw TableView.
+
+    Thin wrapper over :class:`pgwidgets.PGW.TableView` (which is in
+    turn a flat-display subclass of the underlying TreeView) that
+    normalises the constructor signature and callback shapes so a
+    single piece of caller code works under either pgw or qtw.
+
+    Constructor signature, callbacks, and method names mirror
+    ``ginga.qtw.Widgets.TableView`` — see that class's docstring
+    for the full API.  Callback signatures emitted here:
+
+    * ``activated(table, row_dict, path)``
+    * ``selected(table, list_of_row_dicts)``
+    * ``sorted(table, col_key, ascending)``
+    * ``cell_edited(table, path, col_key, old_value, new_value)``
+    * ``scrolled(table, h_pct, v_pct)``
+
+    ``path`` is ``[row_index]`` (a length-1 list) for a flat
+    table, matching the qtw side.
+    """
+
+    def __init__(self, columns=None, show_header=True,
+                 selection_mode='single', alternate_row_colors=False,
+                 show_grid=False, show_row_numbers=False,
+                 sortable=False, allow_text_selection=False,
+                 dragable=False):
         WidgetMixin.__init__(self)
-        PGW.TableView.__init__(self, *get_args(args),
-                               selection_mode=selection, sortable=sortable,
-                               alternate_row_colors=use_alt_row_color)
+
+        # Build the underlying PGW.TableView with the options it
+        # understands.  ``dragable`` has no equivalent on the pgw
+        # side today; accepted for signature parity and ignored.
+        pgw_kwargs = dict(
+            show_header=show_header,
+            selection_mode=selection_mode,
+            alternate_row_colors=alternate_row_colors,
+            show_grid=show_grid,
+            show_row_numbers=show_row_numbers,
+            sortable=sortable,
+            allow_text_selection=allow_text_selection,
+        )
+        if columns is not None:
+            pgw_kwargs['columns'] = self._normalise_columns(columns)
+        PGW.TableView.__init__(self, **pgw_kwargs)
+
+        # Stash for callback redirects (path → row_dict lookup).
+        self._user_columns = list(pgw_kwargs.get('columns', []) or [])
+        # Shadow copy of row data so get_rows / get_row can answer
+        # without a round-trip to the JS side (mirrors what the qtw
+        # wrapper does by reading from QTreeWidget items).  Kept in
+        # sync by the data-mutating method overrides below.
+        self._rows = []
+
+        # Wire callback redirects so a single handler signature
+        # works regardless of widget set.
+        self.on('selected', self._cb_redirect_selected)
+        self._enable_callback('selected')
+        self.on('activated', self._cb_redirect_activated)
+        self._enable_callback('activated')
+        self.on('sorted', self._cb_redirect_sorted)
+        self._enable_callback('sorted')
+        self.on('cell_edited', self._cb_redirect_cell_edited)
+        self._enable_callback('cell_edited')
+        self.on('scrolled', self._cb_redirect_scrolled)
+        self._enable_callback('scrolled')
+
+    # ----- column descriptor normalisation -------------------
+
+    @staticmethod
+    def _normalise_columns(columns):
+        """Accept dicts, tuples, or strings (same forms as the qtw
+        wrapper) and return a list of dicts the underlying
+        pgwidgets-js TableView understands."""
+        out = []
+        for i, col in enumerate(columns):
+            if isinstance(col, dict):
+                key = col.get('key') or col.get('label') or f'col{i}'
+                d = {
+                    'label': col.get('label', key),
+                    'key': key,
+                    'type': col.get('type', 'string'),
+                }
+                if 'halign' in col:
+                    d['halign'] = col['halign']
+            elif isinstance(col, (tuple, list)):
+                label = col[0]
+                key = col[1] if len(col) > 1 else label
+                dtype = col[2] if len(col) > 2 else 'string'
+                d = {'label': label, 'key': key, 'type': dtype}
+            elif isinstance(col, str):
+                d = {'label': col, 'key': col, 'type': 'string'}
+            else:
+                raise ValueError(
+                    f"unrecognised column descriptor: {col!r}")
+            out.append(d)
+        return out
+
+    # ----- column / row API (delegated, with normalisation) --
+
+    def set_columns(self, columns):
+        norm = self._normalise_columns(columns)
+        self._user_columns = norm
+        super().set_columns(norm)
+
+    def append_column(self, column):
+        norm, = self._normalise_columns([column])
+        self._user_columns.append(norm)
+        super().append_column(norm)
+
+    def insert_column(self, idx, column):
+        norm, = self._normalise_columns([column])
+        self._user_columns.insert(idx, norm)
+        super().insert_column(idx, norm)
+
+    def delete_column(self, idx):
+        if 0 <= idx < len(self._user_columns):
+            del self._user_columns[idx]
+        super().delete_column(idx)
+
+    # ----- row data (mutators shadow _rows for get_rows) -----
+
+    def _col_keys(self):
+        return [c['key'] for c in self._user_columns]
+
+    def _normalise_row(self, row):
+        if isinstance(row, dict):
+            return dict(row)
+        if isinstance(row, (list, tuple)):
+            return dict(zip(self._col_keys(), row))
+        raise ValueError(
+            f"row must be a dict or sequence, got {type(row).__name__}")
+
+    def set_rows(self, rows):
+        self._rows = [self._normalise_row(r) for r in rows]
+        super().set_rows(rows)
+
+    def set_data(self, data):
+        self._rows = [self._normalise_row(r) for r in data]
+        super().set_data(data)
+
+    def append_row(self, row):
+        self._rows.append(self._normalise_row(row))
+        super().append_row(row)
+
+    def insert_row(self, idx, row):
+        self._rows.insert(idx, self._normalise_row(row))
+        super().insert_row(idx, row)
+
+    def delete_row(self, idx):
+        if 0 <= idx < len(self._rows):
+            del self._rows[idx]
+        super().delete_row(idx)
+
+    def set_cell(self, row, col, value):
+        if 0 <= row < len(self._rows):
+            if isinstance(col, int):
+                if 0 <= col < len(self._user_columns):
+                    self._rows[row][self._user_columns[col]['key']] = value
+            else:
+                self._rows[row][col] = value
+        super().set_cell(row, col, value)
+
+    def clear(self):
+        self._rows = []
+        super().clear()
+
+    def get_rows(self):
+        """Return all rows as a list of dicts.  Mirrors the qtw
+        wrapper's method so the same caller code works either way."""
+        return [dict(r) for r in self._rows]
+
+    def get_row(self, idx):
+        if not (0 <= idx < len(self._rows)):
+            raise IndexError(f"row index {idx} out of range")
+        return dict(self._rows[idx])
+
+    # get_row_count, get_column_count, select_*, sort_by_column,
+    # scroll_*, set_show_grid, set_show_row_numbers, set_sortable,
+    # set_column_editable, set_column_width,
+    # set_optimal_column_widths, set_scroll_position, and
+    # get_scroll_position are all inherited from PGW.TableView
+    # unchanged.
+
+    # ----- selection conversion ------------------------------
+
+    # ---- path normalisation ---------------------------------
+    #
+    # pgwidgets-js's TableView.set_data tags each row internally
+    # with a string key ``"row0"``, ``"row1"``, ..., and surfaces
+    # paths as ``["row0"]`` style lists.  The qtw wrapper, in
+    # contrast, uses bare integer row indices (``[0]``, ``[1]``).
+    # We convert at the boundary so portable caller code can use
+    # integer paths uniformly under either widget set.
+
+    @staticmethod
+    def _to_pgw_path(path):
+        out = []
+        for k in path:
+            if isinstance(k, int):
+                out.append(f'row{k}')
+            else:
+                out.append(k)
+        return out
+
+    @staticmethod
+    def _from_pgw_path(path):
+        out = []
+        for k in path or ():
+            if isinstance(k, str) and k.startswith('row'):
+                try:
+                    out.append(int(k[3:]))
+                    continue
+                except ValueError:
+                    pass
+            out.append(k)
+        return out
+
+    def get_selected(self):
+        """Return selected rows as a list of dicts.
+
+        The underlying ``PGW.TableView.get_selected`` returns a
+        list of ``{path, values}`` records; we project to just the
+        row dicts for parity with the qtw wrapper.
+        """
+        raw = super().get_selected()
+        out = []
+        for entry in raw or []:
+            if isinstance(entry, dict) and 'values' in entry:
+                out.append(entry['values'])
+            else:
+                out.append(entry)
+        return out
+
+    def get_selected_paths(self):
+        """Return selected rows as a list of ``[row_index]`` paths
+        (integers, matching the qtw wrapper)."""
+        raw = super().get_selected()
+        return [self._from_pgw_path(entry['path'])
+                for entry in (raw or [])
+                if isinstance(entry, dict) and 'path' in entry]
+
+    def select_path(self, path, state=True):
+        super().select_path(self._to_pgw_path(path), state)
+
+    def select_paths(self, paths, state=True):
+        super().select_paths([self._to_pgw_path(p) for p in paths],
+                             state)
+
+    def scroll_to_path(self, path):
+        super().scroll_to_path(self._to_pgw_path(path))
+
+    # ----- callback redirects --------------------------------
+
+    def _cb_redirect_selected(self, sel_lst):
+        # PGW emits the raw [{path, values}, ...] list; the
+        # wrapper's get_selected projects to row dicts.
+        self._make_callback('selected', self.get_selected())
+
+    def _cb_redirect_activated(self, values, path):
+        # PGW signature: (values_dict, path).  Re-emit as
+        # (row_dict, path) so it matches qtw, with path
+        # normalised to integer row indices.
+        self._make_callback('activated', values,
+                            self._from_pgw_path(path))
+
+    def _cb_redirect_sorted(self, col_key, ascending):
+        self._make_callback('sorted', col_key, ascending)
+
+    def _cb_redirect_cell_edited(self, path, col_key,
+                                 old_value, new_value):
+        self._make_callback('cell_edited',
+                            self._from_pgw_path(path), col_key,
+                            old_value, new_value)
+
+    def _cb_redirect_scrolled(self, h_pct, v_pct):
+        self._make_callback('scrolled', h_pct, v_pct)
 
 
 class Canvas(WidgetMixin, PGW.Canvas):

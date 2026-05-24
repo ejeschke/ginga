@@ -22,7 +22,7 @@ __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
-           'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
+           'TableView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
@@ -862,20 +862,68 @@ class StatusBar(WidgetBase):
         self.widget.showMessage(msg_str, int(duration * 1000))
 
 
+def _coerce_bool(s):
+    """Best-effort string → bool conversion for sort keys."""
+    if isinstance(s, bool):
+        return s
+    if isinstance(s, (int, float)):
+        return bool(s)
+    if isinstance(s, str):
+        return s.strip().lower() in ('1', 'true', 't', 'yes', 'y',
+                                     'on', '✓')
+    return bool(s)
+
+
 class TreeWidgetItem(QtGui.QTreeWidgetItem):
-    """A hack to subclass QTreeWidgetItem to enable sorting by numbers
-    in a field.
+    """``QTreeWidgetItem`` subclass with type-aware sort comparison.
+
+    Looks up the column's declared type on the parent ``QTreeWidget``
+    (set by :meth:`TreeView.setup_table` as ``_datatypes``) and
+    compares accordingly.  Mirrors the pgw TreeView's type-aware
+    sort behaviour so a column of integers sorts numerically,
+    a column of booleans by truth value, and so on.  Falls back to
+    case-insensitive string comparison for unknown types.
     """
     def __init__(self, *args, **kwargs):
         QtGui.QTreeWidgetItem.__init__(self, *args, **kwargs)
 
-    def __lt__(self, otherItem):
-        column = self.treeWidget().sortColumn()
-        try:
-            return float(self.text(column)) < float(otherItem.text(column))
+    def __lt__(self, other):
+        tv = self.treeWidget()
+        col = tv.sortColumn()
+        dtype = getattr(tv, '_datatypes', None)
+        kind = dtype[col] if dtype and 0 <= col < len(dtype) else 'str'
 
-        except ValueError:
-            return self.text(column) < otherItem.text(column)
+        a, b = self.text(col), other.text(col)
+
+        # Empty strings always sort last (consistent both ways) so
+        # missing values don't muddle the order.
+        if a == '' and b != '':
+            return False
+        if b == '' and a != '':
+            return True
+
+        if kind in ('int', 'integer'):
+            try:
+                return int(a) < int(b)
+            except (ValueError, TypeError):
+                pass  # fall through to string compare
+        elif kind in ('float', 'number'):
+            try:
+                return float(a) < float(b)
+            except (ValueError, TypeError):
+                pass
+        elif kind in ('bool', 'boolean'):
+            return _coerce_bool(a) < _coerce_bool(b)
+        elif kind == 'check':
+            return self.checkState(col) < other.checkState(col)
+        # 'str', 'icon', 'widget', or unknown — try numeric first
+        # (preserves the old TreeView heuristic where un-typed
+        # numeric strings sort numerically), then fall back to
+        # case-insensitive string compare.
+        try:
+            return float(a) < float(b)
+        except (ValueError, TypeError):
+            return a.lower() < b.lower()
 
 
 class TreeView(WidgetBase):
@@ -912,12 +960,17 @@ class TreeView(WidgetBase):
         tv.itemExpanded.connect(self._item_expanded_cb)
         tv.itemCollapsed.connect(self._item_collapsed_cb)
         tv.itemChanged.connect(self._item_changed_cb)
+        # Fires when the user clicks a header section to (re)sort.
+        # Lets TreeViewItem.__lt__ do type-aware comparison while
+        # the higher level gets a clean "the user sorted by col N"
+        # event.
+        tv.header().sortIndicatorChanged.connect(self._sort_indicator_cb)
         if self.dragable:
             tv.setDragEnabled(True)
             tv.startDrag = self._start_drag
 
         for cbname in ('selected', 'activated', 'drag-start', 'expanded',
-                       'collapsed', 'changed'):
+                       'collapsed', 'changed', 'sorted'):
             self.enable_callback(cbname)
 
     def setup_table(self, columns, levels, leaf_key):
@@ -950,6 +1003,10 @@ class TreeView(WidgetBase):
 
         self.datakeys = datakeys
         self.datatypes = datatypes
+        # Mirror datatypes onto the QTreeWidget itself so the
+        # TreeWidgetItem.__lt__ comparator can see them without
+        # needing a back-reference to the Ginga wrapper.
+        treeview._datatypes = datatypes
         self.leaf_idx = datakeys.index(self.leaf_key)
 
         if self.sortable:
@@ -1090,6 +1147,19 @@ class TreeView(WidgetBase):
     def _selection_cb(self):
         res_dict = self.get_selected()
         self.make_callback('selected', res_dict)
+
+    def _sort_indicator_cb(self, col, order):
+        """Fire when the user clicks a header section to (re)sort.
+
+        The callback carries the column *key* (a stable string),
+        not the column index — matching the pgw TableView's
+        ``sorted`` signature so a single handler works under both
+        widget sets.
+        """
+        ascending = (order == QtCore.Qt.AscendingOrder)
+        col_key = (self.datakeys[col]
+                   if 0 <= col < len(self.datakeys) else None)
+        self.make_callback('sorted', col_key, ascending)
 
     def _item_expanded_cb(self, item):
         path = self._get_path(item)
@@ -1360,6 +1430,556 @@ class TreeView(WidgetBase):
         drag_pkg = DragPackage(self.widget)
         self.make_callback('drag-start', drag_pkg, res_dict)
         drag_pkg.start_drag()
+
+
+# Synthetic key used for the row-number column when show_row_numbers
+# is enabled.  Underscore-prefixed so it can't collide with a real
+# user column key.
+_ROW_NUM_KEY = '_row_num_'
+
+
+class TableView(TreeView):
+    """Flat tabular view, API-compatible with the pgw TableView.
+
+    Backed by a ``QTreeWidget`` configured for single-level display
+    (no expand/collapse hierarchy, no indentation), so it visually
+    presents as a table while reusing all of :class:`TreeView`'s
+    selection / drag / font / padding / type-aware sort plumbing.
+    The row-oriented public API matches :class:`PGW.TableView`
+    (and the underlying pgwidgets-python ``TableView``):
+
+    Constructor options
+    -------------------
+    columns : list
+        Column descriptors.  Each entry may be:
+
+        * a ``dict``: ``{label, key, type, halign}`` (the canonical
+          form, matching pgw);
+        * a tuple/list: ``(label, key[, type])`` (the legacy form);
+        * a bare string: treated as both label and key, type
+          ``'string'``.
+
+        ``type`` is one of ``'string'``/``'str'``, ``'integer'``/
+        ``'int'``, ``'float'``/``'number'``, ``'boolean'``/``'bool'``,
+        or ``'icon'``.  Drives the sort comparator.
+    show_header : bool
+        Show the column header row.  Default ``True``.
+    selection_mode : str
+        ``'single'``, ``'multiple'``, or ``'none'``.
+    alternate_row_colors : bool
+        Stripe alternate rows.
+    show_grid : bool
+        Draw grid lines.  ``QTreeWidget`` doesn't expose native
+        grid lines, so this is emulated via a stylesheet —
+        cosmetic only.
+    show_row_numbers : bool
+        Show a 1-based row-number column on the left, styled like
+        a vertical header (gray background, bold, narrow,
+        non-editable, non-sortable).
+    sortable : bool
+        Allow click-to-sort on column headers.
+    allow_text_selection : bool
+        Currently a no-op on qtw; accepted for API compatibility.
+    dragable : bool
+        Allow rows to be dragged out (inherited from TreeView).
+
+    Row data
+    --------
+    ``set_rows`` / ``set_data`` / ``append_row`` / ``insert_row``
+    accept either a ``dict`` keyed by column key, or a positional
+    ``list`` / ``tuple`` matching the column order.  Internally
+    rows are addressed by integer index, exposed as a length-1
+    "path" (``[row_index]``) to mirror :class:`TreeView`.
+
+    Callbacks
+    ---------
+    * ``activated(table, row_dict)`` — fires on double-click.
+    * ``selected(table, list_of_row_dicts)`` — selection changed.
+    * ``sorted(table, col_index, ascending)`` — user clicked a
+      header to sort.
+    * ``cell_edited(table, row, col, value)`` — an editable cell
+      was edited (only fires for columns marked editable via
+      :meth:`set_column_editable`).
+    * ``scrolled(table, h_pct, v_pct)`` — scroll position changed.
+    """
+
+    def __init__(self, columns=None, show_header=True,
+                 selection_mode='single', alternate_row_colors=False,
+                 show_grid=False, show_row_numbers=False,
+                 sortable=False, allow_text_selection=False,
+                 dragable=False):
+        super().__init__(auto_expand=False, sortable=sortable,
+                         selection=selection_mode,
+                         use_alt_row_color=alternate_row_colors,
+                         dragable=dragable)
+
+        # Flat-table display tweaks.  Hides the expand/collapse
+        # indicator and zeroes out indentation so the first column
+        # starts flush left like a real table.
+        tv = self.widget
+        tv.setRootIsDecorated(False)
+        tv.setItemsExpandable(False)
+        tv.setIndentation(0)
+        if not show_header:
+            tv.header().hide()
+
+        # Per-column editable flags.  Populated by
+        # set_column_editable; consulted when rows are added.
+        self._editable_cols = set()
+        # User-supplied (normalised) column descriptors.  Excludes
+        # the synthetic row-number column even when show_row_numbers
+        # is on, so the public API indexes into the user's columns.
+        self._user_columns = []
+        self._show_row_numbers = bool(show_row_numbers)
+        self._show_grid = False
+        self._allow_text_selection = bool(allow_text_selection)  # noqa
+
+        # Replace TreeView's 'activated' / 'changed' wiring with
+        # the table-oriented signatures.  Connect to additional
+        # signals for 'scrolled'.
+        tv.verticalScrollBar().valueChanged.connect(self._scroll_cb)
+        tv.horizontalScrollBar().valueChanged.connect(self._scroll_cb)
+
+        # New callbacks (in addition to those TreeView enables).
+        for cbname in ('cell_edited', 'scrolled'):
+            self.enable_callback(cbname)
+
+        if show_grid:
+            self.set_show_grid(True)
+
+        if columns is not None:
+            self.set_columns(columns)
+
+    # ----- internal helpers ------------------------------------
+
+    @staticmethod
+    def _normalise_columns(columns):
+        """Accept dicts, tuples, or strings; return list of dicts."""
+        out = []
+        for i, col in enumerate(columns):
+            if isinstance(col, dict):
+                key = col.get('key') or col.get('label') or f'col{i}'
+                d = {
+                    'label': col.get('label', key),
+                    'key': key,
+                    'type': col.get('type', 'string'),
+                    'halign': col.get('halign'),
+                }
+            elif isinstance(col, (tuple, list)):
+                label = col[0]
+                key = col[1] if len(col) > 1 else label
+                dtype = col[2] if len(col) > 2 else 'string'
+                d = {'label': label, 'key': key, 'type': dtype,
+                     'halign': None}
+            elif isinstance(col, str):
+                d = {'label': col, 'key': col, 'type': 'string',
+                     'halign': None}
+            else:
+                raise WidgetError(
+                    f"unrecognised column descriptor: {col!r}")
+            out.append(d)
+        return out
+
+    def _col_offset(self):
+        """How many columns to skip before the user's first column.
+
+        1 when ``show_row_numbers`` is on (the row-number column
+        sits at index 0); 0 otherwise.
+        """
+        return 1 if self._show_row_numbers else 0
+
+    def _user_col_keys(self):
+        return [c['key'] for c in self._user_columns]
+
+    def _item_to_row_dict(self, item):
+        """Reconstruct a row dict from a QTreeWidgetItem."""
+        offset = self._col_offset()
+        row = {}
+        for j, col in enumerate(self._user_columns):
+            row[col['key']] = item.text(j + offset)
+        return row
+
+    def _apply_editable_flags(self, item):
+        """Apply per-column editable flags to a fresh row item."""
+        offset = self._col_offset()
+        # First, clear editable on every column (including the
+        # row-number column, which is always non-editable).
+        flags = item.flags() & ~QtCore.Qt.ItemIsEditable
+        item.setFlags(flags)
+        # Then we'd need per-column editability — but QTreeWidgetItem
+        # flags are per-item, not per-column.  Practical workaround:
+        # if ANY column is marked editable, mark the whole item
+        # editable.  Callers who want per-column editability typically
+        # rely on the QTreeWidget's edit-on-double-click defaulting
+        # to whichever column was clicked.
+        if self._editable_cols:
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+        # Row-number cell is never editable; QTreeWidgetItem flags
+        # don't differentiate per column, so we rely on user clicks
+        # not landing on column 0 (it's narrow and visually clearly
+        # a row header).
+        if offset > 0:
+            # Make the row-number cell visually a header.
+            self._style_row_number_cell(item)
+
+    def _style_row_number_cell(self, item):
+        # Background / foreground from the application palette so
+        # the styling tracks the user's theme.
+        palette = self.widget.palette()
+        bg = palette.button()
+        fg = palette.buttonText()
+        item.setBackground(0, bg)
+        item.setForeground(0, fg)
+        font = item.font(0)
+        font.setBold(True)
+        item.setFont(0, font)
+        item.setTextAlignment(0,
+                              QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+
+    def _renumber_row_column(self):
+        """Refresh the synthetic row-number column after rows
+        are inserted/deleted/reordered."""
+        if not self._show_row_numbers:
+            return
+        tv = self.widget
+        for i in range(tv.topLevelItemCount()):
+            item = tv.topLevelItem(i)
+            item.setText(0, str(i + 1))
+            self._style_row_number_cell(item)
+
+    def _build_col_specs(self):
+        """Translate ``self._user_columns`` to setup_table's tuple
+        form, prepending the row-number column if enabled."""
+        specs = [(c['label'], c['key'], c['type'])
+                 for c in self._user_columns]
+        if self._show_row_numbers:
+            specs = [('', _ROW_NUM_KEY, 'str')] + specs
+        return specs
+
+    def _rebuild_table(self, rows=None):
+        """Re-run setup_table from the current state and (optionally)
+        re-populate rows.  Called when the column shape changes."""
+        col_specs = self._build_col_specs()
+        if not col_specs:
+            return
+        # leaf_key: the first user column's key is a reasonable
+        # primary; the row-number column is never the leaf.
+        leaf_key = self._user_columns[0]['key']
+        super().setup_table(col_specs, levels=1, leaf_key=leaf_key)
+        if self._show_row_numbers:
+            self._configure_row_number_column()
+        if rows is not None:
+            self.set_rows(rows)
+
+    def _configure_row_number_column(self):
+        tv = self.widget
+        header = tv.header()
+        # Narrow, fixed-ish width.  ResizeToContents grows to fit
+        # the largest "999..." label as rows are added.
+        header.setSectionResizeMode(0, QtGui.QHeaderView.ResizeToContents)
+        # Make the row-number header itself look like a row-header
+        # corner cell: blank, no sort indicator.
+        tv.headerItem().setText(0, '')
+
+    # ----- column management -----------------------------------
+
+    def set_columns(self, columns):
+        """Replace the column layout.  Clears existing rows."""
+        self._user_columns = self._normalise_columns(columns)
+        self._rebuild_table()
+
+    def insert_column(self, idx, column):
+        """Insert a new column at index ``idx`` (user-space)."""
+        col, = self._normalise_columns([column])
+        self._user_columns.insert(idx, col)
+        # Snapshot existing rows so we can repopulate, since
+        # changing columnCount on QTreeWidget invalidates items.
+        rows = self.get_rows()
+        for r in rows:
+            r.setdefault(col['key'], '')
+        self._rebuild_table(rows=rows)
+
+    def append_column(self, column):
+        self.insert_column(len(self._user_columns), column)
+
+    def delete_column(self, idx):
+        if not (0 <= idx < len(self._user_columns)):
+            raise WidgetError(f"column index {idx} out of range")
+        removed = self._user_columns.pop(idx)
+        rows = self.get_rows()
+        for r in rows:
+            r.pop(removed['key'], None)
+        self._rebuild_table(rows=rows)
+
+    def set_column_editable(self, col_idx, tf):
+        if tf:
+            self._editable_cols.add(col_idx)
+        else:
+            self._editable_cols.discard(col_idx)
+        # Re-apply flags on existing items
+        tv = self.widget
+        for i in range(tv.topLevelItemCount()):
+            self._apply_editable_flags(tv.topLevelItem(i))
+
+    def get_column_count(self):
+        return len(self._user_columns)
+
+    def set_column_width(self, idx, width):
+        """Set width (px) of user column ``idx``."""
+        self.widget.setColumnWidth(idx + self._col_offset(), width)
+
+    # ----- row management --------------------------------------
+
+    def set_rows(self, rows):
+        """Replace all rows.  ``rows`` is a sequence of dicts
+        (keyed by column key) or a sequence of positional values."""
+        self.widget.clear()
+        for i, row in enumerate(rows):
+            self._append_one(row)
+
+    # Alias matching pgw's ``set_data`` name.
+    set_data = set_rows
+
+    def append_row(self, values):
+        self._append_one(values)
+
+    def insert_row(self, idx, values):
+        tv = self.widget
+        item = self._make_row_item(values)
+        tv.insertTopLevelItem(idx, item)
+        self._apply_editable_flags(item)
+        self._renumber_row_column()
+
+    def delete_row(self, idx):
+        tv = self.widget
+        if not (0 <= idx < tv.topLevelItemCount()):
+            raise WidgetError(f"row index {idx} out of range")
+        tv.takeTopLevelItem(idx)
+        self._renumber_row_column()
+
+    def get_row_count(self):
+        return self.widget.topLevelItemCount()
+
+    def get_row(self, idx):
+        item = self.widget.topLevelItem(idx)
+        if item is None:
+            raise WidgetError(f"row index {idx} out of range")
+        return self._item_to_row_dict(item)
+
+    def get_rows(self):
+        tv = self.widget
+        return [self._item_to_row_dict(tv.topLevelItem(i))
+                for i in range(tv.topLevelItemCount())]
+
+    def set_cell(self, row, col, value):
+        item = self.widget.topLevelItem(row)
+        if item is None:
+            raise WidgetError(f"row index {row} out of range")
+        if not (0 <= col < len(self._user_columns)):
+            raise WidgetError(f"column index {col} out of range")
+        text = '' if value is None else str(value)
+        item.setText(col + self._col_offset(), text)
+        # Mirror to UserRole so the next cell_edited callback can
+        # report old_value correctly.
+        item.setData(col + self._col_offset(), QtCore.Qt.UserRole, text)
+
+    def _append_one(self, values):
+        tv = self.widget
+        item = self._make_row_item(values)
+        tv.addTopLevelItem(item)
+        self._apply_editable_flags(item)
+        self._renumber_row_column()
+
+    def _make_row_item(self, values):
+        """Build a TreeWidgetItem from a row dict-or-sequence."""
+        if isinstance(values, dict):
+            row_dict = values
+        elif isinstance(values, (list, tuple)):
+            row_dict = dict(zip(self._user_col_keys(), values))
+        else:
+            raise WidgetError(
+                f"row must be a dict or sequence, got {type(values).__name__}")
+
+        item = TreeWidgetItem()
+        offset = self._col_offset()
+        for j, col in enumerate(self._user_columns):
+            val = row_dict.get(col['key'], '')
+            text = '' if val is None else str(val)
+            item.setText(j + offset, text)
+            # Stash the value in Qt.UserRole so cell_edited can
+            # report old_value without us hooking the editor.
+            item.setData(j + offset, QtCore.Qt.UserRole, text)
+        # The row-number text is filled in by _renumber_row_column
+        # after the item is in the tree.
+        return item
+
+    def clear(self):
+        super().clear()
+
+    # ----- selection -------------------------------------------
+
+    def get_selected(self):
+        """Return selected rows as a list of dicts."""
+        tv = self.widget
+        return [self._item_to_row_dict(it) for it in tv.selectedItems()]
+
+    def set_selected(self, items):
+        """Select rows by integer index, by ``[row]`` path, or by
+        row dict (matched by leaf-key value)."""
+        tv = self.widget
+        # Reset
+        tv.clearSelection()
+        for it in items:
+            idx = self._resolve_to_row_index(it)
+            if idx is None or not (0 <= idx < tv.topLevelItemCount()):
+                continue
+            tv.topLevelItem(idx).setSelected(True)
+
+    def select_path(self, path, state=True):
+        """``path`` is ``[row_index]`` (length 1)."""
+        if not path:
+            return
+        idx = self._resolve_to_row_index(path)
+        if idx is None or not (0 <= idx < self.get_row_count()):
+            return
+        self.widget.topLevelItem(idx).setSelected(state)
+
+    def select_paths(self, paths, state=True):
+        for p in paths:
+            self.select_path(p, state)
+
+    def select_all(self, state=True):
+        if state:
+            self.widget.selectAll()
+        else:
+            self.widget.clearSelection()
+
+    def _resolve_to_row_index(self, item):
+        if isinstance(item, int):
+            return item
+        if isinstance(item, (list, tuple)) and item:
+            # path: [row_index] or [leaf_value]
+            head = item[0]
+            if isinstance(head, int):
+                return head
+            try:
+                return int(head)
+            except (TypeError, ValueError):
+                return None
+        if isinstance(item, dict):
+            # Match by leaf-key value
+            leaf = self.leaf_key
+            if leaf is None:
+                return None
+            want = item.get(leaf)
+            for i in range(self.get_row_count()):
+                if self.get_row(i).get(leaf) == want:
+                    return i
+        return None
+
+    # ----- sort / scroll ---------------------------------------
+
+    def set_sortable(self, tf):
+        self.sortable = bool(tf)
+        self.widget.setSortingEnabled(self.sortable)
+
+    def sort_by_column(self, col, ascending=True):
+        order = (QtCore.Qt.AscendingOrder if ascending
+                 else QtCore.Qt.DescendingOrder)
+        self.widget.sortByColumn(col + self._col_offset(), order)
+
+    def scroll_to_path(self, path):
+        idx = self._resolve_to_row_index(path)
+        if idx is None or not (0 <= idx < self.get_row_count()):
+            return
+        item = self.widget.topLevelItem(idx)
+        self.widget.scrollToItem(item)
+
+    def scroll_to_end(self):
+        n = self.get_row_count()
+        if n:
+            self.widget.scrollToItem(self.widget.topLevelItem(n - 1))
+
+    def set_scroll_position(self, h_pct, v_pct):
+        for bar, pct in ((self.widget.horizontalScrollBar(), h_pct),
+                         (self.widget.verticalScrollBar(), v_pct)):
+            mx = bar.maximum()
+            bar.setValue(int(pct * mx))
+
+    def get_scroll_position(self):
+        out = []
+        for bar in (self.widget.horizontalScrollBar(),
+                    self.widget.verticalScrollBar()):
+            mx = bar.maximum()
+            out.append(bar.value() / mx if mx else 0.0)
+        return tuple(out)
+
+    # ----- display config --------------------------------------
+
+    def set_show_grid(self, tf):
+        """Toggle grid lines.  QTreeWidget has no native grid; we
+        emulate via a stylesheet, so the result is approximate."""
+        self._show_grid = bool(tf)
+        if self._show_grid:
+            self.widget.setStyleSheet(
+                "QTreeView::item { border-right: 1px solid #d0d0d0; "
+                "border-bottom: 1px solid #d0d0d0; }")
+        else:
+            self.widget.setStyleSheet("")
+
+    def set_show_row_numbers(self, tf):
+        new = bool(tf)
+        if new == self._show_row_numbers:
+            return
+        self._show_row_numbers = new
+        if self._user_columns:
+            rows = self.get_rows()
+            # set_columns wipes the table; preserve the user's data.
+            self.set_columns(self._user_columns)
+            self.set_rows(rows)
+
+    # ----- overridden callback redirects -----------------------
+
+    def _cb_redirect(self, item):
+        # TreeView's version emits a path-keyed dict; for a flat
+        # table, emit (row_dict, path) where path is [row_index] —
+        # matches the pgw TableView 'activated' signature.
+        row_dict = self._item_to_row_dict(item)
+        idx = self.widget.indexOfTopLevelItem(item)
+        self.make_callback('activated', row_dict, [idx])
+
+    def _selection_cb(self):
+        # Inherited would also work (returns get_selected()), but
+        # spelled out for clarity.
+        self.make_callback('selected', self.get_selected())
+
+    def _item_changed_cb(self, item, col):
+        # Skip the synthetic row-number column.
+        if self._show_row_numbers and col == 0:
+            return
+        user_col = col - self._col_offset()
+        # Only fire cell_edited for columns the caller marked
+        # editable, so spurious itemChanged signals from
+        # programmatic updates don't trigger callbacks.
+        if user_col in self._editable_cols:
+            col_key = (self._user_columns[user_col]['key']
+                       if 0 <= user_col < len(self._user_columns)
+                       else None)
+            new_value = item.text(col)
+            old_value = item.data(col, QtCore.Qt.UserRole)
+            idx = self.widget.indexOfTopLevelItem(item)
+            self.make_callback('cell_edited', [idx], col_key,
+                               old_value, new_value)
+            # Update the stashed value so the next edit reports
+            # the right old_value.
+            item.setData(col, QtCore.Qt.UserRole, new_value)
+        # Keep the legacy 'changed' callback firing too for
+        # TreeView-compatible callers.
+        super()._item_changed_cb(item, col)
+
+    def _scroll_cb(self, value):
+        h, v = self.get_scroll_position()
+        self.make_callback('scrolled', h, v)
 
 
 # CONTAINERS
