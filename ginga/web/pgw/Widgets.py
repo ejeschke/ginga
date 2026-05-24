@@ -329,6 +329,13 @@ class TextArea(WidgetMixin, PGW.TextArea):
         WidgetMixin.__init__(self)
         PGW.TextArea.__init__(self, *get_args(args), **kwargs)
 
+    def append_text(self, text, autoscroll=True):
+        # if text.endswith('\n'):
+        #     text = text[:-1]
+        super().append_text(text)
+        if autoscroll:
+            super().set_scroll_position(0.0, 1.0)
+
 
 class TextSource(WidgetMixin, PGW.TextSource):
     def __init__(self, *args, **kwargs):
@@ -521,7 +528,11 @@ class TreeView(WidgetMixin, PGW.TreeView):
         subtree = super().get_subtree(status='selected')
         self._make_callback('selected', subtree)
 
-    def _cb_redirect_activated(self, node_vals, path):
+    def _cb_redirect_activated(self, node_vals, path, col_key=None):
+        # pgwidgets-js sends ``col_key`` as a 3rd arg on newer
+        # builds; older builds send only two.  TreeView's
+        # public ``activated`` signature stays ``(widget, subtree)``,
+        # so col_key is accepted but not surfaced here.
         subtree = super().get_subtree(status=path)
         self._make_callback('activated', subtree)
 
@@ -593,17 +604,20 @@ class TableView(WidgetMixin, PGW.TableView):
     ``ginga.qtw.Widgets.TableView`` — see that class's docstring
     for the full API.  Callback signatures emitted here:
 
-    * ``activated(table, row_dict, path)``
+    * ``activated(table, row_dict, path, col_key)``
     * ``selected(table, list_of_row_dicts)``
     * ``sorted(table, col_key, ascending)``
     * ``cell_edited(table, path, col_key, old_value, new_value)``
     * ``scrolled(table, h_pct, v_pct)``
 
     ``path`` is ``[row_index]`` (a length-1 list) for a flat
-    table, matching the qtw side.
+    table, matching the qtw side.  ``col_key`` on ``activated``
+    reflects the clicked cell's column key on a row dblclick, or
+    ``None`` when activation came from the Enter key (no specific
+    column) — matching qtw/gtk behaviour.
     """
 
-    def __init__(self, columns=None, show_header=True,
+    def __init__(self, *args, columns=None, show_header=True,
                  selection_mode='single', alternate_row_colors=False,
                  show_grid=False, show_row_numbers=False,
                  sortable=False, allow_text_selection=False,
@@ -624,7 +638,7 @@ class TableView(WidgetMixin, PGW.TableView):
         )
         if columns is not None:
             pgw_kwargs['columns'] = self._normalise_columns(columns)
-        PGW.TableView.__init__(self, **pgw_kwargs)
+        PGW.TableView.__init__(self, *get_args(args), **pgw_kwargs)
 
         # Stash for callback redirects (path → row_dict lookup).
         self._user_columns = list(pgw_kwargs.get('columns', []) or [])
@@ -665,6 +679,8 @@ class TableView(WidgetMixin, PGW.TableView):
                 }
                 if 'halign' in col:
                     d['halign'] = col['halign']
+                if 'editable' in col:
+                    d['editable'] = bool(col['editable'])
             elif isinstance(col, (tuple, list)):
                 label = col[0]
                 key = col[1] if len(col) > 1 else label
@@ -757,6 +773,28 @@ class TableView(WidgetMixin, PGW.TableView):
             raise IndexError(f"row index {idx} out of range")
         return dict(self._rows[idx])
 
+    def set_column_editable(self, col, tf):
+        """Mark a column as editable.
+
+        ``col`` may be either an integer user-space column index
+        (matching qtw/gtk) or a string column key (matching the
+        native pgwidgets-js API).  We accept both so the same
+        caller code works under any backend.
+        """
+        if isinstance(col, int):
+            if not (0 <= col < len(self._user_columns)):
+                return
+            col_key = self._user_columns[col]['key']
+        else:
+            col_key = col
+        # Keep the local _user_columns descriptor in sync so a
+        # later set_columns() round-trip preserves the flag.
+        for c in self._user_columns:
+            if c['key'] == col_key:
+                c['editable'] = bool(tf)
+                break
+        super().set_column_editable(col_key, bool(tf))
+
     # get_row_count, get_column_count, select_*, sort_by_column,
     # scroll_*, set_show_grid, set_show_row_numbers, set_sortable,
     # set_column_editable, set_column_width,
@@ -839,12 +877,15 @@ class TableView(WidgetMixin, PGW.TableView):
         # wrapper's get_selected projects to row dicts.
         self._make_callback('selected', self.get_selected())
 
-    def _cb_redirect_activated(self, values, path):
-        # PGW signature: (values_dict, path).  Re-emit as
-        # (row_dict, path) so it matches qtw, with path
-        # normalised to integer row indices.
+    def _cb_redirect_activated(self, values, path, col_key=None):
+        # PGW signature: (values_dict, path, col_key).  Re-emit as
+        # (row_dict, path, col_key) so it matches qtw/gtk, with path
+        # normalised to integer row indices.  ``col_key`` defaults
+        # to None for older pgwidgets-js builds that don't yet send
+        # the clicked column, and is also None when activation came
+        # from the Enter key rather than a cell dblclick.
         self._make_callback('activated', values,
-                            self._from_pgw_path(path))
+                            self._from_pgw_path(path), col_key)
 
     def _cb_redirect_sorted(self, col_key, ascending):
         self._make_callback('sorted', col_key, ascending)

@@ -771,11 +771,21 @@ class RadioButton(WidgetBase):
         self.make_callback('activated', val)
 
     def set_state(self, tf):
-        if self.widget.isChecked() != tf:
-            # toggled only fires when the value is toggled
-            self.widget.blockSignals(True)
+        if self.widget.isChecked() == tf:
+            return
+        # toggled only fires when the value is toggled
+        self.widget.blockSignals(True)
+        if not tf and self.widget.autoExclusive():
+            # Qt won't let us uncheck the currently-checked radio in
+            # an autoExclusive group; flip the flag, uncheck, then
+            # restore.  Matches what gtk's set_active(False) does
+            # natively and what cross-backend callers expect.
+            self.widget.setAutoExclusive(False)
+            self.widget.setChecked(False)
+            self.widget.setAutoExclusive(True)
+        else:
             self.widget.setChecked(tf)
-            self.widget.blockSignals(False)
+        self.widget.blockSignals(False)
 
     def get_state(self):
         return self.widget.isChecked()
@@ -1493,13 +1503,16 @@ class TableView(TreeView):
 
     Callbacks
     ---------
-    * ``activated(table, row_dict)`` — fires on double-click.
+    * ``activated(table, row_dict, [row_index], col_key)`` — fires
+      on double-click.  ``col_key`` is the user-space column key
+      that was clicked, or ``None`` if the click landed on the
+      synthetic row-number column.
     * ``selected(table, list_of_row_dicts)`` — selection changed.
-    * ``sorted(table, col_index, ascending)`` — user clicked a
+    * ``sorted(table, col_key, ascending)`` — user clicked a
       header to sort.
-    * ``cell_edited(table, row, col, value)`` — an editable cell
-      was edited (only fires for columns marked editable via
-      :meth:`set_column_editable`).
+    * ``cell_edited(table, [row_index], col_key, old_value, new_value)``
+      — an editable cell was edited (only fires for columns marked
+      editable via :meth:`set_column_editable`).
     * ``scrolled(table, h_pct, v_pct)`` — scroll position changed.
     """
 
@@ -1544,6 +1557,14 @@ class TableView(TreeView):
         for cbname in ('cell_edited', 'scrolled'):
             self.enable_callback(cbname)
 
+        # Apply default high-contrast selection styling.  Qt's
+        # default highlight palette is often a pale tint that
+        # leaves cell text barely readable; force a saturated blue
+        # background with white text (and keep that scheme when
+        # the widget loses focus too, so the selected row stays
+        # visible while a context menu / cell editor is open).
+        self._apply_stylesheet()
+
         if show_grid:
             self.set_show_grid(True)
 
@@ -1564,16 +1585,17 @@ class TableView(TreeView):
                     'key': key,
                     'type': col.get('type', 'string'),
                     'halign': col.get('halign'),
+                    'editable': bool(col.get('editable', False)),
                 }
             elif isinstance(col, (tuple, list)):
                 label = col[0]
                 key = col[1] if len(col) > 1 else label
                 dtype = col[2] if len(col) > 2 else 'string'
                 d = {'label': label, 'key': key, 'type': dtype,
-                     'halign': None}
+                     'halign': None, 'editable': False}
             elif isinstance(col, str):
                 d = {'label': col, 'key': col, 'type': 'string',
-                     'halign': None}
+                     'halign': None, 'editable': False}
             else:
                 raise WidgetError(
                     f"unrecognised column descriptor: {col!r}")
@@ -1686,6 +1708,12 @@ class TableView(TreeView):
     def set_columns(self, columns):
         """Replace the column layout.  Clears existing rows."""
         self._user_columns = self._normalise_columns(columns)
+        # Pick up any ``editable: True`` flags baked into the
+        # column dicts (matches the pgw side, where the JS reads
+        # ``colDef.editable`` directly).  ``set_column_editable``
+        # may still be called later to flip individual columns.
+        self._editable_cols = {i for i, c in enumerate(self._user_columns)
+                               if c.get('editable')}
         self._rebuild_table()
 
     def insert_column(self, idx, column):
@@ -1823,6 +1851,21 @@ class TableView(TreeView):
         tv = self.widget
         return [self._item_to_row_dict(it) for it in tv.selectedItems()]
 
+    def get_selected_paths(self):
+        """Return selected rows as a list of ``[row_index]`` paths."""
+        tv = self.widget
+        # Deduplicate row indices — selectedItems() with a per-cell
+        # selection mode returns one entry per selected cell, but
+        # callers want one entry per selected row.
+        seen, out = set(), []
+        for it in tv.selectedItems():
+            idx = tv.indexOfTopLevelItem(it)
+            if idx >= 0 and idx not in seen:
+                seen.add(idx)
+                out.append([idx])
+        out.sort()
+        return out
+
     def set_selected(self, items):
         """Select rows by integer index, by ``[row]`` path, or by
         row dict (matched by leaf-key value)."""
@@ -1920,12 +1963,33 @@ class TableView(TreeView):
         """Toggle grid lines.  QTreeWidget has no native grid; we
         emulate via a stylesheet, so the result is approximate."""
         self._show_grid = bool(tf)
+        self._apply_stylesheet()
+
+    def _apply_stylesheet(self):
+        """Compose and apply the TableView's stylesheet.
+
+        Layered so optional features (grid lines) can be added/
+        removed without losing the always-on bits (selection
+        highlight).  Without this, the inherited Qt highlight
+        palette is often a low-contrast tint that washes out cell
+        text, especially when ``alternate_row_colors`` is on.
+        """
+        parts = [
+            # High-contrast selection — both when focused (default
+            # ":selected") and unfocused (":selected:!active"), so a
+            # selected row stays readable while a context menu or
+            # cell editor takes focus away from the tree.
+            "QTreeView::item:selected { "
+            "background-color: #2a64c8; color: white; }",
+            "QTreeView::item:selected:!active { "
+            "background-color: #2a64c8; color: white; }",
+        ]
         if self._show_grid:
-            self.widget.setStyleSheet(
-                "QTreeView::item { border-right: 1px solid #d0d0d0; "
+            parts.append(
+                "QTreeView::item { "
+                "border-right: 1px solid #d0d0d0; "
                 "border-bottom: 1px solid #d0d0d0; }")
-        else:
-            self.widget.setStyleSheet("")
+        self.widget.setStyleSheet(' '.join(parts))
 
     def set_show_row_numbers(self, tf):
         new = bool(tf)
@@ -1940,13 +2004,19 @@ class TableView(TreeView):
 
     # ----- overridden callback redirects -----------------------
 
-    def _cb_redirect(self, item):
+    def _cb_redirect(self, item, col=-1):
         # TreeView's version emits a path-keyed dict; for a flat
-        # table, emit (row_dict, path) where path is [row_index] —
-        # matches the pgw TableView 'activated' signature.
+        # table, emit (row_dict, path, col_key) where path is
+        # [row_index] and col_key is the user-space column key (or
+        # ``None`` if the click landed on the synthetic row-number
+        # column or couldn't be resolved).  Matches the qtw / gtk
+        # TableView 'activated' signature.
         row_dict = self._item_to_row_dict(item)
         idx = self.widget.indexOfTopLevelItem(item)
-        self.make_callback('activated', row_dict, [idx])
+        user_col = col - self._col_offset()
+        col_key = (self._user_columns[user_col]['key']
+                   if 0 <= user_col < len(self._user_columns) else None)
+        self.make_callback('activated', row_dict, [idx], col_key)
 
     def _selection_cb(self):
         # Inherited would also work (returns get_selected()), but

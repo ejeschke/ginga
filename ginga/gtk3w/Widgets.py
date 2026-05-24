@@ -26,13 +26,26 @@ __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
-           'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
+           'TableView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
            'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog', 'MessageDialog',
            'DragPackage', 'WidgetMoveEvent', 'name_mangle', 'make_widget',
            'hadjust', 'build_info', 'wrap']
+
+
+_TABLE_VIEW_ROW_NUM_KEY = '_row_num_'
+
+
+def _coerce_bool(s):
+    if isinstance(s, bool):
+        return s
+    if isinstance(s, (int, float)):
+        return bool(s)
+    if isinstance(s, str):
+        return s.strip().lower() in ('1', 'true', 't', 'yes', 'y', 'on', '✓')
+    return bool(s)
 
 
 class WidgetError(Exception):
@@ -963,8 +976,13 @@ class TreeView(WidgetBase):
         self._selection_shelf = Shelf()
         self._selection_stocker = self._selection_shelf.get_stocker()
 
+        # Tracks the current sort direction per column index so
+        # repeated clicks on the same header toggle ascending/
+        # descending — matches qtw's QHeaderView behaviour.
+        self._sort_ascending = {}
+
         for cbname in ('selected', 'activated', 'drag-start',
-                       'collapsed', 'expanded', 'changed'):
+                       'collapsed', 'expanded', 'changed', 'sorted'):
             self.enable_callback(cbname)
         self.__set_style()
 
@@ -1385,24 +1403,62 @@ class TreeView(WidgetBase):
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()
         model = treeview.get_model()
-        model.set_sort_column_id(idx, Gtk.SortType.ASCENDING)
+        # Toggle direction if this column was already the active
+        # sort target; otherwise default to ascending.
+        ascending = not self._sort_ascending.get(idx, False)
+        self._sort_ascending = {idx: ascending}
+        order = (Gtk.SortType.ASCENDING if ascending
+                 else Gtk.SortType.DESCENDING)
         fn = self.cell_sort_funcs[idx]
         model.set_sort_func(idx, fn)
+        model.set_sort_column_id(idx, order)
+        # Fire 'sorted' with the column key (not index), to match
+        # the qtw / pgw TableView signature.
+        col_key = (self.datakeys[idx]
+                   if 0 <= idx < len(self.datakeys) else idx)
+        self.make_callback('sorted', col_key, ascending)
         return True
 
-    def _cmp(self, val1, val2):
-        if isinstance(val1, str):
-            val1, val2 = val1.lower(), val2.lower()
+    def _cmp(self, val1, val2, datatype='str'):
+        # Empty strings always sort last regardless of direction —
+        # matching the qtw TreeWidgetItem.__lt__ behaviour.
+        a_empty = (isinstance(val1, str) and val1 == '')
+        b_empty = (isinstance(val2, str) and val2 == '')
+        if a_empty and not b_empty:
+            return 1
+        if b_empty and not a_empty:
+            return -1
+
+        if datatype in ('int', 'integer'):
             try:
-                val1, val2 = float(val1), float(val2)
-            except ValueError:
+                a, b = int(val1), int(val2)
+                return (a > b) - (a < b)
+            except (ValueError, TypeError):
                 pass
-            if val1 < val2:
-                return -1
-            elif val1 > val2:
-                return 1
-            else:
-                return 0
+        elif datatype in ('float', 'number'):
+            try:
+                a, b = float(val1), float(val2)
+                return (a > b) - (a < b)
+            except (ValueError, TypeError):
+                pass
+        elif datatype in ('bool', 'boolean', 'check'):
+            a, b = _coerce_bool(val1), _coerce_bool(val2)
+            return (a > b) - (a < b)
+
+        # Default ('str' or unknown): preserve legacy "try numeric,
+        # fall back to case-insensitive string" heuristic.
+        if isinstance(val1, str):
+            a, b = val1.lower(), val2.lower() if isinstance(val2, str) else val2
+            try:
+                a, b = float(a), float(b)
+            except (ValueError, TypeError):
+                pass
+            return (a > b) - (a < b)
+        # Non-string, non-typed: fall back to direct comparison.
+        try:
+            return (val1 > val2) - (val1 < val2)
+        except TypeError:
+            return 0
 
     def _mksrtfnN(self, kwd, datatype):
         def fn(*args):
@@ -1410,9 +1466,9 @@ class TreeView(WidgetBase):
             bnch1 = model.get_value(iter1, 0)
             bnch2 = model.get_value(iter2, 0)
             if isinstance(bnch1, str):
-                return self._cmp(bnch1, bnch2)
+                return self._cmp(bnch1, bnch2, datatype=datatype)
             val1, val2 = bnch1[kwd], bnch2[kwd]
-            return self._cmp(val1, val2)
+            return self._cmp(val1, val2, datatype=datatype)
         return fn
 
     def _mkcolfnN(self, idx, kwd, datatype):
@@ -1470,6 +1526,546 @@ class TreeView(WidgetBase):
 
     def get_rgb_array(self):
         return GtkHelp.get_rgb_array(self.tv)
+
+
+class TableView(TreeView):
+    """Flat tabular view, API-compatible with the qtw and pgw TableView.
+
+    Backed by the same :class:`TreeView` machinery — a ``GtkTreeView``
+    over a ``GtkTreeStore(object)`` storing one dict per row — but
+    presents as a flat table (no hierarchy, no expand/collapse) with
+    a row-oriented public API matching :class:`PGW.TableView`.
+
+    See :class:`ginga.qtw.Widgets.TableView` for the full set of
+    constructor options and callback signatures; this class mirrors
+    them exactly.
+
+    Callbacks emitted (in addition to those inherited from TreeView):
+
+    * ``activated(table, row_dict, [row_index], col_key)``
+    * ``selected(table, list_of_row_dicts)``
+    * ``sorted(table, col_key, ascending)``
+    * ``cell_edited(table, [row_index], col_key, old_value, new_value)``
+    * ``scrolled(table, h_pct, v_pct)``
+    """
+
+    def __init__(self, columns=None, show_header=True,
+                 selection_mode='single', alternate_row_colors=False,
+                 show_grid=False, show_row_numbers=False,
+                 sortable=False, allow_text_selection=False,
+                 dragable=False):
+        super().__init__(auto_expand=False, sortable=sortable,
+                         selection=selection_mode,
+                         use_alt_row_color=alternate_row_colors,
+                         dragable=dragable)
+
+        if not show_header:
+            self.tv.set_headers_visible(False)
+
+        # Per-column editable flags (user-space indices, excluding
+        # the synthetic row-number column).
+        self._editable_cols = set()
+        # User-supplied (normalised) column descriptors.
+        self._user_columns = []
+        self._show_row_numbers = bool(show_row_numbers)
+        self._show_grid = False
+        self._allow_text_selection = bool(allow_text_selection)  # noqa
+
+        # Additional callbacks beyond TreeView's set.
+        for cbname in ('cell_edited', 'scrolled'):
+            self.enable_callback(cbname)
+
+        # Hook scrolled-window adjustments for the 'scrolled' cb.
+        sw = self.widget
+        sw.get_hadjustment().connect('value-changed', self._scroll_cb)
+        sw.get_vadjustment().connect('value-changed', self._scroll_cb)
+
+        if show_grid:
+            self.set_show_grid(True)
+
+        if columns is not None:
+            self.set_columns(columns)
+
+    # ----- internal helpers ------------------------------------
+
+    @staticmethod
+    def _normalise_columns(columns):
+        out = []
+        for i, col in enumerate(columns):
+            if isinstance(col, dict):
+                key = col.get('key') or col.get('label') or f'col{i}'
+                d = {'label': col.get('label', key),
+                     'key': key,
+                     'type': col.get('type', 'string'),
+                     'halign': col.get('halign'),
+                     'editable': bool(col.get('editable', False))}
+            elif isinstance(col, (tuple, list)):
+                label = col[0]
+                key = col[1] if len(col) > 1 else label
+                dtype = col[2] if len(col) > 2 else 'string'
+                d = {'label': label, 'key': key, 'type': dtype,
+                     'halign': None, 'editable': False}
+            elif isinstance(col, str):
+                d = {'label': col, 'key': col, 'type': 'string',
+                     'halign': None, 'editable': False}
+            else:
+                raise WidgetError(
+                    f"unrecognised column descriptor: {col!r}")
+            out.append(d)
+        return out
+
+    def _col_offset(self):
+        return 1 if self._show_row_numbers else 0
+
+    def _user_col_keys(self):
+        return [c['key'] for c in self._user_columns]
+
+    def _build_col_specs(self):
+        specs = [(c['label'], c['key'], c['type'])
+                 for c in self._user_columns]
+        if self._show_row_numbers:
+            specs = [('', _TABLE_VIEW_ROW_NUM_KEY, 'str')] + specs
+        return specs
+
+    def _rebuild_table(self, rows=None):
+        col_specs = self._build_col_specs()
+        if not col_specs:
+            return
+        leaf_key = self._user_columns[0]['key']
+        # Set editable=True at the renderer level if any column is
+        # editable; per-column gating happens in _post_setup_columns.
+        self.editable = bool(self._editable_cols)
+        super().setup_table(col_specs, levels=1, leaf_key=leaf_key)
+        self._post_setup_columns()
+        if rows is not None:
+            self.set_rows(rows)
+
+    def _post_setup_columns(self):
+        offset = self._col_offset()
+        for n, tvc in enumerate(self.tv.get_columns()):
+            user_idx = n - offset
+            # Per-column editability for text cells.
+            for cell in tvc.get_cells():
+                if isinstance(cell, Gtk.CellRendererText):
+                    cell.set_property(
+                        "editable",
+                        user_idx >= 0 and user_idx in self._editable_cols)
+                    # Apply halign if specified for this column.
+                    if 0 <= user_idx < len(self._user_columns):
+                        halign = self._user_columns[user_idx].get('halign')
+                        if halign == 'right':
+                            cell.set_property('xalign', 1.0)
+                        elif halign == 'center':
+                            cell.set_property('xalign', 0.5)
+                        elif halign == 'left':
+                            cell.set_property('xalign', 0.0)
+        if self._show_row_numbers:
+            self._configure_row_number_column()
+
+    def _configure_row_number_column(self):
+        tvc = self.tv.get_column(0)
+        if tvc is None:
+            return
+        cells = tvc.get_cells()
+        if not cells:
+            return
+        cell = cells[0]
+        # Header-like styling: bold, right-aligned text.
+        try:
+            cell.set_property('weight', 700)
+            cell.set_property('xalign', 1.0)
+            cell.set_property('editable', False)
+            # Theme-aware background for the row-header look.
+            style_ctx = self.tv.get_style_context()
+            bg = style_ctx.get_background_color(Gtk.StateFlags.NORMAL)
+            cell.set_property('cell-background-rgba', bg)
+        except Exception:
+            pass
+
+        def row_num_data(column, cell, model, it, _):
+            path = model.get_path(it)
+            indices = path.get_indices() if path is not None else [0]
+            cell.set_property('text', str(indices[0] + 1))
+
+        tvc.set_cell_data_func(cell, row_num_data, None)
+        tvc.set_resizable(False)
+        tvc.set_clickable(False)
+        tvc.set_sizing(Gtk.TreeViewColumnSizing.AUTOSIZE)
+
+    # ----- column management -----------------------------------
+
+    def set_columns(self, columns):
+        self._user_columns = self._normalise_columns(columns)
+        # Pick up any ``editable: True`` flags baked into the
+        # column dicts (matches the pgw side, where the JS reads
+        # ``colDef.editable`` directly).
+        self._editable_cols = {i for i, c in enumerate(self._user_columns)
+                               if c.get('editable')}
+        self._rebuild_table()
+
+    def insert_column(self, idx, column):
+        col, = self._normalise_columns([column])
+        self._user_columns.insert(idx, col)
+        rows = self.get_rows()
+        for r in rows:
+            r.setdefault(col['key'], '')
+        self._rebuild_table(rows=rows)
+
+    def append_column(self, column):
+        self.insert_column(len(self._user_columns), column)
+
+    def delete_column(self, idx):
+        if not (0 <= idx < len(self._user_columns)):
+            raise WidgetError(f"column index {idx} out of range")
+        removed = self._user_columns.pop(idx)
+        rows = self.get_rows()
+        for r in rows:
+            r.pop(removed['key'], None)
+        self._rebuild_table(rows=rows)
+
+    def set_column_editable(self, col_idx, tf):
+        if tf:
+            self._editable_cols.add(col_idx)
+        else:
+            self._editable_cols.discard(col_idx)
+        offset = self._col_offset()
+        tvc = self.tv.get_column(col_idx + offset)
+        if tvc is None:
+            return
+        for cell in tvc.get_cells():
+            if isinstance(cell, Gtk.CellRendererText):
+                cell.set_property("editable", tf)
+        self.editable = bool(self._editable_cols)
+
+    def get_column_count(self):
+        return len(self._user_columns)
+
+    def set_column_width(self, idx, width):
+        col = self.tv.get_column(idx + self._col_offset())
+        if col is None:
+            return
+        col.set_sizing(Gtk.TreeViewColumnSizing.FIXED)
+        col.set_fixed_width(width)
+
+    # ----- row management --------------------------------------
+
+    def set_rows(self, rows):
+        self.clear()
+        for r in rows:
+            self._append_one(r)
+
+    # Alias matching pgw's ``set_data`` name.
+    set_data = set_rows
+
+    def append_row(self, values):
+        self._append_one(values)
+
+    def insert_row(self, idx, values):
+        d = self._row_to_dict(values)
+        model = self.tv.get_model()
+        n = model.iter_n_children(None)
+        if idx < 0:
+            idx = 0
+        if idx > n:
+            idx = n
+        new_iter = model.insert(None, idx)
+        model.set_value(new_iter, 0, d)
+
+    def delete_row(self, idx):
+        model = self.tv.get_model()
+        n = model.iter_n_children(None)
+        if not (0 <= idx < n):
+            raise WidgetError(f"row index {idx} out of range")
+        it = model.iter_nth_child(None, idx)
+        model.remove(it)
+
+    def get_row_count(self):
+        model = self.tv.get_model()
+        return model.iter_n_children(None) if model is not None else 0
+
+    def get_row(self, idx):
+        model = self.tv.get_model()
+        n = model.iter_n_children(None) if model is not None else 0
+        if not (0 <= idx < n):
+            raise WidgetError(f"row index {idx} out of range")
+        it = model.iter_nth_child(None, idx)
+        d = model.get_value(it, 0)
+        return dict(d) if isinstance(d, dict) else {}
+
+    def get_rows(self):
+        model = self.tv.get_model()
+        if model is None:
+            return []
+        out = []
+        for i in range(model.iter_n_children(None)):
+            it = model.iter_nth_child(None, i)
+            d = model.get_value(it, 0)
+            out.append(dict(d) if isinstance(d, dict) else {})
+        return out
+
+    def set_cell(self, row, col, value):
+        if not (0 <= col < len(self._user_columns)):
+            raise WidgetError(f"column index {col} out of range")
+        model = self.tv.get_model()
+        n = model.iter_n_children(None) if model is not None else 0
+        if not (0 <= row < n):
+            raise WidgetError(f"row index {row} out of range")
+        it = model.iter_nth_child(None, row)
+        d = model.get_value(it, 0)
+        if not isinstance(d, dict):
+            d = {}
+            model.set_value(it, 0, d)
+        key = self._user_columns[col]['key']
+        d[key] = value
+        # Trigger a redraw.
+        model.row_changed(model.get_path(it), it)
+
+    def _row_to_dict(self, values):
+        if isinstance(values, dict):
+            return dict(values)
+        if isinstance(values, (list, tuple)):
+            return dict(zip(self._user_col_keys(), values))
+        raise WidgetError(
+            f"row must be a dict or sequence, got {type(values).__name__}")
+
+    def _append_one(self, values):
+        d = self._row_to_dict(values)
+        model = self.tv.get_model()
+        model.append(None, [d])
+
+    # ----- selection -------------------------------------------
+
+    def get_selected(self):
+        treeselection = self.tv.get_selection()
+        model, pathlist = treeselection.get_selected_rows()
+        out = []
+        for path in pathlist:
+            it = model.get_iter(path)
+            d = model.get_value(it, 0)
+            if isinstance(d, dict):
+                out.append(dict(d))
+        return out
+
+    def get_selected_paths(self):
+        """Return selected rows as a list of ``[row_index]`` paths."""
+        treeselection = self.tv.get_selection()
+        _model, pathlist = treeselection.get_selected_rows()
+        out = []
+        for path in pathlist:
+            indices = path.get_indices() if path is not None else []
+            if indices:
+                out.append([indices[0]])
+        return out
+
+    def set_selected(self, items):
+        treeselection = self.tv.get_selection()
+        with self._selection_stocker:
+            treeselection.unselect_all()
+            for it in items:
+                idx = self._resolve_to_row_index(it)
+                if idx is None or not (0 <= idx < self.get_row_count()):
+                    continue
+                model = self.tv.get_model()
+                gtk_iter = model.iter_nth_child(None, idx)
+                if gtk_iter is not None:
+                    treeselection.select_iter(gtk_iter)
+
+    def select_path(self, path, state=True):
+        if not path:
+            return
+        idx = self._resolve_to_row_index(path)
+        if idx is None or not (0 <= idx < self.get_row_count()):
+            return
+        model = self.tv.get_model()
+        gtk_iter = model.iter_nth_child(None, idx)
+        treeselection = self.tv.get_selection()
+        with self._selection_stocker:
+            if state:
+                treeselection.select_iter(gtk_iter)
+            else:
+                treeselection.unselect_iter(gtk_iter)
+
+    def select_paths(self, paths, state=True):
+        for p in paths:
+            self.select_path(p, state=state)
+
+    def select_all(self, state=True):
+        treeselection = self.tv.get_selection()
+        with self._selection_stocker:
+            if state:
+                treeselection.select_all()
+            else:
+                treeselection.unselect_all()
+
+    def _resolve_to_row_index(self, item):
+        if isinstance(item, int):
+            return item
+        if isinstance(item, (list, tuple)) and item:
+            head = item[0]
+            if isinstance(head, int):
+                return head
+            if isinstance(head, str) and head.startswith('row'):
+                try:
+                    return int(head[3:])
+                except ValueError:
+                    return None
+            try:
+                return int(head)
+            except (TypeError, ValueError):
+                return None
+        if isinstance(item, dict):
+            leaf = self.leaf_key
+            if leaf is None:
+                return None
+            want = item.get(leaf)
+            for i in range(self.get_row_count()):
+                if self.get_row(i).get(leaf) == want:
+                    return i
+        return None
+
+    # ----- sort / scroll ---------------------------------------
+
+    def set_sortable(self, tf):
+        self.sortable = bool(tf)
+        for tvc in self.tv.get_columns():
+            tvc.set_clickable(self.sortable)
+
+    def sort_by_column(self, col, ascending=True):
+        n = col + self._col_offset()
+        if not (0 <= n < len(self.cell_sort_funcs)):
+            return
+        model = self.tv.get_model()
+        order = (Gtk.SortType.ASCENDING if ascending
+                 else Gtk.SortType.DESCENDING)
+        fn = self.cell_sort_funcs[n]
+        model.set_sort_func(n, fn)
+        model.set_sort_column_id(n, order)
+        self._sort_ascending = {n: ascending}
+
+    def scroll_to_path(self, path):
+        idx = self._resolve_to_row_index(path)
+        if idx is None or not (0 <= idx < self.get_row_count()):
+            return
+        model = self.tv.get_model()
+        gtk_path = model.get_path(model.iter_nth_child(None, idx))
+        self.tv.scroll_to_cell(gtk_path, None, True, 0.5, 0.0)
+
+    def scroll_to_end(self):
+        n = self.get_row_count()
+        if not n:
+            return
+        model = self.tv.get_model()
+        it = model.iter_nth_child(None, n - 1)
+        self.tv.scroll_to_cell(model.get_path(it), None, True, 1.0, 0.0)
+
+    def set_scroll_position(self, h_pct, v_pct):
+        sw = self.widget
+        for adj, pct in ((sw.get_hadjustment(), h_pct),
+                         (sw.get_vadjustment(), v_pct)):
+            lower = adj.get_lower()
+            upper = adj.get_upper() - adj.get_page_size()
+            adj.set_value(lower + pct * max(upper - lower, 0))
+
+    def get_scroll_position(self):
+        sw = self.widget
+        out = []
+        for adj in (sw.get_hadjustment(), sw.get_vadjustment()):
+            lower = adj.get_lower()
+            upper = adj.get_upper() - adj.get_page_size()
+            rng = upper - lower
+            out.append((adj.get_value() - lower) / rng if rng > 0 else 0.0)
+        return tuple(out)
+
+    # ----- display config --------------------------------------
+
+    def set_show_grid(self, tf):
+        self._show_grid = bool(tf)
+        self.tv.set_grid_lines(
+            Gtk.TreeViewGridLines.BOTH if self._show_grid
+            else Gtk.TreeViewGridLines.NONE)
+
+    def set_show_row_numbers(self, tf):
+        new = bool(tf)
+        if new == self._show_row_numbers:
+            return
+        self._show_row_numbers = new
+        if self._user_columns:
+            rows = self.get_rows()
+            self.set_columns(self._user_columns)
+            self.set_rows(rows)
+
+    # ----- overridden callback redirects -----------------------
+
+    def _selection_cb(self, treeselection):
+        if self._selection_shelf.is_blocked():
+            return
+        self.make_callback('selected', self.get_selected())
+
+    def _cb_redirect(self, treeview, path, column):
+        model = treeview.get_model()
+        it = model.get_iter(path)
+        d = model.get_value(it, 0)
+        row_dict = dict(d) if isinstance(d, dict) else {}
+        indices = path.get_indices() if path is not None else [0]
+        # Resolve column key (user-space) from the clicked column.
+        col_key = None
+        try:
+            col_idx = self.tv.get_columns().index(column)
+            user_col = col_idx - self._col_offset()
+            if 0 <= user_col < len(self._user_columns):
+                col_key = self._user_columns[user_col]['key']
+        except (ValueError, IndexError):
+            pass
+        self.make_callback('activated', row_dict, [indices[0]], col_key)
+
+    def _edited_cb(self, cell, path, new_text, datakey, col):
+        # Override to emit the unified 'cell_edited' signature in
+        # addition to the legacy 'changed' callback.
+        model = self.tv.get_model()
+        it = model.get_iter(path)
+        d = model.get_value(it, 0)
+        if not isinstance(d, dict):
+            d = {}
+            model.set_value(it, 0, d)
+        old_value = d.get(datakey)
+        d[datakey] = new_text
+        model.row_changed(model.get_path(it), it)
+        try:
+            idx = int(str(path).split(':')[0])
+        except (ValueError, TypeError):
+            idx = -1
+        user_col = col - self._col_offset()
+        col_key = (self._user_columns[user_col]['key']
+                   if 0 <= user_col < len(self._user_columns) else datakey)
+        self.make_callback('changed', [idx], col_key, new_text)
+        self.make_callback('cell_edited', [idx], col_key,
+                           old_value, new_text)
+
+    def _toggled_cb(self, cell, path, datakey, col):
+        model = self.tv.get_model()
+        it = model.get_iter(path)
+        d = model.get_value(it, 0)
+        if not isinstance(d, dict):
+            d = {}
+            model.set_value(it, 0, d)
+        old_value = d.get(datakey)
+        new_value = not _coerce_bool(old_value)
+        d[datakey] = new_value
+        model.row_changed(model.get_path(it), it)
+        try:
+            idx = int(str(path).split(':')[0])
+        except (ValueError, TypeError):
+            idx = -1
+        user_col = col - self._col_offset()
+        col_key = (self._user_columns[user_col]['key']
+                   if 0 <= user_col < len(self._user_columns) else datakey)
+        self.make_callback('changed', [idx], col_key, new_value)
+        self.make_callback('cell_edited', [idx], col_key,
+                           old_value, new_value)
+
+    def _scroll_cb(self, *args):
+        h, v = self.get_scroll_position()
+        self.make_callback('scrolled', h, v)
 
 
 # CONTAINERS
