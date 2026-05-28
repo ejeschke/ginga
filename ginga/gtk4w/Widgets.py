@@ -1597,8 +1597,18 @@ class TableView(TreeView):
                  show_grid=False, show_row_numbers=False,
                  sortable=False, allow_text_selection=False,
                  dragable=False):
+        # GTK fallback: cell modes degrade to row-equivalents.  The
+        # public API (get_selected_cells, copy/cut/paste methods)
+        # still works — selections just snap to whole rows.
+        self._selection_mode_arg = selection_mode
+        if selection_mode == 'single-cell':
+            parent_mode = 'single'
+        elif selection_mode == 'multiple-cell':
+            parent_mode = 'multiple'
+        else:
+            parent_mode = selection_mode
         super().__init__(auto_expand=False, sortable=sortable,
-                         selection=selection_mode,
+                         selection=parent_mode,
                          use_alt_row_color=alternate_row_colors,
                          dragable=dragable)
 
@@ -1615,7 +1625,8 @@ class TableView(TreeView):
         self._allow_text_selection = bool(allow_text_selection)  # noqa
 
         # Additional callbacks beyond TreeView's set.
-        for cbname in ('cell_edited', 'scrolled'):
+        for cbname in ('cell_edited', 'scrolled',
+                       'cell_selected', 'copy', 'cut', 'paste'):
             self.enable_callback(cbname)
 
         # Hook scrolled-window adjustments for the 'scrolled' cb.
@@ -2109,6 +2120,136 @@ class TableView(TreeView):
     def _scroll_cb(self, *args):
         h, v = self.get_scroll_position()
         self.make_callback('scrolled', h, v)
+
+    # ----- cell-selection API (row-only fallback on gtk) ------
+
+    def get_selected_cells(self):
+        """Return cells in selected rows as ``[{path, col_key, value}, ...]``.
+
+        GtkTreeView doesn't expose native rectangular-cell selection,
+        so on this backend cell-mode selections snap to whole rows
+        and we expand each selected row into one entry per column.
+        """
+        out = []
+        for path in self.get_selected_paths():
+            row_idx = path[0]
+            row_dict = self.get_row(row_idx)
+            for col in self._user_columns:
+                key = col['key']
+                value = row_dict.get(key, '')
+                out.append({'path': [row_idx],
+                            'col_key': key, 'value': value})
+        return out
+
+    def select_cell(self, path, col_key, state=True):
+        self.select_path(path, state=state)
+
+    def select_cells(self, cells, state=True):
+        seen = set()
+        for c in (cells or []):
+            p = c.get('path')
+            if not p:
+                continue
+            key = tuple(p)
+            if key in seen:
+                continue
+            seen.add(key)
+            self.select_path(p, state=state)
+
+    def clear_cell_selection(self):
+        self.clear_selection()
+
+    # ----- clipboard (row-only, system + widget callbacks) ----
+    #
+    # GTK4's clipboard API is fully async — paste's read_text_async
+    # completes via a callback, so the 'paste' widget callback
+    # fires once the OS has returned the clipboard text.  Keyboard
+    # binding for Ctrl+C/V/X is left to a follow-up; in the meantime
+    # plugins can call ``copy_selection`` / ``cut_selection`` /
+    # ``paste_selection`` directly.
+
+    def _build_selection_tsv(self):
+        paths = self.get_selected_paths()
+        if not paths:
+            return ''
+        rows = sorted(p[0] for p in paths)
+        lines = []
+        for r in rows:
+            d = self.get_row(r)
+            lines.append('\t'.join(
+                ('' if d.get(c['key']) is None else str(d[c['key']]))
+                for c in self._user_columns))
+        return '\n'.join(lines)
+
+    def _get_clipboard(self):
+        display = Gdk.Display.get_default()
+        return display.get_clipboard() if display is not None else None
+
+    def copy_selection(self):
+        tsv = self._build_selection_tsv()
+        if not tsv:
+            return
+        clip = self._get_clipboard()
+        if clip is not None:
+            clip.set(tsv)
+        self.make_callback('copy', tsv)
+
+    def cut_selection(self):
+        tsv = self._build_selection_tsv()
+        if not tsv:
+            return
+        clip = self._get_clipboard()
+        if clip is not None:
+            clip.set(tsv)
+        for path in self.get_selected_paths():
+            r = path[0]
+            for user_col in range(len(self._user_columns)):
+                if user_col not in self._editable_cols:
+                    continue
+                col_key = self._user_columns[user_col]['key']
+                old = self.get_row(r).get(col_key, '')
+                self.set_cell(r, user_col, '')
+                self.make_callback('cell_edited', [r], col_key, old, '')
+        self.make_callback('cut', tsv)
+
+    def paste_selection(self):
+        clip = self._get_clipboard()
+        if clip is None:
+            return
+        clip.read_text_async(None, self._on_paste_text_ready)
+
+    def _on_paste_text_ready(self, clipboard, result):
+        try:
+            text = clipboard.read_text_finish(result)
+        except Exception:
+            return
+        if not text:
+            return
+        paths = self.get_selected_paths()
+        if not paths:
+            return
+        anchor_row = min(p[0] for p in paths)
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        rows = text.split('\n')
+        while rows and rows[-1] == '':
+            rows.pop()
+        n_rows = self.get_row_count()
+        n_cols = len(self._user_columns)
+        for i, line in enumerate(rows):
+            r = anchor_row + i
+            if r >= n_rows:
+                break
+            cells = line.split('\t')
+            for j, val in enumerate(cells):
+                if j >= n_cols:
+                    break
+                if j not in self._editable_cols:
+                    continue
+                col_key = self._user_columns[j]['key']
+                old = self.get_row(r).get(col_key, '')
+                self.set_cell(r, j, val)
+                self.make_callback('cell_edited', [r], col_key, old, val)
+        self.make_callback('paste', text)
 
 
 # CONTAINERS

@@ -647,6 +647,13 @@ class TableView(WidgetMixin, PGW.TableView):
         # wrapper does by reading from QTreeWidget items).  Kept in
         # sync by the data-mutating method overrides below.
         self._rows = []
+        # Parallel mirror of the JS-side row keys, in visible order.
+        # After ``set_rows`` these are ``['row0', 'row1', ...]``;
+        # ``insert_row`` / ``delete_row`` keep them in lockstep with
+        # JS's auto-keying algorithm so ``_to_pgw_path`` /
+        # ``_from_pgw_path`` can translate between integer visible
+        # positions and JS row keys after arbitrary mutations.
+        self._row_keys = []
 
         # Wire callback redirects so a single handler signature
         # works regardless of widget set.
@@ -660,6 +667,12 @@ class TableView(WidgetMixin, PGW.TableView):
         self._enable_callback('cell_edited')
         self.on('scrolled', self._cb_redirect_scrolled)
         self._enable_callback('scrolled')
+        # Cell-selection + clipboard callbacks (cell modes).
+        self.on('cell_selected', self._cb_redirect_cell_selected)
+        self._enable_callback('cell_selected')
+        for name in ('copy', 'cut', 'paste'):
+            self.on(name, self._cb_redirect_clipboard, name)
+            self._enable_callback(name)
 
     # ----- column descriptor normalisation -------------------
 
@@ -729,25 +742,43 @@ class TableView(WidgetMixin, PGW.TableView):
         raise ValueError(
             f"row must be a dict or sequence, got {type(row).__name__}")
 
+    def _next_row_key(self):
+        """Compute the next free ``rowN`` key, matching JS's
+        auto-keying algorithm: start at the current row count and
+        walk forward past any collisions.  Must be called *before*
+        appending the new row to ``_row_keys``."""
+        used = set(self._row_keys)
+        i = len(self._row_keys)
+        while f'row{i}' in used:
+            i += 1
+        return f'row{i}'
+
     def set_rows(self, rows):
         self._rows = [self._normalise_row(r) for r in rows]
+        self._row_keys = [f'row{i}' for i in range(len(self._rows))]
         super().set_rows(rows)
 
     def set_data(self, data):
         self._rows = [self._normalise_row(r) for r in data]
+        self._row_keys = [f'row{i}' for i in range(len(self._rows))]
         super().set_data(data)
 
     def append_row(self, row):
+        key = self._next_row_key()
         self._rows.append(self._normalise_row(row))
+        self._row_keys.append(key)
         super().append_row(row)
 
     def insert_row(self, idx, row):
+        key = self._next_row_key()
         self._rows.insert(idx, self._normalise_row(row))
+        self._row_keys.insert(idx, key)
         super().insert_row(idx, row)
 
     def delete_row(self, idx):
         if 0 <= idx < len(self._rows):
             del self._rows[idx]
+            del self._row_keys[idx]
         super().delete_row(idx)
 
     def set_cell(self, row, col, value):
@@ -761,6 +792,7 @@ class TableView(WidgetMixin, PGW.TableView):
 
     def clear(self):
         self._rows = []
+        self._row_keys = []
         super().clear()
 
     def get_rows(self):
@@ -813,26 +845,43 @@ class TableView(WidgetMixin, PGW.TableView):
     # We convert at the boundary so portable caller code can use
     # integer paths uniformly under either widget set.
 
-    @staticmethod
-    def _to_pgw_path(path):
+    def _to_pgw_path(self, path):
+        """Convert a wrapper-style integer-index path (``[2]``) to
+        a JS-side key path (``["row5"]``).  Uses our ``_row_keys``
+        mirror — naïvely formatting ``'row{N}'`` would be wrong
+        after any insert/delete, since JS auto-keys past collisions
+        rather than reusing position numbers."""
         out = []
-        for k in path:
-            if isinstance(k, int):
+        for i, k in enumerate(path):
+            if i == 0 and isinstance(k, int):
+                if 0 <= k < len(self._row_keys):
+                    out.append(self._row_keys[k])
+                else:
+                    out.append(f'row{k}')  # best-effort fallback
+            elif isinstance(k, int):
                 out.append(f'row{k}')
             else:
                 out.append(k)
         return out
 
-    @staticmethod
-    def _from_pgw_path(path):
+    def _from_pgw_path(self, path):
+        """Inverse of ``_to_pgw_path``: convert ``["row5"]`` to
+        ``[2]`` by looking the key up in our mirror.  Falls back
+        to ``int(key[3:])`` only when the key isn't tracked — that
+        preserves behaviour for paths from a tree we never set
+        through ``set_rows`` (rare; mostly defensive)."""
         out = []
-        for k in path or ():
-            if isinstance(k, str) and k.startswith('row'):
-                try:
-                    out.append(int(k[3:]))
+        for i, k in enumerate(path or ()):
+            if i == 0 and isinstance(k, str):
+                if k in self._row_keys:
+                    out.append(self._row_keys.index(k))
                     continue
-                except ValueError:
-                    pass
+                if k.startswith('row'):
+                    try:
+                        out.append(int(k[3:]))
+                        continue
+                    except ValueError:
+                        pass
             out.append(k)
         return out
 
@@ -853,12 +902,32 @@ class TableView(WidgetMixin, PGW.TableView):
         return out
 
     def get_selected_paths(self):
-        """Return selected rows as a list of ``[row_index]`` paths
-        (integers, matching the qtw wrapper)."""
+        """Return rows containing the current selection as a list
+        of ``[row_index]`` paths.  Works for both row-mode and
+        cell-mode selections — in cell mode the underlying row-
+        level selection is empty, so we fall back to deriving row
+        indices from the union of selected cells (matching what
+        the qtw side returns from ``selectedItems()``)."""
         raw = super().get_selected()
-        return [self._from_pgw_path(entry['path'])
-                for entry in (raw or [])
-                if isinstance(entry, dict) and 'path' in entry]
+        out = [self._from_pgw_path(entry['path'])
+               for entry in (raw or [])
+               if isinstance(entry, dict) and 'path' in entry]
+        if out:
+            return out
+        # Cell-mode fallback: derive unique row paths from the
+        # cell selection.
+        seen = set()
+        for c in self.get_selected_cells():
+            path = c.get('path')
+            if not path:
+                continue
+            key = tuple(path)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(list(path))
+        out.sort()
+        return out
 
     def select_path(self, path, state=True):
         super().select_path(self._to_pgw_path(path), state)
@@ -898,6 +967,64 @@ class TableView(WidgetMixin, PGW.TableView):
 
     def _cb_redirect_scrolled(self, h_pct, v_pct):
         self._make_callback('scrolled', h_pct, v_pct)
+
+    def _cb_redirect_cell_selected(self, cells):
+        # JS sends ``[{path, col_key, value}, ...]`` with pgw-style
+        # paths.  Normalise paths to integer row indices to match
+        # the qtw side.
+        out = []
+        for c in (cells or []):
+            if isinstance(c, dict):
+                d = dict(c)
+                if 'path' in d:
+                    d['path'] = self._from_pgw_path(d['path'])
+                out.append(d)
+        self._make_callback('cell_selected', out)
+
+    def _cb_redirect_clipboard(self, tsv, name):
+        # ``copy``/``cut``/``paste`` carry the TSV (or pasted text)
+        # exactly as the JS produced it.  Re-emit unchanged.
+        self._make_callback(name, tsv)
+
+    # ----- cell-selection API (matches the qtw wrapper) -------
+
+    def get_selected_cells(self):
+        """Return ``[{path, col_key, value}, ...]`` for the current
+        cell selection, with paths normalised to integer row
+        indices."""
+        raw = super().get_selected_cells()
+        out = []
+        for c in (raw or []):
+            if isinstance(c, dict):
+                d = dict(c)
+                if 'path' in d:
+                    d['path'] = self._from_pgw_path(d['path'])
+                out.append(d)
+        return out
+
+    def select_cell(self, path, col_key, state=True):
+        super().select_cell(self._to_pgw_path(path), col_key, bool(state))
+
+    def select_cells(self, cells, state=True):
+        converted = []
+        for c in (cells or []):
+            converted.append({
+                'path': self._to_pgw_path(c.get('path', [])),
+                'col_key': c.get('col_key'),
+            })
+        super().select_cells(converted, bool(state))
+
+    def clear_cell_selection(self):
+        super().clear_cell_selection()
+
+    # ``copy_selection`` / ``cut_selection`` / ``paste_selection``
+    # are exposed by pgwidgets-js as auto-dispatched action methods
+    # (see ``pgwidgets_js/defs.py``).  pgwidgets-python's class
+    # factory generates the matching Python methods automatically,
+    # so the inherited ones forward the call into the browser and
+    # fire the ``copy`` / ``cut`` / ``paste`` callbacks once the
+    # JS-side clipboard work completes.  No wrapper override
+    # needed.
 
 
 class Canvas(WidgetMixin, PGW.Canvas):

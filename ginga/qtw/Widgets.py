@@ -1475,7 +1475,12 @@ class TableView(TreeView):
     show_header : bool
         Show the column header row.  Default ``True``.
     selection_mode : str
-        ``'single'``, ``'multiple'``, or ``'none'``.
+        ``'single'``, ``'multiple'``, ``'none'``, or the per-cell
+        variants ``'single-cell'`` / ``'multiple-cell'``.  Cell
+        modes light up the cell-clicked rectangle (Shift) /
+        disjoint cells (Ctrl), plus row-select via row-number
+        click and column-select via header click (with modifiers
+        if ``sortable`` is on).
     alternate_row_colors : bool
         Stripe alternate rows.
     show_grid : bool
@@ -1507,13 +1512,22 @@ class TableView(TreeView):
       on double-click.  ``col_key`` is the user-space column key
       that was clicked, or ``None`` if the click landed on the
       synthetic row-number column.
-    * ``selected(table, list_of_row_dicts)`` — selection changed.
+    * ``selected(table, list_of_row_dicts)`` — row-mode selection
+      changed.
+    * ``cell_selected(table, [{path, col_key, value}, ...])`` —
+      cell-mode selection changed (``single-cell`` /
+      ``multiple-cell``).
     * ``sorted(table, col_key, ascending)`` — user clicked a
       header to sort.
     * ``cell_edited(table, [row_index], col_key, old_value, new_value)``
       — an editable cell was edited (only fires for columns marked
       editable via :meth:`set_column_editable`).
     * ``scrolled(table, h_pct, v_pct)`` — scroll position changed.
+    * ``copy(table, tsv)`` / ``cut(table, tsv)`` /
+      ``paste(table, text)`` — Ctrl+C / X / V on the widget.  The
+      widget itself updates the visible cells on paste / cut; the
+      callbacks let plugins react (e.g. propagate to a backing
+      model).
     """
 
     def __init__(self, columns=None, show_header=True,
@@ -1521,8 +1535,14 @@ class TableView(TreeView):
                  show_grid=False, show_row_numbers=False,
                  sortable=False, allow_text_selection=False,
                  dragable=False):
+        # Cell modes map to a row-level "multiple" Qt mode at the
+        # TreeView layer; per-cell behavior is enabled below by
+        # switching the SelectionBehavior to SelectItems.
+        self._selection_mode_arg = selection_mode
+        is_cell_mode = selection_mode in ('single-cell', 'multiple-cell')
+        parent_mode = 'multiple' if is_cell_mode else selection_mode
         super().__init__(auto_expand=False, sortable=sortable,
-                         selection=selection_mode,
+                         selection=parent_mode,
                          use_alt_row_color=alternate_row_colors,
                          dragable=dragable)
 
@@ -1554,8 +1574,64 @@ class TableView(TreeView):
         tv.horizontalScrollBar().valueChanged.connect(self._scroll_cb)
 
         # New callbacks (in addition to those TreeView enables).
-        for cbname in ('cell_edited', 'scrolled'):
+        for cbname in ('cell_edited', 'scrolled',
+                       'cell_selected', 'copy', 'cut', 'paste'):
             self.enable_callback(cbname)
+
+        # Explicit anchor for cell-mode Shift-extends.  Qt has its
+        # own "current index" notion, but it's mutated by clicks
+        # before our handlers see them, so we track our own anchor
+        # — updated on plain/Ctrl clicks on cells, row-numbers, or
+        # headers — and read it for Shift+row-num / Shift+header
+        # extensions across whole rows / columns.
+        self._cell_anchor = None  # (row, user_col) or None
+
+        # ----- cell-mode wiring -----------------------------------
+        # When the caller asked for a cell-level selection mode,
+        # switch QTreeWidget to per-cell selection and route the
+        # 'cell_selected' callback through itemSelectionChanged.
+        if is_cell_mode:
+            tv.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
+            if selection_mode == 'multiple-cell':
+                tv.setSelectionMode(
+                    QtGui.QAbstractItemView.ExtendedSelection)
+            else:  # single-cell
+                tv.setSelectionMode(
+                    QtGui.QAbstractItemView.SingleSelection)
+            # Take over sort triggering so plain header click sorts
+            # (when sortable) without *also* firing the column-
+            # select handler, and modifier-click selects without
+            # *also* triggering Qt's auto-sort.  We still keep the
+            # parent's sortIndicatorChanged wiring for the public
+            # ``sorted`` callback, just route the trigger ourselves.
+            # ORDER MATTERS: setSortingEnabled(False) has a side-
+            # effect of calling header().setSectionsClickable(False),
+            # so make sections clickable *after* disabling sorting.
+            tv.setSortingEnabled(False)
+            tv.header().setSectionsClickable(True)
+
+        # Header section click → handles both sort (if sortable)
+        # and column-select (with modifiers, or always in
+        # non-sortable cell mode).
+        tv.header().sectionClicked.connect(self._header_section_clicked)
+        # Track item clicks so plain-click on the synthetic row-
+        # number column selects the whole row in cell mode, and so
+        # ordinary cell clicks update the anchor.
+        tv.itemClicked.connect(self._item_clicked_cb)
+
+        # Keyboard shortcuts for Ctrl+C / Ctrl+X / Ctrl+V.  The
+        # parent shortcut ties these to *this* QTreeWidget so they
+        # only fire when it has focus.
+        for keyseq, slot in (
+                ('Ctrl+C', self.copy_selection),
+                ('Ctrl+X', self.cut_selection),
+                ('Ctrl+V', self.paste_selection)):
+            # QShortcut + QKeySequence live in different qtpy
+            # submodules across PyQt5/6 + PySide2/6 — QtHelp
+            # papers over that.
+            sc = QtHelp.QShortcut(QtHelp.QKeySequence(keyseq), tv)
+            sc.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
+            sc.activated.connect(slot)
 
         # Apply default high-contrast selection styling.  Qt's
         # default highlight palette is often a pale tint that
@@ -1688,6 +1764,18 @@ class TableView(TreeView):
         # primary; the row-number column is never the leaf.
         leaf_key = self._user_columns[0]['key']
         super().setup_table(col_specs, levels=1, leaf_key=leaf_key)
+        # Parent's setup_table calls ``setSortingEnabled(self.sortable)``
+        # which has a side-effect of resetting the header's
+        # ``setSectionsClickable`` state — so in cell mode we have
+        # to re-apply our overrides after every column rebuild,
+        # otherwise header clicks stop firing ``sectionClicked``.
+        # ORDER MATTERS: setSortingEnabled(False) itself calls
+        # setSectionsClickable(False), so toggle sections clickable
+        # *after* disabling sorting.
+        if self._is_cell_mode():
+            tv = self.widget
+            tv.setSortingEnabled(False)
+            tv.header().setSectionsClickable(True)
         if self._show_row_numbers:
             self._configure_row_number_column()
         if rows is not None:
@@ -1866,6 +1954,65 @@ class TableView(TreeView):
         out.sort()
         return out
 
+    # ----- cell-selection public API ---------------------------
+
+    def get_selected_cells(self):
+        """Return ``[{path, col_key, value}, ...]`` for the cells
+        currently selected — sorted by (row, column).  Available in
+        any selection mode, but only meaningful in
+        ``single-cell`` / ``multiple-cell``."""
+        tv = self.widget
+        # selectionModel().selectedIndexes() returns one QModelIndex
+        # per selected cell, including the synthetic row-number
+        # column.  Filter that out.
+        offset = self._col_offset()
+        out = []
+        for qmi in tv.selectionModel().selectedIndexes():
+            col = qmi.column()
+            user_col = col - offset
+            if user_col < 0 or user_col >= len(self._user_columns):
+                continue
+            row = qmi.row()
+            col_key = self._user_columns[user_col]['key']
+            it = tv.topLevelItem(row)
+            value = it.text(col) if it is not None else ''
+            out.append({'path': [row],
+                        'col_key': col_key,
+                        'value': value})
+        out.sort(key=lambda d: (d['path'][0],
+                                self._user_col_keys()
+                                    .index(d['col_key'])))
+        return out
+
+    def select_cell(self, path, col_key, state=True):
+        """Select (or deselect) a single cell by ``(path, col_key)``."""
+        if not path:
+            return
+        idx = self._resolve_to_row_index(path)
+        if idx is None or not (0 <= idx < self.get_row_count()):
+            return
+        try:
+            user_col = self._user_col_keys().index(col_key)
+        except ValueError:
+            return
+        col = user_col + self._col_offset()
+        it = self.widget.topLevelItem(idx)
+        if it is None:
+            return
+        model = self.widget.model()
+        qmi = model.index(idx, col)
+        sm = self.widget.selectionModel()
+        flag = (QtCore.QItemSelectionModel.Select if state
+                else QtCore.QItemSelectionModel.Deselect)
+        sm.select(qmi, flag)
+
+    def select_cells(self, cells, state=True):
+        for c in (cells or []):
+            self.select_cell(c.get('path'), c.get('col_key'), state)
+
+    def clear_cell_selection(self):
+        self.widget.clearSelection()
+
     def set_selected(self, items):
         """Select rows by integer index, by ``[row]`` path, or by
         row dict (matched by leaf-key value)."""
@@ -2019,9 +2166,15 @@ class TableView(TreeView):
         self.make_callback('activated', row_dict, [idx], col_key)
 
     def _selection_cb(self):
-        # Inherited would also work (returns get_selected()), but
-        # spelled out for clarity.
-        self.make_callback('selected', self.get_selected())
+        # In cell modes, fire 'cell_selected' with per-cell records
+        # instead of (or alongside) the row-level 'selected'.
+        if self._is_cell_mode():
+            self.make_callback('cell_selected', self.get_selected_cells())
+        else:
+            self.make_callback('selected', self.get_selected())
+
+    def _is_cell_mode(self):
+        return self._selection_mode_arg in ('single-cell', 'multiple-cell')
 
     def _item_changed_cb(self, item, col):
         # Skip the synthetic row-number column.
@@ -2050,6 +2203,267 @@ class TableView(TreeView):
     def _scroll_cb(self, value):
         h, v = self.get_scroll_position()
         self.make_callback('scrolled', h, v)
+
+    # ----- cell-mode click routing -----------------------------
+
+    def _item_clicked_cb(self, item, column):
+        """Handle clicks on a cell.  Routes row-number column
+        clicks to whole-row selection and updates the Shift-extend
+        anchor for ordinary cell clicks."""
+        if not self._is_cell_mode():
+            return
+        tv = self.widget
+        row = tv.indexOfTopLevelItem(item)
+        if row < 0:
+            return
+        offset = self._col_offset()
+        user_col = column - offset
+        mods = QtGui.QApplication.keyboardModifiers()
+        ctrl = bool(mods & QtCore.Qt.ControlModifier) or \
+               bool(mods & QtCore.Qt.MetaModifier)
+        shift = bool(mods & QtCore.Qt.ShiftModifier)
+
+        # Row-number column gets whole-row select handling.
+        if self._show_row_numbers and column == 0:
+            self._do_row_select(row, ctrl, shift)
+            return
+
+        # Ordinary cell click: Qt's built-in selection logic has
+        # already done the right thing (select / toggle / extend).
+        # We just refresh our anchor so a subsequent Shift+row-num
+        # or Shift+header click extends from this cell.
+        if not shift and user_col >= 0:
+            self._cell_anchor = (row, user_col)
+
+    def _do_row_select(self, row, ctrl, shift):
+        """Select an entire row (all user columns) via the row-
+        number gutter, honouring Ctrl-toggle and Shift-extend
+        modifiers."""
+        tv = self.widget
+        sm = tv.selectionModel()
+        model = tv.model()
+        offset = self._col_offset()
+        ncols = len(self._user_columns)
+        if ncols == 0:
+            return
+
+        if shift and self._cell_anchor is not None:
+            a_row, _ = self._cell_anchor
+            rmin, rmax = (a_row, row) if a_row <= row else (row, a_row)
+            sel = QtCore.QItemSelection(
+                model.index(rmin, offset),
+                model.index(rmax, offset + ncols - 1))
+            sm.clear()
+            sm.select(sel, QtCore.QItemSelectionModel.Select)
+            # Anchor unchanged on Shift-extend (Excel-style).
+            return
+
+        sel = QtCore.QItemSelection(
+            model.index(row, offset),
+            model.index(row, offset + ncols - 1))
+        if ctrl:
+            sm.select(sel, QtCore.QItemSelectionModel.Toggle)
+        else:
+            sm.clear()
+            sm.select(sel, QtCore.QItemSelectionModel.Select)
+        self._cell_anchor = (row, 0)
+
+    def _header_section_clicked(self, logical_index):
+        """Header click → sort and/or column-select.
+
+        When ``sortable`` is on, plain click sorts (we drive it
+        ourselves since ``setSortingEnabled`` is off in cell mode);
+        modifier clicks select.  When ``sortable`` is off, every
+        click selects.  Always: only fires in cell mode (the
+        signal is connected unconditionally but the handler bails
+        out for row modes)."""
+        if not self._is_cell_mode():
+            return
+        user_col = logical_index - self._col_offset()
+        if user_col < 0 or user_col >= len(self._user_columns):
+            return
+        mods = QtGui.QApplication.keyboardModifiers()
+        ctrl = bool(mods & QtCore.Qt.ControlModifier) or \
+               bool(mods & QtCore.Qt.MetaModifier)
+        shift = bool(mods & QtCore.Qt.ShiftModifier)
+
+        # Plain click on a sortable header → sort, not select.
+        if self.sortable and not (ctrl or shift):
+            asc = True
+            cur_col, cur_asc = (self.widget.header().sortIndicatorSection(),
+                                self.widget.header().sortIndicatorOrder()
+                                    == QtCore.Qt.AscendingOrder)
+            if cur_col == logical_index:
+                asc = not cur_asc
+            self.sort_by_column(user_col, ascending=asc)
+            return
+
+        self._do_column_select(user_col, ctrl, shift)
+
+    def _do_column_select(self, user_col, ctrl, shift):
+        """Select an entire column (all rows) via header click,
+        honouring Ctrl-toggle and Shift-extend modifiers."""
+        tv = self.widget
+        sm = tv.selectionModel()
+        model = tv.model()
+        nrows = tv.topLevelItemCount()
+        if nrows == 0:
+            return
+        offset = self._col_offset()
+        col = user_col + offset
+
+        if shift and self._cell_anchor is not None:
+            _, a_col = self._cell_anchor
+            cmin, cmax = (a_col, user_col) if a_col <= user_col \
+                                            else (user_col, a_col)
+            sel = QtCore.QItemSelection(
+                model.index(0, cmin + offset),
+                model.index(nrows - 1, cmax + offset))
+            sm.clear()
+            sm.select(sel, QtCore.QItemSelectionModel.Select)
+            return
+
+        sel = QtCore.QItemSelection(
+            model.index(0, col),
+            model.index(nrows - 1, col))
+        if ctrl:
+            sm.select(sel, QtCore.QItemSelectionModel.Toggle)
+        else:
+            sm.clear()
+            sm.select(sel, QtCore.QItemSelectionModel.Select)
+        self._cell_anchor = (0, user_col)
+
+    # ----- clipboard -------------------------------------------
+
+    def _build_selection_tsv(self):
+        """Build a TSV string from the bounding rectangle of the
+        current selection.  Gaps emit empty cells."""
+        if self._is_cell_mode():
+            cells = self.get_selected_cells()
+            keyed = {(c['path'][0], c['col_key']):
+                     ('' if c['value'] is None else str(c['value']))
+                     for c in cells}
+            if not keyed:
+                return ''
+            rows = sorted({r for (r, _) in keyed})
+            user_keys = self._user_col_keys()
+            cols_used = sorted({user_keys.index(k)
+                                for (_, k) in keyed
+                                if k in user_keys})
+            if not cols_used:
+                return ''
+            cMin, cMax = cols_used[0], cols_used[-1]
+            lines = []
+            for r in rows:
+                cells_row = []
+                for c in range(cMin, cMax + 1):
+                    cells_row.append(keyed.get((r, user_keys[c]), ''))
+                lines.append('\t'.join(cells_row))
+            return '\n'.join(lines)
+        # Row mode: every selected row gets serialised in full.
+        paths = self.get_selected_paths()
+        if not paths:
+            return ''
+        rows = sorted(p[0] for p in paths)
+        lines = []
+        for r in rows:
+            row_dict = self.get_row(r)
+            lines.append('\t'.join(
+                ('' if row_dict.get(k) is None else str(row_dict[k]))
+                for k in self._user_col_keys()))
+        return '\n'.join(lines)
+
+    def _selection_top_left(self):
+        """Return ``(row, col_index)`` of the top-left cell in the
+        current selection, or None if empty."""
+        if self._is_cell_mode():
+            cells = self.get_selected_cells()
+            if not cells:
+                return None
+            user_keys = self._user_col_keys()
+            r_min = min(c['path'][0] for c in cells)
+            c_min = min(user_keys.index(c['col_key'])
+                        for c in cells if c['col_key'] in user_keys)
+            return (r_min, c_min)
+        paths = self.get_selected_paths()
+        if not paths:
+            return None
+        return (min(p[0] for p in paths), 0)
+
+    def copy_selection(self):
+        tsv = self._build_selection_tsv()
+        if not tsv:
+            return
+        QtGui.QApplication.clipboard().setText(tsv)
+        self.make_callback('copy', tsv)
+
+    def cut_selection(self):
+        tsv = self._build_selection_tsv()
+        if not tsv:
+            return
+        QtGui.QApplication.clipboard().setText(tsv)
+        # Clear editable cells in the selection.
+        offset = self._col_offset()
+        user_keys = self._user_col_keys()
+        if self._is_cell_mode():
+            for c in self.get_selected_cells():
+                if c['col_key'] not in user_keys:
+                    continue
+                user_col = user_keys.index(c['col_key'])
+                if user_col not in self._editable_cols:
+                    continue
+                row = c['path'][0]
+                old = c['value']
+                self.set_cell(row, user_col, '')
+                self.make_callback('cell_edited', [row], c['col_key'],
+                                   old, '')
+        else:
+            for path in self.get_selected_paths():
+                row = path[0]
+                for user_col in range(len(self._user_columns)):
+                    if user_col not in self._editable_cols:
+                        continue
+                    col_key = self._user_columns[user_col]['key']
+                    it = self.widget.topLevelItem(row)
+                    old = it.text(user_col + offset) if it else ''
+                    self.set_cell(row, user_col, '')
+                    self.make_callback('cell_edited', [row], col_key,
+                                       old, '')
+        self.make_callback('cut', tsv)
+
+    def paste_selection(self):
+        text = QtGui.QApplication.clipboard().text()
+        if text is None or text == '':
+            return
+        anchor = self._selection_top_left()
+        if anchor is None:
+            return
+        anchor_row, anchor_col = anchor
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        rows = text.split('\n')
+        # Drop trailing empty row left over by most clipboards.
+        while rows and rows[-1] == '':
+            rows.pop()
+        n_user_cols = len(self._user_columns)
+        n_rows = self.get_row_count()
+        offset = self._col_offset()
+        for i, line in enumerate(rows):
+            r = anchor_row + i
+            if r >= n_rows:
+                break
+            cells = line.split('\t')
+            for j, val in enumerate(cells):
+                c = anchor_col + j
+                if c >= n_user_cols:
+                    break
+                if c not in self._editable_cols:
+                    continue
+                col_key = self._user_columns[c]['key']
+                it = self.widget.topLevelItem(r)
+                old = it.text(c + offset) if it else ''
+                self.set_cell(r, c, val)
+                self.make_callback('cell_edited', [r], col_key, old, val)
+        self.make_callback('paste', text)
 
 
 # CONTAINERS
