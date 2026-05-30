@@ -1817,17 +1817,48 @@ def get_icon(iconpath, size=None, adjust_width=True):
     return pixbuf
 
 
-def get_font(font_family, point_size):
-    font_family = font_asst.resolve_alias(font_family, font_family)
-    font = Pango.FontDescription('%s %d' % (font_family, point_size))
-    return font
+def get_font(font_spec, font_size):
+    """Function to obtain a font for the Pg backend.
 
+    Parameters
+    ----------
+    font_spec : str or `~ginga.fonts.font_asst.Font`
+        The desired font
 
-def load_font(font_name, font_file):
-    # TODO!
-    ## raise ValueError("Loading fonts dynamically is an unimplemented"
-    ##                  " feature for gtk4 back end")
-    return font_name
+    font_size : int
+        The point size requested for the given font
+
+    Returns
+    -------
+    font : dict
+        The desired font information in native backend form
+    """
+    key = ('gtk', font_spec, font_size)
+    try:
+        return font_asst.get_cache(key)
+
+    except KeyError:
+        pass
+
+    if isinstance(font_spec, str):
+        font_tup = font_asst.parse_font(font_spec)
+    elif isinstance(font_spec, font_asst.Font):
+        font_tup = font_spec
+    else:
+        raise ValueError("not a valid font spec: {}".format(str(font_spec)))
+
+    substitutes = font_asst.get_substitutes(font_tup.family)
+    family = substitutes[0]
+    font_str = f'"{family}" {font_tup.style} {font_tup.weight} {font_size}'
+    font_desc = Pango.FontDescription()
+    # cache this dict for faster lookups hence
+    font_asst.add_cache(key, font_desc)
+    if isinstance(font_spec, str):
+        # also store the font under a secondary key
+        key2 = ('gtk', font_tup, font_size)
+        font_asst.add_cache(key2, font_desc)
+
+    return font_desc
 
 
 def get_image(iconpath, size=None, adjust_width=True):

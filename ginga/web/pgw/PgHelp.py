@@ -4,17 +4,13 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import re
 import binascii
 from io import BytesIO
 
 from PIL import Image
 
-from ginga.misc import Bunch
 from ginga.fonts import font_asst
 from ginga.util import icon_helper
-
-font_regex = re.compile(r'^(.+)\s+(\d+)$')
 
 
 def get_image_src_from_buffer(img_buf, imgtype='png'):
@@ -71,37 +67,48 @@ def get_image(imgpath, size=None, format='png'):
         return get_icon(imgpath, size=size, format=format)
 
 
-def font_info(font_str):
-    """Extract font information from a font string, such as supplied to the
-    'font' argument to a widget.
+def get_font(font_spec, font_size):
+    """Function to obtain a font for the Pg backend.
+
+    Parameters
+    ----------
+    font_spec : str or `~ginga.fonts.font_asst.Font`
+        The desired font
+
+    font_size : int
+        The point size requested for the given font
+
+    Returns
+    -------
+    font : dict
+        The desired font information in native backend form
     """
-    vals = font_str.split(';')
-    point_size, style, weight = 8, 'normal', 'normal'
-    family = vals[0]
-    if len(vals) > 1:
-        style = vals[1]
-    if len(vals) > 2:
-        weight = vals[2]
+    key = ('pg', font_spec, font_size)
+    try:
+        return font_asst.get_cache(key)
 
-    match = font_regex.match(family)
-    if match:
-        family, point_size = match.groups()
-        point_size = int(point_size)
+    except KeyError:
+        pass
 
-    return Bunch.Bunch(family=family, point_size=point_size,
-                       style=style, weight=weight)
+    if isinstance(font_spec, str):
+        font_tup = font_asst.parse_font(font_spec)
+    elif isinstance(font_spec, font_asst.Font):
+        font_tup = font_spec
+    else:
+        raise ValueError("not a valid font spec: {}".format(str(font_spec)))
 
+    substitutes = font_asst.get_substitutes(font_tup.family)
+    font_dct = font_tup._asdict()
+    font_dct['family'] = substitutes[0]
+    font_dct['size'] = font_size
+    # cache this dict for faster lookups hence
+    font_asst.add_cache(key, font_dct)
+    if isinstance(font_spec, str):
+        # also store the font under a secondary key
+        key2 = ('pg', font_tup, font_size)
+        font_asst.add_cache(key2, font_dct)
 
-def get_font(font_family, point_size):
-    font_family = font_asst.resolve_alias(font_family, font_family)
-    font_str = '%s %d' % (font_family, point_size)
-    return font_info(font_str)
+    return font_dct
 
-
-def load_font(font_name, font_file):
-    # TODO!
-    ## raise ValueError("Loading fonts dynamically is an unimplemented"
-    ##                  " feature for pg back end")
-    return font_name
 
 # END

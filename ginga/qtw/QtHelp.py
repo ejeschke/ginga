@@ -101,6 +101,16 @@ QTabWidget::pane { margin: 0px,0px,0px,0px; padding: 0px; }
 QMdiSubWindow { margin: 0px; padding: 2px; }
 """
 
+font_weight_dct = {'thin': QFont.Thin,
+                   'extra light': QFont.ExtraLight,
+                   'light': QFont.Light,
+                   'normal': QFont.Normal,
+                   'medium': QFont.Medium,
+                   'demibold': QFont.DemiBold,
+                   'bold': QFont.Bold,
+                   'extra bold': QFont.ExtraBold,
+                   'black': QFont.Black}
+
 
 class TopLevel(QWidget):
 
@@ -487,79 +497,114 @@ def get_color(color, alpha=None):
     return clr
 
 
-def get_cached_font(font_name, font_size):
-    key = ('qt', font_name, font_size)
+# When Qt loads a scalable font, sometimes the family name is not what
+# is expected. This dict handles the mapping between what the user thinks
+# the font family is and what Qt thinks it is.  It also tracks which fonts
+# have already been loaded or not.  See load_font() below for details
+#
+qt_fonts = dict()
+
+
+def get_font(font_spec, font_size):
+    """Function to obtain a native font for the Qt backend.
+
+    Parameters
+    ----------
+    font_spec : str or `~ginga.fonts.font_asst.Font`
+        The desired font
+
+    font_size : int
+        The point size requested for the given font
+
+    Returns
+    -------
+    font : QFont
+        The desired font in native backend form
+    """
+    global qt_fonts
+
+    key = ('qt', font_spec, font_size)
     try:
         return font_asst.get_cache(key)
 
     except KeyError:
         pass
 
-    # font not loaded? try and load it
-    try:
-        info = font_asst.get_font_info(font_name, subst_ok=False)
-        font_family = load_font(font_name, info.font_path)
-        font = QFont(font_family, font_size)
-        font.setStyleStrategy(QFont.PreferAntialias)
-        font_asst.add_cache(key, font)
-        return font
+    if isinstance(font_spec, str):
+        font_tup = font_asst.parse_font(font_spec)
+    elif isinstance(font_spec, font_asst.Font):
+        font_tup = font_spec
+    else:
+        raise ValueError("not a valid font spec: {}".format(str(font_spec)))
 
-    except KeyError:
-        pass
+    family = font_tup.family
 
-    # see if we can build the font from the name
-    try:
-        font = QFont(font_name, font_size)
-        font.setStyleStrategy(QFont.PreferAntialias)
-        font_asst.add_cache(key, font)
-        return font
+    if font_tup in qt_fonts:
+        # <-- this font is already loaded, but not in the desired size
+        # just look up Qt's name for it
+        family = qt_fonts[font_tup].family
 
-    except Exception:
-        pass
+    else:
+        family = font_tup.family
+        # font not loaded? try and load it
+        if font_asst.have_loadable_font(font_tup):
+            try:
+                qfont_tup = load_font(font_tup)
+                family = qfont_tup.family
 
-    # try and substitute one of the built in fonts
-    info = font_asst.get_font_info(font_name, subst_ok=True)
-    font_family = load_font(font_name, info.font_path)
-    font = QFont(font_family, font_size)
-    font.setStyleStrategy(QFont.PreferAntialias)
-    font_asst.add_cache(key, font)
+            except Exception as e:
+                pass
 
-    return font
+    # try to create the font from the family name directly, plus in any
+    # other substitute fonts
+    families = [family] + font_asst.get_substitutes(font_tup.family)
+    for family in families:
+        try:
+            font = QFont(family, font_size)
+            if font_tup.style == 'italic':
+                font.setStyle(QFont.StyleItalic)
+            font.setWeight(font_weight_dct[font_tup.weight])
+            font.setStyleStrategy(QFont.PreferAntialias)
+            font_asst.add_cache(key, font)
+            if isinstance(font_spec, str):
+                # also store the font under a secondary key
+                key2 = ('qt', font_tup, font_size)
+                font_asst.add_cache(key2, font)
+            return font
+
+        except Exception as e:
+            print(f"Error making font: {e}")
+            continue
+
+    raise ValueError(f"Couldn't create font for family '{font_tup.family}', "
+                     f"style={font_tup.style}, weight={font_tup.weight}")
 
 
-# holds mapping of Qt font names to "ginga" font names
-qt_fonts = dict()
-
-
-def get_font(font_name, font_size):
-    font_name = font_asst.resolve_alias(font_name, font_name)
-    return get_cached_font(font_name, font_size)
-
-
-def load_font(font_name, font_file):
+def load_font(font_tup):
+    """Attempt to load a scalable font.
+    """
     global qt_fonts
-    if font_name in qt_fonts:
-        # <-- this font is already loaded, just look up Qt's name for it
-        font_family = qt_fonts[font_name]
-        return font_family
+
+    # get any known information about this font
+    # (may raise a KeyError if it's not known)
+    font_info = font_asst.get_font_info(font_tup, subst_ok=False)
 
     # NOTE: you need to have created a QApplication() first (see
     # qtw.Widgets.Application) for this to work correctly, or you will get
     # a crash!
-    font_id = QFontDatabase.addApplicationFont(font_file)
+    font_path = font_info.font_path
+    font_id = QFontDatabase.addApplicationFont(font_path)
     if font_id < 0:
-        raise ValueError("Unspecified Qt problem loading font from '%s'" % (
-            font_file))
+        raise ValueError(f"Unspecified Qt problem loading font from '{font_path}'")
 
-    font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
-    qt_fonts[font_name] = font_family
-
-    if font_name != font_family:
-        # If Qt knows this under a different name, add an alias
-        #print("overriding alias '{}' with '{}'".format(font_name, font_family))
-        font_asst.add_alias(font_family, font_name)
-
-    return font_family
+    qfont_families = QFontDatabase.applicationFontFamilies(font_id)
+    # the family closest to what we want seems to be at the end of the list
+    qfont_name = qfont_families[-1]
+    # record this so we can look it up quickly next time
+    new_tup = font_asst.Font(family=qfont_name, style=font_tup.style,
+                             weight=font_tup.weight)
+    qt_fonts[font_tup] = new_tup
+    return new_tup
 
 
 # cache of QPainters for surfaces

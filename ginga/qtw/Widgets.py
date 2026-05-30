@@ -2220,7 +2220,7 @@ class TableView(TreeView):
         user_col = column - offset
         mods = QtGui.QApplication.keyboardModifiers()
         ctrl = bool(mods & QtCore.Qt.ControlModifier) or \
-               bool(mods & QtCore.Qt.MetaModifier)
+            bool(mods & QtCore.Qt.MetaModifier)
         shift = bool(mods & QtCore.Qt.ShiftModifier)
 
         # Row-number column gets whole-row select handling.
@@ -2284,7 +2284,7 @@ class TableView(TreeView):
             return
         mods = QtGui.QApplication.keyboardModifiers()
         ctrl = bool(mods & QtCore.Qt.ControlModifier) or \
-               bool(mods & QtCore.Qt.MetaModifier)
+            bool(mods & QtCore.Qt.MetaModifier)
         shift = bool(mods & QtCore.Qt.ShiftModifier)
 
         # Plain click on a sortable header → sort, not select.
@@ -2292,7 +2292,8 @@ class TableView(TreeView):
             asc = True
             cur_col, cur_asc = (self.widget.header().sortIndicatorSection(),
                                 self.widget.header().sortIndicatorOrder()
-                                    == QtCore.Qt.AscendingOrder)
+                                == QtCore.Qt.AscendingOrder)  # noqa318
+
             if cur_col == logical_index:
                 asc = not cur_asc
             self.sort_by_column(user_col, ascending=asc)
@@ -2315,7 +2316,7 @@ class TableView(TreeView):
         if shift and self._cell_anchor is not None:
             _, a_col = self._cell_anchor
             cmin, cmax = (a_col, user_col) if a_col <= user_col \
-                                            else (user_col, a_col)
+                else (user_col, a_col)
             sel = QtCore.QItemSelection(
                 model.index(0, cmin + offset),
                 model.index(nrows - 1, cmax + offset))

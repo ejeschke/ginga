@@ -112,11 +112,20 @@ class WidgetMixin(CallbackMixin):
         self.destroy()
 
     def set_font(self, font_info, size=10):
-        # set_font api in pgwidgets
+        # The pgwidgets-js ``set_font`` is positional —
+        # ``set_font(family, size, weight, style)`` setting the
+        # corresponding CSS properties on the element.  Unpack the
+        # Ginga-style font here so the JS side gets a CSS
+        # family string rather than a dict object that stringifies
+        # to "[object Object]" (which the browser then falls back
+        # to its default serif font for).
         if isinstance(font_info, str):
             font_info = PgHelp.get_font(font_info, size)
-        super().set_font(dict(font=font_info.family, size=font_info.point_size,
-                              weight=font_info.weight, style=font_info.style))
+        family = font_info.get('family', 'sans-serif')
+        pts = font_info.get('size', size)
+        weight = font_info.get('weight', 'normal')
+        style = font_info.get('style', 'normal')
+        super().set_font(family, pts, weight, style)
 
     def set_margins(self, l, r, t, b):
         # used interchangably with the idea of border width in Ginga
