@@ -43,8 +43,12 @@ def add_substitute(family, sub_family):
     return add_substitutes(family, [sub_family])
 
 
-# for backwards compatibility
-add_alias = add_substitute
+def add_alias(family, alt_family):
+    global aliases
+    family = family.lower()
+    lst = aliases.setdefault(family, [])
+    # insert as the preferential font
+    lst.insert(0, alt_family)
 
 
 def get_substitutes(family):

@@ -39,7 +39,7 @@ class Colorbar(GingaPlugin.GlobalPlugin):
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Colorbar')
         self.settings.add_defaults(cbar_height=36,
-                                   font='Roboto', fontsize=10)
+                                   font='sans', fontsize=10)
         self.settings.load(onError='silent')
 
         fv.add_callback('add-channel', self.add_channel_cb)

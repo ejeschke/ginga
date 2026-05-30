@@ -119,6 +119,7 @@ class GingaShell(GenericShell):
         fixed_font = self.settings.get('fixedFont', None)
         if fixed_font is not None:
             font_asst.add_alias('fixed', fixed_font)
+            font_asst.add_alias('house', fixed_font)
 
         serif_font = self.settings.get('serifFont', None)
         if serif_font is not None:
@@ -127,6 +128,8 @@ class GingaShell(GenericShell):
         sans_font = self.settings.get('sansFont', None)
         if sans_font is not None:
             font_asst.add_alias('sans', sans_font)
+            font_asst.add_alias('sans serif', sans_font)
+            font_asst.add_alias('sans-serif', sans_font)
 
         # GUI initialization
         self.iconpath = icon_dir
