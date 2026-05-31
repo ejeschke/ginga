@@ -48,7 +48,8 @@ try:
                             QPainter, QPen, QPolygonF, QPolygon, QTextCursor,
                             QDrag, QPainterPath, QBrush, QFontDatabase,
                             QCursor, QFontMetrics, QSurfaceFormat,
-                            QTextOption, QWheelEvent, QKeySequence)
+                            QTextOption, QWheelEvent, QKeySequence,
+                            QPalette)
     # QShortcut is in QtGui under PyQt6/PySide6 and in QtWidgets
     # under PyQt5/PySide2; qtpy typically normalises to QtGui, but
     # we try both to stay robust across binding versions.

@@ -23,10 +23,10 @@ __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
            'TableView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
-           'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
-           'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
-           'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
-           'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog',
+           'Expander', 'FixedLayout', 'TabWidget', 'StackWidget', 'MDIWidget',
+           'ScrollArea', 'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar',
+           'MenuAction', 'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel',
+           'Application', 'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog',
            'MessageDialog', 'DragPackage',
            'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
 
@@ -1567,6 +1567,20 @@ class TableView(TreeView):
         self._show_grid = False
         self._allow_text_selection = bool(allow_text_selection)  # noqa
 
+        # Colour-override state, four layers with cell > row >
+        # column > table precedence (mirrors the pgw side).  See
+        # _resolve_cell_color / _apply_color_to_cell below.
+        #
+        # Cell / row entries are keyed by ``id(QTreeWidgetItem)``
+        # so they survive header-click sort but are wiped when
+        # ``set_rows`` / ``set_columns`` rebuild the items (item
+        # objects go away).  Column / table entries persist
+        # across rebuilds and are re-applied to every new row.
+        self._cell_color_map = {}     # (id(item), user_col) -> {fg,bg}
+        self._row_color_map = {}      # id(item)             -> {fg,bg}
+        self._col_color_map = {}      # col_key              -> {fg,bg}
+        self._table_color = None      # {fg,bg} | None
+
         # Replace TreeView's 'activated' / 'changed' wiring with
         # the table-oriented signatures.  Connect to additional
         # signals for 'scrolled'.
@@ -1763,6 +1777,13 @@ class TableView(TreeView):
         # leaf_key: the first user column's key is a reasonable
         # primary; the row-number column is never the leaf.
         leaf_key = self._user_columns[0]['key']
+        # Per-cell / per-row colour overrides reference item
+        # identities that won't survive setup_table's rebuild.
+        # Drop them now; column / table layers persist and will
+        # be re-applied via _apply_row_colors as each new row
+        # comes back through _append_one.
+        self._cell_color_map.clear()
+        self._row_color_map.clear()
         super().setup_table(col_specs, levels=1, leaf_key=leaf_key)
         # Parent's setup_table calls ``setSortingEnabled(self.sortable)``
         # which has a side-effect of resetting the header's
@@ -1850,6 +1871,12 @@ class TableView(TreeView):
         """Replace all rows.  ``rows`` is a sequence of dicts
         (keyed by column key) or a sequence of positional values."""
         self.widget.clear()
+        # Per-cell / per-row colour overrides reference the
+        # old item objects we're about to discard; drop those.
+        # Column / table colours persist and are re-applied to
+        # each new row via _apply_row_colors.
+        self._cell_color_map.clear()
+        self._row_color_map.clear()
         for i, row in enumerate(rows):
             self._append_one(row)
 
@@ -1864,13 +1891,21 @@ class TableView(TreeView):
         item = self._make_row_item(values)
         tv.insertTopLevelItem(idx, item)
         self._apply_editable_flags(item)
+        self._apply_row_colors(item)
         self._renumber_row_column()
 
     def delete_row(self, idx):
         tv = self.widget
         if not (0 <= idx < tv.topLevelItemCount()):
             raise WidgetError(f"row index {idx} out of range")
-        tv.takeTopLevelItem(idx)
+        item = tv.takeTopLevelItem(idx)
+        # Drop dangling colour entries that referenced this item.
+        if item is not None:
+            iid = id(item)
+            self._row_color_map.pop(iid, None)
+            for key in [k for k in self._cell_color_map
+                        if k[0] == iid]:
+                del self._cell_color_map[key]
         self._renumber_row_column()
 
     def get_row_count(self):
@@ -1904,6 +1939,7 @@ class TableView(TreeView):
         item = self._make_row_item(values)
         tv.addTopLevelItem(item)
         self._apply_editable_flags(item)
+        self._apply_row_colors(item)
         self._renumber_row_column()
 
     def _make_row_item(self, values):
@@ -2013,6 +2049,141 @@ class TableView(TreeView):
     def clear_cell_selection(self):
         self.widget.clearSelection()
 
+    # ----- per-cell / row / column / table colour overrides ----
+
+    def _resolve_cell_color(self, item, user_col):
+        """Walk cell → row → column → table to produce the
+        merged ``(fg, bg)`` colour pair for one item / user-col.
+        Either component may be ``None`` (meaning "no override at
+        this layer" — the underlying widget palette wins)."""
+        iid = id(item)
+        col_key = (self._user_columns[user_col]['key']
+                   if 0 <= user_col < len(self._user_columns)
+                   else None)
+        fg = bg = None
+        cs = self._cell_color_map.get((iid, user_col))
+        if cs:
+            fg = cs.get('fg'); bg = cs.get('bg')
+        if fg is None or bg is None:
+            rs = self._row_color_map.get(iid)
+            if rs:
+                if fg is None: fg = rs.get('fg')
+                if bg is None: bg = rs.get('bg')
+        if fg is None or bg is None:
+            cls = self._col_color_map.get(col_key)
+            if cls:
+                if fg is None: fg = cls.get('fg')
+                if bg is None: bg = cls.get('bg')
+        if fg is None or bg is None:
+            if self._table_color:
+                if fg is None: fg = self._table_color.get('fg')
+                if bg is None: bg = self._table_color.get('bg')
+        return fg, bg
+
+    def _apply_color_to_cell(self, item, user_col):
+        """Write the resolved colour to the QTreeWidgetItem.  Always
+        overwrites — a ``None`` resolved value installs a default
+        (invalid) brush, which clears the item's override and lets
+        the widget palette show through again."""
+        fg, bg = self._resolve_cell_color(item, user_col)
+        col = user_col + self._col_offset()
+        # ``QtGui`` in this module is actually qtpy.QtWidgets;
+        # QBrush / QColor live in qtpy.QtGui and are re-exported
+        # from QtHelp.
+        item.setForeground(col,
+                           QtHelp.QBrush(QtHelp.QColor(fg)) if fg
+                           else QtHelp.QBrush())
+        item.setBackground(col,
+                           QtHelp.QBrush(QtHelp.QColor(bg)) if bg
+                           else QtHelp.QBrush())
+
+    def _apply_row_colors(self, item):
+        """Paint every user-column cell of a single item according
+        to the current cell/row/column/table state.  Called from
+        ``_append_one`` / ``insert_row`` so newly-inserted rows
+        pick up column- and table-level overrides automatically."""
+        for user_col in range(len(self._user_columns)):
+            self._apply_color_to_cell(item, user_col)
+
+    def _apply_all_colors(self):
+        """Reapply colours to every visible cell — used when a
+        change at column or table level affects many cells at
+        once."""
+        tv = self.widget
+        for row in range(tv.topLevelItemCount()):
+            item = tv.topLevelItem(row)
+            if item is None:
+                continue
+            self._apply_row_colors(item)
+
+    def set_cell_color(self, path, col_key, fg=None, bg=None):
+        idx = self._resolve_to_row_index(path)
+        if idx is None:
+            return
+        if col_key not in self._user_col_keys():
+            return
+        user_col = self._user_col_keys().index(col_key)
+        item = self.widget.topLevelItem(idx)
+        if item is None:
+            return
+        key = (id(item), user_col)
+        if fg is None and bg is None:
+            self._cell_color_map.pop(key, None)
+        else:
+            self._cell_color_map[key] = {'fg': fg, 'bg': bg}
+        self._apply_color_to_cell(item, user_col)
+
+    def set_row_color(self, path, fg=None, bg=None):
+        idx = self._resolve_to_row_index(path)
+        if idx is None:
+            return
+        item = self.widget.topLevelItem(idx)
+        if item is None:
+            return
+        iid = id(item)
+        if fg is None and bg is None:
+            self._row_color_map.pop(iid, None)
+        else:
+            self._row_color_map[iid] = {'fg': fg, 'bg': bg}
+        self._apply_row_colors(item)
+
+    def set_column_color(self, col_key, fg=None, bg=None):
+        if col_key not in self._user_col_keys():
+            return
+        if fg is None and bg is None:
+            self._col_color_map.pop(col_key, None)
+        else:
+            self._col_color_map[col_key] = {'fg': fg, 'bg': bg}
+        user_col = self._user_col_keys().index(col_key)
+        tv = self.widget
+        for row in range(tv.topLevelItemCount()):
+            item = tv.topLevelItem(row)
+            if item is not None:
+                self._apply_color_to_cell(item, user_col)
+
+    def set_table_color(self, fg=None, bg=None):
+        if fg is None and bg is None:
+            self._table_color = None
+        else:
+            self._table_color = {'fg': fg, 'bg': bg}
+        self._apply_all_colors()
+
+    def clear_cell_color(self, path, col_key):
+        self.set_cell_color(path, col_key, fg=None, bg=None)
+
+    def clear_row_color(self, path):
+        self.set_row_color(path, fg=None, bg=None)
+
+    def clear_column_color(self, col_key):
+        self.set_column_color(col_key, fg=None, bg=None)
+
+    def clear_all_colors(self):
+        self._cell_color_map.clear()
+        self._row_color_map.clear()
+        self._col_color_map.clear()
+        self._table_color = None
+        self._apply_all_colors()
+
     def set_selected(self, items):
         """Select rows by integer index, by ``[row]`` path, or by
         row dict (matched by leaf-key value)."""
@@ -2113,30 +2284,53 @@ class TableView(TreeView):
         self._apply_stylesheet()
 
     def _apply_stylesheet(self):
-        """Compose and apply the TableView's stylesheet.
+        """Apply the TableView's visual overrides.
 
-        Layered so optional features (grid lines) can be added/
-        removed without losing the always-on bits (selection
-        highlight).  Without this, the inherited Qt highlight
-        palette is often a low-contrast tint that washes out cell
-        text, especially when ``alternate_row_colors`` is on.
+        Selection highlight is set via the widget's *palette*, not
+        a stylesheet.  This matters: any ``QTreeView::item`` rule
+        in a stylesheet (even one scoped to ``:selected``) makes
+        Qt switch to ``QStyleSheetStyle`` for item rendering,
+        which clobbers per-item ``setBackground`` brushes.  Using
+        the palette keeps the high-contrast selection scheme AND
+        lets per-cell / per-row colour overrides paint normally.
+
+        The grid-line stylesheet rule (when ``show_grid`` is on)
+        is the same hazard, so it stays as an *opt-in* trade-off:
+        with the grid on, per-item colours may not appear under
+        every Qt version.  For full grid + per-item-colour
+        compatibility, a custom QStyledItemDelegate would be
+        needed — out of scope here.
         """
-        parts = [
-            # High-contrast selection — both when focused (default
-            # ":selected") and unfocused (":selected:!active"), so a
-            # selected row stays readable while a context menu or
-            # cell editor takes focus away from the tree.
-            "QTreeView::item:selected { "
-            "background-color: #2a64c8; color: white; }",
-            "QTreeView::item:selected:!active { "
-            "background-color: #2a64c8; color: white; }",
-        ]
+        # High-contrast selection scheme via palette.  Both the
+        # Active and Inactive colour groups get the same blue so
+        # selected rows stay readable when focus moves off the
+        # tree (context menu open, cell editor up, etc.).
+        palette = self.widget.palette()
+        sel_bg = QtHelp.QColor('#2a64c8')
+        sel_fg = QtHelp.QColor('white')
+        # ``QPalette.Highlight`` / ``HighlightedText`` are the role
+        # enums; qtpy normalises Qt5/Qt6 access so this form works
+        # under all bindings.
+        palette.setColor(QtHelp.QPalette.Highlight, sel_bg)
+        palette.setColor(QtHelp.QPalette.HighlightedText, sel_fg)
+        palette.setColor(QtHelp.QPalette.Inactive,
+                         QtHelp.QPalette.Highlight, sel_bg)
+        palette.setColor(QtHelp.QPalette.Inactive,
+                         QtHelp.QPalette.HighlightedText, sel_fg)
+        self.widget.setPalette(palette)
+
+        # Grid lines via stylesheet (QTreeView has no native
+        # grid).  Opt-in only, since the ``::item`` rule below
+        # interferes with per-item colour painting (known Qt
+        # quirk).  Callers who need both grid AND per-item
+        # colouring should leave grid off; see the docstring.
         if self._show_grid:
-            parts.append(
+            self.widget.setStyleSheet(
                 "QTreeView::item { "
                 "border-right: 1px solid #d0d0d0; "
                 "border-bottom: 1px solid #d0d0d0; }")
-        self.widget.setStyleSheet(' '.join(parts))
+        else:
+            self.widget.setStyleSheet("")
 
     def set_show_row_numbers(self, tf):
         new = bool(tf)
@@ -2698,6 +2892,35 @@ class Expander(ContainerBase):
 
     def _toggle_widget(self, w, tf):
         self.expand(tf)
+
+
+class FixedLayout(ContainerBase):
+    """A container widget in which children can be placed at fixed
+    positions.
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.widget = QtGui.QWidget()
+
+    def add_widget(self, child, x_px, y_px):
+        child_w = child.get_widget()
+        child_w.setParent(self.widget)
+
+        child_w.move(x_px, y_px)
+        self.add_ref(child)
+
+    def remove(self, child, delete=False):
+        if child not in self.children:
+            raise ValueError("Widget is not a child of this container")
+        self.children.remove(child)
+
+        child_w = child.get_widget()
+        child_w.unParent()
+        if delete:
+            child_w.deleteLater()
+
+        self.make_callback('widget-removed', child)
 
 
 class TabWidget(ContainerBase):

@@ -1624,6 +1624,15 @@ class TableView(TreeView):
         self._show_grid = False
         self._allow_text_selection = bool(allow_text_selection)  # noqa
 
+        # Colour-override layers (cell > row > column > table).
+        # Per-cell and per-row entries are keyed by ``id()`` of
+        # the row dict that's stored in the TreeStore's column 0.
+        # See _mkcolfnN override and _resolve_cell_color_gtk below.
+        self._cell_colors = {}     # (id(row_dict), col_key) -> {fg,bg}
+        self._row_colors = {}      # id(row_dict)            -> {fg,bg}
+        self._col_colors = {}      # col_key                 -> {fg,bg}
+        self._table_color = None   # {fg,bg} | None
+
         # Additional callbacks beyond TreeView's set.
         for cbname in ('cell_edited', 'scrolled',
                        'cell_selected', 'copy', 'cut', 'paste'):
@@ -1830,8 +1839,24 @@ class TableView(TreeView):
         n = model.iter_n_children(None)
         if not (0 <= idx < n):
             raise WidgetError(f"row index {idx} out of range")
+        # Capture the row dict's id before removing so we can
+        # purge dangling colour entries.
         it = model.iter_nth_child(None, idx)
+        d = model.get_value(it, 0)
+        rid = id(d) if isinstance(d, dict) else None
         model.remove(it)
+        if rid is not None:
+            self._row_colors.pop(rid, None)
+            for key in [k for k in self._cell_colors if k[0] == rid]:
+                del self._cell_colors[key]
+
+    def clear(self):
+        # Drop per-cell / per-row colour entries — they reference
+        # dict identities about to be discarded.  Column / table
+        # layers persist.
+        self._cell_colors.clear()
+        self._row_colors.clear()
+        super().clear()
 
     def get_row_count(self):
         model = self.tv.get_model()
@@ -2037,6 +2062,31 @@ class TableView(TreeView):
         self.tv.set_grid_lines(
             Gtk.TreeViewGridLines.BOTH if self._show_grid
             else Gtk.TreeViewGridLines.NONE)
+        # GTK paints grid lines using the style context's
+        # ``border-color`` on ``treeview.view``; most light themes
+        # leave that at ~rgba(0,0,0,0.1), which is invisible on a
+        # white background.  Override with a stronger explicit
+        # colour so the lines actually show up.
+        self._apply_grid_css()
+
+    _GRID_CSS = b"""
+    treeview.view {
+        border-color: #999999;
+    }
+    """
+
+    def _apply_grid_css(self):
+        if getattr(self, '_grid_css_provider', None) is not None:
+            return
+        provider = Gtk.CssProvider()
+        try:
+            provider.load_from_data(self._GRID_CSS)
+        except Exception:
+            return
+        ctx = self.tv.get_style_context()
+        ctx.add_provider(provider,
+                         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self._grid_css_provider = provider
 
     def set_show_row_numbers(self, tf):
         new = bool(tf)
@@ -2158,6 +2208,137 @@ class TableView(TreeView):
 
     def clear_cell_selection(self):
         self.clear_selection()
+
+    # ----- colour overrides (per-cell / row / column / table) ---
+    #
+    # See the gtk3w TableView for the design rationale.  Same
+    # strategy here: piggyback on the cell-data-func that's
+    # already attached to each column, consult the four storage
+    # layers, set ``foreground`` / ``cell-background`` properties
+    # on the cell renderer at paint time.  Mutators update the
+    # dicts and ``queue_draw`` the tree.
+
+    def _mkcolfnN(self, idx, kwd, datatype):
+        parent_fn = super()._mkcolfnN(idx, kwd, datatype)
+
+        def fn(*args):
+            parent_fn(*args)
+            column, cell, model, iter = args[:4]
+            bnch = model.get_value(iter, 0)
+            if isinstance(bnch, dict):
+                fg, bg = self._resolve_cell_color_gtk(id(bnch), kwd)
+            else:
+                fg, bg = self._resolve_cell_color_gtk(None, kwd)
+            self._apply_color_to_cell_gtk(cell, fg, bg)
+        return fn
+
+    def _resolve_cell_color_gtk(self, row_id, col_key):
+        fg = bg = None
+        if row_id is not None:
+            cs = self._cell_colors.get((row_id, col_key))
+            if cs:
+                fg = cs.get('fg'); bg = cs.get('bg')
+            if fg is None or bg is None:
+                rs = self._row_colors.get(row_id)
+                if rs:
+                    if fg is None: fg = rs.get('fg')
+                    if bg is None: bg = rs.get('bg')
+        if fg is None or bg is None:
+            cls = self._col_colors.get(col_key)
+            if cls:
+                if fg is None: fg = cls.get('fg')
+                if bg is None: bg = cls.get('bg')
+        if fg is None or bg is None:
+            if self._table_color:
+                if fg is None: fg = self._table_color.get('fg')
+                if bg is None: bg = self._table_color.get('bg')
+        return fg, bg
+
+    @staticmethod
+    def _apply_color_to_cell_gtk(cell, fg, bg):
+        if isinstance(cell, Gtk.CellRendererText):
+            if fg is not None:
+                cell.set_property('foreground', fg)
+                cell.set_property('foreground-set', True)
+            else:
+                cell.set_property('foreground-set', False)
+        if bg is not None:
+            cell.set_property('cell-background', bg)
+            cell.set_property('cell-background-set', True)
+        else:
+            cell.set_property('cell-background-set', False)
+
+    def _row_dict_at(self, idx):
+        model = self.tv.get_model()
+        if model is None:
+            return None
+        if not (0 <= idx < model.iter_n_children(None)):
+            return None
+        it = model.iter_nth_child(None, idx)
+        d = model.get_value(it, 0) if it is not None else None
+        return d if isinstance(d, dict) else None
+
+    # ----- public colour API ----------------------------------
+
+    def set_cell_color(self, path, col_key, fg=None, bg=None):
+        idx = self._resolve_to_row_index(path)
+        if idx is None:
+            return
+        d = self._row_dict_at(idx)
+        if d is None:
+            return
+        key = (id(d), col_key)
+        if fg is None and bg is None:
+            self._cell_colors.pop(key, None)
+        else:
+            self._cell_colors[key] = {'fg': fg, 'bg': bg}
+        self.tv.queue_draw()
+
+    def set_row_color(self, path, fg=None, bg=None):
+        idx = self._resolve_to_row_index(path)
+        if idx is None:
+            return
+        d = self._row_dict_at(idx)
+        if d is None:
+            return
+        rid = id(d)
+        if fg is None and bg is None:
+            self._row_colors.pop(rid, None)
+        else:
+            self._row_colors[rid] = {'fg': fg, 'bg': bg}
+        self.tv.queue_draw()
+
+    def set_column_color(self, col_key, fg=None, bg=None):
+        if col_key not in (c['key'] for c in self._user_columns):
+            return
+        if fg is None and bg is None:
+            self._col_colors.pop(col_key, None)
+        else:
+            self._col_colors[col_key] = {'fg': fg, 'bg': bg}
+        self.tv.queue_draw()
+
+    def set_table_color(self, fg=None, bg=None):
+        if fg is None and bg is None:
+            self._table_color = None
+        else:
+            self._table_color = {'fg': fg, 'bg': bg}
+        self.tv.queue_draw()
+
+    def clear_cell_color(self, path, col_key):
+        self.set_cell_color(path, col_key, fg=None, bg=None)
+
+    def clear_row_color(self, path):
+        self.set_row_color(path, fg=None, bg=None)
+
+    def clear_column_color(self, col_key):
+        self.set_column_color(col_key, fg=None, bg=None)
+
+    def clear_all_colors(self):
+        self._cell_colors.clear()
+        self._row_colors.clear()
+        self._col_colors.clear()
+        self._table_color = None
+        self.tv.queue_draw()
 
     # ----- clipboard (row-only, system + widget callbacks) ----
     #

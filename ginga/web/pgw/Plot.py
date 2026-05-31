@@ -27,7 +27,7 @@ class PlotWidget(Widgets.Image):
 
         super().set_expanding(True, True)
 
-        self._widget = FigureCanvas(plot.get_figure())
+        self._surface = FigureCanvas(plot.get_figure())
         self.image_format = 'png'
 
         if plot is not None:
@@ -55,14 +55,6 @@ class PlotWidget(Widgets.Image):
         # figure width x height in inches
         _wd_in, _ht_in = fig.get_size_inches()
         _wd_px, _ht_px = int(_wd_in / fig.dpi), int(_ht_in / fig.dpi)
-
-        # if wd != _wd_px or ht != _ht_px:
-        #     #self.logger.info(f"FIGURE SIZE ({_wd_px}x{_ht_px}) DOES NOT MATCH WIDGET SIZE ({wd}x{ht})")
-        #     fig.set_size_inches(wd_in, ht_in)
-        #     fig.canvas.draw()
-        # else:
-        #     #self.logger.info(f"FIGURE SIZE ({_wd_px}x{_ht_px}) MATCHES WIDGET SIZE ({wd}x{ht})")
-        #     pass
 
         # fig.canvas.draw()
         bbox_in = Bbox([[0, 0], [wd_in, ht_in]])

@@ -1035,6 +1035,26 @@ class TableView(WidgetMixin, PGW.TableView):
     # JS-side clipboard work completes.  No wrapper override
     # needed.
 
+    # ----- per-cell / row / column / table colour overrides --
+    #
+    # ``set_column_color`` / ``set_table_color`` / ``clear_column_color``
+    # / ``clear_all_colors`` don't need path translation and so are
+    # auto-generated from defs.py without further help here.  The
+    # path-taking methods need our integer-index ↔ pgw-row-key
+    # boundary conversion.
+
+    def set_cell_color(self, path, col_key, fg=None, bg=None):
+        super().set_cell_color(self._to_pgw_path(path), col_key, fg, bg)
+
+    def set_row_color(self, path, fg=None, bg=None):
+        super().set_row_color(self._to_pgw_path(path), fg, bg)
+
+    def clear_cell_color(self, path, col_key):
+        super().clear_cell_color(self._to_pgw_path(path), col_key)
+
+    def clear_row_color(self, path):
+        super().clear_row_color(self._to_pgw_path(path))
+
 
 class Canvas(WidgetMixin, PGW.Canvas):
     def __init__(self, *args, **kwargs):

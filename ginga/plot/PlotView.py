@@ -48,7 +48,7 @@ class PlotViewBase(ViewerBase):
             return True
         return False
 
-    def __init__(self, logger=None, settings=None, figure=None):
+    def __init__(self, logger=None, settings=None, figure=None, addaxis=True):
 
         if not have_mpl:
             raise ImportError("Install 'matplotlib' to use this viewer")
@@ -145,9 +145,10 @@ class PlotViewBase(ViewerBase):
         self.figure = figure
 
         self.artist_dct = dict()
-        bg = self.settings.get('plot_bg', 'white')
-        self.ax = self.figure.add_subplot(111, facecolor=bg)
-        # self.ax.grid(True)
+        if addaxis:
+            bg = self.settings.get('plot_bg', 'white')
+            self.ax = self.figure.add_subplot(111, facecolor=bg)
+            # self.ax.grid(True)
 
         self.dc = get_canvas_types()
         self.private_canvas = self.dc.DrawingCanvas()
@@ -1393,9 +1394,9 @@ class PlotViewBase(ViewerBase):
 
 class PlotViewEvent(PlotEventMixin, Mixins.UIMixin, PlotViewBase):
 
-    def __init__(self, logger=None, settings=None, figure=None):
+    def __init__(self, logger=None, settings=None, figure=None, addaxis=True):
         PlotViewBase.__init__(self, logger=logger, settings=settings,
-                              figure=figure)
+                              figure=figure, addaxis=addaxis)
         Mixins.UIMixin.__init__(self)
         PlotEventMixin.__init__(self)
 
@@ -1415,9 +1416,9 @@ class CanvasView(PlotViewEvent):
         cls.bindmapClass = klass
 
     def __init__(self, logger=None, settings=None, figure=None,
-                 bindmap=None, bindings=None):
+                 addaxis=True, bindmap=None, bindings=None):
         PlotViewEvent.__init__(self, logger=logger, settings=settings,
-                               figure=figure)
+                               figure=figure, addaxis=addaxis)
 
         #self.private_canvas.ui_set_active(True, viewer=self)
         self.ui_set_active(True, viewer=self)
