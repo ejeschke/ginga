@@ -1633,6 +1633,13 @@ class TableView(TreeView):
         self._col_colors = {}      # col_key                 -> {fg,bg}
         self._table_color = None   # {fg,bg} | None
 
+        # Alternating-row stripe.  Applied in ``_mkcolfnN`` only
+        # when no explicit bg is set at any override layer, so any
+        # cell/row/column/table colour wins.  The stripe is painted
+        # via the cell renderer's ``cell-background`` property, so
+        # it survives ``show_grid`` (grid lines render on top).
+        self._alternate_row_colors = bool(alternate_row_colors)
+
         # Additional callbacks beyond TreeView's set.
         for cbname in ('cell_edited', 'scrolled',
                        'cell_selected', 'copy', 'cut', 'paste'):
@@ -2218,6 +2225,12 @@ class TableView(TreeView):
     # on the cell renderer at paint time.  Mutators update the
     # dicts and ``queue_draw`` the tree.
 
+    # Stripe palette for ``alternate_row_colors=True``.  Even rows
+    # get white, odd rows get a soft grey — both written explicitly
+    # so the appearance is independent of theme rules-hint support.
+    _ALT_ROW_BG_EVEN = '#ffffff'
+    _ALT_ROW_BG_ODD = '#f4f4f4'
+
     def _mkcolfnN(self, idx, kwd, datatype):
         parent_fn = super()._mkcolfnN(idx, kwd, datatype)
 
@@ -2229,8 +2242,23 @@ class TableView(TreeView):
                 fg, bg = self._resolve_cell_color_gtk(id(bnch), kwd)
             else:
                 fg, bg = self._resolve_cell_color_gtk(None, kwd)
+            if bg is None and self._alternate_row_colors:
+                bg = self._alt_row_bg_for(model, iter)
             self._apply_color_to_cell_gtk(cell, fg, bg)
         return fn
+
+    def _alt_row_bg_for(self, model, iter):
+        """Return the stripe bg colour for the row at ``iter``,
+        based on its visible (top-level) row index.  Returns None
+        if the path can't be determined."""
+        path = model.get_path(iter)
+        if path is None:
+            return None
+        indices = path.get_indices()
+        if not indices:
+            return None
+        return (self._ALT_ROW_BG_ODD if indices[0] % 2
+                else self._ALT_ROW_BG_EVEN)
 
     def _resolve_cell_color_gtk(self, row_id, col_key):
         fg = bg = None
@@ -2965,14 +2993,28 @@ class Splitter(ContainerBase):
         self.panes = [self.widget]
 
     def _get_pane(self):
+        # ``background-color: transparent`` on the separator keeps
+        # the custom dots image visible while letting the window's
+        # chrome-grey background show through behind it — without
+        # it the theme's default ``separator.wide`` colour wins,
+        # which is usually a slightly lighter shade than the rest
+        # of the window.
         if self.orientation == 'horizontal':
             w = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
             iconfile = pathlib.Path(icondir) / 'vdots.png'
-            content = "background-image: url('file://%s'); background-repeat: no-repeat; background-position: center center; background-size: 10px 30px;" % (iconfile)
+            content = ("background-image: url('file://%s'); "
+                       "background-color: transparent; "
+                       "background-repeat: no-repeat; "
+                       "background-position: center center; "
+                       "background-size: 10px 30px;" % (iconfile))
         else:
             w = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
             iconfile = pathlib.Path(icondir) / 'hdots.png'
-            content = "background-image: url('file://%s'); background-repeat: no-repeat; background-position: center center; background-size: 30px 10px;" % (iconfile)
+            content = ("background-image: url('file://%s'); "
+                       "background-color: transparent; "
+                       "background-repeat: no-repeat; "
+                       "background-position: center center; "
+                       "background-size: 30px 10px;" % (iconfile))
         w.set_wide_handle(True)
         context = w.get_style_context()
         css_data = "paned separator.wide { %s }" % (content)

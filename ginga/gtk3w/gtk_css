@@ -1,26 +1,101 @@
 /*
- CSS for styling Gtk3 widgets
+ * CSS for styling Gtk3 widgets to match the pgwidgets-js look.
+ *
+ * Loaded application-wide by ``GtkHelp.set_default_style()`` at
+ * STYLE_PROVIDER_PRIORITY_APPLICATION, which overrides the
+ * default theme.
  */
+
 
 /*
- under some themes, toggle buttons don't have any border, are
- crammed together too closely, and don't show any difference
- when they are checked or not.
+ * Light-grey chrome background applied at the window level.
+ * GTK's transparent containers (Box, Frame, GtkPaned splitter
+ * panes) show through to the window's bg by default, while
+ * content widgets (TreeView, TextArea, Button) paint their own.
+ *
+ * A few widgets paint their own (white) background — they don't
+ * inherit the window bg automatically — so they need explicit
+ * selectors here.  ``notebook`` (TabWidget), ``toolbar``
+ * (Toolbar), and ``grid`` (GridBox) are the most visible cases;
+ * add more here if other widgets show up looking too-white.
+ *
+ * Colour matches the pgwidgets-js Menu.css / StatusBar.css
+ * palette (``#e8e8e8``).
  */
- 
-GtkToggleButton {
-    border: 1px solid shade (@theme_bg_color, 0.9) ;
-    padding: 1px;
+window,
+dialog,
+notebook,
+notebook stack,
+toolbar,
+grid,
+frame,
+scrolledwindow,
+scrolledwindow viewport {
+    background-color: #e8e8e8;
 }
 
-GtkToolbar GtkToggleButton:checked {
-    background-color: shade (@theme_bg_color, 0.9);
+/*
+ * Menubar / statusbar themes sometimes paint their own background,
+ * so call out the colour explicitly too.  A thin divider under
+ * the menu bar pulls it visually apart from the content below.
+ */
+menubar,
+statusbar {
+    background-color: #e8e8e8;
 }
 
-GtkToolbar {
+menubar {
+    border-bottom: 1px solid #bbb;
+}
+
+
+/*
+ * Buttons — match the pgwidgets-js Button.css gradient + hover /
+ * active palette so the apps look the same whether they run
+ * under gtk or pg.  Applies to standalone Gtk.Button widgets
+ * (including toggle buttons, which extend the ``button`` CSS
+ * node).
+ */
+button {
+    background-image: linear-gradient(to bottom,
+                                      #fafafa 0%,
+                                      #e4e4e4 100%);
+    background-color: transparent;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    color: #222;
+    padding: 4px 8px;
+}
+
+button:hover {
+    background-image: linear-gradient(to bottom,
+                                      #ffffff 0%,
+                                      #ececec 100%);
+    border-color: #888;
+}
+
+button:active,
+button:checked {
+    background-image: linear-gradient(to bottom,
+                                      #d8d8d8 0%,
+                                      #e8e8e8 100%);
+    border-color: #777;
+}
+
+
+/*
+ * Toolbar gets a bit of padding so its children don't crowd the
+ * edges, matching the prior default.
+ */
+toolbar {
     padding: 2px;
 }
 
+
+/*
+ * Force the scrollbar steppers visible (some themes hide them by
+ * default).
+ */
 GtkScrollbar {
    -GtkScrollbar-has-backward-stepper: 1;
    -GtkScrollbar-has-forward-stepper: 1;
